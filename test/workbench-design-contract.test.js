@@ -1,0 +1,120 @@
+import { describe, expect, it } from 'vitest';
+import { validateWorkbench, layoutWorkbench, workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js';
+import { workbenchDesignTemplate, MARKET_DESIGN_TEMPLATES, WORKBENCH_DESIGN_VERSION } from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
+import { renderMarketArtifact } from '../packages/dsh-research-task-runtime/market-artifact.js';
+import { researchMarketDimensions, researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
+import { buildResearchTaskPrompt } from '../packages/dsh-research-task-runtime/index.js';
+
+const candles = [
+  { date: '02-04', open: 10, high: 11, low: 9.5, close: 10.6, volume: 1200 },
+  { date: '02-05', open: 10.6, high: 11.2, low: 10.2, close: 10.8, volume: 1800 }
+];
+const panel = (title, type, prompt, artifact) => ({ title, type, prompt, size: 'small', artifact });
+
+describe('research workbench Figma design contract', () => {
+  it('uses host rendered templates for simulated K-line and metrics without a per-panel model', () => {
+    const input = validateWorkbench({ requestId: 'figma-smoke', title: '模拟行情', dataMode: 'simulated', panels: [
+      panel('K线与成交量', 'market', 'variant: candlestick；显示开高低收和成交量', { variant: 'candlestick', asOf: '2026-02-05', candles }),
+      panel('关键指标', 'market', 'variant: metrics；同一时点的价格与涨跌', { variant: 'metrics', asOf: '2026-02-05', items: [{ label: '现价', value: '10.8 元' }, { label: '涨跌', value: '+1.89%' }] })
+    ] });
+    const [candle, metrics] = layoutWorkbench(input.panels);
+    expect(candle).toMatchObject({ width: 536, height: 264 });
+    expect(metrics).toMatchObject({ width: 896, height: 144 });
+    for (const p of [candle, metrics]) {
+      const rendered = renderMarketArtifact(p.artifact);
+      expect(rendered?.html).toContain(`data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"`);
+      expect(researchMarketDimensions({ containerSpec: rendered })).toEqual({ width: p.width, height: p.height });
+      expect(rendered?.html).toContain('模拟数据');
+    }
+    expect(renderMarketArtifact(candle.artifact)?.html).toContain('K线与成交量');
+    expect(renderMarketArtifact(candle.artifact)?.html).toContain('<canvas');
+    expect(workbenchPanelPrompt(input, candle)).toContain('market.candlestick');
+  });
+
+  it('rejects a line chart that claims to be a K-line', () => {
+    expect(() => validateWorkbench({ requestId: 'wrong-chart', title: '模拟行情', dataMode: 'simulated', panels: [
+      panel('K线', 'chart', '以折线画 K线', { variant: 'line', labels: ['02-04', '02-05'], series: [{ name: '收盘价', values: [10.6, 10.8] }] }),
+      panel('关键指标', 'market', 'variant: metrics', { variant: 'metrics', asOf: '2026-02-05', items: [{ label: '现价', value: '10.8 元' }] })
+    ] })).toThrow('market.candlestick');
+  });
+
+  it('does not mistake a metrics panel for candlesticks when its data note mentions K-line', () => {
+    const input = validateWorkbench({ requestId: 'same-source', title: '模拟行情', dataMode: 'simulated', panels: [
+      panel('当日行情概览', 'market', 'variant: metrics；与 K线 使用同一收盘时点', { variant: 'metrics', asOf: '2026-02-05', items: [{ label: '现价', value: '10.8 元' }] }),
+      panel('K线与成交量', 'market', 'variant: candlestick；显示 OHLC', { variant: 'candlestick', asOf: '2026-02-05', candles })
+    ] });
+    expect(input.panels.map(p => p.artifact.variant)).toEqual(['metrics', 'candlestick']);
+  });
+
+  it('routes source K-line generation to the host market schema', () => {
+    const prompt = buildResearchTaskPrompt({ parentSessionId: 'session', canvasNodeId: 'node', kind: 'container',
+      prompt: '工作台：贵金属\n本面板：K线与成交量\n展示有来源的 OHLC\n优先使用 market 类型' });
+    expect(prompt).toContain('market.candlestick');
+    expect(prompt).toContain('唯一交付格式：');
+    expect(prompt).toContain('不能改成折线');
+  });
+
+  it('keeps host dimensions and source nodes in one versioned mapping', () => {
+    expect(workbenchDesignTemplate({ type: 'market', title: '指标', prompt: 'variant: metrics' })).toMatchObject({
+      version: WORKBENCH_DESIGN_VERSION, figma: '1217:225751', width: 896, height: 144
+    });
+    expect(MARKET_DESIGN_TEMPLATES.table).toMatchObject({ figma: '1217:225879', width: 536, height: 258 });
+    for (const [variant, template] of Object.entries(MARKET_DESIGN_TEMPLATES)) {
+      const html = `<body data-sherlock-market="${variant}" data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"></body>`;
+      expect(researchMarketDimensions({ containerSpec: { type: 'html', html } })).toEqual({ width: template.width, height: template.height });
+    }
+  });
+
+  it('keeps the source calendar size and fits six operational metrics in a compact card', () => {
+    expect(workbenchDesignTemplate({ type: 'calendar', artifact: { items: Array(8).fill({}) } })).toMatchObject({
+      figma: '1217:222167', width: 536, height: 316
+    });
+    expect(workbenchDesignTemplate({ type: 'dashboard', artifact: { items: Array(6).fill({}) } })).toMatchObject({
+      width: 656, height: 280
+    });
+    expect(workbenchDesignTemplate({ type: 'news', artifact: { items: Array(8).fill({}) } })).toMatchObject({
+      width: 656, height: 456
+    });
+  });
+
+  it('normalizes generic simulated finance cards into source-backed metrics, trend and table', () => {
+    const input = validateWorkbench({ requestId: 'finance-normalize', title: '金融分析工作台', dataMode: 'simulated', panels: [
+      panel('核心行情', 'dashboard', '关键数据', { asOf: '2026-02-06', items: [{ label: '现价', value: '1478.60 元' }] }),
+      panel('价格趋势', 'chart', '日内走势', { variant: 'line', labels: ['09:30', '10:30'], series: [{ name: '价格', values: [1462, 1478] }] }),
+      panel('交易明细', 'table', '交易数据', { columns: ['时间', '价格'], rows: [['09:30', '1462']] })
+    ] });
+    expect(input.panels.map(p => [p.type, p.artifact.variant])).toEqual([['market', 'metrics'], ['market', 'trend'], ['market', 'table']]);
+    expect(layoutWorkbench(input.panels).map(p => [p.width, p.height])).toEqual([[896, 144], [536, 264], [536, 258]]);
+    expect(input.panels.map(p => renderMarketArtifact(p.artifact)?.html.includes('data-sherlock-design'))).toEqual([true, true, true]);
+    const bad = { requestId: 'no-financial-bar', title: '金融分析工作台', dataMode: 'simulated', panels: [
+      panel('柱图', 'chart', '财务柱图', { variant: 'bar', labels: ['一','二'], series: [{ name: '值', values: [1,2] }] }),
+      panel('指标', 'dashboard', '指标', { asOf: '模拟', items: [{ label: '值', value: '1' }] })
+    ] };
+    expect(validateWorkbench(bad).panels[0]).toMatchObject({ type: 'chart', artifact: { variant: 'bar' } });
+  });
+
+  it('sizes dense finance data for reading while retaining source size for sparse data', () => {
+    const denseTable = {version:1,type:'market',variant:'table',title:'银行明细',asOf:'模拟',
+      columns:['名称','代码','价格','涨跌','市盈率','市净率','市值'],rows:Array.from({length:8},(_,i)=>[`银行${i}`,'600000.SH','8.5','+0.2','6.2','0.8','1000'])};
+    const denseMetrics = {version:1,type:'market',variant:'metrics',title:'关键指标',asOf:'模拟',
+      items:Array.from({length:9},(_,i)=>({label:`指标${i}`,value:String(i)}))};
+    expect(workbenchDesignTemplate({type:'market',artifact:denseTable})).toMatchObject({width:536,height:258});
+    expect(workbenchDesignTemplate({type:'market',artifact:denseMetrics})).toMatchObject({width:896,height:232});
+    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseTable).html}})).toEqual({width:536,height:258});
+    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseMetrics).html}})).toEqual({width:896,height:232});
+    expect(workbenchDesignTemplate({type:'market',artifact:{...denseTable,columns:['名称','价格'],rows:[['A','8.5']]}})).toMatchObject({width:536,height:258});
+  });
+
+  it('packs contracted financial cards across a wide canvas before shrinking them', () => {
+    const nodes = ['metrics', 'candlestick', 'table', 'breadth'].map((variant, index) => ({
+      id: `m${index}`, kind: 'generated-container', sizeMode: 'auto', generationStatus: 'completed',
+      containerSpec: { type: 'html', html: `<body data-sherlock-market="${variant}" data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"></body>` }
+    }));
+    const result = researchBentoLayout(nodes, { width: 1200, height: 800 });
+    expect(result.width).toBe(1084);
+    expect(result.height).toBe(652);
+    expect(result.viewport.scale).toBe(1);
+    expect(result.nodes[1]).toMatchObject({ x: 0, y: 156, width: 536 });
+    expect(result.nodes[2]).toMatchObject({ x: 548, y: 156, width: 536 });
+  });
+});

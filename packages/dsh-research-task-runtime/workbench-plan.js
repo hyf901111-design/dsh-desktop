@@ -1,25 +1,297 @@
 import { researchBentoSize } from './bento-layout.js';
+import { acceptArtifactOutput } from './artifact-output.js';
+import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
+import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market'];
+const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt']);
+const simulated = value => /模拟|演示/u.test(value ?? '');
+const schemaHints = {
+    dashboard: 'dashboard 应包含 asOf 和 items:[{label,value:"带单位的字符串",detail?}]（也接受 metrics 中的数值和 unit）。',
+    chart: 'chart 应包含 variant:"line|bar"、labels:[字符串]、series:[{name,values:[数字]}]，每组 values 与 labels 等长。',
+    table: 'table 应包含 columns:[列名] 和 rows:[[单元格]]，每行列数一致。',
+    kpi: 'kpi 应包含 items:[{label,value,change?}]，最多 12 项。',
+    market: 'market 应包含 variant、asOf 和对应数据；metrics 用 items:[{label,value}]，trend 用等长 labels/series.values，table 用等宽 columns/rows；医药侧图、管线、事件依次用 scatter 的 xLabel/yLabel/items、pipeline 的 stages/items、events 的 items；基金三件套分别用 fund-kpi items、fund-holdings columns/rows、fund-industry items:[{label,weight,benchmark}]。',
+    news: 'news 应包含 items:[{title,summary,date?,category?}]。',
+    reports: 'reports 应包含 items:[{title,summary,date?,category?}]。',
+    calendar: 'calendar 应包含 items:[{title,summary,date?,category?}]。',
+    gantt: 'gantt 应包含 asOf 和 items:[{label,start:"YYYY-MM-DD",end:"YYYY-MM-DD",progress?:0–100,owner?}]。'
+};
+const metricValue = metric => {
+    if (!metric || (typeof metric.value !== 'string' && !(typeof metric.value === 'number' && Number.isFinite(metric.value)))) return metric?.value;
+    return `${metric.value}${str(metric.unit, 40) ? ` ${metric.unit}` : ''}`;
+};
+const percentIn = (value, label) => {
+    const match = typeof value === 'string' && value.match(new RegExp(label + '\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*%'));
+    return match ? Number(match[1]) : null;
+};
+function fundTemplatePanel(panel, workbenchTitle) {
+    if (!/基金/u.test(workbenchTitle) || !panel.artifact || typeof panel.artifact !== 'object') return null;
+    const source = panel.artifact;
+    const intent = panel.title + '\n' + panel.prompt;
+    const base = { version: 1, type: 'market', title: source.title ?? panel.title,
+        asOf: source.asOf ?? '模拟数据 · 时点未提供' };
+    let artifact;
+    if (/行业.{0,8}(?:暴露|偏离)|(?:暴露|偏离).{0,8}行业/u.test(intent)) {
+        if (!Array.isArray(source.items)) throw Error(`面板「${panel.title}」应提供行业权重和基准权重，不能降级成普通指标卡。`);
+        artifact = { ...base, variant: 'fund-industry', items: source.items.map(item => ({
+            label: item?.label,
+            weight: Number.isFinite(item?.weight) ? item.weight : percentIn(item?.detail, '组合权重'),
+            benchmark: Number.isFinite(item?.benchmark) ? item.benchmark : percentIn(item?.detail, '基准')
+        })) };
+        if (artifact.items.some(item => !Number.isFinite(item.weight) || !Number.isFinite(item.benchmark)))
+            throw Error(`面板「${panel.title}」缺少行业组合权重或基准权重，请提交 items:[{label,weight,benchmark}]。`);
+    } else if (/穿透持仓|持仓明细|重叠暴露/u.test(intent) && Array.isArray(source.columns)) {
+        artifact = { ...base, variant: 'fund-holdings', columns: source.columns, rows: source.rows,
+            ...(source.period ? { period: source.period } : {}) };
+    } else if (/组合风险|持仓概览|穿透概览|基金指标/u.test(intent) && Array.isArray(source.items ?? source.metrics)) {
+        const items = normalizeMetrics(source.items ?? source.metrics, 'dashboard');
+        artifact = { ...base, variant: 'fund-kpi', items: items.map(item => ({
+            label: item?.label, value: item?.value, ...(item?.detail ? { detail: item.detail } : {})
+        })) };
+    } else return null;
+    return { ...panel, type: 'market', prompt: `variant: ${artifact.variant}；${panel.prompt}`, artifact };
+}
+// Simulated financial plans often arrive as generic KPI/chart/table objects.
+// Normalize them before a node is created, so a valid plan cannot silently
+// fall back to the unrelated generic card renderer.
+function financialTemplatePanel(panel, workbenchTitle) {
+    if (!/金融|股票|证券|股市|A股|指数|行情|基金|贵金属|黄金|白银|交易|沪深|港股/u.test(`${workbenchTitle}\n${panel.title}`)) return panel;
+    const fund = fundTemplatePanel(panel, workbenchTitle);
+    if (fund) return fund;
+    const source = panel.artifact;
+    if (!source || typeof source !== 'object' || Array.isArray(source)) return panel;
+    const base = { version: 1, type: 'market', title: source.title ?? panel.title,
+        asOf: source.asOf ?? '模拟数据 · 时点未提供' };
+    let artifact;
+    if (panel.type === 'dashboard' || panel.type === 'kpi') {
+        const raw = source.items ?? source.metrics;
+        if (!Array.isArray(raw) || raw.length > 12) throw Error(`面板「${panel.title}」的金融指标需拆成最多 12 项的独立组件。`);
+        artifact = { ...base, variant: 'metrics', items: normalizeMetrics(raw, 'dashboard').map((item, index) => ({
+            label: item?.label, value: item?.value,
+            ...((raw[index]?.change ?? item?.detail) ? { detail: raw[index]?.change ?? item?.detail } : {})
+        })) };
+    } else if (panel.type === 'table') {
+        artifact = { ...base, variant: 'table', columns: source.columns, rows: source.rows };
+    } else if (panel.type === 'chart') {
+        if (source.variant !== 'line') return panel;
+        artifact = { ...base, variant: 'trend', labels: source.labels, series: source.series };
+    } else return panel;
+    return { ...panel, type: 'market', prompt: `variant: ${artifact.variant}；${panel.prompt}`, artifact };
+}
+function normalizeMetrics(metrics, type) {
+    return metrics.map(metric => {
+        if (!metric || typeof metric !== 'object') return metric;
+        const change = [Number.isFinite(metric.delta) ? `变动 ${metric.delta}${str(metric.unit, 40) ? ` ${metric.unit}` : ''}` : '', Number.isFinite(metric.deltaPct) ? `变动比例 ${metric.deltaPct}（原始模拟值）` : ''].filter(Boolean).join(' · ');
+        if (type === 'kpi') return { label: metric.label, value: metricValue(metric), ...(change ? { change } : {}) };
+        const detail = [str(metric.detail, 2000) ? metric.detail : '', change].filter(Boolean).join(' · ');
+        return { label: metric.label, value: metricValue(metric), ...(detail ? { detail } : {}) };
+    });
+}
+function normalizeSimulatedMarketData(artifact) {
+    if (artifact.type !== 'market') return;
+    // Preserve supplied values while accepting the names models commonly use
+    // for the same fields. Source-backed data remains on the strict path.
+    if (artifact.variant === 'scatter' && Array.isArray(artifact.items)) {
+        artifact.items = artifact.items.map(item => {
+            if (!item || typeof item !== 'object') return item;
+            const number = value => typeof value === 'string' && /^\d+(?:\.\d+)?$/u.test(value.trim()) ? Number(value) : value;
+            return { ...item, label: item.label ?? item.name ?? item.company, x: number(item.x), y: number(item.y),
+                ...(item.size !== undefined ? { size: number(item.size) } : {}) };
+        });
+    }
+    if (artifact.variant === 'pipeline' && Array.isArray(artifact.items)) {
+        if (!artifact.stages && Array.isArray(artifact.phases)) artifact.stages = artifact.phases;
+        artifact.items = artifact.items.map(item => {
+            if (!item || typeof item !== 'object') return item;
+            const phase = item.stage ?? item.phase;
+            const matched = typeof phase === 'string' && Array.isArray(artifact.stages)
+                ? artifact.stages.findIndex(v => String(v).replace(/\s/gu, '') === phase.replace(/\s/gu, '')) : -1;
+            const stage = typeof phase === 'string' && /^\d+$/u.test(phase.trim()) ? Number(phase)
+                : matched >= 0 ? matched + 1 : phase;
+            return { ...item, name: item.name ?? item.project ?? item.drug,
+                target: item.target ?? item.targetName,
+                stage, nextDate: item.nextDate ?? item.next ?? item.date };
+        });
+    }
+    if (artifact.variant === 'events' && Array.isArray(artifact.items)) {
+        artifact.items = artifact.items.map(item => item && typeof item === 'object' ? {
+            ...item, object: item.object ?? item.subject ?? item.company,
+            focus: item.focus ?? item.observation_focus ?? item.summary,
+            window: item.window ?? item.impact_window,
+            status: item.status ?? item.state
+        } : item);
+    }
+    if (['table', 'fund-holdings'].includes(artifact.variant) && Array.isArray(artifact.columns) && Array.isArray(artifact.rows)) {
+        artifact.rows = artifact.rows.map(row => {
+            if (!Array.isArray(row) || row.length === artifact.columns.length) return row;
+            const cells = row.flatMap(cell => Array.isArray(cell) ? cell : [cell]);
+            return cells.length === artifact.columns.length && cells.every(cell => typeof cell === 'string' || Number.isFinite(cell)) ? cells : row;
+        });
+    }
+    if (artifact.variant !== 'trend' || !Array.isArray(artifact.labels) || !Array.isArray(artifact.series)) return;
+    const count = artifact.labels.length;
+    if (count < 12 || count > 60) return;
+    const repaired = [];
+    for (const item of artifact.series) {
+        const values = item?.values;
+        if (!Array.isArray(values) || values.length !== count - 1 || !values.every(Number.isFinite)) continue;
+        item.values = Array.from({ length: count }, (_, index) => {
+            const position = index * (values.length - 1) / (count - 1);
+            const left = Math.floor(position), right = Math.ceil(position);
+            return Number((values[left] + (values[right] - values[left]) * (position - left)).toFixed(4));
+        });
+        repaired.push(item.name);
+    }
+    if (repaired.length) artifact.note = [artifact.note, `模拟数据补点：${repaired.join('、')}序列由等距线性插值补齐。`].filter(Boolean).join(' · ');
+}
+function normalizeSimulatedCalendar(artifact) {
+    if (artifact.type !== 'calendar' || !Array.isArray(artifact.items)) return;
+    artifact.items = artifact.items.map(item => {
+        if (!item || typeof item !== 'object') return item;
+        const result = { ...item };
+        const dateTime = typeof result.date === 'string' && result.date.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/u);
+        if (dateTime && !result.time) { result.date = dateTime[1]; result.time = dateTime[2]; }
+        if (!result.summary) result.summary = [
+            result.object && `对象：${result.object}`,
+            result.observation_focus && `观察重点：${result.observation_focus}`,
+            result.impact_window && `影响窗口：${result.impact_window}`,
+            result.status && `状态：${result.status}`
+        ].filter(Boolean).join(' · ');
+        return result;
+    });
+}
+function simulatedArtifactProblem(artifact) {
+    if (artifact.type === 'market' && artifact.variant === 'scatter' && Array.isArray(artifact.items)) {
+        const index = artifact.items.findIndex(i => !str(i?.label, 200) || !Number.isFinite(i?.x) || !Number.isFinite(i?.y));
+        if (index !== -1) return `散点第${index + 1}项需有 label、非负数值 x 和 y；已提供的 name/company 可作为 label。`;
+    }
+    if (artifact.type === 'market' && artifact.variant === 'pipeline' && Array.isArray(artifact.items)) {
+        if (!Array.isArray(artifact.stages) || artifact.stages.length < 2) return '管线需有至少两个公共阶段名 stages；可将 phases 作为别名。';
+        const index = artifact.items.findIndex(i => !str(i?.name, 200) || !str(i?.target, 200) || !Number.isInteger(i?.stage) || i.stage < 0 || i.stage > artifact.stages.length || !str(i?.nextDate, 200));
+        if (index !== -1) return `管线第${index + 1}项需有项目名 name、靶点 target、已达阶段数 stage（0 至 ${artifact.stages.length}）及下一节点 nextDate。`;
+    }
+    if (artifact.type === 'market' && artifact.variant === 'events' && Array.isArray(artifact.items)) {
+        const required = ['date','object','event','focus','window','status'];
+        const index = artifact.items.findIndex(i => required.some(k => !str(i?.[k], 200)));
+        if (index !== -1) return `事件第${index + 1}项缺少 ${required.filter(k => !str(artifact.items[index]?.[k], 200)).join('、')}；观察重点和影响窗口可用 observation_focus、impact_window。`;
+    }
+    if (artifact.type === 'market' && artifact.variant === 'trend' && Array.isArray(artifact.labels) && Array.isArray(artifact.series)) {
+        const mismatch = artifact.series.find(item => !Array.isArray(item?.values) || item.values.length !== artifact.labels.length);
+        if (mismatch) return `趋势序列「${mismatch.name ?? '未命名'}」有 ${mismatch.values?.length ?? 0} 个值，横轴有 ${artifact.labels.length} 个时点；请只修正该序列。`;
+    }
+    if (artifact.type === 'market' && ['table', 'fund-holdings'].includes(artifact.variant) && Array.isArray(artifact.columns) && Array.isArray(artifact.rows)) {
+        const index = artifact.rows.findIndex(row => !Array.isArray(row) || row.length !== artifact.columns.length);
+        if (index !== -1) return `表格第${index + 1}行有 ${artifact.rows[index]?.length ?? 0} 个单元格，列标题有 ${artifact.columns.length} 列；请只修正该行。`;
+    }
+    if (artifact.type === 'calendar' && Array.isArray(artifact.items)) {
+        const index = artifact.items.findIndex(item => item && !item.summary && !item.url);
+        if (index !== -1) return `日历第${index + 1}项缺少可显示的摘要；请补 summary 或对象与观察重点。`;
+    }
+    return schemaHints[artifact.type];
+}
+export function prepareSimulatedArtifact(panel) {
+    const source = panel.artifact;
+    if (!source || typeof source !== 'object' || Array.isArray(source) || !preparedTypes.has(panel.type) || (source.type !== undefined && source.type !== panel.type) || (source.version !== undefined && source.version !== 1))
+        throw Error(`面板「${panel.title}」的模拟数据格式或模板无效。`);
+    if (Buffer.byteLength(JSON.stringify(source), 'utf8') > 64_000)
+        throw Error(`面板「${panel.title}」的模拟数据过长。`);
+    // Simulated data must never smuggle invented citations into a trusted host template.
+    const hasLink = value => value && typeof value === 'object' && Object.entries(value).some(([key, item]) =>
+        key === 'url' || key === 'sources' || (item && typeof item === 'object' && hasLink(item)));
+    if (hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
+    const artifact = structuredClone(source);
+    artifact.version = 1;
+    artifact.type = panel.type;
+    if (artifact.type === 'market' && !artifact.variant) {
+        // The input schema permits an omitted variant. The data shape and panel
+        // intent identify a single host template without another model retry.
+        artifact.variant = Array.isArray(artifact.candles) ? 'candlestick'
+            : Array.isArray(artifact.labels) && Array.isArray(artifact.series) ? 'trend'
+                : (Array.isArray(artifact.stages) || Array.isArray(artifact.phases)) && Array.isArray(artifact.items) ? 'pipeline'
+                    : str(artifact.xLabel, 200) && str(artifact.yLabel, 200) && Array.isArray(artifact.items) ? 'scatter'
+                        : Array.isArray(artifact.items) && artifact.items.some(item => item?.date && item?.event && (item?.focus || item?.observation_focus)) ? 'events'
+                : Array.isArray(artifact.columns) && Array.isArray(artifact.rows) ? 'table'
+                    : Number.isSafeInteger(artifact.advancing) ? 'breadth'
+                        : Array.isArray(artifact.items) && artifact.items.every(item => Number.isFinite(item?.weight) && Number.isFinite(item?.change)) ? 'heatmap'
+                            : Array.isArray(artifact.items) ? 'metrics' : marketVariant(panel);
+    }
+    normalizeSimulatedMarketData(artifact);
+    normalizeSimulatedCalendar(artifact);
+    if (['dashboard', 'kpi'].includes(artifact.type) && artifact.items === undefined && Array.isArray(artifact.metrics)) {
+        artifact.items = normalizeMetrics(artifact.metrics, artifact.type);
+        delete artifact.metrics;
+    }
+    // Native canvas schemas are exact-key contracts. Keep the data fields and
+    // carry a supplied snapshot time into the visible title when applicable.
+    if (['chart', 'table', 'kpi'].includes(artifact.type)) {
+        const allowed = { chart: ['version', 'type', 'title', 'variant', 'labels', 'series'], table: ['version', 'type', 'title', 'columns', 'rows'], kpi: ['version', 'type', 'title', 'items'] }[artifact.type];
+        const asOf = str(artifact.asOf, 80) ? artifact.asOf : undefined;
+        for (const key of Object.keys(artifact)) if (!allowed.includes(key)) delete artifact[key];
+        if (asOf && !panel.title.includes(asOf) && panel.title.length + asOf.length + 9 <= 80)
+            artifact.title = `${panel.title} · ${asOf}`;
+    }
+    artifact.title = simulated(artifact.title ?? panel.title) ? (artifact.title ?? panel.title) : `${artifact.title ?? panel.title}（模拟）`;
+    if (artifact.title.length > 80) throw Error(`面板「${panel.title}」的标题过长，无法标注模拟。`);
+    if (['market', 'dashboard'].includes(artifact.type)) {
+        if (!str(artifact.asOf, 256)) throw Error(`面板「${panel.title}」缺少模拟数据时点。`);
+        if (!simulated(artifact.asOf)) artifact.asOf = `模拟数据 · ${artifact.asOf}`;
+    }
+    if (['news', 'reports', 'calendar'].includes(artifact.type) && Array.isArray(artifact.items))
+        artifact.items = artifact.items.map(item => ({ ...item, category: simulated(item.category) ? item.category : `模拟 · ${item.category || '信息'}` }));
+    if (!acceptArtifactOutput(JSON.stringify(artifact))) throw Error(`面板「${panel.title}」的模拟数据格式无效。${simulatedArtifactProblem(artifact)}`);
+    return artifact;
+}
 export function validateWorkbench(value) {
+    value = expandSimulatedWorkbenchPreset(value);
     if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 2 || value.panels.length > 10)
         throw Error('工作台需要 2–10 个独立面板。');
+    if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
+    const isSimulated = value.dataMode === 'simulated';
+    const parallel = value.generationMode === 'parallel';
+    if (value.generationMode !== undefined && !parallel) throw Error('工作台生成模式无效。');
+    if (parallel && !isSimulated) throw Error('并行模拟生成仅适用于模拟数据工作台。');
     const seen = new Set();
     const panels = value.panels.map(p => {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !types.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
-        return { title: p.title.trim(), prompt: p.prompt.trim(), type: p.type, size: panelSize(p), height: PANEL_SIZES[panelSize(p)] };
+        const requestsCandlestick = /K\s*线|蜡烛图|candlestick/iu.test(p.title) ||
+            (p.type === 'chart' && /(?:绘制|显示|生成|展示|画).{0,12}(?:K\s*线|蜡烛图|candlestick)/iu.test(p.prompt));
+        if (requestsCandlestick && (p.type !== 'market' || marketVariant(p) !== 'candlestick'))
+            throw Error(`面板「${p.title}」必须使用 market.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
+        if (!isSimulated && p.artifact !== undefined) throw Error('真实数据面板不能提交模拟数据对象。');
+        if (parallel && p.artifact !== undefined) throw Error('并行模拟生成只提交面板规划，不提交 artifact。');
+        const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
+        const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : undefined;
+        const panel = { title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}) };
+        workbenchDesignTemplate(panel);
+        return panel;
     });
-    return { requestId: value.requestId.trim(), title: value.title.trim(), panels };
+    if (isSimulated && Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台模拟数据总量过长。');
+    const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
+    if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');
+    return { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(parallel ? { generationMode: 'parallel' } : {}), panels };
 }
 export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 }) {
-    const columns = panels.length === 2 || panels.length === 4 ? 2 : 3;
-    return panels.map((p, index) => ({ ...p, size: panelSize(p), width: 320, height: 220, x: index % columns * 336, y: Math.floor(index / columns) * 236 }));
+    // 21H's finance composition uses an 896px main span plus a compact side
+    // column. A 1380px packing lane creates four tiny cards after canvas fit.
+    const rowLimit = Math.max(896, Math.min(1088, (canvasSize.width || 1380) - 32));
+    let x = 0, y = 0, rowHeight = 0;
+    return panels.map(p => {
+        const template = workbenchDesignTemplate(p);
+        if (x && x + template.width > rowLimit) { x = 0; y += rowHeight + 16; rowHeight = 0; }
+        const result = { ...p, size: template.size, width: template.width, height: template.height, x, y };
+        x += template.width + 16;
+        rowHeight = Math.max(rowHeight, template.height);
+        return result;
+    });
 }
 
 export function workbenchPanelPrompt(input, p) {
-    return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型；生成中的320×220是临时占位，不是成品边界。成品按内容密度选择合理布局；正文12/18px、标题13/20px、指标23/26px，数字英文DINPro、中文Noto Sans SC；内边距12px。结构化表格交给宿主 AG Grid 渲染，不在 HTML 中仿造表格；K 线、热力图、指标、资讯、日历等非表格内容使用与 AG Grid Quartz 一致的深浅色背景、表头、边框、行间距和蓝色焦点控件。不要在正文重复宿主面板标题，不截断用户要求的数据、行列或来源，不用折叠隐藏主要字段。表格保持可读，复杂图表按实际图种呈现，组件内部不要嵌套滚动条。数据注明来源和日期，无法获得的数据明确标注缺失；不得伪造实时数据或声称已开启持续监控。`;
+    const template = workbenchDesignTemplate(p);
+    const origin = ['chart','reports','news','gantt'].includes(p.type) ? 'Figma 组件族参考' : 'Figma 节点';
+    return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线用 candles 的 OHLC 与成交量，均不得用通用 chart 或自写 HTML 替代。` : ''}组件样式、深浅主题、字体和几何由宿主模板负责；仅提交数据，不自造视觉样式。用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。`;
 }

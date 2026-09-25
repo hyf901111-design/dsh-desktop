@@ -1,10 +1,14 @@
 import { patchResearchCanvasDeferredHtml } from './research-canvas-deferred-html.mjs'
+import { patchResearchCanvasViewportPersistence } from './research-canvas-viewport-persistence.mjs'
 import { generationSource, generationCss, patchGenerationLifecycle, componentPromptSource } from './figma-generation-client.mjs'
 import { researchCompletedDesignCss } from './research-completed-design.mjs'
 import { patchResearchComponentHeaderNote, researchComponentHeaderNoteCss } from './research-component-header-note.mjs'
 import { patchResearchOfficeResize } from './research-office-resize.mjs'
 import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs'
 import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
+import { patchResearchCreationProgress } from './research-creation-progress.mjs'
+import { parseResearchMarketNativeTable, ResearchMarketNativeTable, researchMarketNativeTableCss } from './research-market-native-table.mjs'
+import { MARKET_REGULAR_FONT_CSS } from '../../packages/dsh-research-task-runtime/market-font.js'
 import { readFileSync } from 'node:fs'
 import { patchFigmaDerivedMenu, derivedMenuCss } from './figma-derived-menu-client.mjs'
 const iconData = Object.fromEntries(['branch','chevron','summary','plus','check','more','expand','global-link-light','global-container-light','global-voice-light','global-link-dark','global-container-dark','global-voice-dark'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/'+name+'.svg',import.meta.url)).toString('base64')]));
@@ -31,6 +35,12 @@ export function researchCanvasDotMetrics(canvasSize, viewport) {
 }
 export function researchCanvasDotRowPath(columns) {
   return Array.from({ length: columns }, (_, column) => 'M' + (6.855 + column * 13.71).toFixed(5) + ' 6.855h.07').join('');
+}
+export function researchCanvasUnobscuredWidth(bounds, panelBounds) {
+  if (!(bounds?.width > 0)) return 0;
+  if (!panelBounds || panelBounds.left <= bounds.left || panelBounds.left >= bounds.right ||
+      panelBounds.bottom <= bounds.top || panelBounds.top >= bounds.bottom) return bounds.width;
+  return Math.max(1, Math.min(bounds.width, panelBounds.left - bounds.left));
 }
 function ResearchCanvasDotGrid({ viewport, canvasSize }) {
   const id = 'odyssey-dots-' + (0, react.useId)().replaceAll(':', '');
@@ -72,6 +82,152 @@ function patchCanvasGraphicPrimitives(source) {
 
 export function patchFigmaFinalCanvas(source) {
   source = patchResearchCanvasDeferredHtml(source)
+  source = patchResearchCanvasViewportPersistence(source)
+  const marketResizeSource = `/* ODYSSEY_MARKET_METRICS_RESIZE */
+        function researchCanvasMinimumHeight(node, policy) {
+            if (node?.kind !== "generated-container") return policy.minHeight;
+            const spec = node.containerSpec;
+            const dimensions = researchMarketDimensions(node, true);
+            if (dimensions) return Number.isFinite(node.height) && node.height>0
+                ? Math.min(dimensions.height, node.height) : dimensions.height;
+            if (spec?.type !== "market" || spec.variant !== "metrics") return policy.minHeight;
+            const count = spec.items?.length || 0;
+            return count > 12 ? 320 : count > 6 ? 232 : 144;
+        }
+        function researchCanvasMinimumWidth(node, policy) {
+            if (node?.kind !== "generated-container") return policy.minWidth;
+            const spec=node.containerSpec;
+            const preferred=researchMarketDimensions(node,true)?.width ??
+                (spec?.type==='kpi'&&spec.items?.length===6?896:null) ??
+                (/data-research-kind="(?:news|reports)"/.test(spec?.html??'')?656:null);
+            if (!preferred) return policy.minWidth;
+            // Every generated family uses the same readable-width ratio. The
+            // content template determines its starting size, not a second
+            // unrelated drag rule.
+            const floor=Math.max(policy.minWidth,Math.min(preferred,Math.round(preferred*.72/8)*8));
+            return Number.isFinite(node.width)&&node.width>0?Math.min(floor,node.width):floor;
+        }`;
+  if (source.includes('/* ODYSSEY_MARKET_METRICS_RESIZE */')) {
+    source=block(source,'/* ODYSSEY_MARKET_METRICS_RESIZE */','function normalizeResearchCanvasNodeGeometry(node) {',marketResizeSource);
+  } else {
+    source=exact(source,'function normalizeResearchCanvasNodeGeometry(node) {',marketResizeSource+'\n        function normalizeResearchCanvasNodeGeometry(node) {');
+    source=exact(source,'Math.max(policy.minHeight, finiteHeight)','Math.max(researchCanvasMinimumHeight(node, policy), finiteHeight)');
+    source=exact(source,'Math.max(policy.minHeight, geometry.height + sy * dy)','Math.max(researchCanvasMinimumHeight(node, policy), geometry.height + sy * dy)');
+  }
+  if(source.includes('Math.max(policy.minWidth, finiteWidth)'))source=exact(source,'Math.max(policy.minWidth, finiteWidth)','Math.max(researchCanvasMinimumWidth(node, policy), finiteWidth)');
+  if(source.includes('Math.max(policy.minWidth, geometry.width + sx * dx)'))source=exact(source,'Math.max(policy.minWidth, geometry.width + sx * dx)','Math.max(researchCanvasMinimumWidth(node, policy), geometry.width + sx * dx)');
+  const isolatedPointerResize = `/* ODYSSEY_POINTER_RESIZE_ISOLATED */
+                  update({files:snapshot.files.map(apply),artifacts:snapshot.artifacts.map(apply)},false);`;
+  const reflowingPointerResize = `/* ODYSSEY_POINTER_RESIZE_REFLOW */
+                  let artifacts=snapshot.artifacts.map(apply);
+                  for(const geometry of nodes) {
+                    const previous=snapshot.artifacts.find(node=>node.id===geometry.id);
+                    if(previous&&(Math.abs(previous.width-geometry.width)>2||Math.abs(previous.height-geometry.height)>2))
+                      artifacts=researchCanvasReflowGrowth(snapshot.artifacts,artifacts,geometry.id);
+                  }
+                  update({files:snapshot.files.map(apply),artifacts},false);`;
+  if (source.includes('/* ODYSSEY_POINTER_RESIZE_REFLOW */'))
+    source=exact(source,reflowingPointerResize,isolatedPointerResize);
+  else if (!source.includes('/* ODYSSEY_POINTER_RESIZE_ISOLATED */'))
+    source=exact(source,'update({files:snapshot.files.map(apply),artifacts:snapshot.artifacts.map(apply)},false);',isolatedPointerResize);
+  if(!source.includes('/* ODYSSEY_NATIVE_MARKET_TABLE */')) {
+    source=exact(source,'if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });',`/* ODYSSEY_NATIVE_MARKET_TABLE */
+            const nativeTable = spec.type === "html" ? researchMarketTableForSpec(spec) : null;
+            if (nativeTable) return (0, react_jsx_runtime.jsx)(ResearchMarketNativeTable, { data: nativeTable });
+            if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });`);
+  }
+  if (!source.includes('"data-research-market-panel": researchMarketDimensions(node)'))
+    source=exact(source,'"data-research-compact-chrome": compact || void 0,',
+      '"data-research-compact-chrome": compact || void 0, "data-research-market-panel": researchMarketDimensions(node) ? true : void 0,');
+  if(!source.includes('/* ODYSSEY_PREPARED_WORKBENCH_V1 */')) {
+    source=exact(source,"excerpt: p.error ?? '正在准备任务…', containerPrompt: p.prompt, refreshMinutes: 0,",`/* ODYSSEY_PREPARED_WORKBENCH_V1 */
+                        excerpt: p.preparedOutput ? researchContainerPlainText(parseResearchContainerSpec(p.preparedOutput)) : p.error ?? '正在准备任务…', containerPrompt: p.prompt, refreshMinutes: 0,`);
+    source=exact(source,"generationStatus: p.taskId ? 'queued' : 'failed', generationLastSeq: 0,","generationStatus: p.preparedOutput ? 'completed' : p.taskId ? 'queued' : 'failed', generationLastSeq: p.preparedOutput ? 1 : 0,");
+    source=exact(source,'containerSizePreset: p.size ?? researchComponentSize(p), workbenchId: plan.id,',`...(p.preparedOutput ? {containerSpec:parseResearchContainerSpec(p.preparedOutput),generationCompletedAt:Date.now(),lastSuccessfulAt:Date.now()} : {}),
+                        containerSizePreset: p.size ?? researchComponentSize(p), workbenchId: plan.id,`);
+  }
+  if(!source.includes('/* ODYSSEY_WORKBENCH_PLAN_HYDRATION */')) {
+    source=exact(source,
+      'if (plan.panels.every(p => existing.has(p.nodeId))) return true;',
+      `/* ODYSSEY_WORKBENCH_PLAN_HYDRATION */
+                    if (plan.panels.every(p => existing.has(p.nodeId))) {
+                        let changed = false;
+                        const artifacts = snapshot.artifacts.map(node => {
+                            const panel = plan.panels.find(p => p.nodeId === node.id);
+                            if (!panel || node.generationStatus !== 'queued' || node.generationTaskId) return node;
+                            if (panel.taskId) {
+                                changed = true;
+                                return { ...node, generationTaskId: panel.taskId,
+                                    generationStartedAt: node.generationStartedAt ?? plan.createdAt ?? Date.now() };
+                            }
+                            if (panel.error) {
+                                changed = true;
+                                return { ...node, generationStatus: 'failed', generationError: panel.error, excerpt: panel.error };
+                            }
+                            return node;
+                        });
+                        if (changed) commitUpdate({ artifacts }, true);
+                        /* ODYSSEY_WORKBENCH_PREPARED_HYDRATION */
+                        for (const panel of plan.panels) {
+                            const current = snapshot.artifacts.find(node => node.id === panel.nodeId);
+                            if (panel.preparedOutput && panel.taskId && current?.generationStatus !== 'completed') {
+                                this.applyGenerationInspection(panel.nodeId, {
+                                    taskId: panel.taskId, canvasNodeId: panel.nodeId,
+                                    state: 'completed', lastSeq: 1, events: [], finalOutput: panel.preparedOutput
+                                });
+                            }
+                        }
+                        return true;
+                    }`);
+  }
+  if(source.includes('/* ODYSSEY_WORKBENCH_PLAN_HYDRATION */') && !source.includes('/* ODYSSEY_WORKBENCH_PREPARED_HYDRATION */')) {
+    source=exact(source,
+      'if (changed) commitUpdate({ artifacts }, true);\n                        return true;',
+      `if (changed) commitUpdate({ artifacts }, true);
+                        /* ODYSSEY_WORKBENCH_PREPARED_HYDRATION */
+                        for (const panel of plan.panels) {
+                            const current = snapshot.artifacts.find(node => node.id === panel.nodeId);
+                            if (panel.preparedOutput && panel.taskId && current?.generationStatus !== 'completed') {
+                                this.applyGenerationInspection(panel.nodeId, {
+                                    taskId: panel.taskId, canvasNodeId: panel.nodeId,
+                                    state: 'completed', lastSeq: 1, events: [], finalOutput: panel.preparedOutput
+                                });
+                            }
+                        }
+                        return true;`);
+  }
+  source=source.replace("generationStatus: p.preparedOutput ? 'completed' : p.taskId ? 'queued' : 'failed',",
+    "generationStatus: p.preparedOutput ? 'completed' : p.taskId || p.pending ? 'queued' : 'failed',");
+  if(!source.includes('/* ODYSSEY_PREPARED_WORKBENCH_LAYOUT */')) {
+    source=exact(source,"const nodes = plan.panels.filter(p => !existing.has(p.nodeId)).map(p => canonicalResearchCanvasArtifactNode({", "let nodes = plan.panels.filter(p => !existing.has(p.nodeId)).map(p => canonicalResearchCanvasArtifactNode({");
+    source=exact(source,'if (nodes.some(n => n === null)) return false;\n                    const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);',`if (nodes.some(n => n === null)) return false;
+                    /* ODYSSEY_PREPARED_WORKBENCH_LAYOUT */
+                    if(nodes.every(n=>n.generationStatus==='completed')&&nodes.some(researchMarketDimensions)) {
+                        const packed=researchBentoLayout(nodes,researchCanvasVisibleArea(snapshot),new Map(),{fitColumns:true});
+                        nodes=packed.nodes.map(n=>({...n,x:n.x+n.width/2,y:bottom+n.y+n.height/2}));
+                    }
+                    const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);`);
+  }
+  if(!source.includes('/* ODYSSEY_PREPARED_WORKBENCH_VIEWPORT */')) {
+    source=exact(source,"/* ODYSSEY_PREPARED_WORKBENCH_LAYOUT */\n                    if(nodes.every(n=>n.generationStatus==='completed')&&nodes.some(researchMarketDimensions)) {",`/* ODYSSEY_PREPARED_WORKBENCH_LAYOUT */
+                    /* ODYSSEY_PREPARED_WORKBENCH_VIEWPORT */
+                    let preparedViewport = null;
+                    if(nodes.every(n=>n.generationStatus==='completed')&&nodes.some(researchMarketDimensions)) {`);
+    source=exact(source,'nodes=packed.nodes.map(n=>({...n,x:n.x+n.width/2,y:bottom+n.y+n.height/2}));',`nodes=packed.nodes.map(n=>({...n,x:n.x+n.width/2,y:bottom+n.y+n.height/2}));
+                        preparedViewport=researchWorkbenchViewport(nodes,snapshot.viewport,researchCanvasVisibleArea(snapshot));`);
+    source=exact(source,'persistClipboardBatch({ ...snapshot, artifacts, selection });\n                    commitUpdate({ artifacts, selection }, false);',`persistClipboardBatch({ ...snapshot, artifacts, selection });
+                    if(preparedViewport){autoFitManaged=true;autoFitActive=true;}
+                    commitUpdate({ artifacts, selection, ...(preparedViewport ? {viewport:preparedViewport} : {}) }, false);`);
+  }
+  if(source.includes('/* ODYSSEY_PREPARED_WORKBENCH_VIEWPORT */')&&!source.includes('if(preparedViewport){autoFitManaged=true;autoFitActive=true;}'))
+    source=exact(source,'commitUpdate({ artifacts, selection, ...(preparedViewport ? {viewport:preparedViewport} : {}) }, false);',
+      'if(preparedViewport){autoFitManaged=true;autoFitActive=true;}\n                    commitUpdate({ artifacts, selection, ...(preparedViewport ? {viewport:preparedViewport} : {}) }, false);');
+  source=source.replaceAll("nodes.every(n=>n.generationStatus==='completed')&&nodes.some(researchMarketDimensions)",
+    "nodes.every(n=>n.generationStatus==='completed')");
+  source=source.replace('researchWorkspace.setViewport(researchWorkbenchViewport(nodes, researchWorkspaceSnapshot2.viewport, researchWorkspaceSnapshot2.canvasSize));',
+    'researchWorkspace.setViewport(researchWorkbenchViewport(nodes, researchWorkspaceSnapshot2.viewport, researchCanvasVisibleArea(researchWorkspaceSnapshot2)));');
+  source=source.replace('researchWorkspace.setViewport(researchWorkbenchViewport(nodes, researchWorkspaceSnapshot2.viewport, researchCanvasVisibleArea(researchWorkspaceSnapshot2)));',
+    'researchWorkspace.setViewport(researchWorkbenchViewport(nodes, researchWorkspaceSnapshot2.viewport, researchCanvasVisibleArea(researchWorkspaceSnapshot2)), true);');
   if(!source.includes('/* ODYSSEY_MARKET_COMPLETION_BOUNDS */')) {
     source=exact(source,'function normalizeResearchCanvasNodeGeometry(node) {',`function normalizeResearchCanvasNodeGeometry(node) {
     /* ODYSSEY_MARKET_COMPLETION_BOUNDS */
@@ -103,10 +259,13 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))))));
+  return patchResearchCreationProgress(patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)))))));
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);
+  source=source.replaceAll('const availableWidth=bounds.width;', 'const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);');
+  if(!source.includes('function researchCanvasUnobscuredWidth('))
+    source=exact(source,'function researchCanvasDotMetrics(',researchCanvasUnobscuredWidth.toString().replace('export ','')+'\nfunction researchCanvasDotMetrics(');
   // Empty creation cards use a compact 400 × 280 editor; completed content chooses its own size.
   source=source.replace('containerPrompt: "", containerSizePreset: "medium"', 'containerPrompt: "", containerSizePreset: "small"');
   source=source.replace('kind === "generated-container" ? { width: 320, height: 220 }', 'kind === "generated-container" ? { width: 400, height: 280 }');
@@ -160,8 +319,9 @@ function patchFigmaCanvasContent(source) {
   source=source.replace('.rScV5Q_richNode:not([open])>.rScV5Q_previewBody:has(iframe)>.rScV5Q_previewShield{pointer-events:auto}', '.rScV5Q_richNode:not([data-selected=true]):not([open])>.rScV5Q_previewBody:has(iframe)>.rScV5Q_previewShield{pointer-events:auto}');
   source=source.replace('workspace.setCanvasSize({ width: bounds.width, height: bounds.height });', `const panel=root.ownerDocument.querySelector('.t8lSSG_panel:has([data-research-active=true])');
                     const panelBounds=panel?.getBoundingClientRect();
-                    const availableWidth=bounds.width;
-                    workspace.setCanvasSize({ width: bounds.width, height: bounds.height, availableWidth });`);
+                    const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);
+                    const visibleHeight=Math.max(0,Math.min(bounds.height,(root.ownerDocument.defaultView?.innerHeight??bounds.bottom)-bounds.top));
+                    workspace.setCanvasSize({ width: bounds.width, height: bounds.height, visibleHeight, availableWidth });`);
   // One viewport contract is used by the floating toolbar, drafts, and automatic growth.
   source=block(source,source.includes('function researchCanvasVisibleArea(')?'function researchCanvasVisibleArea(':'function researchCanvasViewportPlacement(', 'function researchCanvasGeneratedPlacement(', placementSource);
   source=source.replace('function researchGenerationSizedNode(node, geometry) {','function researchGenerationSizedNode(node, geometry, snapshot = null) {');
@@ -178,9 +338,9 @@ function patchFigmaCanvasContent(source) {
     if(geometry===null)return node;
     const next={...node,...geometry};
     if(node.sizeMode!=='manual'&&['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result'].includes(node.kind)){
-      // Automatic growth selects a complete preset, including both dimensions.
-      const preset=researchBentoSize(next,next),size=RESEARCH_BENTO_SIZES[preset];
-      next.width=size.width;next.height=size.height;next.containerSizePreset=preset;
+      const dimensions=researchOptimalDimensions(next);
+      next.width=dimensions.width;next.height=dimensions.height;
+      next.containerSizePreset=researchBentoSize(next,dimensions);
     }
     if(node.sizeMode!=='manual'&&(['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result'].includes(node.kind)||node.creationMode==='selection')){
       const before=normalizeResearchCanvasNodeGeometry(node),after=normalizeResearchCanvasNodeGeometry(next);
@@ -264,11 +424,12 @@ function patchFigmaCanvasContent(source) {
                     }
                     const bounds=root.getBoundingClientRect();
                     const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),panelBounds=panel?.getBoundingClientRect();
-                    const availableWidth=bounds.width;
+                    const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);
                     if(panel!==observedPanel){if(observedPanel)observer?.unobserve(observedPanel);if(panel)observer?.observe(panel);observedPanel=panel;}
                     const current=workspace.getSnapshot(),previous=current.canvasSize;
-                    if(previous.width!==bounds.width||previous.height!==bounds.height||previous.availableWidth!==availableWidth){
-                      const next={width:bounds.width,height:bounds.height,availableWidth};
+                    const visibleHeight=Math.max(0,Math.min(bounds.height,(root.ownerDocument.defaultView?.innerHeight??bounds.bottom)-bounds.top));
+                    if(previous.width!==bounds.width||previous.height!==bounds.height||previous.visibleHeight!==visibleHeight||previous.availableWidth!==availableWidth){
+                      const next={width:bounds.width,height:bounds.height,visibleHeight,availableWidth};
                       const viewport=researchCanvasViewportForAreaChange(current,next);
                       workspace.setCanvasSize(next);
                       if(viewport!==current.viewport)workspace.setViewport(viewport);
@@ -279,6 +440,11 @@ function patchFigmaCanvasContent(source) {
                     if(document.visibilityState!=="hidden"&&panel?.getAnimations?.().some(animation=>animation.playState==='running'))scheduleSync();
                 };
                 `);
+  // Existing packaged clients already contain the resize compositor patch
+  // above. Upgrade that path as well so visibleHeight reaches the workspace.
+  if(!source.includes('previous.visibleHeight!==visibleHeight'))source=exact(source,
+    'if(previous.width!==bounds.width||previous.height!==bounds.height||previous.availableWidth!==availableWidth){\n                      const next={width:bounds.width,height:bounds.height,availableWidth};',
+    'const visibleHeight=Math.max(0,Math.min(bounds.height,(root.ownerDocument.defaultView?.innerHeight??bounds.bottom)-bounds.top));\n                    if(previous.width!==bounds.width||previous.height!==bounds.height||previous.visibleHeight!==visibleHeight||previous.availableWidth!==availableWidth){\n                      const next={width:bounds.width,height:bounds.height,visibleHeight,availableWidth};');
   source=source.replace('syncSize();\n\t\t\t\tconst observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleSync);', 'let observedPanel=null;\n                const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleSync);\n                syncSize();');
   // Upgrade already patched clients too; streamed descendants do not resize the panel.
   source=source.replace("record.target?.closest?.('.t8lSSG_panel')", "record.target?.matches?.('.t8lSSG_panel')").replace("||node.closest?.('.t8lSSG_panel')", '');
@@ -303,10 +469,30 @@ function patchFigmaCanvasContent(source) {
     source=source.slice(0,start)+part+source.slice(end);
   }
   source=source.replace('workspace.organizeCanvas(researchCanvasMeasureForArrange(rootRef.current, canvasNodes));', 'if(workspace.organizeCanvas(researchCanvasMeasureForArrange(rootRef.current, canvasNodes)))setClipboardFeedback({state:"success",kind:"arrange",message:"已整理 "+canvasNodes.length+" 个组件"});');
+  source=source.replace('const update = (patch, persist) => publish({ ...snapshot, ...researchCanvasFitAutomaticUpdate(snapshot,patch) }, persist);',
+    `const update = (patch, persist) => { const {__odysseyArrange,...safePatch}=patch;return publish({ ...snapshot, ...(__odysseyArrange?safePatch:researchCanvasFitAutomaticUpdate(snapshot,safePatch)),...(__odysseyArrange?{__odysseyArrange:true}:{}) }, persist); };`);
+  source=source.replace('const changedGroups = new Set(next.artifacts.filter(n => n.workbenchId && !n.containerSizePreset',
+    'const changedGroups = new Set((next.__odysseyArrange?[]:next.artifacts).filter(n => n.workbenchId && !n.containerSizePreset');
+  source=source.replace('commitUpdate(organized, true);','commitUpdate({...organized,__odysseyArrange:true}, true);');
+  source=source.replace('...cached.dimensions, sizeMode: "manual"', '...cached.dimensions, intrinsic: true, sizeMode: "manual"');
   source=source.replace('"data-research-clipboard-feedback": "", "data-state": clipboardFeedback.state,', '"data-research-clipboard-feedback": "", "data-research-arrange-feedback":clipboardFeedback.kind==="arrange"?"":undefined, "data-state": clipboardFeedback.state,');
   source=source.replace("pointerEvents: 'none' }, children: clipboardFeedback.message", `pointerEvents: 'none' }, children: clipboardFeedback.kind==='arrange'?(0,react_jsx_runtime.jsxs)('span',{className:'odyssey-arrange-toast',children:[(0,react_jsx_runtime.jsx)('img',{src:${JSON.stringify(iconData.check)},width:16,height:16,alt:''}),clipboardFeedback.message]}):clipboardFeedback.message`);
   source=block(source,'function researchCanvasMeasureForArrange(',source.includes('/* SHERLOCK_FIGMA_CANVAS_FINAL_20260910 */')?'const RESEARCH_BENTO_SIZES':'function researchCanvasOrganizedLayout(',`function researchCanvasMeasureForArrange(root,nodes) {
-    return new Map(nodes.filter(n=>n.kind==='generated-container').map(n=>{const size=researchBentoSize(n);const {width,height}=RESEARCH_BENTO_SIZES[size];return [n.id,{width,height,sizeMode:n.sizeMode==='manual'?'manual':'auto'}];}));
+    const measured=new Map();
+    if(!root)return measured;
+    for(const node of nodes){
+      if(node.kind!=='generated-container'||node.generationStatus!=='completed'||researchMarketDimensions(node,true))continue;
+      const card=Array.from(root.querySelectorAll('[data-research-artifact-card]')).find(el=>el.getAttribute('data-research-artifact-card')===node.id);
+      const content=card?.querySelector('.rScV5Q_containerContent,[data-research-artifact-content]');
+      if(!content||content.querySelector('iframe')||node.containerSpec?.type==='chart')continue;
+      const width=researchOptimalDimensions(node).width,original=content.getAttribute('style'),beforeHeight=content.clientHeight;
+      try{
+        content.style.width=(width-2)+'px';content.style.height='auto';content.style.minHeight='0';content.style.maxHeight='none';
+        const natural=Math.max(content.scrollHeight,content.firstElementChild?.scrollHeight||0);
+        if(natural>0&&Math.abs(natural-beforeHeight)>8)measured.set(node.id,{width,height:Math.max(220,Math.ceil(natural+RESEARCH_CANVAS_TITLE_HEIGHT+2)),intrinsic:true});
+      }finally{if(original===null)content.removeAttribute('style');else content.setAttribute('style',original);}
+    }
+    return measured;
   }`);
   source=source.replace('[selectionToolbarWidth, setSelectionToolbarWidth] = (0, react.useState)(420)', '[selectionToolbarWidth, setSelectionToolbarWidth] = (0, react.useState)(320)');
   source=source.replace('snapshot.canvasSize.width - selectionToolbarWidth / 2 - 8', '(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width) - selectionToolbarWidth / 2 - 8');
@@ -346,19 +532,18 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
   source = source.replace('const width = 520;\n\t\t\tconst height = 300;', 'const width = kind === "summary" ? 320 : 656;\n\t\t\tconst height = kind === "summary" ? 220 : 456;')
   source = block(source, 'function researchContainerFinalGeometry(', 'function researchContainerRefreshDue(', `function researchContainerFinalGeometry(node, spec) {
   if(node?.sizeMode==='manual'||spec===null)return null;
-  const {width,height}=RESEARCH_BENTO_SIZES[researchBentoSize({...node,containerSpec:spec})];
+  const {width,height}=researchOptimalDimensions({...node,containerSpec:spec});
   return {width,height};
 }`)
   source = block(source, 'function researchGenerationFinalGeometry(', 'function researchContainerFinalGeometry(', `function researchGenerationFinalGeometry(node,text) {
   if(node?.sizeMode==='manual')return null;
-  const size=node.kind==='generated-mind-map'?'large':(text?.length??0)>160?'large':'small';
-  const {width,height}=RESEARCH_BENTO_SIZES[size]; return {width,height};
+  if(node.kind==='generated-mind-map')return {width:656,height:456};
+  const {width,height}=researchOptimalDimensions({...node,content:text});return {width,height};
 }`)
-  // Generated components choose a grid specification; intrinsic content cannot grow beyond L.
+  // Completed HTML may exceed the preset when its actual content needs room.
   source = exact(source, 'if (node.sizeMode === "manual" || node.kind === "web-link" || node.kind === "generated-container" && node.containerSpec?.type === "html"', 'if (node.sizeMode === "manual" || node.kind === "generated-container" || node.kind === "web-link" || node.kind === "generated-container" && node.containerSpec?.type === "html"')
-  source = exact(source, 'const width = Math.max(before.width, dimensions.width);\n\t\t\tconst height = Math.min(RESEARCH_CANVAS_MAX_AUTO_HEIGHT, Math.max(before.height, dimensions.height));', `const fitting=RESEARCH_BENTO_SIZES[researchBentoSize(node,dimensions)];
-            const width = Math.max(Math.min(before.width,656),fitting.width);
-            const height = Math.max(Math.min(before.height,456),fitting.height);`)
+  source = exact(source, 'const width = Math.max(before.width, dimensions.width);\n\t\t\tconst height = Math.min(RESEARCH_CANVAS_MAX_AUTO_HEIGHT, Math.max(before.height, dimensions.height));', `const width = Math.max(320,dimensions.width);
+            const height = Math.max(220,dimensions.height);`)
   source = exact(source, 'if (researchHtmlAutoGeometry(current.node, dimensions) === null) return;', `card?.toggleAttribute('data-research-content-overflow', dimensions.width>(current.node?.sizeMode==='manual'?current.node.width:656) || dimensions.height>(current.node?.sizeMode==='manual'?current.node.height:456));
                     if(current.node?.sizeMode==='manual'||growths>=3||Date.now()-startedAt>8000)return;
                     if (researchHtmlAutoGeometry(current.node, dimensions) === null) return;`)
@@ -399,7 +584,8 @@ const organizedLayoutSource = `function researchCanvasOrganizedLayout(files, art
 
 const placementSource = `function researchCanvasVisibleArea(snapshot) {
   const size=snapshot?.canvasSize??{};
-  return {width:size.availableWidth>0?Math.min(size.width,size.availableWidth):size.width,height:Math.max(0,(size.height??0)-88)};
+  const height=size.visibleHeight>0?Math.min(size.height,size.visibleHeight):size.height;
+  return {width:size.availableWidth>0?Math.min(size.width,size.availableWidth):size.width,height:Math.max(0,(height??0)-88)};
 }
 function researchCanvasViewportForAreaChange(snapshot,next) {
   // Figma 66: resizing the viewport must never reframe existing components.
@@ -574,14 +760,21 @@ const responsiveSource = `function ResearchContainerContent(props) {
   (0,react.useLayoutEffect)(()=>{const element=ref.current;if(!element)return;const update=()=>{if(element.clientWidth>0)setWidth(element.clientWidth);};const Observer=element.ownerDocument.defaultView?.ResizeObserver,observer=Observer?new Observer(update):null;observer?.observe(element);update();return()=>observer?.disconnect();},[node.id]);
   return (0,react_jsx_runtime.jsx)('div',{ref,className:'odyssey-component-content','data-component-summary':false,'data-component-width':width<480?'narrow':width<760?'medium':'wide',children:
     (0,react_jsx_runtime.jsx)('div',{className:'odyssey-component-primary',children:(0,react_jsx_runtime.jsx)(ResearchContainerBody,props)})});
-}`
+}
+${parseResearchMarketNativeTable.toString()}
+const researchMarketNativeTableCache = new WeakMap();
+function researchMarketTableForSpec(spec) {
+  if (!researchMarketNativeTableCache.has(spec)) researchMarketNativeTableCache.set(spec, parseResearchMarketNativeTable(spec.html, document));
+  return researchMarketNativeTableCache.get(spec);
+}
+${ResearchMarketNativeTable.toString()}`
 
 export const canvasCss = `
 body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerMarkdown,.rScV5Q_containerTableScroll,.rScV5Q_mindMap,.odyssey-generation-records,textarea){scrollbar-width:none!important}
 body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) ::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
 .rScV5Q_root[data-space-pressed=true]:after{content:none;border:0}
 [data-research-empty-viewport]{box-sizing:border-box;white-space:nowrap}
-.rScV5Q_root{--sherlock-research-dot:rgba(139,139,139,.4)!important;background-image:none!important}body[data-ds-dark-theme] .rScV5Q_root{--sherlock-research-dot:rgba(184,184,184,.46)!important}
+.rScV5Q_root{--sherlock-research-dot:var(--odyssey-dot)!important;background-image:none!important}
 .rScV5Q_root>.odyssey-canvas-dots{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;color:var(--sherlock-research-dot)}
 .odyssey-global-icon{display:inline-block;width:16px;height:16px;flex:0 0 16px;background:center/16px 16px no-repeat}
 .odyssey-global-link{background-image:url('${iconData['global-link-light']}')}body[data-ds-dark-theme] .odyssey-global-link{background-image:url('${iconData['global-link-dark']}')}
@@ -593,6 +786,8 @@ body[data-ds-dark-theme] .rScV5Q_globalToolbar[data-research-global-toolbar]{bac
 
 [data-research-compact-chrome]{--odyssey-card:#f1f2f4;--odyssey-content:#fff;--odyssey-card-border:#e1e1e1;--odyssey-card-text:#292b2f;--odyssey-card-muted:#81858c;--odyssey-select:#a2c4ff;border-radius:12px!important;border-color:transparent!important;outline:none!important;box-shadow:none!important;container-type:size}
 body[data-ds-dark-theme] [data-research-compact-chrome]{--odyssey-card:#292a2d;--odyssey-content:#171717;--odyssey-card-border:#424242;--odyssey-card-text:#ececed;--odyssey-card-muted:#98999f;--odyssey-select:#1b77ff}
+[data-research-compact-chrome][data-research-market-panel]{--odyssey-card:#fafafa;--odyssey-content:#fafafa}
+body[data-ds-dark-theme] [data-research-compact-chrome][data-research-market-panel]{--odyssey-card:#303030;--odyssey-content:#303030}
 [data-research-compact-chrome][data-selected=true]{border-color:transparent!important;outline:none!important;box-shadow:none!important}
 /* The selection and drag ring belongs to the foreground overlay. A shadow on
    the host paints behind full-bleed previews and disappears under their edge. */
@@ -726,4 +921,4 @@ body[data-ds-dark-theme] .odyssey-generation-records{background:#ffffff05}
 .rScV5Q_generationFailure>strong{font-size:16px;font-weight:500}.rScV5Q_generationFailure>span{color:var(--odyssey-card-muted)}.rScV5Q_generationFailure details{font-size:12px;line-height:20px}.rScV5Q_generationFailure details p{margin:8px 0}.rScV5Q_generationFailure button{margin-left:auto}
 @keyframes odyssey-ring{to{transform:rotate(360deg)}}@keyframes odyssey-skeleton{50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.rScV5Q_generationSpinner,.odyssey-generation-skeleton i,.odyssey-derived-skeleton>i{animation:none}}
-` + derivedMenuCss + researchCompletedDesignCss + researchComponentHeaderNoteCss + generationCss
+` + derivedMenuCss + researchCompletedDesignCss + researchComponentHeaderNoteCss + generationCss + MARKET_REGULAR_FONT_CSS + researchMarketNativeTableCss

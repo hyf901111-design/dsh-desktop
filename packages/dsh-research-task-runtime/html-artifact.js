@@ -1,7 +1,7 @@
 import { sharedComponentRuntime } from './shared-component-runtime.js'
 import { createCanvasUseSurface, installCanvasUseSurface } from './canvas-use-surface.js'
 import { researchNotoFontCss } from './component-noto-font.js'
-import { AG_GRID_VISUAL, AG_GRID_HTML_SURFACE_CSS } from './ag-grid-visual.js'
+import { MARKET_PRESENTATION_CSS } from './market-presentation.js'
 export const MAX_RESEARCH_HTML_BYTES = 200_000
 export const RESEARCH_HTML_LIMIT_ERROR = 'HTML 页面超过 200 KB 上限，请精简内容后重试。'
 
@@ -31,17 +31,32 @@ export function researchHtmlText(html) {
 }
 
 // Older trusted dashboard outputs duplicated full metric explanations on the
-// face of each card. Compact the display copy only; saved data and expandable
-// details remain intact. The signature avoids rewriting arbitrary model HTML.
+// face of each card. Keep one visible copy of a short note; longer notes keep
+// their expandable detail. The signature avoids rewriting arbitrary model HTML.
 export function compactHostDashboardHtml(html) {
-  if (typeof html !== 'string' || !html.includes('<main class="list research-metrics">') ||
+  if (typeof html !== 'string') return html
+  // Previously saved host-rendered market cards keep their original HTML.
+  // Apply the same surface and disclosure geometry while loading their preview.
+  if (html.includes('data-sherlock-market=') && html.includes('data-sherlock-design=') && !html.includes('ODYSSEY_MARKET_PRESENTATION_V2'))
+    html = html.replace('</head>', `<style>${MARKET_PRESENTATION_CSS}</style></head>`)
+  // Saved host-rendered cards retain their HTML. Apply the same density fixes
+  // on load so users do not need to regenerate a board to see the correction.
+  if (html.includes('<body data-sherlock-market="breadth"') && html.includes('data-sherlock-design="21m-20260923-v1"') && !html.includes('data-sherlock-breadth-refined')) {
+    const css = `<style data-sherlock-breadth-refined>html,body[data-sherlock-market="breadth"]{height:100%}body[data-sherlock-market="breadth"]{padding:8px 12px}.market-breadth{height:100%;display:grid;grid-template-columns:minmax(220px,1fr) minmax(260px,1fr);gap:18px;align-items:stretch}.market-distribution{min-width:0;display:flex;flex-direction:column;justify-content:center}.market-counts{font-size:10px;line-height:16px;gap:8px}.market-bar{height:10px;margin:9px 0}.market-distribution>.market-detail{line-height:15px}.market-breadth .market-metrics{min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:center}.market-breadth .market-metric{min-height:64px;padding:7px 8px;background:var(--sherlock-surface-muted)}.market-breadth .market-value{font-size:16px;line-height:20px;margin-top:1px}.market-breadth .market-detail{font-size:8px;line-height:11px;margin-top:0}@media(max-width:620px){.market-breadth{grid-template-columns:1fr;gap:8px;height:auto}.market-breadth .market-metric{min-height:54px}}</style>`
+    return html.replace('</head>', `${css}</head>`)
+  }
+  if ((html.includes('<body data-research-kind="news"') || html.includes('<body data-research-kind="reports"')) && html.includes("const all=Array.from(document.querySelectorAll('article'))") && !html.includes('class="feed-meta"') && !html.includes('data-sherlock-feed-refined')) {
+    const css = `<style data-sherlock-feed-refined>body{padding:6px 10px 10px;background:var(--sherlock-surface)}.controls{margin:4px 0 5px;gap:6px;align-items:center}.controls input,.controls select,.controls button{height:27px;padding:3px 7px;font-size:11px;border-radius:4px}.controls input{min-width:120px}.list.research-feed{gap:0}.research-feed-item{display:grid;grid-template-columns:104px minmax(0,1fr);gap:0 10px;padding:6px 2px 7px;min-height:52px;border-bottom:.5px solid var(--sherlock-border)}.research-feed-item .meta{grid-row:1/3;min-width:0;font-size:10px;line-height:14px}.research-feed-item h2{margin:0;font-size:12px;line-height:16px;font-weight:600}.research-feed-item details{margin:1px 0 0;font-size:10px;line-height:14px;color:var(--sherlock-muted)}.research-feed-item details summary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden;list-style:none}.research-feed-item details[open] summary{-webkit-line-clamp:unset}.research-feed-item details p{margin:3px 0}.research-feed-item details .muted{display:none}#count{margin:0 0 3px;font-size:9px}@media(max-width:390px){.research-feed-item{grid-template-columns:1fr}.research-feed-item .meta{grid-row:auto}}</style>`
+    return html.replace('</head>', `${css}</head>`)
+  }
+  if (!html.includes('<main class="list research-metrics">') ||
       !html.includes("const all=Array.from(document.querySelectorAll('article'))")) return html
   const count = (html.match(/<article class="research-metric"/g) ?? []).length
   let display = count >= 5
     ? html.replace('grid-template-columns:repeat(auto-fit,minmax(min(120px,100%),1fr))', 'grid-template-columns:repeat(3,minmax(0,1fr))')
     : html
-  display = display.replace(/<p class="research-metric-detail">([^<]+)<\/p><details><summary>详情<\/summary><p>\1<\/p>/g,
-    (match, detail) => detail.length > 32 ? `<details><summary>查看口径</summary><p>${detail}</p>` : match)
+  display = display.replace(/<p class="research-metric-detail">([^<]+)<\/p><details><summary>详情<\/summary><p>\1<\/p><\/details>/g,
+    (match, detail) => detail.length > 40 ? `<details><summary>查看口径</summary><p>${detail}</p></details>` : `<p class="research-metric-detail">${detail}</p>`)
   return display
 }
 
@@ -64,7 +79,7 @@ const RESEARCH_PROFILE_PUNCTUATION_DESCRIPTOR = Object.freeze({
 // Figma 21M: current monochrome controls + 21H fund72/Lumos content roles.
 // Controls and business colors are independent; chart/status colors never become actions.
 const researchComponentPalette = (p) => Object.freeze({ ...p,
-  'accent-foreground': p['control-on-primary'], accent: p['control-primary'], link: p['control-primary'],
+  'accent-foreground': p['control-on-primary'], accent: p['control-primary'], link: p['control-text'],
   'accent-soft': p['row-selected'], 'row-bg': p.surface, 'chart-background': p.surface,
   'holdings-change-negative': p.text,
   'chart-foreground': p.text, 'chart-foreground-muted': p.muted, 'chart-label': p.muted,
@@ -76,11 +91,10 @@ const researchComponentPalette = (p) => Object.freeze({ ...p,
 })
 export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
   light: researchComponentPalette({
-    bg: AG_GRID_VISUAL.light.background, surface: AG_GRID_VISUAL.light.background, 'surface-muted': AG_GRID_VISUAL.light.alternate, text: AG_GRID_VISUAL.light.foreground, muted: AG_GRID_VISUAL.light.muted, border: AG_GRID_VISUAL.light.border,
-    'control-bg': AG_GRID_VISUAL.light.background, 'control-border': AG_GRID_VISUAL.light.border, 'control-text': AG_GRID_VISUAL.light.foreground, 'control-muted': AG_GRID_VISUAL.light.muted,
-    'control-primary': AG_GRID_VISUAL.light.accent, 'control-on-primary': '#ffffff', 'control-secondary': AG_GRID_VISUAL.light.header,
-    'row-alternate': AG_GRID_VISUAL.light.alternate, 'row-selected': AG_GRID_VISUAL.light.hover,
-    header: AG_GRID_VISUAL.light.header,
+    bg: '#fafafa', surface: '#fafafa', 'surface-muted': '#ebf1f5', text: '#202629', muted: '#65717a', border: '#e1e6e9',
+    'control-bg': '#ffffff', 'control-border': '#d9d9d9', 'control-text': '#333333', 'control-muted': '#777777',
+    'control-primary': '#191919', 'control-on-primary': '#ffffff', 'control-secondary': '#f0f0f0',
+    'row-alternate': '#f0f3f5', 'row-selected': '#f0f0f0',
     'status-success-bg': '#e2f2eb', 'status-success-fg': '#08745d',
     'status-warning-bg': '#faf0db', 'status-warning-fg': '#876000',
     'status-info-bg': '#e2eef7', 'status-info-fg': '#005096',
@@ -93,11 +107,10 @@ export const RESEARCH_COMPONENT_PALETTES = Object.freeze({
     'heatmap-high': '#005096', 'heatmap-medium': '#0078b4', 'heatmap-low': '#d5e6f1'
   }),
   dark: researchComponentPalette({
-    bg: AG_GRID_VISUAL.dark.background, surface: AG_GRID_VISUAL.dark.background, 'surface-muted': AG_GRID_VISUAL.dark.alternate, text: AG_GRID_VISUAL.dark.foreground, muted: AG_GRID_VISUAL.dark.muted, border: AG_GRID_VISUAL.dark.border,
-    'control-bg': AG_GRID_VISUAL.dark.background, 'control-border': AG_GRID_VISUAL.dark.border, 'control-text': AG_GRID_VISUAL.dark.foreground, 'control-muted': AG_GRID_VISUAL.dark.muted,
-    'control-primary': AG_GRID_VISUAL.dark.accent, 'control-on-primary': '#ffffff', 'control-secondary': AG_GRID_VISUAL.dark.header,
-    'row-alternate': AG_GRID_VISUAL.dark.alternate, 'row-selected': AG_GRID_VISUAL.dark.hover,
-    header: AG_GRID_VISUAL.dark.header,
+    bg: '#303030', surface: '#303030', 'surface-muted': '#3b3b3b', text: '#f4f5f6', muted: '#b9bec3', border: '#454545',
+    'control-bg': '#292929', 'control-border': '#505050', 'control-text': '#f5f5f5', 'control-muted': '#a0a0a0',
+    'control-primary': '#f5f5f5', 'control-on-primary': '#191919', 'control-secondary': '#383838',
+    'row-alternate': '#353b40', 'row-selected': '#383838',
     'status-success-bg': '#24473d', 'status-success-fg': '#82dabb',
     'status-warning-bg': '#50452c', 'status-warning-fg': '#f6d077',
     'status-info-bg': '#244459', 'status-info-fg': '#9bd8f6',
@@ -149,19 +162,21 @@ ${['success','warning','danger','info'].map(status => `:where([data-sherlock-sta
 // colors are deliberately outside this selector set. Existing artifacts keep their DOM/JS.
 export const RESEARCH_COMPONENT_CONTROLS_CSS = `@layer sherlock-component-controls{
 :is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],summary,input,select,textarea){color:var(--sherlock-control-text)!important;background-color:var(--sherlock-control-bg)!important;background-image:none!important;border-color:var(--sherlock-control-border)!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)!important;caret-color:var(--sherlock-control-text)!important}
-:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:27px!important;min-height:27px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:3px!important;padding:0 var(--sherlock-control-padding-right,10px) 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,12px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
+body[data-sherlock-market] details>summary{background-color:var(--sherlock-surface)!important;color:var(--sherlock-text)!important}
+body[data-sherlock-market] details>summary:hover{background-color:var(--sherlock-surface-muted)!important}
+:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 var(--sherlock-control-padding-right,10px) 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,10px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) :is(select:not([multiple]):not([size]),select[size="1"]){--sherlock-control-padding-right:32px;appearance:none!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='-1 -1 10 6' fill='none' stroke='%23777777' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='miter' stroke-miterlimit='4'%3E%3Cpath d='M0 0L4 4L8 0'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:10px 6px!important;background-origin:border-box!important;background-position:right 11px center!important}
 :root[data-sherlock-theme="dark"] :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) :is(select:not([multiple]):not([size]),select[size="1"]){background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='-1 -1 10 6' fill='none' stroke='%23a0a0a0' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='miter' stroke-miterlimit='4'%3E%3Cpath d='M0 0L4 4L8 0'/%3E%3C/svg%3E")!important}
 [data-sherlock-profile="fund72-holdings"] input.research-filter-search{--sherlock-control-padding-left:29px;padding-left:29px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23777777' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:12px 12px!important;background-position:10px center!important}
 :root[data-sherlock-theme="dark"] [data-sherlock-profile="fund72-holdings"] input.research-filter-search{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a0a0a0' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important}
-textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:3px!important;padding:8px 10px!important;font-size:12px!important;line-height:16px!important}
-:is(button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]){height:27px!important;min-height:27px!important;border:0!important;border-radius:3px!important;padding:0 10px!important;font-size:12px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
+textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:10px!important;line-height:16px!important}
+:is(button,[role="button"],input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
 :is(button[type="submit"],button[aria-pressed="true"],input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
 /* Market42 sort headers are text controls inside the original compact table header. */
 [data-sherlock-market="table"] th button{height:auto!important;min-height:0!important;padding:0!important;border-radius:0!important;font-size:9px!important;line-height:11px!important;font-weight:400!important;background-color:transparent!important;color:var(--sherlock-market-table-muted)!important}
 :is(input[type="checkbox"],input[type="radio"]){width:13px!important;height:13px!important;min-height:0!important;padding:0!important;accent-color:var(--sherlock-control-primary)!important}
 input[type="checkbox"]{border-radius:3px!important}
-:is(button,[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-primary)!important;outline-offset:2px!important}
+:is(button,[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-text)!important;outline-offset:2px!important}
 :is(input,textarea)::placeholder{color:var(--sherlock-control-muted)!important;opacity:1!important}
 :is(button,[role="button"],input,select,textarea):disabled{opacity:.45!important;cursor:not-allowed!important}
 a[href],a[href]:visited{color:var(--sherlock-control-text)!important;text-underline-offset:3px;text-decoration-thickness:1px}
@@ -528,12 +543,22 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   document.addEventListener('pointerdown', event => {
     if (event.isTrusted && event.button === 0) parent.postMessage({ type: 'sherlock-content-pointer', metaKey: event.metaKey, shiftKey: event.shiftKey }, '*')
   }, true)
+  const canScrollWheel = (target, deltaX, deltaY) => {
+    for (let e = target?.nodeType === 1 ? target : target?.parentElement; e; e = e.parentElement) {
+      const s = getComputedStyle(e), root = e === document.scrollingElement
+      const scrolls = (d, overflow, size, view, pos) => d && (root || /^(auto|scroll|overlay)$/.test(overflow)) && size > view + 1 && (d > 0 ? pos < size - view - 1 : pos > 1)
+      if (scrolls(deltaY, s.overflowY, e.scrollHeight, e.clientHeight, e.scrollTop) || scrolls(deltaX, s.overflowX, e.scrollWidth, e.clientWidth, e.scrollLeft)) return true
+    }
+    return false
+  }
   document.addEventListener('wheel', event => {
-    if (!event.isTrusted || (!event.metaKey && !event.ctrlKey)) return
+    if (!event.isTrusted) return
+    if (!event.metaKey && !event.ctrlKey && canScrollWheel(event.target, event.deltaX, event.deltaY)) return
     event.preventDefault()
     event.stopImmediatePropagation()
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? document.documentElement.clientHeight : 1
-    parent.postMessage({ type: 'sherlock-content-zoom', x: Math.max(0, Math.min(1, event.clientX / Math.max(1, document.documentElement.clientWidth))), y: Math.max(0, Math.min(1, event.clientY / Math.max(1, document.documentElement.clientHeight))), deltaX: Math.max(-4096, Math.min(4096, event.deltaX * unit)), deltaY: Math.max(-4096, Math.min(4096, event.deltaY * unit)), ctrlKey: event.ctrlKey }, '*')
+    const coordinates = { x: Math.max(0, Math.min(1, event.clientX / Math.max(1, document.documentElement.clientWidth))), y: Math.max(0, Math.min(1, event.clientY / Math.max(1, document.documentElement.clientHeight))), deltaX: Math.max(-4096, Math.min(4096, event.deltaX * unit)), deltaY: Math.max(-4096, Math.min(4096, event.deltaY * unit)) }
+    parent.postMessage(event.metaKey || event.ctrlKey ? { type: 'sherlock-content-zoom', ...coordinates, ctrlKey: event.ctrlKey } : { type: 'sherlock-content-pan', ...coordinates }, '*')
   }, { capture: true, passive: false })
   document.addEventListener('click', event => {
     const anchor = event.target?.closest?.('a[href]')
@@ -718,6 +743,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
     }
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data)) {
       if (data.type === 'sherlock-content-zoom' && Object.keys(data).length === 6 && [data.x, data.y, data.deltaX, data.deltaY].every(Number.isFinite) && data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1 && Math.abs(data.deltaX) <= 4096 && Math.abs(data.deltaY) <= 4096 && typeof data.ctrlKey === 'boolean') { parent.postMessage(data, '*'); return }
+      if (data.type === 'sherlock-content-pan' && Object.keys(data).length === 5 && [data.x, data.y, data.deltaX, data.deltaY].every(Number.isFinite) && data.x >= 0 && data.x <= 1 && data.y >= 0 && data.y <= 1 && Math.abs(data.deltaX) <= 4096 && Math.abs(data.deltaY) <= 4096) { parent.postMessage(data, '*'); return }
       if (data.type === 'sherlock-content-hover' && Object.keys(data).length === 2 && typeof data.active === 'boolean') { parent.postMessage({ type: data.type, active: data.active }, '*'); return }
       if (data.type === 'sherlock-content-pointer' && Object.keys(data).length === 3 && typeof data.metaKey === 'boolean' && typeof data.shiftKey === 'boolean') { parent.postMessage({ type: data.type, metaKey: data.metaKey, shiftKey: data.shiftKey }, '*'); return }
       if (data.type === 'sherlock-content-failed' && Object.keys(data).length === 1) { parent.postMessage({ type: data.type }, '*'); return }
@@ -776,7 +802,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
   const baseStyle = `@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
-  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${AG_GRID_HTML_SURFACE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${displayHtml}</body></html>`
+  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${displayHtml}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
   const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`
   return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 EWork Odyssey 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`

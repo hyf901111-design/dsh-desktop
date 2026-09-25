@@ -1,3 +1,40 @@
+// A whole-board fit makes ten Figma-sized cards unreadable. Fit a useful
+// opening group and leave later cards on the pannable canvas at their real size.
+export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
+  if (!nodes.length || !(canvasSize?.width > 0) || !(canvasSize?.height > 0)) return viewport;
+  const width = Math.min(canvasSize.width, canvasSize.availableWidth > 0 ? canvasSize.availableWidth : canvasSize.width);
+  const height = canvasSize.height;
+  // researchCanvasVisibleArea already reserves 88px for the floating toolbar.
+  // Keep a further 16px of reading space below a complete event strip.
+  const hasEvents = nodes.some(n => n.containerSpec?.html?.includes('data-sherlock-market="events"'));
+  const bottomInset = hasEvents ? 16 : 32;
+  const bounds = values => ({
+    left: Math.min(...values.map(n => n.x - n.width / 2)), right: Math.max(...values.map(n => n.x + n.width / 2)),
+    top: Math.min(...values.map(n => n.y - n.height / 2)), bottom: Math.max(...values.map(n => n.y + n.height / 2))
+  });
+  const fit = b => Math.min(1, Math.max(1, width - 64) / (b.right - b.left), Math.max(1, height - 32 - bottomInset) / (b.bottom - b.top));
+  const all = bounds(nodes);
+  let chosen = all;
+  // The shared 21M design marker also appears on the six-card medical preset.
+  // Its event strip must join the full-board fit instead of the opening subset.
+  const financial = !hasEvents && nodes.some(n => n.containerSpec?.html?.includes('data-sherlock-design="21m-20260923-v1"'));
+  const readableScale = financial ? .85 : .7;
+  if (nodes.length > (financial ? 2 : 4) && fit(all) < readableScale) {
+    const ordered = [...nodes].sort((a,b) => (a.workbenchIndex ?? 0) - (b.workbenchIndex ?? 0));
+    chosen = bounds(ordered.slice(0, 1));
+    for (let count = 2; count <= Math.min(4, ordered.length); count++) {
+      const candidate = bounds(ordered.slice(0, count));
+      if (fit(candidate) < readableScale) break;
+      chosen = candidate;
+    }
+  }
+  const scale = Math.max(.08, fit(chosen));
+  return { scale, x: width / 2 - (chosen.left + chosen.right) / 2 * scale,
+    // A partial fit is a reading position. Start at the top of the board so
+    // subsequent rows remain visible instead of centering one card in space.
+    y: chosen === all ? 32 + (height - 32 - bottomInset) / 2 - (chosen.top + chosen.bottom) / 2 * scale : 32 - chosen.top * scale };
+}
+
 // Arrange once on the active-to-terminal transition; later renders and edits
 // cannot trigger another arrange. Keep user-positioned cards untouched.
 export function settleWorkbenchLayout(before, next, pack) {
@@ -12,12 +49,16 @@ export function settleWorkbenchLayout(before, next, pack) {
     const top = Math.min(...nodes.map(n=>n.y-n.height/2));
     const positions = new Map(packed.nodes.map(n=>[n.id,{...n,x:left+n.x+n.width/2,y:top+n.y+n.height/2}]));
     next = {...next,artifacts:next.artifacts.map(n=>positions.get(n.id)??n),
-      ...(packed.viewport ? {viewport:{...packed.viewport,x:packed.viewport.x-left*packed.viewport.scale,y:packed.viewport.y-top*packed.viewport.scale}} : {})};
+      viewport: readableWorkbenchViewport([...positions.values()], next.viewport, next.canvasSize)};
   }
   return next;
 }
 
 export function patchResearchWorkbenchGrowth(source) {
+  const viewportStart = source.indexOf('function researchWorkbenchViewport(');
+  const viewportEnd = source.indexOf('function researchCanvasReturnViewport(', viewportStart);
+  if (viewportStart < 0 || viewportEnd < viewportStart) throw Error('Workbench viewport anchor missing');
+  source = source.slice(0, viewportStart) + readableWorkbenchViewport.toString().replace('readableWorkbenchViewport', 'researchWorkbenchViewport') + '\n\t\t' + source.slice(viewportEnd);
   const start = source.indexOf('function researchCanvasReflowGrowth(')
   const end = source.indexOf('function researchGenerationSizedNode(', start)
   if (start < 0 || end < start) throw Error('Workbench growth anchor missing')
@@ -46,7 +87,7 @@ export function patchResearchWorkbenchGrowth(source) {
     }
     return shifted;
   }
-${settleWorkbenchLayout.toString()}
+${settleWorkbenchLayout.toString().replaceAll('readableWorkbenchViewport(', 'researchWorkbenchViewport(')}
 function researchWorkbenchGrowthViewport(before,next) {
     next=settleWorkbenchLayout(before,next,researchBentoLayout);
     const size=next.canvasSize, width=Math.min(size?.width??0,size?.availableWidth??Infinity),height=size?.height??0;

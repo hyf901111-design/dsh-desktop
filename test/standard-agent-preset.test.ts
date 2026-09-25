@@ -164,6 +164,8 @@ describe('Sherlock standard agent preset policy', () => {
     expect(build.filter(p => p.id !== 'persona')).toEqual(standard.filter(p => p.id !== 'persona'))
     const persona = build.find(p => p.id === 'persona').config.text
     expect(persona).toContain('research_workbench_create')
+    expect(persona).toContain('without per-panel model calls')
+    expect(persona).not.toContain('generationMode:"parallel"')
     expect(persona).toContain('For simple factual questions')
     const { resolveSessionPreset } = await import('@deepseek-ai/dsh-agent-presets')
     expect(resolveSessionPreset({ header: { version: 0, id: SessionId('build-test'), createdAt: 1, agentPreset: 'build' }, events: [] })).toBe('build')

@@ -1072,7 +1072,7 @@ function patchConversationTabIcon(source) {
   part = replaceExact(part, 'onDropTab, getTabIcon, getTabBadge } = props;', `onDropTab, getTabIcon: nativeGetTabIcon, getTabBadge } = props;
     ${marker}
     const getTabIcon = tab => tab.id === 'sherlock-research-conversation' || tab.type === 'sherlock-research-conversation'
-      ? (0, react_jsx_runtime.jsx)('svg', {width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,'data-conversation-tab-icon':true,children:(0, react_jsx_runtime.jsx)('path',{d:'M13.5 7.5a5.5 5.5 0 0 1-5.5 5.5H3l-1 1V7.5a5.75 5.75 0 0 1 11.5 0Z'})})
+      ? (0, react_jsx_runtime.jsx)('svg', {width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.25,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,'data-conversation-tab-icon':true,children:(0, react_jsx_runtime.jsx)('path',{d:'M13.5 7.5a5.5 5.5 0 0 1-5.5 5.5H3l-1 1V7.5a5.75 5.75 0 0 1 11.5 0Z'})})
       : nativeGetTabIcon?.(tab);`, 'conversation tab icon')
   return source.slice(0, start) + part + source.slice(end)
 }

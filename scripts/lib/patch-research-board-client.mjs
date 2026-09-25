@@ -12,12 +12,12 @@ import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, join } from 'node:path'
 import { compactHostDashboardHtml, researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
+import { MARKET_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/market-presentation.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
-const agGridVisualSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/ag-grid-visual.js'), 'utf8')).replace(/^export /gm, '')
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
   .replace(/^export /gm, '')
-  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1'+agGridVisualSource+'\nconst researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n')
+  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n')
   .replace(/\bparseResearchHtmlArtifact\(/g, 'parseResearchContainerSpec(')
 const START = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_BEGIN */',
   END = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_END */'
@@ -594,6 +594,34 @@ function generationResultPatch(source) {
     `children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 }), (${retained}) ? "应用结果" : "重试"]`)
   return canvasInteractionPatch(source + '\n/* SHERLOCK_GENERATION_RESULT_V1 */')
 }
+export function researchPreviewCanConsumeWheel(target, boundary, deltaX, deltaY) {
+  for (let element = target?.nodeType === 1 ? target : target?.parentElement; element; element = element.parentElement) {
+    const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element)
+    if (style) {
+      const scrolls = (delta, overflow, size, visible, position) =>
+        delta !== 0 && /^(auto|scroll|overlay)$/u.test(overflow) && size > visible + 1 &&
+        (delta > 0 ? position < size - visible - 1 : position > 1)
+      if (scrolls(deltaY, style.overflowY, element.scrollHeight, element.clientHeight, element.scrollTop) ||
+          scrolls(deltaX, style.overflowX, element.scrollWidth, element.clientWidth, element.scrollLeft)) return true
+    }
+    if (element === boundary) break
+  }
+  return false
+}
+
+export function canvasWheelPassThroughPatch(source) {
+  if (source.includes('/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */')) return source
+  if (source.includes('/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V1 */')) return replace(source,
+    'frame?.querySelector?.("[data-research-artifact-card]")',
+    'frame?.matches?.("[data-research-artifact-card]")') + '\n/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */'
+  source = replace(source,
+    'if (!event.metaKey && !event.ctrlKey && interactivePreview) return;',
+    `const preview = selected && event.target?.closest?.("[data-research-preview-interactive]");
+                    const passToCanvas = preview && frame?.matches?.("[data-research-artifact-card]") && !preview.querySelector("iframe") && !researchPreviewCanConsumeWheel(event.target, preview, event.deltaX, event.deltaY);
+                    if (!event.metaKey && !event.ctrlKey && interactivePreview && !event.__sherlockCanvasPan && !passToCanvas) return;`)
+  return source + `\nconst researchPreviewCanConsumeWheel = ${researchPreviewCanConsumeWheel.toString()};\n/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */`
+}
+
 function canvasInteractionPatch(source) {
   source = generationFeedbackPatch(source)
   if (!source.includes('/* SHERLOCK_CHART_ARRANGE_STABLE_V1 */')) {
@@ -612,7 +640,7 @@ function canvasInteractionPatch(source) {
       "const measuredHeight = Math.min(maxHeight, Math.max(RESEARCH_CANVAS_NODE_POLICIES.assistant.minHeight, naturalHeight + RESEARCH_CANVAS_TITLE_HEIGHT + 2));\n                    const height = measuredHeight > before.height && measuredHeight - before.height <= 2 ? before.height : measuredHeight;\n                    measured.set(node.id, { ...before, width, height, sizeMode: 'manual' });")
     source += '\n/* SHERLOCK_ARRANGE_BORDER_STABLE_V1 */'
   }
-  if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return patchFigmaFilePreview(patchFigmaFinalCanvas(source))
+  if (source.includes('/* SHERLOCK_CANVAS_INTERACTION_V1 */')) return canvasWheelPassThroughPatch(patchFigmaFilePreview(patchFigmaFinalCanvas(source)))
   source = replace(source,
     'const interactivePreview = event.target?.closest?.("[data-research-preview-interactive],[data-research-selection-actions],[data-research-create-popover]");',
     `const frame = event.target?.closest?.("[data-research-node-id]");
@@ -637,7 +665,7 @@ function canvasInteractionPatch(source) {
                     const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
                     if (organized === null) return false;
                     organized.viewport = researchWorkbenchViewport([...organized.files, ...organized.artifacts], organized.viewport, snapshot.canvasSize);` + source.slice(end)
-  return patchFigmaFilePreview(patchFigmaFinalCanvas(source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */'))
+  return canvasWheelPassThroughPatch(patchFigmaFilePreview(patchFigmaFinalCanvas(source + '\n/* SHERLOCK_CANVAS_INTERACTION_V1 */')))
 }
 
 function generationFeedbackPatch(source) {
@@ -665,10 +693,13 @@ function generationFeedbackPatch(source) {
   return generationActivityClockPatch(source + `\n/* SHERLOCK_GENERATION_FEEDBACK_V1 */\nif(typeof document!=="undefined"){const style=document.createElement("style");style.dataset.sherlockGenerationFeedback="";style.textContent=${JSON.stringify(css)};document.head.appendChild(style);}\n`)
 }
 
-function patchLegacyDashboardPreview(source) {
+export function patchLegacyDashboardPreview(source) {
   const previewStart = 'function buildResearchHtmlPreview(html, title = '
   if (!source.includes('function compactHostDashboardHtml(html) {'))
     source = replace(source, previewStart, `${compactHostDashboardHtml.toString()}\n${previewStart}`)
+  if (!source.includes('const MARKET_PRESENTATION_CSS = '))
+    source = replace(source, 'function compactHostDashboardHtml(html) {',
+      `const MARKET_PRESENTATION_CSS = ${JSON.stringify(MARKET_PRESENTATION_CSS)};\nfunction compactHostDashboardHtml(html) {`)
   if (!source.includes('const displayHtml = compactHostDashboardHtml(html)')) {
     source = replace(source, "  const theme = initialTheme === 'dark' ? 'dark' : 'light'", "  const displayHtml = compactHostDashboardHtml(html)\n  const theme = initialTheme === 'dark' ? 'dark' : 'light'")
     source = replace(source, '<body>${html}</body></html>', '<body>${displayHtml}</body></html>')

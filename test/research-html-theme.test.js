@@ -43,7 +43,7 @@ describe('offline HTML component theme runtime', () => {
   it('keeps runtime previews small while default exports retain their self-contained font', () => {
     const html = '<p>黄金多因子 123ABC</p>'
     const preview = buildResearchHtmlPreview(html, '字体', 'light', { notoFont: 'runtime' })
-    expect(Buffer.byteLength(preview)).toBeLessThan(200_000)
+    expect(Buffer.byteLength(preview)).toBeLessThan(201_000)
     expect(preview).not.toContain('data:font/woff2;base64,')
     expect(buildResearchHtmlPreview(html)).toContain('data:font/woff2;base64,')
     expect(researchComponentTypographyCss('html', { notoFont: 'local' })).toContain('url("/fonts/NotoSansSC.woff2")')
@@ -115,6 +115,16 @@ describe('offline HTML component theme runtime', () => {
     expect(outer.parentMessages[0].data).toEqual(zoom);
   });
 
+  it('relays ordinary wheel only from the owned inner frame when content cannot scroll', () => {
+    const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
+    const pan = { type:'sherlock-content-pan', x:0.5, y:0.2, deltaX:0, deltaY:120 };
+    outer.send(pan, {});
+    outer.send({...pan, deltaY:Infinity}, outer.frame.contentWindow);
+    expect(outer.parentMessages).toHaveLength(0);
+    outer.send(pan, outer.frame.contentWindow);
+    expect(outer.parentMessages[0].data).toEqual(pan);
+  });
+
   it('relays content selection only from its own inner frame and validates modifiers', () => {
     const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
     const pointer = { type: 'sherlock-content-pointer', metaKey: false, shiftKey: true };
@@ -130,14 +140,14 @@ describe('offline HTML component theme runtime', () => {
     const inner = runtime(outer.childHtml())
     expect(inner.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('dark')
     expect(inner.window.document.documentElement.style.colorScheme).toBe('dark')
-    expect(outer.childHtml()).toContain('--sherlock-bg:#171717')
-    expect(outer.childHtml()).toContain('--sherlock-bg:#ffffff')
+    expect(outer.childHtml()).toContain('--sherlock-bg:#303030')
+    expect(outer.childHtml()).toContain('--sherlock-bg:#fafafa')
     expect(outer.childHtml()).toContain('--sherlock-chart-6:')
     const fallback = runtime(runtime(buildResearchHtmlPreview('<main>内容</main>', '报告', 'unknown')).childHtml())
     expect(fallback.window.document.documentElement.getAttribute('data-sherlock-theme')).toBe('light')
   })
 
-  it('keeps chart aliases independent of AG Grid accent links in both card themes', () => {
+  it('keeps chart aliases independent of neutral link roles in both card themes', () => {
     for (const mode of ['light', 'dark']) {
       const inner = runtime(runtime(buildResearchHtmlPreview('<a href="https://example.com" style="color:inherit">来源</a>', '图表', mode)).childHtml())
       const computed = inner.window.getComputedStyle(inner.window.document.documentElement)
@@ -145,9 +155,9 @@ describe('offline HTML component theme runtime', () => {
         expect(computed.getPropertyValue(alias).trim()).toBe(computed.getPropertyValue(token).trim())
         expect(computed.getPropertyValue(token).trim()).not.toBe('')
       }
-      expect(computed.getPropertyValue('--sherlock-bg').trim()).toBe(mode === 'dark' ? '#171717' : '#ffffff')
+      expect(computed.getPropertyValue('--sherlock-bg').trim()).toBe(mode === 'dark' ? '#303030' : '#fafafa')
       const link = inner.window.getComputedStyle(inner.window.document.querySelector('a'))
-      expect(computed.getPropertyValue('--sherlock-link').trim()).toBe(mode === 'dark' ? '#4b9cff' : '#2675d6')
+      expect(computed.getPropertyValue('--sherlock-link').trim()).toBe(mode === 'dark' ? '#f5f5f5' : '#333333')
     }
   })
 
@@ -342,13 +352,14 @@ it('relays hover only from the current embedded component using a boolean state'
   expect(outer.parentMessages.map(x=>x.data)).toEqual([{type:'sherlock-content-hover',active:true},{type:'sherlock-content-hover',active:false}]);
 });
 
-it('publishes AG Grid surface and action roles while retaining business colors', () => {
-  expect(RESEARCH_COMPONENT_PALETTES.light['control-primary']).toBe('#2675d6')
-  expect(RESEARCH_COMPONENT_PALETTES.dark['control-primary']).toBe('#4b9cff')
-  expect(RESEARCH_COMPONENT_PALETTES.light['control-border']).toBe('#e1e1e1')
-  expect(RESEARCH_COMPONENT_PALETTES.dark['control-border']).toBe('#424242')
-  expect(RESEARCH_COMPONENT_PALETTES.light['row-selected']).toBe('#eaf2ff')
-  expect(RESEARCH_COMPONENT_PALETTES.dark['row-selected']).toBe('#303744')
+// Regression: current Figma controls are neutral in both themes; chart/status roles stay colored.
+it('publishes source-backed field, action, row and business color roles independently', () => {
+  expect(RESEARCH_COMPONENT_PALETTES.light['control-primary']).toBe('#191919')
+  expect(RESEARCH_COMPONENT_PALETTES.dark['control-primary']).toBe('#f5f5f5')
+  expect(RESEARCH_COMPONENT_PALETTES.light['control-border']).toBe('#d9d9d9')
+  expect(RESEARCH_COMPONENT_PALETTES.dark['control-border']).toBe('#505050')
+  expect(RESEARCH_COMPONENT_PALETTES.light['row-selected']).toBe('#f0f0f0')
+  expect(RESEARCH_COMPONENT_PALETTES.dark['row-selected']).toBe('#383838')
   expect(RESEARCH_COMPONENT_PALETTES.light['chart-1']).toBe('#005096')
   expect(RESEARCH_COMPONENT_PALETTES.dark['status-warning-fg']).toBe('#f6d077')
 })

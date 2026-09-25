@@ -4,7 +4,7 @@ const asset = name => 'data:image/svg+xml;base64,' + readFileSync(new URL(`../..
 const dotFieldData = JSON.parse(readFileSync(new URL('../../build/figma-generation/dot-fields.json', import.meta.url), 'utf8'))
 const icons = Object.fromEntries(['stop', 'retry', 'restart', 'resume', 'process', 'running', 'waiting', 'error', 'stopped'].map(name => [name, asset(name)]))
 
-function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExpand, onRetry, retryDisabled, retryLabel, onResume }) {
+function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExpand, onRetry, retryDisabled, retryLabel, onResume, phaseOverride, detailOverride }) {
   /* GENERATION_ICONS */
   const presentation = researchGenerationPresentation(node)
   const [reduceMotion, setReduceMotion] = (0, react.useState)(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -14,7 +14,6 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [])
-  const [progressIndex, setProgressIndex] = (0, react.useState)(0)
   const [pending, setPending] = (0, react.useState)(false)
   const [requestError, setRequestError] = (0, react.useState)('')
   const [clock, setClock] = (0, react.useState)(Date.now)
@@ -26,7 +25,7 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
   ;(0, react.useEffect)(() => { if (active) onExpand?.('loading') }, [node.id, node.generationTaskId])
   ;(0, react.useEffect)(() => {
     epoch.current++; started.current = node.generationStartedAt ?? (node.generationStatus === 'queued' ? null : Date.now())
-    setProgressIndex(0); setPending(false); setRequestError('')
+    setPending(false); setRequestError('')
     return () => { epoch.current++ }
   }, [node.id, node.generationTaskId])
   ;(0, react.useEffect)(() => { if (!active) { epoch.current++; setPending(false) } }, [active])
@@ -48,17 +47,9 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
   const rows = researchGenerationLog(node).filter(row => active || row.id !== 'preparing')
   const progressRows = rows.filter(row => row.id !== 'preparing')
   const last = progressRows.at(-1)?.text
-  const progressKey = progressRows.map(row => row.id + ':' + row.text).join('|')
-  ;(0, react.useEffect)(() => {
-    setProgressIndex(0)
-    if (!moving || progressRows.length < 2 || reduceMotion) return
-    const timer = setInterval(() => setProgressIndex(value => value + 1), 600)
-    return () => clearInterval(timer)
-  }, [moving, node.generationTaskId, progressKey, reduceMotion])
-  const rolling = moving && !reduceMotion && progressRows.length > 1
-  const progress = rolling ? progressRows[(progressRows.length - 1 + progressIndex) % progressRows.length]?.text : last
-  const phase = ({ waiting: '等待开始', stopping: '正在停止生成…', stopped: '已停止生成', error: '暂时未能完成生成', paused: '已暂停生成' }[state] || presentation.title)
-  const detail = requestError || (state === 'error' ? researchPublicProgress(node.generationError || '已保留你的生成要求，可以重试。') : state === 'stopped' ? '已保留需求与已获取的信息，可以重新生成。' : progress || '正在准备任务…')
+  const progress = last
+  const phase = phaseOverride ?? ({ waiting: '等待开始', stopping: '正在停止生成…', stopped: '已停止生成', error: '暂时未能完成生成', paused: '已暂停生成' }[state] || presentation.title)
+  const detail = requestError || detailOverride || (state === 'error' ? researchPublicProgress(node.generationError || '已保留你的生成要求，可以重试。') : state === 'stopped' ? '已保留需求与已获取的信息，可以重新生成。' : progress || '正在准备任务…')
   const derived = researchIsDerivedNode(node)
   const sourceCount = new Set(node.sourceNodeIds ?? []).size
   const stop = async () => {
@@ -104,7 +95,7 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
         (0, react_jsx_runtime.jsx)('span', { className: 'odyssey-generation-state-icon', 'aria-hidden': true, style: { maskImage: 'url("' + glyphs[glyph] + '")', animationPlayState: moving ? 'running' : 'paused' }, 'data-generation-spinning': moving }),
         (0, react_jsx_runtime.jsx)('strong', { children: researchPublicProgress(node.title || '当前组件') }),
         (0, react_jsx_runtime.jsx)('div', { className: 'odyssey-generation-phase', role: 'status', children: phase }),
-        (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: (0, react_jsx_runtime.jsx)('span', { 'data-progress-ticker': rolling ? '' : undefined, children: detail }, node.generationTaskId + ':' + progressIndex + ':' + detail) }),
+        (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: (0, react_jsx_runtime.jsx)('span', { 'data-progress-ticker': moving && !reduceMotion ? '' : undefined, children: detail }, node.generationTaskId + ':' + detail) }),
         derived ? (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-sources': '', children: node.kind === 'generated-summary' ? '基于所选 ' + sourceCount + ' 个组件' : '来源：' + sourceCount + ' 个组件' }) : null
       ] }),
       (0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-generation-actions', 'aria-label': '生成操作', children: [
@@ -120,14 +111,14 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
 function ResearchGenerationDots({ moving }) {
   /* GENERATION_DOT_FIELDS */
   const element = (0, react.useRef)(null)
-  const phase = (0, react.useRef)(0)
+  const gloss = (0, react.useRef)(null)
   ;(0, react.useEffect)(() => {
     const canvas = element.current
+    const shine = gloss.current
     const context = canvas?.getContext?.('2d')
     if (!context || typeof Path2D === 'undefined') return
     const paths = ResearchGenerationDots.paths || (ResearchGenerationDots.paths = fields.shapes.map(path => new Path2D(path)))
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let frame = 0, previous = 0, paintedAt = 0, layoutTimer = 0, windowResizeTimer = 0, resizing = false
+    let layoutTimer = 0, windowResizeTimer = 0
     let width = 0, height = 0, scale = 1, points = [], color = ''
     const grid = fields.grid
     const draw = () => {
@@ -135,27 +126,21 @@ function ResearchGenerationDots({ moving }) {
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.globalCompositeOperation = 'lighter'
       context.fillStyle = color
-      const value = reduced.matches ? 0 : phase.current
       for (const point of points) {
         context.setTransform(scale, 0, 0, scale, point.x * scale, point.y * scale)
         context.globalAlpha = point.alpha
         context.fill(point.path)
       }
-      if (value > 0) {
-        const reach = 82, position = -reach + value * (width + height * .38 + reach * 2)
-        context.fillStyle = document.body.hasAttribute('data-ds-dark-theme') ? '#ffffff' : '#fdfdfd'
-        for (const point of points) {
-          const distance = Math.abs(point.x + point.y * .38 - position)
-          if (distance >= reach) continue
-          const light = Math.pow(1 - distance / reach, 2)
-          context.setTransform(scale, 0, 0, scale, point.x * scale, point.y * scale)
-          context.globalAlpha = Math.min(.82, point.alpha * light * 1.5)
-          context.fill(point.path)
-        }
-      }
       context.globalAlpha = 1
-      canvas.dataset.dotPhase = String(value)
+      canvas.dataset.dotPhase = '0'
       canvas.dataset.dotReady = 'true'
+      // The dot geometry is painted once. The compositor moves only the
+      // masked light layer, so active cards do not redraw thousands of paths.
+      if (shine) {
+        const mask = 'url("' + canvas.toDataURL('image/png') + '")'
+        shine.style.maskImage = mask
+        shine.style.webkitMaskImage = mask
+      }
     }
     const layout = () => {
       width = canvas.clientWidth; height = canvas.clientHeight
@@ -177,59 +162,72 @@ function ResearchGenerationDots({ moving }) {
       for (let row = 0; row < rows + 1; row++) for (let col = 0; col < cols + 1; col++) points.push(sample(row, col))
       canvas.dataset.dotGeometry = [width, height, points.length, points[0]?.x, points[0]?.y, points.at(-1)?.x, points.at(-1)?.y].join(':')
       canvas.dataset.dotProfile = theme + '-' + shape
-      resizing = false
       draw()
-    }
-    const tick = now => {
-      const before = phase.current
-      if (previous) phase.current = (phase.current + Math.min(100, now - previous) / 7000) % 1
-      if (phase.current > .995) phase.current = 0
-      previous = now
-      if (!resizing && (now - paintedAt >= 48 || phase.current < before)) { paintedAt = now; draw() }
-      frame = requestAnimationFrame(tick)
-    }
-    const motion = () => {
-      cancelAnimationFrame(frame); previous = 0
-      canvas.dataset.dotMoving = String(moving && !reduced.matches)
-      if (moving && !reduced.matches) frame = requestAnimationFrame(tick)
-      else draw()
     }
     const scheduleLayout = () => {
       const themeName = document.body.hasAttribute('data-ds-dark-theme') ? 'dark-' : 'light-'
       if (canvas.clientWidth === width && canvas.clientHeight === height && canvas.dataset.dotProfile?.startsWith(themeName)) return
-      resizing = true; clearTimeout(layoutTimer); layoutTimer = setTimeout(layout, 80)
+      clearTimeout(layoutTimer); layoutTimer = setTimeout(layout, 80)
     }
     const pauseWindowResize = () => {
-      resizing = true; clearTimeout(windowResizeTimer)
-      windowResizeTimer = setTimeout(() => { resizing = false; scheduleLayout(); if (!resizing) draw() }, 180)
+      clearTimeout(windowResizeTimer)
+      windowResizeTimer = setTimeout(scheduleLayout, 180)
     }
     const resize = new ResizeObserver(scheduleLayout)
     const theme = new MutationObserver(scheduleLayout)
     resize.observe(canvas); theme.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
-    reduced.addEventListener('change', motion)
     window.addEventListener('resize', pauseWindowResize)
-    layout(); motion()
-    return () => { cancelAnimationFrame(frame); clearTimeout(layoutTimer); clearTimeout(windowResizeTimer); resize.disconnect(); theme.disconnect(); reduced.removeEventListener('change', motion); window.removeEventListener('resize', pauseWindowResize) }
-  }, [moving])
-  return (0, react_jsx_runtime.jsx)('canvas', { ref: element, 'data-research-generation-dots': '', 'aria-hidden': true, style: { animationPlayState: moving ? 'running' : 'paused' } })
+    layout()
+    return () => { clearTimeout(layoutTimer); clearTimeout(windowResizeTimer); resize.disconnect(); theme.disconnect(); window.removeEventListener('resize', pauseWindowResize) }
+  }, [])
+  return (0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-generation-dot-field', 'aria-hidden': true, children: [
+    (0, react_jsx_runtime.jsx)('canvas', { ref: element, 'data-research-generation-dots': '', 'data-dot-moving': moving, style: { animationPlayState: moving ? 'running' : 'paused' } }),
+    (0, react_jsx_runtime.jsx)('div', { ref: gloss, 'data-research-generation-gloss': '', 'data-gloss-moving': moving, children: (0, react_jsx_runtime.jsx)('span', {}) })
+  ] })
 }
 
 function ResearchGenerationAction({ name, label, icon, invoke, expanded, disabled }) {
-  const [tip, setTip] = (0, react.useState)(false)
+  const button = (0, react.useRef)(null)
+  const tooltip = (0, react.useRef)(null)
+  const suppressed = (0, react.useRef)(false)
   const id = 'generation-tip-' + (0, react.useId)().replaceAll(':', '')
-  return (0, react_jsx_runtime.jsxs)('span', { className: 'odyssey-generation-action', children: [
+  ;(0, react.useEffect)(() => {
+    const tip = document.createElement('div')
+    tip.className = 'odyssey-generation-tooltip'
+    tip.id = id
+    tip.setAttribute('role', 'tooltip')
+    tip.textContent = label
+    document.body.appendChild(tip)
+    tooltip.current = tip
+    const place = () => {
+      if (tip.dataset.visible !== 'true' || !button.current) return
+      const rect = button.current.getBoundingClientRect()
+      const left = Math.max(8, Math.min(window.innerWidth - tip.offsetWidth - 8, rect.right - tip.offsetWidth))
+      const above = rect.top - tip.offsetHeight - 8
+      tip.style.left = left + 'px'
+      tip.style.top = (above >= 8 ? above : rect.bottom + 8) + 'px'
+    }
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    tip.place = place
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); tip.remove(); tooltip.current = null }
+  }, [id, label])
+  const show = () => { if (!suppressed.current && !disabled && tooltip.current) { tooltip.current.dataset.visible = 'true'; tooltip.current.place() } }
+  const hide = () => { if (tooltip.current) delete tooltip.current.dataset.visible }
+  return (0, react_jsx_runtime.jsx)('span', { className: 'odyssey-generation-action', children:
     (0, react_jsx_runtime.jsx)('button', {
-      type: 'button', disabled, 'aria-label': label, 'aria-expanded': expanded, 'aria-describedby': tip ? id : undefined,
+      ref: button, type: 'button', disabled, 'aria-label': label, 'aria-expanded': expanded, 'aria-describedby': id,
       'data-research-generation-toggle': name === 'process' ? '' : undefined,
       'data-research-generation-cancel': name === 'stop' ? '' : undefined,
-      onPointerEnter: () => setTip(true), onPointerLeave: () => setTip(false), onFocus: () => setTip(true), onBlur: () => setTip(false),
+      onPointerEnter: () => { suppressed.current = false; show() },
+      onPointerLeave: () => { suppressed.current = false; hide() },
+      onFocus: show, onBlur: hide,
       onPointerDown: event => event.stopPropagation(),
-      onKeyDown: event => { event.stopPropagation(); if (event.key === 'Escape') { event.preventDefault(); setTip(false) } },
-      onClick: event => { event.preventDefault(); event.stopPropagation(); setTip(false); invoke() },
+      onKeyDown: event => { event.stopPropagation(); if (event.key === 'Escape') { event.preventDefault(); suppressed.current = true; hide() } },
+      onClick: event => { event.preventDefault(); event.stopPropagation(); suppressed.current = true; hide(); invoke() },
       children: (0, react_jsx_runtime.jsx)('span', { 'aria-hidden': true, style: { maskImage: 'url("' + icon + '")' } })
-    }),
-    tip ? (0, react_jsx_runtime.jsx)('span', { role: 'tooltip', id, children: label }) : null
-  ] })
+    })
+  })
 }
 
 function researchTerminalGenerationEvents(events) {
@@ -253,6 +251,18 @@ function researchComponentPrompt(node, prompt) {
 export const componentPromptSource = researchComponentPrompt.toString()
 
 export function patchGenerationLifecycle(source) {
+  if (!source.includes('/* ODYSSEY_STRUCTURED_EXECUTION_PROGRESS */')) {
+    const anchor = 'for (const row of markers) append(row.id, row.text);\n\t\t\treturn rows.length ? rows.slice(-8)'
+    if (!source.includes(anchor)) throw Error('Missing generation log progress anchor')
+    source = source.replace(anchor, `for (const row of markers) append(row.id, row.text);
+            /* ODYSSEY_STRUCTURED_EXECUTION_PROGRESS */
+            if (/(?:^|\\n)\\s*\\{\\s*"(?:version|type|title)"/i.test(content)) {
+              const fields = (content.match(/"(?:label|date|summary|close)"\\s*:/g) ?? []).length;
+              append('structured-start', '正在填写结构化组件数据');
+              if (fields) append('structured-fields-' + fields, '已写入 ' + Math.min(fields, 999) + ' 个数据字段，正在校验内容');
+            }
+            return rows.length ? rows.slice(-8)`)
+  }
   source = source.replace('return {width:280,height:200,sizeMode:\'auto\',resizable:true};', 'return {width:320,height:220,sizeMode:\'auto\',resizable:true};')
   const promptStart = source.indexOf('function researchComponentPrompt('), promptEnd = source.indexOf('function researchAlignComponentPresets(', promptStart)
   if (promptStart < 0 || promptEnd < promptStart) throw Error('Missing component prompt contract')
@@ -322,7 +332,12 @@ export const generationCss = `
 [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#fafafa;--generation-title:#262626;--generation-phase:#575757;--generation-detail:#6e6e6e;--generation-icon:#666;--generation-action-icon:#666;--generation-time:#59636d;--generation-button:#fff;--generation-border:rgba(0,0,0,.12);box-sizing:border-box;position:relative;isolation:isolate;display:flex;justify-content:center;min-height:0;height:100%;width:100%;padding:50px 20px!important;overflow:hidden;border-radius:8px;background:var(--generation-bg);color:var(--generation-title);filter:none!important;backdrop-filter:none!important}
 body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#030303;--generation-title:#f5f5f5;--generation-phase:#dbdbdb;--generation-detail:#b0b0b0;--generation-icon:#bdbdbd;--generation-time:#b3bcc4;--generation-button:#353535;--generation-border:#696969;--generation-action-icon:#ccc}
 body [data-research-compact-chrome][data-research-artifact-card] .odyssey-generation-surface{background:var(--generation-bg)!important}
-[data-research-generation-dots]{position:absolute;inset:0;z-index:-1;pointer-events:none;width:100%;height:100%;opacity:1;mask-image:none}
+.odyssey-generation-dot-field{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+[data-research-generation-dots]{position:absolute;inset:0;pointer-events:none;width:100%;height:100%;opacity:1;mask-image:none}
+[data-research-generation-gloss]{position:absolute;inset:0;pointer-events:none;mask-size:100% 100%;mask-repeat:no-repeat;overflow:hidden}
+[data-research-generation-gloss][data-gloss-moving=false]{opacity:0}
+[data-research-generation-gloss]>span{position:absolute;top:-40%;left:-60%;width:55%;height:180%;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.16) 25%,rgba(255,255,255,.88) 50%,rgba(255,255,255,.16) 75%,transparent 100%);transform:skewX(-14deg);animation:odyssey-generation-gloss 7s linear infinite;will-change:transform}
+@keyframes odyssey-generation-gloss{to{transform:translate3d(310%,0,0) skewX(-14deg)}}
 [data-research-generation-foreground]{position:absolute;top:calc(50% - 51px);left:20px;right:20px;bottom:20px;display:flex;flex-direction:column;gap:10px;min-width:0;flex:none;max-height:100%;overflow:auto;scrollbar-width:none}
 .odyssey-generation-surface[data-process-expanded=true]>[data-research-generation-foreground]{visibility:hidden}
 .odyssey-generation-state-icon{display:block;flex:none;width:18px;height:18px;background:var(--generation-icon);mask-position:center;mask-size:18px 18px;mask-repeat:no-repeat}
@@ -342,16 +357,15 @@ body[data-ds-dark-theme] [data-generation-ui-state=error] .odyssey-generation-ph
 .odyssey-generation-action>button:focus-visible{outline:1px solid currentColor;outline-offset:2px}
 .odyssey-generation-action>button:disabled{opacity:.4;cursor:default}
 .odyssey-generation-action>button>span{display:block;width:13px;height:13px;background:currentColor;mask-size:13px 13px;mask-repeat:no-repeat;mask-position:center}
-.odyssey-generation-action>[role=tooltip]{position:absolute;top:calc(100% + 6px);right:0;z-index:6;white-space:nowrap;border-radius:4px;padding:5px 8px;background:#191919;color:#fff;font:400 12px/18px 'Noto Sans SC',sans-serif;pointer-events:none}
-body[data-ds-dark-theme] .odyssey-generation-action>[role=tooltip]{background:#f5f5f5;color:#191919}
-.odyssey-generation-action:not(:has([role=tooltip]))>button:is(:hover,:focus-visible)::after{content:attr(aria-label);position:absolute;top:calc(100% + 6px);right:0;z-index:6;white-space:nowrap;border-radius:4px;padding:5px 8px;background:#191919;color:#fff;font:400 12px/18px 'Noto Sans SC',sans-serif;pointer-events:none}
-body[data-ds-dark-theme] .odyssey-generation-action:not(:has([role=tooltip]))>button:is(:hover,:focus-visible)::after{background:#f5f5f5;color:#191919}
+.odyssey-generation-tooltip{box-sizing:border-box;position:fixed;z-index:2147480000;width:max-content;max-width:180px;white-space:nowrap;border:1px solid rgba(0,0,0,.1);border-radius:5px;padding:5px 8px;background:#fff;color:#252525;box-shadow:0 4px 16px rgba(0,0,0,.13);font:11px/18px 'Noto Sans SC',sans-serif;pointer-events:none;visibility:hidden}
+.odyssey-generation-tooltip[data-visible=true]{visibility:visible}
+body[data-ds-dark-theme] .odyssey-generation-tooltip{background:#383838;color:#f5f5f5;border-color:rgba(255,255,255,.18);box-shadow:0 4px 16px rgba(0,0,0,.35)}
 [data-research-compact-chrome] .odyssey-generation-surface>[data-research-generation-records]{position:absolute;inset:48px 20px 20px;z-index:2;margin:0;background:var(--generation-bg);border:1px solid var(--generation-border);border-radius:6px;padding:12px;font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--generation-phase);overflow:auto}
 .odyssey-generation-surface>[data-research-generation-records]>div{display:flex;gap:8px;overflow-wrap:anywhere}.odyssey-generation-surface>[data-research-generation-records] time{flex:none;color:var(--generation-detail)}
 /* Breakpoints are implementation choices; source anchors: wide 99, tall 251, compact 62. */
 @container(max-width:300px){[data-research-generation-foreground]{top:calc(50% - 59px)}}
 @container(max-height:240px){[data-research-generation-foreground]{top:calc(50% - 38px)}}
 @keyframes odyssey-generation-ring{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){[data-research-generation-dots],.odyssey-generation-state-icon{animation:none!important}.odyssey-generation-actions{transition:none}}
+@media(prefers-reduced-motion:reduce){[data-research-generation-gloss]>span,.odyssey-generation-state-icon{animation:none!important}[data-research-generation-gloss]{opacity:0!important}.odyssey-generation-actions{transition:none}}
 @media(hover:none){.odyssey-generation-actions{opacity:1;pointer-events:auto}}
 `

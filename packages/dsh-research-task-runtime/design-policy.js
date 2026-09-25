@@ -5,6 +5,24 @@ import { parse as parseScript } from '@babel/parser'
 export const DESIGN_POLICY_ERROR = 'COMPONENT_DESIGN_POLICY_REQUIRED'
 export const DESIGN_POLICY_REPAIR = '组件设计规范验收未通过。保留原始数据、来源、交互、共享状态和用户框选尺寸，只修复视觉实现，不得降级为静态说明。使用语义 button/input/select 等控件和宿主 --sherlock-control-* 黑白灰变量；主按钮使用 .research-primary 或 data-sherlock-variant="primary"，搭配 control-primary/control-on-primary。业务图表用 chart-*，状态用 status-*-bg/fg，不能把业务色用于控件。删除宿主 --sherlock-* 变量重定义及自造字体，继承宿主 DIN Pro / Noto Sans SC 字体或使用 --sherlock-font-sans。直接返回原 v1 schema 的完整 JSON。'
 
+// Correct mechanical host-style mistakes without changing data, layout, or script.
+// Other design failures still go through the existing model repair path.
+export function normalizeGeneratedHostStyles(html) {
+ let changed = false
+ const result = html.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi, (match, open, source, close) => {
+  let tree
+  try { tree = postcss.parse(source) } catch { return match }
+  tree.walkDecls(decl => {
+   if (decl.prop.toLowerCase().startsWith('--sherlock-')) { decl.remove(); changed = true }
+   else if (decl.prop.toLowerCase() === 'font-family' && declarationIssue(decl.prop, decl.value, false)) {
+    decl.value = 'var(--sherlock-font-sans)'; changed = true
+   }
+  })
+  return open + tree.toString() + close
+ })
+ return changed ? result : html
+}
+
 const CONTROLS = 'button,input,select,textarea,option,optgroup,summary,a,[role="button"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],.research-primary,.research-secondary,[data-sherlock-variant]'
 const COLOR_PROPERTIES = /^(?:color|background(?:-color|-image)?|(?:border|outline)(?:-(?:top|right|bottom|left))?(?:-color)?|accent-color|caret-color|fill|stroke|(?:box|text)-shadow|text-decoration-color)$/
 const BUSINESS_TOKEN = /^--sherlock-(?:accent(?:-|$)|chart-|status-)/

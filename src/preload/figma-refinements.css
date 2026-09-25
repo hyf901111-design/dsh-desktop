@@ -8,6 +8,40 @@ body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   padding:0 20px; grid-template-rows:none!important; overflow:visible;
   background:transparent; backdrop-filter:blur(32px); border:0; box-shadow:none;
 }
+/* Figma 361:6112: the 56 px header floats over the research canvas. The
+   canvas must reach behind the gradient or its transparent stop is invisible. */
+body .wSkVaW_root[data-odyssey-page="research"] {
+  background:var(--odyssey-canvas);
+}
+body .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
+  position:absolute;
+  top:0;
+  right:0;
+  left:0;
+  /* The glass layer must be clipped at the window's two top corners. */
+  border-radius:16px 16px 0 0;
+  clip-path:inset(0 round 16px 16px 0 0);
+  background:linear-gradient(180deg,#f2f2f2 0%,rgb(242 242 242 / .82) 45%,rgb(242 242 242 / 0) 100%);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+body[data-ds-dark-theme] .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
+  background:linear-gradient(180deg,#1f1f1f 0%,#1f1f1f 38.462%,rgb(31 31 31 / 0) 100%);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+body .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true])::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:0;
+  pointer-events:none;
+  border-radius:16px 16px 0 0;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  mask-image:linear-gradient(180deg,#000 0%,transparent 100%);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,transparent 100%);
+}
 body .wSkVaW_header :is([data-srb-title-row],[data-srb-title-cluster]) { display:contents!important; }
 body .wSkVaW_header .wSkVaW_crumbs { order:1; flex:0 1 auto; min-width:0; max-width:200px; overflow:hidden; }
 body .wSkVaW_header .wSkVaW_crumbSeg { min-width:0; flex-shrink:1; }
@@ -352,9 +386,8 @@ body .rScV5Q_mindMapMenu.odyssey-derived-detail-menu { --odyssey-derived-surface
 body[data-ds-dark-theme] .rScV5Q_mindMapMenu.odyssey-derived-detail-menu { --odyssey-derived-input:#373737; --odyssey-derived-muted:#9c9c9c; }
 body [role=menu]:has([data-odyssey-file-menu-label]) { height:auto; padding:8px 10px; border:0; outline:1px solid #ffffffa6; outline-offset:-1px; border-radius:14px; background:#ffffffe8; backdrop-filter:blur(16px); box-shadow:0 8px 24px #0000001f; }
 body[data-ds-dark-theme] [role=menu]:has([data-odyssey-file-menu-label]) { background:#333333e8; outline-color:#333333a6; }
-body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] { padding:0 10px; gap:12px; font:400 14px/24px var(--odyssey-font-ui); }
-body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] svg { width:17px; height:17px; }
-body [role=menu]:has([data-odyssey-file-menu-label]) [class*=_itemWrap_]:first-child [role=menuitem] svg { width:16px; height:16px; }
+body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] { padding:0 10px; gap:12px; font:500 14px/24px var(--odyssey-font-ui); }
+body [role=menu]:has([data-odyssey-file-menu-label]) [role=menuitem] svg { width:16px; height:16px; }
 
 /* Blank canvas, component actions and format submenu (12C). */
 body .rScV5Q_contextMenu { box-sizing:border-box; width:240px; min-width:0; padding:5px; border:1px solid var(--odyssey-menu-border); border-radius:10px; background:var(--odyssey-menu); color:var(--odyssey-text); box-shadow:0 8px 24px -4px #00000024; backdrop-filter:blur(24px); font:400 13px/20px var(--odyssey-font-ui); }
@@ -370,7 +403,16 @@ body .rScV5Q_contextDownloadFormats[role=menu] { width:180px; padding:5px; }
 body [data-odyssey-tab-overflow-menu][role=menu] { padding:8px 6px; border:0; outline:1px solid #00000012; outline-offset:-1px; border-radius:12px; background:#fafafaf5; backdrop-filter:blur(16px); box-shadow:0 8px 24px #00000029; }
 body[data-ds-dark-theme] [data-odyssey-tab-overflow-menu][role=menu] { outline-color:#ffffff1a; background:#282828f5; box-shadow:0 8px 24px #00000052; }
 body [data-odyssey-tab-overflow-heading] { font-size:11px; }
-body [data-odyssey-tab-overflow-option][role=menuitemradio] { padding:0 10px; gap:10px; border-radius:7px; font:400 12px/21px var(--odyssey-font-ui); }
+body [data-odyssey-tab-overflow-option][role=menuitemradio] { padding:0 10px; gap:10px; border-radius:7px; font:500 14px/21px var(--odyssey-font-ui); }
+/* Right-panel tabs and both menus share a readable icon/text weight. */
+body .t8lSSG_panel [data-odyssey-panel-tab] .t8lSSG_tabTitle { font:500 13px/20px var(--odyssey-font-ui); }
+body .t8lSSG_panel :is([data-odyssey-tab-icon],[data-conversation-tab-icon],[data-odyssey-task-tab-icon]),
+body :is([data-odyssey-tab-overflow-menu],[role=menu]:has([data-odyssey-file-menu-label])) [data-odyssey-tab-icon] { color:var(--dsw-alias-label-primary); }
+body .t8lSSG_panel :is([data-odyssey-tab-icon],[data-conversation-tab-icon]),
+body [data-odyssey-tab-overflow-menu] [data-odyssey-tab-icon],
+body [role=menu]:has([data-odyssey-file-menu-label]) [data-odyssey-tab-icon],
+body .t8lSSG_panel [data-odyssey-task-tab-icon] g { stroke-width:1.25; }
+body [data-odyssey-tab-overflow-icon] { color:var(--dsw-alias-label-primary); }
 /* Figma 711:29359: a child record owns a real, independent right-tab viewport. */
 [data-odyssey-subagent-panel]{display:flex;flex:1;flex-direction:column;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
 /* Portal wrappers use display:contents. The child fills the right tab and never

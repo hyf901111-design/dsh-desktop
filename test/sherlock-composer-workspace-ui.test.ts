@@ -9,7 +9,7 @@ import {
   type HTMLElement as HappyDOMHTMLElement
 } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { linkedCell, parseMarketTableHtml } from '../src/preload/research-ag-grid'
+import { canvasWheelPassThroughPatch } from '../scripts/lib/patch-research-board-client.mjs'
 
 type TestResearchVoiceBridge = {
   setActive(value: { sessionId: string; active: boolean }): Promise<{ ok: boolean; error?: string }>
@@ -24,9 +24,6 @@ type ComponentType<Props> = (props: Props) => unknown
 type ReactNode = unknown
 
 const requireModule = createRequire(import.meta.url)
-const { renderMarketArtifact } = requireModule('../packages/dsh-research-task-runtime/market-artifact.js') as {
-  renderMarketArtifact: (spec: Record<string, unknown>) => { version: number; type: string; title: string; html: string } | null
-}
 const { createElement, StrictMode, useEffect, useLayoutEffect, useSyncExternalStore } = requireModule('react') as {
   createElement: (type: unknown, props?: unknown, ...children: unknown[]) => unknown
   StrictMode: unknown
@@ -184,16 +181,9 @@ async function loadClientBundle(
     localStorage: options?.window?.localStorage,
     navigator: options?.window?.navigator,
     HTMLElement: options?.window?.HTMLElement,
-    Node: options?.window?.Node,
-    Element: options?.window?.Element,
-    Event: options?.window?.Event,
-    CustomEvent: options?.window?.CustomEvent,
     HTMLTextAreaElement: options?.window?.HTMLTextAreaElement,
     Text: options?.window?.Text,
-    DOMParser: options?.window?.DOMParser,
     ResizeObserver: options?.window?.ResizeObserver,
-    MutationObserver: options?.window?.MutationObserver,
-    getComputedStyle: options?.window?.getComputedStyle?.bind(options.window),
     requestAnimationFrame: options?.window?.requestAnimationFrame?.bind(options.window),
     cancelAnimationFrame: options?.window?.cancelAnimationFrame?.bind(options.window),
     setTimeout,
@@ -201,8 +191,7 @@ async function loadClientBundle(
     setInterval,
     clearInterval,
     queueMicrotask,
-    JSON: options?.json ?? globalThis.JSON,
-    URL: options?.window?.URL ?? globalThis.URL
+    JSON: options?.json ?? globalThis.JSON
   })
   if (descriptor === undefined) throw new Error(`${packageName} did not register its client bundle`)
 
@@ -1014,6 +1003,7 @@ async function mountResearchCanvas(options: {
     cancel?(request: Record<string, unknown>): Promise<Record<string, unknown>>
   }
   fetch?: (input: string, init?: RequestInit) => Promise<Response>
+  transformSource?: (source: string) => string
 }) {
   const browserWindow = new Window({ url: 'https://sherlock.local/' })
   const { sessionId } = options
@@ -1123,7 +1113,8 @@ async function mountResearchCanvas(options: {
   const client = await loadClientBundle('dsh-client-ui-conversation', options.dshDesktop, {
     document: browserWindow.document,
     window: browserWindow,
-    modules: options.modules
+    modules: options.modules,
+    transformSource: options.transformSource
   })
   const OfficeCoordinator = client.ResearchOfficePreviewCoordinator as new () => {
     attach(service: unknown): () => void
@@ -10133,53 +10124,16 @@ describe('Sherlock workspace and composer controls', () => {
   it('keeps dense table columns readable and renders short safe source links', async () => {
     const mounted = await mountResearchCanvas({ sessionId: 'table-resilience', artifacts: [{
       id: 'dense', kind: 'generated-container', messageId: 'dense', title: '政策', excerpt: '政策', x: 400, y: 300, width: 540, height: 600, sizeMode: 'manual', generationStatus: 'completed', containerPrompt: '政策比较', refreshMinutes: 0,
-      containerSpec: { version: 1, type: 'table', title: '政策', columns: ['来源','时间','政策','要点','影响'], rows: [['[国家医保局](https://example.org/very/long/path/to/document.html)','2026.09','政策正文','要点内容','影响说明']] }
+      containerSpec: { version: 1, type: 'table', title: '政策', columns: ['时间','政策','要点','影响','来源'], rows: [['2026.09','政策正文','要点内容','影响说明','[国家医保局](https://example.org/very/long/path/to/document.html)']] }
     }] });
     try {
       const table = mounted.host.querySelector('[data-research-container-table]') as any;
-      expect(table.getAttribute('data-research-grid-engine')).toBe('ag-grid-community');
-      expect(table.querySelectorAll('.ag-header-cell').length).toBeGreaterThanOrEqual(2);
-      expect(table.querySelector('[aria-label="下一列"]')).not.toBeNull();
-      expect((mounted.workspace.getSnapshot().artifacts[0]!.containerSpec as { columns: string[] }).columns).toHaveLength(5);
-      expect(table.querySelector('input[aria-label="筛选研究表格"]')).not.toBeNull();
-      const cell = linkedCell('[国家医保局](https://example.org/very/long/path/to/document.html)', mounted.browserWindow.document as unknown as Document);
-      expect(cell.querySelector('a')?.textContent).toBe('国家医保局');
-      expect(cell.querySelector('a')?.getAttribute('href')).toBe('https://example.org/very/long/path/to/document.html');
-      expect(cell.textContent).not.toContain('/very/long');
+      expect(table.style.tableLayout).toBe('fixed'); expect(table.style.minWidth).toBe('640px');
+      expect(table.querySelector('a').textContent).toBe('国家医保局');
+      expect(table.querySelector('a').getAttribute('href')).toBe('https://example.org/very/long/path/to/document.html');
+      expect(table.textContent).not.toContain('/very/long');
     } finally { await mounted.cleanup(); }
   });
-
-  it('renders saved financial market tables with AG Grid and keeps source metadata', async () => {
-    const market = renderMarketArtifact({
-      version: 1, type: 'market', variant: 'table', title: '逐笔行情', asOf: '09:25 · 演示', note: '离线验收数据',
-      columns: ['时间', '成交价', '方向'], rows: [['09:25:01', '335.12', '主动买'], ['09:25:02', '335.22', '主动卖']],
-      tones: [['', 'positive', ''], ['', 'negative', '']],
-      sources: [{ label: '交易所', url: 'https://example.org/quote' }]
-    })!
-    const mounted = await mountResearchCanvas({ sessionId: 'market-ag-grid', artifacts: [{
-      id: 'market-grid', kind: 'generated-container', messageId: 'market-grid', title: '逐笔行情', excerpt: '逐笔行情',
-      x: 400, y: 300, width: 450, height: 280, sizeMode: 'manual', generationStatus: 'completed',
-      containerPrompt: '逐笔行情', refreshMinutes: 0, containerSpec: market
-    }] })
-    try {
-      const stored = mounted.workspace.getSnapshot().artifacts[0]!.containerSpec as { type: string; html: string }
-      expect(stored.html).toContain('https://example.org/quote')
-      expect(parseMarketTableHtml(stored.html, mounted.browserWindow.document as unknown as Document)?.sources).toHaveLength(1)
-      const table = mounted.host.querySelector('[data-research-grid-engine="ag-grid-community"]') as any
-      expect(table).not.toBeNull()
-      expect(table.querySelector('.ag-root')).not.toBeNull()
-      expect(table.querySelectorAll('.ag-row')).toHaveLength(2)
-      expect(table.querySelector('[data-tone="positive"]')?.textContent).toBe('335.12')
-      expect(table.querySelector('iframe')).toBeNull()
-      const info = table.querySelector('[aria-label="查看行情口径与来源"]') as any
-      expect(info).not.toBeNull()
-      await act(async () => info.click())
-      expect(table.querySelector('.sherlock-ag-grid-market-panel')?.textContent).toContain('09:25 · 演示')
-      expect(table.querySelector('.sherlock-ag-grid-market-panel')?.hasAttribute('hidden')).toBe(false)
-      expect(table.querySelector('.sherlock-ag-grid-market-panel a')?.getAttribute('href')).toBe('https://example.org/quote')
-      expect(stored.type).toBe('html')
-    } finally { await mounted.cleanup() }
-  })
 
   it('retains readable HTML content on runtime errors and requires a host click to open a source', async () => {
     const mounted = await mountResearchCanvas({ sessionId: 'html-resilience', artifacts: [{
@@ -13380,7 +13334,8 @@ describe('Workbench staggered reveal and component task descriptions', () => {
       await act(async () => { root!.render(createElement('div', null, createElement(Card,{node}), createElement(Card,{node:{...node,id:'second',workbenchRevealAt:now+500}}))); });
       expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(1);
       expect(host.textContent).toContain('BTC 资金费率');
-      expect(host.querySelector('[data-research-generation-description]')?.textContent).toContain('链上数据');
+      expect(host.querySelector('[data-research-generation-foreground] strong')?.textContent).toContain('链上数据');
+      expect(host.querySelector('[data-research-generation-description]')?.textContent).toContain('BTC 资金费率');
       await act(async () => { await vi.advanceTimersByTimeAsync(499); });
       expect(host.querySelectorAll('[data-research-artifact-card]')).toHaveLength(1);
       await act(async () => { await vi.advanceTimersByTimeAsync(1); });
@@ -13390,7 +13345,7 @@ describe('Workbench staggered reveal and component task descriptions', () => {
 });
 
 it('routes preview wheel to the canvas until that component is selected', async () => {
-  const mounted = await mountResearchCanvas({sessionId:'wheel-selection',artifacts:[{id:'wheel-card',kind:'generated-container',messageId:'wheel-card',title:'组件滚轮',excerpt:'内容',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'离线内容',refreshMinutes:0,x:400,y:300,width:500,height:400,sizeMode:'manual',containerSpec:{version:1,type:'html',title:'组件滚轮',html:'<main style="height:1800px">可滚动页面</main>'}}]})
+  const mounted = await mountResearchCanvas({sessionId:'wheel-selection',transformSource:canvasWheelPassThroughPatch,artifacts:[{id:'wheel-card',kind:'generated-container',messageId:'wheel-card',title:'组件滚轮',excerpt:'内容',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'离线内容',refreshMinutes:0,x:400,y:300,width:500,height:400,sizeMode:'manual',containerSpec:{version:1,type:'html',title:'组件滚轮',html:'<main style="height:1800px">可滚动页面</main>'}}]})
   try {
     const body=mounted.host.querySelector('[data-research-preview-body]')!
     const before=mounted.workspace.getSnapshot().viewport
@@ -13404,5 +13359,25 @@ it('routes preview wheel to the canvas until that component is selected', async 
     event=wheel();await act(async()=>{body.dispatchEvent(event)})
     expect(event.defaultPrevented).toBe(false)
     expect(mounted.workspace.getSnapshot().viewport).toEqual(selected)
+    const fromNonScrollingIframe=wheel()
+    Object.defineProperty(fromNonScrollingIframe,'__sherlockCanvasPan',{value:true})
+    await act(async()=>{body.dispatchEvent(fromNonScrollingIframe)})
+    expect(fromNonScrollingIframe.defaultPrevented).toBe(true)
+    expect(mounted.workspace.getSnapshot().viewport.y).toBe(selected.y-80)
+  } finally {await mounted.cleanup()}
+})
+
+it('pans the canvas over a selected component with no scrollable content', async () => {
+  const mounted = await mountResearchCanvas({sessionId:'wheel-empty-component',transformSource:canvasWheelPassThroughPatch,artifacts:[{id:'wheel-empty',kind:'generated-container',messageId:'wheel-empty',title:'研究摘要',excerpt:'简要结论',generationStatus:'completed',sourceNodeIds:[],containerPrompt:'生成摘要',refreshMinutes:0,x:400,y:300,width:320,height:220,sizeMode:'manual',containerSpec:{version:1,type:'markdown',title:'研究摘要',content:'简要结论'}}]})
+  try {
+    await act(async()=>{mounted.workspace.setSelection({selectedNodeIds:['wheel-empty'],orderedFileIds:[]})})
+    const body=mounted.host.querySelector('[data-research-preview-body]')!
+    expect(body.closest('[data-research-node-id]')?.hasAttribute('data-research-artifact-card')).toBe(true)
+    expect(body.closest('[data-research-preview-interactive]')).not.toBeNull()
+    const before=mounted.workspace.getSnapshot().viewport
+    const wheel=new mounted.browserWindow.WheelEvent('wheel',{bubbles:true,cancelable:true,deltaY:80})
+    await act(async()=>{body.dispatchEvent(wheel)})
+    expect(wheel.defaultPrevented).toBe(true)
+    expect(mounted.workspace.getSnapshot().viewport.y).toBe(before.y-80)
   } finally {await mounted.cleanup()}
 })

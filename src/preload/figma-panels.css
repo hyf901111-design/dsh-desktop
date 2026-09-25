@@ -33,18 +33,7 @@ body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {
 .wSkVaW_root[data-odyssey-page="conversation"] > :is(.wSkVaW_scrollBody,[data-center-composer-host]) {
   width:100%;
 }
-.wSkVaW_root[data-odyssey-page="research"] {
-  height:100%;
-  min-height:0;
-  overflow:clip;
-  overscroll-behavior:none;
-}
-/* Embedded research content can request scrollIntoView while focused. Keep the
-   page shell fixed so its canvas dots and bottom toolbar remain viewport-bound. */
-#root:has(.wSkVaW_root[data-odyssey-page="research"]) [data-dsh-frame]>[data-pane="conversation"] {
-  overflow:clip;
-  overscroll-behavior:none;
-}
+.wSkVaW_root[data-odyssey-page="research"] { height:100%; }
 .wSkVaW_root[data-odyssey-page="research"] [data-research-global-toolbar] {
   bottom:calc(24px + var(--dsh-sidebar-height,0px));
   backdrop-filter:blur(24px);
@@ -125,7 +114,7 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
   color:#777;
 }
 .t8lSSG_panel .t8lSSG_tabBarPlus>svg { display:block; flex:none; }
-.t8lSSG_panel .t8lSSG_tabBarPlus>svg path { stroke-width:1; }
+.t8lSSG_panel .t8lSSG_tabBarPlus>svg path { stroke-width:1.25; }
 [data-ds-dark-theme] .t8lSSG_panel .t8lSSG_tabBarPlus { color:#a0a0a0; }
 .t8lSSG_panel .t8lSSG_tabBarPlus:hover { background:rgb(0 0 0 / .045); color:var(--odyssey-text); }
 [data-ds-dark-theme] .t8lSSG_panel .t8lSSG_tabBarPlus:hover { background:rgb(255 255 255 / .08); }

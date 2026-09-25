@@ -1,5 +1,5 @@
 export type WorkbenchPanel = { title: string; prompt: string; type: string; size: 'small' | 'medium' | 'large'; height: number }
-export type WorkbenchPlan = { requestId: string; title: string; panels: WorkbenchPanel[] }
+export type WorkbenchPlan = { requestId: string; title: string; dataMode?: 'simulated' | 'source'; generationMode?: 'parallel'; panels: WorkbenchPanel[] }
 export const PANEL_SIZES: Record<WorkbenchPanel['size'], number>
 export function validateWorkbench(value: unknown): WorkbenchPlan
 export function layoutWorkbench(panels: WorkbenchPanel[]): (WorkbenchPanel & { x: number; y: number; width: number })[]

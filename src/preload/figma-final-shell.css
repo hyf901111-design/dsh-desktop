@@ -3,7 +3,7 @@
 :root,body {
   --odyssey-font-ui: "Noto Sans SC", sans-serif;
   --odyssey-workspace: rgb(241.715 241.715 241.715);
-  --odyssey-canvas: rgb(238.43 238.43 238.43);
+  --odyssey-canvas: #eaeaea;
   --odyssey-shell: rgb(228.79 228.79 228.79 / .60);
   --odyssey-glass: rgb(255 255 255 / .62);
   --odyssey-glass-border: rgb(255 255 255 / .6);
@@ -19,7 +19,7 @@
 }
 [data-ds-dark-theme] {
   --odyssey-workspace: rgb(30.503 30.503 30.503);
-  --odyssey-canvas: rgb(36.29 36.29 36.29);
+  --odyssey-canvas: #1f1f1f;
   --odyssey-shell: rgb(8.574 8.574 8.574 / .60);
   --odyssey-glass: rgb(16.575 17.85 19.125 / .62);
   --odyssey-glass-border: rgb(255 255 255 / .1);

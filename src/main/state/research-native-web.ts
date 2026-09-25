@@ -1,6 +1,7 @@
 import { WebContentsView, session, net, type BrowserWindow, type IpcMain } from 'electron'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { inspectResearchWebContent, normalizeResearchLinkUrl, type ResearchLinkFrameRegistry } from './research-link-frame'
+import { guardResearchWebDownloads } from '../search/research-web-downloads'
 
 export function requiresNativeWeb(headers: Pick<Headers, 'get'>): boolean {
   const xfo = headers.get('x-frame-options') ?? ''
@@ -54,6 +55,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     if(!entry){
       if(entries.size>=12){const oldest=[...entries].sort((a,b)=>a[1].touched-b[1].touched)[0];if(oldest)release(oldest[0])}
       const isolated=session.fromPartition('persist:research-web-pages')
+      guardResearchWebDownloads(isolated)
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})

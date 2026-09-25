@@ -5,7 +5,10 @@ const controllers: ComputerController[] = []
 afterEach(async () => { for (const c of controllers.splice(0)) await c.stop(); vi.useRealTimers() })
 function setup(options: Partial<ConstructorParameters<typeof ComputerController>[0]> = {}) {
   const callTool = vi.fn(async (name: string, raw: string, _options?: { signal: AbortSignal }) => ({
-    isError: false, text: '', structuredJson: JSON.stringify(['get_window_state', 'get_desktop_state'].includes(name) ? { screenshot_width: 800, screenshot_height: 600, window_bounds: { x: 20, y: 30, width: 400, height: 300 }, elements: [{ element_token: 'verified-token', frame: { x: 20, y: 30, w: 10, h: 10 } }] } : { name, ...JSON.parse(raw) }),
+    isError: false, text: '', structuredJson: JSON.stringify(['get_window_state', 'get_desktop_state'].includes(name) ? { screenshot_width: 800, screenshot_height: 600, window_bounds: { x: 20, y: 30, width: 400, height: 300 }, elements: [{ element_token: 'verified-token', frame: { x: 20, y: 30, w: 10, h: 10 } }] }
+      : name === 'list_windows' ? { windows: [{ pid: 9, window_id: 10, z_index: 1, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } }] }
+      : name === 'list_apps' ? { apps: [{ name: 'Target', bundle_id: 'com.example.target', pid: 9, running: true, active: true }] }
+      : { name, ...JSON.parse(raw) }),
     images: ['get_window_state', 'get_desktop_state'].includes(name) ? [{ mimeType: 'image/png', dataBase64: 'AA==' }] : []
   }))
   const stroke = vi.fn(options.stroke ?? (async () => {}))
@@ -30,6 +33,24 @@ it('never forwards model-selected session, scripts, launch arguments, or output 
   expect(JSON.parse(callTool.mock.calls.find(([n]) => n === 'launch_app')![1])).toEqual({ bundle_id: 'com.example.app', session: expect.stringMatching(/^ework-/) })
   await expect(run({ op: 'shell', command: 'anything' })).rejects.toThrow('不支持')
 })
+it('lists running applications by default and finds installed applications by name', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_apps' ? {
+    isError: false, text: '', images: [], structuredJson: JSON.stringify({ apps: [
+      { name: '易飞书', bundle_id: 'com.example.lark', pid: 9, running: true, active: true, launch_path: '/Applications/Lark.app' },
+      { name: '画板', bundle_id: 'com.example.board', pid: 10, running: true, active: false },
+      { name: 'Photoshop 2025', bundle_id: 'com.adobe.Photoshop', running: false, last_used: 'yesterday' }
+    ] }) } : original(name, raw, options))
+  const running = await run({ op: 'apps' })
+  expect(running.data.apps).toEqual([
+    { name: '易飞书', bundle_id: 'com.example.lark', pid: 9, running: true, active: true },
+    { name: '画板', bundle_id: 'com.example.board', pid: 10, running: true, active: false }
+  ])
+  expect(running.data.installedAppCount).toBe(3)
+  const searched = await run({ op: 'apps', name: 'photo' })
+  expect(searched.data.apps).toEqual([{ name: 'Photoshop 2025', bundle_id: 'com.adobe.Photoshop', running: false, active: false }])
+})
 it.each([{ x: 800, y: 1 }, { x: -1, y: 1 }, { x: NaN, y: 1 }, { x: 1, y: 1, pid: 12 }, { element_token: 'guessed' }])('rejects out of frame and mismatched targets %j', async bad => {
   const { run, callTool } = setup()
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
@@ -50,7 +71,8 @@ it('routes drag through the cancellable background gesture worker in displayed p
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
   await run({ op: 'drag', revision: o.revision, x: 100, y: 100, to_x: 300, to_y: 200, modifiers: ['shift'] })
   expect(stroke).toHaveBeenCalledWith(o.target, expect.anything(), [[{ x: 100, y: 100 }, { x: 300, y: 200 }]], 700, expect.any(AbortSignal), ['shift'], undefined)
-  expect(callTool.mock.calls.some(([n]) => n === 'drag' || n === 'bring_to_front')).toBe(false)
+  expect(callTool.mock.calls.some(([n]) => n === 'drag')).toBe(false)
+  expect(callTool.mock.calls.filter(([n]) => n === 'bring_to_front')).toHaveLength(1)
 })
 it.each([true, false])('refreshes delayed model observations and only inputs on unchanged targets (%s)', async unchanged => {
   const compare = vi.fn(() => unchanged)
@@ -62,6 +84,32 @@ it.each([true, false])('refreshes delayed model observations and only inputs on 
   expect(stroke).toHaveBeenCalledTimes(unchanged ? 1 : 0)
   if (!unchanged) expect(result.action.performed).toBe(false)
   now.mockRestore()
+})
+it.each([false, true])('rebinds an aged web text field despite unrelated pixels changing (%s)', async changedField => {
+  let snapshot = 0
+  const { run, callTool } = setup({ unchanged: () => false, prepareObservation: r => ({ ...r, data: { ...r.data,
+    background_input: { exact_window: { status: 'matched', pid: 9, window_id: 10 },
+      routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }] },
+    elements: [{ element_token: `s${++snapshot}:0`, role: 'AXTextArea', in_web_content: true,
+      value: changedField && snapshot > 1 ? 'someone typed' : '', enabled: true,
+      frame: { x: 100, y: 60, w: 160, h: 40 } }] } }) })
+  const view = await run({ op: 'observe', pid: 9, window_id: 10 })
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 110000)
+  const result = await run({ op: 'type', revision: view.revision, x: 300, y: 100, text: '何亚枫' })
+  const attempts = callTool.mock.calls.filter(([name]) => name === 'type_text')
+  expect(attempts).toHaveLength(changedField ? 0 : 1)
+  if (changedField) expect(result.action.performed).toBe(false)
+  else expect(JSON.parse(attempts[0]![1])).toMatchObject({ delivery_mode: 'foreground', text: '何亚枫' })
+})
+it('revalidates an aged accessible button locally before clicking', async () => {
+  let snapshot = 0
+  const { run, stroke } = setup({ unchanged: () => false, prepareObservation: r => ({ ...r, data: { ...r.data,
+    elements: [{ element_token: `s${++snapshot}:0`, role: 'AXButton', actions: ['AXPress'],
+      label: '搜索', enabled: true, frame: { x: 100, y: 60, w: 60, h: 60 } }] } }) })
+  const view = await run({ op: 'observe', pid: 9, window_id: 10 })
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 110000)
+  await run({ op: 'click', revision: view.revision, x: 220, y: 120 })
+  expect(stroke).toHaveBeenCalledOnce()
 })
 it('batches continuous strokes and returns one post-gesture observation', async () => {
   const stroke = vi.fn(async () => {})
@@ -80,7 +128,7 @@ it.each([[], [[{ x: -1, y: 2 }, { x: 20, y: 20 }]], Array.from({ length: 13 }, (
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
   await expect(run({ op: 'stroke', revision: o.revision, strokes })).rejects.toThrow()
   expect(stroke).not.toHaveBeenCalled()
-  expect(callTool.mock.calls.some(([n]) => n === 'bring_to_front')).toBe(false)
+  expect(callTool.mock.calls.filter(([n]) => n === 'bring_to_front')).toHaveLength(1)
 })
 it('retains the gesture lease until native cancellation releases the mouse', async () => {
   let release!: () => void
@@ -127,6 +175,55 @@ it('binds discovered windows to their owning process and hides off-screen utilit
   await run({ op: 'release' })
   await expect(run({ op: 'observe', window_id: 10 })).rejects.toThrow()
 })
+it('observes a known app in one call, skips its decorative watermark and focuses the real window once', async () => {
+  const targetWindow = vi.fn()
+  const { run, callTool } = setup({ targetWindow })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'list_apps') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ apps: [
+      { name: '易飞书', bundle_id: 'com.example.lark', pid: 9, running: true }
+    ] }) }
+    if (name === 'list_windows') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 11, title: '', z_index: 9, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } },
+      { pid: 9, window_id: 10, title: '易飞书', z_index: 8, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } }
+    ] }) }
+    if (name === 'bring_to_front') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ activated: true }) }
+    return original(name, raw, options)
+  })
+  const first = await run({ op: 'observe', name: '易飞书' })
+  expect(first.target).toEqual({ kind: 'window', pid: 9, window_id: 10 })
+  expect(first.focus).toEqual({ requested: true, verified: true, appActive: true })
+  expect(targetWindow).toHaveBeenCalledWith(first.target, first.data.window_bounds, true)
+  const second = await run({ op: 'observe', pid: 9, window_id: 10 })
+  expect(second.focus).toEqual({ requested: false, verified: true, appActive: true })
+  expect(callTool.mock.calls.filter(([name]) => name === 'bring_to_front')).toHaveLength(1)
+  expect(callTool.mock.calls.findIndex(([name]) => name === 'bring_to_front')).toBeLessThan(callTool.mock.calls.findIndex(([name]) => name === 'get_window_state'))
+})
+it('returns window choices when a known app has multiple real windows', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_apps'
+    ? { isError: false, text: '', images: [], structuredJson: JSON.stringify({ apps: [{ name: 'Editor', pid: 9, running: true }] }) }
+    : name === 'list_windows'
+      ? { isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+        { pid: 9, window_id: 10, title: 'A', is_on_screen: true, bounds: { width: 400, height: 300 } },
+        { pid: 9, window_id: 12, title: 'B', is_on_screen: true, bounds: { width: 400, height: 300 } }
+      ] }) }
+      : original(name, raw, options))
+  const result = await run({ op: 'observe', name: 'Editor' })
+  expect(result.next).toEqual([{ op: 'observe', pid: 9, window_id: 10 }, { op: 'observe', pid: 9, window_id: 12 }])
+  expect(callTool.mock.calls.some(([name]) => name === 'bring_to_front' || name === 'get_window_state')).toBe(false)
+})
+it('reports application focus separately when a transparent sibling prevents exact-window verification', async () => {
+  const { run, callTool } = setup()
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'bring_to_front'
+    ? { isError: true, text: 'Exact window unverified', images: [], structuredJson: JSON.stringify({ activated: false, process_activated: true, code: 'bring_to_front_exact_window_unverified' }) }
+    : original(name, raw, options))
+  const view = await run({ op: 'observe', pid: 9, window_id: 10 })
+  expect(view.focus).toEqual({ requested: true, verified: false, appActive: true })
+  expect(view.target.window_id).toBe(10)
+})
 it.each([
   { op: 'click', element_token: 'verified-token' }, { op: 'type', text: '后台' },
   { op: 'key', key: 'Return' }, { op: 'hotkey', keys: ['cmd', 'a'] },
@@ -135,9 +232,10 @@ it.each([
   const { run, callTool } = setup()
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
   await run({ ...action, revision: o.revision, delivery_mode: 'foreground' })
-  const input = callTool.mock.calls.filter(([n]) => !['start_session', 'get_window_state'].includes(n))
+  const input = callTool.mock.calls.filter(([n]) => !['start_session', 'get_window_state', 'list_windows', 'bring_to_front'].includes(n))
   expect(input).toHaveLength(1)
   expect(JSON.parse(input[0]![1])).toMatchObject({ delivery_mode: 'background', target: o.target })
+  expect(callTool.mock.calls.filter(([n]) => n === 'bring_to_front')).toHaveLength(1)
 })
 it('refuses desktop input without falling back to global mouse events', async () => {
   const { run, callTool } = setup()
@@ -154,7 +252,7 @@ it('does not retry refused background input in the foreground', async () => {
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
   await expect(run({ op: 'click', revision: o.revision, element_token: 'verified-token' })).rejects.toThrow('background_unavailable')
   expect(callTool.mock.calls.filter(([n]) => n === 'click')).toHaveLength(1)
-  expect(callTool.mock.calls.some(([n]) => n === 'bring_to_front')).toBe(false)
+  expect(callTool.mock.calls.filter(([n]) => n === 'bring_to_front')).toHaveLength(1)
 })
 it.each(['drag', 'stroke'])('retains the lease until cancelled %s releases its target', async op => {
   let release!: () => void
@@ -196,7 +294,8 @@ it.each([{ count: 1, button: 'left' }, { count: 2, button: 'left' }, { count: 1,
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
   const result = await run({ op: 'click', revision: o.revision, x: 30, y: 40, ...click, modifiers: ['shift'] })
   expect(stroke).toHaveBeenCalledWith(o.target, expect.anything(), [[{ x: 30, y: 40 }, { x: 30, y: 40 }]], 100, expect.any(AbortSignal), ['shift'], click)
-  expect(callTool.mock.calls.some(([n]) => n === 'click' || n === 'bring_to_front')).toBe(false)
+  expect(callTool.mock.calls.some(([n]) => n === 'click')).toBe(false)
+  expect(callTool.mock.calls.filter(([n]) => n === 'bring_to_front')).toHaveLength(1)
   expect(result.action).toMatchObject({ route: 'window_pointer', delivery_mode: 'background' })
 })
 
@@ -249,7 +348,7 @@ it('rejects locked-screen operations before connecting and still permits release
 
 it.each([
   { op: 'type', text: '测试', x: 120, y: 80, tool: 'type_text' },
-  { op: 'key', key: 'Return', tool: 'press_key' },
+  { op: 'key', key: 'Return', x: 120, y: 80, tool: 'press_key' },
   { op: 'hotkey', keys: ['cmd', 'a'], x: 120, y: 80, tool: 'hotkey' }
 ])('retries an untouched same-process keyboard refusal against the exact window: %j', async action => {
   const { run, callTool } = setup()
@@ -270,7 +369,7 @@ it.each([
   expect(result.action).toMatchObject({ delivery_mode: 'foreground' })
 })
 
-it.each([{ op: 'type', text: '测试', tool: 'type_text' }, { op: 'hotkey', keys: ['cmd', 'a'], tool: 'hotkey' }])('asks for an exact text field before foreground retry when the field is unspecified: %j', async action => {
+it.each([{ op: 'type', text: '测试', tool: 'type_text' }, { op: 'key', key: 'Return', tool: 'press_key' }, { op: 'hotkey', keys: ['cmd', 'a'], tool: 'hotkey' }])('asks for an exact text field before foreground retry when the field is unspecified: %j', async action => {
   const { run, callTool } = setup()
   const original = callTool.getMockImplementation()!
   callTool.mockImplementation(async (name, raw, options) => name === action.tool ? {
@@ -283,19 +382,304 @@ it.each([{ op: 'type', text: '测试', tool: 'type_text' }, { op: 'hotkey', keys
   expect(result.action).toMatchObject({ performed: false, code: 'keyboard_target_required' })
   expect(result.revision).not.toBe(o.revision)
 })
+it('uses the driver foreground window route when another application was already frontmost', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, background_input: {
+    exact_window: { status: 'matched', pid: 9, window_id: 10 },
+    routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }]
+  } } }) })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'list_apps') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ apps: [
+      { name: 'Target', pid: 9, running: true, active: false }, { name: 'ChatGPT', pid: 12, running: true, active: true }
+    ] }) }
+    return original(name, raw, options)
+  })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', revision: o.revision, x: 120, y: 80, text: 'hello' })
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground', fallback_reason: 'same_pid_keyboard_ambiguity' })
+  expect(callTool.mock.calls.filter(([name, raw]) => name === 'type_text' && JSON.parse(raw).delivery_mode === 'foreground')).toHaveLength(1)
+})
 
-it('returns a fresh view without replaying an AX-addressed text write that may have landed', async () => {
+it('lets the foreground driver reactivate the target between keyboard actions', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, background_input: {
+    exact_window: { status: 'matched', pid: 9, window_id: 10 },
+    routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }]
+  } } }) })
+  const original = callTool.getMockImplementation()!
+  let targetActive = false
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'list_apps') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ apps: [
+      { name: 'Target', pid: 9, running: true, active: targetActive },
+      { name: 'EWork Odyssey', pid: process.pid, running: true, active: !targetActive }
+    ] }) }
+    if (name === 'bring_to_front') {
+      targetActive = true
+      return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ activated: true, process_activated: true }) }
+    }
+    if (name === 'type_text' || name === 'press_key') {
+      targetActive = false // The driver restores the prior foreground after delivery.
+    }
+    return original(name, raw, options)
+  })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  targetActive = false // EWork became foreground while the model planned the next action.
+  const typed = await run({ op: 'type', text: '脑子要多用', revision: o.revision, x: 120, y: 80 })
+  const sent = await run({ op: 'key', key: 'Return', revision: typed.revision, x: 120, y: 80 })
+  expect(typed.action).toMatchObject({ delivery_mode: 'foreground' })
+  expect(sent.action).toMatchObject({ delivery_mode: 'foreground' })
+  expect(callTool.mock.calls.filter(([name]) => name === 'bring_to_front')).toHaveLength(1)
+  expect(callTool.mock.calls.filter(([name]) => name === 'type_text' || name === 'press_key').map(([, raw]) => JSON.parse(raw).delivery_mode)).toEqual(['foreground', 'foreground'])
+})
+
+it('uses the driver foreground route when exact activation is only partially verified', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, background_input: {
+    exact_window: { status: 'matched', pid: 9, window_id: 10 },
+    routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }]
+  } } }) })
+  const original = callTool.getMockImplementation()!
+  let targetActive = false
+  callTool.mockImplementation(async (name, raw, options) => {
+    if (name === 'list_apps') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ apps: [
+      { pid: 9, active: targetActive }, { pid: process.pid, active: !targetActive }
+    ] }) }
+    if (name === 'bring_to_front') {
+      targetActive = true
+      return { isError: true, text: 'Exact window unverified', images: [],
+        structuredJson: JSON.stringify({ code: 'bring_to_front_exact_window_unverified', process_activated: true, activated: false }) }
+    }
+    return original(name, raw, options)
+  })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  targetActive = false
+  const result = await run({ op: 'type', text: '脑子要多用', revision: o.revision, x: 120, y: 80 })
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground' })
+  expect(callTool.mock.calls.filter(([name]) => name === 'bring_to_front')).toHaveLength(1)
+})
+
+it('retries an AX-addressed text write after the driver refuses before any input', async () => {
   const { run, callTool } = setup()
   const original = callTool.getMockImplementation()!
-  callTool.mockImplementation(async (name, raw, options) => name === 'type_text' ? {
+  callTool.mockImplementation(async (name, raw, options) => name === 'type_text' && JSON.parse(raw).delivery_mode === 'background' ? {
     isError: true, text: 'Background input refused', images: [],
     structuredJson: JSON.stringify({ code: 'same_pid_keyboard_ambiguity', effect: 'refused', pid: 9, window_id: 10 })
   } : original(name, raw, options))
   const o = await run({ op: 'observe', pid: 9, window_id: 10 })
   const result = await run({ op: 'type', text: '测试', revision: o.revision, element_token: 'verified-token' })
-  expect(callTool.mock.calls.filter(([name]) => name === 'type_text')).toHaveLength(1)
-  expect(result.action).toMatchObject({ effect: 'unverifiable', code: 'same_pid_keyboard_ambiguity' })
+  expect(callTool.mock.calls.filter(([name]) => name === 'type_text')).toHaveLength(2)
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground', fallback_reason: 'same_pid_keyboard_ambiguity' })
   expect(result.revision).not.toBe(o.revision)
+})
+
+it('uses the observed keyboard capability to avoid a known background refusal', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, background_input: {
+    exact_window: { status: 'matched', pid: 9, window_id: 10 },
+    routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }]
+  } } }) })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', text: '何亚枫', revision: o.revision, x: 120, y: 80 })
+  const attempts = callTool.mock.calls.filter(([name]) => name === 'type_text').map(([, raw]) => JSON.parse(raw))
+  expect(attempts).toHaveLength(1)
+  expect(attempts[0]).toMatchObject({ delivery_mode: 'foreground', text: '何亚枫', target: o.target })
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground', fallback_reason: 'same_pid_keyboard_ambiguity' })
+})
+
+it('does not attempt a known-refused route without an exact field target', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, background_input: {
+    exact_window: { status: 'matched', pid: 9, window_id: 10 },
+    routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }]
+  } } }) })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', text: '何亚枫', revision: o.revision })
+  expect(callTool.mock.calls.filter(([name]) => name === 'type_text')).toHaveLength(0)
+  expect(result.action).toMatchObject({ performed: false, code: 'keyboard_target_required' })
+})
+
+it('ends the run after repeated keyboard targeting refusals instead of trying alternate search text indefinitely', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, background_input: {
+    exact_window: { status: 'matched', pid: 9, window_id: 10 },
+    routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }]
+  } } }) })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const first = await run({ op: 'type', text: '何亚枫', revision: o.revision })
+  const second = await run({ op: 'type', text: 'heya', revision: first.revision })
+  expect(second.action).toMatchObject({ performed: false, terminal: true, code: 'keyboard_target_required' })
+  expect(callTool.mock.calls.filter(([name]) => name === 'type_text')).toHaveLength(0)
+  await expect(run({ op: 'observe', pid: 9, window_id: 10 })).rejects.toThrow('本轮桌面控制已停止')
+})
+
+it('resolves one accessible search field without asking the model for coordinates', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data,
+    elements: [{ element_token: 'search-field', role: 'AXTextField', frame: { x: 40, y: 50, w: 120, h: 28 } }],
+    background_input: { exact_window: { status: 'matched', pid: 9, window_id: 10 },
+      routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }] }
+  } }) })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', text: '何亚枫', revision: o.revision })
+  const args = JSON.parse(callTool.mock.calls.find(([name]) => name === 'type_text')![1])
+  expect(args).toMatchObject({ delivery_mode: 'foreground', element_token: 'search-field', text: '何亚枫' })
+  expect(result.action).toMatchObject({ delivery_mode: 'foreground' })
+})
+
+it('pixel-focuses an Electron web input instead of trusting its AX text echo', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data,
+    original_screenshot_width: 1600, original_screenshot_height: 1200,
+    elements: [{ element_token: 'message-field', role: 'AXTextArea', in_web_content: true,
+      frame: { x: 100, y: 110, w: 160, h: 40 } }],
+    background_input: { exact_window: { status: 'matched', pid: 9, window_id: 10 },
+      routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }] }
+  } }) })
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const typed = await run({ op: 'type', text: '脑子要多用', revision: o.revision })
+  const sent = await run({ op: 'key', key: 'Return', revision: typed.revision })
+  const typeArgs = JSON.parse(callTool.mock.calls.find(([name]) => name === 'type_text')![1])
+  const keyArgs = JSON.parse(callTool.mock.calls.find(([name]) => name === 'press_key')![1])
+  expect(typeArgs).toMatchObject({ delivery_mode: 'foreground', text: '脑子要多用', x: 640, y: 400 })
+  expect(keyArgs).toMatchObject({ delivery_mode: 'foreground', key: 'Return', x: 640, y: 400 })
+  expect(typeArgs.element_token).toBeUndefined()
+  expect(keyArgs.element_token).toBeUndefined()
+  expect(sent.action).toMatchObject({ delivery_mode: 'foreground' })
+})
+
+it('uses one foreground transaction for an addressed web field even without a keyboard refusal', async () => {
+  const { run, callTool } = setup({ screenPoint: (_target, _data, x, y) => ({ x: 20 + x / 2, y: 30 + y / 2 }),
+    prepareObservation: r => ({ ...r, data: { ...r.data,
+    elements: [{ element_token: 'search-field', role: 'AXTextArea', in_web_content: true,
+      frame: { x: 100, y: 60, w: 160, h: 40 } }] } }) })
+  const view = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', revision: view.revision, x: 300, y: 100, text: '何亚枫' })
+  const attempts = callTool.mock.calls.filter(([name]) => name === 'type_text').map(([, raw]) => JSON.parse(raw))
+  expect(attempts).toHaveLength(1)
+  expect(attempts[0]).toMatchObject({ delivery_mode: 'foreground', text: '何亚枫' })
+  expect(result.action).toMatchObject({ fallback_reason: 'web_text_field' })
+})
+
+it.each([1, 2])('maps a downscaled stream point into the driver validated %s× window pixel frame', async driverScale => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data,
+    screenshot_width: 915, screenshot_height: 1600,
+    original_screenshot_width: 915, original_screenshot_height: 1600,
+    window_bounds: { x: 3440, y: -160, width: 1080, height: 1889 },
+    driver_screenshot_scale: driverScale,
+    background_input: { exact_window: { status: 'matched', pid: 9, window_id: 10 },
+      routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }] }
+  } }) })
+  const view = await run({ op: 'observe', pid: 9, window_id: 10 })
+  await run({ op: 'type', revision: view.revision, x: 650, y: 1560, text: 'hello' })
+  const args = JSON.parse(callTool.mock.calls.find(([name]) => name === 'type_text')![1])
+  expect(args.delivery_mode).toBe('foreground')
+  expect(args.x).toBeCloseTo(650 * 1080 * driverScale / 915, 2)
+  expect(args.y).toBeCloseTo(1560 * 1889 * driverScale / 1600, 2)
+})
+
+it('blocks foreground typing when a sibling popup covers the field', async () => {
+  const { run, callTool } = setup({ prepareObservation: r => ({ ...r, data: { ...r.data, background_input: {
+    exact_window: { status: 'matched', pid: 9, window_id: 10 },
+    routes: [{ route: 'pid_keyboard', status: 'refused', reason: 'same_pid_keyboard_ambiguity' }]
+  } } }) })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_windows' ? {
+    isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 10, z_index: 10, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } },
+      { pid: 9, window_id: 11, z_index: 20, is_on_screen: true, bounds: { x: 100, y: 60, width: 100, height: 100 } }
+    ] })
+  } : original(name, raw, options))
+  const o = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'type', text: '何亚枫', revision: o.revision, x: 120, y: 80 })
+  expect(result.action).toMatchObject({ performed: false, code: 'keyboard_window_covered' })
+  expect(callTool.mock.calls.filter(([name]) => name === 'type_text')).toHaveLength(0)
+})
+
+it.each([{ element_token: 'parent-item' }, { x: 110, y: 110 }])('routes a menu item from the parent snapshot to its live popup and observes the parent after dismissal: %j', async selection => {
+  const { run, callTool, stroke } = setup({ screenPoint: (_target, _data, x, y) => ({ x: x + 20, y: y + 30 }) })
+  const original = callTool.getMockImplementation()!
+  let popupOpen = true
+  callTool.mockImplementation(async (name, raw, options) => {
+    const args = JSON.parse(raw)
+    if (name === 'list_windows') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 10, z_index: 10, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } },
+      ...(popupOpen ? [{ pid: 9, window_id: 11, z_index: 20, is_on_screen: true, bounds: { x: 100, y: 100, width: 100, height: 100 } }] : [])
+    ] }) }
+    if (name === 'get_window_state') {
+      if (args.window_id === 11 && !popupOpen) throw Error('window_id 11 is not a live window')
+      const popup = args.window_id === 11
+      return { isError: false, text: '', images: [{ mimeType: 'image/png', dataBase64: 'AA==' }], structuredJson: JSON.stringify({
+        screenshot_width: popup ? 100 : 800, screenshot_height: popup ? 100 : 600,
+        window_bounds: popup ? { x: 100, y: 100, width: 100, height: 100 } : { x: 20, y: 30, width: 400, height: 300 },
+        elements: [{ element_token: popup ? 'popup-item' : 'parent-item', role: 'AXButton', label: '创建群组', actions: ['AXPress'], frame: { x: 110, y: 120, w: 40, h: 30 } }]
+      }) }
+    }
+    if (name === 'click' && args.target.window_id === 11) popupOpen = false
+    return original(name, raw, options)
+  })
+  const first = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'click', revision: first.revision, ...selection })
+  const clicks = callTool.mock.calls.filter(([name]) => name === 'click').map(([, raw]) => JSON.parse(raw))
+  expect(clicks).toHaveLength(1)
+  expect(clicks[0]).toMatchObject({ target: { pid: 9, window_id: 11 }, element_token: 'popup-item' })
+  expect(stroke).not.toHaveBeenCalled()
+  expect(result.target.window_id).toBe(10)
+  expect(result.action.dismissedPopup).toBe(true)
+  expect(result.revision).not.toBe(first.revision)
+})
+
+it('returns a fresh popup view without clicking through when the menu target cannot be matched', async () => {
+  const { run, callTool, stroke } = setup({ screenPoint: (_target, _data, x, y) => ({ x: x + 20, y: y + 30 }) })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    const args = JSON.parse(raw)
+    if (name === 'list_windows') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 10, z_index: 10, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } },
+      { pid: 9, window_id: 11, z_index: 20, is_on_screen: true, bounds: { x: 100, y: 100, width: 100, height: 100 } }
+    ] }) }
+    if (name === 'get_window_state' && args.window_id === 11) return { isError: false, text: '', images: [{ mimeType: 'image/png', dataBase64: 'AA==' }], structuredJson: JSON.stringify({
+      screenshot_width: 100, screenshot_height: 100, window_bounds: { x: 100, y: 100, width: 100, height: 100 },
+      elements: [{ element_token: 'other-item', role: 'AXButton', label: '删除', actions: ['AXPress'], frame: { x: 110, y: 120, w: 40, h: 30 } }]
+    }) }
+    return original(name, raw, options)
+  })
+  const first = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'click', revision: first.revision, x: 110, y: 110 })
+  expect(result.action).toMatchObject({ performed: false, code: 'overlay_window_changed' })
+  expect(result.target.window_id).toBe(11)
+  expect(stroke).not.toHaveBeenCalled()
+  expect(callTool.mock.calls.some(([name]) => name === 'click')).toBe(false)
+})
+
+it('refuses a covered coordinate click when window stacking order is unavailable', async () => {
+  const { run, callTool, stroke } = setup({ screenPoint: (_target, _data, x, y) => ({ x: x + 20, y: y + 30 }) })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => name === 'list_windows' ? {
+    isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 10, z_index: null, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } },
+      { pid: 9, window_id: 11, z_index: null, is_on_screen: true, bounds: { x: 100, y: 100, width: 100, height: 100 } }
+    ] }) } : original(name, raw, options))
+  const first = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'click', revision: first.revision, x: 110, y: 110 })
+  expect(result.action).toMatchObject({ performed: false, code: 'window_stack_unknown' })
+  expect(stroke).not.toHaveBeenCalled()
+  expect(callTool.mock.calls.some(([name]) => name === 'click')).toBe(false)
+})
+
+it('does not turn a right click on a popup into an accessibility press', async () => {
+  const { run, callTool, stroke } = setup({ screenPoint: (_target, _data, x, y) => ({ x: x + 20, y: y + 30 }) })
+  const original = callTool.getMockImplementation()!
+  callTool.mockImplementation(async (name, raw, options) => {
+    const args = JSON.parse(raw)
+    if (name === 'list_windows') return { isError: false, text: '', images: [], structuredJson: JSON.stringify({ windows: [
+      { pid: 9, window_id: 10, z_index: 10, is_on_screen: true, bounds: { x: 20, y: 30, width: 400, height: 300 } },
+      { pid: 9, window_id: 11, z_index: 20, is_on_screen: true, bounds: { x: 100, y: 100, width: 100, height: 100 } }
+    ] }) }
+    if (name === 'get_window_state') return { isError: false, text: '', images: [{ mimeType: 'image/png', dataBase64: 'AA==' }], structuredJson: JSON.stringify({
+      screenshot_width: args.window_id === 11 ? 100 : 800, screenshot_height: args.window_id === 11 ? 100 : 600,
+      window_bounds: args.window_id === 11 ? { x: 100, y: 100, width: 100, height: 100 } : { x: 20, y: 30, width: 400, height: 300 },
+      elements: [{ element_token: args.window_id === 11 ? 'popup-item' : 'parent-item', role: 'AXButton', label: '创建群组', actions: ['AXPress'], frame: { x: 110, y: 120, w: 40, h: 30 } }]
+    }) }
+    return original(name, raw, options)
+  })
+  const first = await run({ op: 'observe', pid: 9, window_id: 10 })
+  const result = await run({ op: 'click', revision: first.revision, x: 110, y: 110, button: 'right' })
+  expect(result.action.performed).toBe(false)
+  expect(stroke).not.toHaveBeenCalled()
+  expect(callTool.mock.calls.some(([name]) => name === 'click')).toBe(false)
 })
 
 it('handles the SDK Tool error form of the same-process refusal without trusting its message text', async () => {

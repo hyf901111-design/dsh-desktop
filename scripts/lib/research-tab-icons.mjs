@@ -1,4 +1,4 @@
-// One neutral, 16px, round 1px outline family for tabs and both tab menus.
+// A quiet 16px outline family shared by tabs and both tab menus.
 export function researchTabIconKind(tab) {
  const type=String(tab?.type ?? tab?.id ?? '').toLowerCase()
  if(/conversation/.test(type)&&!/subagent/.test(type))return 'conversation'
@@ -16,7 +16,7 @@ export function researchTabIcon(tab, jsx) {
  const kind=researchTabIconKind(tab)
  const paths={
  conversation:'M13.5 7.5a5.5 5.5 0 0 1-5.5 5.5H3l-1 1V7.5a5.75 5.75 0 0 1 11.5 0Z',
- folder:'M1.5 5V3.5h4l1.5 1.5h6v2H4l-2 5.5M2 12.5h10.5L15 7H4L2 12.5Z',
+ folder:'M1.5 6V4.5A1.5 1.5 0 0 1 3 3h2.5L7 4.5h6A1.5 1.5 0 0 1 14.5 6v6A1.5 1.5 0 0 1 13 13.5H3A1.5 1.5 0 0 1 1.5 12V6Z',
  schedule:'M14 8A6 6 0 1 1 2 8a6 6 0 0 1 12 0ZM8 4v4l3 2',
  task:'M5 2.5H3.5v11h9v-11H11M6 1.5h4v2H6v-2ZM5 6l1 1 2-2M9 6h2M5 10h6',
  terminal:'M2 2.5h12v11H2v-11ZM4 5.5l2.5 2L4 9.5M8 10h3',
@@ -26,7 +26,7 @@ export function researchTabIcon(tab, jsx) {
  document:'M3.5 1.5h6l3 3v10h-9v-13ZM9.5 1.5v3h3M6 8h4M6 11h4',
  panel:'M2 2.5h12v11H2v-11ZM2 6h12M6 6v7.5'
  }
- return jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,'data-odyssey-tab-icon':kind,children:jsx('path',{d:paths[kind]})})
+ return jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.25,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,'data-odyssey-tab-icon':kind,children:jsx('path',{d:paths[kind]})})
 }
 export function patchResearchTabIcons(source) {
  if(source.includes('/* odyssey:unified-tab-icons */')) {

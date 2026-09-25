@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { Window } from 'happy-dom';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
-import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
+import { patchFigmaFinalCanvas, researchCanvasUnobscuredWidth } from '../scripts/lib/figma-canvas-client.mjs';
 const nodes = ['large','large','small','small','small'].map((size,index)=>({id:String(index),containerSizePreset:size,content:'原始数据'+index}));
 describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
+  it('measures the canvas area left of an overlapping chat panel',()=>{
+    const canvas={left:100,right:1100,top:70,bottom:870,width:1000};
+    expect(researchCanvasUnobscuredWidth(canvas,{left:810,right:1180,top:70,bottom:870})).toBe(710);
+    expect(researchCanvasUnobscuredWidth(canvas,{left:1120,right:1400,top:70,bottom:870})).toBe(1000);
+    expect(researchCanvasUnobscuredWidth(canvas,{left:810,right:1180,top:900,bottom:1200})).toBe(1000);
+  });
   it('preserves the viewport and component coordinates when Figma 66 panes resize',async()=>{
     const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
     const extract=name=>{const start=source.indexOf('function '+name+'(');let at=source.indexOf('{',start),depth=1;for(at++;depth;at++){if(source[at]==='{')depth++;if(source[at]==='}')depth--;}return source.slice(start,at);};
@@ -18,19 +25,21 @@ describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
     expect(JSON.stringify(snapshot.artifacts)).toBe(before);
     expect(fit(snapshot,snapshot.canvasSize)).toBe(snapshot.viewport);
     expect(source).toContain("querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)')");
+    expect(source).toContain('const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);');
+    expect(source).toContain('researchCanvasVisibleArea(researchWorkspaceSnapshot2)), true);');
   });
-  it('opens an empty container as S without resizing existing content',async()=>{
+  it('opens an empty container with a compact editor without resizing existing content',async()=>{
     const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
-    let descriptor;runInNewContext(source,{window:{__ModuleLoader__:{load:value=>descriptor=value}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
+    let descriptor;runInNewContext(source,{document:new Window().document,window:{__ModuleLoader__:{load:value=>descriptor=value}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
     let fallback;fallback=new Proxy(function(){},{get:()=>fallback,apply:()=>fallback});const client=descriptor.factory(()=>fallback);
     const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
     const workspace=client.createResearchWorkspaceSession(storage,'small-draft');workspace.setCanvasSize({width:1088,availableWidth:728,height:800});
     const first=workspace.createContainerDraft();
-    expect(first).toMatchObject({width:320,height:220,containerSizePreset:'small',generationStatus:'draft'});
+    expect(first).toMatchObject({width:400,height:280,containerSizePreset:'small',generationStatus:'draft'});
     workspace.updateNodeGeometry(first.id,{width:656,height:456,sizeMode:'manual'});
-    const before=JSON.stringify(workspace.getSnapshot().artifacts[0]);
-    expect(workspace.createContainerDraft()).toMatchObject({width:320,height:220,containerSizePreset:'small'});
-    expect(JSON.stringify(workspace.getSnapshot().artifacts[0])).toBe(before);
+    const before=workspace.getSnapshot().artifacts[0];
+    expect(workspace.createContainerDraft()).toMatchObject({width:400,height:280,containerSizePreset:'small'});
+    expect(workspace.getSnapshot().artifacts[0]).toEqual(before);
   });
   it('packs two L and three S into two visible columns when the right panel covers the third',()=>{
     const result=researchBentoLayout(nodes,{width:1088,availableWidth:728,height:800});
@@ -61,7 +70,7 @@ describe('Figma 46 chooses grid columns from the actual visible canvas',()=>{
   });
   it('fits organize within the visible area while the default generation policy remains unchanged',async()=>{
     const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
-    let descriptor;runInNewContext(source,{window:{__ModuleLoader__:{load:value=>descriptor=value}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
+    let descriptor;runInNewContext(source,{document:new Window().document,window:{__ModuleLoader__:{load:value=>descriptor=value}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
     let fallback;fallback=new Proxy(function(){},{get:()=>fallback,apply:()=>fallback});const client=descriptor.factory(()=>fallback);
     const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
     const artifacts=nodes.map((node,index)=>({...node,kind:'generated-container',messageId:node.id,title:'内容'+index,excerpt:node.content,containerPrompt:'内容',refreshMinutes:0,sourceNodeIds:[],generationStatus:'completed',containerSpec:{version:1,type:'markdown',title:'内容',content:node.content},x:500,y:500,width:index<2?656:320,height:index<2?456:220,sizeMode:'auto'}));

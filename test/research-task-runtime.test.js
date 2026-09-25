@@ -204,6 +204,20 @@ function sequentialTaskIds() {
   return () => `task-${++next}`
 }
 
+it('reserves a five-panel source workbench with one durable write and separate task identities', async () => {
+  const { ResearchTaskRuntime } = await runtimeModule()
+  const adapter = deferredTaskAdapter(), storage = memoryTaskStorage()
+  const save = vi.spyOn(storage, 'save')
+  const runtime = new ResearchTaskRuntime({ adapter: adapter.adapter, storage, createId: sequentialTaskIds() })
+  try {
+    const receipts = await runtime.startBatch({ parentSessionId: 'parent-1', panels: Array.from({length:5},(_,i)=>({canvasNodeId:`panel-${i}`,kind:'container',prompt:`研究面板 ${i}`})) })
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(receipts.map(item=>item.taskId)).toEqual(['task-1','task-2','task-3','task-4','task-5'])
+    expect(storage.snapshot().tasks).toHaveLength(5)
+    for (const [index, receipt] of receipts.entries()) expect(runtime.inspect({parentSessionId:'parent-1',taskId:receipt.taskId}).canvasNodeId).toBe(`panel-${index}`)
+  } finally { await runtime.dispose() }
+})
+
 describe('Research task contract and prompt', () => {
   it('marks only an oversized restored HTML task as failed and preserves other task history', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
@@ -261,6 +275,23 @@ describe('Research task contract and prompt', () => {
       prompt: '在组件中加载 https://example.com/dashboard'
     })
     expect(explicitWebPrompt).toContain('"type": "web"')
+  })
+
+  it('uses the short panel contract when retrying a legacy auto-layout workbench card', async () => {
+    const { buildResearchTaskPrompt } = await runtimeModule()
+    const legacy = '展示贵金属全品种报价热力图与列表，支持按品种筛选和切换日/周涨跌。数据必须标注时点与来源；无法获取的品种说明缺失，不得编造价格。\n组件初始尺寸 656×456px；自动布局按内容密度选择规格。'
+    const prompt = buildResearchTaskPrompt({ ...containerRequest(), prompt: legacy })
+    expect(prompt).toContain('独立面板')
+    expect(prompt).toMatch(/"type":\s*"html"/u)
+    expect(prompt).toContain(legacy)
+    expect(prompt).toContain('宿主原生空状态')
+    expect(prompt).toContain('"type":"dashboard"')
+    expect(prompt).not.toContain('"type":"markdown","title":"面板标题","content":"数据暂不可用')
+    expect(prompt).toContain('没有任何可核验的数值或记录')
+    expect(Buffer.byteLength(prompt, 'utf8')).toBeLessThan(8_000)
+
+    const manual = buildResearchTaskPrompt({ ...containerRequest(), prompt: '用户自己拉框创建智能容器：' + legacy })
+    expect(manual).toContain('统一遵循 EWork 工作台 Figma 组件规范')
   })
 
   it('uses the selected document body for an interactive activity page or a professional journey map', async () => {
@@ -552,6 +583,9 @@ describe('Research task public event sanitization', () => {
   it('maps tool calls to bounded public labels without arguments or result bodies', async () => {
     const { publicEventFromSessionEvent } = await runtimeModule()
 
+    expect(publicEventFromSessionEvent({type:'tool/call',data:{name:'web_fetch',arguments:'{"url":"https://example.org/market"}'}}))
+      .toEqual({type:'tool-started',tool:'读取网页',detail:'[来源链接]'})
+
     const started = publicEventFromSessionEvent({
       type: 'tool/call',
       seq: 9,
@@ -642,18 +676,18 @@ describe('Research model connection failures', () => {
 })
 
 describe('Research task ten-slot scheduling', () => {
-  it('queues heavy components at three slots while summary tasks keep their independent capacity', async () => {
+  it('queues heavy components at two slots while summary tasks keep their independent capacity', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches = deferredTaskAdapter()
     const runtime = new ResearchTaskRuntime({adapter: launches.adapter, storage: memoryTaskStorage(), createId: sequentialTaskIds()})
     const receipts = await Promise.all(Array.from({length:7},(_,i)=>runtime.start(containerRequest('component-'+i))))
-    await launches.waitForStarts(3)
-    expect(runtime.inspect({parentSessionId:'parent-1',taskId:receipts[3].taskId}).state).toBe('queued')
+    await launches.waitForStarts(2)
+    expect(runtime.inspect({parentSessionId:'parent-1',taskId:receipts[2].taskId}).state).toBe('queued')
     await runtime.start(summaryRequest('summary'))
-    await launches.waitForStarts(4)
+    await launches.waitForStarts(3)
     launches.complete(receipts[0].taskId, JSON.stringify({version:1,type:'markdown',title:'已核验资料',content:'有来源的研究正文。'}))
-    await launches.waitForStarts(5)
-    expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-8','task-4'])
+    await launches.waitForStarts(4)
+    expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-8','task-3'])
     await runtime.dispose()
   })
 
@@ -988,8 +1022,51 @@ describe('Research task Subagent adapter', () => {
   it('keeps explicit retrieval enabled when the user forbids example data', async () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('必须本次实际调用网页搜索工具 web_search 查询国家药监局最近60天公告，不得复用画布旧结果或示例数据。')
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['financial_query', 'web_search'])
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['financial_query', 'web_search', 'web_fetch'])
     expect(fixture.ctx.web.search).toHaveBeenCalled()
+    await handle.dispose()
+  })
+
+  it('inherits the parent agent scoped tools for a component without granting hidden tools', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.tools = { schemas: vi.fn(() => [
+      { name: 'read' }, { name: 'web_search' }, { name: 'web_fetch' }, { name: 'ework__source_lookup' }
+    ]) }
+    const handle = await fixture.start('检索最新市场数据并制作研究组件')
+    expect(fixture.ctx.tools.schemas).toHaveBeenCalledWith(expect.objectContaining({ id: 'parent-1' }))
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow)
+      .toEqual(['read', 'web_search', 'web_fetch', 'ework__source_lookup'])
+    await handle.dispose()
+  })
+
+  it('keeps an offline component offline while retaining the parent agent local tools', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.tools = { schemas: () => [{ name: 'read' }, { name: 'web_search' }, { name: 'web_fetch' }, { name: 'financial_query' }] }
+    const handle = await fixture.start('不要联网，使用给定数据生成离线组件')
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['read'])
+    await handle.dispose()
+  })
+
+  it.each(['board', 'qa'])('inherits parent-visible research tools for a %s child', async kind => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.tools = { schemas: vi.fn(() => [
+      { name: 'read' }, { name: 'bash' }, { name: 'web_search' },
+      { name: 'research_canvas_inspect' }, { name: 'research_canvas_apply' },
+      { name: 'research_workbench_create' }, { name: 'custom_parent_tool' }
+    ]) }
+    const runtime = await runtimeModule()
+    const handle = await runtime.createSubagentAdapter(fixture.ctx).start({
+      parentSessionId: 'parent-1', kind, query: '研究当前画板', prompt: '研究当前画板',
+      signal: new AbortController().signal, onSessionEvent: vi.fn()
+    })
+    const allowed = fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow
+    expect(allowed).toContain('read')
+    expect(allowed).toContain('bash')
+    expect(allowed).toContain('web_search')
+    expect(allowed).toContain('research_canvas_inspect')
+    expect(allowed).toContain('custom_parent_tool')
+    expect(allowed.includes('research_canvas_apply')).toBe(kind === 'board')
+    expect(allowed.includes('research_workbench_create')).toBe(kind === 'board')
     await handle.dispose()
   })
 
@@ -1015,7 +1092,7 @@ describe('Research task Subagent adapter', () => {
   it('distinguishes an offline deliverable from an explicit retrieval request', async () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('实际调用 financial_query 查询沪深300ETF最近行情，再创建离线HTML交互组件，不得使用示例数据。')
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['financial_query', 'web_search'])
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['financial_query', 'web_search', 'web_fetch'])
     await handle.dispose()
   })
 
@@ -1150,7 +1227,7 @@ describe('Research task Subagent adapter', () => {
   it.each(['写一篇关于黄金最近的一个研究报告', '黄金近期研究报告', 'Gold research report from the last week'])('keeps search available for research wording: %s', async (query) => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start(query)
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search', 'web_fetch'] })
     await handle.dispose()
   })
 
@@ -1162,7 +1239,7 @@ describe('Research task Subagent adapter', () => {
   ])('does not treat a data heading as supplied values: %s', async query => {
     const fixture = containerAdapterFixture();
     const handle = await fixture.start(query);
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] });
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search', 'web_fetch'] });
     await handle.dispose();
   });
 
@@ -1177,7 +1254,7 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 10, type: 'tool/result', data: {} });
     expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 11, type: 'step/end', data: {} });
-    expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search', 'financial_query'] });
+    expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search', 'web_fetch', 'financial_query'] });
     expect(fixture.ctx.child.steer).not.toHaveBeenCalled();
     await handle.dispose();
     expect(lift).toHaveBeenCalledTimes(1);
@@ -1187,7 +1264,7 @@ describe('Research task Subagent adapter', () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('分析黄金的供需格局')
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search', 'web_fetch'] })
     await handle.dispose()
   })
 
@@ -1204,7 +1281,7 @@ describe('Research task Subagent adapter', () => {
     expect(fixture.ctx.web.fetch).toHaveBeenCalledTimes(1)
     expect(fixture.ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/etf' }, expect.any(AbortSignal))
     const child = fixture.ctx.subagents.start.mock.calls[0][1]
-    expect(child.toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
+    expect(child.toolFilter).toEqual({ allow: ['financial_query', 'web_search', 'web_fetch'] })
     expect(child.prompt[0].text).toContain('https://example.com/etf')
     expect(child.prompt[0].text).toContain('120亿元')
     expect(child.prompt[0].text).not.toContain('生成(汉语词语)')
@@ -1307,7 +1384,7 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.web.search.mockResolvedValue({ content: '比特币最新价格为60000美元。', sources: [] })
     const handle = await fixture.start('生成比特币监控面板，用真实最新数据替换演示数据')
     expect(fixture.ctx.web.search).toHaveBeenCalledWith({ query: '比特币 最新数据', maxResults: 5 }, expect.any(AbortSignal))
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search', 'web_fetch'] })
     await handle.dispose()
   })
 
@@ -1348,7 +1425,7 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.web.search.mockResolvedValue({ content: '沪深300ETF（510300）单位净值1.25，2026-09-04。', sources: [] })
     const handle = await fixture.start('查找沪深300ETF（510300）最近一次可核实的单位净值和日期，生成一个简洁的指标组件，注明来源，不要估算或编造。')
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
-    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search'] })
+    expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter).toEqual({ allow: ['financial_query', 'web_search', 'web_fetch'] })
     expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('真实数值、单位、日期')
     await handle.dispose()
   })
@@ -1450,7 +1527,7 @@ describe('Research task Subagent adapter', () => {
       parent,
       prompt: [{ type: 'text', text: expect.stringContaining('产品固定提示词') }],
       maxDepth: 1,
-      toolFilter: { allow: ['financial_query', 'web_search'] }
+      toolFilter: { allow: ['financial_query', 'web_search', 'web_fetch'] }
     }))
     expect(ctx.subagents.start.mock.calls[0][1].persona).toContain('画布')
     expect(parent.session.events).toHaveLength(0)
@@ -1511,13 +1588,13 @@ describe('Research task Subagent adapter', () => {
     expect(ctx.web.fetch).toHaveBeenCalledWith({ url: 'https://example.com/csi300' }, expect.any(AbortSignal))
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
       parent,
-      toolFilter: { allow: ['financial_query', 'web_search'] },
+      toolFilter: { allow: ['financial_query', 'web_search', 'web_fetch'] },
       prompt: [expect.objectContaining({
         text: expect.stringMatching(/产品固定 JSON 提示词[\s\S]*主机已获取[\s\S]*3,987\.42/u)
       })]
     }))
     const effectivePrompt = ctx.subagents.start.mock.calls[0][1].prompt[0].text
-    expect(effectivePrompt).toContain('只有网站介绍、页面标题或网址时，必须继续调用 web_search')
+    expect(effectivePrompt).toContain('只有网站介绍、页面标题或网址时，先用 web_fetch 读取相关来源')
     expect(effectivePrompt).not.toContain('以上资料足以回答')
     expect(effectivePrompt).toContain('今开 3960.10')
     expect(effectivePrompt).toContain('https://example.com/csi300')
@@ -1558,7 +1635,7 @@ describe('Research task Subagent adapter', () => {
       maxResults: 5
     }, expect.any(AbortSignal))
     expect(ctx.subagents.start).toHaveBeenCalledWith('spawn', expect.objectContaining({
-      toolFilter: { allow: ['financial_query', 'web_search'] },
+      toolFilter: { allow: ['financial_query', 'web_search', 'web_fetch'] },
       prompt: [expect.objectContaining({ text: expect.stringContaining('TRON 生态进展') })]
     }))
     await handle.dispose()
@@ -1935,6 +2012,7 @@ it('shared component executor retains the production child adapter and native co
       expect(request.toolFilter.allow).toEqual([
         'financial_query',
         'web_search',
+        'web_fetch',
         ...(kind === 'qa' ? ['research_canvas_inspect'] : [])
       ])
       expect(request.persona).toContain(kind === 'qa' ? '直接回答' : '画布')
@@ -2042,7 +2120,7 @@ it('shared current request controls retrieval independently from offline instruc
   const executor = createSharedBoardExecutor(ctx)
   try {
     expect(await executor.execute({ sessionId: parent.id, kind: 'container', query: '比特币实时监控面板', prompt: '当前明确请求：比特币实时监控面板\n历史资料：之前的计数器无需联网或读取文件。', files: [] }, new AbortController().signal)).toBe(valid)
-    for (const [, request] of ctx.subagents.start.mock.calls) expect(request.toolFilter.allow).toEqual(['financial_query', 'web_search'])
+    for (const [, request] of ctx.subagents.start.mock.calls) expect(request.toolFilter.allow).toEqual(['financial_query', 'web_search', 'web_fetch'])
     expect(ctx.subagents.start.mock.calls[1][1].prompt[0].text).not.toContain('private reasoning')
   } finally { await executor.dispose() }
 })

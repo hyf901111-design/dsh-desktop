@@ -1,0 +1,3741 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260923-01",
+  "branch": "codex/integration/20260923-01",
+  "baseMainCommit": "7634c2cbdd91482cccf7a672d0e9138981f590fe",
+  "expectedMainCommit": "7634c2cbdd91482cccf7a672d0e9138981f590fe",
+  "createdAt": "2026-09-23T02:55:47.568Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "内置工作台组件生成技能 v1.0.0",
+        "branch": "codex/feat/bundled-component-skill-main-20260923",
+        "baseCommit": "842df24a63abbb6ae0d615d7bba751fe7e24f3f2",
+        "tipCommit": "12796dfbbd4d4ce07e2956d134b0b796f87aa7a2",
+        "commits": [
+          {
+            "commit": "12796dfbbd4d4ce07e2956d134b0b796f87aa7a2",
+            "parents": [
+              "842df24a63abbb6ae0d615d7bba751fe7e24f3f2"
+            ],
+            "subject": "修复：加载并锁定内置工作台组件技能"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/main/integrations/bundled-skills.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--run",
+              "test/integration-bundled-skill.test.js",
+              "test/integration-bundled-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js",
+              "--testTimeout",
+              "15000"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦 6 个测试文件共 174 项通过；macOS 包验证用例单独延长超时以避免并行负载误报",
+            "verifiedCommit": "12796dfbbd4d4ce07e2956d134b0b796f87aa7a2",
+            "completedAt": "2026-09-23T03:07:38.832142+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "12796dfbbd4d4ce07e2956d134b0b796f87aa7a2",
+            "completedAt": "2026-09-23T03:07:38.832142+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "旧集成包真实 UI 验收发现技能卡片缺失；本次修复已经单测覆盖，待刷新集成批次并重新构建后实测。"
+        },
+        "acceptanceCriteria": [
+          "插件 → 技能显示“工作台组件生成”，标记“EWork 内置 · v1.0.0”，开关置灰且保持启用",
+          "画布直接创建、选中来源创建、工作台规划面板及超时重试、共享看板结构化组件任务均加载该技能；缺失技能时明确失败",
+          "默认 S/M/L 规格、手动尺寸、深浅主题和内容密度按技能规范生成；旧 PPT 技能仍可用"
+        ],
+        "risks": [
+          "新增技能在重新构建的真实客户端中的卡片显示和实际生成质量仍需复验"
+        ],
+        "generatedAt": "2026-09-23T03:07:38.832142+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ec4e127fb125e880a86da92ed0073c6d8bb64179",
+        "verificationCommit": "ec4e127fb125e880a86da92ed0073c6d8bb64179",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ec4e127fb125e880a86da92ed0073c6d8bb64179",
+            "completedAt": "2026-09-23T03:08:40.052Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "ec4e127fb125e880a86da92ed0073c6d8bb64179",
+            "completedAt": "2026-09-23T03:08:40.052Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T03:08:40.052Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "Computer Use 陈旧输入重绑与光标弧线移动",
+        "branch": "codex/feat/computer-menu-routing-main-20260923",
+        "baseCommit": "6a90f92ee0078af1a30a82b41f2a6c06254093af",
+        "tipCommit": "d1c0e22b6738f0dc02b168d4e83b13bb8454f3b6",
+        "commits": [
+          {
+            "commit": "d1c0e22b6738f0dc02b168d4e83b13bb8454f3b6",
+            "parents": [
+              "6a90f92ee0078af1a30a82b41f2a6c06254093af"
+            ],
+            "subject": "修复：桌面输入过期重绑并加入光标弧线移动"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/desktop-computer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/overlay-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-controller.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-overlay-layout.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/desktop-computer-overlay.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-overlay-layout.test.ts",
+              "test/desktop-computer-overlay.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "3 个聚焦文件、80 项通过；覆盖 110 秒陈旧输入、控件变化拒绝、单次前台 Web 输入和光标弧线轨迹",
+            "verifiedCommit": "d1c0e22b6738f0dc02b168d4e83b13bb8454f3b6",
+            "completedAt": "2026-09-23T08:48:44.356465+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "d1c0e22b6738f0dc02b168d4e83b13bb8454f3b6",
+            "completedAt": "2026-09-23T08:48:44.356465+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "补丁格式检查通过",
+            "verifiedCommit": "d1c0e22b6738f0dc02b168d4e83b13bb8454f3b6",
+            "completedAt": "2026-09-23T08:48:44.356465+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实易飞书消息输入与发送由用户在集成客户端自行测试，本次未发送真实消息。"
+        },
+        "acceptanceCriteria": [
+          "模型观察后超过 30 秒时，若原输入框角色、位置和值未变，客户端刷新控件并直接完成输入，不因光标闪烁或无关页面变化拒绝",
+          "Web 输入框优先执行目标窗口短暂前置、聚焦并输入的一次事务，目标变化或遮挡时继续拒绝",
+          "智能助理光标在目标之间沿短弧线移动，抵达后执行操作，覆盖层不接管系统鼠标"
+        ],
+        "risks": [
+          "易飞书富文本输入及真实发送结果待用户在本地集成客户端实测",
+          "前台输入会短暂激活目标窗口；弧线移动增加每次跨距离操作最多约 520 毫秒"
+        ],
+        "generatedAt": "2026-09-23T08:48:44.356465+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+        "verificationCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-html-theme.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sherlock-composer-workspace-ui.test.ts -t pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-artifact-resilience.test.js test/shared-component-validation.test.js test/research-task-runtime.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-web-downloads.test.ts",
+              "test/research-native-web.test.ts",
+              "test/conversation-browser.test.ts",
+              "test/browser-page-reader.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-web-downloads.test.ts test/research-native-web.test.ts test/conversation-browser.test.ts test/browser-page-reader.test.ts",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/structured-workbench-generation.test.js",
+              "test/research-workbench.test.js",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/structured-workbench-generation.test.js test/research-workbench.test.js test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/workbench-design-contract.test.js",
+              "test/research-workbench.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-market-layout.test.js",
+              "test/research-market-artifact.test.js",
+              "test/structured-workbench-generation.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/workbench-design-contract.test.js test/research-workbench.test.js test/bundled-component-skill.test.js test/research-market-layout.test.js test/research-market-artifact.test.js test/structured-workbench-generation.test.js",
+            "verifiedCommit": "b2c0ff0a5bf7bbf9c9cfc9848796e07ae9a27afb",
+            "completedAt": "2026-09-23T08:49:20.683Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T08:49:20.683Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "右侧页签可读性与生成组件提示稳定性",
+        "branch": "codex/feat/right-tabs-tooltips-20260923",
+        "baseCommit": "7634c2cbdd91482cccf7a672d0e9138981f590fe",
+        "tipCommit": "6dd8a3327e51b6663ab05f296282b3e5f9fc5174",
+        "commits": [
+          {
+            "commit": "6dd8a3327e51b6663ab05f296282b3e5f9fc5174",
+            "parents": [
+              "7634c2cbdd91482cccf7a672d0e9138981f590fe"
+            ],
+            "subject": "修复：统一右侧页签与生成按钮提示样式"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-creation-tools.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-task-tab-icon.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-tab-icons.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-research-generation-design.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-controls.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-tab-icons.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "6dd8a3327e51b6663ab05f296282b3e5f9fc5174",
+            "completedAt": "2026-09-23T03:07:42.404353+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "右侧页签、生成提示与草稿布局 21 项聚焦测试通过",
+            "verifiedCommit": "6dd8a3327e51b6663ab05f296282b3e5f9fc5174",
+            "completedAt": "2026-09-23T03:07:42.404353+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Chromium 18 种生成卡片状态和尺寸视觉回归通过；悬停持续显示单个气泡，链接输入框随 320×220 至 561×422 卡片伸展",
+            "verifiedCommit": "6dd8a3327e51b6663ab05f296282b3e5f9fc5174",
+            "completedAt": "2026-09-23T03:07:42.404353+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "独立 Chromium 真实渲染已验证生成卡片气泡稳定、与成品气泡同样式及链接草稿响应尺寸；右侧页签原生客户端在集成包验收。"
+        },
+        "acceptanceCriteria": [
+          "右侧页签及新建和已打开菜单的图标统一为清晰的 16px、1.6px 描边，文字可读",
+          "生成卡片右上角功能气泡悬停持续显示，同一时间仅显示当前按钮说明，明暗主题与成品卡片样式统一",
+          "链接草稿最小 320×220，调整到 561×422 时输入框增长且创建按钮保持底部"
+        ],
+        "risks": [
+          "客户端原生右侧页签的实际显示仍须在集成构建后核对"
+        ],
+        "generatedAt": "2026-09-23T03:07:42.404353+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5199016efc78ffd96e04ea0a13e64e64863a43e2",
+        "verificationCommit": "5199016efc78ffd96e04ea0a13e64e64863a43e2",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "5199016efc78ffd96e04ea0a13e64e64863a43e2",
+            "completedAt": "2026-09-23T03:11:55.793Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "5199016efc78ffd96e04ea0a13e64e64863a43e2",
+            "completedAt": "2026-09-23T03:11:55.793Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "5199016efc78ffd96e04ea0a13e64e64863a43e2",
+            "completedAt": "2026-09-23T03:11:55.793Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "5199016efc78ffd96e04ea0a13e64e64863a43e2",
+            "completedAt": "2026-09-23T03:11:55.793Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "5199016efc78ffd96e04ea0a13e64e64863a43e2",
+            "completedAt": "2026-09-23T03:11:55.793Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-23T03:11:55.793Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "生成组件提示、失败率与卡顿修复",
+        "branch": "codex/feat/research-generation-reliability-20260923",
+        "baseCommit": "6b68b9b8405cc497520fd3da26d1b9ce92761eb9",
+        "tipCommit": "164bab7fd7ab412a37fee154a0877b2c1a74d4a3",
+        "commits": [
+          {
+            "commit": "164bab7fd7ab412a37fee154a0877b2c1a74d4a3",
+            "parents": [
+              "6b68b9b8405cc497520fd3da26d1b9ce92761eb9"
+            ],
+            "subject": "修复：稳定生成卡片提示并降低组件生成开销"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-skill.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-research-generation-design.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-controls.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-model-selection.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "164bab7fd7ab412a37fee154a0877b2c1a74d4a3",
+            "completedAt": "2026-09-23T03:54:54.173Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Chromium 18 场景通过，悬停气泡稳定，固定点阵与合成层扫光验证",
+            "verifiedCommit": "164bab7fd7ab412a37fee154a0877b2c1a74d4a3",
+            "completedAt": "2026-09-23T03:54:54.173Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "研究任务、组件规范与生成按钮聚焦测试通过",
+            "verifiedCommit": "164bab7fd7ab412a37fee154a0877b2c1a74d4a3",
+            "completedAt": "2026-09-23T03:54:54.173Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "组件子任务支持时选较低推理档位",
+            "verifiedCommit": "164bab7fd7ab412a37fee154a0877b2c1a74d4a3",
+            "completedAt": "2026-09-23T03:54:54.173Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 真实渲染证实气泡在卡片上方持续可见，明暗主题与动态内容回归通过；原生集成包待复验。"
+        },
+        "acceptanceCriteria": [
+          "生成卡片右上角气泡稳定显示，浮在卡片上方并与成品组件气泡一致",
+          "生成状态点阵固定，仅光泽扫过；运行中的卡片不逐帧重绘 Canvas",
+          "单面板提示词精简且保留尺寸、主题、真实数据与控件规范；支持时用较低推理档位"
+        ],
+        "risks": [
+          "真实模型成功率和客户端 resize 性能仍需在集成包中观察；不会将无来源数据伪装为完成",
+          "现有 research-task-model-selection 测试中旧的 spawn 事件断言在未修改的集成基线同样失败；新增纯函数回归单独通过"
+        ],
+        "generatedAt": "2026-09-23T03:57:45.380Z"
+      },
+      "merged": {
+        "mergeCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+        "verificationCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+            "completedAt": "2026-09-23T03:59:08.863Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+            "completedAt": "2026-09-23T03:59:08.863Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+            "completedAt": "2026-09-23T03:59:08.863Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+            "completedAt": "2026-09-23T03:59:08.863Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+            "completedAt": "2026-09-23T03:59:08.863Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+            "completedAt": "2026-09-23T03:59:08.863Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "8c52a9167ba68ffc16eb5cb34a4f5c763186cf8e",
+            "completedAt": "2026-09-23T03:59:08.863Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T03:59:08.863Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "右侧页签细线图标与组件生成可靠性修复",
+        "branch": "codex/feat/right-tab-icon-refinement-20260923",
+        "baseCommit": "edff9c9694409f61eb6728541f1672be7343ad14",
+        "tipCommit": "c61c1ac0b615d30f361c0b808b1cd8cb6105a5dc",
+        "commits": [
+          {
+            "commit": "af1769aecbe74f2deff97877a9e0e26c836d8dd6",
+            "parents": [
+              "edff9c9694409f61eb6728541f1672be7343ad14"
+            ],
+            "subject": "界面：统一右侧页签图标细线风格"
+          },
+          {
+            "commit": "c61c1ac0b615d30f361c0b808b1cd8cb6105a5dc",
+            "parents": [
+              "af1769aecbe74f2deff97877a9e0e26c836d8dd6"
+            ],
+            "subject": "组件：继承主代理工具并修复网页取数与缺数交付"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-task-tab-icon.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-tab-icons.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "test/research-artifact-resilience.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-tab-icons.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "页签图标和溢出菜单聚焦测试 2 项通过；Chromium 深浅主题图标对照已检查",
+            "verifiedCommit": "c61c1ac0b615d30f361c0b808b1cd8cb6105a5dc",
+            "completedAt": "2026-09-23T04:31:34.236298Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "研究任务工具继承、网页读取、缺数交付和图表备注聚焦测试 178 项通过",
+            "verifiedCommit": "c61c1ac0b615d30f361c0b808b1cd8cb6105a5dc",
+            "completedAt": "2026-09-23T04:31:34.236298Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "c61c1ac0b615d30f361c0b808b1cd8cb6105a5dc",
+            "completedAt": "2026-09-23T04:31:34.236298Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 以 2x 像素密度核对新页签和菜单图标的浅色/深色细线样式；组件生成仍需集成客户端真实重试验证。"
+        },
+        "acceptanceCriteria": [
+          "右侧页签及新建菜单共用 16px、1.25px 细线图标，无重复描边",
+          "组件子 agent 仅继承主 agent 当前可见工具；允许检索时能读取命中网页正文，离线需求不启用网页工具",
+          "有真实数值的图表保留来源备注；数据确实不可得时显示明确缺数内容，不发布空图表",
+          "一块看板同时运行的生成任务不超过 2 个，以降低 UI 与模型并发压力"
+        ],
+        "risks": [
+          "真实模型批量成功率需在集成包中复测；financial_query 对贵金属可能返回 unavailable，来源正文能否提供数值取决于所选网站",
+          "现有 research-tabbar-final-layout 测试在已打补丁的 vendor fixture 上有 3 项基线失败，本次未修改布局，相关图标与菜单测试已通过"
+        ],
+        "generatedAt": "2026-09-23T04:31:34.236298Z"
+      },
+      "merged": {
+        "mergeCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+        "verificationCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "b952196005ad1dbb26abda90362d7b7fabaaade9",
+            "completedAt": "2026-09-23T04:32:03.821Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T04:32:03.821Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "画布子代理继承主代理当前可见工具",
+        "branch": "codex/feat/research-child-capability-parity-20260923",
+        "baseCommit": "0f8355a1a84bc705a91e23236f00813ac0628448",
+        "tipCommit": "876e1c14af209ace513735cd2da4c6bc5f3a93a7",
+        "commits": [
+          {
+            "commit": "876e1c14af209ace513735cd2da4c6bc5f3a93a7",
+            "parents": [
+              "0f8355a1a84bc705a91e23236f00813ac0628448"
+            ],
+            "subject": "研究：让画布子代理继承主代理可见工具"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "研究任务子代理聚焦测试 153 项通过，覆盖组件、工作台规划、问答的父工具继承与画布操作边界",
+            "verifiedCommit": "876e1c14af209ace513735cd2da4c6bc5f3a93a7",
+            "completedAt": "2026-09-23T04:50:43.360Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过；新 worktree 的显式依赖路径已用本地 node_modules 链接补齐",
+            "verifiedCommit": "876e1c14af209ace513735cd2da4c6bc5f3a93a7",
+            "completedAt": "2026-09-23T04:50:43.360Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "本次仅改变子代理工具范围，不改变界面；集成客户端仍需以真实任务验证工具调用。"
+        },
+        "acceptanceCriteria": [
+          "组件、工作台规划和问答子代理继承主代理当前可见工具，不能获得主代理不可见的工具",
+          "问答子代理不能直接修改画布或创建其他画布任务",
+          "离线组件不启用联网工具；最终无工具合成阶段继续保持无工具"
+        ],
+        "risks": [
+          "真实模型是否选用新增工具及生成成功率需在集成客户端通过实际任务验证",
+          "持续画布操作代理仍受观察-操作-再观察专用工具与次数约束，不扩大到任意工具"
+        ],
+        "generatedAt": "2026-09-23T04:50:43.360Z"
+      },
+      "merged": {
+        "mergeCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+        "verificationCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "93bde74c60d497f5840c4a54237ec94ed57f7d76",
+            "completedAt": "2026-09-23T04:52:36.327Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T04:52:36.327Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "旧工作台卡片生成提示词精简与重试恢复",
+        "branch": "codex/feat/legacy-workbench-prompt-recovery-20260923",
+        "baseCommit": "b0c355bda623e25e9bbb7d27c00af6bbea88f449",
+        "tipCommit": "5cac5cd6c273a403b2a622a9182ea8f29e35631d",
+        "commits": [
+          {
+            "commit": "5cac5cd6c273a403b2a622a9182ea8f29e35631d",
+            "parents": [
+              "b0c355bda623e25e9bbb7d27c00af6bbea88f449"
+            ],
+            "subject": "组件：无数据时交付结构化空状态面板"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "面板空状态及运行时聚焦检查 181 项通过",
+            "verifiedCommit": "5cac5cd6c273a403b2a622a9182ea8f29e35631d",
+            "completedAt": "2026-09-23T05:29:24.416542+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "5cac5cd6c273a403b2a622a9182ea8f29e35631d",
+            "completedAt": "2026-09-23T05:29:24.416542+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "集成客户端实测旧工作台卡片可完成；真实行情源均不可用时之前呈现长段文字，本次改为原生结构化空状态，待重新打包验收。"
+        },
+        "acceptanceCriteria": [
+          "旧版自动布局工作台卡片与新版面板共用短生成协议，完整保留原始业务需求",
+          "真实来源和时点要求保留，缺失数据只能标注，不伪造价格或连续趋势",
+          "用户手动画框的智能容器继续使用完整组件规范及自定义尺寸路径",
+          "无可核验数据时使用宿主原生 dashboard 空状态，逐项显示缺失字段，不输出长段 markdown。"
+        ],
+        "risks": [
+          "面板类型从旧需求首行推断；复杂交互优先 HTML，其余由宿主校验",
+          "真实模型成功率仍需在集成客户端重试验证"
+        ],
+        "generatedAt": "2026-09-23T05:29:24.416542+00:00"
+      },
+      "merged": {
+        "mergeCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+        "verificationCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "dc9f1e98a43fab1f506a017666b04d9ab1736868",
+            "completedAt": "2026-09-23T05:30:27.924Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T05:30:27.924Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "选中组件无可滚动内容时滚轮回退画布",
+        "branch": "codex/feat/research-canvas-wheel-pass-through-20260923",
+        "baseCommit": "7634c2cbdd91482cccf7a672d0e9138981f590fe",
+        "tipCommit": "39080d139b0c8048830bd234fed374e9cae85b78",
+        "commits": [
+          {
+            "commit": "18961207ba868a03175b726c641f658d9851dde3",
+            "parents": [
+              "7634c2cbdd91482cccf7a672d0e9138981f590fe"
+            ],
+            "subject": "画布：组件无可滚动内容时滚轮继续平移画布"
+          },
+          {
+            "commit": "d17aff4ffef2bdc86d299b572383814aee489105",
+            "parents": [
+              "18961207ba868a03175b726c641f658d9851dde3"
+            ],
+            "subject": "测试：隔离画布滚轮回归所需的客户端补丁"
+          },
+          {
+            "commit": "39080d139b0c8048830bd234fed374e9cae85b78",
+            "parents": [
+              "d17aff4ffef2bdc86d299b572383814aee489105"
+            ],
+            "subject": "类型：声明画布滚轮补丁的测试接口"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-wheel-zoom.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-wheel-zoom.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-wheel-pass-through.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "滚轮路由、HTML 安全消息和现有适配 75 项通过",
+            "verifiedCommit": "39080d139b0c8048830bd234fed374e9cae85b78",
+            "completedAt": "2026-09-23T05:57:57.490233+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "独立注入客户端补丁的画布 UI 回归 2 项通过",
+            "verifiedCommit": "39080d139b0c8048830bd234fed374e9cae85b78",
+            "completedAt": "2026-09-23T05:57:57.490233+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "39080d139b0c8048830bd234fed374e9cae85b78",
+            "completedAt": "2026-09-23T05:57:57.490233+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端问题已复现并以挂载 UI 用例验证滚轮分流；集成打包后待客户端手势复核。"
+        },
+        "acceptanceCriteria": [
+          "选中组件无内部滚动空间或已到滚动边界时滚轮平移画布",
+          "组件内部可滚动时保留内部滚动，缩放手势不受影响",
+          "离线 HTML 组件无可滚动内容时安全转发滚轮到画布"
+        ],
+        "risks": [
+          "HTML iframe 的真实设备滚动链行为需在集成客户端复核"
+        ],
+        "generatedAt": "2026-09-23T05:57:57.490233+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+        "verificationCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-html-theme.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sherlock-composer-workspace-ui.test.ts -t pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected",
+            "verifiedCommit": "5d321f9209b51f6ab2639a9d0c9fce4e2805199b",
+            "completedAt": "2026-09-23T05:59:12.484Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T05:59:12.484Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "模拟工作台组件验收与展示脚本可靠性",
+        "branch": "codex/feat/simulated-workbench-acceptance-20260923",
+        "baseCommit": "7634c2cbdd91482cccf7a672d0e9138981f590fe",
+        "tipCommit": "2c8873e33e0221f316f82bb9743552876091f152",
+        "commits": [
+          {
+            "commit": "2c8873e33e0221f316f82bb9743552876091f152",
+            "parents": [
+              "7634c2cbdd91482cccf7a672d0e9138981f590fe"
+            ],
+            "subject": "修复：模拟工作台组件验收与展示脚本误判"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-artifact-resilience.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-component-validation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "3 个直接相关测试文件、183 项通过；新增 15 指标、静态脚本与宿主样式修正回归",
+            "verifiedCommit": "2c8873e33e0221f316f82bb9743552876091f152",
+            "completedAt": "2026-09-23T06:38:46Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "2c8873e33e0221f316f82bb9743552876091f152",
+            "completedAt": "2026-09-23T06:38:46Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按项目约定不构建共享客户端；用真实失败会话的 3 份模型输出重放，3 份均通过完整任务验收，待集成客户端进行画布验收"
+        },
+        "acceptanceCriteria": [
+          "用户明确提供 15 项模拟行情指标时全部保留并生成完整仪表面板",
+          "仅有悬停、缩放或静态渲染脚本的模拟组件无需空共享状态注册；按钮、表单与持续状态仍校验共享通道",
+          "模型输出的宿主变量重定义和自造字体可机械修正并保留业务内容",
+          "运行中真实客户端复验失败面板并确认自动尺寸与主题适配"
+        ],
+        "risks": [
+          "模拟交易台本次单独因模型 180 秒初次生成和 90 秒无工具恢复均没有公开输出而超时；本修复不改变模型服务可用性",
+          "功能分支尚未集成、构建或在当前客户端生效"
+        ],
+        "generatedAt": "2026-09-23T06:41:20Z"
+      },
+      "merged": {
+        "mergeCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+        "verificationCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-html-theme.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sherlock-composer-workspace-ui.test.ts -t pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-artifact-resilience.test.js test/shared-component-validation.test.js test/research-task-runtime.test.js",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-web-downloads.test.ts",
+              "test/research-native-web.test.ts",
+              "test/conversation-browser.test.ts",
+              "test/browser-page-reader.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-web-downloads.test.ts test/research-native-web.test.ts test/conversation-browser.test.ts test/browser-page-reader.test.ts",
+            "verifiedCommit": "0696bd50c413fd9029c1bfe1fc83e060f857757c",
+            "completedAt": "2026-09-23T06:45:54.346Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T06:45:54.346Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究网页自动下载及 error.txt 保存弹窗拦截",
+        "branch": "codex/feat/research-generation-download-guard-20260923",
+        "baseCommit": "7634c2cbdd91482cccf7a672d0e9138981f590fe",
+        "tipCommit": "9bc3483f0a1c5cd7f28134544c88fca3ede3f917",
+        "commits": [
+          {
+            "commit": "9bc3483f0a1c5cd7f28134544c88fca3ede3f917",
+            "parents": [
+              "7634c2cbdd91482cccf7a672d0e9138981f590fe"
+            ],
+            "subject": "修复：阻止研究网页错误下载反复弹出保存窗口"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/conversation-browser.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/search/research-web-downloads.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-native-web.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-native-web.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-web-downloads.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-web-downloads.test.ts",
+              "test/research-native-web.test.ts",
+              "test/conversation-browser.test.ts",
+              "test/browser-page-reader.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "4 个相关测试文件、16 项聚焦测试通过",
+            "verifiedCommit": "9bc3483f0a1c5cd7f28134544c88fca3ede3f917",
+            "completedAt": "2026-09-23T06:24:17Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "补齐工作树本地依赖链接后 TypeScript 类型检查通过",
+            "verifiedCommit": "9bc3483f0a1c5cd7f28134544c88fca3ede3f917",
+            "completedAt": "2026-09-23T06:24:17Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 按项目约定不构建共享客户端；需在集成客户端验证重复弹窗停止"
+        },
+        "acceptanceCriteria": [
+          "研究网页自动触发的下载不打开系统保存对话框",
+          "主窗口遇到 error.txt 响应时不弹出保存对话框",
+          "正常的非 error.txt 下载行为保留"
+        ],
+        "risks": [
+          "第三方网页实际返回 error.txt 的 URL 尚未在运行日志中确认；若来自未受控的独立 Electron 会话，集成验收需补齐来源防护"
+        ],
+        "generatedAt": "2026-09-23T06:24:17Z"
+      },
+      "merged": {
+        "mergeCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+        "verificationCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-html-theme.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sherlock-composer-workspace-ui.test.ts -t pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-artifact-resilience.test.js test/shared-component-validation.test.js test/research-task-runtime.test.js",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-web-downloads.test.ts",
+              "test/research-native-web.test.ts",
+              "test/conversation-browser.test.ts",
+              "test/browser-page-reader.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-web-downloads.test.ts test/research-native-web.test.ts test/conversation-browser.test.ts test/browser-page-reader.test.ts",
+            "verifiedCommit": "f28cbd71bc1ca41d9855045921679aa8267469bd",
+            "completedAt": "2026-09-23T06:48:14.543Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T06:48:14.543Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "模拟工作台结构化批量生成",
+        "branch": "codex/feat/structured-workbench-generation-20260923",
+        "baseCommit": "cddd53f97dde050124f63359c31f757de207f965",
+        "tipCommit": "a5e959826950a51bcf76b2a721bf1bc1b34d33d5",
+        "commits": [
+          {
+            "commit": "a5e959826950a51bcf76b2a721bf1bc1b34d33d5",
+            "parents": [
+              "cddd53f97dde050124f63359c31f757de207f965"
+            ],
+            "subject": "修复：兼容模拟指标输入并提供组件格式提示"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "test/structured-workbench-generation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/structured-workbench-generation.test.js",
+              "test/research-workbench.test.js",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "4 个聚焦文件、202 项测试通过",
+            "verifiedCommit": "a5e959826950a51bcf76b2a721bf1bc1b34d33d5",
+            "completedAt": "2026-09-23T07:44:47.210696+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "a5e959826950a51bcf76b2a721bf1bc1b34d33d5",
+            "completedAt": "2026-09-23T07:44:47.210696+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 不构建共享客户端。旧集成包实测发现指标字段差异；本修复待新集成包验证。"
+        },
+        "acceptanceCriteria": [
+          "模拟工作台六面板一次提交后全部生成，单面板模型子任务数为零",
+          "浅深主题和窄宽尺寸下模拟指标、图表、盘口、资讯、委托及持仓可读",
+          "无效模拟数据原子拒绝，旧真实数据路径和既有任务恢复保持可用"
+        ],
+        "risks": [
+          "第一阶段只覆盖个人看板模拟数据；共享画板和真实数据仍走旧模型路径",
+          "主规划模型仍须一次输出有效结构化数据"
+        ],
+        "generatedAt": "2026-09-23T07:44:47.210696+00:00"
+      },
+      "merged": {
+        "mergeCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+        "verificationCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-html-theme.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sherlock-composer-workspace-ui.test.ts -t pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-artifact-resilience.test.js test/shared-component-validation.test.js test/research-task-runtime.test.js",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-web-downloads.test.ts",
+              "test/research-native-web.test.ts",
+              "test/conversation-browser.test.ts",
+              "test/browser-page-reader.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-web-downloads.test.ts test/research-native-web.test.ts test/conversation-browser.test.ts test/browser-page-reader.test.ts",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/structured-workbench-generation.test.js",
+              "test/research-workbench.test.js",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/structured-workbench-generation.test.js test/research-workbench.test.js test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "9f0a070ab726b64159c81d484b7d3cfaefc246b8",
+            "completedAt": "2026-09-23T07:45:32.876Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T07:45:32.876Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复金融面板 K线语义误判",
+        "branch": "codex/feat/workbench-figma-runtime-20260923",
+        "baseCommit": "8a5997b19d3436210f3f7010816f3bc72de914e3",
+        "tipCommit": "44bf09bf738cc0d00df343b686d85b9d73132f72",
+        "commits": [
+          {
+            "commit": "44bf09bf738cc0d00df343b686d85b9d73132f72",
+            "parents": [
+              "8a5997b19d3436210f3f7010816f3bc72de914e3"
+            ],
+            "subject": "修复：避免行情概览提及K线时被误判"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-design-contract.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/workbench-design-contract.test.js",
+              "test/structured-workbench-generation.test.js",
+              "test/research-workbench.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "3 个聚焦文件 25 项通过，覆盖行情概览提及 K线 时仍保留 metrics 变体",
+            "verifiedCommit": "44bf09bf738cc0d00df343b686d85b9d73132f72",
+            "completedAt": "2026-09-23T08:53:11.500750+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "44bf09bf738cc0d00df343b686d85b9d73132f72",
+            "completedAt": "2026-09-23T08:53:11.500750+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "上一版集成客户端真实测试出现首次误判、二次提交生成三个模板组件；本修复在功能分支聚焦验证后待集成包再测。"
+        },
+        "acceptanceCriteria": [
+          "market.metrics 面板的说明提及 K线 不触发蜡烛图校验",
+          "真正的 K线面板仍须使用 market.candlestick 与 OHLC/成交量",
+          "真实客户端模拟三面板首次提交成功且视觉可读"
+        ],
+        "risks": [
+          "需重建集成测试客户端并复测首次提交"
+        ],
+        "generatedAt": "2026-09-23T08:53:11.500750+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+        "verificationCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-html-theme.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sherlock-composer-workspace-ui.test.ts -t pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-artifact-resilience.test.js test/shared-component-validation.test.js test/research-task-runtime.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-web-downloads.test.ts",
+              "test/research-native-web.test.ts",
+              "test/conversation-browser.test.ts",
+              "test/browser-page-reader.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-web-downloads.test.ts test/research-native-web.test.ts test/conversation-browser.test.ts test/browser-page-reader.test.ts",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/structured-workbench-generation.test.js",
+              "test/research-workbench.test.js",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/structured-workbench-generation.test.js test/research-workbench.test.js test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/workbench-design-contract.test.js",
+              "test/research-workbench.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-market-layout.test.js",
+              "test/research-market-artifact.test.js",
+              "test/structured-workbench-generation.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/workbench-design-contract.test.js test/research-workbench.test.js test/bundled-component-skill.test.js test/research-market-layout.test.js test/research-market-artifact.test.js test/structured-workbench-generation.test.js",
+            "verifiedCommit": "ee0d78d7611b6a81a4de623fb96104f9f60785c9",
+            "completedAt": "2026-09-23T08:53:41.566Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-09-23T08:53:41.566Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究画布按内容定尺寸与矩阵整理及金融指标尺寸修复",
+        "branch": "codex/feat/workbench-parity-20260923",
+        "baseCommit": "e8be4e8fef8ba692c1332c87109802e70afa86ae",
+        "tipCommit": "8f3791e08afe04784a096085f0e981374fb1eb84",
+        "commits": [
+          {
+            "commit": "bd0b56b710ac20932c42efb39561e849b802b6f2",
+            "parents": [
+              "e8be4e8fef8ba692c1332c87109802e70afa86ae"
+            ],
+            "subject": "按组件内容优化研究画布默认尺寸与矩阵整理"
+          },
+          {
+            "commit": "8f3791e08afe04784a096085f0e981374fb1eb84",
+            "parents": [
+              "bd0b56b710ac20932c42efb39561e849b802b6f2"
+            ],
+            "subject": "保持金融工作台六指标条的原稿尺寸"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-research-optimal-arrange.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-bento-arrange-fit.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-optimal-arrange.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-optimal-arrange.test.js",
+              "test/research-market-layout.test.js",
+              "test/research-bento-arrange-fit.test.js",
+              "test/research-market-arrange-content.test.js",
+              "test/research-workbench.test.js",
+              "test/research-bento-visible-layout.test.js",
+              "test/research-workbench-multi-scenario.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "七个直接相关测试文件的59项用例通过，覆盖内容尺寸、金融指标条、重复整理、混合排列及完整工作台。",
+            "verifiedCommit": "8f3791e08afe04784a096085f0e981374fb1eb84",
+            "completedAt": "2026-09-24T14:24:58Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "8f3791e08afe04784a096085f0e981374fb1eb84",
+            "completedAt": "2026-09-24T14:24:58Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-optimal-arrange.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "Chromium 实画布显示四类组件，表格最后一行完整可见，布局无重叠。",
+            "verifiedCommit": "8f3791e08afe04784a096085f0e981374fb1eb84",
+            "completedAt": "2026-09-24T14:24:58Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 中实际挂载画布并整理 KPI、8 条新闻、短结论及 6 行表格；保存了排列截图，表格最后一行可见。"
+        },
+        "acceptanceCriteria": [
+          "生成的组件按内容取得完整可读且不过度留白的默认尺寸",
+          "整理画布时按组件最佳尺寸排成不重叠、边界尽量对齐的矩阵",
+          "长资讯和表格内容不裁切，短组件保持统一最小尺寸",
+          "重复整理稳定，不让已有组件意外位移或拉伸"
+        ],
+        "risks": [
+          "用户主动整理时，已完成的结构化组件会重算尺寸；没有可靠内容测量值的自定义 HTML 暂以已有框体为准。"
+        ],
+        "generatedAt": "2026-09-24T14:25:04Z"
+      },
+      "merged": {
+        "mergeCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+        "verificationCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-ppt-skill.test.ts",
+              "test/macos-package-runtime.test.ts",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/bundled-component-skill.test.js test/bundled-ppt-skill.test.ts test/macos-package-runtime.test.ts test/research-task-runtime.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/computer-controller.test.ts",
+              "test/computer-observation.test.ts",
+              "test/computer-vision.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/computer-controller.test.ts test/computer-observation.test.ts test/computer-vision.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/figma-canvas-draft-layout.test.ts",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/research-generation-controls.test.ts test/figma-canvas-draft-layout.test.ts test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-generation-design.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-research-generation-design.mjs",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-generation-controls.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/bundled-component-skill.test.js test/research-generation-controls.test.ts",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-model-selection.test.js",
+              "-t",
+              "uses a supported concise reasoning mode"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-model-selection.test.js -t uses a supported concise reasoning mode",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-tab-icons.test.js",
+              "test/figma-panel-tab-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-tab-icons.test.js test/figma-panel-tab-overflow.test.ts",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-task-runtime.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-html-theme.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-canvas-wheel-pass-through.test.js test/component-wheel-zoom.test.js test/research-html-theme.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/sherlock-composer-workspace-ui.test.ts",
+              "-t",
+              "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/sherlock-composer-workspace-ui.test.ts -t pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-artifact-resilience.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-task-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-artifact-resilience.test.js test/shared-component-validation.test.js test/research-task-runtime.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-web-downloads.test.ts",
+              "test/research-native-web.test.ts",
+              "test/conversation-browser.test.ts",
+              "test/browser-page-reader.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-web-downloads.test.ts test/research-native-web.test.ts test/conversation-browser.test.ts test/browser-page-reader.test.ts",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/structured-workbench-generation.test.js",
+              "test/research-workbench.test.js",
+              "test/research-task-runtime.test.js",
+              "test/research-artifact-resilience.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/structured-workbench-generation.test.js test/research-workbench.test.js test/research-task-runtime.test.js test/research-artifact-resilience.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/workbench-design-contract.test.js",
+              "test/research-workbench.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-market-layout.test.js",
+              "test/research-market-artifact.test.js",
+              "test/structured-workbench-generation.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/workbench-design-contract.test.js test/research-workbench.test.js test/bundled-component-skill.test.js test/research-market-layout.test.js test/research-market-artifact.test.js test/structured-workbench-generation.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-market-artifact.test.js",
+              "test/research-interactive-artifact.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/structured-workbench-generation.test.js",
+              "test/research-workbench-multi-scenario.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-market-artifact.test.js test/research-interactive-artifact.test.js test/workbench-design-contract.test.js test/structured-workbench-generation.test.js test/research-workbench-multi-scenario.test.js",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8151392b88b0d9540fb07007ccb24462360de14d",
+            "completedAt": "2026-09-24T14:26:35.107Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-24T14:26:35.107Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/bundled-component-skill.test.js",
+        "test/bundled-ppt-skill.test.ts",
+        "test/macos-package-runtime.test.ts",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/computer-controller.test.ts",
+        "test/computer-observation.test.ts",
+        "test/computer-vision.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-tab-icons.test.js",
+        "test/research-generation-controls.test.ts",
+        "test/figma-canvas-draft-layout.test.ts",
+        "test/figma-panel-tab-overflow.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/verify-research-generation-design.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-task-runtime.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/research-generation-controls.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-task-model-selection.test.js",
+        "-t",
+        "uses a supported concise reasoning mode"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-tab-icons.test.js",
+        "test/figma-panel-tab-overflow.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-task-runtime.test.js",
+        "test/research-artifact-resilience.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/research-canvas-wheel-pass-through.test.js",
+        "test/component-wheel-zoom.test.js",
+        "test/research-html-theme.test.js",
+        "test/research-board-client-adapter.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/sherlock-composer-workspace-ui.test.ts",
+        "-t",
+        "pans the canvas over a selected component|routes preview wheel to the canvas until that component is selected"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/research-artifact-resilience.test.js",
+        "test/shared-component-validation.test.js",
+        "test/research-task-runtime.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/research-web-downloads.test.ts",
+        "test/research-native-web.test.ts",
+        "test/conversation-browser.test.ts",
+        "test/browser-page-reader.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/structured-workbench-generation.test.js",
+        "test/research-workbench.test.js",
+        "test/research-task-runtime.test.js",
+        "test/research-artifact-resilience.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/workbench-design-contract.test.js",
+        "test/research-workbench.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/research-market-layout.test.js",
+        "test/research-market-artifact.test.js",
+        "test/structured-workbench-generation.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/research-market-artifact.test.js",
+        "test/research-interactive-artifact.test.js",
+        "test/workbench-design-contract.test.js",
+        "test/structured-workbench-generation.test.js",
+        "test/research-workbench-multi-scenario.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
