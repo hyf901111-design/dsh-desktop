@@ -130,6 +130,28 @@ it('rejects unsupported fund-flow values rather than inventing a net amount',()=
  expect(acceptArtifactOutput(JSON.stringify({...base,records:[]}))).toBeUndefined()
  expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.fund-flow 的结构化数据')).toBeNull()
 })
+it('shows a distinct valuation percentile band with range and keyboard readings',()=>{
+ const labels=Array.from({length:65},(_,i)=>`第${i+1}日`),values=labels.map((_,i)=>20+i*.05)
+ const bands={p10:17,p25:19,p50:21,p75:23,p90:25}
+ const d=render({variant:'valuation-band',labels,values,bands,unit:'倍'})
+ const chart=d.querySelector('.market-valuation-band svg')
+ d.defaultView.eval(d.querySelector('script').textContent)
+ expect(d.querySelectorAll('.valuation-band-middle')).toHaveLength(1)
+ expect(d.querySelectorAll('.valuation-percentile')).toHaveLength(3)
+ expect(d.querySelector('.valuation-readout').textContent).toContain('P75–P90')
+ chart.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Home',bubbles:true}))
+ expect(d.querySelector('.valuation-readout').textContent).toContain('第1日 · 当前 20 倍 · P25–P50')
+ d.querySelector('[data-valuation-range="20"]').click()
+ expect(d.querySelector('.valuation-line').getAttribute('points').split(' ')).toHaveLength(20)
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(65)
+ expect(marketVariant({title:'白酒板块估值分位带'})).toBe('valuation-band')
+})
+it('rejects reversed quantile thresholds or missing valuation observations',()=>{
+ const base={version:1,type:'market',variant:'valuation-band',title:'估值',asOf:'模拟',labels:['一','二'],values:[20,21],bands:{p10:17,p25:19,p50:21,p75:23,p90:25},unit:'倍'}
+ expect(acceptArtifactOutput(JSON.stringify({...base,bands:{...base.bands,p75:18}}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,values:[20]}))).toBeUndefined()
+ expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.valuation-band 的结构化数据')).toBeNull()
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')

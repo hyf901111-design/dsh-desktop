@@ -28,6 +28,11 @@ describe('真实客户端模拟工作台输入修复', () => {
     expect(flow.artifact.records).toHaveLength(10);
     expect(JSON.parse(acceptArtifactOutput(JSON.stringify(flow.artifact))).html).toContain('data-flow-industry');
   });
+  it('为估值分位带准备完整时点与单调分位阈值', () => {
+    const valuation = generateSimulatedPanel({ title: '估值分位带', prompt: 'variant: valuation-band', type: 'market', size: 'large' }, '白酒行业观察工作台');
+    expect(valuation.artifact.values).toHaveLength(65);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(valuation.artifact))).html).toContain('valuation-band-middle');
+  });
   it('将仅多包一层的表格单元格展开为完整列，保留原始文字', () => {
     const table = panel('重点覆盖估值与盈利预期（模拟）', 'market', {
       asOf: '2026-02-06 15:00', columns: ['公司', '代码', '收盘', '涨跌', 'PE', 'EPS'],

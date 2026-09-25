@@ -37,6 +37,11 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
                 { period: '模拟本周', industry, inflow: 18 + index * 4, outflow: 14 + index * 3 },
                 { period: '模拟上周', industry, inflow: 12 + index * 3, outflow: 16 + index * 2 }
             ])
+        } : variant === 'valuation-band' ? {
+            version: 1, type: 'market', variant, unit: '倍',
+            labels: Array.from({ length: 65 }, (_, index) => `模拟交易日 ${index + 1}`),
+            values: Array.from({ length: 65 }, (_, index) => +(20 + index * .035 + Math.sin(index / 5) * 2.1).toFixed(2)),
+            bands: { p10: 17.8, p25: 19.2, p50: 21.1, p75: 23.3, p90: 24.8 }
         } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }
