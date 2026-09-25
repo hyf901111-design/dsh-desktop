@@ -30,6 +30,10 @@ const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
+  // A planner may repeat the whole workbench request in every panel prompt.
+  // Select these two distinct financial cards from their own titles first.
+  if (/盘口|买卖[一二三五十]?档|委买|委卖|order.book/iu.test(panel.title ?? '')) return 'order-book';
+  if (/量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|price.volume/iu.test(panel.title ?? '')) return 'price-volume';
   const value = `${panel.title ?? ''}\n${panel.prompt ?? ''}`;
   const declared = value.match(/\b(?:variant|变体)\s*[:：=]\s*(fund-kpi|fund-holdings|fund-industry|price-volume|order-book|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1]?.toLowerCase();
   if (declared) return declared;

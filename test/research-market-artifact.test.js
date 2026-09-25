@@ -70,7 +70,8 @@ it('renders a fixed price-volume template with linked readings, real range contr
  d.querySelector('[data-price-volume-range="20"]').click()
  expect(d.querySelector('.price-volume-line').getAttribute('points').split(' ')).toHaveLength(20)
  expect(d.querySelector('[data-price-volume-range="20"]').getAttribute('aria-pressed')).toBe('true')
- expect(marketVariant({title:'贵州茅台量价走势图'})).toBe('price-volume')
+  expect(marketVariant({title:'贵州茅台量价走势图'})).toBe('price-volume')
+  expect(marketVariant({title:'贵州茅台量价联动',prompt:'同时生成 market.price-volume 和 market.order-book'})).toBe('price-volume')
  expect(workbenchDesignTemplate({type:'market',title:'贵州茅台量价走势图'}).height).toBe(286)
 })
 it('rejects incomplete or fabricated price-volume data before creating a card',()=>{
@@ -94,7 +95,8 @@ it('renders both sides of a real order book and switches visible depth',()=>{
  const last=d.querySelectorAll('.order-book-level')[15]
  last.click()
  expect(d.querySelector('.order-book-readout').textContent).toContain('卖8 · 10.08 元 · 190 手')
- expect(marketVariant({title:'股票十档盘口'})).toBe('order-book')
+  expect(marketVariant({title:'股票十档盘口'})).toBe('order-book')
+  expect(marketVariant({title:'贵州茅台买卖盘口',prompt:'同时生成 market.price-volume 和 market.order-book'})).toBe('order-book')
  expect(workbenchDesignTemplate({type:'market',title:'股票十档盘口'}).width).toBe(536)
 })
 it('rejects invalid order book levels and zero-unit templates',()=>{

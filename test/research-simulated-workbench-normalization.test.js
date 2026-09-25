@@ -15,7 +15,7 @@ const metric = panel('医药行业核心指标（模拟）', 'market', {
 describe('真实客户端模拟工作台输入修复', () => {
   it('批量准备量价和盘口固定模板，不在规划后因模拟样本缺失而失败', () => {
     const price = generateSimulatedPanel({ title: '贵州茅台量价联动', prompt: 'variant: price-volume；模拟价格与成交量', type: 'market', size: 'large' }, '证券量价与盘口工作台');
-    const book = generateSimulatedPanel({ title: '贵州茅台买卖盘口', prompt: 'variant: order-book；模拟买卖十档', type: 'market', size: 'large' }, '证券量价与盘口工作台');
+    const book = generateSimulatedPanel({ title: '贵州茅台买卖盘口', prompt: '同时生成 market.price-volume 与 market.order-book；模拟买卖十档', type: 'market', size: 'large' }, '证券量价与盘口工作台');
     expect(price.artifact.labels).toHaveLength(65);
     expect(book.artifact.bids).toHaveLength(10);
     expect(JSON.parse(acceptArtifactOutput(JSON.stringify(price.artifact))).html).toContain('data-sherlock-market="price-volume"');
