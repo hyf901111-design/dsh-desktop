@@ -149,6 +149,7 @@ describe('模拟工作台结构化生成', () => {
       const result = await tool.execute(args, exec)
       expect(result.status).toBe('prepared')
       expect(result.panels).toEqual(['行情指标（模拟）', '日 K 线（模拟）'])
+      expect(result.templateIds).toEqual(['market.metrics', 'market.candlestick'])
       expect(runtime.start).not.toHaveBeenCalled()
       expect(runtime.startPreparedBatch).toHaveBeenCalledTimes(1)
       const prepared = runtime.startPreparedBatch.mock.calls[0][0].panels
@@ -158,9 +159,26 @@ describe('模拟工作台结构化生成', () => {
       await handler({ method: 'POST' }, { writeHead: () => {}, end: body => { listed = JSON.parse(body) } })
       expect(listed.plans[0].panels.map(panel => panel.title)).toEqual(result.panels)
       expect(listed.plans[0].panels.every(panel => panel.taskId && panel.preparedOutput)).toBe(true)
-      expect((await tool.execute(args, exec)).planId).toBe(result.planId)
+      const repeated = await tool.execute(args, exec)
+      expect(repeated.planId).toBe(result.planId)
+      expect(repeated.templateIds).toEqual(result.templateIds)
       expect(runtime.startPreparedBatch).toHaveBeenCalledTimes(1)
     } finally { await dispose(); await rm(dir, { recursive: true, force: true }) }
+  })
+
+  it('returns the mounted fund template instead of the planner generic KPI type', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'fund-template-result-'))
+    let tool
+    const ctx = { agents: { get: () => ({}) }, tools: { register: t => { tool = t; return () => {} } }, webServer: { register: () => () => {} } }
+    const runtime = { startPreparedBatch: vi.fn(async () => [{ taskId: 'fund-prepared' }]) }
+    const dispose = await registerWorkbench(ctx, runtime, { filePath: join(dir, 'plans.json'), isTrustedRequest: () => true, readJsonBody: async () => ({}) })
+    try {
+      const result = await tool.execute({ requestId:'fund-template', title:'双卡研究工作台', dataMode:'simulated', panels:[
+        { title:'基金核心指标', prompt:'最大回撤附完整口径', type:'kpi', size:'small' }
+      ] }, { agent:{ session:{ id:'research-1' } }, signal:new AbortController().signal })
+      expect(result.templateIds).toEqual(['market.fund-kpi'])
+      expect(runtime.startPreparedBatch.mock.calls[0][0].panels[0].artifact.variant).toBe('fund-kpi')
+    } finally { await dispose(); await rm(dir, { recursive:true, force:true }) }
   })
 
   it('validates locally generated examples across market, chart, lists and schedule components', () => {

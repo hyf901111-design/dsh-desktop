@@ -7,9 +7,13 @@ export const WORKBENCH_PATH = '/sherlock/research-workbenches/list';
 import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt} from './workbench-plan.js';
 import {SIMULATED_WORKBENCH_PRESETS} from './simulated-workbench-presets.js';
 import {generateSimulatedPanel} from './simulated-workbench-generator.js';
+import {marketVariant} from './workbench-design-contract.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
 const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+const templateIds = panels => panels.map(panel => panel.type === 'market'
+    ? `market.${panel.artifact?.variant ?? marketVariant(panel) ?? 'unspecified'}`
+    : panel.type === 'chart' ? `chart.${panel.artifact?.variant ?? 'unspecified'}` : panel.type);
 // Only a host-started, leased board child can register this in-process sink.
 // Planning captures validated data; cloud writes still require current edit authority.
 const sharedPlans = new Map();
@@ -74,7 +78,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             if (old) {
                 if (JSON.stringify(validateWorkbench(old.input ?? old)) !== JSON.stringify(input))
                     throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
-                return { planId: old.id, panels: old.panels.map(p => p.title), status: old.ready ? input.dataMode === 'simulated' ? 'prepared' : 'accepted' : 'preparing' };
+                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? input.dataMode === 'simulated' ? 'prepared' : 'accepted' : 'preparing' };
             }
             const id = randomUUID();
             const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
@@ -133,7 +137,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             plan.ready = true;
             mountedPlans.delete(id);
             await persist();
-            return { planId: id, panels: plan.panels.map(p => p.title), status: input.dataMode === 'simulated' ? 'prepared' : 'accepted' };
+            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: input.dataMode === 'simulated' ? 'prepared' : 'accepted' };
         };
         const pending = chain.then(run);
         chain = pending.catch(() => { });
@@ -141,7 +145,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     };
     const disposeTool = ctx.tools.register(defineTool({
         name: 'research_workbench_create',
-        description: '在研究画布规划并创建 1–10 个独立面板；用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据提交 panels，不提交 artifact。同一请求重试保持 requestId。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
+        description: '在研究画布规划并创建 1–10 个独立面板；用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据提交 panels，不提交 artifact。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
         parameters: {
             requestId: { type: 'string', required: true, description: '本轮需求的唯一稳定标识，重试保持一致。' },
             title: { type: 'string', required: true },
@@ -154,7 +158,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         artifact: { type: 'object', additionalProperties: true, description: '可选。已有完整模拟数据时提交；未提交则由宿主生成。禁止脚本和外部链接。' }
                     } } }
         },
-        output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },
+        output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, templateIds: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },
         execute: create
     }));
     const disposeRoute = ctx.webServer.register({ kind: 'exact', path: WORKBENCH_PATH, handler: async (req, res) => {
