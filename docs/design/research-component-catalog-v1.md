@@ -15,7 +15,7 @@
 | 5 | `market.quote-table` | 代码、名称、价格、涨跌、时点 | 排序、详情链接、横向滚动 | `market.table` |
 | 6 | `research.pipeline` | 项目、阶段、目标、下一节点 | 阶段说明、项目详情 | `market.pipeline`；客户端已验收项目详情展开 |
 | 7 | `research.catalyst-events` | 日期、对象、事件、关注点、状态 | 时间/状态筛选、详情 | `market.events`；客户端已验收状态/日期筛选、结果数及空状态 |
-| 8 | `market.weighted-heatmap` | 标的、权重、变化率 | 悬停/键盘读数、图例、详情 | `market.heatmap`；键盘读数待加强 |
+| 8 | `market.weighted-heatmap` | 标的、权重、变化率 | 悬停/键盘读数、图例、详情 | `market.heatmap`；选块、键盘读数和完整表已实现，待客户端验收 |
 | 9 | `market.breadth` | 上涨、平盘、下跌数及指标 | 分布读数、指标详情 | `market.breadth` |
 | 10 | `fund.kpi` | 基金/组合指标、数值、口径 | 指标详情 | `market.fund-kpi` |
 | 11 | `fund.holdings` | 持仓标的、权重及数据期间 | 搜索、列排序、滚动 | `market.fund-holdings` |

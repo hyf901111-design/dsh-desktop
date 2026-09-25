@@ -329,6 +329,21 @@ it('retains heatmap weights and market breadth counts without synthetic replacem
  expect(compactHostDashboardHtml(old)).toContain('data-sherlock-breadth-refined')
 })
 
+it('lets a reader select every heatmap block with a keyboard and read the full data',()=>{
+ const d=render({variant:'heatmap',items:[{label:'银行',weight:20.3,change:.42},{label:'食品饮料',weight:18.1,change:-.63},{label:'医药',weight:12,change:1.25}]})
+ const tiles=[...d.querySelectorAll('.market-tile')]
+ expect(tiles).toHaveLength(3)
+ expect(tiles.every(tile=>tile.tagName==='BUTTON')).toBe(true)
+ expect(d.querySelectorAll('.market-heat-data tbody tr')).toHaveLength(3)
+ d.defaultView.eval(d.querySelector('script').textContent)
+ tiles[1].dispatchEvent(new d.defaultView.MouseEvent('click',{bubbles:true}))
+ expect(d.querySelector('.market-heat-readout').textContent).toContain('食品饮料 · 权重 18.1% · 涨跌 -0.63%')
+ expect(tiles[1].getAttribute('aria-pressed')).toBe('true')
+ tiles[1].dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))
+ expect(d.querySelector('.market-heat-readout').textContent).toContain('医药 · 权重 12% · 涨跌 +1.25%')
+ expect(tiles[2].getAttribute('aria-pressed')).toBe('true')
+})
+
 it('rejects an old index snapshot presented as the latest market data',()=>{
  const spec=asOf=>JSON.stringify({version:1,type:'market',variant:'metrics',title:'沪深300行情',asOf,items:[{label:'收盘点位',value:'3885.2459 点'}]})
  const request='沪深300指数最近交易日的行情指标组件'
