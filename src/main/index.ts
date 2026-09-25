@@ -1,7 +1,7 @@
 import { legacyConnectionSources } from './integrations/legacy-connections'
 import { legacySkillRoots } from './integrations/legacy-skills'
 import { IntegrationService } from './integrations/service'
-import { maySkipDataYesToolPrompt } from './integrations/datayes-approval'
+import { maySkipGrantedToolPrompt } from './integrations/granted-tool-approval'
 import { startIntegrationBridge } from './integrations/runtime-bridge'
 import { registerIntegrationIpc } from './integrations/ipc'
 import { resolveIntegrationContext } from './integrations/context'
@@ -1322,14 +1322,7 @@ async function bootstrap(): Promise<void> {
         sessions: async () => (await taskRpc('session.list', {})).items,
       }),
       approveWrite: async (_call, tool, connection) => {
-        if (maySkipDataYesToolPrompt(tool, connection)) return true
-        if (!mainWindow || mainWindow.isDestroyed()) return false
-        const result = await dialog.showMessageBox(mainWindow, {
-          type: 'question', title: '确认工具操作', message: `允许“${connection.name}”执行“${tool.name}”？`,
-          detail: `${tool.description}\n\n此工具可能修改外部数据。仅批准这一次调用。`,
-          buttons: ['取消', '允许本次'], defaultId: 0, cancelId: 0,
-        })
-        return result.response === 1
+        return maySkipGrantedToolPrompt(tool, connection)
       },
     })
     integrationService.providers['google-calendar'] = new GoogleCalendarAdapter(integrationService.vault, { openExternal: url => shell.openExternal(url) })

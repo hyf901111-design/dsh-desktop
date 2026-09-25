@@ -11,13 +11,14 @@ afterEach(async () => { for (const fn of cleanups.splice(0)) await fn(); vi.unst
 async function mount(component = false) {
  const w = new Window(); vi.stubGlobal('window', w); vi.stubGlobal('document', w.document); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
  let revision=1
+ let pending:any=null
  const listeners=new Set<()=>void>()
  const view:any={ boardId:'b',seq:7,permissions:{read:true},history:[],canvas:{artifacts:[{id:'c',title:'行业走势图'}]},messages:[{id:'q',role:'user',text:'请整理资料',author:{username:'甲'}}],tasks:[{taskId:'t',requestMessageId:'q',conversation:!component,targetId:component?'c':null,status:'running',progress:{startedAt:Date.now()-12000,lastActivityAt:Date.now(),outputChars:10,events:[{seq:1,type:'tool-started',tool:'检索网页',detail:'行业报告'},{seq:2,type:'tool-finished',failed:false}]}}] }
- const page:any={subscribe:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f)},version:()=>revision,getView:()=>view,getState:()=>({}),retryRequest:()=>null,call:vi.fn(async()=>[]),showError:vi.fn()}
+ const page:any={subscribe:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f)},version:()=>revision,getView:()=>view,getState:()=>({}),retryRequest:()=>null,pendingSend:()=>pending,call:vi.fn(async()=>[]),showError:vi.fn()}
  const host=w.document.createElement('div');w.document.body.append(host);const root=createRoot(host as unknown as HTMLElement)
  await React.act(async()=>root.render(React.createElement(ResearchBoardDiscussion,{page,sessionId:'s'})))
  cleanups.push(async()=>{await React.act(async()=>root.unmount());await w.happyDOM.abort()})
- return {host,view,emit:async()=>{revision++;await React.act(async()=>listeners.forEach(f=>f()))}}
+ return {host,view,setPending:(value:any)=>{pending=value},emit:async()=>{revision++;await React.act(async()=>listeners.forEach(f=>f()))}}
 }
 it('shows bounded real activity immediately and updates without changing cloud seq or switching sessions',async()=>{
  const f=await mount();expect(f.host.textContent).toContain('检索网页');expect(f.host.textContent).toContain('行业报告');expect(f.host.textContent).toContain('12 秒')
@@ -45,4 +46,15 @@ it('shows the sent message while its conversation task is still queued',async()=
  f.view.tasks[0].status='pending'
  await f.emit()
  expect(f.host.querySelector('[data-message-id="q"]')?.textContent).toContain('请整理资料')
+})
+it('shows an outgoing message immediately before the server acknowledges it',async()=>{
+ const f=await mount()
+ f.view.messages=[];f.view.tasks=[]
+ f.setPending({id:'local-1',text:'请制作行业工作台',state:'sending'})
+ await f.emit()
+ expect(f.host.querySelector('[data-message-id="sending:local-1"]')?.textContent).toContain('请制作行业工作台')
+ f.view.messages.push({id:'server-1',role:'user',text:'请制作行业工作台'})
+ f.setPending(null)
+ await f.emit()
+ expect(f.host.querySelectorAll('[data-message-id]')).toHaveLength(1)
 })

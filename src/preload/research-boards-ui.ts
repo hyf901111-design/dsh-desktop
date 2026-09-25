@@ -166,6 +166,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         id: string
         key: string
         busy: boolean
+        text?: string
         reply?: RequestReply
         retry?: () => Promise<void>
       }
@@ -1136,7 +1137,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
     request.retry = () =>
       submitShared(sessionId, text, context, imageIds, mode, retryDraft ?? draft)
+    request.text = text
     request.busy = true
+    notify()
     const generation = state.account.generation
     const admitted = retryDraft !== undefined && retryDraft !== draft
       ? { untouched: () => false, restore: () => false }
@@ -1329,6 +1332,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         !r.busy && r.reply.state === 'taskCreateFailed'
         ? r
         : null
+    },
+    pendingSend: (id: string) => {
+      const request = sends.get(id)
+      if (!request?.text || !request.busy && !request.reply?.accepted) return null
+      if (request.reply?.requestMessageId && view(id)?.messages.some((m: any) => m.id === request.reply?.requestMessageId)) return null
+      return { id: request.id, text: request.text, state: request.reply?.accepted ? 'syncing' : 'sending' }
     },
     saveDraft,
     undo,
@@ -2621,6 +2630,7 @@ export function ResearchBoardDiscussion({
       }))
   ], v.tasks, v.messages)
   const currentUserId = page.getState().account?.user?.userId
+  const pendingSend = page.pendingSend?.(sessionId)
   nativeProps = { ...nativeProps, currentUserId }
   const renderMessage = (m: any, i: number) =>
     NativeMessage && !componentTask(taskForMessage(m, v.tasks)) ? h(NativeMessage, { key: m.id ?? i, message: m, nativeProps }) : h(
@@ -2741,8 +2751,8 @@ export function ResearchBoardDiscussion({
   }
   return h(
     'div',
-    { className: 'srb-discussion' + (!groups.length ? ' srb-discussion-empty' : ''), 'data-shared-discussion': sessionId },
-    !groups.length &&
+    { className: 'srb-discussion' + (!groups.length && !pendingSend ? ' srb-discussion-empty' : ''), 'data-shared-discussion': sessionId },
+    !groups.length && !pendingSend &&
       h('p', { className: 'sRp_emptyState' }, '探索更远，洞见更深'),
     ...groups.map((group) =>
       h(
@@ -2760,6 +2770,9 @@ export function ResearchBoardDiscussion({
         group.requestId && renderControls(group.requestId)
       )
     ),
+    pendingSend && h('section', { className: 'srb-request-group', key: 'sending:' + pendingSend.id },
+      renderMessage({ id: 'sending:' + pendingSend.id, role: 'user', text: pendingSend.text, authorId: currentUserId }, 0),
+      h('p', { className: 'srb-status' }, pendingSend.state === 'syncing' ? '消息已发送，正在同步…' : '正在发送…')),
     renderControls()
   )
 }
