@@ -21,9 +21,9 @@ const rows = `<table><thead><tr><th>证券</th><th>权重</th><th>基金</th><th
 
 describe('opt-in Figma fund72 HTML profiles', () => {
   it.each([
-    ['light', '#ebf1f5', '#f0f3f5', '#fafafa', '#b84343', '#202629'],
-    ['dark', '#3b3b3b', '#353b40', '#303030', '#ff9d9d', '#f4f5f6']
-  ])('keeps %s source header/zebra/change roles independent from market colors', (theme, header, stripe, surface, positive, negative) => {
+    ['light', '#f7f8f9', '#f7f8f9', '#ffffff', '#b84343', '#292b2f'],
+    ['dark', '#242424', '#242424', '#171717', '#ff9d9d', '#e7e7e9']
+  ])('uses the %s AG Grid surface while retaining holdings change semantics', (theme, header, stripe, surface, positive, negative) => {
     const { style } = render(`<main data-sherlock-profile="fund72-holdings">${rows}</main>`, theme)
     expect(style('thead th').backgroundColor).toBe(header)
     expect(style('tbody tr:first-child td').backgroundColor).toBe(stripe)
@@ -92,12 +92,11 @@ describe('opt-in Figma fund72 HTML profiles', () => {
     }
   })
 
-  it('places opt-in profiles after the neutral controls layer and keeps field geometry fixed', () => {
+  it('places opt-in profiles after the AG Grid controls layer and keeps field geometry fixed', () => {
     expect(host.RESEARCH_COMPONENT_PROFILE_CSS).toContain('@layer sherlock-component-profiles')
-    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('height:28px!important')
-    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('border-radius:6px!important')
-    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('border-radius:7px!important')
-    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('font-size:var(--sherlock-control-font-size,10px)!important')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('height:27px!important')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('border-radius:3px!important')
+    expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('font-size:var(--sherlock-control-font-size,12px)!important')
     expect(host.RESEARCH_COMPONENT_CONTROLS_CSS).toContain('input.research-filter-search{--sherlock-control-padding-left:29px;padding-left:29px!important')
     expect(host.RESEARCH_COMPONENT_PROFILE_CSS).not.toMatch(/(?:display:none|overflow:hidden|text-overflow:ellipsis)/)
   })

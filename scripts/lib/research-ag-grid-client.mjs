@@ -22,6 +22,7 @@ const sherlockResearchAgGrid = (() => {
   ${result.outputFiles[0].text}
   return module.exports;
 })();
+sherlockResearchAgGrid.installResearchAgSurfaceStyles(document);
 function ResearchAgGridTable({ spec, numericColumns }) {
   const hostRef = (0, react.useRef)(null);
   (0, react.useLayoutEffect)(() => {

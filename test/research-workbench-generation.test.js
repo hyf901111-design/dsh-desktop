@@ -15,6 +15,12 @@ it('gives a planned workbench panel a bounded format-specific prompt', () => {
   expect(prompt).not.toContain('"type": "mind-map"');
 });
 
+it('routes searchable workbench tables to the AG Grid backed table format', () => {
+  const prompt = buildResearchTaskPrompt({ ...request, prompt: '工作台：行情研究\n本面板：价格明细\n显示十二行行情并提供搜索筛选。\n仅生成本面板，优先使用 table 类型。' });
+  expect(prompt).toContain('"type":"table"');
+  expect(prompt).not.toContain('"type": "html"');
+});
+
 it('restores the original workbench contract when an older card is retried from its saved content prompt', async () => {
   const prompts = [];
   let nextId = 0;

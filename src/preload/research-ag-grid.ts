@@ -4,6 +4,7 @@ import {
   themeQuartz,
   type GridApi,
 } from 'ag-grid-community'
+import { AG_GRID_VISUAL } from '../../packages/dsh-research-task-runtime/ag-grid-visual.js'
 
 type TableSpec = {
   columns: string[]
@@ -15,30 +16,30 @@ type TableSpec = {
 }
 
 const lightTheme = themeQuartz.withParams({
-  accentColor: '#2675d6',
-  backgroundColor: '#ffffff',
-  borderColor: '#e1e1e1',
+  accentColor: AG_GRID_VISUAL.light.accent,
+  backgroundColor: AG_GRID_VISUAL.light.background,
+  borderColor: AG_GRID_VISUAL.light.border,
   fontFamily: '"EWork DIN Pro", "Noto Sans SC", sans-serif',
   fontSize: 12,
-  foregroundColor: '#292b2f',
-  headerBackgroundColor: '#f1f2f4',
-  headerTextColor: '#81858c',
-  oddRowBackgroundColor: '#f7f8f9',
-  rowHoverColor: '#eaf2ff',
+  foregroundColor: AG_GRID_VISUAL.light.foreground,
+  headerBackgroundColor: AG_GRID_VISUAL.light.header,
+  headerTextColor: AG_GRID_VISUAL.light.muted,
+  oddRowBackgroundColor: AG_GRID_VISUAL.light.alternate,
+  rowHoverColor: AG_GRID_VISUAL.light.hover,
   spacing: 4,
 })
 
 const darkTheme = themeQuartz.withParams({
-  accentColor: '#4b9cff',
-  backgroundColor: '#171717',
-  borderColor: '#424242',
+  accentColor: AG_GRID_VISUAL.dark.accent,
+  backgroundColor: AG_GRID_VISUAL.dark.background,
+  borderColor: AG_GRID_VISUAL.dark.border,
   fontFamily: '"EWork DIN Pro", "Noto Sans SC", sans-serif',
   fontSize: 12,
-  foregroundColor: '#e7e7e9',
-  headerBackgroundColor: '#292a2d',
-  headerTextColor: '#989aa0',
-  oddRowBackgroundColor: '#242424',
-  rowHoverColor: '#303744',
+  foregroundColor: AG_GRID_VISUAL.dark.foreground,
+  headerBackgroundColor: AG_GRID_VISUAL.dark.header,
+  headerTextColor: AG_GRID_VISUAL.dark.muted,
+  oddRowBackgroundColor: AG_GRID_VISUAL.dark.alternate,
+  rowHoverColor: AG_GRID_VISUAL.dark.hover,
   spacing: 4,
 })
 
@@ -76,9 +77,17 @@ body[data-ds-dark-theme] .sherlock-ag-grid-search{background:#1f1f1f;color:#e7e7
 body[data-ds-dark-theme] .sherlock-ag-grid-search:focus{border-color:#4b9cff}
 body[data-ds-dark-theme] .sherlock-ag-grid-host [data-tone=positive]{color:#ff625f}
 body[data-ds-dark-theme] .sherlock-ag-grid-host [data-tone=negative]{color:#22d6a0}
+.rScV5Q_containerContent :is([data-research-container-chart],[data-research-container-kpi],[data-research-container-markdown]){background:var(--sherlock-bg);color:var(--sherlock-text);font:12px/18px var(--sherlock-font-sans)}
+.rScV5Q_containerContent [data-research-container-chart]{padding:10px 12px;background:var(--sherlock-surface)}
+.rScV5Q_containerContent [data-research-container-kpi]{padding:10px 12px;gap:8px;align-content:start}
+.rScV5Q_containerContent [data-research-container-kpi]>div{min-height:76px;padding:8px;border:1px solid var(--sherlock-border);border-radius:0;background:var(--sherlock-row-alternate);gap:3px}
+.rScV5Q_containerContent [data-research-container-kpi] span{font:11px/16px var(--sherlock-font-sans);color:var(--sherlock-muted)}
+.rScV5Q_containerContent [data-research-container-kpi] strong{font:500 21px/26px var(--sherlock-font-sans);color:var(--sherlock-text)}
+.rScV5Q_containerContent [data-research-container-markdown]{padding:10px 12px}
+.rScV5Q_containerContent .rScV5Q_mindMapNode{border-radius:0;background:var(--sherlock-row-alternate)}
 `
 
-function ensureStyles(doc: Document): void {
+export function installResearchAgSurfaceStyles(doc: Document): void {
   if (doc.getElementById('sherlock-research-ag-grid-styles')) return
   const tag = doc.createElement('style')
   tag.id = 'sherlock-research-ag-grid-styles'
@@ -151,7 +160,7 @@ export function linkedCell(value: unknown, doc: Document): HTMLElement {
 
 export function mountResearchAgGrid(host: HTMLElement, spec: TableSpec, numericColumns: boolean[]): () => void {
   const doc = host.ownerDocument
-  ensureStyles(doc)
+  installResearchAgSurfaceStyles(doc)
   host.replaceChildren()
 
   const toolbar = doc.createElement('div')
