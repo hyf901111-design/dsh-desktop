@@ -83,6 +83,10 @@ function patchCanvasGraphicPrimitives(source) {
 export function patchFigmaFinalCanvas(source) {
   source = patchResearchCanvasDeferredHtml(source)
   source = patchResearchCanvasViewportPersistence(source)
+  const singleWorkbenchGuard = 'if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 1 || plan.panels.length > 10) return false;'
+  if (!source.includes(singleWorkbenchGuard)) source = exact(source,
+    'if (!plan || !Array.isArray(plan.panels) || plan.panels.length < 2 || plan.panels.length > 10) return false;',
+    singleWorkbenchGuard)
   const marketResizeSource = `/* ODYSSEY_MARKET_METRICS_RESIZE */
         function researchCanvasMinimumHeight(node, policy) {
             if (node?.kind !== "generated-container") return policy.minHeight;
