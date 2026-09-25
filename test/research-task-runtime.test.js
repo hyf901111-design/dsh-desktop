@@ -1100,7 +1100,7 @@ describe('Research task Subagent adapter', () => {
     const fixture = containerAdapterFixture()
     fixture.ctx.tools = { schemas: vi.fn(() => [
       { name: 'read' }, { name: 'bash' }, { name: 'web_search' },
-      { name: 'research_canvas_inspect' }, { name: 'research_canvas_apply' },
+      { name: 'research_canvas_inspect' }, { name: 'research_canvas_apply' }, { name: 'research_canvas_update_market' },
       { name: 'research_workbench_create' }, { name: 'custom_parent_tool' }
     ]) }
     const runtime = await runtimeModule()
@@ -1115,6 +1115,7 @@ describe('Research task Subagent adapter', () => {
     expect(allowed).toContain('research_canvas_inspect')
     expect(allowed).toContain('custom_parent_tool')
     expect(allowed.includes('research_canvas_apply')).toBe(kind === 'board')
+    expect(allowed.includes('research_canvas_update_market')).toBe(kind === 'board')
     expect(allowed.includes('research_workbench_create')).toBe(kind === 'board')
     await handle.dispose()
   })

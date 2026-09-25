@@ -1602,7 +1602,7 @@ export function createSubagentAdapter(ctx) {
       // second canvas task; an offline component retains local parent tools.
       const qaExcludedTools = new Set([
         'research_workbench_create', 'research_canvas_use', 'research_canvas_task',
-        'research_canvas_apply', 'research_canvas_undo'
+        'research_canvas_apply', 'research_canvas_update_market', 'research_canvas_undo'
       ])
       const containerExcludedTools = new Set([
         'run_code', 'research_workbench_create', 'research_canvas_use',
