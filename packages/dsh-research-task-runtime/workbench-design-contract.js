@@ -7,6 +7,7 @@ const market = Object.freeze({
   metrics: { id: 'financial.metrics', figma: '1217:225751', width: 896, height: 144, size: 'medium' },
   candlestick: { id: 'financial.candlestick', figma: '1321:71859', width: 536, height: 264, size: 'large' },
   trend: { id: 'financial.trend', figma: '1217:225781', width: 536, height: 264, size: 'large' },
+  'price-volume': { id: 'financial.price-volume', figma: '1217:225781', width: 536, height: 286, size: 'large' },
   scatter: { id: 'financial.scatter', figma: '1217:225825', width: 348, height: 264, size: 'large' },
   table: { id: 'financial.table', figma: '1217:225879', width: 536, height: 258, size: 'large' },
   pipeline: { id: 'financial.pipeline', figma: '1217:225964', width: 348, height: 258, size: 'large' },
@@ -29,7 +30,7 @@ const rank = { small: 0, medium: 1, large: 2 };
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
   const value = `${panel.title ?? ''}\n${panel.prompt ?? ''}`;
-  const declared = value.match(/\b(?:variant|变体)\s*[:：=]\s*(fund-kpi|fund-holdings|fund-industry|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1]?.toLowerCase();
+  const declared = value.match(/\b(?:variant|变体)\s*[:：=]\s*(fund-kpi|fund-holdings|fund-industry|price-volume|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1]?.toLowerCase();
   if (declared) return declared;
   // A multi-symbol quote watchlist needs sortable rows rather than one
   // stock's metrics or candles, even when the prompt calls them indicators.
@@ -39,6 +40,7 @@ export function marketVariant(panel = {}) {
       /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
     if (/K\s*线|蜡烛图|candlestick/iu.test(text)) return 'candlestick';
+    if (/量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|price.volume/iu.test(text)) return 'price-volume';
     if (/趋势|走势|折线|trend/iu.test(text)) return 'trend';
     if (/热力图|heatmap/iu.test(text)) return 'heatmap';
     if (/广度|breadth/iu.test(text)) return 'breadth';

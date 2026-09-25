@@ -2,6 +2,7 @@ import {it,expect} from 'vitest'
 import {Window} from 'happy-dom'
 import {acceptArtifactOutput, workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {compactHostDashboardHtml,RESEARCH_COMPONENT_CONTROLS_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
+import {marketVariant,workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 const render=spec=>{const out=acceptArtifactOutput(JSON.stringify({version:1,type:'market',title:'源稿行情',asOf:'09.21 15:00 · 情景模拟',...spec}));expect(out).toBeDefined();const w=new Window();w.document.write(JSON.parse(out).html);return w.document}
 it('renders source metrics with exact data and typography rather than free-form cards',()=>{
  const d=render({variant:'metrics',items:[{label:'上证指数',value:'3,912.48',detail:'+0.64%'},{label:'深证成指',value:'12,648.32',detail:'+1.12%'}]})
@@ -51,6 +52,34 @@ it('lets a reader inspect every genuine trend point with keyboard controls',()=>
  expect(chart.dataset.selectedIndex).toBe('1')
  chart.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Home',bubbles:true}))
  expect(d.querySelector('.trend-readout').textContent).toContain('2026-01')
+})
+it('renders a fixed price-volume template with linked readings, real range controls and missing volume',()=>{
+ const labels=Array.from({length:65},(_,i)=>`第 ${i+1} 日`)
+ const prices=labels.map((_,i)=>100+i*.5),volumes=labels.map((_,i)=>i===10?null:1000+i*20)
+ const d=render({variant:'price-volume',labels,prices,volumes,priceUnit:'元',volumeUnit:'股'})
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(65)
+ expect(d.querySelectorAll('[data-price-volume-range]')).toHaveLength(4)
+ expect(d.querySelector('[data-price-volume-range="240"]').disabled).toBe(true)
+ expect(d.querySelectorAll('tbody tr')[10].textContent).toContain('—')
+ const chart=d.querySelector('.price-volume svg')
+ d.defaultView.eval(d.querySelector('script').textContent)
+ expect(d.querySelectorAll('.price-volume-bar')).toHaveLength(64)
+ expect(d.querySelector('.price-volume-readout').textContent).toContain('132')
+ chart.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}))
+ expect(d.querySelector('.price-volume-readout').textContent).toContain('131.5')
+ d.querySelector('[data-price-volume-range="20"]').click()
+ expect(d.querySelector('.price-volume-line').getAttribute('points').split(' ')).toHaveLength(20)
+ expect(d.querySelector('[data-price-volume-range="20"]').getAttribute('aria-pressed')).toBe('true')
+ expect(marketVariant({title:'贵州茅台量价走势图'})).toBe('price-volume')
+ expect(workbenchDesignTemplate({type:'market',title:'贵州茅台量价走势图'}).height).toBe(286)
+})
+it('rejects incomplete or fabricated price-volume data before creating a card',()=>{
+ const base={version:1,type:'market',variant:'price-volume',title:'量价',asOf:'示例',labels:['一','二'],prices:[1,2],volumes:[10,null],priceUnit:'元',volumeUnit:'股'}
+ expect(acceptArtifactOutput(JSON.stringify({...base,volumes:[10]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,volumes:[null,null]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,prices:[1,-2]}))).toBeUndefined()
+ const output=acceptArtifactOutput(JSON.stringify(base))
+ expect(workbenchMarketVariantIssue(output,'必须输出 market.price-volume 的结构化数据')).toBeNull()
 })
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
