@@ -485,7 +485,7 @@ export function buildResearchTaskPrompt(request) {
       allowsWeb
         ? '只有用户明确提供的 http 或 https 网址才能用于 web；不得把用户没有提供的网址替换成自行猜测的网站。'
         : '用户未提供明确网址时，不得生成 web，也不得自行猜测或推荐外部网站；这不限制使用 html 创建自包含页面。',
-      '当需求涉及实时、监控或最新数据时，金融数据先使用 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
+      '当需求涉及实时、监控或最新数据时，金融数据优先使用当前会话可见且获授权的专业数据工具；若无适用工具，再使用 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
       '不要输出代码围栏、解释、前言或 JSON 之外的文字；HTML/CSS/JavaScript 只能放在 html 字段内。',
       '图表最多 24 个标签和 6 个系列；表格最多 12 列和 100 行；KPI 最多 12 项。',
       '',
@@ -1541,14 +1541,22 @@ export function createSubagentAdapter(ctx) {
         agentOptions = componentModelSelection(response.result.value, kind)
       }
       const permitsTools = !synthesisOnly && (['qa', 'board'].includes(kind) || kind === 'container' && containerAllowsWebSearch(query ?? ''))
+      // Inspect the parent's scoped registry before planning any host lookup.
+      // A connected source should not be preceded by an unrelated web search.
+      const scopedSchemas = ctx.tools?.schemas?.(parent)
+      const preferredSources = kind === 'container' && permitsTools ? preferredComponentSourceTools(scopedSchemas, query) : []
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
-      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && !financialSubject && containerNeedsWebData(query ?? '')
+      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !financialSubject && containerNeedsWebData(query ?? '')
       if (signal.aborted) throw signal.reason
       let effectivePrompt = prompt
       let hostEvidence = ''
-      if (kind === 'container' || kind === 'create') effectivePrompt += '\n趋势图优先使用宿主 chart 格式的 labels/series，直接交付已有真实数据，不编写冗长的 SVG 坐标或重复的 HTML 图表代码。历史记录很多时可选取有明确日期的代表数据点，并注明采样和覆盖范围；无法取得的区间保留缺失说明，不要为凑齐数据持续查询。'
+      // Typed workbench panels already carry one exact host template schema.
+      // Generic chart advice can contradict market.candlestick and market.table.
+      if (kind === 'create' || kind === 'container' && !workbenchPanelFormat(query ?? '')) effectivePrompt += '\n趋势图优先使用宿主 chart 格式的 labels/series，直接交付已有真实数据，不编写冗长的 SVG 坐标或重复的 HTML 图表代码。历史记录很多时可选取有明确日期的代表数据点，并注明采样和覆盖范围；无法取得的区间保留缺失说明，不要为凑齐数据持续查询。'
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
-      if (permitsTools) effectivePrompt += '\n股票、指数、ETF、基金的行情、净值、历史日线或对比研究，优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。'
+      if (permitsTools) effectivePrompt += preferredSources.length
+        ? `\n${componentSourceInstruction(preferredSources)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。`
+        : '\n股票、指数、ETF、基金的行情、净值、历史日线或对比研究，优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -1575,9 +1583,6 @@ export function createSubagentAdapter(ctx) {
       // Native spawn composes the parent preset but does not copy its scoped
       // tool restrictions. Inherit only tools this parent can actually see;
       // a global registry scan would grant the component child extra access.
-      const scopedSchemas = ctx.tools?.schemas?.(parent)
-      const preferredSources = kind === 'container' && permitsTools ? preferredComponentSourceTools(scopedSchemas, query) : []
-      if (preferredSources.length) effectivePrompt += `\n${componentSourceInstruction(preferredSources)}`
       const parentToolNames = Array.isArray(scopedSchemas)
         ? [...new Set(scopedSchemas.map(tool => tool?.name).filter(name => typeof name === 'string'))]
         : null

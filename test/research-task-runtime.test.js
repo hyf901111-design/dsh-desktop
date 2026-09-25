@@ -1207,6 +1207,33 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it('uses visible DataYes tools before financial_query and skips the host web preflight', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.tools = { schemas: vi.fn(() => [
+      { name: 'ework__datayes_search', description: '搜索通联 DataYes 金融数据 API' },
+      { name: 'ework__datayes_call', description: '调用通联 DataYes 金融数据 API' },
+      { name: 'financial_query', description: '查询金融数据' },
+      { name: 'web_search', description: '检索网页' }
+    ]) }
+    const handle = await fixture.start('生成白酒行业最新行情资讯面板')
+    const child = fixture.ctx.subagents.start.mock.calls[0][1]
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    expect(child.prompt[0].text).toContain('优先选与面板字段最匹配的通联工具取可溯源数据')
+    expect(child.prompt[0].text).not.toContain('优先调用 financial_query')
+    expect(child.prompt[0].text).not.toContain('金融数据先使用 financial_query')
+    expect(child.toolFilter.allow).toContain('ework__datayes_call')
+    await handle.dispose()
+  })
+
+  it('does not append generic chart advice to a typed market template', async () => {
+    const fixture = containerAdapterFixture()
+    const handle = await fixture.start('工作台：白酒研究\n本面板：龙头白酒股 K 线图\n优先使用 market 类型\n模板：market.candlestick\n展示贵州茅台日线')
+    const prompt = fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+    expect(prompt).toContain('market.candlestick')
+    expect(prompt).not.toContain('趋势图优先使用宿主 chart 格式')
+    await handle.dispose()
+  })
+
   it.each([
     '使用演示数据生成一个ETF数据监控面板',
     '做最新价格监控的演示页面，使用模拟数据',
