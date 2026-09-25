@@ -1601,12 +1601,18 @@ export function createSubagentAdapter(ctx) {
         'research_workbench_create', 'research_canvas_use', 'research_canvas_task',
         'research_canvas_apply', 'research_canvas_undo'
       ])
+      const containerExcludedTools = new Set([
+        'run_code', 'research_workbench_create', 'research_canvas_use',
+        'research_canvas_task', ...CANVAS_TOOL_NAMES
+      ])
       const childTools = (parentToolNames ?? fallbackTools).filter(name =>
+        name !== 'run_code' &&
         (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
         // When an authorized specialist is available, keep the generic
         // financial adapter out of the first attempt. Models otherwise pick
         // its familiar name even when the prompt says to use DataYes first.
         !(kind === 'container' && preferredSources.length && name === 'financial_query') &&
+        !(kind === 'container' && containerExcludedTools.has(name)) &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
       const run = await startComponentAgent(ctx, {
