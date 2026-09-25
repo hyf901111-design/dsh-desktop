@@ -588,6 +588,44 @@
           "旧批次 20260923-01 的交接记录已失效，需使用新批次"
         ],
         "generatedAt": "2026-09-25T11:19:02.045189Z"
+      },
+      "merged": {
+        "mergeCommit": "66bccf4350242b7df08c42109c6540ea66a967fa",
+        "verificationCommit": "66bccf4350242b7df08c42109c6540ea66a967fa",
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/bundled-component-skill.test.js",
+              "test/research-header-glass.test.js",
+              "test/research-medical-source-panels.test.js",
+              "test/research-optimal-arrange.test.js",
+              "test/research-workbench.test.js",
+              "--testTimeout",
+              "15000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/bundled-component-skill.test.js test/research-header-glass.test.js test/research-medical-source-panels.test.js test/research-optimal-arrange.test.js test/research-workbench.test.js --testTimeout 15000",
+            "verifiedCommit": "66bccf4350242b7df08c42109c6540ea66a967fa",
+            "completedAt": "2026-09-25T11:27:50.375Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "66bccf4350242b7df08c42109c6540ea66a967fa",
+            "completedAt": "2026-09-25T11:27:50.375Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-25T11:27:50.375Z"
       }
     }
   ],
