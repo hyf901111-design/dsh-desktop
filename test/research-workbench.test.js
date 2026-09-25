@@ -33,6 +33,7 @@ describe('研究工作台', () => {
         expect(marketVariant({ title:'行业热力图', prompt:'对比行业指标趋势' })).toBe('heatmap');
         expect(marketVariant({ title:'K 线图', prompt:'展示成交量趋势' })).toBe('candlestick');
         expect(marketVariant({ title:'核心指标', prompt:'variant: trend；明确展示趋势图' })).toBe('trend');
+        expect(marketVariant({ title:'热门白酒股行情看板', prompt:'展示十只股票的最新价、成交额和市值，支持按涨跌幅排序，点击个股查看K线详情' })).toBe('table');
         expect(validateWorkbench({ requestId:'variant-inference', title:'金融模拟工作台', dataMode:'simulated', generationMode:'parallel', panels:[
             {title:'K 线图',prompt:'展示日 K 线和成交量',type:'market',size:'large'},
             {title:'行业热力图',prompt:'按行业涨跌幅展示热力图',type:'market',size:'large'}

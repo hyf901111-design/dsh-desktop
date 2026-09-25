@@ -30,7 +30,7 @@ describe('EWork bundled component skill', () => {
       const loaded = candidate && await provider.get(candidate, {})
       expect(loaded?.content).toContain('320×220')
       const metadata = JSON.parse(readFileSync(path.join(bundledSkillRoot, slug, '_meta.json'), 'utf8'))
-      expect(metadata).toEqual({ slug, cnName: '工作台组件生成', version: 'v1.5.0', source: 'eSkill' })
+      expect(metadata).toEqual({ slug, cnName: '工作台组件生成', version: 'v1.5.1', source: 'eSkill' })
     } finally {
       await provider.dispose()
     }
@@ -42,7 +42,7 @@ describe('EWork bundled component skill', () => {
       ? { ...base, sources: [{ id: 'data', type: 'artifact', title: '台账', text: '两份合同在30天内到期。' }] }
       : base
     const prompt = buildResearchTaskPrompt(request)
-    expect(prompt).toContain('内置技能 ework-workbench-components v1.5.0')
+    expect(prompt).toContain('内置技能 ework-workbench-components v1.5.1')
     expect(prompt).toContain('【references/figma-21m.md】')
     expect(prompt).toContain('【references/adaptation-and-acceptance.md】')
     expect(prompt).toContain('【references/runtime-v1.md】')
@@ -75,12 +75,23 @@ describe('EWork bundled component skill', () => {
       parentSessionId: 'session', canvasNodeId: 'panel', kind: 'container', prompt: panelPrompt
     })
     expect(prompt).toContain(requirement)
-    expect(prompt).toContain('内置技能 ework-workbench-components v1.5.0')
+    expect(prompt).toContain('内置技能 ework-workbench-components v1.5.1')
     expect(prompt).toContain('唯一交付格式：')
-    expect(prompt.match(/内置技能 ework-workbench-components v1\.5\.0/g)).toHaveLength(1)
+    expect(prompt.match(/内置技能 ework-workbench-components v1\.5\.1/g)).toHaveLength(1)
     expect(prompt).toContain('market.candlestick')
     expect(prompt).toContain('S 320×220、M 656×220、L 656×456')
     expect(prompt.length).toBeLessThan(5000)
     expect(panelPrompt).not.toContain('文字最多450字')
+  })
+
+  it('gives a market panel only its selected host template schema', () => {
+    const panelPrompt = workbenchPanelPrompt({ title: '白酒工作台' }, {
+      title: '龙头白酒股K线图', type: 'market', size: 'large',
+      prompt: '展示近三个月 OHLC 和成交量，缺失成交量如实标注'
+    })
+    const prompt = buildResearchTaskPrompt({ parentSessionId: 'session', canvasNodeId: 'panel', kind: 'container', prompt: panelPrompt })
+    expect(prompt).toContain('"variant":"candlestick"')
+    expect(prompt).toContain('volume 可为 null')
+    expect(prompt).not.toContain('fund-holdings')
   })
 })

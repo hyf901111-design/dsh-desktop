@@ -23,7 +23,7 @@ export function acceptArtifactOutput(text) {
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=preserveLongChartCaption(candidate);
   if(chartWithNotes)return JSON.stringify(chartWithNotes);
-  const spec=parseResearchContainerSpec(renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.
@@ -31,6 +31,41 @@ export function acceptArtifactOutput(text) {
   return JSON.stringify(spec);
  }
  return undefined;
+}
+
+export function workbenchMarketVariantIssue(output, prompt) {
+ const expected=typeof prompt==='string'?prompt.match(/必须输出 market\.(fund-kpi|fund-holdings|fund-industry|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth) 的结构化数据/iu)?.[1]:undefined;
+ if(!expected||typeof output!=='string')return null;
+ let spec;
+ try{spec=JSON.parse(output)}catch{return null}
+ const actual=spec?.type==='html'?spec.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/iu)?.[1]:undefined;
+ if(actual&&actual!==expected)return `本面板必须使用 market.${expected} 宿主模板，当前输出为 market.${actual}。请按原需求填充指定模板，不将主要数据放入 note。`;
+ const symbols=[...new Set((prompt.match(/\b\d{6}\.(?:SH|SZ|BJ)\b/giu)??[]).map(value=>value.toUpperCase()))];
+ if(actual==='candlestick'&&symbols.length>1){
+  const options=[...spec.html.matchAll(/<option\b[^>]*>([\s\S]*?)<\/option>/giu)].map(match=>match[1].toUpperCase());
+  if(symbols.some(symbol=>!options.some(option=>option.includes(symbol))))return '需求包含多标的 K 线，必须用 datasets 保留各标的并提供切换；缺失标的须以明确的缺失状态说明，不能仅放在 note。';
+ }
+ if(actual==='table'&&symbols.length>1){
+  const rows=spec.html.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/iu)?.[1]?.toUpperCase()??'';
+  if(symbols.some(symbol=>!rows.includes(symbol)))return '多标的行情表必须在表格行中保留所请求的证券代码；缺失标的须明确说明，不能只写在 note。';
+ }
+ return null;
+}
+
+// A KPI item can carry source/date details even though the older native KPI
+// schema only has change. Render that complete data with the trusted metrics
+// template instead of discarding the panel or squeezing evidence into a value.
+function detailedKpiMarket(candidate) {
+ const scalar=value=>typeof value==='string'&&value.trim().length>0&&value.length<=512||typeof value==='number'&&Number.isFinite(value);
+ if(candidate?.version!==1||candidate.type!=='kpi'||!Array.isArray(candidate.items)||
+   Object.keys(candidate).some(key=>!['version','type','title','items'].includes(key))||
+   !candidate.items.some(item=>typeof item?.detail==='string'&&item.detail.trim()))return null;
+ if(candidate.items.some(item=>!item||Object.keys(item).some(key=>!['label','value','change','detail'].includes(key))||
+   typeof item.label!=='string'||!item.label.trim()||!scalar(item.value)||item.change!==undefined&&!scalar(item.change)||
+   item.detail!==undefined&&(typeof item.detail!=='string'||item.detail.length>2000)))return null;
+ return {version:1,type:'market',variant:'metrics',title:candidate.title,asOf:'数据时点见各指标说明',
+  items:candidate.items.map(item=>{const detail=[item.change,item.detail].filter(value=>value!==undefined&&value!==null&&String(value).trim()).map(String).join(' · ');
+   return {label:item.label,value:String(item.value),...(detail?{detail}:{})}})};
 }
 
 // A source outage is useful research context, but an empty plot is neither a

@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
 import {Window} from 'happy-dom'
-import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
+import {acceptArtifactOutput, workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {compactHostDashboardHtml,RESEARCH_COMPONENT_CONTROLS_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
 const render=spec=>{const out=acceptArtifactOutput(JSON.stringify({version:1,type:'market',title:'源稿行情',asOf:'09.21 15:00 · 情景模拟',...spec}));expect(out).toBeDefined();const w=new Window();w.document.write(JSON.parse(out).html);return w.document}
 it('renders source metrics with exact data and typography rather than free-form cards',()=>{
@@ -12,6 +12,12 @@ it('retains every table column, decimal, time and neutral sorting control',()=>{
  const d=render({variant:'table',columns:['时间','成交价','量 / 手','金额 / 万','方向'],rows:[['14:59:58.124','4.521','128','5.79','主动卖']],tones:[['','','','','negative']]})
  expect([...d.querySelectorAll('tbody td')].map(x=>x.textContent)).toEqual(['14:59:58.124','4.521','128','5.79','主动卖'])
  expect(d.querySelectorAll('thead button')).toHaveLength(5);expect(d.querySelector('[data-tone=negative]').textContent).toBe('主动卖')
+})
+it('links verified market table rows to a detail page without accepting unsafe URLs',()=>{
+ const data={variant:'table',columns:['标的','最新价'],rows:[['贵州茅台 600519.SH','1237.00']],rowLinks:['https://example.com/chart/600519']}
+ const d=render(data)
+ expect(d.querySelector('tbody a').href).toBe('https://example.com/chart/600519')
+ expect(acceptArtifactOutput(JSON.stringify({version:1,type:'market',title:'行情',asOf:'2026-09-24',...data,rowLinks:['javascript:alert(1)']}))).toBeUndefined()
 })
 it('renders source-style financial trends with all values and a bounded legend',()=>{
  const d=render({variant:'trend',labels:['09:30','10:30','11:30'],series:[{name:'沪深300',values:[3821,3830,3827]},{name:'医药',values:[1220,1229,1236]}]})
@@ -28,6 +34,42 @@ it('validates real OHLC bounds instead of fabricating or accepting impossible ca
  const candle={date:'2026-09-18',open:4493.21,high:4541.82,low:4480.46,close:4528.61,volume:128}
  expect(render({variant:'candlestick',candles:[candle]}).querySelector('canvas')).not.toBeNull()
  expect(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'candlestick',title:'走势',asOf:'2026-09-18',candles:[{...candle,high:4400}]}))).toBeUndefined()
+})
+it('keeps an OHLC candle when the source did not provide volume',()=>{
+ const candle={date:'2026-09-18',open:4493.21,high:4541.82,low:4480.46,close:4528.61,volume:null}
+ const d=render({variant:'candlestick',note:'历史成交量缺失',candles:[candle]})
+ expect(d.querySelector('canvas')).not.toBeNull()
+ expect(d.querySelector('tbody tr').textContent).toContain('—')
+ expect(d.body.textContent).toContain('历史成交量缺失')
+})
+it('uses the host candlestick template for multiple stocks and available ranges',()=>{
+ const candles=Array.from({length:65},(_,index)=>({date:`2026-09-${String(index+1).padStart(2,'0')}`,open:100+index,high:102+index,low:99+index,close:101+index,volume:index%2?null:1000+index}))
+ const d=render({variant:'candlestick',datasets:[{symbol:'600519.SH',name:'贵州茅台',candles},{symbol:'000858.SZ',name:'五粮液',candles: candles.map(row=>({...row,open:row.open/2,high:row.high/2,low:row.low/2,close:row.close/2}))}]})
+ expect(d.querySelectorAll('.market-candle-symbol option')).toHaveLength(2)
+ expect(d.querySelectorAll('[data-candle-range]')).toHaveLength(4)
+ expect(d.querySelector('script').textContent).toContain('60')
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(130)
+})
+it('shows a missing stock explicitly without inventing candles',()=>{
+ const candle={date:'2026-09-18',open:100,high:102,low:99,close:101,volume:1000}
+ const d=render({variant:'candlestick',datasets:[{symbol:'600519.SH',name:'贵州茅台',candles:[candle]},{symbol:'000858.SZ',name:'五粮液',candles:[],missing:'历史日线来源未返回'}]})
+ expect(d.querySelectorAll('.market-candle-symbol option')).toHaveLength(2)
+ expect(d.body.textContent).toContain('历史日线来源未返回')
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(1)
+})
+it('preserves sourced KPI details through the host metrics template',()=>{
+ const output=acceptArtifactOutput(JSON.stringify({version:1,type:'kpi',title:'行业核心指标',items:[{label:'中证白酒',value:'6105.76 点',change:'-2.11%',detail:'2026-09-24 收盘 · 来源：行情接口'}]}))
+ expect(output).toBeDefined()
+ const w=new Window();w.document.write(JSON.parse(output).html)
+ expect(w.document.querySelector('.market-detail').textContent).toContain('2026-09-24 收盘')
+ expect(w.document.body.textContent).toContain('-2.11%')
+ expect(acceptArtifactOutput(JSON.stringify({version:1,type:'kpi',title:'行业核心指标',items:[{label:'指标',value:{unexpected:true},detail:'来源'}]}))).toBeUndefined()
+})
+it('detects a model replacing the requested financial template with another one',()=>{
+ const output=acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'candlestick',title:'行情看板',asOf:'2026-09-24',candles:[{date:'2026-09-24',open:1,high:2,low:1,close:2,volume:null}]}))
+ expect(workbenchMarketVariantIssue(output,'必须输出 market.table 的结构化数据')).toContain('market.table')
+ expect(workbenchMarketVariantIssue(output,'必须输出 market.candlestick 的结构化数据')).toBeNull()
+ expect(workbenchMarketVariantIssue(output,'本面板：贵州茅台 600519.SH、五粮液 000858.SZ；必须输出 market.candlestick 的结构化数据')).toContain('多标的')
 })
 it('shows only moving averages supported by the available candle count',()=>{
  const candle={date:'2026-09-18',open:4493.21,high:4541.82,low:4480.46,close:4528.61,volume:128}

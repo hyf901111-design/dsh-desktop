@@ -31,6 +31,12 @@ export function marketVariant(panel = {}) {
   const value = `${panel.title ?? ''}\n${panel.prompt ?? ''}`;
   const declared = value.match(/\b(?:variant|变体)\s*[:：=]\s*(fund-kpi|fund-holdings|fund-industry|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1]?.toLowerCase();
   if (declared) return declared;
+  // A multi-symbol quote watchlist needs sortable rows rather than one
+  // stock's metrics or candles, even when the prompt calls them indicators.
+  const primaryCandle = /K\s*线|蜡烛图|candlestick/iu.test(panel.title ?? '') ||
+    /(?:展示|绘制|生成|画).{0,16}(?:K\s*线|蜡烛图|candlestick)/iu.test(panel.prompt ?? '');
+  if (!primaryCandle &&
+      /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
     if (/K\s*线|蜡烛图|candlestick/iu.test(text)) return 'candlestick';
     if (/趋势|走势|折线|trend/iu.test(text)) return 'trend';
