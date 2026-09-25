@@ -282,17 +282,21 @@ export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 
         const template = workbenchDesignTemplate(p);
         return { ...p, size: template.size, width: template.width, height: template.height };
     });
-    const spanLead = sized.length >= 3 && sized.length % 2 === 1 && sized[0].width >= 800 && sized[0].height <= 220;
+    const spanLead = sized.length >= 3 && sized[0].width >= 800 && sized[0].height <= 220;
     const start = spanLead ? 1 : 0;
     const rest = sized.slice(start);
-    const leftWidth = Math.max(0, ...rest.filter((_, i) => i % 2 === 0).map(p => p.width));
-    const rightWidth = Math.max(0, ...rest.filter((_, i) => i % 2 === 1).map(p => p.width));
+    const spanTail = spanLead && rest.length % 2 === 1 && rest.at(-1).width >= 800;
+    const paired = spanTail ? rest.slice(0, -1) : rest;
+    const leftWidth = Math.max(0, ...paired.filter((_, i) => i % 2 === 0).map(p => p.width));
+    const rightWidth = Math.max(0, ...paired.filter((_, i) => i % 2 === 1).map(p => p.width));
+    const totalWidth = leftWidth + 16 + rightWidth;
+    const centeredX = width => Math.abs(totalWidth - width) <= 16 ? 0 : Math.max(0, (totalWidth - width) / 2);
     let y = spanLead ? sized[0].height + 16 : 0;
     return sized.map((p, index) => {
-        if (spanLead && index === 0) return { ...p, x: (leftWidth + 16 + rightWidth - p.width) / 2, y: 0, workbenchSpan: true };
+        if (spanLead && index === 0) return { ...p, x: centeredX(p.width), y: 0, workbenchSpan: true };
         const cell = index - start;
         if (cell && cell % 2 === 0) y += Math.max(rest[cell - 2].height, rest[cell - 1].height) + 16;
-        return { ...p, x: cell % 2 ? leftWidth + 16 : 0, y };
+        return { ...p, x: spanTail && cell === rest.length - 1 ? centeredX(p.width) : cell % 2 ? leftWidth + 16 : 0, y };
     });
 }
 

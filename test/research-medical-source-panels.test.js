@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Window } from 'happy-dom';
 import { renderMarketArtifact } from '../packages/dsh-research-task-runtime/market-artifact.js';
 import { renderInteractiveArtifact } from '../packages/dsh-research-task-runtime/interactive-artifact.js';
 import { researchBentoLayout, researchMarketDimensions } from '../packages/dsh-research-task-runtime/bento-layout.js';
@@ -7,6 +8,13 @@ import { layoutWorkbench, validateWorkbench } from '../packages/dsh-research-tas
 const base = { version: 1, type: 'market', asOf: '模拟数据 · 2026-02-06' };
 const artifact = (variant, data) => ({ ...base, variant, title: `${variant}（模拟）`, ...data });
 const node = (id, spec) => ({ id, kind: 'generated-container', generationStatus: 'completed', sizeMode: 'auto', containerSpec: spec });
+const rendered = spec => {
+  const window = new Window();
+  window.document.write(renderMarketArtifact(spec).html);
+  const script = window.document.querySelector('script');
+  if (script) window.eval(script.textContent);
+  return window.document;
+};
 const medical = [
   artifact('metrics', { items: Array.from({ length: 6 }, (_, i) => ({ label: `指标${i}`, value: String(i) })) }),
   artifact('trend', { labels: ['02-01', '02-02'], series: [{ name: '医药', values: [100, 102] }] }),
@@ -28,6 +36,34 @@ describe('21H medical source composition', () => {
     expect(events?.html).toContain('待跟进');
     expect(renderMarketArtifact({ ...medical[2], items: [{ label: 'bad', x: NaN, y: 20 }] })).toBeNull();
     expect(renderMarketArtifact({ ...medical[4], items: [{ name: 'bad', target: 'ADC', stage: 5, nextDate: '09.25' }] })).toBeNull();
+  });
+
+  it('lets a reader select scatter values by keyboard and reveal every source row', () => {
+    const document = rendered(medical[2]);
+    const buttons = [...document.querySelectorAll('[data-scatter-select]')];
+    expect(buttons).toHaveLength(2);
+    expect(document.querySelector('.scatter-readout').textContent).toBe('A1 · PE 2027E 10 · EPS CAGR 30');
+    buttons[0].dispatchEvent(new document.defaultView.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(document.querySelector('.scatter-readout').textContent).toBe('B2 · PE 2027E 28 · EPS CAGR 52');
+    expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
+    expect([...document.querySelectorAll('.market-scatter details tbody tr')].map(row => row.textContent)).toEqual(['A11030', 'B22852']);
+  });
+
+  it('expands pipeline details and filters event rows by date and status', () => {
+    const pipeline = rendered(medical[4]);
+    expect(pipeline.querySelectorAll('.pipeline-row summary')).toHaveLength(2);
+    expect(pipeline.querySelector('.pipeline-detail').textContent).toContain('当前阶段：II');
+    const events = rendered(medical[5]);
+    const date = events.querySelector('[data-event-date-filter]');
+    const status = events.querySelector('[data-event-status-filter]');
+    expect(events.querySelector('.event-count').textContent).toBe('2 / 2 项');
+    date.value = '02-10 09:00';
+    date.dispatchEvent(new events.defaultView.Event('change'));
+    expect([...events.querySelectorAll('[data-event-row]')].filter(row => !row.hidden)).toHaveLength(1);
+    status.value = '待跟进';
+    status.dispatchEvent(new events.defaultView.Event('change'));
+    expect(events.querySelector('.event-count').textContent).toBe('0 / 2 项');
+    expect(events.querySelector('.market-empty').hidden).toBe(false);
   });
 
   it('keeps a six-column source table at 536 pixels with scrollable text', () => {
