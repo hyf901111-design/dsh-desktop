@@ -136,6 +136,32 @@ ${nativeCard} .rScV5Q_containerChart{padding:12px;background:transparent}
 ${nativeCard} .rScV5Q_chartLabel,
 ${nativeCard} [data-research-container-chart=line] .rScV5Q_chartLabel{font:400 9px/16px "EWork DIN Pro","Noto Sans SC",sans-serif;fill:var(--research-completed-muted);color:var(--research-completed-muted)}
 ${nativeCard} .rScV5Q_chartLegend{padding:6px 0 0;font:400 9px/16px "EWork DIN Pro","Noto Sans SC",sans-serif;color:var(--research-completed-muted)}
+${nativeCard} .odyssey-native-table{min-width:0;overflow:hidden}
+${nativeCard} .odyssey-native-table-controls{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+${nativeCard} .odyssey-native-table-controls input{box-sizing:border-box;min-width:0;flex:1;height:27px;padding:0 8px;border:1px solid var(--research-completed-divider);border-radius:5px;background:var(--research-completed-row);color:var(--research-completed-text);font:400 10px "EWork DIN Pro","Noto Sans SC",sans-serif}
+${nativeCard} .odyssey-native-table-controls [role=status]{flex:none;color:var(--research-completed-muted);font:9px/16px "EWork DIN Pro","Noto Sans SC",sans-serif}
+${nativeCard} .odyssey-native-table-grid{width:100%;overflow-x:auto;overflow-y:visible}
+${nativeCard} .odyssey-native-table-grid table{width:100%;min-width:max-content}
+${nativeCard} .odyssey-native-table-grid th{min-width:84px;white-space:nowrap}
+${nativeCard} .odyssey-native-table-grid th button{width:100%;padding:0;border:0;background:none;color:inherit;text-align:inherit;font:inherit;cursor:pointer}
+${nativeCard} .odyssey-native-table-grid th button:hover{color:var(--research-completed-text)}
+${nativeCard} .odyssey-native-empty{margin:10px 0;color:var(--research-completed-muted);font:10px/16px "EWork DIN Pro","Noto Sans SC",sans-serif}
+${nativeCard} .odyssey-native-chart{min-height:0;overflow:auto}
+${nativeCard} .odyssey-native-chart svg{min-height:110px}
+${nativeCard} .odyssey-native-chart svg [role=button]{cursor:pointer;outline:none}
+${nativeCard} .odyssey-native-chart svg [role=button]:focus-visible{stroke:var(--research-completed-text);stroke-width:2px}
+${nativeCard} .odyssey-native-chart svg [data-selected=true]{stroke:var(--research-completed-text);stroke-width:1.5px}
+${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend{display:flex;flex-wrap:wrap;gap:4px 10px}
+${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend button{display:inline-flex;align-items:center;gap:5px;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend button[aria-pressed=false]{opacity:.38}
+${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend i{display:inline-block;width:7px;height:7px;border-radius:50%}
+${nativeCard} .odyssey-native-chart-readout{padding:2px 0;color:var(--research-completed-text);font:500 10px/16px "EWork DIN Pro","Noto Sans SC",sans-serif}
+${nativeCard} .odyssey-native-chart-data{color:var(--research-completed-muted);font:10px/16px "EWork DIN Pro","Noto Sans SC",sans-serif}
+${nativeCard} .odyssey-native-chart-data summary{width:max-content;cursor:pointer}
+${nativeCard} .odyssey-native-chart-data>div{max-height:180px;overflow:auto}
+${nativeCard} .odyssey-native-chart-data table{width:100%;border-collapse:collapse;color:var(--research-completed-text);font:9px/16px "EWork DIN Pro","Noto Sans SC",sans-serif}
+${nativeCard} .odyssey-native-chart-data :is(th,td){padding:3px 6px;border-bottom:1px solid var(--research-completed-divider);text-align:right;white-space:nowrap}
+${nativeCard} .odyssey-native-chart-data :is(th,td):first-child{text-align:left}
 
 /* Actions are neutral. Do not recolor chart paths, legend swatches, status
    tokens or the canvas' --odyssey-select / selection pseudo-element. */

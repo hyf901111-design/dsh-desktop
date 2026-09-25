@@ -8,6 +8,7 @@ import { patchFigmaCanvasArrangeMotion } from './figma-canvas-arrange-motion.mjs
 import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
 import { patchResearchCreationProgress } from './research-creation-progress.mjs'
 import { parseResearchMarketNativeTable, ResearchMarketNativeTable, researchMarketNativeTableCss } from './research-market-native-table.mjs'
+import { ResearchInteractiveTable, ResearchContainerChart } from './research-native-interactivity.mjs'
 import { MARKET_REGULAR_FONT_CSS } from '../../packages/dsh-research-task-runtime/market-font.js'
 import { readFileSync } from 'node:fs'
 import { patchFigmaDerivedMenu, derivedMenuCss } from './figma-derived-menu-client.mjs'
@@ -263,7 +264,17 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchResearchCreationProgress(patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source)))))));
+  return patchResearchNativeInteractivity(patchResearchCreationProgress(patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))))))));
+}
+function patchResearchNativeInteractivity(source) {
+  return replaceResearchContainerTable(source);
+}
+function replaceResearchContainerTable(source) {
+  const body=source.indexOf('function ResearchContainerBody(');
+  const start=source.indexOf('if (spec.type === "table") return',body);
+  const end=source.indexOf('if (spec.type === "kpi")',start);
+  if(body<0||start<body||end<start)throw Error('Native research table renderer missing');
+  return source.slice(0,start)+'if (spec.type === "table") return (0, react_jsx_runtime.jsx)(ResearchInteractiveTable, { spec });\n\t\t\t'+source.slice(end);
 }
 function patchFigmaCanvasContent(source) {
   source=patchCanvasGraphicPrimitives(source);
@@ -281,11 +292,10 @@ function patchFigmaCanvasContent(source) {
     const values=spec.rows.map(row=>row[index]).filter(value=>value!==null&&value!==undefined&&!['','—','--'].includes(String(value).trim()));
     return values.length>0&&values.every(value=>typeof value==='number'||/^[+−-]?\\d+(?:,\\d{3})*(?:\\.\\d+)?(?:%|‰|亿|万|元|点|倍|px)?$/.test(String(value).replace(/\\s/g,'')));
   }\n`;
-  if(source.includes('function researchTableNumericColumn('))source=block(source,'function researchTableNumericColumn(', 'function ResearchContainerContent(',tableColumnSource.trimEnd());
-  else source=exact(source,'function ResearchContainerContent(',tableColumnSource+'function ResearchContainerContent(');
-  source=source.replace('const spec = node.containerSpec;\n\t\t\tif (spec.type === "html")', 'const spec = node.containerSpec;\n            const numericColumns=spec.type==="table"?spec.columns.map((_,index)=>researchTableNumericColumn(spec,index)):[];\n\t\t\tif (spec.type === "html")');
-  source=source.replace('"th", { children: column }, index)', '"th", { "data-numeric": numericColumns[index] ? "true" : void 0, children: column }, index)');
-  source=source.replace('"data-numeric": typeof cell === "number" ? "true" : void 0', '"data-numeric": numericColumns[cellIndex] ? "true" : void 0');
+  const tableSource=tableColumnSource+ResearchInteractiveTable.toString()+'\n';
+  if(source.includes('function researchTableNumericColumn('))source=block(source,'function researchTableNumericColumn(', 'function ResearchContainerContent(',tableSource.trimEnd());
+  else source=exact(source,'function ResearchContainerContent(',tableSource+'function ResearchContainerContent(');
+  source=replaceResearchContainerTable(source);
   source=source.replace('"strong", { children: String(item.value) }', '"strong", { "data-research-metric-positive": /涨跌|增长|变化|收益率|回报|change|growth|return/i.test(item.label) && /^\\+\\s*\\d/.test(String(item.value).trim()) || void 0, children: String(item.value) }');
   source=source.replaceAll('"aria-label": "更多", "aria-haspopup": "menu"', '"aria-label": "更多操作", "aria-haspopup": "menu"');
   source=source.replace('title: expanded ? "关闭放大阅读" : "放大阅读", ', '');
@@ -299,16 +309,8 @@ function patchFigmaCanvasContent(source) {
   source=source.replace('children: "···"', "children:(0,react_jsx_runtime.jsx)('img',{src:"+JSON.stringify(iconData.more)+",width:13,height:13,alt:'',className:'odyssey-canvas-icon'})");
   source=source.replace(' || growths >= 3 || Date.now() - startedAt > 8000 || current.node?.sizeMode === "manual" || current.node?.containerSpec?.html !== spec.html', ' || current.node?.containerSpec?.html !== spec.html');
   source=source.replace("card?.toggleAttribute('data-research-content-overflow', dimensions.width>656 || dimensions.height>456);", "card?.toggleAttribute('data-research-content-overflow', dimensions.width>(current.node?.sizeMode==='manual'?current.node.width:656) || dimensions.height>(current.node?.sizeMode==='manual'?current.node.height:456));\n                    if(current.node?.sizeMode==='manual'||growths>=3||Date.now()-startedAt>8000)return;");
-  const chartStart=source.indexOf('function ResearchContainerChart({ spec }) {'),chartEnd=source.indexOf('function readResearchComponentTheme(',chartStart);
-  if(chartStart>=0&&chartEnd>chartStart){let chart=source.slice(chartStart,chartEnd);
-    chart=chart.replace('function ResearchContainerChart({ spec }) {', `function ResearchContainerChart({ spec }) {
-            /* SHERLOCK_RESPONSIVE_NATIVE_CHART */
-            const svgRef=(0,react.useRef)(null),[plotSize,setPlotSize]=(0,react.useState)({width:640,height:290});
-            (0,react.useLayoutEffect)(()=>{const svg=svgRef.current;if(!svg)return;const measure=()=>{if(svg.clientWidth>0&&svg.clientHeight>0)setPlotSize(previous=>previous.width===svg.clientWidth&&previous.height===svg.clientHeight?previous:{width:svg.clientWidth,height:svg.clientHeight});};measure();const Observer=svg.ownerDocument.defaultView?.ResizeObserver;if(!Observer)return;const observer=new Observer(measure);observer.observe(svg);return()=>observer.disconnect();},[]);`);
-    if(source.includes('/* SHERLOCK_RESPONSIVE_NATIVE_CHART */'))chart=source.slice(chartStart,chartEnd);
-    chart=chart.replace('const width = 540;', 'const width = Math.max(100,plotSize.width-left-18);').replace('const height = 230;', 'const height = Math.max(40,plotSize.height-top-30);').replace('viewBox: "0 0 640 290",', 'ref:svgRef,viewBox: "0 0 "+plotSize.width+" "+plotSize.height,').replace('y: 274, textAnchor:', 'y: top+height+22, textAnchor:');
-    source=source.slice(0,chartStart)+chart+source.slice(chartEnd);
-  }
+  source=block(source,'function ResearchContainerChart({ spec }) {',
+    'function readResearchComponentTheme(',ResearchContainerChart.toString());
   source=source.replace(/const RESEARCH_CANVAS_GRID_SIZE = [\d.]+;/, 'const RESEARCH_CANVAS_GRID_SIZE = 13.71;');
   source=source.replace('backgroundPosition: `${viewport.x - gridSize / 2 + 1}px ${viewport.y - gridSize / 2 + 1}px`', 'backgroundPosition: `${viewport.x + 12.5499 * viewport.scale}px ${viewport.y + 7.6871 * viewport.scale}px`');
   source=source.replace('"data-research-global-toolbar": "",\n', '"data-research-global-toolbar": "", style:{left:(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width)/2},\n');
