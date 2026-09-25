@@ -66,4 +66,35 @@ describe('Fund72 source-contracted workbench', () => {
     bad.panels[2].artifact.items[0].detail = '仅有 +8.2% 偏离';
     expect(() => validateWorkbench(bad)).toThrow('组合权重或基准权重');
   });
+
+  it('filters and sorts industry exposure and updates the comparison readout', () => {
+    const artifact = { version:1, type:'market', variant:'fund-industry', title:'行业配置', asOf:'模拟数据 · 2026-02-06', items:[
+      {label:'医药',weight:18.8,benchmark:16.7},
+      {label:'电子',weight:24.6,benchmark:16.4},
+      {label:'银行',weight:12.1,benchmark:14.5}
+    ] };
+    const doc = new Window().document;
+    doc.write(renderMarketArtifact(artifact).html);
+    doc.defaultView.eval(doc.querySelector('script').textContent);
+    const rows = [...doc.querySelectorAll('.fund-industry')];
+    expect(rows).toHaveLength(3);
+    expect(rows.every(row => row.tagName === 'BUTTON')).toBe(true);
+    expect(doc.querySelector('.fund-industry-count').textContent).toBe('3 / 3 个行业');
+    const filter = doc.querySelector('.fund-industry-filter');
+    filter.value = 'under';
+    filter.dispatchEvent(new doc.defaultView.Event('change'));
+    expect(doc.querySelector('.fund-industry-count').textContent).toBe('1 / 3 个行业');
+    expect(doc.querySelector('.fund-industry-readout').textContent).toContain('银行 · 组合 12.1% · 基准 14.5% · 低配 2.4 个百分点');
+    expect(doc.querySelector('.fund-callout strong').textContent).toBe('银行低配 2.4%');
+    filter.value = 'all';
+    filter.dispatchEvent(new doc.defaultView.Event('change'));
+    const sort = doc.querySelector('.fund-industry-sort');
+    sort.value = 'name';
+    sort.dispatchEvent(new doc.defaultView.Event('change'));
+    expect([...doc.querySelectorAll('.fund-industry')].map(row => row.dataset.label)).toEqual(['电子','医药','银行']);
+    const medical = rows.find(row => row.dataset.label === '医药');
+    medical.click();
+    expect(medical.getAttribute('aria-pressed')).toBe('true');
+    expect(doc.querySelector('.fund-industry-readout').textContent).toContain('医药 · 组合 18.8%');
+  });
 });

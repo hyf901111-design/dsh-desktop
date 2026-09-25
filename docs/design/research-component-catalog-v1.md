@@ -19,7 +19,7 @@
 | 9 | `market.breadth` | 上涨、平盘、下跌数及指标 | 分布读数、指标详情 | `market.breadth` |
 | 10 | `fund.kpi` | 基金/组合指标、数值、口径 | 指标详情 | `market.fund-kpi` |
 | 11 | `fund.holdings` | 持仓标的、权重及数据期间 | 搜索、列排序、滚动 | `market.fund-holdings` |
-| 12 | `fund.industry` | 行业、组合权重、基准权重 | 差值读数、排序/筛选 | `market.fund-industry`；筛选待加强 |
+| 12 | `fund.industry` | 行业、组合权重、基准权重 | 差值读数、排序/筛选 | `market.fund-industry`；筛选、排序及差值读数已实现，待客户端验收 |
 | 13 | `research.kpi` | 指标名、值、变化 | 指标详情 | 原生 `kpi` |
 | 14 | `research.line` | 分类标签、同量纲序列 | 图例、选点、完整数据 | 原生 `chart.line`；选点待加强 |
 | 15 | `research.bar` | 分类标签、同量纲序列 | 图例、选柱、完整数据 | 原生 `chart.bar`；选柱待加强 |
