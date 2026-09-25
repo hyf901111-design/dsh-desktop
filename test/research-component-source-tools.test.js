@@ -34,3 +34,16 @@ it('starts a latest-index query in the current China-market window instead of an
   expect(instruction).toContain('不要先发无日期请求')
   expect(instruction).toContain('不可推断原因是尚未收盘')
 })
+
+it('uses the verified Shenwan endpoint and does not copy example dates or force page parameter types', () => {
+  const instruction = componentSourceInstruction(
+    [{ name: 'ework__t_get_api_info', description: '读取通联 DataYes 接口定义' }],
+    '申万农林牧渔行业指数最近日行情',
+    new Date('2026-09-25T19:30:00Z')
+  )
+  expect(instruction).toContain('getMktIdxdSw')
+  expect(instruction).toContain('20260916 至 20260926')
+  expect(instruction).toContain('接口定义里的示例日期只是示例')
+  expect(instruction).toContain('严格遵守工具及业务接口的参数类型')
+  expect(instruction).not.toContain('pagesize、pagenum 等参数也必须是字符串')
+})

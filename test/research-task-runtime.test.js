@@ -229,6 +229,44 @@ it('accepts a one-panel source workbench without inventing a second task', async
   } finally { await runtime.dispose() }
 })
 
+it('does not publish a stale latest-market panel after its recency gate requests repair', async () => {
+  const { ResearchTaskRuntime } = await runtimeModule()
+  const adapter = deferredTaskAdapter()
+  const runtime = new ResearchTaskRuntime({ adapter: adapter.adapter, storage: memoryTaskStorage(),
+    createId: () => 'latest-panel', now: () => Date.parse('2026-09-25T19:30:00Z') })
+  const panel = asOf => JSON.stringify({ version: 1, type: 'market', variant: 'metrics',
+    title: '申万农林牧渔指数行情', asOf, items: [{ label: '收盘点位', value: '2538.15 点' }] })
+  try {
+    await runtime.start({ parentSessionId: 'parent-1', canvasNodeId: 'latest-node', kind: 'container',
+      prompt: '申万农林牧渔指数最近日行情，必须使用 market.metrics 宿主模板' })
+    await adapter.waitForStarts(1)
+    adapter.complete('latest-panel', panel('2025-12-12 收盘'))
+    await adapter.waitForStarts(2)
+    expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'latest-panel' }).state).not.toBe('completed')
+    adapter.complete('latest-panel', panel('2026-09-24 收盘'))
+    await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'latest-panel' })).toMatchObject({ state: 'completed' }))
+    expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'latest-panel' }).finalOutput).toContain('2026-09-24')
+  } finally { await runtime.dispose() }
+})
+
+it('fails a latest-market panel when both attempts still return stale data', async () => {
+  const { ResearchTaskRuntime } = await runtimeModule()
+  const adapter = deferredTaskAdapter()
+  const runtime = new ResearchTaskRuntime({ adapter: adapter.adapter, storage: memoryTaskStorage(),
+    createId: () => 'stale-panel', now: () => Date.parse('2026-09-25T19:30:00Z') })
+  const stale = JSON.stringify({ version: 1, type: 'market', variant: 'metrics', title: '指数行情',
+    asOf: '2025-12-12 收盘', items: [{ label: '收盘点位', value: '2944.10 点' }] })
+  try {
+    await runtime.start({ parentSessionId: 'parent-1', canvasNodeId: 'stale-node', kind: 'container', prompt: '指数最近行情' })
+    await adapter.waitForStarts(1)
+    adapter.complete('stale-panel', stale)
+    await adapter.waitForStarts(2)
+    adapter.complete('stale-panel', stale)
+    await eventually(() => expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'stale-panel' })).toMatchObject({ state: 'failed' }))
+    expect(runtime.inspect({ parentSessionId: 'parent-1', taskId: 'stale-panel' }).finalOutput).toBeUndefined()
+  } finally { await runtime.dispose() }
+})
+
 describe('Research task contract and prompt', () => {
   it('marks only an oversized restored HTML task as failed and preserves other task history', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()

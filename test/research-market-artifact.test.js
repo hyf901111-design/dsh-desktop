@@ -380,4 +380,7 @@ it('rejects an old index snapshot presented as the latest market data',()=>{
  expect(workbenchMarketRecencyIssue(spec('2026-09-24 收盘'),request,now)).toBeNull()
  expect(workbenchMarketRecencyIssue(spec('历史资料：2025-06-09 收盘'),request,now)).toBeNull()
  expect(workbenchMarketRecencyIssue(spec('2025-06-09 收盘'),'沪深300指数模拟数据行情',now)).toBeNull()
+ const trend=asOf=>JSON.stringify({version:1,type:'market',variant:'trend',title:'沪深300指数趋势',asOf,points:[{date:'2025-06-09',value:3885.25},{date:'2025-06-10',value:3890.5}]})
+ expect(workbenchMarketRecencyIssue(trend('2025-06-09 至 2025-06-10'),request,now)).toContain('20260916 至 20260926')
+ expect(workbenchMarketRecencyIssue(trend('2026-09-16 至 2026-09-24'),request,now)).toBeNull()
 })
