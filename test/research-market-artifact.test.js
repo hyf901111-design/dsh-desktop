@@ -106,6 +106,30 @@ it('rejects invalid order book levels and zero-unit templates',()=>{
  expect(acceptArtifactOutput(JSON.stringify({...base,sizeUnit:''}))).toBeUndefined()
  expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.order-book 的结构化数据')).toBeNull()
 })
+it('filters a fixed fund-flow chart by period and industry while keeping the full evidence table',()=>{
+ const records=[
+  {period:'本周',industry:'科技',inflow:20,outflow:10},
+  {period:'上周',industry:'科技',inflow:5,outflow:12},
+  {period:'本周',industry:'金融',inflow:3,outflow:8}
+ ]
+ const d=render({variant:'fund-flow',unit:'亿元',records})
+ d.defaultView.eval(d.querySelector('script').textContent)
+ expect(d.querySelector('.fund-flow-summary').textContent).toBe('3 项 · 净流入 -2 亿元')
+ const period=d.querySelector('[data-flow-period]');period.value='本周';period.dispatchEvent(new d.defaultView.Event('change'))
+ expect(d.querySelectorAll('.fund-flow-row:not([hidden])')).toHaveLength(2)
+ const industry=d.querySelector('[data-flow-industry]');industry.value='科技';industry.dispatchEvent(new d.defaultView.Event('change'))
+ expect(d.querySelector('.fund-flow-summary').textContent).toBe('1 项 · 净流入 10 亿元')
+ d.querySelector('.fund-flow-row:not([hidden])').click()
+ expect(d.querySelector('.fund-flow-readout').textContent).toContain('流入 20 亿元 · 流出 10 亿元 · 净额 10 亿元')
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(3)
+ expect(marketVariant({title:'行业资金流向'})).toBe('fund-flow')
+})
+it('rejects unsupported fund-flow values rather than inventing a net amount',()=>{
+ const base={version:1,type:'market',variant:'fund-flow',title:'流向',asOf:'模拟',unit:'亿元',records:[{period:'本周',industry:'科技',inflow:20,outflow:10}]}
+ expect(acceptArtifactOutput(JSON.stringify({...base,records:[{period:'本周',industry:'科技',inflow:20,outflow:-1}]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,records:[]}))).toBeUndefined()
+ expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.fund-flow 的结构化数据')).toBeNull()
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')

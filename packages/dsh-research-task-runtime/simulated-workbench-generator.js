@@ -31,6 +31,12 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
             version: 1, type: 'market', variant, priceUnit: '元', sizeUnit: '股',
             bids: Array.from({ length: 10 }, (_, index) => ({ price: +(108.66 - index * .01).toFixed(2), size: 900 + index * 120 })),
             asks: Array.from({ length: 10 }, (_, index) => ({ price: +(108.67 + index * .01).toFixed(2), size: 1100 + index * 90 }))
+        } : variant === 'fund-flow' ? {
+            version: 1, type: 'market', variant, unit: '亿元',
+            records: ['科技', '消费', '金融', '医药', '工业'].flatMap((industry, index) => [
+                { period: '模拟本周', industry, inflow: 18 + index * 4, outflow: 14 + index * 3 },
+                { period: '模拟上周', industry, inflow: 12 + index * 3, outflow: 16 + index * 2 }
+            ])
         } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }

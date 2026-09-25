@@ -23,6 +23,11 @@ describe('真实客户端模拟工作台输入修复', () => {
     const prepared = validateWorkbench({ requestId: 'market-two-new', title: '证券量价与盘口工作台', dataMode: 'simulated', panels: [price, book] });
     expect(prepared.panels.map(item => item.artifact.variant)).toEqual(['price-volume', 'order-book']);
   });
+  it('为资金流向模板准备可按时段与行业筛选的本地模拟样本', () => {
+    const flow = generateSimulatedPanel({ title: '行业资金流向', prompt: 'variant: fund-flow', type: 'market', size: 'large' }, '行业观察工作台');
+    expect(flow.artifact.records).toHaveLength(10);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(flow.artifact))).html).toContain('data-flow-industry');
+  });
   it('将仅多包一层的表格单元格展开为完整列，保留原始文字', () => {
     const table = panel('重点覆盖估值与盈利预期（模拟）', 'market', {
       asOf: '2026-02-06 15:00', columns: ['公司', '代码', '收盘', '涨跌', 'PE', 'EPS'],
