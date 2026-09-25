@@ -245,6 +245,11 @@ it('rejects risk scores outside the documented five-level inputs',()=>{
  expect(acceptArtifactOutput(JSON.stringify({...base,items:[{label:'供应链',probability:2.5,impact:4}]}))).toBeUndefined()
  expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.risk-matrix 的结构化数据')).toBeNull()
 })
+it('keeps all nine new template types distinct when each panel repeats a shared workbench prompt',()=>{
+ const cases=[['量价联动','price-volume'],['买卖盘口','order-book'],['行业资金流向','fund-flow'],['估值分位带','valuation-band'],['基金净值回撤','equity-drawdown'],['资产配置占比','allocation-donut'],['利润瀑布图','waterfall'],['客户转化漏斗','funnel'],['项目风险矩阵','risk-matrix']]
+ const prompt=cases.map(([,variant])=>`market.${variant}`).join('、')
+ for(const [title,variant] of cases)expect(marketVariant({title,prompt})).toBe(variant)
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')

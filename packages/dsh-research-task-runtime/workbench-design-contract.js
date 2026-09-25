@@ -49,6 +49,13 @@ export function marketVariant(panel = {}) {
   // Select these two distinct financial cards from their own titles first.
   if (/盘口|买卖[一二三五十]?档|委买|委卖|order.book/iu.test(panel.title ?? '')) return 'order-book';
   if (/量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|price.volume/iu.test(panel.title ?? '')) return 'price-volume';
+  if (/资金流|净流入|净流出|fund.flow/iu.test(panel.title ?? '')) return 'fund-flow';
+  if (/估值分位|估值带|分位带|valuation.band/iu.test(panel.title ?? '')) return 'valuation-band';
+  if (/净值.{0,10}回撤|回撤.{0,10}净值|equity.drawdown/iu.test(panel.title ?? '')) return 'equity-drawdown';
+  if (/配置占比|资产配置|持仓占比|分配环图|allocation.donut/iu.test(panel.title ?? '')) return 'allocation-donut';
+  if (/瀑布图|增减桥|waterfall/iu.test(panel.title ?? '')) return 'waterfall';
+  if (/漏斗|转化率|funnel/iu.test(panel.title ?? '')) return 'funnel';
+  if (/风险矩阵|风险热力|概率.{0,8}影响|risk.matrix/iu.test(panel.title ?? '')) return 'risk-matrix';
   const value = `${panel.title ?? ''}\n${panel.prompt ?? ''}`;
   const declared = value.match(new RegExp(`\\b(?:variant|变体)\\s*[:：=]\\s*(${MARKET_VARIANT_PATTERN})\\b`, 'iu'))?.[1]?.toLowerCase();
   if (declared) return declared;
