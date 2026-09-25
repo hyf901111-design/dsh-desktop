@@ -2,7 +2,7 @@ import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
 import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { buildResearchHtmlPreview, parseResearchHtmlArtifact, researchComponentTypographyCss, RESEARCH_COMPONENT_PALETTES } from '../packages/dsh-research-task-runtime/html-artifact.js'
+import { buildResearchHtmlPreview, parseResearchHtmlArtifact, researchComponentTypographyCss, RESEARCH_COMPONENT_PALETTES, RESEARCH_COMPONENT_CONTROLS_CSS } from '../packages/dsh-research-task-runtime/html-artifact.js'
 
 function runtime(html, { standalone = false, systemDark = false, configure } = {}) {
   const window = new Window({ settings: { disableJavaScriptEvaluation: true } })
@@ -40,6 +40,20 @@ function runtime(html, { standalone = false, systemDark = false, configure } = {
 const themeMessage = (colorScheme) => ({ type: 'sherlock-theme', colorScheme })
 
 describe('offline HTML component theme runtime', () => {
+  it('keeps chart SVG buttons outside ordinary control color and size rules', () => {
+    const window = new Window()
+    window.document.body.innerHTML = '<button>普通按钮</button><svg><rect role="button"/><circle role="button"/></svg>'
+    const htmlButton = window.document.querySelector('button')
+    const chartButtons = [...window.document.querySelectorAll('svg [role="button"]')]
+    const rules = RESEARCH_COMPONENT_CONTROLS_CSS.split('\n').filter(line => line.includes('[role="button"]') && (line.includes('background-color:var(--sherlock-control-bg)') || line.includes('height:28px')))
+    expect(rules).toHaveLength(2)
+    for (const rule of rules) {
+      const selector = rule.slice(0, rule.indexOf('{'))
+      expect(window.document.querySelectorAll(selector)).toContain(htmlButton)
+      for (const chartButton of chartButtons) expect(window.document.querySelectorAll(selector)).not.toContain(chartButton)
+    }
+  })
+
   it('keeps runtime previews small while default exports retain their self-contained font', () => {
     const html = '<p>黄金多因子 123ABC</p>'
     const preview = buildResearchHtmlPreview(html, '字体', 'light', { notoFont: 'runtime' })
