@@ -2,7 +2,7 @@ const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡�
 const datayesSource = /通联|datayes|萝卜投研/iu
 const recentMarketRequest = /最近|最新|今日|当前|实时|日行情/iu
 
-function chinaMarketWindow(now) {
+export function chinaMarketWindow(now) {
   const values = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
   }).formatToParts(now).filter(part => part.type !== 'literal').map(part => [part.type, part.value]))

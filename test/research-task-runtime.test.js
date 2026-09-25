@@ -1237,6 +1237,26 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
+  it('gives a financial workbench planner the scoped DataYes date-window guidance', async () => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.tools = { schemas: vi.fn(() => [
+      { name: 'ework__datayes_info', description: '读取通联 DataYes 金融数据 API 定义' },
+      { name: 'ework__datayes_call', description: '调用通联 DataYes 金融数据 API' },
+      { name: 'financial_query', description: '查询金融数据' }
+    ]) }
+    const runtime = await runtimeModule()
+    const handle = await runtime.createSubagentAdapter(fixture.ctx).start({
+      parentSessionId: 'parent-1', kind: 'board', query: '创建沪深300最新行情工作台',
+      prompt: '创建沪深300最新行情工作台', signal: new AbortController().signal,
+      onSessionEvent: vi.fn()
+    })
+    const child = fixture.ctx.subagents.start.mock.calls[0][1]
+    expect(child.prompt[0].text).toContain('先用接口定义工具读取 getMktIdxd')
+    expect(child.prompt[0].text).toContain('不要先发无日期请求')
+    expect(child.toolFilter.allow).toContain('ework__datayes_call')
+    await handle.dispose()
+  })
+
   it('does not append generic chart advice to a typed market template', async () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('工作台：白酒研究\n本面板：龙头白酒股 K 线图\n优先使用 market 类型\n模板：market.candlestick\n展示贵州茅台日线')

@@ -4,6 +4,7 @@ import { parseResearchContainerSpec } from './artifact-validator.js';
 import { renderInteractiveArtifact } from './interactive-artifact.js';
 import { renderGanttArtifact } from './gantt-artifact.js';
 import { researchHtmlText } from './html-artifact.js';
+import { chinaMarketWindow } from './component-source-tools.js';
 
 // Linear scan, string/escape aware: prose around a complete JSON object is harmless.
 // Never eval model output, concatenate fragments, or guess missing values.
@@ -32,6 +33,24 @@ export function acceptArtifactOutput(text) {
   return JSON.stringify(spec);
  }
  return undefined;
+}
+
+export function workbenchMarketRecencyIssue(text, prompt, now = new Date()) {
+ if(!/(?:最近|最新|今日|当前|实时)/u.test(prompt)||!/(?:行情|收盘|指数|股价|股票|ETF)/iu.test(prompt)||/(?:情景模拟|模拟数据)/u.test(prompt))return null;
+ const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='market'&&value.variant==='metrics');
+ if(!candidate)return null;
+ const asOf=typeof candidate.asOf==='string'?candidate.asOf:'';
+ const note=typeof candidate.note==='string'?candidate.note:'';
+ const match=asOf.match(/(20\d{2})[-/.]?(\d{1,2})[-/.]?(\d{1,2})/u);
+ if(!match)return '最新行情指标必须标明确切交易日期，不得仅写“最新”或“最近可得”。';
+ const date=Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]));
+ if(!Number.isFinite(date)||new Date(date).toISOString().slice(0,10)!==`${match[1]}-${match[2].padStart(2,'0')}-${match[3].padStart(2,'0')}`)return '行情指标的数据日期无效，请核对来源返回的交易日期。';
+ const {start,end}=chinaMarketWindow(now);
+ const today=Date.UTC(Number(end.slice(0,4)),Number(end.slice(4,6))-1,Number(end.slice(6,8)));
+ const age=Math.round((today-date)/86400000);
+ if(age>14&&!/(?:历史|过期|仅返回|本次返回|较早)/u.test(asOf+' '+note))return `本面板要求最近行情，但 ${asOf} 距中国市场日期 ${end} 已有 ${age} 天。先实际查询 ${start} 至 ${end} 的日期窗口；不能把旧年份或升序第一页写成“最近可得”。若来源确实没有近期数据，明确标注为历史数据及缺失范围。`;
+ if(age < -1)return `行情数据日期 ${asOf} 晚于中国市场日期 ${end}，请核对来源交易日期。`;
+ return null;
 }
 
 export function workbenchMarketVariantIssue(output, prompt) {

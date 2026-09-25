@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest'
 import {Window} from 'happy-dom'
-import {acceptArtifactOutput, workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
+import {acceptArtifactOutput, workbenchMarketVariantIssue, workbenchMarketRecencyIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {compactHostDashboardHtml,RESEARCH_COMPONENT_CONTROLS_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {marketVariant,workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 const render=spec=>{const out=acceptArtifactOutput(JSON.stringify({version:1,type:'market',title:'源稿行情',asOf:'09.21 15:00 · 情景模拟',...spec}));expect(out).toBeDefined();const w=new Window();w.document.write(JSON.parse(out).html);return w.document}
@@ -327,4 +327,15 @@ it('retains heatmap weights and market breadth counts without synthetic replacem
  expect(d.querySelector('style').textContent).toContain('grid-template-columns:minmax(220px,1fr) minmax(260px,1fr)')
  const old=d.documentElement.outerHTML.replace(' data-sherlock-breadth-refined=""','')
  expect(compactHostDashboardHtml(old)).toContain('data-sherlock-breadth-refined')
+})
+
+it('rejects an old index snapshot presented as the latest market data',()=>{
+ const spec=asOf=>JSON.stringify({version:1,type:'market',variant:'metrics',title:'沪深300行情',asOf,items:[{label:'收盘点位',value:'3885.2459 点'}]})
+ const request='沪深300指数最近交易日的行情指标组件'
+ const now=new Date('2026-09-25T19:30:00Z')
+ expect(workbenchMarketRecencyIssue(spec('2025-06-09 收盘'),request,now)).toContain('20260916 至 20260926')
+ expect(workbenchMarketRecencyIssue(spec('2026-09-07 收盘'),request,now)).toContain('不能把旧年份或升序第一页写成“最近可得”')
+ expect(workbenchMarketRecencyIssue(spec('2026-09-24 收盘'),request,now)).toBeNull()
+ expect(workbenchMarketRecencyIssue(spec('历史资料：2025-06-09 收盘'),request,now)).toBeNull()
+ expect(workbenchMarketRecencyIssue(spec('2025-06-09 收盘'),'沪深300指数模拟数据行情',now)).toBeNull()
 })
