@@ -1,0 +1,620 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260925-01",
+  "branch": "codex/integration/20260925-01",
+  "baseMainCommit": "7e9595fcf446f86ac253bc7549cd514908929d79",
+  "expectedMainCommit": "7e9595fcf446f86ac253bc7549cd514908929d79",
+  "createdAt": "2026-09-25T11:27:26.473Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "已验收的组件技能研究模式稳定候选",
+        "branch": "codex/feat/stable-skill-acceptance-20260925",
+        "baseCommit": "7e9595fcf446f86ac253bc7549cd514908929d79",
+        "tipCommit": "311e1f7e2ab7e1dd6361094ed03ba009cf23a67d",
+        "commits": [
+          {
+            "commit": "311e1f7e2ab7e1dd6361094ed03ba009cf23a67d",
+            "parents": [
+              "7e9595fcf446f86ac253bc7549cd514908929d79"
+            ],
+            "subject": "功能：恢复已验收的组件技能研究模式并移除 AG Grid 实验"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "config/sherlock-integration-batches/20260923-01.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/design/research-workbench-design-contract.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/design/research-workbench-parity-acceptance-20260923.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/research/computer-use-integration.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-09-23-structured-workbench-generation-design.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "D",
+            "path": "packages/dsh-research-task-runtime/ag-grid-visual.d.ts"
+          },
+          {
+            "status": "D",
+            "path": "packages/dsh-research-task-runtime/ag-grid-visual.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-actions.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-skill.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/computer-use-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/fund-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/gantt-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-font.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/market-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/simulated-workbench-generator.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/simulated-workbench-presets.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/benchmark-research-workbench-parity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/build-computer-stroke.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/install-brand-assets.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-creation-tools.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-wheel-zoom.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-task-tab-icon.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "D",
+            "path": "scripts/lib/research-ag-grid-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-canvas-viewport-persistence.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-market-native-table.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-tab-icons.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-growth.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/macos/computer-capture.mm"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-research-generation-design.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-research-optimal-arrange.mjs"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/agents/openai.yaml"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/references/adaptation-and-acceptance.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/references/figma-21m.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "A",
+            "path": "src/main/computer/capture-stream.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/controller.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/computer/desktop-computer.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/computer/observation.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/computer/overlay-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/bundled-skills.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/integrations/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/conversation-browser.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/search/research-web-downloads.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-native-web.ts"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/figma-ag-grid-boards.ts"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/figma-ag-grid-presets.json"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/research-ag-grid-presets.ts"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/research-ag-grid.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-wheel-zoom.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/computer-controller.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/computer-observation.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/computer-overlay-layout.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/desktop-computer-overlay.test.ts"
+          },
+          {
+            "status": "D",
+            "path": "test/figma-ag-grid-boards.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-home-materials.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/research-workbench-parity-mock.json"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/macos-package-runtime.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-artifact-resilience.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-bento-arrange-fit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-bento-visible-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-client-adapter.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-actions.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-resize-isolation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-storage.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-canvas-wheel-pass-through.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-component-upgrade-final.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-fund-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-controls.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-header-glass.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-profiles.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-interactive-artifact.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-market-arrange-content.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-layout.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-market-native-table.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-medical-source-panels.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-native-web.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-optimal-arrange.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-simulated-workbench-normalization.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-tab-icons.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-model-selection.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-web-downloads.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-generation.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-workbench-multi-scenario.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-workbench-variety.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-component-validation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-composer-workspace-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/standard-agent-preset.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/structured-workbench-generation.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-design-contract.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/bundled-component-skill.test.js",
+              "test/research-header-glass.test.js",
+              "test/research-medical-source-panels.test.js",
+              "test/research-optimal-arrange.test.js",
+              "test/research-workbench.test.js",
+              "--testTimeout",
+              "15000"
+            ],
+            "outcome": "passed",
+            "summary": "5 个聚焦文件、53 项测试通过",
+            "verifiedCommit": "311e1f7e2ab7e1dd6361094ed03ba009cf23a67d",
+            "completedAt": "2026-09-25T11:19:02.045189Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "311e1f7e2ab7e1dd6361094ed03ba009cf23a67d",
+            "completedAt": "2026-09-25T11:19:02.045189Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "树哈希与已启动的 262b603a 版本相同；真实 EWork 研究画布、顶栏与左侧栏已显示，用户已验收。"
+        },
+        "acceptanceCriteria": [
+          "集成后工作台源码与验收版一致",
+          "保留组件生成 Skill、顶栏及侧栏优化",
+          "不包含 AG Grid 或 Perspective 运行代码",
+          "仅本地合并，不发布或推送"
+        ],
+        "risks": [
+          "现有 main 的 AG Grid 提交保留在历史中，合并后的工作树恢复为验收版本",
+          "旧批次 20260923-01 的交接记录已失效，需使用新批次"
+        ],
+        "generatedAt": "2026-09-25T11:19:02.045189Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/bundled-component-skill.test.js",
+        "test/research-header-glass.test.js",
+        "test/research-medical-source-panels.test.js",
+        "test/research-optimal-arrange.test.js",
+        "test/research-workbench.test.js",
+        "--testTimeout",
+        "15000"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
