@@ -9,7 +9,7 @@ import {
   type HTMLElement as HappyDOMHTMLElement
 } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { linkedCell } from '../src/preload/research-ag-grid'
+import { linkedCell, parseMarketTableHtml } from '../src/preload/research-ag-grid'
 
 type TestResearchVoiceBridge = {
   setActive(value: { sessionId: string; active: boolean }): Promise<{ ok: boolean; error?: string }>
@@ -24,6 +24,9 @@ type ComponentType<Props> = (props: Props) => unknown
 type ReactNode = unknown
 
 const requireModule = createRequire(import.meta.url)
+const { renderMarketArtifact } = requireModule('../packages/dsh-research-task-runtime/market-artifact.js') as {
+  renderMarketArtifact: (spec: Record<string, unknown>) => { version: number; type: string; title: string; html: string } | null
+}
 const { createElement, StrictMode, useEffect, useLayoutEffect, useSyncExternalStore } = requireModule('react') as {
   createElement: (type: unknown, props?: unknown, ...children: unknown[]) => unknown
   StrictMode: unknown
@@ -187,6 +190,7 @@ async function loadClientBundle(
     CustomEvent: options?.window?.CustomEvent,
     HTMLTextAreaElement: options?.window?.HTMLTextAreaElement,
     Text: options?.window?.Text,
+    DOMParser: options?.window?.DOMParser,
     ResizeObserver: options?.window?.ResizeObserver,
     MutationObserver: options?.window?.MutationObserver,
     getComputedStyle: options?.window?.getComputedStyle?.bind(options.window),
@@ -197,7 +201,8 @@ async function loadClientBundle(
     setInterval,
     clearInterval,
     queueMicrotask,
-    JSON: options?.json ?? globalThis.JSON
+    JSON: options?.json ?? globalThis.JSON,
+    URL: options?.window?.URL ?? globalThis.URL
   })
   if (descriptor === undefined) throw new Error(`${packageName} did not register its client bundle`)
 
@@ -10143,6 +10148,38 @@ describe('Sherlock workspace and composer controls', () => {
       expect(cell.textContent).not.toContain('/very/long');
     } finally { await mounted.cleanup(); }
   });
+
+  it('renders saved financial market tables with AG Grid and keeps source metadata', async () => {
+    const market = renderMarketArtifact({
+      version: 1, type: 'market', variant: 'table', title: '逐笔行情', asOf: '09:25 · 演示', note: '离线验收数据',
+      columns: ['时间', '成交价', '方向'], rows: [['09:25:01', '335.12', '主动买'], ['09:25:02', '335.22', '主动卖']],
+      tones: [['', 'positive', ''], ['', 'negative', '']],
+      sources: [{ label: '交易所', url: 'https://example.org/quote' }]
+    })!
+    const mounted = await mountResearchCanvas({ sessionId: 'market-ag-grid', artifacts: [{
+      id: 'market-grid', kind: 'generated-container', messageId: 'market-grid', title: '逐笔行情', excerpt: '逐笔行情',
+      x: 400, y: 300, width: 450, height: 280, sizeMode: 'manual', generationStatus: 'completed',
+      containerPrompt: '逐笔行情', refreshMinutes: 0, containerSpec: market
+    }] })
+    try {
+      const stored = mounted.workspace.getSnapshot().artifacts[0]!.containerSpec as { type: string; html: string }
+      expect(stored.html).toContain('https://example.org/quote')
+      expect(parseMarketTableHtml(stored.html, mounted.browserWindow.document as unknown as Document)?.sources).toHaveLength(1)
+      const table = mounted.host.querySelector('[data-research-grid-engine="ag-grid-community"]') as any
+      expect(table).not.toBeNull()
+      expect(table.querySelector('.ag-root')).not.toBeNull()
+      expect(table.querySelectorAll('.ag-row')).toHaveLength(2)
+      expect(table.querySelector('[data-tone="positive"]')?.textContent).toBe('335.12')
+      expect(table.querySelector('iframe')).toBeNull()
+      const info = table.querySelector('[aria-label="查看行情口径与来源"]') as any
+      expect(info).not.toBeNull()
+      await act(async () => info.click())
+      expect(table.querySelector('.sherlock-ag-grid-market-panel')?.textContent).toContain('09:25 · 演示')
+      expect(table.querySelector('.sherlock-ag-grid-market-panel')?.hasAttribute('hidden')).toBe(false)
+      expect(table.querySelector('.sherlock-ag-grid-market-panel a')?.getAttribute('href')).toBe('https://example.org/quote')
+      expect(stored.type).toBe('html')
+    } finally { await mounted.cleanup() }
+  })
 
   it('retains readable HTML content on runtime errors and requires a host click to open a source', async () => {
     const mounted = await mountResearchCanvas({ sessionId: 'html-resilience', artifacts: [{

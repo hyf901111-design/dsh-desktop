@@ -8,6 +8,10 @@ import {
 type TableSpec = {
   columns: string[]
   rows: (string | number | null)[][]
+  tones?: string[][]
+  asOf?: string
+  note?: string
+  sources?: { label: string; url: string }[]
 }
 
 const lightTheme = themeQuartz.withParams({
@@ -39,9 +43,16 @@ const darkTheme = themeQuartz.withParams({
 })
 
 const styles = `
-.sherlock-ag-grid-host{box-sizing:border-box;display:flex;flex-direction:column;min-width:0;min-height:0;width:100%;height:100%;padding:10px 12px!important;overflow:hidden!important}
+.sherlock-ag-grid-host{box-sizing:border-box;position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;width:100%;height:100%;padding:10px 12px!important;overflow:hidden!important}
 .sherlock-ag-grid-toolbar{display:flex;align-items:center;gap:8px;flex:none;min-height:30px;margin-bottom:6px}
 .sherlock-ag-grid-search{box-sizing:border-box;min-width:0;width:100%;height:27px;padding:4px 8px;border:1px solid var(--odyssey-card-border,#e1e1e1);border-radius:3px;outline:none;background:var(--odyssey-content,#fff);color:var(--odyssey-card-text,#292b2f);font:12px "EWork DIN Pro","Noto Sans SC",sans-serif}
+.sherlock-ag-grid-market-info{flex:none;border:0;background:transparent;color:var(--odyssey-card-muted,#81858c);font:11px "EWork DIN Pro","Noto Sans SC",sans-serif;cursor:pointer}
+.sherlock-ag-grid-market-panel{position:absolute;z-index:5;inset:42px 12px 35px;padding:12px;background:var(--odyssey-content,#fff);border:1px solid var(--odyssey-card-border,#e1e1e1);color:var(--odyssey-card-text,#292b2f);font:11px/1.5 "EWork DIN Pro","Noto Sans SC",sans-serif;overflow:hidden}
+.sherlock-ag-grid-market-panel[hidden]{display:none}
+.sherlock-ag-grid-market-panel p{margin:0 0 8px;overflow-wrap:anywhere}
+.sherlock-ag-grid-market-panel a{display:block;color:var(--ag-accent-color,#2675d6)}
+.sherlock-ag-grid-market-panel button{border:0;background:transparent;color:inherit;cursor:pointer}
+.sherlock-ag-grid-market-panel nav{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
 .sherlock-ag-grid-search:focus{border-color:#2675d6}
 .sherlock-ag-grid-search::placeholder{color:var(--odyssey-card-muted,#81858c)}
 .sherlock-ag-grid-viewport{flex:1;min-width:0;min-height:0;width:100%;overflow:hidden}
@@ -59,8 +70,12 @@ const styles = `
 .sherlock-ag-grid-host .ag-header-cell.sherlock-ag-grid-numeric .ag-header-cell-label{justify-content:flex-end}
 .sherlock-ag-grid-host .ag-cell a{color:var(--ag-accent-color,#2675d6);text-decoration:none}
 .sherlock-ag-grid-host .ag-cell a:hover{text-decoration:underline}
+.sherlock-ag-grid-host [data-tone=positive]{color:#c62f36}
+.sherlock-ag-grid-host [data-tone=negative]{color:#008565}
 body[data-ds-dark-theme] .sherlock-ag-grid-search{background:#1f1f1f;color:#e7e7e9}
 body[data-ds-dark-theme] .sherlock-ag-grid-search:focus{border-color:#4b9cff}
+body[data-ds-dark-theme] .sherlock-ag-grid-host [data-tone=positive]{color:#ff625f}
+body[data-ds-dark-theme] .sherlock-ag-grid-host [data-tone=negative]{color:#22d6a0}
 `
 
 function ensureStyles(doc: Document): void {
@@ -75,6 +90,35 @@ function numericValue(value: unknown): number | null {
   const text = String(value ?? '').replace(/[,\s]/g, '').replace(/^−/, '-').replace(/^\+/, '')
   const parsed = Number.parseFloat(text)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+export function parseMarketTableHtml(html: string, doc: Document): TableSpec | null {
+  if (!/<body\b[^>]*data-sherlock-market=["']table["']/i.test(html)) return null
+  const Parser = doc.defaultView?.DOMParser
+  if (!Parser) return null
+  const parsed = new Parser().parseFromString(html, 'text/html')
+  if (parsed.body.getAttribute('data-sherlock-market') !== 'table') return null
+  const table = parsed.querySelector('.market-table-wrap table')
+  if (!table) return null
+  const columns = [...table.querySelectorAll('thead th')].map(cell => cell.textContent?.trim() ?? '')
+  const bodyRows = [...table.querySelectorAll('tbody tr')]
+  if (!columns.length || columns.some(value => !value) || !bodyRows.length) return null
+  const rows = bodyRows.map(row => [...row.querySelectorAll('td')].map(cell => cell.textContent?.trim() ?? ''))
+  if (rows.some(row => row.length !== columns.length)) return null
+  const tones = bodyRows.map(row => [...row.querySelectorAll('td')].map(cell => cell.getAttribute('data-tone') ?? 'neutral'))
+  const sourceLinks = [...parsed.querySelectorAll('footer a')].flatMap(anchor => {
+    try {
+      const url = new URL(anchor.getAttribute('href') ?? '')
+      return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+        ? [{ label: anchor.textContent?.trim().replace(/\s*↗$/, '') || url.hostname, url: url.href }] : []
+    } catch { return [] }
+  })
+  return {
+    columns, rows, tones,
+    asOf: parsed.querySelector('meta[name="sherlock-header-note"]')?.getAttribute('content') ?? undefined,
+    note: parsed.querySelector('footer span')?.textContent?.trim() || undefined,
+    sources: sourceLinks,
+  }
 }
 
 export function linkedCell(value: unknown, doc: Document): HTMLElement {
@@ -119,6 +163,63 @@ export function mountResearchAgGrid(host: HTMLElement, spec: TableSpec, numericC
   search.setAttribute('aria-label', '筛选研究表格')
   search.addEventListener('pointerdown', event => event.stopPropagation())
   toolbar.append(search)
+  if (spec.asOf || spec.note || spec.sources?.length) {
+    const info = doc.createElement('button')
+    info.type = 'button'
+    info.className = 'sherlock-ag-grid-market-info'
+    info.textContent = '口径/来源'
+    info.setAttribute('aria-label', '查看行情口径与来源')
+    info.addEventListener('pointerdown', event => event.stopPropagation())
+    toolbar.append(info)
+    const panel = doc.createElement('div')
+    panel.className = 'sherlock-ag-grid-market-panel'
+    panel.hidden = true
+    const close = doc.createElement('button')
+    close.type = 'button'
+    close.textContent = '关闭'
+    close.setAttribute('aria-label', '关闭行情口径与来源')
+    panel.append(close)
+    if (spec.asOf) { const line = doc.createElement('p'); line.textContent = `数据时点：${spec.asOf}`; panel.append(line) }
+    if (spec.note) { const line = doc.createElement('p'); line.textContent = spec.note; panel.append(line) }
+    const sources = spec.sources ?? []
+    if (sources.length) {
+      const list = doc.createElement('div')
+      const nav = doc.createElement('nav')
+      const back = doc.createElement('button')
+      const forward = doc.createElement('button')
+      const count = doc.createElement('span')
+      back.type = forward.type = 'button'
+      back.textContent = '‹'
+      forward.textContent = '›'
+      back.setAttribute('aria-label', '上一页行情来源')
+      forward.setAttribute('aria-label', '下一页行情来源')
+      let page = 0
+      const pages = Math.ceil(sources.length / 4)
+      const render = () => {
+        list.replaceChildren()
+        for (const source of sources.slice(page * 4, (page + 1) * 4)) {
+          const anchor = doc.createElement('a')
+          anchor.href = source.url
+          anchor.target = '_blank'
+          anchor.rel = 'noopener noreferrer'
+          anchor.textContent = `${source.label} ↗`
+          list.append(anchor)
+        }
+        back.disabled = page === 0
+        forward.disabled = page === pages - 1
+        count.textContent = `来源 ${page + 1}/${pages}`
+      }
+      back.onclick = () => { page--; render() }
+      forward.onclick = () => { page++; render() }
+      nav.append(back, count, forward)
+      panel.append(list, nav)
+      render()
+    }
+    info.onclick = event => { event.stopPropagation(); panel.hidden = !panel.hidden; if (!panel.hidden) close.focus() }
+    close.onclick = event => { event.stopPropagation(); panel.hidden = true; info.focus() }
+    panel.onkeydown = event => { if (event.key === 'Escape') close.click() }
+    host.append(panel)
+  }
   const viewport = doc.createElement('div')
   viewport.className = 'sherlock-ag-grid-viewport'
   const footer = doc.createElement('div')
@@ -148,7 +249,12 @@ export function mountResearchAgGrid(host: HTMLElement, spec: TableSpec, numericC
     comparator: numericColumns[index]
       ? (a: unknown, b: unknown) => (numericValue(a) ?? Number.NEGATIVE_INFINITY) - (numericValue(b) ?? Number.NEGATIVE_INFINITY)
       : undefined,
-    cellRenderer: (params: { value: unknown }) => linkedCell(params.value, doc),
+    cellRenderer: (params: { value: unknown; data?: { __rowIndex?: number } }) => {
+      const cell = linkedCell(params.value, doc)
+      const tone = spec.tones?.[params.data?.__rowIndex ?? -1]?.[index]
+      if (tone === 'positive' || tone === 'negative') cell.dataset.tone = tone
+      return cell
+    },
   }))
   const dark = () => doc.body.hasAttribute('data-ds-dark-theme')
   const api: GridApi = createGrid<Record<string, string | number | null>>(viewport, {

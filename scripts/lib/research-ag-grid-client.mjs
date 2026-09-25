@@ -49,6 +49,21 @@ ${END}`
     source = source.replace(anchor, () => `${bridge}\n${anchor}`)
   }
 
+  const htmlBranch = 'if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });'
+  const oldMarketHtmlBranch = `if (spec.type === "html") {
+              const marketTable = sherlockResearchAgGrid.parseMarketTableHtml(spec.html, document);
+              if (marketTable) return (0, react_jsx_runtime.jsx)(ResearchAgGridTable, { spec: marketTable, numericColumns: marketTable.columns.map((_, index) => researchTableNumericColumn(marketTable, index)) });
+              return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });
+            }`
+  const marketHtmlBranch = `const marketTable = (0, react.useMemo)(() => spec.type === "html" ? sherlockResearchAgGrid.parseMarketTableHtml(spec.html, document) : null, [spec.type, spec.html]);
+            if (spec.type === "html") {
+              if (marketTable) return (0, react_jsx_runtime.jsx)(ResearchAgGridTable, { spec: marketTable, numericColumns: marketTable.columns.map((_, index) => researchTableNumericColumn(marketTable, index)) });
+              return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });
+            }`
+  if (source.includes(htmlBranch)) source = source.replace(htmlBranch, marketHtmlBranch)
+  else if (source.includes(oldMarketHtmlBranch)) source = source.replace(oldMarketHtmlBranch, marketHtmlBranch)
+  else if (!source.includes(marketHtmlBranch)) throw new Error('Research HTML render branch missing')
+
   const oldStart = 'if (spec.type === "table") return (0, react_jsx_runtime.jsx)("div",'
   const nextBranch = 'if (spec.type === "kpi") return'
   const start = source.indexOf(oldStart)
