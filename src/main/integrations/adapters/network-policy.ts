@@ -32,10 +32,10 @@ async function resolveTarget(url:URL,policy:NetworkPolicy) {
 export async function validateNetworkTarget(url:URL,policy:NetworkPolicy):Promise<void>{await resolveTarget(url,policy)}
 
 /** DNS is resolved and checked once, then pinned to this individual request. */
-export async function networkFetch(input:string|URL,init:RequestInit={},policy:NetworkPolicy={}):Promise<Response> {
+export async function networkFetch(input:string|URL,init:RequestInit={},policy:NetworkPolicy={},options:{timeoutMs?:number}={}):Promise<Response> {
   let url=new URL(input),method=init.method??'GET',body=init.body
   let headers=new Headers(init.headers)
-  const signal=AbortSignal.any([AbortSignal.timeout(30_000),...(init.signal?[init.signal]:[])])
+  const signal=AbortSignal.any([AbortSignal.timeout(options.timeoutMs??30_000),...(init.signal?[init.signal]:[])])
   for(let redirects=0;redirects<=5;redirects++) {
     signal.throwIfAborted()
     const address=await resolveTarget(url,policy)

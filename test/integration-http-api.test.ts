@@ -2,7 +2,7 @@ import {afterEach,expect,it} from 'vitest'
 import {createServer,type Server,type RequestListener} from 'node:http'
 import type {AddressInfo} from 'node:net'
 import {HttpApiAdapter} from '../src/main/integrations/adapters/http-api'
-import {validateNetworkTarget} from '../src/main/integrations/adapters/network-policy'
+import {networkFetch,validateNetworkTarget} from '../src/main/integrations/adapters/network-policy'
 import type {ApiConfig} from '../src/shared/integrations'
 const servers:Server[]=[]
 afterEach(async()=>{await Promise.all(servers.splice(0).map(s=>new Promise<void>(r=>{s.closeAllConnections();s.close(()=>r())})))})
@@ -21,6 +21,13 @@ it('executes a real declared request with vault auth and blocks undeclared or in
 it('requires an explicit local origin grant and always blocks metadata targets',async()=>{
   await expect(validateNetworkTarget(new URL('http://127.0.0.1:3000'),{})).rejects.toMatchObject({code:'NETWORK_BLOCKED'})
   await expect(validateNetworkTarget(new URL('http://169.254.169.254'),{allowLocal:true,allowedOrigins:['http://169.254.169.254']})).rejects.toMatchObject({code:'NETWORK_BLOCKED'})
+})
+it('uses an explicit network deadline for slower MCP calls without changing the default adapter budget',async()=>{
+  const base=await server((_req,res)=>setTimeout(()=>res.end('{"ok":true}'),45))
+  const policy={allowLocal:true,allowedOrigins:[base]}
+  await expect(networkFetch(`${base}/slow`,{},policy,{timeoutMs:10})).rejects.toThrow()
+  const response=await networkFetch(`${base}/slow`,{},policy,{timeoutMs:100})
+  expect(await response.json()).toEqual({ok:true})
 })
 it('never forwards credentials or a request to a different ungranted origin',async()=>{
   let destinationCalls=0

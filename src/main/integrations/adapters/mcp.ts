@@ -260,7 +260,7 @@ export class McpSupervisor {
       // Disable SDK replay/reconnect; only safe connect/discovery is retried by establish().
       reconnectionOptions: { initialReconnectionDelay: 500, maxReconnectionDelay: 30_000, reconnectionDelayGrowFactor: 2, maxRetries: 0 },
       fetch: async (input, init = {}) => {
-        const response = await networkFetch(input, { ...init, signal: AbortSignal.any([entry.controller.signal, ...(init.signal ? [init.signal] : [])]) }, { ...config.network, allowedOrigins: config.network.allowedOrigins?.length ? config.network.allowedOrigins : [url.origin] })
+        const response = await networkFetch(input, { ...init, signal: AbortSignal.any([entry.controller.signal, ...(init.signal ? [init.signal] : [])]) }, { ...config.network, allowedOrigins: config.network.allowedOrigins?.length ? config.network.allowedOrigins : [url.origin] }, { timeoutMs: TOOL_CALL_TIMEOUT + 3000 })
         if (response.status === 401 || response.status === 403) {
           await response.body?.cancel()
           throw new IntegrationError('AUTH_REQUIRED', 'MCP 服务拒绝授权，请检查凭据和访问范围')
