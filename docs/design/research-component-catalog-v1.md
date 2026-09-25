@@ -28,7 +28,7 @@
 | 18 | `research.news` | 日期、标题、摘要、分类 | 搜索、分类筛选、展开、来源 | `news` |
 | 19 | `research.reports` | 日期、标题、摘要、分类 | 搜索、分类筛选、展开、来源 | `reports` |
 | 20 | `research.calendar` | 日期、事件、摘要 | 月份切换、日期筛选、清除 | `calendar` |
-| 21 | `research.gantt` | 任务、开始/结束、进度、负责人 | 时间定位、任务详情 | `gantt`；详情待加强 |
+| 21 | `research.gantt` | 任务、开始/结束、进度、负责人 | 时间定位、任务详情 | `gantt`；可选任务及键盘导航已实现，待客户端验收 |
 | 22 | `market.price-volume` | 日期、价格、成交量、量纲 | 时间范围、双图联动读数、完整表 | `market.price-volume`；客户端已验收选点和完整表，长区间控件待验收 |
 | 23 | `market.order-book` | 买卖档位、价格、数量、价差、时点 | 档位数切换、逐档读数 | `market.order-book`；客户端已验收逐档读数，10 档切换待验收 |
 | 24 | `market.fund-flow` | 时间或行业、流入/流出/净额 | 时间/行业筛选、读数、完整表 | `market.fund-flow`；待客户端验收 |

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Window } from 'happy-dom';
 import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js';
 import { layoutWorkbench, validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js';
 import { renderGanttArtifact } from '../packages/dsh-research-task-runtime/gantt-artifact.js';
@@ -64,5 +65,20 @@ describe('complete simulated workbenches', () => {
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(renderGanttArtifact({...input,items:[{...input.items[0],start:'2026-02-30'}]})).toBeNull();
     expect(renderGanttArtifact({...input,items:[{...input.items[0],end:'2026-06-30'}]})).toBeNull();
+  });
+
+  it('lets readers select Gantt tasks and inspect dates, owner, and progress', () => {
+    const doc = new Window().document;
+    doc.write(renderGanttArtifact({version:1,type:'gantt',title:'模拟计划',asOf:'模拟数据',items:[
+      {label:'资料梳理',owner:'行业组',start:'2026-07-01',end:'2026-07-10',progress:75},
+      {label:'报告复核',owner:'复核组',start:'2026-07-11',end:'2026-07-20',progress:30}
+    ]}).html);
+    doc.defaultView.eval(doc.querySelector('script').textContent);
+    const tasks = [...doc.querySelectorAll('.gantt-task')];
+    expect(tasks).toHaveLength(2);
+    expect(doc.querySelector('.gantt-readout').textContent).toBe('资料梳理 · 2026-07-01 至 2026-07-10 · 完成 75% · 负责人 行业组');
+    tasks[0].dispatchEvent(new doc.defaultView.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+    expect(tasks[1].getAttribute('aria-pressed')).toBe('true');
+    expect(doc.querySelector('.gantt-readout').textContent).toBe('报告复核 · 2026-07-11 至 2026-07-20 · 完成 30% · 负责人 复核组');
   });
 });
