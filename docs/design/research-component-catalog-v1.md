@@ -31,7 +31,7 @@
 | 21 | `research.gantt` | 任务、开始/结束、进度、负责人 | 时间定位、任务详情 | `gantt`；客户端已验收任务选择、方向键导航和日期/进度/负责人读数 |
 | 22 | `market.price-volume` | 日期、价格、成交量、量纲 | 时间范围、双图联动读数、完整表 | `market.price-volume`；客户端已验收选点和完整表，长区间控件待验收 |
 | 23 | `market.order-book` | 买卖档位、价格、数量、价差、时点 | 档位数切换、逐档读数 | `market.order-book`；客户端已验收逐档读数，10 档切换待验收 |
-| 24 | `market.fund-flow` | 时间或行业、流入/流出/净额 | 时间/行业筛选、读数、完整表 | `market.fund-flow`；客户端发现筛选后选中读数不同步，已修复待复验 |
+| 24 | `market.fund-flow` | 时间或行业、流入/流出/净额 | 时间/行业筛选、读数、完整表 | `market.fund-flow`；客户端已复验双筛选、选中读数及净流出汇总 |
 | 25 | `market.valuation-band` | 日期、估值分位区间、当前估值 | 时间区间、分位读数、完整表 | `market.valuation-band`；客户端已验收近 1 月切换和键盘读数 |
 | 26 | `fund.equity-drawdown` | 日期、净值、基准、回撤 | 时间范围、净值/回撤切换、完整表 | `market.equity-drawdown`；客户端已验收净值/回撤视图切换 |
 | 27 | `research.allocation-donut` | 分类、数值、比例、总量 | 图例筛选、选片读数、完整表 | `market.allocation-donut`；客户端已验收分类筛选与占比重算 |
