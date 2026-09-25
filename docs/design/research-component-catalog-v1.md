@@ -21,9 +21,9 @@
 | 11 | `fund.holdings` | 持仓标的、权重及数据期间 | 搜索、列排序、滚动 | `market.fund-holdings` |
 | 12 | `fund.industry` | 行业、组合权重、基准权重 | 差值读数、排序/筛选 | `market.fund-industry`；客户端已验收低配筛选、行业排序和差值读数 |
 | 13 | `research.kpi` | 指标名、值、变化 | 指标详情 | 原生 `kpi` |
-| 14 | `research.line` | 分类标签、同量纲序列 | 图例、选点、完整数据 | 原生 `chart.line`；选点待加强 |
-| 15 | `research.bar` | 分类标签、同量纲序列 | 图例、选柱、完整数据 | 原生 `chart.bar`；选柱待加强 |
-| 16 | `research.table` | 列名、完整行 | 排序、搜索、横向滚动 | 原生 `table`；搜索待加强 |
+| 14 | `research.line` | 分类标签、同量纲序列 | 图例、选点、完整数据 | 原生 `chart.line`；客户端已验收选点、图例切换和完整数据，模拟近 3 个月数量复验通过 |
+| 15 | `research.bar` | 分类标签、同量纲序列 | 图例、选柱、完整数据 | 原生 `chart.bar`；客户端已验收选柱、图例切换和完整数据，模拟 3 行业数量复验通过 |
+| 16 | `research.table` | 列名、完整行 | 排序、搜索、横向滚动 | 原生 `table`；客户端已验收数值排序、搜索和 3 行规划数量 |
 | 17 | `research.dashboard` | 指标、值、数据时点、口径 | 指标详情及来源 | `dashboard` |
 | 18 | `research.news` | 日期、标题、摘要、分类 | 搜索、分类筛选、展开、来源 | `news` |
 | 19 | `research.reports` | 日期、标题、摘要、分类 | 搜索、分类筛选、展开、来源 | `reports` |
