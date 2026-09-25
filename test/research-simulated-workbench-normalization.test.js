@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js';
+import { validateWorkbench, prepareSimulatedArtifact } from '../packages/dsh-research-task-runtime/workbench-plan.js';
 import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js';
 import { generateSimulatedPanel } from '../packages/dsh-research-task-runtime/simulated-workbench-generator.js';
 
@@ -13,6 +13,20 @@ const metric = panel('医药行业核心指标（模拟）', 'market', {
 });
 
 describe('真实客户端模拟工作台输入修复', () => {
+  it('让通用折线、柱状和表格遵守规划中的月份、行业及行数', () => {
+    const line = generateSimulatedPanel({ title: '近3个月双序列趋势', prompt: '折线图，近3个月，两条序列', type: 'chart', size: 'large' }, '模拟测试工作台');
+    const bar = generateSimulatedPanel({ title: '三行业双序列对比', prompt: '柱状图，3个行业，两条序列', type: 'chart', size: 'large' }, '模拟测试工作台');
+    const table = generateSimulatedPanel({ title: '三方案对比表', prompt: '3行格式化数值', type: 'table', size: 'large' }, '模拟测试工作台');
+    expect(line.artifact.labels).toEqual(['2026-04', '2026-05', '2026-06']);
+    expect(bar.artifact.labels).toEqual(['医药', '科技', '消费']);
+    expect(table.artifact.rows).toHaveLength(3);
+    for (const chart of [line, bar]) {
+      expect(chart.artifact.series).toHaveLength(2);
+      expect(chart.artifact.series.every(series => series.values.length === chart.artifact.labels.length)).toBe(true);
+      expect(() => acceptArtifactOutput(JSON.stringify(prepareSimulatedArtifact(chart)))).not.toThrow();
+    }
+    expect(() => acceptArtifactOutput(JSON.stringify(prepareSimulatedArtifact(table)))).not.toThrow();
+  });
   it('批量准备量价和盘口固定模板，不在规划后因模拟样本缺失而失败', () => {
     const price = generateSimulatedPanel({ title: '贵州茅台量价联动', prompt: 'variant: price-volume；模拟价格与成交量', type: 'market', size: 'large' }, '证券量价与盘口工作台');
     const book = generateSimulatedPanel({ title: '贵州茅台买卖盘口', prompt: '同时生成 market.price-volume 与 market.order-book；模拟买卖十档', type: 'market', size: 'large' }, '证券量价与盘口工作台');

@@ -9,6 +9,21 @@ const examples = ['medical-21h', 'market-overview-21h', 'research-operations-21m
 const asOf = '2026-06-30 15:00 · 模拟数据';
 const subjectOf = title => title.replace(/（模拟）|模拟数据|工作台|研究|监控|验证|可视化/gu, '').trim() || '研究样本';
 const clone = value => structuredClone(value);
+const numberWords = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+function requestedCount(intent, unit, maximum) {
+    const match = intent.match(new RegExp(`([\\d一二两三四五六七八九十]{1,4})\\s*(?:个)?\\s*${unit}`, 'u'));
+    if (!match) return null;
+    const chinese = match[1].split('十');
+    const value = /^\d+$/u.test(match[1]) ? Number(match[1])
+        : chinese.length === 2 ? (chinese[0] ? numberWords[chinese[0]] : 1) * 10 + (chinese[1] ? numberWords[chinese[1]] : 0)
+            : numberWords[match[1]];
+    return Number.isInteger(value) && value >= 1 && value <= maximum ? value : null;
+}
+function simulatedSeries(series, count) {
+    return series.map((item, seriesIndex) => ({ ...item, values: Array.from({ length: count }, (_, index) =>
+        index < item.values.length ? item.values[index]
+            : +(item.values.at(-1) + (index - item.values.length + 1) * (seriesIndex ? .6 : .8) + Math.sin(index) * .5).toFixed(2)) }));
+}
 const sample = (type, variant) => {
     const found = examples.find(panel => panel.type === type && (type !== 'market' || panel.artifact.variant === variant));
     if (!found) throw Error(`模拟组件类型 ${type}${variant ? `.${variant}` : ''} 暂无宿主模板。`);
@@ -124,6 +139,18 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
         artifact = sample('chart');
         artifact.variant = /趋势|折线|走势|line/iu.test(intent) ? 'line' : 'bar';
         artifact.series = artifact.series.map((item, index) => ({ ...item, name: `${subject}${index ? '对比' : '样本'}` }));
+        const months = requestedCount(intent, '月', 24);
+        const industries = requestedCount(intent, '行业', 20);
+        if (months && artifact.variant === 'line') {
+            artifact.labels = Array.from({ length: months }, (_, index) => {
+                const date = new Date(Date.UTC(2026, 6 - months + index, 1));
+                return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+            });
+        } else if (industries) {
+            artifact.labels = Array.from({ length: industries }, (_, index) =>
+                artifact.labels[index] ?? `模拟行业 ${index + 1}`);
+        }
+        artifact.series = simulatedSeries(artifact.series, artifact.labels.length);
     } else if (panel.type === 'table') {
         artifact = { columns: ['模拟样本', '数值', '变化', '观察重点'], rows: [
             [`${subject} A`, '148.60', '+0.62%', '量价观察'],
@@ -132,6 +159,14 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
             [`${subject} D`, '178.20', '+0.74%', '库存变化'],
             [`${subject} E`, '68.40', '-0.24%', '广度改善']
         ] };
+        const count = requestedCount(intent, '行', 20);
+        if (count) artifact.rows = Array.from({ length: count }, (_, index) => {
+            if (index < artifact.rows.length) return artifact.rows[index];
+            const row = [...artifact.rows[index % artifact.rows.length]];
+            row[0] = `${subject} ${String.fromCharCode(65 + index)}`;
+            row[1] = (82 + index * 11.4).toFixed(2);
+            return row;
+        });
     } else if (panel.type === 'news' || panel.type === 'reports') {
         artifact = sample(panel.type);
         artifact.items = artifact.items.map((item, index) => ({ ...item,

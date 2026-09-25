@@ -20,7 +20,7 @@ it('searches native table rows and sorts formatted numeric values without discar
     expect(rows().map(row => row?.slice(0, 2))).toEqual(['金融', '医药', '科技'])
     const input = f.host.querySelector('[aria-label="搜索表格"]')!
     await act(async () => {
-      input.value = '科技'
+      (input as any).value = '科技'
       input.dispatchEvent(new f.browser.Event('input', { bubbles: true }))
       input.dispatchEvent(new f.browser.Event('change', { bubbles: true }))
     })
