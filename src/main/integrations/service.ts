@@ -72,7 +72,24 @@ export class IntegrationService {
         this.installer = new DeclarativeInstaller(join(options.root, 'packages'));
         this.providers = options.providers ?? {};
     }
-    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); return service; }
+    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); return service; }
+    private async migrateDefaultToolGrants() {
+        const state = this.store.snapshot();
+        if (!Object.values(state.connections).some(connection => connection.deniedToolIds === undefined)) return;
+        await this.store.change(draft => {
+            for (const connection of Object.values(draft.connections)) {
+                if (connection.deniedToolIds !== undefined) continue;
+                const known = Object.values(draft.tools).filter(tool => tool.connectionId === connection.id).map(tool => tool.id);
+                // A subset records a deliberate prior choice. An empty legacy list was the old default.
+                connection.deniedToolIds = connection.toolGrants.length ? known.filter(toolId => !connection.toolGrants.includes(toolId)) : [];
+                const granted = known.filter(toolId => !connection.deniedToolIds!.includes(toolId));
+                if (granted.length !== connection.toolGrants.length || granted.some(toolId => !connection.toolGrants.includes(toolId))) {
+                    connection.toolGrants = granted;
+                    connection.revision++;
+                }
+            }
+        });
+    }
     async previewLegacySkills() {
         const owner = this.owner(), migration = new LegacySkillMigration({ root: join(this.options.root, 'migration'), ownerAccountId: owner, manager: this.skills, roots: this.options.legacySkillRoots ?? [] });
         const report = await migration.preview(), state = this.store.snapshot();
@@ -214,7 +231,7 @@ export class IntegrationService {
                 await this.store.change(state => { signal.throwIfAborted(); const c = this.entity('connection', target, state) as Connection; if (c.revision !== command.meta.expectedRevision)
                     throw new IntegrationError('VERSION_CONFLICT', '连接已变化'); for (const selected of command.toolIds)
                     if (state.tools[selected]?.connectionId !== target)
-                        throw new IntegrationError('ACCESS_DENIED', '工具不属于此连接'); c.toolGrants = [...new Set(command.toolIds)]; c.unattendedToolGrants = c.unattendedToolGrants.filter(tool => c.toolGrants.includes(tool)); c.revision++; });
+                        throw new IntegrationError('ACCESS_DENIED', '工具不属于此连接'); c.toolGrants = [...new Set(command.toolIds)]; c.deniedToolIds = Object.values(state.tools).filter(tool => tool.connectionId === target && !c.toolGrants.includes(tool.id)).map(tool => tool.id); c.unattendedToolGrants = c.unattendedToolGrants.filter(tool => c.toolGrants.includes(tool)); c.revision++; });
             });
             case 'probe': return this.probe(id(command.id));
             case 'compile-openapi': {
@@ -528,7 +545,7 @@ export class IntegrationService {
                 config = { type: 'app', provider: draft.type, auth: { ...auth, type: 'bearer' }, clientId: text(draft.clientId ?? '', 500) || undefined };
             const workspaces = text(draft.workspaceIds ?? '', 8192).split(/[\s,，]+/).filter(Boolean);
             signal.throwIfAborted();
-            const c: Connection = { id: target, name, providerId: config.type === 'app' ? config.provider : config.type, kind: config.type, ownerAccountId: owner, config, enabled: previous?.enabled ?? true, revision: (previous?.revision ?? 0) + 1, authState: config.auth.type === 'none' || config.auth.credentialRef ? 'connected' : 'unconfigured', health: 'unknown', workspaceGrant: workspaces.length ? { mode: 'selected', workspaceIds: workspaces } : { mode: 'all-owned', ownerAccountId: owner }, toolGrants: previous?.toolGrants ?? [], unattendedToolGrants: previous?.unattendedToolGrants ?? [], createdAt: previous?.createdAt ?? Date.now(), updatedAt: Date.now(), configDigest: hash(config) };
+            const c: Connection = { id: target, name, providerId: config.type === 'app' ? config.provider : config.type, kind: config.type, ownerAccountId: owner, config, enabled: previous?.enabled ?? true, revision: (previous?.revision ?? 0) + 1, authState: config.auth.type === 'none' || config.auth.credentialRef ? 'connected' : 'unconfigured', health: 'unknown', workspaceGrant: workspaces.length ? { mode: 'selected', workspaceIds: workspaces } : { mode: 'all-owned', ownerAccountId: owner }, toolGrants: previous?.toolGrants ?? [], deniedToolIds: previous?.deniedToolIds ?? [], unattendedToolGrants: previous?.unattendedToolGrants ?? [], createdAt: previous?.createdAt ?? Date.now(), updatedAt: Date.now(), configDigest: hash(config) };
             await this.store.change(state => { signal.throwIfAborted(); if (owner !== this.owner() || previous && state.connections[target]?.revision !== meta.expectedRevision)
                 throw new IntegrationError('VERSION_CONFLICT', '连接或账户已变化'); state.connections[target] = c; if (config.type === 'api')
                 this.replaceTools(state, c, config.operations.map(op => ({ name: op.id, description: op.description, inputSchema: op.inputSchema, effect: op.effect })));
@@ -539,6 +556,7 @@ export class IntegrationService {
                     if (tool.connectionId === target)
                         delete state.tools[key];
                 c.toolGrants = [];
+                c.deniedToolIds = [];
                 c.unattendedToolGrants = [];
             } });
             saved = true;
@@ -559,15 +577,16 @@ export class IntegrationService {
         const old = new Map(Object.values(state.tools).filter(tool => tool.connectionId === c.id).map(tool => [tool.id, tool]));
         for (const key of old.keys())
             delete state.tools[key];
-        const unchanged = new Set<string>();
+        const allowed = new Set<string>();
+        const denied = new Set(c.deniedToolIds ?? []);
         for (const tool of tools) {
             const toolId = `t_${hash([c.id, tool.name]).slice(0, 32)}`, schemaDigest = hash([tool.inputSchema, tool.effect]);
             state.tools[toolId] = { id: toolId, connectionId: c.id, operationId: tool.name, rawName: tool.name, name: tool.name, description: tool.description, inputSchema: tool.inputSchema, effect: tool.effect, enabled: true, schemaDigest };
-            if (old.get(toolId)?.schemaDigest === schemaDigest)
-                unchanged.add(toolId);
+            if (!denied.has(toolId)) allowed.add(toolId);
         }
-        c.toolGrants = c.toolGrants.filter(key => unchanged.has(key));
-        c.unattendedToolGrants = c.unattendedToolGrants.filter(key => unchanged.has(key));
+        c.toolGrants = [...allowed];
+        c.deniedToolIds = [...denied].filter(key => !!state.tools[key]);
+        c.unattendedToolGrants = c.unattendedToolGrants.filter(key => old.get(key)?.schemaDigest === state.tools[key]?.schemaDigest && allowed.has(key));
     }
     async probe(connectionId: string): Promise<IntegrationReply> {
         const previous = this.connection(connectionId), signal = AbortSignal.timeout(30000);
@@ -603,7 +622,7 @@ export class IntegrationService {
                 if (before !== hash(Object.values(state.tools).filter(tool => tool.connectionId === c.id)))
                     c.revision++;
             } });
-            return { type: 'probe', status: verified ? 'verified' : 'config-valid', message: verified ? (previous.kind === 'mcp' ? '连接成功，已发现真实工具；请选择允许使用的工具' : '只读请求已验证成功') : '配置有效；没有无需参数的只读探测接口，尚未验证调用' };
+            return { type: 'probe', status: verified ? 'verified' : 'config-valid', message: verified ? (previous.kind === 'mcp' ? '连接成功，已发现的工具默认允许使用；可在连接详情中停用' : '只读请求已验证成功') : '配置有效；没有无需参数的只读探测接口，尚未验证调用' };
         }
         catch (error) {
             await this.store.change(state => { const c = state.connections[connectionId]; if (c?.revision === previous.revision && c.configDigest === previous.configDigest) {
@@ -713,7 +732,7 @@ export class IntegrationService {
                 if (digest !== prior) {
                     await this.store.change(latest => { const c = latest.connections[connection.id]; if (!c || c.revision !== connection.revision)
                         throw new IntegrationError('VERSION_CONFLICT', '连接已变化'); this.replaceTools(latest, c, discovered); c.revision++; });
-                    throw new IntegrationError('SCHEMA_CHANGED', '服务器工具已变化，请重新确认允许的工具');
+                    throw new IntegrationError('SCHEMA_CHANGED', '服务器工具已变化，请重试当前请求');
                 }
                 assertCapabilityAccess(call, this.store.snapshot(), this.options.getOwnerId(), this.runtimeEpoch);
             }

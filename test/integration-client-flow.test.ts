@@ -55,6 +55,63 @@ it('connects a user API, discovers the declared tool, invokes it and denies it a
   } finally { server.closeAllConnections(); await new Promise<void>(done => server.close(() => done())) }
 })
 
+it('allows discovered tools in a user configured MCP without a separate grant step', async () => {
+  const service = await create()
+  await mutate(service, { type: 'save-connection', draft: { ...emptyConnectionDraft('mcp-stdio'), name: '默认允许的 MCP', command: process.execPath, args: JSON.stringify([resolve('test/fixtures/integrations/mcp-stdio.mjs'), 'auto-grant']) } })
+  let connection = await row(service)
+  expect(await service.request({ type: 'probe', id: connection.id })).toMatchObject({ type: 'probe', status: 'verified' })
+  connection = await row(service)
+  expect(connection.tools!.length).toBeGreaterThan(1)
+  expect(connection.tools!.every(tool => tool.allowed)).toBe(true)
+  const toolId = connection.tools!.find(tool => tool.name === 'echo')!.id
+  const result = await service.execute({ callId: randomUUID(), toolId, connectionRevision: connection.revision, arguments: { message: 'automatic' }, context: { sessionId: 's', rootSessionId: 's', workspaceId: 'w', ownerAccountId: 'owner', runtimeEpoch: service.runtimeEpoch, unattended: false } }, new AbortController().signal)
+  expect(result.content[0]!.text).toContain('automatic')
+})
+
+it('keeps a manually disabled tool disabled after discovery while allowing new tools by default', async () => {
+  const service = await create()
+  await mutate(service, { type: 'save-connection', draft: { ...emptyConnectionDraft('mcp-stdio'), name: '可停用的 MCP', command: process.execPath, args: JSON.stringify([resolve('test/fixtures/integrations/mcp-stdio.mjs'), 'manual-denial']) } })
+  let connection = await row(service)
+  await service.request({ type: 'probe', id: connection.id })
+  connection = await row(service)
+  const disabled = connection.tools!.find(tool => tool.name === 'echo')!
+  await mutate(service, { type: 'grant-tools', id: connection.id, toolIds: connection.tools!.filter(tool => tool.id !== disabled.id).map(tool => tool.id) }, connection.revision)
+  connection = await row(service)
+  expect(connection.tools!.find(tool => tool.id === disabled.id)?.allowed).toBe(false)
+  await service.request({ type: 'probe', id: connection.id })
+  connection = await row(service)
+  expect(connection.tools!.find(tool => tool.id === disabled.id)?.allowed).toBe(false)
+  expect(connection.tools!.filter(tool => tool.id !== disabled.id).every(tool => tool.allowed)).toBe(true)
+})
+
+it('migrates an old empty grant list to default allow and preserves an old partial selection', async () => {
+  const service = await create()
+  const toolsJson = JSON.stringify([
+    { id: 'one', name: 'One', description: 'One', method: 'GET', path: '/one', inputSchema: { type: 'object', properties: {} } },
+    { id: 'two', name: 'Two', description: 'Two', method: 'GET', path: '/two', inputSchema: { type: 'object', properties: {} } }
+  ])
+  await mutate(service, { type: 'save-connection', draft: { ...emptyConnectionDraft(), name: '旧连接一', url: 'https://one.example.com', toolsJson } })
+  await mutate(service, { type: 'save-connection', draft: { ...emptyConnectionDraft(), name: '旧连接二', url: 'https://two.example.com', toolsJson } })
+  const before = service.store.snapshot()
+  const first = Object.values(before.connections).find(connection => connection.name === '旧连接一')!
+  const second = Object.values(before.connections).find(connection => connection.name === '旧连接二')!
+  const selected = Object.values(before.tools).find(tool => tool.connectionId === second.id)!.id
+  await service.store.change(state => {
+    state.connections[first.id]!.toolGrants = []
+    state.connections[second.id]!.toolGrants = [selected]
+    delete state.connections[first.id]!.deniedToolIds
+    delete state.connections[second.id]!.deniedToolIds
+  })
+  await service.dispose()
+  const restored = await IntegrationService.open({ root: service.store.root, encryption, getOwnerId: () => 'owner', approveWrite: async () => true })
+  services.push(restored)
+  const state = restored.store.snapshot()
+  expect(state.connections[first.id]!.toolGrants).toHaveLength(2)
+  expect(state.connections[first.id]!.deniedToolIds).toEqual([])
+  expect(state.connections[second.id]!.toolGrants).toEqual([selected])
+  expect(state.connections[second.id]!.deniedToolIds).toHaveLength(1)
+})
+
 it('installs a real market skill and preserves independent copies for two accounts', async () => {
   let owner = 'one'; const service = await create(() => owner, true)
   const market = await service.request({ type: 'market', kind: 'skill' }); if (market.type !== 'market') throw Error('Wrong market')

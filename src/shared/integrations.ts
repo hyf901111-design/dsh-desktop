@@ -77,6 +77,8 @@ export type Connection = {
     health: 'unknown' | 'checking' | 'healthy' | 'degraded' | 'unreachable';
     workspaceGrant: WorkspaceGrant;
     toolGrants: string[];
+    /** Explicit user opt-outs; newly discovered tools are otherwise allowed by default. */
+    deniedToolIds?: string[];
     unattendedToolGrants: string[];
     accountLabel?: string;
     lastError?: string;

@@ -113,10 +113,6 @@ async function fixture({ marketManifest } = {}) {
 describe('IntegrationService → authenticated bridge → Harness tools and skills', () => {
   it('reads independently generated API nonces through both a real tool and a Code Mode worker', async () => {
     const f = await fixture(), binding = await f.connect()
-    expect((await f.invoke(binding.name, { query: 'before-grant' })).isError).toBe(true)
-    expect(f.requests).toHaveLength(0)
-    await f.mutate({ type: 'grant-tools', id: binding.connectionId, toolIds: [binding.toolId] })
-    await f.runtime.sync()
     expect(f.ctx.tools.schemas(f.a).map(tool => tool.name)).toContain(binding.name)
     expect(f.ctx.tools.schemas(f.b).map(tool => tool.name)).not.toContain(binding.name)
     const direct = await f.invoke(binding.name, { query: 'direct-request' }, f.a, 'direct-call')

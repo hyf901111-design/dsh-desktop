@@ -1,7 +1,7 @@
 import type { ConnectionDraft } from './bridge';
 import type { ApiOperation } from '../../shared/integrations';
 import { connectionForm, manualToolForm, parseDraftTools, type ManualToolDraft } from './forms';
-/** Keeps unsaved form state local; defining a tool never grants it permission. */
+/** Keeps unsaved form state local; saved connection tools follow the default allow policy. */
 export class ConnectionFormController {
     private step: 'basic' | 'tools' = 'basic';
     private manual?: ManualToolDraft;
