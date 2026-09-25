@@ -40,3 +40,9 @@ it('keeps main requests styled as conversation when they also own delegated comp
  await f.emit();expect(f.host.querySelector('[data-request-message-id="q"]')?.getAttribute('data-execution-kind')).toBe('conversation')
  expect(f.host.querySelector('[data-message-id="child-result"]')?.getAttribute('data-execution-kind')).toBe('component')
 })
+it('shows the sent message while its conversation task is still queued',async()=>{
+ const f=await mount()
+ f.view.tasks[0].status='pending'
+ await f.emit()
+ expect(f.host.querySelector('[data-message-id="q"]')?.textContent).toContain('请整理资料')
+})

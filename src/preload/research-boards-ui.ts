@@ -2594,7 +2594,7 @@ export function ResearchBoardDiscussion({
       h('button', { onClick: () => showRecovery(page) }, '查看我的恢复记录')
     )
   const live = [
-    ...new Map(v.messages.filter((m: any) => !m.queueDeleted && !v.tasks.some((t: any) => t.conversation && t.status === 'pending' && !t.resumeCount && t.requestMessageId === m.id)).map((m: any) => [m.id, m])).values()
+    ...new Map(v.messages.filter((m: any) => !m.queueDeleted).map((m: any) => [m.id, m])).values()
   ] as any[]
   const requestIds = new Set(
     live.filter((m) => m.role === 'user').map((m) => m.id)

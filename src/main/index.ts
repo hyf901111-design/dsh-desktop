@@ -1,6 +1,7 @@
 import { legacyConnectionSources } from './integrations/legacy-connections'
 import { legacySkillRoots } from './integrations/legacy-skills'
 import { IntegrationService } from './integrations/service'
+import { maySkipDataYesToolPrompt } from './integrations/datayes-approval'
 import { startIntegrationBridge } from './integrations/runtime-bridge'
 import { registerIntegrationIpc } from './integrations/ipc'
 import { resolveIntegrationContext } from './integrations/context'
@@ -1321,6 +1322,7 @@ async function bootstrap(): Promise<void> {
         sessions: async () => (await taskRpc('session.list', {})).items,
       }),
       approveWrite: async (_call, tool, connection) => {
+        if (maySkipDataYesToolPrompt(tool, connection)) return true
         if (!mainWindow || mainWindow.isDestroyed()) return false
         const result = await dialog.showMessageBox(mainWindow, {
           type: 'question', title: '确认工具操作', message: `允许“${connection.name}”执行“${tool.name}”？`,
