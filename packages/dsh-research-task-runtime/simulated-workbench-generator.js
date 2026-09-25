@@ -56,6 +56,12 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
         } : variant === 'funnel' ? {
             version: 1, type: 'market', variant, unit: '个',
             stages: [{ label: '触达', count: 1000 }, { label: '浏览', count: 680 }, { label: '咨询', count: 310 }, { label: '转化', count: 122 }]
+        } : variant === 'risk-matrix' ? {
+            version: 1, type: 'market', variant,
+            items: [{ label: '供应链波动', probability: 4, impact: 4, detail: '模拟供应中断情景' },
+                { label: '需求放缓', probability: 3, impact: 5, detail: '模拟销售下降情景' },
+                { label: '现金流压力', probability: 2, impact: 4, detail: '模拟回款延迟情景' },
+                { label: '系统维护', probability: 2, impact: 2, detail: '模拟短时维护情景' }]
         } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }

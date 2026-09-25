@@ -15,6 +15,7 @@ const market = Object.freeze({
   'allocation-donut': { id: 'research.allocation-donut', figma: '1217:247228', width: 434, height: 286, size: 'large' },
   waterfall: { id: 'research.waterfall', figma: '1217:225781', width: 536, height: 286, size: 'large' },
   funnel: { id: 'research.funnel', figma: '1217:225825', width: 434, height: 286, size: 'large' },
+  'risk-matrix': { id: 'research.risk-matrix', figma: '1217:225825', width: 536, height: 310, size: 'large' },
   scatter: { id: 'financial.scatter', figma: '1217:225825', width: 348, height: 264, size: 'large' },
   table: { id: 'financial.table', figma: '1217:225879', width: 536, height: 258, size: 'large' },
   pipeline: { id: 'financial.pipeline', figma: '1217:225964', width: 348, height: 258, size: 'large' },
@@ -67,6 +68,7 @@ export function marketVariant(panel = {}) {
     if (/配置占比|资产配置|持仓占比|分配环图|allocation.donut/iu.test(text)) return 'allocation-donut';
     if (/瀑布图|增减桥|waterfall/iu.test(text)) return 'waterfall';
     if (/漏斗|转化率|funnel/iu.test(text)) return 'funnel';
+    if (/风险矩阵|风险热力|概率.{0,8}影响|risk.matrix/iu.test(text)) return 'risk-matrix';
     if (/趋势|走势|折线|trend/iu.test(text)) return 'trend';
     if (/热力图|heatmap/iu.test(text)) return 'heatmap';
     if (/广度|breadth/iu.test(text)) return 'breadth';

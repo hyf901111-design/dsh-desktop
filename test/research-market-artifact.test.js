@@ -222,6 +222,29 @@ it('rejects increasing counts in a same-cohort funnel',()=>{
  expect(acceptArtifactOutput(JSON.stringify({...base,stages:[{label:'触达',count:100},{label:'转化',count:120}]}))).toBeUndefined()
  expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.funnel 的结构化数据')).toBeNull()
 })
+it('filters the risk matrix by severity and cell, keeping every risk in its source table',()=>{
+ const items=[{label:'供应链',probability:4,impact:4,detail:'模拟中断'},
+  {label:'需求',probability:3,impact:5,detail:'模拟放缓'},
+  {label:'维护',probability:2,impact:2,detail:'模拟维护'}]
+ const d=render({variant:'risk-matrix',items})
+ expect(d.querySelectorAll('.risk-cell')).toHaveLength(25)
+ d.defaultView.eval(d.querySelector('script').textContent)
+ d.querySelector('[data-risk-filter="high"]').click()
+ expect(d.querySelectorAll('.risk-item:not([hidden])')).toHaveLength(2)
+ d.querySelector('[data-risk-cell="4-4"]').click()
+ expect(d.querySelectorAll('.risk-item:not([hidden])')).toHaveLength(1)
+ expect(d.querySelector('.risk-readout').textContent).toContain('供应链 · 概率 4/5 · 影响 4/5 · 得分 16')
+ d.querySelector('.risk-clear-cell').click()
+ expect(d.querySelectorAll('.risk-item:not([hidden])')).toHaveLength(2)
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(3)
+ expect(marketVariant({title:'项目风险矩阵'})).toBe('risk-matrix')
+})
+it('rejects risk scores outside the documented five-level inputs',()=>{
+ const base={version:1,type:'market',variant:'risk-matrix',title:'风险',asOf:'模拟',items:[{label:'供应链',probability:4,impact:4}]}
+ expect(acceptArtifactOutput(JSON.stringify({...base,items:[{label:'供应链',probability:6,impact:4}]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,items:[{label:'供应链',probability:2.5,impact:4}]}))).toBeUndefined()
+ expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.risk-matrix 的结构化数据')).toBeNull()
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')

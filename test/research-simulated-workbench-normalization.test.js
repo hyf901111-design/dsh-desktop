@@ -54,6 +54,11 @@ describe('真实客户端模拟工作台输入修复', () => {
     expect(panel.artifact.stages.map(item => item.count)).toEqual([1000, 680, 310, 122]);
     expect(JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact))).html).toContain('funnel-stage-list');
   });
+  it('为风险矩阵准备各等级可定位的本地模拟风险项', () => {
+    const panel = generateSimulatedPanel({ title: '项目风险矩阵', prompt: 'variant: risk-matrix', type: 'market', size: 'large' }, '项目观察工作台');
+    expect(panel.artifact.items).toHaveLength(4);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact))).html).toContain('risk-grid');
+  });
   it('将仅多包一层的表格单元格展开为完整列，保留原始文字', () => {
     const table = panel('重点覆盖估值与盈利预期（模拟）', 'market', {
       asOf: '2026-02-06 15:00', columns: ['公司', '代码', '收盘', '涨跌', 'PE', 'EPS'],
