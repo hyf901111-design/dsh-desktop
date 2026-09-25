@@ -30,6 +30,21 @@ it('renders source-style financial trends with all values and a bounded legend',
  expect(d.querySelector('[data-sherlock-market="trend"]')).not.toBeNull()
  expect(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'trend',title:'走势',asOf:'模拟',labels:['一','二'],series:[{name:'错位',values:[1]}]}))).toBeUndefined()
 })
+it('keeps a sourced full-year daily trend instead of rejecting 252 genuine observations',()=>{
+ const labels=Array.from({length:252},(_,i)=>`2025-${String(Math.floor(i/21)+1).padStart(2,'0')}-${String(i%21+1).padStart(2,'0')}`)
+ const values=labels.map((_,i)=>100+i/10)
+ const d=render({variant:'trend',labels,series:[{name:'农林牧渔指数',values}],sources:[{label:'通联 DataYes',url:''}]})
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(252)
+ expect(d.querySelector('.trend-line').getAttribute('points').split(' ')).toHaveLength(252)
+ expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')
+ expect(d.querySelector('.market-footer a')).toBeNull()
+})
+it('preserves source names without URLs while rejecting unsafe source links',()=>{
+ const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
+ expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')
+ expect(d.querySelector('.market-footer a')).toBeNull()
+ expect(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'heatmap',title:'热力图',asOf:'2026-09-25',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'危险链接',url:'javascript:alert(1)'}]}))).toBeUndefined()
+})
 it('validates real OHLC bounds instead of fabricating or accepting impossible candles',()=>{
  const candle={date:'2026-09-18',open:4493.21,high:4541.82,low:4480.46,close:4528.61,volume:128}
  expect(render({variant:'candlestick',candles:[candle]}).querySelector('canvas')).not.toBeNull()
