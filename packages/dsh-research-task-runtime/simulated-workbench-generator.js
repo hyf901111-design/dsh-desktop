@@ -47,6 +47,9 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
             labels: Array.from({ length: 65 }, (_, index) => `模拟交易日 ${index + 1}`),
             equity: Array.from({ length: 65 }, (_, index) => +(1 + index * .003 + Math.sin(index / 6) * .025).toFixed(4)),
             benchmark: Array.from({ length: 65 }, (_, index) => +(1 + index * .002 + Math.sin(index / 8) * .012).toFixed(4))
+        } : variant === 'allocation-donut' ? {
+            version: 1, type: 'market', variant, unit: '%',
+            items: ['股票', '债券', '现金', '商品', '其他'].map((label, index) => ({ label, value: [42, 28, 15, 10, 5][index] }))
         } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }

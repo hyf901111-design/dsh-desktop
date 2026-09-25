@@ -12,6 +12,7 @@ const market = Object.freeze({
   'fund-flow': { id: 'financial.fund-flow', figma: '1217:225879', width: 536, height: 286, size: 'large' },
   'valuation-band': { id: 'financial.valuation-band', figma: '1217:225781', width: 536, height: 286, size: 'large' },
   'equity-drawdown': { id: 'fund.equity-drawdown', figma: '1217:247146', width: 536, height: 286, size: 'large' },
+  'allocation-donut': { id: 'research.allocation-donut', figma: '1217:247228', width: 434, height: 286, size: 'large' },
   scatter: { id: 'financial.scatter', figma: '1217:225825', width: 348, height: 264, size: 'large' },
   table: { id: 'financial.table', figma: '1217:225879', width: 536, height: 258, size: 'large' },
   pipeline: { id: 'financial.pipeline', figma: '1217:225964', width: 348, height: 258, size: 'large' },
@@ -61,6 +62,7 @@ export function marketVariant(panel = {}) {
     if (/资金流|净流入|净流出|fund.flow/iu.test(text)) return 'fund-flow';
     if (/估值分位|估值带|分位带|valuation.band/iu.test(text)) return 'valuation-band';
     if (/净值.{0,10}回撤|回撤.{0,10}净值|equity.drawdown/iu.test(text)) return 'equity-drawdown';
+    if (/配置占比|资产配置|持仓占比|分配环图|allocation.donut/iu.test(text)) return 'allocation-donut';
     if (/趋势|走势|折线|trend/iu.test(text)) return 'trend';
     if (/热力图|heatmap/iu.test(text)) return 'heatmap';
     if (/广度|breadth/iu.test(text)) return 'breadth';
