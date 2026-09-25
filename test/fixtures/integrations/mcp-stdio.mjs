@@ -4,10 +4,11 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 
 const server = new Server({ name: 'ework-stdio-fixture', version: '1.0.0' }, { capabilities: { tools: {} } })
 const names = ['echo', 'environment', 'wait', 'large', 'stderr', 'crash']
+const echoSchema = { type: 'object', properties: { message: { type: 'string' }, url_params: { type: 'object', additionalProperties: { type: 'string' } } }, additionalProperties: true }
 let calls = 0
 server.setRequestHandler(ListToolsRequestSchema, request => {
   const start = request.params?.cursor === 'page-2' ? 3 : 0
-  return { tools: names.slice(start, start + 3).map(name => ({ name, description: `Fixture ${name}`, inputSchema: { type: 'object', additionalProperties: true } })), ...(start === 0 ? { nextCursor: 'page-2' } : {}) }
+  return { tools: names.slice(start, start + 3).map(name => ({ name, description: `Fixture ${name}`, inputSchema: name === 'echo' ? echoSchema : { type: 'object', additionalProperties: true } })), ...(start === 0 ? { nextCursor: 'page-2' } : {}) }
 })
 server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   calls++

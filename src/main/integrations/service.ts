@@ -13,6 +13,7 @@ import { compileOpenApi } from './adapters/openapi';
 import { McpSupervisor } from './adapters/mcp';
 import type { ProviderAdapter, ProviderTool } from './adapters/provider';
 import { assertCapabilityAccess } from './policy';
+import { normalizeMcpQueryArguments } from './query-arguments';
 import { IntegrationCatalog } from './catalog';
 import { DeclarativeInstaller } from './installer';
 import { DependencyIndex } from './dependency-index';
@@ -736,7 +737,7 @@ export class IntegrationService {
                 }
                 assertCapabilityAccess(call, this.store.snapshot(), this.options.getOwnerId(), this.runtimeEpoch);
             }
-            const result = connection.config.type === 'api' ? await this.api.invoke(connection.config, tool.operationId, call.arguments, combined) : connection.config.type === 'mcp' ? await this.mcp.invoke(connection.id, tool.rawName ?? tool.operationId, call.arguments, combined) : await this.providers[connection.providerId]?.invoke(connection, tool.operationId, call.arguments, combined);
+            const result = connection.config.type === 'api' ? await this.api.invoke(connection.config, tool.operationId, call.arguments, combined) : connection.config.type === 'mcp' ? await this.mcp.invoke(connection.id, tool.rawName ?? tool.operationId, normalizeMcpQueryArguments(tool.inputSchema, call.arguments), combined) : await this.providers[connection.providerId]?.invoke(connection, tool.operationId, call.arguments, combined);
             if (!result)
                 throw new IntegrationError('RUNTIME_UNAVAILABLE', '应用适配器不可用');
             try {

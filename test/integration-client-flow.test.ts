@@ -64,8 +64,8 @@ it('allows discovered tools in a user configured MCP without a separate grant st
   expect(connection.tools!.length).toBeGreaterThan(1)
   expect(connection.tools!.every(tool => tool.allowed)).toBe(true)
   const toolId = connection.tools!.find(tool => tool.name === 'echo')!.id
-  const result = await service.execute({ callId: randomUUID(), toolId, connectionRevision: connection.revision, arguments: { message: 'automatic' }, context: { sessionId: 's', rootSessionId: 's', workspaceId: 'w', ownerAccountId: 'owner', runtimeEpoch: service.runtimeEpoch, unattended: false } }, new AbortController().signal)
-  expect(result.content[0]!.text).toContain('automatic')
+  const result = await service.execute({ callId: randomUUID(), toolId, connectionRevision: connection.revision, arguments: { message: 'automatic', url_params: { pagesize: 10, pagenum: 1 } }, context: { sessionId: 's', rootSessionId: 's', workspaceId: 'w', ownerAccountId: 'owner', runtimeEpoch: service.runtimeEpoch, unattended: false } }, new AbortController().signal)
+  expect(JSON.parse(result.content[0]!.text).args).toMatchObject({ message: 'automatic', url_params: { pagesize: '10', pagenum: '1' } })
 })
 
 it('keeps a manually disabled tool disabled after discovery while allowing new tools by default', async () => {
