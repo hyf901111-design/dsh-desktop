@@ -365,7 +365,8 @@ const RESEARCH_HTML_INNER_FONT_RUNTIME = String.raw`function researchHtmlInnerFo
 }`
 
 // Static runtime source stays identical across bundlers and is injected before artifact
-// scripts. Theme input remains a two-field color-scheme value.
+// scripts. Theme input remains a two-field color-scheme value. Control cleanup must
+// leave the data paint on interactive chart SVGs intact.
 const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerThemeRuntime(fixedTheme) {
   let hostTheme = document.documentElement.getAttribute('data-sherlock-theme') === 'dark' ? 'dark' : 'light'
   let activeTheme
@@ -411,15 +412,13 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     apply()
   }
   addEventListener('message', receive)
-  // Dynamic controls use the same host roles. Inline !important otherwise wins
-  // over every stylesheet layer. Strip only protected control presentation;
-  // preserve layout width, values, listeners, business graphics and fill=none.
   const controlSelector = 'button,input,select,textarea,summary,a[href],[role="button"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="combobox"],[role="slider"],[role="menuitem"]'
   const protectedControlProperty = /^(?:color|background(?:-.+)?|border(?:-.+)?|outline(?:-.+)?|box-shadow|text-shadow|accent-color|caret-color|font(?:-.+)?|height|min-height|padding(?:-.+)?)$/
   const normalizeControls = root => {
     if (!root?.querySelectorAll) return
     const elements = [root, ...root.querySelectorAll('*')]
     for (const element of elements) {
+      if (element.closest?.('svg[role="img"]')) continue
       if (!element.matches || !element.closest(controlSelector)) continue
       const ownControl = element.matches(controlSelector)
       for (const property of Array.from(element.style || [])) {

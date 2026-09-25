@@ -260,6 +260,14 @@ describe('offline HTML component theme runtime', () => {
     expect(inner.window.document.getElementById('counter')).toBe(button)
   })
 
+  it('preserves interactive chart SVG paints during control normalization', () => {
+    const html = '<svg role="img"><rect role="button" style="fill:rgb(12, 98, 141)!important"/><circle role="button" style="fill:rgb(192, 45, 52)!important"/></svg>'
+    const inner = runtime(runtime(buildResearchHtmlPreview(html, '图表', 'dark')).childHtml())
+    inner.parsed()
+    expect(inner.window.document.querySelector('rect').style.getPropertyValue('fill')).toBe('rgb(12, 98, 141)')
+    expect(inner.window.document.querySelector('circle').style.getPropertyValue('fill')).toBe('rgb(192, 45, 52)')
+  })
+
   it('honors an explicit fixed meta theme while letting custom CSS override non-important defaults', () => {
     const html = '<!doctype html><html><head><meta content="light" name="sherlock-theme"><style>:root{--sherlock-accent:#dd2233}body{background:pink}</style></head><body>自定义<script>window.firstTheme=document.documentElement.getAttribute("data-sherlock-theme")</script></body></html>'
     const outer = runtime(buildResearchHtmlPreview(html, '自定义', 'dark'))
