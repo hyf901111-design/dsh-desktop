@@ -1,4 +1,5 @@
 import { renderMarketArtifact } from './market-artifact.js';
+import { requiredMarketVariant } from './workbench-design-contract.js';
 import { parseResearchContainerSpec } from './artifact-validator.js';
 import { renderInteractiveArtifact } from './interactive-artifact.js';
 import { renderGanttArtifact } from './gantt-artifact.js';
@@ -34,7 +35,7 @@ export function acceptArtifactOutput(text) {
 }
 
 export function workbenchMarketVariantIssue(output, prompt) {
- const expected=typeof prompt==='string'?prompt.match(/必须输出 market\.(fund-kpi|fund-holdings|fund-industry|price-volume|order-book|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth) 的结构化数据/iu)?.[1]:undefined;
+ const expected=requiredMarketVariant(prompt);
  if(!expected||typeof output!=='string')return null;
  let spec;
  try{spec=JSON.parse(output)}catch{return null}

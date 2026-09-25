@@ -1,4 +1,5 @@
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
+import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction } from './component-source-tools.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
@@ -386,7 +387,7 @@ function workbenchPanelPrompt(prompt) {
   const legacyHeader = legacyWorkbenchPanelHeader(prompt)
   const type = workbenchPanelFormat(legacyHeader ? legacyHeader + prompt.split('\n')[0] : prompt)
   if (!type) return null
-  const selectedMarketVariant = type === 'market' ? prompt.match(/\bmarket\.(fund-kpi|fund-holdings|fund-industry|price-volume|order-book|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1] : undefined
+  const selectedMarketVariant = type === 'market' ? requestedMarketVariant(prompt) : undefined
   const schemas = {
     kpi: '{"version":1,"type":"kpi","title":"标题","items":[{"label":"指标","value":"数值","change":"可选变化"}]}',
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}',

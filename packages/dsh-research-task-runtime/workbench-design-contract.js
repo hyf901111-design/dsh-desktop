@@ -21,6 +21,14 @@ const market = Object.freeze({
 });
 
 export const MARKET_DESIGN_TEMPLATES = market;
+export const MARKET_VARIANT_NAMES = Object.freeze(Object.keys(market));
+export const MARKET_VARIANT_PATTERN = MARKET_VARIANT_NAMES.join('|');
+export function requestedMarketVariant(prompt) {
+  return typeof prompt === 'string' ? prompt.match(new RegExp(`\\bmarket\\.(${MARKET_VARIANT_PATTERN})\\b`, 'iu'))?.[1]?.toLowerCase() : undefined;
+}
+export function requiredMarketVariant(prompt) {
+  return typeof prompt === 'string' ? prompt.match(new RegExp(`必须输出 market\\.(${MARKET_VARIANT_PATTERN}) 的结构化数据`, 'iu'))?.[1]?.toLowerCase() : undefined;
+}
 const generic = Object.freeze({
   small: { width: 320, height: 220 },
   medium: { width: 656, height: 220 },
@@ -35,7 +43,7 @@ export function marketVariant(panel = {}) {
   if (/盘口|买卖[一二三五十]?档|委买|委卖|order.book/iu.test(panel.title ?? '')) return 'order-book';
   if (/量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|price.volume/iu.test(panel.title ?? '')) return 'price-volume';
   const value = `${panel.title ?? ''}\n${panel.prompt ?? ''}`;
-  const declared = value.match(/\b(?:variant|变体)\s*[:：=]\s*(fund-kpi|fund-holdings|fund-industry|price-volume|order-book|metrics|candlestick|trend|scatter|table|pipeline|events|heatmap|breadth)\b/iu)?.[1]?.toLowerCase();
+  const declared = value.match(new RegExp(`\\b(?:variant|变体)\\s*[:：=]\\s*(${MARKET_VARIANT_PATTERN})\\b`, 'iu'))?.[1]?.toLowerCase();
   if (declared) return declared;
   // A multi-symbol quote watchlist needs sortable rows rather than one
   // stock's metrics or candles, even when the prompt calls them indicators.
