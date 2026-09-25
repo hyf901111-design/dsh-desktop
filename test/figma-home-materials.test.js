@@ -23,7 +23,7 @@ beforeAll(async () => {
 })
 afterAll(async () => { await browser?.close() })
 
-it('research header fades identically at both edges and softens content below its controls', async () => {
+it('research header keeps its vertical fade at both edges and covers the top-right cutout', async () => {
   const page = await browser.newPage({ viewport: { width: 720, height: 160 }, deviceScaleFactor: 1 })
   try {
     await page.setContent(`<style>${css}</style><style>
@@ -47,7 +47,8 @@ it('research header fades identically at both edges and softens content below it
     const left = green(bar.x + 100, bar.y + 44)
     const right = green(bar.x + bar.width - 25, bar.y + 44)
     expect(Math.abs(left - right)).toBeLessThan(6)
-    expect(green(bar.x + bar.width - 25, bar.y + 72)).toBeLessThan(160)
+    expect(left).toBeGreaterThan(green(bar.x + 100, bar.y + 8) + 20)
+    expect(green(bar.x + bar.width - 5, bar.y + 8)).toBeLessThan(80)
   } finally { await page.close() }
 })
 
