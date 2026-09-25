@@ -353,6 +353,14 @@ export class IntegrationView {
         }
         return this.toolGrantDraft.selected;
     }
+    private syncToolSelectAll(row: IntegrationRow) {
+        const toggle=this.root?.querySelector<HTMLButtonElement>('[data-action=toggle-all-tools]');
+        if(!toggle)return;
+        const selected=this.toolSelections(row);
+        const all=!!row.tools?.length && row.tools.every(tool=>selected.has(tool.id));
+        toggle.textContent=all?'取消全选':'全选';
+        toggle.setAttribute('aria-pressed',String(all));
+    }
     private clearSkillDetail() {
         this.skillDetail?.useController?.abort();
         this.skillDetail=undefined;
@@ -428,7 +436,8 @@ export class IntegrationView {
             + summaryRow('认证方式', summary?.authLabel || '查看连接配置', 'edit-connection', '管理凭据')
             + summaryRow('关联任务', dependencies ? dependencies.length ? `${dependencies.length} 个任务依赖这条连接` : '暂无关联任务' : '移除连接前会检查关联任务', dependencies?.length ? 'show-dependencies' : undefined, this.dependenciesExpanded ? '收起任务' : '查看任务', this.dependenciesExpanded && dependencies?.length ? `<ul>${dependencies.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : '');
         const selected = this.toolsExpanded ? this.toolSelections(row) : undefined;
-        const toolForm = this.toolsExpanded ? `<section class="ig-tools" aria-label="工具权限"><header class="ig-tools-head"><h2>允许使用的工具</h2><span>${tools.length} 个工具</span></header><p class="ig-tools-intro">只开放你勾选的工具，新增能力不会自动授权。</p>${tools.length ? tools.map(tool => `<label class="ig-tool-row"><input type="checkbox" name="toolGrant" value="${esc(tool.id)}" ${selected?.has(tool.id) ? 'checked' : ''}><div><strong>${esc(tool.name)}</strong><span>${esc(tool.description)}</span></div></label>`).join('') : '<p class="ig-note">暂未发现工具。请先完善配置并测试连接。</p>'}<footer class="ig-tool-actions">${button('cancel-tool-grants', '取消')}${button('grant-tools', '保存工具权限', true, !tools.length)}</footer></section>` : '';
+        const allSelected=!!tools.length && tools.every(tool=>selected?.has(tool.id));
+        const toolForm = this.toolsExpanded ? `<section class="ig-tools" aria-label="工具权限"><header class="ig-tools-head"><h2>允许使用的工具</h2><div class="ig-tools-head-actions"><span>${tools.length} 个工具</span>${tools.length ? `<button type="button" class="ig-tool-select-all" data-action="toggle-all-tools" aria-pressed="${allSelected}">${allSelected ? '取消全选' : '全选'}</button>` : ''}</div></header><p class="ig-tools-intro">只开放你勾选的工具，新增能力不会自动授权。</p>${tools.length ? tools.map(tool => `<label class="ig-tool-row"><input type="checkbox" name="toolGrant" value="${esc(tool.id)}" ${selected?.has(tool.id) ? 'checked' : ''}><div><strong>${esc(tool.name)}</strong><span>${esc(tool.description)}</span></div></label>`).join('') : '<p class="ig-note">暂未发现工具。请先完善配置并测试连接。</p>'}<footer class="ig-tool-actions">${button('cancel-tool-grants', '取消')}${button('grant-tools', '保存工具权限', true, !tools.length)}</footer></section>` : '';
         return `<div class="ig-detail-grid"><div class="ig-detail-main">${this.toolsExpanded ? toolForm : `<section class="ig-detail-summary">${summaryContent}</section>`}</div><aside class="ig-detail-aside" aria-label="连接状态"><section class="ig-help"><h2>${esc(row.status)}</h2><p>${esc(summary?.healthDetail || row.detail || '点击重新测试，检查这条连接的实际可用状态。')}</p></section>${button('probe', '重新测试')}${['google-calendar', 'notion'].includes(row.connectionType || '') ? button('authorize', '授权连接', true) : ''}<hr><p class="ig-note">断开连接会影响依赖它的定时任务；已有内容仍会保留。</p>${button('disconnect', '断开连接')}${row.removable ? button('request-uninstall', '移除连接') : ''}</aside></div>`;
     }
     private renderFeedback() {
@@ -452,7 +461,7 @@ export class IntegrationView {
     private onInput = (event: Event) => { const target = event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement; if (!target.name)
         return; if(target.name==='toolGrant' && this.route.page==='detail' && this.toolsExpanded){
         const row=this.snapshot.rows.find(item=>item.id===this.routeId());
-        if(row?.kind==='connection' && row.tools?.some(tool=>tool.id===target.value)){const selected=this.toolSelections(row);if((target as HTMLInputElement).checked)selected.add(target.value);else selected.delete(target.value);}
+        if(row?.kind==='connection' && row.tools?.some(tool=>tool.id===target.value)){const selected=this.toolSelections(row);if((target as HTMLInputElement).checked)selected.add(target.value);else selected.delete(target.value);this.syncToolSelectAll(row);}
         return;
     } if (this.route.page === 'connection') {
         const redraw = this.connectionEditor.input(target, this.draft);
@@ -682,6 +691,15 @@ export class IntegrationView {
             case 'manage-tools':
                 const expand=!this.toolsExpanded;this.clearToolGrantDraft();this.toolsExpanded=expand;this.render();
                 if(this.root)this.root.scrollTop=0;
+                break;
+            case 'toggle-all-tools':
+                if(row?.kind==='connection' && this.toolsExpanded && row.tools?.length){
+                    const selected=this.toolSelections(row);
+                    const selectAll=row.tools.some(tool=>!selected.has(tool.id));
+                    for(const tool of row.tools)if(selectAll)selected.add(tool.id);else selected.delete(tool.id);
+                    this.root?.querySelectorAll<HTMLInputElement>('input[name=toolGrant]').forEach(input=>{input.checked=selected.has(input.value)});
+                    this.syncToolSelectAll(row);
+                }
                 break;
             case 'cancel-tool-grants':
                 this.clearToolGrantDraft();this.render();

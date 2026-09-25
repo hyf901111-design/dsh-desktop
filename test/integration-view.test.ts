@@ -288,6 +288,23 @@ it('uses one connection title, a real summary aside, and an explicit right-align
  f.doc.querySelector<HTMLInputElement>('[name=toolGrant][value=write]')!.click();
  f.click('[data-action=grant-tools]');await f.settle();expect(f.calls.find(c=>c.type==='grant-tools')).toMatchObject({id:'api',toolIds:['read','write'],meta:{expectedRevision:8}});f.view.dispose()
 })
+it('selects and clears all discovered tools without saving until confirmed',async()=>{
+ const data=snapshot();data.rows.push({id:'mcp',kind:'connection',tab:'mcp',name:'数据 MCP',description:'MCP 工具',enabled:true,status:'已连接',source:'个人连接',revision:8,connectionType:'mcp-http',removable:true,tools:[{id:'one',name:'工具一',description:'读取',allowed:true},{id:'two',name:'工具二',description:'检索',allowed:false}]});
+ const f=await fixture(async c=>c.type==='snapshot'?{type:'snapshot',snapshot:data}:{type:'operation',operation:{id:'grant',status:'succeeded',message:'已保存',cancellable:false}});
+ f.click('[data-tab=mcp]');f.click('[data-detail=mcp]');f.click('[data-action=manage-tools]');
+ const toggle=()=>f.doc.querySelector<HTMLButtonElement>('[data-action=toggle-all-tools]')!;
+ expect(toggle().textContent).toBe('全选');
+ f.click('[data-action=toggle-all-tools]');
+ expect([...f.doc.querySelectorAll<HTMLInputElement>('[name=toolGrant]')].every(input=>input.checked)).toBe(true);
+ expect(toggle().textContent).toBe('取消全选');
+ expect(f.calls.some(c=>c.type==='grant-tools')).toBe(false);
+ f.click('[data-action=toggle-all-tools]');
+ expect([...f.doc.querySelectorAll<HTMLInputElement>('[name=toolGrant]')].every(input=>!input.checked)).toBe(true);
+ expect(toggle().textContent).toBe('全选');
+ f.click('[data-action=toggle-all-tools]');f.click('[data-action=grant-tools]');await f.settle();
+ expect(f.calls.find(c=>c.type==='grant-tools')).toMatchObject({id:'mcp',toolIds:['one','two'],meta:{expectedRevision:8}});
+ f.view.dispose();
+})
 it('opens add choices in place and returns directly to the originating list after creating a plugin draft',async()=>{
  const f=await fixture();f.click('[data-tab=mcp]');f.click('[data-action=add]');expect(f.doc.querySelector('h1')!.textContent).toBe('插件');expect(f.doc.querySelectorAll('.ig-add-row')).toHaveLength(0);expect(f.doc.querySelector('[role=menu] [data-add=plugin]')).not.toBeNull();f.click('[data-add=plugin]');expect(f.doc.querySelector('h1')!.textContent).toBe('创建插件');expect(f.doc.querySelector('[name=manifest]')).not.toBeNull();f.click('[data-action=back]');expect(f.doc.querySelector('[data-tab=mcp]')!.getAttribute('aria-selected')).toBe('true');f.view.dispose()
 })
