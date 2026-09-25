@@ -47,6 +47,9 @@ export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
   // A planner may repeat the whole workbench request in every panel prompt.
   // Select these two distinct financial cards from their own titles first.
+  if (/基金.{0,8}行业|行业.{0,8}(?:暴露|偏离)|fund[.-]industry/iu.test(panel.title ?? '')) return 'fund-industry';
+  if (/基金.{0,8}(?:持仓|穿透)|fund[.-]holdings/iu.test(panel.title ?? '')) return 'fund-holdings';
+  if (/基金.{0,8}(?:指标|概览)|基金核心|组合.{0,8}指标|fund[.-]kpi/iu.test(panel.title ?? '')) return 'fund-kpi';
   if (/盘口|买卖[一二三五十]?档|委买|委卖|order.book/iu.test(panel.title ?? '')) return 'order-book';
   if (/量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|price.volume/iu.test(panel.title ?? '')) return 'price-volume';
   if (/资金流|净流入|净流出|fund.flow/iu.test(panel.title ?? '')) return 'fund-flow';
@@ -66,6 +69,9 @@ export function marketVariant(panel = {}) {
   if (!primaryCandle &&
       /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
+    if (/fund[.-]kpi/iu.test(text)) return 'fund-kpi';
+    if (/fund[.-]holdings/iu.test(text)) return 'fund-holdings';
+    if (/fund[.-]industry/iu.test(text)) return 'fund-industry';
     if (/K\s*线|蜡烛图|candlestick/iu.test(text)) return 'candlestick';
     if (/量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|price.volume/iu.test(text)) return 'price-volume';
     if (/盘口|买卖[一二三五十]?档|委买|委卖|order.book/iu.test(text)) return 'order-book';

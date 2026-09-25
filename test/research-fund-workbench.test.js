@@ -61,6 +61,21 @@ describe('Fund72 source-contracted workbench', () => {
     expect(packed.nodes.map(node => [node.width,node.height])).toEqual([[896,132],[556,400],[328,400]]);
   });
 
+  it('expands long fund indicator definitions without truncating their source text', () => {
+    const detail = '组合权重 24.6% / 基准 16.4% / 偏离 +8.2%，按已披露权益持仓统计';
+    const doc = new Window().document;
+    doc.write(renderMarketArtifact({version:1,type:'market',variant:'fund-kpi',title:'组合概览',asOf:'2026-02-06',items:[
+      {label:'行业偏离',value:'+8.2%',detail},
+      {label:'覆盖率',value:'92.6%',detail:'已披露持仓'}
+    ]}).html);
+    const disclosure = doc.querySelector('.fund-detail-disclosure');
+    expect(disclosure.querySelector('p').textContent).toBe(detail);
+    expect(disclosure.open).toBe(false);
+    disclosure.querySelector('summary').click();
+    expect(disclosure.open).toBe(true);
+    expect(doc.querySelectorAll('.fund-kpi')[1].querySelector('details')).toBeNull();
+  });
+
   it('rejects industry cards without comparable weights', () => {
     const bad = input();
     bad.panels[2].artifact.items[0].detail = '仅有 +8.2% 偏离';

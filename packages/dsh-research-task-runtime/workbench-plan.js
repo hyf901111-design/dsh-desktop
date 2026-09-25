@@ -28,7 +28,7 @@ const percentIn = (value, label) => {
     return match ? Number(match[1]) : null;
 };
 function fundTemplatePanel(panel, workbenchTitle) {
-    if (!/基金/u.test(workbenchTitle) || !panel.artifact || typeof panel.artifact !== 'object') return null;
+    if (!/基金/u.test(`${workbenchTitle}\n${panel.title}`) || !panel.artifact || typeof panel.artifact !== 'object') return null;
     const source = panel.artifact;
     const intent = panel.title + '\n' + panel.prompt;
     const base = { version: 1, type: 'market', title: source.title ?? panel.title,
@@ -46,7 +46,7 @@ function fundTemplatePanel(panel, workbenchTitle) {
     } else if (/穿透持仓|持仓明细|重叠暴露/u.test(intent) && Array.isArray(source.columns)) {
         artifact = { ...base, variant: 'fund-holdings', columns: source.columns, rows: source.rows,
             ...(source.period ? { period: source.period } : {}) };
-    } else if (/组合风险|持仓概览|穿透概览|基金指标/u.test(intent) && Array.isArray(source.items ?? source.metrics)) {
+    } else if (/组合风险|持仓概览|穿透概览|基金.{0,8}指标/u.test(intent) && Array.isArray(source.items ?? source.metrics)) {
         const items = normalizeMetrics(source.items ?? source.metrics, 'dashboard');
         artifact = { ...base, variant: 'fund-kpi', items: items.map(item => ({
             label: item?.label, value: item?.value, ...(item?.detail ? { detail: item.detail } : {})

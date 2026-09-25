@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateWorkbench, prepareSimulatedArtifact } from '../packages/dsh-research-task-runtime/workbench-plan.js';
 import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js';
 import { generateSimulatedPanel } from '../packages/dsh-research-task-runtime/simulated-workbench-generator.js';
+import { marketVariant } from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
 
 const panel = (title, type, artifact) => ({ title, type, size: 'large', prompt: `展示${title}的模拟数据`, artifact });
 const plan = (first, second) => ({
@@ -13,6 +14,25 @@ const metric = panel('医药行业核心指标（模拟）', 'market', {
 });
 
 describe('真实客户端模拟工作台输入修复', () => {
+  it('按规划保留基金指标模板和六个季度时点', () => {
+    const trend = generateSimulatedPanel({ title:'基金 vs 基准 累计收益率趋势（模拟）', prompt:'market.trend；6 个季度时点，两条同量纲序列', type:'market', size:'medium' }, '研究工作台双卡面板规划');
+    const kpi = generateSimulatedPanel({ title:'基金核心指标卡（模拟）', prompt:'fund.kpi；最大回撤需要较长口径说明', type:'market', size:'medium' }, '研究工作台双卡面板规划');
+    expect(marketVariant({title:'基金核心指标卡（模拟）',prompt:'fund.kpi'})).toBe('fund-kpi');
+    expect(trend.artifact.labels).toEqual(['2025Q1','2025Q2','2025Q3','2025Q4','2026Q1','2026Q2']);
+    expect(trend.artifact.series.every(item=>item.values.length===6)).toBe(true);
+    expect(kpi.artifact.variant).toBe('fund-kpi');
+    expect(kpi.artifact.items.find(item=>item.label==='最大回撤').detail.length).toBeGreaterThan(26);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(prepareSimulatedArtifact(trend)))).html).toContain('data-trend-series');
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(prepareSimulatedArtifact(kpi)))).html).toContain('fund-detail-disclosure');
+    const genericPlannerKpi = generateSimulatedPanel({ title:'基金核心指标（演示数据）', prompt:'最大回撤有完整长口径', type:'kpi', size:'small' }, '研究工作台面板规划');
+    expect(genericPlannerKpi.type).toBe('market');
+    expect(genericPlannerKpi.artifact.variant).toBe('fund-kpi');
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(prepareSimulatedArtifact(genericPlannerKpi)))).html).toContain('fund-detail-disclosure');
+    const suppliedKpi = validateWorkbench({requestId:'fund-kpi-panel-title',title:'研究工作台面板规划',dataMode:'simulated',panels:[{
+      title:'基金核心指标（演示数据）',prompt:'最大回撤说明',type:'kpi',size:'small',artifact:{items:[{label:'最大回撤',value:'-8.4%',detail:'模拟区间内按照日频复权单位净值计算峰值至后续谷值的最大跌幅'}]}
+    }]});
+    expect(suppliedKpi.panels[0].artifact.variant).toBe('fund-kpi');
+  });
   it('让通用折线、柱状和表格遵守规划中的月份、行业及行数', () => {
     const line = generateSimulatedPanel({ title: '近3个月双序列趋势', prompt: '折线图，近3个月，两条序列', type: 'chart', size: 'large' }, '模拟测试工作台');
     const bar = generateSimulatedPanel({ title: '三行业双序列对比', prompt: '柱状图，3个行业，两条序列', type: 'chart', size: 'large' }, '模拟测试工作台');

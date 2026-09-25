@@ -11,7 +11,7 @@ const subjectOf = title => title.replace(/（模拟）|模拟数据|工作台|�
 const clone = value => structuredClone(value);
 const numberWords = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
 function requestedCount(intent, unit, maximum) {
-    const match = intent.match(new RegExp(`([\\d一二两三四五六七八九十]{1,4})\\s*(?:个)?\\s*${unit}`, 'u'));
+    const match = intent.match(new RegExp(`([\\d一二两三四五六七八九十]{1,4})\\s*(?:个)?\\s*(?:${unit})`, 'u'));
     if (!match) return null;
     const chinese = match[1].split('十');
     const value = /^\d+$/u.test(match[1]) ? Number(match[1])
@@ -32,6 +32,13 @@ const sample = (type, variant) => {
 
 export function generateSimulatedPanel(panel, workbenchTitle) {
     if (panel.artifact) return panel;
+    // Planners sometimes call a financial template by its generic canvas type.
+    // Preserve the requested fixed template before choosing sample data.
+    if (['kpi', 'table'].includes(panel.type)) {
+        const variant = marketVariant(panel);
+        if (['fund-kpi', 'fund-holdings', 'fund-industry'].includes(variant))
+            return generateSimulatedPanel({ ...panel, type: 'market', prompt: `variant: ${variant}；${panel.prompt}` }, workbenchTitle);
+    }
     const subject = subjectOf(workbenchTitle);
     const intent = `${panel.title}\n${panel.prompt}`;
     let artifact;
@@ -82,13 +89,21 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
                 : variant === 'fund-industry' ? { variant, items: [] }
                     : sample('market', variant);
         artifact.asOf = asOf;
-        if (variant === 'metrics' || variant === 'fund-kpi') artifact.items = [
+        if (variant === 'metrics') artifact.items = [
             { label: '模拟收盘', value: '1,486.20', detail: '较前期 +0.62%' },
             { label: '模拟成交额', value: '286.4 亿元', detail: '较前期 +8.3%' },
             { label: '区间涨跌', value: '+2.16%', detail: '近 30 日虚构样本' },
             { label: '波动率', value: '12.8%', detail: '30 日模拟口径' },
             { label: '估值倍数', value: '22.5 倍', detail: '模拟 TTM' },
             { label: '样本数量', value: '36 家', detail: '虚构观察池' }
+        ];
+        if (variant === 'fund-kpi') artifact.items = [
+            { label: '模拟单位净值', value: '1.2864 元', detail: '虚构基金样本 · 复权口径' },
+            { label: '近一年收益', value: '+12.8%', detail: '模拟近 12 个月累计收益' },
+            { label: '年化波动率', value: '15.6%', detail: '模拟日收益率标准差按 252 个交易日折算' },
+            { label: '最大回撤', value: '-8.4%', detail: '模拟区间内使用日频复权单位净值，按历史峰值至后续谷值计算；已计入模拟分红，未计申购赎回费用' },
+            { label: '夏普比率', value: '0.82', detail: '模拟收益率与模拟无风险利率比较' },
+            { label: '基金规模', value: '28.6 亿元', detail: '虚构期末资产净值' }
         ];
         if (variant === 'candlestick') {
             // Keep a complete OHLC + volume series. Change the price level by
@@ -115,7 +130,23 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
             ];
         }
         if (variant === 'scatter') artifact.items = artifact.items.map((item, index) => ({ ...item, label: `${subject}样本 ${index + 1}` }));
-        if (variant === 'trend') artifact.series = artifact.series.map((item, index) => ({ ...item, name: index ? '模拟基准' : `${subject}模拟指数` }));
+        if (variant === 'trend') {
+            artifact.series = artifact.series.map((item, index) => ({ ...item, name: index ? '模拟基准' : `${subject}模拟指数` }));
+            const quarters = requestedCount(intent, '季度', 24);
+            const months = requestedCount(intent, '月', 24);
+            const points = requestedCount(intent, '(?:交易日|观察)?时点|数据点', 366);
+            const count = quarters ?? months ?? points;
+            if (count && count >= 2) {
+                artifact.labels = quarters ? Array.from({ length: count }, (_, index) => {
+                    const quarter = 2026 * 4 + 2 - count + index;
+                    return `${Math.floor(quarter / 4)}Q${quarter % 4 + 1}`;
+                }) : months ? Array.from({ length: count }, (_, index) => {
+                    const date = new Date(Date.UTC(2026, 6 - count + index, 1));
+                    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+                }) : Array.from({ length: count }, (_, index) => artifact.labels[index] ?? `模拟时点 ${index + 1}`);
+                artifact.series = simulatedSeries(artifact.series, count);
+            }
+        }
         if (variant === 'pipeline') artifact.items = artifact.items.map((item, index) => ({ ...item,
             name: `${subject}项目 ${index + 1}`, target: `模拟观察点 ${index + 1}`
         }));
