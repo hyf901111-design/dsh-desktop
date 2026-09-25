@@ -1557,7 +1557,7 @@ export function createSubagentAdapter(ctx) {
       if (kind === 'create' || kind === 'container' && !workbenchPanelFormat(query ?? '')) effectivePrompt += '\n趋势图优先使用宿主 chart 格式的 labels/series，直接交付已有真实数据，不编写冗长的 SVG 坐标或重复的 HTML 图表代码。历史记录很多时可选取有明确日期的代表数据点，并注明采样和覆盖范围；无法取得的区间保留缺失说明，不要为凑齐数据持续查询。'
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
       if (permitsTools) effectivePrompt += preferredSources.length
-        ? `\n${componentSourceInstruction(preferredSources)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。`
+        ? `\n${componentSourceInstruction(preferredSources, query)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。`
         : '\n股票、指数、ETF、基金的行情、净值、历史日线或对比研究，优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.

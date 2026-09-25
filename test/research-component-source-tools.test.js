@@ -21,3 +21,16 @@ it('prefers visible DataYes tools for a financial component without naming unava
   expect(instruction).not.toContain('ework__t_other')
   expect(preferredComponentSourceTools(schemas, '整理会议待办')).toEqual([])
 })
+
+it('starts a latest-index query in the current China-market window instead of an unbounded first page', () => {
+  const instruction = componentSourceInstruction(
+    [{ name: 'ework__t_get_api_info', description: '读取通联 DataYes 接口定义' }],
+    '沪深300指数最新日行情',
+    new Date('2026-09-25T19:30:00Z')
+  )
+  expect(instruction).toContain('当前中国市场日期为 2026-09-26')
+  expect(instruction).toContain('20260916 至 20260926')
+  expect(instruction).toContain('先用接口定义工具读取 getMktIdxd')
+  expect(instruction).toContain('不要先发无日期请求')
+  expect(instruction).toContain('不可推断原因是尚未收盘')
+})
