@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { validateWorkbench, registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
 import { ResearchTaskRuntime } from '../packages/dsh-research-task-runtime/index.js'
 import { generateSimulatedPanel } from '../packages/dsh-research-task-runtime/simulated-workbench-generator.js'
+import { MARKET_VARIANT_NAMES } from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -183,9 +184,11 @@ describe('模拟工作台结构化生成', () => {
 
   it('validates locally generated examples across market, chart, lists and schedule components', () => {
     const definitions = [
-      ...['metrics','candlestick','trend','scatter','table','pipeline','events','heatmap','breadth','fund-kpi','fund-holdings','fund-industry'].map(variant => ({type:'market', prompt:`variant: ${variant}`})),
-      ...['chart','table','kpi','dashboard','news','reports','calendar','gantt'].map(type => ({type, prompt:type === 'chart' ? '柱状图' : type}))
+      ...MARKET_VARIANT_NAMES.map(variant => ({type:'market', prompt:`variant: ${variant}`})),
+      {type:'chart',prompt:'折线趋势图'}, {type:'chart',prompt:'柱状对比图'},
+      ...['table','kpi','dashboard','news','reports','calendar','gantt'].map(type => ({type,prompt:type}))
     ]
+    expect(definitions).toHaveLength(30)
     for (const title of ['金融研究工作台', '样本工作台']) {
       for (const [index, definition] of definitions.entries()) {
         const panel = { title:`面板 ${index}`, size:'large', ...definition }
