@@ -1,7 +1,7 @@
 import {beforeEach,expect,it,vi} from 'vitest'
 const handlers=new Map<string,Function>(), views:any[]=[]
-const mock=vi.hoisted(()=>({fetch:vi.fn(),permission:vi.fn()}))
-vi.mock('electron',()=>({net:{fetch:mock.fetch},session:{fromPartition:()=>({setPermissionRequestHandler:mock.permission,setPermissionCheckHandler:mock.permission})},WebContentsView:class {
+const mock=vi.hoisted(()=>({fetch:vi.fn(),permission:vi.fn(),download:vi.fn()}))
+vi.mock('electron',()=>({net:{fetch:mock.fetch},session:{fromPartition:()=>({setPermissionRequestHandler:mock.permission,setPermissionCheckHandler:mock.permission,on:mock.download})},WebContentsView:class {
   visible=false;bounds:any; webContents:any
   constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),loadURL:vi.fn(async()=>{}),setZoomFactor:vi.fn(),enableDeviceEmulation:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
   setVisible(v:boolean){this.visible=v} setBounds(v:any){this.bounds=v} setBorderRadius(){}
@@ -26,6 +26,7 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  await expect(call('resolve',{...identity,url:'https://www.google.com/'})).resolves.toEqual({engine:'native'})
  const layout={...identity,url:'https://www.google.com/',bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},active:true,scale:1,radius:9}
  await call('update',layout)
+ expect(mock.download).toHaveBeenCalledWith('will-download',expect.any(Function))
  expect(views[0].settings.webPreferences).toMatchObject({nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true})
  expect(views[0].visible).toBe(true)
  const wc=views[0].webContents

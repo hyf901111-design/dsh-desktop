@@ -15,10 +15,42 @@ describe('component acceptance and recovery',()=>{
   expect(output.type).toBe('html');expect(output.title).toBe('医药指数趋势');
   expect(output.html).toContain(title);expect(output.html).toContain('<svg');
   for(const value of [...chart.labels,...chart.series[0].values])expect(output.html).toContain(String(value));
-  expect(acceptArtifactOutput(JSON.stringify({...chart,series:[{name:'指数',values:[1]}]}))).toBeUndefined();
+ expect(acceptArtifactOutput(JSON.stringify({...chart,series:[{name:'指数',values:[1]}]}))).toBeUndefined();
+ });
+ it('keeps a real chart with source and date notes instead of rejecting extra descriptive fields',()=>{
+  const chart={version:1,type:'chart',title:'金价走势',variant:'line',labels:['2026-09-21','2026-09-22'],series:[{name:'价格',values:[101,102]}],dataDate:'2026-09-22',source:'https://example.org/quote'};
+  const output=JSON.parse(acceptArtifactOutput(JSON.stringify(chart)));
+  expect(output.type).toBe('html');expect(output.html).toContain('2026-09-22');expect(output.html).toContain('https://example.org/quote');expect(output.html).toContain('102');
+ });
+ it('keeps an explicitly unavailable source as a readable status, never a fabricated empty chart',()=>{
+  const chart={version:1,type:'chart',title:'金银比走势',variant:'line',labels:[],series:[{name:'金银比',values:[]}],missing:'行情接口不可用，未能取得可核查的数值序列',basis:'同一时点金价÷银价',source:'本轮接口返回 unavailable'};
+  const output=JSON.parse(acceptArtifactOutput(JSON.stringify(chart)));
+  expect(output.type).toBe('markdown');expect(output.content).toContain('数据暂不可用');expect(output.content).toContain('同一时点金价÷银价');expect(output.content).not.toContain('"values"');
+  expect(acceptArtifactOutput(JSON.stringify({...chart,missing:undefined}))).toBeUndefined();
  });
  it.each([JSON.stringify(spec),'已经取得数据。\n```json\n'+JSON.stringify(spec)+'\n```','检索受限，缺失数据已标注。\n'+JSON.stringify(spec)])('accepts a complete artifact surrounded by prose',input=>expect(JSON.parse(acceptArtifactOutput(input))).toEqual(spec));
  it('handles braces and quotes in HTML without executing it',()=>{const x={version:1,type:'html',title:'交互',html:'<h1>有效内容</h1><script>const x={a:"}"};</script>'};expect(JSON.parse(acceptArtifactOutput('说明\n'+JSON.stringify(x)))).toEqual(x)});
+ it('keeps every requested metric in a simulated market snapshot',()=>{
+  const snapshot={version:1,type:'dashboard',title:'行情快照（模拟数据）',asOf:'模拟时点 2026-02-06 15:00',items:Array.from({length:15},(_,i)=>({label:`指标 ${i+1}`,value:`${i+1}.00 元`,detail:`第 ${i+1} 项口径（模拟）`}))};
+  const output=JSON.parse(acceptArtifactOutput(JSON.stringify(snapshot)));
+  expect(output.type).toBe('html');
+  for(const item of snapshot.items){expect(output.html).toContain(item.label);expect(output.html).toContain(item.value)}
+  expect(output.html.match(/class="research-metric"/g)).toHaveLength(15);
+ });
+ it('accepts a static simulated panel after mechanical host-style correction',async()=>{
+  const html='<!doctype html><html><head><style>:root{--sherlock-bg:#fff}body{background:var(--sherlock-bg);font-family:"Noto Sans SC",sans-serif}</style></head><body><div id="book">模拟盘口 1478.60 元</div><script>document.getElementById("book").addEventListener("mousemove",e=>e.currentTarget.title="模拟数据")</script></body></html>';
+  const start=vi.fn(async()=>({childSessionId:'static-child',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'html',title:'模拟盘口',html})}]})}));
+  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'static-task'});
+  try {
+   await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'显示静态模拟盘口'});
+   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'static-task'}).state).toBe('completed'));
+   const output=JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'static-task'}).finalOutput);
+   expect(start).toHaveBeenCalledOnce();
+   expect(output.html).toContain('模拟盘口 1478.60 元');
+   expect(output.html).not.toContain('--sherlock-bg:#fff');
+   expect(output.html).toContain('font-family:var(--sherlock-font-sans)');
+  }finally{await runtime.dispose()}
+ });
  it.each([{...spec,rows:[['wrong width']]},{...spec,rows:[]},{version:1,type:'kpi',title:'空',items:[]},{version:1,type:'html',title:'空',html:'<style>body{color:red}</style>'}])('rejects unusable contents',x=>expect(acceptArtifactOutput(JSON.stringify(x))).toBeUndefined());
  it('uses exactly the renderer schema for all native types',async()=>{
   const client=await readFile(new URL('../node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',import.meta.url),'utf8');
@@ -45,14 +77,16 @@ describe('component acceptance and recovery',()=>{
 });
 describe('stable interactive collections',()=>{
  const base={version:1,type:'calendar',title:'事件日历',items:[{title:'会议 A',summary:'公开会议议程',date:'2026-09-08',category:'会议',url:'https://example.org/a'},{title:'报告 B',summary:'年度研究报告',date:'2026-10-12',category:'报告',url:'https://example.org/b'},{title:'时间待定',summary:'日期尚未确认',date:'预计四季度',category:'会议'}]};
- it('renders calendar navigation, search, date selection and expandable details',()=>{
+ it('renders the source-style calendar with month navigation and date selection',()=>{
   const s=renderInteractiveArtifact(base);expect(parseResearchContainerSpec(s)).not.toBeNull();
   const w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.body.innerHTML=s.html;w.eval(w.document.querySelector('script').textContent);
-  const doc=w.document,visible=()=>[...doc.querySelectorAll('article')].filter(a=>!a.hidden);
-  expect(visible()).toHaveLength(3);const month=doc.getElementById('month');month.value='2026-09';month.dispatchEvent(new w.Event('change'));expect(visible()).toHaveLength(1);
-  doc.querySelector('[aria-label="2026-09-08"]').click();expect(visible()).toHaveLength(1);doc.getElementById('next').click();expect(visible()[0].textContent).toContain('报告 B');
-  doc.getElementById('clear-day').click();doc.getElementById('search').value='时间待定';doc.getElementById('search').dispatchEvent(new w.Event('input'));expect(visible()).toHaveLength(1);
-  doc.getElementById('expand').click();expect(doc.querySelector('details').open).toBe(true);w.happyDOM.abort();
+  const doc=w.document,visible=()=>[...doc.querySelectorAll('.event')];
+  const month=doc.getElementById('month');expect(month.value).toBe('2026-09');expect(visible()).toHaveLength(1);
+  doc.querySelector('[aria-label="2026-09-08"]').click();expect(doc.getElementById('agenda-title').textContent).toBe('当日安排');expect(visible()).toHaveLength(1);
+  doc.getElementById('next').click();expect(month.value).toBe('2026-10');expect(visible()[0].textContent).toContain('报告 B');
+  doc.getElementById('clear-day').click();expect(doc.getElementById('agenda-title').textContent).toBe('本月安排');
+  month.value='uncertain';month.dispatchEvent(new w.Event('change'));expect(visible()[0].textContent).toContain('时间待定');
+  month.value='';month.dispatchEvent(new w.Event('change'));expect(visible()).toHaveLength(3);w.happyDOM.abort();
  });
  it.each(['news','reports'])('provides searchable %s and safe source links',type=>{const out=renderInteractiveArtifact({...base,type});expect(out.html).toContain('https://example.org/a');expect(out.html).toContain('筛选分类');expect(out.html).not.toContain('<iframe')});
  it('uses the host title only and source metric roles without nested decorative cards',()=>{
@@ -89,6 +123,12 @@ describe('evidence-preserving synthesis retries',()=>{
   const {researchSearchEvidence}=await import('../packages/dsh-research-task-runtime/index.js');
   const event={type:'tool/result',data:{message:{content:[{type:'tool-result',toolCallId:'search',content:[{type:'text',text:'[来源](https://example.org) 有效摘要'},{type:'reasoning',text:'PRIVATE'}]},{type:'tool-result',toolCallId:'read-file',content:[{type:'text',text:'PRIVATE FILE'}]},{type:'tool-result',toolCallId:'search',isError:true,content:[{type:'text',text:'PRIVATE ERROR'}]}]}}};
   const text=researchSearchEvidence(event,new Set(['search']));expect(text).toContain('有效摘要');expect(text).not.toContain('PRIVATE');
+ });
+ it('carries a fetched source body into bounded synthesis evidence',async()=>{
+  const {researchSearchEvidence}=await import('../packages/dsh-research-task-runtime/index.js');
+  const event={type:'tool/result',data:{message:{content:[{type:'tool-result',toolCallId:'fetch',content:[{type:'text',text:'来源日期 2026-09-22，黄金收盘价 101.2 美元/盎司'}]}]}}};
+  expect(researchSearchEvidence(event,new Set(['fetch']))).toContain('黄金收盘价 101.2');
+  expect(researchSearchEvidence(event,new Set(['other']))).toBe('');
  });
 });
 

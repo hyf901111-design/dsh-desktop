@@ -21,7 +21,7 @@ import { assertManagedPackagePath, removePackageResources, removeSkillPackageRes
 import { manifestDigest, compareVersions } from './manifest';
 import { LegacySkillMigration, type LegacySkillRoot } from './legacy-skills';
 import { previewLegacyConnections, type LegacyConnectionSource } from './legacy-connections';
-import { loadBundledSkills, readBundledSkill, BUNDLED_PPT_SKILL_ID, type BundledSkill } from './bundled-skills';
+import { loadBundledSkills, readBundledSkill, isBundledSkillId, type BundledSkill } from './bundled-skills';
 export interface IntegrationServiceOptions {
     root: string;
     encryption: PlatformEncryption;
@@ -168,7 +168,7 @@ export class IntegrationService {
         const command = raw as IntegrationCommand;
         if (!command || typeof command !== 'object')
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
-        if ((command.type === 'set-enabled' || command.type === 'uninstall') && command.id === BUNDLED_PPT_SKILL_ID) {
+        if ((command.type === 'set-enabled' || command.type === 'uninstall') && isBundledSkillId(command.id)) {
             this.owner();
             throw new IntegrationError('ACCESS_DENIED', '内置技能保持启用，随客户端更新，不能关闭或删除');
         }

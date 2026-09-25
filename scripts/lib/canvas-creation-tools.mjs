@@ -60,6 +60,10 @@ export function patchMarqueeInteraction(source) {
   return source
 }
 export function patchCanvasCreationTools(source) {
+  // Existing local installations already carry the link draft patch. Upgrade
+  // their stored geometry as well as the fresh-patch path below.
+  source = source.replaceAll('Math.max(320,node.width||400),height:Math.max(177,node.height||177)', 'Math.max(320,node.width||320),height:Math.max(220,node.height||220)')
+  source = source.replace("width:400,height:177,sizeMode:'manual'},'link'", "width:320,height:220,sizeMode:'manual'},'link'")
   const oldInteractive = 'const isInteractiveTarget = (target) => typeof target?.closest === "function" && target.closest("input,textarea,button,select,a,[contenteditable=true],[data-research-preview-interactive]") !== null;'
   const cardInteractive = `const isInteractiveTarget = (target) => typeof target?.closest === "function" && (target.closest("input,textarea,button,select,a,[contenteditable=true]") !== null || (target.closest("[data-research-preview-interactive]") !== null && !target.closest("[data-research-node-id]")?.querySelector("[data-research-generation-process]")));`
   source = source.replace(oldInteractive, cardInteractive)
@@ -121,7 +125,7 @@ export function patchCanvasCreationTools(source) {
 function patchNativeLinkDraft(source) {
   if(source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')&&!source.includes('/* ODYSSEY_LINK_GEOMETRY */'))source=source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
     /* ODYSSEY_LINK_GEOMETRY */
-    if(node?.containerPrompt==='odyssey:link-draft')return {width:Math.max(320,node.width||400),height:Math.max(177,node.height||177),sizeMode:'manual',resizable:true};`)
+    if(node?.containerPrompt==='odyssey:link-draft')return {width:Math.max(320,node.width||320),height:Math.max(220,node.height||220),sizeMode:'manual',resizable:true};`)
   if (!source.includes('/* ODYSSEY_LINK_SELECTION */') || source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')) return source
   const change=(from,to)=>{if(!source.includes(from))throw Error('Native link anchor missing: '+from.slice(0,90));source=source.replace(from,to)}
   change('createContainerDraft(placement = null) {', 'createContainerDraft(placement = null, draftKind = "container") {')
@@ -165,7 +169,7 @@ function patchNativeLinkDraft(source) {
   function ResearchContainerDraft(`)
   change('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
     /* ODYSSEY_LINK_GEOMETRY */
-    if(node?.containerPrompt==='odyssey:link-draft')return {width:Math.max(320,node.width||400),height:Math.max(177,node.height||177),sizeMode:'manual',resizable:true};`)
+    if(node?.containerPrompt==='odyssey:link-draft')return {width:Math.max(320,node.width||320),height:Math.max(220,node.height||220),sizeMode:'manual',resizable:true};`)
   // Old overlay-only selection listeners must not clear the native node selection.
   const legacy=source.indexOf('/* ODYSSEY_LINK_SELECTION */'), legacyEnd=source.indexOf('const selectCanvasTool=',legacy)
   if(legacy>=0&&legacyEnd>=0)source=source.slice(0,legacy)+source.slice(legacyEnd)
@@ -191,7 +195,7 @@ function patchLinkDraftChrome(source) {
   if (!source.includes('/* ODYSSEY_LINK_CANVAS_FRAME */') || source.includes('/* ODYSSEY_LINK_SHARED_CHROME */')) return source
   source=source.replace('className: "rScV5Q_linkPopover odyssey-link-draft",', `/* ODYSSEY_LINK_SHARED_CHROME */
     className: "rScV5Q_richNode odyssey-link-draft", "data-research-compact-chrome":"", "data-research-artifact-card":"",`)
-  source=source.replace("width:400,height:280,sizeMode:'manual'", "width:400,height:177,sizeMode:'manual'")
+  source=source.replace("width:400,height:280,sizeMode:'manual'", "width:320,height:220,sizeMode:'manual'")
   const start=source.indexOf('/* ODYSSEY_LINK_SHARED_CHROME */'), end=source.indexOf('}), rootRef.current)]',start)
   let block=source.slice(start,end)
   block=block.replace('children: "链接组件",','children: (0,react_jsx_runtime.jsx)("span",{className:"rScV5Q_nodeTitleText",children:"链接组件"}),')

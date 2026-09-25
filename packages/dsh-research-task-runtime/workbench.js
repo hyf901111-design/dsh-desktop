@@ -5,8 +5,10 @@ import { dirname } from 'node:path';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 export const WORKBENCH_PATH = '/sherlock/research-workbenches/list';
 import {validateWorkbench, layoutWorkbench, workbenchPanelPrompt} from './workbench-plan.js';
+import {SIMULATED_WORKBENCH_PRESETS} from './simulated-workbench-presets.js';
+import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
-const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market'];
+const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 // Only a host-started, leased board child can register this in-process sink.
 // Planning captures validated data; cloud writes still require current edit authority.
@@ -40,6 +42,13 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 }
         }
     let chain = Promise.resolve();
+    const mountWaiters = new Map();
+    const mountedPlans = new Set();
+    const waitForCanvas = (id) => new Promise(resolve => {
+        if (mountedPlans.delete(id)) return resolve();
+        const timer = setTimeout(() => { mountWaiters.delete(id); resolve(); }, 1800);
+        mountWaiters.set(id, () => { clearTimeout(timer); mountWaiters.delete(id); mountedPlans.delete(id); resolve(); });
+    });
     const persist = async () => {
         await mkdir(dirname(filePath), { recursive: true });
         const tmp = `${filePath}.${randomUUID()}.tmp`;
@@ -50,7 +59,9 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         const capture = sharedPlans.get(exec.agent?.session?.id);
         if (capture) {
             exec.signal?.throwIfAborted();
-            return capture(validateWorkbench(args));
+            const plan = validateWorkbench(args);
+            if (plan.dataMode === 'simulated') throw Error('共享画板的模拟数据快路径尚未启用，请使用现有面板生成流程。');
+            return capture(plan);
         }
         const run = async () => {
             const input = validateWorkbench(args);
@@ -63,10 +74,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             if (old) {
                 if (JSON.stringify(validateWorkbench(old.input ?? old)) !== JSON.stringify(input))
                     throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
-                return { planId: old.id, panels: old.panels.map(p => p.title), status: 'accepted' };
+                return { planId: old.id, panels: old.panels.map(p => p.title), status: old.ready ? input.dataMode === 'simulated' ? 'prepared' : 'accepted' : 'preparing' };
             }
             const id = randomUUID();
-            const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), panels: layoutWorkbench(input.panels).map((p, i) => ({ ...p, nodeId: `${id}-${i}` })) };
+            const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
+                panels: layoutWorkbench(input.panels).map((p, i) => ({ ...p, nodeId: `${id}-${i}` })) };
             if (plans.length >= 200)
                 plans = plans.filter(p => !p.applied || p.createdAt > Date.now() - 30 * 86400000);
             if (plans.length >= 1000)
@@ -80,7 +92,36 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 plans = plans.filter(p => p.id !== id);
                 throw error;
             }
-            await Promise.all(plan.panels.map(async (p) => {
+            // Let the canvas mount the exact validated plan before any panel
+            // preparation starts. The bounded fallback also supports headless
+            // sessions without an open renderer.
+            await waitForCanvas(id);
+            if (input.dataMode === 'simulated') {
+                try {
+                    if (input.panels.some(p => !p.artifact)) {
+                        const content = validateWorkbench({ ...input, generationMode: undefined,
+                            panels: input.panels.map(p => generateSimulatedPanel(p, input.title)) });
+                        for (let index = 0; index < plan.panels.length; index++)
+                            Object.assign(plan.panels[index], { title: content.panels[index].title,
+                                prompt: content.panels[index].prompt, type: content.panels[index].type,
+                                artifact: content.panels[index].artifact });
+                    }
+                    const receipts = await runtime.startPreparedBatch({ parentSessionId, panels: plan.panels.map(p => ({ canvasNodeId: p.nodeId, prompt: workbenchPanelPrompt(input, p), artifact: p.artifact })) });
+                    for (let index = 0; index < plan.panels.length; index++) plan.panels[index].taskId = receipts[index].taskId;
+                } catch (error) {
+                    for (const panel of plan.panels) panel.error = `模拟数据准备失败：${error.message}`;
+                    plan.ready = true;
+                    await persist();
+                    throw error;
+                }
+            } else if (typeof runtime.startBatch === 'function') {
+                try {
+                    const receipts = await runtime.startBatch({ parentSessionId, panels: plan.panels.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) });
+                    for (let index = 0; index < plan.panels.length; index++) plan.panels[index].taskId = receipts[index].taskId;
+                } catch (error) {
+                    for (const panel of plan.panels) panel.error = `面板任务未能启动：${error.message}`;
+                }
+            } else await Promise.all(plan.panels.map(async (p) => {
                 try {
                     const receipt = await runtime.start({ parentSessionId, canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) });
                     p.taskId = receipt.taskId;
@@ -90,8 +131,9 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 }
             }));
             plan.ready = true;
+            mountedPlans.delete(id);
             await persist();
-            return { planId: id, panels: plan.panels.map(p => p.title), status: 'accepted' };
+            return { planId: id, panels: plan.panels.map(p => p.title), status: input.dataMode === 'simulated' ? 'prepared' : 'accepted' };
         };
         const pending = chain.then(run);
         chain = pending.catch(() => { });
@@ -99,13 +141,17 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     };
     const disposeTool = ctx.tools.register(defineTool({
         name: 'research_workbench_create',
-        description: '在研究画布一次创建由独立面板组成的工作台，各面板自动并发生成。仅用于需要多个研究维度的工作台需求；简单问答直接回复。先判断最少必要面板数（2–10），分别指定用途、范围、内容类型和高度。按使用目的选择交互：新闻/政策/交易动态用 news，报告库用 reports，日历用 calendar，指标监控快照用 dashboard；金融行情、K线成交量、行业热力及市场广度用 market，面板prompt写明variant与数据口径；其它趋势用 chart，对比才用 table；综合工作台通常包含至少三种有意义的形式，避免清一色表格或长文。尊重用户明确要求的形式，不要在主会话先重复完成所有检索与报告。相同请求重试使用相同 requestId。返回 accepted 仅表示任务已提交，不表示数据已生成或监控已启用。',
+        description: '在研究画布规划并创建 2–10 个独立面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据提交 panels，不提交 artifact。同一请求重试保持 requestId。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
         parameters: {
             requestId: { type: 'string', required: true, description: '本轮需求的唯一稳定标识，重试保持一致。' },
             title: { type: 'string', required: true },
-            panels: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+            dataMode: { type: 'string', enum: ['simulated', 'source'], description: '用户允许演示数据且个人看板时使用 simulated；真实来源或共享画板省略。' },
+            generationMode: { type: 'string', enum: ['parallel'], description: '兼容旧调用；模拟数据即使传 parallel 也由宿主本地生成，不启动面板模型。新调用可省略。' },
+            preset: { type: 'string', enum: SIMULATED_WORKBENCH_PRESETS, description: '宿主内置的完整模拟工作台。设置后不要传 panels。' },
+            panels: { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题、内容边界、数据与来源，以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
-                        type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '初始规格：small 320×220、medium 656×220、large 656×456。按内容密度先选规格：核心指标/短结论用small，短表格/横向趋势用medium，复杂图表/多维对比用large。内容放不下升级，超过large则拆分组件或摘要，完整内容在放大阅读中呈现。字体不缩小、组件内无滚动条。' }
+                        type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
+                        artifact: { type: 'object', additionalProperties: true, description: '可选。已有完整模拟数据时提交；未提交则由宿主生成。禁止脚本和外部链接。' }
                     } } }
         },
         output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },
@@ -118,20 +164,30 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             if (!isTrustedRequest(req, true))
                 return send(403, { error: 'Request rejected' });
             try {
-                const { parentSessionId, acknowledged = [] } = await readJsonBody(req);
+                const { parentSessionId, acknowledged = [], mounted = [] } = await readJsonBody(req);
                 await assertPrivateResearchSession(parentSessionId);
                 if (!str(parentSessionId, 256))
                     return send(400, { error: '会话无效' });
-                if (!Array.isArray(acknowledged) || acknowledged.length > 100)
+                if (!Array.isArray(acknowledged) || acknowledged.length > 100 || !Array.isArray(mounted) || mounted.length > 100)
                     return send(400, { error: '请求无效' });
+                for (const p of plans) if (p.parentSessionId === parentSessionId && !p.ready && mounted.includes(p.id)) {
+                    mountedPlans.add(p.id);
+                    mountWaiters.get(p.id)?.();
+                }
                 if (acknowledged.length) {
                     const pending = chain.then(async () => { for (const p of plans)
-                        if (p.parentSessionId === parentSessionId && acknowledged.includes(p.id))
+                        if (p.parentSessionId === parentSessionId && p.ready && acknowledged.includes(p.id))
                             p.applied = true; await persist(); });
                     chain = pending.catch(() => { });
                     await pending;
                 }
-                send(200, { plans: plans.filter(p => p.parentSessionId === parentSessionId && p.ready && !p.applied).map(p => ({ ...p, panels: p.panels.map(panel => ({ ...panel })) })) });
+                send(200, { plans: plans.filter(p => p.parentSessionId === parentSessionId && !p.applied).map(p => ({ id: p.id, title: p.title, createdAt: p.createdAt, ready: p.ready, panels: p.panels.map(({ artifact, ...panel }) => ({
+                    ...panel,
+                    ...(!p.ready && !panel.taskId && !panel.error ? { pending: true } : {}),
+                    // A completed prepared plan can also be mounted after the
+                    // preparation finishes, such as when the renderer reloads.
+                    ...(p.dataMode === 'simulated' && panel.taskId ? { preparedOutput: runtime.inspect({ parentSessionId, taskId: panel.taskId, afterSeq: 0 }).finalOutput } : {})
+                })) })) });
             }
             catch {
                 send(400, { error: '工作台读取失败' });

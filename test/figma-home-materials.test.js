@@ -22,6 +22,47 @@ beforeAll(async () => {
 })
 afterAll(async () => { await browser?.close() })
 for (const dark of [false, true]) {
+  it(`${dark ? 'dark' : 'light'} research header overlays the canvas within the Figma 56 px bar`, async () => {
+    const page = await browser.newPage()
+    try {
+      await page.setContent(`<style>${css}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
+        <main class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="research" style="display:flex;flex-direction:column;height:400px">
+          <header class="wSkVaW_header" data-srb-session-header data-odyssey-header-layout="regular"></header>
+          <div class="wSkVaW_scrollBody" data-research-center style="flex:1;position:relative"></div>
+        </div></main>
+      </body>`)
+      const result = await page.evaluate(() => {
+        const header = document.querySelector('header')
+        const canvas = document.querySelector('[data-research-center]')
+        const bar = header.getBoundingClientRect()
+        return {
+          height: bar.height,
+          canvasTop: canvas.getBoundingClientRect().top,
+          barTop: bar.top,
+          barBottom: bar.bottom,
+          background: getComputedStyle(header).backgroundImage,
+          blur: getComputedStyle(header, '::before').backdropFilter,
+          mask: getComputedStyle(header, '::before').maskImage,
+          canvasOverlay: getComputedStyle(canvas, '::after').content,
+          topHit: document.elementFromPoint(bar.left + 5, bar.top + 5)?.closest('header') === header,
+          belowHit: document.elementFromPoint(bar.left + 5, bar.bottom + 5)?.closest('header') === header,
+        }
+      })
+      expect(result.height).toBe(56)
+      expect(result.canvasTop).toBe(result.barTop)
+      expect(result.barBottom - result.canvasTop).toBe(56)
+      expect(result.canvasOverlay).toBe('none')
+      expect(result.topHit).toBe(true)
+      expect(result.belowHit).toBe(false)
+      expect(result.blur).toBe('blur(8px)')
+      expect(result.mask).toContain('linear-gradient')
+      if (dark) {
+        expect(result.background).toContain('38.462%')
+        expect(result.background).toContain('rgba(31, 31, 31, 0)')
+      }
+    } finally { await page.close() }
+  })
+
   it(`${dark ? 'dark' : 'light'} home material survives the full cascade and leaves reading surfaces intact`, async () => {
     const page = await browser.newPage()
     try {
@@ -65,7 +106,7 @@ for (const dark of [false, true]) {
       expect(results.childBlur).toBe('blur(32px)')
       expect(results.compactHomeBlurs).toEqual(['none', 'none'])
       expect(results.childHomeParent).toMatchObject({ headerBlur: 'blur(32px)', radius: '16px' })
-      for (const reading of results.reading) expect(reading).toEqual({ color: dark ? 'rgb(41, 41, 41)' : 'rgb(249, 249, 249)', blur: 'none', headerBlur: 'blur(32px)', radius: '16px' })
+      results.reading.forEach((reading, index) => expect(reading).toEqual({ color: dark ? 'rgb(41, 41, 41)' : 'rgb(249, 249, 249)', blur: 'none', headerBlur: index < 2 ? 'blur(32px)' : 'none', radius: '16px' }))
       expect(results.sideColor).toBe(dark ? 'rgb(41, 41, 41)' : 'rgb(249, 249, 249)')
     } finally { await page.close() }
   })

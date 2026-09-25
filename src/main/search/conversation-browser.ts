@@ -1,6 +1,7 @@
 import { WebContentsView, session, type BrowserWindow, type IpcMain } from 'electron'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { readablePageUrl } from './browser-page-reader'
+import { guardResearchWebDownloads } from './research-web-downloads'
 // @ts-ignore Fixed sandbox API, shared with canvas browser interaction.
 import { createCanvasUseSurface } from '../../../packages/dsh-research-task-runtime/canvas-use-surface.js'
 
@@ -55,6 +56,7 @@ export function registerConversationBrowser(options: { ipcMain: IpcMain; getMain
     let e=entries.get(id);if(e)return e
     if(entries.size >= 8)throw Error('已打开 8 个会话浏览器，请先关闭不用的网页。')
     const browserSession=session.fromPartition('persist:research-web-pages')
+    guardResearchWebDownloads(browserSession)
     browserSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
     browserSession.setPermissionCheckHandler(()=>false)
     const view=new WebContentsView({webPreferences:{session:browserSession,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:false}})

@@ -5,6 +5,8 @@ export const SHARED_STATE_REPAIR = '共享状态验收未通过。保留用户�
 
 const key = node => node?.type === 'Identifier' ? node.name : node?.type === 'StringLiteral' ? node.value : undefined
 const member = node => node?.type === 'MemberExpression' || node?.type === 'OptionalMemberExpression'
+const localPresentationEvents = new Set(['mousemove','mouseover','mouseout','mouseenter','mouseleave','pointermove','pointerover','pointerout','pointerenter','pointerleave','resize','focus','blur'])
+const interactiveTags = new Set(['button','input','select','textarea','form','details','summary'])
 function path(node) {
   if (node?.type === 'Identifier') return node.name
   if (member(node)) return `${path(node.object)}.${key(node.property)}`
@@ -26,7 +28,9 @@ function walk(node, visit) {
 // or the application's own native artifact renderers.
 export function sharedComponentIssue(html, { required = false } = {}) {
   const scripts = [], inlineHandlers = []
+  let hasInteractiveControl = false
   function collect(node) {
+    if (interactiveTags.has(node.tagName) || node.attrs?.some(a => a.name === 'contenteditable' && a.value !== 'false')) hasInteractiveControl = true
     if (node.tagName === 'script') {
       const type = node.attrs?.find(a => a.name === 'type')?.value?.toLowerCase() || ''
       if (!type || /^(?:module|(?:text|application)\/(?:javascript|ecmascript))$/.test(type)) {
@@ -44,13 +48,21 @@ export function sharedComponentIssue(html, { required = false } = {}) {
     for (const source of inlineHandlers) programs.push(parseScript(`function handler(event){${source}\n}`))
   } catch { return '组件脚本语法无效，无法验证共享状态接入。' }
   const registrations = [], calls = [], bindings = new Map()
+  let hasBusinessInteraction = hasInteractiveControl || inlineHandlers.length > 0
   for (const program of programs) walk(program, node => {
     if (node.type === 'FunctionDeclaration' && node.id) bindings.set(node.id.name, node)
     if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier') bindings.set(node.id.name, node.init)
+    if (node.type === 'AssignmentExpression' && member(node.left) && /^on[a-z]+$/.test(key(node.left.property) || '') && !localPresentationEvents.has(key(node.left.property).slice(2))) hasBusinessInteraction = true
     if (node.type !== 'CallExpression' && node.type !== 'OptionalCallExpression') return
     calls.push(node)
+    const called = path(node.callee)
+    if (['setInterval','window.setInterval','globalThis.setInterval','setTimeout','window.setTimeout','globalThis.setTimeout','requestAnimationFrame','window.requestAnimationFrame','globalThis.requestAnimationFrame'].includes(called)) hasBusinessInteraction = true
+    if (key(node.callee.property) === 'addEventListener' && !localPresentationEvents.has(node.arguments[0]?.value)) hasBusinessInteraction = true
+    if (key(node.callee.property) === 'createElement' && interactiveTags.has(node.arguments[0]?.value)) hasBusinessInteraction = true
     if (['window.sherlockShared.register','globalThis.sherlockShared.register','sherlockShared.register'].includes(path(node.callee))) registrations.push(node)
   })
+  // Hover, resize, and one-time rendering have no shared business state.
+  if (!required && !hasBusinessInteraction) return undefined
   if (registrations.length !== 1) return '有脚本交互的组件必须实际注册一个共享状态容器；注释和文字中的接口名称不算接入。'
   let config = registrations[0].arguments[0]
   if (config?.type === 'Identifier') config = bindings.get(config.name)

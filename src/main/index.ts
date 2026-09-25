@@ -15,6 +15,7 @@ import { TaskStore } from './scheduled/task-store'
 import { TaskRunner, harnessRpc } from './scheduled/task-runner'
 import { createDesktopComputer } from './computer/desktop-computer'
 import { registerConversationBrowser } from './search/conversation-browser'
+import { guardUnexpectedErrorDownloads } from './search/research-web-downloads'
 import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
 import { registerResearchNativeWeb } from './state/research-native-web'
@@ -831,6 +832,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     getRouter: () => researchCanvasWheelRouter,
     onRejected: (error) => console.warn('[research-canvas] rejected wheel region update', error)
   })
+  guardUnexpectedErrorDownloads(session.defaultSession)
   const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry})
   registerCanvasUseWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,native:nativeResearchWeb.contents,authorize:(id,write)=>{if(!researchBoardsService)throw Error('画板服务尚未就绪');researchBoardsService.authorizeCanvasUse(id,write)}})
   registerResearchLinkFrameHandlers({

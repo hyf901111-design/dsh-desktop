@@ -14,6 +14,7 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.files.v1:',
   'sherlock.research.canvas.artifacts.v1:',
   'sherlock.research.canvas.selection.v1:',
+  'sherlock.research.canvas.viewport.v1:',
   'sherlock.research.canvas.preview-revocations.v1:',
   'sherlock.research.session-engaged.v1:'
 ] as const
@@ -58,6 +59,7 @@ export class ResearchCanvasStorage {
     if (!validResearchCanvasStorageKey(key) || !validResearchCanvasStorageValue(value)) {
       return false
     }
+    if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
     if (this.getItem(key) === value) return true
 
     const filePath = researchCanvasStoragePath(this.userDataPath, key)
@@ -88,7 +90,8 @@ export class ResearchCanvasStorage {
       const parsed = JSON.parse(readFileSync(filePath, 'utf8')) as unknown
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
       const record = parsed as { key?: unknown; value?: unknown }
-      if (record.key !== key || !validResearchCanvasStorageValue(record.value)) return null
+      if (record.key !== key || !validResearchCanvasStorageValue(record.value) ||
+          (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256)) return null
       return record.value
     } catch {
       return null

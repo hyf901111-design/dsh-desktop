@@ -7,6 +7,7 @@ import { patchFigmaUpdateWorkspace } from '../scripts/lib/figma-updates-client.m
 import { patchFigmaWorkspaceMenus } from '../scripts/lib/figma-workspace-menus.mjs'
 import {
   patchResearchBoardConversation,
+  patchLegacyDashboardPreview,
   patchResearchBoardSidebar,
   patchResearchBoardWorkspace
 } from '../scripts/lib/patch-research-board-client.mjs'
@@ -93,6 +94,12 @@ describe('real research board module adapter', () => {
   it('patches exact actual modules idempotently and fails closed on drift', async () => {
     const { raw, source } = await load()
     expect(await patchResearchBoardConversation(source)).toBe(source)
+    const previewSource = patchLegacyDashboardPreview(source)
+    expect(patchLegacyDashboardPreview(previewSource)).toBe(previewSource)
+    const previewStart = previewSource.indexOf('const MARKET_PRESENTATION_CSS = ')
+    const previewEnd = previewSource.indexOf('function buildResearchHtmlPreview(', previewStart)
+    expect(previewStart).toBeGreaterThan(0)
+    expect(previewSource.slice(previewStart, previewEnd)).toContain('ODYSSEY_MARKET_PRESENTATION_V2')
     await expect(
       patchResearchBoardConversation(
         raw.replace(

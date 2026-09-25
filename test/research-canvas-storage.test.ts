@@ -42,6 +42,15 @@ describe('desktop Research canvas storage', () => {
     expect(new ResearchCanvasStorage(userData).getItem(key)).toBe('1')
   })
 
+  it('persists the bounded canvas viewport across a desktop storage restart', () => {
+    const userData = temporaryUserData()
+    const key = 'sherlock.research.canvas.viewport.v1:fund-board'
+    const value = JSON.stringify({ x: 96, y: 100, scale: 0.85 })
+    expect(new ResearchCanvasStorage(userData).setItem(key, value)).toBe(true)
+    expect(new ResearchCanvasStorage(userData).getItem(key)).toBe(value)
+    expect(new ResearchCanvasStorage(userData).setItem(key, 'x'.repeat(257))).toBe(false)
+  })
+
   it('persists the preview revocation outbox through production IPC and a storage restart', () => {
     const userData = temporaryUserData()
     const key = 'sherlock.research.canvas.preview-revocations.v1:session-restart'

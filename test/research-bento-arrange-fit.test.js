@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
+import { Window } from 'happy-dom';
 import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
 import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
 
@@ -16,7 +17,8 @@ async function patchedWorkspace() {
   const old=source.replace('researchBentoLayout(nodes, researchCanvasVisibleArea({canvasSize}), measured, {fitColumns:true})','researchBentoLayout(nodes, canvasSize, measured)');
   const upgraded=patchFigmaFinalCanvas(old);
   expect(patchFigmaFinalCanvas(upgraded)).toBe(upgraded);
-  let descriptor;runInNewContext(upgraded,{window:{__ModuleLoader__:{load:v=>descriptor=v}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
+  const window=new Window();
+  let descriptor;runInNewContext(upgraded,{document:window.document,window:{__ModuleLoader__:{load:v=>descriptor=v}},URL,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout});
   let fallback;fallback=new Proxy(function(){},{get:()=>fallback,apply:()=>fallback});
   const client=descriptor.factory(()=>fallback);
   const values=new Map(), storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>{values.set(k,v);return true}};
@@ -58,7 +60,7 @@ describe('D69 arrange fits columns in the unobstructed viewport',()=>{
     expect(before.artifacts.every(n=>n.sourceNodeIds?.[0]==='reference')).toBe(true);
     expect(workspace.organizeCanvas()).toBe(true);
     const after=workspace.getSnapshot();
-    const expected=researchBentoLayout(native,{width:740,height:736},new Map(),{fitColumns:true});
+    const expected=researchBentoLayout(before.artifacts,{width:740,height:736},new Map(),{fitColumns:true});
     expect(after.viewport).toEqual(expected.viewport);
     expect(after.selection).toEqual(before.selection);
     expect(after.artifacts.map(n=>[n.id,n.excerpt,n.sourceNodeIds])).toEqual(before.artifacts.map(n=>[n.id,n.excerpt,n.sourceNodeIds]));

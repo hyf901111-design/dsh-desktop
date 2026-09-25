@@ -60,6 +60,8 @@ export function createCanvasActionController(adapter) {
         lastAction=null
       } else {
         if(Object.keys(args).some(k=>!['requestId','revision','changes'].includes(k)) || !Array.isArray(args.changes) || !args.changes.length || args.changes.length>1000) fail('变更列表无效。')
+        if (args.changes.some(change => change?.op === 'arrange') && args.changes.length !== 1)
+          fail('自动整理不能与坐标、尺寸或内容修改同批执行；请只提交 arrange，或只提交明确的更新。')
         let next=clone(before)
         for(const change of args.changes) {
           if (!object(change)) fail('变更无效。')

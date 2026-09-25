@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -57,15 +57,22 @@ describe('macOS package runtime verification', () => {
         )
         writeFileSync(path.join(runtimeRoot, 'package.json'), '{"type":"module"}\n')
         symlinkSync(nodeModulesPath, path.join(runtimeRoot, 'node_modules'))
+        cpSync(path.join(projectRoot, 'build', 'integration-catalog'), path.join(resourcesPath, 'integration-catalog'), { recursive: true })
         // The package verifier also checks the independent plugin runtime tree.
-        const pluginLlmRoot = path.join(resourcesPath, 'sherlock-plugin-profile', 'modules', '@deepseek-ai', 'dsh-llm')
-        mkdirSync(path.join(pluginLlmRoot, 'lib'), { recursive: true })
-        for (const file of ['package.json', 'lib/index.js']) {
-          copyFileSync(path.join(nodeModulesPath, '@deepseek-ai', 'dsh-llm', file), path.join(pluginLlmRoot, file))
+        for (const packageName of ['dsh-llm', 'dsh-skill']) {
+          const pluginPackageRoot = path.join(resourcesPath, 'sherlock-plugin-profile', 'modules', '@deepseek-ai', packageName)
+          mkdirSync(path.join(pluginPackageRoot, 'lib'), { recursive: true })
+          for (const file of ['package.json', 'lib/index.js']) {
+            copyFileSync(path.join(nodeModulesPath, '@deepseek-ai', packageName, file), path.join(pluginPackageRoot, file))
+          }
         }
         symlinkSync(
           path.join(projectRoot, 'skills', 'efund-ppt-maker'),
           path.join(packagedSkillRoot, 'efund-ppt-maker')
+        )
+        symlinkSync(
+          path.join(projectRoot, 'skills', 'ework-workbench-components'),
+          path.join(packagedSkillRoot, 'ework-workbench-components')
         )
 
         const strictResult = spawnSync(
@@ -90,10 +97,12 @@ describe('macOS package runtime verification', () => {
         expect(result.status, result.stderr).toBe(0)
         expect(result.stdout).toContain('apache-arrow: loadable')
         expect(result.stdout).toContain('signature: skipped (unsigned CI package)')
+        expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.5.0 (source parity)')
         expect(result.stdout).toContain('package: verified')
       } finally {
         rmSync(temporaryRoot, { recursive: true, force: true })
       }
-    }
+    },
+    15_000
   )
 })

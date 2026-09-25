@@ -28,4 +28,16 @@ describe('generated shared-state acceptance', () => {
    expect(sharedComponentIssue('<p>研究报告</p><script type="application/ld+json">{}</script>')).toBeUndefined()
    expect(sharedComponentIssue(page('const ='))).toContain('语法')
  })
+ it('allows scripted static display and local hover without demanding shared business state', () => {
+   const chart='<canvas id="chart"></canvas><script>const canvas=document.querySelector("canvas");canvas.addEventListener("mousemove",e=>canvas.title=String(e.offsetX));canvas.addEventListener("mouseleave",()=>canvas.title="");window.addEventListener("resize",()=>canvas.width=300);</script>'
+   const orderBook='<div id="book"></div><script>const initial={price:"1478.60"};const handle=window.sherlockShared.register({initialState:initial,reduce:s=>s,render:s=>document.getElementById("book").textContent=s.price});document.getElementById("book").textContent=initial.price;</script>'
+   expect(sharedComponentIssue(chart)).toBeUndefined()
+   expect(sharedComponentIssue(orderBook)).toBeUndefined()
+   expect(sharedComponentIssue(orderBook,{required:true})).toBeTruthy()
+ });
+ it('still requires shared state for controls, nonlocal events, and independent animation', () => {
+   expect(sharedComponentIssue('<button>买入</button><script>document.querySelector("button").onclick=()=>{}</script>')).toBeTruthy()
+   expect(sharedComponentIssue('<div id="book"></div><script>setInterval(()=>document.getElementById("book").textContent=Date.now(),100)</script>')).toBeTruthy()
+   expect(sharedComponentIssue('<canvas></canvas><script>document.addEventListener("keydown",()=>{});</script>')).toBeTruthy()
+ });
 })

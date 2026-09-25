@@ -38,11 +38,16 @@ it.each([
   const action=vi.fn(()=>true),m=await mount(status,{[callback]:action})
   const button=m.query('button[aria-label="'+label+'"]')
   expect(button).not.toBeNull();expect(m.win.getComputedStyle(button).width).toBe('24px');expect(m.win.getComputedStyle(button).height).toBe('24px')
-  await React.act(async()=>button.focus())
-  const tooltip=m.query('[role="tooltip"]');expect(tooltip?.textContent).toBe(label)
+  const tooltip=m.win.document.querySelector('[role="tooltip"]') as any;expect(tooltip?.textContent).toBe(label)
   expect(button.getAttribute('aria-describedby')).toBe(tooltip.id)
+  expect(m.win.getComputedStyle(tooltip).visibility).toBe('hidden')
+  await React.act(async()=>button.focus())
+  expect(m.win.document.querySelector('[role="tooltip"]')).toBe(tooltip)
+  await m.render()
+  expect(m.win.document.querySelector('[role="tooltip"]')).toBe(tooltip)
   await React.act(async()=>button.dispatchEvent(new m.win.KeyboardEvent('keydown',{key:'Escape',bubbles:true})))
-  expect(m.query('[role="tooltip"]')).toBeNull()
+  expect(m.win.document.querySelector('[role="tooltip"]')).toBe(tooltip)
+  expect(tooltip.hasAttribute('data-visible')).toBe(false)
   await m.click(button);expect(action).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({id:'manual',width:240,height:620,sizeMode:'manual'}))
 })
 it('keeps stop pending until inspection returns a terminal state and can recover from a rejected request',async()=>{
@@ -70,29 +75,34 @@ it('opens the matching child in the right panel without inline records or resizi
 it('does not claim resume support without an existing resume capability',async()=>{
   const m=await mount('paused');expect(m.query('[aria-label="继续生成"]')).toBeNull()
 })
-it('keeps waiting time at 00:00 instead of counting queue time as execution',async()=>{
+it('shows total waiting time while keeping the queued motion paused',async()=>{
   const m=await mount('queued')
-  expect(m.query('[data-research-generation-elapsed]').textContent).toBe('00:00')
-  const initial=Date.now();vi.spyOn(Date,'now').mockReturnValue(initial+20000)
-  try { await m.render('queued');expect(m.query('[data-research-generation-elapsed]').textContent).toBe('00:00') }
-  finally {vi.restoreAllMocks()}
+  const before=m.query('[data-research-generation-elapsed]').textContent
+  expect(before).toMatch(/^00:(?:18|19)$/)
+  await React.act(async()=>{await new Promise(resolve=>setTimeout(resolve,1100))})
+  const after=m.query('[data-research-generation-elapsed]').textContent
+  expect(Number(after.slice(-2))).toBeGreaterThan(Number(before.slice(-2)))
+  expect(m.win.getComputedStyle(m.query('[data-research-generation-dots]')).animationPlayState).toBe('paused')
 })
 
 it('renders the full source dot field on an isolated canvas without the old opacity-wave mask',async()=>{
   const m=await mount('queued')
   const dots=m.query('[data-research-generation-dots]')
   expect(dots.tagName).toBe('CANVAS')
-  expect(dots.getAttribute('aria-hidden')).toBe('true')
+  expect(dots.parentElement?.getAttribute('aria-hidden')).toBe('true')
   expect(m.win.getComputedStyle(dots).getPropertyValue('mask-image')).not.toContain('linear-gradient')
 })
 
-it('rolls real public progress every 600ms and freezes after stopping',async()=>{
+it('advances execution detail only on new public events and freezes after stopping',async()=>{
  vi.useFakeTimers()
  const m=await mount('running');m.node.generationEvents=[{seq:1,type:'tool-started',tool:'web_search',detail:'检索行业资料'},{seq:2,type:'tool-started',tool:'financial_query',detail:'查询指数行情'}] as any
  await m.render();const first=m.query('[data-progress-ticker]')?.textContent
  expect(first).toBeTruthy()
  await React.act(async()=>{vi.advanceTimersByTime(600)})
- expect(m.query('[data-progress-ticker]')?.textContent).not.toBe(first)
+ expect(m.query('[data-progress-ticker]')?.textContent).toBe(first)
+ ;(m.node.generationEvents as any[]).push({seq:3,type:'tool-started',tool:'内容校验',detail:'正在核对新一批数据'})
+ await m.render()
+ expect(m.query('[data-progress-ticker]')?.textContent).toContain('正在核对新一批数据')
  await m.render('cancelled');expect(m.query('[data-progress-ticker]')).toBeNull()
  const stopped=m.host.textContent
  await React.act(async()=>{vi.advanceTimersByTime(1800)})

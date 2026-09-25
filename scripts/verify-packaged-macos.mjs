@@ -122,19 +122,18 @@ try {
     const runtimeRoot = path.join(resourcesPath, 'app')
     const runtimeNode = path.join(runtimeRoot, 'node_modules', 'node', 'bin', 'node')
     execFileSync(runtimeNode, ['-e', "const h=require(process.argv[1]); if(typeof h.draw!=='function'||typeof h.cancel!=='function')process.exit(1)", path.join(resourcesPath, 'native', 'computer-stroke.node')], { stdio: 'inherit' })
+    execFileSync(runtimeNode, ['-e', "const h=require(process.argv[1]); if(typeof h.start!=='function'||typeof h.stop!=='function'||typeof h.state!=='function')process.exit(1)", path.join(resourcesPath, 'native', 'computer-capture.node')], { stdio: 'inherit' })
     const computerDriver = path.join(resourcesPath, 'native', 'cua-driver')
     if (!existsSync(computerDriver)) throw new Error('Computer use driver is missing')
     const driverVersion = execFileSync(computerDriver, ['--version'], { encoding: 'utf8' }).trim()
     if (driverVersion !== 'cua-driver 0.28.2') throw new Error(`Unexpected computer driver: ${driverVersion}`)
     if (!existsSync(path.join(resourcesPath, 'native', 'cua-driver-MIT.txt'))) throw new Error('Computer driver license is missing')
-    const bundledSkill = verifyBundledSkillParity({
-      sourceSkillDirectory: path.resolve('skills', 'efund-ppt-maker'),
-      packagedSkillDirectory: path.join(
-        resourcesPath,
-        'sherlock-skills',
-        'efund-ppt-maker'
-      )
-    })
+    const bundledSkills = ['efund-ppt-maker', 'ework-workbench-components'].map((slug) =>
+      verifyBundledSkillParity({
+        sourceSkillDirectory: path.resolve('skills', slug),
+        packagedSkillDirectory: path.join(resourcesPath, 'sherlock-skills', slug)
+      })
+    )
 
     const updateRecovery = path.join(resourcesPath, 'update-recovery.cjs')
     if (!existsSync(updateRecovery)) throw new Error('macOS rename recovery helper is missing')
@@ -148,7 +147,9 @@ try {
     } else {
       verifySignature(appPath)
     }
-    console.log(`bundled skill: ${bundledSkill.slug} ${bundledSkill.version} (source parity)`)
+    for (const bundledSkill of bundledSkills) {
+      console.log(`bundled skill: ${bundledSkill.slug} ${bundledSkill.version} (source parity)`)
+    }
     console.log(`package: verified (${appPath})`)
   } else {
     if (skipSignature) {

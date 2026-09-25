@@ -9,7 +9,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import { apply as spawn } from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import { createApiProxy } from '@deepseek-ai/dsh-host-apiproxy'
-import { createSharedBoardExecutor } from '../packages/dsh-research-task-runtime/index.js'
+import { componentModelSelection, createSharedBoardExecutor } from '../packages/dsh-research-task-runtime/index.js'
 
 const rpc = payload => ({ rpcId: 'model-test', payload })
 const selected = { provider: 'selected-provider', model: 'selected-model' }
@@ -62,6 +62,12 @@ async function fixture() {
 }
 
 describe('research task selected model admission', () => {
+  it('uses a supported concise reasoning mode only for generated components', () => {
+    const models = { current: selected, groups: [{ id: selected.provider, models: [{ id: selected.model, reasoning: { efforts: [{ id: 'high' }, { id: 'low' }] } }] }] }
+    expect(componentModelSelection(models, 'container')).toEqual({ ...selected, reasoningEffort: 'low' })
+    expect(componentModelSelection(models, 'board')).toEqual(selected)
+    expect(componentModelSelection({ ...models, groups: [] }, 'container')).toEqual(selected)
+  })
   it.each(['blank', 'previously-run'])('routes a real spawn from a selected %s parent without changing history or other native request options', async state => {
     const f = await fixture()
     try {
