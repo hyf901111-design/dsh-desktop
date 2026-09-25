@@ -39,19 +39,21 @@ const medical21h = [
             ['青禾生物','MOCK03','78.62','+1.84','35.0','2.25','申报进展'],
             ['安澜制药','MOCK04','41.38','+0.76','41.0','1.01','临床会议'],
             ['启星器械','MOCK05','36.20','-0.35','26.0','1.39','产品注册'],
-            ['远航药研','MOCK06','94.50','+3.28','48.0','1.97','III 期结果']
+            ['远航药研','MOCK06','94.50','+3.28','48.0','1.97','III 期结果'],
+            ['恒立生科','MOCK07','57.90','+0.91','31.0','1.87','注册申请']
         ]
     }),
     panel('重点在研管线', 'pipeline', { stages: ['临床前','I 期','II 期','III 期','注册'], items: [
         { name: 'HC-101', target: 'PD-1 / VEGF 双抗', stage: 4, nextDate: '2026-07-15' },
         { name: 'MY-202', target: 'HER2 ADC', stage: 3, nextDate: '2026-08-02' },
         { name: 'QH-303', target: 'GLP-1R', stage: 2, nextDate: '2026-08-20' },
-        { name: 'AL-404', target: 'KRAS G12D', stage: 2, nextDate: '2026-09-04' },
-        { name: 'QX-505', target: 'CD19 CAR-T', stage: 3, nextDate: '2026-09-18' },
-        { name: 'YH-606', target: 'BCL-2', stage: 1, nextDate: '2026-10-06' }
+        { name: 'AL-404', target: 'KRAS G12D', stage: 2, nextDate: '2026-09-04' }
     ] }),
     panel('近期行业事件', 'events', { items: [
-        { date: '07-15 09:00', object: '华辰医药', event: 'III 期数据读出', focus: '关注主要终点、耐受性与后续申报计划', window: '7 月中旬', status: '待公布' }
+        { date: '07-15 09:00', object: '华辰医药', event: 'III 期数据读出', focus: '关注主要终点、耐受性与后续申报计划', window: '7 月中旬', status: '待公布' },
+        { date: '07-22 14:00', object: '明远医疗', event: '中期业绩交流', focus: '海外销售与研发费用变化', window: '7 月下旬', status: '待召开' },
+        { date: '08-02 10:00', object: '青禾生物', event: '创新药注册沟通', focus: '申报材料完整性和监管反馈', window: '8 月上旬', status: '待审批' },
+        { date: '08-12 09:30', object: '启星器械', event: '产品注册进展', focus: '临床验证及获批时间', window: '8 月中旬', status: '待跟进' }
     ] })
 ];
 

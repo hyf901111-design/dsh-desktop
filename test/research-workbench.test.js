@@ -111,6 +111,28 @@ describe('研究工作台', () => {
         expect(pending[2].x).toBe(496);
         expect(pending[3].y-pending[3].height/2).toBe(472);
     });
+    it('keeps a six-card medical preset in a compact matrix as source-sized cards complete', () => {
+        const pending = Array.from({length:6},(_,index)=>({
+            id:`medical-${index}`,workbenchId:'medical',workbenchIndex:index,
+            workbenchSpan:index===0,width:320,height:220,generationStatus:'queued'
+        }));
+        const initial=researchWorkbenchMatrixNodes(pending,0,0);
+        expect(initial.map(node=>[node.x-node.width/2,node.y-node.height/2])).toEqual([
+            [168,0],[0,236],[336,236],[0,472],[336,472],[0,708]
+        ]);
+        const sizes=[[896,144],[536,264],[348,264],[536,258],[348,258],[896,110]];
+        const before={artifacts:initial,canvasSize:{width:897,height:740}};
+        const after={...before,artifacts:initial.map((node,index)=>({...node,
+            width:sizes[index][0],height:sizes[index][1],generationStatus:'completed',
+            ...(index===5?{containerSpec:{type:'html',html:'<body data-sherlock-market="events">'}}:{})
+        }))};
+        const settled=settleWorkbenchLayout(before,after).artifacts;
+        expect(settled.map(node=>[node.x-node.width/2,node.y-node.height/2])).toEqual([
+            [0,0],[0,156],[548,156],[0,432],[548,432],[0,702]
+        ]);
+        const viewport=readableWorkbenchViewport(settled,{x:0,y:0,scale:1},before.canvasSize);
+        expect((settled[5].x+settled[5].width/2)*viewport.scale+viewport.x).toBeLessThanOrEqual(897);
+    });
     it('resizes a 144px market metrics card smoothly while preserving generic minimums', async () => {
         const client = await bundle();
         const html = renderMarketArtifact({version:1,type:'market',variant:'metrics',title:'模拟指标',asOf:'模拟',
@@ -463,7 +485,7 @@ describe('研究工作台', () => {
         const {artifacts,viewport}=workspace.getSnapshot();
         expect(artifacts).toHaveLength(6);
         expect(artifacts[5].containerSpec.html).toContain('data-sherlock-market="events"');
-        expect(viewport.scale).toBeGreaterThanOrEqual(.85);
+        expect(viewport.scale).toBeGreaterThanOrEqual(.79);
         expect((artifacts[5].y+artifacts[5].height/2)*viewport.scale+viewport.y).toBeLessThanOrEqual(742);
         // Prior builds stored an automatic prepared layout as "manual". Restore
         // that exact top-left fit, then verify it is upgraded on the next open.
@@ -476,7 +498,7 @@ describe('研究工作台', () => {
         const reopened=client.createResearchWorkspaceSession(storage,'medical-viewport');
         reopened.setCanvasSize({width:899,availableWidth:899,height:906,visibleHeight:828});
         const restored=reopened.getSnapshot();
-        expect(restored.viewport.scale).toBeGreaterThanOrEqual(.85);
+        expect(restored.viewport.scale).toBeGreaterThanOrEqual(.79);
         expect((restored.artifacts[5].y+restored.artifacts[5].height/2)*restored.viewport.scale+restored.viewport.y).toBeLessThanOrEqual(742);
         const manual={...restored.viewport,x:restored.viewport.x+40};
         reopened.setViewport(manual);

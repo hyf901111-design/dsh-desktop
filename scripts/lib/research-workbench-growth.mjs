@@ -37,22 +37,28 @@ export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
 
 export function researchWorkbenchMatrixNodes(nodes, left, top) {
   const ordered = [...nodes].sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0));
-  const spanLead = ordered.length >= 3 && ordered.length%2===1 &&
+  const spanLead = ordered.length >= 3 &&
     (ordered[0].workbenchSpan===true || ordered[0].width>=800 && ordered[0].height<=220);
   const start = spanLead ? 1 : 0;
   const rest = ordered.slice(start);
-  const leftWidth = Math.max(...rest.filter((_,i)=>i%2===0).map(n=>n.width));
-  const rightWidth = Math.max(...rest.filter((_,i)=>i%2===1).map(n=>n.width));
-  let y = top + (spanLead ? ordered[0].height+16 : 0);
+  const spanTail = spanLead && rest.length%2===1 && rest.at(-1).width>=800;
+  const paired = spanTail ? rest.slice(0,-1) : rest;
+  const gap=ordered.some(node=>node.containerSpec?.html?.includes('data-sherlock-market="events"'))?12:16;
+  const leftWidth = Math.max(0,...paired.filter((_,i)=>i%2===0).map(n=>n.width));
+  const rightWidth = Math.max(0,...paired.filter((_,i)=>i%2===1).map(n=>n.width));
+  const totalWidth=leftWidth+gap+rightWidth;
+  const centeredX=width=>Math.abs(totalWidth-width)<=gap?0:Math.max(0,(totalWidth-width)/2);
+  let y = top + (spanLead ? ordered[0].height+gap : 0);
   const positions = new Map();
   if (spanLead) {
     const node=ordered[0];
-    positions.set(node.id,{...node,x:left+(leftWidth+16+rightWidth)/2,y:top+node.height/2});
+    positions.set(node.id,{...node,x:left+centeredX(node.width)+node.width/2,y:top+node.height/2});
   }
   for (let i=0;i<rest.length;i++) {
-    if (i && i%2===0) y += Math.max(rest[i-2].height,rest[i-1].height)+16;
+    if (i && i%2===0) y += Math.max(rest[i-2].height,rest[i-1].height)+gap;
     const node=rest[i];
-    positions.set(node.id,{...node,x:left+(i%2?leftWidth+16:0)+node.width/2,y:y+node.height/2});
+    const x=spanTail&&i===rest.length-1?centeredX(node.width):i%2?leftWidth+gap:0;
+    positions.set(node.id,{...node,x:left+x+node.width/2,y:y+node.height/2});
   }
   return nodes.map(n=>positions.get(n.id));
 }
@@ -70,8 +76,9 @@ export function settleWorkbenchLayout(before, next) {
       return !old || old.width!==n.width || old.height!==n.height || old.generationStatus!==n.generationStatus;
     });
     if (!changed) continue;
-    const left = Math.min(...nodes.map(n=>n.x-n.width/2));
-    const top = Math.min(...nodes.map(n=>n.y-n.height/2));
+    const anchor = prior.length ? prior : nodes;
+    const left = Math.min(...anchor.map(n=>n.x-n.width/2));
+    const top = Math.min(...anchor.map(n=>n.y-n.height/2));
     const positions = new Map(researchWorkbenchMatrixNodes(nodes,left,top).map(n=>[n.id,n]));
     next = {...next,artifacts:next.artifacts.map(n=>positions.get(n.id)??n)};
   }

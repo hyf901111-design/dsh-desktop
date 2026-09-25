@@ -127,8 +127,9 @@ describe('21H medical source composition', () => {
   it('builds the complete six-card medical demo from a short host preset call', () => {
     const prepared = validateWorkbench({ requestId: 'medical-preset', title: '医药行业研究工作台', dataMode: 'simulated', preset: 'medical-21h' });
     expect(prepared.panels.map(panel => panel.artifact.variant)).toEqual(['metrics', 'trend', 'scatter', 'table', 'pipeline', 'events']);
+    expect([prepared.panels[3].artifact.rows.length, prepared.panels[4].artifact.items.length, prepared.panels[5].artifact.items.length]).toEqual([7, 4, 4]);
     expect(layoutWorkbench(prepared.panels).map(panel => [panel.width, panel.height])).toEqual([
-      [896, 144], [536, 264], [348, 264], [536, 258], [348, 258], [896, 110]
+      [896, 144], [536, 264], [348, 264], [536, 258], [348, 258], [896, 166]
     ]);
     for (const panel of prepared.panels) {
       expect(panel.artifact.asOf).toContain('模拟');
