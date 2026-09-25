@@ -22,7 +22,16 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
     let artifact;
     if (panel.type === 'market') {
         const variant = marketVariant(panel);
-        artifact = variant === 'fund-kpi' ? { variant, items: [] }
+        artifact = variant === 'price-volume' ? {
+            version: 1, type: 'market', variant, priceUnit: '元', volumeUnit: '股',
+            labels: Array.from({ length: 65 }, (_, index) => `模拟交易日 ${index + 1}`),
+            prices: Array.from({ length: 65 }, (_, index) => +(100 + index * .18 + Math.sin(index / 4) * 1.5).toFixed(2)),
+            volumes: Array.from({ length: 65 }, (_, index) => 9000 + (index * 317) % 5300)
+        } : variant === 'order-book' ? {
+            version: 1, type: 'market', variant, priceUnit: '元', sizeUnit: '股',
+            bids: Array.from({ length: 10 }, (_, index) => ({ price: +(108.66 - index * .01).toFixed(2), size: 900 + index * 120 })),
+            asks: Array.from({ length: 10 }, (_, index) => ({ price: +(108.67 + index * .01).toFixed(2), size: 1100 + index * 90 }))
+        } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }
                     : sample('market', variant);

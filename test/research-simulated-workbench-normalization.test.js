@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js';
 import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js';
+import { generateSimulatedPanel } from '../packages/dsh-research-task-runtime/simulated-workbench-generator.js';
 
 const panel = (title, type, artifact) => ({ title, type, size: 'large', prompt: `展示${title}的模拟数据`, artifact });
 const plan = (first, second) => ({
@@ -12,6 +13,16 @@ const metric = panel('医药行业核心指标（模拟）', 'market', {
 });
 
 describe('真实客户端模拟工作台输入修复', () => {
+  it('批量准备量价和盘口固定模板，不在规划后因模拟样本缺失而失败', () => {
+    const price = generateSimulatedPanel({ title: '贵州茅台量价联动', prompt: 'variant: price-volume；模拟价格与成交量', type: 'market', size: 'large' }, '证券量价与盘口工作台');
+    const book = generateSimulatedPanel({ title: '贵州茅台买卖盘口', prompt: 'variant: order-book；模拟买卖十档', type: 'market', size: 'large' }, '证券量价与盘口工作台');
+    expect(price.artifact.labels).toHaveLength(65);
+    expect(book.artifact.bids).toHaveLength(10);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(price.artifact))).html).toContain('data-sherlock-market="price-volume"');
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(book.artifact))).html).toContain('data-sherlock-market="order-book"');
+    const prepared = validateWorkbench({ requestId: 'market-two-new', title: '证券量价与盘口工作台', dataMode: 'simulated', panels: [price, book] });
+    expect(prepared.panels.map(item => item.artifact.variant)).toEqual(['price-volume', 'order-book']);
+  });
   it('将仅多包一层的表格单元格展开为完整列，保留原始文字', () => {
     const table = panel('重点覆盖估值与盈利预期（模拟）', 'market', {
       asOf: '2026-02-06 15:00', columns: ['公司', '代码', '收盘', '涨跌', 'PE', 'EPS'],
