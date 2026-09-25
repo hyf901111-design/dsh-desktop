@@ -33,7 +33,7 @@
 | 23 | `market.order-book` | 买卖档位、价格、数量、价差、时点 | 档位数切换、逐档读数 | `market.order-book`；客户端已验收逐档读数，10 档切换待验收 |
 | 24 | `market.fund-flow` | 时间或行业、流入/流出/净额 | 时间/行业筛选、读数、完整表 | `market.fund-flow`；待客户端验收 |
 | 25 | `market.valuation-band` | 日期、估值分位区间、当前估值 | 时间区间、分位读数、完整表 | `market.valuation-band`；待客户端验收 |
-| 26 | `fund.equity-drawdown` | 日期、净值、基准、回撤 | 时间范围、净值/回撤切换、完整表 | 待新增固定模板 |
+| 26 | `fund.equity-drawdown` | 日期、净值、基准、回撤 | 时间范围、净值/回撤切换、完整表 | `market.equity-drawdown`；待客户端验收 |
 | 27 | `research.allocation-donut` | 分类、数值、比例、总量 | 图例筛选、选片读数、完整表 | 待新增固定模板 |
 | 28 | `research.waterfall` | 起点、分项增减、终点、单位 | 分项读数、完整表 | 待新增固定模板 |
 | 29 | `research.funnel` | 阶段、数量、转化率 | 阶段详情、完整表 | 待新增固定模板 |

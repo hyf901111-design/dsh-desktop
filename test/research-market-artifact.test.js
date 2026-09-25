@@ -152,6 +152,27 @@ it('rejects reversed quantile thresholds or missing valuation observations',()=>
  expect(acceptArtifactOutput(JSON.stringify({...base,values:[20]}))).toBeUndefined()
  expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.valuation-band 的结构化数据')).toBeNull()
 })
+it('computes fund drawdown from the historical peak and switches views without losing source rows',()=>{
+ const d=render({variant:'equity-drawdown',labels:['第一日','第二日','第三日'],equity:[1,1.2,.9],benchmark:[1,1.1,1.2],unit:'元'})
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(3)
+ expect(d.querySelectorAll('tbody tr')[2].textContent).toContain('-25%')
+ const chart=d.querySelector('.market-equity-drawdown svg')
+ d.defaultView.eval(d.querySelector('script').textContent)
+ expect(d.querySelectorAll('.drawdown-benchmark')).toHaveLength(1)
+ d.querySelector('[data-drawdown-view="drawdown"]').click()
+ expect(d.querySelectorAll('.drawdown-area')).toHaveLength(1)
+ expect(d.querySelectorAll('.drawdown-benchmark')).toHaveLength(0)
+ expect(d.querySelector('.drawdown-readout').textContent).toContain('回撤 -25%')
+ chart.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Home',bubbles:true}))
+ expect(d.querySelector('.drawdown-readout').textContent).toContain('第一日 · 净值 1 元')
+ expect(marketVariant({title:'基金净值与回撤'})).toBe('equity-drawdown')
+})
+it('rejects mismatched fund benchmark rather than drawing a false comparison',()=>{
+ const base={version:1,type:'market',variant:'equity-drawdown',title:'净值',asOf:'模拟',labels:['一','二'],equity:[1,1.1],benchmark:[1,1.05],unit:'元'}
+ expect(acceptArtifactOutput(JSON.stringify({...base,benchmark:[1]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,equity:[1,0]}))).toBeUndefined()
+ expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.equity-drawdown 的结构化数据')).toBeNull()
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')

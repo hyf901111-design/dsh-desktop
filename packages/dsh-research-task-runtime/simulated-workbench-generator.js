@@ -42,6 +42,11 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
             labels: Array.from({ length: 65 }, (_, index) => `模拟交易日 ${index + 1}`),
             values: Array.from({ length: 65 }, (_, index) => +(20 + index * .035 + Math.sin(index / 5) * 2.1).toFixed(2)),
             bands: { p10: 17.8, p25: 19.2, p50: 21.1, p75: 23.3, p90: 24.8 }
+        } : variant === 'equity-drawdown' ? {
+            version: 1, type: 'market', variant, unit: '元',
+            labels: Array.from({ length: 65 }, (_, index) => `模拟交易日 ${index + 1}`),
+            equity: Array.from({ length: 65 }, (_, index) => +(1 + index * .003 + Math.sin(index / 6) * .025).toFixed(4)),
+            benchmark: Array.from({ length: 65 }, (_, index) => +(1 + index * .002 + Math.sin(index / 8) * .012).toFixed(4))
         } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }

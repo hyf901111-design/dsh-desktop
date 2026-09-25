@@ -33,6 +33,12 @@ describe('真实客户端模拟工作台输入修复', () => {
     expect(valuation.artifact.values).toHaveLength(65);
     expect(JSON.parse(acceptArtifactOutput(JSON.stringify(valuation.artifact))).html).toContain('valuation-band-middle');
   });
+  it('为基金净值回撤模板准备同长净值与基准序列', () => {
+    const panel = generateSimulatedPanel({ title: '基金净值与回撤', prompt: 'variant: equity-drawdown', type: 'market', size: 'large' }, '基金组合观察工作台');
+    expect(panel.artifact.equity).toHaveLength(65);
+    expect(panel.artifact.benchmark).toHaveLength(65);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact))).html).toContain('drawdown-controls');
+  });
   it('将仅多包一层的表格单元格展开为完整列，保留原始文字', () => {
     const table = panel('重点覆盖估值与盈利预期（模拟）', 'market', {
       asOf: '2026-02-06 15:00', columns: ['公司', '代码', '收盘', '涨跌', 'PE', 'EPS'],
