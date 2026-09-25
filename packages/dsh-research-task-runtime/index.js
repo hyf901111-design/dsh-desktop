@@ -1608,10 +1608,8 @@ export function createSubagentAdapter(ctx) {
       const childTools = (parentToolNames ?? fallbackTools).filter(name =>
         name !== 'run_code' &&
         (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
-        // When an authorized specialist is available, keep the generic
-        // financial adapter out of the first attempt. Models otherwise pick
-        // its familiar name even when the prompt says to use DataYes first.
-        !(kind === 'container' && preferredSources.length && name === 'financial_query') &&
+        // Keep the generic financial adapter as a last-resort fallback when
+        // the specialist's search, catalog, or business API is unavailable.
         !(kind === 'container' && containerExcludedTools.has(name)) &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )

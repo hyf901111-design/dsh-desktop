@@ -1222,7 +1222,7 @@ describe('Research task Subagent adapter', () => {
     expect(child.prompt[0].text).not.toContain('优先调用 financial_query')
     expect(child.prompt[0].text).not.toContain('金融数据先使用 financial_query')
     expect(child.toolFilter.allow).toContain('ework__datayes_call')
-    expect(child.toolFilter.allow).not.toContain('financial_query')
+    expect(child.toolFilter.allow).toContain('financial_query')
     await handle.dispose()
   })
 
