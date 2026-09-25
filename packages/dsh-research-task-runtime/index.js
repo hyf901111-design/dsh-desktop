@@ -1603,6 +1603,10 @@ export function createSubagentAdapter(ctx) {
       ])
       const childTools = (parentToolNames ?? fallbackTools).filter(name =>
         (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
+        // When an authorized specialist is available, keep the generic
+        // financial adapter out of the first attempt. Models otherwise pick
+        // its familiar name even when the prompt says to use DataYes first.
+        !(kind === 'container' && preferredSources.length && name === 'financial_query') &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
       const run = await startComponentAgent(ctx, {
@@ -1639,7 +1643,10 @@ export function createSubagentAdapter(ctx) {
         researchClosed = true
         liftResearchLimit = child.ctx.tools.restrict({ deny: [...networkTools] })
       }
-      const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(() => { researchLimitDue = true }, 120000) : undefined
+      // Leave time within the child's 180-second budget for the template JSON.
+      // Financial tools can otherwise occupy almost the whole first attempt,
+      // causing a second 90-second synthesis run and visible panel timeouts.
+      const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(() => { researchLimitDue = true }, 90000) : undefined
       const seen = new Set()
       const deliver = (event) => {
         const seq = event?.seq

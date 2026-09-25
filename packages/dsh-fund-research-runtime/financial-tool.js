@@ -29,6 +29,13 @@ export function createFinancialTool(provider) {
       try {
         if (Object.hasOwn(args, 'operation')) throw serviceError('FINANCIAL_ARGUMENTS_INVALID')
         const input = { ...args, operation: 'financial' }
+        // resolve is the discovery operation: an omitted asset must not turn
+        // an otherwise usable name into a repeated validation failure.
+        if (input.intent === 'resolve' && input.asset === undefined && typeof input.query === 'string') {
+          input.asset = /ETF|交易型开放式/iu.test(input.query) ? 'etf'
+            : /基金|净值/iu.test(input.query) ? 'fund'
+              : /指数|全指|沪深|中证|上证|深证|^H\d{5}$/iu.test(input.query) ? 'index' : 'stock'
+        }
         // Fund research already fixes the asset class. Models may repeat this
         // harmless discriminator; keep the hosted wire contract canonical.
         if (input.intent === 'research' && input.asset === 'fund') delete input.asset

@@ -278,11 +278,17 @@ function stopHarnessThemePreferenceSync(): void {
   harnessThemePreferenceSyncTimer = undefined
 }
 
+const nativeChromeConfigured = new WeakSet<BrowserWindow>()
 function applyWindowChromeTheme(window: BrowserWindow, isDark: boolean): void {
   if (window.isDestroyed()) return
   if (process.platform === 'darwin') {
+    // The window constructor already owns the transparent native material.
+    // Reapplying vibrancy during renderer theme/DOM updates can rebuild the
+    // whole NSVisualEffectView and briefly expose the backing window.
+    if (nativeChromeConfigured.has(window)) return
     window.setBackgroundColor('#00000000')
     window.setVibrancy('menu')
+    nativeChromeConfigured.add(window)
     return
   }
 
@@ -580,6 +586,7 @@ function createWindow(): BrowserWindow {
     }
   })
   if (process.platform === 'darwin') {
+    nativeChromeConfigured.add(window)
     installWindowResize(window)
     window.setWindowButtonVisibility(true)
     window.setWindowButtonPosition({ x: 12, y: 9 })

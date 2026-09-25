@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { afterAll, beforeAll, expect, it } from 'vitest'
+import sharp from 'sharp'
 
 // Use the actual stylesheet order. The newer universal input rule intentionally
 // makes every composer opaque; only empty-home header and corner rules differ.
@@ -21,6 +22,35 @@ beforeAll(async () => {
   browser = await chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
 })
 afterAll(async () => { await browser?.close() })
+
+it('research header fades identically at both edges and softens content below its controls', async () => {
+  const page = await browser.newPage({ viewport: { width: 720, height: 160 }, deviceScaleFactor: 1 })
+  try {
+    await page.setContent(`<style>${css}</style><style>
+      body { margin:0 }
+      .tile { position:absolute; top:0; width:30px; height:140px; background:#00c880 }
+      .tile.left { left:85px }
+      .tile.right { right:10px }
+    </style><body data-ds-dark-theme>
+      <main class="pI_x6G_centerCol" style="width:720px;height:160px;margin:0">
+        <div class="wSkVaW_root" data-odyssey-page="research" style="display:flex;height:160px">
+          <header class="wSkVaW_header" data-srb-session-header></header>
+          <div class="wSkVaW_scrollBody" data-research-center style="position:relative;flex:1">
+            <i class="tile left"></i><i class="tile right"></i>
+          </div>
+        </div>
+      </main>
+    </body>`)
+    const bar = await page.locator('header').boundingBox()
+    const { data, info } = await sharp(await page.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+    const green = (x, y) => data[(Math.round(y) * info.width + Math.round(x)) * info.channels + 1]
+    const left = green(bar.x + 100, bar.y + 44)
+    const right = green(bar.x + bar.width - 25, bar.y + 44)
+    expect(Math.abs(left - right)).toBeLessThan(6)
+    expect(green(bar.x + bar.width - 25, bar.y + 72)).toBeLessThan(160)
+  } finally { await page.close() }
+})
+
 for (const dark of [false, true]) {
   it(`${dark ? 'dark' : 'light'} research header overlays the canvas within the Figma 56 px bar`, async () => {
     const page = await browser.newPage()
@@ -40,7 +70,6 @@ for (const dark of [false, true]) {
           canvasTop: canvas.getBoundingClientRect().top,
           barTop: bar.top,
           barBottom: bar.bottom,
-          background: getComputedStyle(header).backgroundImage,
           blur: getComputedStyle(header, '::before').backdropFilter,
           mask: getComputedStyle(header, '::before').maskImage,
           canvasOverlay: getComputedStyle(canvas, '::after').content,
@@ -56,10 +85,6 @@ for (const dark of [false, true]) {
       expect(result.belowHit).toBe(false)
       expect(result.blur).toBe('blur(8px)')
       expect(result.mask).toContain('linear-gradient')
-      if (dark) {
-        expect(result.background).toContain('38.462%')
-        expect(result.background).toContain('rgba(31, 31, 31, 0)')
-      }
     } finally { await page.close() }
   })
 

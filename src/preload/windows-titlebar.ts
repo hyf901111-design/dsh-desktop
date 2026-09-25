@@ -29,14 +29,21 @@ export function mountNativeThemeSync(
   if (!document.body || nativeThemeSyncedDocuments.has(document)) return
   nativeThemeSyncedDocuments.add(document)
 
-  syncTheme(document, ipcRenderer)
-  const themeObserver = new MutationObserver(() => syncTheme(document, ipcRenderer))
+  let lastTheme: boolean | undefined
+  const syncIfChanged = () => {
+    const theme = documentIsDark(document)
+    if (theme === lastTheme) return
+    lastTheme = theme
+    syncTheme(document, ipcRenderer, theme)
+  }
+  syncIfChanged()
+  const themeObserver = new MutationObserver(syncIfChanged)
   themeObserver.observe(document.body, {
     attributes: true,
     attributeFilter: ['data-ds-dark-theme']
   })
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    syncTheme(document, ipcRenderer)
+    syncIfChanged()
   })
 }
 
@@ -249,8 +256,7 @@ function execute(
   })
 }
 
-function syncTheme(document: Document, ipcRenderer: Pick<IpcRenderer, 'invoke'>): void {
-  const isDark = documentIsDark(document)
+function syncTheme(document: Document, ipcRenderer: Pick<IpcRenderer, 'invoke'>, isDark = documentIsDark(document)): void {
   void ipcRenderer.invoke('desktop-titlebar:set-theme', isDark).catch((error: unknown) => {
     console.warn('[desktop-titlebar] unable to synchronize native theme', error)
   })

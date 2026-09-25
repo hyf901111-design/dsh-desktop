@@ -1218,10 +1218,11 @@ describe('Research task Subagent adapter', () => {
     const handle = await fixture.start('生成白酒行业最新行情资讯面板')
     const child = fixture.ctx.subagents.start.mock.calls[0][1]
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
-    expect(child.prompt[0].text).toContain('优先选与面板字段最匹配的通联工具取可溯源数据')
+    expect(child.prompt[0].text).toContain('先实际调用与面板字段最匹配的通联工具取可溯源数据')
     expect(child.prompt[0].text).not.toContain('优先调用 financial_query')
     expect(child.prompt[0].text).not.toContain('金融数据先使用 financial_query')
     expect(child.toolFilter.allow).toContain('ework__datayes_call')
+    expect(child.toolFilter.allow).not.toContain('financial_query')
     await handle.dispose()
   })
 
@@ -1281,7 +1282,7 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 10, type: 'tool/result', data: {} });
     expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
     fixture.ctx.emit(fixture.ctx.child.session, { seq: 11, type: 'step/end', data: {} });
-    expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledExactlyOnceWith({ deny: ['web_search', 'web_fetch', 'financial_query'] });
+    expect(new Set(fixture.ctx.child.ctx.tools.restrict.mock.calls[0][0].deny)).toEqual(new Set(['web_search', 'web_fetch', 'financial_query']));
     expect(fixture.ctx.child.steer).not.toHaveBeenCalled();
     await handle.dispose();
     expect(lift).toHaveBeenCalledTimes(1);

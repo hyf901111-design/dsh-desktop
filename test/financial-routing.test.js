@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { createFinancialRouter } from '../services/fund-data/financial/router.js'
 import { quoteQuality } from '../services/fund-data/financial/policy.js'
 import { projectCatalog, projectAnalysis, projectLegacyOperation } from '../services/fund-data/financial/projection.js'
-import { validateFinancialQuery, validateFinancialResult, LIMITATIONS } from '../packages/dsh-fund-research-runtime/financial-contract.js'
+import { validateFinancialQuery, validateFinancialResult, financialHash, LIMITATIONS } from '../packages/dsh-fund-research-runtime/financial-contract.js'
 import { createFinancialTool } from '../packages/dsh-fund-research-runtime/financial-tool.js'
 import { createHostedFundProvider } from '../packages/dsh-fund-research-runtime/hosted-provider.js'
 import { FundCoordinator } from '../services/fund-data/coordinator.js'
@@ -243,6 +243,22 @@ describe('financial admission, hosted transport and storage',()=>{
       expect(tool.name).toBe('financial_query')
       await expect(tool.execute({intent:'quote',asset:'stock',symbols:['300033.SZ'],provider:'x'},{})).rejects.toThrow()
       expect(fetch).toHaveBeenCalledTimes(1)
+    } finally {vi.useRealTimers()}
+  })
+  it('infers the asset for resolve discovery without changing explicit asset choices', async()=>{
+    const calls=[]
+    const tool=createFinancialTool({ financial: async query => {
+      calls.push(query)
+      return { schema_version:'financial-1',request_hash:financialHash(query),received_at:NOW.toISOString(),status:'unavailable',records:[],limitations:['部分数据暂缺。'] }
+    } })
+    vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(NOW)
+    try {
+      for (const [query,asset] of [['中证全指电力指数','index'],['H30199','index'],['长江电力','stock'],['沪深300ETF','etf'],['电力主题基金','fund']]) {
+        await tool.execute({intent:'resolve',query},{})
+        expect(calls.at(-1)).toMatchObject({intent:'resolve',query,asset})
+      }
+      await tool.execute({intent:'resolve',asset:'stock',query:'沪深300'},{})
+      expect(calls.at(-1).asset).toBe('stock')
     } finally {vi.useRealTimers()}
   })
 })

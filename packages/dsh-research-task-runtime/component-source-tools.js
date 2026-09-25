@@ -13,5 +13,5 @@ export function preferredComponentSourceTools(schemas, request) {
 
 export function componentSourceInstruction(tools) {
   if (!tools?.length) return ''
-  return `当前会话可见的通联 DataYes 金融数据工具：${tools.map(tool => `${tool.name}（${tool.description}）`).join('；')}。优先选与面板字段最匹配的通联工具取可溯源数据：行情、历史序列和估值先找数据 API、读取定义、再实际调用；研报、公告、会议资料使用对应检索工具。接口发现的结果不是数据本身。若连接权限、数据覆盖或接口不可用，再使用 financial_query，最后补充 web_search/web_fetch。只使用已授权工具，不绕过客户端的调用确认；已有足够证据时立即交付，不重复检索。`
+  return `当前会话可见的通联 DataYes 金融数据工具：${tools.map(tool => `${tool.name}（${tool.description}）`).join('；')}。先实际调用与面板字段最匹配的通联工具取可溯源数据：行情、历史序列和估值先找数据 API、读取定义、再实际调用；研报、公告、会议资料使用对应检索工具。接口发现的结果不是数据本身。若通联接口无权限、无覆盖或不可用，使用 web_search/web_fetch 查找可核验来源，已有证据直接填写宿主模板。只使用已授权工具，不绕过客户端的调用确认；同一查询失败后更换来源或保留已得数据，不重复无效调用。`
 }
