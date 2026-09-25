@@ -44,6 +44,11 @@ describe('真实客户端模拟工作台输入修复', () => {
     expect(panel.artifact.items.reduce((sum, item) => sum + item.value, 0)).toBe(100);
     expect(JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact))).html).toContain('allocation-legend');
   });
+  it('为增减瀑布模板准备可推导期末余额的本地模拟样本', () => {
+    const panel = generateSimulatedPanel({ title: '利润增减瀑布图', prompt: 'variant: waterfall', type: 'market', size: 'large' }, '经营观察工作台');
+    expect(panel.artifact.changes.reduce((sum, item) => sum + item.value, panel.artifact.start)).toBe(116);
+    expect(JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact))).html).toContain('waterfall-readout');
+  });
   it('将仅多包一层的表格单元格展开为完整列，保留原始文字', () => {
     const table = panel('重点覆盖估值与盈利预期（模拟）', 'market', {
       asOf: '2026-02-06 15:00', columns: ['公司', '代码', '收盘', '涨跌', 'PE', 'EPS'],

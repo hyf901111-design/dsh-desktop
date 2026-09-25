@@ -50,6 +50,9 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
         } : variant === 'allocation-donut' ? {
             version: 1, type: 'market', variant, unit: '%',
             items: ['股票', '债券', '现金', '商品', '其他'].map((label, index) => ({ label, value: [42, 28, 15, 10, 5][index] }))
+        } : variant === 'waterfall' ? {
+            version: 1, type: 'market', variant, unit: '亿元', start: 100, startLabel: '期初', endLabel: '期末',
+            changes: [{ label: '收入增长', value: 24 }, { label: '成本增加', value: -11 }, { label: '费用减少', value: 6 }, { label: '其他调整', value: -3 }]
         } : variant === 'fund-kpi' ? { variant, items: [] }
             : variant === 'fund-holdings' ? { variant, columns: [], rows: [] }
                 : variant === 'fund-industry' ? { variant, items: [] }

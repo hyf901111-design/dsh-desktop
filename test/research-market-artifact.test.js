@@ -191,6 +191,23 @@ it('rejects empty or nonpositive allocations',()=>{
  expect(acceptArtifactOutput(JSON.stringify({...base,items:[{label:'股票',value:2}]}))).toBeUndefined()
  expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.allocation-donut 的结构化数据')).toBeNull()
 })
+it('derives every waterfall balance and exposes selectable change bars',()=>{
+ const d=render({variant:'waterfall',start:100,changes:[{label:'收入',value:20},{label:'成本',value:-8}],unit:'亿元',startLabel:'期初',endLabel:'期末'})
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(4)
+ expect(d.querySelectorAll('tbody tr')[3].textContent).toContain('112')
+ d.defaultView.eval(d.querySelector('script').textContent)
+ const bars=d.querySelectorAll('.waterfall-bar')
+ expect(bars).toHaveLength(4)
+ bars[2].dispatchEvent(new d.defaultView.Event('click'))
+ expect(d.querySelector('.waterfall-readout').textContent).toContain('成本 -8 亿元 · 120 → 112 亿元')
+ expect(marketVariant({title:'利润增减瀑布图'})).toBe('waterfall')
+})
+it('rejects nonnumeric waterfall adjustments',()=>{
+ const base={version:1,type:'market',variant:'waterfall',title:'瀑布',asOf:'模拟',start:100,changes:[{label:'收入',value:20}],unit:'亿元'}
+ expect(acceptArtifactOutput(JSON.stringify({...base,changes:[{label:'收入',value:'20'}]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...base,changes:[]}))).toBeUndefined()
+ expect(workbenchMarketVariantIssue(acceptArtifactOutput(JSON.stringify(base)),'必须输出 market.waterfall 的结构化数据')).toBeNull()
+})
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')
