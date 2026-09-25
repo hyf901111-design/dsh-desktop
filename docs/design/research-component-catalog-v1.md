@@ -10,7 +10,7 @@
 |---:|---|---|---|---|
 | 1 | `market.quote-metrics` | 标的、最新价、涨跌、成交额、时点 | 指标详情、来源 | `market.metrics` |
 | 2 | `market.candlestick` | 日期、开高低收、成交量或明确缺失 | 标的切换、可用区间、指针/键盘读数、完整表 | `market.candlestick` |
-| 3 | `market.trend` | 日期、同量纲序列、单位 | 序列图例、读数、完整表 | `market.trend`；选点待加强 |
+| 3 | `market.trend` | 日期、同量纲序列、单位 | 序列图例、指针/键盘选点读数、完整表 | `market.trend` |
 | 4 | `market.valuation-scatter` | 标的、横纵轴值与口径 | 样本读数、图例、完整表 | `market.scatter`；键盘选点待加强 |
 | 5 | `market.quote-table` | 代码、名称、价格、涨跌、时点 | 排序、详情链接、横向滚动 | `market.table` |
 | 6 | `research.pipeline` | 项目、阶段、目标、下一节点 | 阶段说明、项目详情 | `market.pipeline`；详情待加强 |
