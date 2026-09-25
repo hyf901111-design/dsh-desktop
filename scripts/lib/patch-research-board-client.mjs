@@ -619,7 +619,7 @@ export function canvasWheelPassThroughPatch(source) {
     `const preview = selected && event.target?.closest?.("[data-research-preview-interactive]");
                     const passToCanvas = preview && frame?.matches?.("[data-research-artifact-card]") && !preview.querySelector("iframe") && !researchPreviewCanConsumeWheel(event.target, preview, event.deltaX, event.deltaY);
                     if (!event.metaKey && !event.ctrlKey && interactivePreview && !event.__sherlockCanvasPan && !passToCanvas) return;`)
-  return source + `\nconst researchPreviewCanConsumeWheel = ${researchPreviewCanConsumeWheel.toString()};\n/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */`
+  return source + `\nvar researchPreviewCanConsumeWheel = ${researchPreviewCanConsumeWheel.toString()};\n/* SHERLOCK_SELECTED_COMPONENT_WHEEL_V2 */`
 }
 
 function canvasInteractionPatch(source) {

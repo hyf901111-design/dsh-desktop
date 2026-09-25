@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { researchPreviewCanConsumeWheel } from '../scripts/lib/patch-research-board-client.mjs'
+import { createContext, runInContext } from 'node:vm'
+import { canvasWheelPassThroughPatch, researchPreviewCanConsumeWheel } from '../scripts/lib/patch-research-board-client.mjs'
 
 function scrollElement({ height = 200, contentHeight = 200, top = 0, overflow = 'auto', parent = null } = {}) {
   const style = { overflowY: overflow, overflowX: 'hidden' }
@@ -11,6 +12,13 @@ function scrollElement({ height = 200, contentHeight = 200, top = 0, overflow = 
 }
 
 describe('selected component wheel ownership', () => {
+  it('allows a reconnect to evaluate the bundled wheel helper twice', () => {
+    const patched = canvasWheelPassThroughPatch('if (!event.metaKey && !event.ctrlKey && interactivePreview) return;')
+    const helper = patched.slice(patched.indexOf('\nvar researchPreviewCanConsumeWheel'))
+    const context = createContext({})
+    expect(() => { runInContext(helper, context); runInContext(helper, context) }).not.toThrow()
+  })
+
   it('returns the wheel to the canvas when the component has no overflow', () => {
     const component = scrollElement()
     const child = scrollElement({ parent: component })

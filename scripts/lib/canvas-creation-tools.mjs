@@ -256,7 +256,7 @@ function patchComponentMarquee(source) {
 }
 function installCreationStyle(source) {
   source = source.replace(/\n;\(\(\)=>\{const id='odyssey-creation-tools-style';[^\n]+\n/g, '\n')
-  return source.trimEnd() + `\n;(()=>{const id='odyssey-creation-tools-style';document.getElementById(id)?.remove();const style=document.createElement('style');style.id=id;style.textContent=${JSON.stringify(creationToolsCss)};document.head.append(style)})();\n`
+  return source.trimEnd() + `\n;(()=>{if(typeof document==='undefined')return;const id='odyssey-creation-tools-style';document.getElementById(id)?.remove();const style=document.createElement('style');style.id=id;style.textContent=${JSON.stringify(creationToolsCss)};document.head.append(style)})();\n`
 }
 export const creationToolsCss = `
 [data-research-canvas] [data-research-marquee]{border-width:var(--odyssey-marquee-stroke,1px)!important;border-color:#0d99ff!important}
