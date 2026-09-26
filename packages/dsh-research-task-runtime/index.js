@@ -1304,7 +1304,12 @@ export class ResearchTaskRuntime {
         catch (error) {
           if (!structured || !['INVALID_OUTPUT', 'OUTPUT_TOO_LARGE', 'GENERATION_FAILED', 'SHARED_STATE_REQUIRED', DESIGN_POLICY_ERROR].includes(error.code)) throw error
           output = undefined; generationError = error
-          if (error.code === 'INVALID_OUTPUT' && sourceRecords.length && /"type"\s*:\s*"data-bound"/u.test(deliveredText)) bindingRepairEvidence = componentBindingEvidence(sourceRecords)
+          // Progress prose and malformed JSON can fail before the missing-binding
+          // check above. Keep verified responses in that same bounded repair.
+          if (error.code === 'INVALID_OUTPUT' && sourceRecords.length && (
+            /"type"\s*:\s*"data-bound"/u.test(deliveredText) ||
+            task.kind === 'container' && workbenchPanelFormat(task.prompt) && typeof this.adapter.bindData === 'function'
+          )) bindingRepairEvidence = componentBindingEvidence(sourceRecords)
           if (error.code === 'SHARED_STATE_REQUIRED') sharedStateError = error
           if (error.code === DESIGN_POLICY_ERROR) designPolicyError = error
         }
