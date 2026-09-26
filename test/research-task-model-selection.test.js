@@ -9,7 +9,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import { apply as spawn } from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import { createApiProxy } from '@deepseek-ai/dsh-host-apiproxy'
-import { componentModelSelection, createSharedBoardExecutor } from '../packages/dsh-research-task-runtime/index.js'
+import { componentModelSelection, createSubagentAdapter } from '../packages/dsh-research-task-runtime/index.js'
 
 const rpc = payload => ({ rpcId: 'model-test', payload })
 const selected = { provider: 'selected-provider', model: 'selected-model' }
@@ -51,12 +51,18 @@ async function fixture() {
   ctx.on('session/created', session => { if (session.header.parentSession === parent.id) children.push(session) })
   // A deployment request contribution must remain effective on the isolated child.
   ctx.on('agent/request', async (_payload, next) => ({ ...await next(), temperature: 0.37, reasoningEffort: 'high' }))
-  const executor = createSharedBoardExecutor(ctx)
+  const executor = createSubagentAdapter(ctx)
   const choose = async choice => {
     const response = await api.sessions.selectModel(rpc({ sessionId: parent.id, ...choice }))
     expect(response.result, JSON.stringify(response.result)).toMatchObject({ ok: true })
   }
-  const execute = (signal = new AbortController().signal) => executor.execute({ sessionId: parent.id, kind: 'board', prompt: '只使用本地材料回答', taskId: 'task-model' }, signal)
+  const execute = async (signal = new AbortController().signal) => {
+    // Shared-board Q&A now runs on the main agent; exercise the actual spawn
+    // adapter here because this suite verifies isolated child model selection.
+    const handle = await executor.start({ parentSessionId: parent.id, kind: 'board', query: '只使用本地材料回答', prompt: '只使用本地材料回答', signal, onSessionEvent: () => {} })
+    try { return (await handle.result).output.filter(block => block.type === 'text').map(block => block.text).join('\n') }
+    finally { await handle.dispose() }
+  }
   return { ctx, parent, api, controls, registration, requests, children, choose, execute,
     async close() { await executor.dispose(); await ctx.fiber.dispose() } }
 }

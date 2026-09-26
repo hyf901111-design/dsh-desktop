@@ -1,5 +1,6 @@
 import {assertPrivateResearchSession} from './board-runtime.js'
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { canvasHumanRequest } from './canvas-task-routing.js';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { defineTool } from '@deepseek-ai/dsh-tools';
@@ -60,6 +61,10 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         await rename(tmp, filePath);
     };
     const create = (args, exec) => {
+        if (args?.requestId === undefined) {
+            const messageId = canvasHumanRequest(exec.agent?.session)?.messageId;
+            if (messageId) args = { ...args, requestId: `auto-${createHash('sha256').update(messageId).digest('hex')}` };
+        }
         const capture = sharedPlans.get(exec.agent?.session?.id);
         if (capture) {
             exec.signal?.throwIfAborted();
@@ -149,7 +154,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         name: 'research_workbench_create',
         description: '在研究画布新增 1–10 个独立面板；此工具不会替换、刷新或删除已有组件。用户要求更新已有组件时，先 research_canvas_inspect；金融模板用 research_canvas_update_market 直接提交结构化数据，其他组件用 research_canvas_apply 修改其 containerSpec；不要把新增结果称为替换。用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据已取到时直接将完整结构化数据放入各 panel.artifact，宿主即刻填充预置模板，不启动逐卡模型；仅尚未取到数据的面板走子任务。不可把模拟数据标为真实来源。面板子任务不继承主对话的工具返回；如果主对话已取数，必须在对应 prompt 中传递实际数值、日期、单位及真实调用来源，不能只列待查字段或说“已取得”，否则子任务会重复检索。仅调用 financial_query 的记录不得标为通联；不同来源分别标注。返回 accepted 仅表示面板任务已启动，回复应说生成中，不能声称全部完成；prepared 才表示宿主已准备好内容。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
         parameters: {
-            requestId: { type: 'string', required: true, description: '本轮需求的唯一稳定标识，重试保持一致。' },
+            requestId: { type: 'string', description: '可选。本轮需求的稳定标识，重试保持一致；省略时宿主根据当前用户消息生成，重复调用不会重复建卡。' },
             title: { type: 'string', required: true },
             dataMode: { type: 'string', enum: ['simulated', 'source'], description: '用户允许演示数据且个人看板时使用 simulated；真实来源或共享画板省略。' },
             generationMode: { type: 'string', enum: ['parallel'], description: '兼容旧调用；模拟数据即使传 parallel 也由宿主本地生成，不启动面板模型。新调用可省略。' },

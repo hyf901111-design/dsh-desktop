@@ -32,7 +32,7 @@ const encryption = { isEncryptionAvailable: () => true, encryptString: value => 
 
 async function fixture(mode = 'native') {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'ework-research-integrations-')))
-  const ctx = new Context(), entered = deferred(), finish = deferred(), requests = [], admitted = [], handles = []
+  const ctx = new Context(), entered = deferred(), finish = deferred(), requests = [], admitted = [], handles = [], modelRequests = []
   let service, bridge, runtime, adapter, server
   cleanups.push(async () => {
     finish.resolve()
@@ -52,8 +52,10 @@ async function fixture(mode = 'native') {
   })
   // The model transport is deterministic and local; tools still execute through real Harness dispatch.
   class LocalModel extends LlmAdapter {
-    async resolveModel(provider, id) { return { provider, id, name: id } }
-    async *stream() {
+    async resolveModel(provider, id) { return { provider, id, name: id, reasoning: { efforts: [{ id: 'low', name: 'Low' }, { id: 'max', name: 'Max' }], defaultEffort: 'max' } } }
+    async listModels(provider) { return [{ provider, id: 'local', name: 'Local' }] }
+    async *stream(request) {
+      modelRequests.push(request)
       entered.resolve(); await finish.promise
       yield { type: 'block-start', index: 0, blockType: 'text' }
       yield { type: 'text-delta', index: 0, text: '本机数据验证完成' }
@@ -67,7 +69,8 @@ async function fixture(mode = 'native') {
   ctx.provide('settings', { register: () => ({ get: () => ({ selections: [] }), replace: async () => {} }) })
   const parent = (await ctx.agents.create({ sessionId: 'research-parent', meta: { cwd: root }, agentOptions: { provider: 'fixture-model', model: 'local' } })).agent
   if (mode === 'code') parent.ctx.tools.presentAs('code')
-  const api = createApiProxy(ctx, { cwd: root })
+  const api = createApiProxy(ctx, { cwd: root, defaultModelSelection: () => ({ provider: 'fixture-model', model: 'local' }) })
+  ctx.provide('apiProxy', api)
   const sessions = async () => {
     const response = await api.sessions.list({ rpcId: randomUUID(), payload: {} })
     if (!response.result.ok) throw Error(response.result.error.message)
@@ -116,12 +119,17 @@ async function fixture(mode = 'native') {
     return child
   }
   const invoke = (child, name) => ctx.tools.execute({ name, arguments: {}, callId: randomUUID(), agent: child, signal: new AbortController().signal })
-  return { ctx, parent, start, names, runtime, requests, admitted, sessions, invoke, liftParentRestriction, mutate, connection }
+  return { ctx, parent, start, names, runtime, requests, admitted, sessions, invoke, liftParentRestriction, mutate, connection, modelRequests }
 }
 
 describe('research children inherit authorized EWork tools', () => {
+  it('uses the selected concise effort in the actual first component model request', async () => {
+    const f = await fixture(); await f.start('container')
+    expect(f.modelRequests[0].reasoningEffort).toBe('low')
+  })
   it.each(['qa', 'board', 'container'])('lets a real %s child call parent-visible data without widening the parent scope', async kind => {
     const f = await fixture(), child = await f.start(kind)
+    expect(f.modelRequests[0].tools.map(tool => tool.name)).toContain(f.names.visible)
     const childNames = f.ctx.tools.schemas(child).map(tool => tool.name)
     expect(childNames).toContain(f.names.visible)
     expect(childNames).not.toContain(f.names.hidden)

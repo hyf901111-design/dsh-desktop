@@ -8,6 +8,20 @@ import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../p
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 afterEach(() => vi.unstubAllGlobals())
 describe('workbench execution policy', () => {
+  it('applies the early plan before the first human message is committed to session history', () => {
+    const pending = { header: {}, events: [
+      ...session('解释上一张图').events,
+      { type: 'agent/inbox/spliced', data: { inserted: [session('使用通联创建宁德时代工作台').events[0].data] } },
+      { type: 'agent/inbox/spliced', data: { removedCount: 1, inserted: [] } }
+    ] }
+    let prompt
+    registerWorkbenchExecutionPolicy({ systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
+    expect(prompt.text({ agent: { session: pending } })).toContain('立即调用 research_workbench_create')
+    pending.events.push({ type: 'agent/inbox/spliced', data: { inserted: [{ ...session('创建工作台').events[0].data, source: { kind: 'tool' } }] } })
+    expect(workbenchCreationRequest(pending).text).toBe('使用通联创建宁德时代工作台')
+    pending.events.push(...session('解释一下当前数据').events)
+    expect(workbenchCreationRequest(pending)).toBeNull()
+  })
   it('recognizes human creation intent without changing coding questions or tool output', () => {
     expect(workbenchCreationRequest(session('使用通联mcp获取数据，创建一个股票研究工作台'))).not.toBeNull()
     for (const text of ['为什么生成工作台这么慢', '不要生成工作台', '修复组件生成逻辑', '请创建登录界面']) expect(workbenchCreationRequest(session(text))).toBeNull()
