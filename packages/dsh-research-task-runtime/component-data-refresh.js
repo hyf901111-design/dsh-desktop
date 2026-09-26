@@ -52,7 +52,10 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
    rows=keyed.sort((a,b)=>(a.key<b.key?-1:a.key>b.key?1:0)*(mapping.$order==='desc'?-1:1)).map(v=>v.value)
   }
   if(mapping.$take!==undefined){if(!Number.isInteger(mapping.$take)||!mapping.$take||Math.abs(mapping.$take)>2000)throw Error('列表数量无效');rows=mapping.$take>0?rows.slice(0,mapping.$take):rows.slice(mapping.$take)}
-  const mapped=rows.map(item=>next(mapping.$map,item))
+  // An explicit collection plus a field path is a scalar row selector. Keep
+  // conversions on the outer expression so units and precision apply once.
+  const rowMapping=!Object.hasOwn(mapping,'$map')&&mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:mapping.$map
+  const mapped=rows.map(item=>next(rowMapping,item))
   if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return scalarMapping(mapped[0],mapping)}
   return scalarMapping(mapped,mapping)
  }
