@@ -7,7 +7,7 @@ function canvasWorkspaceActions(adapter) {
     describe(node,collection) {
       const fields={title:{type:'string',maxLength:256,description:'画板内显示标题，不重命名原文件。'}}
       if(collection==='artifacts' && researchCanvasArtifactContentEditable(node))fields.excerpt={type:'string',maxLength:120000,description:'组件正文。'}
-      if(collection==='artifacts' && node.containerSpec && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus))fields.containerSpec={type:'object',description:'当前组件的完整内容对象；先按 ID 查看 content，保留原结构，修改所需字段。提交后由该组件解析器验证。'}
+      if(collection==='artifacts' && (node.containerSpec || node.kind==='generated-container' && ['failed','cancelled','interrupted'].includes(node.generationStatus)) && !RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus))fields.containerSpec={type:'object',description:'当前组件的完整内容对象；先按 ID 查看 content，保留原结构，修改所需字段。提交后由该组件解析器验证。'}
       fields.width={type:'number',minimum:80,maximum:RESEARCH_CANVAS_MAX_NODE_SIZE,description:'宽度；组件比例约束由原生布局校验。'};
       fields.height={type:'number',minimum:80,maximum:RESEARCH_CANVAS_MAX_NODE_SIZE,description:'高度；固定比例组件须保持原比例。'};
       return fields

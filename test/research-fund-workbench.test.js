@@ -27,7 +27,7 @@ describe('Fund72 source-contracted workbench', () => {
     const planned = layoutWorkbench(validateWorkbench(input()).panels);
     expect(planned.map(item => item.artifact.variant)).toEqual(['fund-kpi','fund-holdings','fund-industry']);
     expect(planned.map(item => [item.width,item.height,item.x,item.y])).toEqual([
-      [896,132,0,0], [556,400,0,148], [328,400,572,148]
+      [656,212,0,0], [656,155,672,0], [656,228,0,228]
     ]);
     for (const item of planned) {
       const rendered = renderMarketArtifact(item.artifact);
@@ -58,7 +58,7 @@ describe('Fund72 source-contracted workbench', () => {
       containerSpec:renderMarketArtifact(item.artifact)
     }));
     const packed = researchBentoLayout(nodes, {width:1024,height:768});
-    expect(packed.nodes.map(node => [node.width,node.height])).toEqual([[896,132],[556,400],[328,400]]);
+    expect(packed.nodes.map(node => [node.width,node.height])).toEqual([[656,212],[656,155],[656,228]]);
   });
 
   it('expands long fund indicator definitions without truncating their source text', () => {
