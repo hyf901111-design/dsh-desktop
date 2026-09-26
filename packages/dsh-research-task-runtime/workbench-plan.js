@@ -260,6 +260,19 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !types.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
+        // A planner may include the selected template with empty data arrays.
+        // That is a pending fetch, not a completed artifact. Never discard even
+        // one supplied observation, date or note under this narrow recovery.
+        const draft=p.artifact;
+        const emptyFields=['items','labels','series','columns','rows','candles'];
+        if(!isSimulated&&p.type==='market'&&draft?.version===1&&draft.type==='market'&&templateFor(draft)&&
+            (draft.asOf===undefined||typeof draft.asOf==='string'&&!draft.asOf.trim())&&
+            Object.keys(draft).every(key=>['version','type','variant','title','asOf',...emptyFields].includes(key))&&
+            emptyFields.some(key=>Array.isArray(draft[key]))&&
+            emptyFields.every(key=>draft[key]===undefined||Array.isArray(draft[key])&&draft[key].length===0)) {
+            const {artifact,...planned}=p;
+            p={...planned,prompt:`variant: ${draft.variant}；${p.prompt}`};
+        }
         const requestsCandlestick = /K\s*线|蜡烛图|candlestick/iu.test(p.title) ||
             (p.type === 'chart' && /(?:绘制|显示|生成|展示|画).{0,12}(?:K\s*线|蜡烛图|candlestick)/iu.test(p.prompt));
         if (requestsCandlestick && (p.type !== 'market' || marketVariant(p) !== 'candlestick'))
