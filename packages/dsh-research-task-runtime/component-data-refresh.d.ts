@@ -1,5 +1,6 @@
 import type {ComponentDataBinding,ComponentDataInput,ComponentDataSettings,DataRequest,DataValue} from '../../src/shared/component-data'
 export function evaluateMapping(mapping:unknown,responses:Record<string,unknown>,now?:Date):any
+export function materializeComponentMapping(mapping:unknown,responses:Record<string,unknown>,now?:Date):any
 export function decodeDataResponse(value:unknown):unknown
 export class ComponentDataRefresh {
  constructor(options:{now?:()=>number;owner:()=>string|undefined;load:()=>Promise<ComponentDataBinding[]>;save:(value:ComponentDataBinding[])=>Promise<void>;inspect:(binding:ComponentDataInput|ComponentDataBinding)=>Promise<{revision:string;spec:any;writable:boolean}>;apply:(binding:ComponentDataBinding,revision:string,spec:any,signal:AbortSignal)=>Promise<unknown>;validateRequest:(request:Pick<DataRequest,'key'|'toolId'|'args'>,target:ComponentDataInput)=>Promise<DataRequest>;execute:(binding:ComponentDataBinding,request:DataRequest,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>})

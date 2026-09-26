@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
-import { decodeDataResponse, evaluateMapping } from './component-data-refresh.js'
+import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from './component-data-refresh.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
 
@@ -71,7 +71,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     responses[request.key]=source.response
     requests.push({key:request.key,toolId:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(request.args,now):request.args})
   }
-  const data=evaluateMapping(candidate.mapping,responses,now)
+  const data=materializeComponentMapping(candidate.mapping,responses,now)
   const output=acceptArtifactOutput(JSON.stringify(data))
   if(!output)throw Error('数据映射结果不符合当前组件模板，请根据真实响应修正路径、类型或单位。')
   return {data,output,recipe:{requests,mapping:candidate.mapping,intervalMinutes:1}}

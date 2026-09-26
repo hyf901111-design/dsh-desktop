@@ -6,6 +6,7 @@ import {ComponentDataRefresh,evaluateMapping} from '../../../packages/dsh-resear
 import type {IntegrationService} from '../integrations/service'
 import type {ScheduledTask} from '../../shared/scheduled-tasks'
 import type {CanvasActionBridge} from '../state/canvas-action-bridge'
+import {normalizeMcpQueryArguments} from '../integrations/query-arguments'
 
 export function componentRefreshBindings(requests:Array<{connectionId:string;connectionRevision:number;toolId:string;schemaDigest:string}>):NonNullable<ScheduledTask['integrationBindings']>{
  const groups=new Map<string,NonNullable<ScheduledTask['integrationBindings']>[number]>()
@@ -39,12 +40,14 @@ export async function createComponentDataService(options:{file:string;integratio
    const {workspace}=await identity(target.sessionId)
    const state=options.integrations.store.snapshot(),tool=state.tools[request.toolId],connection=tool&&state.connections[tool.connectionId]
    if(!tool||!connection||!tool.enabled||!connection.enabled||connection.ownerAccountId!==options.owner()||connection.authState!=='connected'||!connection.toolGrants.includes(tool.id)||connection.workspaceGrant.mode==='selected'&&!connection.workspaceGrant.workspaceIds.includes(workspace.workspaceId))throw Error('所选数据工具未连接或当前工作区不可用')
-   if(!ajv.validate(tool.inputSchema,evaluateMapping(request.args,{})))throw Error('请求参数不符合插件接口定义')
+   const evaluated=evaluateMapping(request.args,{})
+   if(!ajv.validate(tool.inputSchema,connection.config.type==='mcp'?normalizeMcpQueryArguments(tool.inputSchema,evaluated):evaluated))throw Error('请求参数不符合插件接口定义')
    return {key:request.key,toolId:tool.id,args:request.args,connectionId:connection.id,connectionRevision:connection.revision,schemaDigest:tool.schemaDigest,sourceName:connection.name+' / '+tool.name}
   },
   execute:async(binding:any,request:any,args:any,signal:AbortSignal)=>{
    const live=options.integrations.runtimeSnapshot(),tool=live.tools.find(t=>t.id===request.toolId),connection=live.connections.find(c=>c.id===request.connectionId)
    if(!tool||!connection||connection.revision!==request.connectionRevision||tool.schemaDigest!==request.schemaDigest)throw Error('数据接口配置已变化，请重新绑定')
+   if(options.integrations.store.snapshot().connections[request.connectionId]?.config.type==='mcp')args=normalizeMcpQueryArguments(tool.inputSchema,args)
    if(!ajv.validate<Record<string,unknown>>(tool.inputSchema,args))throw Error('刷新请求参数不符合接口定义')
    return options.integrations.execute({callId:randomUUID(),toolId:request.toolId,connectionRevision:request.connectionRevision,arguments:args,context:{sessionId:binding.sessionId,rootSessionId:binding.sessionId,workspaceId:binding.workspaceId,ownerAccountId:binding.ownerAccountId,runtimeEpoch:live.runtimeEpoch,unattended:true,taskId:'component-data:'+binding.id}},signal)
   }

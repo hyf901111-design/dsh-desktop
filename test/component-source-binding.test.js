@@ -8,6 +8,12 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it('formats numeric indicator values and explicit missing summaries without a model repair',()=>{
+ const numeric=structuredClone(draft);numeric.mapping.items.$map.value={$path:'price',$as:'number',$digits:3}
+ expect(resolveBoundComponent(JSON.stringify(numeric),records,now).data.items[0].value).toBe('4.515')
+ const report={...draft,mapping:{version:1,type:'reports',title:'ETF研报',items:{$from:'quote',$each:'data.rows',$map:{title:{$path:'name'},summary:{$path:'absent',$optional:true},date:{$from:'quote',$path:'data.date'}}}}}
+ expect(resolveBoundComponent(JSON.stringify(report),records,now).data.items[0].summary).toBe('来源未提供摘要')
+})
 it('repairs an invalid binding with its observed response instead of reverting to a static contract',async()=>{
  const invalid=structuredClone(draft);invalid.mapping.items.$each='wrongPath'
  const start=vi.fn(async()=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(start.mock.calls.length===1?invalid:draft)}],sourceRecords:start.mock.calls.length===1?records:[]}),dispose:async()=>{}}))

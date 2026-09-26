@@ -67,6 +67,21 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  }
  return Object.fromEntries(Object.entries(mapping).map(([k,v])=>{if(k.startsWith('$'))throw Error('不支持的字段映射：'+k);return [k,next(v)]}))
 }
+/** Apply display-only defaults consistently at generation and refresh time. */
+export function materializeComponentMapping(mapping,responses,now=new Date()){
+ const data=evaluateMapping(mapping,responses,now)
+ const display=value=>typeof value==='number'&&Number.isFinite(value)?String(value):value
+ if(['kpi','dashboard'].includes(data?.type)||data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)){
+  if(Array.isArray(data.items))data.items=data.items.map(item=>({...item,value:display(item.value)}))
+ }
+ if(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant)){
+  if(Array.isArray(data.rows))data.rows=data.rows.map(row=>Array.isArray(row)?row.map(display):row)
+ }
+ if(['news','reports','calendar'].includes(data?.type)&&Array.isArray(data.items)){
+  data.items=data.items.map(item=>({...item,...(item.summary==null?{summary:'来源未提供摘要'}:{})}))
+ }
+ return data
+}
 function rejectCredentials(value){
  if(!value||typeof value!=='object')return
  for(const [key,v]of Object.entries(value)){if(forbidden.has(key)||/^(authorization|api[-_]?key|access[-_]?token|password|secret|cookie)$/i.test(key))throw Error('凭据由插件管理，不能写入组件请求');rejectCredentials(v)}
@@ -207,7 +222,7 @@ export class ComponentDataRefresh {
    if(!before.writable||!model||model.templateId!==b.templateId||model.version!==b.templateVersion)throw Error('组件模板已变化，请重新绑定数据')
    const baseline=hash(before.spec)
    const results=await Promise.all(b.requests.map(async r=>[r.key,await this.request(b,r,signal)]));signal.throwIfAborted()
-   const data=evaluateMapping(b.mapping,Object.fromEntries(results),new Date(startedAt))
+   const data=materializeComponentMapping(b.mapping,Object.fromEntries(results),new Date(startedAt))
    data.title=model.data.title
    if(templateFor(data)?.id!==b.templateId)throw Error('新数据与当前组件类型不匹配')
    const output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
