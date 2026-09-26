@@ -3,6 +3,7 @@ import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
+const mappingOperators=new Set(['$date','$from','$path','$each','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default'])
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
@@ -39,6 +40,8 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(Array.isArray(mapping)){if(mapping.length>2000)throw Error('数据记录过多');return mapping.map(v=>next(v))}
  if(!record(mapping))return mapping
  if(Object.keys(mapping).some(k=>forbidden.has(k)))throw Error('字段名称无效')
+ const unknown=Object.keys(mapping).find(k=>k.startsWith('$')&&!mappingOperators.has(k))
+ if(unknown)throw Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。')
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
  const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)

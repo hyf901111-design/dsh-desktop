@@ -12,6 +12,11 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('rejects invented mapping operators with an actionable scalar selection example',()=>{
+  const mapping={$from:'sh',$path:'data.data',$take:1,$single:true,$path2:'closeIndex',$as:'number'}
+  expect(()=>evaluateMapping(mapping,{sh:{data:{data:[{closeIndex:3888.37}]}}})).toThrow(/不支持的字段映射：\$path2.*\$each.*\$map/)
+  expect(()=>evaluateMapping({$path:'price',$sacle:100},{price:3})).toThrow(/不支持的字段映射：\$sacle/)
+ })
  it('selects a scalar field from explicitly named rows before applying units once',()=>{
   const responses={sh:{data:{data:[{tradeDate:'2026-09-24',closeIndex:3888.37,turnoverValue:783613000000},{tradeDate:'2026-09-23',closeIndex:3936.39,turnoverValue:800000000000}]}}}
   const select={$from:'sh',$each:'data.data',$sortBy:'tradeDate',$order:'asc',$take:-1,$single:true}
