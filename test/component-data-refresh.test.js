@@ -12,6 +12,16 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('selects a scalar field from explicitly named rows before applying units once',()=>{
+  const responses={sh:{data:{data:[{tradeDate:'2026-09-24',closeIndex:3888.37,turnoverValue:783613000000},{tradeDate:'2026-09-23',closeIndex:3936.39,turnoverValue:800000000000}]}}}
+  const select={$from:'sh',$each:'data.data',$sortBy:'tradeDate',$order:'asc',$take:-1,$single:true}
+  expect(evaluateMapping({...select,$path:'closeIndex',$as:'number',$digits:2},responses)).toBe(3888.37)
+  expect(evaluateMapping({...select,$path:'turnoverValue',$as:'number',$scale:1e-8,$digits:2,$suffix:' 亿元'},responses)).toBe('7836.13 亿元')
+  expect(evaluateMapping({...select,$path:'tradeDate',$prefix:'数据日期 '},responses)).toBe('数据日期 2026-09-24')
+  expect(()=>evaluateMapping({...select,$path:'absent',$as:'number'},responses)).toThrow(/接口缺少字段：absent/)
+  expect(()=>evaluateMapping({...select,$take:2,$path:'closeIndex'},responses)).toThrow(/恰好匹配一条/)
+  expect(evaluateMapping({...select,$path:'absent',$map:{$path:'closeIndex'}},responses)).toBe(3888.37)
+ })
  it('combines mapped groups of metric records without flattening table rows or scalar values',()=>{
   const sources={a:{rows:[{name:'上证',close:3888.37}]},b:{rows:[{name:'深成',close:13316.97}]}}
   const mapping={version:1,type:'market',variant:'metrics',title:'指数',items:['a','b'].map(key=>({$from:key,$each:'rows',$map:{label:{$path:'name'},value:{$path:'close'}}}))}
