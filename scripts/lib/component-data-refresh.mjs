@@ -1,3 +1,4 @@
+import {componentDataStatusDefinitions,componentDataStatusCss,patchComponentDataStatus} from './component-data-status.mjs';
 const begin='/* ODYSSEY_COMPONENT_DATA_START */',end='/* ODYSSEY_COMPONENT_DATA_END */';
 function openComponentData(sessionId,node,action='settings') {
   window.dispatchEvent(new CustomEvent('sherlock:component-data-open',{detail:{sessionId,nodeId:node.id,title:node.title||node.containerSpec?.title||'组件',action}}));
@@ -7,12 +8,13 @@ function ComponentDataSettings({sessionId,canvasRoot}) {
  const closeRef=react.useRef(null);
  react.useEffect(()=>{
   const root=canvasRoot?.current,bridge=window.dshDesktop?.componentData;
-  if(!root||!sessionId||typeof bridge?.setVisible!=='function')return;
+  if(!root||!sessionId||sherlockShared(sessionId)||typeof bridge?.setVisible!=='function')return;
   let intersects=true;
-  const send=()=>{const active=intersects&&document.visibilityState!=='hidden'&&root.isConnected&&root.getClientRects().length>0;void bridge.setVisible(sessionId,active).catch(()=>{});};
+  const monitor=createComponentDataStatusMonitor({sessionId,bridge,store:componentDataStatusStore,isVisible:()=>intersects&&document.visibilityState!=='hidden'&&root.isConnected&&root.getClientRects().length>0});
+  const send=()=>void monitor.refresh();
   const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{intersects=entries.some(e=>e.isIntersecting);send();}):null;
-  observer?.observe(root);document.addEventListener('visibilitychange',send);const timer=setInterval(send,5000);send();
-  return()=>{clearInterval(timer);observer?.disconnect();document.removeEventListener('visibilitychange',send);void bridge.setVisible(sessionId,false).catch(()=>{});};
+  observer?.observe(root);document.addEventListener('visibilitychange',send);window.addEventListener('sherlock:component-data-changed',send);
+  return()=>{monitor.dispose();observer?.disconnect();document.removeEventListener('visibilitychange',send);window.removeEventListener('sherlock:component-data-changed',send);};
  },[sessionId,canvasRoot]);
  react.useEffect(()=>{const open=e=>{setTarget(e.detail);setError('');setBinding(null);setLoading(true)};window.addEventListener('sherlock:component-data-open',open);return()=>window.removeEventListener('sherlock:component-data-open',open)},[]);
  react.useEffect(()=>{
@@ -24,8 +26,8 @@ function ComponentDataSettings({sessionId,canvasRoot}) {
   const timer=setInterval(refresh,5000);return()=>{active=false;clearInterval(timer)};
  },[target]);
  if(!target)return null;
- const change=async(settings)=>{setBusy(true);setError('');try{const next=await window.dshDesktop.componentData.request(target.sessionId,{action:'configure',nodeId:target.nodeId,settings});setBinding(next)}catch(e){setError(e.message)}finally{setBusy(false)}};
- const run=async()=>{setBusy(true);setError('');try{setBinding(await window.dshDesktop.componentData.request(target.sessionId,{action:'refresh',nodeId:target.nodeId}))}catch(e){setError(e.message)}finally{setBusy(false)}};
+ const change=async(settings)=>{setBusy(true);setError('');try{const next=await window.dshDesktop.componentData.request(target.sessionId,{action:'configure',nodeId:target.nodeId,settings});setBinding(next)}catch(e){setError(e.message)}finally{setBusy(false);window.dispatchEvent(new Event('sherlock:component-data-changed'))}};
+ const run=async()=>{setBusy(true);setError('');try{setBinding(await window.dshDesktop.componentData.request(target.sessionId,{action:'refresh',nodeId:target.nodeId}))}catch(e){setError(e.message)}finally{setBusy(false);window.dispatchEvent(new Event('sherlock:component-data-changed'))}};
  const format=t=>t?new Date(t).toLocaleString():'尚未刷新';
  const label={idle:'已就绪',paused:'已暂停',refreshing:'正在取数',success:'已更新',unchanged:'数据无变化',error:'更新失败，保留上次数据'};
  const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs;
@@ -42,11 +44,12 @@ function ComponentDataSettings({sessionId,canvasRoot}) {
 }
 const css=`.odyssey-data-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#0005;padding:24px}.odyssey-data-settings{width:min(440px,100%);max-height:calc(100vh - 48px);overflow:auto;padding:24px;border-radius:16px;background:var(--surface,#fff);color:var(--text-primary,#202124);box-shadow:0 16px 64px #0004;border:1px solid #8884;font:14px/1.6 system-ui}.odyssey-data-settings header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.odyssey-data-settings header>div{min-width:0;flex:1}.odyssey-data-settings button.odyssey-data-close{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;min-height:32px;padding:0;line-height:1;font-size:20px;border:0;background:transparent;border-radius:6px;align-self:flex-start}.odyssey-data-settings button.odyssey-data-close:focus-visible{outline:2px solid #35a4ff;outline-offset:2px}.odyssey-data-settings h3{font-size:18px;margin:0}.odyssey-data-settings p{margin:8px 0;overflow-wrap:anywhere}.odyssey-data-settings label{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:20px 0}.odyssey-data-settings button,.odyssey-data-settings select{appearance:none;background:#8882;color:inherit;border:1px solid #8884;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}.odyssey-data-settings select{appearance:auto;min-width:148px}.odyssey-data-settings button:disabled{opacity:.45;cursor:default}.odyssey-data-settings button:hover:not(:disabled){background:#8883}.odyssey-data-settings dl{display:grid;grid-template-columns:auto 1fr;gap:8px 20px}.odyssey-data-settings dd{margin:0;text-align:right;overflow-wrap:anywhere}.odyssey-data-help,.odyssey-data-settings dt{color:var(--text-secondary,#777)}.odyssey-data-settings footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}.odyssey-data-error{color:#d76a52}.odyssey-data-status{font-weight:600}.odyssey-data-sources{padding:10px 14px;border-radius:8px;background:#8881}@media(prefers-color-scheme:dark){.odyssey-data-settings{background:#242424;color:#eee}.odyssey-data-settings option{background:#242424}}`;
 export function patchComponentDataRefresh(source){
+ source=patchComponentDataStatus(source);
  source=source.replace('(ComponentDataSettings,{})','(ComponentDataSettings,{sessionId,canvasRoot:rootRef})');
  const settingsButton=`(0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-component-data-settings':'',onClick:()=>choose(()=>openComponentData(sessionId,node)),children:'数据源与自动更新'})`;
  const settingsWithLegacyStop=`sherlockShared(sessionId)?(0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-stop-legacy-refresh':'',disabled:editingPrompt||!node.refreshMinutes,onClick:()=>choose(()=>onSetRefresh?.(node,0)),children:node.refreshMinutes?'关闭旧自动刷新':'共享组件暂不支持数据自动更新'}):${settingsButton}`;
  const refreshButton=`onClick: () => choose(() => sherlockShared(sessionId)?onRefresh?.(node,node.containerPrompt):openComponentData(sessionId,node,'refresh')), children: sherlockShared(sessionId)?"重新生成":"刷新数据"`;
- const definitions=begin+'\n'+openComponentData.toString()+'\n'+ComponentDataSettings.toString()+`\nif(typeof document!=='undefined'){let s=document.getElementById('odyssey-data-settings-style');if(!s){s=document.createElement('style');s.id='odyssey-data-settings-style';document.head.appendChild(s);}s.textContent=${JSON.stringify(css)}}\n`+end;
+ const definitions=begin+'\n'+componentDataStatusDefinitions()+openComponentData.toString()+'\n'+ComponentDataSettings.toString()+`\nif(typeof document!=='undefined'){let s=document.getElementById('odyssey-data-settings-style');if(!s){s=document.createElement('style');s.id='odyssey-data-settings-style';document.head.appendChild(s);}s.textContent=${JSON.stringify(css+componentDataStatusCss)}}\n`+end;
  if(source.includes(begin)){
   if(!source.includes('data-stop-legacy-refresh'))source=source.replace(settingsButton,settingsWithLegacyStop).replace(`onClick: () => choose(() => openComponentData(sessionId,node,'refresh')), children: "刷新数据"`,refreshButton);
   const a=source.indexOf(begin),b=source.indexOf(end,a);return source.slice(0,a)+definitions+source.slice(b+end.length)
