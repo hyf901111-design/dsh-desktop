@@ -354,6 +354,15 @@ describe('Research task contract and prompt', () => {
     expect(invalid).toContain('统一遵循 EWork 工作台 Figma 组件规范')
   })
 
+  it('preserves a declared variant when editing an auto-layout card',async()=>{
+    const {buildResearchTaskPrompt}=await runtimeModule()
+    for(const suffix of ['', '\n组件初始尺寸 656×456px；自动布局按内容密度选择规格。']){
+      const prompt=buildResearchTaskPrompt({...containerRequest(),prompt:'使用通联更新三大指数行情概览。variant: metrics。共9个指标。'+suffix})
+      expect(prompt).toContain('"variant":"metrics"')
+      expect(prompt).not.toContain('唯一交付格式：{"version":1,"type":"dashboard"')
+    }
+  })
+
   it('uses the selected document body for an interactive activity page or a professional journey map', async () => {
     const { buildResearchTaskExecutionPrompt } = await runtimeModule()
     for (const requirement of ['制作报名活动页，按钮打开报名说明', '制作专业用户体验地图，包含阶段、触点、情绪和改进机会']) {
@@ -1152,7 +1161,12 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
-  it('uses one binding contract and retrieval tools for a typed plugin-backed panel', async () => {
+  it.each([
+    '工作台：ETF研究\n本面板：最新ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。',
+    '使用通联更新三大指数行情概览。variant: metrics。共9个指标。',
+    '使用通联更新三大指数行情概览。variant: metrics。共9个指标。\n组件初始尺寸 656×456px；自动布局按内容密度选择规格。',
+    '展示三大指数行情概览，使用通联数据并自动绑定。\n组件初始尺寸 656×456px；自动布局按内容密度选择规格。'
+  ])('uses one binding contract for planned and edited plugin-backed panels: %s', async (query) => {
     const fixture=containerAdapterFixture()
     fixture.ctx.tools={schemas:vi.fn(()=>[
       {name:'ework__datayes_call',description:'调用通联 DataYes 金融数据 API'},
@@ -1160,10 +1174,12 @@ describe('Research task Subagent adapter', () => {
       {name:'web_search'},{name:'web_fetch'},{name:'financial_query'},{name:'research_context_read'},{name:'research_context_list'},{name:'research_context_search'},
       {name:'bash'},{name:'write'},{name:'subagent'},{name:'ask_user_question'}
     ])}
-    const handle=await fixture.start('工作台：ETF研究\n本面板：最新ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。')
+    const handle=await fixture.start(query)
     const child=fixture.ctx.subagents.start.mock.calls[0][1]
     expect(child.prompt[0].text).toContain('data-bound')
     expect(child.prompt[0].text).toContain('mapping 的模板结构')
+    expect(child.prompt[0].text).toContain('无需创建日期表达式')
+    expect(child.prompt[0].text).not.toContain('查询日期使用动态日期表达式')
     expect(child.prompt[0].text).not.toContain('唯一交付格式：')
     expect(child.toolFilter.allow).toEqual(['ework__datayes_call','ework__other_source','web_search','web_fetch'])
     expect(child.prompt[0].text).toContain('已指定使用配置的插件')

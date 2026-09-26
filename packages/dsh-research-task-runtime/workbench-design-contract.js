@@ -31,7 +31,9 @@ export const MARKET_DESIGN_TEMPLATES = market;
 export const MARKET_VARIANT_NAMES = Object.freeze(Object.keys(market));
 export const MARKET_VARIANT_PATTERN = MARKET_VARIANT_NAMES.join('|');
 export function requestedMarketVariant(prompt) {
-  return typeof prompt === 'string' ? prompt.match(new RegExp(`\\bmarket\\.(${MARKET_VARIANT_PATTERN})\\b`, 'iu'))?.[1]?.toLowerCase() : undefined;
+  if(typeof prompt !== 'string')return undefined;
+  return (prompt.match(new RegExp(`\\bmarket\\.(${MARKET_VARIANT_PATTERN})\\b`, 'iu'))?.[1] ||
+    prompt.match(new RegExp(`(?:\\bvariant|变体)\\s*[:：=]\\s*(${MARKET_VARIANT_PATTERN})\\b`, 'iu'))?.[1])?.toLowerCase();
 }
 export function requiredMarketVariant(prompt) {
   return typeof prompt === 'string' ? prompt.match(new RegExp(`必须输出 market\\.(${MARKET_VARIANT_PATTERN}) 的结构化数据`, 'iu'))?.[1]?.toLowerCase() : undefined;

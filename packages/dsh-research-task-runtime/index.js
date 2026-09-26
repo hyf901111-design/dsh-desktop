@@ -389,7 +389,10 @@ function workbenchPanelFormat(prompt) {
     // contain the planner header. An explicit registered preset still carries
     // the same compact data contract and tool scope.
     const explicit=prompt.match(/\b(market|chart)\.([a-z-]+)\b/u)
-    return explicit&&templateFor({type:explicit[1],variant:explicit[2]})?explicit[1]:null
+    if(explicit&&templateFor({type:explicit[1],variant:explicit[2]}))return explicit[1]
+    if(requestedMarketVariant(prompt))return 'market'
+    const legacyHeader=legacyWorkbenchPanelHeader(prompt)
+    return legacyHeader?workbenchPanelFormat(legacyHeader+prompt.split('\n')[0]):null
   }
   const type = prompt.match(/优先使用 ([a-z-]+) 类型/u)?.[1]
   if (!WORKBENCH_PANEL_TYPES.has(type)) return null
@@ -409,8 +412,7 @@ function containerSchedulingCost(task) {
 }
 
 function workbenchPanelPrompt(prompt, boundData = false) {
-  const legacyHeader = legacyWorkbenchPanelHeader(prompt)
-  const type = workbenchPanelFormat(legacyHeader ? legacyHeader + prompt.split('\n')[0] : prompt)
+  const type = workbenchPanelFormat(prompt)
   if (!type) return null
   const selectedMarketVariant = type === 'market' ? requestedMarketVariant(prompt) : undefined
   const schemas = {
@@ -429,7 +431,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     '直接输出一个完整 JSON 对象；不附前言、说明或代码围栏。',
     COMPONENT_BOUND_DATA_PROMPT,
     `mapping 的模板结构：${schemas[type]}`,
-    '数值、日期、单位与来源必须来自实际响应；保留主要字段，缺失就标注。取得足够数据后立即输出，不搜索应用代码，不启动子任务。最新/近期数据的查询日期使用动态日期表达式。记录的日期、来源、正文和数值使用路径引用，静态标题与单位可以直接写文字。',
+    '数值、日期、单位与来源必须来自实际响应；保留主要字段，缺失就标注。取得足够数据后立即输出，不搜索应用代码，不启动子任务。请求参数和日期照抄实际成功调用，由宿主维护后续滚动日期。记录的日期、来源、正文和数值使用路径引用，静态标题与单位可以直接写文字。',
     '行情快照使用单次响应已有的核心字段，不为补充未提供的52周高低等可选字段额外拉取长历史。响应被截断时缩小范围；不能绑定不完整的JSON。只交付当前已有足够证据的内容。',
     `本面板需求：\n${prompt.split('\n仅生成本面板，')[0]}`
   ].join('\n')
