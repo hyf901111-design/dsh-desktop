@@ -165,6 +165,7 @@ function normalizeSimulatedCalendar(artifact) {
     });
 }
 function simulatedArtifactProblem(artifact) {
+    if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
     if (artifact.type === 'market' && artifact.variant === 'scatter' && Array.isArray(artifact.items)) {
         const index = artifact.items.findIndex(i => !str(i?.label, 200) || !Number.isFinite(i?.x) || !Number.isFinite(i?.y));
         if (index !== -1) return `散点第${index + 1}项需有 label、非负数值 x 和 y；已提供的 name/company 可作为 label。`;
@@ -191,7 +192,7 @@ function simulatedArtifactProblem(artifact) {
         const index = artifact.items.findIndex(item => item && !item.summary && !item.url);
         if (index !== -1) return `日历第${index + 1}项缺少可显示的摘要；请补 summary 或对象与观察重点。`;
     }
-    return schemaHints[artifact.type];
+    return schemaHints[artifact.type] ?? '需提交已注册模板的结构化数据对象。';
 }
 export function prepareSimulatedArtifact(panel) {
     const source = panel.artifact;
@@ -264,7 +265,7 @@ export function validateWorkbench(value) {
         if (requestsCandlestick && (p.type !== 'market' || marketVariant(p) !== 'candlestick'))
             throw Error(`面板「${p.title}」必须使用 market.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
         if (!isSimulated && p.artifact !== undefined) {
-            if (!templateFor(p.artifact) || p.artifact.type !== p.type || !acceptArtifactOutput(JSON.stringify(p.artifact))) throw Error('真实数据必须按已注册的组件模板提交完整结构化数据，不提交 HTML。');
+            if (!templateFor(p.artifact) || p.artifact.type !== p.type || !acceptArtifactOutput(JSON.stringify(p.artifact))) throw Error(`面板「${p.title}」的真实数据格式无效。${simulatedArtifactProblem(p.artifact)} 请复用已取得的数据，只修正字段格式，不重新取数或编写 HTML。`);
             const issue = workbenchMarketRecencyIssue(JSON.stringify(p.artifact), p.prompt);
             if (issue) throw Error(issue);
         }
