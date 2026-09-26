@@ -51,6 +51,15 @@ describe('data refresh without generation',()=>{
   expect(f.apply).toHaveBeenCalledTimes(1);expect(f.service.list()[0]).toMatchObject({status:'error',failures:1})
   expect(f.service.list()[0].nextRun).toBeGreaterThan(120000)
  })
+ it('skips writes after keyed provider rows normalize to the stored template shape',async()=>{
+  const f=setup();await f.service.load()
+  const table={version:1,type:'market',variant:'table',title:'ETF',asOf:'2026-09-24',columns:[{key:'date',label:'日期'},{key:'close',label:'收盘'}],rows:[{date:'2026-09-24',close:4.515}]}
+  let spec=JSON.parse(acceptArtifactOutput(JSON.stringify(table)))
+  f.service.options.inspect=async()=>({revision:'r1',spec,writable:true})
+  const b=await f.service.bind({...f.input,mapping:table})
+  await f.service.refresh(b.id);await f.service.refresh(b.id)
+  expect(f.service.list()[0].status).toBe('unchanged');expect(f.apply).not.toHaveBeenCalled()
+ })
  it('rejects stale results after pause, edit, or delete',async()=>{
   for(const action of ['pause','edit','delete']){
    const f=setup();await f.service.load();const b=await f.service.bind(f.input)

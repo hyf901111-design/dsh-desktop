@@ -164,7 +164,7 @@ export class ComponentDataRefresh {
    const output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
    const spec=JSON.parse(output),accepted=readTemplateModel(spec)
    if(!accepted||accepted.templateId!==b.templateId||accepted.version!==b.templateVersion)throw Error('接口数据不符合当前模板，已保留上次内容')
-   const unchanged=hash(model.data)===hash(data)
+   const unchanged=hash(model.data)===hash(accepted.data)
    await this.commit(b,async()=>{
     signal.throwIfAborted();if(!current())return
     const live=await this.options.inspect(b)
