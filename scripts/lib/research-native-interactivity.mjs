@@ -139,9 +139,9 @@ export function ResearchContainerChart({ spec }) {
                 }
               }, 'point-' + seriesIndex + '-' + index) : null)];
             }),
-          spec.labels.map((label, index) => react_jsx_runtime.jsx('text', {
+          spec.labels.map((label, index) => (index === 0 || index === spec.labels.length - 1 || index % Math.max(1, Math.ceil(spec.labels.length / Math.max(2, Math.floor(width / 70)))) === 0) ? react_jsx_runtime.jsx('text', {
             x: left + (index + .5) * step, y: top + height + 22, textAnchor: 'middle',
-            className: 'rScV5Q_chartLabel', children: label }, 'label-' + index))
+            className: 'rScV5Q_chartLabel', children: label }, 'label-' + index) : null)
         ] }),
       react_jsx_runtime.jsx('div', { className: 'rScV5Q_chartLegend', children: spec.series.map((series, index) =>
         react_jsx_runtime.jsxs('button', { type: 'button', 'aria-pressed': visible[index],
