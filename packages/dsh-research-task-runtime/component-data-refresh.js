@@ -4,7 +4,7 @@ import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
-const mappingOperators=new Set(['$date','$from','$path','$each','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default'])
+const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default'])
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
@@ -45,11 +45,24 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  const unknown=Object.keys(mapping).find(k=>k.startsWith('$')&&!mappingOperators.has(k))
  if(unknown)throw Error('不支持的字段映射：'+unknown+'。选取列表单值须使用 $each 指定列表、$map 指定行内字段，例如 {"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number"}；不得增加未定义运算符。')
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
+ if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在')
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
  const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
  if(eachPath!==undefined){
   let rows=path(source,eachPath)
   if(!Array.isArray(rows)||rows.length>2000)throw Error('列表字段不存在或超过 2000 条')
+  if(mapping.$filter!==undefined){
+   const filter=mapping.$filter
+   if(!record(filter)||!Object.keys(filter).length||Object.keys(filter).length>16)throw Error('列表筛选需要 1–16 个字段条件')
+   const entries=Object.entries(filter)
+   for(const [key,value]of entries){
+    // Validate even when the source list is empty. Conditions are literal scalar
+    // equality only, never code or recursively evaluated mapping expressions.
+    path({},key)
+    if(!key||value!==null&&!['string','number','boolean'].includes(typeof value)||typeof value==='number'&&!Number.isFinite(value))throw Error('列表筛选只支持标量等值条件')
+   }
+   rows=rows.filter(item=>entries.every(([key,value])=>path(item,key)===value))
+  }
   if(mapping.$sortBy!==undefined){
    if(typeof mapping.$sortBy!=='string'||!['asc','desc',undefined].includes(mapping.$order))throw Error('列表排序无效')
    const keyed=rows.map(value=>({value,key:path(value,mapping.$sortBy)}))
@@ -63,6 +76,11 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   const mapped=rows.map(item=>next(rowMapping,item))
   if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return scalarMapping(mapped[0],mapping)}
   return mapped.map(value=>scalarMapping(value,mapping))
+ }
+ if(mapping.$filter!==undefined)throw Error('筛选必须指定列表 $each')
+ if(Object.hasOwn(mapping,'$map')){
+  if(!record(source)||mapping.$take!==undefined||mapping.$sortBy!==undefined||mapping.$order!==undefined||mapping.$single!==undefined&&mapping.$single!==true)throw Error('对象映射需要单个来源对象；列表请指定 $each')
+  return scalarMapping(next(mapping.$map,source),mapping)
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
