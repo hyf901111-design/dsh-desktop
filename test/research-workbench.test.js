@@ -38,6 +38,18 @@ it('deals six cards into a strict two-column matrix despite a saved leading-stri
  expect(plan[0].workbenchSpan).not.toBe(true);
 });
 describe('研究工作台', () => {
+    it('schedules an empty market template draft for fetching without dropping any supplied observations', () => {
+        const draft={version:1,type:'market',variant:'metrics',title:'行情快照',asOf:'',items:[]};
+        const p={title:'行情快照',prompt:'使用通联获取宁德时代行情',type:'market',size:'medium',artifact:draft};
+        const input={requestId:'empty-draft',title:'真实行情工作台',dataMode:'source',panels:[p]};
+        const result=validateWorkbench(input).panels[0];
+        expect(result.artifact).toBeUndefined();
+        expect(marketVariant(result)).toBe('metrics');
+        expect(result.prompt).toContain(p.prompt);
+        expect(p.artifact).toBe(draft);
+        for(const artifact of [{...draft,items:[{label:'最新价',value:'0'}]},{...draft,note:'已有数据来源'},{...draft,asOf:'2026-09-25'},{...draft,extra:true}])
+            expect(()=>validateWorkbench({...input,panels:[{...p,artifact}]})).toThrow();
+    });
     it('uses the panel title to distinguish a metrics strip from trends mentioned in its scope', () => {
         expect(marketVariant({ title:'核心指标（模拟）', prompt:'展示六项指标，并说明近期趋势' })).toBe('metrics');
         expect(marketVariant({ title:'行业热力图', prompt:'对比行业指标趋势' })).toBe('heatmap');
