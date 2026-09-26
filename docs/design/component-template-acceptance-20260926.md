@@ -26,3 +26,9 @@
 ## Figma
 
 用户指定文件 `Jkyr5rMvgM8GNH6E68xnqd`，目标页面 `111:683`。新 Frame 的节点链接、30 类组件数量和视觉检查结果待完成后补入。
+# 独立审查修复
+
+- 同一会话中的接口请求保持并行，最终画布 inspect、基线校验、CAS 写入按会话串行。接入真实 `createCanvasActionController` 的四卡并发回归从两卡冲突变为四卡成功。
+- 对刷新后的实际产物再次验证模板 ID 和版本。空图表降级成 Markdown 时拒绝覆盖旧数据，绑定继续有效。
+- 共享组件保留“关闭旧自动刷新”入口；个人组件使用新的接口数据刷新设置。共享工作台的新接口绑定仍未支持。
+- 聚焦检查：`component-data-refresh`、`component-data-ui`、`research-canvas-actions` 共 19 项通过。打包客户端验收仍待完成。

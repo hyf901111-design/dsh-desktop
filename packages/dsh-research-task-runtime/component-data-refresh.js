@@ -62,7 +62,7 @@ export function decodeDataResponse(value){
  return result
 }
 export class ComponentDataRefresh {
- constructor(options){this.options=options;this.records=[];this.active=new Map();this.requests=new Map();this.chain=Promise.resolve();this.stopped=false}
+ constructor(options){this.options=options;this.records=[];this.active=new Map();this.requests=new Map();this.commits=new Map();this.chain=Promise.resolve();this.stopped=false}
  now(){return this.options.now?.()??Date.now()}
  async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>8||!record(b.mapping)))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
  list(sessionId){return structuredClone(this.records.filter(b=>b.ownerAccountId===this.options.owner()&&(!sessionId||b.sessionId===sessionId)))}
@@ -115,6 +115,14 @@ export class ComponentDataRefresh {
   finally{signal.removeEventListener('abort',abort);pending.users.delete(signal);if(!pending.users.size)pending.controller.abort()}
 
  }
+ async commit(b,work){
+  // The canvas CAS revision and busy lock belong to the board, not a card.
+  // Keep network work concurrent; serialize the final read/check/write per board.
+  const key=JSON.stringify([b.ownerAccountId,b.sessionId])
+  const pending=(this.commits.get(key)??Promise.resolve()).catch(()=>{}).then(work)
+  this.commits.set(key,pending)
+  try{return await pending}finally{if(this.commits.get(key)===pending)this.commits.delete(key)}
+ }
  async run(b,signal){
   const current=()=>this.records.find(row=>row.id===b.id&&row.revision===b.revision&&row.ownerAccountId===this.options.owner())
   const startedAt=this.now();const state=current();state.status='refreshing';state.lastAttempt=startedAt;await this.persist()
@@ -127,11 +135,16 @@ export class ComponentDataRefresh {
    data.title=model.data.title
    if(templateFor(data)?.id!==b.templateId)throw Error('新数据与当前组件类型不匹配')
    const output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
-   const spec=JSON.parse(output),live=await this.options.inspect(b)
-   signal.throwIfAborted();if(!current())return
-   if(hash(live.spec)!==baseline)throw Error('组件内容已被修改，本次数据未覆盖你的更改')
+   const spec=JSON.parse(output),accepted=readTemplateModel(spec)
+   if(!accepted||accepted.templateId!==b.templateId||accepted.version!==b.templateVersion)throw Error('接口数据不符合当前模板，已保留上次内容')
    const unchanged=hash(model.data)===hash(data)
-   if(!unchanged)await this.options.apply(b,live.revision,spec,signal)
+   await this.commit(b,async()=>{
+    signal.throwIfAborted();if(!current())return
+    const live=await this.options.inspect(b)
+    signal.throwIfAborted();if(!current())return
+    if(!live.writable||hash(live.spec)!==baseline)throw Error('组件内容已被修改，本次数据未覆盖你的更改')
+    if(!unchanged)await this.options.apply(b,live.revision,spec,signal)
+   })
    if(!current())return
    Object.assign(current(),{status:unchanged?'unchanged':'success',lastSuccess:this.now(),dataAsOf:typeof data.asOf==='string'?data.asOf:undefined,error:undefined,failures:0,nextRun:b.enabled?this.now()+b.intervalMinutes*60000:null})
   }catch(error){

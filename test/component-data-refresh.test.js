@@ -1,6 +1,7 @@
 import {describe,it,expect,vi} from 'vitest'
 import {ComponentDataRefresh, evaluateMapping} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
+import {createCanvasActionController} from '../packages/dsh-research-task-runtime/canvas-actions.js'
 const data={version:1,type:'market',variant:'metrics',title:'指标',asOf:'2026-09-25',items:[{label:'指数',value:'100'}]}
 function setup(){
  let now=100000,stored=[],spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),revision='r1'
@@ -50,6 +51,34 @@ describe('data refresh without generation',()=>{
 })
 
 describe('concurrent data consumers and account changes',()=>{
+ it('fetches concurrently but commits all four cards against the real board revision protocol',async()=>{
+  const initial=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
+  let board={files:[],artifacts:['a','b','c','d'].map(id=>({id,containerSpec:initial,x:0,y:0,width:400,height:300})),selection:{selectedNodeIds:[],orderedFileIds:[]}}
+  const controller=createCanvasActionController({snapshot:()=>board,canWrite:()=>true,describe:()=>({containerSpec:{type:'object'}}),validate:n=>n,commit:async n=>{await Promise.resolve();board=n}})
+  const releases=[]
+  const service=new ComponentDataRefresh({owner:()=> 'owner',load:async()=>[],save:async()=>{},
+   validateRequest:async r=>r,execute:()=>new Promise(resolve=>releases.push(resolve)),
+   inspect:async b=>{const live=await controller.inspect({ids:[b.nodeId]});return {revision:live.revision,writable:live.writable,spec:live.nodes[0].content.containerSpec}},
+   apply:async(b,revision,spec)=>controller.apply({requestId:b.id,revision,changes:[{op:'update',id:b.nodeId,fields:{containerSpec:spec}}]})})
+  const bindings=[]
+  for(const nodeId of ['a','b','c','d'])bindings.push(await service.bind({...setup().input,nodeId,requests:[{key:'quote',toolId:'t',args:{ticker:nodeId}}]}))
+  const pending=Promise.all(bindings.map(b=>service.refresh(b.id)))
+  await vi.waitFor(()=>expect(releases).toHaveLength(4))
+  releases.forEach(release=>release({items:[{name:'指数',price:102}],date:'2026-09-26'}))
+  await pending
+  expect(service.list().map(b=>[b.nodeId,b.status])).toEqual(['a','b','c','d'].map(id=>[id,'success']))
+  expect(board.artifacts.every(n=>n.containerSpec.html.includes('102'))).toBe(true)
+ })
+ it('retains a valid chart and binding when an empty response would downgrade it to markdown',async()=>{
+  const f=setup(),chart={version:1,type:'chart',title:'趋势',variant:'line',labels:['周一','周二'],series:[{name:'价格',values:[1,2]}]}
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(chart)))
+  f.service.options.inspect=async()=>({revision:'r1',spec,writable:true})
+  const b=await f.service.bind({...f.input,mapping:{...chart,labels:[],series:[{name:'价格',values:[]}],missing:'数据暂不可用'}})
+  const first=await f.service.refresh(b.id),second=await f.service.refresh(b.id)
+  expect(first.status).toBe('error');expect(second.status).toBe('error')
+  expect(first.error).toMatch(/模板|数据/);expect(second.error).not.toContain('组件模板已变化')
+  expect(f.apply).not.toHaveBeenCalled()
+ })
  it('shares a pending source request across different cards while one consumer is paused',async()=>{
   const f=setup();await f.service.load();const a=await f.service.bind(f.input),b=await f.service.bind({...f.input,nodeId:'n2'})
   let release,networkSignal;f.execute.mockImplementationOnce((_b,_r,_a,signal)=>{networkSignal=signal;return new Promise(r=>{release=r})})
