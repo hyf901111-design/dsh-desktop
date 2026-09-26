@@ -519,12 +519,12 @@ describe('Research task contract and prompt', () => {
     } finally {await runtime.dispose()}
   })
 
-  it('keeps source tools on a provider retry when only API discovery evidence was returned', async () => {
+  it.each(['RATE_LIMIT','EMPTY_RESPONSE','SERVER'])('keeps source tools on a %s provider retry when only API discovery evidence was returned', async code => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const calls=[]
     const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{
       calls.push(request)
-      if(calls.length===1) request.onSessionEvent({type:'turn/end',data:{reason:{kind:'error',error:{code:'RATE_LIMIT'}}}})
+      if(calls.length===1) request.onSessionEvent({type:'turn/end',data:{reason:{kind:'error',error:{code}}}})
       return {childSessionId:'retry-'+calls.length,dispose:async()=>{},result:Promise.resolve(calls.length===1
         ? {stopReason:'error',output:[],researchEvidence:'API定义：需要 ticker 和 beginDate，尚无业务数据'}
         : {stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'markdown',title:'取数结果',content:'已通过授权来源取得业务数据。'})}]})}

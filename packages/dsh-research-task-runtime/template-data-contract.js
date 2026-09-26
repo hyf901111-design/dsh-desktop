@@ -12,6 +12,10 @@ export function normalizeIndexedTableRows(data){
  if(!(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant))||!Array.isArray(data.columns)||!Array.isArray(data.rows))return data
  const keys=data.columns.map((_,i)=>String(i))
  return {...data,rows:data.rows.map(row=>{
+  // A per-symbol query with take:1 returns [row] unless $single is set.
+  // Only unwrap an unambiguous one-row envelope; never flatten multi-row data.
+  if(Array.isArray(row)&&row.length===1&&Array.isArray(row[0])&&row[0].length===keys.length&&row[0].every(cell=>typeof cell==='string'||Number.isFinite(cell)||cell===null))return row[0]
+
   if(!row||Array.isArray(row)||typeof row!=='object'||Object.keys(row).length!==keys.length||!keys.every(k=>Object.hasOwn(row,k)))return row
   return keys.map(k=>row[k])
  })}
@@ -41,4 +45,15 @@ export function templateDataIssue(data){
   if(index>=0)return fail(`rows[${index}] 必须是 ${data.columns.length} 个单元格的数组`)
  }
  return null
+}
+
+// Empty retrieval is a source problem, not malformed visual JSON. A bounded
+// repair must retain tools so it can correct the query's time direction.
+export function templateSourceDataIssue(data) {
+  if(['dashboard','market'].includes(data?.type)&&Array.isArray(data.items)&&data.items.length&&data.items.every(item=>typeof item.value==='string'&&/^(?:—|--|N\/A)(?:[（(].*)?$/iu.test(item.value.trim()))&&/不可用|未提供|未取得/u.test(JSON.stringify(data)))
+    return '全部核心指标为空，尚无业务数据。必须先实际调用当前可用的数据工具；接口目录或无工具声明不能代替取数。若数据源确实无法提供，说明具体查询和缺失原因，不把全空面板标为生成完成。'
+
+  if(data?.type==='market'&&data.variant==='candlestick'&&Array.isArray(data.candles)&&data.candles.length===0)
+    return 'K线来源返回空数组。请检查接口定义中的锚点日期与时间方向：最近历史交易日应向过去查询，不可照抄向未来查询的示例。修正参数实际取数；休市不代表历史行情不存在。仍无数据时如实说明，不编造价格。'
+  return null
 }

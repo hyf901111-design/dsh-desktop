@@ -1,3 +1,4 @@
+import { templateSourceDataIssue } from './template-data-contract.js'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from './component-source-tools.js'
@@ -1252,7 +1253,7 @@ export class ResearchTaskRuntime {
       // One bounded recovery for transport/provider failures, in the same queue slot.
       // Never retry refusals, cancellation, permission failures or unavailable facts.
       if (['container', 'create'].includes(task.kind) && result?.stopReason !== 'aborted' &&
-          (result?.stopReason === 'timeout' && !result.localDeadlineExceeded || result?.stopReason === 'error' && ['RATE_LIMIT', 'TRANSPORT', 'TIMEOUT'].includes(task.modelFailureCode))) {
+          (result?.stopReason === 'timeout' && !result.localDeadlineExceeded || result?.stopReason === 'error' && ['RATE_LIMIT', 'TRANSPORT', 'TIMEOUT', 'EMPTY_RESPONSE', 'SERVER'].includes(task.modelFailureCode))) {
         const evidence = typeof result.researchEvidence === 'string' ? truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES) : ''
         this.appendEvent(task, { type: 'assistant-delta', text: '模型暂时繁忙，正在保留资料并稍后重试…' })
         await handle.dispose(); handle = undefined
@@ -1295,6 +1296,8 @@ export class ResearchTaskRuntime {
           catch(error){throw new ResearchTaskError(error.code==='SOURCE_DATA_REQUIRED'?'GENERATION_FAILED':'INVALID_OUTPUT',error.message)}
           binding=mapped?.recipe
           if(mapped)deliveredText=JSON.stringify(mapped.data)
+          const sourceIssue=extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
+          if(sourceIssue)throw new ResearchTaskError('GENERATION_FAILED',sourceIssue)
           output = finalText(mapped?[{type:'text',text:deliveredText}]:result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && task.kind === 'container' && workbenchPanelFormat(task.prompt) && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
@@ -1353,7 +1356,7 @@ export class ResearchTaskRuntime {
         sourceRecords.push(...(result.sourceRecords??[]))
         if (task.cancelRequested || terminalState(task.state)) return
       }
-      if (structured && output === undefined && !sharedStateError && !designPolicyError && canSynthesizeResult(result)) {
+      if (structured && output === undefined && generationError?.code !== 'GENERATION_FAILED' && !sharedStateError && !designPolicyError && canSynthesizeResult(result)) {
         output = readableFallback ?? (task.kind !== 'container' && recoveryEvidence ? JSON.stringify({ version: 1, type: 'markdown', title: '已取得的研究资料', content: ('> 已保留相关来源摘要，完整分析暂未完成。请结合来源原文核实。\n\n' + recoveryEvidence).slice(0, 32000) }) : undefined)
       }
       if (output !== undefined && canSynthesizeResult(result)) result = { ...result, stopReason: 'completed' }

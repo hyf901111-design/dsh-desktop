@@ -161,7 +161,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             preset: { type: 'string', enum: SIMULATED_WORKBENCH_PRESETS, description: '宿主内置的完整模拟工作台。设置后不要传 panels。' },
             panels: { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题与内容边界；主对话已有的数据必须完整带入实际记录、日期、单位与来源，子任务看不到主对话工具返回。以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
-                        type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
+                        type: { type: 'string', enum: types, required: true, description: '散点图用 market 且 prompt 声明 variant: scatter；普通柱状图用 chart 并声明 chart.bar；指标卡 metrics 只显示数值，不会渲染散点或柱状图。' }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
                         artifact: { type: 'object', additionalProperties: true, description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。真实来源/时点就近标注。' }
                     } } }
         },

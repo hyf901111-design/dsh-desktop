@@ -209,3 +209,28 @@ it('classifies discovery from scoped tool descriptions without rejecting actual 
  const input=structuredClone(draft);input.requests[0].tool=business
  expect(resolveBoundComponent(JSON.stringify(input),collector.records,now).data.items[0].value).toBe('4.515 元')
 })
+
+it('allows a real retrieval repair after an empty K-line response rather than locking the repair into synthesis',async()=>{
+ const empty={version:1,type:'market',variant:'candlestick',title:'ETF K线',asOf:'2026-09-26',candles:[],missing:'请求向未来返回空数组'}
+ const full={...empty,asOf:'2026-09-24',candles:[{date:'2026-09-24',open:4.5,high:4.6,low:4.4,close:4.52,volume:null}]}
+ const start=vi.fn(async()=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(start.mock.calls.length===1?empty:full)}],sourceRecords:[{tool,args,response:{data:{kline:[]}}}]}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF K线\n优先使用 market 类型；variant: candlestick。使用通联真实数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start.mock.calls[1][0].synthesisOnly).toBe(false)
+  expect(start.mock.calls[1][0].prompt).toContain('时间方向')
+ }finally{await runtime.dispose()}
+})
+
+it('does not complete an all-empty claimed-unavailable dashboard without a tool-enabled recovery',async()=>{
+ const missing={version:1,type:'dashboard',title:'行业配置',asOf:'数据暂不可用',items:[{label:'行业权重',value:'—',detail:'未提供工具'}]}
+ const start=vi.fn(async()=>({childSessionId:'c-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(start.mock.calls.length===1?missing:{...missing,asOf:'2026-09-24',items:[{label:'银行',value:'12.5%'}]})}]}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'使用通联获取真实行业配置'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start.mock.calls).toHaveLength(2)
+  expect(start.mock.calls[1][0].synthesisOnly).toBe(false)
+ }finally{await runtime.dispose()}
+})
