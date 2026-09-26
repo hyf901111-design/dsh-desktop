@@ -1079,7 +1079,7 @@ export class ResearchTaskRuntime {
     const prepared = panels.map(panel => {
       const request = validateResearchTaskStart({ parentSessionId: parent, canvasNodeId: panel.canvasNodeId, kind: 'container', prompt: panel.prompt })
       const output = finalText([{ type: 'text', text: JSON.stringify(panel.artifact) }], 'container')
-      if (!output) throw new ResearchTaskError('INVALID_OUTPUT', '模拟数据组件无有效内容')
+      if (!output) throw new ResearchTaskError('INVALID_OUTPUT', '结构化组件无有效内容')
       return { request, output }
     })
     if (new Set(prepared.map(p => p.request.canvasNodeId)).size !== prepared.length) throw new ResearchTaskError('INVALID_REQUEST', '组件标识重复')

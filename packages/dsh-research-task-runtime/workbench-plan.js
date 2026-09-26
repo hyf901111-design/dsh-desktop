@@ -1,5 +1,6 @@
 import { researchBentoSize } from './bento-layout.js';
-import { acceptArtifactOutput } from './artifact-output.js';
+import { templateFor } from './component-template-registry.js';
+import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
@@ -262,15 +263,19 @@ export function validateWorkbench(value) {
             (p.type === 'chart' && /(?:绘制|显示|生成|展示|画).{0,12}(?:K\s*线|蜡烛图|candlestick)/iu.test(p.prompt));
         if (requestsCandlestick && (p.type !== 'market' || marketVariant(p) !== 'candlestick'))
             throw Error(`面板「${p.title}」必须使用 market.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
-        if (!isSimulated && p.artifact !== undefined) throw Error('真实数据面板不能提交模拟数据对象。');
+        if (!isSimulated && p.artifact !== undefined) {
+            if (!templateFor(p.artifact) || p.artifact.type !== p.type || !acceptArtifactOutput(JSON.stringify(p.artifact))) throw Error('真实数据必须按已注册的组件模板提交完整结构化数据，不提交 HTML。');
+            const issue = workbenchMarketRecencyIssue(JSON.stringify(p.artifact), p.prompt);
+            if (issue) throw Error(issue);
+        }
         if (parallel && p.artifact !== undefined) throw Error('并行模拟生成只提交面板规划，不提交 artifact。');
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
-        const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : undefined;
+        const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
         const panel = { title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}) };
         workbenchDesignTemplate(panel);
         return panel;
     });
-    if (isSimulated && Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台模拟数据总量过长。');
+    if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');
     return { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(parallel ? { generationMode: 'parallel' } : {}), panels };

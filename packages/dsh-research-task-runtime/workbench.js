@@ -78,7 +78,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             if (old) {
                 if (JSON.stringify(validateWorkbench(old.input ?? old)) !== JSON.stringify(input))
                     throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
-                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? input.dataMode === 'simulated' ? 'prepared' : 'accepted' : 'preparing' };
+                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? input.dataMode === 'simulated' || input.panels.every(p=>p.artifact) ? 'prepared' : 'accepted' : 'preparing' };
             }
             const id = randomUUID();
             const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
@@ -118,26 +118,28 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     await persist();
                     throw error;
                 }
-            } else if (typeof runtime.startBatch === 'function') {
+            } else {
+                const prepared = plan.panels.filter(p => p.artifact);
+                const pending = plan.panels.filter(p => !p.artifact);
                 try {
-                    const receipts = await runtime.startBatch({ parentSessionId, panels: plan.panels.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) });
-                    for (let index = 0; index < plan.panels.length; index++) plan.panels[index].taskId = receipts[index].taskId;
-                } catch (error) {
-                    for (const panel of plan.panels) panel.error = `面板任务未能启动：${error.message}`;
+                    if (prepared.length) {
+                        const receipts = await runtime.startPreparedBatch({parentSessionId, panels:prepared.map(p => ({canvasNodeId:p.nodeId,prompt:workbenchPanelPrompt(input,p),artifact:p.artifact}))});
+                        prepared.forEach((p,i) => {p.taskId=receipts[i].taskId;p.prepared=true;});
+                    }
+                    if (pending.length && typeof runtime.startBatch === 'function') {
+                        const receipts = await runtime.startBatch({parentSessionId, panels:pending.map(p => ({canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)}))});
+                        pending.forEach((p,i) => {p.taskId=receipts[i].taskId;});
+                    } else for (const p of pending) {
+                        try { p.taskId=(await runtime.start({parentSessionId,canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p)})).taskId; } catch { p.error='面板任务未能启动，请重试。'; }
+                    }
+                } catch(error) {
+                    for(const p of plan.panels) if(!p.taskId)p.error='面板任务未能启动，请重试。';
                 }
-            } else await Promise.all(plan.panels.map(async (p) => {
-                try {
-                    const receipt = await runtime.start({ parentSessionId, canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) });
-                    p.taskId = receipt.taskId;
-                }
-                catch {
-                    p.error = '面板任务未能启动，请重试。';
-                }
-            }));
+            }
             plan.ready = true;
             mountedPlans.delete(id);
             await persist();
-            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: input.dataMode === 'simulated' ? 'prepared' : 'accepted' };
+            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: input.dataMode === 'simulated' || input.panels.every(p=>p.artifact) ? 'prepared' : 'accepted' };
         };
         const pending = chain.then(run);
         chain = pending.catch(() => { });
@@ -145,7 +147,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     };
     const disposeTool = ctx.tools.register(defineTool({
         name: 'research_workbench_create',
-        description: '在研究画布新增 1–10 个独立面板；此工具不会替换、刷新或删除已有组件。用户要求更新已有组件时，先 research_canvas_inspect；金融模板用 research_canvas_update_market 直接提交结构化数据，其他组件用 research_canvas_apply 修改其 containerSpec；不要把新增结果称为替换。用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据提交 panels，不提交 artifact。面板子任务不继承主对话的工具返回；如果主对话已取数，必须在对应 prompt 中传递实际数值、日期、单位及真实调用来源，不能只列待查字段或说“已取得”，否则子任务会重复检索。仅调用 financial_query 的记录不得标为通联；不同来源分别标注。返回 accepted 仅表示面板任务已启动，回复应说生成中，不能声称全部完成；prepared 才表示宿主已准备好内容。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
+        description: '在研究画布新增 1–10 个独立面板；此工具不会替换、刷新或删除已有组件。用户要求更新已有组件时，先 research_canvas_inspect；金融模板用 research_canvas_update_market 直接提交结构化数据，其他组件用 research_canvas_apply 修改其 containerSpec；不要把新增结果称为替换。用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据已取到时直接将完整结构化数据放入各 panel.artifact，宿主即刻填充预置模板，不启动逐卡模型；仅尚未取到数据的面板走子任务。不可把模拟数据标为真实来源。面板子任务不继承主对话的工具返回；如果主对话已取数，必须在对应 prompt 中传递实际数值、日期、单位及真实调用来源，不能只列待查字段或说“已取得”，否则子任务会重复检索。仅调用 financial_query 的记录不得标为通联；不同来源分别标注。返回 accepted 仅表示面板任务已启动，回复应说生成中，不能声称全部完成；prepared 才表示宿主已准备好内容。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
         parameters: {
             requestId: { type: 'string', required: true, description: '本轮需求的唯一稳定标识，重试保持一致。' },
             title: { type: 'string', required: true },
@@ -155,7 +157,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             panels: { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题与内容边界；主对话已有的数据必须完整带入实际记录、日期、单位与来源，子任务看不到主对话工具返回。以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
                         type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
-                        artifact: { type: 'object', additionalProperties: true, description: '可选。已有完整模拟数据时提交；未提交则由宿主生成。禁止脚本和外部链接。' }
+                        artifact: { type: 'object', additionalProperties: true, description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。真实来源/时点就近标注。' }
                     } } }
         },
         output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, templateIds: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },
@@ -190,7 +192,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     ...(!p.ready && !panel.taskId && !panel.error ? { pending: true } : {}),
                     // A completed prepared plan can also be mounted after the
                     // preparation finishes, such as when the renderer reloads.
-                    ...(p.dataMode === 'simulated' && panel.taskId ? { preparedOutput: runtime.inspect({ parentSessionId, taskId: panel.taskId, afterSeq: 0 }).finalOutput } : {})
+                    ...((p.dataMode === 'simulated' || panel.prepared) && panel.taskId ? { preparedOutput: runtime.inspect({ parentSessionId, taskId: panel.taskId, afterSeq: 0 }).finalOutput } : {})
                 })) })) });
             }
             catch {

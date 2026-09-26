@@ -1,3 +1,4 @@
+import {retainTemplateModel} from './component-template-registry.js';
 import { renderMarketArtifact } from './market-artifact.js';
 import { requiredMarketVariant } from './workbench-design-contract.js';
 import { parseResearchContainerSpec } from './artifact-validator.js';
@@ -30,7 +31,7 @@ export function acceptArtifactOutput(text) {
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.
   if(spec.type==='html' && researchHtmlText(spec.html).length===0 && !/<(?:svg|canvas)\b/i.test(spec.html))continue;
-  return JSON.stringify(spec);
+  return JSON.stringify(retainTemplateModel(spec,detailedKpiMarket(candidate) ?? candidate));
  }
  return undefined;
 }

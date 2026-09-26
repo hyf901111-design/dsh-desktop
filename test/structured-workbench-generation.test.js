@@ -130,8 +130,14 @@ describe('模拟工作台结构化生成', () => {
       const legacy = mockPlan(); legacy.requestId = 'source-1'; delete legacy.dataMode; legacy.panels = legacy.panels.slice(0, 2).map(({ artifact, ...p }) => p)
       expect((await tool.execute(legacy, exec)).status).toBe('accepted')
       expect(runtime.start).toHaveBeenCalledTimes(2)
+      const sourced = {requestId:'source-ready',title:'接口快照',dataMode:'source',panels:[{title:'指标快照',type:'market',size:'medium',prompt:'接口已返回',artifact:{version:1,type:'market',variant:'metrics',title:'指标快照',asOf:'2026-09-25 · 数据接口',items:[{label:'收盘',value:'3000'}]}}]}
+      expect((await tool.execute(sourced,exec)).status).toBe('prepared')
+      expect(runtime.start).toHaveBeenCalledTimes(2)
+      expect(runtime.startPreparedBatch).toHaveBeenCalledTimes(2)
+      await handler({method:'POST'},{writeHead:()=>{},end:body=>{listed=JSON.parse(body)}})
+      expect(listed.plans.at(-1).panels[0].preparedOutput).toBeTruthy()
     } finally { await dispose(); await rm(dir, { recursive: true, force: true }) }
-  })
+  },10000)
 
   it('prepares a lightweight simulated plan locally, including OHLC, without panel agents', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'planned-workbench-'))
