@@ -42,6 +42,6 @@ it('updates an existing market card from an object without asking the model to e
   const market={version:1,type:'market',variant:'metrics',title:'申万农林牧渔行情（本次复核）',asOf:'2026-09-24 收盘',items:[{label:'收盘点位',value:'2538.15 点'}]}
   const result=JSON.parse(await tools.get('research_canvas_update_market').execute({requestId:'refresh',revision:'r1',id:'card',market},{agent:{session:{id:'session'}},signal:new AbortController().signal}))
   expect(result).toMatchObject({status:'applied',changedIds:['card']})
-  expect(calls[0]).toMatchObject({sessionId:'session',method:'apply',args:{requestId:'refresh',revision:'r1',changes:[{op:'update',id:'card',fields:{containerSpec:{type:'html',title:market.title}}}]}})
+  expect(calls[0]).toMatchObject({sessionId:'session',method:'apply',args:{requestId:'refresh',revision:'r1',changes:[{op:'update',id:'card',fields:{title:market.title,containerSpec:{type:'html',title:market.title}}}]}})
  }finally{dispose()}
 })

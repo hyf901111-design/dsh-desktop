@@ -78,7 +78,7 @@ export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThi
       if(!args||Object.keys(args).some(key=>!['requestId','revision','id','market'].includes(key))||
         ![args.requestId,args.revision,args.id].every(value=>typeof value==='string'&&value.trim()&&value.length<=256)||
         args.market?.type!=='market')throw Error('金融组件更新参数无效。')
-      const changes=normalizeCanvasChanges([{op:'update',id:args.id,fields:{containerSpec:args.market}}])
+      const changes=normalizeCanvasChanges([{op:'update',id:args.id,fields:{title:args.market.title,containerSpec:args.market}}])
       await guardCanvas(exec,'apply',{requestId:args.requestId,revision:args.revision,changes})
       const sessionId=canvasSession(exec)
       if(typeof sessionId!=='string'||!sessionId)throw Error('当前执行未绑定画板。')
