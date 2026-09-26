@@ -52,6 +52,22 @@ it('repairs an invalid binding with its observed response instead of reverting t
   expect(bindData).toHaveBeenCalledOnce()
  } finally {await runtime.dispose()}
 })
+it('recovers verified data after the retrieval deadline even when the first output is empty',async()=>{
+ const start=vi.fn(async()=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve(start.mock.calls.length===1
+  ?{stopReason:'timeout',localDeadlineExceeded:true,output:[],sourceRecords:records}
+  :{stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:[]}),dispose:async()=>{}}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n优先使用 market 类型；必须输出 market.metrics 的结构化数据。使用通联真实数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  expect(start.mock.calls[1][0]).toMatchObject({synthesisOnly:true})
+  expect(start.mock.calls[1][0].prompt).toContain('mapping 的模板结构')
+  expect(start.mock.calls[1][0].prompt).toContain('responseSample')
+  expect(bindData).toHaveBeenCalledOnce()
+ }finally{await runtime.dispose()}
+})
 it('repairs a static plugin-backed card once using observed data without fetching again',async()=>{
  const staticData={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'4.515 元'}]}
  const start=vi.fn(async input=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(start.mock.calls.length===1?staticData:draft)}],sourceRecords:start.mock.calls.length===1?records:[]}),dispose:async()=>{}}))
