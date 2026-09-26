@@ -5,9 +5,27 @@ import { runInNewContext } from 'node:vm';
 import { acceptArtifactOutput, artifactReadableFallback } from '../packages/dsh-research-task-runtime/artifact-output.js';
 import { renderInteractiveArtifact } from '../packages/dsh-research-task-runtime/interactive-artifact.js';
 import { parseResearchContainerSpec } from '../packages/dsh-research-task-runtime/artifact-validator.js';
+import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js';
 import { ResearchTaskRuntime } from '../packages/dsh-research-task-runtime/index.js';
 const spec={version:1,type:'table',title:'公司对比',columns:['公司','收入'],rows:[['甲公司',12]]};
 describe('component acceptance and recovery',()=>{
+ it('keeps a sourced consensus table interactive without dropping its date, notes or rows',()=>{
+  const table={version:1,type:'table',title:'一致预期',columns:['年度','净利润（亿元）','EPS（元）'],rows:[['2025E','722.01','15.60'],['2026E','962.58','20.80']],asOf:'快照 2026-09-24 · 来源：通联 Datayes',note:'预测净利润由万元换算为亿元，非实时。'};
+  const output=JSON.parse(acceptArtifactOutput(JSON.stringify(table)));
+  expect(output.type).toBe('html');
+  const model=readTemplateModel(output);
+  expect(model.data).toEqual({...table,type:'market',variant:'table'});
+  expect(output.html).toContain(table.asOf);expect(output.html).toContain(table.note);
+  expect(output.html).not.toContain('交互视图暂未完成');
+  const w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.body.innerHTML=output.html;
+  for(const script of w.document.querySelectorAll('script:not([type="application/json"])'))w.eval(script.textContent);
+  const search=w.document.querySelector('[data-market-search]');search.value='2026E';search.dispatchEvent(new w.Event('input'));
+  expect([...w.document.querySelectorAll('tbody tr')].filter(row=>!row.hidden).map(row=>row.textContent)).toEqual(['2026E962.5820.80']);
+  search.value='';search.dispatchEvent(new w.Event('input'));w.document.querySelector('[data-column="0"]').click();
+  expect(w.document.querySelectorAll('tbody tr')).toHaveLength(2);
+  w.happyDOM.abort();
+  for(const invalid of [{extra:true},{rows:[['wrong width']]},{rows:[]},{asOf:17},{note:{source:'invalid'}}])expect(acceptArtifactOutput(JSON.stringify({...table,...invalid}))).toBeUndefined();
+ });
  it('preserves an overlong chart caption as visible notes without dropping any points',()=>{
   const title='医药指数趋势｜'+('数据来源和日期说明，静态快照；'.repeat(25));
   const chart={version:1,type:'chart',title,variant:'line',labels:['2026-08-01','2026-09-01'],series:[{name:'指数',values:[7012.34,7654.32]}]};

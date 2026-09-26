@@ -8,6 +8,21 @@ import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../p
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 afterEach(() => vi.unstubAllGlobals())
 describe('workbench execution policy', () => {
+  it('ends parent research after the matching accepted plan while allowing a new human request', () => {
+    const current = session('使用通联创建工作台')
+    let prompt
+    registerWorkbenchExecutionPolicy({ systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
+    const text = () => prompt.text({ agent: { session: current } })
+    current.events.push({ type: 'tool/call', data: { name: 'research_workbench_create', callId: 'plan-call' } })
+    const result = { type: 'tool/result', data: { message: { source: { kind: 'tool', callId: 'plan-call' }, content: [{ type: 'tool-result', isError: true, content: [{ type: 'text', text: JSON.stringify({ planId: 'plan', status: 'accepted' }) }] }] } } }
+    current.events.push(result)
+    expect(text()).toContain('立即调用 research_workbench_create')
+    result.data.message.content[0].isError = false
+    expect(text()).toContain('主会话不要再重复接口发现')
+    const next = session('再创建另一只股票的工作台').events[0]; next.data.id = 'human-next'
+    current.events.push(next)
+    expect(text()).toContain('立即调用 research_workbench_create')
+  })
   it('applies the early plan before the first human message is committed to session history', () => {
     const pending = { header: {}, events: [
       ...session('解释上一张图').events,
