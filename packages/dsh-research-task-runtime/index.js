@@ -3,6 +3,7 @@ import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue } from './workbench-model-queue.js'
+import { componentSourceCollector, COMPONENT_BOUND_DATA_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
@@ -12,7 +13,7 @@ import { designPolicyIssue, normalizeGeneratedHostStyles, duplicateTitleRepairSn
 import { SHARED_COMPONENT_INSTRUCTION } from './shared-component-contract.js'
 import { startComponentAgent } from './component-agent-scope.js'
 import { createSharedMainAgentAdapter } from './shared-main-agent.js'
-import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES } from './canvas-tools.js'
+import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES, callCanvas } from './canvas-tools.js'
 import { registerCanvasUseTool } from './canvas-use-tools.js'
 import { registerCanvasUseTasks } from './canvas-use-tasks.js'
 import { loadBundledComponentSkill } from './component-skill.js'
@@ -1179,6 +1180,7 @@ export class ResearchTaskRuntime {
 
   async run(task) {
     let handle, readableFallback
+    const sourceRecords=[]
     const startingEvents = []
     try {
       const executionPrompt = await buildResearchTaskExecutionPrompt(taskRequest(task), {
@@ -1225,6 +1227,7 @@ export class ResearchTaskRuntime {
       for (const event of startingEvents) this.onSessionEvent(task, event)
       await this.persist()
       let result = await handle.result
+      sourceRecords.push(...(result.sourceRecords??[]))
       if (task.cancelRequested || terminalState(task.state)) return
       // One bounded recovery for transport/provider failures, in the same queue slot.
       // Never retry refusals, cancellation, permission failures or unavailable facts.
@@ -1248,11 +1251,12 @@ export class ResearchTaskRuntime {
         task.childSessionId = requiredString(handle.childSessionId, MAX_ID_LENGTH, '子会话标识无效')
         await this.persist()
         result = await handle.result
+        sourceRecords.push(...(result.sourceRecords??[]))
         if (evidence && !result.researchEvidence) result = { ...result, researchEvidence: evidence }
         if (task.cancelRequested || terminalState(task.state)) return
       }
       const structured = task.kind === 'container' || task.kind === 'create'
-      let output, recoveryText = '', recoveryEvidence = '', generationError, sharedStateError, designPolicyError
+      let output, binding, recoveryText = '', recoveryEvidence = '', generationError, sharedStateError, designPolicyError
       // At most one repair generation, within the same task/concurrency slot.
       // Completed malformed output and truncated output follow the same acceptance gate.
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -1262,11 +1266,16 @@ export class ResearchTaskRuntime {
           if (task.cancelRequested || terminalState(task.state)) return
         }
         if (typeof result?.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
-        const deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
+        let deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
-          output = finalText(result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
+          let mapped
+          try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now())) }
+          catch(error){throw new ResearchTaskError('INVALID_OUTPUT',error.message)}
+          binding=mapped?.recipe
+          if(mapped)deliveredText=JSON.stringify(mapped.data)
+          output = finalText(mapped?[{type:'text',text:deliveredText}]:result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           const variantIssue = workbenchMarketVariantIssue(output, task.prompt)
           if (variantIssue) throw new ResearchTaskError('INVALID_OUTPUT', variantIssue)
           const recencyIssue = workbenchMarketRecencyIssue(deliveredText, task.prompt, new Date(this.now()))
@@ -1295,6 +1304,7 @@ export class ResearchTaskRuntime {
         task.childSessionId = requiredString(handle.childSessionId, MAX_ID_LENGTH, '子会话标识无效')
         await this.persist()
         result = await handle.result
+        sourceRecords.push(...(result.sourceRecords??[]))
         if (task.cancelRequested || terminalState(task.state)) return
       }
       if (structured && output === undefined && !sharedStateError && !designPolicyError && canSynthesizeResult(result)) {
@@ -1313,6 +1323,11 @@ export class ResearchTaskRuntime {
           error: '未能取得足够的最新数据，未生成占位监控面板，请重试。'
         })
       } else if (result?.stopReason === 'completed' && output !== undefined) {
+        if(binding&&task.kind==='container'&&typeof this.adapter.bindData==='function') {
+          try { await this.adapter.bindData(task,binding,output,task.controller.signal) }
+          catch(error){this.appendEvent(task,{type:'assistant-delta',text:'组件数据已保留，自动更新暂未绑定：'+publicProgressText(error.message)})}
+          if(task.cancelRequested||terminalState(task.state))return
+        }
         await this.finish(task, 'completed', { finalOutput: output })
       } else {
         const message = result?.stopReason === 'completed'
@@ -1555,6 +1570,10 @@ export function createSubagentAdapter(ctx) {
   }
 
   return {
+    async bindData(task,recipe,output,signal) {
+      if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL)return
+      await callCanvas(task.parentSessionId,'data',{action:'bind-generated',nodeId:task.canvasNodeId,recipe,initialSpec:JSON.parse(output)},signal)
+    },
     async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress, synthesisOnly = false, onWorkbenchPlan }) {
       const parent = await resolveParent(parentSessionId)
       // Web model switches live in the native API's session selection, not in
@@ -1643,6 +1662,8 @@ export function createSubagentAdapter(ctx) {
         !(kind === 'container' && containerExcludedTools.has(name)) &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
+      const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')))
+      if(kind==='container'&&permitsTools&&workbenchPanelFormat(query??'')&&childTools.some(name=>name.startsWith('ework__')))effectivePrompt+=COMPONENT_BOUND_DATA_PROMPT
       const run = await startComponentAgent(ctx, {
         label: '画布生成任务',
         ...(agentOptions ? { agentOptions } : {}),
@@ -1688,6 +1709,7 @@ export function createSubagentAdapter(ctx) {
           if (seen.has(seq)) return
           seen.add(seq)
         }
+        sourceCollector.accept(event)
         if (event?.type === 'tool/call' && networkTools.has(event.data?.name)) {
           searchCalls++
           if (typeof event.data.callId === 'string') evidenceCalls.add(event.data.callId)
@@ -1752,7 +1774,7 @@ export function createSubagentAdapter(ctx) {
       ]) : run.result
       return {
         childSessionId: child.id,
-        result: Promise.resolve(boundedResult).then(result => ({ ...result, ...(evidenceParts.length ? { researchEvidence: evidenceParts.join('\n\n') } : {}) })).finally(() => clearTimeout(completionTimer)),
+        result: Promise.resolve(boundedResult).then(result => ({ ...result, sourceRecords:sourceCollector.records, ...(evidenceParts.length ? { researchEvidence: evidenceParts.join('\n\n') } : {}) })).finally(() => clearTimeout(completionTimer)),
         async dispose() {
           if (disposed) return
           disposed = true

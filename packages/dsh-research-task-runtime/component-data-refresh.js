@@ -89,16 +89,25 @@ export function decodeDataResponse(value){
  return result
 }
 export class ComponentDataRefresh {
- constructor(options){this.options=options;this.records=[];this.active=new Map();this.requests=new Map();this.commits=new Map();this.chain=Promise.resolve();this.stopped=false}
+ constructor(options){this.options=options;this.records=[];this.active=new Map();this.requests=new Map();this.commits=new Map();this.visible=new Map();this.chain=Promise.resolve();this.stopped=false}
  now(){return this.options.now?.()??Date.now()}
+ isVisible(sessionId){const view=this.visible.get(sessionId);return view?.owner===this.options.owner()&&view.until>this.now()}
+ setVisible(sessionId,active){
+  if(!id(sessionId)||typeof active!=='boolean')throw Error('看板可见状态无效')
+  if(active)this.visible.set(sessionId,{owner:this.options.owner(),until:this.now()+20000});else this.visible.delete(sessionId)
+  for(const [key,run]of this.active)if(run.automatic&&this.records.find(b=>b.id===key)?.sessionId===sessionId&&!active)run.controller.abort()
+ }
  async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>8||!record(b.mapping)))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
- list(sessionId){return structuredClone(this.records.filter(b=>b.ownerAccountId===this.options.owner()&&(!sessionId||b.sessionId===sessionId)))}
+ list(sessionId){return structuredClone(this.records.filter(b=>b.ownerAccountId===this.options.owner()&&(!sessionId||b.sessionId===sessionId)).map(b=>({...b,viewPaused:b.enabled&&!this.isVisible(b.sessionId)})))}
  persist(){const snapshot=structuredClone(this.records);const pending=this.chain.then(()=>this.options.save(snapshot));this.chain=pending.catch(()=>{});return pending}
- async bind(input){
+ async bind(input,initialSpec){
   input=bounded(input);rejectCredentials(input)
-  if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes??0)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>8||!record(input.mapping))throw Error('数据绑定参数无效')
+  input.intervalMinutes??=1
+  if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>8||!record(input.mapping))throw Error('数据绑定参数无效')
   const owner=this.options.owner();if(!owner)throw Error('当前账户不可用')
-  const target=await this.options.inspect(input)
+  // Generation registers its verified recipe before the renderer mounts the
+  // completed card. Every refresh still checks the live node and edit rights.
+  const target=initialSpec?{spec:initialSpec,writable:true}:await this.options.inspect(input)
   const model=readTemplateModel(target.spec)
   if(!target.writable||!model)throw Error('该组件尚未保存模板数据，请先使用结构化模板创建或更新一次')
   if(templateFor(input.mapping)?.id!==model.templateId)throw Error('字段映射必须保留当前模板类型')
@@ -117,12 +126,13 @@ export class ComponentDataRefresh {
   else{Object.assign(b,patch);b.revision++;if(b.intervalMinutes===0)b.enabled=false;b.status=b.enabled?'idle':'paused';b.nextRun=b.enabled?this.now()+b.intervalMinutes*60000:null}
   await this.persist();return structuredClone(b)
  }
- async tick(){if(this.stopped)return;const due=this.records.filter(b=>b.ownerAccountId===this.options.owner()&&b.enabled&&b.nextRun<=this.now());await Promise.allSettled(due.slice(0,4).map(b=>this.refresh(b.id)))}
- refresh(id){
+ async tick(){if(this.stopped)return;for(const [key,run]of this.active)if(run.automatic&&!this.isVisible(this.records.find(b=>b.id===key)?.sessionId))run.controller.abort();const due=this.records.filter(b=>b.ownerAccountId===this.options.owner()&&b.enabled&&this.isVisible(b.sessionId)&&b.nextRun<=this.now());await Promise.allSettled(due.slice(0,4).map(b=>this.refresh(b.id,true)))}
+ refresh(id,automatic=false){
   if(this.active.has(id))return this.active.get(id).promise
   const b=this.records.find(b=>b.id===id&&b.ownerAccountId===this.options.owner());if(!b||this.stopped)return Promise.reject(Error('组件数据绑定不存在'))
-  const controller=new AbortController();const promise=this.run(structuredClone(b),controller.signal).finally(()=>this.active.delete(id))
-  this.active.set(id,{promise,controller});return promise
+  if(automatic&&!this.isVisible(b.sessionId))return Promise.resolve()
+  const controller=new AbortController();const promise=this.run(structuredClone(b),controller.signal,automatic).finally(()=>this.active.delete(id))
+  this.active.set(id,{promise,controller,automatic});return promise
  }
  async request(b,request,signal){
   const args=evaluateMapping(request.args,{},new Date(this.now()))
@@ -150,11 +160,12 @@ export class ComponentDataRefresh {
   this.commits.set(key,pending)
   try{return await pending}finally{if(this.commits.get(key)===pending)this.commits.delete(key)}
  }
- async run(b,signal){
+ async run(b,signal,automatic=false){
   const current=()=>this.records.find(row=>row.id===b.id&&row.revision===b.revision&&row.ownerAccountId===this.options.owner())
   const startedAt=this.now();const state=current();state.status='refreshing';state.lastAttempt=startedAt;await this.persist()
   try{
    const before=await this.options.inspect(b),model=readTemplateModel(before.spec)
+   signal.throwIfAborted()
    if(!before.writable||!model||model.templateId!==b.templateId||model.version!==b.templateVersion)throw Error('组件模板已变化，请重新绑定数据')
    const baseline=hash(before.spec)
    const results=await Promise.all(b.requests.map(async r=>[r.key,await this.request(b,r,signal)]));signal.throwIfAborted()
@@ -166,19 +177,19 @@ export class ComponentDataRefresh {
    if(!accepted||accepted.templateId!==b.templateId||accepted.version!==b.templateVersion)throw Error('接口数据不符合当前模板，已保留上次内容')
    const unchanged=hash(model.data)===hash(accepted.data)
    await this.commit(b,async()=>{
-    signal.throwIfAborted();if(!current())return
+    signal.throwIfAborted();if(!current()||automatic&&!this.isVisible(b.sessionId))return
     const live=await this.options.inspect(b)
-    signal.throwIfAborted();if(!current())return
+    signal.throwIfAborted();if(!current()||automatic&&!this.isVisible(b.sessionId))return
     if(!live.writable||hash(live.spec)!==baseline)throw Error('组件内容已被修改，本次数据未覆盖你的更改')
     if(!unchanged)await this.options.apply(b,live.revision,spec,signal)
    })
-   if(!current())return
+   if(!current()||automatic&&!this.isVisible(b.sessionId))return
    Object.assign(current(),{status:unchanged?'unchanged':'success',lastSuccess:this.now(),dataAsOf:typeof data.asOf==='string'?data.asOf:undefined,error:undefined,failures:0,nextRun:b.enabled?this.now()+b.intervalMinutes*60000:null})
   }catch(error){
    if(!current()||signal.aborted)return
    const failures=(current().failures??0)+1
    Object.assign(current(),{status:'error',error:String(error?.message??'取数失败').slice(0,240),failures,nextRun:b.enabled?this.now()+Math.max(b.intervalMinutes*60000,Math.min(3600000,30000*2**Math.min(failures,7))):null})
-  }finally{if(current())await this.persist()}
+  }finally{if(current()){if(signal.aborted||automatic&&!this.isVisible(b.sessionId))current().status=b.enabled?'idle':'paused';await this.persist()}}
   return structuredClone(current())
  }
  async dispose(){this.stopped=true;for(const v of this.active.values())v.controller.abort();for(const r of this.requests.values())r.controller.abort();await Promise.allSettled([...this.active.values()].map(v=>v.promise));await this.chain}

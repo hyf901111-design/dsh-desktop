@@ -5,7 +5,9 @@ export class ComponentDataRefresh {
  constructor(options:{now?:()=>number;owner:()=>string|undefined;load:()=>Promise<ComponentDataBinding[]>;save:(value:ComponentDataBinding[])=>Promise<void>;inspect:(binding:ComponentDataInput|ComponentDataBinding)=>Promise<{revision:string;spec:any;writable:boolean}>;apply:(binding:ComponentDataBinding,revision:string,spec:any,signal:AbortSignal)=>Promise<unknown>;validateRequest:(request:Pick<DataRequest,'key'|'toolId'|'args'>,target:ComponentDataInput)=>Promise<DataRequest>;execute:(binding:ComponentDataBinding,request:DataRequest,args:Record<string,unknown>,signal:AbortSignal)=>Promise<unknown>})
  load():Promise<void>
  list(sessionId?:string):ComponentDataBinding[]
- bind(input:ComponentDataInput):Promise<ComponentDataBinding>
+ setVisible(sessionId:string,active:boolean):void
+ isVisible(sessionId:string):boolean
+ bind(input:ComponentDataInput,initialSpec?:unknown):Promise<ComponentDataBinding>
  configure(id:string,patch:ComponentDataSettings):Promise<ComponentDataBinding>
  refresh(id:string):Promise<ComponentDataBinding|undefined>
  tick():Promise<void>

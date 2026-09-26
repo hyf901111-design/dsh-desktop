@@ -1389,6 +1389,10 @@ async function bootstrap(): Promise<void> {
     if(!componentDataService)throw Error('数据刷新服务不可用')
     return componentDataService.request(sessionId,args)
   })
+  ipcMain.handle('component-data:visibility',(event,sessionId:string,active:boolean)=>{
+    assertTrustedMainWindowEvent(event,mainWindow)
+    componentDataService?.engine.setVisible(sessionId,active)
+  })
   const componentExecutor = new ScheduledComponentExecutor(scheduledStore, async (target, method, args) => {
     canvasActions.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]})
     return canvasActions.execute({sessionId:target.sessionId,method,args,scheduled:true})
