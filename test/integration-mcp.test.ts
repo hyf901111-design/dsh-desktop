@@ -109,6 +109,22 @@ describe('MCP supervisor with real SDK transports', () => {
     expect((await instance.invoke('mcp-fixture', 'echo', {}, signal())).isError).not.toBe(true)
   })
 
+  it('queues a six-card burst and cancels waiting work without sending or replaying it', async () => {
+    const { instance } = supervisor()
+    await instance.connect(connection(), signal())
+    const burst = Array.from({length: 6}, (_, index) => instance.invoke('mcp-fixture', 'wait', {index, delay: 100}, signal()))
+    const cancelled = new AbortController()
+    const waiting = instance.invoke('mcp-fixture', 'echo', {cancelled: true}, cancelled.signal)
+    cancelled.abort()
+    expect((await waiting).errorCode).toBe('CANCELLED')
+    const results = await Promise.all(burst)
+    expect(results.every(result => !result.isError)).toBe(true)
+    expect(results.map(result => JSON.parse(result.content[0]!.text).args.index)).toEqual([0,1,2,3,4,5])
+    const summary = JSON.parse((await instance.invoke('mcp-fixture', 'echo', {}, signal())).content[0]!.text)
+    expect(summary.calls).toBe(7)
+    expect(summary.peakWaits).toBe(4)
+  })
+
   it('bounds output and drains stderr without exposing it as tool content', async () => {
     const { instance } = supervisor()
     await instance.connect(connection(), signal())

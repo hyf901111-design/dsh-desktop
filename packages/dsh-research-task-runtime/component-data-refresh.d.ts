@@ -7,7 +7,7 @@ export class ComponentDataRefresh {
  list(sessionId?:string):ComponentDataBinding[]
  setVisible(sessionId:string,active:boolean):void
  isVisible(sessionId:string):boolean
- bind(input:ComponentDataInput,initialSpec?:unknown):Promise<ComponentDataBinding>
+ bind(input:ComponentDataInput,initialSpec?:unknown,options?:{preserveSettings?:boolean}):Promise<ComponentDataBinding>
  configure(id:string,patch:ComponentDataSettings):Promise<ComponentDataBinding>
  refresh(id:string):Promise<ComponentDataBinding|undefined>
  tick():Promise<void>

@@ -12,6 +12,11 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('uses a literal missing-data label for absent or null text while retaining real values',()=>{
+  const mapping={$from:'q',$each:'reports',$map:{title:{$path:'title'},summary:{$path:'abstractText',$default:'来源未提供摘要'}}}
+  expect(evaluateMapping(mapping,{q:{reports:[{title:'A',abstractText:null},{title:'B'},{title:'C',abstractText:'实际摘要'}]}})).toEqual([{title:'A',summary:'来源未提供摘要'},{title:'B',summary:'来源未提供摘要'},{title:'C',summary:'实际摘要'}])
+  expect(()=>evaluateMapping({$path:'missing',$default:{script:'invalid'}},{})).toThrow(/缺失值/)
+ })
  it('selects a mapped date from a path array and never formats objects as text',()=>{
   const responses={q:{data:{kline:[{date:'2026-09-23'},{date:'2026-09-24'}]}}}
   expect(evaluateMapping({$from:'q',$path:'data.kline',$sortBy:'date',$order:'desc',$take:1,$single:true,$map:{$path:'date'},$suffix:' 收盘'},responses)).toBe('2026-09-24 收盘')
@@ -37,6 +42,16 @@ describe('data refresh without generation',()=>{
   f.now(240000);await f.service.tick();expect(f.execute).toHaveBeenCalledTimes(1)
   f.service.setVisible('s',true);await f.service.tick();expect(f.execute).toHaveBeenCalledTimes(2)
   f.service.setVisible('s',false);expect(f.service.list()[0].viewPaused).toBe(true)
+ })
+ it('rebinds a regenerated card to its new source while preserving the user refresh settings',async()=>{
+  const f=setup();await f.service.load();const first=await f.service.bind(f.input)
+  await f.service.configure(first.id,{intervalMinutes:5,enabled:false})
+  const replacement=structuredClone(f.input);replacement.requests[0].args.url_params.ticker='510500'
+  const next=await f.service.bind(replacement,f.spec(),{preserveSettings:true})
+  expect(next).toMatchObject({id:first.id,intervalMinutes:5,enabled:false,nextRun:null})
+  expect(next.requests[0].args.url_params.ticker).toBe('510500')
+  expect(next.revision).toBe(3)
+  expect(f.service.list()).toHaveLength(1)
  })
  it('cancels an in-flight automatic fetch on navigation and ignores its late result',async()=>{
   const f=setup();await f.service.load();await f.service.bind(f.input);f.now(170000);f.service.setVisible('s',true)

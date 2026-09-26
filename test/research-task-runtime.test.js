@@ -1155,7 +1155,8 @@ describe('Research task Subagent adapter', () => {
     expect(child.prompt[0].text).toContain('data-bound')
     expect(child.prompt[0].text).toContain('mapping 的模板结构')
     expect(child.prompt[0].text).not.toContain('唯一交付格式：')
-    expect(child.toolFilter.allow).toEqual(['ework__datayes_call','ework__other_source','web_search','web_fetch','financial_query','research_context_read'])
+    expect(child.toolFilter.allow).toEqual(['ework__datayes_call','ework__other_source','web_search','web_fetch','research_context_read'])
+    expect(child.prompt[0].text).toContain('已指定使用配置的插件')
     await handle.dispose()
   })
 
