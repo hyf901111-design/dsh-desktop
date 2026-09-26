@@ -22,25 +22,39 @@ export function parseResearchMarketNativeTable(html, doc) {
 export function ResearchMarketNativeTable({ data }) {
   const [order, setOrder] = react.useState({ column: -1, ascending: true });
   const [query, setQuery] = react.useState('');
+  const [selected, setSelected] = react.useState(null);
   if (!data) return (0, react_jsx_runtime.jsx)('div', { children: '表格暂不可用' });
-  const filtered = data.variant === 'fund-holdings' && query.trim()
+  const filtered = query.trim()
     ? data.rows.filter(row => row.some(cell => cell.text.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())))
     : data.rows;
   const rows = order.column < 0 ? filtered : [...filtered].sort((a, b) => {
     const left = a[order.column].text, right = b[order.column].text;
-    const clean = value => value.trim().replace(/[,，%]/g, '');
-    const x = Number(clean(left)), y = Number(clean(right));
-    const comparison = clean(left) && clean(right) && Number.isFinite(x) && Number.isFinite(y)
+    const numeric = value => {
+      const match=value.trim().replace(/[,，]/g,'').match(/^([+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*(万亿|亿|万|%|元|股)?$/);
+      return match?Number(match[1])*({万亿:1e12,亿:1e8,万:1e4}[match[2]]??1):NaN;
+    };
+    const x = numeric(left), y = numeric(right);
+    const comparison = Number.isFinite(x) && Number.isFinite(y)
       ? x - y : left.localeCompare(right, 'zh-CN', { numeric: true });
     return order.ascending ? comparison : -comparison;
   });
+  // Limit display precision only. Sorting and expanded row details retain the source text.
+  const display = (cell, column) => {
+    if (/代码|编号|日期|交易日|时间|ticker|code|id/i.test(column)) return cell.text;
+    const match = cell.text.match(/^([+-]?\d+\.\d{3,})(%?)$/);
+    if (!match) return cell.text;
+    const number = Number(match[1]);
+    if (!Number.isFinite(number)) return cell.text;
+    const digits = match[2] || /亿|万|率|幅/.test(column) ? 2 : 6;
+    return number.toLocaleString('en-US', {useGrouping:false, maximumFractionDigits:digits}) + match[2];
+  };
+  const selectedRow = selected && data.rows.find(row => row[0]?.text === selected);
   return (0, react_jsx_runtime.jsxs)('div', { 'data-sherlock-market-native': data.variant, children: [
-    ...(data.variant === 'fund-holdings' ? [(0, react_jsx_runtime.jsxs)('div', { className: 'fund-native-filters', children: [
-      (0, react_jsx_runtime.jsx)('span', { children: data.simulated ? '模拟基金池' : '基金池' }),
-      (0, react_jsx_runtime.jsx)('span', { children: data.simulated ? '模拟时点' : '当前时点' }),
-      (0, react_jsx_runtime.jsx)('input', { type: 'search', value: query, placeholder: '搜索名称', 'aria-label': '搜索名称',
+    (0, react_jsx_runtime.jsxs)('div', { className: 'terminal-native-filters', children: [
+      (0, react_jsx_runtime.jsx)('input', { type: 'search', value: query, placeholder: '搜索表格内容', 'aria-label': '搜索表格内容',
         onChange: event => setQuery(event.target.value) })
-    ] })] : []),
+      ,(0, react_jsx_runtime.jsx)('span', { children: `${rows.length} / ${data.rows.length} 行${data.simulated ? ' · 模拟数据' : ''}` })
+    ] }),
     (0, react_jsx_runtime.jsx)('div', { className: 'fund-native-table-wrap', children: (0, react_jsx_runtime.jsxs)('table', { children: [
       (0, react_jsx_runtime.jsx)('thead', { children: (0, react_jsx_runtime.jsx)('tr', { children:
         data.columns.map((column, index) => (0, react_jsx_runtime.jsx)('th', {
@@ -50,13 +64,27 @@ export function ResearchMarketNativeTable({ data }) {
             children: column })
         }, index)) }) }),
       (0, react_jsx_runtime.jsx)('tbody', { children: rows.map((row, rowIndex) =>
-        (0, react_jsx_runtime.jsx)('tr', { children: row.map((cell, index) =>
-          (0, react_jsx_runtime.jsx)('td', { 'data-tone': cell.tone, children: cell.text }, index)) }, rowIndex)) })
-    ] }) })
+        (0, react_jsx_runtime.jsx)('tr', { tabIndex:0, 'aria-selected':selected===row[0]?.text,
+          onClick:()=>setSelected(previous=>previous===row[0]?.text?null:row[0]?.text),
+          onKeyDown:event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();setSelected(previous=>previous===row[0]?.text?null:row[0]?.text)}},
+          children: row.map((cell, index) =>
+          (0, react_jsx_runtime.jsx)('td', { 'data-tone': cell.tone, title:cell.text, children: display(cell,data.columns[index]) }, index)) }, rowIndex)) })
+    ] }) }),
+    selectedRow && (0,react_jsx_runtime.jsx)('div',{className:'terminal-native-readout',role:'status',children:selectedRow.map((cell,i)=>`${data.columns[i]}：${cell.text}`).join(' · ')})
   ] });
 }
 
 export const researchMarketNativeTableCss = `
+[data-sherlock-market-native] .terminal-native-filters{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;line-height:18px}
+[data-sherlock-market-native] .terminal-native-filters input{box-sizing:border-box;min-width:60px;flex:1;height:24px;padding:2px 7px;border:1px solid #b8c7d2;border-radius:2px;background:#f3f6f8;color:inherit;font-family:inherit;font-size:12px;line-height:18px}
+[data-sherlock-market-native] .terminal-native-filters span{white-space:nowrap}
+[data-sherlock-market-native] .fund-native-table-wrap{max-height:calc(100% - 30px);overflow:auto}
+[data-sherlock-market-native]:has(.terminal-native-readout) .fund-native-table-wrap{max-height:calc(100% - 84px)}
+[data-sherlock-market-native] .terminal-native-readout{max-height:48px;overflow:auto;margin-top:6px;font-size:11px;line-height:16px;overflow-wrap:anywhere}
+[data-sherlock-market-native] tbody tr{cursor:pointer}
+[data-sherlock-market-native] tbody tr:focus-visible{outline:1px solid #0d99ff;outline-offset:-1px}
+[data-sherlock-market-native] tbody tr[aria-selected=true]{box-shadow:inset 2px 0 #0d99ff}
+body[data-ds-dark-theme] [data-sherlock-market-native] .terminal-native-filters input{background:#19222c;border-color:#3c4b5c}
 [data-sherlock-market-native="table"]{box-sizing:border-box;width:100%;height:100%;padding:8px 12px 6px;overflow:auto;container-type:inline-size;background:rgba(255,255,255,.76);color:#202629;font:14px/20px "EWork Market DIN Regular",DINPro,"Noto Sans SC",sans-serif}
 [data-sherlock-market-native="table"] table{width:100%;border-collapse:collapse;table-layout:auto;font:inherit}
 [data-sherlock-market-native="table"] :is(th,td){box-sizing:border-box;padding:3px 3px;border:0;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
