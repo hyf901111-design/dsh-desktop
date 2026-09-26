@@ -12,6 +12,12 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('selects a mapped date from a path array and never formats objects as text',()=>{
+  const responses={q:{data:{kline:[{date:'2026-09-23'},{date:'2026-09-24'}]}}}
+  expect(evaluateMapping({$from:'q',$path:'data.kline',$sortBy:'date',$order:'desc',$take:1,$single:true,$map:{$path:'date'},$suffix:' 收盘'},responses)).toBe('2026-09-24 收盘')
+  expect(()=>evaluateMapping({$from:'q',$path:'data',$as:'string'},responses)).toThrow(/文本/)
+  expect(()=>evaluateMapping({$from:'q',$path:'data.kline',$suffix:' 收盘'},responses)).toThrow(/文本/)
+ })
  it('formats mapped numeric display precision after unit conversion',()=>{
   const source={q:{change:-1.6339869281045791,amount:3220888135}}
   expect(evaluateMapping({$from:'q',$path:'change',$digits:2,$as:'string',$suffix:'%'},source)).toBe('-1.63%')

@@ -21,6 +21,17 @@ function formattedDate(rule,now){
  const plain=get('year')+get('month')+get('day')
  return rule.format==='yyyy-MM-dd'?`${get('year')}-${get('month')}-${get('day')}`:rule.format==='yyyyMMdd000000'?plain+'000000':plain
 }
+function scalarMapping(value,mapping){
+ if(mapping.$as==='number'){if(value===null||value===''||!Number.isFinite(Number(value)))throw Error('数值字段无效');value=Number(value)}
+ if(mapping.$scale!==undefined){if(typeof value!=='number'||!Number.isFinite(mapping.$scale))throw Error('数值换算无效');value*=mapping.$scale}
+ if(mapping.$digits!==undefined){if(typeof value!=='number'||!Number.isFinite(value)||!Number.isInteger(mapping.$digits)||mapping.$digits<0||mapping.$digits>8)throw Error('显示精度无效');value=mapping.$as==='string'?value.toFixed(mapping.$digits):Number(value.toFixed(mapping.$digits))}
+ if(mapping.$as==='string'||mapping.$prefix!==undefined||mapping.$suffix!==undefined){
+  if(value!==null&&typeof value==='object'||mapping.$prefix!==undefined&&typeof mapping.$prefix!=='string'||mapping.$suffix!==undefined&&typeof mapping.$suffix!=='string')throw Error('文本字段需要单个值，不能直接使用对象或数组')
+  if(mapping.$as==='string'&&value!==null)value=String(value)
+  if(mapping.$prefix!==undefined||mapping.$suffix!==undefined)value=(mapping.$prefix??'')+String(value??'—')+(mapping.$suffix??'')
+ }
+ return value
+}
 /** Deliberately small JSON mapping language: no scripts, expressions or network. */
 export function evaluateMapping(mapping,responses,now=new Date(),row=responses,depth=0,budget={nodes:0}){
  if(depth>24||++budget.nodes>30000)throw Error('字段映射超出限制')
@@ -30,8 +41,9 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(Object.keys(mapping).some(k=>forbidden.has(k)))throw Error('字段名称无效')
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
- if(Object.hasOwn(mapping,'$each')){
-  let rows=path(source,mapping.$each)
+ const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
+ if(eachPath!==undefined){
+  let rows=path(source,eachPath)
   if(!Array.isArray(rows)||rows.length>2000)throw Error('列表字段不存在或超过 2000 条')
   if(mapping.$sortBy!==undefined){
    if(typeof mapping.$sortBy!=='string'||!['asc','desc',undefined].includes(mapping.$order))throw Error('列表排序无效')
@@ -41,18 +53,13 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   }
   if(mapping.$take!==undefined){if(!Number.isInteger(mapping.$take)||!mapping.$take||Math.abs(mapping.$take)>2000)throw Error('列表数量无效');rows=mapping.$take>0?rows.slice(0,mapping.$take):rows.slice(mapping.$take)}
   const mapped=rows.map(item=>next(mapping.$map,item))
-  if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return mapped[0]}
-  return mapped
+  if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return scalarMapping(mapped[0],mapping)}
+  return scalarMapping(mapped,mapping)
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
   if(value===undefined){if(mapping.$optional===true)return null;throw Error('接口缺少字段：'+mapping.$path)}
-  if(mapping.$as==='number'){if(value===null||value===''||!Number.isFinite(Number(value)))throw Error('数值字段无效');value=Number(value)}
-  if(mapping.$scale!==undefined){if(typeof value!=='number'||!Number.isFinite(mapping.$scale))throw Error('数值换算无效');value*=mapping.$scale}
-  if(mapping.$digits!==undefined){if(typeof value!=='number'||!Number.isFinite(value)||!Number.isInteger(mapping.$digits)||mapping.$digits<0||mapping.$digits>8)throw Error('显示精度无效');value=mapping.$as==='string'?value.toFixed(mapping.$digits):Number(value.toFixed(mapping.$digits))}
-  if(mapping.$as==='string'&&value!==null)value=String(value)
-  if(mapping.$prefix!==undefined||mapping.$suffix!==undefined)value=String(mapping.$prefix??'')+String(value??'—')+String(mapping.$suffix??'')
-  return value
+  return scalarMapping(value,mapping)
  }
  return Object.fromEntries(Object.entries(mapping).map(([k,v])=>{if(k.startsWith('$'))throw Error('不支持的字段映射：'+k);return [k,next(v)]}))
 }

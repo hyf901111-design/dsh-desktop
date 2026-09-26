@@ -7,6 +7,18 @@ import type {IntegrationService} from '../integrations/service'
 import type {ScheduledTask} from '../../shared/scheduled-tasks'
 import type {CanvasActionBridge} from '../state/canvas-action-bridge'
 
+export function componentRefreshBindings(requests:Array<{connectionId:string;connectionRevision:number;toolId:string;schemaDigest:string}>):NonNullable<ScheduledTask['integrationBindings']>{
+ const groups=new Map<string,NonNullable<ScheduledTask['integrationBindings']>[number]>()
+ for(const request of requests){
+  let binding=groups.get(request.connectionId)
+  if(!binding){binding={kind:'connection',entityId:request.connectionId,bindingRevision:request.connectionRevision,toolIds:[],schemaDigests:{},allowWrite:true};groups.set(request.connectionId,binding)}
+  if(binding.bindingRevision!==request.connectionRevision||binding.schemaDigests[request.toolId]&&binding.schemaDigests[request.toolId]!==request.schemaDigest)throw Error('数据接口版本不一致，请重新绑定')
+  if(!binding.toolIds.includes(request.toolId))binding.toolIds.push(request.toolId)
+  binding.schemaDigests[request.toolId]=request.schemaDigest
+ }
+ return [...groups.values()]
+}
+
 export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean}){
  const ajv=new Ajv({strict:false,allErrors:false,validateFormats:false})
  async function identity(sessionId:string){
@@ -38,7 +50,7 @@ export async function createComponentDataService(options:{file:string;integratio
   }
  })
  await engine.load()
- const contextTasks=():ScheduledTask[]=>engine.list().filter(b=>b.status==='refreshing').map((b:any)=>({id:'component-data:'+b.id,title:'组件数据刷新',prompt:'按已保存接口映射刷新数据',workspaceId:b.workspaceId,component:{sessionId:b.sessionId,nodeId:b.nodeId,title:'组件',boardTitle:'工作台'},state:b.enabled?'enabled':'paused',createdAt:0,nextRun:b.nextRun,schedule:{frequency:'daily',time:'00:00',timezone:'Asia/Shanghai',weekday:0,date:''},notification:'never',runs:[{id:b.id,status:'running',startedAt:b.lastAttempt??0}],integrationBindings:b.requests.map((r:any)=>({kind:'connection',entityId:r.connectionId,bindingRevision:r.connectionRevision,toolIds:[r.toolId],schemaDigests:{[r.toolId]:r.schemaDigest},allowWrite:true}))}))
+ const contextTasks=():ScheduledTask[]=>engine.list().filter(b=>b.status==='refreshing').map((b:any)=>({id:'component-data:'+b.id,title:'组件数据刷新',prompt:'按已保存接口映射刷新数据',workspaceId:b.workspaceId,component:{sessionId:b.sessionId,nodeId:b.nodeId,title:'组件',boardTitle:'工作台'},state:b.enabled?'enabled':'paused',createdAt:0,nextRun:b.nextRun,schedule:{frequency:'daily',time:'00:00',timezone:'Asia/Shanghai',weekday:0,date:''},notification:'never',runs:[{id:b.id,status:'running',startedAt:b.lastAttempt??0}],integrationBindings:componentRefreshBindings(b.requests)}))
  const request=async(sessionId:string,args:any)=>{
   await identity(sessionId)
   if(!args||typeof args!=='object')throw Error('数据操作参数无效')

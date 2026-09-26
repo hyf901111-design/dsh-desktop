@@ -1142,6 +1142,23 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
+  it('uses one binding contract and retrieval tools for a typed plugin-backed panel', async () => {
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:vi.fn(()=>[
+      {name:'ework__datayes_call',description:'调用通联 DataYes 金融数据 API'},
+      {name:'ework__other_source',description:'用户配置的其他数据来源'},
+      {name:'web_search'},{name:'web_fetch'},{name:'financial_query'},{name:'research_context_read'},
+      {name:'bash'},{name:'write'},{name:'subagent'},{name:'ask_user_question'}
+    ])}
+    const handle=await fixture.start('工作台：ETF研究\n本面板：最新ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。')
+    const child=fixture.ctx.subagents.start.mock.calls[0][1]
+    expect(child.prompt[0].text).toContain('data-bound')
+    expect(child.prompt[0].text).toContain('mapping 的模板结构')
+    expect(child.prompt[0].text).not.toContain('唯一交付格式：')
+    expect(child.toolFilter.allow).toEqual(['ework__datayes_call','ework__other_source','web_search','web_fetch','financial_query','research_context_read'])
+    await handle.dispose()
+  })
+
   it('keeps explicit retrieval enabled when the user forbids example data', async () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('必须本次实际调用网页搜索工具 web_search 查询国家药监局最近60天公告，不得复用画布旧结果或示例数据。')
