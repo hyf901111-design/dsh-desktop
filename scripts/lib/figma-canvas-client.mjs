@@ -81,6 +81,10 @@ function patchCanvasGraphicPrimitives(source) {
   return source;
 }
 
+function patchCreationAfterCanvasUse(source) {
+  // The creation controls consume the canvas-use stop/queue handlers.
+  return source.includes('stop=()=>{if(canvasRunning)') ? patchResearchCreationProgress(source) : source;
+}
 export function patchFigmaFinalCanvas(source) {
   source = patchResearchCanvasDeferredHtml(source)
   source = patchResearchCanvasViewportPersistence(source)
@@ -133,13 +137,16 @@ export function patchFigmaFinalCanvas(source) {
                   update({files:snapshot.files.map(apply),artifacts},false);`;
   if (source.includes('/* ODYSSEY_POINTER_RESIZE_REFLOW */'))
     source=exact(source,reflowingPointerResize,isolatedPointerResize);
-  else if (!source.includes('/* ODYSSEY_POINTER_RESIZE_ISOLATED */'))
+  else if (!source.includes('/* ODYSSEY_POINTER_RESIZE_ISOLATED */') && source.includes('applyPointerGeometry(nodes) {'))
     source=exact(source,'update({files:snapshot.files.map(apply),artifacts:snapshot.artifacts.map(apply)},false);',isolatedPointerResize);
   if(!source.includes('/* ODYSSEY_NATIVE_MARKET_TABLE */')) {
-    source=exact(source,'if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });',`/* ODYSSEY_NATIVE_MARKET_TABLE */
+    const htmlReturn = source.includes('(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize })')
+      ? 'if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });'
+      : 'if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, onSize: onHtmlSize });';
+    source=exact(source,htmlReturn,`/* ODYSSEY_NATIVE_MARKET_TABLE */
             const nativeTable = spec.type === "html" ? researchMarketTableForSpec(spec) : null;
             if (nativeTable) return (0, react_jsx_runtime.jsx)(ResearchMarketNativeTable, { data: nativeTable });
-            if (spec.type === "html") return (0, react_jsx_runtime.jsx)(ResearchHtmlArtifact, { spec, node, sessionId, onSize: onHtmlSize });`);
+            ${htmlReturn}`);
   }
   if (!source.includes('"data-research-market-panel": researchMarketDimensions(node)'))
     source=exact(source,'"data-research-compact-chrome": compact || void 0,',
@@ -264,7 +271,7 @@ export function patchFigmaFinalCanvas(source) {
         if (raised) next = { ...next, ...raised };
       }`);
   }
-  return patchResearchNativeInteractivity(patchResearchCreationProgress(patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))))))));
+  return patchResearchNativeInteractivity(patchCreationAfterCanvasUse(patchResearchComponentHeaderNote(patchGenerationLifecycle(patchResearchOfficeResize(patchResearchWorkbenchGrowth(patchFigmaCanvasArrangeMotion(patchFigmaCanvasContent(source))))))));
 }
 function patchResearchNativeInteractivity(source) {
   return replaceResearchContainerTable(source);
@@ -531,7 +538,7 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
   const replacements=new Map(packed.nodes.map(n=>[n.id,{...n,x:n.x+n.width/2,y:top+n.y+n.height/2,sizeMode:'auto'}]));
   return artifacts.map(n=>replacements.get(n.id)??n);
 }`)
-  source = block(source, '                    // Normalize component row sizes first,', '\n\t\t\t\t\tcommitUpdate(organized, true);', `                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
+  source = block(source, '                    // Normalize component row sizes first,', '\n\t\t\t\t\tcommitUpdate({...organized,__odysseyArrange:true}, true);', `                    const organized = researchCanvasOrganizedLayout(snapshot.files, snapshot.artifacts, snapshot.canvasSize, measured);
                     if (organized === null) return false;`)
   source = source.replaceAll('width: 720, height: RESEARCH_COMPONENT_SIZES[researchComponentSize(current)]', 'width: RESEARCH_BENTO_SIZES[researchComponentSize(current)].width, height: RESEARCH_BENTO_SIZES[researchComponentSize(current)].height')
   source = source.replace('kind === "generated-container" ? { width: 520, height: 300 }', 'kind === "generated-container" ? { width: 400, height: 280 }')
@@ -555,7 +562,6 @@ function researchAlignComponentPresets(artifacts, top = 32, canvasSize) {
                     if (researchHtmlAutoGeometry(current.node, dimensions) === null) return;`)
   source = block(source, 'function ResearchGenerationProcess(', 'function isResearchWechatArticleUrl(', generationSource)
   source = block(source, 'function ResearchContainerContent(props) {', 'function ResearchContainerBody(', responsiveSource)
-  source = exact(source, 'minWidth: Math.max(420, spec.columns.length * 128)', 'minWidth: 0')
   for(const [before,after] of [['不超过 3 层，高度概括','保留核心主题'],['平衡阅读效率与内容理解','覆盖重点与主要关系'],['充分展开内容关系细节','展开细节与依据']])source=exact(source, before, after)
   source=exact(source, 'onKeyDown: (event) => { event.stopPropagation(); if (event.key === \'Escape\') closeSelectedCreate(); },', `onKeyDown: (event) => { event.stopPropagation(); if(event.key==='Escape')closeSelectedCreate(); if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();if(!createPreparing&&createPrompt.trim())void startSelectedCreate();} },`)
   source=exact(source, "children: [\n\t\t\t\t\t(0, react_jsx_runtime.jsx)('textarea', { ref: createInputRef", `children: [

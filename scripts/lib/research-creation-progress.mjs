@@ -223,9 +223,12 @@ export function patchResearchCreationProgress(source) {
     source = source.slice(0, at) + helper + source.slice(finish)
   } else source = replaceOnce(source, end, helper + end)
   source = source.replace('ResearchCreationPlanningCard, { intent: creationIntent, onDismiss:', 'ResearchCreationPlanningCard, { intent: creationIntent, sessionId, onDismiss:')
-  if (!source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\tkeyboard.submit')) source = replaceOnce(source,
-    'keyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));',
-    'odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\tkeyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));')
+  const queuedSubmit = 'keyboard.submit(canvasRunning && subagent === null ? "queue" : resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));';
+  const plainSubmit = 'keyboard.submit(resolveSubmitMode(running, accelerated ? "accelerated" : "enter", subagent === null));';
+  if (!source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\tkeyboard.submit')) {
+    const submit = source.includes(queuedSubmit) ? queuedSubmit : plainSubmit;
+    source = replaceOnce(source, submit, 'odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\t' + submit);
+  }
   if (!source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit();')) source = replaceOnce(source,
     'if (!empty && !disabled && !machineBusy) inputActions.submit();',
     'if (!empty && !disabled && !machineBusy) { odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit(); }')
@@ -351,9 +354,11 @@ export function patchResearchCreationProgress(source) {
   }
   source = source.replace('workbenchRevealAt: Date.now() + plan.panels.indexOf(p) * 500',
     'workbenchRevealAt: Date.now() + plan.panels.indexOf(p) * 120')
-  if (!source.includes('generationStartedAt: odysseyCreationIntents.get(sessionId)?.startedAt')) source = replaceOnce(source,
-    'generationStatus: p.preparedOutput ? \'completed\' : p.taskId ? \'queued\' : \'failed\', generationLastSeq: p.preparedOutput ? 1 : 0,',
-    'generationStatus: p.preparedOutput ? \'completed\' : p.taskId ? \'queued\' : \'failed\', generationStartedAt: odysseyCreationIntents.get(sessionId)?.startedAt ?? plan.createdAt ?? Date.now(), generationLastSeq: p.preparedOutput ? 1 : 0,')
+  if (!source.includes('generationStartedAt: odysseyCreationIntents.get(sessionId)?.startedAt')) {
+    const status = source.includes("p.taskId || p.pending ? 'queued'") ? "p.taskId || p.pending" : "p.taskId";
+    const before = `generationStatus: p.preparedOutput ? 'completed' : ${status} ? 'queued' : 'failed', generationLastSeq: p.preparedOutput ? 1 : 0,`;
+    source = replaceOnce(source, before, before.replace('generationLastSeq:', 'generationStartedAt: odysseyCreationIntents.get(sessionId)?.startedAt ?? plan.createdAt ?? Date.now(), generationLastSeq:'));
+  }
   if (!source.includes('/* ODYSSEY_WORKBENCH_PLANNED_VIEWPORT */')) source = replaceOnce(source,
     'const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);',
     `/* ODYSSEY_WORKBENCH_PLANNED_VIEWPORT */
