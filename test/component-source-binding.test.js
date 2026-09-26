@@ -55,6 +55,14 @@ it('rejects unobserved requests, changed securities, failed calls and invented f
  expect(()=>resolveBoundComponent(JSON.stringify(missing),records,now)).toThrow(/列表字段/)
  expect(resolveBoundComponent(JSON.stringify({version:1,type:'market'}),records,now)).toBeNull()
 })
+it('rolls a current-date query anchor for recent panels but preserves fixed historical queries',()=>{
+ const fixed=structuredClone(draft);fixed.requests[0].args=args
+ const result=resolveBoundComponent(JSON.stringify(fixed),records,now,{rollingDates:true})
+ expect(result.recipe.requests[0].args.url_params.date).toEqual({$date:{format:'yyyyMMdd',timezone:'Asia/Shanghai'}})
+ expect(resolveBoundComponent(JSON.stringify(fixed),records,now).recipe.requests[0].args.url_params.date).toBe('20260926')
+ const past=structuredClone(fixed);past.requests[0].args.url_params.date='20260826'
+ expect(resolveBoundComponent(JSON.stringify(past),[{...records[0],args:past.requests[0].args}],now,{rollingDates:true}).recipe.requests[0].args.url_params.date).toBe('20260826')
+})
 it('captures only matching successful structured plugin results from public events',()=>{
  const collector=componentSourceCollector([tool])
  const call=id=>({type:'tool/call',data:{callId:id,name:tool,arguments:JSON.stringify(args)}})
