@@ -19,11 +19,11 @@ export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
   // Its event strip must join the full-board fit instead of the opening subset.
   const financial = !hasEvents && nodes.some(n => n.containerSpec?.html?.includes('data-sherlock-design="21m-20260923-v1"'));
   const readableScale = financial ? .85 : .7;
-  if (nodes.length > 4 && fit(all) < readableScale) {
+  if (!hasEvents && nodes.length > 4 && fit(all) < readableScale) {
     const ordered = [...nodes].sort((a,b) => (a.workbenchIndex ?? 0) - (b.workbenchIndex ?? 0));
-    chosen = bounds(ordered.slice(0, 1));
-    for (let count = 2; count <= Math.min(4, ordered.length); count++) {
-      const candidate = bounds(ordered.slice(0, count));
+    chosen = {...bounds(ordered.slice(0, 2)), left:all.left, right:all.right};
+    for (let count = 4; count <= Math.min(4, ordered.length); count += 2) {
+      const candidate = {...bounds(ordered.slice(0, count)), left:all.left, right:all.right};
       if (fit(candidate) < readableScale) break;
       chosen = candidate;
     }
@@ -37,28 +37,14 @@ export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
 
 export function researchWorkbenchMatrixNodes(nodes, left, top) {
   const ordered = [...nodes].sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0));
-  const spanLead = ordered.length >= 3 &&
-    (ordered[0].workbenchSpan===true || ordered[0].width>=800 && ordered[0].height<=220);
-  const start = spanLead ? 1 : 0;
-  const rest = ordered.slice(start);
-  const spanTail = spanLead && rest.length%2===1 && rest.at(-1).width>=800;
-  const paired = spanTail ? rest.slice(0,-1) : rest;
   const gap=ordered.some(node=>node.containerSpec?.html?.includes('data-sherlock-market="events"'))?12:16;
-  const leftWidth = Math.max(0,...paired.filter((_,i)=>i%2===0).map(n=>n.width));
-  const rightWidth = Math.max(0,...paired.filter((_,i)=>i%2===1).map(n=>n.width));
-  const totalWidth=leftWidth+gap+rightWidth;
-  const centeredX=width=>Math.abs(totalWidth-width)<=gap?0:Math.max(0,(totalWidth-width)/2);
-  let y = top + (spanLead ? ordered[0].height+gap : 0);
+  const leftWidth = Math.max(0,...ordered.filter((_,i)=>i%2===0).map(n=>n.width));
+  let y = top;
   const positions = new Map();
-  if (spanLead) {
-    const node=ordered[0];
-    positions.set(node.id,{...node,x:left+centeredX(node.width)+node.width/2,y:top+node.height/2});
-  }
-  for (let i=0;i<rest.length;i++) {
-    if (i && i%2===0) y += Math.max(rest[i-2].height,rest[i-1].height)+gap;
-    const node=rest[i];
-    const x=spanTail&&i===rest.length-1?centeredX(node.width):i%2?leftWidth+gap:0;
-    positions.set(node.id,{...node,x:left+x+node.width/2,y:y+node.height/2});
+  for (let i=0;i<ordered.length;i++) {
+    if (i && i%2===0) y += Math.max(ordered[i-2].height,ordered[i-1].height)+gap;
+    const node=ordered[i];
+    positions.set(node.id,{...node,workbenchSpan:false,x:left+(i%2?leftWidth+gap:0)+node.width/2,y:y+node.height/2});
   }
   return nodes.map(n=>positions.get(n.id));
 }

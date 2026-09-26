@@ -27,6 +27,16 @@ it('passes the actual on-screen canvas height through the packaged resize path',
     expect(patched).toContain('const next={width:bounds.width,height:bounds.height,visibleHeight,availableWidth}');
 });
 function store() { const map = new Map(); return { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => { map.set(k, v); return true; } }; }
+it('deals six cards into a strict two-column matrix despite a saved leading-strip hint',()=>{
+ const nodes=Array.from({length:6},(_,i)=>({id:`strict-${i}`,workbenchIndex:i,workbenchSpan:i===0,width:320,height:220,generationStatus:'queued'}));
+ const matrix=researchWorkbenchMatrixNodes(nodes,24,40);
+ expect(matrix.map(n=>[n.x-n.width/2,n.y-n.height/2])).toEqual([[24,40],[360,40],[24,276],[360,276],[24,512],[360,512]]);
+ const plan=layoutWorkbench(nodes.map((_,i)=>({title:i?'资讯'+i:'核心指标',prompt:i?'行业资讯':'六项指标',type:i?'news':'market',size:'large'})));
+ expect(plan[0].y).toBe(plan[1].y);
+ expect(plan[2].y).toBe(plan[3].y);
+ expect(plan[4].y).toBe(plan[5].y);
+ expect(plan[0].workbenchSpan).not.toBe(true);
+});
 describe('研究工作台', () => {
     it('uses the panel title to distinguish a metrics strip from trends mentioned in its scope', () => {
         expect(marketVariant({ title:'核心指标（模拟）', prompt:'展示六项指标，并说明近期趋势' })).toBe('metrics');
@@ -90,7 +100,7 @@ describe('研究工作台', () => {
         expect(grown[2].y-grown[2].height/2).toBe(grown[0].y+grown[0].height/2+16);
         expect(grown[1].x-grown[1].width/2).toBe(grown[0].x+grown[0].width/2+16);
     });
-    it('spans a wide leading indicator strip above three aligned ETF rows', () => {
+    it('keeps a wide leading indicator in the same two-column ETF matrix', () => {
         const plan = layoutWorkbench([
             {title:'主要指数实时行情',prompt:'指数行情',type:'market',size:'large'},
             {title:'行业板块热力图',prompt:'热力图',type:'market',size:'large'},
@@ -100,16 +110,16 @@ describe('研究工作台', () => {
             {title:'ETF 溢价率预警',prompt:'预警',type:'table',size:'large'},
             {title:'ETF 市场要闻',prompt:'要闻',type:'news',size:'large'}
         ]);
-        expect(plan[0].workbenchSpan).toBe(true);
-        expect(plan[1].y).toBe(plan[2].y);
-        expect(plan[3].y).toBe(plan[4].y);
-        expect(plan[5].y).toBe(plan[6].y);
-        expect(new Set([plan[2].x,plan[4].x,plan[6].x]).size).toBe(1);
+        expect(plan[0].workbenchSpan).not.toBe(true);
+        expect(plan[0].y).toBe(plan[1].y);
+        expect(plan[2].y).toBe(plan[3].y);
+        expect(plan[4].y).toBe(plan[5].y);
+        expect(new Set([plan[1].x,plan[3].x,plan[5].x]).size).toBe(1);
         const pending = researchWorkbenchMatrixNodes(plan.map((p,i)=>({id:`etf-${i}`,workbenchIndex:i,workbenchSpan:p.workbenchSpan===true,width:320,height:220})),0,0);
-        expect(pending[0].x).toBe(328);
-        expect(pending[1].x).toBe(160);
-        expect(pending[2].x).toBe(496);
-        expect(pending[3].y-pending[3].height/2).toBe(472);
+        expect(pending[0].x).toBe(160);
+        expect(pending[1].x).toBe(496);
+        expect(pending[2].x).toBe(160);
+        expect(pending[3].y-pending[3].height/2).toBe(236);
     });
     it('keeps a six-card medical preset in a compact matrix as source-sized cards complete', () => {
         const pending = Array.from({length:6},(_,index)=>({
@@ -118,7 +128,7 @@ describe('研究工作台', () => {
         }));
         const initial=researchWorkbenchMatrixNodes(pending,0,0);
         expect(initial.map(node=>[node.x-node.width/2,node.y-node.height/2])).toEqual([
-            [168,0],[0,236],[336,236],[0,472],[336,472],[0,708]
+            [0,0],[336,0],[0,236],[336,236],[0,472],[336,472]
         ]);
         const sizes=[[896,144],[536,264],[348,264],[536,258],[348,258],[896,110]];
         const before={artifacts:initial,canvasSize:{width:897,height:740}};
@@ -128,7 +138,7 @@ describe('研究工作台', () => {
         }))};
         const settled=settleWorkbenchLayout(before,after).artifacts;
         expect(settled.map(node=>[node.x-node.width/2,node.y-node.height/2])).toEqual([
-            [0,0],[0,156],[548,156],[0,432],[548,432],[0,702]
+            [0,0],[908,0],[0,276],[908,276],[0,552],[908,552]
         ]);
         const viewport=readableWorkbenchViewport(settled,{x:0,y:0,scale:1},before.canvasSize);
         expect((settled[5].x+settled[5].width/2)*viewport.scale+viewport.x).toBeLessThanOrEqual(897);
@@ -461,8 +471,9 @@ describe('研究工作台', () => {
             ['completed',896,144],['completed',536,264],['completed',536,258]
         ]);
         const placed=workspace.getSnapshot().artifacts;
-        expect(placed.map(n=>[n.x,n.y])).toEqual([[544,120],[268,340],[820,337]]);
-        expect(placed[2].y-placed[2].height/2).toBe(placed[1].y-placed[1].height/2);
+        expect(placed.map(n=>[n.x,n.y])).toEqual([[448,120],[1180,180],[268,457]]);
+        expect(placed[0].y-placed[0].height/2).toBe(placed[1].y-placed[1].height/2);
+        expect(placed[2].x-placed[2].width/2).toBe(placed[0].x-placed[0].width/2);
         const viewport=workspace.getSnapshot().viewport;
         for (const node of placed) {
             expect((node.x-node.width/2)*viewport.scale+viewport.x).toBeGreaterThanOrEqual(31);
@@ -485,7 +496,7 @@ describe('研究工作台', () => {
         const {artifacts,viewport}=workspace.getSnapshot();
         expect(artifacts).toHaveLength(6);
         expect(artifacts[5].containerSpec.html).toContain('data-sherlock-market="events"');
-        expect(viewport.scale).toBeGreaterThanOrEqual(.79);
+        for(const n of artifacts)expect((n.x+n.width/2)*viewport.scale+viewport.x).toBeLessThanOrEqual(867);
         expect((artifacts[5].y+artifacts[5].height/2)*viewport.scale+viewport.y).toBeLessThanOrEqual(742);
         // Prior builds stored an automatic prepared layout as "manual". Restore
         // that exact top-left fit, then verify it is upgraded on the next open.
@@ -498,7 +509,7 @@ describe('研究工作台', () => {
         const reopened=client.createResearchWorkspaceSession(storage,'medical-viewport');
         reopened.setCanvasSize({width:899,availableWidth:899,height:906,visibleHeight:828});
         const restored=reopened.getSnapshot();
-        expect(restored.viewport.scale).toBeGreaterThanOrEqual(.79);
+        for(const n of restored.artifacts)expect((n.x+n.width/2)*restored.viewport.scale+restored.viewport.x).toBeLessThanOrEqual(867);
         expect((restored.artifacts[5].y+restored.artifacts[5].height/2)*restored.viewport.scale+restored.viewport.y).toBeLessThanOrEqual(742);
         const manual={...restored.viewport,x:restored.viewport.x+40};
         reopened.setViewport(manual);
