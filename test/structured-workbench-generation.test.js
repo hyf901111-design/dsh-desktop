@@ -206,6 +206,14 @@ describe('模拟工作台结构化生成', () => {
     }
   })
 
+  it('uses portfolio weights and contribution for simulated holdings rather than quote fields',()=>{
+    const panel=generateSimulatedPanel({type:'market',title:'核心持仓',prompt:'variant: fund-holdings',size:'medium'},'金融终端')
+    expect(panel.artifact.columns).toEqual(['证券名称','权重 / %','持仓市值 / 亿','日涨跌 / %','贡献 / bp'])
+    expect(panel.artifact.rows).toHaveLength(12)
+    expect(panel.artifact.rows.reduce((sum,row)=>sum+Number(row[1]),0)).toBeLessThan(100)
+    for(const row of panel.artifact.rows)expect(Number(row[4])).toBeCloseTo(Number(row[1])*Number(row[3]),2)
+  })
+
   it('accepts a preset-only tool call and prepares all six cards without panel agents', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'medical-preset-'))
     let tool
