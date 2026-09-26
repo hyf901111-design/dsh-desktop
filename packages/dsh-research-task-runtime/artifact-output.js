@@ -40,6 +40,14 @@ export function acceptArtifactOutput(text) {
 // Accept the two common table shapes without asking a model to retranscribe
 // values. Only explicit unique column keys may determine the cell order.
 function normalizeTemplateAliases(value) {
+ // Native tables cannot carry provenance. Route a fully valid sourced table
+ // to the trusted interactive template instead of retrying or losing its notes.
+ if(value?.type==='table'&&typeof value.asOf==='string'&&value.asOf.trim()&&
+   Object.keys(value).every(key=>['version','type','title','columns','rows','asOf','note'].includes(key))&&
+   (value.note===undefined||typeof value.note==='string'&&value.note.trim())) {
+  const {asOf,note,...core}=value;
+  if(parseResearchContainerSpec(core))return {...value,type:'market',variant:'table'};
+ }
  if(value?.type!=='market')return value;
  if(value.variant==='metrics'&&Array.isArray(value.items))return {...value,items:value.items.map(item=>
   item&&typeof item.change==='string'&&!item.detail?{...item,detail:item.change}:item)};
