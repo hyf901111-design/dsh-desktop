@@ -14,7 +14,7 @@ export function candleRuntime(groups) {
   const left=2,right=Math.max(20,w-32),top=6,bottom=99,volumeBottom=121
   const min=Math.min(...data.map(d=>d.low)),max=Math.max(...data.map(d=>d.high)),range=max-min||Math.max(Math.abs(max)*.01,1),lo=min-range*.08,hi=max+range*.08
   const y=v=>bottom-(v-lo)/(hi-lo)*(bottom-top),step=(right-left)/data.length,x=i=>left+step*(i+.5),vol=Math.max(1,...data.map(d=>d.volume??0))
-  ctx.font='9px "EWork DIN Pro", "Noto Sans SC",sans-serif';ctx.textBaseline='middle'
+  ctx.font='11px "EWork DIN Pro", "Noto Sans SC",sans-serif';ctx.textBaseline='middle'
   for(let i=0;i<4;i++){const value=lo+(hi-lo)*i/3,yy=y(value);ctx.strokeStyle=color('chart-grid');ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(right,yy);ctx.stroke();ctx.fillStyle=color('chart-label');ctx.fillText(value.toFixed(0),right+5,yy)}
   for(const [i,d]of data.entries()){ctx.strokeStyle=ctx.fillStyle=color(d.close>=d.open?'market-positive':'market-negative');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x(i),y(d.high));ctx.lineTo(x(i),y(d.low));ctx.stroke();const bw=Math.max(1,Math.min(8,step*.65));ctx.fillRect(x(i)-bw/2,Math.min(y(d.open),y(d.close)),bw,Math.max(1,Math.abs(y(d.open)-y(d.close))));if(d.volume!==null)ctx.fillRect(x(i)-bw/2,volumeBottom-d.volume/vol*17,bw,d.volume/vol*17)}
   for(const [period,token]of [[5,'chart-1'],[20,'chart-4'],[60,'chart-3']]){ctx.strokeStyle=color(token);ctx.lineWidth=1;ctx.beginPath();let points=0;for(let i=0;i<data.length;i++){const absolute=all.length-data.length+i;if(absolute<period-1)continue;const v=all.slice(absolute-period+1,absolute+1).reduce((sum,d)=>sum+d.close,0)/period;if(points++===0)ctx.moveTo(x(i),y(v));else ctx.lineTo(x(i),y(v))}if(points)ctx.stroke()}

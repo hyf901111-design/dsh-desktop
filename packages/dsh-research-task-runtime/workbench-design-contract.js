@@ -5,7 +5,7 @@ export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
 const market = Object.freeze({
   metrics: { id: 'financial.metrics', figma: '1217:225751', width: 896, height: 144, size: 'medium' },
-  candlestick: { id: 'financial.candlestick', figma: '1321:71859', width: 536, height: 264, size: 'large' },
+  candlestick: { id: 'financial.candlestick', figma: '1321:71859', width: 536, height: 304, size: 'large' },
   trend: { id: 'financial.trend', figma: '1217:225781', width: 536, height: 264, size: 'large' },
   'price-volume': { id: 'financial.price-volume', figma: '1217:225781', width: 536, height: 286, size: 'large' },
   'order-book': { id: 'financial.order-book', figma: '1217:225879', width: 536, height: 280, size: 'large' },
