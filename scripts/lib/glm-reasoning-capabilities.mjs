@@ -12,8 +12,24 @@ export function glmReasoningEntry(entry, provider, baseURL) {
 }
 
 export function patchGlmReasoningCapabilities(source) {
-  if (source.includes('SHERLOCK_GLM_53_REASONING_V1')) return source
+  if (source.includes('SHERLOCK_GLM_53_REASONING_V2')) return source
   const anchor = 'const models = entries.map((entry) => {'
-  if (!source.includes(anchor)) throw Error('GLM reasoning capability patch anchor missing')
-  return source.replace(anchor, `// SHERLOCK_GLM_53_REASONING_V1\n${glmReasoningEntry.toString()}\nconst models = entries.map((rawEntry) => {\n const entry = glmReasoningEntry(rawEntry, provider, request.baseURL ?? providerBaseUrl);`)
+  if (!source.includes('SHERLOCK_GLM_53_REASONING_V1')) {
+    if (!source.includes(anchor)) throw Error('GLM reasoning capability patch anchor missing')
+    source = source.replace(anchor, `// SHERLOCK_GLM_53_REASONING_V1\n${glmReasoningEntry.toString()}\nconst models = entries.map((rawEntry) => {\n const entry = glmReasoningEntry(rawEntry, provider, request.baseURL ?? providerBaseUrl);`)
+  }
+  const defaultAnchor = 'function profileOptions(profile, reasoning, apiKey) {'
+  if (!source.includes(defaultAnchor)) throw Error('GLM default reasoning patch anchor missing')
+  source = source.replace(defaultAnchor, `${glmReasoningDefault.toString()}\n${defaultAnchor}`)
+    .replace('describableReasoningLevel(resolvedModel, profile.reasoning)', 'describableReasoningLevel(resolvedModel, glmReasoningDefault(resolvedModel, profile.reasoning))')
+    .replace('resolveReasoningLevel(model, options.reasoningEffort ?? profile.reasoning)', 'resolveReasoningLevel(model, glmReasoningDefault(model, options.reasoningEffort ?? profile.reasoning))')
+  return source.replace('SHERLOCK_GLM_53_REASONING_V1', 'SHERLOCK_GLM_53_REASONING_V2')
+}
+
+export function glmReasoningDefault(model, effort) {
+  // The SDK treats an omitted effort on a reasoning model as disabled.
+  // 5.3 forbids that; retain its documented default outside scoped fast tasks.
+  return effort === undefined && /^glm-5\.3(?:-flashx?)?$/i.test(model.id) &&
+    model.reasoning && model.compat?.thinkingFormat === 'zai' && model.thinkingLevelMap?.off === null
+    ? 'max' : effort
 }

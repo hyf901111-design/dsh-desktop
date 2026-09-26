@@ -45,6 +45,7 @@ describe('workbench execution policy', () => {
       const adapter = new PiAiAdapter({ profiles: () => profiles, resolveApiKey: async () => 'local-test-key' })
       const info = await adapter.resolveModel('zai', 'GLM-5.3-Flash')
       expect(info.reasoning.efforts.map(e => e.id)).toEqual(['low', 'high', 'max'])
+      expect(info.reasoning.defaultEffort).toBe('max')
       let body
       vi.stubGlobal('fetch', vi.fn(async (_, init) => {
         body = JSON.parse(init.body)
@@ -57,6 +58,9 @@ describe('workbench execution policy', () => {
       expect(body.reasoning_effort).toBe('low')
       expect(body.max_completion_tokens ?? body.max_tokens).toBe(16384)
       expect(chunks.at(-1).type).toBe('finish')
+      for await (const chunk of adapter.stream({ provider: 'zai', model: 'GLM-5.3-Flash', messages: [{ role: 'user', content: [{ type: 'text', text: '普通聊天' }] }] })) { /* drain the ordinary default request */ }
+      expect(body.thinking.type).toBe('enabled')
+      expect(body.reasoning_effort).toBe('max')
     } finally { unlinkSync(filename) }
   })
 })
