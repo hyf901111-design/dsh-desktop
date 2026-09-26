@@ -46,7 +46,19 @@ export function componentBindingEvidence(records) {
  }).join('\n')
 }
 
-export function resolveBoundComponent(text,records,now=new Date()) {
+function rollingTodayAnchors(args,now) {
+ const formats=['yyyyMMdd','yyyy-MM-dd','yyyyMMdd000000']
+ const today=new Map(formats.map(format=>[evaluateMapping({$date:{format}}, {}, now),format]))
+ const visit=(value,key='')=>{
+  if(typeof value==='string'&&/^(dateString|end|endDate|end_date|tradeDate|trade_date|date)$/i.test(key)&&today.has(value))return {$date:{format:today.get(value),timezone:'Asia/Shanghai'}}
+  if(Array.isArray(value))return value.map(v=>visit(v))
+  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,visit(v,k)]))
+  return value
+ }
+ return visit(args)
+}
+
+export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
   if(!candidate)return null
   if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(candidate.mapping))throw Error('自动更新配置需要已成功调用的接口及当前模板字段映射。')
@@ -57,7 +69,7 @@ export function resolveBoundComponent(text,records,now=new Date()) {
     const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args))
     if(!source)throw Error('自动更新只能绑定本轮已成功取数且参数一致的插件接口，请保留原请求及真实字段。')
     responses[request.key]=source.response
-    requests.push({key:request.key,toolId:request.tool.slice('ework__'.length),args:request.args})
+    requests.push({key:request.key,toolId:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(request.args,now):request.args})
   }
   const data=evaluateMapping(candidate.mapping,responses,now)
   const output=acceptArtifactOutput(JSON.stringify(data))

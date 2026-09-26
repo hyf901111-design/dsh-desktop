@@ -4,6 +4,7 @@ import { preferredComponentSourceTools, componentSourceInstruction, registerComp
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue } from './workbench-model-queue.js'
 import { componentSourceCollector, componentBindingEvidence, COMPONENT_BOUND_DATA_PROMPT, resolveBoundComponent } from './component-source-binding.js'
+import { readTemplateModel } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
@@ -1271,12 +1272,12 @@ export class ResearchTaskRuntime {
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
           let mapped
-          try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now())) }
+          try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(task.prompt)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(task.prompt)}) }
           catch(error){throw new ResearchTaskError('INVALID_OUTPUT',error.message)}
           binding=mapped?.recipe
           if(mapped)deliveredText=JSON.stringify(mapped.data)
           output = finalText(mapped?[{type:'text',text:deliveredText}]:result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
-          if (!mapped && attempt === 0 && task.kind === 'container' && workbenchPanelFormat(task.prompt) && sourceRecords.length && typeof this.adapter.bindData === 'function') {
+          if (!mapped && attempt === 0 && task.kind === 'container' && workbenchPanelFormat(task.prompt) && sourceRecords.length && typeof this.adapter.bindData === 'function' && readTemplateModel(JSON.parse(output))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', '已取得插件数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。')
           }
