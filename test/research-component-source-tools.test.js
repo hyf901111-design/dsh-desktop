@@ -1,6 +1,15 @@
 import { expect, it } from 'vitest'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from '../packages/dsh-research-task-runtime/component-source-tools.js'
 
+it('keeps date windows local to the panel and does not route ETF names to index quotes', () => {
+  const tools=[{name:'ework__data',description:'通联 DataYes API'}], now=new Date('2026-09-26T01:00:00Z')
+  const plan=componentSourceInstruction(tools,'创建沪深300ETF工作台：最新行情、大盘概览、近20个交易日K线',now,{planning:true})
+  expect(plan).not.toContain('20260815')
+  expect(plan).not.toContain('getMktIdxd')
+  expect(componentSourceInstruction(tools,'沪深300ETF 最新行情',now)).not.toContain('getMktIdxd')
+  expect(componentSourceInstruction(tools,'最新指数概览',now)).toContain('20260916 至 20260926')
+})
+
 it('queries enough calendar days for the requested trading-day series on its first fetch', () => {
   const tools=[{name:'ework__data',description:'通联 DataYes API'}]
   const now=new Date('2026-09-25T19:30:00Z')
