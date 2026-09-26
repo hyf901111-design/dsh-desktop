@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "c6b1591c4ee03e01eb38da535a5c857f641c79fd",
-        "tipCommit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
+        "baseCommit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
+        "tipCommit": "02f5c14d7c84b8759b076e5d8193647b08407881",
         "commits": [
           {
-            "commit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
+            "commit": "02f5c14d7c84b8759b076e5d8193647b08407881",
             "parents": [
-              "c6b1591c4ee03e01eb38da535a5c857f641c79fd"
+              "a4824597f6fd24708a0d3a9aa010cabe3ddfa246"
             ],
-            "subject": "修复面板首轮通联工具缺失与思考档位失效并消除规划重试"
+            "subject": "避免工作台提交后重复取数并保留来源表格的交互模板"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-integration-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-agent-scope.js"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
           },
           {
             "status": "M",
@@ -37,19 +33,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-integrations.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-model-selection.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
+            "path": "test/research-artifact-resilience.test.js"
           },
           {
             "status": "M",
@@ -62,17 +46,13 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-execution-policy.test.js",
-              "test/research-workbench.test.js",
-              "test/research-task-integrations.test.js",
-              "test/research-task-model-selection.test.js",
-              "test/component-agent-scope.test.js",
-              "test/integration-harness-e2e.test.js"
+              "test/research-artifact-resilience.test.js",
+              "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "66项首轮工具可见性、真实子任务思考档位、规划幂等及权限撤销聚焦验证通过",
-            "verifiedCommit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
-            "completedAt": "2026-09-26T06:54:48.891754+00:00",
+            "summary": "36项工作台收尾、表格来源保留和交互恢复聚焦检查通过",
+            "verifiedCommit": "02f5c14d7c84b8759b076e5d8193647b08407881",
+            "completedAt": "2026-09-26T07:14:00.812318+00:00",
             "timeoutMs": 120000
           },
           {
@@ -83,80 +63,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
-            "completedAt": "2026-09-26T06:54:48.891754+00:00",
+            "verifiedCommit": "02f5c14d7c84b8759b076e5d8193647b08407881",
+            "completedAt": "2026-09-26T07:14:00.812318+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "本增量仅修改运行时链路，已核验真实模型首请求字段。最终包的完整工作台耗时复测将在集成构建后执行。前一包的30秒自动回答已在客户端验证通过。"
+          "summary": "本次增量为运行时格式归一化及提交后的执行阶段提示；已验证表格搜索排序和来源保留，集成包将继续实测。上一集成包六卡22秒展开、任务169秒完成，发现的一致预期文字降级由本增量修复。"
         },
         "acceptanceCriteria": [
-          "主任务首轮带入面板规划提示",
-          "子任务首轮包含父级已授权通联工具且低思考档位实际发送",
-          "省略请求标识自动生成并保持重试幂等"
+          "成功提交后主会话结束本轮，避免重复取数",
+          "带来源日期的有效表格使用可交互模板且保留数据",
+          "金融计划明确模板与同轴同单位，交易所后缀不猜测"
         ],
         "risks": [
-          "真实外部接口响应与完整工作台耗时待集成新包复测"
+          "外部接口与模型响应时间仍有波动，最后一轮集成包复验待执行"
         ],
-        "generatedAt": "2026-09-26T06:54:48.891754+00:00"
-      },
-      "merged": {
-        "mergeCommit": "70663327f0182bcdae7833379c857808fa2efdda",
-        "verificationCommit": "70663327f0182bcdae7833379c857808fa2efdda",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "70663327f0182bcdae7833379c857808fa2efdda",
-            "completedAt": "2026-09-26T06:55:52.795Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "70663327f0182bcdae7833379c857808fa2efdda",
-            "completedAt": "2026-09-26T06:55:52.795Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "70663327f0182bcdae7833379c857808fa2efdda",
-            "completedAt": "2026-09-26T06:55:52.795Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T06:55:52.795Z"
+        "generatedAt": "2026-09-26T07:14:00.812318+00:00"
       }
     }
   ],
