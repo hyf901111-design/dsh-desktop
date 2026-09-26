@@ -35,9 +35,11 @@ export const name = 'sherlock-research-task-runtime'
 export const inject = ['llm', 'agentDefaultModel', 'systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy']
 
 export const MAX_ACTIVE_PER_PARENT = 10
-// Keep concurrent model streams and web reads below the point where the canvas
-// and native window resize become noticeably starved during workbench batches.
+// Heavy free-form pages keep two slots. Fixed-template data tasks can share
+// that capacity without making every six-panel workbench wait for three waves.
 export const MAX_ACTIVE_CONTAINERS_PER_PARENT = 2
+const TEMPLATE_CAPACITY = MAX_ACTIVE_CONTAINERS_PER_PARENT * 2
+const RATE_LIMIT_COOLDOWN_MS = 60000
 export function componentModelSelection(models, kind) {
   const { provider, model } = models.current
   if (kind !== 'container') return { provider, model }
@@ -382,6 +384,14 @@ function workbenchPanelFormat(prompt) {
   if (type === 'chart' && /K线|蜡烛图|candlestick/iu.test(prompt)) return 'market'
   if (type === 'chart' && /(?:叠加|双轴|区间筛选|月份区间)/u.test(prompt)) return 'html'
   return type
+}
+
+function containerSchedulingCost(task) {
+  if (!['container', 'create'].includes(task?.kind)) return 0
+  const type = task.kind === 'container' ? workbenchPanelFormat(task.prompt ?? '') : null
+  // Use the same parsed delivery contract as prompt assembly. Manual pages,
+  // custom HTML and unknown formats keep the original heavy-task capacity.
+  return type && type !== 'html' && (type !== 'market' || requestedMarketVariant(task.prompt)) ? 1 : 2
 }
 
 function workbenchPanelPrompt(prompt) {
@@ -948,7 +958,7 @@ export class ResearchTaskRuntime {
   parentQueue(parentSessionId) {
     let queue = this.parents.get(parentSessionId)
     if (queue === undefined) {
-      queue = { active: new Set(), pending: [] }
+      queue = { active: new Set(), pending: [], rateLimitedUntil: 0 }
       this.parents.set(parentSessionId, queue)
     }
     return queue
@@ -1129,8 +1139,12 @@ export class ResearchTaskRuntime {
     if (this.disposed) return
     const queue = this.parentQueue(parentSessionId)
     while (queue.active.size < MAX_ACTIVE_PER_PARENT && queue.pending.length > 0) {
-      const activeContainers = [...queue.active].filter(id => ['container', 'create'].includes(this.tasks.get(id)?.kind)).length
-      const index = queue.pending.findIndex(id => activeContainers < MAX_ACTIVE_CONTAINERS_PER_PARENT || !['container', 'create'].includes(this.tasks.get(id)?.kind))
+      const used = [...queue.active].reduce((sum, id) => sum + containerSchedulingCost(this.tasks.get(id)), 0)
+      const capacity = this.now() < queue.rateLimitedUntil ? MAX_ACTIVE_CONTAINERS_PER_PARENT : TEMPLATE_CAPACITY
+      const index = queue.pending.findIndex(id => {
+        const cost = containerSchedulingCost(this.tasks.get(id))
+        return cost === 0 || used + cost <= capacity
+      })
       if (index < 0) break
       const [taskId] = queue.pending.splice(index, 1)
       const task = this.tasks.get(taskId)
@@ -1142,6 +1156,9 @@ export class ResearchTaskRuntime {
 
   onSessionEvent(task, sessionEvent) {
     if (task.state !== 'running') return
+    const failure = sessionEvent?.type === 'llm/retry' ? sessionEvent.data?.failure?.code
+      : sessionEvent?.type === 'turn/end' && sessionEvent.data?.reason?.kind === 'error' ? sessionEvent.data.reason.error?.code : null
+    if (failure === 'RATE_LIMIT') this.parentQueue(task.parentSessionId).rateLimitedUntil = this.now() + RATE_LIMIT_COOLDOWN_MS
     if (sessionEvent?.type === 'turn/start') { delete task.modelFailureMessage; delete task.modelFailureCode }
     if (sessionEvent?.type === 'turn/end' && sessionEvent.data?.reason?.kind === 'error') {
       const code = sessionEvent.data.reason.error?.code
