@@ -12,6 +12,33 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('filters shared quote rows before sorting and selecting the latest window',()=>{
+  const source={q:{data:{data:[{ticker:'600519',tradeDate:'2026-09-24',closePrice:1237},{ticker:'300750',tradeDate:'2026-09-24',closePrice:270},{ticker:'600519',tradeDate:'2026-09-22',closePrice:1240},{ticker:'600519',tradeDate:'2026-09-23',closePrice:1239}]}}}
+  const select={$from:'q',$each:'data.data',$filter:{ticker:'600519'},$sortBy:'tradeDate',$order:'asc',$take:-2}
+  expect(evaluateMapping({...select,$map:{$path:'closePrice'},$as:'number'},source)).toEqual([1239,1237])
+  expect(evaluateMapping({...select,$map:{$path:'tradeDate'}},source)).toEqual(['2026-09-23','2026-09-24'])
+  expect(evaluateMapping({...select,$filter:{ticker:'missing'},$map:{$path:'closePrice'}},source)).toEqual([])
+  expect(source.q.data.data).toHaveLength(4)
+ })
+ it('projects snapshot objects into heatmap records at generation and refresh',async()=>{
+  const f=setup();await f.service.load()
+  const mapping={version:1,type:'market',variant:'heatmap',title:'行情',asOf:'2026-09-24',items:[{$from:'quote',$single:true,$map:{label:{$path:'data.data.name'},weight:{$path:'data.data.marketValue',$as:'number',$scale:1e-8,$digits:2},change:{$path:'data.data.changePct',$as:'number',$scale:100,$digits:2}}}]}
+  const response={data:{data:{name:'贵州茅台',marketValue:1500000000000,changePct:-0.0114}}}
+  const model=materializeComponentMapping(mapping,{quote:response})
+  expect(model.items).toEqual([{label:'贵州茅台',weight:15000,change:-1.14}])
+  expect(acceptArtifactOutput(JSON.stringify(model))).toBeTruthy()
+  f.service.options.inspect=async()=>({revision:'r1',spec:JSON.parse(acceptArtifactOutput(JSON.stringify({...model,items:[{label:'贵州茅台',weight:14900,change:-1}]}))),writable:true})
+  const b=await f.service.bind({...f.input,mapping});f.execute.mockResolvedValue(response);await f.service.refresh(b.id)
+  expect(f.service.list()[0].status).toBe('success');expect(f.spec().html).toContain('贵州茅台')
+ })
+ it('rejects ambiguous filters and missing or inherited projection sources',()=>{
+  const select={$from:'q',$each:'rows',$map:{$path:'price'}}
+  for(const filter of [[],{}, {ticker:{$eq:'600519'}}, {'constructor.name':'x'}, {ticker:Infinity},Object.fromEntries(Array.from({length:17},(_,i)=>['x'+i,i]))])expect(()=>evaluateMapping({...select,$filter:filter},{q:{rows:[]}})).toThrow(/筛选|路径/)
+  expect(()=>evaluateMapping({$from:'absent',$map:{label:'fake'}},{})).toThrow(/来源/)
+  expect(()=>evaluateMapping({$from:'constructor',$map:{label:'fake'}},{})).toThrow(/来源/)
+  expect(()=>evaluateMapping({$from:'q',$filter:{ticker:'x'},$map:{label:'fake'}},{q:{}})).toThrow(/列表/)
+ })
+
  it('rejects invented mapping operators with an actionable scalar selection example',()=>{
   const mapping={$from:'sh',$path:'data.data',$take:1,$single:true,$path2:'closeIndex',$as:'number'}
   expect(()=>evaluateMapping(mapping,{sh:{data:{data:[{closeIndex:3888.37}]}}})).toThrow(/不支持的字段映射：\$path2.*\$each.*\$map/)
