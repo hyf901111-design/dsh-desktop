@@ -51,7 +51,8 @@ export function ResearchContainerChart({ spec }) {
   const [plotSize, setPlotSize] = react.useState({ width: 640, height: 290 });
   const [hidden, setHidden] = react.useState([]);
   const [selected, setSelected] = react.useState({ series: 0, point: 0 });
-  react.useEffect(() => { setHidden([]); setSelected({ series: 0, point: 0 }); }, [spec]);
+  const seriesIdentity = JSON.stringify(spec.series.map(series => series.name));
+  react.useEffect(() => { setHidden([]); setSelected({ series: 0, point: 0 }); }, [spec.variant, seriesIdentity]);
   react.useLayoutEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
