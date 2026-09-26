@@ -234,3 +234,33 @@ it('does not complete an all-empty claimed-unavailable dashboard without a tool-
   expect(start.mock.calls[1][0].synthesisOnly).toBe(false)
  }finally{await runtime.dispose()}
 })
+
+it.each(['empty','static'])('keeps retrieval enabled when %s output has only API definitions, never business data',async mode=>{
+ const sample={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'文档样例',items:[{label:'价格',value:'100'}]}
+ const start=vi.fn(async()=>({childSessionId:'c-'+start.mock.calls.length,result:Promise.resolve(start.mock.calls.length===1
+  ? {stopReason:'completed',output:mode==='empty'?[]:[{type:'text',text:JSON.stringify(sample)}],researchEvidence:'API定义包含价格100的请求样例，并非行情',sourceRecords:[{tool,args,response:null,purpose:'discovery'}]}
+  : {stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData:async()=>{},dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n优先使用 market 类型；variant: metrics。使用通联真实数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start.mock.calls).toHaveLength(2);expect(start.mock.calls[1][0].synthesisOnly).toBe(false)
+  expect(start.mock.calls[1][0].prompt).toContain('接口文档')
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).not.toContain('文档样例')
+ }finally{await runtime.dispose()}
+})
+it('does not publish a sample card when a retrieval repair again returns only discovery',async()=>{
+ const start=vi.fn(async()=>({childSessionId:'c-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'market',variant:'heatmap',title:'行情',asOf:'文档样例',items:[{label:'比亚迪',weight:825106379,change:2.075}]})}],sourceRecords:[{tool,args,response:null,purpose:'discovery'}]}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：股票研究\n本面板：热力图\n优先使用 market 类型；variant: heatmap。使用通联真实数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('failed'))
+  expect(start.mock.calls).toHaveLength(2);expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toBeUndefined()
+ }finally{await runtime.dispose()}
+})
+it('retains discovery provenance even when a successful API definition is plain text',()=>{
+ const collector=componentSourceCollector([tool],[{name:tool,description:'获取 API 完整定义。导航接口，不消耗额度。'}])
+ collector.accept({type:'tool/call',data:{callId:'definition',name:tool,arguments:JSON.stringify(args)}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'definition'},content:[{type:'tool-result',content:[{type:'text',text:'接口文档、参数和样例，不是业务数据'}]}]}}})
+ expect(collector.records).toEqual([{tool,args,response:null,purpose:'discovery'}])
+})

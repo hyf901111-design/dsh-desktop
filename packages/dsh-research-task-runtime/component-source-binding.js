@@ -24,8 +24,12 @@ export function componentSourceCollector(allowed,schemas=[]) {
       calls.delete(message.source.callId)
       const result=message.content?.find(b=>b.type==='tool-result')
       if(!result||result.isError)return
-      try {
-        const response=decodeDataResponse(result),purpose=discovery.has(call.tool)?'discovery':undefined
+      const purpose=discovery.has(call.tool)?'discovery':undefined
+      let response
+      try { response=decodeDataResponse(result) }
+      catch { if(!purpose)return;response=null }
+      // Plain-text API definitions still establish discovery, never data.
+      {
         const previous=records.findIndex(r=>r.tool===call.tool&&isDeepStrictEqual(r.args,call.args))
         if(previous>=0)records.splice(previous,1)
         records.push({...call,response,...(purpose?{purpose}:{})})
@@ -35,7 +39,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
           const directory=records.findIndex(r=>r.purpose==='discovery')
           records.splice(directory<0?0:directory,1)
         }
-      } catch { /* Prose alone has no repeatable field mapping. */ }
+      }
     }
   }
 }

@@ -1291,6 +1291,10 @@ export class ResearchTaskRuntime {
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
+          // A valid-looking static card can contain values copied from an API
+          // example. Discovery-only evidence requires retrieval even when the
+          // previous response was empty or a provider retry already ran.
+          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.length&&sourceRecords.every(record=>record.purpose==='discovery'))throw new ResearchTaskError('GENERATION_FAILED','当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。')
           let mapped
           try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(task.prompt)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(task.prompt)}) }
           catch(error){throw new ResearchTaskError(error.code==='SOURCE_DATA_REQUIRED'?'GENERATION_FAILED':'INVALID_OUTPUT',error.message)}
