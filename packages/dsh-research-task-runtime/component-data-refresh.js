@@ -50,15 +50,42 @@ function rejectCredentials(value){
  if(!value||typeof value!=='object')return
  for(const [key,v]of Object.entries(value)){if(forbidden.has(key)||/^(authorization|api[-_]?key|access[-_]?token|password|secret|cookie)$/i.test(key))throw Error('凭据由插件管理，不能写入组件请求');rejectCredentials(v)}
 }
+function jsonFromDataText(text){
+ if(typeof text!=='string'||Buffer.byteLength(text)>2_000_000)throw Error('接口返回的数据过大')
+ try{return [JSON.parse(text)]}catch{}
+ // Some MCP providers prepend source citations to a single JSON payload.
+ // Read complete line-start JSON values only; never execute prose or guess fields.
+ const values=[],starts=/(?:^|\n)[\t ]*([\[{])/g
+ let match
+ while((match=starts.exec(text))){
+  const start=starts.lastIndex-1,stack=[],open={'{':'}','[':']'};let quoted=false,escaped=false,complete=false
+  for(let i=start;i<text.length;i++){
+   const c=text[i]
+   if(quoted){if(escaped)escaped=false;else if(c==='\\')escaped=true;else if(c==='"')quoted=false;continue}
+   if(c==='"'){quoted=true;continue}
+   if(open[c])stack.push(open[c])
+   else if(c==='}'||c===']'){
+    if(stack.pop()!==c)break
+    if(!stack.length){values.push(JSON.parse(text.slice(start,i+1)));starts.lastIndex=i+1;complete=true;break}
+   }
+  }
+  if(!complete)throw Error('接口 JSON 数据不完整')
+ }
+ return values
+}
 export function decodeDataResponse(value){
  if(value?.isError)throw Error('数据接口返回错误')
- if(Array.isArray(value?.content)){
-  const json=value.content.filter(c=>c.type==='text').map(c=>{try{return JSON.parse(c.text)}catch{return undefined}}).filter(v=>v!==undefined)
+ if(record(value?.structuredContent))value=value.structuredContent
+ else if(Array.isArray(value?.content)){
+  if(Buffer.byteLength(JSON.stringify(value.content))>2_000_000)throw Error('接口返回的数据过大')
+  const json=value.content.filter(c=>c.type==='text').flatMap(c=>jsonFromDataText(c.text))
   if(json.length!==1)throw Error('接口没有返回唯一的结构化 JSON 数据')
   value=json[0]
  }
  const result=bounded(value,2_000_000)
- if(record(result)&&(result.success===false||result.retCode!==undefined&&Number(result.retCode)!==1&&Number(result.retCode)!==0||typeof result.code==='number'&&result.code<0))throw Error('数据接口业务请求失败')
+ for(let envelope=result,depth=0;record(envelope)&&depth<4;envelope=envelope.data,depth++){
+  if(envelope.success===false||envelope.retCode!==undefined&&Number(envelope.retCode)!==1&&Number(envelope.retCode)!==0||typeof envelope.code==='number'&&envelope.code<0)throw Error('数据接口业务请求失败')
+ }
  return result
 }
 export class ComponentDataRefresh {
