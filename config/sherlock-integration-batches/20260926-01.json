@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "2df8c999ccc3cc743ddde25ea38a571f513e99f7",
-        "tipCommit": "34a493fa95080ec6eb9c02eff3995eef852d742d",
+        "baseCommit": "34a493fa95080ec6eb9c02eff3995eef852d742d",
+        "tipCommit": "3f9958958292a0ad3819252353d0a837e531cd4a",
         "commits": [
           {
-            "commit": "34a493fa95080ec6eb9c02eff3995eef852d742d",
+            "commit": "d1d0cbe864247f6bd0b7e8e3e369e62f9165055a",
             "parents": [
-              "2df8c999ccc3cc743ddde25ea38a571f513e99f7"
+              "34a493fa95080ec6eb9c02eff3995eef852d742d"
             ],
-            "subject": "修复真实取数被误禁用并减少组件规划重试和限流"
+            "subject": "按模型服务商调度工作台请求并对限流统一退避"
+          },
+          {
+            "commit": "3f9958958292a0ad3819252353d0a837e531cd4a",
+            "parents": [
+              "d1d0cbe864247f6bd0b7e8e3e369e62f9165055a"
+            ],
+            "subject": "修正数据更新弹窗关闭按钮尺寸和对齐"
           }
         ],
         "files": [
@@ -32,28 +39,20 @@
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-model-queue.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
+            "path": "scripts/lib/component-data-refresh.mjs"
           },
           {
             "status": "M",
             "path": "test/research-component-source-tools.test.js"
           },
           {
-            "status": "M",
-            "path": "test/research-market-artifact.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "status": "A",
+            "path": "test/workbench-model-queue.test.js"
           }
         ],
         "checks": [
@@ -62,16 +61,16 @@
               "npx",
               "vitest",
               "run",
+              "test/workbench-model-queue.test.js",
               "test/research-component-source-tools.test.js",
-              "test/research-market-artifact.test.js",
               "test/research-task-runtime.test.js",
               "test/workbench-execution-policy.test.js",
-              "test/research-workbench.test.js"
+              "test/component-data-ui.test.js"
             ],
             "outcome": "passed",
-            "summary": "264项聚焦验证通过",
-            "verifiedCommit": "34a493fa95080ec6eb9c02eff3995eef852d742d",
-            "completedAt": "2026-09-26T08:00:38.762203+00:00",
+            "summary": "191项聚焦验证通过，含真实LLM中间件、并发和限流恢复",
+            "verifiedCommit": "3f9958958292a0ad3819252353d0a837e531cd4a",
+            "completedAt": "2026-09-26T08:28:29.674836+00:00",
             "timeoutMs": 180000
           },
           {
@@ -82,81 +81,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "34a493fa95080ec6eb9c02eff3995eef852d742d",
-            "completedAt": "2026-09-26T08:00:38.762203+00:00",
+            "verifiedCommit": "3f9958958292a0ad3819252353d0a837e531cd4a",
+            "completedAt": "2026-09-26T08:28:29.674836+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "数据路由、恢复和调度修复已通过聚焦验证；新包完整六卡和交互待验证。"
+          "summary": "调度聚焦测试和UI脚本解析通过；新包真实ETF六卡与关闭按钮视觉复验待进行"
         },
         "acceptanceCriteria": [
-          "真实通联取数不会被禁止虚构数据或离线交付描述误禁用",
-          "初始模板并发为3，限流后收紧为2；重型任务为2",
-          "交易日请求预留周末和节假日缓冲，保留指定历史范围",
-          "中性颜色矩阵可恢复且所有业务单元格与有效颜色保持校验"
+          "同一服务商工作台模型流最多2个，429后按15/30/60秒退避并单请求探测",
+          "停止或取消不遗留队列和请求槽位",
+          "行情快照和历史K线按各自面板确定日期窗口",
+          "数据更新弹窗关闭按钮保持32像素正方形"
         ],
         "risks": [
           "外部模型、数据服务时延有波动，真实工作台耗时待复验"
         ],
-        "generatedAt": "2026-09-26T08:00:38.762203+00:00"
-      },
-      "merged": {
-        "mergeCommit": "59aee4d7568b85bad58947625583397eac08024f",
-        "verificationCommit": "59aee4d7568b85bad58947625583397eac08024f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "59aee4d7568b85bad58947625583397eac08024f",
-            "completedAt": "2026-09-26T08:01:14.770Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "59aee4d7568b85bad58947625583397eac08024f",
-            "completedAt": "2026-09-26T08:01:14.770Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "59aee4d7568b85bad58947625583397eac08024f",
-            "completedAt": "2026-09-26T08:01:14.770Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T08:01:14.770Z"
+        "generatedAt": "2026-09-26T08:28:29.674836+00:00"
       }
     }
   ],
