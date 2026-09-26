@@ -1,0 +1,381 @@
+{
+  "fileKey": "Jkyr5rMvgM8GNH6E68xnqd",
+  "frameId": "1683:73465",
+  "presentationRevision": "terminal-20260926",
+  "dataContractVersion": "21m-20260923-v1",
+  "templates": {
+    "market.metrics": {
+      "id": "1696:73546",
+      "lightId": "1696:73507",
+      "darkId": "1696:73468",
+      "tileId": "1696:73465",
+      "width": 1336,
+      "height": 214,
+      "layers": [
+        38,
+        38
+      ]
+    },
+    "market.candlestick": {
+      "id": "1696:73786",
+      "lightId": "1696:73668",
+      "darkId": "1696:73550",
+      "tileId": "1696:73547",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        117,
+        117
+      ]
+    },
+    "market.trend": {
+      "id": "1696:73878",
+      "lightId": "1696:73834",
+      "darkId": "1696:73790",
+      "tileId": "1696:73787",
+      "width": 1336,
+      "height": 302,
+      "layers": [
+        43,
+        43
+      ]
+    },
+    "market.price-volume": {
+      "id": "1696:74110",
+      "lightId": "1696:73996",
+      "darkId": "1696:73882",
+      "tileId": "1696:73879",
+      "width": 1336,
+      "height": 312,
+      "layers": [
+        113,
+        113
+      ]
+    },
+    "market.order-book": {
+      "id": "1696:74260",
+      "lightId": "1696:74187",
+      "darkId": "1696:74114",
+      "tileId": "1696:74111",
+      "width": 1336,
+      "height": 252,
+      "layers": [
+        72,
+        72
+      ]
+    },
+    "market.fund-flow": {
+      "id": "1696:74394",
+      "lightId": "1696:74329",
+      "darkId": "1696:74264",
+      "tileId": "1696:74261",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        64,
+        64
+      ]
+    },
+    "market.valuation-band": {
+      "id": "1696:74488",
+      "lightId": "1696:74443",
+      "darkId": "1696:74398",
+      "tileId": "1696:74395",
+      "width": 1336,
+      "height": 312,
+      "layers": [
+        44,
+        44
+      ]
+    },
+    "market.equity-drawdown": {
+      "id": "1696:74612",
+      "lightId": "1696:74552",
+      "darkId": "1696:74492",
+      "tileId": "1696:74489",
+      "width": 1336,
+      "height": 312,
+      "layers": [
+        59,
+        59
+      ]
+    },
+    "market.allocation-donut": {
+      "id": "1696:74682",
+      "lightId": "1696:74649",
+      "darkId": "1696:74616",
+      "tileId": "1696:74613",
+      "width": 1336,
+      "height": 302,
+      "layers": [
+        32,
+        32
+      ]
+    },
+    "market.waterfall": {
+      "id": "1696:74744",
+      "lightId": "1696:74715",
+      "darkId": "1696:74686",
+      "tileId": "1696:74683",
+      "width": 1336,
+      "height": 282,
+      "layers": [
+        28,
+        28
+      ]
+    },
+    "market.funnel": {
+      "id": "1696:74808",
+      "lightId": "1696:74778",
+      "darkId": "1696:74748",
+      "tileId": "1696:74745",
+      "width": 1336,
+      "height": 258,
+      "layers": [
+        29,
+        29
+      ]
+    },
+    "market.risk-matrix": {
+      "id": "1696:75186",
+      "lightId": "1696:74999",
+      "darkId": "1696:74812",
+      "tileId": "1696:74809",
+      "width": 1336,
+      "height": 312,
+      "layers": [
+        186,
+        186
+      ]
+    },
+    "market.scatter": {
+      "id": "1696:75348",
+      "lightId": "1696:75269",
+      "darkId": "1696:75190",
+      "tileId": "1696:75187",
+      "width": 1336,
+      "height": 378,
+      "layers": [
+        78,
+        78
+      ]
+    },
+    "market.table": {
+      "id": "1696:75648",
+      "lightId": "1696:75500",
+      "darkId": "1696:75352",
+      "tileId": "1696:75349",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        147,
+        147
+      ]
+    },
+    "market.pipeline": {
+      "id": "1696:75754",
+      "lightId": "1696:75703",
+      "darkId": "1696:75652",
+      "tileId": "1696:75649",
+      "width": 1336,
+      "height": 272,
+      "layers": [
+        50,
+        50
+      ]
+    },
+    "market.events": {
+      "id": "1696:75958",
+      "lightId": "1696:75858",
+      "darkId": "1696:75758",
+      "tileId": "1696:75755",
+      "width": 1336,
+      "height": 266,
+      "layers": [
+        99,
+        99
+      ]
+    },
+    "market.heatmap": {
+      "id": "1696:76086",
+      "lightId": "1696:76024",
+      "darkId": "1696:75962",
+      "tileId": "1696:75959",
+      "width": 1336,
+      "height": 322,
+      "layers": [
+        61,
+        61
+      ]
+    },
+    "market.breadth": {
+      "id": "1696:76154",
+      "lightId": "1696:76122",
+      "darkId": "1696:76090",
+      "tileId": "1696:76087",
+      "width": 1336,
+      "height": 202,
+      "layers": [
+        31,
+        31
+      ]
+    },
+    "market.fund-kpi": {
+      "id": "1696:76238",
+      "lightId": "1696:76198",
+      "darkId": "1696:76158",
+      "tileId": "1696:76155",
+      "width": 1336,
+      "height": 214,
+      "layers": [
+        39,
+        39
+      ]
+    },
+    "market.fund-holdings": {
+      "id": "1696:76538",
+      "lightId": "1696:76390",
+      "darkId": "1696:76242",
+      "tileId": "1696:76239",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        147,
+        147
+      ]
+    },
+    "market.fund-industry": {
+      "id": "1696:76666",
+      "lightId": "1696:76604",
+      "darkId": "1696:76542",
+      "tileId": "1696:76539",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        61,
+        61
+      ]
+    },
+    "kpi": {
+      "id": "1696:76780",
+      "lightId": "1696:76725",
+      "darkId": "1696:76670",
+      "tileId": "1696:76667",
+      "width": 1336,
+      "height": 214,
+      "layers": [
+        54,
+        54
+      ]
+    },
+    "chart.line": {
+      "id": "1696:76912",
+      "lightId": "1696:76848",
+      "darkId": "1696:76784",
+      "tileId": "1696:76781",
+      "width": 1336,
+      "height": 322,
+      "layers": [
+        63,
+        63
+      ]
+    },
+    "chart.bar": {
+      "id": "1696:77040",
+      "lightId": "1696:76978",
+      "darkId": "1696:76916",
+      "tileId": "1696:76913",
+      "width": 1336,
+      "height": 322,
+      "layers": [
+        61,
+        61
+      ]
+    },
+    "table": {
+      "id": "1696:77348",
+      "lightId": "1696:77196",
+      "darkId": "1696:77044",
+      "tileId": "1696:77041",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        151,
+        151
+      ]
+    },
+    "dashboard": {
+      "id": "1696:77430",
+      "lightId": "1696:77391",
+      "darkId": "1696:77352",
+      "tileId": "1696:77349",
+      "width": 1336,
+      "height": 240,
+      "layers": [
+        38,
+        38
+      ]
+    },
+    "news": {
+      "id": "1696:77556",
+      "lightId": "1696:77495",
+      "darkId": "1696:77434",
+      "tileId": "1696:77431",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        60,
+        60
+      ]
+    },
+    "reports": {
+      "id": "1696:77682",
+      "lightId": "1696:77621",
+      "darkId": "1696:77560",
+      "tileId": "1696:77557",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        60,
+        60
+      ]
+    },
+    "calendar": {
+      "id": "1696:77848",
+      "lightId": "1696:77767",
+      "darkId": "1696:77686",
+      "tileId": "1696:77683",
+      "width": 1336,
+      "height": 318,
+      "layers": [
+        80,
+        80
+      ]
+    },
+    "gantt": {
+      "id": "1696:77958",
+      "lightId": "1696:77905",
+      "darkId": "1696:77852",
+      "tileId": "1696:77849",
+      "width": 1336,
+      "height": 354,
+      "layers": [
+        52,
+        52
+      ]
+    }
+  },
+  "collections": {
+    "primitive": "VariableCollectionId:1692:73465",
+    "color": "VariableCollectionId:1692:73466",
+    "measures": "VariableCollectionId:1692:73467"
+  },
+  "styles": {
+    "Display": "S:3f104bb97c6f6cef5f88e4c68745a8bb87870ed6,",
+    "Section": "S:ed19a701aaed32f77da4af7df9f0fd2ddeefbdaf,",
+    "Title": "S:a53d4c7b194f0700a98a968b2aa300d40e9abde0,",
+    "Body": "S:bfdd1b4bd767ab3d64e6a5ccc9c3fa15a8b26a18,",
+    "Caption": "S:91c051590e627cd879212349b7c4c169790d0ada,",
+    "Metric": "S:7beca8429d0316e7334a38d3cf1b9ec4b038ea47,"
+  }
+}

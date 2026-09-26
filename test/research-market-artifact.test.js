@@ -77,8 +77,8 @@ it('renders a fixed price-volume template with linked readings, real range contr
  const prices=labels.map((_,i)=>100+i*.5),volumes=labels.map((_,i)=>i===10?null:1000+i*20)
  const d=render({variant:'price-volume',labels,prices,volumes,priceUnit:'元',volumeUnit:'股'})
  expect(d.querySelectorAll('tbody tr')).toHaveLength(65)
- expect(d.querySelectorAll('[data-price-volume-range]')).toHaveLength(4)
- expect(d.querySelector('[data-price-volume-range="240"]').disabled).toBe(true)
+ expect(d.querySelectorAll('[data-price-volume-range]')).toHaveLength(3)
+ expect(d.querySelector('[data-price-volume-range="240"]')).toBeNull()
  expect(d.querySelectorAll('tbody tr')[10].textContent).toContain('—')
  const chart=d.querySelector('.price-volume svg')
  d.defaultView.eval(d.querySelector('script').textContent)
@@ -91,7 +91,7 @@ it('renders a fixed price-volume template with linked readings, real range contr
  expect(d.querySelector('[data-price-volume-range="20"]').getAttribute('aria-pressed')).toBe('true')
   expect(marketVariant({title:'贵州茅台量价走势图'})).toBe('price-volume')
   expect(marketVariant({title:'贵州茅台量价联动',prompt:'同时生成 market.price-volume 和 market.order-book'})).toBe('price-volume')
- expect(workbenchDesignTemplate({type:'market',title:'贵州茅台量价走势图'}).height).toBe(286)
+ expect(workbenchDesignTemplate({type:'market',title:'贵州茅台量价走势图'}).height).toBe(310)
 })
 it('rejects incomplete or fabricated price-volume data before creating a card',()=>{
  const base={version:1,type:'market',variant:'price-volume',title:'量价',asOf:'示例',labels:['一','二'],prices:[1,2],volumes:[10,null],priceUnit:'元',volumeUnit:'股'}
@@ -116,7 +116,7 @@ it('renders both sides of a real order book and switches visible depth',()=>{
  expect(d.querySelector('.order-book-readout').textContent).toContain('卖8 · 10.08 元 · 190 手')
   expect(marketVariant({title:'股票十档盘口'})).toBe('order-book')
   expect(marketVariant({title:'贵州茅台买卖盘口',prompt:'同时生成 market.price-volume 和 market.order-book'})).toBe('order-book')
- expect(workbenchDesignTemplate({type:'market',title:'股票十档盘口'}).width).toBe(536)
+ expect(workbenchDesignTemplate({type:'market',title:'股票十档盘口'}).width).toBe(656)
 })
 it('rejects invalid order book levels and zero-unit templates',()=>{
  const base={version:1,type:'market',variant:'order-book',title:'盘口',asOf:'示例',bids:[{price:10,size:100}],asks:[{price:10.01,size:120}],priceUnit:'元',sizeUnit:'手'}

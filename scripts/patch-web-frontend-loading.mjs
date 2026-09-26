@@ -1,3 +1,5 @@
+import { patchComponentDataRefresh } from './lib/component-data-refresh.mjs'
+import { patchResearchCreationProgress } from './lib/research-creation-progress.mjs'
 import { patchComponentScheduledTasks } from './lib/component-scheduled-tasks.mjs'
 import { patchConversationBrowser } from './lib/conversation-browser-client.mjs'
 import { patchWorkspaceDragFeedback } from './lib/workspace-drag-feedback.mjs'
@@ -191,7 +193,7 @@ writeFileSync(conversationPath, patchInspectPortal(readFileSync(conversationPath
 writeFileSync(conversationPath, patchComponentWheelZoom(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchCanvasActionsClient(readFileSync(conversationPath, 'utf8')))
-writeFileSync(conversationPath, patchCanvasUseClient(readFileSync(conversationPath, 'utf8')))
+writeFileSync(conversationPath, patchResearchCreationProgress(patchCanvasUseClient(readFileSync(conversationPath, 'utf8'))))
 const subagentRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-subagent/lib/index.js')
 writeFileSync(subagentRuntimePath, patchCanvasTaskNotices(readFileSync(subagentRuntimePath, 'utf8')))
 
@@ -222,3 +224,5 @@ writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversatio
 writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchComponentScheduledTasks(readFileSync(conversationPath, 'utf8')))
+
+writeFileSync(conversationPath, patchComponentDataRefresh(readFileSync(conversationPath, 'utf8')))

@@ -18,8 +18,8 @@ describe('research workbench Figma design contract', () => {
       panel('关键指标', 'market', 'variant: metrics；同一时点的价格与涨跌', { variant: 'metrics', asOf: '2026-02-05', items: [{ label: '现价', value: '10.8 元' }, { label: '涨跌', value: '+1.89%' }] })
     ] });
     const [candle, metrics] = layoutWorkbench(input.panels);
-    expect(candle).toMatchObject({ width: 536, height: 264 });
-    expect(metrics).toMatchObject({ width: 896, height: 144 });
+    expect(candle).toMatchObject({ width: 656, height: 352 });
+    expect(metrics).toMatchObject({ width: 656, height: 130 });
     for (const p of [candle, metrics]) {
       const rendered = renderMarketArtifact(p.artifact);
       expect(rendered?.html).toContain(`data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"`);
@@ -56,9 +56,9 @@ describe('research workbench Figma design contract', () => {
 
   it('keeps host dimensions and source nodes in one versioned mapping', () => {
     expect(workbenchDesignTemplate({ type: 'market', title: '指标', prompt: 'variant: metrics' })).toMatchObject({
-      version: WORKBENCH_DESIGN_VERSION, figma: '1217:225751', width: 896, height: 144
+      version: WORKBENCH_DESIGN_VERSION, figma: '1696:73546', width: 656, height: 212
     });
-    expect(MARKET_DESIGN_TEMPLATES.table).toMatchObject({ figma: '1217:225879', width: 536, height: 258 });
+    expect(MARKET_DESIGN_TEMPLATES.table).toMatchObject({ figma: '1696:75648', width: 656, height: 352 });
     for (const [variant, template] of Object.entries(MARKET_DESIGN_TEMPLATES)) {
       const html = `<body data-sherlock-market="${variant}" data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"></body>`;
       expect(researchMarketDimensions({ containerSpec: { type: 'html', html } })).toEqual({ width: template.width, height: template.height });
@@ -67,13 +67,13 @@ describe('research workbench Figma design contract', () => {
 
   it('keeps the source calendar size and fits six operational metrics in a compact card', () => {
     expect(workbenchDesignTemplate({ type: 'calendar', artifact: { items: Array(8).fill({}) } })).toMatchObject({
-      figma: '1217:222167', width: 536, height: 316
+      figma: '1696:77848', width: 656, height: 316
     });
     expect(workbenchDesignTemplate({ type: 'dashboard', artifact: { items: Array(6).fill({}) } })).toMatchObject({
-      width: 656, height: 280
+      width: 656, height: 238
     });
     expect(workbenchDesignTemplate({ type: 'news', artifact: { items: Array(8).fill({}) } })).toMatchObject({
-      width: 656, height: 456
+      width: 656, height: 356
     });
   });
 
@@ -84,7 +84,7 @@ describe('research workbench Figma design contract', () => {
       panel('交易明细', 'table', '交易数据', { columns: ['时间', '价格'], rows: [['09:30', '1462']] })
     ] });
     expect(input.panels.map(p => [p.type, p.artifact.variant])).toEqual([['market', 'metrics'], ['market', 'trend'], ['market', 'table']]);
-    expect(layoutWorkbench(input.panels).map(p => [p.width, p.height])).toEqual([[896, 144], [536, 264], [536, 258]]);
+    expect(layoutWorkbench(input.panels).map(p => [p.width, p.height])).toEqual([[656, 130], [656, 300], [656, 155]]);
     expect(input.panels.map(p => renderMarketArtifact(p.artifact)?.html.includes('data-sherlock-design'))).toEqual([true, true, true]);
     const bad = { requestId: 'no-financial-bar', title: '金融分析工作台', dataMode: 'simulated', panels: [
       panel('柱图', 'chart', '财务柱图', { variant: 'bar', labels: ['一','二'], series: [{ name: '值', values: [1,2] }] }),
@@ -98,11 +98,11 @@ describe('research workbench Figma design contract', () => {
       columns:['名称','代码','价格','涨跌','市盈率','市净率','市值'],rows:Array.from({length:8},(_,i)=>[`银行${i}`,'600000.SH','8.5','+0.2','6.2','0.8','1000'])};
     const denseMetrics = {version:1,type:'market',variant:'metrics',title:'关键指标',asOf:'模拟',
       items:Array.from({length:9},(_,i)=>({label:`指标${i}`,value:String(i)}))};
-    expect(workbenchDesignTemplate({type:'market',artifact:denseTable})).toMatchObject({width:536,height:258});
-    expect(workbenchDesignTemplate({type:'market',artifact:denseMetrics})).toMatchObject({width:896,height:232});
-    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseTable).html}})).toEqual({width:536,height:258});
-    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseMetrics).html}})).toEqual({width:896,height:232});
-    expect(workbenchDesignTemplate({type:'market',artifact:{...denseTable,columns:['名称','价格'],rows:[['A','8.5']]}})).toMatchObject({width:536,height:258});
+    expect(workbenchDesignTemplate({type:'market',artifact:denseTable})).toMatchObject({width:656,height:280});
+    expect(workbenchDesignTemplate({type:'market',artifact:denseMetrics})).toMatchObject({width:656,height:294});
+    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseTable).html}})).toEqual({width:656,height:280});
+    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseMetrics).html}})).toEqual({width:656,height:294});
+    expect(workbenchDesignTemplate({type:'market',artifact:{...denseTable,columns:['名称','价格'],rows:[['A','8.5']]}})).toMatchObject({width:656,height:155});
   });
 
   it('packs contracted financial cards across a wide canvas before shrinking them', () => {
@@ -111,10 +111,10 @@ describe('research workbench Figma design contract', () => {
       containerSpec: { type: 'html', html: `<body data-sherlock-market="${variant}" data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"></body>` }
     }));
     const result = researchBentoLayout(nodes, { width: 1200, height: 800 });
-    expect(result.width).toBe(1084);
-    expect(result.height).toBe(652);
-    expect(result.viewport.scale).toBe(1);
-    expect(result.nodes[1]).toMatchObject({ x: 0, y: 156, width: 536 });
-    expect(result.nodes[2]).toMatchObject({ x: 548, y: 156, width: 536 });
+    expect(result.width).toBe(1324);
+    expect(result.height).toBe(716);
+    expect(result.viewport.scale).toBeCloseTo(1136 / 1324);
+    expect(result.nodes[1]).toMatchObject({ x: 668, y: 0, width: 656 });
+    expect(result.nodes[2]).toMatchObject({ x: 0, y: 364, width: 656 });
   });
 });

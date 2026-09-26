@@ -7,7 +7,7 @@ import {patchFigmaFinalCanvas} from '../scripts/lib/figma-canvas-client.mjs';
 const market=(variant,extra='')=>({version:1,type:'html',html:`<body data-sherlock-market="${variant}">${extra}</body>`});
 const node=(id,spec)=>({id,kind:'generated-container',sizeMode:'auto',generationStatus:'completed',containerSpec:spec});
 describe('source market workbench completion layout',()=>{
-  it('upgrades an already patched client so fund cards keep their 132px resize minimum',async()=>{
+  it('upgrades an already patched client so fund cards keep a content-sized resize minimum',async()=>{
     const current=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
     const old=current.replace(/\/\* ODYSSEY_MARKET_METRICS_RESIZE \*\/[\s\S]*?(?=function normalizeResearchCanvasNodeGeometry)/,
       '/* ODYSSEY_MARKET_METRICS_RESIZE */\nfunction researchCanvasMinimumHeight(node,policy){return policy.minHeight}\n');
@@ -17,8 +17,8 @@ describe('source market workbench completion layout',()=>{
     const end=upgraded.indexOf('function normalizeResearchCanvasNodeGeometry',start);
     const minimum=new Function('researchMarketDimensions',upgraded.slice(start,end)+'\nreturn researchCanvasMinimumHeight')(researchMarketDimensions);
     const fund=node('fund',{type:'html',html:'<body data-sherlock-market="fund-kpi" data-sherlock-design="21m-20260923-v1"><div class="fund-kpi"></div></body>'});
-    expect(minimum(fund,{minHeight:220})).toBe(132);
-    expect(minimum({...fund,containerSpec:{type:'html',html:'<body data-sherlock-market="fund-kpi" data-sherlock-design="21m-20260923-v1">'+Array(6).fill('<div class="fund-kpi"></div>').join('')+'</body>'}},{minHeight:220})).toBe(208);
+    expect(minimum(fund,{minHeight:220})).toBe(130);
+    expect(minimum({...fund,containerSpec:{type:'html',html:'<body data-sherlock-market="fund-kpi" data-sherlock-design="21m-20260923-v1">'+Array(6).fill('<div class="fund-kpi"></div>').join('')+'</body>'}},{minHeight:220})).toBe(212);
   });
   it('keeps later workbench cards fixed when a source card is manually enlarged',async()=>{
     const source=patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));

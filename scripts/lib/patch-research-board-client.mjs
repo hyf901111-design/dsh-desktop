@@ -14,6 +14,7 @@ import { resolve, join } from 'node:path'
 import { compactHostDashboardHtml, researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
 import { candleRuntime, candleControls, refineCandlestickHtml } from '../../packages/dsh-research-task-runtime/market-candlestick.js'
 import { MARKET_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/market-presentation.js'
+import { applyTerminalPresentation, TERMINAL_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/terminal-presentation.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
@@ -695,6 +696,7 @@ function generationFeedbackPatch(source) {
 }
 
 export function patchLegacyDashboardPreview(source) {
+  source = source.replace('const baseStyle = `@layer sherlock-component-defaults{', 'const baseStyle = `@layer sherlock-terminal;@layer sherlock-component-defaults{')
   const previewStart = 'function buildResearchHtmlPreview(html, title = '
   if (!source.includes('function compactHostDashboardHtml(html) {'))
     source = replace(source, previewStart, `${compactHostDashboardHtml.toString()}\n${previewStart}`)
@@ -704,9 +706,25 @@ export function patchLegacyDashboardPreview(source) {
   if (!source.includes('const MARKET_PRESENTATION_CSS = '))
     source = replace(source, 'function compactHostDashboardHtml(html) {',
       `const MARKET_PRESENTATION_CSS = ${JSON.stringify(MARKET_PRESENTATION_CSS)};\nfunction compactHostDashboardHtml(html) {`)
-  if (!source.includes('const displayHtml = compactHostDashboardHtml(html)')) {
-    source = replace(source, "  const theme = initialTheme === 'dark' ? 'dark' : 'light'", "  const displayHtml = compactHostDashboardHtml(html)\n  const theme = initialTheme === 'dark' ? 'dark' : 'light'")
+  if (!source.includes('function applyTerminalPresentation(html) {'))
+    source = replace(source, previewStart, `const TERMINAL_PRESENTATION_CSS = ${JSON.stringify(TERMINAL_PRESENTATION_CSS)};\n${applyTerminalPresentation.toString()}\n${previewStart}`)
+  // Refresh owned serialized definitions on a second postinstall as well.
+  // Function boundaries are known insertion anchors, not brace parsing.
+  const refreshDefinition = (start, end, definition) => {
+    const a = source.indexOf(start), b = source.indexOf(end, a + start.length)
+    if (a < 0 || b < 0) throw Error('Component preview definition boundary missing: ' + start)
+    source = source.slice(0, a) + definition + '\n' + source.slice(b)
+  }
+  refreshDefinition('function candleRuntime(groups) {', 'function candleControls(groups) {', candleRuntime.toString())
+  refreshDefinition('function candleControls(groups) {', 'function refineCandlestickHtml(html) {', candleControls.toString())
+  refreshDefinition('function refineCandlestickHtml(html) {', 'const MARKET_PRESENTATION_CSS = ', refineCandlestickHtml.toString())
+  refreshDefinition('const TERMINAL_PRESENTATION_CSS = ', previewStart,
+    `const TERMINAL_PRESENTATION_CSS = ${JSON.stringify(TERMINAL_PRESENTATION_CSS)};\n${applyTerminalPresentation.toString()}`)
+  if (!source.includes('const displayHtml = ')) {
+    source = replace(source, "  const theme = initialTheme === 'dark' ? 'dark' : 'light'", "  const displayHtml = applyTerminalPresentation(compactHostDashboardHtml(html))\n  const theme = initialTheme === 'dark' ? 'dark' : 'light'")
     source = replace(source, '<body>${html}</body></html>', '<body>${displayHtml}</body></html>')
+  } else {
+    source = source.replace('const displayHtml = compactHostDashboardHtml(html)', 'const displayHtml = applyTerminalPresentation(compactHostDashboardHtml(html))')
   }
   return source
 }

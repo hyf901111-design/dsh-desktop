@@ -51,7 +51,8 @@ export function ResearchContainerChart({ spec }) {
   const [plotSize, setPlotSize] = react.useState({ width: 640, height: 290 });
   const [hidden, setHidden] = react.useState([]);
   const [selected, setSelected] = react.useState({ series: 0, point: 0 });
-  react.useEffect(() => { setHidden([]); setSelected({ series: 0, point: 0 }); }, [spec]);
+  const seriesIdentity = JSON.stringify(spec.series.map(series => series.name));
+  react.useEffect(() => { setHidden([]); setSelected({ series: 0, point: 0 }); }, [spec.variant, seriesIdentity]);
   react.useLayoutEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
@@ -99,8 +100,11 @@ export function ResearchContainerChart({ spec }) {
         role: 'group', 'aria-label': spec.title, children: [
           Array.from({ length: 5 }, (_, index) => {
             const lineY = top + index * height / 4;
-            return react_jsx_runtime.jsx('line', { x1: left, x2: left + width, y1: lineY, y2: lineY,
-              className: 'rScV5Q_chartGrid', strokeDasharray: '4 4' }, 'grid-' + index);
+            const value=maximum-index*range/4;
+            return react_jsx_runtime.jsxs('g', { children:[
+              react_jsx_runtime.jsx('line', { x1:left,x2:left+width,y1:lineY,y2:lineY,className:'rScV5Q_chartGrid' }),
+              react_jsx_runtime.jsx('text', { x:left-8,y:lineY+4,textAnchor:'end',className:'rScV5Q_chartLabel',children:Math.abs(value)>=1000?Math.round(value).toLocaleString('en-US'):Number(value.toFixed(range<10?2:1)).toString() })
+            ]},'grid-'+index);
           }),
           react_jsx_runtime.jsx('line', { x1: left, x2: left + width, y1: baseline, y2: baseline,
             className: 'rScV5Q_chartAxis' }),
@@ -138,9 +142,9 @@ export function ResearchContainerChart({ spec }) {
                 }
               }, 'point-' + seriesIndex + '-' + index) : null)];
             }),
-          spec.labels.map((label, index) => react_jsx_runtime.jsx('text', {
+          spec.labels.map((label, index) => (index === 0 || index === spec.labels.length - 1 || index % Math.max(1, Math.ceil(spec.labels.length / Math.max(2, Math.floor(width / 70)))) === 0) ? react_jsx_runtime.jsx('text', {
             x: left + (index + .5) * step, y: top + height + 22, textAnchor: 'middle',
-            className: 'rScV5Q_chartLabel', children: label }, 'label-' + index))
+            className: 'rScV5Q_chartLabel', children: label }, 'label-' + index) : null)
         ] }),
       react_jsx_runtime.jsx('div', { className: 'rScV5Q_chartLegend', children: spec.series.map((series, index) =>
         react_jsx_runtime.jsxs('button', { type: 'button', 'aria-pressed': visible[index],

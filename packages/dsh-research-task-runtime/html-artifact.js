@@ -3,6 +3,7 @@ import { sharedComponentRuntime } from './shared-component-runtime.js'
 import { createCanvasUseSurface, installCanvasUseSurface } from './canvas-use-surface.js'
 import { researchNotoFontCss } from './component-noto-font.js'
 import { MARKET_PRESENTATION_CSS } from './market-presentation.js'
+import { applyTerminalPresentation } from './terminal-presentation.js'
 export const MAX_RESEARCH_HTML_BYTES = 200_000
 export const RESEARCH_HTML_LIMIT_ERROR = 'HTML 页面超过 200 KB 上限，请精简内容后重试。'
 
@@ -166,16 +167,16 @@ export const RESEARCH_COMPONENT_CONTROLS_CSS = `@layer sherlock-component-contro
 :is(button:not(.market-tile),[role="button"]:not(rect):not(circle),[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],summary,input,select,textarea){color:var(--sherlock-control-text)!important;background-color:var(--sherlock-control-bg)!important;background-image:none!important;border-color:var(--sherlock-control-border)!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)!important;caret-color:var(--sherlock-control-text)!important}
 body[data-sherlock-market] details>summary{background-color:var(--sherlock-surface)!important;color:var(--sherlock-text)!important}
 body[data-sherlock-market] details>summary:hover{background-color:var(--sherlock-surface-muted)!important}
-:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 var(--sherlock-control-padding-right,10px) 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,10px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
+:is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 var(--sherlock-control-padding-right,10px) 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,11px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) :is(select:not([multiple]):not([size]),select[size="1"]){--sherlock-control-padding-right:32px;appearance:none!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='-1 -1 10 6' fill='none' stroke='%23777777' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='miter' stroke-miterlimit='4'%3E%3Cpath d='M0 0L4 4L8 0'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:10px 6px!important;background-origin:border-box!important;background-position:right 11px center!important}
 :root[data-sherlock-theme="dark"] :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) :is(select:not([multiple]):not([size]),select[size="1"]){background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='-1 -1 10 6' fill='none' stroke='%23a0a0a0' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='miter' stroke-miterlimit='4'%3E%3Cpath d='M0 0L4 4L8 0'/%3E%3C/svg%3E")!important}
 [data-sherlock-profile="fund72-holdings"] input.research-filter-search{--sherlock-control-padding-left:29px;padding-left:29px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23777777' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:12px 12px!important;background-position:10px center!important}
 :root[data-sherlock-theme="dark"] [data-sherlock-profile="fund72-holdings"] input.research-filter-search{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a0a0a0' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important}
-textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:10px!important;line-height:16px!important}
-:is(button:not(.market-tile),[role="button"]:not(rect):not(circle),input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
+textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:11px!important;line-height:16px!important}
+:is(button:not(.market-tile),[role="button"]:not(rect):not(circle),input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:11px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
 :is(button[type="submit"],button[aria-pressed="true"]:not(.market-tile),input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
 /* Market42 sort headers are text controls inside the original compact table header. */
-[data-sherlock-market="table"] th button{height:auto!important;min-height:0!important;padding:0!important;border-radius:0!important;font-size:9px!important;line-height:11px!important;font-weight:400!important;background-color:transparent!important;color:var(--sherlock-market-table-muted)!important}
+[data-sherlock-market="table"] th button{height:auto!important;min-height:0!important;padding:0!important;border-radius:0!important;font-size:11px!important;line-height:16px!important;font-weight:400!important;background-color:transparent!important;color:var(--sherlock-market-table-muted)!important}
 :is(input[type="checkbox"],input[type="radio"]){width:13px!important;height:13px!important;min-height:0!important;padding:0!important;accent-color:var(--sherlock-control-primary)!important}
 input[type="checkbox"]{border-radius:3px!important}
 :is(button:not(.market-tile),[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-text)!important;outline-offset:2px!important}
@@ -205,13 +206,13 @@ body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile=
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]){box-sizing:border-box!important;width:100%!important;min-width:0!important;height:auto!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--sherlock-surface)!important;color:var(--sherlock-text)!important;font-weight:400!important;container-type:inline-size}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]) :is(*),:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]){font-family:"EWork Profile Punctuation","EWork DIN Pro","Noto Sans SC",sans-serif!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-kpi"],[data-sherlock-profile="fund72-industry"]) [data-sherlock-numeric]{font-weight:500!important;font-variant-numeric:tabular-nums!important}
-:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]){padding:11px 12px 10px!important;font-size:9px!important;line-height:18px!important}
-:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-filters{--sherlock-control-font-size:9px;--sherlock-control-line-height:18px;display:grid!important;gap:8px!important;padding:0!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]){padding:11px 12px 10px!important;font-size:11px!important;line-height:18px!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-filters{--sherlock-control-font-size:11px;--sherlock-control-line-height:18px;display:grid!important;gap:8px!important;padding:0!important}
 :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-filters :is(input,select){width:100%!important;min-width:0!important}
-:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-footer{padding:0!important;color:var(--sherlock-muted)!important;font-size:8px!important;line-height:14px!important;font-weight:400!important}
+:is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile="fund72-industry"]) .research-footer{padding:0!important;color:var(--sherlock-muted)!important;font-size:11px!important;line-height:14px!important;font-weight:400!important}
 [data-sherlock-profile="fund72-holdings"] .research-filters{grid-template-columns:minmax(0,178fr) minmax(0,142fr) minmax(0,184fr)!important;width:calc(100% - 12px)!important;margin:0 0 18px!important}
-[data-sherlock-profile="fund72-holdings"] table{width:100%!important;table-layout:fixed!important;border-collapse:separate!important;border-spacing:0!important;border:0!important;border-radius:0!important;margin:0!important;padding:0!important;background:transparent!important;text-align:left!important;font-size:9px!important;line-height:18px!important}
-[data-sherlock-profile="fund72-holdings"] :is(th,td){box-sizing:border-box!important;border:0!important;text-align:left!important;vertical-align:middle!important;font-size:9px!important;font-weight:400!important;white-space:normal!important;overflow-wrap:anywhere}
+[data-sherlock-profile="fund72-holdings"] table{width:100%!important;table-layout:fixed!important;border-collapse:separate!important;border-spacing:0!important;border:0!important;border-radius:0!important;margin:0!important;padding:0!important;background:transparent!important;text-align:left!important;font-size:11px!important;line-height:18px!important}
+[data-sherlock-profile="fund72-holdings"] :is(th,td){box-sizing:border-box!important;border:0!important;text-align:left!important;vertical-align:middle!important;font-size:11px!important;font-weight:400!important;white-space:normal!important;overflow-wrap:anywhere}
 [data-sherlock-profile="fund72-holdings"] th{height:25px!important;padding:4px 6px!important;line-height:17px!important;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-muted)!important}
 [data-sherlock-profile="fund72-holdings"] th:nth-child(1){width:34.2105263158%!important}
 [data-sherlock-profile="fund72-holdings"] :is(th:nth-child(2),th:nth-child(4)){width:16.9172932331%!important}
@@ -234,21 +235,21 @@ body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile=
 [data-sherlock-profile="fund72-kpi"] .research-metrics{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))!important;gap:10px!important;margin:0!important;padding:0!important}
 [data-sherlock-profile="fund72-kpi"] .research-metric{box-sizing:border-box!important;min-width:0!important;min-height:64px!important;margin:0!important;padding:6px 10px 4px!important;border:0!important;border-radius:5px!important;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important}
 [data-sherlock-profile="fund72-kpi"] :is(.research-metric-label,.research-metric-value,.research-metric-detail){margin:0!important;text-align:left!important}
-[data-sherlock-profile="fund72-kpi"] .research-metric-label{padding:0!important;font-size:9px!important;line-height:14px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
+[data-sherlock-profile="fund72-kpi"] .research-metric-label{padding:0!important;font-size:11px!important;line-height:14px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
 [data-sherlock-profile="fund72-kpi"] .research-metric-value{padding:3px 0 0!important;font-size:23px!important;line-height:26px!important;font-weight:500!important;color:var(--sherlock-text)!important;font-variant-numeric:tabular-nums!important}
 [data-sherlock-profile="fund72-kpi"] [data-sherlock-unit]{font-weight:400!important}
-[data-sherlock-profile="fund72-kpi"] .research-metric-detail{padding:0!important;font-size:8px!important;line-height:11px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
+[data-sherlock-profile="fund72-kpi"] .research-metric-detail{padding:0!important;font-size:11px!important;line-height:11px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
 [data-sherlock-profile="fund72-industry"] .research-filters{grid-template-columns:minmax(0,142fr) minmax(0,146fr)!important;width:calc(100% - 8px)!important;margin:0 0 25px!important}
 [data-sherlock-profile="fund72-industry"] .research-industry-rows{display:grid!important;gap:9px!important;margin:0!important;padding:0!important}
 [data-sherlock-profile="fund72-industry"] .research-industry-row{display:grid!important;grid-template-columns:90px minmax(0,1fr) 43px!important;align-items:center!important;min-height:18px!important;padding:0 2px 0 0!important;margin:0!important}
-[data-sherlock-profile="fund72-industry"] .research-industry-label{font-size:9px!important;line-height:18px!important;font-weight:400!important;color:var(--sherlock-text)!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-label{font-size:11px!important;line-height:18px!important;font-weight:400!important;color:var(--sherlock-text)!important}
 [data-sherlock-profile="fund72-industry"] .research-industry-track{height:7px!important;align-self:start!important;margin:6px 7px 0 2px!important;border:0!important;border-radius:2px!important;background:var(--sherlock-surface-muted)!important}
 [data-sherlock-profile="fund72-industry"] .research-industry-bar{height:7px!important;max-width:100%!important;border:0!important;border-radius:2px!important;background:var(--sherlock-fund72-industry-1)!important}
 [data-sherlock-profile="fund72-industry"] .research-industry-row:nth-child(even) .research-industry-bar{background:var(--sherlock-fund72-industry-2)!important}
-[data-sherlock-profile="fund72-industry"] .research-industry-value{font-size:10px!important;line-height:18px!important;font-weight:500!important;text-align:right!important;color:var(--sherlock-text)!important;font-variant-numeric:tabular-nums!important}
+[data-sherlock-profile="fund72-industry"] .research-industry-value{font-size:11px!important;line-height:18px!important;font-weight:500!important;text-align:right!important;color:var(--sherlock-text)!important;font-variant-numeric:tabular-nums!important}
 [data-sherlock-profile="fund72-industry"] .research-callout{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:14px!important;margin:27px 0 0!important;padding:0 0 0 2px!important}
-[data-sherlock-profile="fund72-industry"] .research-callout [data-sherlock-status]{box-sizing:border-box!important;min-width:136px!important;min-height:22px!important;padding:3px!important;border-radius:4px!important;font-size:9px!important;line-height:16px!important;font-weight:400!important;text-align:center!important}
-[data-sherlock-profile="fund72-industry"] .research-benchmark{font-size:9px!important;line-height:16px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
+[data-sherlock-profile="fund72-industry"] .research-callout [data-sherlock-status]{box-sizing:border-box!important;min-width:136px!important;min-height:22px!important;padding:3px!important;border-radius:4px!important;font-size:11px!important;line-height:16px!important;font-weight:400!important;text-align:center!important}
+[data-sherlock-profile="fund72-industry"] .research-benchmark{font-size:11px!important;line-height:16px!important;font-weight:400!important;color:var(--sherlock-muted)!important}
 [data-sherlock-profile="fund72-industry"] .research-footer{margin:35px 0 0!important}
 @container (max-width:400px){[data-sherlock-profile="fund72-holdings"] .research-filters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;width:100%!important}[data-sherlock-profile="fund72-holdings"] .research-filter-search{grid-column:1 / -1}}
 }`
@@ -605,6 +606,8 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
 // Interaction journal is data only. Existing generated pages keep their own JS
 // closures; replay restores those closures instead of merely repainting the DOM.
 export function researchInteractionVersion(html) {
+  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
+  if(encoded&&encoded.length<512000){try{const model=JSON.parse(encoded);if(typeof model.templateId==='string'&&typeof model.version==='string')return 'template:'+model.templateId+':'+model.version;}catch{}}
   let a=2166136261, b=5381;
   for (let i=0;i<html.length;i++) { a=Math.imul(a^html.charCodeAt(i),16777619); b=Math.imul(b,33)^html.charCodeAt(i); }
   return (a>>>0).toString(36)+'-'+(b>>>0).toString(36)+'-'+html.length;
@@ -790,7 +793,7 @@ const escapeAttribute = (value) => String(value).replace(/&/g, '&amp;').replace(
 // The same wrapper is exported, never a bare executable artifact document.
 export function buildResearchHtmlPreview(html, title = '交互网页', initialTheme = 'light', options = {}) {
   if (parseResearchHtmlArtifact({ version: 1, type: 'html', title, html }) === null) return '<!doctype html><meta charset="utf-8"><p>HTML 页面格式无效，请重试。</p>'
-  const displayHtml = compactHostDashboardHtml(html)
+  const displayHtml = applyTerminalPresentation(compactHostDashboardHtml(html))
   const theme = initialTheme === 'dark' ? 'dark' : 'light'
   const fixedTheme = researchHtmlFixedTheme(html)
   const runtimeFont = options.notoFont === 'runtime'
@@ -802,7 +805,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
-  const baseStyle = `@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
+  const baseStyle = `@layer sherlock-terminal;@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
   const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${displayHtml}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
   const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`

@@ -119,6 +119,7 @@ export function patchFigmaCanvasGestures(source) {
                     }
                     return next;
                   };
+                  /* ODYSSEY_POINTER_RESIZE_ISOLATED */
                   update({files:snapshot.files.map(apply),artifacts:snapshot.artifacts.map(apply)},false);
                 },
                 cancelPointerGeometry(nodes) {

@@ -48,5 +48,13 @@ it.each(['line', 'bar'])('selects %s data, toggles series and keeps the full dat
     expect(details.textContent).toContain('三季度')
     expect(details.textContent).toContain('36')
     expect(f.workspace.getSnapshot().artifacts.find((node:any) => node.id === 'derived')?.containerSpec).toEqual(spec)
+    const updated={...spec,series:[{name:'甲',values:[11,21,31]},spec.series[1]]}
+    await act(async()=>{
+      const view=await f.workspace.canvasAction('inspect',{})
+      await f.workspace.canvasAction('apply',{requestId:'data-refresh',revision:view.revision,changes:[{op:'update',id:'derived',fields:{containerSpec:updated}}]})
+    })
+    expect(f.host.querySelector('.rScV5Q_chartLegend button:last-child')?.getAttribute('aria-pressed')).toBe('false')
+    expect(f.host.querySelector('.odyssey-native-chart-readout')?.textContent).toBe('二季度 · 甲 21')
+
   } finally { await f.cleanup() }
 })

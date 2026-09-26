@@ -257,6 +257,7 @@ contextBridge.exposeInMainWorld(
     researchVoice: createResearchVoiceBridge(ipcRenderer),
     researchCanvasWheel: createResearchCanvasWheelBridge(ipcRenderer),
     scheduledTasks: Object.freeze({list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list')}),
+    componentData: Object.freeze({request:(sessionId:string,args:unknown)=>ipcRenderer.invoke('component-data:request',sessionId,args)}),
     researchCanvasActions: createCanvasActionsBridge(ipcRenderer),
     researchContext: createResearchContextBridge(
       (channel, value) => ipcRenderer.invoke(channel, value)

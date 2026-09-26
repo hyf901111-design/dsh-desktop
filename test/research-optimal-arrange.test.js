@@ -7,9 +7,9 @@ const feed=rows=>node('feed',{type:'html',html:`<body data-research-kind="news">
 describe('content-sized workbench arrangement',()=>{
   it('sizes short and long components from actual content without the old large-card height cap',()=>{
     expect(researchOptimalDimensions(node('short',{type:'markdown',content:'简短结论'}))).toEqual({width:320,height:220});
-    expect(researchOptimalDimensions(node('news',{type:'news',items:Array.from({length:9},()=>({title:'资讯'}))}))).toEqual({width:656,height:634});
-    expect(researchMarketDimensions(feed(9))).toEqual({width:656,height:634});
-    expect(researchMarketContentDimensions('table',{columnCount:7,rowCount:20})).toEqual({width:536,height:546});
+    expect(researchOptimalDimensions(node('news',{type:'news',items:Array.from({length:9},()=>({title:'资讯'}))}))).toEqual({width:656,height:356});
+    expect(researchMarketDimensions(feed(9))).toEqual({width:656,height:356});
+    expect(researchMarketContentDimensions('table',{columnCount:7,rowCount:20})).toEqual({width:656,height:380});
     expect(researchOptimalDimensions(node('long',{type:'markdown',content:'正文'.repeat(1800)})).height).toBeGreaterThan(2000);
   });
 
@@ -23,7 +23,7 @@ describe('content-sized workbench arrangement',()=>{
     ];
     const result=researchBentoLayout(input,{width:1200,height:900},new Map(),{fitColumns:true});
     expect(result.nodes.map(({id,width,height})=>[id,width,height])).toEqual([
-      ['chart',536,320],['short',320,220],['feed',656,576],['table',536,474],['metric',656,220]
+      ['chart',656,320],['short',320,220],['feed',656,356],['table',656,380],['metric',656,212]
     ]);
     expect(result.nodes.every(n=>n.sizeMode==='auto')).toBe(true);
     for(const a of result.nodes)for(const b of result.nodes)if(a!==b)
