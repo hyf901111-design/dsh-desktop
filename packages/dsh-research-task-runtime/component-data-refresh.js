@@ -58,6 +58,10 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
+  if(Object.hasOwn(mapping,'$default')){
+   if(mapping.$default!==null&&!['string','number','boolean'].includes(typeof mapping.$default))throw Error('缺失值只能使用文字或标量')
+   if(value===undefined||value===null||value==='')value=mapping.$default
+  }
   if(value===undefined){if(mapping.$optional===true)return null;throw Error('接口缺少字段：'+mapping.$path)}
   return scalarMapping(value,mapping)
  }
@@ -132,7 +136,7 @@ export class ComponentDataRefresh {
  async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>8||!record(b.mapping)))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
  list(sessionId){return structuredClone(this.records.filter(b=>b.ownerAccountId===this.options.owner()&&(!sessionId||b.sessionId===sessionId)).map(b=>({...b,viewPaused:b.enabled&&!this.isVisible(b.sessionId)})))}
  persist(){const snapshot=structuredClone(this.records);const pending=this.chain.then(()=>this.options.save(snapshot));this.chain=pending.catch(()=>{});return pending}
- async bind(input,initialSpec){
+ async bind(input,initialSpec,{preserveSettings=false}={}){
   input=bounded(input);rejectCredentials(input)
   input.intervalMinutes??=1
   if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>8||!record(input.mapping))throw Error('数据绑定参数无效')
@@ -146,7 +150,9 @@ export class ComponentDataRefresh {
   const requests=[]
   for(const r of input.requests){if(!id(r.key)||!id(r.toolId)||!record(r.args)||requests.some(x=>x.key===r.key))throw Error('数据请求无效');requests.push(await this.options.validateRequest({...r},input))}
   const previous=this.records.find(b=>b.ownerAccountId===owner&&b.sessionId===input.sessionId&&b.nodeId===input.nodeId)
-  const binding={id:previous?.id??randomUUID(),revision:(previous?.revision??0)+1,ownerAccountId:owner,sessionId:input.sessionId,nodeId:input.nodeId,workspaceId:input.workspaceId,templateId:model.templateId,templateVersion:model.version,requests,mapping:input.mapping,intervalMinutes:input.intervalMinutes??0,enabled:(input.intervalMinutes??0)>0,status:'idle',failures:0,nextRun:(input.intervalMinutes??0)>0?this.now()+input.intervalMinutes*60000:null}
+  const intervalMinutes=preserveSettings&&previous?previous.intervalMinutes:input.intervalMinutes
+  const enabled=intervalMinutes>0&&(preserveSettings&&previous?previous.enabled:true)
+  const binding={id:previous?.id??randomUUID(),revision:(previous?.revision??0)+1,ownerAccountId:owner,sessionId:input.sessionId,nodeId:input.nodeId,workspaceId:input.workspaceId,templateId:model.templateId,templateVersion:model.version,requests,mapping:input.mapping,intervalMinutes,enabled,status:enabled?'idle':'paused',failures:0,nextRun:enabled?this.now()+intervalMinutes*60000:null}
   this.active.get(binding.id)?.controller.abort()
   this.records=this.records.filter(b=>b.id!==binding.id);this.records.push(binding);await this.persist();return structuredClone(binding)
  }

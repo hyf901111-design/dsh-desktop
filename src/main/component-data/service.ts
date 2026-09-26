@@ -59,8 +59,7 @@ export async function createComponentDataService(options:{file:string;integratio
   if(args.action==='bind'||args.action==='bind-generated'){
    const {workspace}=await identity(sessionId)
    const recipe=typeof args.recipe==='string'?JSON.parse(args.recipe):args.recipe
-   if(args.action==='bind-generated'&&binding)return binding
-   return engine.bind({...recipe,sessionId,nodeId:args.nodeId,workspaceId:workspace.workspaceId},args.action==='bind-generated'?args.initialSpec:undefined)
+   return engine.bind({...recipe,sessionId,nodeId:args.nodeId,workspaceId:workspace.workspaceId},args.action==='bind-generated'?args.initialSpec:undefined,{preserveSettings:args.action==='bind-generated'})
   }
   if(!binding)throw Error('组件尚未绑定数据接口。请让助手用已调用成功的接口和字段映射设置数据源。')
   if(args.action==='refresh')return engine.refresh(binding.id)
