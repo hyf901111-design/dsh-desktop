@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util'
-import { decodeDataResponse, evaluateMapping } from './component-data-refresh.js'
+import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from './component-data-refresh.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
 
@@ -49,10 +49,30 @@ export function componentBindingEvidence(records) {
 function rollingTodayAnchors(args,now) {
  const formats=['yyyyMMdd','yyyy-MM-dd','yyyyMMdd000000']
  const today=new Map(formats.map(format=>[evaluateMapping({$date:{format}}, {}, now),format]))
+ const endKey=/^(dateString|end|endDate|end_date|end_time|to_date|tradeDate|trade_date|date)$/i
+ const beginKey=/^(start|begin|startDate|beginDate|start_date|begin_date|start_time|begin_time|from_date)$/i
+ const dateParts=value=>typeof value==='string'?(value.match(/^(\d{4})-(\d{2})-(\d{2})$/)??value.match(/^(\d{4})(\d{2})(\d{2})(?:000000)?$/)):null
+ const day=parts=>Date.UTC(Number(parts[1]),Number(parts[2])-1,Number(parts[3]))
+ const todayDay=day(dateParts(evaluateMapping({$date:{format:'yyyy-MM-dd'}},{},now)))
+ const isToday=value=>today.has(typeof value==='string'?value:value?.$date?evaluateMapping(value,{},now):null)
  const visit=(value,key='')=>{
-  if(typeof value==='string'&&/^(dateString|end|endDate|end_date|tradeDate|trade_date|date)$/i.test(key)&&today.has(value))return {$date:{format:today.get(value),timezone:'Asia/Shanghai'}}
+  if(typeof value==='string'&&endKey.test(key)&&today.has(value))return {$date:{format:today.get(value),timezone:'Asia/Shanghai'}}
   if(Array.isArray(value))return value.map(v=>visit(v))
-  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,visit(v,k)]))
+  if(value&&typeof value==='object'){
+   const entries=Object.entries(value),hasRollingEnd=entries.some(([k,v])=>endKey.test(k)&&isToday(v))
+   return Object.fromEntries(entries.map(([k,v])=>{
+    const parts=beginKey.test(k)&&hasRollingEnd?dateParts(v):null
+    if(parts){
+     const offsetDays=(day(parts)-todayDay)/86400000
+     if(Number.isInteger(offsetDays)&&offsetDays<=0&&offsetDays>=-3660){
+      const format=v.includes('-')?'yyyy-MM-dd':v.length===14?'yyyyMMdd000000':'yyyyMMdd'
+      const rule={$date:{format,timezone:'Asia/Shanghai',offsetDays}}
+      if(evaluateMapping(rule,{},now)===v)return [k,rule]
+     }
+    }
+    return [k,visit(v,k)]
+   }))
+  }
   return value
  }
  return visit(args)
@@ -71,7 +91,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     responses[request.key]=source.response
     requests.push({key:request.key,toolId:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(request.args,now):request.args})
   }
-  const data=evaluateMapping(candidate.mapping,responses,now)
+  const data=materializeComponentMapping(candidate.mapping,responses,now)
   const output=acceptArtifactOutput(JSON.stringify(data))
   if(!output)throw Error('数据映射结果不符合当前组件模板，请根据真实响应修正路径、类型或单位。')
   return {data,output,recipe:{requests,mapping:candidate.mapping,intervalMinutes:1}}
