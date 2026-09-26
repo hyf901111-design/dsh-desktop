@@ -36,6 +36,7 @@ interface Entry {
   negotiatedVersion?: string
   fatal?: IntegrationError
   activeCalls: number
+  callQueue: Array<{start(): void; cancel(): void}>
   closePromise?: Promise<void>
 }
 
@@ -124,7 +125,7 @@ export class McpSupervisor {
       // Reuse the transport, but refresh tool discovery so changed schemas reach the owning service.
       return structuredClone(await this.discover(previous, signal))
     }
-    const entry: Entry = { id: connection.id, config, fingerprint, controller: new AbortController(), ready: Promise.resolve({ tools: [] }), settled: false, closed: false, closing: false, secrets: [], tools: [], activeCalls: 0 }
+    const entry: Entry = { id: connection.id, config, fingerprint, controller: new AbortController(), ready: Promise.resolve({ tools: [] }), settled: false, closed: false, closing: false, secrets: [], tools: [], activeCalls: 0, callQueue: [] }
     this.entries.set(connection.id, entry)
     const onAbort = () => entry.controller.abort()
     signal.addEventListener('abort', onAbort, { once: true })
@@ -149,12 +150,15 @@ export class McpSupervisor {
     const entry = this.entries.get(connectionId)
     if (!entry?.settled || entry.closed || entry.closing || !entry.client) return failure('RUNTIME_UNAVAILABLE', 'MCP 尚未连接，请先测试连接')
     if (!entry.tools.some(tool => tool.name === rawToolName)) return failure('NOT_FOUND', '该工具不在 MCP 已发现的工具列表中')
-    if (entry.activeCalls >= 4) return failure('TIMEOUT', '该 MCP 连接已有 4 个调用，请稍后重试')
     if (signal.aborted) return failure('CANCELLED', 'MCP 操作已取消')
     const combined = AbortSignal.any([signal, entry.controller.signal])
-    entry.activeCalls++
+    let acquired = false
     try {
       if (Buffer.byteLength(JSON.stringify(args), 'utf8') > MAX_BYTES) throw new IntegrationError('INVALID_CONFIG', 'MCP 请求参数过大')
+      await this.acquireCall(entry, combined)
+      acquired = true
+      aborted(combined)
+      if (entry.closed || entry.closing || !entry.client) throw new IntegrationError('RUNTIME_UNAVAILABLE', 'MCP 连接已断开')
       const result = await entry.client.callTool({ name: rawToolName, arguments: args }, undefined, { signal: combined, timeout: TOOL_CALL_TIMEOUT, maxTotalTimeout: TOOL_CALL_TIMEOUT })
       if (Buffer.byteLength(JSON.stringify(result), 'utf8') > MAX_BYTES) throw new IntegrationError('RESPONSE_TOO_LARGE', 'MCP 响应超过 8 MiB')
       const rawContent = Array.isArray(result.content) ? result.content : []
@@ -171,7 +175,33 @@ export class McpSupervisor {
     } catch (error) {
       const failureError = entry.fatal ?? mappedError(error, combined, true)
       return failure(failureError.code, failureError.message)
-    } finally { entry.activeCalls-- }
+    } finally {
+      if (acquired) {
+        entry.activeCalls--
+        if (!entry.closed && !entry.closing && !entry.controller.signal.aborted) entry.callQueue.shift()?.start()
+      }
+    }
+  }
+
+  private async acquireCall(entry: Entry, signal: AbortSignal): Promise<void> {
+    aborted(signal)
+    if (entry.activeCalls < 4) { entry.activeCalls++; return }
+    if (entry.callQueue.length >= 64) throw new IntegrationError('TIMEOUT', 'MCP 等待队列已满，请稍后重试')
+    // Queue unsent work instead of reporting a local concurrency limit as a
+    // failed business request. Calls already sent are never replayed here.
+    await new Promise<void>((resolve, reject) => {
+      const waiting = {
+        start: () => { signal.removeEventListener('abort', waiting.cancel); entry.activeCalls++; resolve() },
+        cancel: () => {
+          signal.removeEventListener('abort', waiting.cancel)
+          const index = entry.callQueue.indexOf(waiting)
+          if (index >= 0) entry.callQueue.splice(index, 1)
+          reject(cancelled())
+        }
+      }
+      entry.callQueue.push(waiting)
+      signal.addEventListener('abort', waiting.cancel, {once: true})
+    })
   }
 
   async dispose(connectionId: string): Promise<void> {
@@ -307,6 +337,7 @@ export class McpSupervisor {
   private async closeEntry(entry: Entry): Promise<void> {
     if (entry.closePromise) return entry.closePromise
     entry.closing = true
+    for (const waiting of [...entry.callQueue]) waiting.cancel()
     entry.closePromise = (async () => {
       // Abort pending startup promptly. A ready HTTP session gets a best-effort DELETE first.
       if (!entry.settled) entry.controller.abort()
