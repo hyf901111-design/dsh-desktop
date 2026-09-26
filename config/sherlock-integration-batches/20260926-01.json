@@ -11,29 +11,65 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "0c1f2a68180e398b7debad4b7d97131a7531ebb8",
-        "tipCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
+        "baseCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
+        "tipCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
         "commits": [
           {
-            "commit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
+            "commit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
             "parents": [
-              "0c1f2a68180e398b7debad4b7d97131a7531ebb8"
+              "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c"
             ],
-            "subject": "统一编辑卡片的模板识别与数据绑定协议"
+            "subject": "修复真实取数组件的模板限制、映射失败和原位恢复链路"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/fund-artifact.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "scripts/lib/canvas-actions-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/component-generation-real-shapes.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-actions-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-fund-workbench.test.js"
           }
         ],
         "checks": [
@@ -42,14 +78,22 @@
               "npx",
               "vitest",
               "run",
-              "test/research-task-runtime.test.js",
+              "test/component-generation-real-shapes.test.js",
               "test/component-source-binding.test.js",
-              "test/workbench-design-contract.test.js"
+              "test/component-data-refresh.test.js",
+              "test/component-template-registry.test.js",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-canvas-actions.test.js",
+              "test/research-market-artifact.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-task-runtime.test.js",
+              "test/structured-workbench-generation.test.js",
+              "test/research-component-source-tools.test.js"
             ],
             "outcome": "passed",
-            "summary": "198项聚焦验证通过；实测遗漏 variant 声明的回归5项先失败后通过；编辑和旧卡片都使用相同的自动绑定与滚动日期协议",
-            "verifiedCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
-            "completedAt": "2026-09-26T13:36:32.760548+00:00",
+            "summary": "321项聚焦检查通过；实际失败形状先复现再修复，覆盖模板、映射、业务响应保留、原位恢复和交互",
+            "verifiedCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
+            "completedAt": "2026-09-26T14:45:51.689231+00:00",
             "timeoutMs": 180000
           },
           {
@@ -60,86 +104,26 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
-            "completedAt": "2026-09-26T13:36:32.760548+00:00",
+            "verifiedCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
+            "completedAt": "2026-09-26T14:45:51.689231+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "49bb0d7实机六卡刷新、固定时间与频率设置和关闭按钮已通过。编辑入口识别到遗漏，当前修复待新包复验。"
+          "summary": "旧版真实12卡首次6成功6失败；本次修复待集成包全新工作台验收，不将人工修复计入首次成功率。"
         },
         "acceptanceCriteria": [
-          "实际成功插件调用的字段映射可同时用于首次渲染和后续刷新",
-          "默认1分钟刷新，保留手动频率设置",
-          "看板不可见自动暂停并取消在途自动刷新",
-          "旧数据与交互状态保留，未验证请求不能绑定",
-          "通联资讯来源和证据可规范化为绑定记录",
-          "历史序列由宿主排序与截取，最新值不依赖固定下标",
-          "组件底部固定显示上次成功刷新时间和刷新频率",
-          "仅成功刷新卡片出现单次局部高亮；减少动态效果偏好使用静态短时高亮",
-          "打包期间重启的旧进程不能通过新包启动验证"
+          "真实负数散点、多曲线、可缺失基准行业分布保留数据并显示",
+          "数值列表和二维表格映射在生成与刷新时一致",
+          "发现接口不能替代业务数据，晚到业务响应不被前16次调用挤掉",
+          "终态失败卡可校验后原位修复并撤销，运行中任务不可被覆盖",
+          "带来源的柱状图保留模板和交互能力"
         ],
         "risks": [
-          "外部模型、数据服务时延有波动，真实工作台耗时待复验"
+          "外部模型与数据源仍有时延和可用性波动，须通过新包工作台验收"
         ],
-        "generatedAt": "2026-09-26T13:36:32.760548+00:00"
-      },
-      "merged": {
-        "mergeCommit": "20483feaec2a39dbaf224144b54ab2111e4a34db",
-        "verificationCommit": "20483feaec2a39dbaf224144b54ab2111e4a34db",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "20483feaec2a39dbaf224144b54ab2111e4a34db",
-            "completedAt": "2026-09-26T13:37:00.697Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "20483feaec2a39dbaf224144b54ab2111e4a34db",
-            "completedAt": "2026-09-26T13:37:00.697Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "20483feaec2a39dbaf224144b54ab2111e4a34db",
-            "completedAt": "2026-09-26T13:37:00.697Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T13:37:00.697Z"
+        "generatedAt": "2026-09-26T14:45:51.689231+00:00"
       }
     }
   ],
