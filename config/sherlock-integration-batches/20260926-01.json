@@ -11,364 +11,29 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "1b6106dad75ed62af1d9008c61fbad74900aaed6",
-        "tipCommit": "18c99223f2f767987308b99928b9026a7df903c4",
+        "baseCommit": "18c99223f2f767987308b99928b9026a7df903c4",
+        "tipCommit": "3d4934cc8a4ab329a45821fb21551ac03bf6af5b",
         "commits": [
           {
-            "commit": "4b49eba328dc91090eb30ddb2b21007946672e2d",
+            "commit": "3d4934cc8a4ab329a45821fb21551ac03bf6af5b",
             "parents": [
-              "1b6106dad75ed62af1d9008c61fbad74900aaed6"
+              "18c99223f2f767987308b99928b9026a7df903c4"
             ],
-            "subject": "修复干净安装时画布补丁的依赖顺序与重复替换"
-          },
-          {
-            "commit": "55277b8b9b03801223bfb041ebc3ce98dea00479",
-            "parents": [
-              "4b49eba328dc91090eb30ddb2b21007946672e2d"
-            ],
-            "subject": "保留MCP动态查询字典并验证实际参数透传"
-          },
-          {
-            "commit": "74f92c1d0d122b99a31971dd1fe291738bb4f650",
-            "parents": [
-              "55277b8b9b03801223bfb041ebc3ce98dea00479"
-            ],
-            "subject": "统一三十类组件模板并支持真实结构化数据直接成卡"
-          },
-          {
-            "commit": "074ee6300b26331a6c1c7382c25a8abb12c6f7b8",
-            "parents": [
-              "74f92c1d0d122b99a31971dd1fe291738bb4f650"
-            ],
-            "subject": "实现组件接口数据独立刷新及用户频率设置并保留视图状态"
-          },
-          {
-            "commit": "f35f57ca95c904a02d52eff199087d27d8b33ed7",
-            "parents": [
-              "074ee6300b26331a6c1c7382c25a8abb12c6f7b8"
-            ],
-            "subject": "修复原生图表数据更新后图例与选点被重置的问题"
-          },
-          {
-            "commit": "1bb5236485e3d3bacd9d93fcc3143491ccd96cf4",
-            "parents": [
-              "f35f57ca95c904a02d52eff199087d27d8b33ed7"
-            ],
-            "subject": "补充跨组件取数去重与账户切换验证并隔离刷新任务授权"
-          },
-          {
-            "commit": "7d473ec28d9388153600c1d781c9a3c764dbc26b",
-            "parents": [
-              "1bb5236485e3d3bacd9d93fcc3143491ccd96cf4"
-            ],
-            "subject": "完善三十类组件模板的字号区间控件与自适应验收并接入数据优先提示词"
-          },
-          {
-            "commit": "e200627ab1f1839689a56691449a93a1a91ffbd2",
-            "parents": [
-              "7d473ec28d9388153600c1d781c9a3c764dbc26b"
-            ],
-            "subject": "修复并行刷新画布冲突与空数据覆盖并保留共享旧计划停用入口"
-          },
-          {
-            "commit": "e643ad34211e724866b2cea29265c14d19f8cc93",
-            "parents": [
-              "e200627ab1f1839689a56691449a93a1a91ffbd2"
-            ],
-            "subject": "完善K线可读字号与紧凑高度并记录三十类组件设计稿"
-          },
-          {
-            "commit": "18c99223f2f767987308b99928b9026a7df903c4",
-            "parents": [
-              "e643ad34211e724866b2cea29265c14d19f8cc93"
-            ],
-            "subject": "参考彭博终端重构三十类紧凑组件并同步可编辑设计稿"
+            "subject": "兼容通联附带来源说明的数据响应并保护刷新内容"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/design/component-template-acceptance-20260926.md"
           },
           {
             "status": "M",
-            "path": "docs/design/component-templates-and-data-refresh.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/design/terminal-components-20260926.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/design/terminal-components-figma-map-20260926.json"
-          },
-          {
-            "status": "M",
-            "path": "docs/superpowers/plans/2026-09-26-component-templates-data-refresh.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-integration-runtime/schema-projection.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.d.ts"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/fund-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/gantt-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-allocation-donut.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-candlestick.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-equity-drawdown.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-fund-flow.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-funnel.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-order-book.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-price-volume.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-risk-matrix.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/market-table-runtime.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-valuation-band.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-waterfall.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/terminal-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/component-template-audit.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/component-template-gallery.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/fixtures/terminal-template-data.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/install-brand-assets.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-actions-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/component-data-refresh.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-gestures.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-completed-design.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-native-interactivity.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/main/component-data/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/integrations/context.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/scheduled/component-executor.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/component-data.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/scheduled-tasks.ts"
-          },
-          {
-            "status": "A",
             "path": "test/component-data-refresh.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-data-ui.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-scheduled-tasks.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/helpers/research-derived-fixture.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-context.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-actions-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-arrange-content.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-artifact.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-layout.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-native-interactivity.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-optimal-arrange.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/structured-workbench-generation.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/terminal-component-presentation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-design-contract.test.js"
           }
         ],
         "checks": [
@@ -377,26 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
               "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
+              "test/component-data-ui.test.js"
             ],
             "outcome": "passed",
-            "summary": "当前精确提交 170 项直接相关测试通过，日志 /tmp/ework-terminal-handoff-tests.log",
-            "verifiedCommit": "18c99223f2f767987308b99928b9026a7df903c4",
-            "completedAt": "2026-09-26T04:26:07.460005+00:00",
-            "timeoutMs": 180000
+            "summary": "14 项数据刷新及界面聚焦检查通过，覆盖通联真实来源前缀格式",
+            "verifiedCommit": "3d4934cc8a4ab329a45821fb21551ac03bf6af5b",
+            "completedAt": "2026-09-26T04:40:02.571860+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -405,9 +58,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "当前精确提交 TypeScript 类型检查通过。",
-            "verifiedCommit": "18c99223f2f767987308b99928b9026a7df903c4",
-            "completedAt": "2026-09-26T04:26:07.460005+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "3d4934cc8a4ab329a45821fb21551ac03bf6af5b",
+            "completedAt": "2026-09-26T04:40:02.571860+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -426,63 +79,7 @@
           "取数可用性受用户接口权限与服务响应影响。",
           "不以本次模板验证宣称历史整窗闪烁问题已修复。"
         ],
-        "generatedAt": "2026-09-26T04:26:07.460005+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c38fb4fa7c9e9173ec3f53c179e825944923ae86",
-        "verificationCommit": "c38fb4fa7c9e9173ec3f53c179e825944923ae86",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "c38fb4fa7c9e9173ec3f53c179e825944923ae86",
-            "completedAt": "2026-09-26T04:27:52.751Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "c38fb4fa7c9e9173ec3f53c179e825944923ae86",
-            "completedAt": "2026-09-26T04:27:52.751Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c38fb4fa7c9e9173ec3f53c179e825944923ae86",
-            "completedAt": "2026-09-26T04:27:52.751Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T04:27:52.751Z"
+        "generatedAt": "2026-09-26T04:40:02.571860+00:00"
       }
     }
   ],
