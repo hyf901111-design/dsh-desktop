@@ -2,6 +2,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
+import { registerWorkbenchModelQueue } from './workbench-model-queue.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
@@ -2117,6 +2118,7 @@ export async function apply(ctx) {
   ctx.effect(() => {
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx)
+    const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
@@ -2127,6 +2129,7 @@ export async function apply(ctx) {
     } catch (error) {
       disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
+      disposeModelQueue()
       disposeCompletionNotifications()
       disposeCanvasTools()
       disposeRoutes()
@@ -2136,6 +2139,7 @@ export async function apply(ctx) {
     return async () => {
       disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
+      disposeModelQueue()
       disposeCompletionNotifications()
       await disposeShared()
       await disposeComputerUseTool()

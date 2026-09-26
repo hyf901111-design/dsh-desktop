@@ -1,4 +1,5 @@
 import { canvasHumanRequest } from './canvas-task-routing.js'
+import { workbenchCreationRequest } from './workbench-execution-policy.js'
 
 const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
 const datayesSource = /通联|datayes|萝卜投研/iu
@@ -11,9 +12,10 @@ export function registerComponentSourceGuidance(ctx) {
     name: 'sherlock:component-sources', order: 145,
     text: ({ agent }) => {
       if (!agent || agent.session?.header?.parentSession) return ''
-      const request = canvasHumanRequest(agent.session)?.text
+      const planning = workbenchCreationRequest(agent.session)
+      const request = planning?.text ?? canvasHumanRequest(agent.session)?.text
       if (!request || /全部?使用模拟数据|全部.{0,5}模拟|(?:只|仅)(?:用|使用)模拟数据/u.test(request)) return ''
-      return componentSourceInstruction(preferredComponentSourceTools(ctx.tools.schemas(agent), request), request)
+      return componentSourceInstruction(preferredComponentSourceTools(ctx.tools.schemas(agent), request), request, new Date(), { planning: Boolean(planning) })
     }
   })
 }
@@ -37,9 +39,11 @@ export function preferredComponentSourceTools(schemas, request) {
     .slice(0, 12)
 }
 
-export function componentSourceInstruction(tools, request = '', now = new Date()) {
+export function componentSourceInstruction(tools, request = '', now = new Date(), { planning = false } = {}) {
   if (!tools?.length) return ''
-  const knownApi = /沪深300/u.test(request) ? '沪深300指数日行情已核验接口 getMktIdxd；先用接口定义工具读取 getMktIdxd，定义失败再搜索，省去重复的接口发现。' : /申万/u.test(request) ? '申万行业指数日行情已核验接口 getMktIdxdSw；先读取该接口定义，定义失败再搜索，省去重复的接口发现。' : ''
+  // A multi-panel plan must not stamp its longest K-line window onto snapshots.
+  if (planning) request = ''
+  const knownApi = /沪深300(?!\s*(?:ETF|基金))/iu.test(request) ? '沪深300指数日行情已核验接口 getMktIdxd；先用接口定义工具读取 getMktIdxd，定义失败再搜索，省去重复的接口发现。' : /申万/u.test(request) ? '申万行业指数日行情已核验接口 getMktIdxdSw；先读取该接口定义，定义失败再搜索，省去重复的接口发现。' : ''
   const dailySeries = /K\s*线|日线|日行情|交易日|candlestick/iu.test(request)
   const count = dailySeries ? Number(request.match(/(?:最近|近)\s*(\d{1,3})\s*(?:个)?\s*交易日/u)?.[1] ?? 0) : 0
   const explicitWindow = /\d{4}[-/]?\d{2}[-/]?\d{2}\s*(?:至|到|~|～|—|–)\s*\d{4}[-/]?\d{2}[-/]?\d{2}/u.test(request)
