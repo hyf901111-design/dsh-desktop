@@ -11,21 +11,35 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "847bab13ca4e7e4257779eaf854644034aa0d0ec",
-        "tipCommit": "a774d765744cf9c8e0c549045af04d77f723301e",
+        "baseCommit": "a774d765744cf9c8e0c549045af04d77f723301e",
+        "tipCommit": "02e046cf2f48251bfc753dc91e240572215b8113",
         "commits": [
           {
-            "commit": "a774d765744cf9c8e0c549045af04d77f723301e",
+            "commit": "8907a1064e04a575add707e5a903dccfa7d666c9",
             "parents": [
-              "847bab13ca4e7e4257779eaf854644034aa0d0ec"
+              "a774d765744cf9c8e0c549045af04d77f723301e"
             ],
-            "subject": "让近期行情刷新跟随当前日期并限定模板修复范围"
+            "subject": "修正数组日期映射并拒绝将对象直接显示为文本"
+          },
+          {
+            "commit": "55fc238ddec16954bfd319df44ce236050735caa",
+            "parents": [
+              "8907a1064e04a575add707e5a903dccfa7d666c9"
+            ],
+            "subject": "合并组件刷新请求的重复插件能力绑定"
+          },
+          {
+            "commit": "02e046cf2f48251bfc753dc91e240572215b8113",
+            "parents": [
+              "55fc238ddec16954bfd319df44ce236050735caa"
+            ],
+            "subject": "精简组件取数上下文并统一可刷新模板交付协议"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
@@ -33,7 +47,19 @@
           },
           {
             "status": "M",
-            "path": "test/component-source-binding.test.js"
+            "path": "src/main/component-data/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-refresh.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-data-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -46,12 +72,13 @@
               "test/component-data-refresh.test.js",
               "test/component-data-ui.test.js",
               "test/research-task-runtime.test.js",
-              "test/research-task-model-selection.test.js"
+              "test/research-task-model-selection.test.js",
+              "test/component-data-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "202 项聚焦验证通过，含近期日期滚动、绑定证据复用及历史日期保留",
-            "verifiedCommit": "a774d765744cf9c8e0c549045af04d77f723301e",
-            "completedAt": "2026-09-26T09:11:24.109130+00:00",
+            "summary": "205 项聚焦验证通过，含真实日期映射重现、重复连接合并和精简取数上下文",
+            "verifiedCommit": "02e046cf2f48251bfc753dc91e240572215b8113",
+            "completedAt": "2026-09-26T09:31:16.853172+00:00",
             "timeoutMs": 180000
           },
           {
@@ -62,14 +89,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a774d765744cf9c8e0c549045af04d77f723301e",
-            "completedAt": "2026-09-26T09:11:24.109130+00:00",
+            "verifiedCommit": "02e046cf2f48251bfc753dc91e240572215b8113",
+            "completedAt": "2026-09-26T09:31:16.853172+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "新交付规则待新包真实生成验收；前一包三卡全部完成，行情与K线实际分钟刷新、频率设置及离页暂停均已实测。"
+          "summary": "真实六卡均生成，发现指数及研报静态交付、K线对象转文本和对比表重复能力绑定；本次修复待新包验证。关闭按钮已实测通过。"
         },
         "acceptanceCriteria": [
           "实际成功插件调用的字段映射可同时用于首次渲染和后续刷新",
@@ -82,63 +109,7 @@
         "risks": [
           "外部模型、数据服务时延有波动，真实工作台耗时待复验"
         ],
-        "generatedAt": "2026-09-26T09:11:24.109130+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9d74cd6748c46aa35858f9f1608a66405d2c41a3",
-        "verificationCommit": "9d74cd6748c46aa35858f9f1608a66405d2c41a3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "9d74cd6748c46aa35858f9f1608a66405d2c41a3",
-            "completedAt": "2026-09-26T09:13:00.447Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "9d74cd6748c46aa35858f9f1608a66405d2c41a3",
-            "completedAt": "2026-09-26T09:13:00.447Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9d74cd6748c46aa35858f9f1608a66405d2c41a3",
-            "completedAt": "2026-09-26T09:13:00.447Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T09:13:00.447Z"
+        "generatedAt": "2026-09-26T09:31:16.853172+00:00"
       }
     }
   ],
