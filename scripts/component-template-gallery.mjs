@@ -1,3 +1,4 @@
+import {terminalFixture} from './fixtures/terminal-template-data.mjs'
 import {writeFile,mkdir,readFile} from 'node:fs/promises'
 import {resolve,join} from 'node:path'
 import {build} from 'esbuild'
@@ -17,16 +18,16 @@ const tableHelpers=extract('function ResearchTableCell(','function ResearchInter
 const nativeEntry=`import * as react from 'react';import * as react_jsx_runtime from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';import {ResearchInteractiveTable,ResearchContainerChart} from './scripts/lib/research-native-interactivity.mjs';Object.assign(globalThis,{react,react_jsx_runtime});const RESEARCH_CONTAINER_CHART_COLORS=Array.from({length:6},(_,i)=>'var(--sherlock-chart-'+(i+1)+')');globalThis.RESEARCH_CONTAINER_CHART_COLORS=RESEARCH_CONTAINER_CHART_COLORS;function normalizeResearchWebUrl(v){try{return new URL(v).href}catch{return null}}function researchWebUrlHostname(v){return new URL(v).hostname}${tableHelpers};Object.assign(globalThis,{ResearchTableCell,researchTableNumericColumn});${nativeBody};const root=createRoot(document.getElementById('root'));window.updateData=data=>root.render(react.createElement(ResearchContainerBody,{node:{containerSpec:data}}));window.updateData(window.DATA);`
 await build({stdin:{contents:nativeEntry,resolveDir:process.cwd(),loader:'js'},bundle:true,platform:'browser',format:'iife',outfile:join(output,'native.js'),logLevel:'silent'})
 const manifest=[]
-for(const t of COMPONENT_TEMPLATES){
+for(const [index,t] of COMPONENT_TEMPLATES.entries()){
  const prompt=t.type==='market'?`variant: ${t.variant}`:t.id==='chart.bar'?'柱状对比图':t.id==='chart.line'?'折线趋势图':t.type
- const p=generateSimulatedPanel({title:'模板 '+t.id,prompt,type:t.type,size:'large'},'组件模板验收')
+ const p=terminalFixture(generateSimulatedPanel({title:'模板 '+t.id,prompt,type:t.type,size:'large'},'组件模板验收'),index)
  const data=prepareSimulatedArtifact(p),spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
  for(const theme of ['light','dark']){
   const file=t.id+'-'+theme+'.html'
-  const html=spec.type==='html'?buildResearchHtmlPreview(spec.html,spec.title,theme):`<!doctype html><html data-sherlock-theme="${theme}"><head><meta charset="utf-8"><style>${RESEARCH_COMPONENT_THEME_CSS}${canvasCss}${researchCompletedDesignCss}html,body,body>section{height:100%;min-height:100vh}body{margin:0;color:var(--sherlock-text);background:var(--sherlock-surface)}#root{min-height:100vh}.rScV5Q_containerChart svg{width:100%;height:240px}.rScV5Q_containerKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}</style></head><body ${theme==='dark'?'data-ds-dark-theme':''}><section data-research-artifact-card data-research-compact-chrome data-research-generated-container><main id="root" data-research-container-type="${spec.type}"></main></section><script>window.DATA=${JSON.stringify(spec).replace(/</g,'\\u003c')}</script><script src="native.js"></script></body></html>`
+  const html=spec.type==='html'?buildResearchHtmlPreview(spec.html,spec.title,theme):`<!doctype html><html data-sherlock-theme="${theme}"><head><meta charset="utf-8"><style>${RESEARCH_COMPONENT_THEME_CSS}${canvasCss}${researchCompletedDesignCss}html,body,body>section{height:100%;min-height:100vh}body{margin:0;color:var(--research-completed-text);background:var(--sherlock-surface)}#root{height:100vh}.rScV5Q_containerChart svg{width:100%;height:calc(100vh - 94px)}.rScV5Q_containerKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}</style></head><body ${theme==='dark'?'data-ds-dark-theme':''}><section data-research-artifact-card data-research-compact-chrome data-research-generated-container><main id="root" data-research-container-type="${spec.type}"></main></section><script>window.DATA=${JSON.stringify(spec).replace(/</g,'\\u003c')}</script><script src="native.js"></script></body></html>`
   await writeFile(join(output,file),html)
  }
- manifest.push({id:t.id,width:t.width,height:t.height,data,specType:spec.type})
+ manifest.push({id:t.id,width:t.width,height:t.height-32,cardHeight:t.height,data,specType:spec.type})
 }
 await writeFile(join(output,'manifest.json'),JSON.stringify(manifest,null,2))
 await writeFile(join(output,'index.html'),`<!doctype html><meta charset="utf-8"><h1>30 类组件模板验收（模拟数据）</h1>${manifest.map(t=>`<p><a href="${t.id}-light.html">${t.id} 浅色</a> · <a href="${t.id}-dark.html">深色</a></p>`).join('')}`)

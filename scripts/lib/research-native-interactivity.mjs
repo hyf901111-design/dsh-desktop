@@ -100,8 +100,11 @@ export function ResearchContainerChart({ spec }) {
         role: 'group', 'aria-label': spec.title, children: [
           Array.from({ length: 5 }, (_, index) => {
             const lineY = top + index * height / 4;
-            return react_jsx_runtime.jsx('line', { x1: left, x2: left + width, y1: lineY, y2: lineY,
-              className: 'rScV5Q_chartGrid', strokeDasharray: '4 4' }, 'grid-' + index);
+            const value=maximum-index*range/4;
+            return react_jsx_runtime.jsxs('g', { children:[
+              react_jsx_runtime.jsx('line', { x1:left,x2:left+width,y1:lineY,y2:lineY,className:'rScV5Q_chartGrid' }),
+              react_jsx_runtime.jsx('text', { x:left-8,y:lineY+4,textAnchor:'end',className:'rScV5Q_chartLabel',children:Math.abs(value)>=1000?Math.round(value).toLocaleString('en-US'):Number(value.toFixed(range<10?2:1)).toString() })
+            ]},'grid-'+index);
           }),
           react_jsx_runtime.jsx('line', { x1: left, x2: left + width, y1: baseline, y2: baseline,
             className: 'rScV5Q_chartAxis' }),

@@ -38,13 +38,14 @@ function renderHoldings(spec) {
   if (!list(spec.columns, 8) || !spec.columns.every(text) || !list(spec.rows, 30) ||
       spec.rows.some(row => !Array.isArray(row) || row.length !== spec.columns.length ||
         row.some(value => typeof value !== 'string' && typeof value !== 'number'))) return null;
+  const numericColumns = spec.columns.map((_,index) => index>0 && spec.rows.every(row => typeof row[index]==='number' || /^[+−-]?[\d,.]+[%‰亿元万点倍]*$/.test(String(row[index]).trim())));
   const widths = spec.columns.length === 5 ? [35,17,16,16,16] : null;
   const colgroup = widths ? '<colgroup>' + widths.map(width => '<col style="width:' + width + '%">').join('') + '</colgroup>' : '';
   const head = '<thead><tr>' + spec.columns.map((name, index) =>
-    '<th><button class="fund-sort" data-column="' + index + '" aria-label="按' + escape(name) + '排序">' + escape(name) + '</button></th>').join('') + '</tr></thead>';
-  const rows = spec.rows.map(row => '<tr>' + row.map(value => {
+    '<th data-numeric="' + numericColumns[index] + '"><button class="fund-sort" data-column="' + index + '" aria-label="按' + escape(name) + '排序">' + escape(name) + '</button></th>').join('') + '</tr></thead>';
+  const rows = spec.rows.map(row => '<tr>' + row.map((value,index) => {
     const tone = /^[+＋]/.test(String(value)) ? 'positive' : /^[-−]/.test(String(value)) ? 'negative' : '';
-    return cell('td', value, tone ? ' data-tone="' + tone + '"' : '');
+    return cell('td', value, ' data-numeric="' + numericColumns[index] + '"' + (tone ? ' data-tone="' + tone + '"' : ''));
   }).join('') + '</tr>').join('');
   const simulated = /模拟|演示/u.test(spec.asOf);
   const filters = '<div class="fund-filters"><input class="fund-control" value="' + (simulated ? '模拟基金池' : '基金池') + '" aria-label="基金池" readonly>' +

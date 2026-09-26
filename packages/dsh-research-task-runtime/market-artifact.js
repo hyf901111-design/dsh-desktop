@@ -1,3 +1,4 @@
+import { marketTableRuntime } from './market-table-runtime.js'
 import { candleRuntime, candleControls } from './market-candlestick.js'
 import { MARKET_REGULAR_FONT_CSS } from './market-font.js'
 import { WORKBENCH_DESIGN_VERSION } from './workbench-design-contract.js'
@@ -97,12 +98,12 @@ function heatmapRuntime() {
 function renderScatter(spec) {
  const xs=spec.items.map(i=>i.x),ys=spec.items.map(i=>i.y);
  const maxX=Math.max(1,...xs)*1.12,maxY=Math.max(1,...ys)*1.12;
- const x=v=>30+v/maxX*276,y=v=>158-v/maxY*142;
- const grid=Array.from({length:5},(_,i)=>{const px=30+i*69,py=158-i*35.5;return `<line class="grid" x1="${px}" y1="16" x2="${px}" y2="158"/><line class="grid" x1="30" y1="${py}" x2="306" y2="${py}"/><text class="axis" x="${px}" y="167" text-anchor="middle">${Math.round(maxX*i/4)}</text><text class="axis" x="26" y="${py+3}" text-anchor="end">${Math.round(maxY*i/4)}</text>`}).join('');
+ const x=v=>40+v/maxX*576,y=v=>172-v/maxY*152;
+ const grid=Array.from({length:5},(_,i)=>{const px=40+i*144,py=172-i*38;return `<line class="grid" x1="${px}" y1="20" x2="${px}" y2="172"/><line class="grid" x1="40" y1="${py}" x2="616" y2="${py}"/><text class="axis" x="${px}" y="189" text-anchor="middle">${Math.round(maxX*i/4)}</text><text class="axis" x="34" y="${py+3}" text-anchor="end">${Math.round(maxY*i/4)}</text>`}).join('');
  const points=spec.items.map((item,index)=>{const px=x(item.x),py=y(item.y);return `<g data-scatter-point="${index}"><title>${esc(item.label)} · ${esc(spec.xLabel)} ${item.x} · ${esc(spec.yLabel)} ${item.y}</title><circle cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" r="${Math.min(13,5+Math.sqrt(item.size??1)*3).toFixed(2)}"/><text class="point-label" x="${px.toFixed(2)}" y="${(py+3).toFixed(2)}">${index+1}</text></g>`}).join('');
  const legend=spec.items.map((item,index)=>`<button type="button" class="sample-entry" data-scatter-select="${index}" aria-pressed="false"><b>${index+1}</b> ${esc(item.label)}</button>`).join('');
  const table=`<details><summary>完整样本数据</summary><table><thead><tr><th>样本</th><th>${esc(spec.xLabel)}</th><th>${esc(spec.yLabel)}</th></tr></thead><tbody>${spec.items.map(item=>`<tr><td>${esc(item.label)}</td><td>${item.x}</td><td>${item.y}</td></tr>`).join('')}</tbody></table></details>`;
- return `<div class="market-scatter"><div class="scatter-readout" role="status"></div><svg viewBox="0 0 320 172" preserveAspectRatio="none" role="img" aria-label="${esc(spec.xLabel)}与${esc(spec.yLabel)}散点对比；用下方样本按钮选择读数">${grid}${points}</svg><div class="caption"><span>${esc(spec.xLabel)} →</span><span>↑ ${esc(spec.yLabel)} · ${spec.items.length} 个样本</span></div><div class="sample-legend" role="group" aria-label="选择散点样本">${legend}</div>${table}</div>`;
+ return `<div class="market-scatter"><div class="scatter-readout" role="status"></div><svg viewBox="0 0 640 198" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(spec.xLabel)}与${esc(spec.yLabel)}散点对比；用下方样本按钮选择读数">${grid}${points}</svg><div class="caption"><span>${esc(spec.xLabel)} →</span><span>↑ ${esc(spec.yLabel)} · ${spec.items.length} 个样本</span></div><div class="sample-legend" role="group" aria-label="选择散点样本">${legend}</div>${table}</div>`;
 }
 function renderPipeline(spec) {
  const count=spec.stages.length;
@@ -207,11 +208,12 @@ export function renderMarketArtifact(s) {
   if(!list(s.columns,12)||!s.columns.every(str)||!list(s.rows,100)||s.rows.some(r=>!Array.isArray(r)||r.length!==s.columns.length||r.some(c=>typeof c!=='string'&& !finite(c))))return null
   if(s.tones!==undefined&&(!Array.isArray(s.tones)||s.tones.length!==s.rows.length||s.tones.some(r=>!Array.isArray(r)||r.length!==s.columns.length||r.some(v=>!['','positive','negative','neutral'].includes(v)))))return null
   if(s.rowLinks!==undefined&&(!Array.isArray(s.rowLinks)||s.rowLinks.length!==s.rows.length||s.rowLinks.some(url=>url!==null&&!safeUrl(url))))return null
+  const numericColumns=s.columns.map((_,index)=>index>0&&s.rows.every(row=>typeof row[index]==='number'||/^[+−-]?[\d,.]+[%‰亿元万点倍]*$/.test(String(row[index]).trim())));
   const labels=s.columns.map(c=>c.replace(/\s/g,''));
   const weights=labels.length===4&&labels[1]==='最新'&&labels[3]==='市场'?[35,20,20,25]:labels.length===5&&labels[0]==='时间'&&labels[1]==='成交价'?[18,10.5,20.5,21.5,29.5]:null;
   const columnLayout=weights?` style="table-layout:fixed"><colgroup>${weights.map(w=>`<col style="width:${w}%">`).join('')}</colgroup>`:'>';
-  body=`<div class="market-table-wrap"><table${columnLayout}<thead><tr>${s.columns.map((c,i)=>`<th><button data-column="${i}" aria-label="按${esc(c)}排序">${esc(c)}</button></th>`).join('')}</tr></thead><tbody>${s.rows.map((r,i)=>`<tr>${r.map((c,j)=>`<td data-tone="${tone(s.tones?.[i]?.[j])}">${j===0&&s.rowLinks?.[i]?`<a href="${esc(s.rowLinks[i])}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${esc(c)} 详情">${esc(c)}</a>`:esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
-  script=`document.querySelectorAll('[data-column]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.column),tbody=document.querySelector('tbody'),asc=b.dataset.order!=='asc';b.dataset.order=asc?'asc':'desc';document.querySelectorAll('th').forEach(th=>th.removeAttribute('aria-sort'));b.parentElement.setAttribute('aria-sort',asc?'ascending':'descending');const rows=Array.from(tbody.rows);rows.sort((a,c)=>{const x=a.cells[i].textContent,y=c.cells[i].textContent,n=v=>v.trim().replace(/[,，%]/g,'');const value=n(x)!==''&&n(y)!==''&&Number.isFinite(Number(n(x)))&&Number.isFinite(Number(n(y)))?Number(n(x))-Number(n(y)):x.localeCompare(y,'zh-CN',{numeric:true});return asc?value:-value});rows.forEach(r=>tbody.appendChild(r))}));`
+  body=`<div class="terminal-table-toolbar"><input type="search" data-market-search aria-label="搜索行情" placeholder="代码 / 名称 / 关键字"><span data-market-count role="status"></span></div><div class="market-table-wrap"><table${columnLayout}<thead><tr>${s.columns.map((c,i)=>`<th data-numeric="${numericColumns[i]}"><button data-column="${i}" aria-label="按${esc(c)}排序">${esc(c)}</button></th>`).join('')}</tr></thead><tbody>${s.rows.map((r,i)=>`<tr>${r.map((c,j)=>`<td data-numeric="${numericColumns[j]}" data-tone="${tone(s.tones?.[i]?.[j])}">${j===0&&s.rowLinks?.[i]?`<a href="${esc(s.rowLinks[i])}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${esc(c)} 详情">${esc(c)}</a>`:esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="terminal-table-readout" role="status"></div>`
+  script=`(${marketTableRuntime.toString()})();`
  } else if(s.variant==='candlestick') {
   if(s.datasets!==undefined&&s.candles!==undefined)return null
   const groups=s.datasets??[{symbol:'',name:s.title,candles:s.candles}]

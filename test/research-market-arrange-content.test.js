@@ -26,12 +26,12 @@ describe('financial workbench arrange keeps content-sized frames', () => {
     const input = panels.map(node => node.id === 'heatmap' ? { ...node, sizeMode: 'manual' } : node);
     const result = researchBentoLayout(input, { width: 1200, height: 1200 }, new Map(), { fitColumns: true });
     expect(result.nodes.map(({ id, x, y, width, height }) => [id, x, y, width, height])).toEqual([
-      ['metrics', 0, 0, 896, 144],
-      ['candlestick', 0, 156, 536, 304],
-      ['heatmap', 548, 156, 434, 258],
-      ['breadth', 0, 472, 896, 220],
-      ['table', 0, 704, 536, 258],
-      ['trend', 548, 704, 536, 264]
+      ['metrics', 0, 0, 656, 212],
+      ['candlestick', 668, 0, 656, 352],
+      ['heatmap', 0, 224, 656, 320],
+      ['breadth', 668, 364, 656, 200],
+      ['table', 0, 556, 656, 352],
+      ['trend', 668, 576, 656, 300]
     ]);
     expect(result.nodes.find(node => node.id === 'heatmap').sizeMode).toBe('manual');
     expect(researchBentoLayout(result.nodes, { width: 1200, height: 1200 }, new Map(), { fitColumns: true })).toEqual(result);
@@ -41,7 +41,7 @@ describe('financial workbench arrange keeps content-sized frames', () => {
     const inflated = panels.map(node => ({...node,width:656,height:456}));
     const result = researchBentoLayout(inflated, {width:1200,height:1200}, new Map(), {fitColumns:true});
     expect(result.nodes.map(({width,height})=>[width,height])).toEqual([
-      [896,144],[536,304],[434,258],[896,220],[536,258],[536,264]
+      [656,212],[656,352],[656,320],[656,200],[656,352],[656,300]
     ]);
   });
 
@@ -51,7 +51,7 @@ describe('financial workbench arrange keeps content-sized frames', () => {
       ...(node.id === 'breadth' ? {width:744.9,height:240.9,sizeMode:'manual'} : {})}));
     const result = researchBentoLayout(input,{width:1200,height:1200},new Map(),{fitColumns:true});
     expect(result.nodes.map(({width,height})=>[width,height])).toEqual([
-      [896,144],[536,304],[434,258],[896,220],[536,258],[536,264]
+      [656,212],[656,352],[656,320],[656,200],[656,352],[656,300]
     ]);
     expect(result.nodes.map(node=>node.sizeMode)).toEqual(Array(6).fill('auto'));
   });
@@ -75,10 +75,10 @@ describe('financial workbench arrange keeps content-sized frames', () => {
     expect(workspace.organizeCanvas(measured)).toBe(true);
     const arranged = workspace.getSnapshot().artifacts;
     expect(arranged.map(({id,width,height})=>[id,width,height])).toEqual([
-      ['metrics',896,144],['candlestick',536,304],['heatmap',434,258],
-      ['breadth',896,220],['table',536,258],['trend',536,264]
+      ['metrics',656,212],['candlestick',656,352],['heatmap',656,320],
+      ['breadth',656,200],['table',656,352],['trend',656,300]
     ]);
-    expect(arranged.find(node => node.id === 'heatmap').sizeMode).toBe('manual');
+    expect(arranged.find(node => node.id === 'heatmap').sizeMode).toBe('auto');
     expect(arranged.find(node => node.id === 'metrics').sizeMode).toBe('auto');
     window.happyDOM.abort();
   });

@@ -22,49 +22,25 @@ export function researchBentoSize(node = {}, measured) {
 // The source frame is a starting point. Dense content earns room for legible
 // labels and rows; sparse content keeps the source proportions.
 export function researchMarketContentDimensions(variant, data = {}) {
-  const base = { metrics:[896,144], candlestick:[536,304], trend:[536,264], 'price-volume':[536,286], 'order-book':[536,280], 'fund-flow':[536,286], 'valuation-band':[536,286], 'equity-drawdown':[536,286], 'allocation-donut':[434,286], waterfall:[536,286], funnel:[434,286], 'risk-matrix':[536,310], scatter:[348,264], table:[536,258], pipeline:[348,258], events:[896,110], heatmap:[434,258], breadth:[896,220], 'fund-kpi':[896,132], 'fund-holdings':[556,400], 'fund-industry':[328,400] }[variant];
+  const base = {'metrics': [656, 212], 'candlestick': [656, 352], 'trend': [656, 300], 'price-volume': [656, 310], 'order-book': [656, 250], 'fund-flow': [656, 352], 'valuation-band': [656, 310], 'equity-drawdown': [656, 310], 'allocation-donut': [656, 300], 'waterfall': [656, 280], 'funnel': [656, 256], 'risk-matrix': [656, 310], 'scatter': [656, 376], 'table': [656, 352], 'pipeline': [656, 270], 'events': [656, 264], 'heatmap': [656, 320], 'breadth': [656, 200], 'fund-kpi': [656, 212], 'fund-holdings': [656, 352], 'fund-industry': [656, 352]}[variant];
   if (!base) return null;
   const count = (array, explicit) => Number.isInteger(explicit) ? explicit : Array.isArray(array) ? array.length : 0;
-  if (variant === 'metrics') {
-    const items = count(data.items, data.itemCount);
-    return { width:896, height:items > 12 ? 320 + Math.max(0,Math.ceil((items-12)/6))*88 : items > 6 ? 232 : 144 };
-  }
-  if (variant === 'scatter') {
-    const items = count(data.items, data.itemCount);
-    return { width: 348, height: 264 + Math.max(0, Math.ceil(items / 3) - 2) * 12 };
-  }
-  if (variant === 'pipeline') {
-    const items = count(data.items, data.itemCount);
-    return { width: 348, height: 258 + Math.max(0, items - 6) * 29 };
-  }
-  if (variant === 'table') {
-    const columns = count(data.columns, data.columnCount), rows = count(data.rows, data.rowCount);
-    // The 21H source table fits seven compact financial columns in 536px.
-    // Preserve selectable text and horizontal overflow for unusually long cells.
-    const wide = columns > 7;
-    return { width:wide ? 656 : 536,
-      height:wide ? 320 + Math.max(0, rows - 8) * 24 : 258 + Math.max(0, rows - 8) * 24 };
-  }
-  if (variant === 'events') {
-    const rows = count(data.items, data.itemCount);
-    return { width: 896, height: 110 + Math.max(0, rows - 2) * 28 };
-  }
-  if (variant === 'fund-kpi') {
-    const items = count(data.items, data.itemCount);
-    return { width:896, height:items > 5 ? 208 : 132 };
-  }
-  if (variant === 'fund-holdings') {
-    const columns = count(data.columns, data.columnCount), rows = count(data.rows, data.rowCount);
-    return { width:columns > 5 ? 656 : 556, height:rows > 8 ? 400 + (rows - 8) * 24 : 400 };
-  }
-  if (variant === 'fund-industry') {
-    const rows = count(data.items, data.itemCount);
-    return { width:328, height:rows > 7 ? 400 + (rows - 7) * 28 : 400 };
-  }
-  return { width:base[0], height:base[1] };
+  const rows = count(data.items ?? data.rows, data.itemCount || data.rowCount);
+  if (!rows) return { width: base[0], height: base[1] };
+  if (variant === 'metrics' || variant === 'fund-kpi')
+    return {width:656,height:48 + Math.max(1, Math.ceil((rows || 6) / 3)) * 82};
+  // Short datasets collapse; large datasets get a readable viewport with scrolling.
+  // Never make a 100-row feed turn into a multi-screen canvas column.
+  if (variant === 'table' || variant === 'fund-holdings')
+    return {width:656,height:80 + Math.min(12, Math.max(3, rows || 10)) * 25};
+  if (variant === 'fund-industry') return {width:656,height:144 + Math.min(8, Math.max(3, rows || 6)) * 28};
+  if (variant === 'pipeline') return {width:656,height:72 + Math.min(8, Math.max(3, rows || 5)) * 36};
+  if (variant === 'events') return {width:656,height:76 + Math.min(6, Math.max(2, rows || 5)) * 32};
+  return {width:base[0],height:base[1]};
 }
+
 export function researchDashboardContentDimensions(items = 0) {
-  return { width: 656, height: items > 6 ? Math.max(456,80+Math.ceil(items/3)*74) : items >= 5 ? 280 : 220 };
+  return { width: 656, height: 74 + Math.ceil(Math.max(1, items || 6) / 3) * 82 };
 }
 export function researchGanttContentDimensions(items = 0) {
   return { width: 656, height: Math.max(320, 80 + items * 36) };
@@ -74,12 +50,12 @@ export function researchGanttContentDimensions(items = 0) {
 export function researchMarketDimensions(node, includeManual = false) {
   if (node.sizeMode === 'manual' && !includeManual) return null;
   const spec=node.containerSpec, html=spec?.type==='html'?spec.html:'';
-  if (html?.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:536, height:316 };
+  if (html?.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:656, height:316 };
   if (html?.includes('data-research-kind="dashboard"')) return researchDashboardContentDimensions((html.match(/class="research-metric"/g) || []).length);
   if (html?.includes('data-research-kind="gantt"')) return researchGanttContentDimensions((html.match(/class="gantt-row"/g) || []).length);
   if (/data-research-kind="(?:news|reports)"/.test(html)) {
     const rows=(html.match(/class="research-feed-item"/g) || []).length;
-    return {width:656,height:Math.max(220,112+rows*58)};
+    return {width:656,height:Math.max(220,80+Math.min(6,rows)*46)};
   }
   const kind=html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1];
   // This function is serialized into the patched client; keep its contract
@@ -120,20 +96,20 @@ export function researchOptimalDimensions(node = {}, measured = null) {
   let width, height;
   if (type === 'kpi' || type === 'dashboard') {
     const items = count(spec.items) || count(spec.metrics);
-    width = items <= 4 ? 320 : 656;
-    height = Math.max(220, 62 + Math.ceil(items / (width === 320 ? 2 : 3)) * 78);
+    width = 656;
+    height = (type === 'dashboard' ? 74 : 48) + Math.ceil(Math.max(1, items) / 3) * 82;
   } else if (type === 'table') {
-    width = columns <= 3 ? 320 : columns <= 5 ? 536 : 656;
-    height = Math.max(220, 126 + rows * 29);
+    width = 656;
+    height = 80 + Math.min(12, Math.max(3, rows)) * 25;
   } else if (type === 'news' || type === 'reports') {
     width = 656;
-    height = Math.max(220, 112 + rows * (type === 'reports' ? 64 : 58));
+    height = Math.max(220, 80 + Math.min(6, rows) * 46);
   } else if (type === 'calendar') {
-    width = 536; height = 316;
+    width = 656; height = 316;
   } else if (type === 'gantt') {
     width = 656; height = Math.max(320, 80 + rows * 36);
   } else if (type === 'chart') {
-    width = 536; height = 320;
+    width = 656; height = 320;
   } else if (type === 'markdown' || node.kind === 'generated-summary') {
     const content = String(spec.content ?? node.content ?? node.excerpt ?? '');
     width = content.length <= 140 ? 320 : 536;
@@ -157,7 +133,8 @@ export function researchContentMatrixLayout(nodes, canvasSize = {}, measured = n
   const availableWidth = Math.min(canvasSize.availableWidth > 0 ? canvasSize.availableWidth : Infinity,
     canvasSize.width > 0 ? canvasSize.width : 1380);
   const availableHeight = canvasSize.height > 0 ? canvasSize.height : 900;
-  const hasMarketSource = nodes.some(node=>node.containerSpec?.type==='html' && /data-sherlock-market=/.test(node.containerSpec.html ?? ''));
+  const hasMarketSource = nodes.some(node=>node.containerSpec?.type==='html' && /data-sherlock-market=/.test(node.containerSpec.html ?? '') && !node.containerSpec.html.includes('data-sherlock-design='));
+  const strictWorkbench = nodes.length > 1 && nodes.every(node => node.workbenchId && node.workbenchId === nodes[0].workbenchId);
   const entries = nodes.map(node => {
     const dimensions=hasMarketSource && node.containerSpec?.type==='kpi' && node.containerSpec.items?.length===6
       ? {width:896,height:144} : researchOptimalDimensions(node, measured.get(node.id));
@@ -177,9 +154,10 @@ export function researchContentMatrixLayout(nodes, canvasSize = {}, measured = n
     const placed = [];
     let shelfX=0,shelfY=0,shelfHeight=0;
     for (const entry of entries) {
-      if(entries.length>40){
+      if(entries.length>40 || strictWorkbench){
         if(shelfX && shelfX+entry.width>limit){shelfY+=shelfHeight+gap;shelfX=0;shelfHeight=0;}
-        placed.push({...entry.node,x:shelfX,y:shelfY,width:entry.width,height:entry.height});
+        placed.push({...entry.node,x:shelfX,y:shelfY,width:entry.width,height:entry.height,
+          ...(strictWorkbench ? {sizeMode:'auto'} : {})});
         shelfX+=entry.width+gap;shelfHeight=Math.max(shelfHeight,entry.height);
         continue;
       }
@@ -208,6 +186,10 @@ export function researchContentMatrixLayout(nodes, canvasSize = {}, measured = n
       score:scale - slack*.025 - aspect*.005};
   }
   let best = null;
+  if (strictWorkbench) {
+    const {score,...result} = pack(Math.max(...entries.map(entry=>entry.width))*2 + gap);
+    return result;
+  }
   for (const limit of [...widths].filter(w=>w>0&&w<=Math.max(2400,availableWidth*2)).sort((a,b)=>a-b)) {
     const candidate=pack(limit);
     if (!best || candidate.score > best.score + 1e-9) best=candidate;
@@ -264,7 +246,7 @@ function researchMarketLayout(nodes,availableWidth,height) {
   }
   const compact=pack(896);
   if(!hasDesignContract){const {fullFit,...result}=compact;return result;}
-  const wide=pack(1088);
+  const wide=pack(1324);
   const {fullFit,...result}=wide.fullFit>compact.fullFit+1e-9?wide:compact;
   return result;
 }

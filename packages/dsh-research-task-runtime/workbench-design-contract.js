@@ -1,30 +1,30 @@
 // The model supplies data and a semantic type. Geometry and design provenance
 // belong to the client so a prompt cannot silently change the visual system.
-import { researchMarketContentDimensions, researchGanttContentDimensions } from './bento-layout.js';
+import { researchMarketContentDimensions, researchOptimalDimensions } from './bento-layout.js';
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
 const market = Object.freeze({
-  metrics: { id: 'financial.metrics', figma: '1217:225751', width: 896, height: 144, size: 'medium' },
-  candlestick: { id: 'financial.candlestick', figma: '1321:71859', width: 536, height: 304, size: 'large' },
-  trend: { id: 'financial.trend', figma: '1217:225781', width: 536, height: 264, size: 'large' },
-  'price-volume': { id: 'financial.price-volume', figma: '1217:225781', width: 536, height: 286, size: 'large' },
-  'order-book': { id: 'financial.order-book', figma: '1217:225879', width: 536, height: 280, size: 'large' },
-  'fund-flow': { id: 'financial.fund-flow', figma: '1217:225879', width: 536, height: 286, size: 'large' },
-  'valuation-band': { id: 'financial.valuation-band', figma: '1217:225781', width: 536, height: 286, size: 'large' },
-  'equity-drawdown': { id: 'fund.equity-drawdown', figma: '1217:247146', width: 536, height: 286, size: 'large' },
-  'allocation-donut': { id: 'research.allocation-donut', figma: '1217:247228', width: 434, height: 286, size: 'large' },
-  waterfall: { id: 'research.waterfall', figma: '1217:225781', width: 536, height: 286, size: 'large' },
-  funnel: { id: 'research.funnel', figma: '1217:225825', width: 434, height: 286, size: 'large' },
-  'risk-matrix': { id: 'research.risk-matrix', figma: '1217:225825', width: 536, height: 310, size: 'large' },
-  scatter: { id: 'financial.scatter', figma: '1217:225825', width: 348, height: 264, size: 'large' },
-  table: { id: 'financial.table', figma: '1217:225879', width: 536, height: 258, size: 'large' },
-  pipeline: { id: 'financial.pipeline', figma: '1217:225964', width: 348, height: 258, size: 'large' },
-  events: { id: 'financial.events', figma: '1217:225748', width: 896, height: 110, size: 'medium' },
-  heatmap: { id: 'financial.heatmap', figma: '1321:71859', width: 434, height: 258, size: 'large' },
-  breadth: { id: 'financial.breadth', figma: '1321:71859', width: 896, height: 220, size: 'medium' },
-  'fund-kpi': { id: 'fund72.kpi', figma: '1217:247146', width: 896, height: 132, size: 'medium' },
-  'fund-holdings': { id: 'fund72.holdings', figma: '1217:247167', width: 556, height: 400, size: 'large' },
-  'fund-industry': { id: 'fund72.industry', figma: '1217:247228', width: 328, height: 400, size: 'large' }
+  metrics: { id: 'financial.metrics', figma: '1696:73546', width: 656, height: 212, size: 'medium' },
+  candlestick: { id: 'financial.candlestick', figma: '1696:73786', width: 656, height: 352, size: 'large' },
+  trend: { id: 'financial.trend', figma: '1696:73878', width: 656, height: 300, size: 'large' },
+  'price-volume': { id: 'financial.price-volume', figma: '1696:74110', width: 656, height: 310, size: 'large' },
+  'order-book': { id: 'financial.order-book', figma: '1696:74260', width: 656, height: 250, size: 'large' },
+  'fund-flow': { id: 'financial.fund-flow', figma: '1696:74394', width: 656, height: 352, size: 'large' },
+  'valuation-band': { id: 'financial.valuation-band', figma: '1696:74488', width: 656, height: 310, size: 'large' },
+  'equity-drawdown': { id: 'fund.equity-drawdown', figma: '1696:74612', width: 656, height: 310, size: 'large' },
+  'allocation-donut': { id: 'research.allocation-donut', figma: '1696:74682', width: 656, height: 300, size: 'large' },
+  waterfall: { id: 'research.waterfall', figma: '1696:74744', width: 656, height: 280, size: 'large' },
+  funnel: { id: 'research.funnel', figma: '1696:74808', width: 656, height: 256, size: 'large' },
+  'risk-matrix': { id: 'research.risk-matrix', figma: '1696:75186', width: 656, height: 310, size: 'large' },
+  scatter: { id: 'financial.scatter', figma: '1696:75348', width: 656, height: 376, size: 'large' },
+  table: { id: 'financial.table', figma: '1696:75648', width: 656, height: 352, size: 'large' },
+  pipeline: { id: 'financial.pipeline', figma: '1696:75754', width: 656, height: 270, size: 'large' },
+  events: { id: 'financial.events', figma: '1696:75958', width: 656, height: 264, size: 'medium' },
+  heatmap: { id: 'financial.heatmap', figma: '1696:76086', width: 656, height: 320, size: 'large' },
+  breadth: { id: 'financial.breadth', figma: '1696:76154', width: 656, height: 200, size: 'medium' },
+  'fund-kpi': { id: 'fund72.kpi', figma: '1696:76238', width: 656, height: 212, size: 'medium' },
+  'fund-holdings': { id: 'fund72.holdings', figma: '1696:76538', width: 656, height: 352, size: 'large' },
+  'fund-industry': { id: 'fund72.industry', figma: '1696:76666', width: 656, height: 352, size: 'large' }
 });
 
 export const MARKET_DESIGN_TEMPLATES = market;
@@ -36,6 +36,18 @@ export function requestedMarketVariant(prompt) {
 export function requiredMarketVariant(prompt) {
   return typeof prompt === 'string' ? prompt.match(new RegExp(`必须输出 market\\.(${MARKET_VARIANT_PATTERN}) 的结构化数据`, 'iu'))?.[1]?.toLowerCase() : undefined;
 }
+export const TERMINAL_GENERIC_TEMPLATES = Object.freeze({
+  'kpi': { figma: '1696:76780', height: 212 },
+  'chart.line': { figma: '1696:76912', height: 320 },
+  'chart.bar': { figma: '1696:77040', height: 320 },
+  'table': { figma: '1696:77348', height: 352 },
+  'dashboard': { figma: '1696:77430', height: 238 },
+  'news': { figma: '1696:77556', height: 352 },
+  'reports': { figma: '1696:77682', height: 352 },
+  'calendar': { figma: '1696:77848', height: 316 },
+  'gantt': { figma: '1696:77958', height: 352 }
+});
+
 const generic = Object.freeze({
   small: { width: 320, height: 220 },
   medium: { width: 656, height: 220 },
@@ -102,21 +114,14 @@ export function workbenchDesignTemplate(panel = {}) {
     return { ...market[variant], ...researchMarketContentDimensions(variant, panel.artifact), version: WORKBENCH_DESIGN_VERSION, variant };
   }
   const artifact = panel.artifact ?? {};
-  // 21H's work calendar is a concrete 536×316 content component. Keep its
-  // measured source geometry instead of squeezing it into the generic grid.
-  if (panel.type === 'calendar') return {
-    id: 'research.calendar', figma: '1217:222167', version: WORKBENCH_DESIGN_VERSION,
-    size: 'medium', width: 536, height: 316
-  };
-  if (panel.type === 'gantt') return {
-    id: 'research.gantt', figma: '1323:71859', version: WORKBENCH_DESIGN_VERSION,
-    size: 'large', ...researchGanttContentDimensions(artifact.items?.length)
-  };
-  if (panel.type === 'dashboard' && (artifact.items?.length ?? artifact.metrics?.length ?? 0) >= 5 &&
-    (artifact.items?.length ?? artifact.metrics?.length ?? 0) <= 6) return {
-    id: 'research.dashboard', figma: '1320:71868', version: WORKBENCH_DESIGN_VERSION,
-    size: 'medium', width: 656, height: 280
-  };
+  const semanticType = panel.type === 'chart' ? 'chart.' + (artifact.variant === 'bar' ? 'bar' : 'line') : panel.type;
+  const terminal = TERMINAL_GENERIC_TEMPLATES[semanticType];
+  if (terminal) {
+    const hasData = (artifact.items?.length ?? artifact.metrics?.length ?? artifact.rows?.length ?? artifact.labels?.length ?? 0) > 0;
+    const dimensions = hasData ? researchOptimalDimensions({containerSpec:{...artifact,type:panel.type}}) : {width:656,height:terminal.height};
+    return {id:'research.'+semanticType,figma:terminal.figma,version:WORKBENCH_DESIGN_VERSION,
+      size:dimensions.height>220?'large':'medium',...dimensions};
+  }
   let needed = panel.type === 'chart' || panel.type === 'html' || panel.type === 'reports' ? 'large'
     : panel.type === 'table' && (artifact.columns?.length > 4 || artifact.rows?.length > 5) ? 'large'
       : panel.type === 'kpi' && artifact.items?.length > 6 ? 'large'
