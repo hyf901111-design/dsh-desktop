@@ -11,44 +11,29 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "9c512e622d1b2994f06c0946ec15a67da83f354c",
-        "tipCommit": "0c1f2a68180e398b7debad4b7d97131a7531ebb8",
+        "baseCommit": "0c1f2a68180e398b7debad4b7d97131a7531ebb8",
+        "tipCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
         "commits": [
           {
-            "commit": "0d6136c6dd17a674c97463b9065ca5e26935744f",
+            "commit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
             "parents": [
-              "9c512e622d1b2994f06c0946ec15a67da83f354c"
+              "0c1f2a68180e398b7debad4b7d97131a7531ebb8"
             ],
-            "subject": "启动测试包前确认旧进程退出以避免加载旧运行时"
-          },
-          {
-            "commit": "0c1f2a68180e398b7debad4b7d97131a7531ebb8",
-            "parents": [
-              "0d6136c6dd17a674c97463b9065ca5e26935744f"
-            ],
-            "subject": "为组件固定显示刷新时间并增加局部更新高亮"
+            "subject": "统一编辑卡片的模板识别与数据绑定协议"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "script/build_and_run.sh"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-data-refresh.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/component-data-status.mjs"
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
           },
           {
             "status": "M",
-            "path": "test/build-and-run.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/component-data-status.test.js"
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -57,17 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-data-status.test.js",
-              "test/component-data-ui.test.js",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/build-and-run.test.ts",
-              "test/brand-migration.test.ts"
+              "test/research-task-runtime.test.js",
+              "test/component-source-binding.test.js",
+              "test/workbench-design-contract.test.js"
             ],
             "outcome": "passed",
-            "summary": "53项聚焦验证通过；状态变化仅影响对应卡片，首屏和返回不闪烁，失败保留上次时间，组件内容不重建；模拟打包期间旧进程重启回归通过",
-            "verifiedCommit": "0c1f2a68180e398b7debad4b7d97131a7531ebb8",
-            "completedAt": "2026-09-26T13:20:30.102718+00:00",
+            "summary": "198项聚焦验证通过；实测遗漏 variant 声明的回归5项先失败后通过；编辑和旧卡片都使用相同的自动绑定与滚动日期协议",
+            "verifiedCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
+            "completedAt": "2026-09-26T13:36:32.760548+00:00",
             "timeoutMs": 180000
           },
           {
@@ -78,14 +60,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "0c1f2a68180e398b7debad4b7d97131a7531ebb8",
-            "completedAt": "2026-09-26T13:20:30.102718+00:00",
+            "verifiedCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
+            "completedAt": "2026-09-26T13:36:32.760548+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "上一集成包的六卡均已可见且近10日选择保留。本次底部时间与更新高亮待新集成包实机验证。"
+          "summary": "49bb0d7实机六卡刷新、固定时间与频率设置和关闭按钮已通过。编辑入口识别到遗漏，当前修复待新包复验。"
         },
         "acceptanceCriteria": [
           "实际成功插件调用的字段映射可同时用于首次渲染和后续刷新",
@@ -101,63 +83,7 @@
         "risks": [
           "外部模型、数据服务时延有波动，真实工作台耗时待复验"
         ],
-        "generatedAt": "2026-09-26T13:20:30.102718+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9fdd99625470ab12aaac5bb50dac2b2aac75d4c8",
-        "verificationCommit": "9fdd99625470ab12aaac5bb50dac2b2aac75d4c8",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "9fdd99625470ab12aaac5bb50dac2b2aac75d4c8",
-            "completedAt": "2026-09-26T13:20:57.812Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "9fdd99625470ab12aaac5bb50dac2b2aac75d4c8",
-            "completedAt": "2026-09-26T13:20:57.812Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9fdd99625470ab12aaac5bb50dac2b2aac75d4c8",
-            "completedAt": "2026-09-26T13:20:57.812Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T13:20:57.812Z"
+        "generatedAt": "2026-09-26T13:36:32.760548+00:00"
       }
     }
   ],
