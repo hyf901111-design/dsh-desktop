@@ -1,5 +1,5 @@
 import {describe,it,expect,vi} from 'vitest'
-import {ComponentDataRefresh, evaluateMapping} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
+import {ComponentDataRefresh, evaluateMapping, decodeDataResponse} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {createCanvasActionController} from '../packages/dsh-research-task-runtime/canvas-actions.js'
 const data={version:1,type:'market',variant:'metrics',title:'指标',asOf:'2026-09-25',items:[{label:'指数',value:'100'}]}
@@ -12,6 +12,23 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('decodes DataYes source-prefixed JSON without dropping provenance or nested data',()=>{
+  const payload={provenance:{api_name:'getMktIdxd',source_no:'9'},data:{retCode:1,data:[{name:'指数 {A}',value:101}]}}
+  const wrapped={content:[{type:'text',text:'=== 已登记来源 SOURCES ===\n9 | 接口数据\n=== END SOURCES ===\n提示：引用使用来源编号。\n'+JSON.stringify(payload)}]}
+  expect(decodeDataResponse(wrapped)).toEqual(payload)
+  expect(evaluateMapping({$from:'quote',$path:'data.data.0.value'},{quote:decodeDataResponse(wrapped)})).toBe(101)
+  expect(decodeDataResponse({content:[{type:'text',text:'说明\n```json\n'+JSON.stringify(payload,null,2)+'\n```'}]})).toEqual(payload)
+ })
+ it('rejects ambiguous, truncated, oversized and nested failed provider responses',()=>{
+  for(const text of ['说明\n{"data":1}\n{"data":2}','说明\n{"data":[1,2}','说明\n{"data":[\n{"value":1}\n','x'.repeat(2_000_001),'来源\n{"provenance":{},"data":{"retCode":-1,"data":[]}}'])expect(()=>decodeDataResponse({content:[{type:'text',text}]})).toThrow()
+  expect(decodeDataResponse({structuredContent:{data:[1]},content:[{type:'text',text:'human summary'}]})).toEqual({data:[1]})
+ })
+ it('refreshes a component from a citation-wrapped business response',async()=>{
+  const f=setup();await f.service.load();const b=await f.service.bind(f.input)
+  f.execute.mockResolvedValue({content:[{type:'text',text:'=== 已登记来源 SOURCES ===\n示例来源\n'+JSON.stringify({items:[{name:'指数',price:102}],date:'2026-09-26'})}]})
+  await f.service.refresh(b.id)
+  expect(f.service.list()[0].status).toBe('success');expect(f.spec().html).toContain('102');expect(f.apply).toHaveBeenCalledTimes(1)
+ })
  it('maps bounded JSON values and dates without evaluating code',()=>{
   expect(evaluateMapping({a:{$date:{format:'yyyyMMdd',timezone:'Asia/Shanghai',offsetDays:-1}}},{},new Date('2026-09-26T02:00:00Z'))).toEqual({a:'20260925'})
   expect(()=>evaluateMapping({$path:'__proto__.x'},{},new Date())).toThrow()
