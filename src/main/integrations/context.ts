@@ -38,9 +38,11 @@ export async function resolveIntegrationContext(input: CapabilityContext, option
     if (input.rootSessionId !== root.sessionId)
         throw new IntegrationError('ACCESS_DENIED', '会话父级身份不匹配');
     const sessionIds = new Set([input.sessionId, root.sessionId]);
-    const task = options.tasks.find(item => !item.deletedAt && ((item.sessionId && sessionIds.has(item.sessionId)) ||
+    const candidates = options.tasks.filter(item => !item.deletedAt && ((item.sessionId && sessionIds.has(item.sessionId)) ||
         item.runs.some(run => run.sessionId && sessionIds.has(run.sessionId)) ||
         (item.component && sessionIds.has(item.component.sessionId) && item.runs.some(run => run.status === 'running'))));
+    const task = candidates.find(item=>item.id===input.taskId) ?? candidates.find(item=>!item.id.startsWith('component-data:'));
+    if(input.taskId?.startsWith('component-data:') && !task)throw new IntegrationError('ACCESS_DENIED','组件数据更新已暂停或配置已变化');
     // Explicitly overwrite, rather than spread, all scheduler-owned fields.
     return {
         sessionId: input.sessionId, rootSessionId: root.sessionId,

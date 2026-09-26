@@ -24,6 +24,7 @@ export type TaskRun = {
   sessionId?: string
   rpcId?: string
   componentBaseline?: string
+  dataRefreshResult?: {status:'success'|'failed';error?:string;noChange?:boolean}
 }
 export type ScheduledTask = TaskInput & {
   id: string

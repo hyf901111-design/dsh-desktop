@@ -1,3 +1,4 @@
+import { createComponentDataService } from './component-data/service'
 import { legacyConnectionSources } from './integrations/legacy-connections'
 import { legacySkillRoots } from './integrations/legacy-skills'
 import { IntegrationService } from './integrations/service'
@@ -164,6 +165,7 @@ let accountService: AccountService | undefined
 let researchBoardsService: ResearchBoardsService | undefined
 let disposeResearchBoardsHandlers: (() => void) | undefined
 let mainWindow: BrowserWindow | undefined
+let componentDataService: Awaited<ReturnType<typeof createComponentDataService>> | undefined
 let integrationService: IntegrationService | undefined
 let integrationEndpoint: Awaited<ReturnType<typeof startIntegrationBridge>> | undefined
 let stopIntegrationIdentity = () => {}
@@ -1237,7 +1239,7 @@ async function bootstrap(): Promise<void> {
         notification.show()
       } catch (error) { console.warn('[session-notification] unable to show notification', error) }
     },
-    canvasAction: (value,signal) => canvasActions.execute(value,signal),
+    canvasAction: (value:any,signal) => value?.method==='data' ? componentDataService ? componentDataService.request(value.sessionId,value.args) : Promise.reject(Error('数据刷新服务不可用')) : canvasActions.execute(value,signal),
     isSharedSession:id=>researchBoardsService?.isSharedSession(id)===true,
     additionalSources:id=>researchBoardIntegration?.personalContext(id)??[],
     readCanvas: (sessionId) => researchBoardsService?.isSharedSession(sessionId)
@@ -1317,7 +1319,7 @@ async function bootstrap(): Promise<void> {
         return result.canceled ? null : result.filePaths[0] ?? null
       },
       resolveContext: context => resolveIntegrationContext(context, {
-        ownerId: integrationOwner(), tasks: scheduledStoreForIntegrations?.list() ?? [],
+        ownerId: integrationOwner(), tasks: [...(scheduledStoreForIntegrations?.list() ?? []),...(componentDataService?.contextTasks() ?? [])],
         workspaces: async () => (await taskRpc('workspace.list', {})).items,
         sessions: async () => (await taskRpc('session.list', {})).items,
       }),
@@ -1381,10 +1383,16 @@ async function bootstrap(): Promise<void> {
     if (task.deletedAt) await dependencyIndex?.removeTask(task.id)
     else try{await dependencyIndex?.syncBindings(task.id, task.integrationBindings ?? [])}catch{console.warn('[integrations] task dependency index update unavailable')}
   }
+  try { if (integrationService) componentDataService = await createComponentDataService({file:join(app.getPath('userData'),'component-data-bindings.json'),integrations:integrationService,canvas:canvasActions,rpc:taskRpc,owner:integrationOwner,isShared:id=>researchBoardsService?.isSharedSession(id)===true}) } catch(error) { console.error('[component-data] 配置读取失败，原文件已保留',error) }
+  ipcMain.handle('component-data:request',async(event,sessionId:string,args:any)=>{
+    assertTrustedMainWindowEvent(event,mainWindow)
+    if(!componentDataService)throw Error('数据刷新服务不可用')
+    return componentDataService.request(sessionId,args)
+  })
   const componentExecutor = new ScheduledComponentExecutor(scheduledStore, async (target, method, args) => {
     canvasActions.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]})
     return canvasActions.execute({sessionId:target.sessionId,method,args,scheduled:true})
-  }, (method, args) => researchBoardIntegration!.runtime(method, args, AbortSignal.timeout(30000)))
+  }, async target => {if(!componentDataService)throw Error('数据刷新服务不可用');const result=await componentDataService.request(target.sessionId,{action:'refresh',nodeId:target.nodeId});if(Array.isArray(result))throw Error('刷新结果无效');return result})
   scheduledRunner = new TaskRunner(scheduledStore, taskRpc, () => !scheduledLoadError && runtime.snapshot().phase === 'ready', (task, run) => {
     if (Notification.isSupported()) new Notification({ title: task.title, body: run.status === 'success' ? (task.component ? '组件已按计划更新' : '定时任务已完成，打开专属对话查看结果') : `定时任务需要处理：${run.error}` }).show()
   }, Date.now, componentExecutor, async task => {
@@ -1421,7 +1429,9 @@ async function bootstrap(): Promise<void> {
     if (typeof payload?.id !== 'string') throw new Error('任务标识无效')
     if (method === 'run') return scheduledRunner!.run(payload.id)
     if (method === 'pause' || method === 'resume' || method === 'delete') {
+      const component=scheduledStore.list().find(t=>t.id===payload.id)?.component
       const result = await scheduledStore.action(payload.id, method)
+      if(component && method!=='resume' && componentDataService){const bound=componentDataService.engine.list(component.sessionId).find(b=>b.nodeId===component.nodeId);if(bound)await componentDataService.engine.configure(bound.id,{enabled:false})}
       if (method === 'delete') await dependencyIndex?.removeTask(payload.id)
       return result
     }
@@ -1524,7 +1534,7 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => componentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )

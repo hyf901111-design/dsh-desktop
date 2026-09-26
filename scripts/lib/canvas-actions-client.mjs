@@ -20,13 +20,14 @@ function canvasWorkspaceActions(adapter) {
       if(Object.hasOwn(changes,'containerSpec')) {
         const spec=parseResearchContainerSpec(changes.containerSpec)
         if(!spec)throw Error('组件内容不符合其结构约定，请保留原有结构重新修改。')
+        const previousVersion=node.containerSpec?.html?researchInteractionVersion(node.containerSpec.html):undefined
         node.containerSpec=spec
         try{node.excerpt=researchContainerPlainText(spec)||JSON.stringify(spec)}catch{node.excerpt=JSON.stringify(spec)}
         node.excerpt=node.excerpt.slice(0,RESEARCH_GENERATION_MAX_OUTPUT)
         node.generationStatus='completed';delete node.generationError;delete node.refreshError
         node.lastSuccessfulAt=Date.now()
-        // Changed content starts a new interaction version; never replay old UI actions.
-        if(node.config?.interactionState){node.config={...node.config};delete node.config.interactionState}
+        // Data refresh within a fixed template preserves view controls; template edits reset them.
+        if(node.config?.interactionState&&(!previousVersion||previousVersion!==researchInteractionVersion(spec.html??''))){node.config={...node.config};delete node.config.interactionState}
       }
       if(['x','y','width','height'].some(k=>Object.hasOwn(changes,k))){node.sizeMode='manual';const geometry=normalizeResearchCanvasNodeGeometry(node);for(const key of ['width','height'])if(Object.hasOwn(changes,key)&&Math.abs(geometry[key]-node[key])>.01)throw Error('尺寸不符合组件原生比例或最小尺寸，请保留原比例调整。');}
       return node

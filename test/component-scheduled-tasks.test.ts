@@ -17,26 +17,18 @@ it('patches the real client, parses, and can be repeated without duplicate entri
  expect(result).toContain('data-component-schedule-open')
  expect(result).toContain('data-component-schedule-clock')
 })
-it.each([false,true])('updates only the bound component, detects concurrent changes=%s and never prompts a global session',async changed=>{
+it.each([false,true])('refreshes bound data without a model, reports error=%s',async failed=>{
  const dir=await mkdtemp(join(tmpdir(),'component-task-'))
  try{
  const store=new TaskStore(join(dir,'tasks.json'))
- const task=await store.save({title:'更新',prompt:'更新指标'.repeat(2500),workspaceId:'',component:{sessionId:'canvas',nodeId:'a',title:'指标',boardTitle:'画板'},schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-25'},notification:'always'})
- let spec={version:1,type:'markdown',title:'指标',content:'旧内容'}
- const canvas=vi.fn(async(_target,method,args:any)=>{
-   if(method==='inspect')return {revision:'current',writable:true,nodes:[{id:'a',kind:'generated-container',capabilities:{fields:{containerSpec:{}}},content:{containerSpec:spec}}]}
-   expect(args.changes).toHaveLength(1);expect(args.changes[0].id).toBe('a');spec=args.changes[0].fields.containerSpec
- })
- const runtime=vi.fn(async(method,args)=>{ if(method==='start'){expect(Buffer.byteLength(args.query)).toBeLessThanOrEqual(16384);expect(args.prompt).toContain(task.prompt);return {status:'running'}} return {status:'completed',text:JSON.stringify({...spec,content:'新内容'})} })
- const rpc=vi.fn();const notify=vi.fn()
- const runner=new TaskRunner(store,rpc,()=>true,notify,Date.now,new ScheduledComponentExecutor(store,canvas,runtime))
- await runner.run(task.id)
- expect(store.list()[0]!.runs[0]!.status).toBe('running')
- if(changed)spec={...spec,content:'用户修改'}
- await runner.tick()
- expect(rpc).not.toHaveBeenCalled()
- expect(store.list()[0]!.runs[0]!.status).toBe(changed?'failed':'success')
- expect(spec.content).toBe(changed?'用户修改':'新内容')
+ const task=await store.save({title:'更新',prompt:'更新指标',workspaceId:'',component:{sessionId:'canvas',nodeId:'a',title:'指标',boardTitle:'画板'},schedule:{frequency:'daily',time:'09:00',timezone:'Asia/Shanghai',weekday:1,date:'2026-09-25'},notification:'always'})
+ const canvas=vi.fn(async()=>({revision:'r',writable:true,nodes:[{id:'a',kind:'generated-container',capabilities:{fields:{containerSpec:{}}},content:{containerSpec:{type:'html',html:'template'}}}]}))
+ const refresh=vi.fn(async target=>{expect(target.nodeId).toBe('a');return failed?{status:'error',error:'接口不可用'}:{status:'unchanged'}})
+ const rpc=vi.fn(),notify=vi.fn()
+ const runner=new TaskRunner(store,rpc,()=>true,notify,Date.now,new ScheduledComponentExecutor(store,canvas,refresh))
+ await runner.run(task.id);await runner.tick()
+ expect(rpc).not.toHaveBeenCalled();expect(refresh).toHaveBeenCalledOnce()
+ expect(store.list()[0]!.runs[0]!.status).toBe(failed?'failed':'success')
  expect(notify).toHaveBeenCalledOnce()
  }finally{await rm(dir,{recursive:true,force:true})}
 })

@@ -56,10 +56,13 @@ function ResearchCanvasDotGrid({ viewport, canvasSize }) {
     ] });
 }
 function patchCanvasGraphicPrimitives(source) {
+  const dotRender='(0,react_jsx_runtime.jsx)(ResearchCanvasDotGrid,{viewport,canvasSize:snapshot.canvasSize}),';
+  const first=source.indexOf(dotRender),duplicate=source.indexOf(dotRender,first+dotRender.length);
+  if(first>=0&&duplicate>=0)source=source.slice(0,duplicate)+source.slice(duplicate+dotRender.length);
   const definitions = researchCanvasDotMetrics.toString().replace('export ', '') + '\n' + researchCanvasDotRowPath.toString().replace('export ', '') + '\n' + ResearchCanvasDotGrid.toString();
   if (source.includes('function researchCanvasDotMetrics(')) source = block(source, 'function researchCanvasDotMetrics(', 'function ResearchCanvas({', definitions);
   else source = exact(source, 'function ResearchCanvas({', definitions + '\nfunction ResearchCanvas({');
-  if (!source.includes('children: [(0,react_jsx_runtime.jsx)(ResearchCanvasDotGrid,')) {
+  if (!source.includes('(ResearchCanvasDotGrid,{viewport,canvasSize:snapshot.canvasSize})')) {
     const start = source.indexOf('"data-canvas-scale": viewport.scale.toFixed(3)');
     const children = source.indexOf('children: [', start);
     if (start < 0 || children < start || children - start > 600) throw Error('Figma dot grid children anchor missing');

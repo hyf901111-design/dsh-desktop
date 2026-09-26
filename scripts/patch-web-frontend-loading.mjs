@@ -1,3 +1,4 @@
+import { patchComponentDataRefresh } from './lib/component-data-refresh.mjs'
 import { patchResearchCreationProgress } from './lib/research-creation-progress.mjs'
 import { patchComponentScheduledTasks } from './lib/component-scheduled-tasks.mjs'
 import { patchConversationBrowser } from './lib/conversation-browser-client.mjs'
@@ -223,3 +224,5 @@ writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversatio
 writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchComponentScheduledTasks(readFileSync(conversationPath, 'utf8')))
+
+writeFileSync(conversationPath, patchComponentDataRefresh(readFileSync(conversationPath, 'utf8')))

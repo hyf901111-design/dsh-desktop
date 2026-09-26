@@ -605,6 +605,8 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
 // Interaction journal is data only. Existing generated pages keep their own JS
 // closures; replay restores those closures instead of merely repainting the DOM.
 export function researchInteractionVersion(html) {
+  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
+  if(encoded&&encoded.length<512000){try{const model=JSON.parse(encoded);if(typeof model.templateId==='string'&&typeof model.version==='string')return 'template:'+model.templateId+':'+model.version;}catch{}}
   let a=2166136261, b=5381;
   for (let i=0;i<html.length;i++) { a=Math.imul(a^html.charCodeAt(i),16777619); b=Math.imul(b,33)^html.charCodeAt(i); }
   return (a>>>0).toString(36)+'-'+(b>>>0).toString(36)+'-'+html.length;

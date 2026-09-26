@@ -1,3 +1,4 @@
+import {COMPONENT_TEMPLATES,templateSummary,templateFor} from './component-template-registry.js'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { acceptArtifactOutput } from './artifact-output.js'
 import { marketPanelSchema } from './market-artifact.js'
@@ -12,18 +13,20 @@ export const canvasSession = exec => children.get(exec.agent?.session?.id)?.pare
 export async function callCanvas(sessionId,method,args,signal,{env=process.env,fetch:request=globalThis.fetch}={}) {
   const url=new URL(env.SHERLOCK_RESEARCH_CONTEXT_URL)
   if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||url.username||url.password||!env.SHERLOCK_RESEARCH_CONTEXT_TOKEN)throw Error('画布操作服务不可用。')
-  const response=await request(`${url.origin}/canvas-actions`,{method:'POST',redirect:'error',signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(45000)]),headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({sessionId,method,args})})
+  const response=await request(`${url.origin}/canvas-actions`,{method:'POST',redirect:'error',signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(method==='data'?120000:45000)]),headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({sessionId,method,args})})
   const result=await response.json();if(!response.ok)throw Error(result.error??'画布操作失败。');return result
 }
 export async function guardCanvas(exec,method,args){const child=children.get(exec.agent?.session?.id);if(!child?.guard)for(const guard of goalGuards)await guard(exec,method,args);return child?.guard?.(method,args)}
-export const CANVAS_TOOL_NAMES=['research_canvas_inspect','research_canvas_apply','research_canvas_update_market','research_canvas_undo']
+export const CANVAS_TOOL_NAMES=['research_canvas_inspect','research_canvas_apply','research_canvas_update_market','research_canvas_undo','research_component_data']
 export function summarizeMarketCanvasInspect(result) {
   if(!Array.isArray(result?.nodes))return result
   return {...result,nodes:result.nodes.map(node=>{
     const spec=node.content?.containerSpec
+    const summary=templateSummary(spec)
+    if(summary){const content={...node.content};delete content.containerSpec;return {...node,content,contentSummary:summary}}
     const html=spec?.type==='html'?spec.html:undefined
     const variant=html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/iu)?.[1]
-    if(!variant)return node
+    if(!variant){if(!html)return node;const content={...node.content};delete content.containerSpec;return {...node,content,contentSummary:{type:'html',title:spec.title,message:'自定义 HTML 已省略，确需编辑时使用 detail:full。'}}}
     const asOf=html.match(/<meta\s+name="sherlock-header-note"\s+content="([^"]*)"/iu)?.[1]
     const content={...node.content};delete content.containerSpec
     return {...node,content,contentSummary:{templateId:`market.${variant}`,...(asOf?{asOf}:{}),updateSchema:marketPanelSchema(variant),message:'宿主金融模板的完整 HTML 已省略；仅在确需保留原 HTML 时用 detail:"full" 重新 inspect。刷新数据直接按 updateSchema 调用 research_canvas_update_market，无需手写转义 JSON。'}}
@@ -33,7 +36,7 @@ export function normalizeCanvasChanges(changes) {
   if(!Array.isArray(changes))return changes
   return changes.map(change=>{
     const spec=change?.op==='update'?change.fields?.containerSpec:undefined
-    if(spec?.type!=='market')return change
+    if(!templateFor(spec)&&spec?.type!=='market')return change
     const rendered=acceptArtifactOutput(JSON.stringify(spec))
     if(!rendered)throw Error(`金融组件数据不符合宿主模板。${marketPanelSchema(spec.variant??spec.market?.variant??Object.keys(spec.market??{})[0])}`)
     return {...change,fields:{...change.fields,containerSpec:JSON.parse(rendered)}}
@@ -83,6 +86,20 @@ export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThi
       const sessionId=canvasSession(exec)
       if(typeof sessionId!=='string'||!sessionId)throw Error('当前执行未绑定画板。')
       return JSON.stringify(await callCanvas(sessionId,'apply',{requestId:args.requestId,revision:args.revision,changes},exec.signal,{env,fetch:request}))
+    }
+  })))
+  disposers.push(ctx.tools.register(defineTool({
+    name:'research_component_data',
+    description:'查看 30 类固定组件模板、配置已有组件的数据接口或立即取数刷新。用户要求持续更新时，在首次取数成功后保存请求和字段映射，后续由宿主直接取数，不启动模型、不重写样式。先 inspect 获取 nodeId；使用插件已配置工具的真实 toolId，凭据由插件管理。recipe JSON: {requests:[{key:"quote",toolId:"t_...",args:{接口参数}}],mapping:{version:1,type:"market",variant:"metrics",title:"指标",asOf:{$from:"quote",$path:"data.date"},items:{$from:"quote",$each:"data.rows",$map:{label:{$path:"name"},value:{$path:"price",$as:"string"}}}},intervalMinutes:5}。路径为点分字段或数组下标；$each/$map 映射数组，$as 为 number/string，$scale 做单位换算，$prefix/$suffix 加单位；请求日期可填 {$date:{format:"yyyyMMdd|yyyy-MM-dd|yyyyMMdd000000",timezone:"Asia/Shanghai",offsetDays:-30}}。必须按真实响应字段映射，不能猜。intervalMinutes:0 仅手动；1–10080 为客户端运行时周期。失败保留旧数据。',
+    parameters:{action:{type:'string',required:true,enum:['templates','list','bind','refresh','configure']},nodeId:{type:'string'},recipe:{type:'string',description:'bind 使用的 JSON 对象字符串，记录请求和 mapping，无脚本或凭据。'},intervalMinutes:{type:'number'},enabled:{type:'boolean'}},
+    output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result}]},
+    execute:async(args,exec)=>{
+      if(args.action==='templates')return JSON.stringify(COMPONENT_TEMPLATES.map(t=>({...t,...(t.type==='market'?{schema:marketPanelSchema(t.variant)}:{})})))
+      await guardCanvas(exec,'inspect',{})
+      const sessionId=canvasSession(exec)
+      if(typeof sessionId!=='string'||!sessionId)throw Error('当前执行未绑定画板。')
+      const input={action:args.action,nodeId:args.nodeId,...(args.action==='bind'?{recipe:args.recipe}:{}),...(args.action==='configure'?{settings:{...(args.intervalMinutes!==undefined?{intervalMinutes:args.intervalMinutes}:{}),...(args.enabled!==undefined?{enabled:args.enabled}:{})}}:{})}
+      return JSON.stringify(await callCanvas(sessionId,'data',input,exec.signal,{env,fetch:request}))
     }
   })))
   return ()=>{for(const c of controllers)c.abort();for(const dispose of disposers.reverse())dispose()}
