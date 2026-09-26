@@ -344,6 +344,16 @@ describe('Research task contract and prompt', () => {
     expect(manual).toContain('统一遵循 EWork 工作台 Figma 组件规范')
   })
 
+  it('honors an explicit preset template in an edited card without the original planning header',async()=>{
+    const {buildResearchTaskPrompt}=await runtimeModule()
+    const prompt=buildResearchTaskPrompt({...containerRequest(),prompt:'使用通联获取510300最近20个交易日日K线，生成预置 market.candlestick 模板并自动绑定。'})
+    expect(prompt).toContain('独立面板')
+    expect(prompt).toContain('"variant":"candlestick"')
+    expect(prompt).not.toContain('统一遵循 EWork 工作台 Figma 组件规范')
+    const invalid=buildResearchTaskPrompt({...containerRequest(),prompt:'制作 market.unknown 页面'})
+    expect(invalid).toContain('统一遵循 EWork 工作台 Figma 组件规范')
+  })
+
   it('uses the selected document body for an interactive activity page or a professional journey map', async () => {
     const { buildResearchTaskExecutionPrompt } = await runtimeModule()
     for (const requirement of ['制作报名活动页，按钮打开报名说明', '制作专业用户体验地图，包含阶段、触点、情绪和改进机会']) {
@@ -1147,7 +1157,7 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.tools={schemas:vi.fn(()=>[
       {name:'ework__datayes_call',description:'调用通联 DataYes 金融数据 API'},
       {name:'ework__other_source',description:'用户配置的其他数据来源'},
-      {name:'web_search'},{name:'web_fetch'},{name:'financial_query'},{name:'research_context_read'},
+      {name:'web_search'},{name:'web_fetch'},{name:'financial_query'},{name:'research_context_read'},{name:'research_context_list'},{name:'research_context_search'},
       {name:'bash'},{name:'write'},{name:'subagent'},{name:'ask_user_question'}
     ])}
     const handle=await fixture.start('工作台：ETF研究\n本面板：最新ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。')
@@ -1155,7 +1165,7 @@ describe('Research task Subagent adapter', () => {
     expect(child.prompt[0].text).toContain('data-bound')
     expect(child.prompt[0].text).toContain('mapping 的模板结构')
     expect(child.prompt[0].text).not.toContain('唯一交付格式：')
-    expect(child.toolFilter.allow).toEqual(['ework__datayes_call','ework__other_source','web_search','web_fetch','research_context_read'])
+    expect(child.toolFilter.allow).toEqual(['ework__datayes_call','ework__other_source','web_search','web_fetch'])
     expect(child.prompt[0].text).toContain('已指定使用配置的插件')
     await handle.dispose()
   })
