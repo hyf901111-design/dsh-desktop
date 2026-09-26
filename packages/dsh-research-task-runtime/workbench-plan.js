@@ -168,7 +168,7 @@ function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
     if (artifact.type === 'market' && artifact.variant === 'scatter' && Array.isArray(artifact.items)) {
         const index = artifact.items.findIndex(i => !str(i?.label, 200) || !Number.isFinite(i?.x) || !Number.isFinite(i?.y));
-        if (index !== -1) return `散点第${index + 1}项需有 label、非负数值 x 和 y；已提供的 name/company 可作为 label。`;
+        if (index !== -1) return `散点第${index + 1}项需有 label、有限数值 x 和 y（允许负值）；已提供的 name/company 可作为 label。`;
     }
     if (artifact.type === 'market' && artifact.variant === 'pipeline' && Array.isArray(artifact.items)) {
         if (!Array.isArray(artifact.stages) || artifact.stages.length < 2) return '管线需有至少两个公共阶段名 stages；可将 phases 作为别名。';
@@ -260,6 +260,10 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !types.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
+        // Correct a metadata-only planner mismatch before launching a child.
+        // Existing supplied data remains subject to its original schema.
+        if (!p.artifact && p.type === 'market' && /柱状图|条形图/iu.test(p.title) && !/行业|配置|资金流/u.test(p.title))
+            p = {...p,type:'chart',prompt:`chart.bar；${p.prompt.replace(/variant\s*[:：=]\s*metrics/iu,'')}`};
         // A planner may include the selected template with empty data arrays.
         // That is a pending fetch, not a completed artifact. Never discard even
         // one supplied observation, date or note under this narrow recovery.
@@ -312,5 +316,5 @@ export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 
 export function workbenchPanelPrompt(input, p) {
     const template = workbenchDesignTemplate(p);
     const origin = ['chart','reports','news','gantt'].includes(p.type) ? 'Figma 组件族参考' : 'Figma 节点';
-    return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线单标的用 candles，多标的用 datasets，成交量缺失填 null，均不得用通用 chart 或自写 HTML 替代。` : ''}组件样式、深浅主题、字体和几何由宿主模板负责；仅提交数据，不自造视觉样式。用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。`;
+    return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线单标的用 candles，多标的用 datasets，成交量缺失填 null，均不得用通用 chart 或自写 HTML 替代。` : ''}${p.type === 'chart' ? `必须输出 ${template.id.endsWith('.bar') ? 'chart.bar' : 'chart.line'} 的结构化数据，labels 与 series.values 等长。` : ''}组件样式、深浅主题、字体和几何由宿主模板负责；仅提交数据，不自造视觉样式。用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。`;
 }

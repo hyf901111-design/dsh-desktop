@@ -59,6 +59,8 @@ const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
+  // A chart named explicitly by the user must not degrade to generic metrics.
+  if (/散点|scatter/iu.test(panel.title ?? '')) return 'scatter';
   // A planner may repeat the whole workbench request in every panel prompt.
   // Select these two distinct financial cards from their own titles first.
   if (/基金.{0,8}行业|行业.{0,8}(?:暴露|偏离)|fund[.-]industry/iu.test(panel.title ?? '')) return 'fund-industry';
@@ -116,7 +118,7 @@ export function workbenchDesignTemplate(panel = {}) {
     return { ...market[variant], ...researchMarketContentDimensions(variant, panel.artifact), version: WORKBENCH_DESIGN_VERSION, variant };
   }
   const artifact = panel.artifact ?? {};
-  const semanticType = panel.type === 'chart' ? 'chart.' + (artifact.variant === 'bar' ? 'bar' : 'line') : panel.type;
+  const semanticType = panel.type === 'chart' ? 'chart.' + (artifact.variant === 'bar' || /chart\.bar|柱状|条形/iu.test(`${panel.title ?? ''} ${panel.prompt ?? ''}`) ? 'bar' : 'line') : panel.type;
   const terminal = TERMINAL_GENERIC_TEMPLATES[semanticType];
   if (terminal) {
     const hasData = (artifact.items?.length ?? artifact.metrics?.length ?? artifact.rows?.length ?? artifact.labels?.length ?? 0) > 0;

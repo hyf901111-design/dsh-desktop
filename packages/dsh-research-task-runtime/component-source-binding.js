@@ -1,4 +1,4 @@
-import { templateDataIssue } from './template-data-contract.js'
+import { templateDataIssue, templateSourceDataIssue } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
 import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from './component-data-refresh.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
@@ -150,6 +150,8 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   }
   const mapping=singleSourceMapping(candidate.mapping,responses)
   const data=materializeComponentMapping(mapping,responses,now)
+  const sourceIssue=templateSourceDataIssue(data)
+  if(sourceIssue)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
   const issue=templateDataIssue(data)
   if(issue)throw Error(issue)
   const output=acceptArtifactOutput(JSON.stringify(data))

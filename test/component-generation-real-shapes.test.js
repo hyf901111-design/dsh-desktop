@@ -66,3 +66,28 @@ it('keeps a sourced bar chart as a refreshable fixed template with series and ke
  expect(d.querySelector('.chart-readout').textContent).toContain('甲')
  expect(d.querySelector('.chart-readout').textContent).toContain('32.2')
 })
+
+it('keeps explicit chart semantics when a planner mistakenly labels the panel as metrics',async()=>{
+ const {validateWorkbench,workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+ const {marketVariant}=await import('../packages/dsh-research-task-runtime/workbench-design-contract.js')
+ const plan=validateWorkbench({requestId:'semantics',title:'股票工作台',panels:[
+  {title:'估值与涨跌幅散点图',type:'market',size:'large',prompt:'variant: metrics；横轴PE纵轴涨跌幅'},
+  {title:'六股成交额柱状图',type:'market',size:'large',prompt:'variant: metrics；柱状呈现成交额'}]})
+ expect(marketVariant(plan.panels[0])).toBe('scatter')
+ expect(plan.panels[1].type).toBe('chart')
+ expect(workbenchPanelPrompt(plan,plan.panels[1])).toContain('chart.bar')
+})
+it('converts absolute heatmap sizing weights to labelled sample shares without mutating the source',()=>{
+ const items=[{label:'甲',weight:300000000000,change:-1},{label:'乙',weight:100000000000,change:2}]
+ const d=documentFor({variant:'heatmap',items})
+ expect(d.body.textContent).toContain('样本内权重 75.00%')
+ expect(d.body.textContent).not.toContain('300000000000%')
+ expect(items[0].weight).toBe(300000000000)
+})
+
+it('unwraps one-row query results in a table while preserving multi-row results as invalid',()=>{
+ const data=materializeComponentMapping({...base,variant:'table',columns:['代码','价格'],rows:[{$from:'a',$each:'rows',$take:1,$map:[{$path:'code'},{$path:'price'}]},{$from:'b',$each:'rows',$take:1,$map:[{$path:'code'},{$path:'price'}]}]}, {a:{rows:[{code:'510300',price:4.5}]},b:{rows:[{code:'510500',price:6.2}]}})
+ expect(data.rows).toEqual([['510300','4.5'],['510500','6.2']])
+ const d=documentFor(data);expect(d.querySelectorAll('tbody tr')).toHaveLength(2)
+ expect(acceptArtifactOutput(JSON.stringify({...data,rows:[[['甲',1],['乙',2]]]}))).toBeUndefined()
+})
