@@ -85,6 +85,15 @@ it('rolls a current-date query anchor for recent panels but preserves fixed hist
  const past=structuredClone(fixed);past.requests[0].args.url_params.date='20260826'
  expect(resolveBoundComponent(JSON.stringify(past),[{...records[0],args:past.requests[0].args}],now,{rollingDates:true}).recipe.requests[0].args.url_params.date).toBe('20260826')
 })
+it('moves both ends of a recent market or news window so refresh does not freeze on old pages',()=>{
+ for(const [begin,end,start,finish]of [['beginDate','endDate','20260916','20260926'],['start_time','end_time','2026-09-01','2026-09-26']]){
+  const candidate=structuredClone(draft);candidate.requests[0].args={url_params:{[begin]:start,[end]:finish}}
+  const result=resolveBoundComponent(JSON.stringify(candidate),[{...records[0],args:candidate.requests[0].args}],now,{rollingDates:true})
+  expect(result.recipe.requests[0].args.url_params[end].$date.offsetDays??0).toBe(0)
+  expect(result.recipe.requests[0].args.url_params[begin].$date.offsetDays).toBe(begin==='beginDate'?-10:-25)
+  expect(resolveBoundComponent(JSON.stringify(candidate),[{...records[0],args:candidate.requests[0].args}],now).recipe.requests[0].args).toEqual(candidate.requests[0].args)
+ }
+})
 it('captures only matching successful structured plugin results from public events',()=>{
  const collector=componentSourceCollector([tool])
  const call=id=>({type:'tool/call',data:{callId:id,name:tool,arguments:JSON.stringify(args)}})
