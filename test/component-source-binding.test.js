@@ -142,6 +142,22 @@ it('rolls a current-date query anchor for recent panels but preserves fixed hist
  const past=structuredClone(fixed);past.requests[0].args.url_params.date='20260826'
  expect(resolveBoundComponent(JSON.stringify(past),[{...records[0],args:past.requests[0].args}],now,{rollingDates:true}).recipe.requests[0].args.url_params.date).toBe('20260826')
 })
+it('normalizes serialized date rules only when their resolved arguments match a successful call',()=>{
+ for(const date of ['{$date:{format:"yyyyMMdd",timezone:"Asia/Shanghai",offsetDays:0}}','{"$date":{"format":"yyyyMMdd","timezone":"Asia/Shanghai"}}']){
+  const input=structuredClone(draft);input.requests[0].args.url_params.date=date
+  const result=resolveBoundComponent(JSON.stringify(input),records,now)
+  expect(result.data.items[0].value).toBe('4.515 元')
+  expect(result.recipe.requests[0].args.url_params.date.$date.format).toBe('yyyyMMdd')
+  expect(input.requests[0].args.url_params.date).toBe(date)
+ }
+ const wrong=structuredClone(draft)
+ wrong.requests[0].args.url_params.date='{$date:{format:"yyyyMMdd",offsetDays:-1}}'
+ expect(()=>resolveBoundComponent(JSON.stringify(wrong),records,now)).toThrow(/本轮已成功/)
+ wrong.requests[0].args.url_params.date='{$date:{format:"yyyyMMdd",extra:"ignored"}}'
+ expect(()=>resolveBoundComponent(JSON.stringify(wrong),records,now)).toThrow(/日期规则/)
+ wrong.requests[0].args.url_params.date='{$date:{format:process.env.SECRET}}'
+ expect(()=>resolveBoundComponent(JSON.stringify(wrong),records,now)).toThrow(/日期规则/)
+})
 it('moves both ends of a recent market or news window so refresh does not freeze on old pages',()=>{
  for(const [begin,end,start,finish]of [['beginDate','endDate','20260916','20260926'],['start_time','end_time','2026-09-01','2026-09-26']]){
   const candidate=structuredClone(draft);candidate.requests[0].args={url_params:{[begin]:start,[end]:finish}}
