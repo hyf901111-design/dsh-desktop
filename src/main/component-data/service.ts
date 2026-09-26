@@ -44,10 +44,11 @@ export async function createComponentDataService(options:{file:string;integratio
   if(!args||typeof args!=='object')throw Error('数据操作参数无效')
   const rows=engine.list(sessionId),binding=rows.find((b:any)=>b.nodeId===args.nodeId)
   if(args.action==='list')return rows
-  if(args.action==='bind'){
+  if(args.action==='bind'||args.action==='bind-generated'){
    const {workspace}=await identity(sessionId)
    const recipe=typeof args.recipe==='string'?JSON.parse(args.recipe):args.recipe
-   return engine.bind({...recipe,sessionId,nodeId:args.nodeId,workspaceId:workspace.workspaceId})
+   if(args.action==='bind-generated'&&binding)return binding
+   return engine.bind({...recipe,sessionId,nodeId:args.nodeId,workspaceId:workspace.workspaceId},args.action==='bind-generated'?args.initialSpec:undefined)
   }
   if(!binding)throw Error('组件尚未绑定数据接口。请让助手用已调用成功的接口和字段映射设置数据源。')
   if(args.action==='refresh')return engine.refresh(binding.id)

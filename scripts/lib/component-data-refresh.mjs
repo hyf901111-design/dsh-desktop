@@ -2,9 +2,18 @@ const begin='/* ODYSSEY_COMPONENT_DATA_START */',end='/* ODYSSEY_COMPONENT_DATA_
 function openComponentData(sessionId,node,action='settings') {
   window.dispatchEvent(new CustomEvent('sherlock:component-data-open',{detail:{sessionId,nodeId:node.id,title:node.title||node.containerSpec?.title||'组件',action}}));
 }
-function ComponentDataSettings() {
+function ComponentDataSettings({sessionId,canvasRoot}) {
  const [target,setTarget]=react.useState(null),[binding,setBinding]=react.useState(null),[error,setError]=react.useState(''),[busy,setBusy]=react.useState(false);
  const closeRef=react.useRef(null);
+ react.useEffect(()=>{
+  const root=canvasRoot?.current,bridge=window.dshDesktop?.componentData;
+  if(!root||!sessionId||typeof bridge?.setVisible!=='function')return;
+  let intersects=true;
+  const send=()=>{const active=intersects&&document.visibilityState!=='hidden'&&root.isConnected&&root.getClientRects().length>0;void bridge.setVisible(sessionId,active).catch(()=>{});};
+  const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{intersects=entries.some(e=>e.isIntersecting);send();}):null;
+  observer?.observe(root);document.addEventListener('visibilitychange',send);const timer=setInterval(send,5000);send();
+  return()=>{clearInterval(timer);observer?.disconnect();document.removeEventListener('visibilitychange',send);void bridge.setVisible(sessionId,false).catch(()=>{});};
+ },[sessionId,canvasRoot]);
  react.useEffect(()=>{const open=e=>{setTarget(e.detail);setError('');setBinding(null)};window.addEventListener('sherlock:component-data-open',open);return()=>window.removeEventListener('sherlock:component-data-open',open)},[]);
  react.useEffect(()=>{
   if(!target)return;let active=true;
@@ -22,10 +31,10 @@ function ComponentDataSettings() {
  const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs;
  return react_dom.createPortal(jsx('div',{className:'odyssey-data-backdrop',onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();if(e.target===e.currentTarget)setTarget(null)},children:jsxs('section',{className:'odyssey-data-settings',role:'dialog','aria-modal':true,'aria-label':'组件数据与自动更新',onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape')setTarget(null)},children:[
   jsxs('header',{children:[jsxs('div',{children:[jsx('h3',{children:'数据与自动更新'}),jsx('p',{children:target.title})]}),jsx('button',{ref:closeRef,type:'button',className:'odyssey-data-close','aria-label':'关闭数据设置',onClick:()=>setTarget(null),children:'×'})]}),
-  binding?jsxs('div',{children:[jsx('p',{className:'odyssey-data-status',role:'status',children:label[binding.status]||'已就绪'}),jsx('div',{className:'odyssey-data-sources',children:[...new Set(binding.requests.map(r=>r.sourceName||r.toolId))].map(name=>jsx('p',{children:name},name))}),
+  binding?jsxs('div',{children:[jsx('p',{className:'odyssey-data-status',role:'status',children:binding.viewPaused?'离开看板，已暂停自动更新':label[binding.status]||'已就绪'}),jsx('div',{className:'odyssey-data-sources',children:[...new Set(binding.requests.map(r=>r.sourceName||r.toolId))].map(name=>jsx('p',{children:name},name))}),
    jsxs('label',{children:['更新频率',jsx('select',{value:binding.intervalMinutes||0,disabled:busy,onChange:e=>void change({intervalMinutes:Number(e.target.value),enabled:Number(e.target.value)>0}),children:[0,1,5,15,30,60,240,1440,...(![0,1,5,15,30,60,240,1440].includes(binding.intervalMinutes)?[binding.intervalMinutes]:[])].map(n=>jsx('option',{value:n,children:n===0?'仅手动':n>=60&&n%60===0?'每 '+n/60+' 小时':'每 '+n+' 分钟'},n))})]}),
    jsxs('dl',{children:[jsx('dt',{children:'数据时点'}),jsx('dd',{children:binding.dataAsOf||'见组件内来源说明'}),jsx('dt',{children:'上次成功'}),jsx('dd',{children:format(binding.lastSuccess)}),jsx('dt',{children:'下次更新'}),jsx('dd',{children:binding.enabled?format(binding.nextRun):'未启用'})]}),
-   jsx('p',{className:'odyssey-data-help',children:'客户端运行时按设置取数。更新保留组件样式和布局；取数失败时继续显示上次数据。'}),
+   jsx('p',{className:'odyssey-data-help',children:'查看该看板时按设置取数，离开后自动暂停。更新保留组件样式、布局和交互状态；取数失败时继续显示上次数据。'}),
    jsxs('footer',{children:[jsx('button',{type:'button',disabled:busy||!binding.intervalMinutes,onClick:()=>void change({enabled:!binding.enabled}),children:binding.enabled?'暂停更新':'恢复更新'}),jsx('button',{type:'button',disabled:busy,onClick:()=>void run(),children:busy?'取数中…':'立即更新'})]})
   ]}):jsx('p',{children:'尚未绑定数据源。请在对话中说明需要持续更新的数据，助手会保存成功取数的接口和更新规则。'}),
   (error||binding?.error)&&jsx('p',{className:'odyssey-data-error',role:'alert',children:error||binding.error})
@@ -33,6 +42,7 @@ function ComponentDataSettings() {
 }
 const css=`.odyssey-data-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#0005;padding:24px}.odyssey-data-settings{width:min(440px,100%);max-height:calc(100vh - 48px);overflow:auto;padding:24px;border-radius:16px;background:var(--surface,#fff);color:var(--text-primary,#202124);box-shadow:0 16px 64px #0004;border:1px solid #8884;font:14px/1.6 system-ui}.odyssey-data-settings header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.odyssey-data-settings header>div{min-width:0;flex:1}.odyssey-data-settings button.odyssey-data-close{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;min-height:32px;padding:0;line-height:1;font-size:20px;border:0;background:transparent;border-radius:6px;align-self:flex-start}.odyssey-data-settings button.odyssey-data-close:focus-visible{outline:2px solid #35a4ff;outline-offset:2px}.odyssey-data-settings h3{font-size:18px;margin:0}.odyssey-data-settings p{margin:8px 0;overflow-wrap:anywhere}.odyssey-data-settings label{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:20px 0}.odyssey-data-settings button,.odyssey-data-settings select{appearance:none;background:#8882;color:inherit;border:1px solid #8884;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}.odyssey-data-settings select{appearance:auto;min-width:148px}.odyssey-data-settings button:disabled{opacity:.45;cursor:default}.odyssey-data-settings button:hover:not(:disabled){background:#8883}.odyssey-data-settings dl{display:grid;grid-template-columns:auto 1fr;gap:8px 20px}.odyssey-data-settings dd{margin:0;text-align:right;overflow-wrap:anywhere}.odyssey-data-help,.odyssey-data-settings dt{color:var(--text-secondary,#777)}.odyssey-data-settings footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}.odyssey-data-error{color:#d76a52}.odyssey-data-status{font-weight:600}.odyssey-data-sources{padding:10px 14px;border-radius:8px;background:#8881}@media(prefers-color-scheme:dark){.odyssey-data-settings{background:#242424;color:#eee}.odyssey-data-settings option{background:#242424}}`;
 export function patchComponentDataRefresh(source){
+ source=source.replace('(ComponentDataSettings,{})','(ComponentDataSettings,{sessionId,canvasRoot:rootRef})');
  const settingsButton=`(0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-component-data-settings':'',onClick:()=>choose(()=>openComponentData(sessionId,node)),children:'数据源与自动更新'})`;
  const settingsWithLegacyStop=`sherlockShared(sessionId)?(0,react_jsx_runtime.jsx)('button',{type:'button',role:'menuitem','data-stop-legacy-refresh':'',disabled:editingPrompt||!node.refreshMinutes,onClick:()=>choose(()=>onSetRefresh?.(node,0)),children:node.refreshMinutes?'关闭旧自动刷新':'共享组件暂不支持数据自动更新'}):${settingsButton}`;
  const refreshButton=`onClick: () => choose(() => sherlockShared(sessionId)?onRefresh?.(node,node.containerPrompt):openComponentData(sessionId,node,'refresh')), children: sherlockShared(sessionId)?"重新生成":"刷新数据"`;
@@ -50,6 +60,6 @@ export function patchComponentDataRefresh(source){
  const timerStart=source.indexOf('const refreshRef = (0, react.useRef)(onGenerate);'),timerEnd=source.indexOf('const activeGeneration =',timerStart);
  if(timerStart<0||timerEnd<timerStart)throw Error('Legacy refresh timer anchor missing');
  source=source.slice(0,timerStart)+'/* Data refresh is scheduled by the host; never start a generation timer here. */\n'+source.slice(timerEnd);
- replace("(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace}),", "(0,react_jsx_runtime.jsx)(ComponentDataSettings,{}),(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace}),");
+ replace("(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace}),", "(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace}),");
  return source;
 }

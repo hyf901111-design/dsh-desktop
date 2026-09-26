@@ -12,6 +12,22 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('defaults to one minute and pauses automatic work outside the visible board',async()=>{
+  const f=setup();await f.service.load();const {intervalMinutes,...input}=f.input;const b=await f.service.bind(input)
+  expect(b).toMatchObject({intervalMinutes:1,enabled:true})
+  f.now(170000);await f.service.tick();expect(f.execute).not.toHaveBeenCalled()
+  f.service.setVisible('s',true);await f.service.tick();expect(f.execute).toHaveBeenCalledTimes(1)
+  f.now(240000);await f.service.tick();expect(f.execute).toHaveBeenCalledTimes(1)
+  f.service.setVisible('s',true);await f.service.tick();expect(f.execute).toHaveBeenCalledTimes(2)
+  f.service.setVisible('s',false);expect(f.service.list()[0].viewPaused).toBe(true)
+ })
+ it('cancels an in-flight automatic fetch on navigation and ignores its late result',async()=>{
+  const f=setup();await f.service.load();await f.service.bind(f.input);f.now(170000);f.service.setVisible('s',true)
+  let release;f.execute.mockImplementationOnce(()=>new Promise(resolve=>{release=resolve}))
+  const pending=f.service.tick();await vi.waitFor(()=>expect(release).toBeTruthy())
+  f.service.setVisible('s',false);release({items:[{name:'指数',price:999}],date:'2026-09-26'});await pending
+  expect(f.apply).not.toHaveBeenCalled();expect(f.service.list()[0]).toMatchObject({status:'idle',viewPaused:true})
+ })
  it('decodes DataYes source-prefixed JSON without dropping provenance or nested data',()=>{
   const payload={provenance:{api_name:'getMktIdxd',source_no:'9'},data:{retCode:1,data:[{name:'指数 {A}',value:101}]}}
   const wrapped={content:[{type:'text',text:'=== 已登记来源 SOURCES ===\n9 | 接口数据\n=== END SOURCES ===\n提示：引用使用来源编号。\n'+JSON.stringify(payload)}]}
