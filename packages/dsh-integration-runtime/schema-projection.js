@@ -32,8 +32,14 @@ export function projectMcpInputSchema(input) {
       result.properties = Object.fromEntries(Object.entries(node.properties ?? {}).map(([key, value]) => [key, project(value, depth + 1)]))
       if (Array.isArray(node.required)) result.required = node.required.filter(key => Object.hasOwn(result.properties, key))
       if (typeof node.additionalProperties === 'boolean') result.additionalProperties = node.additionalProperties
-      // Schema-valued additionalProperties cannot be expressed in Harness;
-      // unknown keys remain server-validated rather than silently forbidden.
+      // Dynamic dictionaries must remain explicitly open in the model contract.
+      // An empty properties object without this flag is sampled as {} by some
+      // compatible providers even though JSON Schema defaults to allowing keys.
+      if (node.additionalProperties && typeof node.additionalProperties === 'object') {
+        result.additionalProperties = true
+        const valueType = typeof node.additionalProperties.type === 'string' ? node.additionalProperties.type : 'JSON'
+        result.description = [result.description, `动态键值对象；参数名来自实际接口定义，值类型为 ${valueType}。把已确认的参数逐项填入此对象，不要将有参数的请求传成空对象。`].filter(Boolean).join(' ')
+      }
     } else if (node.type === 'array') {
       if (node.items && typeof node.items === 'object' && !Array.isArray(node.items)) result.items = project(node.items, depth + 1)
     } else {

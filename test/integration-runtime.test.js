@@ -78,9 +78,11 @@ describe('managed integration runtime against real Harness services and HTTP bri
     await f.runtime.sync()
     const tool = f.ctx.tools.get('ework__lookup', f.a)
     expect(tool.parameters.properties.query).toEqual({ type: 'string', description: '检索词' })
-    expect(tool.parameters.properties.filters.additionalProperties).toBeUndefined()
-    expect((await f.invoke()).isError).toBe(false)
+    expect(tool.parameters.properties.filters.additionalProperties).toBe(true)
+    expect(tool.parameters.properties.filters.description).toContain('键值')
+    expect((await f.invoke(f.a, {query:'ETF', filters:{ticker:'510300',beginDate:'20260901',endDate:'20260926',pagesize:'100'}})).isError).toBe(false)
     expect(f.received).toHaveLength(1)
+    expect(f.received[0].arguments.filters).toEqual({ticker:'510300',beginDate:'20260901',endDate:'20260926',pagesize:'100'})
   })
 
   it('rejects an unauthorized workspace, forged agent, and model-supplied identity without issuing requests', async () => {
