@@ -5,6 +5,15 @@ import {acceptArtifactOutput, workbenchMarketVariantIssue, workbenchMarketRecenc
 import {compactHostDashboardHtml,RESEARCH_COMPONENT_CONTROLS_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {marketVariant,workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 const render=spec=>{const out=acceptArtifactOutput(JSON.stringify({version:1,type:'market',title:'源稿行情',asOf:'09.21 15:00 · 情景模拟',...spec}));expect(out).toBeDefined();const w=new Window();w.document.write(JSON.parse(out).html);return w.document}
+it('ignores a malformed neutral-only color matrix without losing any table data or inferring financial colors',()=>{
+ const spec={version:1,type:'market',variant:'table',title:'一致预期',asOf:'2026-09-24',columns:['年度','净利润','EPS','PE'],rows:[['2026E','961.33','20.83','14.13']],tones:[['neutral','neutral','neutral']]}
+ const d=render(spec)
+ expect([...d.querySelectorAll('tbody td')].map(td=>td.textContent)).toEqual(spec.rows[0])
+ expect(d.querySelectorAll('[data-tone=positive],[data-tone=negative]')).toHaveLength(0)
+ expect(acceptArtifactOutput(JSON.stringify({...spec,tones:[['positive']]}))).toBeUndefined()
+ expect(acceptArtifactOutput(JSON.stringify({...spec,rows:[['2026E','961.33']]}))).toBeUndefined()
+ expect(spec.tones).toEqual([['neutral','neutral','neutral']])
+})
 it('renders source metrics with exact data and typography rather than free-form cards',()=>{
  const d=render({variant:'metrics',items:[{label:'上证指数',value:'3,912.48',detail:'+0.64%'},{label:'深证成指',value:'12,648.32',detail:'+1.12%'}]})
  expect(d.querySelector('h1')).toBeNull();expect(d.querySelectorAll('.market-value')).toHaveLength(2)
