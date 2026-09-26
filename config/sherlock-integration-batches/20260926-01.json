@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "04a2fd8b6d843ead6c902faa85ed3bf43b6aa154",
-        "tipCommit": "ebbc91b02e1c24c4974aa469cdd2556844da8d17",
+        "baseCommit": "ebbc91b02e1c24c4974aa469cdd2556844da8d17",
+        "tipCommit": "6ec7b0639d19e93f508f155b955c8e16db714090",
         "commits": [
           {
-            "commit": "ebbc91b02e1c24c4974aa469cdd2556844da8d17",
+            "commit": "6ec7b0639d19e93f508f155b955c8e16db714090",
             "parents": [
-              "04a2fd8b6d843ead6c902faa85ed3bf43b6aa154"
+              "ebbc91b02e1c24c4974aa469cdd2556844da8d17"
             ],
-            "subject": "修复取数后空输出导致自动恢复中断的问题"
+            "subject": "由宿主规范指标分组并恢复K线真实数据日期"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
-            "path": "test/component-source-binding.test.js"
+            "path": "test/component-data-refresh.test.js"
           }
         ],
         "checks": [
@@ -38,13 +38,15 @@
               "npx",
               "vitest",
               "run",
+              "test/component-data-refresh.test.js",
               "test/component-source-binding.test.js",
+              "test/component-data-service.test.ts",
               "test/research-task-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "183项聚焦检查通过，包含已有真实数据但最终输出为空的本地超时恢复",
-            "verifiedCommit": "ebbc91b02e1c24c4974aa469cdd2556844da8d17",
-            "completedAt": "2026-09-26T10:46:31.808448+00:00",
+            "summary": "208项聚焦检查通过；包含K线标题日期降级到真实最后交易日、指标记录分组规范化及空输出有源恢复",
+            "verifiedCommit": "6ec7b0639d19e93f508f155b955c8e16db714090",
+            "completedAt": "2026-09-26T10:51:28.538230+00:00",
             "timeoutMs": 180000
           },
           {
@@ -55,14 +57,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "ebbc91b02e1c24c4974aa469cdd2556844da8d17",
-            "completedAt": "2026-09-26T10:46:31.808448+00:00",
+            "verifiedCommit": "6ec7b0639d19e93f508f155b955c8e16db714090",
+            "completedAt": "2026-09-26T10:51:28.538230+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "上一包真实指数卡日志确认解析undefined中断自动恢复；回归已复现并修复，新包真实刷新验收待完成。"
+          "summary": "真实包中4卡绑定并连续刷新；余下K线/指数失败输出已使用原始公开工具结果离线重放通过，待最终包实机复验。"
         },
         "acceptanceCriteria": [
           "实际成功插件调用的字段映射可同时用于首次渲染和后续刷新",
@@ -75,63 +77,7 @@
         "risks": [
           "外部模型、数据服务时延有波动，真实工作台耗时待复验"
         ],
-        "generatedAt": "2026-09-26T10:46:31.808448+00:00"
-      },
-      "merged": {
-        "mergeCommit": "826b7642c07e6c65c26c3b34dc23b574f28b0ee9",
-        "verificationCommit": "826b7642c07e6c65c26c3b34dc23b574f28b0ee9",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "826b7642c07e6c65c26c3b34dc23b574f28b0ee9",
-            "completedAt": "2026-09-26T10:48:35.113Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "826b7642c07e6c65c26c3b34dc23b574f28b0ee9",
-            "completedAt": "2026-09-26T10:48:35.113Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "826b7642c07e6c65c26c3b34dc23b574f28b0ee9",
-            "completedAt": "2026-09-26T10:48:35.113Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T10:48:35.113Z"
+        "generatedAt": "2026-09-26T10:51:28.538230+00:00"
       }
     }
   ],
