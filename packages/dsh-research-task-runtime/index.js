@@ -1,6 +1,7 @@
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from './component-source-tools.js'
+import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
@@ -2090,6 +2091,7 @@ export async function apply(ctx) {
   const disposeWorkbench = await registerWorkbench(ctx, runtime, { filePath: join(dshHome(), 'sherlock-workbenches.json'), isTrustedRequest, readJsonBody })
   ctx.effect(() => {
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
+    const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
@@ -2099,6 +2101,7 @@ export async function apply(ctx) {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
     } catch (error) {
       disposeSourceGuidance?.()
+      disposeWorkbenchPolicy()
       disposeCompletionNotifications()
       disposeCanvasTools()
       disposeRoutes()
@@ -2107,6 +2110,7 @@ export async function apply(ctx) {
     }
     return async () => {
       disposeSourceGuidance?.()
+      disposeWorkbenchPolicy()
       disposeCompletionNotifications()
       await disposeShared()
       await disposeComputerUseTool()

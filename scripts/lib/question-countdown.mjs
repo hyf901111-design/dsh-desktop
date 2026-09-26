@@ -24,11 +24,13 @@ export function automaticQuestionDraft(question) {
 }
 
 export function patchQuestionCountdown(source) {
-  if (source.includes('odyssey-question-countdown-v1')) return source
+  if (source.includes('odyssey-question-countdown-v2')) return source
   function replace(needle, replacement) {
     if (!source.includes(needle)) throw new Error('Question countdown patch anchor missing: ' + needle.slice(0, 80))
     source = source.replace(needle, replacement)
   }
+  // Existing local installs already contain v1; upgrade them as well as fresh installs.
+  if (!source.includes('odyssey-question-countdown-v1')) {
   replace('function QuestionFlow({ pending, t }) {', `// odyssey-question-countdown-v1\n${startQuestionCountdown.toString()}\n${automaticQuestionDraft.toString()}\nfunction QuestionFlow({ pending, t }) {`)
   replace('const question = questions[index];', `const [countdown, setCountdown] = (0, react.useState)(30);
       const touchedQuestions = (0, react.useRef)(new Set());
@@ -58,5 +60,20 @@ export function patchQuestionCountdown(source) {
       }, [index, busy, error, draft, pending.key]);
 ${anchor}`)
   replace('children: t("action.skip")', 'title: countdown === null ? undefined : "倒计时结束后按推荐方案继续；没有推荐项时由模型自行判断",\n children: t("action.skip") + (countdown === null ? "" : ` (${countdown}s)`)')
+  }
+  replace('odyssey-question-countdown-v1', 'odyssey-question-countdown-v2')
+  // Focus can be restored by the shell or keyboard navigation. Only an actual
+  // choice / edit (updateDraft) cancels the deadline, never merely focusing.
+  replace('onFocus: () => { touchedQuestions.current.add(index); cancelCountdown.current(); setCountdown(null); },\n ', '')
+  replace('focusedQuestions.current.add(index); touchedQuestions.current.add(index); cancelCountdown.current(); setCountdown(null);', 'focusedQuestions.current.add(index);')
+  replace('title: countdown === null ? undefined : "倒计时结束后按推荐方案继续；没有推荐项时由模型自行判断",\n children: t("action.skip") + (countdown === null ? "" : ` (${countdown}s)`)', 'children: t("action.skip")')
+  replace('children: error === null ? null : "key" in error ? t(error.key) : error.text', `children: error === null ? (hasOptions ? (0, react_jsx_runtime.jsx)("span", {
+          className: "odyssey-question-countdown",
+          "data-countdown-state": busy ? "submitting" : countdown === null ? "paused" : "running",
+          "aria-live": "off",
+          children: t("option.recommended") === "Recommended"
+            ? busy ? "Submitting…" : countdown !== null ? countdown + "s until automatic choice" : "Auto-choice paused; submit to continue"
+            : busy ? "正在提交…" : countdown !== null ? countdown + (automaticQuestionDraft(question).selected.length ? " 秒后自动采用推荐项" : " 秒后自动判断并继续") : answered(draft) ? "已选择，提交后继续" : "自动选择已暂停，请继续作答"
+        }) : null) : "key" in error ? t(error.key) : error.text`)
   return source
 }
