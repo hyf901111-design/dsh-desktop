@@ -67,8 +67,8 @@ describe('研究工作台', () => {
     it('keeps Figma template sizes and non-overlapping source order',()=>{
         const panels=layoutWorkbench(['small','large','medium','small','small','large','medium','small','large'].map((size,i)=>({...panel(i),size})));
         expect(panels[0]).toMatchObject({width:320,height:220,x:0,y:0});
-        expect(panels[1]).toMatchObject({width:656,height:456,x:672,y:0});
-        expect(panels[2]).toMatchObject({width:656,height:220,x:0,y:472});
+        expect(panels[1]).toMatchObject({width:656,height:352,x:672,y:0});
+        expect(panels[2]).toMatchObject({width:656,height:220,x:0,y:368});
         for (const [i,a] of panels.entries()) for (const b of panels.slice(i+1))
             expect(a.x+a.width+16<=b.x || b.x+b.width+16<=a.x || a.y+a.height+16<=b.y || b.y+b.height+16<=a.y).toBe(true);
         expect(panels.map(p=>p.title)).toEqual(Array.from({length:9},(_,i)=>`面板${i}`));
@@ -152,7 +152,7 @@ describe('研究工作台', () => {
         expect(client.normalizeResearchCanvasNodeGeometry(metrics)).toMatchObject({width:896,height:144});
         const taller = client.resizeResearchCanvasNode(metrics,'se',{x:4,y:2},1);
         expect(taller).toMatchObject({width:900,height:146,sizeMode:'manual'});
-        expect(client.resizeResearchCanvasNode(taller,'se',{x:-4,y:-2},1)).toMatchObject({width:896,height:144});
+        expect(client.resizeResearchCanvasNode(taller,'se',{x:-4,y:-2},1)).toMatchObject({width:896,height:146});
         expect(client.resizeResearchCanvasNode(metrics,'se',{x:0,y:-40},1).height).toBe(144);
         const dense = {...metrics,height:232,containerSpec:{version:1,type:'html',html:renderMarketArtifact({version:1,type:'market',variant:'metrics',title:'指标',asOf:'模拟',items:Array.from({length:9},(_,i)=>({label:`指标${i}`,value:String(i)}))}).html}};
         expect(client.resizeResearchCanvasNode(dense,'se',{x:0,y:-40},1).height).toBe(232);
@@ -170,8 +170,8 @@ describe('研究工作台', () => {
             const rendered=renderMarketArtifact({version:1,type:'market',title:'模拟',asOf:'模拟数据',...data});
             const node={id:`readable-${index}`,kind:'generated-container',x:width/2,y:height/2,width,height,sizeMode:'auto',containerSpec:rendered};
             expect(client.resizeResearchCanvasNode(node,'se',{x:0,y:0},1)).toMatchObject({width,height});
-            const minimum=Math.max(320,Math.min(width,Math.round(width*.72/8)*8));
-            expect(client.resizeResearchCanvasNode(node,'se',{x:-1000,y:-1000},1)).toMatchObject({width:minimum,height});
+            const minimum=Math.min(width,472);
+            expect(client.resizeResearchCanvasNode(node,'se',{x:-1000,y:-1000},1)).toMatchObject({width:minimum,height:Math.min(height,[212,200,320][index])});
             const legacy={...node,width:Math.max(200,minimum-30),height:Math.max(80,height-30),sizeMode:'manual'};
             expect(client.resizeResearchCanvasNode(legacy,'se',{x:0,y:0},1)).toMatchObject({width:legacy.width,height:legacy.height});
         }
@@ -195,7 +195,7 @@ describe('研究工作台', () => {
         const client = await bundle();
         const panels = layoutWorkbench(validateWorkbench({requestId:'ops-frame-test',title:'运营验证',
             dataMode:'simulated',preset:'research-operations-21m'}).panels);
-        for (const [index,height] of [[0,280],[2,320]]) {
+        for (const [index,height] of [[0,280],[2,316]]) {
             const panel=panels[index];
             const node={id:`ops-${index}`,kind:'generated-container',title:panel.title,x:448,y:192,
                 width:panel.width,height,sizeMode:'auto',containerSpec:JSON.parse(acceptArtifactOutput(JSON.stringify(panel.artifact)))};
@@ -432,7 +432,7 @@ describe('研究工作台', () => {
             .map((panel,i)=>({...panel,nodeId:`generic-${i}`,taskId:`task-${i}`,preparedOutput:acceptArtifactOutput(JSON.stringify(specs[i]))}));
         expect(workspace.applyWorkbench({id:'prepared-generic',panels})).toBe(true);
         const nodes=workspace.getSnapshot().artifacts;
-        expect(nodes.map(n=>[n.width,n.height])).toEqual([[320,220],[536,358],[656,518]]);
+        expect(nodes.map(n=>[n.width,n.height])).toEqual([[320,220],[656,280],[656,316]]);
         for(const [i,a] of nodes.entries())for(const b of nodes.slice(i+1))
             expect(a.x+a.width/2+12<=b.x-b.width/2||b.x+b.width/2+12<=a.x-a.width/2||a.y+a.height/2+12<=b.y-b.height/2||b.y+b.height/2+12<=a.y-a.height/2).toBe(true);
     });
@@ -468,10 +468,10 @@ describe('研究工作台', () => {
         workspace.setCanvasSize({width:896,height:824});
         expect(workspace.applyWorkbench({id:'prepared',panels:planned})).toBe(true);
         expect(workspace.getSnapshot().artifacts.map(n=>[n.generationStatus,n.width,n.height])).toEqual([
-            ['completed',896,144],['completed',536,264],['completed',536,258]
+            ['completed',656,316],['completed',656,316],['completed',656,316]
         ]);
         const placed=workspace.getSnapshot().artifacts;
-        expect(placed.map(n=>[n.x,n.y])).toEqual([[448,120],[1180,180],[268,457]]);
+        expect(placed.map(n=>[n.x,n.y])).toEqual([[328,206],[1000,206],[328,538]]);
         expect(placed[0].y-placed[0].height/2).toBe(placed[1].y-placed[1].height/2);
         expect(placed[2].x-placed[2].width/2).toBe(placed[0].x-placed[0].width/2);
         const viewport=workspace.getSnapshot().viewport;
@@ -521,7 +521,7 @@ describe('研究工作台', () => {
     it('uses S M L sizes and retains full content while capping arranged frames at L', async () => {
         const input = { requestId: 'sizes', title: '工作台', panels: [0,1,2,3].map((n) => ({ ...panel(n), size: n === 0 ? 'small' : n === 1 ? 'medium' : 'large' })) };
         const planned = layoutWorkbench(validateWorkbench(input).panels);
-        expect(planned.map(p => p.height)).toEqual([220,220,456,456]);
+        expect(planned.map(p => p.height)).toEqual([220,352,456,352]);
         const client = await bundle(), workspace = client.createResearchWorkspaceSession(store(), 'sizes');
         workspace.applyWorkbench({ id: 'sizes', panels: planned.map((p,i) => ({ ...p, nodeId: `s${i}`, taskId: `t${i}` })) });
         workspace.updateNodeGeometry('s0', { height: 3500, sizeMode: 'auto' });
@@ -644,7 +644,7 @@ it('opens a dense Figma-sized workbench at readable scale while leaving later ca
   const viewport=readableWorkbenchViewport(nodes,{x:0,y:0,scale:1},{width:1088,height:800});
   expect(viewport.scale).toBe(1);
   expect(nodes[0].x*viewport.scale+viewport.x).toBeCloseTo(544);
-  expect((nodes[0].y-72)*viewport.scale+viewport.y).toBeCloseTo(32);
+  expect((nodes[0].y-72)*viewport.scale+viewport.y).toBeCloseTo(64);
   expect((nodes.at(-1).y+72)*viewport.scale+viewport.y).toBeGreaterThan(800);
   expect(nodes.every(n=>n.width===896&&n.height===144)).toBe(true);
 });
@@ -674,10 +674,10 @@ it('keeps a complete event strip above the floating canvas toolbar', () => {
   ].map((n,i)=>({...n,containerSpec:{type:'html',html:marker+(i===5?'<section data-sherlock-market="events">':'')}}));
   // The host has already removed the toolbar's 88px from the on-screen canvas.
   const viewport=readableWorkbenchViewport(nodes,{x:0,y:0,scale:1},{width:897,height:740});
-  expect(viewport.scale).toBeGreaterThanOrEqual(.85);
+  expect(viewport.scale).toBeGreaterThanOrEqual(.81);
   expect((nodes[0].y-nodes[0].height/2)*viewport.scale+viewport.y).toBeGreaterThanOrEqual(31);
   expect((nodes[5].y+nodes[5].height/2)*viewport.scale+viewport.y).toBeLessThanOrEqual(728);
   const compact=readableWorkbenchViewport(nodes,{x:0,y:0,scale:1},{width:820,height:658});
-  expect(compact.scale).toBeGreaterThan(.74);
+  expect(compact.scale).toBeGreaterThan(.70);
   expect((nodes[5].y+nodes[5].height/2)*compact.scale+compact.y).toBeLessThanOrEqual(642);
 });

@@ -8,11 +8,12 @@ export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
   // Keep a further 16px of reading space below a complete event strip.
   const hasEvents = nodes.some(n => n.containerSpec?.html?.includes('data-sherlock-market="events"'));
   const bottomInset = hasEvents ? 16 : 32;
+  const topInset = 64; // Reserve the floating research header and its fade.
   const bounds = values => ({
     left: Math.min(...values.map(n => n.x - n.width / 2)), right: Math.max(...values.map(n => n.x + n.width / 2)),
     top: Math.min(...values.map(n => n.y - n.height / 2)), bottom: Math.max(...values.map(n => n.y + n.height / 2))
   });
-  const fit = b => Math.min(1, Math.max(1, width - 64) / (b.right - b.left), Math.max(1, height - 32 - bottomInset) / (b.bottom - b.top));
+  const fit = b => Math.min(1, Math.max(1, width - 64) / (b.right - b.left), Math.max(1, height - topInset - bottomInset) / (b.bottom - b.top));
   const all = bounds(nodes);
   let chosen = all;
   // The shared 21M design marker also appears on the six-card medical preset.
@@ -32,7 +33,7 @@ export function readableWorkbenchViewport(nodes, viewport, canvasSize) {
   return { scale, x: width / 2 - (chosen.left + chosen.right) / 2 * scale,
     // A partial fit is a reading position. Start at the top of the board so
     // subsequent rows remain visible instead of centering one card in space.
-    y: chosen === all ? 32 + (height - 32 - bottomInset) / 2 - (chosen.top + chosen.bottom) / 2 * scale : 32 - chosen.top * scale };
+    y: chosen === all ? topInset + (height - topInset - bottomInset) / 2 - (chosen.top + chosen.bottom) / 2 * scale : topInset - chosen.top * scale };
 }
 
 export function researchWorkbenchMatrixNodes(nodes, left, top) {

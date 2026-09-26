@@ -123,7 +123,7 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
                 close: +(candle.close / 1486.2 * base).toFixed(2)
             }));
         }
-        if (variant === 'table' || variant === 'fund-holdings') {
+        if (variant === 'table') {
             artifact.columns = /估值|同业|公司/u.test(intent)
                 ? ['模拟样本', '模拟收盘', '涨跌幅', 'PE · TTM', '观察重点']
                 : ['模拟样本', '模拟收盘', '涨跌幅', '成交额 / 亿', '观察重点'];
@@ -134,6 +134,13 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
                 ['对比样本 C', '178.20', '+0.74%', '19.6', '库存变化'],
                 ['对比样本 D', '68.40', '-0.24%', '12.8', '广度改善']
             ];
+        }
+        if (variant === 'fund-holdings') {
+            artifact.columns = ['证券名称', '权重 / %', '持仓市值 / 亿', '日涨跌 / %', '贡献 / bp'];
+            artifact.rows = Array.from({length:12}, (_,i) => {
+                const weight=9.6-i*.48, change=+(Math.sin(i+1)*2.3).toFixed(2);
+                return [`模拟标的 ${String.fromCharCode(65+i)}`,weight.toFixed(2),(24.16-i*.72).toFixed(2),(change>0?'+':'')+change.toFixed(2),(change*weight).toFixed(2)];
+            });
         }
         if (variant === 'scatter') artifact.items = artifact.items.map((item, index) => ({ ...item, label: `${subject}样本 ${index + 1}` }));
         if (variant === 'trend') {
