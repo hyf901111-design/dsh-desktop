@@ -41,7 +41,8 @@ export async function resolveIntegrationContext(input: CapabilityContext, option
     const candidates = options.tasks.filter(item => !item.deletedAt && ((item.sessionId && sessionIds.has(item.sessionId)) ||
         item.runs.some(run => run.sessionId && sessionIds.has(run.sessionId)) ||
         (item.component && sessionIds.has(item.component.sessionId) && item.runs.some(run => run.status === 'running'))));
-    const task = candidates.find(item=>item.id===input.taskId) ?? candidates.find(item=>!item.id.startsWith('component-data:'));
+    const selected = candidates.find(item=>item.id===input.taskId);
+    const task = input.taskId?.startsWith('component-data:') ? selected : selected ?? candidates.find(item=>!item.id.startsWith('component-data:'));
     if(input.taskId?.startsWith('component-data:') && !task)throw new IntegrationError('ACCESS_DENIED','组件数据更新已暂停或配置已变化');
     // Explicitly overwrite, rather than spread, all scheduler-owned fields.
     return {

@@ -30,4 +30,5 @@ it('keeps component refresh grants scoped to the selected durable recipe',async(
  expect(await resolveIntegrationContext({...context,taskId:dataTask.id},options)).toMatchObject({taskId:dataTask.id,unattended:true})
  expect(await resolveIntegrationContext({...context,taskId:'forged'},options)).toMatchObject({taskId:ordinary.id,unattended:true})
  await expect(resolveIntegrationContext({...context,taskId:dataTask.id},{...options,tasks:[]})).rejects.toMatchObject({code:'ACCESS_DENIED'})
+ await expect(resolveIntegrationContext({...context,taskId:dataTask.id},{...options,tasks:[ordinary]})).rejects.toMatchObject({code:'ACCESS_DENIED'})
 })

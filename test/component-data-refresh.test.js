@@ -48,3 +48,26 @@ describe('data refresh without generation',()=>{
   await expect(f.service.bind({...f.input,requests:[{key:'x',toolId:'t',args:{Authorization:'Bearer secret'}}]})).rejects.toThrow()
  })
 })
+
+describe('concurrent data consumers and account changes',()=>{
+ it('shares a pending source request across different cards while one consumer is paused',async()=>{
+  const f=setup();await f.service.load();const a=await f.service.bind(f.input),b=await f.service.bind({...f.input,nodeId:'n2'})
+  let release,networkSignal;f.execute.mockImplementationOnce((_b,_r,_a,signal)=>{networkSignal=signal;return new Promise(r=>{release=r})})
+  const one=f.service.refresh(a.id),two=f.service.refresh(b.id)
+  await vi.waitFor(()=>expect(release).toBeTruthy())
+  await f.service.configure(a.id,{enabled:false})
+  expect(networkSignal.aborted).toBe(false)
+  release({items:[{name:'指数',price:103}],date:'2026-09-26'})
+  await Promise.all([one,two]);expect(f.execute).toHaveBeenCalledTimes(1);expect(f.apply).toHaveBeenCalledTimes(1)
+  expect(f.service.list().find(row=>row.id===a.id).status).toBe('paused')
+ })
+ it('drops an old account response and does not schedule its bindings for the next account',async()=>{
+  const f=setup();await f.service.load();const b=await f.service.bind(f.input)
+  let release;f.execute.mockImplementationOnce(()=>new Promise(r=>{release=r}))
+  const pending=f.service.refresh(b.id);await vi.waitFor(()=>expect(release).toBeTruthy())
+  f.service.options.owner=()=> 'next-owner'
+  release({items:[{name:'指数',price:104}],date:'2026-09-26'});await pending
+  expect(f.apply).not.toHaveBeenCalled();expect(f.service.list()).toEqual([])
+  f.now(99999999);await f.service.tick();expect(f.execute).toHaveBeenCalledTimes(1)
+ })
+})
