@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process'
 import {it,expect} from 'vitest'
 import {Window} from 'happy-dom'
 import {acceptArtifactOutput, workbenchMarketVariantIssue, workbenchMarketRecencyIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
@@ -435,4 +436,20 @@ it('keeps heatmap semantic colours and tile geometry out of generic button styli
   expect(tile.matches(selector.trim())).toBe(false);
  }
  expect(tile.getAttribute('style')).toContain('market-positive');
+});
+
+it('executes the packaged preview upgrader with all candle dependencies present',()=>{
+ const source="function buildResearchHtmlPreview(html, title = '') {\n  const theme = initialTheme === 'dark' ? 'dark' : 'light';\n return `<html><body>${html}</body></html>`; }";
+ const groups=[{name:'<标的>',symbol:'A',candles:[{date:'2026-09-24',open:1,high:2,low:1,close:2,volume:null}]}];
+ const saved=`<html><head></head><body data-sherlock-market="candlestick" data-sherlock-design="21m-20260923-v1"><div class="market-candle-controls"><div class="market-candle-ranges"><button disabled>近1年</button></div></div><script>(function candleRuntime(groups){} )(${JSON.stringify(groups)});</script></body></html>`.replace('{} )','{})');
+ const result=JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',`
+  import {patchLegacyDashboardPreview} from './scripts/lib/patch-research-board-client.mjs';
+  import {runInNewContext} from 'node:vm';
+  const patched=patchLegacyDashboardPreview(${JSON.stringify(source)}),context={initialTheme:'dark'};
+  runInNewContext(patched,context);
+  console.log(JSON.stringify({ordinary:context.buildResearchHtmlPreview('<main>test</main>'),saved:context.buildResearchHtmlPreview(${JSON.stringify(saved)}),idempotent:patchLegacyDashboardPreview(patched)===patched}));
+ `],{encoding:'utf8'}));
+ expect(result.ordinary).toContain('<main>test</main>');
+ expect(result.saved).toContain('data-candle-controls-v2');
+ expect(result.idempotent).toBe(true);
 });

@@ -12,6 +12,7 @@ import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve, join } from 'node:path'
 import { compactHostDashboardHtml, researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
+import { candleRuntime, candleControls, refineCandlestickHtml } from '../../packages/dsh-research-task-runtime/market-candlestick.js'
 import { MARKET_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/market-presentation.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
@@ -697,6 +698,9 @@ export function patchLegacyDashboardPreview(source) {
   const previewStart = 'function buildResearchHtmlPreview(html, title = '
   if (!source.includes('function compactHostDashboardHtml(html) {'))
     source = replace(source, previewStart, `${compactHostDashboardHtml.toString()}\n${previewStart}`)
+  if (!source.includes('function refineCandlestickHtml(html) {'))
+    source = replace(source, 'function compactHostDashboardHtml(html) {',
+      `${candleRuntime.toString()}\n${candleControls.toString()}\n${refineCandlestickHtml.toString()}\nfunction compactHostDashboardHtml(html) {`)
   if (!source.includes('const MARKET_PRESENTATION_CSS = '))
     source = replace(source, 'function compactHostDashboardHtml(html) {',
       `const MARKET_PRESENTATION_CSS = ${JSON.stringify(MARKET_PRESENTATION_CSS)};\nfunction compactHostDashboardHtml(html) {`)

@@ -30,8 +30,8 @@ export function candleRuntime(groups) {
  new ResizeObserver(draw).observe(canvas);window.addEventListener('sherlock-theme-change',draw);draw()
 }
 
-const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function candleControls(groups) {
+ const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const length=groups[0].candles.length,initial=length>20?20:'all';
  return `<div class="market-candle-controls" data-candle-controls-v2>${groups.length>1?`<select class="market-candle-symbol" aria-label="选择标的">${groups.map((g,i)=>`<option value="${i}">${escape(g.name)} · ${escape(g.symbol)}</option>`).join('')}</select>`:''}<div class="market-candle-ranges" role="group" aria-label="时间区间">${[[5,'近5日'],[10,'近10日'],[20,'近20日'],[60,'近3月'],[120,'近6月'],[240,'近1年'],['all','全部']].map(([count,label])=>`<button type="button" data-candle-range="${count}" aria-pressed="${count===initial}"${count==='all'?!length?' hidden':'':count>=length?' hidden':''}>${label}</button>`).join('')}</div></div><div class="market-candle-coverage" role="status" style="font-size:10px;line-height:18px;color:var(--sherlock-muted)"></div>`;
 }
