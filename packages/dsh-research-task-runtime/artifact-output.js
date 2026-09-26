@@ -36,7 +36,11 @@ export function acceptArtifactOutput(text) {
 }
 
 export function workbenchMarketRecencyIssue(text, prompt, now = new Date()) {
- if(!/(?:最近|最新|今日|当前|实时)/u.test(prompt)||!/(?:行情|收盘|指数|股价|股票|ETF)/iu.test(prompt)||/(?:情景模拟|模拟数据)/u.test(prompt))return null;
+ // The appended display contract mentions realtime data for every panel.
+ // Only the actual panel request can require a recent daily market quote.
+ const request=(prompt??'').split('仅生成本面板，')[0];
+ if(!/(?:最近|最新|今日|当前|实时)/u.test(request)||!/(?:行情|收盘|指数|股价|股票|ETF)/iu.test(request)||/(?:情景模拟|模拟数据)/u.test(request))return null;
+ if(/月度|季度|年度|季报|年报|产量|利润|营收|20\d{2}Q[1-4]/iu.test(request)&&!/(?:交易日|日行情|收盘|股价|股票行情|实时行情|最新行情)/u.test(request))return null;
  const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='market'&&['metrics','trend'].includes(value.variant));
  if(!candidate)return null;
  const asOf=typeof candidate.asOf==='string'?candidate.asOf:'';

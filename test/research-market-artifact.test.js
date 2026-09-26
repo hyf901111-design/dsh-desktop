@@ -384,3 +384,12 @@ it('rejects an old index snapshot presented as the latest market data',()=>{
  expect(workbenchMarketRecencyIssue(trend('2025-06-09 至 2025-06-10'),request,now)).toContain('20260916 至 20260926')
  expect(workbenchMarketRecencyIssue(trend('2026-09-16 至 2026-09-24'),request,now)).toBeNull()
 })
+
+it('does not apply daily-quote recency rules to monthly and quarterly industry metrics',()=>{
+ const spec=JSON.stringify({version:1,type:'market',variant:'metrics',title:'白酒行业核心指标',asOf:'2026年8月（月度）/ 2026Q2（季度）',items:[{label:'上市公司净利润',value:'749.55 亿元'},{label:'定基价格指数',value:'104.03'}]})
+ const now=new Date('2026-09-26T01:00:00Z')
+ expect(workbenchMarketRecencyIssue(spec,'本面板：白酒行业核心指标\n展示2026Q2利润和2026年8月价格指数\n仅生成本面板，优先使用 market 类型。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据。',now)).toBeNull()
+ expect(workbenchMarketRecencyIssue(spec,'最新白酒行业月度价格指数与季度利润',now)).toBeNull()
+ const daily=JSON.stringify({version:1,type:'market',variant:'metrics',title:'季度观察：最新交易日行情',asOf:'2026-06-30',items:[{label:'收盘价',value:'1200 元'}]})
+ expect(workbenchMarketRecencyIssue(daily,'季度观察：股票最新交易日行情',now)).not.toBeNull()
+})

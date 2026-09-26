@@ -145,7 +145,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     };
     const disposeTool = ctx.tools.register(defineTool({
         name: 'research_workbench_create',
-        description: '在研究画布新增 1–10 个独立面板；此工具不会替换、刷新或删除已有组件。用户要求更新已有组件时，先 research_canvas_inspect；金融模板用 research_canvas_update_market 直接提交结构化数据，其他组件用 research_canvas_apply 修改其 containerSpec；不要把新增结果称为替换。用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据提交 panels，不提交 artifact。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
+        description: '在研究画布新增 1–10 个独立面板；此工具不会替换、刷新或删除已有组件。用户要求更新已有组件时，先 research_canvas_inspect；金融模板用 research_canvas_update_market 直接提交结构化数据，其他组件用 research_canvas_apply 修改其 containerSpec；不要把新增结果称为替换。用户指定数量时严格遵守，不额外增加配套面板。自定义模拟工作台提交 dataMode:"simulated" 和只含 title/prompt/type/size 的 panels；宿主用设计模板一次性生成模拟内容，无需每张面板启动模型，也无需编写 artifact。标准模拟预设：medical-21h、market-overview-21h、research-operations-21m，可只提交 preset。已有完整模拟数据时可提交 artifact。真实数据提交 panels，不提交 artifact。面板子任务不继承主对话的工具返回；如果主对话已取数，必须在对应 prompt 中传递实际数值、日期、单位及真实调用来源，不能只列待查字段或说“已取得”，否则子任务会重复检索。仅调用 financial_query 的记录不得标为通联；不同来源分别标注。返回 accepted 仅表示面板任务已启动，回复应说生成中，不能声称全部完成；prepared 才表示宿主已准备好内容。同一请求重试保持 requestId。返回的 templateIds 与 panels 按顺序对应，回复用户时以最终 templateIds 为准。所有模拟值显著标注；不可虚构链接或声称连接真实行情。',
         parameters: {
             requestId: { type: 'string', required: true, description: '本轮需求的唯一稳定标识，重试保持一致。' },
             title: { type: 'string', required: true },
@@ -153,7 +153,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             generationMode: { type: 'string', enum: ['parallel'], description: '兼容旧调用；模拟数据即使传 parallel 也由宿主本地生成，不启动面板模型。新调用可省略。' },
             preset: { type: 'string', enum: SIMULATED_WORKBENCH_PRESETS, description: '宿主内置的完整模拟工作台。设置后不要传 panels。' },
             panels: { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
-                        title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题、内容边界、数据与来源，以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
+                        title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题与内容边界；主对话已有的数据必须完整带入实际记录、日期、单位与来源，子任务看不到主对话工具返回。以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
                         type: { type: 'string', enum: types, required: true }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
                         artifact: { type: 'object', additionalProperties: true, description: '可选。已有完整模拟数据时提交；未提交则由宿主生成。禁止脚本和外部链接。' }
                     } } }
