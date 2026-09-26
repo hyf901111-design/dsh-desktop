@@ -31,9 +31,18 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(Object.hasOwn(mapping,'$date'))return formattedDate(mapping.$date,now)
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
  if(Object.hasOwn(mapping,'$each')){
-  const rows=path(source,mapping.$each)
+  let rows=path(source,mapping.$each)
   if(!Array.isArray(rows)||rows.length>2000)throw Error('列表字段不存在或超过 2000 条')
-  return rows.map(item=>next(mapping.$map,item))
+  if(mapping.$sortBy!==undefined){
+   if(typeof mapping.$sortBy!=='string'||!['asc','desc',undefined].includes(mapping.$order))throw Error('列表排序无效')
+   const keyed=rows.map(value=>({value,key:path(value,mapping.$sortBy)}))
+   if(keyed.some(v=>typeof v.key!=='string'&&!(typeof v.key==='number'&&Number.isFinite(v.key))))throw Error('排序字段缺失或不是数值/文本')
+   rows=keyed.sort((a,b)=>(a.key<b.key?-1:a.key>b.key?1:0)*(mapping.$order==='desc'?-1:1)).map(v=>v.value)
+  }
+  if(mapping.$take!==undefined){if(!Number.isInteger(mapping.$take)||!mapping.$take||Math.abs(mapping.$take)>2000)throw Error('列表数量无效');rows=mapping.$take>0?rows.slice(0,mapping.$take):rows.slice(mapping.$take)}
+  const mapped=rows.map(item=>next(mapping.$map,item))
+  if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return mapped[0]}
+  return mapped
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
@@ -73,12 +82,27 @@ function jsonFromDataText(text){
  }
  return values
 }
+function datayesEvidence(text){
+ const sources=text.match(/=== 已登记来源 SOURCES[^\n]*===\n([\s\S]*?)=== END SOURCES ===/u)?.[1]
+ const evidence=text.match(/=== 可引用证据 EVIDENCE ===\n([\s\S]*?)=== END EVIDENCE ===/u)?.[1]
+ if(!sources||!evidence)return null
+ const rows=[]
+ for(const line of sources.split('\n')){
+  const m=line.match(/^(\d+)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*(.*?)\s*\|\s*(https?:\/\/[^\s|]+)(?:\s*\|.*)?$/u)
+  if(!m)continue
+  const excerpts=[...evidence.matchAll(/^\[(\d+):E\d+\]\s*(.+)$/gmu)].filter(e=>e[1]===m[1]).map(e=>e[2])
+  rows.push({id:m[1],category:m[2].trim(),source:m[3].trim(),date:m[4],title:m[5].trim(),url:m[6],summary:excerpts[0]??'',excerpts})
+ }
+ return rows.length&&rows.length<=200?{sources:rows}:null
+}
 export function decodeDataResponse(value){
  if(value?.isError)throw Error('数据接口返回错误')
  if(record(value?.structuredContent))value=value.structuredContent
  else if(Array.isArray(value?.content)){
   if(Buffer.byteLength(JSON.stringify(value.content))>2_000_000)throw Error('接口返回的数据过大')
-  const json=value.content.filter(c=>c.type==='text').flatMap(c=>jsonFromDataText(c.text))
+  const text=value.content.filter(c=>c.type==='text').map(c=>c.text).join('\n')
+  const evidence=datayesEvidence(text)
+  const json=evidence?[evidence]:value.content.filter(c=>c.type==='text').flatMap(c=>jsonFromDataText(c.text))
   if(json.length!==1)throw Error('接口没有返回唯一的结构化 JSON 数据')
   value=json[0]
  }
