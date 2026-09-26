@@ -21,7 +21,8 @@ export function extractArtifactObjects(text) {
 }
 export function acceptArtifactOutput(text) {
  const candidates=extractArtifactObjects(text);
- for(const candidate of candidates.reverse()) {
+ for(const original of candidates.reverse()) {
+  const candidate=normalizeTemplateAliases(original);
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=preserveLongChartCaption(candidate);
@@ -34,6 +35,19 @@ export function acceptArtifactOutput(text) {
   return JSON.stringify(retainTemplateModel(spec,detailedKpiMarket(candidate) ?? candidate));
  }
  return undefined;
+}
+
+// Accept the two common table shapes without asking a model to retranscribe
+// values. Only explicit unique column keys may determine the cell order.
+function normalizeTemplateAliases(value) {
+ if(value?.type!=='market')return value;
+ if(value.variant==='metrics'&&Array.isArray(value.items))return {...value,items:value.items.map(item=>
+  item&&typeof item.change==='string'&&!item.detail?{...item,detail:item.change}:item)};
+ if(!['table','fund-holdings'].includes(value.variant)||!Array.isArray(value.columns)||!value.columns.length||!Array.isArray(value.rows))return value;
+ const keys=value.columns.map(c=>c?.key);
+ if(keys.some(k=>typeof k!=='string'||!k||['__proto__','constructor','prototype'].includes(k))||new Set(keys).size!==keys.length||value.columns.some(c=>typeof c.label!=='string'||!c.label.trim()))return value;
+ if(value.rows.some(row=>!row||Array.isArray(row)||typeof row!=='object'||Object.keys(row).length!==keys.length||keys.some(k=>!Object.hasOwn(row,k))))return value;
+ return {...value,columns:value.columns.map(c=>c.label),rows:value.rows.map(row=>keys.map(k=>row[k]===null?'—':row[k]))};
 }
 
 export function workbenchMarketRecencyIssue(text, prompt, now = new Date()) {
