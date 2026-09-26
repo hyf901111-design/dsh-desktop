@@ -3,7 +3,7 @@ function openComponentData(sessionId,node,action='settings') {
   window.dispatchEvent(new CustomEvent('sherlock:component-data-open',{detail:{sessionId,nodeId:node.id,title:node.title||node.containerSpec?.title||'组件',action}}));
 }
 function ComponentDataSettings({sessionId,canvasRoot}) {
- const [target,setTarget]=react.useState(null),[binding,setBinding]=react.useState(null),[error,setError]=react.useState(''),[busy,setBusy]=react.useState(false);
+ const [target,setTarget]=react.useState(null),[binding,setBinding]=react.useState(null),[error,setError]=react.useState(''),[busy,setBusy]=react.useState(false),[loading,setLoading]=react.useState(false);
  const closeRef=react.useRef(null);
  react.useEffect(()=>{
   const root=canvasRoot?.current,bridge=window.dshDesktop?.componentData;
@@ -14,11 +14,11 @@ function ComponentDataSettings({sessionId,canvasRoot}) {
   observer?.observe(root);document.addEventListener('visibilitychange',send);const timer=setInterval(send,5000);send();
   return()=>{clearInterval(timer);observer?.disconnect();document.removeEventListener('visibilitychange',send);void bridge.setVisible(sessionId,false).catch(()=>{});};
  },[sessionId,canvasRoot]);
- react.useEffect(()=>{const open=e=>{setTarget(e.detail);setError('');setBinding(null)};window.addEventListener('sherlock:component-data-open',open);return()=>window.removeEventListener('sherlock:component-data-open',open)},[]);
+ react.useEffect(()=>{const open=e=>{setTarget(e.detail);setError('');setBinding(null);setLoading(true)};window.addEventListener('sherlock:component-data-open',open);return()=>window.removeEventListener('sherlock:component-data-open',open)},[]);
  react.useEffect(()=>{
   if(!target)return;let active=true;
   const call=(action,extra={})=>window.dshDesktop.componentData.request(target.sessionId,{action,nodeId:target.nodeId,...extra});
-  const refresh=async()=>{try{const rows=await call('list');if(active)setBinding(rows.find(b=>b.nodeId===target.nodeId)||null)}catch(e){if(active)setError(e.message)}};
+  const refresh=async()=>{try{const rows=await call('list');if(active)setBinding(rows.find(b=>b.nodeId===target.nodeId)||null)}catch(e){if(active)setError(e.message)}finally{if(active)setLoading(false)}};
   closeRef.current?.focus();
   if(target.action==='refresh'){setBusy(true);call('refresh').then(refresh).catch(e=>active&&setError(e.message)).finally(()=>active&&setBusy(false));}else void refresh();
   const timer=setInterval(refresh,5000);return()=>{active=false;clearInterval(timer)};
@@ -36,7 +36,7 @@ function ComponentDataSettings({sessionId,canvasRoot}) {
    jsxs('dl',{children:[jsx('dt',{children:'数据时点'}),jsx('dd',{children:binding.dataAsOf||'见组件内来源说明'}),jsx('dt',{children:'上次成功'}),jsx('dd',{children:format(binding.lastSuccess)}),jsx('dt',{children:'下次更新'}),jsx('dd',{children:binding.enabled?format(binding.nextRun):'未启用'})]}),
    jsx('p',{className:'odyssey-data-help',children:'查看该看板时按设置取数，离开后自动暂停。更新保留组件样式、布局和交互状态；取数失败时继续显示上次数据。'}),
    jsxs('footer',{children:[jsx('button',{type:'button',disabled:busy||!binding.intervalMinutes,onClick:()=>void change({enabled:!binding.enabled}),children:binding.enabled?'暂停更新':'恢复更新'}),jsx('button',{type:'button',disabled:busy,onClick:()=>void run(),children:busy?'取数中…':'立即更新'})]})
-  ]}):jsx('p',{children:'尚未绑定数据源。请在对话中说明需要持续更新的数据，助手会保存成功取数的接口和更新规则。'}),
+  ]}):jsx('p',{role:'status',children:loading?'正在读取数据设置…':error?'数据设置暂未载入。':'尚未绑定数据源。请在对话中说明需要持续更新的数据，助手会保存成功取数的接口和更新规则。'}),
   (error||binding?.error)&&jsx('p',{className:'odyssey-data-error',role:'alert',children:error||binding.error})
  ]})}),document.body);
 }

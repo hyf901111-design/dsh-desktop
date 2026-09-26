@@ -8,6 +8,21 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it('repairs a static plugin-backed card once using observed data without fetching again',async()=>{
+ const staticData={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'4.515 元'}]}
+ const start=vi.fn(async input=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(start.mock.calls.length===1?staticData:draft)}],sourceRecords:start.mock.calls.length===1?records:[]}),dispose:async()=>{}}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try {
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情指标\n优先使用 market 类型；variant: metrics。使用通联真实数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  expect(start.mock.calls[1][0].synthesisOnly).toBe(true)
+  expect(start.mock.calls[1][0].prompt).toContain('data-bound')
+  expect(start.mock.calls[1][0].prompt).toContain('"price":4.515')
+  expect(bindData).toHaveBeenCalledOnce()
+ } finally {await runtime.dispose()}
+})
 it('publishes the normal rendered card and binds it to the same task node before completion',async()=>{
  const bindData=vi.fn(async()=>{})
  const adapter={start:async()=>({childSessionId:'child',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records}),dispose:async()=>{}}),bindData,dispose:async()=>{}}

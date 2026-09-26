@@ -49,6 +49,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   if(value===undefined){if(mapping.$optional===true)return null;throw Error('接口缺少字段：'+mapping.$path)}
   if(mapping.$as==='number'){if(value===null||value===''||!Number.isFinite(Number(value)))throw Error('数值字段无效');value=Number(value)}
   if(mapping.$scale!==undefined){if(typeof value!=='number'||!Number.isFinite(mapping.$scale))throw Error('数值换算无效');value*=mapping.$scale}
+  if(mapping.$digits!==undefined){if(typeof value!=='number'||!Number.isFinite(value)||!Number.isInteger(mapping.$digits)||mapping.$digits<0||mapping.$digits>8)throw Error('显示精度无效');value=mapping.$as==='string'?value.toFixed(mapping.$digits):Number(value.toFixed(mapping.$digits))}
   if(mapping.$as==='string'&&value!==null)value=String(value)
   if(mapping.$prefix!==undefined||mapping.$suffix!==undefined)value=String(mapping.$prefix??'')+String(value??'—')+String(mapping.$suffix??'')
   return value
