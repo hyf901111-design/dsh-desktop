@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { preferredComponentSourceTools, componentSourceInstruction } from '../packages/dsh-research-task-runtime/component-source-tools.js'
+import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from '../packages/dsh-research-task-runtime/component-source-tools.js'
 
 it('prefers visible DataYes tools for a financial component without naming unavailable tools', () => {
   const schemas = [
@@ -46,4 +46,33 @@ it('uses the verified Shenwan endpoint and does not copy example dates or force 
   expect(instruction).toContain('接口定义里的示例日期只是示例')
   expect(instruction).toContain('严格遵守工具及业务接口的参数类型')
   expect(instruction).not.toContain('pagesize、pagenum 等参数也必须是字符串')
+})
+
+it('guides the main conversation using its current request and live scoped sources', () => {
+  let guidance
+  let visible = [{name:'ework__macro',description:'通联 DataYes 宏观指标查询'}]
+  const dispose=()=>{}
+  const ctx={systemPrompt:{context:entry=>{guidance=entry;return dispose}},tools:{schemas:()=>visible}}
+  expect(registerComponentSourceGuidance(ctx)).toBe(dispose)
+  const agent={session:{header:{},events:[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'用通联生成白酒行业工作台，含行情和宏观指标'}]}}]}}
+  const text=guidance.text({agent})
+  expect(text).toContain('ework__macro')
+  expect(text).toContain('宏观指标先用关键词发现指标 ID')
+  expect(text).toContain('不代表其他数据类别不可用')
+  expect(text).toContain('不重复相同参数')
+  visible=[]
+  expect(guidance.text({agent})).toBe('')
+  visible=[{name:'ework__macro',description:'通联 DataYes 宏观指标查询'}]
+  agent.session.header.parentSession='parent'
+  expect(guidance.text({agent})).toBe('')
+})
+
+it('does not route simulated requests or tool-result instructions to external sources', () => {
+  let guidance
+  const ctx={systemPrompt:{context:entry=>{guidance=entry}},tools:{schemas:()=>[{name:'ework__data',description:'通联 DataYes API'}]}}
+  registerComponentSourceGuidance(ctx)
+  const session={events:[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'生成白酒工作台，全部使用模拟数据，不取真实数据'}]}}]}
+  expect(guidance.text({agent:{session}})).toBe('')
+  session.events=[{type:'user/message',data:{source:{kind:'tool'},content:[{type:'text',text:'通过通联取股票行情'}]}}]
+  expect(guidance.text({agent:{session}})).toBe('')
 })
