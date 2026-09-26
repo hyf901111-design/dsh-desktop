@@ -21,6 +21,14 @@ stop_sherlock_apps() {
   pkill -x 'Sherlock' 2>/dev/null || true
   pkill -x 'EWork Odyssey Dev' 2>/dev/null || true
   pkill -x 'EWork Odyssey' 2>/dev/null || true
+  for _attempt in $(seq 1 40); do
+    if ! pgrep -x 'Sherlock Dev|Sherlock|EWork Odyssey Dev|EWork Odyssey' >/dev/null; then
+      return 0
+    fi
+    sleep 0.25
+  done
+  echo 'The previous EWork Odyssey process did not exit; refusing to verify a stale runtime.' >&2
+  return 1
 }
 
 ensure_workspace_runtime() {
@@ -50,6 +58,9 @@ build_formal_app() {
 }
 
 open_formal_app() {
+  # Packaging takes minutes. An app reopened in that interval still owns the
+  # Electron singleton, even when its on-disk bundle has since been replaced.
+  stop_sherlock_apps
   open -na "$formal_app"
 }
 

@@ -54,7 +54,8 @@ describe('formal EWork Odyssey build and run', () => {
     )
 
     await executable(path.join(fakeBinDirectory, 'uname'), '#!/bin/sh\necho arm64\n')
-    await executable(path.join(fakeBinDirectory, 'pkill'), '#!/bin/sh\nexit 0\n')
+    await executable(path.join(fakeBinDirectory, 'pkill'), `#!/bin/sh\nrm -f "${fixture}/old-process"\n`)
+    await executable(path.join(fakeBinDirectory, 'pgrep'), `#!/bin/sh\ntest -f "${fixture}/old-process"\n`)
     await executable(
       path.join(fakeBinDirectory, 'npm'),
       `#!/bin/sh
@@ -65,6 +66,8 @@ case "$*" in
     chmod +x "${fixture}/node_modules/node/bin/node"
     ;;
   "run package:formal:dir")
+    # Another launch during packaging must not survive the final launch step.
+    touch "${fixture}/old-process"
     mkdir -p "${packagedApp}/Contents/MacOS"
     touch "${packagedApp}/Contents/MacOS/EWork Odyssey"
     chmod +x "${packagedApp}/Contents/MacOS/EWork Odyssey"
@@ -84,6 +87,7 @@ esac
     await executable(
       path.join(fakeBinDirectory, 'open'),
       `#!/bin/sh
+test ! -f "${fixture}/old-process" || exit 9
 printf '%s\n' "$*" > "${fixture}/opened-app.txt"
 `
     )
@@ -122,6 +126,7 @@ printf '%s\n' "$*" > "${fixture}/opened-app.txt"
 
     await executable(path.join(fakeBinDirectory, 'uname'), '#!/bin/sh\necho arm64\n')
     await executable(path.join(fakeBinDirectory, 'pkill'), '#!/bin/sh\nexit 0\n')
+    await executable(path.join(fakeBinDirectory, 'pgrep'), '#!/bin/sh\nexit 1\n')
     await executable(
       path.join(fakeBinDirectory, 'npm'),
       `#!/bin/sh
