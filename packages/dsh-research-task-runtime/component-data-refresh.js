@@ -69,7 +69,27 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentMapping(mapping,responses,now=new Date()){
- const data=evaluateMapping(mapping,responses,now)
+ const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
+ const data=evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now)
+ if(candle){
+  try{
+   const asOf=evaluateMapping(mapping.asOf,responses,now)
+   if(typeof asOf!=='string'||!asOf.trim())throw Error('K线数据日期必须是单个值')
+   data.asOf=asOf
+  }catch(error){
+   // The candles are the authority for their latest trading date. A malformed
+   // optional header expression must not discard valid, refreshable OHLC rows.
+   // No query timestamp or wall clock is substituted for a trading date.
+   const dates=Array.isArray(data.candles)?data.candles.map(row=>row?.date):[]
+   const valid=date=>typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&Number.isFinite(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date
+   if(!dates.length||!dates.every(valid))throw error
+   data.asOf=dates.reduce((a,b)=>a>b?a:b)+' · 数据截至最后交易日'
+  }
+ }
+ // Multiple source selections naturally produce groups of item records. The
+ // template owns a flat item list; preserve every record and its source order.
+ // Never flatten table rows or arrays of scalar field values.
+ if(Array.isArray(data?.items))data.items=data.items.flatMap(item=>Array.isArray(item)&&item.every(record)?item:[item])
  const display=value=>typeof value==='number'&&Number.isFinite(value)?String(value):value
  if(['kpi','dashboard'].includes(data?.type)||data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)){
   if(Array.isArray(data.items))data.items=data.items.map(item=>({...item,value:display(item.value)}))

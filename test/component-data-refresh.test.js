@@ -1,5 +1,5 @@
 import {describe,it,expect,vi} from 'vitest'
-import {ComponentDataRefresh, evaluateMapping, decodeDataResponse} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
+import {ComponentDataRefresh, evaluateMapping, materializeComponentMapping, decodeDataResponse} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {createCanvasActionController} from '../packages/dsh-research-task-runtime/canvas-actions.js'
 const data={version:1,type:'market',variant:'metrics',title:'指标',asOf:'2026-09-25',items:[{label:'指数',value:'100'}]}
@@ -12,6 +12,21 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('combines mapped groups of metric records without flattening table rows or scalar values',()=>{
+  const sources={a:{rows:[{name:'上证',close:3888.37}]},b:{rows:[{name:'深成',close:13316.97}]}}
+  const mapping={version:1,type:'market',variant:'metrics',title:'指数',items:['a','b'].map(key=>({$from:key,$each:'rows',$map:{label:{$path:'name'},value:{$path:'close'}}}))}
+  expect(materializeComponentMapping(mapping,sources).items).toEqual([{label:'上证',value:'3888.37'},{label:'深成',value:'13316.97'}])
+  expect(materializeComponentMapping({type:'table',rows:[[1,2],[3,4]]},{}).rows).toEqual([['1','2'],['3','4']])
+  expect(materializeComponentMapping({...mapping,items:[[1,2]]},{}).items[0].label).toBeUndefined()
+ })
+ it('derives the candle data date from verified rows when only the header mapping is invalid',()=>{
+  const responses={q:{rows:[{date:'2026-09-23',open:4,high:6,low:3,close:5},{date:'2026-09-24',open:5,high:7,low:4,close:6}]}}
+  const mapping={version:1,type:'market',variant:'candlestick',title:'K线',asOf:{$from:'q',$path:'rows',$single:true,$suffix:' · 通联 DataYes'},candles:{$from:'q',$path:'rows'}}
+  expect(materializeComponentMapping(mapping,responses).asOf).toBe('2026-09-24 · 数据截至最后交易日')
+  expect(materializeComponentMapping({...mapping,asOf:'有效来源日期'},responses).asOf).toBe('有效来源日期')
+  expect(()=>materializeComponentMapping({...mapping,candles:{$from:'q',$path:'absent'}},responses)).toThrow(/接口缺少字段/)
+  expect(()=>materializeComponentMapping(mapping,{q:{rows:[]}})).toThrow(/文本字段/)
+ })
  it('uses a literal missing-data label for absent or null text while retaining real values',()=>{
   const mapping={$from:'q',$each:'reports',$map:{title:{$path:'title'},summary:{$path:'abstractText',$default:'来源未提供摘要'}}}
   expect(evaluateMapping(mapping,{q:{reports:[{title:'A',abstractText:null},{title:'B'},{title:'C',abstractText:'实际摘要'}]}})).toEqual([{title:'A',summary:'来源未提供摘要'},{title:'B',summary:'来源未提供摘要'},{title:'C',summary:'实际摘要'}])
