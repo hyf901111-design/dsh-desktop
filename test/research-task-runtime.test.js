@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it, vi } from 'vitest'
+import { workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 
 const runtimeModule = () => import('../packages/dsh-research-task-runtime/index.js')
 
@@ -725,11 +726,64 @@ describe('Research model connection failures', () => {
 })
 
 describe('Research task ten-slot scheduling', () => {
-  it('queues heavy components at two slots while summary tasks keep their independent capacity', async () => {
+  const templateRequest = (i) => ({...containerRequest('template-'+i),prompt:workbenchPanelPrompt({title:'股票研究'},
+    {title:'行情指标'+i,prompt:'variant: metrics；读取最新行情并保留来源日期',type:'market',size:'medium'})})
+  const metrics = JSON.stringify({version:1,type:'market',variant:'metrics',title:'行情指标',asOf:'2026-09-26 · 离线测试',items:[{label:'价格',value:'10 元'}]})
+  it('runs four template data tasks and admits the next queued card when a slot finishes', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const launches=deferredTaskAdapter()
+    const runtime=new ResearchTaskRuntime({adapter:launches.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),now:()=>Date.parse('2026-09-26T00:00:00Z')})
+    try {
+      const tasks=await Promise.all(Array.from({length:6},(_,i)=>runtime.start(templateRequest(i))))
+      await launches.waitForStarts(4)
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[4].taskId}).state).toBe('queued')
+      launches.complete(tasks[0].taskId,metrics)
+      await launches.waitForStarts(5)
+      expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-4','task-5'])
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[5].taskId}).state).toBe('queued')
+    } finally {await runtime.dispose()}
+  })
+  it('shares capacity between one heavy card and two template cards and releases cancelled work', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const launches=deferredTaskAdapter()
+    const runtime=new ResearchTaskRuntime({adapter:launches.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),now:()=>Date.parse('2026-09-26T00:00:00Z')})
+    try {
+      const heavy=await runtime.start(containerRequest())
+      const templates=await Promise.all(Array.from({length:4},(_,i)=>runtime.start(templateRequest(i))))
+      await launches.waitForStarts(3)
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:templates[2].taskId}).state).toBe('queued')
+      await runtime.start(summaryRequest('summary'))
+      await launches.waitForStarts(4)
+      await runtime.cancel({parentSessionId:'parent-1',taskId:heavy.taskId})
+      await launches.waitForStarts(6)
+      expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-6','task-4','task-5'])
+    } finally {await runtime.dispose()}
+  })
+  it('reduces template concurrency during provider rate limiting and recovers after cooldown', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const launches=deferredTaskAdapter();let now=Date.parse('2026-09-26T00:00:00Z')
+    const runtime=new ResearchTaskRuntime({adapter:launches.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),now:()=>now})
+    try {
+      const tasks=await Promise.all(Array.from({length:8},(_,i)=>runtime.start(templateRequest(i))))
+      await launches.waitForStarts(4)
+      launches.event(tasks[0].taskId,{type:'llm/retry',data:{failure:{code:'RATE_LIMIT'}}})
+      for(const i of [0,1]){launches.complete(tasks[i].taskId,metrics);await launches.waitForDisposed(tasks[i].taskId)}
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[4].taskId}).state).toBe('queued')
+      launches.complete(tasks[2].taskId,metrics)
+      await launches.waitForStarts(5)
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[5].taskId}).state).toBe('queued')
+      now+=61000
+      launches.complete(tasks[3].taskId,metrics)
+      await launches.waitForStarts(8)
+      expect(launches.startedTaskIds()).toHaveLength(8)
+    } finally {await runtime.dispose()}
+  })
+  it.each(['manual','html'])('queues heavy %s components at two slots while summary tasks keep their independent capacity', async (mode) => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches = deferredTaskAdapter()
     const runtime = new ResearchTaskRuntime({adapter: launches.adapter, storage: memoryTaskStorage(), createId: sequentialTaskIds()})
-    const receipts = await Promise.all(Array.from({length:7},(_,i)=>runtime.start(containerRequest('component-'+i))))
+    const receipts = await Promise.all(Array.from({length:7},(_,i)=>runtime.start({...containerRequest('component-'+i),...(mode==='html'?{
+      prompt:workbenchPanelPrompt({title:'交互网页'},{title:'网页'+i,prompt:'自定义交互布局',type:'html',size:'medium'})}: {})})))
     await launches.waitForStarts(2)
     expect(runtime.inspect({parentSessionId:'parent-1',taskId:receipts[2].taskId}).state).toBe('queued')
     await runtime.start(summaryRequest('summary'))
