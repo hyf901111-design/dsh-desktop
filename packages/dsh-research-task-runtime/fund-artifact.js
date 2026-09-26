@@ -1,3 +1,4 @@
+import { TEMPLATE_LIMITS } from './template-data-contract.js';
 import { MARKET_REGULAR_FONT_CSS } from './market-font.js';
 import { WORKBENCH_DESIGN_VERSION } from './workbench-design-contract.js';
 
@@ -23,19 +24,19 @@ const css = [
 ].join('');
 
 function renderKpi(spec) {
-  if (!list(spec.items, 6) || spec.items.some(item => !text(item?.label) || !text(item?.value) || item.detail !== undefined && !text(item.detail))) return null;
+  if (!list(spec.items, TEMPLATE_LIMITS.fundMetrics) || spec.items.some(item => !text(item?.label) || !text(item?.value) || item.detail !== undefined && !text(item.detail))) return null;
   const detail = value => {
     if (!value) return '';
     if (Array.from(value).length <= 26) return cell('div', value, ' class="fund-detail"');
     return '<details class="fund-detail fund-detail-disclosure"><summary aria-label="查看完整指标口径：' + escape(value) + '">' + escape(Array.from(value).slice(0, 24).join('')) + '…</summary>' + cell('p', value) + '</details>';
   };
-  return '<div class="fund-kpis" style="--fund-count:' + spec.items.length + '">' + spec.items.map(item =>
+  return '<div class="fund-kpis" style="--fund-count:' + Math.min(spec.items.length, 4) + '">' + spec.items.map(item =>
     '<div class="fund-kpi">' + cell('div', item.label, ' class="fund-label"') +
     cell('strong', item.value, ' class="fund-value"') +
     detail(item.detail) + '</div>').join('') + '</div>';
 }
 function renderHoldings(spec) {
-  if (!list(spec.columns, 8) || !spec.columns.every(text) || !list(spec.rows, 30) ||
+  if (!list(spec.columns, TEMPLATE_LIMITS.holdingsColumns) || !spec.columns.every(text) || !list(spec.rows, TEMPLATE_LIMITS.holdingsRows) ||
       spec.rows.some(row => !Array.isArray(row) || row.length !== spec.columns.length ||
         row.some(value => typeof value !== 'string' && typeof value !== 'number'))) return null;
   const numericColumns = spec.columns.map((_,index) => index>0 && spec.rows.every(row => typeof row[index]==='number' || /^[+−-]?[\d,.]+[%‰亿元万点倍]*$/.test(String(row[index]).trim())));
@@ -55,37 +56,40 @@ function renderHoldings(spec) {
     '</tbody></table></div><div class="fund-footer">' + (simulated ? '模拟数据 · ' : '') + spec.rows.length + ' 条 · 可搜索与排序</div>';
 }
 function renderIndustry(spec) {
-  if (!list(spec.items, 12) || spec.items.some(item => !text(item?.label) ||
+  if (!list(spec.items, TEMPLATE_LIMITS.fundIndustries) || spec.items.some(item => !text(item?.label) ||
       !Number.isFinite(item.weight) || item.weight < 0 || item.weight > 100 ||
-      !Number.isFinite(item.benchmark) || item.benchmark < 0 || item.benchmark > 100)) return null;
+      item.benchmark != null && (!Number.isFinite(item.benchmark) || item.benchmark < 0 || item.benchmark > 100))) return null;
   const max = Math.max(1, ...spec.items.map(item => item.weight));
-  const rows = spec.items.map(item => '<button type="button" class="fund-industry" data-label="' + escape(item.label) + '" data-weight="' + item.weight + '" data-benchmark="' + item.benchmark + '" data-delta="' + (item.weight - item.benchmark) + '" aria-pressed="false" aria-label="' + escape(item.label + ' · 组合 ' + item.weight + '% · 基准 ' + item.benchmark + '%') + '">' +
+  const comparable=spec.items.filter(item=>Number.isFinite(item.benchmark));
+  const comparison=comparable.length>0;
+  const rows = spec.items.map(item => '<button type="button" class="fund-industry" data-label="' + escape(item.label) + '" data-weight="' + item.weight + '"' + (Number.isFinite(item.benchmark) ? ' data-benchmark="' + item.benchmark + '" data-delta="' + (item.weight-item.benchmark) + '"' : '') + ' aria-pressed="false" aria-label="' + escape(item.label + ' · 组合 ' + item.weight + '%' + (Number.isFinite(item.benchmark) ? ' · 基准 ' + item.benchmark + '%' : ' · 未提供基准')) + '">' +
     cell('span', item.label, ' class="fund-industry-label"') +
     '<span class="fund-track"><span class="fund-bar" style="width:' + Math.max(1, item.weight / max * 83).toFixed(1) + '%"></span></span>' +
     cell('span', item.weight.toFixed(1) + '%', ' class="fund-industry-value"') + '</button>').join('');
-  const prominent = [...spec.items].sort((a, b) => Math.abs(b.weight - b.benchmark) - Math.abs(a.weight - a.benchmark))[0];
-  const delta = prominent.weight - prominent.benchmark;
-  return '<div class="fund-industry-filters"><select class="fund-control fund-industry-filter" aria-label="偏离筛选"><option value="all">全部行业</option><option value="over">超配行业</option><option value="under">低配行业</option></select>' +
-    '<select class="fund-control fund-industry-sort" aria-label="行业排序"><option value="weight">按组合权重</option><option value="delta">按偏离幅度</option><option value="name">按行业名称</option></select></div>' +
+  const prominent = [...comparable].sort((a, b) => Math.abs(b.weight - b.benchmark) - Math.abs(a.weight - a.benchmark))[0];
+  const delta = prominent ? prominent.weight - prominent.benchmark : 0;
+  return '<div class="fund-industry-filters"><select class="fund-control fund-industry-filter" aria-label="偏离筛选"><option value="all">全部行业</option>' + (comparison ? '<option value="over">超配行业</option><option value="under">低配行业</option>' : '') + '</select>' +
+    '<select class="fund-control fund-industry-sort" aria-label="行业排序"><option value="weight">按组合权重</option>' + (comparison ? '<option value="delta">按偏离幅度</option>' : '') + '<option value="name">按行业名称</option></select></div>' +
     '<div class="fund-industry-count" role="status">' + spec.items.length + ' / ' + spec.items.length + ' 个行业</div><div class="fund-industries">' + rows +
     '</div><div class="fund-industry-empty" hidden>该筛选条件下暂无行业</div><div class="fund-industry-readout" role="status"></div>' +
-    '<div class="fund-callout"><strong>' + escape(prominent.label) + (delta >= 0 ? '超配 +' : '低配 ') +
-    Math.abs(delta).toFixed(1) + '%</strong><span>基准 ' + prominent.benchmark.toFixed(1) + '%</span></div>' +
-    '<div class="fund-industry-footer">' + escape(spec.note || '行业权重 · 组合与基准对照') + '</div>';
+    '<div class="fund-callout"' + (comparison ? '' : ' hidden') + '><strong>' + (prominent ? escape(prominent.label) + (delta >= 0 ? '超配 +' : '低配 ') + Math.abs(delta).toFixed(1) + '%' : '') + '</strong><span>' + (prominent ? '基准 ' + prominent.benchmark.toFixed(1) + '%' : '') + '</span></div>' +
+    '<div class="fund-industry-footer">' + escape(spec.note || (comparison ? '行业权重 · 组合与基准对照；缺失基准不参与偏离比较' : '行业权重 · 来源未提供基准，不计算偏离')) + '</div>';
 }
 const holdingsScript = "const search=document.querySelector('.fund-search'),body=document.querySelector('tbody');search.addEventListener('input',()=>{const q=search.value.trim().toLocaleLowerCase();for(const row of body.rows)row.hidden=!row.textContent.toLocaleLowerCase().includes(q)});document.querySelectorAll('[data-column]').forEach(button=>button.addEventListener('click',()=>{const index=Number(button.dataset.column),asc=button.dataset.order!=='asc';button.dataset.order=asc?'asc':'desc';document.querySelectorAll('th').forEach(th=>th.removeAttribute('aria-sort'));button.parentElement.setAttribute('aria-sort',asc?'ascending':'descending');const rows=[...body.rows];rows.sort((a,b)=>{const left=a.cells[index].textContent,right=b.cells[index].textContent;const n=v=>Number(v.replace(/[,，%]/g,''));const diff=Number.isFinite(n(left))&&Number.isFinite(n(right))?n(left)-n(right):left.localeCompare(right,'zh-CN',{numeric:true});return asc?diff:-diff});rows.forEach(row=>body.appendChild(row))}));";
 function fundIndustryRuntime() {
   const filter=document.querySelector('.fund-industry-filter'),sort=document.querySelector('.fund-industry-sort'),container=document.querySelector('.fund-industries'),count=document.querySelector('.fund-industry-count'),readout=document.querySelector('.fund-industry-readout'),empty=document.querySelector('.fund-industry-empty'),callout=document.querySelector('.fund-callout');
   const rows=[...container.querySelectorAll('.fund-industry')];
-  const describe=row=>{const delta=Number(row.dataset.delta);return `${row.dataset.label} · 组合 ${Number(row.dataset.weight).toFixed(1)}% · 基准 ${Number(row.dataset.benchmark).toFixed(1)}% · ${delta>=0?'超配 +':'低配 '}${Math.abs(delta).toFixed(1)} 个百分点`};
+  const comparable=row=>row.dataset.benchmark!==undefined;
+  const describe=row=>{if(!comparable(row))return `${row.dataset.label} · 组合 ${Number(row.dataset.weight).toFixed(1)}% · 来源未提供基准`;const delta=Number(row.dataset.delta);return `${row.dataset.label} · 组合 ${Number(row.dataset.weight).toFixed(1)}% · 基准 ${Number(row.dataset.benchmark).toFixed(1)}% · ${delta>=0?'超配 +':'低配 '}${Math.abs(delta).toFixed(1)} 个百分点`};
   const select=row=>{rows.forEach(item=>item.setAttribute('aria-pressed',String(item===row)));readout.textContent=row?describe(row):''};
   const update=()=>{
-    rows.forEach(row=>{const delta=Number(row.dataset.delta);row.hidden=filter.value==='over'?delta<=0:filter.value==='under'?delta>=0:false});
-    const ordered=[...rows].sort((a,b)=>sort.value==='name'?a.dataset.label.localeCompare(b.dataset.label,'zh-CN'):sort.value==='delta'?Math.abs(Number(b.dataset.delta))-Math.abs(Number(a.dataset.delta)):Number(b.dataset.weight)-Number(a.dataset.weight));
+    rows.forEach(row=>{const delta=Number(row.dataset.delta);row.hidden=filter.value==='over'?!comparable(row)||delta<=0:filter.value==='under'?!comparable(row)||delta>=0:false});
+    const ordered=[...rows].sort((a,b)=>sort.value==='name'?a.dataset.label.localeCompare(b.dataset.label,'zh-CN'):sort.value==='delta'?(comparable(b)?Math.abs(Number(b.dataset.delta)):-1)-(comparable(a)?Math.abs(Number(a.dataset.delta)):-1):Number(b.dataset.weight)-Number(a.dataset.weight));
     ordered.forEach(row=>container.appendChild(row));
     const visible=ordered.filter(row=>!row.hidden);count.textContent=`${visible.length} / ${rows.length} 个行业`;empty.hidden=visible.length>0;callout.hidden=visible.length===0;
     const selected=visible.find(row=>row.getAttribute('aria-pressed')==='true')||visible[0];select(selected);
-    if(visible.length){const prominent=[...visible].sort((a,b)=>Math.abs(Number(b.dataset.delta))-Math.abs(Number(a.dataset.delta)))[0],delta=Number(prominent.dataset.delta);callout.querySelector('strong').textContent=`${prominent.dataset.label}${delta>=0?'超配 +':'低配 '}${Math.abs(delta).toFixed(1)}%`;callout.querySelector('span').textContent=`基准 ${Number(prominent.dataset.benchmark).toFixed(1)}%`}
+    const compared=visible.filter(comparable);callout.hidden=compared.length===0;
+    if(compared.length){const prominent=[...compared].sort((a,b)=>(comparable(b)?Math.abs(Number(b.dataset.delta)):-1)-(comparable(a)?Math.abs(Number(a.dataset.delta)):-1))[0],delta=Number(prominent.dataset.delta);callout.querySelector('strong').textContent=`${prominent.dataset.label}${delta>=0?'超配 +':'低配 '}${Math.abs(delta).toFixed(1)}%`;callout.querySelector('span').textContent=`基准 ${Number(prominent.dataset.benchmark).toFixed(1)}%`}
   };
   rows.forEach(row=>{row.addEventListener('click',()=>select(row));row.addEventListener('focus',()=>select(row))});filter.addEventListener('change',update);sort.addEventListener('change',update);update();
 }

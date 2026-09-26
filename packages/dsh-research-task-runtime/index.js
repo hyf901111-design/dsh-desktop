@@ -394,6 +394,8 @@ function workbenchPanelFormat(prompt) {
     const legacyHeader=legacyWorkbenchPanelHeader(prompt)
     return legacyHeader?workbenchPanelFormat(legacyHeader+prompt.split('\n')[0]):null
   }
+  const explicit=prompt.match(/\b(chart)\.(bar|line)\b/u)
+  if(explicit)return 'chart'
   const type = prompt.match(/优先使用 ([a-z-]+) 类型/u)?.[1]
   if (!WORKBENCH_PANEL_TYPES.has(type)) return null
   if (type === 'kpi' && /(?:每个指标|计算口径|指标口径|定义)/u.test(prompt)) return 'dashboard'
@@ -1290,7 +1292,7 @@ export class ResearchTaskRuntime {
         try {
           let mapped
           try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(task.prompt)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(task.prompt)}) }
-          catch(error){throw new ResearchTaskError('INVALID_OUTPUT',error.message)}
+          catch(error){throw new ResearchTaskError(error.code==='SOURCE_DATA_REQUIRED'?'GENERATION_FAILED':'INVALID_OUTPUT',error.message)}
           binding=mapped?.recipe
           if(mapped)deliveredText=JSON.stringify(mapped.data)
           output = finalText(mapped?[{type:'text',text:deliveredText}]:result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
@@ -1714,7 +1716,7 @@ export function createSubagentAdapter(ctx) {
         !(kind === 'container' && containerExcludedTools.has(name)) &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
-      const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')))
+      const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')),scopedSchemas??[])
       const run = await startComponentAgent(ctx, {
         label: '画布生成任务',
         ...(agentOptions ? { agentOptions } : {}),

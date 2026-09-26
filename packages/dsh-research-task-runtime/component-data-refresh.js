@@ -1,3 +1,4 @@
+import { normalizeIndexedTableRows } from './template-data-contract.js'
 import {randomUUID,createHash} from 'node:crypto'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
@@ -23,7 +24,8 @@ function formattedDate(rule,now){
  return rule.format==='yyyy-MM-dd'?`${get('year')}-${get('month')}-${get('day')}`:rule.format==='yyyyMMdd000000'?plain+'000000':plain
 }
 function scalarMapping(value,mapping){
- if(mapping.$as==='number'){if(value===null||value===''||!Number.isFinite(Number(value)))throw Error('数值字段无效');value=Number(value)}
+ if(value==null&&mapping.$optional===true)return null
+ if(mapping.$as==='number'){if(!['number','string'].includes(typeof value)||typeof value==='string'&&!value.trim()||!Number.isFinite(Number(value)))throw Error('数值字段无效');value=Number(value)}
  if(mapping.$scale!==undefined){if(typeof value!=='number'||!Number.isFinite(mapping.$scale))throw Error('数值换算无效');value*=mapping.$scale}
  if(mapping.$digits!==undefined){if(typeof value!=='number'||!Number.isFinite(value)||!Number.isInteger(mapping.$digits)||mapping.$digits<0||mapping.$digits>8)throw Error('显示精度无效');value=mapping.$as==='string'?value.toFixed(mapping.$digits):Number(value.toFixed(mapping.$digits))}
  if(mapping.$as==='string'||mapping.$prefix!==undefined||mapping.$suffix!==undefined){
@@ -60,7 +62,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   const rowMapping=!Object.hasOwn(mapping,'$map')&&mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:mapping.$map
   const mapped=rows.map(item=>next(rowMapping,item))
   if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return scalarMapping(mapped[0],mapping)}
-  return scalarMapping(mapped,mapping)
+  return mapped.map(value=>scalarMapping(value,mapping))
  }
  if(Object.hasOwn(mapping,'$path')){
   let value=path(source,mapping.$path)
@@ -76,7 +78,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentMapping(mapping,responses,now=new Date()){
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
- const data=evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now)
+ const data=normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now))
  if(candle){
   try{
    const asOf=evaluateMapping(mapping.asOf,responses,now)

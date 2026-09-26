@@ -175,3 +175,37 @@ it('captures only matching successful structured plugin results from public even
  collector.accept(call('ok'));collector.accept(result('ok'));collector.accept(result('ok'))
  expect(collector.records).toEqual(records)
 })
+it('retains the business response after many interface discovery calls',()=>{
+ const collector=componentSourceCollector([tool])
+ for(let i=0;i<25;i++){
+  const callArgs={query:'catalog-'+i}
+  collector.accept({type:'tool/call',data:{callId:String(i),name:tool,arguments:JSON.stringify(callArgs)}})
+  collector.accept({type:'tool/result',data:{message:{source:{callId:String(i)},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify({apis:[]})}]}]}}})
+ }
+ collector.accept({type:'tool/call',data:{callId:'business',name:tool,arguments:JSON.stringify(args)}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'business'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(response)}]}]}}})
+ expect(resolveBoundComponent(JSON.stringify(draft),collector.records,now).data.items[0].value).toBe('4.515 元')
+})
+it('does not bind interface directory discovery as financial data and permits business retrieval during recovery',async()=>{
+ const discovery={...records[0],purpose:'discovery'}
+ expect(()=>resolveBoundComponent(JSON.stringify(draft),[discovery],now)).toThrow(/业务数据/)
+ const start=vi.fn(async input=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:start.mock.calls.length===1?[discovery]:records}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData:async()=>{},dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n优先使用 market 类型；variant: metrics。使用通联真实数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start.mock.calls[1][0].synthesisOnly).toBe(false)
+ }finally{await runtime.dispose()}
+})
+it('classifies discovery from scoped tool descriptions without rejecting actual API calls',()=>{
+ const directory='ework__t_abc1',business='ework__t_abc2'
+ const collector=componentSourceCollector([directory,business],[{name:directory,description:'搜索 Datayes 平台中与查询词最匹配的金融数据 API，返回候选接口列表。导航接口，不消耗额度。'},{name:business,description:'调用 Datayes 业务 API 并返回数据。必须在 get_api_info 之后执行。'}])
+ for(const name of [directory,business]){
+  collector.accept({type:'tool/call',data:{callId:name,name,arguments:JSON.stringify(args)}})
+  collector.accept({type:'tool/result',data:{message:{source:{callId:name},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(response)}]}]}}})
+ }
+ expect(collector.records[0].purpose).toBe('discovery')
+ expect(collector.records[1].purpose).toBeUndefined()
+ const input=structuredClone(draft);input.requests[0].tool=business
+ expect(resolveBoundComponent(JSON.stringify(input),collector.records,now).data.items[0].value).toBe('4.515 元')
+})

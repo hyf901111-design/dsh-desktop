@@ -1,3 +1,4 @@
+import { normalizeIndexedTableRows } from './template-data-contract.js';
 import {retainTemplateModel} from './component-template-registry.js';
 import { renderMarketArtifact } from './market-artifact.js';
 import { requiredMarketVariant } from './workbench-design-contract.js';
@@ -22,11 +23,11 @@ export function extractArtifactObjects(text) {
 export function acceptArtifactOutput(text) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {
-  const candidate=normalizeTemplateAliases(original);
+  const candidate=normalizeTemplateAliases(normalizeIndexedTableRows(original));
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=preserveLongChartCaption(candidate);
-  if(chartWithNotes)return JSON.stringify(chartWithNotes);
+  if(chartWithNotes)return JSON.stringify(retainTemplateModel(chartWithNotes,candidate));
   const spec=parseResearchContainerSpec(renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
@@ -140,6 +141,7 @@ function preserveLongChartCaption(candidate) {
  if(candidate?.type!=='chart'||typeof candidate.title!=='string'||candidate.title.length>8000)return;
  const notes=[['dataDate','数据时点'],['asOf','数据时点'],['unit','单位'],['basis','计算口径'],['reading','解读口径'],['source','资料来源'],['detail','说明']]
   .flatMap(([key,label])=>typeof candidate[key]==='string'&&candidate[key].trim()? [`${label}：${candidate[key].trim().slice(0,2000)}`]:[]);
+
  if(candidate.title.length<=256&&!notes.length)return;
  const title=(candidate.title.split(/[｜|\n]/u)[0].trim()||'研究图表').slice(0,96);
  const chart=parseResearchContainerSpec({version:1,type:'chart',title,variant:candidate.variant,labels:candidate.labels,series:candidate.series});
@@ -159,13 +161,24 @@ function preserveLongChartCaption(candidate) {
    const width=step*.75/chart.series.length;
    return `<rect x="${x(i)-step*.375+si*width}" y="${Math.min(y(v),y(0))}" width="${Math.max(.5,width-2)}" height="${Math.max(.5,Math.abs(y(v)-y(0)))}" fill="${color}">${hint}</rect>`;
   }).join('');
-  return (chart.variant==='line'?`<polyline points="${s.values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>`:'')+marks;
+  return `<g data-series-group="${si}">`+(chart.variant==='line'?`<polyline points="${s.values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2"/>`:'')+marks+'</g>';
  }).join('');
  const ticks=[0,1,2,3,4].map(i=>{const v=low+(high-low)*i/4;return `<line x1="55" x2="605" y1="${y(v)}" y2="${y(v)}" stroke="var(--sherlock-border)" stroke-dasharray="4 4"/><text x="48" y="${y(v)+4}" text-anchor="end">${esc(Number(v.toPrecision(5)))}</text>`}).join('');
  const dates=chart.labels.map((l,i)=>i===0||i===chart.labels.length-1||i%Math.max(1,Math.ceil(chart.labels.length/5))===0?`<text x="${x(i)}" y="283" text-anchor="middle">${esc(l)}</text>`:'').join('');
  const rows=chart.labels.map((l,i)=>`<tr><td>${esc(l)}</td>${chart.series.map(s=>`<td>${s.values[i]}</td>`).join('')}</tr>`).join('');
- const html=`<style>body{padding:20px;font:14px/1.6 var(--sherlock-font-sans)}figure{margin:0}svg{display:block;width:100%;height:auto;color:var(--sherlock-text)}svg text{fill:currentColor;font-size:10px}figcaption{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--sherlock-muted)}summary{cursor:pointer}.legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}</style><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 305" role="img" aria-label="${esc(title)}">${ticks}${series}${dates}</svg><div class="legend">${chart.series.map((s,i)=>`<span style="color:var(--sherlock-chart-${i+1})">● ${esc(s.name)}</span>`).join('')}</div><figcaption>${esc(caption)}</figcaption></figure><details><summary>查看全部数据</summary><table><thead><tr><th>日期</th>${chart.series.map(s=>`<th>${esc(s.name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></details>`;
- return parseResearchContainerSpec({version:1,type:'html',title,html})??undefined;
+ const html=`<style>body{margin:0;padding:8px 10px;font:11px/1.5 var(--sherlock-font-sans)}figure{margin:0}svg{display:block;width:100%;height:auto;color:var(--sherlock-text)}svg text{fill:currentColor;font-size:10px}figcaption{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--sherlock-muted)}summary{cursor:pointer}.legend{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0}.legend button{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer}.legend button[aria-pressed="false"]{opacity:.4}.chart-readout{min-height:18px;font-variant-numeric:tabular-nums}.chart-cursor{stroke:var(--sherlock-muted);stroke-dasharray:3 3}</style><figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 305" role="img" tabindex="0" aria-label="${esc(title)}；方向键切换数据点">${ticks}${series}${dates}<line class="chart-cursor" x1="${x(0)}" x2="${x(0)}" y1="40" y2="260"/></svg><div class="chart-readout" role="status"></div><div class="legend">${chart.series.map((s,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" style="color:var(--sherlock-chart-${i+1})">● ${esc(s.name)}</button>`).join('')}</div><figcaption>${esc(caption)}</figcaption></figure><details><summary>查看全部数据</summary><table><thead><tr><th>日期</th>${chart.series.map(s=>`<th>${esc(s.name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></details>`;
+ const script='<script>('+fixedChartRuntime.toString()+')('+JSON.stringify(chart).replace(/</g,'\\u003c')+');</script>';
+ return parseResearchContainerSpec({version:1,type:'html',title,html:html+script})??undefined;
+}
+
+function fixedChartRuntime(chart){
+ const svg=document.querySelector('svg'),readout=document.querySelector('.chart-readout'),cursor=document.querySelector('.chart-cursor'),buttons=[...document.querySelectorAll('[data-chart-series]')],groups=[...document.querySelectorAll('[data-series-group]')];
+ let selected=0;const visible=chart.series.map(()=>true);
+ const select=index=>{selected=Math.max(0,Math.min(chart.labels.length-1,index));const x=55+540/chart.labels.length*(selected+.5);cursor.setAttribute('x1',x);cursor.setAttribute('x2',x);readout.textContent=chart.labels[selected]+' · '+chart.series.filter((_,i)=>visible[i]).map(s=>s.name+' '+s.values[selected]).join(' · ')};
+ buttons.forEach((button,i)=>button.addEventListener('click',()=>{if(visible[i]&&visible.filter(Boolean).length===1)return;visible[i]=!visible[i];groups[i].style.display=visible[i]?'':'none';button.setAttribute('aria-pressed',String(visible[i]));select(selected)}));
+ svg.addEventListener('keydown',event=>{const index=event.key==='ArrowLeft'?selected-1:event.key==='ArrowRight'?selected+1:event.key==='Home'?0:event.key==='End'?chart.labels.length-1:null;if(index===null)return;event.preventDefault();select(index)});
+ svg.addEventListener('pointermove',event=>{const rect=svg.getBoundingClientRect();if(rect.width)select(Math.round(((event.clientX-rect.left)/rect.width*660-55)/540*chart.labels.length-.5))});
+ select(0);
 }
 
 // Recovery preserves only actual delivered content, never reasoning, prompts, or fabricated data.

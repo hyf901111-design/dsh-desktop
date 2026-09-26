@@ -98,3 +98,17 @@ it('edits generated component content through its declared schema, preserving id
  await w.canvasAction('apply',{requestId:'content',revision:s.revision,changes:[{op:'update',id:'generated',fields:{containerSpec:{...s.nodes[0].content.containerSpec,content:'新内容'}}}]})
  expect(w.getSnapshot().artifacts[0]).toMatchObject({id:'generated',x:300,y:220,containerSpec:{content:'新内容'}})
 })
+it('repairs a terminal failed generated card in place, remains undoable and refuses active or invalid content',async()=>{
+ const {workspace:w}=await fixture()
+ const node={id:'failed',messageId:'failed',kind:'generated-container',title:'价格',x:300,y:220,width:500,height:300,sizeMode:'manual',generationStatus:'failed',generationError:'数据映射无效',containerPrompt:'价格',refreshMinutes:0,excerpt:'未完成'}
+ w.setArtifacts([node,{...node,id:'active',messageId:'active',generationStatus:'running'}])
+ const s=await w.canvasAction('inspect',{ids:['failed','active']})
+ expect(s.nodes[0].capabilities.fields.containerSpec?.type).toBe('object')
+ expect(s.nodes[1].capabilities.fields.containerSpec).toBeUndefined()
+ await expect(w.canvasAction('apply',{requestId:'bad',revision:s.revision,changes:[{op:'update',id:'failed',fields:{containerSpec:{type:'invented'}}}]})).rejects.toThrow()
+ const result=await w.canvasAction('apply',{requestId:'repair',revision:s.revision,changes:[{op:'update',id:'failed',fields:{containerSpec:{version:1,type:'markdown',title:'价格',content:'已取得的真实内容'}}}]})
+ expect(w.getSnapshot().artifacts[0]).toMatchObject({id:'failed',x:300,y:220,width:500,height:300,generationStatus:'completed'})
+ expect(w.getSnapshot().artifacts[0].generationError).toBeUndefined()
+ await w.canvasAction('undo',{requestId:'undo-repair',revision:result.revision,actionId:result.actionId})
+ expect(w.getSnapshot().artifacts[0].generationStatus).toBe('failed')
+})
