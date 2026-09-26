@@ -11,33 +11,25 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c",
-        "tipCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
+        "baseCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
+        "tipCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
         "commits": [
           {
-            "commit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
+            "commit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
             "parents": [
-              "9de4ee28f1fa4b8ef4cadb1d5047fbf1bf0e815c"
+              "87faa96a1677b42334bbe001d4cb344c3dbf57bc"
             ],
-            "subject": "修复真实取数组件的模板限制、映射失败和原位恢复链路"
+            "subject": "修复图形误选、历史取数空结果和模型空响应恢复"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/fund-artifact.js"
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
           },
           {
             "status": "M",
@@ -48,15 +40,27 @@
             "path": "packages/dsh-research-task-runtime/market-artifact.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/template-data-contract.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/canvas-actions-client.mjs"
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
             "path": "test/component-generation-real-shapes.test.js"
           },
           {
@@ -65,11 +69,7 @@
           },
           {
             "status": "M",
-            "path": "test/research-canvas-actions-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-fund-workbench.test.js"
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -80,20 +80,16 @@
               "run",
               "test/component-generation-real-shapes.test.js",
               "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-template-registry.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-actions.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-fund-workbench.test.js",
               "test/research-task-runtime.test.js",
               "test/structured-workbench-generation.test.js",
-              "test/research-component-source-tools.test.js"
+              "test/research-component-source-tools.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-market-artifact.test.js"
             ],
             "outcome": "passed",
-            "summary": "321项聚焦检查通过；实际失败形状先复现再修复，覆盖模板、映射、业务响应保留、原位恢复和交互",
-            "verifiedCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
-            "completedAt": "2026-09-26T14:45:51.689231+00:00",
+            "summary": "274项相关检查通过，最后恢复逻辑另复验196项；新增真实失败回归覆盖空K线、空响应、图形误选和表格单行包裹",
+            "verifiedCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
+            "completedAt": "2026-09-26T15:07:41.790426+00:00",
             "timeoutMs": 180000
           },
           {
@@ -104,14 +100,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
-            "completedAt": "2026-09-26T14:45:51.689231+00:00",
+            "verifiedCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
+            "completedAt": "2026-09-26T15:07:41.790426+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "旧版真实12卡首次6成功6失败；本次修复待集成包全新工作台验收，不将人工修复计入首次成功率。"
+          "summary": "首轮新包真实12卡完成9张、3张失败，发现图形误选与全空卡；补修后重新进行客户端验收，未声称通过。"
         },
         "acceptanceCriteria": [
           "真实负数散点、多曲线、可缺失基准行业分布保留数据并显示",
@@ -123,63 +119,7 @@
         "risks": [
           "外部模型与数据源仍有时延和可用性波动，须通过新包工作台验收"
         ],
-        "generatedAt": "2026-09-26T14:45:51.689231+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b0f1fc8575d82704e8fd01d87542360606d81c0e",
-        "verificationCommit": "b0f1fc8575d82704e8fd01d87542360606d81c0e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "b0f1fc8575d82704e8fd01d87542360606d81c0e",
-            "completedAt": "2026-09-26T14:46:15.585Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "b0f1fc8575d82704e8fd01d87542360606d81c0e",
-            "completedAt": "2026-09-26T14:46:15.585Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b0f1fc8575d82704e8fd01d87542360606d81c0e",
-            "completedAt": "2026-09-26T14:46:15.585Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T14:46:15.585Z"
+        "generatedAt": "2026-09-26T15:07:41.790426+00:00"
       }
     }
   ],
