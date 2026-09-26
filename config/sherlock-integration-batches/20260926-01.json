@@ -11,70 +11,48 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "9272e8b9aeb8866c240d14e339876ff0e275636b",
-        "tipCommit": "c6b1591c4ee03e01eb38da535a5c857f641c79fd",
+        "baseCommit": "c6b1591c4ee03e01eb38da535a5c857f641c79fd",
+        "tipCommit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
         "commits": [
           {
-            "commit": "dedbedfe4bc1e38340c0dd4f99d53c2f90e5598b",
+            "commit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
             "parents": [
-              "9272e8b9aeb8866c240d14e339876ff0e275636b"
+              "c6b1591c4ee03e01eb38da535a5c857f641c79fd"
             ],
-            "subject": "修复问答倒计时被焦点误停并明确自动选择状态"
-          },
-          {
-            "commit": "683c8af41ac26a6f639956ade3cd2305a82c80c1",
-            "parents": [
-              "dedbedfe4bc1e38340c0dd4f99d53c2f90e5598b"
-            ],
-            "subject": "修复GLM新模型思考档位并提前提交工作台面板计划"
-          },
-          {
-            "commit": "c6b1591c4ee03e01eb38da535a5c857f641c79fd",
-            "parents": [
-              "683c8af41ac26a6f639956ade3cd2305a82c80c1"
-            ],
-            "subject": "保留GLM普通请求默认思考并避免发送不支持的关闭参数"
+            "subject": "修复面板首轮通联工具缺失与思考档位失效并消除规划重试"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-integration-runtime/index.js"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-agent-scope.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
-            "path": "scripts/install-brand-assets.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/glm-reasoning-capabilities.mjs"
+            "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/question-countdown.mjs"
+            "path": "test/research-task-integrations.test.js"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "test/research-task-model-selection.test.js"
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
+            "path": "test/research-workbench.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
-          },
-          {
-            "status": "A",
-            "path": "test/question-countdown-interaction.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/workbench-execution-policy.test.js"
           }
         ],
@@ -85,14 +63,16 @@
               "vitest",
               "run",
               "test/workbench-execution-policy.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/question-countdown.test.js",
-              "test/question-countdown-interaction.test.js"
+              "test/research-workbench.test.js",
+              "test/research-task-integrations.test.js",
+              "test/research-task-model-selection.test.js",
+              "test/component-agent-scope.test.js",
+              "test/integration-harness-e2e.test.js"
             ],
             "outcome": "passed",
-            "summary": "22 项问答交互、GLM真实适配器请求和工作台路由聚焦检查通过",
-            "verifiedCommit": "c6b1591c4ee03e01eb38da535a5c857f641c79fd",
-            "completedAt": "2026-09-26T06:28:31.001Z",
+            "summary": "66项首轮工具可见性、真实子任务思考档位、规划幂等及权限撤销聚焦验证通过",
+            "verifiedCommit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
+            "completedAt": "2026-09-26T06:54:48.891754+00:00",
             "timeoutMs": 120000
           },
           {
@@ -103,80 +83,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "c6b1591c4ee03e01eb38da535a5c857f641c79fd",
-            "completedAt": "2026-09-26T06:28:31.001Z",
+            "verifiedCommit": "a4824597f6fd24708a0d3a9aa010cabe3ddfa246",
+            "completedAt": "2026-09-26T06:54:48.891754+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实 QuestionComposer 独立页面无人操作30秒后提交推荐项；实际应用新包和耗时复验待集成构建。"
+          "outcome": "not-applicable",
+          "summary": "本增量仅修改运行时链路，已核验真实模型首请求字段。最终包的完整工作台耗时复测将在集成构建后执行。前一包的30秒自动回答已在客户端验证通过。"
         },
         "acceptanceCriteria": [
-          "30秒无人作答自动选推荐，焦点不误停，手动作答显示暂停状态",
-          "GLM-5.3兼容low/high/max并保留普通请求默认值",
-          "工作台首轮提交面板清单，使用固定模板并优先专业来源"
+          "主任务首轮带入面板规划提示",
+          "子任务首轮包含父级已授权通联工具且低思考档位实际发送",
+          "省略请求标识自动生成并保持重试幂等"
         ],
         "risks": [
-          "外部数据接口和模型服务仍有延迟，实际端到端耗时待新包复测。"
+          "真实外部接口响应与完整工作台耗时待集成新包复测"
         ],
-        "generatedAt": "2026-09-26T06:28:31.001Z"
-      },
-      "merged": {
-        "mergeCommit": "121aabe3bba78a986c451ecb7ea9aeb52337ccd2",
-        "verificationCommit": "121aabe3bba78a986c451ecb7ea9aeb52337ccd2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "121aabe3bba78a986c451ecb7ea9aeb52337ccd2",
-            "completedAt": "2026-09-26T06:28:56.383Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "121aabe3bba78a986c451ecb7ea9aeb52337ccd2",
-            "completedAt": "2026-09-26T06:28:56.383Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "121aabe3bba78a986c451ecb7ea9aeb52337ccd2",
-            "completedAt": "2026-09-26T06:28:56.383Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T06:28:56.383Z"
+        "generatedAt": "2026-09-26T06:54:48.891754+00:00"
       }
     }
   ],
