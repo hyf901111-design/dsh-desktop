@@ -8,6 +8,28 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it('anchors unqualified paths to the single verified response and persists that scope for refresh',()=>{
+ const input=structuredClone(draft)
+ input.mapping.items=[{label:'最新价',value:{$path:'data.rows.0.price',$as:'string'},detail:{$path:'data.date'}}]
+ const result=resolveBoundComponent(JSON.stringify(input),records,now)
+ expect(result.data.items[0]).toEqual({label:'最新价',value:'4.515',detail:'2026-09-25'})
+ expect(result.recipe.mapping.items[0].value.$from).toBe('quote')
+ expect(input.mapping.items[0].value.$from).toBeUndefined()
+ const many=structuredClone(input);many.requests.push({...many.requests[0],key:'other'})
+ expect(()=>resolveBoundComponent(JSON.stringify(many),records,now)).toThrow(/接口缺少字段/)
+ const missing=structuredClone(input);missing.mapping.items[0].value.$path='data.absent'
+ expect(()=>resolveBoundComponent(JSON.stringify(missing),records,now)).toThrow(/接口缺少字段/)
+})
+it('keeps explicit response keys and array row scopes when filling the default source',()=>{
+ const input=structuredClone(draft)
+ input.mapping.items={$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string'}}}
+ input.mapping.asOf={$path:'quote.data.date'}
+ const result=resolveBoundComponent(JSON.stringify(input),records,now)
+ expect(result.data.items[0]).toEqual({label:'沪深300ETF',value:'4.515'})
+ expect(result.recipe.mapping.items.$from).toBe('quote')
+ expect(result.recipe.mapping.items.$map.value.$from).toBeUndefined()
+ expect(result.data.asOf).toBe('2026-09-25')
+})
 it('formats numeric indicator values and explicit missing summaries without a model repair',()=>{
  const numeric=structuredClone(draft);numeric.mapping.items.$map.value={$path:'price',$as:'number',$digits:3}
  expect(resolveBoundComponent(JSON.stringify(numeric),records,now).data.items[0].value).toBe('4.515')

@@ -78,6 +78,25 @@ function rollingTodayAnchors(args,now) {
  return visit(args)
 }
 
+function singleSourceMapping(mapping,responses) {
+  const keys=Object.keys(responses)
+  if(keys.length!==1)return mapping
+  // A lone verified source is unambiguous. Persist the explicit reference so
+  // generation and every subsequent refresh use identical scopes. Array maps
+  // retain their per-row scope; already-qualified response paths stay intact.
+  const visit=(value,inRow=false)=>{
+    if(Array.isArray(value))return value.map(v=>visit(v,inRow))
+    if(!value||typeof value!=='object')return value
+    const path=value.$each??value.$path
+    const inferred=!inRow&&value.$from===undefined&&typeof path==='string'&&!Object.hasOwn(responses,path.split('.')[0])
+    return Object.fromEntries([
+      ...(inferred?[['$from',keys[0]]]:[]),
+      ...Object.entries(value).map(([k,v])=>[k,visit(v,inRow||k==='$map')])
+    ])
+  }
+  return visit(mapping)
+}
+
 export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
   if(!candidate)return null
@@ -91,8 +110,9 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     responses[request.key]=source.response
     requests.push({key:request.key,toolId:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(request.args,now):request.args})
   }
-  const data=materializeComponentMapping(candidate.mapping,responses,now)
+  const mapping=singleSourceMapping(candidate.mapping,responses)
+  const data=materializeComponentMapping(mapping,responses,now)
   const output=acceptArtifactOutput(JSON.stringify(data))
   if(!output)throw Error('数据映射结果不符合当前组件模板，请根据真实响应修正路径、类型或单位。')
-  return {data,output,recipe:{requests,mapping:candidate.mapping,intervalMinutes:1}}
+  return {data,output,recipe:{requests,mapping,intervalMinutes:1}}
 }

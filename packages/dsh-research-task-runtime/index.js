@@ -4,7 +4,7 @@ import { preferredComponentSourceTools, componentSourceInstruction, registerComp
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue } from './workbench-model-queue.js'
 import { componentSourceCollector, componentBindingEvidence, COMPONENT_BOUND_DATA_PROMPT, resolveBoundComponent } from './component-source-binding.js'
-import { readTemplateModel } from './component-template-registry.js'
+import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
@@ -384,7 +384,13 @@ function legacyWorkbenchPanelHeader(prompt) {
   return `工作台：自动布局研究工作台\n本面板：${title}\n优先使用 ${type} 类型\n`
 }
 function workbenchPanelFormat(prompt) {
-  if (!/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(prompt)) return null
+  if (!/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(prompt)) {
+    // Editing a card replaces its user-facing requirement, which may no longer
+    // contain the planner header. An explicit registered preset still carries
+    // the same compact data contract and tool scope.
+    const explicit=prompt.match(/\b(market|chart)\.([a-z-]+)\b/u)
+    return explicit&&templateFor({type:explicit[1],variant:explicit[2]})?explicit[1]:null
+  }
   const type = prompt.match(/优先使用 ([a-z-]+) 类型/u)?.[1]
   if (!WORKBENCH_PANEL_TYPES.has(type)) return null
   if (type === 'kpi' && /(?:每个指标|计算口径|指标口径|定义)/u.test(prompt)) return 'dashboard'
@@ -1689,7 +1695,10 @@ export function createSubagentAdapter(ctx) {
       ])
       const childTools = (parentToolNames ?? fallbackTools).filter(name =>
         name !== 'run_code' &&
-        (!boundTemplate || name.startsWith('ework__') || ['financial_query','web_search','web_fetch','research_context_list','research_context_read','research_context_search'].includes(name)) &&
+        // Context snapshots belong to the parent execution session. This
+        // one-shot data child has no snapshot lease, so advertising those
+        // tools only encourages invalid-ID retries after retrieval is done.
+        (!boundTemplate || name.startsWith('ework__') || ['financial_query','web_search','web_fetch'].includes(name)) &&
         (!pluginRequired || name !== 'financial_query') &&
         (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
         // Keep the generic financial adapter as a last-resort fallback when
