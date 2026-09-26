@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "02f5c14d7c84b8759b076e5d8193647b08407881",
-        "tipCommit": "b2af005743e4d532823cc4d362a9562d9395359f",
+        "baseCommit": "b2af005743e4d532823cc4d362a9562d9395359f",
+        "tipCommit": "2df8c999ccc3cc743ddde25ea38a571f513e99f7",
         "commits": [
           {
-            "commit": "b2af005743e4d532823cc4d362a9562d9395359f",
+            "commit": "2df8c999ccc3cc743ddde25ea38a571f513e99f7",
             "parents": [
-              "02f5c14d7c84b8759b076e5d8193647b08407881"
+              "b2af005743e4d532823cc4d362a9562d9395359f"
             ],
-            "subject": "将空行情模板直接转为取数规划以避免无效重试"
+            "subject": "按模板任务负载调度组件并在模型限流时自动降并发"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "test/research-workbench.test.js"
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -38,12 +38,13 @@
               "npx",
               "vitest",
               "run",
+              "test/research-task-runtime.test.js",
               "test/research-workbench.test.js"
             ],
             "outcome": "passed",
-            "summary": "39项规划、空模板恢复及保留已有观测数据的聚焦检查通过",
-            "verifiedCommit": "b2af005743e4d532823cc4d362a9562d9395359f",
-            "completedAt": "2026-09-26T07:26:38.124122+00:00",
+            "summary": "204项任务运行、规划、混合负载调度、取消和限流冷却验证通过",
+            "verifiedCommit": "2df8c999ccc3cc743ddde25ea38a571f513e99f7",
+            "completedAt": "2026-09-26T07:43:19.631002+00:00",
             "timeoutMs": 120000
           },
           {
@@ -54,79 +55,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "b2af005743e4d532823cc4d362a9562d9395359f",
-            "completedAt": "2026-09-26T07:26:38.124122+00:00",
+            "verifiedCommit": "2df8c999ccc3cc743ddde25ea38a571f513e99f7",
+            "completedAt": "2026-09-26T07:43:19.631002+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "本增量仅修复空模板计划的宿主归一化，复现真实首轮调用并验证不丢弃任何非空观测。此前同版运行时六卡实测197秒全部完成且未降级，K线5/10日和一致预期排序已实际点击通过。"
+          "summary": "本增量仅修改任务队列调度；真实客户端六卡耗时及交互响应将在集成包中与197秒基线比较。"
         },
         "acceptanceCriteria": [
-          "无观测的空模板直接启动取数任务",
-          "带数值日期或注释的已有内容仍保留严格校验"
+          "固定模板允许4张数据任务并发，重型自定义内容保持2张",
+          "取消释放调度名额且摘要等任务不被阻塞",
+          "模型限流后收紧并发60秒，冷却后恢复"
         ],
         "risks": [
-          "模型和外部数据服务响应时间会有波动；不保证生成数据内容免于人工复核"
+          "并发对外部模型吞吐和客户端响应的影响待真实工作台复验"
         ],
-        "generatedAt": "2026-09-26T07:26:38.124122+00:00"
-      },
-      "merged": {
-        "mergeCommit": "00c64a9937271bbea8b2df66aa0b41feea7b521b",
-        "verificationCommit": "00c64a9937271bbea8b2df66aa0b41feea7b521b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "00c64a9937271bbea8b2df66aa0b41feea7b521b",
-            "completedAt": "2026-09-26T07:27:06.699Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "00c64a9937271bbea8b2df66aa0b41feea7b521b",
-            "completedAt": "2026-09-26T07:27:06.699Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "00c64a9937271bbea8b2df66aa0b41feea7b521b",
-            "completedAt": "2026-09-26T07:27:06.699Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T07:27:06.699Z"
+        "generatedAt": "2026-09-26T07:43:19.631002+00:00"
       }
     }
   ],
