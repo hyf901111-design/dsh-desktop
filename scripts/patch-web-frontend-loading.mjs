@@ -11,6 +11,7 @@ import { patchCanvasUseClient } from './lib/canvas-use-client.mjs'
 import { patchCanvasTaskNotices } from './lib/canvas-task-notices.mjs'
 import { patchComponentWheelZoom } from './lib/component-wheel-zoom.mjs'
 import { patchQuestionCountdown } from './lib/question-countdown.mjs'
+import { patchGlmReasoningCapabilities } from './lib/glm-reasoning-capabilities.mjs'
 import { patchMarkdownFileLinks } from './lib/markdown-file-links.mjs'
 import { patchRestoredFileMentions, patchGeneratedFileMentions, patchGeneratedFilePreview } from './lib/generated-file-preview.mjs'
 import { patchInspectPortal, patchInspectConversation, patchInspectLayout } from './lib/inspect-sidebar.mjs'
@@ -46,6 +47,8 @@ const assetsDirectory = join(
   'dist',
   'assets'
 )
+const llmAdapterPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js')
+writeFileSync(llmAdapterPath, patchGlmReasoningCapabilities(readFileSync(llmAdapterPath, 'utf8')))
 const primitivesPath = join(
   process.cwd(),
   'node_modules',
