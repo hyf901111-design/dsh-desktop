@@ -336,6 +336,25 @@ describe('研究工作台', () => {
             await rm(dir, { recursive: true, force: true });
         }
     });
+    it('generates a stable omitted request id per human message and keeps retries idempotent', async () => {
+        const dir = await mkdtemp(join(tmpdir(), 'sherlock-workbench-auto-id-'));
+        let tool;
+        const ctx = { agents: { get: () => ({}) }, tools: { register: t => { tool = t; return () => {}; } }, webServer: { register: () => () => {} } };
+        const start = vi.fn(async request => ({ taskId: request.canvasNodeId }));
+        const dispose = await registerWorkbench(ctx, { start }, { filePath: join(dir, 'plans.json'), isTrustedRequest: () => true, readJsonBody: async () => ({}) });
+        const args = { title: '个股工作台', panels: [toolPanel(0)] };
+        const session = { id: 'parent', events: [{ type: 'user/message', data: { id: 'human-1', source: { kind: 'user' }, content: [{ type: 'text', text: '创建工作台' }] } }] };
+        try {
+            expect(tool.parameters.required ?? []).not.toContain('requestId');
+            const first = await tool.execute(args, { agent: { session } });
+            expect((await tool.execute(args, { agent: { session } })).planId).toBe(first.planId);
+            expect(start).toHaveBeenCalledTimes(1);
+            session.events.push({ type: 'user/message', data: { ...session.events[0].data, id: 'human-2' } });
+            expect((await tool.execute(args, { agent: { session } })).planId).not.toBe(first.planId);
+            expect(start).toHaveBeenCalledTimes(2);
+            await expect(tool.execute(args, { agent: { session: { id: 'parent' } } })).rejects.toThrow();
+        } finally { await dispose(); await rm(dir, { recursive: true, force: true }); }
+    });
     it('publishes the exact panel plan before preparation and waits for canvas mounting', async () => {
         const dir = await mkdtemp(join(tmpdir(), 'sherlock-workbench-plan-'));
         let tool, handler, body = { parentSessionId: 'parent' }, prepare;

@@ -1,8 +1,23 @@
 import { canvasHumanRequest } from './canvas-task-routing.js'
 
+// Prompt assembly runs before the first claimed message is committed as
+// user/message. Include the authored inbox entry so the first model call sees
+// the planning policy, rather than adding it only after an initial tool batch.
+function planningHumanRequest(session) {
+  for (const event of [...(session?.events ?? [])].reverse()) {
+    if (event.type === 'user/message' && event.data?.source?.kind === 'user')
+      return canvasHumanRequest({ events: [event] })
+    if (event.type === 'agent/inbox/spliced') {
+      const message = [...(event.data?.inserted ?? [])].reverse().find(value => value.source?.kind === 'user')
+      if (message) return canvasHumanRequest({ events: [{ type: 'user/message', data: message }] })
+    }
+  }
+  return null
+}
+
 export function workbenchCreationRequest(session) {
   if (session?.header?.parentSession || session?.header?.origin === 'subagent') return null
-  const human = canvasHumanRequest(session)
+  const human = planningHumanRequest(session)
   const text = human?.text?.replace(/```[\s\S]*?```/g, '').replace(/^>.*$/gm, '')
   if (!text || /(?:不要|无需|不需要|别|禁止)(?:再)?(?:创建|生成|搭建|制作|添加)|(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|搭建|制作|构建)/u.test(text)) return null
   return /(?:创建|生成|搭建|制作|构建|做一个)|\b(?:create|build|generate)\b/iu.test(text) && /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text) ? human : null

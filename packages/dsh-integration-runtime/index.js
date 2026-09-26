@@ -196,6 +196,24 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
   listeners.push(ctx.on('tools/change', refreshRestrictions))
   listeners.push(ctx.on('agent/created', ({ agent }) => { attach(agent); void runtime.sync() }))
   listeners.push(ctx.on('agent/disposed', ({ agent }) => { const state = agents.get(agent); agents.delete(agent); state?.dispose?.() }))
+  // Assembly precedes agent/pre-step. A freshly spawned child is still masked
+  // until its capability context resolves, so refresh managed wire schemas at
+  // this boundary instead of giving its first model request an empty MCP set.
+  listeners.push(ctx.on('system-prompt/assemble', async (assembly, context, next) => {
+    const agent = context.agent
+    if (!isLiveAgent(ctx, agent)) return next()
+    await runtime.sync()
+    const state = agents.get(agent)
+    if (state) {
+      try { state.context = await runtime.contextFor(agent, context.signal) }
+      catch { state.context = undefined }
+      refreshRestrictions()
+    }
+    context.signal?.throwIfAborted()
+    const result = await next()
+    const managed = ctx.tools.wireSchemas(agent).schemas.filter(tool => tool.name.startsWith('ework__'))
+    return { ...result, tools: [...result.tools.filter(tool => !tool.name.startsWith('ework__')), ...managed] }
+  }))
   listeners.push(ctx.on('agent/pre-step', async (_payload, next) => { await runtime.sync(); return next() }))
   listeners.push(registerManagedSkillProvider(ctx, runtime))
   runtime.ready = runtime.sync()
