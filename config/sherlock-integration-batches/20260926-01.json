@@ -11,29 +11,29 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
-        "tipCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
+        "baseCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
+        "tipCommit": "4656dc50d75059d55c73f52d03cb34d409137e04",
         "commits": [
           {
-            "commit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
+            "commit": "4656dc50d75059d55c73f52d03cb34d409137e04",
             "parents": [
-              "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d"
+              "07427060a6cbf2f65d243270e17c3ccdd1b1a19f"
             ],
-            "subject": "修复多证券筛选与单对象数据映射导致的组件生成失败"
+            "subject": "阻止接口文档样例冒充真实数据并恢复业务取数"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
-            "path": "test/component-data-refresh.test.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
           }
         ],
         "checks": [
@@ -42,14 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-data-refresh.test.js",
               "test/component-source-binding.test.js",
-              "test/component-generation-real-shapes.test.js"
+              "test/component-data-refresh.test.js",
+              "test/research-task-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "57项聚焦检查通过，覆盖按证券筛选、单对象映射及生成刷新一致性",
-            "verifiedCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
-            "completedAt": "2026-09-26T23:41:29.541942+00:00",
+            "summary": "228项聚焦检查通过；覆盖文档样例误完成、空输出后检索修复、重复失败禁止发布",
+            "verifiedCommit": "4656dc50d75059d55c73f52d03cb34d409137e04",
+            "completedAt": "2026-09-26T23:57:00.672826+00:00",
             "timeoutMs": 180000
           },
           {
@@ -60,14 +60,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
-            "completedAt": "2026-09-26T23:41:29.541942+00:00",
+            "verifiedCommit": "4656dc50d75059d55c73f52d03cb34d409137e04",
+            "completedAt": "2026-09-26T23:57:00.672826+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "当前集成包8卡实测6卡通过，ETF四卡全部完成并验证K线区间、环图和搜索；剩余2卡定位为字段映射，本次补修待新包验证。"
+          "summary": "新包股票4卡中3卡内容通过，热力图从接口文档生成样例被实测发现；此提交修复其恢复校验，待新包重新验收。"
         },
         "acceptanceCriteria": [
           "真实负数散点、多曲线、可缺失基准行业分布保留数据并显示",
@@ -79,63 +79,7 @@
         "risks": [
           "外部模型与数据源仍有时延和可用性波动，须通过新包工作台验收"
         ],
-        "generatedAt": "2026-09-26T23:41:29.541942+00:00"
-      },
-      "merged": {
-        "mergeCommit": "fdc3cd54cd60b19945ba7090b43b8c1bcbce2770",
-        "verificationCommit": "fdc3cd54cd60b19945ba7090b43b8c1bcbce2770",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "fdc3cd54cd60b19945ba7090b43b8c1bcbce2770",
-            "completedAt": "2026-09-26T23:42:47.832Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "fdc3cd54cd60b19945ba7090b43b8c1bcbce2770",
-            "completedAt": "2026-09-26T23:42:47.832Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fdc3cd54cd60b19945ba7090b43b8c1bcbce2770",
-            "completedAt": "2026-09-26T23:42:47.832Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T23:42:47.832Z"
+        "generatedAt": "2026-09-26T23:57:00.672826+00:00"
       }
     }
   ],
