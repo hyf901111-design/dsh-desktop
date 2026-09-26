@@ -206,7 +206,12 @@ export function renderMarketArtifact(s) {
  }
  else if(s.variant==='table') {
   if(!list(s.columns,12)||!s.columns.every(str)||!list(s.rows,100)||s.rows.some(r=>!Array.isArray(r)||r.length!==s.columns.length||r.some(c=>typeof c!=='string'&& !finite(c))))return null
-  if(s.tones!==undefined&&(!Array.isArray(s.tones)||s.tones.length!==s.rows.length||s.tones.some(r=>!Array.isArray(r)||r.length!==s.columns.length||r.some(v=>!['','positive','negative','neutral'].includes(v)))))return null
+  if(s.tones!==undefined&&(!Array.isArray(s.tones)||s.tones.length!==s.rows.length||s.tones.some(r=>!Array.isArray(r)||r.length!==s.columns.length||r.some(v=>!['','positive','negative','neutral'].includes(v))))) {
+   // Neutral-only decoration carries no financial meaning. Drop a malformed
+   // optional matrix while keeping every observation; never realign buy/sell colors.
+   if(!Array.isArray(s.tones)||s.tones.some(r=>!Array.isArray(r)||r.some(v=>v!==''&&v!=='neutral')))return null
+   const {tones,...data}=s;s=data
+  }
   if(s.rowLinks!==undefined&&(!Array.isArray(s.rowLinks)||s.rowLinks.length!==s.rows.length||s.rowLinks.some(url=>url!==null&&!safeUrl(url))))return null
   const numericColumns=s.columns.map((_,index)=>index>0&&s.rows.every(row=>typeof row[index]==='number'||/^[+−-]?[\d,.]+[%‰亿元万点倍]*$/.test(String(row[index]).trim())));
   const labels=s.columns.map(c=>c.replace(/\s/g,''));

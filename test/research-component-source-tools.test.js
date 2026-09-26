@@ -1,6 +1,19 @@
 import { expect, it } from 'vitest'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from '../packages/dsh-research-task-runtime/component-source-tools.js'
 
+it('queries enough calendar days for the requested trading-day series on its first fetch', () => {
+  const tools=[{name:'ework__data',description:'通联 DataYes API'}]
+  const now=new Date('2026-09-25T19:30:00Z')
+  const text=componentSourceInstruction(tools,'宁德时代近 20 个交易日日 K 线',now)
+  expect(text).toContain('20260815 至 20260926')
+  expect(text).toContain('最后 20 个实际交易日')
+  expect(text).toContain('自然日缓冲')
+  expect(text).not.toContain('20260916 至 20260926')
+  const dated=componentSourceInstruction(tools,'宁德时代 2025-01-01 至 2025-03-31 日 K 线',now)
+  expect(dated).toContain('用户指定的日期范围')
+  expect(dated).not.toContain('20260916 至 20260926')
+})
+
 it('prefers visible DataYes tools for a financial component without naming unavailable tools', () => {
   const schemas = [
     { name: 'ework__t_search', description: '搜索 Datayes 平台中最匹配的金融数据 API' },

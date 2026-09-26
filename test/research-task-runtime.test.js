@@ -500,6 +500,25 @@ describe('Research task contract and prompt', () => {
     } finally {await runtime.dispose()}
   })
 
+  it('keeps source tools on a provider retry when only API discovery evidence was returned', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const calls=[]
+    const runtime=new ResearchTaskRuntime({adapter:{start:async request=>{
+      calls.push(request)
+      if(calls.length===1) request.onSessionEvent({type:'turn/end',data:{reason:{kind:'error',error:{code:'RATE_LIMIT'}}}})
+      return {childSessionId:'retry-'+calls.length,dispose:async()=>{},result:Promise.resolve(calls.length===1
+        ? {stopReason:'error',output:[],researchEvidence:'API定义：需要 ticker 和 beginDate，尚无业务数据'}
+        : {stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'markdown',title:'取数结果',content:'已通过授权来源取得业务数据。'})}]})}
+    },dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds(),retryDelayMs:0})
+    try {
+      await runtime.start(containerRequest('source-retry'))
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe('completed'))
+      expect(calls).toHaveLength(2)
+      expect(calls[1].synthesisOnly).toBe(false)
+      expect(calls[1].prompt).toContain('尚无业务数据')
+    } finally {await runtime.dispose()}
+  })
+
   it('rejects renderer-owned prompts and unsupported task kinds', async () => {
     const { validateResearchTaskStart } = await runtimeModule()
 
@@ -729,18 +748,18 @@ describe('Research task ten-slot scheduling', () => {
   const templateRequest = (i) => ({...containerRequest('template-'+i),prompt:workbenchPanelPrompt({title:'股票研究'},
     {title:'行情指标'+i,prompt:'variant: metrics；读取最新行情并保留来源日期',type:'market',size:'medium'})})
   const metrics = JSON.stringify({version:1,type:'market',variant:'metrics',title:'行情指标',asOf:'2026-09-26 · 离线测试',items:[{label:'价格',value:'10 元'}]})
-  it('runs four template data tasks and admits the next queued card when a slot finishes', async () => {
+  it('runs three template data tasks and admits the next queued card when a slot finishes', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches=deferredTaskAdapter()
     const runtime=new ResearchTaskRuntime({adapter:launches.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),now:()=>Date.parse('2026-09-26T00:00:00Z')})
     try {
       const tasks=await Promise.all(Array.from({length:6},(_,i)=>runtime.start(templateRequest(i))))
-      await launches.waitForStarts(4)
-      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[4].taskId}).state).toBe('queued')
+      await launches.waitForStarts(3)
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[3].taskId}).state).toBe('queued')
       launches.complete(tasks[0].taskId,metrics)
-      await launches.waitForStarts(5)
-      expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-4','task-5'])
-      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[5].taskId}).state).toBe('queued')
+      await launches.waitForStarts(4)
+      expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-4'])
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[4].taskId}).state).toBe('queued')
     } finally {await runtime.dispose()}
   })
   it('shares capacity between one heavy card and two template cards and releases cancelled work', async () => {
@@ -755,8 +774,9 @@ describe('Research task ten-slot scheduling', () => {
       await runtime.start(summaryRequest('summary'))
       await launches.waitForStarts(4)
       await runtime.cancel({parentSessionId:'parent-1',taskId:heavy.taskId})
-      await launches.waitForStarts(6)
-      expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-6','task-4','task-5'])
+      await launches.waitForStarts(5)
+      expect(launches.startedTaskIds()).toEqual(['task-1','task-2','task-3','task-6','task-4'])
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:templates[3].taskId}).state).toBe('queued')
     } finally {await runtime.dispose()}
   })
   it('reduces template concurrency during provider rate limiting and recovers after cooldown', async () => {
@@ -765,17 +785,17 @@ describe('Research task ten-slot scheduling', () => {
     const runtime=new ResearchTaskRuntime({adapter:launches.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),now:()=>now})
     try {
       const tasks=await Promise.all(Array.from({length:8},(_,i)=>runtime.start(templateRequest(i))))
-      await launches.waitForStarts(4)
+      await launches.waitForStarts(3)
       launches.event(tasks[0].taskId,{type:'llm/retry',data:{failure:{code:'RATE_LIMIT'}}})
-      for(const i of [0,1]){launches.complete(tasks[i].taskId,metrics);await launches.waitForDisposed(tasks[i].taskId)}
+      launches.complete(tasks[0].taskId,metrics);await launches.waitForDisposed(tasks[0].taskId)
+      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[3].taskId}).state).toBe('queued')
+      launches.complete(tasks[1].taskId,metrics)
+      await launches.waitForStarts(4)
       expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[4].taskId}).state).toBe('queued')
-      launches.complete(tasks[2].taskId,metrics)
-      await launches.waitForStarts(5)
-      expect(runtime.inspect({parentSessionId:'parent-1',taskId:tasks[5].taskId}).state).toBe('queued')
       now+=61000
-      launches.complete(tasks[3].taskId,metrics)
-      await launches.waitForStarts(8)
-      expect(launches.startedTaskIds()).toHaveLength(8)
+      launches.complete(tasks[2].taskId,metrics)
+      await launches.waitForStarts(6)
+      expect(launches.startedTaskIds()).toHaveLength(6)
     } finally {await runtime.dispose()}
   })
   it.each(['manual','html'])('queues heavy %s components at two slots while summary tasks keep their independent capacity', async (mode) => {
@@ -1174,7 +1194,7 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
-  it.each(['不要使用 web_search，使用示例数据', '不调用 financial_query，只使用给定数据'])('keeps explicitly forbidden tools disabled: %s', async query => {
+  it.each(['不要使用 web_search，使用示例数据', '不调用 financial_query，只使用给定数据', '不要调用通联 MCP 获取数据，只使用给定数据'])('keeps explicitly forbidden tools disabled: %s', async query => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start(query)
     expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual([])
@@ -1311,7 +1331,10 @@ describe('Research task Subagent adapter', () => {
     await handle.dispose()
   })
 
-  it('uses visible DataYes tools before financial_query and skips the host web preflight', async () => {
+  it.each(['生成白酒行业最新行情资讯面板',
+    '使用通联 DataYes MCP（研报衍生数据 consensus 一致预期）获取宁德时代(300750)一致预期；缺失项如实标注「暂无数据」，不虚构预测年度。',
+    '调用通联 MCP 获取真实财务数据，不要使用模拟数据，生成离线交互图表。'
+  ])('uses visible DataYes tools for the authored retrieval request: %s', async query => {
     const fixture = containerAdapterFixture()
     fixture.ctx.tools = { schemas: vi.fn(() => [
       { name: 'ework__datayes_search', description: '搜索通联 DataYes 金融数据 API' },
@@ -1319,7 +1342,7 @@ describe('Research task Subagent adapter', () => {
       { name: 'financial_query', description: '查询金融数据' },
       { name: 'web_search', description: '检索网页' }
     ]) }
-    const handle = await fixture.start('生成白酒行业最新行情资讯面板')
+    const handle = await fixture.start(query)
     const child = fixture.ctx.subagents.start.mock.calls[0][1]
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
     expect(child.prompt[0].text).toContain('先实际调用与面板字段最匹配的通联工具取可溯源数据')
