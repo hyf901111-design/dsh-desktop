@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "78f18d92fd0a37504f78aac63b5a1c1f1e34a854",
-        "tipCommit": "4f7cae08a2da108b242b369c55a0b63cab39785d",
+        "baseCommit": "4f7cae08a2da108b242b369c55a0b63cab39785d",
+        "tipCommit": "9272e8b9aeb8866c240d14e339876ff0e275636b",
         "commits": [
           {
-            "commit": "4f7cae08a2da108b242b369c55a0b63cab39785d",
+            "commit": "9272e8b9aeb8866c240d14e339876ff0e275636b",
             "parents": [
-              "78f18d92fd0a37504f78aac63b5a1c1f1e34a854"
+              "4f7cae08a2da108b242b369c55a0b63cab39785d"
             ],
-            "subject": "完善原生行情表交互精度并避免相同数据重复重绘"
+            "subject": "修正六卡工作台顶部安全区和持仓模板内容密度"
           }
         ],
         "files": [
@@ -29,7 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+            "path": "packages/dsh-research-task-runtime/simulated-workbench-generator.js"
           },
           {
             "status": "M",
@@ -37,11 +37,15 @@
           },
           {
             "status": "M",
-            "path": "test/component-data-refresh.test.js"
+            "path": "scripts/lib/research-workbench-growth.mjs"
           },
           {
-            "status": "A",
-            "path": "test/research-market-native-interaction.test.js"
+            "status": "M",
+            "path": "test/research-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/structured-workbench-generation.test.js"
           }
         ],
         "checks": [
@@ -50,15 +54,15 @@
               "npx",
               "vitest",
               "run",
-              "test/component-data-refresh.test.js",
+              "test/research-workbench.test.js",
+              "test/structured-workbench-generation.test.js",
               "test/research-market-native-table.test.js",
-              "test/research-market-native-interaction.test.js",
-              "test/component-data-ui.test.js"
+              "test/research-market-native-interaction.test.js"
             ],
             "outcome": "passed",
-            "summary": "19 项原生表格交互及数据刷新聚焦检查通过",
-            "verifiedCommit": "4f7cae08a2da108b242b369c55a0b63cab39785d",
-            "completedAt": "2026-09-26T05:04:52.707356+00:00",
+            "summary": "53 项矩阵布局、模拟模板、原生表格聚焦检查通过",
+            "verifiedCommit": "9272e8b9aeb8866c240d14e339876ff0e275636b",
+            "completedAt": "2026-09-26T05:21:08.104663+00:00",
             "timeoutMs": 120000
           },
           {
@@ -69,14 +73,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "4f7cae08a2da108b242b369c55a0b63cab39785d",
-            "completedAt": "2026-09-26T05:04:52.707356+00:00",
+            "verifiedCommit": "9272e8b9aeb8866c240d14e339876ff0e275636b",
+            "completedAt": "2026-09-26T05:21:08.104663+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已在集成客户端用通联实际数据创建四卡两列工作台，K线区间可点击，周期取数成功。最新原生表格精度和无变化跳过写入补丁待本地包复验。"
+          "summary": "已完成真实通联四卡工作台与六卡模拟工作台；定时刷新两次 unchanged，保留筛选排序和精确明细。顶部64px安全区和持仓字段修正待新包复验。"
         },
         "acceptanceCriteria": [
           "30类组件深浅色紧凑模板、固定显示样式、数据填充",
@@ -89,63 +93,7 @@
           "取数可用性受用户接口权限与服务响应影响。",
           "不以本次模板验证宣称历史整窗闪烁问题已修复。"
         ],
-        "generatedAt": "2026-09-26T05:04:52.707356+00:00"
-      },
-      "merged": {
-        "mergeCommit": "58f2537d7b39f62d35701f0e7db44da8eeec704c",
-        "verificationCommit": "58f2537d7b39f62d35701f0e7db44da8eeec704c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "58f2537d7b39f62d35701f0e7db44da8eeec704c",
-            "completedAt": "2026-09-26T05:05:27.057Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "58f2537d7b39f62d35701f0e7db44da8eeec704c",
-            "completedAt": "2026-09-26T05:05:27.057Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "58f2537d7b39f62d35701f0e7db44da8eeec704c",
-            "completedAt": "2026-09-26T05:05:27.057Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T05:05:27.057Z"
+        "generatedAt": "2026-09-26T05:21:08.104663+00:00"
       }
     }
   ],
