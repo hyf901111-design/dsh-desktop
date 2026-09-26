@@ -80,6 +80,62 @@
           "外部模型与数据源仍有时延和可用性波动，须通过新包工作台验收"
         ],
         "generatedAt": "2026-09-26T23:57:00.672826+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
+        "verificationCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci",
+            "verifiedCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
+            "completedAt": "2026-09-26T23:58:04.453Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/integration-runtime.test.js",
+              "test/integration-context.test.ts",
+              "test/component-template-registry.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-data-ui.test.js",
+              "test/research-native-interactivity.test.ts",
+              "test/terminal-component-presentation.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/research-market-artifact.test.js",
+              "test/research-market-layout.test.js",
+              "test/research-market-arrange-content.test.js",
+              "test/research-optimal-arrange.test.js",
+              "test/structured-workbench-generation.test.js",
+              "test/research-board-client-adapter.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
+            "verifiedCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
+            "completedAt": "2026-09-26T23:58:04.453Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
+            "completedAt": "2026-09-26T23:58:04.453Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-09-26T23:58:04.453Z"
       }
     }
   ],
