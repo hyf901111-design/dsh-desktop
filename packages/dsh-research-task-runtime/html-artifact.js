@@ -1,3 +1,4 @@
+import { refineCandlestickHtml } from './market-candlestick.js'
 import { sharedComponentRuntime } from './shared-component-runtime.js'
 import { createCanvasUseSurface, installCanvasUseSurface } from './canvas-use-surface.js'
 import { researchNotoFontCss } from './component-noto-font.js'
@@ -35,6 +36,7 @@ export function researchHtmlText(html) {
 // their expandable detail. The signature avoids rewriting arbitrary model HTML.
 export function compactHostDashboardHtml(html) {
   if (typeof html !== 'string') return html
+  html = refineCandlestickHtml(html)
   // Previously saved host-rendered market cards keep their original HTML.
   // Apply the same surface and disclosure geometry while loading their preview.
   if (html.includes('data-sherlock-market=') && html.includes('data-sherlock-design=') && !html.includes('ODYSSEY_MARKET_PRESENTATION_V2'))
@@ -161,7 +163,7 @@ ${['success','warning','danger','info'].map(status => `:where([data-sherlock-sta
 // Earliest important layer wins against later authored styles and gradients. Content/SVG
 // colors are deliberately outside this selector set. Existing artifacts keep their DOM/JS.
 export const RESEARCH_COMPONENT_CONTROLS_CSS = `@layer sherlock-component-controls{
-:is(button,[role="button"]:not(rect):not(circle),[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],summary,input,select,textarea){color:var(--sherlock-control-text)!important;background-color:var(--sherlock-control-bg)!important;background-image:none!important;border-color:var(--sherlock-control-border)!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)!important;caret-color:var(--sherlock-control-text)!important}
+:is(button:not(.market-tile),[role="button"]:not(rect):not(circle),[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],summary,input,select,textarea){color:var(--sherlock-control-text)!important;background-color:var(--sherlock-control-bg)!important;background-image:none!important;border-color:var(--sherlock-control-border)!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)!important;caret-color:var(--sherlock-control-text)!important}
 body[data-sherlock-market] details>summary{background-color:var(--sherlock-surface)!important;color:var(--sherlock-text)!important}
 body[data-sherlock-market] details>summary:hover{background-color:var(--sherlock-surface-muted)!important}
 :is(input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),select){height:28px!important;min-height:28px!important;border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:0 var(--sherlock-control-padding-right,10px) 0 var(--sherlock-control-padding-left,10px)!important;font-size:var(--sherlock-control-font-size,10px)!important;line-height:var(--sherlock-control-line-height,16px)!important}
@@ -170,24 +172,24 @@ body[data-sherlock-market] details>summary:hover{background-color:var(--sherlock
 [data-sherlock-profile="fund72-holdings"] input.research-filter-search{--sherlock-control-padding-left:29px;padding-left:29px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23777777' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-size:12px 12px!important;background-position:10px center!important}
 :root[data-sherlock-theme="dark"] [data-sherlock-profile="fund72-holdings"] input.research-filter-search{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a0a0a0' stroke-width='1.2'%3E%3Ccircle cx='4' cy='4' r='3.4'/%3E%3Cpath d='m7 7 4 4'/%3E%3C/svg%3E")!important}
 textarea{border:.65px solid var(--sherlock-control-border)!important;border-radius:6px!important;padding:8px 10px!important;font-size:10px!important;line-height:16px!important}
-:is(button,[role="button"]:not(rect):not(circle),input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
-:is(button[type="submit"],button[aria-pressed="true"],input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
+:is(button:not(.market-tile),[role="button"]:not(rect):not(circle),input[type="submit"],input[type="button"],input[type="reset"]){height:28px!important;min-height:28px!important;border:0!important;border-radius:7px!important;padding:0 10px!important;font-size:10px!important;line-height:16px!important;background-color:var(--sherlock-control-secondary)!important;color:var(--sherlock-control-text)!important}
+:is(button[type="submit"],button[aria-pressed="true"]:not(.market-tile),input[type="submit"],.research-primary,[data-sherlock-variant="primary"]){background-color:var(--sherlock-control-primary)!important;color:var(--sherlock-control-on-primary)!important}
 /* Market42 sort headers are text controls inside the original compact table header. */
 [data-sherlock-market="table"] th button{height:auto!important;min-height:0!important;padding:0!important;border-radius:0!important;font-size:9px!important;line-height:11px!important;font-weight:400!important;background-color:transparent!important;color:var(--sherlock-market-table-muted)!important}
 :is(input[type="checkbox"],input[type="radio"]){width:13px!important;height:13px!important;min-height:0!important;padding:0!important;accent-color:var(--sherlock-control-primary)!important}
 input[type="checkbox"]{border-radius:3px!important}
-:is(button,[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-text)!important;outline-offset:2px!important}
+:is(button:not(.market-tile),[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-text)!important;outline-offset:2px!important}
 :is(input,textarea)::placeholder{color:var(--sherlock-control-muted)!important;opacity:1!important}
-:is(button,[role="button"],input,select,textarea):disabled{opacity:.45!important;cursor:not-allowed!important}
+:is(button:not(.market-tile),[role="button"],input,select,textarea):disabled{opacity:.45!important;cursor:not-allowed!important}
 a[href],a[href]:visited{color:var(--sherlock-control-text)!important;text-underline-offset:3px;text-decoration-thickness:1px}
 a[href]:hover{text-decoration:underline}
-:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[stroke]:not([stroke="none"]){stroke:currentColor!important}
-:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],a[href],[role="tab"]) :is(span,svg){color:inherit!important}
-:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"]) :is(svg,img){filter:grayscale(1)!important}
-:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg{fill:currentColor!important}
-:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[fill="none"]{fill:none!important}
-:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [fill]:not([fill="none"]){fill:currentColor!important}
-:is(button,[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [stroke]:not([stroke="none"]){stroke:currentColor!important}
+:is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[stroke]:not([stroke="none"]){stroke:currentColor!important}
+:is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],a[href],[role="tab"]) :is(span,svg){color:inherit!important}
+:is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"]) :is(svg,img){filter:grayscale(1)!important}
+:is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg{fill:currentColor!important}
+:is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[fill="none"]{fill:none!important}
+:is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [fill]:not([fill="none"]){fill:currentColor!important}
+:is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [stroke]:not([stroke="none"]){stroke:currentColor!important}
 :is([role="tab"],[aria-current="page"]){color:var(--sherlock-control-text)!important;border-color:var(--sherlock-control-border)!important;background-color:transparent!important;background-image:none!important}
 :is([role="tab"][aria-selected="true"],[aria-current="page"]){background-color:var(--sherlock-control-secondary)!important}
 }`

@@ -299,10 +299,29 @@ it('uses the host candlestick template for multiple stocks and available ranges'
  const candles=Array.from({length:65},(_,index)=>({date:`2026-09-${String(index+1).padStart(2,'0')}`,open:100+index,high:102+index,low:99+index,close:101+index,volume:index%2?null:1000+index}))
  const d=render({variant:'candlestick',datasets:[{symbol:'600519.SH',name:'贵州茅台',candles},{symbol:'000858.SZ',name:'五粮液',candles: candles.map(row=>({...row,open:row.open/2,high:row.high/2,low:row.low/2,close:row.close/2}))}]})
  expect(d.querySelectorAll('.market-candle-symbol option')).toHaveLength(2)
- expect(d.querySelectorAll('[data-candle-range]')).toHaveLength(4)
+ expect(d.querySelectorAll('[data-candle-range]:not([hidden])')).toHaveLength(5)
  expect(d.querySelector('script').textContent).toContain('60')
  expect(d.querySelectorAll('tbody tr')).toHaveLength(130)
 })
+it('offers only distinct usable candle ranges and updates their real coverage',()=>{
+ const candles=Array.from({length:22},(_,i)=>({date:`2026-09-${String(i+1).padStart(2,'0')}`,open:100,high:102,low:99,close:101,volume:null}));
+ const d=render({variant:'candlestick',datasets:[{symbol:'A',name:'标的A',candles},{symbol:'B',name:'标的B',candles:candles.slice(-8)}]});
+ const canvas=d.querySelector('canvas');
+ canvas.getContext=()=>new Proxy({measureText:t=>({width:t.length*5})},{get:(o,k)=>k in o?o[k]:()=>{}});
+ d.defaultView.ResizeObserver=class{observe(){}};
+ d.defaultView.eval(d.querySelector('script').textContent);
+ const usable=()=>[...d.querySelectorAll('[data-candle-range]')].filter(b=>!b.hidden);
+ expect(usable().map(b=>b.textContent)).toEqual(['近5日','近10日','近20日','全部']);
+ expect(usable().every(b=>!b.disabled)).toBe(true);
+ expect(d.querySelector('.market-candle-coverage').textContent).toContain('20 个交易日');
+ d.querySelector('[data-candle-range="5"]').click();
+ expect(d.querySelector('.market-candle-coverage').textContent).toContain('5 个交易日');
+ d.querySelector('[data-candle-range="all"]').click();
+ expect(d.querySelector('.market-candle-coverage').textContent).toContain('22 个交易日');
+ const symbol=d.querySelector('select');symbol.value='1';symbol.dispatchEvent(new d.defaultView.Event('change'));
+ expect(usable().map(b=>b.textContent)).toEqual(['近5日','全部']);
+ expect(d.querySelector('.market-candle-coverage').textContent).toContain('8 个交易日');
+});
 it('shows a missing stock explicitly without inventing candles',()=>{
  const candle={date:'2026-09-18',open:100,high:102,low:99,close:101,volume:1000}
  const d=render({variant:'candlestick',datasets:[{symbol:'600519.SH',name:'贵州茅台',candles:[candle]},{symbol:'000858.SZ',name:'五粮液',candles:[],missing:'历史日线来源未返回'}]})
@@ -393,3 +412,27 @@ it('does not apply daily-quote recency rules to monthly and quarterly industry m
  const daily=JSON.stringify({version:1,type:'market',variant:'metrics',title:'季度观察：最新交易日行情',asOf:'2026-06-30',items:[{label:'收盘价',value:'1200 元'}]})
  expect(workbenchMarketRecencyIssue(daily,'季度观察：股票最新交易日行情',now)).not.toBeNull()
 })
+
+it('upgrades saved candle controls without replacing observations or unrelated HTML',()=>{
+ const groups=[{name:'茅台',symbol:'600519.SH',candles:Array.from({length:22},(_,i)=>({date:`2026-09-${String(i+1).padStart(2,'0')}`,open:100,high:102,low:99,close:101,volume:null}))}];
+ const legacy=`<html><head></head><body data-sherlock-market="candlestick" data-sherlock-design="21m-20260923-v1"><div class="market-candle-controls"><div class="market-candle-ranges"><button disabled>近1年</button></div></div><canvas></canvas><script>(function candleRuntime(groups){return groups;} )(${JSON.stringify(groups)});</script></body></html>`.replace(';} )',';})');
+ const upgraded=compactHostDashboardHtml(legacy);
+ expect(upgraded).toContain('data-candle-controls-v2');
+ expect(upgraded).toContain('data-candle-range="5"');
+ expect(upgraded).toContain(JSON.stringify(groups));
+ expect(upgraded).toContain('market-candle-coverage');
+ expect(upgraded).not.toContain('<button disabled>');
+ expect(compactHostDashboardHtml(upgraded)).toBe(upgraded);
+ const custom=legacy.replace('data-sherlock-design="21m-20260923-v1"','');
+ expect(compactHostDashboardHtml(custom)).toBe(custom);
+});
+it('keeps heatmap semantic colours and tile geometry out of generic button styling',()=>{
+ const d=render({variant:'heatmap',items:[{label:'上涨',weight:50,change:1},{label:'下跌',weight:50,change:-1}]});
+ const tile=d.querySelector('.market-tile');tile.setAttribute('aria-pressed','true');
+ const rules=RESEARCH_COMPONENT_CONTROLS_CSS.replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/([^{}]+)\{([^{}]+)\}/g);
+ for(const [,selector,styles]of rules){
+  if(!/background-color:|height:28px|padding:0/.test(styles))continue;
+  expect(tile.matches(selector.trim())).toBe(false);
+ }
+ expect(tile.getAttribute('style')).toContain('market-positive');
+});
