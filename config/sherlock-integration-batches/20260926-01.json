@@ -11,65 +11,29 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "87faa96a1677b42334bbe001d4cb344c3dbf57bc",
-        "tipCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
+        "baseCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
+        "tipCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
         "commits": [
           {
-            "commit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
+            "commit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
             "parents": [
-              "87faa96a1677b42334bbe001d4cb344c3dbf57bc"
+              "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d"
             ],
-            "subject": "修复图形误选、历史取数空结果和模型空响应恢复"
+            "subject": "修复多证券筛选与单对象数据映射导致的组件生成失败"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-generation-real-shapes.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-source-binding.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/component-data-refresh.test.js"
           }
         ],
         "checks": [
@@ -78,18 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/component-generation-real-shapes.test.js",
+              "test/component-data-refresh.test.js",
               "test/component-source-binding.test.js",
-              "test/research-task-runtime.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-market-artifact.test.js"
+              "test/component-generation-real-shapes.test.js"
             ],
             "outcome": "passed",
-            "summary": "274项相关检查通过，最后恢复逻辑另复验196项；新增真实失败回归覆盖空K线、空响应、图形误选和表格单行包裹",
-            "verifiedCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
-            "completedAt": "2026-09-26T15:07:41.790426+00:00",
+            "summary": "57项聚焦检查通过，覆盖按证券筛选、单对象映射及生成刷新一致性",
+            "verifiedCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
+            "completedAt": "2026-09-26T23:41:29.541942+00:00",
             "timeoutMs": 180000
           },
           {
@@ -100,14 +60,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "e5d29fe4981e62825ef5b93fb9ebe183bdfacb3d",
-            "completedAt": "2026-09-26T15:07:41.790426+00:00",
+            "verifiedCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
+            "completedAt": "2026-09-26T23:41:29.541942+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "首轮新包真实12卡完成9张、3张失败，发现图形误选与全空卡；补修后重新进行客户端验收，未声称通过。"
+          "summary": "当前集成包8卡实测6卡通过，ETF四卡全部完成并验证K线区间、环图和搜索；剩余2卡定位为字段映射，本次补修待新包验证。"
         },
         "acceptanceCriteria": [
           "真实负数散点、多曲线、可缺失基准行业分布保留数据并显示",
@@ -119,63 +79,7 @@
         "risks": [
           "外部模型与数据源仍有时延和可用性波动，须通过新包工作台验收"
         ],
-        "generatedAt": "2026-09-26T15:07:41.790426+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0535c7e49acb825eecb44f1fb8d857b9466ab012",
-        "verificationCommit": "0535c7e49acb825eecb44f1fb8d857b9466ab012",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "0535c7e49acb825eecb44f1fb8d857b9466ab012",
-            "completedAt": "2026-09-26T15:08:34.842Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "0535c7e49acb825eecb44f1fb8d857b9466ab012",
-            "completedAt": "2026-09-26T15:08:34.842Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0535c7e49acb825eecb44f1fb8d857b9466ab012",
-            "completedAt": "2026-09-26T15:08:34.842Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T15:08:34.842Z"
+        "generatedAt": "2026-09-26T23:41:29.541942+00:00"
       }
     }
   ],
