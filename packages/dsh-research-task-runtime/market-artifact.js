@@ -32,7 +32,7 @@ const marketPanelFields = {
  'fund-flow': '"records":[{"period":"时段","industry":"行业","inflow":100,"outflow":80}],"unit":"亿元"；最多60条真实记录，流入/流出是同口径非负数，净额由宿主计算，按时段与行业筛选',
  'valuation-band': '"labels":["时点1","时点2"],"values":[10,11],"bands":{"p10":7,"p25":8,"p50":10,"p75":12,"p90":14},"unit":"倍"；最多366个真实时点，分位阈值单调递增并注明全样本统计口径；宿主绘制分位带、实际估值与选点读数',
  'equity-drawdown': '"labels":["时点1","时点2"],"equity":[1,1.1],"benchmark":[1,1.05],"unit":"元"；最多366个时点，净值与基准同长且为真实正数；宿主归一化对比并从净值历史峰值计算回撤，不另填回撤序列',
- 'allocation-donut': '"items":[{"label":"分类","value":100}],"unit":"亿元"；至少2类、最多8类，同口径正数；总量与占比由宿主计算并提供图例筛选、切片读数及完整表',
+ 'allocation-donut': `"items":[{"label":"分类","value":100}],"unit":"亿元"；至少2类、最多${TEMPLATE_LIMITS.allocationItems}类，同口径正数；前十大持仓应保留全部十项，不强制合并；总量与占比由宿主计算并提供图例筛选、切片读数及完整表`,
  waterfall: '"start":100,"changes":[{"label":"项目","value":10}],"unit":"亿元","startLabel":"可选起点名","endLabel":"可选终点名"；最多12个增减项，终点与累计由宿主计算，提供逐项读数及完整明细表',
  funnel: '"stages":[{"label":"阶段","count":100}],"unit":"个"；2–10个同一批次、从多到少的非负整数，首阶段大于0；阶段与累计转化率由宿主计算，提供逐阶段读数及完整表',
  'risk-matrix': '"items":[{"label":"风险项","probability":1,"impact":1,"detail":"可选说明"}]；最多30项，概率与影响均为1–5级整数，风险得分及等级由宿主计算并提供等级筛选、矩阵格定位、详情和完整表',

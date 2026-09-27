@@ -462,3 +462,18 @@ it('executes the packaged preview upgrader with all candle dependencies present'
  expect(result.saved).toContain('data-candle-controls-v2');
  expect(result.idempotent).toBe(true);
 });
+it('retains twelve allocation categories and allows selecting the tenth holding',()=>{
+ const items=Array.from({length:12},(_,i)=>({label:'持仓'+(i+1),value:12-i}))
+ const d=render({variant:'allocation-donut',items,unit:'%'})
+ d.defaultView.eval(d.querySelector('script').textContent)
+ expect(d.querySelectorAll('.allocation-arc')).toHaveLength(12)
+ expect(d.querySelectorAll('tbody tr')).toHaveLength(12)
+ d.querySelector('.allocation-color-10').dispatchEvent(new d.defaultView.Event('click'))
+ expect(d.querySelector('.allocation-readout').textContent).toContain('持仓10 · 3 %')
+ d.querySelector('[data-allocation-index="9"]').click()
+ expect(d.querySelectorAll('.allocation-arc')).toHaveLength(11)
+ expect(d.querySelector('.allocation-visible-total').textContent).toContain('75')
+ expect(d.querySelector('style').textContent).toContain('.allocation-color-10')
+ expect(d.querySelector('style').textContent).toContain('nth-child(10) i')
+ expect(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'allocation-donut',title:'配置',asOf:'模拟',unit:'%',items:[...items,{label:'13',value:1}]}))).toBeUndefined()
+})

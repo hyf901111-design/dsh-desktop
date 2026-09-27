@@ -1,6 +1,6 @@
 // Shared by prompt construction, renderers and mapping validation. Keep data
 // limits here so a compact prompt cannot promise a shape the renderer rejects.
-export const TEMPLATE_LIMITS=Object.freeze({trendSeries:12,trendPoints:366,scatterItems:20,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
+export const TEMPLATE_LIMITS=Object.freeze({trendSeries:12,trendPoints:366,scatterItems:20,allocationItems:12,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
 export const TEMPLATE_RULES=Object.freeze({
  trend:`1–${TEMPLATE_LIMITS.trendSeries} 条同单位同纵轴序列，2–${TEMPLATE_LIMITS.trendPoints} 个时点；每条 values 必须与 labels 等长且全为有限数值，允许负数`,
  scatter:`1–${TEMPLATE_LIMITS.scatterItems} 个样本；x/y 为有限数值，允许负数；可选 size 必须大于0`,
