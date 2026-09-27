@@ -4,7 +4,7 @@
 export function classifyResearchCreationRequest(raw) {
   if (typeof raw !== 'string') return null
   const text = raw.trim().replace(/\s+/g, ' ')
-  if (!text || text.length > 4000 || /(?:不要|无需|不需要|别|禁止)(?:再)?(?:创建|生成|搭建|制作|添加)/.test(text)) return null
+  if (!text || text.length > 4000 || /(?:不要|无需|不需要|别|禁止|不)(?:再|重新)?(?:创建|生成|搭建|制作|添加)/.test(text)) return null
   if (/(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|搭建|制作|构建)/.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计)(?:.{0,20})(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/.test(text)) return null
   if (!/(?:创建|生成|搭建|制作|构建|添加|做(?:一个|些|个)?|要(?:一个|些|个)?)/.test(text)) return null

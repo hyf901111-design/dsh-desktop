@@ -11,6 +11,7 @@ const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
 function bounded(value,limit=256000){const text=JSON.stringify(value);if(!text||Buffer.byteLength(text)>limit)throw Error('数据超过组件容量');return JSON.parse(text)}
 function path(root,path){
  if(typeof path!=='string'||path.length>512)throw Error('字段路径无效')
+ path=path.replace(/\[(0|[1-9]\d*)\]/g,'.$1')
  let value=root
  for(const key of path?path.split('.'):[]){if(forbidden.has(key)||!/^([\w-]+)$/.test(key))throw Error('字段路径无效');if(value==null||!Object.hasOwn(Object(value),key))return undefined;value=value[key]}
  return value
@@ -209,7 +210,7 @@ export class ComponentDataRefresh {
   if(!target.writable||!model)throw Error('该组件尚未保存模板数据，请先使用结构化模板创建或更新一次')
   if(templateFor(input.mapping)?.id!==model.templateId)throw Error('字段映射必须保留当前模板类型')
   const requests=[]
-  for(const r of input.requests){if(!id(r.key)||!id(r.toolId)||!record(r.args)||requests.some(x=>x.key===r.key))throw Error('数据请求无效');requests.push(await this.options.validateRequest({...r},input))}
+  for(const r of input.requests){if(!id(r.key)||!id(r.toolId)||!record(r.args)||requests.some(x=>x.key===r.key))throw Error('数据请求无效');requests.push(await this.options.validateRequest({...r,toolId:/^ework__t_[a-f\d]+$/i.test(r.toolId)?r.toolId.slice('ework__'.length):r.toolId},input))}
   const previous=this.records.find(b=>b.ownerAccountId===owner&&b.sessionId===input.sessionId&&b.nodeId===input.nodeId)
   const intervalMinutes=preserveSettings&&previous?previous.intervalMinutes:input.intervalMinutes
   const enabled=intervalMinutes>0&&(preserveSettings&&previous?previous.enabled:true)
