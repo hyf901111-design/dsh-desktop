@@ -12,6 +12,17 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('accepts numeric bracket indexes without allowing expressions or property traversal',()=>{
+  expect(evaluateMapping({$path:'data.stocks[0].price'},{data:{stocks:[{price:4.5}]}})).toBe(4.5)
+  for(const field of ['data.stocks[-1].price','data.stocks[0+1].price','data.stocks["0"].price','data.stocks[0].constructor'])expect(()=>evaluateMapping({$path:field},{data:{stocks:[{price:4.5}]}})).toThrow(/路径/)
+ })
+ it('resolves a callable plugin name to its registered id before existing authorization checks',async()=>{
+  const f=setup();await f.service.load();const validate=vi.fn(async r=>({...r,connectionId:'c',connectionRevision:1,schemaDigest:'d'}));f.service.options.validateRequest=validate
+  const input=structuredClone(f.input);input.requests[0].toolId='ework__t_abc123';await f.service.bind(input)
+  expect(validate.mock.calls[0][0].toolId).toBe('t_abc123')
+  validate.mockRejectedValueOnce(Error('所选数据工具未连接'));await expect(f.service.bind(input)).rejects.toThrow(/未连接/)
+ })
+
  it('filters shared quote rows before sorting and selecting the latest window',()=>{
   const source={q:{data:{data:[{ticker:'600519',tradeDate:'2026-09-24',closePrice:1237},{ticker:'300750',tradeDate:'2026-09-24',closePrice:270},{ticker:'600519',tradeDate:'2026-09-22',closePrice:1240},{ticker:'600519',tradeDate:'2026-09-23',closePrice:1239}]}}}
   const select={$from:'q',$each:'data.data',$filter:{ticker:'600519'},$sortBy:'tradeDate',$order:'asc',$take:-2}
