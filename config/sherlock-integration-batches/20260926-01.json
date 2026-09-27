@@ -11,29 +11,60 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "07427060a6cbf2f65d243270e17c3ccdd1b1a19f",
-        "tipCommit": "4656dc50d75059d55c73f52d03cb34d409137e04",
+        "baseCommit": "4656dc50d75059d55c73f52d03cb34d409137e04",
+        "tipCommit": "033c4933a009cbc66af04717c03e146ea94bdb7a",
         "commits": [
           {
-            "commit": "4656dc50d75059d55c73f52d03cb34d409137e04",
+            "commit": "f64a9e8ea165f0ceb59eb2f628f8697be3a2e126",
             "parents": [
-              "07427060a6cbf2f65d243270e17c3ccdd1b1a19f"
+              "4656dc50d75059d55c73f52d03cb34d409137e04"
             ],
-            "subject": "阻止接口文档样例冒充真实数据并恢复业务取数"
+            "subject": "保留前十大持仓环图并优先使用精简基金取数接口"
+          },
+          {
+            "commit": "033c4933a009cbc66af04717c03e146ea94bdb7a",
+            "parents": [
+              "f64a9e8ea165f0ceb59eb2f628f8697be3a2e126"
+            ],
+            "subject": "兼容刷新绑定名称及数组索引并消除更新任务的假规划失败"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
           },
           {
             "status": "M",
-            "path": "test/component-source-binding.test.js"
+            "path": "packages/dsh-research-task-runtime/market-allocation-donut.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-refresh.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-artifact.test.js"
           }
         ],
         "checks": [
@@ -42,14 +73,16 @@
               "npx",
               "vitest",
               "run",
-              "test/component-source-binding.test.js",
               "test/component-data-refresh.test.js",
-              "test/research-task-runtime.test.js"
+              "test/component-source-binding.test.js",
+              "test/research-market-artifact.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/research-creation-progress.test.js"
             ],
             "outcome": "passed",
-            "summary": "228项聚焦检查通过；覆盖文档样例误完成、空输出后检索修复、重复失败禁止发布",
-            "verifiedCommit": "4656dc50d75059d55c73f52d03cb34d409137e04",
-            "completedAt": "2026-09-26T23:57:00.672826+00:00",
+            "summary": "109项聚焦检查通过；环图12类、绑定名称与数组索引兼容、否定创建请求不出现规划卡",
+            "verifiedCommit": "033c4933a009cbc66af04717c03e146ea94bdb7a",
+            "completedAt": "2026-09-27T00:14:03.245447+00:00",
             "timeoutMs": 180000
           },
           {
@@ -60,14 +93,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "4656dc50d75059d55c73f52d03cb34d409137e04",
-            "completedAt": "2026-09-26T23:57:00.672826+00:00",
+            "verifiedCommit": "033c4933a009cbc66af04717c03e146ea94bdb7a",
+            "completedAt": "2026-09-27T00:14:03.245447+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "新包股票4卡中3卡内容通过，热力图从接口文档生成样例被实测发现；此提交修复其恢复校验，待新包重新验收。"
+          "summary": "上一新包六股热力图111秒完成并绑定6请求；基金两卡通过精简持仓接口绑定成功。本次补齐环图十项和绑定兼容，待最终新包验证。"
         },
         "acceptanceCriteria": [
           "真实负数散点、多曲线、可缺失基准行业分布保留数据并显示",
@@ -79,63 +112,7 @@
         "risks": [
           "外部模型与数据源仍有时延和可用性波动，须通过新包工作台验收"
         ],
-        "generatedAt": "2026-09-26T23:57:00.672826+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
-        "verificationCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
-            "completedAt": "2026-09-26T23:58:04.453Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
-            "completedAt": "2026-09-26T23:58:04.453Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6b626b258f989d62470ef4139584bbd696a943bb",
-            "completedAt": "2026-09-26T23:58:04.453Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-26T23:58:04.453Z"
+        "generatedAt": "2026-09-27T00:14:03.245447+00:00"
       }
     }
   ],
