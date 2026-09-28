@@ -11,25 +11,29 @@
         "schemaVersion": 1,
         "featureName": "三十类金融终端组件模板与数据独立刷新",
         "branch": "codex/feat/component-template-data-refresh-20260926",
-        "baseCommit": "033c4933a009cbc66af04717c03e146ea94bdb7a",
-        "tipCommit": "a6ad4ca8e0f50c767b7b4887ca86ec6c691f21f5",
+        "baseCommit": "a6ad4ca8e0f50c767b7b4887ca86ec6c691f21f5",
+        "tipCommit": "9b712d55bbd3110253406b40cf7cef4e2c2e1c63",
         "commits": [
           {
-            "commit": "a6ad4ca8e0f50c767b7b4887ca86ec6c691f21f5",
+            "commit": "9b712d55bbd3110253406b40cf7cef4e2c2e1c63",
             "parents": [
-              "033c4933a009cbc66af04717c03e146ea94bdb7a"
+              "a6ad4ca8e0f50c767b7b4887ca86ec6c691f21f5"
             ],
-            "subject": "修复旧看板工作区移除后数据设置无法读取"
+            "subject": "修复通联等HTTP MCP会话过期后持续刷新失败"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/component-data/service.ts"
+            "path": "src/main/integrations/adapters/mcp.ts"
           },
           {
             "status": "M",
-            "path": "test/component-data-service.test.ts"
+            "path": "test/fixtures/integrations/mcp-http.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-mcp.test.ts"
           }
         ],
         "checks": [
@@ -38,15 +42,14 @@
               "npx",
               "vitest",
               "run",
+              "test/integration-mcp.test.ts",
               "test/component-data-service.test.ts",
-              "test/component-data-ui.test.js",
-              "test/component-data-status.test.js",
               "test/component-data-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "39项聚焦检查通过，复现并修复有效会话无工作区时读取设置失败，绑定和刷新仍校验工作区",
-            "verifiedCommit": "a6ad4ca8e0f50c767b7b4887ca86ec6c691f21f5",
-            "completedAt": "2026-09-28T00:57:20.260676+00:00",
+            "summary": "49项聚焦检查通过；真实SDK复现HTTP会话过期，四并发只重建一次，业务调用不重放",
+            "verifiedCommit": "9b712d55bbd3110253406b40cf7cef4e2c2e1c63",
+            "completedAt": "2026-09-28T01:02:11.321821+00:00",
             "timeoutMs": 180000
           },
           {
@@ -57,80 +60,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a6ad4ca8e0f50c767b7b4887ca86ec6c691f21f5",
-            "completedAt": "2026-09-28T00:57:20.260676+00:00",
+            "verifiedCommit": "9b712d55bbd3110253406b40cf7cef4e2c2e1c63",
+            "completedAt": "2026-09-28T01:02:11.321821+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "已在当前客户端复现黄金指数四日明细表的归属错误；会话存在，工作区已移除，0条绑定。待集成新包验证未绑定状态。"
+          "summary": "已确认基金四卡刷新均报MCP session not found；会话过期恢复测试已通过，待本地新包实测四卡刷新。"
         },
         "acceptanceCriteria": [
           "旧看板的有效会话可读取数据设置，无绑定显示未绑定，不误报工作区不可用",
           "绑定或刷新仍要求有效工作区；不存在的会话仍拒绝读取",
-          "保留既有真实数据绑定和刷新行为"
+          "保留既有真实数据绑定和刷新行为",
+          "HTTP MCP会话过期后重新握手；并发恢复复用连接；业务调用结果未知不重放"
         ],
         "risks": [
           "外部模型与数据源仍有时延和可用性波动，须通过新包工作台验收"
         ],
-        "generatedAt": "2026-09-28T00:57:20.260676+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3971a783a7d971f591d0a9f308cba1b9ab75d8ac",
-        "verificationCommit": "3971a783a7d971f591d0a9f308cba1b9ab75d8ac",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "3971a783a7d971f591d0a9f308cba1b9ab75d8ac",
-            "completedAt": "2026-09-28T00:57:51.564Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/integration-runtime.test.js",
-              "test/integration-context.test.ts",
-              "test/component-template-registry.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-data-ui.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/terminal-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/research-market-layout.test.js",
-              "test/research-market-arrange-content.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/structured-workbench-generation.test.js",
-              "test/research-board-client-adapter.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/integration-runtime.test.js test/integration-context.test.ts test/component-template-registry.test.js test/component-data-refresh.test.js test/component-data-ui.test.js test/research-native-interactivity.test.ts test/terminal-component-presentation.test.js test/workbench-design-contract.test.js test/research-market-artifact.test.js test/research-market-layout.test.js test/research-market-arrange-content.test.js test/research-optimal-arrange.test.js test/structured-workbench-generation.test.js test/research-board-client-adapter.test.js",
-            "verifiedCommit": "3971a783a7d971f591d0a9f308cba1b9ab75d8ac",
-            "completedAt": "2026-09-28T00:57:51.564Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3971a783a7d971f591d0a9f308cba1b9ab75d8ac",
-            "completedAt": "2026-09-28T00:57:51.564Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-09-28T00:57:51.564Z"
+        "generatedAt": "2026-09-28T01:02:11.321821+00:00"
       }
     }
   ],
