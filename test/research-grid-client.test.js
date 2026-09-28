@@ -439,3 +439,18 @@ it('共享只读组件的设置菜单仍允许浏览器阅读，禁止编辑和�
  expect(buttons.find(n=>n.textContent==='刷新').disabled).toBe(true)
  expect(buttons.find(n=>n.textContent==='修改名称').disabled).toBe(true)
 })
+
+
+it('组件选择变化不重复发送相同的共享上下文，避免重绘正在使用的下拉框',async()=>{
+ const f=await fixture(true),html={...text('html'),kind:'generated-container',containerPrompt:'新闻',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'新闻',html:'<select><option>全部</option><option>行业</option></select>'}}
+ await act(async()=>f.workspace.setArtifacts([html]))
+ const frame=f.host.querySelector('iframe[data-research-html-artifact]'),post=vi.fn()
+ Object.defineProperty(frame,'contentWindow',{configurable:true,value:{postMessage:post}})
+ await act(async()=>f.workspace.updateSelection(['html'],'replace'))
+ expect(post.mock.calls.filter(([m])=>m.type==='sherlock-component-context')).toHaveLength(0)
+ await act(async()=>f.workspace.updateSelection([],'replace'))
+ expect(post.mock.calls.filter(([m])=>m.type==='sherlock-component-context')).toHaveLength(0)
+ f.win.dshDesktop.researchBoards={isSharedSession:()=>true}
+ await act(async()=>f.workspace.updateSelection(['html'],'replace'))
+ expect(post.mock.calls.filter(([m])=>m.type==='sherlock-component-context')).toEqual([[expect.objectContaining({readOnly:true,shared:true}),'*']])
+})

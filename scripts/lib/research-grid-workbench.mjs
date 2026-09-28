@@ -65,6 +65,17 @@ export function patchResearchGridWorkbench(source){
   change('const onContentSelect = (event) => {','const onContentSelect = (event) => {\nif(root.hasAttribute("data-ework-grid")){const frame=event.target,id=frame?.matches?.("iframe[data-research-html-artifact]")&&frame.closest("[data-research-node-id]")?.getAttribute("data-research-node-id");if(!id||!workspace.getSnapshot().artifacts.some(n=>n.id===id))return;const modified=event.detail?.shiftKey||event.detail?.metaKey;if(modified){root.ownerDocument.defaultView.getSelection()?.removeAllRanges();workspace.updateSelection([id],"toggle");}else if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id))workspace.updateSelection([id],"replace");return;}')
   change('const disabled = activeGeneration || editingPrompt;',`const disabled = activeGeneration || editingPrompt;
   useWorkbenchSettings({triggerRef,sessionId,node,disabled,editingPrompt,onEdit,onRefresh,onSetRefresh,onFrameAction,onOpenBrowser,onProvenance:()=>{setShowProvenance(true);setOpen(true);}});`)
+  // Selecting a card must not repaint the inner component through an unchanged
+  // shared-context message. Fresh documents still request context on join.
+  change(`(0,react.useLayoutEffect)(()=>{
+      frameRef.current?.contentWindow?.postMessage(componentContext(),'*');
+    });`,`const workbenchContextRef=react.useRef(null);
+    (0,react.useLayoutEffect)(()=>{
+      const context=componentContext(),encoded=JSON.stringify(context),previous=workbenchContextRef.current;
+      if(previous?.html===spec.html&&previous.encoded===encoded)return;
+      workbenchContextRef.current={html:spec.html,encoded};
+      frameRef.current?.contentWindow?.postMessage(context,'*');
+    });`)
   // Original business callbacks stay in this closure. The hidden floating
   // toolbar remains a stable anchor for the existing selected-create dialog.
   const hook=`
