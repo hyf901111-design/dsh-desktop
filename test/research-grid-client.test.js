@@ -216,6 +216,16 @@ it('更多菜单的基于所选创建调用原生成流程并保留来源',async
  expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({kind:'create',selectedNodeIds:['a'],prompt:'基于这些材料创建趋势分析'}))
  expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
 })
+it('恢复录音胶囊不改变工具栏链接按钮的尺寸、图标或隐藏文字',async()=>{
+ const f=await fixture(true),toolbar=f.document.querySelector('[data-ework-toolbar]')
+ for(const name of ['select','container','link','voice']){
+  const button=toolbar.querySelector('[data-research-global-'+name+']'),style=f.win.getComputedStyle(button)
+  expect(style.width,name).toBe('44px');expect(style.height,name).toBe('40px')
+  const icon=button.querySelector('svg,img,.odyssey-global-icon')
+  expect(f.win.getComputedStyle(icon).width,name).toBe('22px')
+  for(const label of button.querySelectorAll('span:not(.odyssey-global-icon)'))expect(f.win.getComputedStyle(label).display,name).toBe('none')
+ }
+})
 it('语音先显示工具栏上方的原录音胶囊，识别完成才追加一次组件并执行',async()=>{
  let subscriber
  const bridge={subscribe:fn=>{subscriber=fn;return()=>{}},setActive:vi.fn(async()=>({ok:true})),start:vi.fn(async()=>({ok:true})),stop:vi.fn(async()=>({ok:true})),cancel:vi.fn(async()=>({ok:true}))}
