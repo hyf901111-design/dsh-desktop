@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "59fe7e8de2db185a9e823d7f7d17a30fe2a37369",
-        "tipCommit": "fff5581a7acb7812f7dca996173e309623f41eae",
+        "baseCommit": "fff5581a7acb7812f7dca996173e309623f41eae",
+        "tipCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
         "commits": [
           {
-            "commit": "fff5581a7acb7812f7dca996173e309623f41eae",
+            "commit": "3cc345e06d07c5b09422e6b954d00bc6c6d46900",
             "parents": [
-              "59fe7e8de2db185a9e823d7f7d17a30fe2a37369"
+              "fff5581a7acb7812f7dca996173e309623f41eae"
             ],
-            "subject": "修复：组件菜单不再被右侧会话滚动关闭"
+            "subject": "修复：恢复语音录音浮层并在识别后创建组件"
+          },
+          {
+            "commit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
+            "parents": [
+              "3cc345e06d07c5b09422e6b954d00bc6c6d46900"
+            ],
+            "subject": "修复：保留链接工具按钮尺寸并隔离录音胶囊样式"
           }
         ],
         "files": [
@@ -30,6 +37,14 @@
           {
             "status": "M",
             "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
@@ -44,20 +59,22 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交补丁构建通过",
-            "verifiedCommit": "fff5581a7acb7812f7dca996173e309623f41eae",
-            "completedAt": "2026-09-28T11:26:07.926349+00:00",
+            "verifiedCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
+            "completedAt": "2026-09-28T11:47:30.975007+00:00",
             "timeoutMs": 300000
           },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js"
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-voice.test.ts"
             ],
             "outcome": "passed",
-            "summary": "50项组件工厂直接交互检查通过；首次更多不被独立会话滚动关闭，画板滚动仍关闭",
-            "verifiedCommit": "fff5581a7acb7812f7dca996173e309623f41eae",
-            "completedAt": "2026-09-28T11:26:07.926349+00:00",
+            "summary": "86项直接相关客户端工厂、网格和原生语音权限所有权检查通过；录音不提前创建、final末尾追加执行、取消空结果错误、Fn与去重、胶囊和四工具按钮样式",
+            "verifiedCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
+            "completedAt": "2026-09-28T11:47:30.975007+00:00",
             "timeoutMs": 300000
           },
           {
@@ -68,18 +85,18 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交类型检查通过",
-            "verifiedCommit": "fff5581a7acb7812f7dca996173e309623f41eae",
-            "completedAt": "2026-09-28T11:26:07.926349+00:00",
+            "verifiedCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
+            "completedAt": "2026-09-28T11:47:30.975007+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端；前一集成候选已核验原生统一图标、连续格线及新草稿完整重启恢复。最新菜单关闭作用域待本次集成原生核验。"
+          "summary": "功能worktree不构建共享客户端；原生录音胶囊位置、开始不提前创建及取消行为在本次集成包核验。模拟事件去重/陈旧与final执行已验证，不能代替真实讲话识别或实体Fn验收。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
-          "组件拉框可挤压已有组件，链接/语音末尾追加，取消恢复完整布局",
+          "组件拉框可挤压已有组件，链接末尾追加、语音有效识别后末尾追加，取消恢复完整布局",
           "更多菜单含思维导图、总结提炼和基于所选创建，保留框选多选",
           "刷新提示使用真实成功时间；问答 icon 打开右侧会话并添加当前组件上下文",
           "现有数据、图表、表格、HTML交互及内容尺寸适配保留",
@@ -104,59 +121,15 @@
           "Figma参考路径统一16px光学框、1.5px圆角描边，補充图标相同管线，离线打包",
           "连续正方形网格与真实吸附共用坐标，绘制/移动/缩放无尺寸文字",
           "真实桌面存储接受精确格位缓存键；新增空白组件、ID与格位跨窗口端口重启保持",
-          "未选中组件首次点击更多保持打开；右侧会话自动滚动不关闭组件菜单，画板滚动、窗口缩放、外部点击与Escape仍关闭"
+          "未选中组件首次点击更多保持打开；右侧会话自动滚动不关闭组件菜单，画板滚动、窗口缩放、外部点击与Escape仍关闭",
+          "语音开始和识别中不创建组件；保留工具栏上方44px原录音胶囊及32px圆形按钮，最终有效识别才追加并自动执行，取消和失败无草稿，实体Fn生命周期与原权限隔离保持"
         ],
         "risks": [
           "本轮功能与factory聚焦检查通过，原生界面需后继集成客户端核验",
           "固定1000px规范文档保留，窄窗展示投影不等于更改文档",
           "既存research-html-theme的4项基线失败与本轮修改无关；没有运行全功能测试"
         ],
-        "generatedAt": "2026-09-28T11:26:07.926349+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1624c9df5d6f66df62fe78b3c178b091a82c784c",
-        "verificationCommit": "1624c9df5d6f66df62fe78b3c178b091a82c784c",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "1624c9df5d6f66df62fe78b3c178b091a82c784c",
-            "completedAt": "2026-09-28T11:27:01.089Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "1624c9df5d6f66df62fe78b3c178b091a82c784c",
-            "completedAt": "2026-09-28T11:27:01.089Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1624c9df5d6f66df62fe78b3c178b091a82c784c",
-            "completedAt": "2026-09-28T11:27:01.089Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T11:27:01.089Z"
+        "generatedAt": "2026-09-28T11:47:30.975007+00:00"
       }
     }
   ],
