@@ -11,22 +11,22 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "7741035b4c0aace7fef1b046b6d7c2a061fcff9a",
-        "tipCommit": "3138742912ad063d70b7f4adafdbfda2bbdde9b9",
+        "baseCommit": "3138742912ad063d70b7f4adafdbfda2bbdde9b9",
+        "tipCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
         "commits": [
           {
-            "commit": "e84f3e6899f07a035c60fad6970c5815ce9f698b",
+            "commit": "d419243f4ab9b51b66cd7d87cbddae5ad830c819",
             "parents": [
-              "7741035b4c0aace7fef1b046b6d7c2a061fcff9a"
+              "3138742912ad063d70b7f4adafdbfda2bbdde9b9"
             ],
-            "subject": "修复：滚动后组件编辑菜单保持可见并关闭旧画布自动缩放"
+            "subject": "修复：重新打开已有工作台时显示底部工具栏"
           },
           {
-            "commit": "3138742912ad063d70b7f4adafdbfda2bbdde9b9",
+            "commit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
             "parents": [
-              "e84f3e6899f07a035c60fad6970c5815ce9f698b"
+              "d419243f4ab9b51b66cd7d87cbddae5ad830c819"
             ],
-            "subject": "修复：组件完整采用新版工作台样式并避开顶栏遮挡"
+            "subject": "修复：统一工具栏图标样式并改善小组件内容适配"
           }
         ],
         "files": [
@@ -36,19 +36,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
@@ -67,7 +55,7 @@
             "path": "test/research-grid-client.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/workbench-component-presentation.test.js"
           }
         ],
@@ -79,8 +67,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "3138742912ad063d70b7f4adafdbfda2bbdde9b9",
-            "completedAt": "2026-09-28T07:26:03.329609+00:00",
+            "verifiedCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
+            "completedAt": "2026-09-28T07:35:42.862155+00:00",
             "timeoutMs": 300000
           },
           {
@@ -95,9 +83,9 @@
               "test/terminal-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：62项直接相关测试",
-            "verifiedCommit": "3138742912ad063d70b7f4adafdbfda2bbdde9b9",
-            "completedAt": "2026-09-28T07:26:03.329609+00:00",
+            "summary": "精确功能提交通过：63项直接相关测试",
+            "verifiedCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
+            "completedAt": "2026-09-28T07:35:42.862155+00:00",
             "timeoutMs": 300000
           },
           {
@@ -108,8 +96,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "3138742912ad063d70b7f4adafdbfda2bbdde9b9",
-            "completedAt": "2026-09-28T07:26:03.329609+00:00",
+            "verifiedCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
+            "completedAt": "2026-09-28T07:35:42.862155+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -130,52 +118,7 @@
           "原生客户端视觉和交互需现场核验；公开发布与主分支晋升未授权",
           "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容"
         ],
-        "generatedAt": "2026-09-28T07:26:03.329609+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cce1e77113a8b5059c9e2213560a29237cd54e2a",
-        "verificationCommit": "cce1e77113a8b5059c9e2213560a29237cd54e2a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "cce1e77113a8b5059c9e2213560a29237cd54e2a",
-            "completedAt": "2026-09-28T07:26:35.192Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "cce1e77113a8b5059c9e2213560a29237cd54e2a",
-            "completedAt": "2026-09-28T07:26:35.192Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "cce1e77113a8b5059c9e2213560a29237cd54e2a",
-            "completedAt": "2026-09-28T07:26:35.192Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T07:26:35.192Z"
+        "generatedAt": "2026-09-28T07:35:42.862155+00:00"
       }
     }
   ],
