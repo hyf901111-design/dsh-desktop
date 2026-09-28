@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
-        "tipCommit": "617a8f619636473daa8dded243b421688173feeb",
+        "baseCommit": "617a8f619636473daa8dded243b421688173feeb",
+        "tipCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
         "commits": [
           {
-            "commit": "617a8f619636473daa8dded243b421688173feeb",
+            "commit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
             "parents": [
-              "3ecf29f2b59d13e6f7950c01cb396904eae5d81f"
+              "617a8f619636473daa8dded243b421688173feeb"
             ],
-            "subject": "修复：统一组件选中描边与滚轮分流并铺满整理工作台"
+            "subject": "修复：整理工作台时保持行情指标组件紧凑"
           }
         ],
         "files": [
@@ -29,35 +29,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -68,8 +44,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
-            "completedAt": "2026-09-28T07:58:22.944613+00:00",
+            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
+            "completedAt": "2026-09-28T08:02:07.338511+00:00",
             "timeoutMs": 300000
           },
           {
@@ -86,9 +62,9 @@
               "test/research-canvas-wheel-pass-through.test.js"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：77项网格、客户端、滚轮和内容展示聚焦测试",
-            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
-            "completedAt": "2026-09-28T07:58:22.944613+00:00",
+            "summary": "精确功能提交通过：78项网格、客户端、滚轮和内容展示聚焦测试",
+            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
+            "completedAt": "2026-09-28T08:02:07.338511+00:00",
             "timeoutMs": 300000
           },
           {
@@ -101,8 +77,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：sandbox选择状态消息及重新载入回归",
-            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
-            "completedAt": "2026-09-28T07:58:22.944613+00:00",
+            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
+            "completedAt": "2026-09-28T08:02:07.338511+00:00",
             "timeoutMs": 300000
           },
           {
@@ -113,8 +89,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
-            "completedAt": "2026-09-28T07:58:22.944613+00:00",
+            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
+            "completedAt": "2026-09-28T08:02:07.338511+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -139,52 +115,7 @@
           "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容",
           "research-html-theme既存4项失败已用修改前源码复现；本轮选择状态用例单独通过。"
         ],
-        "generatedAt": "2026-09-28T07:58:22.944613+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2498292df600c2b9b52337e0c97057f9e6da1b56",
-        "verificationCommit": "2498292df600c2b9b52337e0c97057f9e6da1b56",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "2498292df600c2b9b52337e0c97057f9e6da1b56",
-            "completedAt": "2026-09-28T07:59:07.399Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "2498292df600c2b9b52337e0c97057f9e6da1b56",
-            "completedAt": "2026-09-28T07:59:07.399Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2498292df600c2b9b52337e0c97057f9e6da1b56",
-            "completedAt": "2026-09-28T07:59:07.399Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T07:59:07.399Z"
+        "generatedAt": "2026-09-28T08:02:07.338511+00:00"
       }
     }
   ],
