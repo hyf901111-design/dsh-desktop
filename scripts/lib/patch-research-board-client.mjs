@@ -15,6 +15,7 @@ import { compactHostDashboardHtml, researchComponentTypographyCss } from '../../
 import { candleRuntime, candleControls, refineCandlestickHtml } from '../../packages/dsh-research-task-runtime/market-candlestick.js'
 import { MARKET_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/market-presentation.js'
 import { applyTerminalPresentation, TERMINAL_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/terminal-presentation.js'
+import { applyWorkbenchPresentation, WORKBENCH_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
@@ -719,7 +720,7 @@ export function patchLegacyDashboardPreview(source) {
   refreshDefinition('function candleControls(groups) {', 'function refineCandlestickHtml(html) {', candleControls.toString())
   refreshDefinition('function refineCandlestickHtml(html) {', 'const MARKET_PRESENTATION_CSS = ', refineCandlestickHtml.toString())
   refreshDefinition('const TERMINAL_PRESENTATION_CSS = ', previewStart,
-    `const TERMINAL_PRESENTATION_CSS = ${JSON.stringify(TERMINAL_PRESENTATION_CSS)};\n${applyTerminalPresentation.toString()}`)
+    `const TERMINAL_PRESENTATION_CSS = ${JSON.stringify(TERMINAL_PRESENTATION_CSS)};\n${applyTerminalPresentation.toString()}\nconst WORKBENCH_PRESENTATION_CSS = ${JSON.stringify(WORKBENCH_PRESENTATION_CSS)};\n${applyWorkbenchPresentation.toString()}`)
   if (!source.includes('const displayHtml = ')) {
     source = replace(source, "  const theme = initialTheme === 'dark' ? 'dark' : 'light'", "  const displayHtml = applyTerminalPresentation(compactHostDashboardHtml(html))\n  const theme = initialTheme === 'dark' ? 'dark' : 'light'")
     source = replace(source, '<body>${html}</body></html>', '<body>${displayHtml}</body></html>')

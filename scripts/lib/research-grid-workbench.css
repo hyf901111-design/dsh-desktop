@@ -1,5 +1,5 @@
-/* The workbench changes chrome and geometry; content remains in its own renderer. */
-body [data-research-canvas][data-ework-grid]{--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:#74778055 transparent}
+/* The scroll viewport starts below the desktop workspace's 56px header. */
+body [data-research-canvas][data-ework-grid]{margin-top:56px!important;height:calc(100% - 56px)!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:#74778055 transparent}
 body[data-ds-dark-theme] [data-ework-grid]{--grid-card:#151518;--grid-text:#e7e8ec;--grid-muted:#a0a5b1;--grid-menu:#1c1b20;background:#09090b!important}
 body [data-ework-grid] [data-research-dot-grid],body [data-ework-grid] [data-research-selection-actions],body [data-ework-grid] [data-research-snap-guides],body [data-ework-grid] [data-research-empty-viewport]{display:none!important}
 body [data-ework-grid] [data-research-content-layer]{position:relative!important;inset:0!important;transform:none!important;min-height:100%;pointer-events:none;transform-origin:0 0}
@@ -41,7 +41,7 @@ body [data-ework-grid][data-canvas-tool=component] [data-research-node-id] [data
 body[data-ds-dark-theme] .ew-grid-menu{background:#1c1b20;color:#e9e9ef}
 .ew-grid-menu button{box-sizing:border-box;display:flex;align-items:center;gap:9px;width:100%;min-height:33px;padding:7px 8px;border:0;background:transparent;color:inherit;border-radius:3px;font:inherit;text-align:left;cursor:pointer}
 .ew-grid-menu button:hover{background:#8882}.ew-grid-menu button:disabled{opacity:.4;cursor:default}.ew-grid-menu button span:nth-child(2){flex:1}.ew-grid-divider{height:1px;background:#8882;margin:5px}.ew-grid-submenu{padding-left:22px}
-body [data-ework-grid] [data-research-global-toolbar]{z-index:200!important;transform:translateX(-50%)!important;pointer-events:auto}
+body [data-ework-toolbar]{z-index:200!important;transform:translateX(-50%)!important;pointer-events:auto}
 body [data-ework-grid] .rScV5Q_contextMenu{z-index:2000}
 body [data-ework-grid] [data-research-voice-target] .rScV5Q_containerDraft{visibility:hidden}
 body [data-ework-grid] [data-research-voice-target] [data-research-voice-feedback]{position:absolute!important;inset:34px 0 0!important;transform:none!important;width:auto!important;max-width:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;visibility:visible;background:var(--grid-card)!important;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -52,4 +52,6 @@ body [data-ework-grid] [data-research-voice-target] [data-research-voice-feedbac
 body [data-ework-grid] [data-research-node-id][open] .ew-grid-resize{display:none}
 
 body [data-ework-grid] [data-research-node-id]{--odyssey-card:var(--grid-card)!important;--odyssey-content:var(--grid-card)!important}
+body [data-ework-grid] [data-research-preview-body]{border:0!important;border-radius:0!important;background:var(--grid-card)!important;box-shadow:none!important;color:var(--grid-text)!important}
+body [data-ework-grid] .odyssey-data-stamp{border:0!important;background:var(--grid-card)!important;color:var(--grid-muted)!important;font:400 11px/16px Inter,"Noto Sans SC",system-ui!important;padding:3px 10px!important;min-height:20px!important}
 body [data-ework-grid] [data-research-node-id][data-research-node-id][data-selected=true]::after{box-shadow:inset 0 0 0 1px #249bfa!important}

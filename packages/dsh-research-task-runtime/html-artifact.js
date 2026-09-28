@@ -4,6 +4,7 @@ import { createCanvasUseSurface, installCanvasUseSurface } from './canvas-use-su
 import { researchNotoFontCss } from './component-noto-font.js'
 import { MARKET_PRESENTATION_CSS } from './market-presentation.js'
 import { applyTerminalPresentation } from './terminal-presentation.js'
+import { applyWorkbenchPresentation, WORKBENCH_PRESENTATION_CSS } from './workbench-presentation.js'
 export const MAX_RESEARCH_HTML_BYTES = 200_000
 export const RESEARCH_HTML_LIMIT_ERROR = 'HTML 页面超过 200 KB 上限，请精简内容后重试。'
 
@@ -793,9 +794,9 @@ const escapeAttribute = (value) => String(value).replace(/&/g, '&amp;').replace(
 // The same wrapper is exported, never a bare executable artifact document.
 export function buildResearchHtmlPreview(html, title = '交互网页', initialTheme = 'light', options = {}) {
   if (parseResearchHtmlArtifact({ version: 1, type: 'html', title, html }) === null) return '<!doctype html><meta charset="utf-8"><p>HTML 页面格式无效，请重试。</p>'
-  const displayHtml = applyTerminalPresentation(compactHostDashboardHtml(html))
+  const displayHtml = options.workbench ? applyWorkbenchPresentation(compactHostDashboardHtml(html)) : applyTerminalPresentation(compactHostDashboardHtml(html))
   const theme = initialTheme === 'dark' ? 'dark' : 'light'
-  const fixedTheme = researchHtmlFixedTheme(html)
+  const fixedTheme = options.workbench ? null : researchHtmlFixedTheme(html)
   const runtimeFont = options.notoFont === 'runtime'
   const policy = `<meta http-equiv="Content-Security-Policy" content="${HTML_CSP}"><meta name="referrer" content="no-referrer"><meta http-equiv="x-dns-prefetch-control" content="off">`
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
@@ -805,7 +806,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
-  const baseStyle = `@layer sherlock-terminal;@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
+  const baseStyle = `${options.workbench ? '@layer ework-workbench;' + WORKBENCH_PRESENTATION_CSS : ''}@layer sherlock-terminal;@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
   const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${displayHtml}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
   const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`

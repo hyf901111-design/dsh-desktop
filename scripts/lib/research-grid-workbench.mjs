@@ -2,8 +2,10 @@ import {readFileSync} from 'node:fs'
 import {createResearchGrid} from '../../packages/dsh-research-task-runtime/research-grid.js'
 import {createWorkbenchGridState} from './research-grid-state.mjs'
 import * as ui from './research-grid-ui.mjs'
+import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
-const css=readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')
+const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
+const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+nativePresentation
 export function restoreResearchGridWorkbench(source){
   const start=source.indexOf(begin);if(start<0)return source
   const finish=source.indexOf(end,start),a=source.indexOf(meta,finish),b=source.indexOf(' */',a)
@@ -21,6 +23,7 @@ export function patchResearchGridWorkbench(source){
   source=restoreResearchGridWorkbench(source)
   const changes=[]
   const change=(from,to)=>{if(source.split(from).length!==2)throw Error('Workbench anchor missing or ambiguous: '+from.slice(0,90));changes.push([from,to]);source=source.replace(from,to)}
+  change("buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime'})","buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime',workbench:true})")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
   change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);')
   change('const persistSnapshot = () => {','const persistSnapshot = () => {\nif(!workbenchGrid.save())return false;')
@@ -28,7 +31,7 @@ export function patchResearchGridWorkbench(source){
   const methods=`
     getWorkbenchCells:()=>workbenchGrid.get(),
     getWorkbenchDocument:()=>workbenchGrid.document(snapshot),
-    setWorkbenchWidth(width){if(workbenchGrid.enable(width))update({},false);},
+    setWorkbenchWidth(width){if(workbenchGrid.enable(width)){initialWorkbenchFit=false;autoFitManaged=false;autoFitActive=false;update({},false);}},
     applyWorkbenchCells(cells,persist=false){if(!collaborationCanWrite())return false;if(pendingHistoryTransaction===null)pendingHistoryTransaction=historyState();workbenchGrid.set(cells);const nodes=createResearchGrid().project([...snapshot.files,...snapshot.artifacts],cells,Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)));this.applyPointerGeometry(nodes);if(persist)this.persist();return true;},
   `
   change('subscribeCanvasAction:listener=>{',methods+'subscribeCanvasAction:listener=>{')
@@ -44,6 +47,7 @@ export function patchResearchGridWorkbench(source){
   change('pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\n                    '+hydrated,'pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\nworkbenchGrid.receiveCanonical([...files,...artifacts]);\n                    '+hydrated.replace('researchWorkspaceSnapshot({','researchWorkspaceSnapshot(workbenchGrid.reconcile({').replace(')});',')}));'))
   {const from='return { left: left - origin.left, top: top - origin.top,',to='return { left: left - origin.left, top: top - origin.top + (root?.hasAttribute("data-ework-grid")?root.scrollTop:0),';if(source.split(from).length!==3)throw Error('Marquee anchors changed');for(let i=0;i<2;i++){changes.push([from,to]);source=source.replace(from,to)}}
   change("left: next.left, top: next.top, bottom: 'auto'","left: next.left + parent.scrollLeft, top: next.top + parent.scrollTop, bottom: 'auto'")
+  change("element.style.top = Math.max(inset, Math.min(point.top, height - element.offsetHeight - inset)) + 'px';", "element.style.top = (Math.max(inset, Math.min(point.top, height - element.offsetHeight - inset)) + (canvas.hasAttribute('data-ework-grid')?canvas.scrollTop:0)) + 'px';")
   change('function normalizeResearchCanvasNodeGeometry(node) {','function normalizeResearchCanvasNodeGeometry(node) {\nif(researchGridNodeIds.has(node?.id))return {width:Math.max(1,node.width),height:Math.max(1,node.height),sizeMode:"manual",resizable:true};')
   change('const onWheel = (event) => {','const onWheel = (event) => {\nif(root.hasAttribute("data-ework-grid"))return;')
   change('const onPointerDown = (event) => {','const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid")){const card=event.target?.closest?.("[data-research-node-id]");if(card){const id=card.getAttribute("data-research-node-id");if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id)||event.metaKey||event.shiftKey)workspace.updateSelection([id],event.metaKey?"toggle":event.shiftKey?"add":"replace");return;}if(spacePressedRef.current)return;}')
@@ -59,9 +63,12 @@ export function patchResearchGridWorkbench(source){
       setCreatePrompt('');setCreateError(ids.length>RESEARCH_GENERATION_MAX_SOURCES?'最多选择24项资料':null);
       setCreateSelection({ids,files:current.files.filter(n=>ids.includes(n.id)),artifacts:current.artifacts.filter(n=>ids.includes(n.id)),position:selectionActionPosition});
     };
-    const workbenchLegacy=(node,event,action)=>{if(action){frameAction(node,action);return;}const r=rootRef.current.getBoundingClientRect();setContextMenu({nodeId:node.id,left:event.clientX-r.left,top:event.clientY-r.top+rootRef.current.scrollTop});};
+    const workbenchLegacy=(node,event,action)=>{if(action){frameAction(node,action);return;}const r=rootRef.current.getBoundingClientRect();setContextMenu({nodeId:node.id,left:event.clientX-r.left,top:event.clientY-r.top});};
   `
   change('const emptyViewport = canvasNodes.length > 0',hook+'\nconst emptyViewport = canvasNodes.length > 0')
+  change('(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\tclassName: "rScV5Q_globalToolbar",','(0, react_jsx_runtime.jsxs)(WorkbenchToolbar, {rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,\n\t\t\t\t\tclassName: "rScV5Q_globalToolbar",')
+  change("const button = root.querySelector('[data-research-global-'+attribute+']')","const button = root.ownerDocument.querySelector('[data-ework-toolbar-owner=\"'+CSS.escape(sessionId)+'\"] [data-research-global-'+attribute+']')")
+  change('const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement);','const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement) || document.activeElement?.closest?.("[data-ework-toolbar-owner]")?.getAttribute("data-ework-toolbar-owner")===sessionId;')
   change('children: [(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),','children: [(0,react_jsx_runtime.jsx)(WorkbenchChromeLayer,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly,onAsk:workbenchAsk,onDerived:workbenchDerived,onLegacy:workbenchLegacy,voiceTarget:voiceWorkbenchTarget}),(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),')
   change('const [linkPlacement,setLinkPlacement]=(0,react.useState)(null);','const [linkPlacement,setLinkPlacement]=(0,react.useState)(null);\nconst voiceWorkbenchNode=(0,react.useRef)(null);const [voiceWorkbenchTarget,setVoiceWorkbenchTarget]=react.useState(null);')
   const voice='function ResearchVoiceControl({ sessionId, disabled, onCommand }) {'
@@ -81,6 +88,6 @@ export function patchResearchGridWorkbench(source){
       setVoiceWorkbenchTarget(null);rootRef.current?.querySelector('[data-research-node-id="'+node?.id+'"]')?.removeAttribute('data-research-voice-target');`)
   change('...(draftKind === "link" ? {title:"添加链接"} : {}),','...(draftKind === "link" ? {title:"添加链接"} : draftKind === "voice" ? {title:"语音组件"} : {}),')
   const definitions=[createResearchGrid,createWorkbenchGridState,...Object.values(ui)].map(fn=>fn.toString()).join('\n')
-  source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.appendChild(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
+  source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   return source+'\n'+meta+JSON.stringify(changes)+' */'
 }
