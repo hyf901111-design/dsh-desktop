@@ -13,10 +13,8 @@ export function workbenchGridPattern(width) {
   return 'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")'
 }
 export function WorkbenchIcon({name}) {
-  // Original Figma SVGs are embedded by the build, preserving their own viewport.
-  if(['refresh','ask','more','close','expand','duplicate','rename','edit','settings','branch','summary','plus','download'].includes(name))return react_jsx_runtime.jsx('span',{className:'ew-grid-icon ew-grid-icon-'+name,'data-workbench-icon':name,'aria-hidden':true})
-  const paths={link:'M6 10l4-4M5 9l-1 1a3 3 0 0 0 4 4l2-2M7 5l1-1a3 3 0 0 1 4 4l-2 2',voice:'M6 3a2 2 0 0 1 4 0v5a2 2 0 0 1-4 0zM3.5 7v1a4.5 4.5 0 0 0 9 0V7M8 12.5V15M5 15h6',schedule:'M5 2v3M11 2v3M2 6h12M3 3h10v11H3zM6 9h1M9 9h1M6 12h1',data:'M13 4c0 1.1-2.2 2-5 2S3 5.1 3 4s2.2-2 5-2 5 .9 5 2zM3 4v7c0 1.1 2.2 2 5 2M13 4v3M3 7.5c0 1.1 2.2 2 5 2M11 10v2l1.5 1M14.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0',remove:'M2.5 4h11M6 4V2h4v2M4 4l.7 10h6.6L12 4M6.5 7v4M9.5 7v4'}
-  return react_jsx_runtime.jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:react_jsx_runtime.jsx('path',{d:paths[name]||''})})
+  // Every glyph uses the same optical frame and rounded stroke family.
+  return react_jsx_runtime.jsx('span',{className:'ew-grid-icon ew-grid-icon-'+name,'data-workbench-icon':name,'aria-hidden':true})
 }
 export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
@@ -148,7 +146,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const point=e=>{const r=root.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top+root.scrollTop}}
   const allowed=(cells,before=op.before)=>!cells.some(c=>{const old=before.find(n=>n.id===c.id),card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]');return card?.hasAttribute('data-research-geometry-blocked')&&old&&['x','y','w','h'].some(k=>old[k]!==c[k])})
   const paint=()=>{frame=0;if(!pending||!op)return;workspace.applyWorkbenchCells(pending,false);pending=null}
-  const show=c=>{const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(preview.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});preview.style.setProperty('--grid-gap',m.gap+'px');preview.setAttribute('data-grid-span',c.w+' × '+c.h+' 格');preview.hidden=false}
+  const show=c=>{const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(preview.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});preview.style.setProperty('--grid-gap',m.gap+'px');preview.hidden=false}
   const update=e=>{
     if(!op)return
     const p=point(e),m=grid.metrics(width());let target

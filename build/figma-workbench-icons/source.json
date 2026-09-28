@@ -17,5 +17,12 @@
     "plus": "1775:166719",
     "download": "1775:166677"
   },
-  "notes": "原样下载 Figma 矢量资源，构建时嵌入 CSS mask，保留尺寸、视口和线宽；主题色由宿主控制。expand 保留原稿 90 度旋转。"
+  "notes": "13个Figma原始资源保持原字节；渲染层统一16px光学框、1.5px圆角描边与主题色。expand 放大到14.5px并保留原稿90度旋转。5个补充图标同一构建管线，非Figma导出。",
+  "supplementaryIcons": {
+    "link": "EWork supplementary vector in the reference stroke family",
+    "voice": "EWork supplementary vector in the reference stroke family",
+    "schedule": "EWork supplementary vector in the reference stroke family",
+    "data": "EWork supplementary vector in the reference stroke family",
+    "remove": "EWork supplementary vector in the reference stroke family"
+  }
 }

@@ -45,7 +45,6 @@ body [data-ework-grid][data-canvas-tool=component] .ew-grid-resize{display:none}
 .ew-grid-placeholder{position:absolute;z-index:80;box-sizing:border-box;pointer-events:none;border:1px solid #249bfa;background:#249bfa1a;border-radius:4px}
 /* The unoutlined trailing strips reserve the same gutter as the resulting card. */
 .ew-grid-placeholder::after{content:'';position:absolute;inset:-1px calc(-1 * var(--grid-gap)) calc(-1 * var(--grid-gap)) -1px;pointer-events:none;background:linear-gradient(to left,#249bfa14 var(--grid-gap),transparent var(--grid-gap)),linear-gradient(to top,#249bfa14 var(--grid-gap),transparent var(--grid-gap))}
-.ew-grid-placeholder::before{content:attr(data-grid-span);position:absolute;top:6px;left:8px;font:11px/16px Inter,system-ui;color:#1684d6;pointer-events:none}
 .ew-grid-placeholder[hidden]{display:none}
 body [data-ework-grid][data-canvas-tool=component]{cursor:crosshair}
 body [data-ework-grid][data-canvas-tool=component] [data-research-content-layer]{background-image:var(--grid-pattern)!important;background-size:var(--grid-step) var(--grid-step)!important;background-position:12px 12px!important;background-repeat:repeat!important}
