@@ -8,7 +8,7 @@ it('创建、投影和吸附共同使用实时正方形格位',()=>{
   const m=grid.metrics(width)
   expect(m.rowStep).toBe(m.step)
   const c=grid.draw({x:12+m.step*3,y:12+m.step*4},{x:12+m.step*15-10,y:12+m.step*13-10},m)
-  expect(c).toMatchObject({x:3,y:4,w:12,h:9})
+  expect(c).toMatchObject({x:3,y:4,w:Math.max(12,m.minDraftColumns),h:Math.max(9,m.minDraftRows)})
   const n=grid.project([{id:c.id}],[c],width)[0]
   expect(n.x-n.width/2).toBeCloseTo(12+c.x*m.step)
   expect(n.y-n.height/2).toBeCloseTo(12+c.y*m.step)
@@ -69,4 +69,12 @@ it('整理铺满可用网格，按内容分配不等宽模块并保持稳定',()
  for(let y=0;y<bottom;y++)for(let x=0;x<40;x++)expect(next.filter(c=>x>=c.x&&x<c.x+c.w&&y>=c.y&&y<c.y+c.h)).toHaveLength(1)
  expect(g.arrange(nodes,next,1000,700)).toEqual(next)
  expect(Math.min(...next.map(c=>c.w*g.metrics(1000).step-10))).toBeGreaterThanOrEqual(280)
+})
+
+it('整理智能草稿仍满足输入区最小尺寸，三个草稿不会挤入不足宽的一行',()=>{
+ const g=createResearchGrid(),nodes=['a','b','c'].map(id=>({id,kind:'generated-container',width:320,height:220})),before=nodes.map((n,i)=>item(n.id,i*12,0,12,3))
+ const next=g.arrange(nodes,before,1000),shown=g.project(nodes,next,1000)
+ expect(shown.every(n=>n.width>=320&&n.height>=220)).toBe(true)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(new Set(next.map(n=>n.y)).size).toBeGreaterThan(1)
 })

@@ -81,8 +81,72 @@ it('组件工具在已有组件上拉框，取消恢复让位；选择工具仍�
 it('刷新提示基于真实成功时间，未刷新时不显示假日期',()=>{
  expect(workbenchRefreshTooltip(null)).toEqual({relative:'尚未刷新',absolute:'暂无成功刷新记录'})
  const at=new Date('2026-09-28T06:23:00Z').getTime()
- expect(workbenchRefreshTooltip(at,at+60000).relative).toBe('Last refresh 1 minute ago')
- expect(workbenchRefreshTooltip(at,at+60000).absolute).toContain('Sep 28, 2026')
+ expect(workbenchRefreshTooltip(at,at+60000).relative).toBe('上次刷新：1 分钟前')
+ expect(workbenchRefreshTooltip(at,at+60000).absolute).toMatch(/^2026年9月28日 \d{2}:23$/)
+})
+
+it('网格显示真实方格与组件间距，拉框覆盖触点所在方格的四个边界',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
+ const layer=f.canvas.querySelector('[data-research-content-layer]'),step=(1000-14)/40,gap=10
+ const pattern=layer.style.getPropertyValue('--grid-pattern')
+ expect(pattern).toContain('data:image/svg+xml')
+ const svg=new f.win.DOMParser().parseFromString(decodeURIComponent(pattern.match(/data:image\/svg\+xml,([^"']+)/)[1]),'image/svg+xml')
+ const tile=svg.documentElement,square=svg.querySelector('rect')
+ expect(Number(tile.getAttribute('width'))).toBeCloseTo(step)
+ expect(Number(tile.getAttribute('height'))).toBeCloseTo(step)
+ expect(Number(square.getAttribute('width'))+1).toBeCloseTo(step-gap)
+ expect(Number(square.getAttribute('height'))+1).toBeCloseTo(step-gap)
+ const start={x:12+step*4+(step-gap)*.9,y:12+step*20+(step-gap)*.9},end={x:12+step*20+2,y:12+step*31+2}
+ f.canvas.scrollTop=step*18;await f.event('scroll',f.canvas)
+ await f.event('pointerdown',f.canvas,{button:0,pointerId:68,clientX:start.x,clientY:start.y-f.canvas.scrollTop})
+ await f.event('pointermove',f.canvas,{pointerId:68,clientX:end.x,clientY:end.y-f.canvas.scrollTop})
+ const preview=f.canvas.querySelector('.ew-grid-placeholder'),left=parseFloat(preview.style.left),top=parseFloat(preview.style.top)
+ expect(left).toBeCloseTo(12+step*4);expect(top).toBeCloseTo(12+step*20)
+ expect(left+parseFloat(preview.style.width)).toBeCloseTo(12+step*21-gap)
+ expect(top+parseFloat(preview.style.height)).toBeCloseTo(12+step*32-gap)
+ await f.event('pointercancel',f.canvas,{pointerId:68})
+})
+
+it('工作台底部来源与时间只展示信息，点击空白或文字不打开数据设置',async()=>{
+ const f=await fixture(true),node={...text('footer'),kind:'generated-container',containerPrompt:'资讯',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'资讯',html:'<p>内容</p>'}}
+ await act(async()=>f.workspace.setArtifacts([node]))
+ const footer=f.host.querySelector('.odyssey-data-stamp')
+ expect(footer.tagName).toBe('DIV');expect(footer.getAttribute('aria-label')).not.toContain('设置刷新频率')
+ await f.event('pointerdown',footer,{button:0,pointerId:69})
+ await f.event('click',footer)
+ await f.event('click',footer.querySelector('.odyssey-data-frequency'))
+ expect(f.document.querySelector('.odyssey-data-dialog')).toBeNull()
+ expect(f.document.querySelector('[role=dialog]')).toBeNull()
+ expect(footer.textContent).toContain('尚未刷新')
+})
+
+it('只给选中的组件显示外置调宽调高手柄，单轴拖动不触发底栏或更改另一尺寸',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const card=f.host.querySelector('[data-research-node-id="a"]')
+ expect(f.canvas.querySelector('[data-workbench-resize]')).toBeNull()
+ await act(async()=>f.workspace.updateSelection(['a'],'replace'))
+ const handle=axis=>f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="'+axis+'"]')
+ expect(card.contains(handle('x'))).toBe(false);expect(card.contains(handle('y'))).toBe(false)
+ const before=f.workspace.getSnapshot().artifacts[0],step=(1000-14)/40
+ expect(parseFloat(handle('x').style.left)).toBeCloseTo(before.x+before.width/2)
+ expect(parseFloat(handle('y').style.top)).toBeCloseTo(before.y+before.height/2)
+ await f.event('pointerdown',handle('x'),{button:0,pointerId:70,clientX:500,clientY:180})
+ await f.event('pointerup',f.canvas,{pointerId:70,clientX:500+step*2,clientY:180+step*3})
+ const wider=f.workspace.getSnapshot().artifacts[0]
+ expect(wider.width).toBeCloseTo(before.width+step*2);expect(wider.height).toBe(before.height)
+ await f.event('pointerdown',handle('y'),{button:0,pointerId:71,clientX:260,clientY:300})
+ await f.event('pointerup',f.canvas,{pointerId:71,clientX:260+step*3,clientY:300+step*2})
+ const taller=f.workspace.getSnapshot().artifacts[0]
+ expect(taller.width).toBe(wider.width);expect(taller.height).toBeCloseTo(wider.height+step*2)
+ await act(async()=>f.workspace.undo());expect(f.workspace.getSnapshot().artifacts[0].height).toBe(before.height)
+ await act(async()=>f.workspace.undo());expect(f.workspace.getSnapshot().artifacts[0].width).toBe(before.width)
+ await act(async()=>{f.workspace.setCanvasSize({width:240,height:700,availableWidth:240});f.workspace.setWorkbenchWidth(240)})
+ expect(parseFloat(handle('x').style.width)).toBeLessThanOrEqual((240-24-40*4)/39)
+ expect(parseFloat(handle('y').style.height)).toBeLessThanOrEqual((240-24-40*4)/39)
+ expect(f.win.getComputedStyle(handle('x').querySelector('span')).pointerEvents).toBe('none')
+ await act(async()=>{card.setAttribute('data-research-geometry-blocked','');await new Promise(r=>setTimeout(r,30))})
+ expect(handle('x')).toBeNull();expect(handle('y')).toBeNull()
 })
 it('更多菜单的基于所选创建调用原生成流程并保留来源',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
@@ -117,10 +181,39 @@ it('拉框松手只创建一次并保持目标格位，缩放更新真实渲染�
  expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
  const draft=f.workspace.getSnapshot().artifacts.find(n=>n.id!=='a'),beforeWidth=draft.width
  expect(f.workspace.getWorkbenchCells().find(n=>n.id===draft.id)).toMatchObject({x:0,y:0})
- await f.event('pointerdown',f.host.querySelector('[data-workbench-resize="'+draft.id+'"]'),{button:0,pointerId:6,clientX:490,clientY:290})
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="'+draft.id+'"][data-workbench-resize-axis="x"]'),{button:0,pointerId:6,clientX:490,clientY:290})
  await f.event('pointerup',f.canvas,{pointerId:6,clientX:735,clientY:395})
  const after=f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id),card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]')
  expect(after.width).toBeGreaterThan(beforeWidth);expect(parseFloat(card.style.width)).toBe(after.width)
+})
+it('智能草稿短拉框也达到可编辑最小尺寸，缩放不能收小，窄窗和已有小草稿不污染规范布局',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
+ await f.event('pointerdown',f.canvas,{button:0,pointerId:71,clientX:910,clientY:50})
+ await f.event('pointerup',f.canvas,{pointerId:71,clientX:915,clientY:55})
+ const draft=w.getSnapshot().artifacts[0]
+ expect(draft.width).toBeGreaterThanOrEqual(320);expect(draft.height).toBeGreaterThanOrEqual(220)
+ expect(draft.x+draft.width/2).toBeLessThanOrEqual(988)
+ const cells=w.getWorkbenchCells()
+ for(const axis of ['x','y']){
+  const handle=f.canvas.querySelector('[data-workbench-resize="'+draft.id+'"][data-workbench-resize-axis="'+axis+'"]')
+  await f.event('pointerdown',handle,{button:0,pointerId:72,clientX:900,clientY:240})
+  await f.event('pointerup',f.canvas,{pointerId:72,clientX:900-step*30,clientY:240-step*30})
+ }
+ expect(w.getWorkbenchCells()).toEqual(cells)
+ let existing;await act(async()=>{existing=w.createContainerDraft()});await act(async()=>w.applyWorkbenchCells([{id:draft.id,x:0,y:0,w:20,h:10},{id:existing.id,x:32,y:10,w:4,h:3}],true))
+ const canonical=w.getWorkbenchDocument(),saved=w.getWorkbenchCells()
+ for(const width of [1000,500,240]){
+  await act(async()=>{w.setCanvasSize({width,height:700,availableWidth:width});w.setWorkbenchWidth(width)})
+  const shown=w.getSnapshot().artifacts.find(n=>n.id===existing.id)
+  expect(shown.width).toBeGreaterThanOrEqual(Math.min(320,width-24)-.001)
+  expect(shown.height).toBeGreaterThanOrEqual(220)
+  expect(shown.x-shown.width/2).toBeGreaterThanOrEqual(12-.001)
+  expect(shown.x+shown.width/2).toBeLessThanOrEqual(width-12+.001)
+  expect(w.getWorkbenchDocument()).toEqual(canonical)
+ }
+ await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
+ expect(w.getWorkbenchCells()).toEqual(saved)
 })
 it('改变窗口宽度后撤销和重做保持列跨度',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a'),text('b',740)]);f.workspace.setWorkbenchWidth(1000)
@@ -197,8 +290,8 @@ it('拖动期间窗口缩窄后失焦取消仍恢复原跨度',async()=>{
 it('窄窗口的合法小跨度不会被渲染器放大而重叠',async()=>{
  const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a'),text('b')]);f.workspace.setCanvasSize({width:500,height:700,availableWidth:500});f.workspace.setWorkbenchWidth(500);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:4,h:7},{id:'b',x:4,y:0,w:4,h:7}],true)})
  const [a,b]=f.workspace.getSnapshot().artifacts
- expect(parseFloat(f.host.querySelector('[data-research-node-id="a"]').style.width)).toBe(a.width)
- expect(parseFloat(f.host.querySelector('[data-research-node-id="b"]').style.width)).toBe(b.width)
+ expect(parseFloat(f.host.querySelector('[data-research-node-id="a"]').style.width)).toBeCloseTo(a.width,5)
+ expect(parseFloat(f.host.querySelector('[data-research-node-id="b"]').style.width)).toBeCloseTo(b.width,5)
  expect(a.x-a.width/2).toBeGreaterThanOrEqual(12)
  expect(a.x+a.width/2).toBeLessThan(b.x-b.width/2)
 })
@@ -461,7 +554,7 @@ it('组件选择变化不重复发送相同的共享上下文，避免重绘正�
 it('改变组件大小时只显示吸附预览蓝框，松手或取消恢复单层选中描边',async()=>{
  const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a'),text('b',740)]);f.workspace.updateSelection(['a','b'],'replace')})
  const card=f.host.querySelector('[data-research-node-id="a"]'),other=f.host.querySelector('[data-research-node-id="b"]'),ring=card.querySelector('.ew-grid-selection-ring'),preview=f.canvas.querySelector('.ew-grid-placeholder')
- const down=async id=>f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:id,clientX:480,clientY:250})
+ const down=async id=>f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]'),{button:0,pointerId:id,clientX:480,clientY:250})
  await down(29);await f.event('pointermove',f.canvas,{pointerId:29,clientX:620,clientY:320})
  expect(preview.hidden).toBe(false)
  expect(f.win.getComputedStyle(ring).display).toBe('none')
@@ -475,11 +568,11 @@ it('改变组件大小时只显示吸附预览蓝框，松手或取消恢复单�
 
 it('滚动条占宽时缩放预览四边与实际组件使用同一可用宽度',async()=>{
  const f=await fixture(true)
- await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:8,y:6,w:24,h:8}],true)})
+ await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:8,y:6,w:24,h:8}],true);f.workspace.updateSelection(['a'],'replace')})
  Object.defineProperty(f.canvas,'clientWidth',{configurable:true,value:984})
  await f.event('resize',f.win)
  const card=f.host.querySelector('[data-research-node-id="a"]'),preview=f.canvas.querySelector('.ew-grid-placeholder')
- await f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:67,clientX:780,clientY:320})
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]'),{button:0,pointerId:67,clientX:780,clientY:320})
  await f.event('pointermove',f.canvas,{pointerId:67,clientX:850,clientY:365})
  const node=f.workspace.getSnapshot().artifacts[0]
  expect(preview.hidden).toBe(false)
@@ -521,14 +614,14 @@ it('创建背景网格与内容层共用吸附格距，滚动后绘制框仍对�
  expect(parseFloat(layer.style.getPropertyValue('--grid-step'))).toBe(step)
  expect(f.win.getComputedStyle(layer).backgroundSize).toBe(step+'px '+step+'px')
  f.canvas.scrollTop=step*18;await f.event('scroll',f.canvas)
- const start={x:12+step*4,y:12+step*20},end={x:12+step*16-10,y:12+step*29-10}
+ const start={x:12+step*4,y:12+step*20},end={x:12+step*21-10,y:12+step*32-10}
  await f.event('pointerdown',f.canvas,{button:0,pointerId:52,clientX:start.x,clientY:start.y-f.canvas.scrollTop})
  await f.event('pointermove',f.canvas,{pointerId:52,clientX:end.x,clientY:end.y-f.canvas.scrollTop})
  const preview=f.canvas.querySelector('.ew-grid-placeholder')
  expect(parseFloat(preview.style.left)).toBeCloseTo(start.x)
  expect(parseFloat(preview.style.top)).toBeCloseTo(start.y)
- expect((parseFloat(preview.style.width)+10)/step).toBeCloseTo(12)
- expect((parseFloat(preview.style.height)+10)/step).toBeCloseTo(9)
+ expect((parseFloat(preview.style.width)+10)/step).toBeCloseTo(17)
+ expect((parseFloat(preview.style.height)+10)/step).toBeCloseTo(12)
  await f.event('pointercancel',f.canvas,{pointerId:52})
  await act(async()=>{f.workspace.setCanvasSize({width:800,height:700,availableWidth:800});f.workspace.setWorkbenchWidth(800)})
  expect(parseFloat(layer.style.getPropertyValue('--grid-step'))).toBe((800-14)/40)
@@ -565,7 +658,7 @@ it('窄窗口保留组件最小可操作高度并让位，恢复宽度与只读�
  await f.event('pointermove',f.canvas,{pointerId:61,clientX:80,clientY:80})
  await f.event('pointercancel',f.canvas,{pointerId:61})
  expect(w.getWorkbenchDocument()).toEqual(canonical)
- await f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:62,clientX:110,clientY:100})
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="y"]'),{button:0,pointerId:62,clientX:110,clientY:100})
  await f.event('pointerup',f.canvas,{pointerId:62,clientX:110,clientY:100})
  expect(w.getWorkbenchDocument()).toEqual(canonical)
  await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
@@ -603,11 +696,31 @@ it('窄窗口移动不写回本地补高，缩放仅改变目标尺寸且可撤�
  await f.event('pointerup',f.canvas,{pointerId:65,clientX:40+step,clientY:20})
  expect(w.getWorkbenchCells().map(c=>c.h)).toEqual([5,5])
  const afterMove=w.getWorkbenchCells()
- await f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:66,clientX:230,clientY:100})
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="y"]'),{button:0,pointerId:66,clientX:230,clientY:100})
  await f.event('pointerup',f.canvas,{pointerId:66,clientX:230,clientY:100+step})
  expect(w.getWorkbenchCells().find(c=>c.id==='a').h).toBe(10)
  expect(w.getWorkbenchCells().find(c=>c.id==='b').h).toBe(5)
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(afterMove)
  await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
  expect(w.getWorkbenchCells().map(c=>c.h)).toEqual([5,5])
+})
+
+it('单轴缩放保留未操作轴的规范尺寸，窄窗补高和小草稿补宽不写回',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setArtifacts([text('a')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:5}],true);w.setCanvasSize({width:500,height:700,availableWidth:500});w.setWorkbenchWidth(500);w.updateSelection(['a'],'replace')})
+ const step=parseFloat(f.canvas.querySelector('[data-research-content-layer]').style.getPropertyValue('--grid-step'))
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize-axis=x]'),{button:0,pointerId:74,clientX:230,clientY:100})
+ await f.event('pointerup',f.canvas,{pointerId:74,clientX:230+step,clientY:100+step*3})
+ expect(w.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:21,h:5})
+ await act(async()=>{w.undo();w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
+ let draft;await act(async()=>{draft=w.createContainerDraft();w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:5},{id:draft.id,x:32,y:10,w:4,h:3}],true);w.updateSelection([draft.id],'replace')})
+ const wideStep=parseFloat(f.canvas.querySelector('[data-research-content-layer]').style.getPropertyValue('--grid-step'))
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize-axis=y]'),{button:0,pointerId:75,clientX:800,clientY:500})
+ await f.event('pointerup',f.canvas,{pointerId:75,clientX:800+wideStep*3,clientY:500+wideStep})
+ expect(w.getWorkbenchCells().find(c=>c.id===draft.id)).toMatchObject({x:32,w:4,h:11})
+ await act(async()=>w.undo())
+ expect(w.getWorkbenchCells().find(c=>c.id===draft.id)).toMatchObject({x:32,w:4,h:3})
+ await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="'+draft.id+'"]'),{button:0,pointerId:76,clientX:800,clientY:500})
+ await f.event('pointerup',f.canvas,{pointerId:76,clientX:800,clientY:500+wideStep*2})
+ expect(w.getWorkbenchCells().find(c=>c.id===draft.id)).toMatchObject({x:32,w:4,h:3})
 })
