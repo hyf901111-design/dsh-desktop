@@ -1,4 +1,7 @@
-import {readFile} from 'node:fs/promises'
+import {readFile,mkdtemp,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {ResearchCanvasStorage} from '../src/main/state/research-canvas-storage'
 import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
@@ -85,17 +88,22 @@ it('刷新提示基于真实成功时间，未刷新时不显示假日期',()=>{
  expect(workbenchRefreshTooltip(at,at+60000).absolute).toMatch(/^2026年9月28日 \d{2}:23$/)
 })
 
-it('工作台和菜单图标使用打包的 Figma 矢量，离线不依赖临时资源地址',async()=>{
+it('工作台和菜单图标统一16px视口与1.5px线宽，Figma路径离线打包',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const header=f.host.querySelector('.ew-grid-header')
  for(const name of ['refresh','ask','more','close']){
   const icon=header.querySelector('[data-workbench-icon="'+name+'"]')
   expect(icon).not.toBeNull();expect(icon.tagName).toBe('SPAN')
-  const source=await readFile('build/figma-workbench-icons/'+name+'.svg','utf8')
-  expect(f.document.getElementById('ework-grid-workbench-style').textContent).toContain(Buffer.from(source).toString('base64'))
+  const css=f.document.getElementById('ework-grid-workbench-style').textContent
+  const encoded=css.match(new RegExp('\\.ew-grid-icon-'+name+'\\{mask-image:url\\("data:image/svg\\+xml;base64,([^"]+)'))[1]
+  const svg=new f.win.DOMParser().parseFromString(Buffer.from(encoded,'base64').toString(),'image/svg+xml')
+  expect(svg.documentElement.getAttribute('viewBox')).toBe('0 0 16 16')
+  const group=svg.querySelector('[data-icon-family=workbench]')
+  expect(group.getAttribute('stroke-width')).toBe('1.5')
+  expect([...svg.querySelectorAll('path')].every(path=>!path.hasAttribute('stroke-width'))).toBe(true)
  }
  await f.event('click',header.querySelector('[data-workbench-more]'))
- for(const name of ['duplicate','expand','rename','edit','branch','summary','plus']){
+ for(const name of ['duplicate','expand','rename','edit','branch','summary','plus','data','remove']){
   const icon=f.document.querySelector('.ew-grid-menu .ew-grid-icon-'+name)
   expect(icon,name).not.toBeNull()
  }
@@ -103,7 +111,23 @@ it('工作台和菜单图标使用打包的 Figma 矢量，离线不依赖临时
  expect(css).not.toContain('figma.com/api/mcp/asset/')
 })
 
-it('连续正方形网格与吸附共用原点，拉框显示占格和真实组件间距',async()=>{
+it('真实桌面存储接受网格缓存，新增组件及格位在更换服务端口后仍恢复',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'ework-grid-durable-')),store=new ResearchCanvasStorage(dir)
+ disposals.push(()=>rm(dir,{recursive:true,force:true}))
+ const f=await fixture(false,{researchCanvasStorage:{getItem:key=>store.getItem(key),setItem:(key,value)=>store.setItem(key,value)}})
+ const native=new f.bundle.ResearchWorkspaceRegistry().for('native-durable')
+ native.setCanvasSize({width:1000,height:700,availableWidth:1000});native.setWorkbenchWidth(1000)
+ native.setArtifacts([text('source')])
+ const draft=native.createContainerDraft(null),link=native.createContainerDraft(null,'link')
+ native.applyWorkbenchCells(native.getWorkbenchCells(),true)
+ expect(JSON.parse(new ResearchCanvasStorage(dir).getItem('sherlock.research.canvas.artifacts.v1:native-durable')).map(n=>n.id)).toEqual(['source',draft.id,link.id])
+ const restored=new f.bundle.ResearchWorkspaceRegistry().for('native-durable')
+ restored.setCanvasSize({width:824,height:700,availableWidth:824});restored.setWorkbenchWidth(824)
+ expect(restored.getSnapshot().artifacts.map(n=>n.id)).toEqual(['source',draft.id,link.id])
+ expect(restored.getWorkbenchCells()).toEqual(native.getWorkbenchCells())
+})
+
+it('连续正方形网格与吸附共用原点，拉框无尺寸文字且保留真实组件间距',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  await f.event('click',f.document.querySelector('[data-research-global-container]'))
  const layer=f.canvas.querySelector('[data-research-content-layer]'),step=(1000-14)/40,gap=10
@@ -124,7 +148,8 @@ it('连续正方形网格与吸附共用原点，拉框显示占格和真实组�
  expect(left).toBeCloseTo(12+step*4);expect(top).toBeCloseTo(12+step*20)
  expect(left+parseFloat(preview.style.width)).toBeCloseTo(12+step*21-gap)
  expect(top+parseFloat(preview.style.height)).toBeCloseTo(12+step*32-gap)
- expect(preview.getAttribute('data-grid-span')).toBe('17 × 12 格')
+ expect(preview.hasAttribute('data-grid-span')).toBe(false)
+ expect(f.document.getElementById('ework-grid-workbench-style').textContent).not.toContain('attr(data-grid-span)')
  expect(preview.style.getPropertyValue('--grid-gap')).toBe(gap+'px')
  await f.event('pointercancel',f.canvas,{pointerId:68})
 })

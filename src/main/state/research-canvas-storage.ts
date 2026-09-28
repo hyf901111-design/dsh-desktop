@@ -15,6 +15,7 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.artifacts.v1:',
   'sherlock.research.canvas.selection.v1:',
   'sherlock.research.canvas.viewport.v1:',
+  'ework.research.grid.v1:',
   'sherlock.research.canvas.preview-revocations.v1:',
   'sherlock.research.session-engaged.v1:'
 ] as const
