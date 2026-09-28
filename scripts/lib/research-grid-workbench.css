@@ -3,9 +3,8 @@ body [data-research-canvas][data-ework-grid]{margin-top:56px!important;height:ca
 body[data-ds-dark-theme] [data-ework-grid]{--grid-card:#151518;--grid-text:#e7e8ec;--grid-muted:#a0a5b1;--grid-menu:#1c1b20;background:#09090b!important}
 body [data-ework-grid] [data-research-dot-grid],body [data-ework-grid] [data-research-selection-actions],body [data-ework-grid] [data-research-snap-guides],body [data-ework-grid] [data-research-empty-viewport]{display:none!important}
 body [data-ework-grid] [data-research-content-layer]{position:relative!important;inset:0!important;transform:none!important;min-height:100%;pointer-events:none;transform-origin:0 0}
-body [data-ework-grid] [data-research-content-layer] > [data-research-node-id]{pointer-events:auto;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;border-radius:4px!important;background:var(--grid-card)!important;color:var(--grid-text);transition:left 180ms cubic-bezier(.2,.8,.2,1),top 180ms cubic-bezier(.2,.8,.2,1),width 180ms cubic-bezier(.2,.8,.2,1),height 180ms cubic-bezier(.2,.8,.2,1);overflow:hidden!important}
-body [data-ework-grid] [data-research-node-id][data-selected]{box-shadow:inset 0 0 0 1px #249bfa!important}
-body [data-ework-grid] [data-research-node-id][data-grid-active]{transition:none!important;z-index:50!important;box-shadow:0 4px 20px #0006,inset 0 0 0 1px #249bfa!important}
+body [data-ework-grid] [data-research-node-id]{pointer-events:auto;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;border-radius:4px!important;background:var(--grid-card)!important;color:var(--grid-text);transition:left 180ms cubic-bezier(.2,.8,.2,1),top 180ms cubic-bezier(.2,.8,.2,1),width 180ms cubic-bezier(.2,.8,.2,1),height 180ms cubic-bezier(.2,.8,.2,1);overflow:hidden!important}
+body [data-ework-grid] [data-research-node-id][data-grid-active]{transition:none!important;z-index:50!important;box-shadow:0 4px 20px #0006!important}
 body [data-ework-grid] [data-research-node-id]>.rScV5Q_nodeTitle{box-sizing:border-box;height:34px!important;min-height:34px!important;flex-basis:34px!important;padding:0!important;visibility:hidden!important}
 body [data-ework-grid] [data-research-node-id]>.rScV5Q_nodeTitle>*{display:none!important}
 body [data-ework-grid] [data-research-node-id]>.rScV5Q_nodeTitle:has(input){visibility:visible!important;z-index:70;background:var(--grid-card)!important;padding:0 12px!important;align-items:center!important}
@@ -31,7 +30,7 @@ body [data-ework-grid] .ew-grid-refresh [data-busy=true] svg{animation:ew-grid-s
 .ew-grid-refresh:hover>.ew-grid-tooltip,.ew-grid-refresh:focus-within>.ew-grid-tooltip{display:flex}
 body [data-ework-grid] [data-grid-tooltip]:hover:after{content:attr(data-grid-tooltip);position:absolute;top:30px;right:-60px;width:max-content;max-width:360px;background:#24242b;padding:8px 10px;color:#e9e9ef;border-radius:3px;font:400 12px/17px Inter,"Noto Sans SC",system-ui;white-space:normal}
 body [data-ework-grid] .ew-grid-resize{pointer-events:auto;position:absolute;right:0;bottom:0;width:15px;height:15px;display:grid;place-items:center;border:0;background:transparent;color:var(--grid-muted);padding:0;cursor:nwse-resize;touch-action:none;opacity:0}
-body [data-ework-grid] [data-research-node-id]:is(:hover,[data-selected]) .ew-grid-resize{opacity:.8}
+body [data-ework-grid] [data-research-node-id]:is(:hover,[data-selected=true]) .ew-grid-resize{opacity:.8}
 body [data-ework-grid] .ew-grid-resize svg{width:12px;height:12px}
 .ew-grid-placeholder{position:absolute;z-index:40;box-sizing:border-box;pointer-events:none;border:1px solid #249bfa;background:#249bfa1a;border-radius:4px}
 .ew-grid-placeholder[hidden]{display:none}
@@ -69,4 +68,10 @@ body [data-ework-grid] [data-research-preview-body]{border:0!important;border-ra
 body [data-ework-grid] [data-research-preview-body]:has(iframe[data-research-html-artifact]){padding:0!important}
 body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]:not([data-selected=true])::after{display:none!important}
 body [data-ework-grid] .odyssey-data-stamp{border:0!important;background:var(--grid-card)!important;color:var(--grid-muted)!important;font:400 11px/16px Inter,"Noto Sans SC",system-ui!important;padding:3px 10px!important;min-height:20px!important}
-body [data-ework-grid] [data-research-node-id][data-research-node-id][data-selected=true]::after{box-shadow:inset 0 0 0 1px #249bfa!important}
+/* This first important layer outranks legacy component frame rules. The real
+   overlay is in the chrome host so content/header paint cannot cover its edges. */
+@layer ework-workbench{
+ body [data-ework-grid] [data-research-node-id]{border:0!important;outline:0!important;box-shadow:none!important;border-radius:4px!important}
+ body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]::after{display:none!important}
+}
+body [data-ework-grid] .ew-grid-selection-ring{position:absolute;inset:0;z-index:100;pointer-events:none;border-radius:4px;box-shadow:inset 0 0 0 1px #249bfa}

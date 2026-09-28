@@ -47,3 +47,12 @@ describe('研究工作台网格事务',()=>{
   expect(narrow[0].sizeMode).toBe('manual')
  })
 })
+
+it('整理铺满可用网格，按内容分配不等宽模块并保持稳定',()=>{
+ const g=createResearchGrid(),nodes=[{id:'a',preferred:{width:640,height:290}},{id:'b',preferred:{width:340,height:200}},{id:'c',preferred:{width:600,height:460}}],before=[item('a',6,0,10,6),item('b',30,20,10,5),item('c',5,45,15,13)]
+ const next=g.arrange(nodes,before,1000,700),bottom=Math.max(...next.map(c=>c.y+c.h))
+ expect(next.map(c=>c.id)).toEqual(['a','b','c']);expect(new Set(next.map(c=>c.w)).size).toBeGreaterThan(1)
+ for(let y=0;y<bottom;y++)for(let x=0;x<40;x++)expect(next.filter(c=>x>=c.x&&x<c.x+c.w&&y>=c.y&&y<c.y+c.h)).toHaveLength(1)
+ expect(g.arrange(nodes,next,1000,700)).toEqual(next)
+ expect(Math.min(...next.map(c=>c.w*g.metrics(1000).step-10))).toBeGreaterThanOrEqual(280)
+})
