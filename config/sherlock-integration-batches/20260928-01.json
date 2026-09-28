@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20260928-01",
+  "branch": "codex/integration/20260928-01",
+  "baseMainCommit": "7a8ca47e78b047dc308388f2f18624347ef8923a",
+  "expectedMainCommit": "7a8ca47e78b047dc308388f2f18624347ef8923a",
+  "createdAt": "2026-09-28T07:00:43.494Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "OpenBB 风格网格研究工作台",
+        "branch": "codex/feat/openbb-grid-workbench-20260928",
+        "baseCommit": "7a8ca47e78b047dc308388f2f18624347ef8923a",
+        "tipCommit": "7741035b4c0aace7fef1b046b6d7c2a061fcff9a",
+        "commits": [
+          {
+            "commit": "28c893a9bd9e0da618ff51090b0c470642a8b8b3",
+            "parents": [
+              "7a8ca47e78b047dc308388f2f18624347ef8923a"
+            ],
+            "subject": "功能：将研究画板改为网格工作台并保留组件问答与框选"
+          },
+          {
+            "commit": "7741035b4c0aace7fef1b046b6d7c2a061fcff9a",
+            "parents": [
+              "28c893a9bd9e0da618ff51090b0c470642a8b8b3"
+            ],
+            "subject": "修复：窄窗口组件保持网格投影尺寸避免重叠"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/plans/2026-09-28-openbb-grid-workbench.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-grid-workbench.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能提交通过：补丁重复构建",
+            "verifiedCommit": "7741035b4c0aace7fef1b046b6d7c2a061fcff9a",
+            "completedAt": "2026-09-28T07:00:42.301195+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能提交通过：53项直接相关测试",
+            "verifiedCommit": "7741035b4c0aace7fef1b046b6d7c2a061fcff9a",
+            "completedAt": "2026-09-28T07:00:42.301195+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能提交通过：类型检查",
+            "verifiedCommit": "7741035b4c0aace7fef1b046b6d7c2a061fcff9a",
+            "completedAt": "2026-09-28T07:00:42.301195+00:00",
+            "timeoutMs": 300000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能 worktree 不允许构建共享客户端；React 真实渲染工厂的问答、菜单、语音、拖动与框选已聚焦验证，原生 UI 在集成批次构建后核验。"
+        },
+        "acceptanceCriteria": [
+          "真实 EWork Research 显示40列不等大网格，支持顶栏拖动、右下缩放、碰撞让位与格位吸附",
+          "组件拉框可挤压已有组件，链接/语音末尾追加，取消恢复完整布局",
+          "更多菜单含思维导图、总结提炼和基于所选创建，保留框选多选",
+          "刷新提示使用真实成功时间；问答 icon 打开右侧会话并添加当前组件上下文",
+          "现有数据、图表、表格、HTML交互及内容尺寸适配保留"
+        ],
+        "risks": [
+          "原生客户端视觉和交互需现场核验；公开发布与主分支晋升未授权",
+          "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容"
+        ],
+        "generatedAt": "2026-09-28T07:00:42.301195+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-grid-client.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/research-canvas-clipboard.test.ts",
+        "test/component-data-status.test.js"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 300000
+    }
+  ],
+  "mainSynchronizations": []
+}
