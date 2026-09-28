@@ -22,7 +22,7 @@ async function fixture(mount=false,desktop={}){
  const registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('grid-test'),host=document.createElement('div');document.body.append(host)
  let root,canvas
  const generation={disabled:false,generate:vi.fn(async()=>({ok:true,taskId:'t'}))},actions={setResearchRightTab:vi.fn()}
- const render=async()=>{root??=createRoot(host);await act(async()=>root.render(createElement(bundle.ResearchCanvas,{sessionId:'grid-test',t:x=>x,researchWorkspaces:registry,selectionGeneration:generation,actions})));canvas=host.querySelector('[data-research-canvas]');canvas.getBoundingClientRect=()=>({left:0,top:0,right:1000,bottom:700,width:1000,height:700});Object.defineProperty(canvas,'clientWidth',{configurable:true,value:1000});Object.defineProperty(canvas,'clientHeight',{configurable:true,value:700});await act(async()=>{workspace.setCanvasSize({width:1000,height:700,availableWidth:1000});workspace.setWorkbenchWidth(1000)})}
+ const render=async({measure=true}={})=>{root??=createRoot(host);await act(async()=>root.render(createElement(bundle.ResearchCanvas,{sessionId:'grid-test',t:x=>x,researchWorkspaces:registry,selectionGeneration:generation,actions})));canvas=host.querySelector('[data-research-canvas]');canvas.getBoundingClientRect=()=>({left:0,top:0,right:1000,bottom:700,width:1000,height:700});Object.defineProperty(canvas,'clientWidth',{configurable:true,value:1000});Object.defineProperty(canvas,'clientHeight',{configurable:true,value:700});if(measure)await act(async()=>{workspace.setCanvasSize({width:1000,height:700,availableWidth:1000});workspace.setWorkbenchWidth(1000)})}
  const event=async(type,target,props={})=>{const e=new win.Event(type,{bubbles:true,cancelable:true});Object.defineProperties(e,Object.fromEntries(Object.entries(props).map(([k,v])=>[k,{value:v}])));await act(async()=>{target.dispatchEvent(e);await new Promise(r=>setTimeout(r,30))});return e}
  disposals.push(async()=>{if(root)await act(async()=>root.unmount());await win.happyDOM.abort();keys.forEach((k,i)=>original[i]?Object.defineProperty(globalThis,k,original[i]):delete globalThis[k])})
  if(mount)await render()
@@ -223,6 +223,19 @@ it('底部工具栏通过 React 挂载到页面，避开滚动容器的固定定
  expect(f.canvas.getAttribute('data-canvas-tool')).toBe('select')
  await f.event('keydown',f.win,{code:'KeyF',key:'f'})
  expect(f.canvas.getAttribute('data-canvas-tool')).toBe('component')
+})
+
+it('缓存宽度与窗口一致的首次挂载仍量测并显示工具栏',async()=>{
+ const f=await fixture()
+ const cached={width:1000,height:700,availableWidth:1000,visibleHeight:700}
+ f.workspace.setCanvasSize(cached)
+ f.workspace.setWorkbenchWidth(1000)
+ const bounds=f.win.HTMLElement.prototype.getBoundingClientRect
+ f.win.HTMLElement.prototype.getBoundingClientRect=()=>({left:88,top:68,right:1088,bottom:768,width:1000,height:700})
+ await f.render({measure:false})
+ const toolbar=f.document.querySelector('[data-ework-toolbar]')
+ expect(toolbar.style.visibility).toBe('visible')
+ f.win.HTMLElement.prototype.getBoundingClientRect=bounds
 })
 
 it('工作台顶栏下的组件拖动使用滚动区域原点进行格位换算',async()=>{

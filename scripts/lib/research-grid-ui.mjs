@@ -146,7 +146,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
 }
 export function WorkbenchToolbar({rootRef,sessionId,availableWidth,children,...props}) {
   const [bounds,setBounds]=react.useState(null)
-  react.useLayoutEffect(()=>{
+  react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     const measure=()=>{const r=root.getBoundingClientRect(),next={left:r.left+Math.min(r.width,availableWidth||r.width)/2,bottom:Math.max(20,window.innerHeight-r.bottom+20)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom?previous:next)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root);if(root.parentElement)observer.observe(root.parentElement)
