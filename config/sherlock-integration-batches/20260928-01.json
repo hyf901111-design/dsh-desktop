@@ -11,25 +11,37 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
-        "tipCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
+        "baseCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
+        "tipCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
         "commits": [
           {
-            "commit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
+            "commit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
             "parents": [
-              "3da4eaa374bd24f1cad6641da6765233dc2287ee"
+              "7c5b6dc1901633a3a9b822abf7158f222750448a"
             ],
-            "subject": "修复：统一滚动条占宽后的组件与缩放蓝框位置"
+            "subject": "修复：网格边界对齐与智能组件最小尺寸及独立缩放交互"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/plans/2026-09-28-openbb-grid-workbench.md"
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
             "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
@@ -38,6 +50,10 @@
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -48,8 +64,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
-            "completedAt": "2026-09-28T09:37:19.353383+00:00",
+            "verifiedCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
+            "completedAt": "2026-09-28T10:21:58.868758+00:00",
             "timeoutMs": 300000
           },
           {
@@ -57,12 +73,14 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js"
+              "test/research-grid-workbench.test.js",
+              "test/component-data-status.test.js",
+              "test/research-canvas-clipboard.test.ts"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：50项网格与真实客户端工厂聚焦检查，含滚动条占宽和缩放蓝框四边位置回归",
-            "verifiedCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
-            "completedAt": "2026-09-28T09:37:19.353383+00:00",
+            "summary": "精确功能提交通过：86项直接相关检查，含方格四边拉框、中文刷新、只读信息底栏、外置单轴手柄、窄窗与规范历史、草稿最小尺寸及整理约束",
+            "verifiedCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
+            "completedAt": "2026-09-28T10:21:58.868758+00:00",
             "timeoutMs": 300000
           },
           {
@@ -73,8 +91,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
-            "completedAt": "2026-09-28T09:37:19.353383+00:00",
+            "verifiedCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
+            "completedAt": "2026-09-28T10:21:58.868758+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -83,7 +101,7 @@
           "summary": "功能 worktree 不允许构建共享客户端；React 真实渲染工厂的问答、菜单、语音、拖动与框选已聚焦验证，原生 UI 在集成批次构建后核验。"
         },
         "acceptanceCriteria": [
-          "真实 EWork Research 显示40列不等大网格，支持顶栏拖动、右下缩放、碰撞让位与格位吸附",
+          "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
           "组件拉框可挤压已有组件，链接/语音末尾追加，取消恢复完整布局",
           "更多菜单含思维导图、总结提炼和基于所选创建，保留框选多选",
           "刷新提示使用真实成功时间；问答 icon 打开右侧会话并添加当前组件上下文",
@@ -102,59 +120,18 @@
           "画板右键菜单独立前景并完整避开底部工具栏，下载格式向右独立展开",
           "创建背景显示正方形格位，格距和滚动原点与真实拖动、绘制和缩放一致",
           "旧布局只迁移一次，窄窗补高不污染保存、取消、撤销或只读共享规范布局",
-          "工作台与宿主窗口监听统一扣除滚动条占宽，缩放预览四边与实际组件重合"
+          "工作台与宿主窗口监听统一扣除滚动条占宽，缩放预览四边与实际组件重合",
+          "可见方格四边含真实组件间距，与创建触点、吸附预览和卡片四边共用尺寸及滚动原点",
+          "刷新相对与绝对日期中文展示，工作台底部来源和时间仅展示不整栏可点击",
+          "选中组件显示外置单轴缩放手柄，点击区限制在真实间距内且避开底栏；调宽/高不写回未操作轴的本地补足",
+          "智能草稿创建、缩小和整理至少320×220并取整格位，窄窗夹在可用宽度；已有小草稿补足不改规范保存与共享历史"
         ],
         "risks": [
-          "d3a7d965原生确认底部菜单在工具栏上方且网格为正方形；最新缩放边框修复需后继候选原生核验。",
-          "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容",
-          "research-html-theme既存4项失败已用修改前源码复现；本轮选择状态用例单独通过。"
+          "本轮功能与factory聚焦检查通过，原生界面需后继集成客户端核验",
+          "固定1000px规范文档保留，窄窗展示投影不等于更改文档",
+          "既存research-html-theme的4项基线失败与本轮修改无关；没有运行全功能测试"
         ],
-        "generatedAt": "2026-09-28T09:37:19.353383+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a5230ef7cc2cd3997f3a4c4474a2e422aaa6b605",
-        "verificationCommit": "a5230ef7cc2cd3997f3a4c4474a2e422aaa6b605",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a5230ef7cc2cd3997f3a4c4474a2e422aaa6b605",
-            "completedAt": "2026-09-28T09:38:24.392Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a5230ef7cc2cd3997f3a4c4474a2e422aaa6b605",
-            "completedAt": "2026-09-28T09:38:24.392Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a5230ef7cc2cd3997f3a4c4474a2e422aaa6b605",
-            "completedAt": "2026-09-28T09:38:24.392Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T09:38:24.392Z"
+        "generatedAt": "2026-09-28T10:21:58.868758+00:00"
       }
     }
   ],
