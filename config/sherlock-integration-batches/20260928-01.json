@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "2ee7dedafd90f105be3527f47fce311d24ed9f51",
-        "tipCommit": "7f8636ed48158c73a342fcc93793bbb48f588084",
+        "baseCommit": "7f8636ed48158c73a342fcc93793bbb48f588084",
+        "tipCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
         "commits": [
           {
-            "commit": "7f8636ed48158c73a342fcc93793bbb48f588084",
+            "commit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
             "parents": [
-              "2ee7dedafd90f105be3527f47fce311d24ed9f51"
+              "7f8636ed48158c73a342fcc93793bbb48f588084"
             ],
-            "subject": "修复：组件拖动缩放时只显示单层吸附蓝框"
+            "subject": "修复：画板菜单遮挡与正方形网格真实吸附"
           }
         ],
         "files": [
@@ -29,11 +29,31 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
             "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -44,8 +64,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "7f8636ed48158c73a342fcc93793bbb48f588084",
-            "completedAt": "2026-09-28T08:57:17.234512+00:00",
+            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
+            "completedAt": "2026-09-28T09:25:03.123325+00:00",
             "timeoutMs": 300000
           },
           {
@@ -63,9 +83,9 @@
               "test/component-interaction-state.test.js"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：95项网格、客户端、交互同步聚焦测试",
-            "verifiedCommit": "7f8636ed48158c73a342fcc93793bbb48f588084",
-            "completedAt": "2026-09-28T08:57:17.234512+00:00",
+            "summary": "精确功能提交通过：102项网格、客户端、交互同步聚焦测试",
+            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
+            "completedAt": "2026-09-28T09:25:03.123325+00:00",
             "timeoutMs": 300000
           },
           {
@@ -78,8 +98,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：2项sandbox选择状态与Shift多选检查",
-            "verifiedCommit": "7f8636ed48158c73a342fcc93793bbb48f588084",
-            "completedAt": "2026-09-28T08:57:17.234512+00:00",
+            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
+            "completedAt": "2026-09-28T09:25:03.123325+00:00",
             "timeoutMs": 300000
           },
           {
@@ -90,8 +110,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "7f8636ed48158c73a342fcc93793bbb48f588084",
-            "completedAt": "2026-09-28T08:57:17.234512+00:00",
+            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
+            "completedAt": "2026-09-28T09:25:03.123325+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -115,59 +135,17 @@
           "窗口宽度实时投影组件格位，不等待缩放结束",
           "Shift多选只选组件，编辑框保留正常输入",
           "底部可多滚一屏用于创建组件",
-          "拖动和缩放活动组件只显示单层网格吸附蓝框，松手或取消恢复选中描边，其他选中组件保持描边"
+          "拖动和缩放活动组件只显示单层网格吸附蓝框，松手或取消恢复选中描边，其他选中组件保持描边",
+          "画板右键菜单独立前景并完整避开底部工具栏，下载格式向右独立展开",
+          "创建背景显示正方形格位，格距和滚动原点与真实拖动、绘制和缩放一致",
+          "旧布局只迁移一次，窄窗补高不污染保存、取消、撤销或只读共享规范布局"
         ],
         "risks": [
-          "6761ba92原生设置flyout和底部留白已验证；上下文去重、原生select日志与单层缩放描边均通过真实factory检查，本候选待重新构建后原生实测。",
+          "f61c5ae9原生分类第一次点击显示真实分类菜单，用户随后切到券商研报；当前菜单避让与正方形格位需本候选重新构建后原生核验。",
           "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容",
           "research-html-theme既存4项失败已用修改前源码复现；本轮选择状态用例单独通过。"
         ],
-        "generatedAt": "2026-09-28T08:57:17.234512+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f176aaf35cc37c7b2133f19e909e345c7b4c9c61",
-        "verificationCommit": "f176aaf35cc37c7b2133f19e909e345c7b4c9c61",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "f176aaf35cc37c7b2133f19e909e345c7b4c9c61",
-            "completedAt": "2026-09-28T08:58:02.406Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "f176aaf35cc37c7b2133f19e909e345c7b4c9c61",
-            "completedAt": "2026-09-28T08:58:02.406Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f176aaf35cc37c7b2133f19e909e345c7b4c9c61",
-            "completedAt": "2026-09-28T08:58:02.406Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T08:58:02.406Z"
+        "generatedAt": "2026-09-28T09:25:03.123325+00:00"
       }
     }
   ],
