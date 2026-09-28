@@ -115,6 +115,10 @@ export class McpSupervisor {
   constructor(private readonly vault: { read(ref: string): Promise<string> }) {}
 
   async connect(connection: Connection, signal: AbortSignal): Promise<McpConnectionResult> {
+    return this.connectSession(connection, signal, true)
+  }
+
+  private async connectSession(connection: Connection, signal: AbortSignal, recoverSession: boolean): Promise<McpConnectionResult> {
     aborted(signal)
     if (connection.config.type !== 'mcp') throw new IntegrationError('INVALID_CONFIG', '连接不是 MCP 类型')
     const config = structuredClone(connection.config)
@@ -123,7 +127,20 @@ export class McpSupervisor {
     if (previous && previous.fingerprint === fingerprint && !previous.closed && !previous.closing) {
       if (!previous.settled) return structuredClone(await withSignal(previous.ready, signal))
       // Reuse the transport, but refresh tool discovery so changed schemas reach the owning service.
-      return structuredClone(await this.discover(previous, signal))
+      try {
+        return structuredClone(await this.discover(previous, signal))
+      } catch (error) {
+        // A server may expire its Streamable HTTP session while the desktop
+        // stays open. Discovery has no business side effects and runs before
+        // invoke(); rebuild this rejected session without replaying tool calls.
+        if (config.transport === 'http' && (error as {code?:unknown})?.code === 404 && !signal.aborted) {
+          if (this.entries.get(connection.id) === previous) previous.closed = true
+          // The first caller installs the replacement synchronously. Other
+          // cards join that entry's ready promise instead of reconnecting again.
+          if (recoverSession) return this.connectSession(connection, signal, false)
+        }
+        throw mappedError(error, signal)
+      }
     }
     const entry: Entry = { id: connection.id, config, fingerprint, controller: new AbortController(), ready: Promise.resolve({ tools: [] }), settled: false, closed: false, closing: false, secrets: [], tools: [], activeCalls: 0, callQueue: [] }
     this.entries.set(connection.id, entry)

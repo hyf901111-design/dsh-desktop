@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { McpSupervisor } from '../src/main/integrations/adapters/mcp'
 import type { Connection } from '../src/shared/integrations'
-type HttpFixture = { url: string; metrics: { initializes: number; calls: number; unauthorized: number; deletes: number; requests: number }; close(): Promise<void> }
+type HttpFixture = { url: string; metrics: { initializes: number; calls: number; unauthorized: number; deletes: number; requests: number }; expireSessions(): void; close(): Promise<void> }
 const { createMcpHttpFixture } = await import(new URL('./fixtures/integrations/mcp-http.mjs', import.meta.url).href) as {
   createMcpHttpFixture(options?: { secret?: string; failRequests?: number }): Promise<HttpFixture>
 }
@@ -31,6 +31,21 @@ afterEach(async () => {
 })
 
 describe('MCP supervisor with real SDK transports', () => {
+  it('renegotiates an expired HTTP session once for concurrent refreshes before sending business calls', async () => {
+    const fixture = await createMcpHttpFixture()
+    fixtures.push(fixture)
+    const { instance } = supervisor()
+    const input = connection({config:{type:'mcp',transport:'http',url:fixture.url,auth:{type:'none'},network:{allowLocal:true,allowedOrigins:[new URL(fixture.url).origin]}}})
+    await instance.connect(input,signal())
+    fixture.expireSessions()
+    const connections = await Promise.all(Array.from({length:4},()=>instance.connect(input,signal())))
+    expect(connections.every(result=>result.tools.length===2)).toBe(true)
+    expect(fixture.metrics.initializes).toBe(2)
+    expect(fixture.metrics.calls).toBe(0)
+    const results = await Promise.all(Array.from({length:4},(_,index)=>instance.invoke(input.id,'echo',{index},signal())))
+    expect(results.every(result=>!result.isError)).toBe(true)
+    expect(fixture.metrics.calls).toBe(4)
+  })
   it('discovers paginated STDIO tools and reuses one live process for concurrent connects', async () => {
     const { instance } = supervisor()
     const [first, second] = await Promise.all([instance.connect(connection(), signal()), instance.connect(connection(), signal())])
