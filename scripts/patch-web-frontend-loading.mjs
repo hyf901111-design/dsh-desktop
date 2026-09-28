@@ -1,4 +1,5 @@
 import { patchComponentDataRefresh } from './lib/component-data-refresh.mjs'
+import { patchResearchGridWorkbench, restoreResearchGridWorkbench } from './lib/research-grid-workbench.mjs'
 import { patchResearchCreationProgress } from './lib/research-creation-progress.mjs'
 import { patchComponentScheduledTasks } from './lib/component-scheduled-tasks.mjs'
 import { patchConversationBrowser } from './lib/conversation-browser-client.mjs'
@@ -137,6 +138,9 @@ writeFileSync(primitivesPath, patchFigmaMenuPlacement(patchFigmaMenuScope(readFi
 writeFileSync(asset('.js'), patchFigmaMenuPlacement(patchFigmaMenuScope(patchFigmaReadingWeb(readFileSync(asset('.js'), 'utf8'), readFileSync(primitivesPath, 'utf8')), true), true))
 patchStyles(asset('.css'))
 
+// Restore just this patch before earlier passes update their exact anchors.
+const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
+writeFileSync(gridConversationPath,restoreResearchGridWorkbench(readFileSync(gridConversationPath,'utf8')))
 await installResearchBoardClientPatches()
 
 const conversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
@@ -229,3 +233,4 @@ writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversati
 writeFileSync(conversationPath, patchComponentScheduledTasks(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchComponentDataRefresh(readFileSync(conversationPath, 'utf8')))
+writeFileSync(conversationPath, patchResearchGridWorkbench(readFileSync(conversationPath, 'utf8')))
