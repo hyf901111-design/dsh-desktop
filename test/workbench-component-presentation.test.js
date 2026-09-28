@@ -25,5 +25,6 @@ it('工作台展示层同时覆盖自定义 HTML 样式且不改动业务脚本'
   const preview=buildResearchHtmlPreview(html,'行情','dark',{notoFont:'runtime',workbench:true})
   expect(preview.indexOf('@layer ework-workbench;')).toBeLessThan(preview.indexOf('td{color:gold!important}'))
   expect(preview).toContain('console.log')
-  expect(WORKBENCH_PRESENTATION_CSS).toContain('repeat(auto-fit,minmax(min(150px,100%),1fr))')
+  expect(WORKBENCH_PRESENTATION_CSS).toContain('grid-template-columns:repeat(3,minmax(0,1fr))')
+  expect(WORKBENCH_PRESENTATION_CSS).toContain('overflow:auto!important')
 })
