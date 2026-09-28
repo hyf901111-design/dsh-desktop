@@ -30,6 +30,7 @@ export function patchResearchGridWorkbench(source){
   change('const persistSnapshot = () => {','const persistSnapshot = () => {\nif(!workbenchGrid.save())return false;')
   change('setCanvasSize(canvasSize) {','setCanvasSize(canvasSize) {\nif(workbenchGrid.enabled()){const size={...snapshot.canvasSize,...canvasSize};workbenchGrid.enable(Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity)));}')
   change("if(document.documentElement.hasAttribute('data-odyssey-window-resizing')){","if(!root.hasAttribute('data-ework-grid')&&document.documentElement.hasAttribute('data-odyssey-window-resizing')){")
+  change('const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);','const availableWidth=root.hasAttribute("data-ework-grid")?workbenchAvailableWidth(root,bounds,panelBounds):researchCanvasUnobscuredWidth(bounds,panelBounds);')
   change('const viewport=researchCanvasViewportForAreaChange(current,next);','const viewport=root.hasAttribute("data-ework-grid")?current.viewport:researchCanvasViewportForAreaChange(current,next);')
   change('snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));','snapshot = researchWorkspaceSnapshot(workbenchGrid.reconcile(workbenchGrid.enabled()?next:researchWorkbenchGrowthViewport(snapshot,next)));')
   const methods=`
