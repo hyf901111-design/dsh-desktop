@@ -144,6 +144,17 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   root.addEventListener('pointerdown',down,true);root.addEventListener('pointermove',move,true);root.addEventListener('pointerup',up,true);root.addEventListener('pointercancel',cancel,true);root.addEventListener('lostpointercapture',cancel,true);view.addEventListener('blur',cancel);view.addEventListener('keydown',key,true)
   return()=>{finish(false);preview.remove();root.removeEventListener('pointerdown',down,true);root.removeEventListener('pointermove',move,true);root.removeEventListener('pointerup',up,true);root.removeEventListener('pointercancel',cancel,true);root.removeEventListener('lostpointercapture',cancel,true);view.removeEventListener('blur',cancel);view.removeEventListener('keydown',key,true)}
 }
+export function WorkbenchToolbar({rootRef,sessionId,availableWidth,children,...props}) {
+  const [bounds,setBounds]=react.useState(null)
+  react.useLayoutEffect(()=>{
+    const root=rootRef.current;if(!root)return
+    const measure=()=>{const r=root.getBoundingClientRect(),next={left:r.left+Math.min(r.width,availableWidth||r.width)/2,bottom:Math.max(20,window.innerHeight-r.bottom+20)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom?previous:next)}
+    measure();const observer=new ResizeObserver(measure);observer.observe(root);if(root.parentElement)observer.observe(root.parentElement)
+    window.addEventListener('resize',measure)
+    return()=>{observer.disconnect();window.removeEventListener('resize',measure)}
+  },[rootRef,availableWidth])
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':'','data-ework-toolbar-owner':sessionId,style:{position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||20,top:'auto',visibility:bounds?'visible':'hidden'},children}),document.body)
+}
 export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,selectTool,readOnly}) {
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
@@ -159,7 +170,6 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const nodes=[...snapshot.files,...snapshot.artifacts],bottom=Math.max(12,...nodes.map(n=>n.y+n.height/2))+100
     const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=(snapshot.canvasSize.availableWidth||root.clientWidth)+'px'}
     const viewport=snapshot.viewport;if(Math.abs(root.scrollTop+viewport.y)>.5&&!root.hasAttribute('data-grid-operation'))root.scrollTop=Math.max(0,-viewport.y)
-    const toolbar=root.querySelector('[data-research-global-toolbar]'),r=root.getBoundingClientRect();if(toolbar)Object.assign(toolbar.style,{position:'fixed',left:r.left+Math.min(r.width,snapshot.canvasSize.availableWidth||r.width)/2+'px',top:'auto',bottom:Math.max(20,window.innerHeight-r.bottom+20)+'px'})
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])
 }

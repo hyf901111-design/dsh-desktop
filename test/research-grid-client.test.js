@@ -66,13 +66,13 @@ it('顶栏问答进入右侧会话，更多菜单包含三项原工具',async()=
 it('组件工具在已有组件上拉框，取消恢复让位；选择工具仍框选',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const before=structuredClone(f.workspace.getSnapshot().artifacts)
- await f.event('click',f.host.querySelector('[data-research-global-container]'))
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
  await f.event('pointerdown',f.host.querySelector('[data-research-node-id="a"]'),{button:0,pointerId:1,clientX:20,clientY:20})
  await f.event('pointermove',f.canvas,{pointerId:1,clientX:470,clientY:280})
  expect(f.canvas.getAttribute('data-grid-operation')).toBe('draw')
  await f.event('pointercancel',f.canvas,{pointerId:1})
  expect(f.workspace.getSnapshot().artifacts).toEqual(before)
- await f.event('click',f.host.querySelector('[data-research-global-select]'))
+ await f.event('click',f.document.querySelector('[data-research-global-select]'))
  await f.event('pointerdown',f.canvas,{button:0,pointerId:2,clientX:0,clientY:0})
  await f.event('pointermove',f.canvas,{pointerId:2,clientX:950,clientY:650})
  await f.event('pointerup',f.canvas,{pointerId:2,clientX:950,clientY:650})
@@ -99,7 +99,7 @@ it('语音开始立即追加组件，反馈在组件内部，最终文字在同�
  let subscriber
  const bridge={subscribe:fn=>{subscriber=fn;return()=>{}},setActive:vi.fn(async()=>({ok:true})),start:vi.fn(async()=>({ok:true})),stop:vi.fn(async()=>({ok:true})),cancel:vi.fn(async()=>({ok:true}))}
  const f=await fixture(true,{researchVoice:bridge});await act(async()=>f.workspace.setArtifacts([text('a')]))
- await f.event('click',f.host.querySelector('[data-research-global-voice]'))
+ await f.event('click',f.document.querySelector('[data-research-global-voice]'))
  const voice=f.workspace.getSnapshot().artifacts.find(n=>n.title==='语音组件')
  expect(voice).toBeDefined();expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
  expect(f.host.querySelector('[data-research-node-id="'+voice.id+'"] [data-research-voice-feedback]')).not.toBeNull()
@@ -110,7 +110,7 @@ it('语音开始立即追加组件，反馈在组件内部，最终文字在同�
 })
 it('拉框松手只创建一次并保持目标格位，缩放更新真实渲染尺寸',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
- await f.event('click',f.host.querySelector('[data-research-global-container]'))
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
  await f.event('pointerdown',f.canvas,{button:0,pointerId:5,clientX:20,clientY:20})
  await f.event('pointermove',f.canvas,{pointerId:5,clientX:490,clientY:290})
  await f.event('pointerup',f.canvas,{pointerId:5,clientX:490,clientY:290})
@@ -157,13 +157,13 @@ it('失焦取消拖动，受协作占用的让位组件不会移动',async()=>{
 it('语音取消恢复可编辑正文，重试复用未提交草稿',async()=>{
  const bridge={subscribe:()=>()=>{},setActive:async()=>({ok:true}),start:async()=>({ok:true}),cancel:async()=>({ok:true})}
  const f=await fixture(true,{researchVoice:bridge})
- await f.event('click',f.host.querySelector('[data-research-global-voice]'))
+ await f.event('click',f.document.querySelector('[data-research-global-voice]'))
  const voice=f.workspace.getSnapshot().artifacts[0],card=f.host.querySelector('[data-research-node-id="'+voice.id+'"]')
  expect(card.hasAttribute('data-research-voice-target')).toBe(true)
  await f.event('click',card.querySelector('[data-research-voice-cancel]'))
  expect(card.hasAttribute('data-research-voice-target')).toBe(false)
  expect(card.querySelector('textarea')).not.toBeNull()
- await f.event('click',f.host.querySelector('[data-research-global-voice]'))
+ await f.event('click',f.document.querySelector('[data-research-global-voice]'))
  expect(f.workspace.getSnapshot().artifacts).toHaveLength(1)
 })
 it('失败完成时间不作为成功刷新时间',async()=>{
@@ -209,4 +209,29 @@ it('滚动后的编辑与导出菜单在可见区域打开',async()=>{
  await f.event('click',f.host.querySelector('[data-workbench-more="a"]'),{clientX:800,clientY:110})
  await f.event('click',[...f.document.querySelectorAll('.ew-grid-menu button')].find(n=>n.textContent==='编辑与导出'))
  expect(parseFloat(f.host.querySelector('.rScV5Q_contextMenu').style.top)).toBe(710)
+})
+
+it('底部工具栏通过 React 挂载到页面，避开滚动容器的固定定位边界',async()=>{
+ const f=await fixture(true),toolbar=f.document.querySelector('[data-ework-toolbar]')
+ expect(toolbar.parentElement).toBe(f.document.body)
+ f.canvas.getBoundingClientRect=()=>({left:88,top:68,right:988,bottom:828,width:900,height:760})
+ await act(async()=>f.workspace.setCanvasSize({width:900,height:760,availableWidth:900}))
+ expect(parseFloat(toolbar.style.left)).toBe(538)
+ await f.event('click',toolbar.querySelector('[data-research-global-container]'))
+ expect(f.canvas.getAttribute('data-canvas-tool')).toBe('component')
+ f.canvas.focus();await f.event('keydown',f.win,{code:'KeyV',key:'v'})
+ expect(f.canvas.getAttribute('data-canvas-tool')).toBe('select')
+ await f.event('keydown',f.win,{code:'KeyF',key:'f'})
+ expect(f.canvas.getAttribute('data-canvas-tool')).toBe('component')
+})
+
+it('工作台顶栏下的组件拖动使用滚动区域原点进行格位换算',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ f.canvas.getBoundingClientRect=()=>({left:88,top:68,right:1088,bottom:768,width:1000,height:700})
+ await act(async()=>f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:8}],true))
+ await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="a"]'),{button:0,pointerId:11,clientX:200,clientY:90})
+ await f.event('pointermove',f.canvas,{pointerId:11,clientX:200,clientY:160})
+ expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:2,w:20,h:8})
+ await f.event('pointerup',f.canvas,{pointerId:11,clientX:200,clientY:160})
+ expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:20,h:8})
 })
