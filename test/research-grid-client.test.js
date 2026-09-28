@@ -216,18 +216,44 @@ it('更多菜单的基于所选创建调用原生成流程并保留来源',async
  expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({kind:'create',selectedNodeIds:['a'],prompt:'基于这些材料创建趋势分析'}))
  expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
 })
-it('语音开始立即追加组件，反馈在组件内部，最终文字在同一组件生成',async()=>{
+it('恢复录音胶囊不改变工具栏链接按钮的尺寸、图标或隐藏文字',async()=>{
+ const f=await fixture(true),toolbar=f.document.querySelector('[data-ework-toolbar]')
+ for(const name of ['select','container','link','voice']){
+  const button=toolbar.querySelector('[data-research-global-'+name+']'),style=f.win.getComputedStyle(button)
+  expect(style.width,name).toBe('44px');expect(style.height,name).toBe('40px')
+  const icon=button.querySelector('svg,img,.odyssey-global-icon')
+  expect(f.win.getComputedStyle(icon).width,name).toBe('22px')
+  for(const label of button.querySelectorAll('span:not(.odyssey-global-icon)'))expect(f.win.getComputedStyle(label).display,name).toBe('none')
+ }
+})
+it('语音先显示工具栏上方的原录音胶囊，识别完成才追加一次组件并执行',async()=>{
  let subscriber
  const bridge={subscribe:fn=>{subscriber=fn;return()=>{}},setActive:vi.fn(async()=>({ok:true})),start:vi.fn(async()=>({ok:true})),stop:vi.fn(async()=>({ok:true})),cancel:vi.fn(async()=>({ok:true}))}
  const f=await fixture(true,{researchVoice:bridge});await act(async()=>f.workspace.setArtifacts([text('a')]))
  await f.event('click',f.document.querySelector('[data-research-global-voice]'))
- const voice=f.workspace.getSnapshot().artifacts.find(n=>n.title==='语音组件')
- expect(voice).toBeDefined();expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
- expect(f.host.querySelector('[data-research-node-id="'+voice.id+'"] [data-research-voice-feedback]')).not.toBeNull()
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(1)
+ const feedback=f.document.querySelector('[data-research-voice-feedback]')
+ expect(feedback.closest('[data-ework-toolbar]')).not.toBeNull()
+ expect(feedback.closest('[data-research-node-id]')).toBeNull()
+ expect(f.win.getComputedStyle(feedback).height).toBe('44px')
+ expect(f.win.getComputedStyle(feedback.querySelector('[data-research-voice-cancel]')).width).toBe('32px')
+ expect(f.win.getComputedStyle(feedback.querySelector('[data-research-voice-finish]')).borderRadius).toBe('50%')
  const request=bridge.start.mock.calls[0][0]
- await act(async()=>{subscriber({...request,type:'final',text:'分析这些金融指标'});await new Promise(r=>setTimeout(r,30))})
+ await act(async()=>{subscriber({...request,type:'state',state:'listening'});subscriber({...request,type:'partial',text:'分析这些金融指标'});subscriber({...request,type:'level',level:.8})})
+ expect(feedback.querySelector('[data-research-voice-wave]').getAttribute('data-level')).toBe('0.8')
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(1)
+ await f.event('click',feedback.querySelector('[data-research-voice-finish]'))
+ expect(bridge.stop).toHaveBeenCalledWith(request)
+ expect(f.document.querySelector('[data-research-voice-feedback]').textContent).toContain('识别中')
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(1)
+ await act(async()=>{subscriber({...request,type:'final',text:'分析这些金融指标'});subscriber({...request,type:'final',text:'分析这些金融指标'});await new Promise(r=>setTimeout(r,30))})
+ const voice=f.workspace.getSnapshot().artifacts.find(n=>n.id!=='a')
  expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
+ expect(f.document.querySelector('[data-research-voice-feedback]')).toBeNull()
+ expect(f.generation.generate).toHaveBeenCalledTimes(1)
  expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({kind:'container',targetNodeId:voice.id,prompt:'分析这些金融指标'}))
+ const cells=f.workspace.getWorkbenchCells(),existing=cells.find(n=>n.id==='a')
+ expect(cells.find(n=>n.id===voice.id).y).toBeGreaterThanOrEqual(existing.y+existing.h)
 })
 it('拉框松手只创建一次并保持目标格位，缩放更新真实渲染尺寸',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
@@ -304,17 +330,44 @@ it('失焦取消拖动，受协作占用的让位组件不会移动',async()=>{
  await f.event('pointerup',f.canvas,{pointerId:8,clientX:680,clientY:24})
  expect(f.workspace.getSnapshot().artifacts).toEqual(before)
 })
-it('语音取消恢复可编辑正文，重试复用未提交草稿',async()=>{
- const bridge={subscribe:()=>()=>{},setActive:async()=>({ok:true}),start:async()=>({ok:true}),cancel:async()=>({ok:true})}
+it('语音取消、空识别和错误不创建草稿，重试拒绝迟到的旧识别',async()=>{
+ let subscriber
+ const bridge={subscribe:fn=>{subscriber=fn;return()=>{}},setActive:async()=>({ok:true}),start:vi.fn(async()=>({ok:true})),cancel:vi.fn(async()=>({ok:true}))}
  const f=await fixture(true,{researchVoice:bridge})
  await f.event('click',f.document.querySelector('[data-research-global-voice]'))
- const voice=f.workspace.getSnapshot().artifacts[0],card=f.host.querySelector('[data-research-node-id="'+voice.id+'"]')
- expect(card.hasAttribute('data-research-voice-target')).toBe(true)
- await f.event('click',card.querySelector('[data-research-voice-cancel]'))
- expect(card.hasAttribute('data-research-voice-target')).toBe(false)
- expect(card.querySelector('textarea')).not.toBeNull()
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(0)
+ const first=bridge.start.mock.calls[0][0]
+ await f.event('click',f.document.querySelector('[data-research-voice-cancel]'))
+ expect(bridge.cancel).toHaveBeenCalledWith(first)
+ await act(async()=>subscriber({...first,type:'final',text:'取消后不得创建'}))
+ expect(f.document.querySelector('[data-research-voice-feedback]')).toBeNull()
+ expect(f.generation.generate).not.toHaveBeenCalled()
  await f.event('click',f.document.querySelector('[data-research-global-voice]'))
+ const second=bridge.start.mock.calls[1][0]
+ await act(async()=>subscriber({...second,type:'final',text:'  '}))
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(0)
+ expect(f.document.querySelector('[role=alert]').textContent).toContain('没有识别到语音')
+ await f.event('click',f.document.querySelector('[data-research-voice-finish]'))
+ const third=bridge.start.mock.calls[2][0]
+ await act(async()=>{subscriber({...second,type:'final',text:'旧识别不得创建'});subscriber({...third,type:'error',message:'请允许麦克风访问'})})
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(0)
+ expect(f.generation.generate).not.toHaveBeenCalled()
+ expect(f.document.querySelector('[role=alert]').textContent).toContain('请允许麦克风访问')
+})
+it.each(['toggle','hold-start'])('语音 Fn %s 不提前创建，自动结束后只提交一次',async gesture=>{
+ let subscriber
+ const bridge={subscribe:fn=>{subscriber=fn;return()=>{}},setActive:async()=>({ok:true}),start:vi.fn(async()=>({ok:true})),stop:vi.fn(async()=>({ok:true})),cancel:async()=>({ok:true})}
+ const f=await fixture(true,{researchVoice:bridge})
+ await act(async()=>{subscriber({sessionId:'grid-test',type:gesture});await new Promise(r=>setTimeout(r,30))})
+ const request=bridge.start.mock.calls[0][0]
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(0)
+ await act(async()=>{subscriber({...request,type:'finish'});subscriber({...request,type:'finish'})})
+ expect(bridge.stop).toHaveBeenCalledTimes(1)
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(0)
+ await act(async()=>{subscriber({...request,type:'final',text:'创建营收趋势图'});subscriber({...request,type:'final',text:'创建营收趋势图'});await new Promise(r=>setTimeout(r,30))})
  expect(f.workspace.getSnapshot().artifacts).toHaveLength(1)
+ expect(f.generation.generate).toHaveBeenCalledTimes(1)
+ expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({prompt:'创建营收趋势图'}))
 })
 it('失败完成时间不作为成功刷新时间',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([{...text('a'),generationStatus:'failed',generationCompletedAt:Date.now()}]))
