@@ -259,11 +259,14 @@ export function WorkbenchToolbar({rootRef,sessionId,availableWidth,children,...p
   },[rootRef,availableWidth])
   return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':'','data-ework-toolbar-owner':sessionId,style:{position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||20,top:'auto',visibility:bounds?'visible':'hidden'},children}),document.body)
 }
+export function workbenchAvailableWidth(root,bounds,panelBounds) {
+  return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
+}
 export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,selectTool,readOnly}) {
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     root.setAttribute('data-ework-grid','')
-    const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=Math.max(240,researchCanvasUnobscuredWidth(bounds,panel?.getBoundingClientRect()));workspace.setWorkbenchWidth(width);const size={width:bounds.width,height:bounds.height,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
+    const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect());workspace.setWorkbenchWidth(width);const size={width:bounds.width,height:bounds.height,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root)
     window.addEventListener('resize',measure)
     const scroll=()=>{const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}

@@ -473,6 +473,26 @@ it('改变组件大小时只显示吸附预览蓝框，松手或取消恢复单�
  expect(preview.hidden).toBe(true);expect(f.win.getComputedStyle(ring).display).not.toBe('none')
 })
 
+it('滚动条占宽时缩放预览四边与实际组件使用同一可用宽度',async()=>{
+ const f=await fixture(true)
+ await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:8,y:6,w:24,h:8}],true)})
+ Object.defineProperty(f.canvas,'clientWidth',{configurable:true,value:984})
+ await f.event('resize',f.win)
+ const card=f.host.querySelector('[data-research-node-id="a"]'),preview=f.canvas.querySelector('.ew-grid-placeholder')
+ await f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:67,clientX:780,clientY:320})
+ await f.event('pointermove',f.canvas,{pointerId:67,clientX:850,clientY:365})
+ const node=f.workspace.getSnapshot().artifacts[0]
+ expect(preview.hidden).toBe(false)
+ expect(parseFloat(preview.style.left)).toBeCloseTo(node.x-node.width/2)
+ expect(parseFloat(preview.style.top)).toBeCloseTo(node.y-node.height/2)
+ expect(parseFloat(preview.style.width)).toBeCloseTo(node.width)
+ expect(parseFloat(preview.style.height)).toBeCloseTo(node.height)
+ expect(f.workspace.getSnapshot().canvasSize).toMatchObject({width:1000,availableWidth:984})
+ await f.event('pointerup',f.canvas,{pointerId:67,clientX:850,clientY:365})
+ expect(preview.hidden).toBe(true)
+ expect(parseFloat(card.style.width)).toBeCloseTo(f.workspace.getSnapshot().artifacts[0].width)
+})
+
 it('画板菜单挂到页面前景，靠近底部时完整避开全局工具栏',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const original=f.win.HTMLElement.prototype.getBoundingClientRect
