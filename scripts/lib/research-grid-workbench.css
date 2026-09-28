@@ -29,13 +29,20 @@ body [data-ework-grid] .ew-grid-refresh [data-busy=true] svg{animation:ew-grid-s
 .ew-grid-tooltip time{color:#a4adbe}
 .ew-grid-refresh:hover>.ew-grid-tooltip,.ew-grid-refresh:focus-within>.ew-grid-tooltip{display:flex}
 body [data-ework-grid] [data-grid-tooltip]:hover:after{content:attr(data-grid-tooltip);position:absolute;top:30px;right:-60px;width:max-content;max-width:360px;background:#24242b;padding:8px 10px;color:#e9e9ef;border-radius:3px;font:400 12px/17px Inter,"Noto Sans SC",system-ui;white-space:normal}
-body [data-ework-grid] .ew-grid-resize{pointer-events:auto;position:absolute;right:0;bottom:0;width:15px;height:15px;display:grid;place-items:center;border:0;background:transparent;color:var(--grid-muted);padding:0;cursor:nwse-resize;touch-action:none;opacity:0}
-body [data-ework-grid] [data-research-node-id]:is(:hover,[data-selected=true]) .ew-grid-resize{opacity:.8}
-body [data-ework-grid] .ew-grid-resize svg{width:12px;height:12px}
+body [data-ework-grid] .ew-grid-resize-layer{position:absolute;inset:0;z-index:110;pointer-events:none}
+body [data-ework-grid] .ew-grid-resize{pointer-events:auto;position:absolute;display:grid;place-items:center;padding:0;border:0;background:none;touch-action:none}
+body [data-ework-grid] .ew-grid-resize-x{width:10px;height:36px;cursor:ew-resize}
+body [data-ework-grid] .ew-grid-resize-y{width:36px;height:10px;cursor:ns-resize}
+body [data-ework-grid] .ew-grid-resize span{display:block;pointer-events:none;border-radius:4px;background:#249bfa;box-shadow:0 0 0 1px var(--grid-card)}
+body [data-ework-grid] .ew-grid-resize-x span{width:5px;height:24px}
+body [data-ework-grid] .ew-grid-resize-y span{width:24px;height:5px}
+body [data-ework-grid] .ew-grid-resize:hover span{background:#007cdd}
+body [data-ework-grid] .ew-grid-resize:focus-visible{outline:1px solid #249bfa;border-radius:3px}
+body [data-ework-grid][data-canvas-tool=component] .ew-grid-resize{display:none}
 .ew-grid-placeholder{position:absolute;z-index:80;box-sizing:border-box;pointer-events:none;border:1px solid #249bfa;background:#249bfa1a;border-radius:4px}
 .ew-grid-placeholder[hidden]{display:none}
 body [data-ework-grid][data-canvas-tool=component]{cursor:crosshair}
-body [data-ework-grid][data-canvas-tool=component] [data-research-content-layer]{background-image:linear-gradient(to right,#8882 1px,transparent 1px),linear-gradient(to bottom,#8882 1px,transparent 1px)!important;background-size:var(--grid-step) var(--grid-step)!important;background-position:12px 12px!important}
+body [data-ework-grid][data-canvas-tool=component] [data-research-content-layer]{background-image:var(--grid-pattern)!important;background-size:var(--grid-step) var(--grid-step)!important;background-position:12px 12px!important;background-repeat:repeat!important}
 body [data-ework-grid][data-canvas-tool=component] [data-research-node-id] [data-research-preview-body]{pointer-events:none}
 .ew-grid-menu{position:fixed;z-index:3000;box-sizing:border-box;width:206px;padding:7px;background:#f8f8fa;color:#202124;border:1px solid #8883;border-radius:4px;box-shadow:0 5px 20px #0003;font:400 12px/16px Inter,"Noto Sans SC",system-ui}
 body[data-ds-dark-theme] .ew-grid-menu{background:#1c1b20;color:#e9e9ef}
@@ -63,13 +70,12 @@ body [data-ework-grid] [data-research-voice-target] [data-research-voice-feedbac
 @media(prefers-reduced-motion:reduce){body [data-ework-grid] [data-research-node-id]{transition:none!important}}
 
 .ew-grid-menu{max-height:calc(100vh - 16px);overflow-y:auto}
-body [data-ework-grid] [data-research-node-id][open] .ew-grid-resize{display:none}
 
 body [data-ework-grid] [data-research-node-id]{--odyssey-card:var(--grid-card)!important;--odyssey-content:var(--grid-card)!important}
 body [data-ework-grid] [data-research-preview-body]{border:0!important;border-radius:0!important;background:var(--grid-card)!important;box-shadow:none!important;color:var(--grid-text)!important}
 body [data-ework-grid] [data-research-preview-body]:has(iframe[data-research-html-artifact]){padding:0!important}
 body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]:not([data-selected=true])::after{display:none!important}
-body [data-ework-grid] .odyssey-data-stamp{border:0!important;background:var(--grid-card)!important;color:var(--grid-muted)!important;font:400 11px/16px Inter,"Noto Sans SC",system-ui!important;padding:3px 10px!important;min-height:20px!important}
+body [data-ework-grid] .odyssey-data-stamp{border:0!important;background:var(--grid-card)!important;color:var(--grid-muted)!important;font:400 11px/16px Inter,"Noto Sans SC",system-ui!important;padding:3px 10px!important;min-height:20px!important;cursor:default!important}
 /* This first important layer outranks legacy component frame rules. The real
    overlay is in the chrome host so content/header paint cannot cover its edges. */
 @layer ework-workbench{

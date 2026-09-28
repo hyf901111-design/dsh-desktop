@@ -47,7 +47,7 @@ export function componentDataStatusView(binding){
  return {time,detail,title:(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(binding?.dataAsOf?'\n数据时点：'+binding.dataAsOf:'')+'\n点击设置数据源与刷新频率'}
 }
 
-export function ComponentDataStatusBar({sessionId,node}){
+export function ComponentDataStatusBar({sessionId,node,workbench=false}){
  const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
  const ref=react.useRef(null),sequence=react.useRef(binding?.refreshSequence||0),[pulse,setPulse]=react.useState(0)
  react.useEffect(()=>{
@@ -58,7 +58,7 @@ export function ComponentDataStatusBar({sessionId,node}){
  const view=componentDataStatusView(binding),body=ref.current?.closest('[data-research-node-id]')?.querySelector('[data-research-preview-body]')
  const shared=sherlockShared(sessionId)
  return react_jsx_runtime.jsxs(react_jsx_runtime.Fragment,{children:[
-  react_jsx_runtime.jsxs('button',{ref,type:'button',className:'odyssey-data-stamp','data-component-data-status':binding?.status||'unbound',title:shared?'共享组件尚不支持自动取数':view.title,'aria-label':view.detail+'，'+view.time+(shared?'':'，设置刷新频率'),disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node)},children:[react_jsx_runtime.jsx('span',{className:'odyssey-data-frequency',children:shared?'静态组件':view.detail}),react_jsx_runtime.jsx('time',{dateTime:binding?.lastSuccess?new Date(binding.lastSuccess).toISOString():undefined,children:view.time})]}),
+  react_jsx_runtime.jsxs(workbench?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':binding?.status||'unbound','aria-label':view.detail+'，'+view.time+(workbench||shared?'':'，设置刷新频率'),...(!workbench?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node)}}:{}),children:[react_jsx_runtime.jsx('span',{className:'odyssey-data-frequency',children:shared?'静态组件':view.detail}),react_jsx_runtime.jsx('time',{dateTime:binding?.lastSuccess?new Date(binding.lastSuccess).toISOString():undefined,children:view.time})]}),
   pulse&&body?react_dom.createPortal(react_jsx_runtime.jsx('span',{'aria-hidden':true,className:'odyssey-data-update-highlight'},pulse),body):null
  ]})
 }
