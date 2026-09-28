@@ -28,7 +28,7 @@ export function patchResearchGridWorkbench(source){
   const methods=`
     getWorkbenchCells:()=>workbenchGrid.get(),
     getWorkbenchDocument:()=>workbenchGrid.document(snapshot),
-    setWorkbenchWidth(width){if(workbenchGrid.enable(width))update({},false);},
+    setWorkbenchWidth(width){if(workbenchGrid.enable(width)){initialWorkbenchFit=false;autoFitManaged=false;autoFitActive=false;update({},false);}},
     applyWorkbenchCells(cells,persist=false){if(!collaborationCanWrite())return false;if(pendingHistoryTransaction===null)pendingHistoryTransaction=historyState();workbenchGrid.set(cells);const nodes=createResearchGrid().project([...snapshot.files,...snapshot.artifacts],cells,Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)));this.applyPointerGeometry(nodes);if(persist)this.persist();return true;},
   `
   change('subscribeCanvasAction:listener=>{',methods+'subscribeCanvasAction:listener=>{')
@@ -44,6 +44,7 @@ export function patchResearchGridWorkbench(source){
   change('pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\n                    '+hydrated,'pendingHistoryTransaction = null; undoHistory.length = 0; redoHistory.length = 0;\nworkbenchGrid.receiveCanonical([...files,...artifacts]);\n                    '+hydrated.replace('researchWorkspaceSnapshot({','researchWorkspaceSnapshot(workbenchGrid.reconcile({').replace(')});',')}));'))
   {const from='return { left: left - origin.left, top: top - origin.top,',to='return { left: left - origin.left, top: top - origin.top + (root?.hasAttribute("data-ework-grid")?root.scrollTop:0),';if(source.split(from).length!==3)throw Error('Marquee anchors changed');for(let i=0;i<2;i++){changes.push([from,to]);source=source.replace(from,to)}}
   change("left: next.left, top: next.top, bottom: 'auto'","left: next.left + parent.scrollLeft, top: next.top + parent.scrollTop, bottom: 'auto'")
+  change("element.style.top = Math.max(inset, Math.min(point.top, height - element.offsetHeight - inset)) + 'px';", "element.style.top = (Math.max(inset, Math.min(point.top, height - element.offsetHeight - inset)) + (canvas.hasAttribute('data-ework-grid')?canvas.scrollTop:0)) + 'px';")
   change('function normalizeResearchCanvasNodeGeometry(node) {','function normalizeResearchCanvasNodeGeometry(node) {\nif(researchGridNodeIds.has(node?.id))return {width:Math.max(1,node.width),height:Math.max(1,node.height),sizeMode:"manual",resizable:true};')
   change('const onWheel = (event) => {','const onWheel = (event) => {\nif(root.hasAttribute("data-ework-grid"))return;')
   change('const onPointerDown = (event) => {','const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid")){const card=event.target?.closest?.("[data-research-node-id]");if(card){const id=card.getAttribute("data-research-node-id");if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id)||event.metaKey||event.shiftKey)workspace.updateSelection([id],event.metaKey?"toggle":event.shiftKey?"add":"replace");return;}if(spacePressedRef.current)return;}')
@@ -59,7 +60,7 @@ export function patchResearchGridWorkbench(source){
       setCreatePrompt('');setCreateError(ids.length>RESEARCH_GENERATION_MAX_SOURCES?'最多选择24项资料':null);
       setCreateSelection({ids,files:current.files.filter(n=>ids.includes(n.id)),artifacts:current.artifacts.filter(n=>ids.includes(n.id)),position:selectionActionPosition});
     };
-    const workbenchLegacy=(node,event,action)=>{if(action){frameAction(node,action);return;}const r=rootRef.current.getBoundingClientRect();setContextMenu({nodeId:node.id,left:event.clientX-r.left,top:event.clientY-r.top+rootRef.current.scrollTop});};
+    const workbenchLegacy=(node,event,action)=>{if(action){frameAction(node,action);return;}const r=rootRef.current.getBoundingClientRect();setContextMenu({nodeId:node.id,left:event.clientX-r.left,top:event.clientY-r.top});};
   `
   change('const emptyViewport = canvasNodes.length > 0',hook+'\nconst emptyViewport = canvasNodes.length > 0')
   change('children: [(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),','children: [(0,react_jsx_runtime.jsx)(WorkbenchChromeLayer,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly,onAsk:workbenchAsk,onDerived:workbenchDerived,onLegacy:workbenchLegacy,voiceTarget:voiceWorkbenchTarget}),(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),')

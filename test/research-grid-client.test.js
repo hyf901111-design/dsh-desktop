@@ -202,3 +202,11 @@ it('窄窗口的合法小跨度不会被渲染器放大而重叠',async()=>{
  expect(a.x-a.width/2).toBeGreaterThanOrEqual(12)
  expect(a.x+a.width/2).toBeLessThan(b.x-b.width/2)
 })
+
+it('滚动后的编辑与导出菜单在可见区域打开',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ f.canvas.scrollTop=600;await f.event('scroll',f.canvas)
+ await f.event('click',f.host.querySelector('[data-workbench-more="a"]'),{clientX:800,clientY:110})
+ await f.event('click',[...f.document.querySelectorAll('.ew-grid-menu button')].find(n=>n.textContent==='编辑与导出'))
+ expect(parseFloat(f.host.querySelector('.rScV5Q_contextMenu').style.top)).toBe(710)
+})
