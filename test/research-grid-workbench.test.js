@@ -2,6 +2,20 @@ import { describe, it, expect } from 'vitest'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('创建、投影和吸附共同使用实时正方形格位',()=>{
+ const grid=createResearchGrid()
+ for(const width of [824,1000,1376]){
+  const m=grid.metrics(width)
+  expect(m.rowStep).toBe(m.step)
+  const c=grid.draw({x:12+m.step*3,y:12+m.step*4},{x:12+m.step*15-10,y:12+m.step*13-10},m)
+  expect(c).toMatchObject({x:3,y:4,w:12,h:9})
+  const n=grid.project([{id:c.id}],[c],width)[0]
+  expect(n.x-n.width/2).toBeCloseTo(12+c.x*m.step)
+  expect(n.y-n.height/2).toBeCloseTo(12+c.y*m.step)
+  expect(n.width+10).toBeCloseTo(c.w*m.step)
+  expect(n.height+10).toBeCloseTo(c.h*m.step)
+ }
+})
 describe('研究工作台网格事务',()=>{
  it('插入拉框占位时向下让位并保持原有宽度',()=>{
   const grid=createResearchGrid(), before=[item('a',0,0),item('b',20,0),item('c',0,6)]
@@ -43,7 +57,7 @@ describe('研究工作台网格事务',()=>{
   expect(large.map(n=>n.id)).toEqual(['a','b']);expect(large[0].title).toBe('真实数据')
   expect(cells.find(n=>n.id==='b').h).toBeGreaterThan(cells.find(n=>n.id==='a').h)
   expect(narrow[0].width).toBeLessThan(large[0].width)
-  expect(narrow[0].height).toBe(large[0].height)
+  expect((narrow[0].height+10)/(large[0].height+10)).toBeCloseTo(grid.metrics(824).step/grid.metrics(1224).step)
   expect(narrow[0].sizeMode).toBe('manual')
  })
 })

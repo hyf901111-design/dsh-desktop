@@ -34,7 +34,8 @@ body [data-ework-grid] [data-research-node-id]:is(:hover,[data-selected=true]) .
 body [data-ework-grid] .ew-grid-resize svg{width:12px;height:12px}
 .ew-grid-placeholder{position:absolute;z-index:80;box-sizing:border-box;pointer-events:none;border:1px solid #249bfa;background:#249bfa1a;border-radius:4px}
 .ew-grid-placeholder[hidden]{display:none}
-body [data-ework-grid][data-canvas-tool=component]{cursor:crosshair;background-image:linear-gradient(to right,#8882 1px,transparent 1px),linear-gradient(to bottom,#8882 1px,transparent 1px)!important;background-size:calc((100% - 14px)/40) 35px!important;background-position:12px 12px!important}
+body [data-ework-grid][data-canvas-tool=component]{cursor:crosshair}
+body [data-ework-grid][data-canvas-tool=component] [data-research-content-layer]{background-image:linear-gradient(to right,#8882 1px,transparent 1px),linear-gradient(to bottom,#8882 1px,transparent 1px)!important;background-size:var(--grid-step) var(--grid-step)!important;background-position:12px 12px!important}
 body [data-ework-grid][data-canvas-tool=component] [data-research-node-id] [data-research-preview-body]{pointer-events:none}
 .ew-grid-menu{position:fixed;z-index:3000;box-sizing:border-box;width:206px;padding:7px;background:#f8f8fa;color:#202124;border:1px solid #8883;border-radius:4px;box-shadow:0 5px 20px #0003;font:400 12px/16px Inter,"Noto Sans SC",system-ui}
 body[data-ds-dark-theme] .ew-grid-menu{background:#1c1b20;color:#e9e9ef}
@@ -54,7 +55,8 @@ body [data-ework-toolbar] button>span:not(.odyssey-global-icon){display:none!imp
 body [data-ework-toolbar] :is(svg,img,.odyssey-global-icon){display:block!important;width:22px!important;height:22px!important;flex:none!important}
 body [data-ework-toolbar] button img{filter:none!important}
 body[data-ds-dark-theme] [data-ework-toolbar] button img,body [data-ework-toolbar] button[aria-pressed=true] img{filter:brightness(0) invert(1)!important}
-body [data-ework-grid] .rScV5Q_contextMenu{z-index:2000}
+body .ew-grid-context-menu{position:fixed!important;z-index:3000!important;overflow-y:auto}
+body .ew-grid-download-menu{position:fixed!important;z-index:3001!important}
 body [data-ework-grid] [data-research-voice-target] .rScV5Q_containerDraft{visibility:hidden}
 body [data-ework-grid] [data-research-voice-target] [data-research-voice-feedback]{position:absolute!important;inset:34px 0 0!important;transform:none!important;width:auto!important;max-width:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;visibility:visible;background:var(--grid-card)!important;display:flex;align-items:center;justify-content:center;padding:16px}
 @keyframes ew-grid-spin{to{transform:rotate(360deg)}}

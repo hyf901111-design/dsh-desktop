@@ -208,7 +208,9 @@ it('滚动后的编辑与导出菜单在可见区域打开',async()=>{
  f.canvas.scrollTop=600;await f.event('scroll',f.canvas)
  await f.event('click',f.host.querySelector('[data-workbench-more="a"]'),{clientX:800,clientY:110})
  await f.event('click',[...f.document.querySelectorAll('.ew-grid-menu button')].find(n=>n.textContent==='编辑与导出'))
- expect(parseFloat(f.host.querySelector('.rScV5Q_contextMenu').style.top)).toBe(710)
+ const menu=f.document.querySelector('.rScV5Q_contextMenu')
+ expect(menu.parentElement).toBe(f.document.body)
+ expect(parseFloat(menu.style.top)).toBe(110)
 })
 
 it('底部工具栏通过 React 挂载到页面，避开滚动容器的固定定位边界',async()=>{
@@ -247,7 +249,7 @@ it('工作台顶栏下的组件拖动使用滚动区域原点进行格位换算'
  await act(async()=>f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:8}],true))
  await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="a"]'),{button:0,pointerId:11,clientX:200,clientY:90})
  await f.event('pointermove',f.canvas,{pointerId:11,clientX:200,clientY:160})
- expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:2,w:20,h:8})
+ expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:3,w:20,h:8})
  await f.event('pointerup',f.canvas,{pointerId:11,clientX:200,clientY:160})
  expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:20,h:8})
 })
@@ -469,4 +471,123 @@ it('改变组件大小时只显示吸附预览蓝框，松手或取消恢复单�
  expect(preview.hidden).toBe(true);expect(f.win.getComputedStyle(ring).display).not.toBe('none')
  await down(30);await f.event('pointercancel',f.canvas,{pointerId:30})
  expect(preview.hidden).toBe(true);expect(f.win.getComputedStyle(ring).display).not.toBe('none')
+})
+
+it('画板菜单挂到页面前景，靠近底部时完整避开全局工具栏',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const original=f.win.HTMLElement.prototype.getBoundingClientRect
+ f.win.HTMLElement.prototype.getBoundingClientRect=function(){
+  if(this.matches('.rScV5Q_contextMenu'))return {left:0,top:0,right:260,bottom:160,width:260,height:160}
+  if(this.matches('[data-ework-toolbar]'))return {left:395,top:630,right:605,bottom:684,width:210,height:54}
+  return original.call(this)
+ }
+ f.canvas.scrollTop=350;await f.event('scroll',f.canvas)
+ await f.event('contextmenu',f.canvas,{clientX:450,clientY:650,button:2})
+ const menu=f.document.querySelector('.rScV5Q_contextMenu')
+ expect(menu.parentElement).toBe(f.document.body)
+ expect(f.win.getComputedStyle(menu).position).toBe('fixed')
+ expect(Number(f.win.getComputedStyle(menu).zIndex)).toBeGreaterThan(Number(f.win.getComputedStyle(f.document.querySelector('[data-ework-toolbar]')).zIndex))
+ expect(parseFloat(menu.style.top)+160).toBeLessThanOrEqual(622)
+ expect(menu.textContent).toContain('整理画布')
+ await f.event('keydown',menu,{key:'Escape',code:'Escape'})
+ expect(f.document.querySelector('.rScV5Q_contextMenu')).toBeNull()
+ f.win.HTMLElement.prototype.getBoundingClientRect=original
+})
+
+it('创建背景网格与内容层共用吸附格距，滚动后绘制框仍对应真实格位',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const layer=f.canvas.querySelector('[data-research-content-layer]'),step=(1000-14)/40
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
+ expect(parseFloat(layer.style.getPropertyValue('--grid-step'))).toBe(step)
+ expect(f.win.getComputedStyle(layer).backgroundSize).toBe(step+'px '+step+'px')
+ f.canvas.scrollTop=step*18;await f.event('scroll',f.canvas)
+ const start={x:12+step*4,y:12+step*20},end={x:12+step*16-10,y:12+step*29-10}
+ await f.event('pointerdown',f.canvas,{button:0,pointerId:52,clientX:start.x,clientY:start.y-f.canvas.scrollTop})
+ await f.event('pointermove',f.canvas,{pointerId:52,clientX:end.x,clientY:end.y-f.canvas.scrollTop})
+ const preview=f.canvas.querySelector('.ew-grid-placeholder')
+ expect(parseFloat(preview.style.left)).toBeCloseTo(start.x)
+ expect(parseFloat(preview.style.top)).toBeCloseTo(start.y)
+ expect((parseFloat(preview.style.width)+10)/step).toBeCloseTo(12)
+ expect((parseFloat(preview.style.height)+10)/step).toBeCloseTo(9)
+ await f.event('pointercancel',f.canvas,{pointerId:52})
+ await act(async()=>{f.workspace.setCanvasSize({width:800,height:700,availableWidth:800});f.workspace.setWorkbenchWidth(800)})
+ expect(parseFloat(layer.style.getPropertyValue('--grid-step'))).toBe((800-14)/40)
+})
+
+it('旧35px行布局一次换算到正方形格位，重新打开不重复迁移',async()=>{
+ const f=await fixture(),id='legacy-square',key='ework.research.grid.v1:'+id
+ f.win.localStorage.setItem(key,JSON.stringify({version:1,cells:[{id:'a',x:0,y:0,w:20,h:8},{id:'b',x:0,y:8,w:20,h:10}]}))
+ const w=f.bundle.createResearchWorkspaceSession(f.win.localStorage,id)
+ w.setArtifacts([text('a'),text('b')]);w.setCanvasSize({width:1000,height:700});w.setWorkbenchWidth(1000)
+ const cells=w.getWorkbenchCells(),step=(1000-14)/40
+ expect(cells[0]).toMatchObject({x:0,y:0,w:20})
+ expect(cells[0].h*step).toBeGreaterThanOrEqual(8*35)
+ expect(cells[0].h*step).toBeLessThan(8*35+step)
+ expect(cells[1].y).toBeGreaterThanOrEqual(cells[0].h)
+ expect(JSON.parse(f.win.localStorage.getItem(key)).version).toBe(2)
+ const reopened=f.bundle.createResearchWorkspaceSession(f.win.localStorage,id);reopened.setCanvasSize({width:500,height:700});reopened.setWorkbenchWidth(500)
+ expect(reopened.getWorkbenchCells()).toEqual(cells)
+})
+
+it('窄窗口保留组件最小可操作高度并让位，恢复宽度与只读规范文档不漂移',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setCanvasSize({width:1000,height:700});w.setArtifacts([text('a'),text('b')]);w.setWorkbenchWidth(1000);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:5},{id:'b',x:0,y:5,w:20,h:5}],true)})
+ const cells=w.getWorkbenchCells(),canonical=w.getWorkbenchDocument()
+ for(const width of [500,240]){
+  await act(async()=>{w.setCanvasSize({width,height:700,availableWidth:width});w.setWorkbenchWidth(width)})
+  const [a,b]=w.getSnapshot().artifacts
+  expect(a.height).toBeGreaterThanOrEqual(95)
+  expect(a.y+a.height/2).toBeLessThan(b.y-b.height/2)
+  expect(w.getWorkbenchDocument()).toEqual(canonical)
+ }
+ const card=f.host.querySelector('[data-research-node-id="a"]')
+ await f.event('pointerdown',card.querySelector('[data-workbench-drag-handle]'),{button:0,pointerId:61,clientX:40,clientY:20})
+ await f.event('pointermove',f.canvas,{pointerId:61,clientX:80,clientY:80})
+ await f.event('pointercancel',f.canvas,{pointerId:61})
+ expect(w.getWorkbenchDocument()).toEqual(canonical)
+ await f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:62,clientX:110,clientY:100})
+ await f.event('pointerup',f.canvas,{pointerId:62,clientX:110,clientY:100})
+ expect(w.getWorkbenchDocument()).toEqual(canonical)
+ await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
+ expect(w.getWorkbenchCells()).toEqual(cells)
+ f.win.dshDesktop.researchBoards={isSharedSession:id=>id==='readonly-square'}
+ const peer=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'readonly-square')
+ peer.applyRemoteCanvas(canonical,{revision:1});peer.setCanvasSize({width:240,height:700,availableWidth:240});peer.setWorkbenchWidth(240)
+ expect(peer.getSnapshot().artifacts.every(n=>n.height>=95)).toBe(true)
+ expect(peer.getWorkbenchDocument()).toEqual(canonical)
+})
+
+it('下载格式子菜单独立置于页面前景，跨越间隙与点击时主菜单保持打开',async()=>{
+ const save=vi.fn(async()=>({ok:true})),f=await fixture(true,{researchCanvasExport:{save}})
+ await act(async()=>f.workspace.setArtifacts([{...text('mind'),kind:'generated-mind-map',generationStatus:'completed',generationDetail:'standard',generationLastSeq:1,sourceNodeIds:['source']}]))
+ const card=f.host.querySelector('[data-research-node-id="mind"]')
+ await f.event('contextmenu',card,{button:2,clientX:450,clientY:610})
+ const download=f.document.querySelector('[data-research-context-download]'),group=download.parentElement
+ await f.event('click',download)
+ const popup=f.document.querySelector('.rScV5Q_contextDownloadFormats')
+ expect(popup.parentElement).toBe(f.document.body)
+ expect(f.win.getComputedStyle(popup).position).toBe('fixed')
+ expect(popup.textContent).toBe('SVGPNGJPG')
+ await f.event('mouseout',group,{relatedTarget:f.document.body});await f.event('mouseover',popup,{relatedTarget:f.document.body})
+ await act(async()=>new Promise(r=>setTimeout(r,240)))
+ expect(f.document.querySelector('.rScV5Q_contextDownloadFormats')).toBe(popup)
+ await f.event('pointerdown',popup.querySelector('button'),{button:0})
+ expect(f.document.querySelector('.rScV5Q_contextMenu')).not.toBeNull()
+})
+
+it('窄窗口移动不写回本地补高，缩放仅改变目标尺寸且可撤销',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setArtifacts([text('a'),text('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:5},{id:'b',x:0,y:5,w:20,h:5}],true);w.setCanvasSize({width:500,height:700,availableWidth:500});w.setWorkbenchWidth(500)})
+ const card=f.host.querySelector('[data-research-node-id="a"]'),step=(500-14)/40
+ await f.event('pointerdown',card.querySelector('[data-workbench-drag-handle]'),{button:0,pointerId:65,clientX:40,clientY:20})
+ await f.event('pointerup',f.canvas,{pointerId:65,clientX:40+step,clientY:20})
+ expect(w.getWorkbenchCells().map(c=>c.h)).toEqual([5,5])
+ const afterMove=w.getWorkbenchCells()
+ await f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:66,clientX:230,clientY:100})
+ await f.event('pointerup',f.canvas,{pointerId:66,clientX:230,clientY:100+step})
+ expect(w.getWorkbenchCells().find(c=>c.id==='a').h).toBe(10)
+ expect(w.getWorkbenchCells().find(c=>c.id==='b').h).toBe(5)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(afterMove)
+ await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
+ expect(w.getWorkbenchCells().map(c=>c.h)).toEqual([5,5])
 })

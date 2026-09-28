@@ -136,14 +136,14 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const preview=document.createElement('div');preview.className='ew-grid-placeholder';preview.hidden=true;root.appendChild(preview)
   const width=()=>Math.max(240,Math.min(root.clientWidth,workspace.getSnapshot().canvasSize.availableWidth||root.clientWidth))
   const point=e=>{const r=root.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top+root.scrollTop}}
-  const allowed=cells=>!cells.some(c=>{const old=op.before.find(n=>n.id===c.id),card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]');return card?.hasAttribute('data-research-geometry-blocked')&&old&&['x','y','w','h'].some(k=>old[k]!==c[k])})
+  const allowed=(cells,before=op.before)=>!cells.some(c=>{const old=before.find(n=>n.id===c.id),card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]');return card?.hasAttribute('data-research-geometry-blocked')&&old&&['x','y','w','h'].some(k=>old[k]!==c[k])})
   const paint=()=>{frame=0;if(!pending||!op)return;workspace.applyWorkbenchCells(pending,false);pending=null}
   const show=c=>{const n=grid.project([{id:c.id}], [c], width())[0];Object.assign(preview.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});preview.hidden=false}
   const update=e=>{
     if(!op)return
     const p=point(e),m=grid.metrics(width());let target
     if(op.kind==='draw')target=grid.draw(op.start,p,m)
-    else{const c=op.cell,dx=(p.x-op.start.x)/m.step,dy=(p.y-op.start.y)/35;target=op.kind==='resize'?grid.bounded({...c,w:c.w+Math.round(dx),h:c.h+Math.round(dy)}):grid.bounded({...c,x:c.x+Math.round(dx),y:c.y+Math.round(dy)})}
+    else{const c=op.cell,dx=(p.x-op.start.x)/m.step,dy=(p.y-op.start.y)/m.rowStep;target=op.kind==='resize'?grid.bounded({...c,w:c.w+Math.round(dx),h:Math.max(m.minRows,c.h+Math.round(dy))}):grid.bounded({...c,x:c.x+Math.round(dx),y:c.y+Math.round(dy)})}
     const proposed=grid.place(op.before,target,target.id).filter(c=>c.id!=='__draft__')
     if(!allowed(proposed))return
     op.target=target;show(target)
@@ -156,14 +156,20 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(autoFrame)view.cancelAnimationFrame(autoFrame);autoFrame=0;lastPointer=null
     if(commit&&event){update(event);if(frame)view.cancelAnimationFrame(frame);frame=0}
     if(commit&&!op.target)commit=false
+    if(commit&&op.kind!=='draw'&&['x','y','w','h'].every(k=>op.target[k]===op.cell[k]))commit=false
+    const original=op.canonicalBefore.find(c=>c.id===op.cell?.id)
+    const committedTarget=commit&&op.kind!=='draw'?{...op.target,y:op.kind==='resize'?original.y:Math.max(0,original.y+op.target.y-op.cell.y),...(op.kind==='move'?{w:original.w,h:original.h}:{})}:op.target
+    const proposedCommit=commit?grid.place(op.canonicalBefore,committedTarget,committedTarget.id):null
+    const committed=commit&&op.kind!=='draw'?grid.compact(proposedCommit):proposedCommit
+    if(commit&&!allowed(committed,op.canonicalBefore))commit=false
     if(commit&&op.kind==='draw'){
-      workspace.applyWorkbenchCells(op.before,false)
+      workspace.applyWorkbenchCells(op.canonicalBefore,false)
       const n=grid.project([{id:'__draft__'}],[op.target],width())[0]
       const node=workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,sizeMode:'manual'})
-      if(node)workspace.applyWorkbenchCells(grid.place(op.before,{...op.target,id:node.id},node.id),false)
+      if(node)workspace.applyWorkbenchCells(grid.place(op.canonicalBefore,{...op.target,id:node.id},node.id),false)
       workspace.persist();selectTool('select')
-    }else if(commit){if(pending)workspace.applyWorkbenchCells(pending,false);const compacted=grid.compact(workspace.getWorkbenchCells());if(allowed(compacted))workspace.applyWorkbenchCells(compacted,false);workspace.persist()}
-    else{workspace.applyWorkbenchCells(op.before,false);workspace.cancelPointerGeometry([...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts])}
+    }else if(commit){workspace.applyWorkbenchCells(committed,false);workspace.persist()}
+    else{workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry([...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts])}
     const pointerId=op.pointerId;op=null;
     if(root.hasPointerCapture?.(pointerId))root.releasePointerCapture(pointerId)
     pending=null;preview.hidden=true;root.removeAttribute('data-grid-operation');root.querySelectorAll('[data-grid-active]').forEach(e=>e.removeAttribute('data-grid-active'))
@@ -181,11 +187,11 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     const draw=toolRef.current==='component'
     if(readOnly||!draw&&(!handle&&!resize)||e.target?.closest?.('input,textarea,button,a,select,[contenteditable=true]')&&!resize)return
     if(card?.hasAttribute('data-research-geometry-blocked')||card?.hasAttribute('open'))return
-    const current=workspace.getSnapshot(),before=workspace.getWorkbenchCells(),id=(resize||handle)?.getAttribute(resize?'data-workbench-resize':'data-workbench-drag-handle')
+    const current=workspace.getSnapshot(),canonicalBefore=workspace.getWorkbenchCells(),before=workspace.getWorkbenchVisibleCells(),id=(resize||handle)?.getAttribute(resize?'data-workbench-resize':'data-workbench-drag-handle')
     if(!draw&&!before.some(c=>c.id===id))return
     e.preventDefault();e.stopImmediatePropagation();root.focus({preventScroll:true});root.setPointerCapture?.(e.pointerId)
     if(id&&!current.selection.selectedNodeIds.includes(id))workspace.updateSelection([id],'replace')
-    op={kind:draw?'draw':resize?'resize':'move',pointerId:e.pointerId,start:point(e),before,cell:before.find(c=>c.id===id),geometry:[...current.files,...current.artifacts]}
+    op={kind:draw?'draw':resize?'resize':'move',pointerId:e.pointerId,start:point(e),before,canonicalBefore,cell:before.find(c=>c.id===id),geometry:[...current.files,...current.artifacts]}
     if(!draw&&!op.cell){op=null;return}
     root.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e
     update(e);autoFrame=view.requestAnimationFrame(autoScroll)
@@ -199,6 +205,48 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const blur=e=>{root.removeAttribute('data-grid-multiselect');cancel(e)}
   root.addEventListener('pointerdown',down,true);root.addEventListener('click',click,true);root.addEventListener('pointermove',move,true);root.addEventListener('pointerup',up,true);root.addEventListener('pointercancel',cancel,true);root.addEventListener('lostpointercapture',cancel,true);view.addEventListener('blur',blur);view.addEventListener('keydown',key,true);view.addEventListener('keyup',keyUp,true)
   return()=>{finish(false);preview.remove();root.removeAttribute('data-grid-multiselect');root.removeEventListener('pointerdown',down,true);root.removeEventListener('click',click,true);root.removeEventListener('pointermove',move,true);root.removeEventListener('pointerup',up,true);root.removeEventListener('pointercancel',cancel,true);root.removeEventListener('lostpointercapture',cancel,true);view.removeEventListener('blur',blur);view.removeEventListener('keydown',key,true);view.removeEventListener('keyup',keyUp,true)}
+}
+export function WorkbenchContextMenu({canvasRoot,point,onClose,className,style,children,...props}) {
+  const ref=react.useRef(null)
+  react.useLayoutEffect(()=>{
+    const menu=ref.current,root=canvasRoot.current;if(!menu||!root)return
+    const view=root.ownerDocument.defaultView
+    const place=()=>{
+      const bounds=root.getBoundingClientRect(),inset=12
+      const right=Math.min(bounds.right,view.innerWidth)-inset,bottom=Math.min(bounds.bottom,view.innerHeight)-inset
+      menu.style.maxWidth=Math.max(0,right-bounds.left-inset)+'px'
+      const size=menu.getBoundingClientRect()
+      const left=Math.max(bounds.left+inset,Math.min(bounds.left+point.left,right-size.width))
+      let top=Math.max(bounds.top+inset,Math.min(bounds.top+point.top,bottom-size.height))
+      const toolbar=root.ownerDocument.querySelector('[data-ework-toolbar]')?.getBoundingClientRect()
+      if(toolbar&&left<toolbar.right&&left+size.width>toolbar.left&&top<toolbar.bottom&&top+size.height>toolbar.top){
+        const room=Math.max(0,toolbar.top-bounds.top-inset-8)
+        menu.style.maxHeight=room+'px';top=Math.max(bounds.top+inset,toolbar.top-Math.min(size.height,room)-8)
+      }else menu.style.maxHeight=Math.max(0,bottom-bounds.top-inset)+'px'
+      Object.assign(menu.style,{left:left+'px',top:top+'px'})
+    }
+    place();view.addEventListener('resize',place)
+    return()=>view.removeEventListener('resize',place)
+  },[canvasRoot,point])
+  react.useEffect(()=>{
+    const doc=canvasRoot.current?.ownerDocument;if(!doc)return
+    const outside=e=>{if(!ref.current?.contains(e.target)&&e.target?.closest?.('.ew-grid-download-menu')?.__eworkCanvasRoot!==canvasRoot.current)onClose()}
+    doc.addEventListener('pointerdown',outside,true)
+    return()=>doc.removeEventListener('pointerdown',outside,true)
+  },[canvasRoot,onClose])
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref,className:className+' ew-grid-context-menu',style:{...style,position:'fixed'},onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)
+}
+export function WorkbenchDownloadMenu({canvasRoot,onClose,onMouseEnter,onMouseLeave,className,children,...props}) {
+  const anchor=react.useRef(null),popup=react.useRef(null)
+  react.useLayoutEffect(()=>{
+    const element=popup.current,parent=anchor.current?.parentElement;if(!element||!parent)return
+    element.__eworkCanvasRoot=canvasRoot.current
+    const r=parent.getBoundingClientRect(),size=element.getBoundingClientRect()
+    const left=r.right+6+size.width<=window.innerWidth-8?r.right+6:Math.max(8,r.left-size.width-6)
+    Object.assign(element.style,{left:left+'px',top:Math.max(8,Math.min(r.top,window.innerHeight-size.height-8))+'px'})
+    onMouseEnter?.()
+  },[canvasRoot])
+  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx('span',{ref:anchor,'aria-hidden':true,style:{display:'block',height:0}}),react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref:popup,className:className+' ew-grid-download-menu',onMouseEnter,onMouseLeave,onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)]})
 }
 export function WorkbenchToolbar({rootRef,sessionId,availableWidth,children,...props}) {
   const [bounds,setBounds]=react.useState(null)
@@ -225,7 +273,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     const nodes=[...snapshot.files,...snapshot.artifacts],bottom=Math.max(12,...nodes.map(n=>n.y+n.height/2))+Math.max(520,root.clientHeight||snapshot.canvasSize.height||700)
-    const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=(snapshot.canvasSize.availableWidth||root.clientWidth)+'px'}
+    const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=(snapshot.canvasSize.availableWidth||root.clientWidth)+'px';layer.style.setProperty('--grid-step',createResearchGrid().metrics(snapshot.canvasSize.availableWidth||root.clientWidth).step+'px')}
     const viewport=snapshot.viewport;if(Math.abs(root.scrollTop+viewport.y)>.5&&!root.hasAttribute('data-grid-operation'))root.scrollTop=Math.max(0,-viewport.y)
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])
