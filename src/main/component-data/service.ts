@@ -22,12 +22,18 @@ export function componentRefreshBindings(requests:Array<{connectionId:string;con
 
 export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean}){
  const ajv=new Ajv({strict:false,allErrors:false,validateFormats:false})
- async function identity(sessionId:string){
+ async function sessionIdentity(sessionId:string){
   if(options.isShared(sessionId))throw Error('当前数据刷新仅支持个人工作台')
-  const [sessions,workspaces]=await Promise.all([options.rpc('session.list',{}),options.rpc('workspace.list',{})])
+  const sessions=await options.rpc('session.list',{})
   const session=sessions.items.find((s:any)=>s.sessionId===sessionId)
-  const workspace=workspaces.items.find((w:any)=>session?.cwd?w.path===session.cwd:w.sessionIds?.includes(sessionId))
-  if(!session||!workspace)throw Error('组件所属会话或工作区不可用')
+  if(!session)throw Error('组件所属会话不可用，请重新打开看板后重试')
+  return session
+ }
+ async function identity(sessionId:string){
+  const session=await sessionIdentity(sessionId)
+  const workspaces=await options.rpc('workspace.list',{})
+  const workspace=workspaces.items.find((w:any)=>session.cwd?w.path===session.cwd:w.sessionIds?.includes(sessionId))
+  if(!workspace)throw Error('组件所属工作区未连接，请重新连接原工作区后再绑定或刷新数据；现有内容已保留')
   return {session,workspace}
  }
  async function canvas(target:any,method:string,args:any,signal?:AbortSignal){options.canvas.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]});return options.canvas.execute({sessionId:target.sessionId,method,args,scheduled:true},signal) as Promise<any>}
@@ -55,10 +61,12 @@ export async function createComponentDataService(options:{file:string;integratio
  await engine.load()
  const contextTasks=():ScheduledTask[]=>engine.list().filter(b=>b.status==='refreshing').map((b:any)=>({id:'component-data:'+b.id,title:'组件数据刷新',prompt:'按已保存接口映射刷新数据',workspaceId:b.workspaceId,component:{sessionId:b.sessionId,nodeId:b.nodeId,title:'组件',boardTitle:'工作台'},state:b.enabled?'enabled':'paused',createdAt:0,nextRun:b.nextRun,schedule:{frequency:'daily',time:'00:00',timezone:'Asia/Shanghai',weekday:0,date:''},notification:'never',runs:[{id:b.id,status:'running',startedAt:b.lastAttempt??0}],integrationBindings:componentRefreshBindings(b.requests)}))
  const request=async(sessionId:string,args:any)=>{
-  await identity(sessionId)
   if(!args||typeof args!=='object')throw Error('数据操作参数无效')
+  // Reading saved state does not execute tools and must remain available for
+  // static boards whose original workspace was removed from the sidebar.
+  if(args.action==='list'){await sessionIdentity(sessionId);return engine.list(sessionId)}
+  await identity(sessionId)
   const rows=engine.list(sessionId),binding=rows.find((b:any)=>b.nodeId===args.nodeId)
-  if(args.action==='list')return rows
   if(args.action==='bind'||args.action==='bind-generated'){
    const {workspace}=await identity(sessionId)
    const recipe=typeof args.recipe==='string'?JSON.parse(args.recipe):args.recipe
