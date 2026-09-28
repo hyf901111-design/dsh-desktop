@@ -85,18 +85,37 @@ it('刷新提示基于真实成功时间，未刷新时不显示假日期',()=>{
  expect(workbenchRefreshTooltip(at,at+60000).absolute).toMatch(/^2026年9月28日 \d{2}:23$/)
 })
 
-it('网格显示真实方格与组件间距，拉框覆盖触点所在方格的四个边界',async()=>{
+it('工作台和菜单图标使用打包的 Figma 矢量，离线不依赖临时资源地址',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const header=f.host.querySelector('.ew-grid-header')
+ for(const name of ['refresh','ask','more','close']){
+  const icon=header.querySelector('[data-workbench-icon="'+name+'"]')
+  expect(icon).not.toBeNull();expect(icon.tagName).toBe('SPAN')
+  const source=await readFile('build/figma-workbench-icons/'+name+'.svg','utf8')
+  expect(f.document.getElementById('ework-grid-workbench-style').textContent).toContain(Buffer.from(source).toString('base64'))
+ }
+ await f.event('click',header.querySelector('[data-workbench-more]'))
+ for(const name of ['duplicate','expand','rename','edit','branch','summary','plus']){
+  const icon=f.document.querySelector('.ew-grid-menu .ew-grid-icon-'+name)
+  expect(icon,name).not.toBeNull()
+ }
+ const css=f.document.getElementById('ework-grid-workbench-style').textContent
+ expect(css).not.toContain('figma.com/api/mcp/asset/')
+})
+
+it('连续正方形网格与吸附共用原点，拉框显示占格和真实组件间距',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  await f.event('click',f.document.querySelector('[data-research-global-container]'))
  const layer=f.canvas.querySelector('[data-research-content-layer]'),step=(1000-14)/40,gap=10
  const pattern=layer.style.getPropertyValue('--grid-pattern')
  expect(pattern).toContain('data:image/svg+xml')
  const svg=new f.win.DOMParser().parseFromString(decodeURIComponent(pattern.match(/data:image\/svg\+xml,([^"']+)/)[1]),'image/svg+xml')
- const tile=svg.documentElement,square=svg.querySelector('rect')
+ const tile=svg.documentElement,lines=svg.querySelector('path')
  expect(Number(tile.getAttribute('width'))).toBeCloseTo(step)
  expect(Number(tile.getAttribute('height'))).toBeCloseTo(step)
- expect(Number(square.getAttribute('width'))+1).toBeCloseTo(step-gap)
- expect(Number(square.getAttribute('height'))+1).toBeCloseTo(step-gap)
+ expect(svg.querySelector('rect')).toBeNull()
+ expect(lines.getAttribute('d')).toBe('M '+step+' 0 H 0 V '+step)
+ expect(layer.style.getPropertyValue('--grid-gap')).toBe(gap+'px')
  const start={x:12+step*4+(step-gap)*.9,y:12+step*20+(step-gap)*.9},end={x:12+step*20+2,y:12+step*31+2}
  f.canvas.scrollTop=step*18;await f.event('scroll',f.canvas)
  await f.event('pointerdown',f.canvas,{button:0,pointerId:68,clientX:start.x,clientY:start.y-f.canvas.scrollTop})
@@ -105,6 +124,8 @@ it('网格显示真实方格与组件间距，拉框覆盖触点所在方格的�
  expect(left).toBeCloseTo(12+step*4);expect(top).toBeCloseTo(12+step*20)
  expect(left+parseFloat(preview.style.width)).toBeCloseTo(12+step*21-gap)
  expect(top+parseFloat(preview.style.height)).toBeCloseTo(12+step*32-gap)
+ expect(preview.getAttribute('data-grid-span')).toBe('17 × 12 格')
+ expect(preview.style.getPropertyValue('--grid-gap')).toBe(gap+'px')
  await f.event('pointercancel',f.canvas,{pointerId:68})
 })
 
@@ -411,9 +432,9 @@ it('思维导图在右侧独立展开二级菜单，菜单图标不再用列表�
  expect(child).not.toBeNull();expect(menu.contains(child)).toBe(false)
  expect(parseFloat(child.style.left)).toBeGreaterThanOrEqual(416)
  expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['简要','常规','详细'])
- const paths=['重命名','编辑与导出','数据源与自动更新'].map(label=>[...menu.querySelectorAll('button')].find(n=>n.textContent===label).querySelector('path').getAttribute('d'))
+ const paths=['重命名','编辑与导出','数据源与自动更新'].map(label=>{const button=[...menu.querySelectorAll('button')].find(n=>n.textContent===label);return button.querySelector('[data-workbench-icon]')?.getAttribute('data-workbench-icon')||button.querySelector('path')?.getAttribute('d')})
  expect(new Set(paths).size).toBe(3)
- expect(paths).not.toContain(menu.querySelector('[aria-label="思维导图"] path').getAttribute('d'))
+ expect(paths).not.toContain(menu.querySelector('[aria-label="思维导图"] [data-workbench-icon]').getAttribute('data-workbench-icon'))
 })
 
 it('原生窗口仍处于缩放过程中时实时使用新的可见宽度，保留格位和内容',async()=>{

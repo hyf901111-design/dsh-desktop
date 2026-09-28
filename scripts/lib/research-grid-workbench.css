@@ -23,8 +23,11 @@ body [data-ework-grid] .ew-grid-header button{position:relative;display:grid;pla
 body [data-ework-grid] .ew-grid-header button:hover{background:#8c8d9b22}
 body [data-ework-grid] .ew-grid-header button:focus-visible{outline:1px solid #249bfa}
 body [data-ework-grid] .ew-grid-header button:disabled{opacity:.4;cursor:default}
-body [data-ework-grid] .ew-grid-refresh{display:flex;position:relative;color:#52b788}
-body [data-ework-grid] .ew-grid-refresh [data-busy=true] svg{animation:ew-grid-spin 1s linear infinite}
+body [data-ework-grid] .ew-grid-refresh{display:flex;position:relative;color:#c5804f}
+.ew-grid-icon{display:block;flex:none;width:16px;height:16px;background:currentColor;mask-position:center;mask-repeat:no-repeat}
+body [data-ework-grid] .ew-grid-refresh [data-refresh-current=true]{color:#52b788}
+body [data-ework-grid] .ew-grid-refresh [data-busy=true]{color:#139dff}
+body [data-ework-grid] .ew-grid-refresh [data-busy=true] .ew-grid-icon{animation:ew-grid-spin 1s linear infinite}
 .ew-grid-tooltip{position:fixed;z-index:2000;display:none;pointer-events:none;flex-direction:column;padding:7px 8px;border-radius:3px;background:#24242b;color:#e9e9ef;box-shadow:0 3px 14px #0003;font:400 12px/17px Inter,"Noto Sans SC",system-ui;white-space:nowrap}
 .ew-grid-tooltip time{color:#a4adbe}
 .ew-grid-refresh:hover>.ew-grid-tooltip,.ew-grid-refresh:focus-within>.ew-grid-tooltip{display:flex}
@@ -40,6 +43,9 @@ body [data-ework-grid] .ew-grid-resize:hover span{background:#007cdd}
 body [data-ework-grid] .ew-grid-resize:focus-visible{outline:1px solid #249bfa;border-radius:3px}
 body [data-ework-grid][data-canvas-tool=component] .ew-grid-resize{display:none}
 .ew-grid-placeholder{position:absolute;z-index:80;box-sizing:border-box;pointer-events:none;border:1px solid #249bfa;background:#249bfa1a;border-radius:4px}
+/* The unoutlined trailing strips reserve the same gutter as the resulting card. */
+.ew-grid-placeholder::after{content:'';position:absolute;inset:-1px calc(-1 * var(--grid-gap)) calc(-1 * var(--grid-gap)) -1px;pointer-events:none;background:linear-gradient(to left,#249bfa14 var(--grid-gap),transparent var(--grid-gap)),linear-gradient(to top,#249bfa14 var(--grid-gap),transparent var(--grid-gap))}
+.ew-grid-placeholder::before{content:attr(data-grid-span);position:absolute;top:6px;left:8px;font:11px/16px Inter,system-ui;color:#1684d6;pointer-events:none}
 .ew-grid-placeholder[hidden]{display:none}
 body [data-ework-grid][data-canvas-tool=component]{cursor:crosshair}
 body [data-ework-grid][data-canvas-tool=component] [data-research-content-layer]{background-image:var(--grid-pattern)!important;background-size:var(--grid-step) var(--grid-step)!important;background-position:12px 12px!important;background-repeat:repeat!important}

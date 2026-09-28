@@ -9,13 +9,14 @@ export function workbenchRefreshTooltip(lastSuccess,now=Date.now()) {
 }
 export function workbenchGridPattern(width) {
   const m=createResearchGrid().metrics(width)
-  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+m.step+'" height="'+m.step+'" viewBox="0 0 '+m.step+' '+m.step+'"><rect x="0.5" y="0.5" width="'+(m.cell-1)+'" height="'+(m.cell-1)+'" fill="none" stroke="#8a9099" stroke-opacity="0.24"/></svg>'
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+m.step+'" height="'+m.step+'" viewBox="0 0 '+m.step+' '+m.step+'"><path d="M '+m.step+' 0 H 0 V '+m.step+'" fill="none" stroke="#8a9099" stroke-opacity="0.2" stroke-width="1"/></svg>'
   return 'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")'
 }
 export function WorkbenchIcon({name}) {
-  const paths={refresh:'M12.8 5.6A6 6 0 1 0 14 9M12.8 2.4v3.3H9.5M8 4.3V8l2.4 1.6',ask:'M4 2.5h8a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5H7l-3.5 2v-2A1.5 1.5 0 0 1 2 10V4a1.5 1.5 0 0 1 1.5-1.5M8 5v4M6 7h4',more:'M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.1M2.5 8h.1M2.5 12h.1',close:'M4 4l8 8M12 4l-8 8',expand:'M6 2H2v4M10 14h4v-4M2 2l4 4M14 14l-4-4',duplicate:'M6 5V2h8v9h-3M2 5h8v9H2z',branch:'M4 2v8c0 2 2 2 4 2h4M4 6h5l3-4M3 2h2M11 2h2',summary:'M3 2h7l3 3v9H3zM9 2v4h4M5 8h6M5 11h6',plus:'M8 3v10M3 8h10',download:'M8 2v8M5 7l3 3 3-3M3 11v3h10v-3',link:'M6 10l4-4M5 9l-1 1a3 3 0 0 0 4 4l2-2M7 5l1-1a3 3 0 0 1 4 4l-2 2',voice:'M6 3a2 2 0 0 1 4 0v5a2 2 0 0 1-4 0zM3.5 7v1a4.5 4.5 0 0 0 9 0V7M8 12.5V15M5 15h6'}
-  Object.assign(paths,{schedule:'M5 2v3M11 2v3M2 6h12M3 3h10v11H3zM6 9h1M9 9h1M6 12h1',rename:'M3 11l7.8-7.8 2 2L5 13l-3 1zM9.5 4.5l2 2',edit:'M3 2h6l3 3v3M9 2v4h4M3 2v12h5M9 12l3.5-3.5 1.5 1.5-3.5 3.5-2 .5z',data:'M13 4c0 1.1-2.2 2-5 2S3 5.1 3 4s2.2-2 5-2 5 .9 5 2zM3 4v7c0 1.1 2.2 2 5 2M13 4v3M3 7.5c0 1.1 2.2 2 5 2M11 10v2l1.5 1M14.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0',settings:'M2 4h3M8 4h6M2 8h7M12 8h2M2 12h2M7 12h7M5 2v4h3V2zM9 6v4h3V6zM4 10v4h3v-4z',remove:'M2.5 4h11M6 4V2h4v2M4 4l.7 10h6.6L12 4M6.5 7v4M9.5 7v4'})
-  return react_jsx_runtime.jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.35,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:react_jsx_runtime.jsx('path',{d:paths[name]||paths.more})})
+  // Original Figma SVGs are embedded by the build, preserving their own viewport.
+  if(['refresh','ask','more','close','expand','duplicate','rename','edit','settings','branch','summary','plus','download'].includes(name))return react_jsx_runtime.jsx('span',{className:'ew-grid-icon ew-grid-icon-'+name,'data-workbench-icon':name,'aria-hidden':true})
+  const paths={link:'M6 10l4-4M5 9l-1 1a3 3 0 0 0 4 4l2-2M7 5l1-1a3 3 0 0 1 4 4l-2 2',voice:'M6 3a2 2 0 0 1 4 0v5a2 2 0 0 1-4 0zM3.5 7v1a4.5 4.5 0 0 0 9 0V7M8 12.5V15M5 15h6',schedule:'M5 2v3M11 2v3M2 6h12M3 3h10v11H3zM6 9h1M9 9h1M6 12h1',data:'M13 4c0 1.1-2.2 2-5 2S3 5.1 3 4s2.2-2 5-2 5 .9 5 2zM3 4v7c0 1.1 2.2 2 5 2M13 4v3M3 7.5c0 1.1 2.2 2 5 2M11 10v2l1.5 1M14.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0',remove:'M2.5 4h11M6 4V2h4v2M4 4l.7 10h6.6L12 4M6.5 7v4M9.5 7v4'}
+  return react_jsx_runtime.jsx('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:react_jsx_runtime.jsx('path',{d:paths[name]||''})})
 }
 export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
@@ -38,7 +39,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
-      react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy,'data-workbench-refresh':node.id,'data-busy':busy||binding?.status==='refreshing'||undefined})}),
+      react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy,'data-workbench-refresh':node.id,'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
       react_jsx_runtime.jsx('span',{className:'ew-grid-title',title:node.displayName||node.title||node.name,children:node.displayName||node.title||node.name||'组件'}),
       button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
@@ -147,7 +148,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const point=e=>{const r=root.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top+root.scrollTop}}
   const allowed=(cells,before=op.before)=>!cells.some(c=>{const old=before.find(n=>n.id===c.id),card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]');return card?.hasAttribute('data-research-geometry-blocked')&&old&&['x','y','w','h'].some(k=>old[k]!==c[k])})
   const paint=()=>{frame=0;if(!pending||!op)return;workspace.applyWorkbenchCells(pending,false);pending=null}
-  const show=c=>{const n=grid.project([{id:c.id}], [c], width())[0];Object.assign(preview.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});preview.hidden=false}
+  const show=c=>{const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(preview.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});preview.style.setProperty('--grid-gap',m.gap+'px');preview.setAttribute('data-grid-span',c.w+' × '+c.h+' 格');preview.hidden=false}
   const update=e=>{
     if(!op)return
     const p=point(e),m=grid.metrics(width());let target
@@ -285,7 +286,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     const nodes=[...snapshot.files,...snapshot.artifacts],bottom=Math.max(12,...nodes.map(n=>n.y+n.height/2))+Math.max(520,root.clientHeight||snapshot.canvasSize.height||700)
-    const layer=root.querySelector('[data-research-content-layer]');if(layer){const width=snapshot.canvasSize.availableWidth||root.clientWidth;layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-step',createResearchGrid().metrics(width).step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
+    const layer=root.querySelector('[data-research-content-layer]');if(layer){const width=snapshot.canvasSize.availableWidth||root.clientWidth,m=createResearchGrid().metrics(width);layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-gap',m.gap+'px');layer.style.setProperty('--grid-step',m.step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
     const viewport=snapshot.viewport;if(Math.abs(root.scrollTop+viewport.y)>.5&&!root.hasAttribute('data-grid-operation'))root.scrollTop=Math.max(0,-viewport.y)
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])

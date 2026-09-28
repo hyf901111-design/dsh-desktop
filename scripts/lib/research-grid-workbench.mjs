@@ -6,7 +6,12 @@ import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runti
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
 const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/22px 22px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
-const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+nativePresentation
+const workbenchIcons=['refresh','ask','more','close','expand','duplicate','rename','edit','settings','branch','summary','plus','download'].map(name=>{
+  const asset=readFileSync(new URL('../../build/figma-workbench-icons/'+name+'.svg',import.meta.url),'utf8')
+  const [,width,height]=asset.match(/width="([\d.]+)" height="([\d.]+)"/)
+  return `.ew-grid-icon-${name}{mask-image:url("data:image/svg+xml;base64,${Buffer.from(asset).toString('base64')}");mask-size:${width}px ${height}px;${name==='expand'?'transform:rotate(90deg);':''}}`
+}).join('\n')
+const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation
 export function restoreResearchGridWorkbench(source){
   const start=source.indexOf(begin);if(start<0)return source
   const finish=source.indexOf(end,start),a=source.indexOf(meta,finish),b=source.indexOf(' */',a)
