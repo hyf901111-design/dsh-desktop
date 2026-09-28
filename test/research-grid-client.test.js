@@ -193,3 +193,12 @@ it('拖动期间窗口缩窄后失焦取消仍恢复原跨度',async()=>{
  await f.event('blur',f.win)
  expect(f.workspace.getWorkbenchCells()).toEqual(cells)
 })
+
+it('窄窗口的合法小跨度不会被渲染器放大而重叠',async()=>{
+ const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a'),text('b')]);f.workspace.setCanvasSize({width:500,height:700,availableWidth:500});f.workspace.setWorkbenchWidth(500);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:4,h:7},{id:'b',x:4,y:0,w:4,h:7}],true)})
+ const [a,b]=f.workspace.getSnapshot().artifacts
+ expect(parseFloat(f.host.querySelector('[data-research-node-id="a"]').style.width)).toBe(a.width)
+ expect(parseFloat(f.host.querySelector('[data-research-node-id="b"]').style.width)).toBe(b.width)
+ expect(a.x-a.width/2).toBeGreaterThanOrEqual(12)
+ expect(a.x+a.width/2).toBeLessThan(b.x-b.width/2)
+})
