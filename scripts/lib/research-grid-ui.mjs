@@ -38,6 +38,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
       button('close','移除组件',()=>onRemove(node),{disabled:readOnly})
     ]}),
+    selected&&react_jsx_runtime.jsx('span',{className:'ew-grid-selection-ring','aria-hidden':true}),
     react_jsx_runtime.jsx('button',{className:'ew-grid-resize',type:'button','aria-label':'调整组件大小','data-workbench-resize':node.id,disabled:readOnly,children:react_jsx_runtime.jsx(WorkbenchIcon,{name:'expand'})}),
     tip&&react_dom.createPortal(react_jsx_runtime.jsxs('span',{role:'tooltip',className:'ew-grid-tooltip',style:{display:'flex',left:Math.max(8,tip.left),top:tip.top},children:tip.kind==='refresh'?[react_jsx_runtime.jsx('span',{children:error||time.relative}),react_jsx_runtime.jsx('time',{children:time.absolute})]:[react_jsx_runtime.jsx('span',{children:'将组件加入右侧会话上下文，基于其内容进行问答'})]}),document.body)
   ]})
@@ -69,14 +70,24 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
 export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readOnly,onAsk,onDerived,onLegacy,voiceTarget}) {
   const [hosts,setHosts]=react.useState([]),[menu,setMenu]=react.useState(null)
   const close=react.useCallback(()=>setMenu(null),[])
-  react.useLayoutEffect(()=>{
+  react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     const reconcile=()=>{const nodes=[...snapshot.files,...snapshot.artifacts],next=[]
-    for(const node of nodes){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card)continue;card.toggleAttribute('data-research-voice-target',node.id===voiceTarget);let host=card.querySelector(':scope > .ew-grid-chrome-host');if(!host){host=document.createElement('div');host.className='ew-grid-chrome-host';card.appendChild(host)}next.push({node,host})}
+    for(const node of nodes){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card)continue;card.toggleAttribute('data-research-voice-target',node.id===voiceTarget);let host=card.querySelector(':scope > .ew-grid-chrome-host');if(!host){host=document.createElement('div');host.className='ew-grid-chrome-host';card.appendChild(host)}for(const frame of card.querySelectorAll('iframe[data-research-html-artifact]'))frame.contentWindow?.postMessage({type:'sherlock-workbench-selection',selected:card.hasAttribute('open')||snapshot.selection.selectedNodeIds.includes(node.id)},'*');next.push({node,host})}
     setHosts(previous=>previous.length===next.length&&next.every((n,i)=>previous[i].host===n.host&&previous[i].node===n.node)?previous:next)
-    };reconcile();const observer=new MutationObserver(reconcile);observer.observe(root,{childList:true,subtree:true});return()=>observer.disconnect()
-  },[snapshot.files,snapshot.artifacts,rootRef,voiceTarget])
+    };reconcile();root.addEventListener('load',reconcile,true);const observer=new MutationObserver(reconcile);observer.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});return()=>{observer.disconnect();root.removeEventListener('load',reconcile,true)}
+  },[snapshot.files,snapshot.artifacts,snapshot.selection,rootRef,voiceTarget])
   return react_jsx_runtime.jsxs(react.Fragment,{children:[...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy})]})
+}
+export function handleWorkbenchWheel(root,workspace,event) {
+  if(event.target?.closest?.('[role=menu],[role=dialog][open],.ew-grid-menu,[data-research-create-popover],[data-research-global-toolbar]'))return
+  const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive]')
+  const selected=card&&workspace.getSnapshot().selection.selectedNodeIds.includes(card.getAttribute('data-research-node-id'))
+  if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey&&researchPreviewCanConsumeWheel(event.target,preview,event.deltaX||0,event.deltaY||0))return
+  event.preventDefault();event.stopPropagation()
+  const unit=event.deltaMode===1?16:event.deltaMode===2?root.clientHeight:1
+  root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),root.scrollTop+(Number.isFinite(event.deltaY)?event.deltaY*unit:0)))
+  const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})
 }
 export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly) {
   const grid=createResearchGrid(),view=root.ownerDocument.defaultView

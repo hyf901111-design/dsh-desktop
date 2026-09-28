@@ -229,12 +229,15 @@ it('缓存宽度与窗口一致的首次挂载仍量测并显示工具栏',async
  const f=await fixture()
  const cached={width:1000,height:700,availableWidth:1000,visibleHeight:700}
  f.workspace.setCanvasSize(cached)
+ f.workspace.setArtifacts([text('a')]);f.workspace.updateSelection(['a'],'replace')
  f.workspace.setWorkbenchWidth(1000)
  const bounds=f.win.HTMLElement.prototype.getBoundingClientRect
  f.win.HTMLElement.prototype.getBoundingClientRect=()=>({left:88,top:68,right:1088,bottom:768,width:1000,height:700})
  await f.render({measure:false})
  const toolbar=f.document.querySelector('[data-ework-toolbar]')
  expect(toolbar.style.visibility).toBe('visible')
+ expect(f.host.querySelector('[data-workbench-drag-handle="a"]')).not.toBeNull()
+ expect(f.host.querySelector('.ew-grid-selection-ring')).not.toBeNull()
  f.win.HTMLElement.prototype.getBoundingClientRect=bounds
 })
 
@@ -247,4 +250,47 @@ it('工作台顶栏下的组件拖动使用滚动区域原点进行格位换算'
  expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:2,w:20,h:8})
  await f.event('pointerup',f.canvas,{pointerId:11,clientX:200,clientY:160})
  expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:20,h:8})
+})
+
+it('未选中时组件滚轮交给工作台，选中后仅在内部可滚时消费',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const preview=f.host.querySelector('[data-research-preview-body]');preview.style.overflowY='auto'
+ Object.defineProperty(preview,'clientHeight',{configurable:true,value:100});Object.defineProperty(preview,'scrollHeight',{configurable:true,value:600})
+ Object.defineProperty(f.canvas,'scrollHeight',{configurable:true,value:2500})
+ preview.scrollTop=100
+ const wheel=await f.event('wheel',preview,{deltaX:0,deltaY:3,deltaMode:1})
+ expect(wheel.defaultPrevented).toBe(true);expect(f.canvas.scrollTop).toBe(48);expect(preview.scrollTop).toBe(100)
+ await act(async()=>f.workspace.updateSelection(['a'],'replace'))
+ const inner=await f.event('wheel',preview,{deltaX:0,deltaY:80,deltaMode:0})
+ expect(inner.defaultPrevented).toBe(false);expect(f.canvas.scrollTop).toBe(48)
+ preview.scrollTop=500
+ const boundary=await f.event('wheel',preview,{deltaX:0,deltaY:80,deltaMode:0})
+ expect(boundary.defaultPrevented).toBe(true);expect(f.canvas.scrollTop).toBe(128)
+ const relayed=await f.event('wheel',preview,{deltaX:0,deltaY:80,deltaMode:0,__sherlockCanvasPan:true})
+ expect(relayed.defaultPrevented).toBe(true);expect(f.canvas.scrollTop).toBe(208)
+})
+it('整理走网格铺满布局，可撤销且再次整理结果稳定',async()=>{
+ const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a',160,120),text('b',900,1000),text('c',250,2000)]);f.workspace.setWorkbenchWidth(1000)
+ const before=f.workspace.getWorkbenchCells()
+ expect(f.workspace.organizeCanvas()).toBe(true)
+ const arranged=f.workspace.getWorkbenchCells(),bottom=Math.max(...arranged.map(c=>c.y+c.h))
+ for(let y=0;y<bottom;y++)for(let x=0;x<40;x++)expect(arranged.filter(c=>x>=c.x&&x<c.x+c.w&&y>=c.y&&y<c.y+c.h)).toHaveLength(1)
+ f.workspace.organizeCanvas();expect(f.workspace.getWorkbenchCells()).toEqual(arranged)
+ f.workspace.undo();expect(f.workspace.getWorkbenchCells()).toEqual(before)
+})
+
+it('延迟挂载的HTML预览收到真实选择状态，取消选择和载入同步恢复',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('html')]))
+ const frame=f.document.createElement('iframe'),post=vi.fn();frame.setAttribute('data-research-html-artifact','')
+ Object.defineProperty(frame,'contentWindow',{configurable:true,value:{postMessage:post}})
+ await act(async()=>{f.host.querySelector('[data-research-preview-body]').appendChild(frame);await new Promise(r=>setTimeout(r,30))})
+ await act(async()=>f.workspace.updateSelection(['html'],'replace'))
+ expect(post).toHaveBeenCalledWith({type:'sherlock-workbench-selection',selected:true},'*')
+ await act(async()=>f.workspace.updateSelection([],'replace'))
+ expect(post).toHaveBeenLastCalledWith({type:'sherlock-workbench-selection',selected:false},'*')
+ post.mockClear();await f.event('load',frame)
+ expect(post).toHaveBeenLastCalledWith({type:'sherlock-workbench-selection',selected:false},'*')
+ expect(f.host.querySelector('.ew-grid-selection-ring')).toBeNull()
+ await act(async()=>f.workspace.updateSelection(['html'],'replace'))
+ expect(f.host.querySelector('.ew-grid-selection-ring')).not.toBeNull()
 })

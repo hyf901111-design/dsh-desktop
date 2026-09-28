@@ -371,7 +371,8 @@ const RESEARCH_HTML_INNER_FONT_RUNTIME = String.raw`function researchHtmlInnerFo
 // Static runtime source stays identical across bundlers and is injected before artifact
 // scripts. Theme input remains a two-field color-scheme value. Control cleanup must
 // leave the data paint on interactive chart SVGs intact.
-const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerThemeRuntime(fixedTheme) {
+const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerThemeRuntime(fixedTheme, workbench = false) {
+  let workbenchSelected = workbench ? false : null
   let hostTheme = document.documentElement.getAttribute('data-sherlock-theme') === 'dark' ? 'dark' : 'light'
   let activeTheme
   const correctedControls = new Map()
@@ -409,6 +410,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   }
   const receive = (event) => {
     const data = event.data
+    if (event.source === parent && data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') { workbenchSelected = data.selected; return }
     if (event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
         !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
         data.colorScheme !== 'light' && data.colorScheme !== 'dark') return
@@ -556,7 +558,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   }
   document.addEventListener('wheel', event => {
     if (!event.isTrusted) return
-    if (!event.metaKey && !event.ctrlKey && canScrollWheel(event.target, event.deltaX, event.deltaY)) return
+    if (workbenchSelected !== false && !event.metaKey && !event.ctrlKey && canScrollWheel(event.target, event.deltaX, event.deltaY)) return
     event.preventDefault()
     event.stopImmediatePropagation()
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? document.documentElement.clientHeight : 1
@@ -691,14 +693,17 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   let previousSize = ''
   let fontBlob
   let interactionState
+  let workbenchSelection
   let fontFailed = false
   const publish = () => {
     root.setAttribute('data-sherlock-theme', fixedTheme || colorScheme)
     root.style.colorScheme = fixedTheme || colorScheme
     frame.contentWindow?.postMessage({ type: 'sherlock-theme', colorScheme }, '*')
+    if (workbenchSelection) frame.contentWindow?.postMessage(workbenchSelection, '*')
   }
   addEventListener('message', (event) => {
     const data = event.data
+    if (!standalone && event.source === parent && data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') { workbenchSelection = data; frame.contentWindow?.postMessage(data, '*'); return }
     if(!standalone && event.source===parent && data?.type==='sherlock-canvas-use-request') { frame.contentWindow?.postMessage(data,'*'); return }
     if(!standalone && event.source===frame.contentWindow && data?.type==='sherlock-canvas-use-result') { parent.postMessage(data,'*'); return }
     if(!standalone && event.source===parent && ['sherlock-component-context','sherlock-component-receive'].includes(data?.type)) { frame.contentWindow?.postMessage(data,'*'); return }
@@ -802,7 +807,7 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
+  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)},${options.workbench === true});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.

@@ -385,3 +385,23 @@ it('publishes source-backed field, action, row and business color roles independ
   expect(RESEARCH_COMPONENT_PALETTES.light['chart-1']).toBe('#005096')
   expect(RESEARCH_COMPONENT_PALETTES.dark['status-warning-fg']).toBe('#f6d077')
 })
+
+it('工作台选择状态只接受宿主消息并在iframe重新载入后恢复',()=>{
+ const outer=runtime(buildResearchHtmlPreview('<div>内容</div>','工作台','dark',{workbench:true}))
+ const selection={type:'sherlock-workbench-selection',selected:true},before=outer.messages.length
+ outer.send(selection,{});outer.send({...selection,selected:'true'});outer.send({...selection,extra:1})
+ expect(outer.messages).toHaveLength(before)
+ outer.send(selection);expect(outer.messages.at(-1).data).toEqual(selection)
+ outer.frame.dispatchEvent(new outer.window.Event('load'));expect(outer.messages.at(-1).data).toEqual(selection)
+ const inner=runtime(outer.childHtml(),{configure:win=>{
+  const original=win.document.addEventListener.bind(win.document)
+  win.document.addEventListener=(type,callback,options)=>{if(type==='wheel')win.testWheel=callback;return original(type,callback,options)}
+ }})
+ const content=inner.window.document.body;content.style.overflowY='auto'
+ Object.defineProperty(content,'scrollHeight',{value:800});Object.defineProperty(content,'clientHeight',{value:100})
+ content.scrollTop=50
+ const wheel=()=>({isTrusted:true,target:content,deltaX:0,deltaY:60,deltaMode:0,clientX:0,clientY:0,preventDefault:vi.fn(),stopImmediatePropagation:vi.fn()})
+ const unselected=wheel();inner.window.testWheel(unselected);expect(unselected.preventDefault).toHaveBeenCalled()
+ inner.send(selection);const selected=wheel();inner.window.testWheel(selected);expect(selected.preventDefault).not.toHaveBeenCalled()
+ inner.send({...selection,selected:false});const again=wheel();inner.window.testWheel(again);expect(again.preventDefault).toHaveBeenCalled()
+})

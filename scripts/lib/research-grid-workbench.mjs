@@ -50,7 +50,14 @@ export function patchResearchGridWorkbench(source){
   change("left: next.left, top: next.top, bottom: 'auto'","left: next.left + parent.scrollLeft, top: next.top + parent.scrollTop, bottom: 'auto'")
   change("element.style.top = Math.max(inset, Math.min(point.top, height - element.offsetHeight - inset)) + 'px';", "element.style.top = (Math.max(inset, Math.min(point.top, height - element.offsetHeight - inset)) + (canvas.hasAttribute('data-ework-grid')?canvas.scrollTop:0)) + 'px';")
   change('function normalizeResearchCanvasNodeGeometry(node) {','function normalizeResearchCanvasNodeGeometry(node) {\nif(researchGridNodeIds.has(node?.id))return {width:Math.max(1,node.width),height:Math.max(1,node.height),sizeMode:"manual",resizable:true};')
-  change('const onWheel = (event) => {','const onWheel = (event) => {\nif(root.hasAttribute("data-ework-grid"))return;')
+  change('const onWheel = (event) => {','const onWheel = (event) => {\nif(root.hasAttribute("data-ework-grid")){handleWorkbenchWheel(root,workspace,event);return;}')
+  change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map()) {
+    if(workbenchGrid.enabled()){
+      if(!collaborationCanWrite())return false;
+      const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts].map(n=>({...n,preferred:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n)?.height<=180}));
+      if(!nodes.length)return false;
+      return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.get(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0),true);
+    }`)
   change('const onPointerDown = (event) => {','const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid")){const card=event.target?.closest?.("[data-research-node-id]");if(card){const id=card.getAttribute("data-research-node-id");if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id)||event.metaKey||event.shiftKey)workspace.updateSelection([id],event.metaKey?"toggle":event.shiftKey?"add":"replace");return;}if(spacePressedRef.current)return;}')
   // Original business callbacks stay in this closure. The hidden floating
   // toolbar remains a stable anchor for the existing selected-create dialog.

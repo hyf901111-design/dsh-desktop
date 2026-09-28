@@ -27,6 +27,33 @@ export function createResearchGrid() {
     for(const n of rest)if(overlap(n,active))n.y=active.y+active.h
     return compact([...rest,active],active)
   }
+  // Explicit Arrange uses justified shelves. Every shelf fills all 40 columns;
+  // DP groups compatible content heights and widths instead of stretching a
+  // tiny KPI beside a long article. Pointer compaction keeps its own semantics.
+  function arrange(nodes,items,width,visibleHeight=0) {
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])), ordered=items.map(bounded).sort(order)
+    const preferred=ordered.map(c=>{const n=byId.get(c.id)||{},p=n.preferred||n;return {w:Math.max(280,Math.min(width-2*inset,p.width||480)),h:Math.max(95,Math.min(1600,p.height||260)),flex:!n.gridCompact}})
+    const maxPeers=Math.max(1,Math.min(3,Math.floor((width-2*inset+gap)/300))),cost=Array(ordered.length+1).fill(Infinity),choices=[];cost[ordered.length]=0
+    for(let start=ordered.length-1;start>=0;start--)for(let count=1;count<=Math.min(maxPeers,ordered.length-start);count++){
+      const peers=preferred.slice(start,start+count),sum=peers.reduce((v,p)=>v+p.w,0),scale=(width-2*inset-(count-1)*gap)/sum
+      const heights=peers.map(p=>p.h),mismatch=Math.max(...heights)/Math.min(...heights)-1
+      const score=cost[start+count]+Math.abs(Math.log(scale))*2+Math.max(0,1-scale)*2+mismatch*.7+.2
+      if(score<cost[start]){cost[start]=score;choices[start]=count}
+    }
+    const shelves=[];let y=0
+    for(let start=0;start<ordered.length;){const count=choices[start]||1,peers=preferred.slice(start,start+count),sum=peers.reduce((v,p)=>v+p.w,0)
+      let x=0;const shelf=[]
+      for(let j=0;j<count;j++){const w=j===count-1?columns-x:clamp(Math.round(peers[j].w/sum*columns),Math.ceil(280/m.step),columns-x-(count-j-1)*Math.ceil(280/m.step));shelf.push({...ordered[start+j],x,y,w});x+=w}
+      const h=clamp(Math.ceil((Math.max(...peers.map((p,j)=>p.h*(p.flex?Math.max(.8,Math.min(1.5,p.w/(shelf[j].w*m.step-gap))):1)))+gap)/m.rowStep),3,300)
+      shelves.push({cells:shelf,h,flex:peers.some(p=>p.flex)});y+=h;start+=count
+    }
+    // If a small board fits in one viewport, give flexible content the remaining
+    // room. Reserve the floating toolbar area and keep compact metrics compact.
+    let extra=Math.max(0,Math.ceil((visibleHeight-2*inset-72+gap)/m.rowStep)-y),flex=shelves.filter(s=>s.flex)
+    for(let i=0;i<flex.length&&extra;i++){const add=Math.min(300-flex[i].h,Math.ceil(extra/(flex.length-i)));flex[i].h+=add;extra-=add}
+    y=0;const result=[];for(const shelf of shelves){result.push(...shelf.cells.map(c=>({...c,y,h:shelf.h})));y+=shelf.h}
+    const resultById=new Map(result.map(c=>[c.id,c]));return items.map(c=>resultById.get(c.id))
+  }
   function append(items,id,w=20,h=7){return bounded({id,x:0,y:Math.max(0,...items.map(n=>n.y+n.h)),w,h})}
   function draw(a,b,m){
     const x=clamp(Math.round((Math.min(a.x,b.x)-inset)/m.step),0,columns-4),y=Math.max(0,Math.round((Math.min(a.y,b.y)-inset)/m.rowStep))
@@ -44,5 +71,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-gap,height=c.h*m.rowStep-gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,row,inset,metrics,bounded,overlap,compact,place,append,draw,migrate,project}
+  return {columns,gap,row,inset,metrics,bounded,overlap,compact,place,arrange,append,draw,migrate,project}
 }
