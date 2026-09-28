@@ -54,7 +54,7 @@ export function patchResearchGridWorkbench(source){
   change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map()) {
     if(workbenchGrid.enabled()){
       if(!collaborationCanWrite())return false;
-      const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts].map(n=>({...n,preferred:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n)?.height<=180}));
+      const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts].map(n=>({...n,preferred:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
       if(!nodes.length)return false;
       return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.get(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0),true);
     }`)

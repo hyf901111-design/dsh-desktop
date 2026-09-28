@@ -294,3 +294,13 @@ it('延迟挂载的HTML预览收到真实选择状态，取消选择和载入同
  await act(async()=>f.workspace.updateSelection(['html'],'replace'))
  expect(f.host.querySelector('.ew-grid-selection-ring')).not.toBeNull()
 })
+
+it('整理保持行情指标的紧凑高度，不把视口余量灌入指标卡',async()=>{
+ const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});
+ const {renderMarketArtifact}=await import('../packages/dsh-research-task-runtime/market-artifact.js')
+ const spec=renderMarketArtifact({version:1,type:'market',variant:'metrics',title:'行情',asOf:'模拟数据',items:[{label:'现价',value:'1478.60'},{label:'涨幅',value:'+0.45%'}]})
+ f.workspace.setArtifacts([{...text('metrics'),kind:'generated-container',containerPrompt:'行情',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:spec}]);f.workspace.setWorkbenchWidth(1000)
+ expect(f.workspace.organizeCanvas()).toBe(true)
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThanOrEqual(200)
+ expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:40})
+})
