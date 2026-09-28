@@ -369,10 +369,10 @@ body .wSkVaW_header[data-odyssey-home-header=true] .cubgiG_seat { display:none; 
 
 [data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .YDXeBa_title { margin-right:30px; }
 
-/* Only interacting rows fade overflowing titles; idle titles use the full row. */
+/* Fade overflowing titles at rest too; preserve short titles and hover previews. */
 [data-dsh-sidebar-root] .YDXeBa_sessionRow .odyssey-nav-title { display:block; flex:1 1 0; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:clip; }
 [data-dsh-sidebar-root] .odyssey-nav-title-text { display:inline-block; width:max-content; min-width:100%; white-space:nowrap; vertical-align:top; }
-[data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within,.YDXeBa_menuOpen,[data-menu-open=true]) .odyssey-nav-title[data-odyssey-title-overflow=true] { mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent); }
+[data-dsh-sidebar-root] .YDXeBa_sessionRow .odyssey-nav-title[data-odyssey-title-overflow=true] { mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within) .odyssey-nav-title[data-odyssey-title-preview=moving] { mask-image:linear-gradient(to right,transparent,#000 12px,#000 calc(100% - 24px),transparent); }
 [data-dsh-sidebar-root] .YDXeBa_sessionRow:is(:hover,:focus-within) .odyssey-nav-title[data-odyssey-title-preview=end] { mask-image:linear-gradient(to right,transparent,#000 12px); }
 
