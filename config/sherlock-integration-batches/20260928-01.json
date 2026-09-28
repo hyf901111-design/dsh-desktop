@@ -123,6 +123,51 @@
           "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容"
         ],
         "generatedAt": "2026-09-28T07:00:42.301195+00:00"
+      },
+      "merged": {
+        "mergeCommit": "0f4a6848efbf2d95542175e7bc28a3152da6608e",
+        "verificationCommit": "0f4a6848efbf2d95542175e7bc28a3152da6608e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "0f4a6848efbf2d95542175e7bc28a3152da6608e",
+            "completedAt": "2026-09-28T07:01:28.666Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "0f4a6848efbf2d95542175e7bc28a3152da6608e",
+            "completedAt": "2026-09-28T07:01:28.666Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0f4a6848efbf2d95542175e7bc28a3152da6608e",
+            "completedAt": "2026-09-28T07:01:28.666Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-28T07:01:28.666Z"
       }
     }
   ],
