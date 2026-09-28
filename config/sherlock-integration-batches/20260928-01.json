@@ -11,22 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "3138742912ad063d70b7f4adafdbfda2bbdde9b9",
-        "tipCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
+        "baseCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
+        "tipCommit": "617a8f619636473daa8dded243b421688173feeb",
         "commits": [
           {
-            "commit": "d419243f4ab9b51b66cd7d87cbddae5ad830c819",
+            "commit": "617a8f619636473daa8dded243b421688173feeb",
             "parents": [
-              "3138742912ad063d70b7f4adafdbfda2bbdde9b9"
+              "3ecf29f2b59d13e6f7950c01cb396904eae5d81f"
             ],
-            "subject": "修复：重新打开已有工作台时显示底部工具栏"
-          },
-          {
-            "commit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
-            "parents": [
-              "d419243f4ab9b51b66cd7d87cbddae5ad830c819"
-            ],
-            "subject": "修复：统一工具栏图标样式并改善小组件内容适配"
+            "subject": "修复：统一组件选中描边与滚轮分流并铺满整理工作台"
           }
         ],
         "files": [
@@ -36,7 +29,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
           },
           {
             "status": "M",
@@ -56,7 +53,11 @@
           },
           {
             "status": "M",
-            "path": "test/workbench-component-presentation.test.js"
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -67,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
-            "completedAt": "2026-09-28T07:35:42.862155+00:00",
+            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
+            "completedAt": "2026-09-28T07:58:22.944613+00:00",
             "timeoutMs": 300000
           },
           {
@@ -80,12 +81,28 @@
               "test/research-canvas-clipboard.test.ts",
               "test/component-data-status.test.js",
               "test/workbench-component-presentation.test.js",
-              "test/terminal-component-presentation.test.js"
+              "test/terminal-component-presentation.test.js",
+              "test/component-wheel-zoom.test.js",
+              "test/research-canvas-wheel-pass-through.test.js"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：63项直接相关测试",
-            "verifiedCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
-            "completedAt": "2026-09-28T07:35:42.862155+00:00",
+            "summary": "精确功能提交通过：77项网格、客户端、滚轮和内容展示聚焦测试",
+            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
+            "completedAt": "2026-09-28T07:58:22.944613+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "工作台选择状态"
+            ],
+            "outcome": "passed",
+            "summary": "精确功能提交通过：sandbox选择状态消息及重新载入回归",
+            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
+            "completedAt": "2026-09-28T07:58:22.944613+00:00",
             "timeoutMs": 300000
           },
           {
@@ -96,8 +113,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "3ecf29f2b59d13e6f7950c01cb396904eae5d81f",
-            "completedAt": "2026-09-28T07:35:42.862155+00:00",
+            "verifiedCommit": "617a8f619636473daa8dded243b421688173feeb",
+            "completedAt": "2026-09-28T07:58:22.944613+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -112,58 +129,17 @@
           "刷新提示使用真实成功时间；问答 icon 打开右侧会话并添加当前组件上下文",
           "现有数据、图表、表格、HTML交互及内容尺寸适配保留",
           "首排组件顶栏不被工作台顶栏遮挡，底部工具栏居中且快捷键可用",
-          "内容区全面使用新版工作台样式，移除旧蓝金终端样式"
+          "内容区全面使用新版工作台样式，移除旧蓝金终端样式",
+          "未选中组件无外描边，选中蓝框完整覆盖四边",
+          "未选中滚轮只滚工作台，选中内部可滚/边界回退",
+          "整理画布按内容合理铺满可用网格，重复稳定且可撤销"
         ],
         "risks": [
           "原生客户端视觉和交互需现场核验；公开发布与主分支晋升未授权",
-          "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容"
+          "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容",
+          "research-html-theme既存4项失败已用修改前源码复现；本轮选择状态用例单独通过。"
         ],
-        "generatedAt": "2026-09-28T07:35:42.862155+00:00"
-      },
-      "merged": {
-        "mergeCommit": "90279897e0502eac513a6963100032b518b5c6ca",
-        "verificationCommit": "90279897e0502eac513a6963100032b518b5c6ca",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "90279897e0502eac513a6963100032b518b5c6ca",
-            "completedAt": "2026-09-28T07:36:06.538Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "90279897e0502eac513a6963100032b518b5c6ca",
-            "completedAt": "2026-09-28T07:36:06.538Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "90279897e0502eac513a6963100032b518b5c6ca",
-            "completedAt": "2026-09-28T07:36:06.538Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T07:36:06.538Z"
+        "generatedAt": "2026-09-28T07:58:22.944613+00:00"
       }
     }
   ],
