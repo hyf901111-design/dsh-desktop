@@ -11,29 +11,77 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
-        "tipCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
+        "baseCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
+        "tipCommit": "bd27f53416bd801912667f3251bafd9c43552f84",
         "commits": [
           {
-            "commit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
+            "commit": "bd27f53416bd801912667f3251bafd9c43552f84",
             "parents": [
-              "7c5b6dc1901633a3a9b822abf7158f222750448a"
+              "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5"
             ],
-            "subject": "修复：网格边界对齐与智能组件最小尺寸及独立缩放交互"
+            "subject": "优化：还原Figma工作台图标并恢复连续方格背景"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
+            "status": "A",
+            "path": "build/figma-workbench-icons/ask.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/branch.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/close.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/download.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/duplicate.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/edit.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/expand.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/more.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/plus.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/refresh.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/rename.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/settings.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/source.json"
+          },
+          {
+            "status": "A",
+            "path": "build/figma-workbench-icons/summary.svg"
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "docs/plans/2026-09-28-openbb-grid-workbench.md"
           },
           {
             "status": "M",
@@ -50,10 +98,6 @@
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -64,8 +108,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
-            "completedAt": "2026-09-28T10:21:58.868758+00:00",
+            "verifiedCommit": "bd27f53416bd801912667f3251bafd9c43552f84",
+            "completedAt": "2026-09-28T10:49:15.199321+00:00",
             "timeoutMs": 300000
           },
           {
@@ -78,9 +122,9 @@
               "test/research-canvas-clipboard.test.ts"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：86项直接相关检查，含方格四边拉框、中文刷新、只读信息底栏、外置单轴手柄、窄窗与规范历史、草稿最小尺寸及整理约束",
-            "verifiedCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
-            "completedAt": "2026-09-28T10:21:58.868758+00:00",
+            "summary": "精确功能提交通过：87项直接相关检查，含Figma矢量离线打包、连续方格、绘制/单轴缩放/取消、草稿最小尺寸、中文刷新和只读来源栏",
+            "verifiedCommit": "bd27f53416bd801912667f3251bafd9c43552f84",
+            "completedAt": "2026-09-28T10:49:15.199555+00:00",
             "timeoutMs": 300000
           },
           {
@@ -91,8 +135,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "95899c685b40f9c4dce0cb0483ef13bfcf1f5ed5",
-            "completedAt": "2026-09-28T10:21:58.868758+00:00",
+            "verifiedCommit": "bd27f53416bd801912667f3251bafd9c43552f84",
+            "completedAt": "2026-09-28T10:49:15.199557+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -121,10 +165,11 @@
           "创建背景显示正方形格位，格距和滚动原点与真实拖动、绘制和缩放一致",
           "旧布局只迁移一次，窄窗补高不污染保存、取消、撤销或只读共享规范布局",
           "工作台与宿主窗口监听统一扣除滚动条占宽，缩放预览四边与实际组件重合",
-          "可见方格四边含真实组件间距，与创建触点、吸附预览和卡片四边共用尺寸及滚动原点",
           "刷新相对与绝对日期中文展示，工作台底部来源和时间仅展示不整栏可点击",
           "选中组件显示外置单轴缩放手柄，点击区限制在真实间距内且避开底栏；调宽/高不写回未操作轴的本地补足",
-          "智能草稿创建、缩小和整理至少320×220并取整格位，窄窗夹在可用宽度；已有小草稿补足不改规范保存与共享历史"
+          "智能草稿创建、缩小和整理至少320×220并取整格位，窄窗夹在可用宽度；已有小草稿补足不改规范保存与共享历史",
+          "刷新、问答、列表、关闭及菜单使用Figma原始矢量，视口和线宽保留并离线打包",
+          "连续低对比度正方形网格共用格距与滚动原点，拉框只有一个蓝色卡片边界，格数和无描边间距带显示实际占位"
         ],
         "risks": [
           "本轮功能与factory聚焦检查通过，原生界面需后继集成客户端核验",
@@ -132,51 +177,6 @@
           "既存research-html-theme的4项基线失败与本轮修改无关；没有运行全功能测试"
         ],
         "generatedAt": "2026-09-28T10:21:58.868758+00:00"
-      },
-      "merged": {
-        "mergeCommit": "02b0b5163b9c4adfeee2c899545483b7699ff81a",
-        "verificationCommit": "02b0b5163b9c4adfeee2c899545483b7699ff81a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "02b0b5163b9c4adfeee2c899545483b7699ff81a",
-            "completedAt": "2026-09-28T10:23:04.454Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "02b0b5163b9c4adfeee2c899545483b7699ff81a",
-            "completedAt": "2026-09-28T10:23:04.454Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "02b0b5163b9c4adfeee2c899545483b7699ff81a",
-            "completedAt": "2026-09-28T10:23:04.454Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T10:23:04.454Z"
       }
     }
   ],
