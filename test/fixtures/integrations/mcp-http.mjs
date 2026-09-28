@@ -50,6 +50,7 @@ export async function createMcpHttpFixture(options = {}) {
   await new Promise(resolve => listener.listen(0, '127.0.0.1', resolve))
   return {
     url: `http://127.0.0.1:${listener.address().port}/mcp`, metrics,
+    expireSessions() { sessions.clear() },
     async close() {
       await Promise.all([...servers].map(server => server.close()))
       listener.closeAllConnections()
