@@ -66,6 +66,17 @@ it('顶栏问答进入右侧会话，更多菜单包含三项原工具',async()=
  expect(f.document.querySelector('.ew-grid-menu').textContent).toContain('总结提炼')
  expect(f.document.querySelector('.ew-grid-menu').textContent).toContain('基于所选创建')
 })
+it('首次打开组件菜单不被右侧会话自动滚动关闭，画板滚动仍关闭',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const conversation=f.document.createElement('div');f.document.body.append(conversation)
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([])
+ await f.event('click',f.host.querySelector('[data-workbench-more="a"]'))
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual(['a'])
+ await f.event('scroll',conversation)
+ expect(f.document.querySelector('.ew-grid-menu')).not.toBeNull()
+ await f.event('scroll',f.canvas)
+ expect(f.document.querySelector('.ew-grid-menu')).toBeNull()
+})
 it('组件工具在已有组件上拉框，取消恢复让位；选择工具仍框选',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const before=structuredClone(f.workspace.getSnapshot().artifacts)
