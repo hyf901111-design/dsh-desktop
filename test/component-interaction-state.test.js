@@ -91,3 +91,19 @@ it('journals authorized agent clicks across two independent legacy closures but 
   const before=a.out.length;a.w.document.querySelector('canvas').dispatchEvent(new a.w.MouseEvent('click',{bubbles:true}));expect(a.out).toHaveLength(before)
  }finally{a.dom.window.close();b.dom.window.close()}
 })
+
+
+it('打开原生select不写入交互日志，实际分类change仍保存并可恢复',()=>{
+ const w=new Window({settings:{disableJavaScriptEvaluation:true}});w.document.body.innerHTML='<select><option value="all">全部</option><option value="industry">行业</option></select>'
+ const runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1]
+ const listeners={},out=[],parent={postMessage:m=>out.push(m)},select=w.document.querySelector('select'),listen=w.document.addEventListener.bind(w.document)
+ w.document.addEventListener=(type,fn,...args)=>{listeners[type]=fn;listen(type,fn,...args)}
+ vm.runInNewContext('('+runtime+')()', {document:w.document,parent,addEventListener:w.addEventListener.bind(w),Element:w.Element,Event:w.Event,MouseEvent:w.MouseEvent,KeyboardEvent:w.KeyboardEvent,HTMLInputElement:w.HTMLInputElement,HTMLSelectElement:w.HTMLSelectElement,HTMLTextAreaElement:w.HTMLTextAreaElement,crypto:{randomUUID:()=> 'filter-1'}})
+ w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events:{}},readOnly:false}}));out.length=0
+ listeners.click({isTrusted:true,target:select,clientX:0,clientY:0})
+ expect(out).toHaveLength(0)
+ select.value='industry';listeners.change({isTrusted:true,target:select})
+ expect(out).toHaveLength(1);expect(out[0]).toMatchObject({type:'sherlock-interaction-event',event:{type:'change',tag:'SELECT',value:'industry'}})
+ expect(validResearchInteractionEvent(out[0].event)).toBe(true)
+ w.happyDOM.abort()
+})

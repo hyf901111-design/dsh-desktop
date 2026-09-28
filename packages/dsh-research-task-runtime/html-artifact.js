@@ -674,6 +674,8 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     if(!initialized||readOnly){event.preventDefault();event.stopImmediatePropagation();return;}
     let el=event.target;
     if(!(el instanceof Element))return;
+    // Opening a native select is transient browser UI; only its value changes persist.
+    if(type==='click' && el.matches('select'))return;
     // Keep the actual target: canvas, SVG and delegated grid handlers need it.
     // Label activation forwards a second click to its input; record only that control click.
     if(type==='click' && el.closest('label') && !el.matches('input,select,textarea,button'))return;
