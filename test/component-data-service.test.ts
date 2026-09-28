@@ -6,6 +6,20 @@ import {componentRefreshBindings,createComponentDataService} from '../src/main/c
 import {validateIntegrationBindings} from '../src/shared/scheduled-tasks'
 const {acceptArtifactOutput}=await import(new URL('../packages/dsh-research-task-runtime/artifact-output.js',import.meta.url).href)
 
+it('reads unbound personal-board settings after its workspace is removed without allowing data execution',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'component-data-orphan-'))
+ const rpc=vi.fn(async(method:string)=>({items:method==='session.list'?[{sessionId:'board',cwd:'/removed-board'}]:[]}))
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,rpc,
+  integrations:{} as any,canvas:{} as any})
+ try{
+  await expect(service.request('board',{action:'list'})).resolves.toEqual([])
+  expect(rpc.mock.calls.map(call=>call[0])).not.toContain('workspace.list')
+  await expect(service.request('missing',{action:'list'})).rejects.toThrow(/会话/)
+  await expect(service.request('board',{action:'bind',nodeId:'n',recipe:{}})).rejects.toThrow(/工作区/)
+  await expect(service.request('board',{action:'refresh',nodeId:'n'})).rejects.toThrow(/工作区/)
+ }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
+})
+
 it('binds and refreshes successful MCP numeric query arguments through the same schema normalization',async()=>{
  const directory=await mkdtemp(join(tmpdir(),'component-data-service-'))
  const tool={id:'t',connectionId:'c',name:'call_api',enabled:true,schemaDigest:'d',inputSchema:{type:'object',properties:{url_params:{type:'object',additionalProperties:{type:'string'}}}}}
