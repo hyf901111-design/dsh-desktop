@@ -16,7 +16,7 @@ async function fixture(mount=false,desktop={}){
  let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
+ runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake)
  const registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('grid-test'),host=document.createElement('div');document.body.append(host)
@@ -303,4 +303,139 @@ it('整理保持行情指标的紧凑高度，不把视口余量灌入指标卡'
  expect(f.workspace.organizeCanvas()).toBe(true)
  expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThanOrEqual(200)
  expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:40})
+})
+
+it('思维导图在右侧独立展开二级菜单，菜单图标不再用列表图标代替',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ await f.event('click',f.host.querySelector('[data-workbench-more="a"]'))
+ const menu=f.document.querySelector('.ew-grid-menu'),mind=menu.querySelector('[aria-label="思维导图"]')
+ menu.getBoundingClientRect=()=>({left:210,top:80,right:416,bottom:475,width:206,height:395})
+ mind.getBoundingClientRect=()=>({left:218,top:226,right:408,bottom:259,width:190,height:33})
+ await f.event('mouseover',mind)
+ const child=f.document.querySelector('[aria-label="思维导图详细度"]')
+ expect(child).not.toBeNull();expect(menu.contains(child)).toBe(false)
+ expect(parseFloat(child.style.left)).toBeGreaterThanOrEqual(416)
+ expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['简要','常规','详细'])
+ const paths=['重命名','编辑与导出','数据源与自动更新'].map(label=>[...menu.querySelectorAll('button')].find(n=>n.textContent===label).querySelector('path').getAttribute('d'))
+ expect(new Set(paths).size).toBe(3)
+ expect(paths).not.toContain(menu.querySelector('[aria-label="思维导图"] path').getAttribute('d'))
+})
+
+it('原生窗口仍处于缩放过程中时实时使用新的可见宽度，保留格位和内容',async()=>{
+ const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:40,h:8}],true)})
+ const cells=f.workspace.getWorkbenchCells(),excerpt=f.workspace.getSnapshot().artifacts[0].excerpt
+ f.document.documentElement.setAttribute('data-odyssey-window-resizing','')
+ Object.defineProperty(f.canvas,'clientWidth',{configurable:true,value:1500})
+ f.canvas.getBoundingClientRect=()=>({left:0,top:0,right:1500,bottom:700,width:1500,height:700})
+ await f.event('resize',f.win)
+ const node=f.workspace.getSnapshot().artifacts[0]
+ expect(f.workspace.getSnapshot().canvasSize).toMatchObject({width:1500,availableWidth:1500})
+ expect(node.x+node.width/2).toBeCloseTo(1488)
+ expect(parseFloat(f.host.querySelector('[data-research-node-id="a"]').style.width)).toBe(node.width)
+ expect(f.workspace.getWorkbenchCells()).toEqual(cells);expect(node.excerpt).toBe(excerpt)
+})
+
+it('点击HTML控件的选择消息不改变层级或宿主DOM，避免关闭下拉框或重载内容',async()=>{
+ const f=await fixture(true),html={...text('html'),kind:'generated-container',containerPrompt:'筛选新闻',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'新闻',html:'<select><option>全部</option><option>行业</option></select><button>展开全部</button>'}}
+ await act(async()=>f.workspace.setArtifacts([html,text('other')]))
+ const card=f.host.querySelector('[data-research-node-id="html"]'),frame=card.querySelector('iframe')
+ const stackOrder=f.workspace.getSnapshot().artifacts[0].stackOrder
+ expect(frame).not.toBeNull()
+ const moved=[];const observer=new f.win.MutationObserver(records=>{for(const record of records)for(const removed of record.removedNodes)if(removed===card||removed.contains?.(frame))moved.push(removed)})
+ observer.observe(f.host,{childList:true,subtree:true})
+ await act(async()=>f.workspace.updateSelection(['html'],'replace'))
+ await f.event('sherlock-research-content-select',frame,{detail:{metaKey:false,shiftKey:false}})
+ expect(f.workspace.getSnapshot().artifacts[0].stackOrder).toBe(stackOrder)
+ expect(f.workspace.getSnapshot().artifacts.map(n=>n.id)).toEqual(['html','other'])
+ expect(moved).toHaveLength(0);observer.disconnect()
+ expect(card.querySelector('iframe')).toBe(frame)
+})
+
+it('Shift多选顶栏与正文只切换组件，阻止文本选区且不启动拖动',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a'),text('b')]))
+ const a=f.host.querySelector('[data-research-node-id="a"]'),b=f.host.querySelector('[data-research-node-id="b"]')
+ const range=f.document.createRange();range.selectNodeContents(a.querySelector('[data-research-preview-body]'));f.win.getSelection().addRange(range)
+ await act(async()=>f.workspace.updateSelection(['a'],'replace'))
+ const down=await f.event('pointerdown',b.querySelector('[data-workbench-drag-handle]'),{button:0,pointerId:17,shiftKey:true,clientX:300,clientY:30})
+ expect(down.defaultPrevented).toBe(true)
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual(['a','b'])
+ expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ expect(f.win.getSelection().toString()).toBe('')
+ const remove=await f.event('pointerdown',a.querySelector('[data-research-preview-body]'),{button:0,pointerId:18,shiftKey:true})
+ expect(remove.defaultPrevented).toBe(true);expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual(['b'])
+ const ordinary=await f.event('pointerdown',b.querySelector('[data-research-preview-body]'),{button:0,pointerId:19})
+ expect(ordinary.defaultPrevented).toBe(false)
+})
+
+it('内容底部保留一屏可创建留白，向下滚动后能拉框追加组件',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const before=f.workspace.getSnapshot().artifacts[0],bottom=before.y+before.height/2
+ const layer=f.host.querySelector('[data-research-content-layer]')
+ expect(parseFloat(layer.style.height)-bottom).toBeGreaterThanOrEqual(700)
+ f.canvas.scrollTop=bottom;await f.event('scroll',f.canvas)
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
+ await f.event('pointerdown',f.canvas,{button:0,pointerId:20,clientX:12,clientY:100})
+ await f.event('pointerup',f.canvas,{pointerId:20,clientX:490,clientY:390})
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
+ const added=f.workspace.getSnapshot().artifacts.find(n=>n.id!=='a')
+ expect(added.y-added.height/2).toBeGreaterThan(bottom)
+})
+
+
+it('组件设置向右展开，复用原编辑和定时任务操作而不弹出旧菜单',async()=>{
+ const f=await fixture(true),node={...text('settings'),kind:'generated-container',containerPrompt:'研究行情',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'markdown',title:'行情',content:'# 行情\n真实内容'}}
+ await act(async()=>f.workspace.setArtifacts([node]))
+ const open=async()=>{
+  await f.event('click',f.host.querySelector('[data-workbench-more="settings"]'))
+  const main=f.document.querySelector('[aria-label="组件更多操作"][role="menu"]'),trigger=[...main.querySelectorAll('button')].find(n=>n.textContent.includes('组件设置'))
+  main.getBoundingClientRect=()=>({left:210,top:80,right:416,bottom:475,width:206,height:395})
+  trigger.getBoundingClientRect=()=>({left:218,top:390,right:408,bottom:423,width:190,height:33})
+  await f.event('click',trigger)
+  const child=f.document.querySelector('[aria-label="组件设置"][role="menu"]')
+  expect(child).not.toBeNull();expect(main.contains(child)).toBe(false);expect(parseFloat(child.style.left)).toBeGreaterThanOrEqual(416)
+  expect(f.document.querySelector('[data-odyssey-container-menu]')).toBeNull()
+  expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['编辑需求','刷新数据','设定定时任务','数据源与自动更新'])
+  return child
+ }
+ let child=await open()
+ await f.event('click',[...child.querySelectorAll('button')].find(n=>n.textContent==='编辑需求'))
+ expect(f.host.querySelector('[role="dialog"][aria-label="编辑需求"]')).not.toBeNull()
+ await f.event('keydown',f.host.querySelector('[role="dialog"][aria-label="编辑需求"]'),{key:'Escape'})
+ child=await open();const schedule=vi.fn();f.win.addEventListener('sherlock:component-schedule-open',schedule)
+ await f.event('click',[...child.querySelectorAll('button')].find(n=>n.textContent==='设定定时任务'))
+ expect(schedule).toHaveBeenCalledOnce();expect(schedule.mock.calls[0][0].detail).toMatchObject({sessionId:'grid-test',nodeId:'settings'})
+})
+
+it('斜移经过相邻行再进入右侧子菜单时保持展开，离开后关闭',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ await f.event('click',f.host.querySelector('[data-workbench-more="a"]'))
+ const main=f.document.querySelector('[role="menu"][aria-label="组件更多操作"]'),mind=main.querySelector('[aria-label="思维导图"]')
+ main.getBoundingClientRect=()=>({left:210,top:80,right:416,bottom:475,width:206,height:395})
+ mind.getBoundingClientRect=()=>({left:218,top:226,right:408,bottom:259,width:190,height:33})
+ await f.event('mouseover',mind)
+ await f.event('mouseover',[...main.querySelectorAll('button')].find(n=>n.textContent==='总结提炼'))
+ const child=f.document.querySelector('[aria-label="思维导图详细度"]');expect(child).not.toBeNull()
+ await f.event('mouseover',child)
+ await act(async()=>new Promise(r=>setTimeout(r,200)))
+ expect(f.document.querySelector('[aria-label="思维导图详细度"]')).not.toBeNull()
+ await f.event('mouseout',child)
+ await act(async()=>new Promise(r=>setTimeout(r,200)))
+ expect(f.document.querySelector('[aria-label="思维导图详细度"]')).toBeNull()
+})
+
+
+it('共享只读组件的设置菜单仍允许浏览器阅读，禁止编辑和刷新',async()=>{
+ let shared=false
+ const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}})
+ f.workspace.setArtifacts([{...text('link'),kind:'web-link',url:'https://example.com/',title:'只读链接'}])
+ shared=true;await f.render()
+ await f.event('click',f.host.querySelector('[data-workbench-more="link"]'))
+ const main=f.document.querySelector('[role="menu"][aria-label="组件更多操作"]'),trigger=main.querySelector('[aria-label="组件设置"]')
+ main.getBoundingClientRect=()=>({left:210,top:80,right:416,bottom:475,width:206,height:395})
+ trigger.getBoundingClientRect=()=>({left:218,top:390,right:408,bottom:423,width:190,height:33})
+ await f.event('click',trigger)
+ const child=f.document.querySelector('[role="menu"][aria-label="组件设置"]'),buttons=[...child.querySelectorAll('button')]
+ expect(buttons.find(n=>n.textContent==='浏览器打开').disabled).toBe(false)
+ expect(buttons.find(n=>n.textContent==='刷新').disabled).toBe(true)
+ expect(buttons.find(n=>n.textContent==='修改名称').disabled).toBe(true)
 })
