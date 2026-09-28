@@ -32,9 +32,9 @@ for (const dpr of [1, 1.25, 2]) for (const component of [false, true]) it(`paint
       const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0)
       const l=Math.round(rect.left*dpr),r=Math.round(rect.right*dpr)-1,t=Math.round(rect.top*dpr),b=Math.round(rect.bottom*dpr)-1
       const sides=[Array.from({length:b-t-8},(_,i)=>[l,t+4+i]),Array.from({length:b-t-8},(_,i)=>[r,t+4+i]),Array.from({length:r-l-8},(_,i)=>[l+4+i,t]),Array.from({length:r-l-8},(_,i)=>[l+4+i,b])]
-      return sides.map((points,side)=>points.filter(([x,y])=>Array.from({length:7},(_,i)=>i-3).some(offset=>{const p=ctx.getImageData(x+(side<2?offset:0),y+(side<2?0:offset),1,1).data;return Math.abs(p[0]-13)<=2&&Math.abs(p[1]-153)<=2&&Math.abs(p[2]-255)<=2})).length/points.length)
+      return sides.map((points,side)=>points.filter(([x,y])=>Array.from({length:7},(_,i)=>i-3).some(offset=>{const p=ctx.getImageData(x+(side<2?offset:0),y+(side<2?0:offset),1,1).data;return p[2]-p[0]>70&&p[2]-p[1]>30})).length/points.length)
     },{png,rect,dpr})
-    // Dashed edges have gaps; each side must still contain fully saturated blue.
+    // Thin fractional-scale edges may be antialiased; every side must remain visibly blue.
     for (const count of counts) expect(count, JSON.stringify({rect,counts})).toBeGreaterThan(component ? .95 : .35)
   } finally { await page.close() }
 })

@@ -260,6 +260,7 @@ function installCreationStyle(source) {
 }
 export const creationToolsCss = `
 [data-research-canvas] [data-research-marquee]{border-width:var(--odyssey-marquee-stroke,1px)!important;border-color:#0d99ff!important}
+[data-research-canvas] [data-research-marquee]:not([data-research-component-marquee]){border-width:min(1px,var(--odyssey-marquee-stroke,1px))!important}
 [data-research-component-marquee]{border-style:solid!important;background:transparent!important;overflow:visible!important;pointer-events:none!important;border-radius:0!important}
 [data-research-component-marquee] .odyssey-frame-label{position:absolute;left:-1px;bottom:calc(100% + 5px);color:#64c5ff;font:12px/16px sans-serif;white-space:nowrap}
 [data-frame-corner]{position:absolute;width:7px;height:7px;box-sizing:border-box;background:white;border:1px solid #0d99ff;pointer-events:none}
