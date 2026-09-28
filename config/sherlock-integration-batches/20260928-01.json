@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "7f8636ed48158c73a342fcc93793bbb48f588084",
-        "tipCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
+        "baseCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
+        "tipCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
         "commits": [
           {
-            "commit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
+            "commit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
             "parents": [
-              "7f8636ed48158c73a342fcc93793bbb48f588084"
+              "3da4eaa374bd24f1cad6641da6765233dc2287ee"
             ],
-            "subject": "修复：画板菜单遮挡与正方形网格真实吸附"
+            "subject": "修复：统一滚动条占宽后的组件与缩放蓝框位置"
           }
         ],
         "files": [
@@ -29,19 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
@@ -50,10 +38,6 @@
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -64,8 +48,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
-            "completedAt": "2026-09-28T09:25:03.123325+00:00",
+            "verifiedCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
+            "completedAt": "2026-09-28T09:37:19.353383+00:00",
             "timeoutMs": 300000
           },
           {
@@ -73,33 +57,12 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/terminal-component-presentation.test.js",
-              "test/component-wheel-zoom.test.js",
-              "test/research-canvas-wheel-pass-through.test.js",
-              "test/component-interaction-state.test.js"
+              "test/research-grid-workbench.test.js"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：102项网格、客户端、交互同步聚焦测试",
-            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
-            "completedAt": "2026-09-28T09:25:03.123325+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-html-theme.test.js",
-              "-t",
-              "工作台选择状态|工作台Shift"
-            ],
-            "outcome": "passed",
-            "summary": "精确功能提交通过：2项sandbox选择状态与Shift多选检查",
-            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
-            "completedAt": "2026-09-28T09:25:03.123325+00:00",
+            "summary": "精确功能提交通过：50项网格与真实客户端工厂聚焦检查，含滚动条占宽和缩放蓝框四边位置回归",
+            "verifiedCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
+            "completedAt": "2026-09-28T09:37:19.353383+00:00",
             "timeoutMs": 300000
           },
           {
@@ -110,8 +73,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "3da4eaa374bd24f1cad6641da6765233dc2287ee",
-            "completedAt": "2026-09-28T09:25:03.123325+00:00",
+            "verifiedCommit": "7c5b6dc1901633a3a9b822abf7158f222750448a",
+            "completedAt": "2026-09-28T09:37:19.353383+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -138,59 +101,15 @@
           "拖动和缩放活动组件只显示单层网格吸附蓝框，松手或取消恢复选中描边，其他选中组件保持描边",
           "画板右键菜单独立前景并完整避开底部工具栏，下载格式向右独立展开",
           "创建背景显示正方形格位，格距和滚动原点与真实拖动、绘制和缩放一致",
-          "旧布局只迁移一次，窄窗补高不污染保存、取消、撤销或只读共享规范布局"
+          "旧布局只迁移一次，窄窗补高不污染保存、取消、撤销或只读共享规范布局",
+          "工作台与宿主窗口监听统一扣除滚动条占宽，缩放预览四边与实际组件重合"
         ],
         "risks": [
-          "f61c5ae9原生分类第一次点击显示真实分类菜单，用户随后切到券商研报；当前菜单避让与正方形格位需本候选重新构建后原生核验。",
+          "d3a7d965原生确认底部菜单在工具栏上方且网格为正方形；最新缩放边框修复需后继候选原生核验。",
           "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容",
           "research-html-theme既存4项失败已用修改前源码复现；本轮选择状态用例单独通过。"
         ],
-        "generatedAt": "2026-09-28T09:25:03.123325+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5235091dccb7b708ad41ce57277b3758eacb694f",
-        "verificationCommit": "5235091dccb7b708ad41ce57277b3758eacb694f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "5235091dccb7b708ad41ce57277b3758eacb694f",
-            "completedAt": "2026-09-28T09:25:50.757Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "5235091dccb7b708ad41ce57277b3758eacb694f",
-            "completedAt": "2026-09-28T09:25:50.757Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5235091dccb7b708ad41ce57277b3758eacb694f",
-            "completedAt": "2026-09-28T09:25:50.757Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T09:25:50.757Z"
+        "generatedAt": "2026-09-28T09:37:19.353383+00:00"
       }
     }
   ],
