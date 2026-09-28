@@ -405,3 +405,19 @@ it('工作台选择状态只接受宿主消息并在iframe重新载入后恢复'
  inner.send(selection);const selected=wheel();inner.window.testWheel(selected);expect(selected.preventDefault).not.toHaveBeenCalled()
  inner.send({...selection,selected:false});const again=wheel();inner.window.testWheel(again);expect(again.preventDefault).toHaveBeenCalled()
 })
+
+it('工作台Shift多选在sandbox中阻止文本选区和控件点击，普通点击保留',()=>{
+ const outer=runtime(buildResearchHtmlPreview('<p>可复制内容</p><select><option>全部</option></select>','工作台','dark',{workbench:true}))
+ const inner=runtime(outer.childHtml(),{configure:win=>{
+  win.capturedClicks=[];const original=win.document.addEventListener.bind(win.document)
+  win.document.addEventListener=(type,callback,options)=>{if(type==='pointerdown')win.testPointer=callback;if(type==='click'&&(options===true||options?.capture))win.capturedClicks.push(callback);return original(type,callback,options)}
+ }})
+ const paragraph=inner.window.document.querySelector('p'),range=inner.window.document.createRange();range.selectNodeContents(paragraph);inner.window.getSelection().addRange(range)
+ const event=shiftKey=>({isTrusted:true,button:0,target:paragraph,shiftKey,metaKey:false,preventDefault:vi.fn(),stopImmediatePropagation:vi.fn()})
+ const shifted=event(true);inner.window.testPointer(shifted)
+ expect(shifted.preventDefault).toHaveBeenCalled();expect(inner.window.getSelection().toString()).toBe('')
+ expect(inner.parentMessages.at(-1).data).toEqual({type:'sherlock-content-pointer',shiftKey:true,metaKey:false})
+ const select=inner.window.document.querySelector('select'),click={...event(true),target:select}
+ inner.window.capturedClicks.forEach(fn=>fn(click));expect(click.preventDefault).toHaveBeenCalled()
+ const ordinary=event(false);inner.window.testPointer(ordinary);expect(ordinary.preventDefault).not.toHaveBeenCalled()
+})

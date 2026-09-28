@@ -28,6 +28,9 @@ export function patchResearchGridWorkbench(source){
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
   change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);')
   change('const persistSnapshot = () => {','const persistSnapshot = () => {\nif(!workbenchGrid.save())return false;')
+  change('setCanvasSize(canvasSize) {','setCanvasSize(canvasSize) {\nif(workbenchGrid.enabled()){const size={...snapshot.canvasSize,...canvasSize};workbenchGrid.enable(Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity)));}')
+  change("if(document.documentElement.hasAttribute('data-odyssey-window-resizing')){","if(!root.hasAttribute('data-ework-grid')&&document.documentElement.hasAttribute('data-odyssey-window-resizing')){")
+  change('const viewport=researchCanvasViewportForAreaChange(current,next);','const viewport=root.hasAttribute("data-ework-grid")?current.viewport:researchCanvasViewportForAreaChange(current,next);')
   change('snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));','snapshot = researchWorkspaceSnapshot(workbenchGrid.reconcile(workbenchGrid.enabled()?next:researchWorkbenchGrowthViewport(snapshot,next)));')
   const methods=`
     getWorkbenchCells:()=>workbenchGrid.get(),
@@ -58,7 +61,10 @@ export function patchResearchGridWorkbench(source){
       if(!nodes.length)return false;
       return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.get(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0),true);
     }`)
-  change('const onPointerDown = (event) => {','const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid")){const card=event.target?.closest?.("[data-research-node-id]");if(card){const id=card.getAttribute("data-research-node-id");if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id)||event.metaKey||event.shiftKey)workspace.updateSelection([id],event.metaKey?"toggle":event.shiftKey?"add":"replace");return;}if(spacePressedRef.current)return;}')
+  change('const onPointerDown = (event) => {','const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid")){if(canvasToolRef.current==="select"&&handleWorkbenchMultiSelect(root,workspace,event))return;const card=event.target?.closest?.("[data-research-node-id]");if(card){const id=card.getAttribute("data-research-node-id");if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id))workspace.updateSelection([id],"replace");return;}if(spacePressedRef.current)return;}')
+  change('const onContentSelect = (event) => {','const onContentSelect = (event) => {\nif(root.hasAttribute("data-ework-grid")){const frame=event.target,id=frame?.matches?.("iframe[data-research-html-artifact]")&&frame.closest("[data-research-node-id]")?.getAttribute("data-research-node-id");if(!id||!workspace.getSnapshot().artifacts.some(n=>n.id===id))return;const modified=event.detail?.shiftKey||event.detail?.metaKey;if(modified){root.ownerDocument.defaultView.getSelection()?.removeAllRanges();workspace.updateSelection([id],"toggle");}else if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id))workspace.updateSelection([id],"replace");return;}')
+  change('const disabled = activeGeneration || editingPrompt;',`const disabled = activeGeneration || editingPrompt;
+  useWorkbenchSettings({triggerRef,sessionId,node,disabled,editingPrompt,onEdit,onRefresh,onSetRefresh,onFrameAction,onOpenBrowser,onProvenance:()=>{setShowProvenance(true);setOpen(true);}});`)
   // Original business callbacks stay in this closure. The hidden floating
   // toolbar remains a stable anchor for the existing selected-create dialog.
   const hook=`

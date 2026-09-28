@@ -546,7 +546,15 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   document.documentElement.addEventListener('pointerenter', () => publishHover(true))
   document.documentElement.addEventListener('pointerleave', () => publishHover(false))
   document.addEventListener('pointerdown', event => {
-    if (event.isTrusted && event.button === 0) parent.postMessage({ type: 'sherlock-content-pointer', metaKey: event.metaKey, shiftKey: event.shiftKey }, '*')
+    if (!event.isTrusted || event.button !== 0) return
+    if (workbench && (event.shiftKey || event.metaKey) && event.target?.closest?.('input,textarea,[contenteditable=true]')) return
+    parent.postMessage({ type: 'sherlock-content-pointer', metaKey: event.metaKey, shiftKey: event.shiftKey }, '*')
+    if (workbench && (event.shiftKey || event.metaKey) && !event.target?.closest?.('input,textarea,[contenteditable=true]')) {
+      event.preventDefault(); event.stopImmediatePropagation(); window.getSelection()?.removeAllRanges()
+    }
+  }, true)
+  document.addEventListener('click', event => {
+    if (workbench && (event.shiftKey || event.metaKey) && !event.target?.closest?.('input,textarea,[contenteditable=true]')) { event.preventDefault(); event.stopImmediatePropagation() }
   }, true)
   const canScrollWheel = (target, deltaX, deltaY) => {
     for (let e = target?.nodeType === 1 ? target : target?.parentElement; e; e = e.parentElement) {
