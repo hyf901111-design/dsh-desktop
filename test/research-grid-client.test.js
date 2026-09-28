@@ -454,3 +454,19 @@ it('组件选择变化不重复发送相同的共享上下文，避免重绘正�
  await act(async()=>f.workspace.updateSelection(['html'],'replace'))
  expect(post.mock.calls.filter(([m])=>m.type==='sherlock-component-context')).toEqual([[expect.objectContaining({readOnly:true,shared:true}),'*']])
 })
+
+
+it('改变组件大小时只显示吸附预览蓝框，松手或取消恢复单层选中描边',async()=>{
+ const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a'),text('b',740)]);f.workspace.updateSelection(['a','b'],'replace')})
+ const card=f.host.querySelector('[data-research-node-id="a"]'),other=f.host.querySelector('[data-research-node-id="b"]'),ring=card.querySelector('.ew-grid-selection-ring'),preview=f.canvas.querySelector('.ew-grid-placeholder')
+ const down=async id=>f.event('pointerdown',card.querySelector('[data-workbench-resize]'),{button:0,pointerId:id,clientX:480,clientY:250})
+ await down(29);await f.event('pointermove',f.canvas,{pointerId:29,clientX:620,clientY:320})
+ expect(preview.hidden).toBe(false)
+ expect(f.win.getComputedStyle(ring).display).toBe('none')
+ expect(f.win.getComputedStyle(other.querySelector('.ew-grid-selection-ring')).display).not.toBe('none')
+ expect(Number(f.win.getComputedStyle(preview).zIndex)).toBeGreaterThan(Number(f.win.getComputedStyle(card).zIndex))
+ await f.event('pointerup',f.canvas,{pointerId:29,clientX:620,clientY:320})
+ expect(preview.hidden).toBe(true);expect(f.win.getComputedStyle(ring).display).not.toBe('none')
+ await down(30);await f.event('pointercancel',f.canvas,{pointerId:30})
+ expect(preview.hidden).toBe(true);expect(f.win.getComputedStyle(ring).display).not.toBe('none')
+})
