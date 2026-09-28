@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "617a8f619636473daa8dded243b421688173feeb",
-        "tipCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
+        "baseCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
+        "tipCommit": "c6daeff8218d1c2ab855bdd7897451b34bca867f",
         "commits": [
           {
-            "commit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
+            "commit": "c6daeff8218d1c2ab855bdd7897451b34bca867f",
             "parents": [
-              "617a8f619636473daa8dded243b421688173feeb"
+              "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f"
             ],
-            "subject": "修复：整理工作台时保持行情指标组件紧凑"
+            "subject": "修复：工作台右侧子菜单、控件点击与实时尺寸适配"
           }
         ],
         "files": [
@@ -29,11 +29,27 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -44,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：补丁重复构建",
-            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
-            "completedAt": "2026-09-28T08:02:07.338511+00:00",
+            "verifiedCommit": "c6daeff8218d1c2ab855bdd7897451b34bca867f",
+            "completedAt": "2026-09-28T08:36:33.107514+00:00",
             "timeoutMs": 300000
           },
           {
@@ -59,12 +75,13 @@
               "test/workbench-component-presentation.test.js",
               "test/terminal-component-presentation.test.js",
               "test/component-wheel-zoom.test.js",
-              "test/research-canvas-wheel-pass-through.test.js"
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/component-interaction-state.test.js"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：78项网格、客户端、滚轮和内容展示聚焦测试",
-            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
-            "completedAt": "2026-09-28T08:02:07.338511+00:00",
+            "summary": "精确功能提交通过：92项网格、真实客户端工厂、菜单、滚轮、内容交互聚焦测试",
+            "verifiedCommit": "c6daeff8218d1c2ab855bdd7897451b34bca867f",
+            "completedAt": "2026-09-28T08:36:33.107514+00:00",
             "timeoutMs": 300000
           },
           {
@@ -73,12 +90,12 @@
               "run",
               "test/research-html-theme.test.js",
               "-t",
-              "工作台选择状态"
+              "工作台选择状态|工作台Shift"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交通过：sandbox选择状态消息及重新载入回归",
-            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
-            "completedAt": "2026-09-28T08:02:07.338511+00:00",
+            "summary": "精确功能提交通过：2项sandbox选择状态与Shift多选检查",
+            "verifiedCommit": "c6daeff8218d1c2ab855bdd7897451b34bca867f",
+            "completedAt": "2026-09-28T08:36:33.107514+00:00",
             "timeoutMs": 300000
           },
           {
@@ -89,8 +106,8 @@
             ],
             "outcome": "passed",
             "summary": "精确功能提交通过：类型检查",
-            "verifiedCommit": "b47e7f6ee1eac6a5fbdf4f58d8d5c022c55d418f",
-            "completedAt": "2026-09-28T08:02:07.338511+00:00",
+            "verifiedCommit": "c6daeff8218d1c2ab855bdd7897451b34bca867f",
+            "completedAt": "2026-09-28T08:36:33.107514+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -108,59 +125,19 @@
           "内容区全面使用新版工作台样式，移除旧蓝金终端样式",
           "未选中组件无外描边，选中蓝框完整覆盖四边",
           "未选中滚轮只滚工作台，选中内部可滚/边界回退",
-          "整理画布按内容合理铺满可用网格，重复稳定且可撤销"
+          "整理画布按内容合理铺满可用网格，重复稳定且可撤销",
+          "思维导图和组件设置向右展开二级菜单，实际操作复用原业务回调与权限",
+          "HTML分类下拉第一次点击可打开且不因组件选择改变层级",
+          "窗口宽度实时投影组件格位，不等待缩放结束",
+          "Shift多选只选组件，编辑框保留正常输入",
+          "底部可多滚一屏用于创建组件"
         ],
         "risks": [
           "原生客户端视觉和交互需现场核验；公开发布与主分支晋升未授权",
           "共享布局使用固定1000px逻辑投影；旧布局首次迁移按阅读顺序保留内容",
           "research-html-theme既存4项失败已用修改前源码复现；本轮选择状态用例单独通过。"
         ],
-        "generatedAt": "2026-09-28T08:02:07.338511+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d8a26b32bc5fd2388226476c02c5de5b55d735a1",
-        "verificationCommit": "d8a26b32bc5fd2388226476c02c5de5b55d735a1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "d8a26b32bc5fd2388226476c02c5de5b55d735a1",
-            "completedAt": "2026-09-28T08:02:53.584Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "d8a26b32bc5fd2388226476c02c5de5b55d735a1",
-            "completedAt": "2026-09-28T08:02:53.584Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d8a26b32bc5fd2388226476c02c5de5b55d735a1",
-            "completedAt": "2026-09-28T08:02:53.584Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T08:02:53.584Z"
+        "generatedAt": "2026-09-28T08:36:33.107514+00:00"
       }
     }
   ],
