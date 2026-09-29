@@ -140,12 +140,12 @@ export function createResearchGrid() {
     }
     return compact(items.map(c=>changed.get(c.id)||c))
   }
-  // Moving crosses a peer's midpoint before inserting above/below it. Resolve
-  // compaction during the preview so release uses exactly that destination.
-  function move(items,target,visibleItems=items,visibleTarget=target) {
+  // Use the grabbed header's row for insertion. A tall article's distant
+  // centre must not keep the card below the peer under the pointer.
+  function move(items,target,visibleItems=items,visibleTarget=target,anchorRow=visibleTarget.y+visibleTarget.h/2) {
     const active=bounded(target),original=items.find(c=>c.id===active.id)
     if(original&&['x','y','w','h'].every(k=>original[k]===active[k]))return items.map(bounded)
-    const center=visibleTarget.y+visibleTarget.h/2,peers=visibleItems.filter(c=>overlap(visibleTarget,c)).sort((a,b)=>Math.abs(center-a.y-a.h/2)-Math.abs(center-b.y-b.h/2))
+    const center=anchorRow,peers=visibleItems.filter(c=>c.id!==active.id&&overlap(visibleTarget,c)).sort((a,b)=>Math.abs(center-a.y-a.h/2)-Math.abs(center-b.y-b.h/2))
     const visiblePeer=peers[0],peer=items.find(c=>c.id===visiblePeer?.id)
     // Local minimum-height projection must not move a peer's physical midpoint
     // into its smaller saved frame. Only the ordering decision uses that view.

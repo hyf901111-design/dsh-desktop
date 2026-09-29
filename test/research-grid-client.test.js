@@ -436,7 +436,7 @@ it('失焦取消拖动，受协作占用的让位组件不会移动',async()=>{
  f.host.querySelector('[data-research-node-id="b"]').setAttribute('data-research-geometry-blocked','')
  await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="a"]'),{button:0,pointerId:8,clientX:200,clientY:24})
  f.host.querySelector('[data-research-node-id="b"]').setAttribute('data-research-geometry-blocked','')
- await f.event('pointerup',f.canvas,{pointerId:8,clientX:680,clientY:24})
+ await f.event('pointerup',f.canvas,{pointerId:8,clientX:680,clientY:170})
  // Crossing the midpoint may place the active card below the locked peer;
  // that is allowed when the peer's own geometry remains untouched.
  expect(f.workspace.getSnapshot().artifacts.find(n=>n.id==='b')).toEqual(before.find(n=>n.id==='b'))
@@ -487,7 +487,7 @@ it('失败完成时间不作为成功刷新时间',async()=>{
  expect(f.document.querySelector('[role=tooltip]')?.textContent).toBe('尚未刷新暂无成功刷新记录')
 })
 it('滚动后的框选覆盖层保留可见坐标，就地衍生卡使用稳定工作台格位与来源',async()=>{
- const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:60}],true)})
  f.canvas.scrollTop=600;await f.event('scroll',f.canvas)
  await f.event('pointerdown',f.canvas,{button:0,pointerId:9,clientX:0,clientY:100})
  await f.event('pointermove',f.canvas,{pointerId:9,clientX:900,clientY:250})
@@ -639,16 +639,38 @@ it('窄窗补高后的可见中线决定换位，不提前按保存高度换位'
  await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="a"]'),{button:0,pointerId:82,clientX:40,clientY:24})
  await f.event('pointermove',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*h/2})
  expect(w.getWorkbenchCells()).toEqual(before)
- await f.event('pointermove',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*(h+1)})
+ await f.event('pointermove',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*(h*1.5+1)})
  expect(w.getWorkbenchCells().find(c=>c.id==='a')).toMatchObject({y:5,h:5})
  const resolved=w.getWorkbenchCells()
- await f.event('pointerup',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*(h+1)})
+ await f.event('pointerup',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*(h*1.5+1)})
  expect(w.getWorkbenchCells()).toEqual(resolved)
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
 
+it('滚动后跨列拖动长文章按抓取点挤开邻居，预览、松手、取消和撤销一致',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await act(async()=>{w.setArtifacts(['top','article','b','c'].map(id=>text(id)));w.applyWorkbenchCells([{id:'top',x:0,y:0,w:40,h:20},{id:'article',x:0,y:20,w:20,h:44},{id:'b',x:20,y:20,w:20,h:10},{id:'c',x:20,y:30,w:20,h:14}],true)})
+ const before=w.getWorkbenchCells(),scroll=12+20*step-100
+ f.canvas.scrollTop=scroll;await f.event('scroll',f.canvas)
+ const handle=f.host.querySelector('[data-workbench-drag-handle="article"]'),card=handle.closest('[data-research-node-id]')
+ await f.event('pointerdown',handle,{button:0,pointerId:83,clientX:200,clientY:112})
+ await f.event('pointermove',f.canvas,{pointerId:83,clientX:200+20*step,clientY:126})
+ const preview=w.getWorkbenchCells(),a=preview.find(c=>c.id==='article'),b=preview.find(c=>c.id==='b')
+ expect(a).toMatchObject({x:20,y:20,h:44});expect(b.y).toBe(64)
+ expect(f.win.getComputedStyle(f.host.querySelector('[data-research-node-id="b"]')).transition).toContain('top 180ms')
+ expect(parseFloat(card.style.getPropertyValue('--grid-float-top'))-parseFloat(card.style.height)/2).toBeCloseTo(scroll+114)
+ expect(parseFloat(f.canvas.querySelector('.ew-grid-placeholder').style.top)).toBeCloseTo(12+a.y*step)
+ await f.event('pointerup',f.canvas,{pointerId:83,clientX:200+20*step,clientY:126})
+ expect(w.getWorkbenchCells()).toEqual(preview)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+ await f.event('pointerdown',handle,{button:0,pointerId:84,clientX:200,clientY:112})
+ await f.event('pointermove',f.canvas,{pointerId:84,clientX:200+20*step,clientY:126})
+ expect(w.getWorkbenchCells().find(c=>c.id==='b').y).toBe(64)
+ await f.event('pointercancel',f.canvas,{pointerId:84});expect(w.getWorkbenchCells()).toEqual(before)
+})
+
 it('未选中时组件滚轮交给工作台，选中后仅在内部可滚时消费',async()=>{
- const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:60}],true)})
  const preview=f.host.querySelector('[data-research-preview-body]');preview.style.overflowY='auto'
  Object.defineProperty(preview,'clientHeight',{configurable:true,value:100});Object.defineProperty(preview,'scrollHeight',{configurable:true,value:600})
  Object.defineProperty(f.canvas,'scrollHeight',{configurable:true,value:2500})
@@ -861,18 +883,30 @@ it('Shift多选顶栏与正文只切换组件，阻止文本选区且不启动�
  expect(ordinary.defaultPrevented).toBe(false)
 })
 
-it('内容底部保留一屏可创建留白，向下滚动后能拉框追加组件',async()=>{
- const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+it('空画布及一屏内内容不因留白溢出；长画布底部只保留15格仍可创建',async()=>{
+ const f=await fixture(true),layer=f.host.querySelector('[data-research-content-layer]')
+ expect(parseFloat(layer.style.height)).toBe(700)
+ await act(async()=>f.workspace.setArtifacts([text('a')]))
+ expect(parseFloat(layer.style.height)).toBe(700)
+ await act(async()=>f.workspace.setViewport({x:0,y:-500,scale:1}))
+ expect(f.canvas.scrollTop).toBe(0);expect(f.workspace.getSnapshot().viewport.y).toBe(0)
+ await act(async()=>f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:34}],true))
  const before=f.workspace.getSnapshot().artifacts[0],bottom=before.y+before.height/2
- const layer=f.host.querySelector('[data-research-content-layer]')
- expect(parseFloat(layer.style.height)-bottom).toBeGreaterThanOrEqual(700)
+ const step=(1000-14)/40
+ expect(parseFloat(layer.style.height)).toBe(Math.ceil(bottom+15*step))
  f.canvas.scrollTop=bottom;await f.event('scroll',f.canvas)
  await f.event('click',f.document.querySelector('[data-research-global-container]'))
- await f.event('pointerdown',f.canvas,{button:0,pointerId:20,clientX:12,clientY:100})
- await f.event('pointerup',f.canvas,{pointerId:20,clientX:490,clientY:390})
+ await f.event('pointerdown',f.canvas,{button:0,pointerId:20,clientX:12,clientY:450})
+ await f.event('pointerup',f.canvas,{pointerId:20,clientX:490,clientY:650})
  expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
  const added=f.workspace.getSnapshot().artifacts.find(n=>n.id!=='a')
  expect(added.y-added.height/2).toBeGreaterThan(bottom)
+ await act(async()=>f.workspace.setArtifacts([]))
+ expect(parseFloat(layer.style.height)).toBe(700);expect(f.canvas.scrollTop).toBe(0)
+ await act(async()=>{f.workspace.setArtifacts([text('edge')]);f.workspace.applyWorkbenchCells([{id:'edge',x:0,y:0,w:20,h:28}],true);f.workspace.updateSelection(['edge'],'replace')})
+ const handle=f.document.querySelector('[data-workbench-resize="edge"][data-workbench-resize-axis="y"]')
+ expect(parseFloat(handle.style.top)+parseFloat(handle.style.height)).toBeLessThanOrEqual(700)
+ expect(parseFloat(layer.style.height)).toBe(700)
 })
 
 

@@ -121,6 +121,14 @@ it('移动按邻居中线插入，覆盖下半部时落到其后，空槽在预�
  expect(g.move([item('a',0,0)],item('a',0,14)).find(c=>c.id==='a').y).toBe(0)
 })
 
+it('长组件跨列按鼠标抓取点让位，组件中心不把落点推到下方',()=>{
+ const g=createResearchGrid(),before=[item('article',0,0,20,40),item('b',20,0,20,10),item('c',20,10,20,10)],target=item('article',20,1,20,40)
+ const next=g.move(before,target,before,target,.5)
+ expect(next.find(c=>c.id==='article')).toMatchObject({x:20,y:0,h:40})
+ expect(next.find(c=>c.id==='b').y).toBe(40);expect(next.find(c=>c.id==='c').y).toBe(50)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+})
+
 it('整理时宽表格缩至可用短列，不跳过短指标下方可容纳的空位',()=>{
  const g=createResearchGrid(),nodes=[
   {id:'metrics',preferred:{width:480,height:240}},
