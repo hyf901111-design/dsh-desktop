@@ -26,7 +26,8 @@ body :is([data-tone="positive"],.positive,.up){color:var(--sherlock-market-posit
 body :is(.market-metrics,.fund-kpis){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px 12px!important;border:0!important;min-height:0!important}
 body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi){padding:0!important;min-height:0!important;background:none!important;border:0!important;border-radius:0!important}
 body :is(.market-label,.fund-label,.research-metric-label,.kpi-label){font-size:12px!important;font-weight:400!important;color:var(--sherlock-muted)!important;line-height:18px!important}
-body :is(.market-value,.fund-value,.research-metric-value,.kpi-value){font-size:18px!important;line-height:25px!important;font-weight:600!important;color:var(--sherlock-text)!important;overflow-wrap:anywhere!important}
+body :is(.market-value,.fund-value,.research-metric-value,.kpi-value){font-size:18px!important;line-height:25px!important;font-weight:600!important;overflow-wrap:anywhere!important}
+body :is(.market-value,.fund-value,.research-metric-value,.kpi-value):where(:not(.positive):not(.negative):not(.up):not(.down):not([data-tone])){color:var(--sherlock-text)!important}
 body :is(.market-detail,.fund-detail,.research-metric-detail,.kpi-detail){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important}
 body :is(.market-footer,.fund-footer,.fund-industry-footer,.market-ohlc,.trend-readout,.scatter-readout,.terminal-table-readout){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important;background:transparent!important;border-color:var(--sherlock-border)!important;min-width:0!important;overflow-wrap:anywhere!important}
 body :is(.market-table-wrap,.fund-table-wrap){min-width:0!important;min-height:0!important;overflow:auto!important;max-height:calc(100vh - 68px)!important;border:0!important}
