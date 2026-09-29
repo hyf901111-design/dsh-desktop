@@ -17,4 +17,5 @@ it('偏好存储损坏安全回退且企业色遵循设计稿的稳定系列顺�
 })
 it('英文动态操作提示和静态菜单翻译，不改写任意用户正文',()=>{
  expect(workbenchText('已整理 17 个组件','en')).toBe('Arranged 17 components');expect(workbenchText('编辑需求','en')).toBe('Edit requirements');expect(workbenchText('客户原始中文正文','en')).toBe('客户原始中文正文');expect(workbenchText('编辑需求','zh')).toBe('编辑需求')
+ expect(workbenchText('4 / 4 行','en')).toBe('4 / 4 rows');expect(workbenchText('按客户原始列名排序','en')).toBe('Sort by 客户原始列名')
 })
