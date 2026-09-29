@@ -11,37 +11,33 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
-        "tipCommit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
+        "baseCommit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
+        "tipCommit": "38ec04262c33f0b4e3993465922d579dbb208d23",
         "commits": [
           {
-            "commit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
+            "commit": "38ec04262c33f0b4e3993465922d579dbb208d23",
             "parents": [
-              "4f1a45e1a590e78077e58cd6a7964b581f2c3123"
+              "c09dee7824a52b8ead97abcff21999f808bbf2a0"
             ],
-            "subject": "补全工作台预设调用提示并记录新版设计与真实验收缺口"
+            "subject": "修复管线阶段条与窄列事件阅读并兼容已保存组件"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
-            "status": "A",
-            "path": "docs/design/figma-template-inventory-20260930.json"
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+            "path": "packages/dsh-research-task-runtime/market-presentation.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
+            "path": "test/workbench-component-presentation.test.js"
           }
         ],
         "checks": [
@@ -50,21 +46,18 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-execution-policy.test.js",
-              "test/research-workbench.test.js",
-              "-t",
-              "workbench execution policy|actionable preset receipt"
+              "test/workbench-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "执行策略与缺参恢复契约7项聚焦验证通过；旧画布补丁锚点失败单独记录",
-            "verifiedCommit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
-            "completedAt": "2026-09-29T16:46:05.742956+00:00",
+            "summary": "已保存组件样式升级及内容保留3项聚焦验证通过",
+            "verifiedCommit": "38ec04262c33f0b4e3993465922d579dbb208d23",
+            "completedAt": "2026-09-29T17:10:27.617929+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "b231d53a原生新六卡布局和企业配色交互通过；真实模型7次缺参后误选管线普通表格，不计内容验收成功。新参数说明待集成后复验。"
+          "summary": "0c27c65e原生医药工作台首次调用匹配6预设，整轮13秒；修复阶段条及窄列事件排版，浏览器实际筛选1/4通过，原生新包待复核。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -168,7 +161,8 @@
           "失败卡片使用中性色标题、状态与说明及灰色图标，不混用红色提示与企业蓝色标题；保留真实错误与重试入口",
           "宿主及HTML图表首次进入视窗播放650ms生长动效；折线绘制、柱形及K线展开、散点与环图渐进，资金流/漏斗/盘口/风险矩阵/市场广度/基金行业/甘特图覆盖，坐标数据和最终尺寸保持；主题、悬停、筛选不重播，减少动态效果静态呈现",
           "Figma错误状态图标与标题说明中性色，生成固定尺寸与首次图表动效规范同步",
-          "自然语言工作台首次挂载按组填满可用双列或窄窗单列，后续内容返回保持默认框，已有组件不被重新布局"
+          "自然语言工作台首次挂载按组填满可用双列或窄窗单列，后续内容返回保持默认框，已有组件不被重新布局",
+          "管线阶段条不被通用折叠样式压缩，窄列事件纵向排列且筛选隐藏仍生效，已保存V2页面预览自动使用V3共享样式"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -177,52 +171,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "当前Figma为44类组件+30类图表；旧30模板注册表不代表全覆盖。原生生成成功率目标未验收通过。"
         ],
-        "generatedAt": "2026-09-29T16:46:05.742956+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
-        "verificationCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
-            "completedAt": "2026-09-29T16:47:36.929Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
-            "completedAt": "2026-09-29T16:47:36.929Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
-            "completedAt": "2026-09-29T16:47:36.929Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T16:47:36.929Z"
+        "generatedAt": "2026-09-29T17:10:27.618174+00:00"
       }
     }
   ],
