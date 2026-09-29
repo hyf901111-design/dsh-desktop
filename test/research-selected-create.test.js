@@ -112,14 +112,14 @@ it('窄窗就地插入只保存新卡与必要让位，已有卡宽高不会被�
  }finally{f.dispose()}
 })
 
-it('生成正文获得独立高度，取消真实任务后原位恢复需求且拒绝迟到结果',()=>{
+it('衍生生成保持输入卡尺寸，取消真实任务后原位恢复需求且拒绝迟到结果',()=>{
  const f=fixture(),w=f.workspace,draft=w.beginSelectedCreateDraft(['base']),before=w.getWorkbenchCells(),snapshot=w.getSnapshot()
  try{
   const placement={x:draft.x,y:draft.y,width:draft.width,height:draft.height,sizeMode:'manual'}
   const target=w.beginGeneration('create',['base'],placement,'按财年比较收入。',snapshot,draft.id)
   w.attachGenerationTask(target.id,{taskId:'derived-task',canvasNodeId:target.id,state:'running',lastSeq:0})
-  const m=createResearchGrid().metrics(1000),visible=w.getWorkbenchVisibleCells().find(c=>c.id===target.id)
-  expect(visible.h*m.rowStep-m.gap).toBeGreaterThanOrEqual(450)
+  const visible=w.getWorkbenchVisibleCells().find(c=>c.id===target.id)
+  expect(visible).toEqual(before.find(c=>c.id===target.id))
   expect(w.getWorkbenchCells()).toEqual(before)
   const base=w.getSnapshot().artifacts.find(n=>n.id==='base')
   expect(w.applyGenerationInspection(target.id,{taskId:'derived-task',canvasNodeId:target.id,state:'cancelled',lastSeq:1,events:[],completedAt:Date.now()})).toBe(true)

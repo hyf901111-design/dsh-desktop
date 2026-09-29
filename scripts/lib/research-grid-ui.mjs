@@ -429,6 +429,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     root.setAttribute('data-ework-grid','')
+    const stopChartMotion=installWorkbenchChartMotion(root)
     const scrollbars=new Map()
     root.__eworkScrollbars=()=>{
       const cards=[...root.querySelectorAll('[data-research-node-id]')]
@@ -458,7 +459,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     window.addEventListener('resize',measure)
     const scroll=()=>{const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
-    return()=>{root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
+    return()=>{stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return

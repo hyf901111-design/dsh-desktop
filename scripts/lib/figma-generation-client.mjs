@@ -316,8 +316,6 @@ body [data-research-compact-chrome][data-research-artifact-card] .odyssey-genera
 .odyssey-generation-phase{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-phase)}
 [data-research-generation-foreground]>[data-research-generation-description]{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-detail);overflow-wrap:anywhere}
 [data-research-generation-foreground]>[data-research-generation-sources]{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-detail)}
-[data-generation-ui-state=error] .odyssey-generation-phase{color:#b94739}[data-generation-ui-state=error] .odyssey-generation-state-icon{background:#bd4a3d}
-body[data-ds-dark-theme] [data-generation-ui-state=error] .odyssey-generation-phase{color:#f09b91}body[data-ds-dark-theme] [data-generation-ui-state=error] .odyssey-generation-state-icon{background:#f09b91}
 .odyssey-generation-surface>[data-research-generation-elapsed]{position:absolute;top:16px;left:20px;font:500 12px/18px DINPro,sans-serif;font-variant-numeric:tabular-nums;color:var(--generation-time)}
 .odyssey-generation-actions{position:absolute;bottom:18px;left:20px;z-index:4;padding:0;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .12s}
 .odyssey-generation-surface:hover .odyssey-generation-actions,.odyssey-generation-surface:focus-within .odyssey-generation-actions{opacity:1;pointer-events:auto}

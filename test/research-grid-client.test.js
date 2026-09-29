@@ -436,6 +436,24 @@ it('拉框松手只创建一次并保持目标格位，缩放更新真实渲染�
  const after=f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id),card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]')
  expect(after.width).toBeGreaterThan(beforeWidth);expect(parseFloat(card.style.width)).toBe(after.width)
 })
+it('默认智能组件在排队、运行、失败、重试、重新打开和完成时保持同一尺寸',async()=>{
+ const f=await fixture(true),w=f.workspace
+ let draft;await act(async()=>{draft=w.createContainerDraft()})
+ const geometry=n=>({width:n.width,height:n.height,x:n.x,y:n.y}),box=c=>({id:c.id,x:c.x,y:c.y,w:c.w,h:c.h})
+ const before=geometry(w.getSnapshot().artifacts[0]),cells=w.getWorkbenchVisibleCells().map(box)
+ const same=()=>{expect(geometry(w.getSnapshot().artifacts[0])).toEqual(before);expect(w.getWorkbenchVisibleCells().map(box)).toEqual(cells)}
+ await act(async()=>w.beginContainerGeneration(draft.id,'生成两列数据表'));same()
+ await act(async()=>w.attachGenerationTask(draft.id,{taskId:'default-task',canvasNodeId:draft.id,state:'running',lastSeq:0}));same()
+ await act(async()=>w.applyGenerationInspection(draft.id,{taskId:'default-task',canvasNodeId:draft.id,state:'failed',lastSeq:1,events:[],error:'模型响应超时',completedAt:Date.now()}));same()
+ expect(w.getSnapshot().artifacts[0].generationStatus).toBe('failed')
+ await act(async()=>w.retryGeneration(draft.id));same()
+ await act(async()=>w.attachGenerationTask(draft.id,{taskId:'retry-task',canvasNodeId:draft.id,state:'running',lastSeq:0}));same()
+ await act(async()=>w.applyGenerationInspection(draft.id,{taskId:'retry-task',canvasNodeId:draft.id,state:'retrying',lastSeq:1,events:[]}));same()
+ const reopened=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');reopened.setCanvasSize({width:1000,height:700});reopened.setWorkbenchWidth(1000)
+ expect(geometry(reopened.getSnapshot().artifacts[0])).toEqual(before);expect(reopened.getWorkbenchVisibleCells().map(box)).toEqual(cells)
+ await act(async()=>w.applyGenerationInspection(draft.id,{taskId:'retry-task',canvasNodeId:draft.id,state:'completed',lastSeq:2,events:[],finalOutput:JSON.stringify({version:1,type:'table',title:'完成',columns:['指标','数值'],rows:[['A','1']]}),completedAt:Date.now()}));same()
+ expect(w.getSnapshot().artifacts[0].generationStatus).toBe('completed')
+})
 it('工作台拉框智能组件在排队、运行、重试、重新打开和完成时保持自定义尺寸',async()=>{
  const f=await fixture(true),w=f.workspace
  await act(async()=>w.setArtifacts([text('peer')]))
