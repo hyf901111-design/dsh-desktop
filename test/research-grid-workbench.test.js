@@ -110,6 +110,46 @@ it('移动按邻居中线插入，覆盖下半部时落到其后，空槽在预�
  expect(g.move([item('a',0,0)],item('a',0,14)).find(c=>c.id==='a').y).toBe(0)
 })
 
+it('整理时宽表格缩至可用短列，不跳过短指标下方可容纳的空位',()=>{
+ const g=createResearchGrid(),nodes=[
+  {id:'metrics',preferred:{width:480,height:240}},
+  {id:'chart',preferred:{width:480,height:460}},
+  {id:'table',preferred:{width:600,height:260}},
+  {id:'article',preferred:{width:480,height:660}}
+ ],before=nodes.map((n,i)=>item(n.id,i%2*20,Math.floor(i/2)*24,20,24))
+ const next=g.arrange(nodes,before,1148),a=next.find(c=>c.id==='metrics'),table=next.find(c=>c.id==='table')
+ expect(table).toMatchObject({x:a.x,y:a.y+a.h,w:a.w})
+ expect(table.w*g.metrics(1148).step-g.metrics(1148).gap).toBeGreaterThanOrEqual(280)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(g.arrange(nodes,next,1148)).toEqual(next)
+})
+
+it('多选调高共用尺寸增量，底下未选卡片让位且最小尺寸统一限制',()=>{
+ const g=createResearchGrid(),before=[item('a',0,0,20,8),item('b',20,0,20,10),item('c',0,10,40,6)],nodes=before.map(c=>({id:c.id}))
+ const next=g.resizeSelection(before,['a','b'],'y',3,nodes,1000)
+ expect(next.find(c=>c.id==='a')).toMatchObject({h:11,y:0})
+ expect(next.find(c=>c.id==='b')).toMatchObject({h:13,y:0})
+ expect(next.find(c=>c.id==='c').y).toBe(13)
+ const shrink=g.resizeSelection(before,['a','b'],'y',-99,nodes,1000)
+ expect(shrink.find(c=>c.id==='a').h).toBe(g.metrics(1000).minRows)
+ expect(shrink.find(c=>c.id==='b').h-shrink.find(c=>c.id==='a').h).toBe(2)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(g.resizeSelection(before,['a','b'],'y',0,nodes,1000)).toEqual(before)
+})
+
+it('多选调宽同步增量，保留未选同排组件的最小宽度',()=>{
+ const g=createResearchGrid(),before=[item('a',0,0,14,8),item('b',14,0,26,10),item('c',0,10,14,8),item('d',14,10,26,10)],nodes=before.map(c=>({id:c.id}))
+ const next=g.resizeSelection(before,['a','c'],'x',7,nodes,1000)
+ expect(next.find(c=>c.id==='a')).toMatchObject({w:21,x:0})
+ expect(next.find(c=>c.id==='c')).toMatchObject({w:21,x:0})
+ expect(next.find(c=>c.id==='b')).toMatchObject({w:19,x:21})
+ expect(next.find(c=>c.id==='d')).toMatchObject({w:19,x:21})
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ const limit=g.resizeSelection(before,['a','c'],'x',99,nodes,1000)
+ expect(limit.filter(c=>['b','d'].includes(c.id)).every(c=>c.w*g.metrics(1000).step-10>=280)).toBe(true)
+ expect(limit.find(c=>c.id==='a').w).toBe(limit.find(c=>c.id==='c').w)
+})
+
 it('并排组件调宽先压缩右侧到最小宽度，再让无法容纳的组件换行',()=>{
  const g=createResearchGrid(),before=[item('a',0,0,20,8),item('b',20,0,20,10),item('c',0,10,40,6)],nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{}}))
  const next=g.resize(before,{...before[0],w:26},nodes,1000)

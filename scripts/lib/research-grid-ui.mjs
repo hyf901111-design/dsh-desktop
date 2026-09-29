@@ -179,6 +179,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const grid=createResearchGrid(),view=root.ownerDocument.defaultView
   let op=null,frame=0,pending=null,autoFrame=0,lastPointer=null
   const preview=document.createElement('div');preview.className='ew-grid-placeholder';preview.hidden=true;root.appendChild(preview)
+  const groupPreviews=[]
   const width=()=>Math.max(240,Math.min(root.clientWidth,workspace.getSnapshot().canvasSize.availableWidth||root.clientWidth))
   const point=e=>{const r=root.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top+root.scrollTop}}
   const allowed=(cells,before=op.before)=>!cells.some(c=>{const old=before.find(n=>n.id===c.id),card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]');return card?.hasAttribute('data-research-geometry-blocked')&&old&&['x','y','w','h'].some(k=>old[k]!==c[k])})
@@ -186,11 +187,13 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(op?.kind!=='move')return
     const card=root.querySelector('[data-research-node-id="'+CSS.escape(op.cell.id)+'"]'),origin=grid.project([{id:op.cell.id}],[op.cell],op.width)[0]
     if(!card)return
-    card.style.setProperty('--grid-float-left',Math.max(12,Math.min(width()-12-origin.width,origin.x-origin.width/2+p.x-op.start.x))+'px')
-    card.style.setProperty('--grid-float-top',Math.max(12,origin.y-origin.height/2+p.y-op.start.y)+'px')
+    // Native nodes position their centre with translate(-50%, -50%). Keep that
+    // coordinate convention during the float and the release transition.
+    card.style.setProperty('--grid-float-left',Math.max(12+origin.width/2,Math.min(width()-12-origin.width/2,origin.x+p.x-op.start.x))+'px')
+    card.style.setProperty('--grid-float-top',Math.max(12+origin.height/2,origin.y+p.y-op.start.y)+'px')
   }
-  const paint=()=>{frame=0;if(!pending||!op)return;workspace.applyWorkbenchCells(pending,false);show(op.kind==='draw'?op.target:workspace.getWorkbenchVisibleCells().find(c=>c.id===op.cell.id));pending=null}
-  const show=c=>{const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(preview.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});preview.style.setProperty('--grid-gap',m.gap+'px');preview.hidden=false}
+  const paint=()=>{frame=0;if(!pending||!op)return;workspace.applyWorkbenchCells(pending,false);const visible=workspace.getWorkbenchVisibleCells();show(op.kind==='draw'?op.target:visible.find(c=>c.id===op.cell.id));groupPreviews.forEach(({id,element})=>show(visible.find(c=>c.id===id),element));pending=null}
+  const show=(c,element=preview)=>{if(!c)return;const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(element.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});element.style.setProperty('--grid-gap',m.gap+'px');element.hidden=false}
   const update=e=>{
     if(!op)return
     const p=point(e),m=grid.metrics(width());let target
@@ -199,7 +202,9 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     floatCard(p)
     const original=op.canonicalBefore.find(c=>c.id===op.cell?.id)
     const canonicalTarget=op.kind==='draw'?target:{...target,x:op.kind==='resize'||target.x===op.cell.x?original.x:target.x,y:op.kind==='resize'?original.y:Math.max(0,original.y+target.y-op.cell.y),...(op.kind==='move'?{w:original.w,h:original.h}:op.axis==='x'?{w:target.w===op.cell.w?original.w:target.w,h:original.h}:{w:original.w,h:target.h===op.cell.h?original.h:target.h})}
-    const proposed=(op.kind==='move'?grid.move(op.canonicalBefore,canonicalTarget,op.before,target):op.kind==='resize'&&op.axis==='x'?grid.resize(op.canonicalBefore,canonicalTarget,op.geometry,op.width):grid.place(op.canonicalBefore,canonicalTarget,target.id)).filter(c=>c.id!=='__draft__')
+    const groupResize=op.kind==='resize'&&op.selectedIds.length>1
+    const delta=op.axis==='x'?Math.round((p.x-op.start.x)/m.step):Math.round((p.y-op.start.y)/m.rowStep)
+    const proposed=(groupResize?grid.resizeSelection(op.canonicalBefore,op.selectedIds,op.axis,delta,op.geometry,op.width,op.before):op.kind==='move'?grid.move(op.canonicalBefore,canonicalTarget,op.before,target):op.kind==='resize'&&op.axis==='x'?grid.resize(op.canonicalBefore,canonicalTarget,op.geometry,op.width):grid.place(op.canonicalBefore,canonicalTarget,target.id)).filter(c=>c.id!=='__draft__')
     if(!allowed(proposed,op.canonicalBefore))return
     op.target=target;op.resolved=proposed
     if(op.kind==='draw')show(target)
@@ -225,7 +230,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     else{workspace.applyWorkbenchCells(op.canonicalBefore,false);workspace.cancelPointerGeometry([...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts])}
     const pointerId=op.pointerId;op=null;
     if(root.hasPointerCapture?.(pointerId))root.releasePointerCapture(pointerId)
-    pending=null;preview.hidden=true;root.removeAttribute('data-grid-operation');root.querySelectorAll('[data-grid-active]').forEach(e=>{e.removeAttribute('data-grid-active');e.style.removeProperty('--grid-float-left');e.style.removeProperty('--grid-float-top')})
+    pending=null;preview.hidden=true;groupPreviews.splice(0).forEach(({element})=>element.remove());root.removeAttribute('data-grid-operation');root.querySelectorAll('[data-grid-active]').forEach(e=>{e.removeAttribute('data-grid-active');e.style.removeProperty('--grid-float-left');e.style.removeProperty('--grid-float-top')})
   }
   const autoScroll=()=>{
     autoFrame=0;if(!op||!lastPointer)return
@@ -244,9 +249,11 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(!draw&&!before.some(c=>c.id===id))return
     e.preventDefault();e.stopImmediatePropagation();root.focus({preventScroll:true});root.setPointerCapture?.(e.pointerId)
     if(id&&!current.selection.selectedNodeIds.includes(id))workspace.updateSelection([id],'replace')
-    op={kind:draw?'draw':resize?'resize':'move',axis:resize?.getAttribute('data-workbench-resize-axis'),pointerId:e.pointerId,start:point(e),width:width(),before,canonicalBefore,cell:before.find(c=>c.id===id),geometry:[...current.files,...current.artifacts]}
+    const selectedIds=resize&&current.selection.selectedNodeIds.includes(id)?current.selection.selectedNodeIds.filter(selected=>{const element=root.querySelector('[data-research-node-id="'+CSS.escape(selected)+'"]');return element&&!element.hasAttribute('data-research-geometry-blocked')&&!element.hasAttribute('open')}):[id]
+    op={kind:draw?'draw':resize?'resize':'move',axis:resize?.getAttribute('data-workbench-resize-axis'),selectedIds,pointerId:e.pointerId,start:point(e),width:width(),before,canonicalBefore,cell:before.find(c=>c.id===id),geometry:[...current.files,...current.artifacts]}
     if(!draw&&!op.cell){op=null;return}
     root.setAttribute('data-grid-operation',op.kind);card?.setAttribute('data-grid-active','');lastPointer=e
+    if(resize)for(const selected of selectedIds){if(selected===id)continue;root.querySelector('[data-research-node-id="'+CSS.escape(selected)+'"]')?.setAttribute('data-grid-active','');const element=document.createElement('div');element.className='ew-grid-placeholder';element.hidden=true;root.appendChild(element);groupPreviews.push({id:selected,element})}
     update(e);autoFrame=view.requestAnimationFrame(autoScroll)
   }
   const move=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();lastPointer=e;update(e);if(!autoFrame)autoFrame=view.requestAnimationFrame(autoScroll)}

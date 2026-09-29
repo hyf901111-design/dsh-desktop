@@ -452,3 +452,32 @@ it('工作台表格保留横向滚动条，普通独立预览沿用自身样式'
  const result=buildResearchHtmlPreview(html,'表格','dark',{workbench:true})
  expect(result).toContain('scrollbar-width:thin!important');expect(result).toContain('height:7px!important');expect(result).not.toContain('scrollbar-width:none!important')
 })
+
+it('工作台整理不把折叠明细的表格布局高度算入内容',()=>{
+ const outer=runtime(buildResearchHtmlPreview('<svg width="500" height="120"></svg><p>图表说明</p><details><summary>完整行情数据</summary><table><tr><td>隐藏的第60行</td></tr></table></details>','图表','dark',{workbench:true}))
+ const inner=runtime(outer.childHtml(),{configure:win=>{
+  Object.defineProperty(win.document.documentElement,'clientWidth',{value:520});Object.defineProperty(win.document.documentElement,'clientHeight',{value:2000})
+  win.document.body.style.paddingBottom='8px'
+  const bounds=(top,bottom)=>({left:10,right:510,top,bottom,width:500,height:bottom-top})
+  win.document.querySelector('p').getBoundingClientRect=()=>bounds(10,30)
+  win.document.querySelector('svg').getBoundingClientRect=()=>bounds(10,120)
+  win.document.querySelector('summary').getBoundingClientRect=()=>bounds(100,120)
+  for(const element of win.document.querySelectorAll('table,td'))element.getBoundingClientRect=()=>bounds(140,1900)
+ }})
+ inner.parsed()
+ expect(inner.parentMessages.find(m=>m.data.type==='sherlock-workbench-content-size')?.data.height).toBe(128)
+})
+
+it('工作台展开明细按可滚动区域高度测量，不拉长至全部60行',()=>{
+ const outer=runtime(buildResearchHtmlPreview('<details open style="max-height:200px;overflow:auto"><summary>完整趋势数据</summary><table><tr><td>第60行</td></tr></table></details>','图表','dark',{workbench:true}))
+ const inner=runtime(outer.childHtml(),{configure:win=>{
+  Object.defineProperty(win.document.documentElement,'clientWidth',{value:520});Object.defineProperty(win.document.documentElement,'clientHeight',{value:2000})
+  win.document.body.style.paddingBottom='8px'
+  const bounds=(top,bottom)=>({left:10,right:510,top,bottom,width:500,height:bottom-top})
+  win.document.querySelector('details').getBoundingClientRect=()=>bounds(100,300)
+  win.document.querySelector('summary').getBoundingClientRect=()=>bounds(100,120)
+  for(const element of win.document.querySelectorAll('table,td'))element.getBoundingClientRect=()=>bounds(140,1900)
+ }})
+ inner.parsed()
+ expect(inner.parentMessages.find(m=>m.data.type==='sherlock-workbench-content-size')?.data.height).toBe(308)
+})

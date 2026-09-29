@@ -50,6 +50,31 @@ export function createResearchGrid() {
     peers.forEach((c,i)=>{if(i<count){changed.set(c.id,{...c,x:cursor,w:widths[i]});cursor+=widths[i]}else changed.set(c.id,{...c,y:active.y+active.h})})
     return compact(items.map(c=>changed.get(c.id)||c),active)
   }
+  // A selection shares one grid delta. Clamp the whole group, rather than
+  // letting a small member stop while the other cards keep changing size.
+  function resizeSelection(items,ids,axis,delta,nodes,width,visibleItems=items) {
+    const selected=new Set(ids),members=items.filter(c=>selected.has(c.id)),m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n]))
+    if(!members.length||!delta)return items.map(bounded)
+    const key=axis==='x'?'w':'h',min=c=>minimum(byId.get(c.id),m)[key],visible=new Map(visibleItems.map(c=>[c.id,c])),base=c=>(visible.get(c.id)||c)[key]
+    let lower=Math.max(...members.map(c=>Math.min(base(c),min(c))-base(c))),upper=Math.max(0,Math.min(...members.map(c=>(axis==='x'?columns-(visible.get(c.id)||c).x:300)-base(c))))
+    const rows=[]
+    if(axis==='x')for(const y of new Set(members.map(c=>(visible.get(c.id)||c).y))){
+      const first=Math.min(...members.filter(c=>(visible.get(c.id)||c).y===y).map(c=>(visible.get(c.id)||c).x)),row=visibleItems.filter(c=>c.y===y&&c.x>=first).sort((a,b)=>a.x-b.x)
+      const peerMin=c=>Math.max(minimum(byId.get(c.id),m).w,Math.min(c.w,Math.ceil((280+m.gap)/m.step)))
+      const count=row.filter(c=>selected.has(c.id)).length,reserved=row.reduce((sum,c)=>sum+(selected.has(c.id)?c.w:peerMin(c)),0)
+      upper=Math.min(upper,Math.max(0,Math.floor((columns-first-reserved)/count)))
+      rows.push({first,row,peerMin})
+    }
+    const change=clamp(Math.round(delta),lower,upper)
+    if(!change)return items.map(bounded)
+    const changed=new Map(members.map(c=>[c.id,{...c,[key]:base(c)+change,...(axis==='x'?{x:(visible.get(c.id)||c).x}:{})}]))
+    if(axis==='x'&&change>0)for(const {first,row,peerMin} of rows){
+      const widths=row.map(c=>changed.get(c.id)?.w??c.w)
+      let deficit=Math.max(0,first+widths.reduce((sum,w)=>sum+w,0)-columns),x=first
+      row.forEach((c,i)=>{if(!selected.has(c.id)){const shrink=Math.min(deficit,Math.max(0,widths[i]-peerMin(c)));widths[i]-=shrink;deficit-=shrink}changed.set(c.id,{...(changed.get(c.id)||items.find(n=>n.id===c.id)),x,w:widths[i]});x+=widths[i]})
+    }
+    return compact(items.map(c=>changed.get(c.id)||c))
+  }
   // Moving crosses a peer's midpoint before inserting above/below it. Resolve
   // compaction during the preview so release uses exactly that destination.
   function move(items,target,visibleItems=items,visibleTarget=target) {
@@ -63,9 +88,8 @@ export function createResearchGrid() {
     const resolved=new Map(compact(place(items,active)).map(c=>[c.id,c]))
     return items.map(c=>resolved.get(c.id))
   }
-  // Widths fill each shelf; each card keeps its own intrinsic content height.
-  // Compact the finished shelves into shorter columns instead of filling cards
-  // with blank space. Source order makes repeated Arrange deterministic.
+  // Plan widths by content, then fill the lowest usable space. A wide next
+  // card can narrow to that space; independent content heights never stretch.
   function arrange(nodes,items,width,visibleHeight=0) {
     const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),cellsById=new Map(items.map(n=>[n.id,bounded(n)])),ordered=nodes.map(n=>cellsById.get(n.id)).filter(Boolean)
     const preferred=ordered.map(c=>{const n=byId.get(c.id)||{},p=n.preferred||n,min=minimum(n,m),minWidth=Math.min(m.width-2*inset,n.kind==='generated-container'&&!n.containerSpec?320:280);return {w:Math.max(minWidth,Math.min(m.width-2*inset,p.width||480)),h:Math.max(min.h*m.step-m.gap,p.height||260),minCols:Math.min(columns,Math.ceil((minWidth+m.gap)/m.step)),minRows:min.h}})
@@ -84,7 +108,26 @@ export function createResearchGrid() {
       const h=Math.max(...shelf.map(c=>c.h))
       shelves.push({cells:shelf,h});y+=h;start+=count
     }
-    const result=compact(shelves.flatMap(s=>s.cells))
+    const planned=shelves.flatMap(s=>s.cells),skyline=Array(columns).fill(0),result=[],waiting=planned.map((c,i)=>({c,minCols:preferred[i].minCols}))
+    while(waiting.length){
+      let slot
+      // A later normal card can use a gap too narrow for the next draft. Keep
+      // source order whenever candidates share the same vertical position.
+      for(let i=0;i<waiting.length;i++){
+        const {c,minCols}=waiting[i]
+        for(const level of [...new Set(skyline)].sort((a,b)=>a-b)){
+          let found=false
+          for(let x=0;x<columns;){if(skyline[x]>level){x++;continue}let right=x;while(right<columns&&skyline[right]<=level)right++
+            if(right-x>=minCols){if(!slot||level<slot.y)slot={index:i,x,y:level,available:right-x};found=true;break}x=right}
+          if(found)break
+        }
+      }
+      const [{c}]=waiting.splice(slot.index,1),remainingMin=waiting.length?Math.min(...waiting.map(n=>n.minCols)):columns
+      let w=Math.min(c.w,slot.available)
+      if(slot.available-w<remainingMin)w=slot.available
+      const next={...c,x:slot.x,y:slot.y,w};result.push(next)
+      for(let x=next.x;x<next.x+w;x++)skyline[x]=next.y+next.h
+    }
     const resultById=new Map(result.map(c=>[c.id,c]));return items.map(c=>resultById.get(c.id))
   }
   function append(items,id,w=20,h=7){return bounded({id,x:0,y:Math.max(0,...items.map(n=>n.y+n.h)),w,h})}
@@ -108,5 +151,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,place,resize,move,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,place,resize,resizeSelection,move,arrange,append,draw,migrate,project}
 }
