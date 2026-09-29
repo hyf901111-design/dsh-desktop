@@ -164,6 +164,16 @@ it('整理保留错位的两列，内容高度变化不丢失下面的细分列'
  expect(g.arrange(nested,arranged,1400)).toEqual(arranged)
 })
 
+it('整理把跨在两列之间的浮动表格补入左列空位，适配宽度且不制造内部空白',()=>{
+ const g=createResearchGrid(),before=[item('gold-metrics',0,0,20,9),item('chart',20,0,20,17),item('gold-table',0,9,20,10),item('summary',20,17,20,15),item('pharma-metrics',0,19,20,9),item('heatmap',20,32,20,12),item('floating-table',8,44,20,12),item('news',20,56,20,10),item('article',0,56,20,34)]
+ const nodes=[...before].reverse().map(c=>({id:c.id,preferred:{height:c.h*g.metrics(1000).step-10}})),next=g.arrange(nodes,before,1000)
+ expect(next.find(c=>c.id==='floating-table')).toMatchObject({x:0,y:28,w:20,h:12})
+ expect(next.find(c=>c.id==='article')).toMatchObject({x:0,y:40,w:20,h:34})
+ expect(next.find(c=>c.id==='heatmap')).toMatchObject({x:20,y:32,w:20,h:12})
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(g.arrange(nodes,next,1000)).toEqual(next)
+})
+
 it('多选调高共用尺寸增量，底下未选卡片让位且最小尺寸统一限制',()=>{
  const g=createResearchGrid(),before=[item('a',0,0,20,8),item('b',20,0,20,10),item('c',0,10,40,6)],nodes=before.map(c=>({id:c.id}))
  const next=g.resizeSelection(before,['a','b'],'y',3,nodes,1000)
@@ -175,6 +185,13 @@ it('多选调高共用尺寸增量，底下未选卡片让位且最小尺寸统�
  expect(shrink.find(c=>c.id==='b').h-shrink.find(c=>c.id==='a').h).toBe(2)
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
  expect(g.resizeSelection(before,['a','b'],'y',0,nodes,1000)).toEqual(before)
+})
+
+it('整理本轮就消除吸附后留下的外侧空位，重复整理不继续扩宽',()=>{
+ const g=createResearchGrid(),before=[item('a',0,110,28,25),item('b',2,23,33,13),item('c',2,95,23,15)],nodes=before.map(c=>({id:c.id,preferred:{height:260}}))
+ const next=g.arrange(nodes,before,700)
+ expect(next.every(c=>c.x===0&&c.w===40)).toBe(true)
+ expect(g.arrange(nodes,next,700)).toEqual(next)
 })
 
 it('多选调宽同步增量，保留未选同排组件的最小宽度',()=>{

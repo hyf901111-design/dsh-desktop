@@ -109,7 +109,9 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     if(!entry.busy&&!entry.error&&!entry.view.webContents.isLoadingMainFrame()){
       entry.busy=true;const current=entry,generation=entry.generation
       try {
-        const image=await entry.view.webContents.capturePage(undefined,{stayHidden:!show,stayAwake:true})
+        // Capturing an interactive page must not resurrect its compositor after
+        // the renderer hides it to drag/resize the snapshot in the canvas.
+        const image=await entry.view.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})
         if(current.generation===generation&&!entry.view.webContents.isLoadingMainFrame()&&!image.isEmpty())current.image=image.toDataURL()
         current.typing=await entry.view.webContents.executeJavaScript("!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]')").catch(()=>false)
       } catch {} finally {current.busy=false}

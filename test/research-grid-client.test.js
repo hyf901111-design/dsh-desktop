@@ -87,6 +87,66 @@ it('首次打开组件菜单不被右侧会话自动滚动关闭，画板滚动�
  await f.event('scroll',f.canvas)
  expect(f.document.querySelector('.ew-grid-menu')).toBeNull()
 })
+
+it('链接组件在网格拖动期间隐藏原生层并暂停捕获，松手后恢复',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'data:image/png;base64,test',error:''})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge});let node
+ await act(async()=>{node=f.workspace.createWebLink('https://www.baidu.com/');f.workspace.updateSelection([node.id],'replace')})
+ const el=f.host.querySelector('[data-research-native-web]')
+ el.getBoundingClientRect=()=>({left:12,top:46,right:492,bottom:346,width:480,height:300})
+ Object.defineProperties(el,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>el
+ await act(async()=>{await new Promise(r=>setTimeout(r,350))})
+ expect(bridge.updateNative.mock.calls.some(([value])=>value.active)).toBe(true)
+ const count=bridge.updateNative.mock.calls.length
+ await act(async()=>{f.canvas.setAttribute('data-grid-operation','move');await new Promise(r=>setTimeout(r,250))})
+ expect(bridge.hideNative).toHaveBeenCalled();expect(bridge.updateNative).toHaveBeenCalledTimes(count)
+ await act(async()=>{f.canvas.removeAttribute('data-grid-operation');await new Promise(r=>setTimeout(r,350))})
+ expect(bridge.updateNative.mock.calls.length).toBeGreaterThan(count)
+ expect(bridge.updateNative.mock.lastCall[0].active).toBe(true)
+ const restored=bridge.updateNative.mock.calls.length
+ await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="'+node.id+'"]'),{button:0,pointerId:90,clientX:100,clientY:24})
+ expect(f.canvas.getAttribute('data-grid-operation')).toBe('move')
+ await f.event('blur',f.win)
+ expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ await act(async()=>{await new Promise(r=>setTimeout(r,400))})
+ expect(bridge.updateNative.mock.calls.length).toBeGreaterThan(restored)
+ expect(bridge.updateNative.mock.lastCall[0].active).toBe(true)
+ const afterBlur=bridge.updateNative.mock.calls.length
+ await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="'+node.id+'"]'),{button:0,pointerId:94,clientX:100,clientY:24})
+ await f.event('keydown',f.canvas,{key:'Escape',code:'Escape'})
+ expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ await act(async()=>{await new Promise(r=>setTimeout(r,400))})
+ expect(bridge.updateNative.mock.calls.length).toBeGreaterThan(afterBlur)
+})
+
+it('指针在同一吸附格内移动只更新浮卡，不反复提交整份画布',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setArtifacts([text('a'),text('b',740)]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:8},{id:'b',x:20,y:0,w:20,h:8}],true)})
+ const apply=vi.spyOn(w,'applyWorkbenchCells'),handle=f.host.querySelector('[data-workbench-drag-handle="a"]')
+ await f.event('pointerdown',handle,{button:0,pointerId:91,clientX:200,clientY:24})
+ const initial=apply.mock.calls.length
+ for(let i=1;i<=5;i++)await f.event('pointermove',f.canvas,{pointerId:91,clientX:200+i,clientY:24+i})
+ expect(apply.mock.calls.length).toBe(initial)
+ expect(f.host.querySelector('[data-research-node-id="a"]').style.getPropertyValue('--grid-float-left')).not.toBe('')
+ await f.event('pointercancel',f.canvas,{pointerId:91})
+})
+
+it('链接拖动前发出的迟到截图在松手后也不能覆盖当前快照',async()=>{
+ let resolve
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(()=>new Promise(r=>{resolve=r})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge});let node
+ await act(async()=>{node=f.workspace.createWebLink('https://www.baidu.com/');f.workspace.updateSelection([node.id],'replace')})
+ const el=f.host.querySelector('[data-research-native-web]')
+ el.getBoundingClientRect=()=>({left:12,top:46,right:492,bottom:346,width:480,height:300})
+ Object.defineProperties(el,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>el
+ await act(async()=>{await new Promise(r=>setTimeout(r,150))})
+ expect(resolve).toBeTypeOf('function')
+ await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="'+node.id+'"]'),{button:0,pointerId:93,clientX:100,clientY:24})
+ await f.event('pointerup',f.canvas,{pointerId:93,clientX:100,clientY:24})
+ expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ await act(async()=>resolve({image:'data:image/png;base64,STALE',error:''}))
+ expect(el.querySelector('img').getAttribute('src')).not.toBe('data:image/png;base64,STALE')
+})
 it('组件工具在已有组件上拉框，取消恢复让位；选择工具仍框选',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const before=structuredClone(f.workspace.getSnapshot().artifacts)
