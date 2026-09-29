@@ -250,6 +250,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "afterPack": "scripts/restore-packaged-runtime-patches.mjs"
   }
 }

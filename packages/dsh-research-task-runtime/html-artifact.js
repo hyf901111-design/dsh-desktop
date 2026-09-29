@@ -475,13 +475,18 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       let bottom = 0
       const visible = (element) => {
         if (!element || element.closest('script,style,template,noscript,[hidden]')) return false
+        // Chromium still returns table/range layout boxes inside a closed
+        // details element. Only its first summary is actually displayed.
+        for(let ancestor=element;ancestor&&ancestor!==document.body;ancestor=ancestor.parentElement){
+          if(ancestor.tagName==='DETAILS'&&!ancestor.open){const summary=Array.from(ancestor.children).find(child=>child.tagName==='SUMMARY');if(!summary?.contains(element))return false}
+        }
         const style = getComputedStyle(element)
         return style.display !== 'none' && style.visibility !== 'hidden' && style.position !== 'fixed'
       }
       const include = (bounds, element, borderBox = false) => {
         if (!bounds || !Number.isFinite(bounds.right) || !Number.isFinite(bounds.bottom) || !(bounds.width > 0 && bounds.height > 0)) return
-        let trailingWidth = 0
-        let trailingHeight = 0
+        let contentRight = bounds.right + (window.scrollX || 0)
+        let contentBottom = bounds.bottom + (window.scrollY || 0)
         let depth = 0
         // Include the last panel's trailing insets, not its viewport-derived
         // box height. Otherwise a 40px card padding can remain clipped even
@@ -489,15 +494,22 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
         for (let ancestor = element; ancestor && depth++ < 24; ancestor = ancestor.parentElement) {
           const style = getComputedStyle(ancestor)
           const pixels = (value) => Math.max(0, parseFloat(value) || 0)
-          trailingWidth += pixels(style.marginRight)
-          trailingHeight += pixels(style.marginBottom)
+          contentRight += pixels(style.marginRight)
+          contentBottom += pixels(style.marginBottom)
           if (ancestor !== element || !borderBox) {
-            trailingWidth += pixels(style.paddingRight) + pixels(style.borderRightWidth)
-            trailingHeight += pixels(style.paddingBottom) + pixels(style.borderBottomWidth)
+            contentRight += pixels(style.paddingRight) + pixels(style.borderRightWidth)
+            contentBottom += pixels(style.paddingBottom) + pixels(style.borderBottomWidth)
+          }
+          // A scrollable detail/table keeps a bounded reading viewport. Rows
+          // outside it do not earn thousands of pixels of blank card space.
+          if(ancestor!==element&&ancestor!==document.body&&ancestor!==document.documentElement){
+            const clip=ancestor.getBoundingClientRect(),clips=value=>['auto','scroll','hidden','clip'].includes(value)
+            if(clip.width>0&&clips(style.overflowX||style.overflow))contentRight=Math.min(contentRight,clip.right+(window.scrollX||0)-pixels(style.borderRightWidth)+pixels(style.marginRight))
+            if(clip.height>0&&clips(style.overflowY||style.overflow))contentBottom=Math.min(contentBottom,clip.bottom+(window.scrollY||0)-pixels(style.borderBottomWidth)+pixels(style.marginBottom))
           }
         }
-        right = Math.max(right, bounds.right + (window.scrollX || 0) + trailingWidth)
-        bottom = Math.max(bottom, bounds.bottom + (window.scrollY || 0) + trailingHeight)
+        right = Math.max(right, contentRight)
+        bottom = Math.max(bottom, contentBottom)
       }
       // Text ranges and replaced media describe real content, unlike body or a
       // min-height:100vh shell whose box grows whenever its iframe grows.
