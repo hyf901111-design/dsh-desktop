@@ -84,6 +84,19 @@ it('initializes new templates and ordinary edits from their defaults without res
  expect(send).toHaveBeenLastCalledWith(expect.objectContaining({animate:false,state:expect.objectContaining({controls:[expect.objectContaining({value:'edited-default'})]})}),'*')
 })
 
+it('journal rollback clears cached controls only for the owning iframe',()=>{
+ const win=new Window(),doc=win.document;doc.body.innerHTML='<article><div data-research-preview-body><iframe></iframe></div></article>'
+ const inner=doc.querySelector('iframe').contentWindow,feedback=createComponentRefreshFeedback(doc.querySelector('article')),send=vi.spyOn(inner,'postMessage')
+ clean.push(async()=>{feedback.dispose();await win.happyDOM.abort()})
+ feedback.update(null,'histogram')
+ const ready=value=>win.dispatchEvent(new win.MessageEvent('message',{source:inner,data:{type:'sherlock-workbench-ready',revision:workbenchContentRevision('histogram'),state:{values:[],controls:[{path:[0],tag:'SELECT',value,checked:false}],scroll:[]}}}))
+ ready('4')
+ win.dispatchEvent(new win.MessageEvent('message',{source:win,data:{type:'sherlock-interaction-reload'}}));ready('12')
+ expect(send.mock.calls.at(-1)[0].state.controls[0].value).toBe('4')
+ win.dispatchEvent(new win.MessageEvent('message',{source:inner,data:{type:'sherlock-interaction-reload'}}));ready('12')
+ expect(send.mock.calls.at(-1)[0].state.controls[0].value).toBe('12')
+})
+
 it('waits for new iframe content when success status arrives before the replacement HTML',()=>{
  vi.useFakeTimers();const win=new Window(),doc=win.document;doc.body.innerHTML='<article><div data-research-preview-body><iframe></iframe></div></article>'
  const inner=doc.querySelector('iframe').contentWindow,feedback=createComponentRefreshFeedback(doc.querySelector('article')),send=vi.spyOn(inner,'postMessage')

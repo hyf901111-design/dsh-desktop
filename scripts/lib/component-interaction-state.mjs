@@ -44,7 +44,7 @@ function patchLegacyComponentInteractionState(source) {
   return source+'\n/* ODYSSEY_COMPONENT_INTERACTION_V1 */';
 }
 
-export function patchComponentInteractionState(source) {
+function patchSharedComponentInteractionState(source) {
   source = patchLegacyComponentInteractionState(source);
   if(source.includes('/* ODYSSEY_COMPONENT_SHARED_STATE_V1 */'))return source;
   const once=(a,b)=>{if(!source.includes(a)||source.indexOf(a)!==source.lastIndexOf(a))throw Error('Shared state anchor missing: '+a.slice(0,90));source=source.replace(a,b);};
@@ -101,4 +101,15 @@ export function patchComponentInteractionState(source) {
     }
     if(data.type==='sherlock-interaction-ready'){`);
   return source+'\n/* ODYSSEY_COMPONENT_SHARED_STATE_V1 */';
+}
+
+export function patchComponentInteractionState(source) {
+  source=patchSharedComponentInteractionState(source);
+  if(source.includes('/* ODYSSEY_COMPONENT_INTERACTION_ACK_V2 */'))return source;
+  const once=(a,b)=>{if(source.split(a).length!==2)throw Error('Interaction acknowledgement anchor missing: '+a.slice(0,90));source=source.replace(a,b);};
+  once('const sendInteraction=()=>{','const sendInteraction=(rejectedEventId)=>{');
+  once("{version,events:{}},readOnly:current.readOnly},'*');", "{version,events:{}},readOnly:current.readOnly,...(typeof rejectedEventId==='string'?{rejectedEventId}:{})},'*');");
+  once('researchInteractionVersion(spec.html),data.event))sendInteraction();','researchInteractionVersion(spec.html),data.event))sendInteraction(data.event?.id);');
+  once('catch(error){sherlockBoardsAdapter?.showError(error);sendInteraction();}','catch(error){sherlockBoardsAdapter?.showError(error);sendInteraction(data.event?.id);}');
+  return source+'\n/* ODYSSEY_COMPONENT_INTERACTION_ACK_V2 */';
 }

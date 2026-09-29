@@ -675,6 +675,7 @@ export function validResearchInteractionState(s) {
 const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractionRuntime(authorizedEvents = new WeakSet()) {
   let initialized=false, replaying=false, readOnly=true, clock=0;
   let applied=[];
+  const pending=new Set();
   const pathOf=el=>{const p=[];while(el&&el!==document.body){const parent=el.parentElement;if(!parent)return null;p.unshift([...parent.children].indexOf(el));el=parent;}return p;};
   const resolve=p=>p.reduce((el,n)=>el?.children[n],document.body);
   const post=(type,extra={})=>parent.postMessage({type,...extra},'*');
@@ -700,6 +701,11 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     if(document.documentElement.hasAttribute('data-sherlock-shared-state'))return;
     const data=event.data; readOnly=data.readOnly!==false;
     const events=Object.values(data.state?.events||{}).sort((a,b)=>a.clock-b.clock||a.id.localeCompare(b.id));
+    if(pending.has(data.rejectedEventId)){post('sherlock-interaction-reload');return;}
+    for(const e of events)pending.delete(e.id);
+    // React can acknowledge the first input while later local edits are still
+    // in flight. A matching prefix is not an undo until that tail was accepted.
+    if(!readOnly && events.length<applied.length && events.every((e,i)=>applied[i]===e.id) && applied.slice(events.length).every(id=>pending.has(id))){initialized=true;return;}
     if(applied.some((id,i)=>events[i]?.id!==id)){post('sherlock-interaction-reload');return;}
     replaying=true;
     try {for(const e of events.slice(applied.length)){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {replaying=false;initialized=true;}
@@ -710,7 +716,7 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     let el=event.target;
     if(!(el instanceof Element))return;
     // Opening a native select is transient browser UI; only its value changes persist.
-    if(type==='click' && el.matches('select'))return;
+    if(el.matches('select') && type!=='change')return;
     // Keep the actual target: canvas, SVG and delegated grid handlers need it.
     // Label activation forwards a second click to its input; record only that control click.
     if(type==='click' && el.closest('label') && !el.matches('input,select,textarea,button'))return;
@@ -723,7 +729,7 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     if(type==='input'||type==='change'){if('value'in el)e.value=String(el.value).slice(0,8192);if('checked'in el)e.checked=el.checked;}
     if(type==='click'){const r=el.getBoundingClientRect();if(r.width>0&&r.height>0){e.x=Math.max(0,Math.min(1,(event.clientX-r.left)/r.width));e.y=Math.max(0,Math.min(1,(event.clientY-r.top)/r.height));}}
     if(type==='keydown')e.key=event.key;
-    applied.push(e.id);post('sherlock-interaction-event',{event:e});
+    applied.push(e.id);pending.add(e.id);post('sherlock-interaction-event',{event:e});
   },true);
   addEventListener('DOMContentLoaded',()=>post('sherlock-interaction-ready'),{once:true});
 }`;
@@ -776,7 +782,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
     }
     if(!standalone && event.source===frame.contentWindow && data && ['sherlock-interaction-ready','sherlock-interaction-reload','sherlock-interaction-event'].includes(data.type)) {
       if(data.type==='sherlock-interaction-ready'&&interactionState)frame.contentWindow.postMessage(interactionState,'*');
-      else if(data.type==='sherlock-interaction-reload'){frame.srcdoc=inner;return;}
+      else if(data.type==='sherlock-interaction-reload'){parent.postMessage({type:'sherlock-interaction-reload'},'*');frame.srcdoc=inner;return;}
       parent.postMessage(data,'*');return;
     }
     if (runtimeFont && !standalone && data && typeof data === 'object' && !Array.isArray(data) && data.font === 'noto-sc') {

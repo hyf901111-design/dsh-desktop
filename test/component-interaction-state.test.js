@@ -4,6 +4,7 @@ import vm from 'node:vm'
 import {Window} from 'happy-dom'
 import {validResearchInteractionState,validResearchInteractionEvent,researchInteractionVersion} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {patchComponentInteractionState} from '../scripts/lib/component-interaction-state.mjs'
+import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 const e=(id,clock)=>({id,clock,targetRoute:[1],tag:'BUTTON',type:'click'})
 it('bounds journal data and ties it to component source',()=>{
  expect(validResearchInteractionState({version:'v',events:{a:e('a',1)}})).toBe(true)
@@ -26,7 +27,7 @@ it('restores JS closure state, incrementally applies remote events, and ignores 
  send({c:e('c',1),a:e('a',2)});expect(messages.at(-1).type).toBe('sherlock-interaction-reload');
 })
 it('patches the actual renderer without dropping saved state on parsing',()=>{
- const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');const patched=patchComponentInteractionState(source);
+ const source=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));const patched=patchComponentInteractionState(source);
  expect(patchComponentInteractionState(patched)).toBe(patched);
  expect(patched).toContain('config:{interactionState:value.config.interactionState,');
  expect(patched).toContain('researchSharedStateSinks.set(sessionId');
@@ -105,5 +106,27 @@ it('打开原生select不写入交互日志，实际分类change仍保存并可�
  select.value='industry';listeners.change({isTrusted:true,target:select})
  expect(out).toHaveLength(1);expect(out[0]).toMatchObject({type:'sherlock-interaction-event',event:{type:'change',tag:'SELECT',value:'industry'}})
  expect(validResearchInteractionEvent(out[0].event)).toBe(true)
+ w.happyDOM.abort()
+})
+
+it('连续本地操作的部分确认不重载，完整确认后撤销仍重载；拒绝操作立即回退',()=>{
+ const w=new Window({settings:{disableJavaScriptEvaluation:true}});w.document.body.innerHTML='<input><button>详情</button>'
+ const runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1]
+ const listeners={},out=[],parent={postMessage:m=>out.push(m)},listen=w.document.addEventListener.bind(w.document);let serial=0
+ w.document.addEventListener=(type,fn,...args)=>{listeners[type]=fn;listen(type,fn,...args)}
+ vm.runInNewContext('('+runtime+')()', {document:w.document,parent,addEventListener:w.addEventListener.bind(w),Element:w.Element,Event:w.Event,MouseEvent:w.MouseEvent,KeyboardEvent:w.KeyboardEvent,HTMLInputElement:w.HTMLInputElement,HTMLSelectElement:w.HTMLSelectElement,HTMLTextAreaElement:w.HTMLTextAreaElement,crypto:{randomUUID:()=> 'edit-'+(++serial)}})
+ const receive=(events,extra={})=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events},readOnly:false,...extra}}))
+ const input=w.document.querySelector('input');receive({});out.length=0
+ input.value='4';listeners.input({isTrusted:true,target:input});const first=out.at(-1).event
+ input.value='40';listeners.input({isTrusted:true,target:input});const second=out.at(-1).event
+ receive({[first.id]:first})
+ expect(out.filter(m=>m.type==='sherlock-interaction-reload')).toHaveLength(0)
+ expect(input.value).toBe('40')
+ receive({[first.id]:first,[second.id]:second})
+ receive({[first.id]:first})
+ expect(out.at(-1).type).toBe('sherlock-interaction-reload')
+ input.value='400';listeners.input({isTrusted:true,target:input});const rejected=out.at(-1).event
+ receive({[first.id]:first,[second.id]:second},{rejectedEventId:rejected.id})
+ expect(out.at(-1).type).toBe('sherlock-interaction-reload')
  w.happyDOM.abort()
 })
