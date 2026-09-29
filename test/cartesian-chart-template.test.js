@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {CHART_VARIANTS,chartDataIssue,requestedChartVariant} from '../packages/dsh-research-task-runtime/chart-template-contract.js';
+import {CARTESIAN_CHART_TEMPLATES,chartDataIssue,requestedChartVariant} from '../packages/dsh-research-task-runtime/chart-template-contract.js';
 import {cartesianChartSvg,renderCartesianChart} from '../packages/dsh-research-task-runtime/cartesian-chart-artifact.js';
 import {acceptArtifactOutput,workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js';
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js';
@@ -9,7 +9,7 @@ import {generateSimulatedPanel} from '../packages/dsh-research-task-runtime/simu
 
 const data=(variant,more={})=>({version:1,type:'chart',title:'经营分析',variant,labels:['一季度','二季度','三季度'],series:[{name:'产品',values:[20,35,50]},{name:'服务',values:[10,25,30]}],asOf:'2026-09-30 · 模拟数据',unit:'万元',...more});
 describe('Figma cartesian templates',()=>{
- it.each(CHART_VARIANTS)('%s flows through the real artifact and workbench contract without losing data',variant=>{
+ it.each(CARTESIAN_CHART_TEMPLATES.map(t=>t.variant))('%s flows through the real artifact and workbench contract without losing data',variant=>{
    const input=data(variant), output=JSON.parse(acceptArtifactOutput(JSON.stringify(input)));
    expect(output.type).toBe('html');
    expect(readTemplateModel(output).data).toEqual(input);

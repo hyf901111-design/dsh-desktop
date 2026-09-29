@@ -55,3 +55,13 @@
 本轮动效：12 类坐标图及已有宿主 SVG/Canvas/CSS 首次呈现统一生长；650ms、错峰≤180ms，减少动态效果静态显示。生产沙盒计数确认横向图首次 12 次动画，调宽/主题切换后仍为 12，控制台无警告或错误。Figma `1935:376338` 说明同步 650ms、错峰与不重播规则。证据目录新增 `cartesian-native-final.json`、`cartesian-native-final-checks.json`、`cartesian-native-final.png`、`cartesian-native-dark-details.png`、`cartesian-native-light.png`、`cartesian-horizontal-compact.png`、`build-cartesian-unit.log`、`package-cartesian-unit.log`。
 
 边界：当前注册 40 模板，不等于最新 Figma 44+30 全覆盖；不宣称整体成功率>90%，未做正式发布或 main 提升。
+
+## 构成、分布与目标图模板及首次加载动效
+
+新增 `chart.pie/donut/treemap/sunburst/radar/histogram/box/bullet/gauge` 九类宿主模板，注册表达到 49 项（其中 21 类 chart）。按对应 Figma 22A 主组件读取结构与字段约束；不把坐标图的 labels/series 契约强套到层级或分布数据。饼环保留原值占比，树图按叶节点求和、按面积分割，直方图保留样本并正确处理闭区间/不等宽密度，箱线图明确四分位数与须线口径，子弹及仪表使用固定上下界；百分比指标差额显示百分点。
+
+生产 CSP / Trusted Types 沙盒实测九类三主题与 320px 窄卡，共 36 条浏览器状态检查，无横向溢出。首次动画分别为 4/4/5/7/12/6/4/3/1 次，主题切换、调宽、键盘读数后计数不增加。旭日图下钻软件收入 80，子项 60/20、75%/25%，返回父层恢复总额 128；直方图由 6 箱改为 4 箱后频数 4/9/8/3，总样本 24；雷达隐藏上期后读数只呈现本期且禁止隐藏最后一组；企业模式选中明细为 rgb(232,232,235)。控制台无错误或警告。短卡长内容内部滚动，外框尺寸不因动效变化。
+
+97 项直接相关模板、数据、注册、执行策略、内置技能与动效检查全部通过，未跑全功能测试。Figma 原说明 `1935:376338` 已同步九类动效、650ms、错峰≤180ms及下钻/分箱不重播；字体已加载并原位编辑，说明仍在既有容器内。Figma 截图服务本轮返回 1×1 占位图，故未将这一轮标记为像素级对齐验收通过。
+
+证据：`/tmp/ework-template-acceptance-20260930/special-focused-final.log`、`special-browser-checks.json`、`special-interactive-checks.json`、九类宽卡及窄卡截图。本节是模板与浏览器交互结果；新模板的真实客户端自然语言创建仍待本次集成包验证。49 项注册不等于 44+30 全量覆盖，整体成功率目标仍未达到验收条件。

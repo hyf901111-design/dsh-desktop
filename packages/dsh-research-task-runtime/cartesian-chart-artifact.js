@@ -1,4 +1,4 @@
-import {chartDataIssue} from './chart-template-contract.js';
+import {CARTESIAN_CHART_TEMPLATES,chartDataIssue} from './chart-template-contract.js';
 
 // Pure SVG geometry is also used in the sandbox. Never evaluates model code.
 // Axis domains stay fixed while toggling series, preserving visual comparison.
@@ -128,7 +128,7 @@ function cartesianChartRuntime(spec, geometry) {
 }
 
 export function renderCartesianChart(spec) {
-  if(chartDataIssue(spec))return undefined;
+  if(!CARTESIAN_CHART_TEMPLATES.some(t=>t.variant===spec?.variant)||chartDataIssue(spec))return undefined;
   // Keep the original native line/bar data path for existing saved consumers.
   if(['line','bar'].includes(spec.variant)&&!['asOf','unit','subtitle','note'].some(k=>spec[k]!==undefined)&&spec.labels.length<=24&&spec.series.length<=6)return undefined;
   const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
