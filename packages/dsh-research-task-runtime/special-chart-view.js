@@ -8,7 +8,8 @@ export function specialChartView(spec, width=624, options={}){
  const text=(x,y,value,attrs={})=>node('text',{x,y,...attrs},[String(value)]);
  const short=(s,n=12)=>s.length>n?s.slice(0,n-1)+'…':s;
  const w=Math.max(280,width),kind=spec.variant,composition=['pie','donut','sunburst'].includes(kind);
- const sw=composition?280:w,h=composition?264:kind==='bullet'?Math.max(180,spec.rows.length*54+34):260;
+ const sw=composition?280:w,ideal=composition?264:kind==='bullet'?Math.max(180,spec.rows.length*54+34):260;
+ const h=Math.max(kind==='bullet'?spec.rows.length*46+34:160,Math.min(ideal,Number.isFinite(options.height)?options.height:ideal));
  const elements=[], rows=[],metrics={};let headers=['项目','数值'+unit],summary='',footnote='',root=spec.root;
  const selected=(i,children)=>node('g',{'data-inspect':i},children);
  const title=s=>node('title',{},[s]);
@@ -31,6 +32,7 @@ export function specialChartView(spec, width=624, options={}){
  };
  const grid=(s)=>{for(let i=0;i<=4;i++){const v=s.lo+(s.hi-s.lo)*i/4,y=s.y(v);elements.push(node('line',{class:'grid',x1:s.left,x2:s.right,y1:y,y2:y}),text(s.left-8,y+4,fmt(v),{'text-anchor':'end'}));}};
  if(['pie','donut','sunburst'].includes(kind)){
+  const cy=h/2,radius=Math.min(112,(h-24)/2),ratio=radius/112;
   const items=kind==='sunburst'?(root.children??[root]).map((n,i)=>({label:n.name,value:value(n),children:n.children,path:root.children?[...path,i]:path})):spec.items;
   const total=items.reduce((s,i)=>s+i.value,0);let start=-Math.PI/2;
   headers=['分类','数值'+unit,'占比'];summary=(root?.name??'合计')+' '+fmt(total)+unit;
@@ -38,17 +40,17 @@ export function specialChartView(spec, width=624, options={}){
   items.forEach((item,i)=>{
    const end=start+(total?item.value/total*Math.PI*2:0),detail=`${item.label} · ${fmt(item.value)}${unit} · ${pct(item.value,total)}`;
    row(item.label,[fmt(item.value),pct(item.value,total)],detail,{path:item.path,drill:!!item.children,color:color(i)});
-   const mark=(r,inner,a,b,opacity=1)=>node('path',{class:'composition-sector',d:arc(140,132,r,inner,a,b),fill:color(i),'fill-opacity':opacity,stroke:'var(--sherlock-surface)','stroke-width':1.5,'data-grow-radial':'true'},[title(detail)]);
+   const mark=(r,inner,a,b,opacity=1)=>node('path',{class:'composition-sector',d:arc(140,cy,r*ratio,inner*ratio,a,b),fill:color(i),'fill-opacity':opacity,stroke:'var(--sherlock-surface)','stroke-width':1.5,'data-grow-radial':'true'},[title(detail)]);
    const marks=[];
    if(item.value>0){
     marks.push(mark(kind==='sunburst'&&item.children?77:112,kind==='pie'?0:kind==='donut'?68:40,start,end));
     if(kind==='sunburst'&&item.children){let angle=start;item.children.forEach((c,ci)=>{const b=angle+value(c)/item.value*(end-start);marks.push(mark(112,77,angle,b,.55+.4*(ci%3)/2));angle=b;});}
-    if(kind==='pie'&&item.value/total>=.08){const p=polar(140,132,76,(start+end)/2);marks.push(text(p[0],p[1]+4,pct(item.value,total),{class:'sector-label','text-anchor':'middle'}));}
+    if(kind==='pie'&&item.value/total>=.08&&radius>=90){const p=polar(140,cy,76*ratio,(start+end)/2);marks.push(text(p[0],p[1]+4,pct(item.value,total),{class:'sector-label','text-anchor':'middle'}));}
    }
    elements.push(selected(i,marks));metrics.sectors.push({start,end,value:item.value});start=end;
   });
-  if(!total)elements.push(text(140,136,'总量为 0，暂无占比',{'text-anchor':'middle'}));
-  else if(kind!=='pie')elements.push(text(140,126,fmt(total),{class:'center-value','text-anchor':'middle'}),text(140,146,spec.unit??'合计',{'text-anchor':'middle'}));
+  if(!total)elements.push(text(140,cy+4,'总量为 0，暂无占比',{'text-anchor':'middle'}));
+  else if(kind!=='pie')elements.push(text(140,cy-6,fmt(total),{class:'center-value','text-anchor':'middle',style:`font-size:${Math.min(24,Math.max(14,(kind==='donut'?136:80)*ratio/(fmt(total).length*.62)))}px`}),text(140,cy+14,spec.unit??'合计',{'text-anchor':'middle'}));
   footnote=kind==='sunburst'?'父节点等于叶节点合计 · 点击分类下钻':'面积按原值占比 · 悬停分类联动明细';
  }else if(kind==='treemap'){
   const items=(root.children??[root]).map((n,index)=>({n,index,v:value(n)})).sort((a,b)=>b.v-a.v),total=value(root);
@@ -74,7 +76,7 @@ export function specialChartView(spec, width=624, options={}){
   if(!total)elements.push(text(sw/2,h/2,'总量为 0，暂无面积分布',{'text-anchor':'middle'}));
   footnote='面积按叶节点原值汇总 · 点击分类下钻';
  }else if(kind==='radar'){
-  const cx=sw/2,cy=130,r=89,n=spec.labels.length,point=(v,i)=>polar(cx,cy,r*v/100,-Math.PI/2+i*Math.PI*2/n);
+  const cx=sw/2,cy=h/2,r=Math.min(89,(h-40)/2),n=spec.labels.length,point=(v,i)=>polar(cx,cy,r*v/100,-Math.PI/2+i*Math.PI*2/n);
   for(const level of [25,50,75,100]){
    elements.push(node('polygon',{class:'grid',points:spec.labels.map((_,i)=>point(level,i).join(',')).join(' '),fill:'none'}));
    elements.push(text(cx+4,cy-r*level/100,level));
@@ -129,7 +131,7 @@ export function specialChartView(spec, width=624, options={}){
  }else if(kind==='bullet'){
   const left=Math.min(120,sw*.26),right=sw-18,pw=right-left,x=v=>left+(v-spec.min)/(spec.max-spec.min)*pw;
   spec.rows.forEach((r,i)=>{
-   const y=18+i*54,detail=`${r.label} · 实际 ${fmt(r.value)}${unit} · 目标 ${fmt(r.target)}${unit} · 差额 ${fmt(r.value-r.target)}${differenceUnit}`;
+   const y=10+i*Math.min(54,(h-34)/spec.rows.length),detail=`${r.label} · 实际 ${fmt(r.value)}${unit} · 目标 ${fmt(r.target)}${unit} · 差额 ${fmt(r.value-r.target)}${differenceUnit}`;
    row(r.label,[fmt(r.value),fmt(r.target),fmt(r.value-r.target)],detail);let start=spec.min;
    const marks=spec.bands.map((b,bi)=>{const mark=node('rect',{class:'background',x:x(start),y:y+16,width:x(b.to)-x(start),height:20,fill:'var(--sherlock-muted)','fill-opacity':.1+bi*.07},[title(`${b.label}：${fmt(start)}–${fmt(b.to)}${unit}`)]);start=b.to;return mark;});
    marks.push(node('rect',{x:left,y:y+22,width:x(r.value)-left,height:8,fill:color(i),'data-grow-axis':'x'}),node('line',{class:'target',x1:x(r.target),x2:x(r.target),y1:y+12,y2:y+40,stroke:'var(--sherlock-text)','stroke-width':2}),text(left,y+7,`实际 ${fmt(r.value)} · 目标 ${fmt(r.target)}`),node('rect',{class:'hit',x:left,y,width:pw,height:44,fill:'transparent'},[title(detail)]));
@@ -138,7 +140,7 @@ export function specialChartView(spec, width=624, options={}){
   for(let i=0;i<=4;i++){const v=spec.min+(spec.max-spec.min)*i/4;elements.push(text(x(v),h-6,fmt(v),{'text-anchor':'middle'}));}
   summary='实际与目标'+unit;headers=['指标','实际'+unit,'目标'+unit,'差额'+differenceUnit];footnote='参考区间：'+spec.bands.map((b,i)=>`${b.label} ${fmt(i?spec.bands[i-1].to:spec.min)}–${fmt(b.to)}`).join(' · ')+'；范围本身不代表好坏';
  }else if(kind==='gauge'){
-  const cx=sw/2,cy=195,r=Math.min(155,(sw-60)/2),angle=v=>Math.PI+(v-spec.min)/(spec.max-spec.min)*Math.PI;
+  const cx=sw/2,cy=h-42,r=Math.min(155,(sw-60)/2,h-64),angle=v=>Math.PI+(v-spec.min)/(spec.max-spec.min)*Math.PI;
   elements.push(node('path',{class:'background',d:arc(cx,cy,r,r-22,Math.PI,Math.PI*2),fill:'var(--sherlock-surface-muted)'}));
   const detail=`当前 ${fmt(spec.value)}${unit}`+(spec.target===undefined?'':` · 目标 ${fmt(spec.target)}${unit} · 差额 ${fmt(spec.value-spec.target)}${differenceUnit}`);
   const marks=[node('path',{'data-grow-radial':'true',d:arc(cx,cy,r,r-22,Math.PI,angle(spec.value)),fill:color(0)},[title(detail)])];
