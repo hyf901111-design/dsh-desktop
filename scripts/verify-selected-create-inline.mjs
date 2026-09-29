@@ -360,6 +360,17 @@ try{
  await page.evaluate(id=>workspace.applyGenerationInspection(id,{taskId:'drawn-browser',canvasNodeId:id,state:'completed',lastSeq:2,events:[],finalOutput:JSON.stringify({version:1,type:'table',title:'完成',columns:['指标','数值'],rows:[['A','1']]}),completedAt:Date.now()}),drawnId)
  await frame();assert.deepEqual(await drawnBox(),drawnBefore,'completion preserves user frame')
  report.checks.push('real pointer-drawn frame preserves exact width and height from draft through queue, running and completion; progress scrolls internally and actions remain in frame')
+ const tailLayout=await page.evaluate(()=>{
+   const cell=(id,x,y,w,h)=>({id,x,y,w,h}),before=[cell('gold',0,0,22,8),cell('pharma',22,0,18,8),cell('table',0,8,22,10),cell('btc',22,8,18,7),cell('stocks',22,15,18,11),cell('news',22,26,18,22),cell('report',22,48,18,40),cell('candle',22,88,18,16),cell('heatmap',22,104,18,12)]
+   workspace.setArtifacts(before.map(c=>({id:c.id,kind:'generated-container',messageId:c.id,title:c.id,excerpt:'内容按当前阅读顺序保留',containerPrompt:'显示完整组件',refreshMinutes:0,generationStatus:'completed',generationLastSeq:0,containerSpec:{version:1,type:'table',title:c.id,columns:['内容','来源'],rows:Array.from({length:c.h},()=>['保留 '+c.id+' 的完整内容','原始来源'])},x:200,y:200,width:450,height:240,sizeMode:'manual'})))
+   workspace.applyWorkbenchCells(before,true);const size=workspace.getSnapshot().canvasSize,step=(Math.min(size.width,size.availableWidth||Infinity)-14)/40,measured=new Map(before.map(c=>[c.id,{width:c.w*step-10,height:c.h*step-10}]))
+   const organized=workspace.organizeCanvas(measured);const after=workspace.getWorkbenchCells();workspace.organizeCanvas(measured);const again=workspace.getWorkbenchCells();workspace.undo();const undone=workspace.getWorkbenchCells();workspace.redo();document.querySelector('[data-research-canvas]').scrollTop=0
+   return {before,after,again,undone,organized,size,step,nodes:workspace.getSnapshot().artifacts.map(n=>({id:n.id,content:n.containerSpec.rows[0][0]}))}
+ })
+ assert.deepEqual(tailLayout.again,tailLayout.after,'single-column tail packing is stable');assert.deepEqual(tailLayout.undone,tailLayout.before,'one undo restores every tail component')
+ assert.ok(tailLayout.after.filter(c=>['news','report','candle','heatmap'].includes(c.id)&&c.x===0).length>=2,'later content fills the left column');assert.ok(Math.max(...tailLayout.after.map(c=>c.y+c.h))<90,'packing removes the large empty column');assert.ok(tailLayout.nodes.every(n=>n.content.includes(n.id)))
+ await frame();await page.screenshot({path:output+'balanced-column-tails.png',fullPage:true});report.screenshots.push('balanced-column-tails.png')
+ report.checks.push('single-column news/article tail fills the earlier-ended column without a spanning boundary; existing top-row columns and full contents remain; repeated arrange stable and one undo restores all positions')
  assert.deepEqual(errors,[])
  await writeFile(output+'report.json',JSON.stringify(report,null,2))
  console.log(JSON.stringify(report,null,2))

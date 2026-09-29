@@ -96,7 +96,9 @@ export function createResearchGrid() {
           const growth=Math.min(160,...above.filter(c=>c.y+c.h===bottom).map(c=>(c.h*m.step-m.gap)*.25))
           if(!above.length||missing<=0||missing*m.step<=growth)continue
           const placed={...target,x,w,y:bottom}
-          if(previous.some(c=>overlap(placed,c)))continue
+          // A partly overlapping preceding card is still earlier content. Do
+          // not push it down to steal its column while filling another gap.
+          if(next.some(c=>c.id!==target.id&&c.y<target.y&&overlap(placed,c)))continue
           const packed=compact(next.map(c=>c.id===target.id?placed:c)),rank=[target.y,-missing,Math.abs(x-target.x)]
           if(!best||rank.some((v,j)=>v!==best.rank[j]&&rank.slice(0,j).every((p,k)=>p===best.rank[k])&&v<best.rank[j]))best={rank,packed}
         }
@@ -112,6 +114,36 @@ export function createResearchGrid() {
     // retain their previous order, including unequal height cards.
     for(const n of rest)if(overlap(n,active))n.y=active.y+active.h
     return compact([...rest,active],active)
+  }
+  function fillColumnTails(items,nodes,width) {
+    let next=compact(items)
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),related=new Set()
+    for(const n of nodes)if(n.creationMode==='selection'){related.add(n.id);for(const id of n.sourceNodeIds||[])related.add(id)}
+    // Existing columns can end at very different heights without a spanning
+    // row below them. Move only later cards into a substantially earlier slot;
+    // the current top row and ordinary within-column reading order stay put.
+    for(const id of [...next].sort(order).map(c=>c.id)){
+      const card=next.find(c=>c.id===id),node=byId.get(id)
+      if(!card||card.freePosition||related.has(id)||['queued','running','retrying'].includes(node?.generationStatus))continue
+      const previous=next.filter(c=>c.id!==id&&c.y<card.y)
+      if(!previous.some(c=>c.x<card.x+card.w&&c.x+c.w>card.x&&c.y+c.h<=card.y))continue
+      // Preserve subcolumns directly beneath an existing partial-width group.
+      if(previous.some(c=>c.w<columns&&c.w>card.w*1.5&&c.x<=card.x&&c.x+c.w>=card.x+card.w&&c.y+c.h===card.y))continue
+      const edges=[...new Set([0,columns,...previous.flatMap(c=>[c.x,c.x+c.w])])].sort((a,b)=>a-b)
+      let best
+      for(let i=0;i<edges.length-1;i++){
+        const x=edges[i],w=edges[i+1]-x
+        // Retain content height and use an existing comparable-width column.
+        if(x===card.x||w<card.w||w>card.w*1.5||w<minimum(node,m).w)continue
+        const above=previous.filter(c=>c.x<x+w&&c.x+c.w>x),y=Math.max(0,...above.map(c=>c.y+c.h))
+        if(!above.length||(card.y-y)*m.rowStep<=160)continue
+        const placed={...card,x,w,y}
+        if(next.some(c=>overlap(placed,c)))continue
+        if(!best||y<best.y||y===best.y&&Math.abs(x-card.x)<Math.abs(best.x-card.x))best=placed
+      }
+      if(best)next=compact(next.map(c=>c.id===id?best:c))
+    }
+    return next
   }
   // Growing a card borrows width from its same-row neighbours before wrapping.
   // Resize always starts from the saved transaction, so reversing the pointer
@@ -219,7 +251,7 @@ export function createResearchGrid() {
       if(c.freePosition)return c
       return {...c,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
     })
-    const result=new Map(closeSmallGaps(fillVacancies(planned,nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
+    const result=new Map(closeSmallGaps(fillColumnTails(fillVacancies(planned,nodes,width),nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
   }
   function arrange(nodes,items,width,visibleHeight=0) {
     let next=items.map(bounded)
