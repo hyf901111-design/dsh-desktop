@@ -15,6 +15,7 @@ body [data-ework-grid] .ew-selected-create-actions{display:flex;justify-content:
 body [data-ework-grid] .ew-selected-create-actions button{padding:7px 20px;border:0;border-radius:3px;background:#00a6e9;color:#fff;min-height:32px;font:inherit;cursor:pointer}
 body [data-ework-grid] .ew-selected-create-actions button:disabled{opacity:.45;cursor:default}
 body [data-ework-grid] .ew-selected-create-actions [data-workbench-stop-preparing]{padding:7px 12px;background:var(--grid-menu);color:var(--grid-text)}
+body [data-ework-grid] .ew-selected-create-actions [data-workbench-cancel-selected-edit]{padding:7px 20px;background:transparent;border:1px solid var(--grid-muted);color:var(--grid-text)}
 body [data-ework-grid] .ew-selected-create-draft p{margin:0;color:var(--grid-muted);font-size:11px}
 body [data-ework-grid] .ew-selected-create-error{color:#db6262;overflow-wrap:anywhere}
 /* The outer derived shell adds only the baseline strip to the shared body. */

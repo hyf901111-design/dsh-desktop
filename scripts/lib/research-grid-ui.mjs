@@ -105,7 +105,7 @@ export async function exportWorkbenchContent(card,node,format) {
   const result=await save(request);if(result?.status==='error')throw Error(result.message||'保存失败，请重试')
   return result
 }
-export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLegacy}) {
+export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLegacy,onEditSelected}) {
   const [detail,setDetail]=react.useState(null),[exporting,setExporting]=react.useState(false),[exportError,setExportError]=react.useState(''),ref=react.useRef(null),subRef=react.useRef(null),mindRef=react.useRef(null),settingsRef=react.useRef(null),exportRef=react.useRef(null),leaveTimer=react.useRef(null)
   const trigger=kind=>kind==='mind'?mindRef:kind==='export'?exportRef:settingsRef
   const cancelLeave=()=>{clearTimeout(leaveTimer.current);leaveTimer.current=null}
@@ -123,13 +123,18 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
   const choose=action=>{onClose();action?.()}
   const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{await exportWorkbenchContent(card(),target.node,format);onClose()}catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
-  const row=(icon,label,action,disabled=readOnly)=>jsxs('button',{type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
+  const row=(icon,label,action,disabled=readOnly,attributes={})=>jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
   const flyout=(kind,icon,label,trigger,disabled=false)=>jsxs('button',{ref:trigger,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
-  const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-420,target.top))}
+  const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-(target.node.creationMode==='selection'?486:420),target.top)),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
   return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作',style,onMouseLeave:leave,children:[
     row('duplicate','复制组件',()=>{workspace.copySelectedNodes().then(()=>workspace.pasteClipboardNodes(null)).catch(error=>console.error(error))}),
     row('expand','放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
     row('rename','重命名',()=>onLegacy(target.node,target.event,'rename')),
+    target.node.creationMode==='selection'&&row('rename','编辑需求',()=>onEditSelected?.(target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-workbench-edit-selected-create':target.node.id}),
+    target.node.creationMode==='selection'&&row('branch','查看基准',()=>{
+      const root=card()?.closest('[data-research-canvas]'),current=workspace.getSnapshot(),live=new Set([...current.files,...current.artifacts].map(n=>n.id)),ids=(target.node.sourceNodeIds||[]).filter(id=>live.has(id))
+      if(!ids.length)return;workspace.updateSelection(ids,'replace');root?.querySelector('[data-research-node-id="'+CSS.escape(ids[0])+'"]')?.scrollIntoView({block:'nearest',inline:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});root?.focus({preventScroll:true})
+    },!(target.node.sourceNodeIds||[]).some(id=>[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts].some(n=>n.id===id)),{'data-workbench-view-source':target.node.id}),
     flyout('export','download','导出',exportRef),
     jsx('div',{className:'ew-grid-divider'}),
     flyout('mind','branch','思维导图',mindRef,readOnly),
@@ -148,7 +153,7 @@ export function handleWorkbenchMultiSelect(root,workspace,event) {
   event.preventDefault();event.stopImmediatePropagation();root.ownerDocument.defaultView.getSelection()?.removeAllRanges()
   workspace.updateSelection([card.getAttribute('data-research-node-id')],'toggle');return true
 }
-export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readOnly,onAsk,onDerived,onLegacy}) {
+export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readOnly,onAsk,onDerived,onLegacy,onEditSelected}) {
   const [hosts,setHosts]=react.useState([]),[menu,setMenu]=react.useState(null)
   const close=react.useCallback(()=>setMenu(null),[])
   react.useEffect(()=>{
@@ -159,7 +164,7 @@ export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readO
     };reconcile();root.addEventListener('load',reconcile,true);const observer=new MutationObserver(reconcile);observer.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['open','data-research-geometry-blocked']});return()=>{observer.disconnect();root.removeEventListener('load',reconcile,true)}
   },[snapshot.files,snapshot.artifacts,snapshot.selection,rootRef])
   const resizable=readOnly?[]:hosts.filter(n=>!n.expanded&&!n.blocked&&snapshot.selection.selectedNodeIds.includes(n.node.id)).map(n=>n.node)
-  return react_jsx_runtime.jsxs(react.Fragment,{children:[...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy})]})
+  return react_jsx_runtime.jsxs(react.Fragment,{children:[...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected})]})
 }
 export function WorkbenchResizeControls({nodes,width}) {
   const gap=createResearchGrid().metrics(width).gap

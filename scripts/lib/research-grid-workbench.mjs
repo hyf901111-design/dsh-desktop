@@ -120,25 +120,27 @@ export function patchResearchGridWorkbench(source){
       }
       return state;
     };
-    const workbenchFocusSelected=node=>{
+    const workbenchFocusSelected=(node,editing=false)=>{
       if(createSelection?.nodeId!==node.id){createAttempt.current=null;setCreatePreparing(false);}
-      setCreateSelection(workbenchSelectedState(node));setCreatePrompt(node.containerPrompt||'');setCreateError(null);
+      setCreateSelection({...workbenchSelectedState(node),editing});setCreatePrompt(node.containerPrompt||'');setCreateError(null);
       window.requestAnimationFrame(()=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');card?.scrollIntoView({block:'nearest',inline:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});card?.querySelector('[data-workbench-selected-create-draft] textarea')?.focus({preventScroll:true});});
     };
     const workbenchSelectedPrompt=(node,prompt,persist=false)=>{
       if(sharedReadOnly)return;
+      if(createSelection?.nodeId===node.id&&createSelection.editing){setCreatePrompt(prompt);setCreateError(null);return;}
       if(createSelection?.nodeId!==node.id){createAttempt.current=null;setCreatePreparing(false);}
       if(workspace.updateSelectedCreateDraft(node.id,prompt)){setCreateSelection(workbenchSelectedState(node));setCreatePrompt(prompt);setCreateError(null);if(persist)workspace.persist();}
     };
     const workbenchSelectedSubmit=(node,prompt)=>{
       if(sharedReadOnly)return;
-      const state=workbenchSelectedState(node);setCreateSelection(state);setCreatePrompt(prompt);void startSelectedCreate(state,prompt);
+      const state=workbenchSelectedState(node);if(node.generationStatus!=='draft'&&!workspace.editSelectedCreateDraft(node.id))return;setCreateSelection(state);setCreatePrompt(prompt);void startSelectedCreate(state,prompt);
     };
     const workbenchEditSelected=node=>{
       if(sharedReadOnly)return;
       workbenchSelectedDrafts.current.delete(node.id);
-      const next=workspace.editSelectedCreateDraft(node.id);if(next)workbenchFocusSelected(next);
+      workbenchFocusSelected(node,node.generationStatus!=='draft');
     };
+    const workbenchCancelSelectedEdit=()=>{createAttempt.current=null;closeSelectedCreate();rootRef.current?.focus({preventScroll:true});};
     react.useEffect(()=>{
       if(createSelection?.nodeId&&!snapshot.artifacts.some(n=>n.id===createSelection.nodeId)){workbenchSelectedDrafts.current.delete(createSelection.nodeId);closeSelectedCreate();}
     },[snapshot.artifacts,createSelection,closeSelectedCreate]);
@@ -160,7 +162,7 @@ export function patchResearchGridWorkbench(source){
   change('function ResearchCanvasActionReceipt({workspace}) {','function ResearchCanvasActionReceipt({workspace,rootRef,sessionId,availableWidth}) {')
   change("return react_jsx_runtime.jsxs('div',{'data-canvas-action-receipt':'',","return react_jsx_runtime.jsxs(WorkbenchToolbar,{rootRef,sessionId,availableWidth,bottomOffset:86,'data-workbench-notice':'','data-canvas-action-receipt':'',")
   change('(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace})','(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace,rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth})')
-  change('children: [(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),','children: [(0,react_jsx_runtime.jsx)(WorkbenchChromeLayer,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly,onAsk:workbenchAsk,onDerived:workbenchDerived,onLegacy:workbenchLegacy}),(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),')
+  change('children: [(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),','children: [(0,react_jsx_runtime.jsx)(WorkbenchChromeLayer,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly,onAsk:workbenchAsk,onDerived:workbenchDerived,onLegacy:workbenchLegacy,onEditSelected:workbenchEditSelected}),(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),')
   // Keep the original recording capsule and lifecycle inside the floating toolbar.
   // Only a valid final recognition reaches onCommand and appends a grid component.
   change('onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft();','onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft(null,"voice");')

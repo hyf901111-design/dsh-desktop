@@ -92,7 +92,7 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
       (0, react_jsx_runtime.jsx)('time', { 'data-research-generation-elapsed': '', children: time, title: elapsed + ' 秒' }),
       (0, react_jsx_runtime.jsxs)('div', { 'data-research-generation-foreground': '', children: [
         (0, react_jsx_runtime.jsx)('span', { className: 'odyssey-generation-state-icon', 'aria-hidden': true, style: { maskImage: 'url("' + glyphs[glyph] + '")', animationPlayState: moving ? 'running' : 'paused' }, 'data-generation-spinning': moving }),
-        (0, react_jsx_runtime.jsx)('strong', { children: researchPublicProgress(node.title || '当前组件') }),
+        (0, react_jsx_runtime.jsx)('strong', { title: researchPublicProgress(node.title || '当前组件'), children: researchPublicProgress(node.title || '当前组件') }),
         (0, react_jsx_runtime.jsx)('div', { className: 'odyssey-generation-phase', role: 'status', children: phase }),
         (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: (0, react_jsx_runtime.jsx)('span', { 'data-progress-detail': '', children: detail }, node.generationTaskId + ':' + detail) }),
         derived ? (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-sources': '', children: node.kind === 'generated-summary' ? '基于所选 ' + sourceCount + ' 个组件' : '来源：' + sourceCount + ' 个组件' }) : null
