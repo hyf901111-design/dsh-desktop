@@ -1376,6 +1376,18 @@ it('看板样式在新组件与嵌入页面载入时继承，切换不替换ifra
  messages.length=0;await f.event('load',frame);expect(messages).toContainEqual({type:'sherlock-workbench-style',mode:'dark',controlTheme:'light'})
  await act(async()=>f.workspace.createContainerDraft());expect(f.canvas.dataset.workbenchStyle).toBe('dark');send.mockRestore()
 })
+it('主题扫光只在实际切换时出现，连续切换替换旧动效并清理，减少动态效果时静止切换',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('motion-a')]))
+ const overlays=()=>f.document.querySelectorAll('.ew-workbench-style-transition')
+ expect(overlays()).toHaveLength(0)
+ await act(async()=>f.workspace.setWorkbenchStyle('dark'));expect(overlays()).toHaveLength(1)
+ const first=overlays()[0];expect(first.getAttribute('aria-hidden')).toBe('true');expect(first.style.pointerEvents).toBe('none');expect(first.style.left).toBe('0px');expect(first.style.width).toBe('1000px')
+ await act(async()=>f.workspace.setWorkbenchStyle('dark'));expect(overlays()[0]).toBe(first)
+ await act(async()=>f.workspace.setWorkbenchStyle('enterprise'));expect(overlays()).toHaveLength(1);expect(first.isConnected).toBe(false);expect(f.canvas.dataset.workbenchTransition).toBe('enterprise')
+ await vi.waitFor(()=>expect(overlays()).toHaveLength(0),{timeout:1000});expect(f.canvas.hasAttribute('data-workbench-transition')).toBe(false)
+ f.win.matchMedia=query=>({matches:query==='(prefers-reduced-motion: reduce)',addEventListener(){},removeEventListener(){}})
+ await act(async()=>f.workspace.setWorkbenchStyle('light'));expect(f.canvas.dataset.workbenchStyle).toBe('light');expect(overlays()).toHaveLength(0);expect(f.canvas.hasAttribute('data-workbench-transition')).toBe(false)
+})
 it('模式组支持方向键且与组件工具选中相互独立，英文新增菜单与提示随语言变化',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('style-a')]))
  await f.event('click',f.document.querySelector('[data-research-global-container]'))
