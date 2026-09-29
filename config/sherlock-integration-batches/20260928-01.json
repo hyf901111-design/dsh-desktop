@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "f79a6fc7815a4e671eb28720b5c7bf9a51827b2c",
-        "tipCommit": "a8e7131d1efbe086e7b31543695132f12adea761",
+        "baseCommit": "a8e7131d1efbe086e7b31543695132f12adea761",
+        "tipCommit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
         "commits": [
           {
-            "commit": "a8e7131d1efbe086e7b31543695132f12adea761",
+            "commit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
             "parents": [
-              "f79a6fc7815a4e671eb28720b5c7bf9a51827b2c"
+              "a8e7131d1efbe086e7b31543695132f12adea761"
             ],
-            "subject": "复用同源响应样本并修复短卡图形截断"
+            "subject": "修复图表连续交互重置与撤销缓存覆盖"
           }
         ],
         "files": [
@@ -29,55 +29,23 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/special-chart-artifact.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/special-chart-view.js"
+            "path": "scripts/lib/component-data-status.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+            "path": "scripts/lib/component-interaction-state.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-shared-samples.js"
+            "path": "test/component-interaction-state.test.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-bundled-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/special-chart-template.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-shared-samples.test.js"
+            "path": "test/workbench-refresh.test.js"
           }
         ],
         "checks": [
@@ -86,25 +54,21 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-shared-samples.test.js",
-              "test/special-chart-template.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/component-template-registry.test.js",
+              "test/component-interaction-state.test.js",
+              "test/workbench-refresh.test.js",
               "test/workbench-chart-motion.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/workbench-execution-policy.test.js"
+              "test/component-data-status.test.js"
             ],
             "outcome": "passed",
-            "summary": "117项同源样本、短卡绘图、数据契约、模板、技能与动效聚焦检查通过。",
-            "verifiedCommit": "a8e7131d1efbe086e7b31543695132f12adea761",
-            "completedAt": "2026-09-29T20:30:25.691484+00:00",
+            "summary": "29项交互部分确认、撤销缓存、刷新、动效和状态栏聚焦检查通过。",
+            "verifiedCommit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
+            "completedAt": "2026-09-29T21:06:16.127050+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "九类图表320×300短卡内SVG完整、无横向溢出、调宽不重播；此前生产沙盒三主题与交互通过。第一次六图原生测试发现83与90样本不一致及短卡裁切，已按失败记录。本次修复等待集成包原生复验。"
+          "summary": "修复前真实客户端59秒完成六卡且90条样本一致；修复后浏览器生产包装4箱明细和主题保持，撤销清空旧刷新缓存。原生集成包交互复验仍待本次构建完成，不宣称工作台完全验收。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -217,7 +181,8 @@
           "小卡片绘图区自适应剩余高度，保留坐标及读数、长内容内部滚动，外框不变。",
           "预置饼环、树图、旭日、雷达、直方、箱线、子弹、仪表九类独立数据契约；保留原值与样本，三主题、键盘读数和首次生长动效。",
           "同批直方图使用samplesFromPanel精确复用箱线图原始样本；重复抄写有遗漏的旧式同批输入在创建前拒绝。",
-          "短卡保持外框尺寸，绘图区自适应剩余高度；圆环、仪表、坐标和读数完整可见。"
+          "短卡保持外框尺寸，绘图区自适应剩余高度；圆环、仪表、坐标和读数完整可见。",
+          "连续本地交互的部分确认不误判撤销；原生select仅保存change；拒绝操作和真实撤销清除旧刷新缓存后按日志重放。"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -228,51 +193,6 @@
           "Figma截图接口返回1×1占位，本轮未宣称像素级复验通过。"
         ],
         "generatedAt": "2026-09-29T18:52:36.805261+00:00"
-      },
-      "merged": {
-        "mergeCommit": "44af43893efb7a6957be5ea90b527e1c965976c4",
-        "verificationCommit": "44af43893efb7a6957be5ea90b527e1c965976c4",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "44af43893efb7a6957be5ea90b527e1c965976c4",
-            "completedAt": "2026-09-29T20:31:36.513Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "44af43893efb7a6957be5ea90b527e1c965976c4",
-            "completedAt": "2026-09-29T20:31:36.513Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "44af43893efb7a6957be5ea90b527e1c965976c4",
-            "completedAt": "2026-09-29T20:31:36.513Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T20:31:36.513Z"
       }
     }
   ],
