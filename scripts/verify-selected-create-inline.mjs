@@ -16,6 +16,7 @@ const browser=await playwright.chromium.launch({executablePath:process.env.SHERL
 const report={figma:'Jkyr5rMvgM8GNH6E68xnqd / 1922:341090',rules:'1922:342383',checks:[],screenshots:[]}
 try{
  const page=await browser.newPage({viewport:{width:1120,height:860}}),errors=[]
+ const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
  page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message)})
  await page.route('**/*',r=>r.request().isNavigationRequest()?r.fulfill({contentType:'text/html',body:'<style>body{margin:0}#mount{width:1080px;height:840px}.sRp_researchCanvas{height:100%}</style><div id="mount"></div>'}):r.abort())
  await page.goto('https://selected-create.fixture/')
@@ -171,6 +172,13 @@ try{
    workspace.setArtifacts([{id:'base',messageId:'base',kind:'web-link',title:'授权网页',titleMode:'manual',excerpt:url,url,x:previous.x,y:previous.y,width:previous.width,height:previous.height,sizeMode:'manual'}]);workspace.applyWorkbenchCells([{id:'base',x:0,y:0,w:20,h:11}],true)
    window.webReadMode='failure';window.dshDesktop.researchLinkFrame={inspect:()=>webReadMode==='failure'?Promise.resolve(null):new Promise(resolve=>{window.inspectionResolver=resolve})}
  })
+ await page.evaluate(()=>workspace.updateSelection([],'replace'));await frame()
+ const linkBody=page.locator('[data-research-node-id="base"] [data-research-preview-body]'),linkBodyBefore=await linkBody.boundingBox()
+ await page.evaluate(()=>workspace.updateSelection(['base'],'replace'));await frame()
+ assert.deepEqual(await linkBody.boundingBox(),linkBodyBefore,'selecting a native link keeps the web viewport unchanged')
+ const linkOutline=await page.locator('[data-research-node-id="base"]').evaluate(el=>{const s=getComputedStyle(el);return {width:s.outlineWidth,style:s.outlineStyle,offset:s.outlineOffset,shadow:getComputedStyle(el.querySelector('.ew-grid-selection-ring')).boxShadow}})
+ assert.deepEqual(linkOutline,{width:'1px',style:'solid',offset:'0px',shadow:'none'},'selection paints outside native web bounds without a duplicated inner edge')
+ report.checks.push('native link selection uses one external 1px outline beyond the web surface; selection leaves exact web viewport geometry unchanged')
  await menu();await draft.waitFor();await input.fill('基于授权网页创建收入对比表。')
  let web=await page.evaluate(()=>workspace.getSnapshot().artifacts.find(n=>n.creationMode==='selection')),callsBefore=await page.evaluate(()=>generateCalls.length)
  await draft.getByRole('button',{name:'生成组件',exact:true}).click()
@@ -266,7 +274,6 @@ try{
  report.checks.push('selected bottom-edge height handle stays visible within the viewport without a few-pixel ghost scrollbar')
  await page.evaluate(()=>{const text=id=>({id,kind:'pasted-text',messageId:id,title:id,excerpt:id,x:260,y:160,width:480,height:280,sizeMode:'manual'});workspace.setArtifacts(['article','b','c'].map(text));workspace.applyWorkbenchCells([{id:'article',x:0,y:20,w:26,h:40},{id:'b',x:14,y:0,w:14,h:9},{id:'c',x:28,y:0,w:12,h:16}],true);window.anchorBefore=workspace.getWorkbenchCells();document.querySelector('[data-research-canvas]').scrollTop=0})
  const bounds=await page.locator('[data-research-canvas]').boundingBox(),step=(1000-14)/40,start={x:200,y:bounds.y+12+20.5*step},endX=start.x+14*step,at=row=>bounds.y+12+row*step
- const frame=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))
  await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(endX,at(6.1));await frame();await page.mouse.move(endX,at(6.4));await frame();await page.mouse.up();await frame()
  const via=await page.evaluate(()=>workspace.getWorkbenchCells())
  await page.evaluate(()=>workspace.undo());await frame();await page.locator('[data-research-node-id="article"]').evaluate(el=>Promise.all(el.getAnimations().map(a=>a.finished.catch(()=>{}))))
