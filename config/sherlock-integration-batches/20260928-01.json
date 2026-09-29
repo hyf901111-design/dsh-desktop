@@ -11,32 +11,28 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c9b82ef71df090d4ec04c89e89ab7396f158835e",
-        "tipCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
+        "baseCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
+        "tipCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
         "commits": [
           {
-            "commit": "8529d617a4361a0e7cc2af77e3537cbb6a25ae64",
+            "commit": "dd2eba6edffc275fe5c9163b1d25ce348950a849",
             "parents": [
-              "c9b82ef71df090d4ec04c89e89ab7396f158835e"
+              "24b2f375f3fc647fd4fda07304b50b0285b7361a"
             ],
-            "subject": "修复：画布补位、撤销快捷键及固定提示和常驻网格"
+            "subject": "修复：已生成衍生组件编辑需求支持取消并保留原结果"
           },
           {
-            "commit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
+            "commit": "6746adeb94c657763f1744a8de0f693a928a5561",
             "parents": [
-              "8529d617a4361a0e7cc2af77e3537cbb6a25ae64"
+              "dd2eba6edffc275fe5c9163b1d25ce348950a849"
             ],
-            "subject": "修复：固定提示按钮不继承画板工具栏图标样式"
+            "subject": "修复：需求编辑和基准移入更多菜单并完整显示生成进度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
@@ -61,22 +57,6 @@
           {
             "status": "M",
             "path": "scripts/verify-selected-create-inline.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-selected-create.test.js"
           }
         ],
         "checks": [
@@ -87,8 +67,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交前端补丁构建通过",
-            "verifiedCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
-            "completedAt": "2026-09-29T05:53:02.898499+00:00",
+            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
+            "completedAt": "2026-09-29T06:18:18.236751+00:00",
             "timeoutMs": 300000
           },
           {
@@ -101,8 +81,8 @@
             ],
             "outcome": "passed",
             "summary": "109项聚焦检查通过：大空位补入、同次稳定收敛、冻结证据、选中滚动条及撤销和固定提示",
-            "verifiedCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
-            "completedAt": "2026-09-29T05:53:02.898499+00:00",
+            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
+            "completedAt": "2026-09-29T06:18:18.236751+00:00",
             "timeoutMs": 300000
           },
           {
@@ -115,8 +95,8 @@
             ],
             "outcome": "passed",
             "summary": "7项HTML工作台检查通过，包含选中滚动条与受限撤销桥接",
-            "verifiedCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
-            "completedAt": "2026-09-29T05:53:02.898499+00:00",
+            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
+            "completedAt": "2026-09-29T06:18:18.236751+00:00",
             "timeoutMs": 300000
           },
           {
@@ -127,8 +107,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交类型检查通过",
-            "verifiedCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
-            "completedAt": "2026-09-29T05:53:02.898499+00:00",
+            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
+            "completedAt": "2026-09-29T06:18:18.236751+00:00",
             "timeoutMs": 300000
           },
           {
@@ -137,9 +117,9 @@
               "scripts/verify-selected-create-inline.mjs"
             ],
             "outcome": "passed",
-            "summary": "7组真实Chromium检查通过：共享生成/停止重试冻结证据、键盘撤销重做、固定提示及常驻网格",
-            "verifiedCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
-            "completedAt": "2026-09-29T05:53:02.898499+00:00",
+            "summary": "9组真实Chromium检查通过：菜单编辑/基准、取消/Esc、长标题窄卡完整执行信息、共享生成、冻结证据、撤销和固定提示",
+            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
+            "completedAt": "2026-09-29T06:18:18.236751+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -206,7 +186,10 @@
           "两轴滚动条仅选中显示5px低对比度，切换不挤动内容，背景网格常驻并同格位",
           "画布及非编辑正文支持CmdZ/CmdShiftZ，真实编辑框保留文字撤销，自有选中HTML受限桥接，测高整事务一步撤销",
           "画板所有提示固定在可见画布底部工具栏上方，滚动保持位置，提示按钮标签不继承工具栏图标隐藏样式",
-          "Figma21Z同步大空位补入、选中滚动条、常驻网格、固定提示及撤销规则"
+          "Figma21Z同步大空位补入、选中滚动条、常驻网格、固定提示及撤销规则",
+          "已生成衍生组件编辑需求仅进入本地输入态；取消/Esc保留原结果、需求、冻结来源与格位，点击生成才提交",
+          "编辑需求和查看基准仅在右上更多菜单；查看基准恢复源选择并定位，源已删除时禁用",
+          "生成标题最多两行并可查看完整标题；第三行实时执行信息无旧两行截断，预留至少60px、完整换行，长内容可滚动且与按钮分隔"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -215,52 +198,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T05:53:02.898499+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7855ca535824ab8f6c8189568bee1048b5998e3f",
-        "verificationCommit": "7855ca535824ab8f6c8189568bee1048b5998e3f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "7855ca535824ab8f6c8189568bee1048b5998e3f",
-            "completedAt": "2026-09-29T05:55:30.441Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "7855ca535824ab8f6c8189568bee1048b5998e3f",
-            "completedAt": "2026-09-29T05:55:30.441Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7855ca535824ab8f6c8189568bee1048b5998e3f",
-            "completedAt": "2026-09-29T05:55:30.441Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T05:55:30.441Z"
+        "generatedAt": "2026-09-29T06:18:18.236751+00:00"
       }
     }
   ],
