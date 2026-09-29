@@ -11,36 +11,20 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
-        "tipCommit": "2b1e9f8d31b78ebb1fb6143759d9acb946dcbd29",
+        "baseCommit": "2b1e9f8d31b78ebb1fb6143759d9acb946dcbd29",
+        "tipCommit": "47f312ce399ae59653f0f10a6eb8e9988feb16ae",
         "commits": [
           {
-            "commit": "2b1e9f8d31b78ebb1fb6143759d9acb946dcbd29",
+            "commit": "47f312ce399ae59653f0f10a6eb8e9988feb16ae",
             "parents": [
-              "7981ce5c46f33a93a3c52b7225ece149270357d6"
+              "2b1e9f8d31b78ebb1fb6143759d9acb946dcbd29"
             ],
-            "subject": "功能：增加看板三种样式切换并补齐工作台英文菜单"
+            "subject": "修复：统一看板模式表格底色和按钮对比度并补齐英文提示"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "build/figma-canvas-icons/mode-dark.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/mode-enterprise.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/mode-light.svg"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/workbench-locale.js"
           },
           {
@@ -48,51 +32,15 @@
             "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-style.js"
-          },
-          {
             "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/workbench-localization.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/workbench-style-client.mjs"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "scripts/lib/workbench-style.css"
           },
           {
             "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-storage.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/workbench-style.test.js"
           }
         ],
@@ -104,8 +52,8 @@
             ],
             "outcome": "passed",
             "summary": "前端补丁生成通过",
-            "verifiedCommit": "2b1e9f8d31b78ebb1fb6143759d9acb946dcbd29",
-            "completedAt": "2026-09-29T11:42:05.747576+00:00",
+            "verifiedCommit": "47f312ce399ae59653f0f10a6eb8e9988feb16ae",
+            "completedAt": "2026-09-29T12:05:50.160162+00:00",
             "timeoutMs": 300000
           },
           {
@@ -114,16 +62,12 @@
               "run",
               "test/workbench-style.test.js",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js",
-              "test/research-canvas-storage.test.ts"
+              "test/workbench-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "162项样式隔离、页面保持、英文动态菜单、键盘切换、桌面持久化及直接影响的画布检查通过",
-            "verifiedCommit": "2b1e9f8d31b78ebb1fb6143759d9acb946dcbd29",
-            "completedAt": "2026-09-29T11:42:05.747576+00:00",
+            "summary": "90项样式隔离、页面保持、菜单/缩放/表格英文提示及组件内容样式聚焦检查通过",
+            "verifiedCommit": "47f312ce399ae59653f0f10a6eb8e9988feb16ae",
+            "completedAt": "2026-09-29T12:05:50.160162+00:00",
             "timeoutMs": 300000
           },
           {
@@ -134,14 +78,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "2b1e9f8d31b78ebb1fb6143759d9acb946dcbd29",
-            "completedAt": "2026-09-29T11:42:05.747576+00:00",
+            "verifiedCommit": "47f312ce399ae59653f0f10a6eb8e9988feb16ae",
+            "completedAt": "2026-09-29T12:05:50.160162+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能分支不构建共享客户端；实际补丁渲染Chromium八组检查通过，三模式表格/图表/生成状态及英文菜单截图位于 /tmp/ework-canvas-style-20260929。共享原生客户端核验在integration构建后执行。"
+          "summary": "共享原生首轮已核验三模式和英文更多菜单；发现旧CSS覆盖的表格底色、模式按钮颜色及企业控制对比度已修正，Chromium再次通过，下一次integration精确构建后核验。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -238,52 +182,7 @@
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。"
         ],
-        "generatedAt": "2026-09-29T11:42:05.747576+00:00"
-      },
-      "merged": {
-        "mergeCommit": "76768452a4d71efde14eb1c8a063127e27fa127d",
-        "verificationCommit": "76768452a4d71efde14eb1c8a063127e27fa127d",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "76768452a4d71efde14eb1c8a063127e27fa127d",
-            "completedAt": "2026-09-29T11:43:08.574Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "76768452a4d71efde14eb1c8a063127e27fa127d",
-            "completedAt": "2026-09-29T11:43:08.574Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "76768452a4d71efde14eb1c8a063127e27fa127d",
-            "completedAt": "2026-09-29T11:43:08.574Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T11:43:08.574Z"
+        "generatedAt": "2026-09-29T12:05:50.160162+00:00"
       }
     }
   ],
