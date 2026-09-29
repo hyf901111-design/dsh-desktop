@@ -794,6 +794,19 @@ it('整理使用当前HTML的内容测量收紧尺寸，拒绝其他窗口的测
  expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThan(315)
 })
 
+it('整理菜单关闭后焦点返回画布，立即按Command Z能撤销整理',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setArtifacts([text('a'),text('b',740)]);w.applyWorkbenchCells([{id:'a',x:0,y:10,w:20,h:18},{id:'b',x:20,y:0,w:20,h:10}],true)})
+ const before=w.getWorkbenchCells()
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
+ const button=[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布');button.focus()
+ await f.event('click',button)
+ expect(f.document.activeElement).toBe(f.canvas)
+ expect(w.getWorkbenchCells()).not.toEqual(before)
+ await f.event('keydown',f.document.activeElement,{key:'z',code:'KeyZ',metaKey:true})
+ expect(w.getWorkbenchCells()).toEqual(before)
+})
+
 it('原生表格按完整行内容整理，不使用大号默认高度',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('table')]))
  const card=f.host.querySelector('[data-research-node-id="table"]'),body=card.querySelector('[data-research-preview-body]'),table=f.document.createElement('table')

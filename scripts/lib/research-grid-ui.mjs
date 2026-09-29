@@ -375,6 +375,7 @@ export function measureWorkbenchContents(root,nodes) {
   return measured
 }
 export function arrangeWorkbenchContents(root,workspace,measured) {
+  root.focus({preventScroll:true})
   root.__eworkContentFit?.finish()
   const before=workspace.getSnapshot(),oldNodes=[...before.files,...before.artifacts],oldCache=new Map(root.__eworkContentMeasurements),view=root.ownerDocument.defaultView
   measured.__workbenchDeferred=true
