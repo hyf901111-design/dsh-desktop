@@ -3,6 +3,32 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('空画板首次挂载工作台占满两列，排队到完成保持默认格位，后续批次不改已有布局',()=>{
+ const state=createWorkbenchGridState(null,'new-workbench'),g=createResearchGrid()
+ state.enable(900)
+ let snap=state.reconcile({files:[],artifacts:[],viewport:{x:0,y:0,scale:1}})
+ const panels=Array.from({length:6},(_,i)=>({id:'panel-'+i,kind:'generated-container',workbenchId:'batch',workbenchIndex:i,x:330,y:170,width:656,height:i===1?352:270,sizeMode:'auto',generationStatus:'queued'}))
+ snap=state.reconcile({...snap,artifacts:panels})
+ const geometry=()=>state.get().map(({freePosition,...c})=>c),before=geometry(),at=id=>before.find(c=>c.id===id)
+ expect(at('panel-0')).toMatchObject({x:0,y:0,w:20});expect(at('panel-1')).toMatchObject({x:20,y:0,w:20})
+ expect(before.every((a,i)=>before.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(snap.artifacts.every(n=>n.height>=320)).toBe(true)
+ snap=state.reconcile({...snap,artifacts:snap.artifacts.map(n=>({...n,generationStatus:'completed',containerSpec:{type:'table'}}))})
+ expect(geometry()).toEqual(before)
+ state.reconcile({...snap,artifacts:[...snap.artifacts,...panels.slice(0,2).map((n,i)=>({...n,id:'later-'+i,workbenchId:'later'}))]})
+ expect(geometry().slice(0,6)).toEqual(before)
+ expect(state.get().slice(6).every(c=>c.y>=Math.max(...before.map(c=>c.y+c.h)))).toBe(true)
+})
+it('窄画板新工作台默认占满一列，手动拉框及普通单卡保留追加规则',()=>{
+ const state=createWorkbenchGridState(null,'narrow');state.enable(500)
+ const base={files:[],artifacts:[],viewport:{y:0}};state.reconcile(base)
+ const nodes=Array.from({length:2},(_,i)=>({id:'n'+i,workbenchId:'b',workbenchIndex:i,kind:'generated-container',width:656,height:300,sizeMode:'auto',generationStatus:'queued'}))
+ const snap=state.reconcile({...base,artifacts:nodes})
+ expect(state.get().every(c=>c.x===0&&c.w===40)).toBe(true)
+ const before=state.get().map(c=>({...c}))
+ state.reconcile({...snap,artifacts:[...snap.artifacts,{id:'manual',workbenchId:'manual',kind:'generated-container',width:320,height:220,sizeMode:'manual',preserveGenerationSize:true}]})
+ expect(state.get().slice(0,2)).toEqual(before);expect(state.get().at(-1).w).toBeLessThan(40)
+})
 it('整理补满局部两列之间的空条，不因首排已覆盖全宽而保留下方错位列',()=>{
  for(const width of [1000,1230,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('gold',0,0,20,8),item('pharma',20,0,20,9),item('table',0,8,20,10),item('btc',22,9,18,10),item('stocks',0,18,20,12),item('news',22,19,18,22),item('report',0,30,20,36)]

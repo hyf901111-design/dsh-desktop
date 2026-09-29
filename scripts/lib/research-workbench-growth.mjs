@@ -130,8 +130,11 @@ function researchWorkbenchGrowthViewport(before,next) {
 ` + source.slice(end)
   const initial = `/* ODYSSEY_PREPARED_WORKBENCH_LAYOUT */
                     /* ODYSSEY_PREPARED_WORKBENCH_VIEWPORT */`
+  const obsoleteInitial="nodes=researchWorkbenchMatrixNodes(nodes.map(n=>n.generationStatus==='queued'?{...n,width:320,height:220,containerSizePreset:'small'}:n.generationStatus==='completed'?{...n,...researchOptimalDimensions(n)}:n),0,bottom);"
+  const plannedInitial="nodes=researchWorkbenchMatrixNodes(nodes.map(n=>n.generationStatus==='completed'?{...n,...researchOptimalDimensions(n)}:n),0,bottom);"
+  source=source.replace(obsoleteInitial,plannedInitial)
   if (source.includes(initial)) source = source.replace(initial, `/* ODYSSEY_PREPARED_WORKBENCH_LAYOUT */
-                    nodes=researchWorkbenchMatrixNodes(nodes.map(n=>n.generationStatus==='queued'?{...n,width:320,height:220,containerSizePreset:'small'}:n.generationStatus==='completed'?{...n,...researchOptimalDimensions(n)}:n),0,bottom);
+                    ${plannedInitial}
                     /* ODYSSEY_PREPARED_WORKBENCH_VIEWPORT */`)
   else if (!source.includes('nodes=researchWorkbenchMatrixNodes(nodes.map(')) throw Error('Initial workbench layout anchor missing')
   const preparedPack = `const packed=researchBentoLayout(nodes,researchCanvasVisibleArea(snapshot),new Map(),{fitColumns:true});
