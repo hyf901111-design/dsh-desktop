@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
@@ -336,8 +337,8 @@ it('整理优先保持列内顺序，邻列无法补位时才将后续可容纳�
 it('整理三列宽度的余格也能容纳稍窄组件，补位遵循原左右阅读顺序',()=>{
  const g=createResearchGrid(),m=g.metrics(1400),before=[item('report',0,0,26,40),item('chart',26,0,14,12),item('span',0,40,40,8),item('metrics',0,48,13,10),item('news',13,48,13,18)]
  const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,1400),at=id=>next.find(c=>c.id===id)
- expect(at('metrics')).toMatchObject({x:26,y:12,w:13,h:10})
- expect(at('news')).toMatchObject({x:26,y:22,w:13,h:18})
+ expect(at('metrics')).toMatchObject({x:26,y:12,w:14,h:10})
+ expect(at('news')).toMatchObject({x:26,y:22,w:14,h:18})
  expect(at('chart').h).toBe(12);expect(at('span').y).toBe(40)
  expect(g.arrange(nodes,next,1400)).toEqual(next)
 })
@@ -347,4 +348,31 @@ it('补位改变列边界后在本次整理内收敛，下一次不会再次横�
  const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,1230)
  expect(g.arrange(nodes,next,1230)).toEqual(next)
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+})
+
+
+it('整理白酒看板合并不足最小列宽的冲突边界，指标与事件填满同一列',()=>{
+ for(const width of [946,1230,1400]){
+  const g=createResearchGrid(),m=g.metrics(width),before=[item('candle',0,17,18,16),item('metrics',0,33,24,12),item('trend',18,0,22,14),item('relative',0,45,18,14),item('table',18,14,22,13),item('weights',18,59,22,63),item('news',24,27,16,32),item('assistant',0,0,18,17)]
+  const nodes=before.map(c=>({id:c.id,containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
+  expect(at('news')).toMatchObject({x:18,w:22});expect(at('metrics')).toMatchObject({x:0,w:18})
+  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+  expect(g.arrange(nodes,next,width)).toEqual(next)
+ }
+})
+it('整理医药看板消除首排左侧一格空带，保留可用的细分列',()=>{
+ const g=createResearchGrid(),m=g.metrics(1000),before=[item('metrics',1,0,39,12),item('trend',1,12,24,14),item('scatter',25,12,15,13),item('table',0,26,25,14),item('pipeline',25,25,15,12),item('news',25,37,15,8)]
+ const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,1000)
+ expect(next.find(c=>c.id==='metrics')).toMatchObject({x:0,w:40});expect(next.find(c=>c.id==='trend')).toMatchObject({x:0,w:25})
+ expect(next.find(c=>c.id==='scatter')).toMatchObject({x:25,w:15})
+ expect(g.arrange(nodes,next,1000)).toEqual(next)
+})
+
+it('失败的工作台卡片参与整理补位，运行中的输入草稿仍保留落点',()=>{
+ const cells=[item('revenue',20,0,20,24),item('failed',20,25,20,12),item('draft',0,40,20,12)],state=createWorkbenchGridState({getItem:()=>JSON.stringify({version:2,cells})},'failed-card')
+ state.enable(1000);state.reconcile({files:[],artifacts:[{id:'revenue',kind:'generated-container',containerSpec:{},generationStatus:'completed'},{id:'failed',kind:'generated-container',generationStatus:'failed'},{id:'draft',kind:'generated-container',generationStatus:'running'}],viewport:{}})
+ expect(state.get().find(c=>c.id==='failed').freePosition).toBeUndefined()
+ expect(state.get().find(c=>c.id==='draft').freePosition).toBe(true)
+ const g=createResearchGrid(),m=g.metrics(1000),arranged=g.arrange(state.get().map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),state.get(),1000)
+ expect(arranged.find(c=>c.id==='failed').y).toBe(24)
 })

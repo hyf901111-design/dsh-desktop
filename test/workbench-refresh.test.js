@@ -126,3 +126,15 @@ it('restores chart viewport metadata while keeping it separate from value highli
  expect(restore).toHaveBeenCalledWith({min:50,max:150,start:'01',end:'03'})
  expect(f.body.querySelectorAll('[data-workbench-value-changed]')).toHaveLength(1)
 })
+
+it('pending initial restoration keeps a newer user input',()=>{
+ vi.useFakeTimers();const win=new Window();win.document.body.innerHTML='<iframe></iframe>'
+ const inner=win.document.querySelector('iframe').contentWindow,doc=inner.document;inner.setTimeout=setTimeout;inner.clearTimeout=clearTimeout;doc.body.innerHTML='<input value=""><details><summary>Sources</summary></details>'
+ clean.push(async()=>{inner.dispatchEvent(new inner.Event('pagehide'));await win.happyDOM.abort()})
+ inner.eval('('+installWorkbenchRefresh.toString()+')('+createWorkbenchRefreshSurface.toString()+','+isWorkbenchViewState.toString()+',"revision")');doc.dispatchEvent(new inner.Event('DOMContentLoaded'))
+ const state={values:[],controls:[{path:[0],tag:'INPUT',value:'saved search',checked:false}],scroll:[]}
+ const restore=()=>inner.dispatchEvent(new inner.MessageEvent('message',{source:inner.parent,data:{type:'sherlock-workbench-restore',revision:'revision',animate:false,state}}))
+ const input=doc.querySelector('input');restore();vi.advanceTimersByTime(81);expect(input.value).toBe('saved search')
+ restore();input.value='new search';input.dispatchEvent(new inner.Event('input',{bubbles:true}));vi.advanceTimersByTime(81)
+ expect(input.value).toBe('new search')
+})

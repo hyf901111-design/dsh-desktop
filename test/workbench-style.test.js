@@ -20,13 +20,13 @@ it('英文动态操作提示和静态菜单翻译，不改写任意用户正文'
  expect(workbenchText('已整理 17 个组件','en')).toBe('Arranged 17 components');expect(workbenchText('编辑需求','en')).toBe('Edit requirements');expect(workbenchText('客户原始中文正文','en')).toBe('客户原始中文正文');expect(workbenchText('编辑需求','zh')).toBe('编辑需求')
  expect(workbenchText('4 / 4 行','en')).toBe('4 / 4 rows');expect(workbenchText('按客户原始列名排序','en')).toBe('Sort by 客户原始列名')
 })
-it('企业化控件使用浅色品牌配色，客户端深色主题不覆盖组件控件',()=>{
+it('企业化控件完整复用浅色配色，悬停为灰色且不受客户端深色影响',()=>{
  const w=new Window(),doc=w.document,style=doc.createElement('style');style.textContent=workbenchModeCss();doc.head.append(style)
  doc.documentElement.dataset.workbenchStyle='enterprise';doc.documentElement.dataset.workbenchControlTheme='dark'
  const p=w.getComputedStyle(doc.documentElement)
- expect(p.getPropertyValue('--sherlock-control-bg')).toBe('#f3f5f7')
- expect(p.getPropertyValue('--sherlock-control-text')).toBe('#005096')
- expect(p.getPropertyValue('--sherlock-control-primary')).toBe('#0078b4')
+ for(const key of ['control-bg','control-border','control-text','control-muted','control-primary','control-on-primary'])expect(p.getPropertyValue('--sherlock-'+key)).toBe(workbenchStylePalette('light')[key])
+ expect(p.getPropertyValue('--sherlock-row-selected')).toBe('#e8e8eb')
+ expect(p.getPropertyValue('--sherlock-tooltip-bg')).toBe('#e8e8eb')
 })
 it('新闻筛选计数和控件辅助标签随语言切换，原文和用户输入保持',async()=>{
  const w=new Window(),doc=w.document;doc.body.dataset.researchKind='news';doc.body.innerHTML='<input aria-label="搜索条目" value="用户输入"><select aria-label="筛选分类"></select><p id="count" role="status">2 / 6 条</p><p id="business">2 / 6 条</p>'

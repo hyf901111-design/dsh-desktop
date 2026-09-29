@@ -248,7 +248,16 @@ export function createResearchGrid() {
     const mapped=sized.map(c=>({...c,x:edge(c.x),w:edge(c.x+c.w)-edge(c.x)})),counts=new Map()
     for(const c of mapped)for(const at of [c.x,c.x+c.w])counts.set(at,(counts.get(at)||0)+1)
     let boundaries=[0,...[...counts].filter(([at,count])=>at>0&&at<columns&&count>1).map(([at])=>at),columns].sort((a,b)=>a-b)
-    if(boundaries.length===2){const lanes=Math.max(1,Math.min(3,ordered.length,Math.floor(columns/Math.max(...ordered.map(c=>min(c).w)))));boundaries=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes))}
+    // Nearby repeated edges are rounding drift, not usable columns. Keep the
+    // stronger shared edge (outer edges always win) before fitting any cards.
+    const hadSharedEdges=boundaries.length>2,laneMinimum=Math.min(...ordered.map(c=>min(c).w))
+    for(let i=0;i<boundaries.length-1;){
+      const left=boundaries[i],right=boundaries[i+1]
+      if(right-left>=laneMinimum){i++;continue}
+      const remove=left===0?i+1:right===columns?i:(counts.get(left)||0)>=(counts.get(right)||0)?i+1:i
+      boundaries.splice(remove,1);i=Math.max(0,i-1)
+    }
+    if(boundaries.length===2&&!hadSharedEdges){const lanes=Math.max(1,Math.min(3,ordered.length,Math.floor(columns/Math.max(...ordered.map(c=>min(c).w)))));boundaries=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes))}
     const slot=c=>{
       let best
       for(let i=0;i<boundaries.length-1;i++)for(let j=i+1;j<boundaries.length;j++){

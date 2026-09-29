@@ -10,6 +10,7 @@ body{margin:0!important;padding:8px 10px!important;box-sizing:border-box!importa
 body :is(p,span,label,div,button,input,select,textarea,th,td,summary,small,strong,h1,h2,h3,h4){font-family:var(--sherlock-font-sans)!important}
 body :is(button,input,select,textarea){font-size:12px!important;line-height:18px!important;border-radius:3px!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)}
 body :is(input,select,textarea){background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border:1px solid var(--sherlock-control-border)!important;padding:2px 7px!important;box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
+body :is(input,textarea)::placeholder{color:var(--sherlock-control-muted,var(--sherlock-muted))!important;opacity:1}
 body :is(input,select){height:26px!important;min-height:26px!important}
 body :is(button,input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-primary)!important;outline-offset:1px}
 body :is(.controls,.fund-filters,.fund-industry-filters,.market-candle-controls,.price-volume-controls,.order-book-controls,.fund-flow-controls,.valuation-controls,.equity-controls,.risk-controls,.event-filters,.terminal-table-toolbar){gap:6px!important;flex-wrap:wrap!important}
@@ -23,10 +24,10 @@ body tbody tr{background:var(--sherlock-bg)!important}body tbody tr:nth-child(ev
 body td{background:transparent!important;color:var(--sherlock-text)!important}body :is(td,th)[data-numeric="true"]{text-align:right!important}body :is(td,th)[data-numeric="false"]{text-align:left!important}
 body :is([data-tone="positive"],.positive,.up){color:var(--sherlock-market-positive)!important}body :is([data-tone="negative"],.negative,.down){color:var(--sherlock-market-negative)!important}
 body :is(.market-metrics,.fund-kpis){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px 12px!important;border:0!important;min-height:0!important}
-body :is(.market-metric,.fund-kpi,.research-metric){padding:0!important;min-height:0!important;background:none!important;border:0!important;border-radius:0!important}
-body :is(.market-label,.fund-label,.research-metric-label){font-size:12px!important;font-weight:400!important;color:var(--sherlock-muted)!important;line-height:18px!important}
-body :is(.market-value,.fund-value,.research-metric-value){font-size:18px!important;line-height:25px!important;font-weight:600!important;color:var(--sherlock-text)!important;overflow-wrap:anywhere!important}
-body :is(.market-detail,.fund-detail,.research-metric-detail){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important}
+body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi){padding:0!important;min-height:0!important;background:none!important;border:0!important;border-radius:0!important}
+body :is(.market-label,.fund-label,.research-metric-label,.kpi-label){font-size:12px!important;font-weight:400!important;color:var(--sherlock-muted)!important;line-height:18px!important}
+body :is(.market-value,.fund-value,.research-metric-value,.kpi-value){font-size:18px!important;line-height:25px!important;font-weight:600!important;color:var(--sherlock-text)!important;overflow-wrap:anywhere!important}
+body :is(.market-detail,.fund-detail,.research-metric-detail,.kpi-detail){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important}
 body :is(.market-footer,.fund-footer,.fund-industry-footer,.market-ohlc,.trend-readout,.scatter-readout,.terminal-table-readout){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important;background:transparent!important;border-color:var(--sherlock-border)!important;min-width:0!important;overflow-wrap:anywhere!important}
 body :is(.market-table-wrap,.fund-table-wrap){min-width:0!important;min-height:0!important;overflow:auto!important;max-height:calc(100vh - 68px)!important;border:0!important}
 body :is(.market-candle,.market-trend,.market-scatter,.market-price-volume,.market-fund-flow){min-width:0!important;min-height:0!important;background:transparent!important;border:0!important}

@@ -2,10 +2,11 @@
 // View preferences are local to a board; no artifact or application theme changes.
 export function workbenchStylePalette(mode) {
  const common={'control-primary':'#168cf0','control-on-primary':'#fff',link:'#168cf0','chart-1':'#5b9bd5','chart-2':'#f2a746','chart-3':'#509760','chart-4':'#ded800','chart-5':'#25b6cd','chart-6':'#9b73c5'}
- const light={bg:'#fff',surface:'#fff','surface-muted':'#f4f4f6',text:'#25252b',muted:'#777781',border:'#dedee3','row-alternate':'#f4f4f6','row-selected':'#e8f2fc','control-bg':'#f4f4f6','control-border':'#d1d1d8','control-text':'#25252b','chart-label':'#777781','chart-grid':'#dedee3','chart-crosshair':'#a0a0ab','market-positive':'#00a83e','market-negative':'#df4f57'}
- const dark={bg:'#151518',surface:'#151518','surface-muted':'#24242b',text:'#e8e8ed',muted:'#a0a0ab',border:'#303036','row-alternate':'#24242b','row-selected':'#223147','control-bg':'#1d1d23','control-border':'#45454e','control-text':'#e8e8ed','chart-label':'#a0a0ab','chart-grid':'#3c3c43','chart-crosshair':'#a0a0ab','market-positive':'#00c84a','market-negative':'#ee5962'}
- const enterprise={...light,bg:'#fff',surface:'#fff','surface-muted':'#f3f5f7',text:'#3c3c3c',muted:'#666666',border:'#e3e7eb','row-alternate':'#f3f5f7','row-selected':'#b3ebff','control-bg':'#f3f5f7','control-border':'#c1c6c8','control-text':'#005096','control-primary':'#0078b4',link:'#0078b4','chart-label':'#666666','chart-grid':'#e3e7eb','chart-1':'#005096','chart-2':'#1eb9e1','chart-3':'#969696','chart-4':'#3c3c3c','chart-5':'#0078b4','chart-6':'#b3ebff','chart-7':'#c1c6c8','chart-8':'#cccccc','table-heading':'#1eb9e1','table-heading-text':'#fff'}
- return {...common,...(mode==='dark'?dark:mode==='enterprise'?enterprise:light)}
+ const light={bg:'#fff',surface:'#fff','surface-muted':'#f4f4f6',text:'#25252b',muted:'#777781',border:'#dedee3','row-alternate':'#f4f4f6','row-selected':'#e8f2fc','control-bg':'#f4f4f6','control-border':'#d1d1d8','control-text':'#25252b','control-muted':'#777781','chart-label':'#777781','chart-grid':'#dedee3','chart-crosshair':'#a0a0ab','market-positive':'#00a83e','market-negative':'#df4f57'}
+ const dark={bg:'#151518',surface:'#151518','surface-muted':'#24242b',text:'#e8e8ed',muted:'#a0a0ab',border:'#303036','row-alternate':'#24242b','row-selected':'#223147','control-bg':'#1d1d23','control-border':'#45454e','control-text':'#e8e8ed','control-muted':'#a0a0ab','chart-label':'#a0a0ab','chart-grid':'#3c3c43','chart-crosshair':'#a0a0ab','market-positive':'#00c84a','market-negative':'#ee5962'}
+ const enterprise={...light,bg:'#fff',surface:'#fff','surface-muted':'#f3f5f7',text:'#3c3c3c',muted:'#666666',border:'#e3e7eb','row-alternate':'#f3f5f7','row-selected':'#e8e8eb',link:'#0078b4','chart-label':'#666666','chart-grid':'#e3e7eb','chart-1':'#005096','chart-2':'#1eb9e1','chart-3':'#969696','chart-4':'#3c3c3c','chart-5':'#0078b4','chart-6':'#b3ebff','chart-7':'#c1c6c8','chart-8':'#cccccc','table-heading':'#1eb9e1','table-heading-text':'#fff'}
+ const palette=mode==='dark'?dark:mode==='enterprise'?enterprise:light
+ return {...common,...palette,'tooltip-bg':mode==='enterprise'?'#e8e8eb':palette.surface,'tooltip-text':palette.text,'tooltip-muted':palette.muted,'tooltip-border':palette.border}
 }
 export function workbenchModeCss(scope=':root',content='') {
  const modes=['light','dark','enterprise'],declarations=p=>Object.entries(p).map(([k,v])=>'--sherlock-'+k+':'+v+'!important').join(';')
@@ -35,10 +36,10 @@ export function installWorkbenchStyleMessages() {
 export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 :root[data-workbench-style="enterprise"] body th{background:var(--sherlock-table-heading)!important;color:var(--sherlock-table-heading-text)!important}
 :root[data-workbench-style="enterprise"] body th button{color:inherit!important}
-:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric){background:var(--sherlock-chart-1)!important;padding:12px!important;border-radius:0!important}
-:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric):nth-child(3n+2){background:var(--sherlock-chart-5)!important}
-:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric):nth-child(3n){background:var(--sherlock-chart-4)!important}
-:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric) :is(.market-value,.market-label,.market-detail,.fund-value,.fund-label,.fund-detail,.research-metric-value,.research-metric-label,.research-metric-detail){color:white!important}
+:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div){background:var(--sherlock-chart-1)!important;padding:12px!important;border-radius:0!important}
+:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n+2){background:var(--sherlock-chart-5)!important}
+:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n){background:var(--sherlock-chart-4)!important}
+:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div) :is(.market-value,.market-label,.market-detail,.fund-value,.fund-label,.fund-detail,.research-metric-value,.research-metric-label,.research-metric-detail,.kpi-label,.kpi-value,.kpi-detail,span,strong,em){color:white!important}
 @media(prefers-reduced-motion:no-preference){
  :root[data-workbench-transition] body,:root[data-workbench-transition] body *{transition:background-color 260ms cubic-bezier(.2,.7,.2,1),color 260ms cubic-bezier(.2,.7,.2,1),border-color 260ms cubic-bezier(.2,.7,.2,1)}
  :root[data-workbench-transition] svg :is(rect,path,line,text,circle){transition:fill 260ms cubic-bezier(.2,.7,.2,1),stroke 260ms cubic-bezier(.2,.7,.2,1)}
