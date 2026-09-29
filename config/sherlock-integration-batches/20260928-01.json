@@ -11,36 +11,18 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
-        "tipCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
+        "baseCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
+        "tipCommit": "f475742ec0b9127757875ac9f1f01dee4b279503",
         "commits": [
           {
-            "commit": "c41e5eb9d58aed43460ba379ef2fa45a9d2665e5",
+            "commit": "f475742ec0b9127757875ac9f1f01dee4b279503",
             "parents": [
-              "9a9e174251fb24b76f296123396a71a686aa6d40"
+              "eca3576c489bbd21ca550bef9a96624ca3927084"
             ],
-            "subject": "修复：打包去重后恢复运行时补丁并校验版本一致性"
-          },
-          {
-            "commit": "d0f0e23e65342ea19363722f66ad151fc8d3a7b9",
-            "parents": [
-              "c41e5eb9d58aed43460ba379ef2fa45a9d2665e5"
-            ],
-            "subject": "修复：整理忽略隐藏明细并补齐空位，统一拖动坐标和多选缩放"
-          },
-          {
-            "commit": "eca3576c489bbd21ca550bef9a96624ca3927084",
-            "parents": [
-              "d0f0e23e65342ea19363722f66ad151fc8d3a7b9"
-            ],
-            "subject": "修复：多选缩放保留未选草稿的规范宽度"
+            "subject": "修复：限制组件最小尺寸，整理保留位置关系并淡化滚动条"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "package.json"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/html-artifact.js"
@@ -51,19 +33,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
           },
           {
-            "status": "A",
-            "path": "scripts/restore-packaged-runtime-patches.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/packaged-runtime-patches.test.js"
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
@@ -86,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交前端补丁构建通过",
-            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
-            "completedAt": "2026-09-29T03:03:08.235837+00:00",
+            "verifiedCommit": "f475742ec0b9127757875ac9f1f01dee4b279503",
+            "completedAt": "2026-09-29T03:30:31.636818+00:00",
             "timeoutMs": 300000
           },
           {
@@ -95,14 +69,12 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/packaged-runtime-patches.test.js",
-              "test/profile-runtime-patches.test.js"
+              "test/research-grid-workbench.test.js"
             ],
             "outcome": "passed",
-            "summary": "87项直接相关检查通过，覆盖整理补位、拖动坐标、多选同步缩放、窄窗规范与打包补丁",
-            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
-            "completedAt": "2026-09-29T03:03:08.235837+00:00",
+            "summary": "88项直接相关检查通过，覆盖最小尺寸、多选同步限制、现有位置整理与重复稳定",
+            "verifiedCommit": "f475742ec0b9127757875ac9f1f01dee4b279503",
+            "completedAt": "2026-09-29T03:30:31.636818+00:00",
             "timeoutMs": 300000
           },
           {
@@ -114,9 +86,9 @@
               "^(?!.*(?:keeps runtime previews small|keeps chart aliases|defaults cards, controls|places both theme tokens)).*$"
             ],
             "outcome": "passed",
-            "summary": "26项HTML检查通过，隐藏明细和内部滚动区测量回归通过；4项既存基线隔离",
-            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
-            "completedAt": "2026-09-29T03:03:08.235837+00:00",
+            "summary": "26项HTML检查通过，包含淡显双轴滚动及自然内容高度；4项既存基线隔离",
+            "verifiedCommit": "f475742ec0b9127757875ac9f1f01dee4b279503",
+            "completedAt": "2026-09-29T03:30:31.636818+00:00",
             "timeoutMs": 300000
           },
           {
@@ -127,8 +99,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交类型检查通过",
-            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
-            "completedAt": "2026-09-29T03:03:08.235837+00:00",
+            "verifiedCommit": "f475742ec0b9127757875ac9f1f01dee4b279503",
+            "completedAt": "2026-09-29T03:30:31.636818+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -178,8 +150,11 @@
           "打包去重后在签名前恢复同版本运行时补丁并核验独立插件目录与App副本一致",
           "浮卡和静止卡统一中心坐标，保持指针抓取点，邻居180ms平滑让位",
           "整理只测可见内容，闭合明细只计摘要，展开长表仅计内部滚动视窗",
-          "宽卡缩入短列可用槽位，后续卡补齐最低空位且保持内容独立高度",
-          "多选可调卡片同轴同增量缩放，共同最小及画板边界限制，一步撤销；未选草稿被动补宽不写回规范"
+          "整理优先当前格位的阅读顺序与位置关系，只压缩全画布未使用的横向间隔，保留错位列及细分跨列、列内向上补位，独立内容高度且重复稳定",
+          "多选可调卡片同轴同增量缩放，共同最小及画板边界限制，一步撤销；未选草稿被动补宽不写回规范",
+          "普通组件显示、单卡和多选缩放硬下限280×160，草稿320×220，网格向上取整；已有小卡被动补足不改规范历史，窄画板仅夹可用宽",
+          "宿主与HTML两轴滚动条淡显，静止约13%悬停或聚焦约33%透明度，透明轨道，不造成悬停布局变化",
+          "Figma21Z同步硬最小尺寸、淡显滚动和现有格位优先整理规范，文字不裁切"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -188,52 +163,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T03:03:08.235837+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a4fca0bd0f128efaad559f414e8a182df8e86206",
-        "verificationCommit": "a4fca0bd0f128efaad559f414e8a182df8e86206",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a4fca0bd0f128efaad559f414e8a182df8e86206",
-            "completedAt": "2026-09-29T03:03:45.310Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a4fca0bd0f128efaad559f414e8a182df8e86206",
-            "completedAt": "2026-09-29T03:03:45.310Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a4fca0bd0f128efaad559f414e8a182df8e86206",
-            "completedAt": "2026-09-29T03:03:45.310Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T03:03:45.310Z"
+        "generatedAt": "2026-09-29T03:30:31.636818+00:00"
       }
     }
   ],
