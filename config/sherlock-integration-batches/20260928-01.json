@@ -181,6 +181,51 @@
           "Figma截图接口返回1×1占位，本轮未宣称像素级复验通过。"
         ],
         "generatedAt": "2026-09-29T18:52:36.805261+00:00"
+      },
+      "merged": {
+        "mergeCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
+        "verificationCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
+            "completedAt": "2026-09-29T21:24:02.480Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
+            "completedAt": "2026-09-29T21:24:02.480Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
+            "completedAt": "2026-09-29T21:24:02.480Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-29T21:24:02.480Z"
       }
     }
   ],
