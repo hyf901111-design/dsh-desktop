@@ -16,6 +16,7 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.selection.v1:',
   'sherlock.research.canvas.viewport.v1:',
   'ework.research.grid.v1:',
+  'ework.research.presentation.v1:',
   'sherlock.research.canvas.preview-revocations.v1:',
   'sherlock.research.session-engaged.v1:'
 ] as const
@@ -61,6 +62,14 @@ export class ResearchCanvasStorage {
       return false
     }
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
+    if (key.startsWith('ework.research.presentation.v1:')) {
+      try {
+        const preference = JSON.parse(value)
+        if (value.length > 128 || !preference || Array.isArray(preference) ||
+            Object.keys(preference).length !== 2 || preference.version !== 1 ||
+            !['light', 'dark', 'enterprise'].includes(preference.mode)) return false
+      } catch { return false }
+    }
     if (this.getItem(key) === value) return true
 
     const filePath = researchCanvasStoragePath(this.userDataPath, key)

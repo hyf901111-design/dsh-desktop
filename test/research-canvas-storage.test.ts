@@ -42,6 +42,40 @@ describe('desktop Research canvas storage', () => {
     expect(new ResearchCanvasStorage(userData).getItem(key)).toBe('1')
   })
 
+  it('persists independent board styles across a desktop restart', () => {
+    const userData = temporaryUserData()
+    const first = new ResearchCanvasStorage(userData)
+    const lightKey = 'ework.research.presentation.v1:light-board'
+    const enterpriseKey = 'ework.research.presentation.v1:enterprise-board'
+    const light = JSON.stringify({ version: 1, mode: 'light' })
+    const enterprise = JSON.stringify({ version: 1, mode: 'enterprise' })
+    expect(first.setItem(lightKey, light)).toBe(true)
+    expect(first.setItem(enterpriseKey, enterprise)).toBe(true)
+
+    const restarted = new ResearchCanvasStorage(userData)
+    expect(restarted.getItem(lightKey)).toBe(light)
+    expect(restarted.getItem(enterpriseKey)).toBe(enterprise)
+    expect(restarted.setItem(lightKey, JSON.stringify({ version: 1, mode: 'dark' })))
+      .toBe(true)
+    expect(new ResearchCanvasStorage(userData).getItem(enterpriseKey)).toBe(enterprise)
+  })
+
+  it('rejects invalid board styles without replacing the saved preference', () => {
+    const storage = new ResearchCanvasStorage(temporaryUserData())
+    const key = 'ework.research.presentation.v1:bounded-board'
+    const valid = JSON.stringify({ version: 1, mode: 'dark' })
+    expect(storage.setItem(key, valid)).toBe(true)
+    for (const value of [
+      'not json', 'null', '[]', 'x'.repeat(129),
+      JSON.stringify({ version: 2, mode: 'light' }),
+      JSON.stringify({ version: 1, mode: 'unknown' }),
+      JSON.stringify({ version: 1, mode: 'light', theme: 'dark' })
+    ]) {
+      expect(storage.setItem(key, value)).toBe(false)
+      expect(storage.getItem(key)).toBe(valid)
+    }
+  })
+
   it('persists the bounded canvas viewport across a desktop storage restart', () => {
     const userData = temporaryUserData()
     const key = 'sherlock.research.canvas.viewport.v1:fund-board'
