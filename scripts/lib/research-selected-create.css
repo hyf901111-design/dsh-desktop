@@ -1,8 +1,9 @@
 body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context){display:flex!important;flex-direction:column;min-height:0;overflow:auto!important}
 body [data-ework-grid] .ew-selected-create-context{flex:none;padding:10px 12px 0;font:400 12px/18px Inter,"Noto Sans SC",system-ui;color:var(--grid-muted)}
-body [data-ework-grid] .ew-selected-create-source{display:flex;align-items:center;gap:12px;padding:6px 10px;background:var(--grid-menu);min-height:30px;box-sizing:border-box}
+body [data-ework-grid] .ew-selected-create-source{display:flex;align-items:center;gap:12px;padding:1px 12px;background:var(--grid-menu);min-height:30px;box-sizing:border-box}
 body [data-ework-grid] .ew-selected-create-source>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body [data-ework-grid] .ew-selected-create-context button{flex:none;background:none;border:0;color:#139dff;padding:0;font:inherit;cursor:pointer}
+body [data-ework-grid] .ew-selected-create-source>[data-workbench-view-source]{display:flex;align-items:center;justify-content:flex-end;width:64px;height:28px;box-sizing:border-box}
 body [data-ework-grid] .ew-selected-create-requirement{display:flex;gap:12px;align-items:flex-start;padding:9px 0;max-height:68px;overflow:auto}
 body [data-ework-grid] .ew-selected-create-requirement>span{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
 body [data-ework-grid] .ew-selected-create-draft{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:12px;font:400 12px/18px Inter,"Noto Sans SC",system-ui;color:var(--grid-text)}
@@ -16,3 +17,6 @@ body [data-ework-grid] .ew-selected-create-actions button:disabled{opacity:.45;c
 body [data-ework-grid] .ew-selected-create-actions [data-workbench-stop-preparing]{padding:7px 12px;background:var(--grid-menu);color:var(--grid-text)}
 body [data-ework-grid] .ew-selected-create-draft p{margin:0;color:var(--grid-muted);font-size:11px}
 body [data-ework-grid] .ew-selected-create-error{color:#db6262;overflow-wrap:anywhere}
+/* The outer derived shell adds only the baseline strip to the shared body. */
+body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context)>.odyssey-generation-surface{flex:1;height:auto!important;min-height:0}
+body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context) [data-research-generation-sources]{display:none}

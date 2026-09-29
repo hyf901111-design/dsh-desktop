@@ -242,6 +242,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before){update(lastPointer);autoFrame=view.requestAnimationFrame(autoScroll)}}
   }
   const down=e=>{
+    if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
     if(toolRef.current==='select'&&handleWorkbenchMultiSelect(root,workspace,e))return
     if(e.button!==0||e.target?.closest?.('[data-research-global-toolbar],[role=menu],[role=dialog],.ew-grid-menu'))return
     const handle=e.target?.closest?.('[data-workbench-drag-handle]'),resize=e.target?.closest?.('[data-workbench-resize]'),card=e.target?.closest?.('[data-research-node-id]')||(resize&&root.querySelector('[data-research-node-id="'+CSS.escape(resize.getAttribute('data-workbench-resize'))+'"]'))
@@ -313,16 +314,16 @@ export function WorkbenchDownloadMenu({canvasRoot,onClose,onMouseEnter,onMouseLe
   },[canvasRoot])
   return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx('span',{ref:anchor,'aria-hidden':true,style:{display:'block',height:0}}),react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref:popup,className:className+' ew-grid-download-menu',onMouseEnter,onMouseLeave,onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)]})
 }
-export function WorkbenchToolbar({rootRef,sessionId,availableWidth,children,...props}) {
+export function WorkbenchToolbar({rootRef,sessionId,availableWidth,bottomOffset=20,children,...props}) {
   const [bounds,setBounds]=react.useState(null)
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
-    const measure=()=>{const r=root.getBoundingClientRect(),next={left:r.left+Math.min(r.width,availableWidth||r.width)/2,bottom:Math.max(20,window.innerHeight-r.bottom+20)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom?previous:next)}
+    const measure=()=>{const r=root.getBoundingClientRect(),next={left:r.left+Math.min(r.width,availableWidth||r.width)/2,bottom:Math.max(bottomOffset,window.innerHeight-r.bottom+bottomOffset)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom?previous:next)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root);if(root.parentElement)observer.observe(root.parentElement)
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();window.removeEventListener('resize',measure)}
-  },[rootRef,availableWidth])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':'','data-ework-toolbar-owner':sessionId,style:{position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||20,top:'auto',visibility:bounds?'visible':'hidden'},children}),document.body)
+  },[rootRef,availableWidth,bottomOffset])
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':'','data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
@@ -382,7 +383,15 @@ export function arrangeWorkbenchContents(root,workspace,measured) {
       const height=matched?cache.height+58:!target?natural.get(c.id)?.height:null
       return height?{...c,h:Math.max(grid.minimum(currentNodes.find(n=>n.id===c.id),m).h,Math.min(300,Math.ceil((height+m.gap)/m.step)))}:c
     })
-    const packed=grid.closeSmallGaps(grid.compact(next),width)
+    const measuredCells=new Map(next.map(c=>[c.id,c]))
+    const packed=grid.arrange(currentNodes.map(n=>{
+      const c=measuredCells.get(n.id)
+      return {...n,preferred:{height:c.h*m.step-m.gap-1e-7}}
+    }),next,width)
+    for(const c of packed){
+      const target=expected.get(c.id),previous=cells.find(old=>old.id===c.id)
+      if(target&&previous&&c.w!==previous.w){target.width=Math.round(target.width+(c.w-previous.w)*m.step);complete=false}
+    }
     if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }
@@ -398,6 +407,12 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const contentMeasurements=new Map();root.__eworkContentMeasurements=contentMeasurements
     const contentSize=event=>{
       const data=event.data
+      if(data?.type==='sherlock-workbench-history'){
+        if(readOnly||Array.isArray(data)||Object.keys(data).length!==2||!['undo','redo'].includes(data.action))return
+        const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source),id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id')
+        if(!id||!workspace.getSnapshot().selection.selectedNodeIds.includes(id))return
+        root.__eworkContentFit?.finish();root.focus({preventScroll:true});workspace[data.action]();return
+      }
       if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).length!==3||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
       const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
       const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
@@ -410,7 +425,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const scroll=()=>{const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
     return()=>{root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
-  },[workspace,sessionId])
+  },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     const nodes=[...snapshot.files,...snapshot.artifacts],bottom=Math.max(12,...nodes.map(n=>n.y+n.height/2))+Math.max(520,root.clientHeight||snapshot.canvasSize.height||700)
