@@ -15,17 +15,36 @@ export function sendWorkbenchFramePresentation(frame) {
  frame.contentWindow.postMessage({type:'sherlock-workbench-locale',locale:frame.ownerDocument.documentElement.dataset.odysseyLocale==='en'?'en':'zh'},'*')
  frame.contentWindow.postMessage({type:'sherlock-theme',colorScheme:message.mode==='dark'?'dark':'light'},'*')
 }
+export function animateWorkbenchStyle(root,mode) {
+ const doc=root.ownerDocument,view=doc.defaultView,motion=view.matchMedia?.('(prefers-reduced-motion: reduce)')
+ if(motion?.matches)return()=>{}
+ const bounds=root.getBoundingClientRect(),left=Math.max(0,bounds.left),top=Math.max(0,bounds.top),width=Math.min(view.innerWidth,bounds.right)-left,height=Math.min(view.innerHeight,bounds.bottom)-top
+ if(width<=0||height<=0)return()=>{}
+ const sweep=doc.createElement('div');sweep.className='ew-workbench-style-transition';sweep.dataset.mode=mode;sweep.setAttribute('aria-hidden','true')
+ Object.assign(sweep.style,{position:'fixed',left:left+'px',top:top+'px',width:width+'px',height:height+'px',pointerEvents:'none'})
+ root.dataset.workbenchTransition=mode
+ // Install color transitions before changing the palette, without changing geometry.
+ void root.offsetWidth
+ doc.body.append(sweep)
+ let timer,stopped=false
+ const stop=()=>{if(stopped)return;stopped=true;view.clearTimeout(timer);sweep.remove();delete root.dataset.workbenchTransition;motion?.removeEventListener?.('change',stop)}
+ sweep.addEventListener('animationend',stop,{once:true});motion?.addEventListener?.('change',stop,{once:true});timer=view.setTimeout(stop,520)
+ return stop
+}
 export function useWorkbenchStyle({rootRef,workspace}) {
  react.useLayoutEffect(()=>{
   const root=rootRef.current;if(!root)return
   const doc=root.ownerDocument,view=doc.defaultView,frames=new WeakMap()
+  let hydrated=false,stopTransition=()=>{}
   const sync=()=>{
    const globalDark=doc.body.hasAttribute('data-ds-dark-theme'),mode=workspace.getWorkbenchStyle?.()||(globalDark?'dark':'light')
    const controlTheme=globalDark?'dark':'light'
+   if(hydrated&&root.dataset.workbenchStyle!==mode){stopTransition();stopTransition=animateWorkbenchStyle(root,mode)}
    if(root.dataset.workbenchStyle!==mode||root.dataset.workbenchControlTheme!==controlTheme){
     root.dataset.workbenchStyle=mode;root.dataset.workbenchControlTheme=controlTheme
     root.dispatchEvent(new view.CustomEvent('sherlock-workbench-style-change'))
    }
+   hydrated=true
    for(const frame of root.querySelectorAll('iframe[data-research-html-artifact]')){
     const signature=mode+':'+globalDark+':'+doc.documentElement.dataset.odysseyLocale
     if(frames.get(frame)===signature)continue
@@ -37,7 +56,7 @@ export function useWorkbenchStyle({rootRef,workspace}) {
   const off=workspace.subscribe(sync),observer=new view.MutationObserver(sync),theme=new view.MutationObserver(sync)
   observer.observe(root,{childList:true,subtree:true});theme.observe(doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']})
   root.addEventListener('load',loaded,true);sync()
-  return()=>{off();locale.disconnect();observer.disconnect();theme.disconnect();root.removeEventListener('load',loaded,true)}
+  return()=>{stopTransition();off();locale.disconnect();observer.disconnect();theme.disconnect();root.removeEventListener('load',loaded,true)}
  },[rootRef,workspace])
 }
 export function WorkbenchStylePicker({workspace}) {
