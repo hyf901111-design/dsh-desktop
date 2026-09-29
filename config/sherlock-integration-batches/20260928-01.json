@@ -11,25 +11,33 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "d3c851c3c1564e467884646bdc7a0cb0f5a807a0",
-        "tipCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
+        "baseCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
+        "tipCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
         "commits": [
           {
-            "commit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
+            "commit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
             "parents": [
-              "d3c851c3c1564e467884646bdc7a0cb0f5a807a0"
+              "229981b1fb0887b2c438bb9b6e1f91b2b992e648"
             ],
-            "subject": "补齐市场广度基金权重与甘特图生长动效"
+            "subject": "修复新工作台首次生成挤入单列并保留规划尺寸"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-chart-motion.js"
+            "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
-            "path": "test/workbench-chart-motion.test.js"
+            "path": "scripts/lib/research-workbench-growth.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -39,9 +47,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "补丁生成、幂等恢复和语法核验通过",
-            "verifiedCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
-            "completedAt": "2026-09-29T15:45:41.415791+00:00",
+            "summary": "补丁应用与幂等恢复通过",
+            "verifiedCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
+            "completedAt": "2026-09-29T16:21:49.410952+00:00",
             "timeoutMs": 300000
           },
           {
@@ -49,36 +57,19 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/workbench-chart-motion.test.js"
+              "test/research-grid-workbench.test.js",
+              "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "11项主题呈现与动效聚焦检查通过；三主题失败中性色与输入框、十二类真实图表动效Chromium验证通过",
-            "verifiedCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
-            "completedAt": "2026-09-29T15:45:41.415791+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-selected-create.test.js",
-              "-t",
-              "默认智能组件|衍生生成保持输入卡尺寸|拉框智能组件|重复补丁"
-            ],
-            "outcome": "passed",
-            "summary": "默认、拉框、衍生生命周期与补丁幂等4项聚焦检查通过",
-            "verifiedCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
-            "completedAt": "2026-09-29T15:45:41.415791+00:00",
+            "summary": "125项原有与新增网格检查通过；新增真实 applyWorkbench 生命周期与补丁幂等2项通过",
+            "verifiedCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
+            "completedAt": "2026-09-29T16:21:49.410952+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端。真实补丁浏览器主题、输入、失败状态和图表加载动效核验通过；十二种图表动画不改变框尺寸，主题/筛选不重播，减少动态效果静态。上一集成真实白酒/医药/茅台整理已消除空带；本次在集成重建后检查真实输入与失败卡。"
+          "summary": "真实自然语言医药工作台18秒生成六卡，但首次布局单列留白未通过。已修复新组初始化填满双列，生成全程保持既定格位；待集成客户端重建复验。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -181,7 +172,8 @@
           "默认创建、手动拉框及衍生创建在排队、运行、失败、重试、重载、完成全程维持生成前尺寸，不临时提升最小高度",
           "失败卡片使用中性色标题、状态与说明及灰色图标，不混用红色提示与企业蓝色标题；保留真实错误与重试入口",
           "宿主及HTML图表首次进入视窗播放650ms生长动效；折线绘制、柱形及K线展开、散点与环图渐进，资金流/漏斗/盘口/风险矩阵/市场广度/基金行业/甘特图覆盖，坐标数据和最终尺寸保持；主题、悬停、筛选不重播，减少动态效果静态呈现",
-          "Figma错误状态图标与标题说明中性色，生成固定尺寸与首次图表动效规范同步"
+          "Figma错误状态图标与标题说明中性色，生成固定尺寸与首次图表动效规范同步",
+          "自然语言工作台首次挂载按组填满可用双列或窄窗单列，后续内容返回保持默认框，已有组件不被重新布局"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -189,52 +181,7 @@
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。"
         ],
-        "generatedAt": "2026-09-29T15:45:41.415791+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b8267bb26a8735321443c7e97de670e25f75c450",
-        "verificationCommit": "b8267bb26a8735321443c7e97de670e25f75c450",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "b8267bb26a8735321443c7e97de670e25f75c450",
-            "completedAt": "2026-09-29T15:49:07.435Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "b8267bb26a8735321443c7e97de670e25f75c450",
-            "completedAt": "2026-09-29T15:49:07.435Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b8267bb26a8735321443c7e97de670e25f75c450",
-            "completedAt": "2026-09-29T15:49:07.435Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T15:49:07.435Z"
+        "generatedAt": "2026-09-29T16:21:49.410952+00:00"
       }
     }
   ],
