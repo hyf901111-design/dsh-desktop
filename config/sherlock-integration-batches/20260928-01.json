@@ -187,6 +187,51 @@
           "Figma全量44组件和30图表仍未全部覆盖；本轮注册表40项包括12类坐标图，完整原生成功率目标尚未验收通过。"
         ],
         "generatedAt": "2026-09-29T18:52:36.805261+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
+        "verificationCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
+            "completedAt": "2026-09-29T18:54:46.242Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
+            "completedAt": "2026-09-29T18:54:46.242Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
+            "completedAt": "2026-09-29T18:54:46.242Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-29T18:54:46.242Z"
       }
     }
   ],
