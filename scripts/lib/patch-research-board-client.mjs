@@ -1,3 +1,5 @@
+import {WORKBENCH_ENGLISH} from './workbench-localization.mjs'
+import {validWorkbenchStyleMessage,installWorkbenchStyleMessages,validWorkbenchLocaleMessage,installWorkbenchLocaleMessages} from '../../packages/dsh-research-task-runtime/workbench-style.js'
 import { sharedComponentRuntime } from '../../packages/dsh-research-task-runtime/shared-component-runtime.js'
 import { patchSharedNativeConversation } from './shared-native-conversation.mjs'
 import { patchComponentInteractionState } from './component-interaction-state.mjs'
@@ -21,8 +23,9 @@ const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
   .replace(/^export /gm, '')
-  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n'+isWorkbenchScrollbarMessage.toString()+'\n'+installWorkbenchScrollbars.toString()+'\n')
+  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+validWorkbenchLocaleMessage.toString()+'\n'+installWorkbenchLocaleMessages.toString()+'\n'+validWorkbenchStyleMessage.toString()+'\n'+installWorkbenchStyleMessages.toString()+'\nconst researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n'+isWorkbenchScrollbarMessage.toString()+'\n'+installWorkbenchScrollbars.toString()+'\n')
   .replace(/\bparseResearchHtmlArtifact\(/g, 'parseResearchContainerSpec(')
+  .replace(/\bWORKBENCH_ENGLISH\b/g, 'RESEARCH_WORKBENCH_ENGLISH')
 const START = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_BEGIN */',
   END = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_END */'
 function replace(source, anchor, next, label = anchor.slice(0, 80)) {

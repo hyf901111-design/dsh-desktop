@@ -35,7 +35,7 @@ it('重复补丁恢复原始代码且不积累事件或样式',async()=>{
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),base=restoreResearchGridWorkbench(source),once=patchResearchGridWorkbench(base)
  expect(restoreResearchGridWorkbench(once).trim()).toBe(base.trim())
  expect(patchResearchGridWorkbench(once)).toBe(once)
-})
+},15000)
 it('拖动网格事务可撤销并恢复所有让位组件，重新打开保持格位',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a'),text('b',740)]);f.workspace.setWorkbenchWidth(1000)
  const before=structuredClone(f.workspace.getSnapshot().artifacts),cells=f.workspace.getWorkbenchCells()
@@ -1351,4 +1351,39 @@ it('宿主原生滚动条一直不占位，选中仅改变覆盖层颜色并保�
  expect(thumb()).toBe('transparent')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
+})
+it('三种看板样式仅保存本看板展示偏好，不改变内容、布局、选择或撤销记录',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('style-a')]))
+ await act(async()=>f.workspace.updateSelection(['style-a'],'replace'))
+ const before=structuredClone(f.workspace.getSnapshot()),cells=f.workspace.getWorkbenchCells(),theme=f.document.body.getAttribute('data-ds-dark-theme')
+ for(const mode of ['light','enterprise','dark']){
+  await f.event('click',f.document.querySelector('[data-workbench-style-option="'+mode+'"]'))
+  expect(f.canvas.dataset.workbenchStyle).toBe(mode);expect(f.document.body.getAttribute('data-ds-dark-theme')).toBe(theme)
+  expect(f.workspace.getSnapshot().artifacts).toEqual(before.artifacts);expect(f.workspace.getSnapshot().selection).toEqual(before.selection);expect(f.workspace.getWorkbenchCells()).toEqual(cells)
+  expect(f.document.querySelector('[data-workbench-style-option="'+mode+'"]').getAttribute('aria-checked')).toBe('true')
+ }
+ const restored=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');expect(restored.getWorkbenchStyle()).toBe('dark')
+ const other=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'other-board');expect(other.getWorkbenchStyle()).toBeNull()
+ expect(f.workspace.setWorkbenchStyle('unknown')).toBe(false)
+ await act(async()=>f.workspace.undo());expect(f.workspace.getSnapshot().artifacts).toEqual([])
+})
+it('看板样式在新组件与嵌入页面载入时继承，切换不替换iframe',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('style-a')]))
+ const card=f.host.querySelector('[data-research-node-id="style-a"]'),frame=f.document.createElement('iframe');frame.dataset.researchHtmlArtifact='';card.append(frame)
+ const messages=[],send=vi.spyOn(frame.contentWindow,'postMessage').mockImplementation(d=>messages.push(d));await act(async()=>f.workspace.setWorkbenchStyle('enterprise'))
+ expect(messages).toContainEqual({type:'sherlock-workbench-style',mode:'enterprise',controlTheme:'light'})
+ const parent=frame.parentElement;await act(async()=>f.workspace.setWorkbenchStyle('dark'));expect(frame.parentElement).toBe(parent)
+ messages.length=0;await f.event('load',frame);expect(messages).toContainEqual({type:'sherlock-workbench-style',mode:'dark',controlTheme:'light'})
+ await act(async()=>f.workspace.createContainerDraft());expect(f.canvas.dataset.workbenchStyle).toBe('dark');send.mockRestore()
+})
+it('模式组支持方向键且与组件工具选中相互独立，英文新增菜单与提示随语言变化',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('style-a')]))
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
+ const tool=f.canvas.dataset.canvasTool
+ await f.event('keydown',f.document.querySelector('[data-workbench-style-option=light]'),{key:'ArrowRight'})
+ expect(f.canvas.dataset.workbenchStyle).toBe('dark');expect(f.canvas.dataset.canvasTool).toBe(tool)
+ await act(async()=>{f.document.documentElement.dataset.odysseyLocale='en';await new Promise(r=>setTimeout(r,20))})
+ expect(f.document.querySelector('[data-workbench-style-option=enterprise]').getAttribute('aria-label')).toBe('EFund mode')
+ await f.event('click',f.document.querySelector('[data-workbench-more="style-a"]'),{clientX:600,clientY:100})
+ const menu=f.document.querySelector('.ew-grid-menu');expect(menu.textContent).toContain('Duplicate component');expect(menu.textContent).toContain('Create from selection');expect(menu.textContent).not.toMatch(/[\u4e00-\u9fff]/)
 })

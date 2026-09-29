@@ -134,7 +134,7 @@ function ResearchGenerationGrid({ moving }) {
       if (!width || !height) return
       scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
       canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale)
-      dark = document.body.hasAttribute('data-ds-dark-theme'); draw()
+      const mode=canvas.closest('[data-ework-grid]')?.dataset.workbenchStyle;dark=mode?mode==='dark':document.body.hasAttribute('data-ds-dark-theme');draw()
     }
     const stop = () => { if (frame) cancelAnimationFrame(frame); frame = 0; last = 0 }
     const tick = time => {
@@ -146,6 +146,7 @@ function ResearchGenerationGrid({ moving }) {
     }
     const start = () => { if (moving && visible && pageVisible && !frame) frame = requestAnimationFrame(tick) }
     const resize = new ResizeObserver(layout), theme = new MutationObserver(layout)
+    const workbench=canvas.closest('[data-ework-grid]');workbench?.addEventListener('sherlock-workbench-style-change',layout)
     resize.observe(canvas); theme.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
     const intersection = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
       visible = entries.some(entry => entry.isIntersecting); visible ? start() : stop()
@@ -158,7 +159,7 @@ function ResearchGenerationGrid({ moving }) {
     surface.addEventListener('pointermove', hover); surface.addEventListener('pointerleave', leave)
     document.addEventListener('visibilitychange', visibility)
     layout(); start()
-    return () => { stop(); resize.disconnect(); theme.disconnect(); intersection?.disconnect(); surface.removeEventListener('pointermove', hover); surface.removeEventListener('pointerleave', leave); document.removeEventListener('visibilitychange', visibility) }
+    return () => { stop(); resize.disconnect(); theme.disconnect();workbench?.removeEventListener('sherlock-workbench-style-change',layout); intersection?.disconnect(); surface.removeEventListener('pointermove', hover); surface.removeEventListener('pointerleave', leave); document.removeEventListener('visibilitychange', visibility) }
   }, [moving])
   return (0, react_jsx_runtime.jsx)('canvas', { ref: element, className: 'odyssey-generation-shape-grid', 'aria-hidden': true, 'data-research-generation-grid': '', 'data-grid-moving': moving, 'data-grid-size': 34, 'data-grid-speed': .72 })
 }

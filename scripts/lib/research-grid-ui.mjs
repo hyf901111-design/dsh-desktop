@@ -338,7 +338,7 @@ export function WorkbenchDownloadMenu({canvasRoot,onClose,onMouseEnter,onMouseLe
   },[canvasRoot])
   return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx('span',{ref:anchor,'aria-hidden':true,style:{display:'block',height:0}}),react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,ref:popup,className:className+' ew-grid-download-menu',onMouseEnter,onMouseLeave,onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onClose();canvasRoot.current?.focus({preventScroll:true})}},children}),document.body)]})
 }
-export function WorkbenchToolbar({rootRef,sessionId,availableWidth,bottomOffset=20,children,...props}) {
+export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bottomOffset=20,children,...props}) {
   const [bounds,setBounds]=react.useState(null)
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
@@ -347,7 +347,7 @@ export function WorkbenchToolbar({rootRef,sessionId,availableWidth,bottomOffset=
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();window.removeEventListener('resize',measure)}
   },[rootRef,availableWidth,bottomOffset])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children}),document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?[...react.Children.toArray(children),react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]:children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))

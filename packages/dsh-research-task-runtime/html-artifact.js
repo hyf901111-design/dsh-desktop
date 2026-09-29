@@ -1,3 +1,5 @@
+import {WORKBENCH_ENGLISH} from './workbench-locale.js'
+import {validWorkbenchStyleMessage,installWorkbenchStyleMessages,validWorkbenchLocaleMessage,installWorkbenchLocaleMessages} from './workbench-style.js'
 import { installWorkbenchScrollbars, isWorkbenchScrollbarMessage } from './workbench-scrollbars.js'
 import { refineCandlestickHtml } from './market-candlestick.js'
 import { createWorkbenchRefreshSurface, installWorkbenchRefresh, isWorkbenchViewState, workbenchContentRevision, workbenchRefreshCss } from './workbench-refresh.js'
@@ -404,7 +406,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     }
   }
   const apply = () => {
-    const colorScheme = fixedTheme || hostTheme
+    const colorScheme = workbench ? hostTheme : fixedTheme || hostTheme
     if (activeTheme === colorScheme) return
     activeTheme = colorScheme
     document.documentElement.setAttribute('data-sherlock-theme', colorScheme)
@@ -737,15 +739,21 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   let fontBlob
   let interactionState
   let workbenchSelection
+  let workbenchStyle
+  let workbenchLocale
   let fontFailed = false
   const publish = () => {
     root.setAttribute('data-sherlock-theme', fixedTheme || colorScheme)
     root.style.colorScheme = fixedTheme || colorScheme
     frame.contentWindow?.postMessage({ type: 'sherlock-theme', colorScheme }, '*')
     if (workbenchSelection) frame.contentWindow?.postMessage(workbenchSelection, '*')
+    if (workbenchStyle) frame.contentWindow?.postMessage(workbenchStyle, '*')
+    if (workbenchLocale) frame.contentWindow?.postMessage(workbenchLocale, '*')
   }
   addEventListener('message', (event) => {
     const exportData=event.data
+    if(!standalone&&event.source===parent&&validWorkbenchLocaleMessage(exportData)){workbenchLocale=exportData;frame.contentWindow?.postMessage(exportData,'*');return}
+    if(!standalone&&event.source===parent&&validWorkbenchStyleMessage(exportData)){workbenchStyle=exportData;frame.contentWindow?.postMessage(exportData,'*');return}
     if(!standalone&&event.source===parent&&exportData?.type==='sherlock-workbench-export'&&Object.keys(exportData).length===2&&typeof exportData.id==='string'&&/^export-[a-z0-9-]{1,80}$/.test(exportData.id)){frame.contentWindow?.postMessage(exportData,'*');return}
     if(!standalone&&event.source===frame.contentWindow&&exportData?.type==='sherlock-workbench-export-result'&&Object.keys(exportData).length===3&&typeof exportData.id==='string'&&/^export-[a-z0-9-]{1,80}$/.test(exportData.id)&&typeof exportData.svg==='string'&&exportData.svg.length<=8*1024*1024){parent.postMessage(exportData,'*');return}
     const data = event.data
@@ -865,14 +873,14 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)},${options.workbench === true});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}${options.workbench ? `${isWorkbenchScrollbarMessage.toString()};addEventListener('DOMContentLoaded',()=>{(${installWorkbenchScrollbars.toString()})(document.documentElement,()=>document.scrollingElement,()=>document.documentElement.dataset.workbenchSelected==='true',()=>[document.scrollingElement,...document.body.querySelectorAll('*')]);},{once:true});(${installWorkbenchExport.toString()})(${serializeWorkbenchContent.toString()});(${installWorkbenchRefresh.toString()})(${createWorkbenchRefreshSurface.toString()},${isWorkbenchViewState.toString()},${JSON.stringify(workbenchContentRevision(html))});` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
+  const lockedRuntime = `<script>${options.workbench ? validWorkbenchStyleMessage.toString()+';('+installWorkbenchStyleMessages.toString()+')();'+validWorkbenchLocaleMessage.toString()+';('+installWorkbenchLocaleMessages.toString()+')('+JSON.stringify(WORKBENCH_ENGLISH).replace(/</g,'\\u003c')+');' : ''}for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)},${options.workbench === true});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}${options.workbench ? `${isWorkbenchScrollbarMessage.toString()};addEventListener('DOMContentLoaded',()=>{(${installWorkbenchScrollbars.toString()})(document.documentElement,()=>document.scrollingElement,()=>document.documentElement.dataset.workbenchSelected==='true',()=>[document.scrollingElement,...document.body.querySelectorAll('*')]);},{once:true});(${installWorkbenchExport.toString()})(${serializeWorkbenchContent.toString()});(${installWorkbenchRefresh.toString()})(${createWorkbenchRefreshSurface.toString()},${isWorkbenchViewState.toString()},${JSON.stringify(workbenchContentRevision(html))});` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
   const baseStyle = `${options.workbench ? '@layer ework-workbench;' + WORKBENCH_PRESENTATION_CSS + workbenchRefreshCss : ''}@layer sherlock-terminal;@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
   const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]', options.workbench === true)}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${displayHtml}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
-  const outerRuntime = `const isWorkbenchViewState=${isWorkbenchViewState.toString()};const isWorkbenchScrollbarMessage=${isWorkbenchScrollbarMessage.toString()};(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`
+  const outerRuntime = `const validWorkbenchLocaleMessage=${validWorkbenchLocaleMessage.toString()};const validWorkbenchStyleMessage=${validWorkbenchStyleMessage.toString()};const isWorkbenchViewState=${isWorkbenchViewState.toString()};const isWorkbenchScrollbarMessage=${isWorkbenchScrollbarMessage.toString()};(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`
   return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 EWork Odyssey 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`
 }
 // RESEARCH_COMPONENT_THEME_END
