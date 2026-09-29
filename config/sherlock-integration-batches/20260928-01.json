@@ -11,92 +11,24 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
-        "tipCommit": "d3c851c3c1564e467884646bdc7a0cb0f5a807a0",
+        "baseCommit": "d3c851c3c1564e467884646bdc7a0cb0f5a807a0",
+        "tipCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
         "commits": [
           {
-            "commit": "b825838780a9e6cac6f3d1ad4a5b74418a7bffcd",
+            "commit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
             "parents": [
-              "44f4c34895ce2ba960533d5d960d03d0f7cce8d4"
+              "d3c851c3c1564e467884646bdc7a0cb0f5a807a0"
             ],
-            "subject": "保留指标主题切换中的涨跌语义颜色"
-          },
-          {
-            "commit": "4fd4f861b3bc917402c99098605c0a30eef7813d",
-            "parents": [
-              "b825838780a9e6cac6f3d1ad4a5b74418a7bffcd"
-            ],
-            "subject": "修复智能容器输入框继承客户端深色背景"
-          },
-          {
-            "commit": "7e369444fdb6ca45571090f7a3e74c1bbf6d5d92",
-            "parents": [
-              "4fd4f861b3bc917402c99098605c0a30eef7813d"
-            ],
-            "subject": "固定各生成入口卡片尺寸并统一失败状态配色"
-          },
-          {
-            "commit": "0a076c726d1c2c00e85181fb8d444d60841eb23f",
-            "parents": [
-              "7e369444fdb6ca45571090f7a3e74c1bbf6d5d92"
-            ],
-            "subject": "为组件图表首次加载添加生长动效"
-          },
-          {
-            "commit": "d3c851c3c1564e467884646bdc7a0cb0f5a807a0",
-            "parents": [
-              "0a076c726d1c2c00e85181fb8d444d60841eb23f"
-            ],
-            "subject": "补全资金流漏斗盘口与风险矩阵加载动效"
+            "subject": "补齐市场广度基金权重与甘特图生长动效"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/workbench-chart-motion.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/workbench-style.css"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-selected-create.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/workbench-chart-motion.test.js"
           }
         ],
@@ -108,8 +40,8 @@
             ],
             "outcome": "passed",
             "summary": "补丁生成、幂等恢复和语法核验通过",
-            "verifiedCommit": "d3c851c3c1564e467884646bdc7a0cb0f5a807a0",
-            "completedAt": "2026-09-29T15:38:28.784961+00:00",
+            "verifiedCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
+            "completedAt": "2026-09-29T15:45:41.415791+00:00",
             "timeoutMs": 300000
           },
           {
@@ -122,9 +54,9 @@
               "test/workbench-chart-motion.test.js"
             ],
             "outcome": "passed",
-            "summary": "11项主题呈现与动效聚焦检查通过；三主题失败中性色与输入框、九类真实图表动效Chromium验证通过",
-            "verifiedCommit": "d3c851c3c1564e467884646bdc7a0cb0f5a807a0",
-            "completedAt": "2026-09-29T15:38:28.784961+00:00",
+            "summary": "11项主题呈现与动效聚焦检查通过；三主题失败中性色与输入框、十二类真实图表动效Chromium验证通过",
+            "verifiedCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
+            "completedAt": "2026-09-29T15:45:41.415791+00:00",
             "timeoutMs": 300000
           },
           {
@@ -139,14 +71,14 @@
             ],
             "outcome": "passed",
             "summary": "默认、拉框、衍生生命周期与补丁幂等4项聚焦检查通过",
-            "verifiedCommit": "d3c851c3c1564e467884646bdc7a0cb0f5a807a0",
-            "completedAt": "2026-09-29T15:38:28.784961+00:00",
+            "verifiedCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
+            "completedAt": "2026-09-29T15:45:41.415791+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端。真实补丁浏览器主题、输入、失败状态和图表加载动效核验通过；九种图表动画不改变框尺寸，主题/筛选不重播，减少动态效果静态。上一集成真实白酒/医药/茅台整理已消除空带；本次在集成重建后检查真实输入与失败卡。"
+          "summary": "功能worktree不构建共享客户端。真实补丁浏览器主题、输入、失败状态和图表加载动效核验通过；十二种图表动画不改变框尺寸，主题/筛选不重播，减少动态效果静态。上一集成真实白酒/医药/茅台整理已消除空带；本次在集成重建后检查真实输入与失败卡。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -248,7 +180,7 @@
           "普通智能容器、衍生创建、编辑需求及链接输入统一继承看板控件主题，浅色/企业化不被全局深色覆盖，需求输入和焦点保持",
           "默认创建、手动拉框及衍生创建在排队、运行、失败、重试、重载、完成全程维持生成前尺寸，不临时提升最小高度",
           "失败卡片使用中性色标题、状态与说明及灰色图标，不混用红色提示与企业蓝色标题；保留真实错误与重试入口",
-          "宿主及HTML图表首次进入视窗播放650ms生长动效；折线绘制、柱形及K线展开、散点与环图渐进，资金流/漏斗/盘口/风险矩阵覆盖，坐标数据和最终尺寸保持；主题、悬停、筛选不重播，减少动态效果静态呈现",
+          "宿主及HTML图表首次进入视窗播放650ms生长动效；折线绘制、柱形及K线展开、散点与环图渐进，资金流/漏斗/盘口/风险矩阵/市场广度/基金行业/甘特图覆盖，坐标数据和最终尺寸保持；主题、悬停、筛选不重播，减少动态效果静态呈现",
           "Figma错误状态图标与标题说明中性色，生成固定尺寸与首次图表动效规范同步"
         ],
         "risks": [
@@ -257,52 +189,7 @@
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。"
         ],
-        "generatedAt": "2026-09-29T15:38:28.784961+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3f3727e0a22e8f208511d014e3e1f6e73496a15e",
-        "verificationCommit": "3f3727e0a22e8f208511d014e3e1f6e73496a15e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "3f3727e0a22e8f208511d014e3e1f6e73496a15e",
-            "completedAt": "2026-09-29T15:40:14.198Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "3f3727e0a22e8f208511d014e3e1f6e73496a15e",
-            "completedAt": "2026-09-29T15:40:14.198Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3f3727e0a22e8f208511d014e3e1f6e73496a15e",
-            "completedAt": "2026-09-29T15:40:14.198Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T15:40:14.198Z"
+        "generatedAt": "2026-09-29T15:45:41.415791+00:00"
       }
     }
   ],
