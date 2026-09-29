@@ -178,6 +178,51 @@
           "当前Figma为44类组件+30类图表；旧30模板注册表不代表全覆盖。原生生成成功率目标未验收通过。"
         ],
         "generatedAt": "2026-09-29T16:46:05.742956+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
+        "verificationCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
+            "completedAt": "2026-09-29T16:47:36.929Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
+            "completedAt": "2026-09-29T16:47:36.929Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7d2c036c470b0dac83d89ed9845194609382db08",
+            "completedAt": "2026-09-29T16:47:36.929Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-29T16:47:36.929Z"
       }
     }
   ],
