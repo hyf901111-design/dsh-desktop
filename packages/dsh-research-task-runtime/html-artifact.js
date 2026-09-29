@@ -261,7 +261,7 @@ body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile=
 // The first important layer keeps authored page scrollbar rules from diverging.
 function researchComponentScrollbarCss(scope, darkScope, workbench = false) {
   const scrollports = `:is(${scope},${scope} *)`
-  if(workbench)return `@layer sherlock-component-scrollbars{${scrollports}{scrollbar-width:thin!important;scrollbar-color:#a1a4ad transparent!important}${scrollports}::-webkit-scrollbar{display:block!important;width:7px!important;height:7px!important}${scrollports}::-webkit-scrollbar-thumb{background:#a1a4ad!important;border-radius:4px!important}${scrollports}::-webkit-scrollbar-track{background:transparent!important}${darkScope}{scrollbar-color:#686b75 transparent!important}${darkScope} *{scrollbar-color:#686b75 transparent!important}}`
+  if(workbench)return `@layer sherlock-component-scrollbars{${scope}{--sherlock-scroll-thumb:#74778022}${scope}:is(:hover,:focus-within){--sherlock-scroll-thumb:#74778055}${darkScope}{--sherlock-scroll-thumb:#aaaebb22}${darkScope}:is(:hover,:focus-within){--sherlock-scroll-thumb:#aaaebb55}${scrollports}{scrollbar-width:thin!important;scrollbar-color:var(--sherlock-scroll-thumb) transparent!important}${scrollports}::-webkit-scrollbar{display:block!important;width:5px!important;height:5px!important}${scrollports}::-webkit-scrollbar-thumb{background:var(--sherlock-scroll-thumb)!important;border-radius:4px!important}${scrollports}::-webkit-scrollbar-track{background:transparent!important}}`
   return `@layer sherlock-component-scrollbars{${scrollports}{scrollbar-width:none!important}${scrollports}::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}}`
 }
 
