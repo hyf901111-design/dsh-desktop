@@ -11,28 +11,36 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "24b2f375f3fc647fd4fda07304b50b0285b7361a",
-        "tipCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
+        "baseCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
+        "tipCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
         "commits": [
           {
-            "commit": "dd2eba6edffc275fe5c9163b1d25ce348950a849",
+            "commit": "ee8c771cb7492dd7433bbd3b5ff2865274915457",
             "parents": [
-              "24b2f375f3fc647fd4fda07304b50b0285b7361a"
+              "6746adeb94c657763f1744a8de0f693a928a5561"
             ],
-            "subject": "修复：已生成衍生组件编辑需求支持取消并保留原结果"
+            "subject": "修复：长组件拖动按抓取点让位并收紧画布底部留白"
           },
           {
-            "commit": "6746adeb94c657763f1744a8de0f693a928a5561",
+            "commit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
             "parents": [
-              "dd2eba6edffc275fe5c9163b1d25ce348950a849"
+              "ee8c771cb7492dd7433bbd3b5ff2865274915457"
             ],
-            "subject": "修复：需求编辑和基准移入更多菜单并完整显示生成进度"
+            "subject": "修复：整理短列空挡并移除未选滚动占位和刷新撤销提示"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/canvas-actions-client.mjs"
           },
           {
             "status": "M",
@@ -44,19 +52,39 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-selected-create.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-selected-create.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/verify-selected-create-inline.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/component-data/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/canvas-action-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-action-bridge.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-actions-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -67,8 +95,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交前端补丁构建通过",
-            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
-            "completedAt": "2026-09-29T06:18:18.236751+00:00",
+            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
+            "completedAt": "2026-09-29T07:05:49.864810+00:00",
             "timeoutMs": 300000
           },
           {
@@ -77,12 +105,16 @@
               "run",
               "test/research-grid-client.test.js",
               "test/research-grid-workbench.test.js",
-              "test/research-selected-create.test.js"
+              "test/research-selected-create.test.js",
+              "test/research-canvas-actions-client.test.js",
+              "test/research-canvas-action-bridge.test.ts",
+              "test/component-data-service.test.ts",
+              "test/component-data-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "109项聚焦检查通过：大空位补入、同次稳定收敛、冻结证据、选中滚动条及撤销和固定提示",
-            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
-            "completedAt": "2026-09-29T06:18:18.236751+00:00",
+            "summary": "160项聚焦检查通过：短列补位、最小尺寸、拖动邻居让位、撤销、刷新来源和静默提示",
+            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
+            "completedAt": "2026-09-29T07:05:49.864810+00:00",
             "timeoutMs": 300000
           },
           {
@@ -95,8 +127,8 @@
             ],
             "outcome": "passed",
             "summary": "7项HTML工作台检查通过，包含选中滚动条与受限撤销桥接",
-            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
-            "completedAt": "2026-09-29T06:18:18.236751+00:00",
+            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
+            "completedAt": "2026-09-29T07:05:49.864810+00:00",
             "timeoutMs": 300000
           },
           {
@@ -107,8 +139,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交类型检查通过",
-            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
-            "completedAt": "2026-09-29T06:18:18.236751+00:00",
+            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
+            "completedAt": "2026-09-29T07:05:49.864810+00:00",
             "timeoutMs": 300000
           },
           {
@@ -117,9 +149,9 @@
               "scripts/verify-selected-create-inline.mjs"
             ],
             "outcome": "passed",
-            "summary": "9组真实Chromium检查通过：菜单编辑/基准、取消/Esc、长标题窄卡完整执行信息、共享生成、冻结证据、撤销和固定提示",
-            "verifiedCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
-            "completedAt": "2026-09-29T06:18:18.236751+00:00",
+            "summary": "15组真实Chromium检查通过：真实鼠标路径一致、选中零占位切换、静默刷新、15格尾部及生成菜单等直接影响路径",
+            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
+            "completedAt": "2026-09-29T07:05:49.864810+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -142,7 +174,6 @@
           "HTML分类下拉第一次点击可打开且不因组件选择改变层级",
           "窗口宽度实时投影组件格位，不等待缩放结束",
           "Shift多选只选组件，编辑框保留正常输入",
-          "底部可多滚一屏用于创建组件",
           "拖动和缩放活动组件只显示单层网格吸附蓝框，松手或取消恢复选中描边，多选同步缩放时每张活动卡使用单层预览",
           "画板右键菜单独立前景并完整避开底部工具栏，下载格式向右独立展开",
           "创建背景显示正方形格位，格距和滚动原点与真实拖动、绘制和缩放一致",
@@ -171,7 +202,6 @@
           "整理只测可见内容，闭合明细只计摘要，展开长表仅计内部滚动视窗",
           "多选可调卡片同轴同增量缩放，共同最小及画板边界限制，一步撤销；未选草稿被动补宽不写回规范",
           "普通组件显示、单卡和多选缩放硬下限280×160，草稿320×220，网格向上取整；已有小卡被动补足不改规范历史，窄画板仅夹可用宽",
-          "宿主与HTML两轴滚动条淡显，静止约13%悬停或聚焦约33%透明度，透明轨道，不造成悬停布局变化",
           "Figma21Z同步硬最小尺寸、淡显滚动和现有格位优先整理规范，文字不裁切",
           "整理优先当前顺序与列关系；孤立偏移表格吸附邻近共有列、适配宽度、独立内容测高并补位，本轮闭合吸附空位，重复稳定",
           "链接拖动缩放期间隐藏原生网页并暂停捕获及正文提取，松手、失焦、Esc恢复；旧截图与错误响应不回写当前画面",
@@ -183,13 +213,17 @@
           "窄窗创建读取可见格位决定落点，保存以canonical格位为基底，已有卡不永久写入被动最小宽高；回宽、重载和一步撤销保持原尺寸",
           "通栏前大空位先借用邻列末尾组件，否则依原阅读顺序借后续组件；保护基准及衍生关系，不拉高短图；初次及二次测高同事务稳定收敛",
           "普通及衍生复用同一生成主体，运行至少450px可读，停止回原输入卡并保留证据，重启不重读网页，基准删除仍可用完整快照",
-          "两轴滚动条仅选中显示5px低对比度，切换不挤动内容，背景网格常驻并同格位",
           "画布及非编辑正文支持CmdZ/CmdShiftZ，真实编辑框保留文字撤销，自有选中HTML受限桥接，测高整事务一步撤销",
           "画板所有提示固定在可见画布底部工具栏上方，滚动保持位置，提示按钮标签不继承工具栏图标隐藏样式",
           "Figma21Z同步大空位补入、选中滚动条、常驻网格、固定提示及撤销规则",
           "已生成衍生组件编辑需求仅进入本地输入态；取消/Esc保留原结果、需求、冻结来源与格位，点击生成才提交",
           "编辑需求和查看基准仅在右上更多菜单；查看基准恢复源选择并定位，源已删除时禁用",
-          "生成标题最多两行并可查看完整标题；第三行实时执行信息无旧两行截断，预留至少60px、完整换行，长内容可滚动且与按钮分隔"
+          "生成标题最多两行并可查看完整标题；第三行实时执行信息无旧两行截断，预留至少60px、完整换行，长内容可滚动且与按钮分隔",
+          "空画布和少量可完整显示内容无额外滚动；超出视窗仅保留15个实际网格行；移除或收起同步回收余白",
+          "同排高卡旁大空位无完整供体时，后续通栏卡适配短列宽度并接续补位；不拉高短表，保持最小尺寸、来源组关系和重复稳定",
+          "未选中组件宿主与HTML内部滚动条为none/0px，滚动条轨道透明且gutter:auto，无灰色占位；选中后显示5px细条",
+          "鼠标路径经过不同邻居中线时，以真实peer和前后位置更新布局；相同终点结果一致，松手等于预览",
+          "真实组件数据刷新经主桥与preload传递来源，正常提交数据与历史但不显示撤销提示；主动画布编辑仍有撤销反馈"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -198,52 +232,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T06:18:18.236751+00:00"
-      },
-      "merged": {
-        "mergeCommit": "79b1dae0c216a178b132e8900320480ff415613a",
-        "verificationCommit": "79b1dae0c216a178b132e8900320480ff415613a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "79b1dae0c216a178b132e8900320480ff415613a",
-            "completedAt": "2026-09-29T06:20:01.878Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "79b1dae0c216a178b132e8900320480ff415613a",
-            "completedAt": "2026-09-29T06:20:01.878Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "79b1dae0c216a178b132e8900320480ff415613a",
-            "completedAt": "2026-09-29T06:20:01.878Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T06:20:01.878Z"
+        "generatedAt": "2026-09-29T07:05:49.864810+00:00"
       }
     }
   ],
