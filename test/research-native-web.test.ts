@@ -3,7 +3,7 @@ const handlers=new Map<string,Function>(), views:any[]=[]
 const mock=vi.hoisted(()=>({fetch:vi.fn(),permission:vi.fn(),download:vi.fn()}))
 vi.mock('electron',()=>({net:{fetch:mock.fetch},session:{fromPartition:()=>({setPermissionRequestHandler:mock.permission,setPermissionCheckHandler:mock.permission,on:mock.download})},WebContentsView:class {
   visible=false;bounds:any; webContents:any
-  constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),reload:vi.fn(),loadURL:vi.fn(async()=>{}),setZoomFactor:vi.fn(),enableDeviceEmulation:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
+  constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),reload:vi.fn(),loadURL:vi.fn(async()=>{this.webContents.on.mock.calls.find(([n]:any[])=>n==='dom-ready')?.[1]()}),setZoomFactor:vi.fn(),enableDeviceEmulation:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),executeJavaScriptInIsolatedWorld:vi.fn(async()=>({viewport:400,content:400})),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
   setVisible(v:boolean){this.visible=v} setBounds(v:any){this.bounds=v} setBorderRadius(){}
 }}))
 import {nativeWebBounds,nativeWebViewport,registerResearchNativeWeb,requiresNativeWeb} from '../src/main/state/research-native-web'
@@ -43,6 +43,7 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  expect(wc.capturePage.mock.calls.length).toBe(captures)
  expect(views[0].visible).toBe(false)
  wc.isLoadingMainFrame=()=>false
+ fire('dom-ready')
  fire('did-finish-load')
  const configurations=wc.enableDeviceEmulation.mock.calls.length
  await call('update',layout)
@@ -105,6 +106,26 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  await expect(call('update',{...layout,nodeId:'other'})).rejects.toThrow('not authorized')
 })
 it('rejects malformed native geometry',()=>{expect(()=>nativeWebBounds({bounds:{x:NaN}})).toThrow()})
+
+it('慢截图和正文提取不阻塞网页尺寸更新，正文就绪即可显示而无需等待图片全部加载',async()=>{
+ const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1200,900]}
+ registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(n:string,f:Function)=>handlers.set(n,f)} as any})
+ const identity={sessionId:'performance',nodeId:'link',url:'https://www.baidu.com/'},event={sender:win.webContents,senderFrame:mainFrame},call=(v:any)=>handlers.get('research:native-web:update')!(event,v)
+ registry.authorize(identity)
+ const request={...identity,active:true,bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},scale:1,radius:3}
+ await call(request)
+ const wc=views[0].webContents,fire=(name:string,...args:any[])=>wc.on.mock.calls.find(([n]:any[])=>n===name)?.[1](...args)
+ wc.isLoadingMainFrame=()=>true;fire('did-start-navigation',{},'https://www.baidu.com/next',false,true);fire('dom-ready')
+ wc.capturePage.mockImplementation(()=>new Promise(()=>{}));wc.executeJavaScript.mockImplementation(()=>new Promise(()=>{}))
+ const slow=call({...request,layoutSize:{width:500,height:320},bounds:{x:100,y:100,width:500,height:320}})
+ const result=await Promise.race([slow,new Promise(resolve=>setTimeout(()=>resolve('blocked'),80))])
+ expect(result).not.toBe('blocked');expect(views[0].visible).toBe(true)
+ expect(views[0].bounds).toEqual({x:100,y:100,width:500,height:320})
+ await call({...request,layoutSize:{width:600,height:340},bounds:{x:100,y:100,width:600,height:340}})
+ expect(views[0].bounds).toEqual({x:100,y:100,width:600,height:340})
+ expect(wc.loadURL).toHaveBeenCalledTimes(1)
+})
 
 it('rejects malformed webpage layout dimensions',()=>{expect(()=>nativeWebViewport({layoutSize:{width:NaN,height:300},scale:1})).toThrow();expect(()=>nativeWebViewport({layoutSize:{width:400,height:300},scale:0})).toThrow()})
 

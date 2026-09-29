@@ -14,7 +14,7 @@ export function createResearchLinkFrameBridge(invoke: ResearchLinkFrameInvoke) {
     canvasUse(value: ResearchLinkFrameIdentity & {args:unknown}) { return invoke('research:canvas-use:web',value) },
     captureCanvas(rect:{x:number;y:number;width:number;height:number}) { return invoke('research:canvas-use:capture',{rect}) },
     resolveEngine(value: ResearchLinkFrameAuthorization) { return invoke('research:native-web:resolve',value) as Promise<{engine:'iframe'|'native'}> },
-    updateNative(value: ResearchLinkFrameAuthorization & {bounds:{x:number;y:number;width:number;height:number};layoutSize:{width:number;height:number};active:boolean;scale:number;radius:number}) { return invoke('research:native-web:update',value) as Promise<{image:string;error:string;inspection:{url:string;title:string;sourceText:string;scrollWidth:number;clientWidth:number}|null}> },
+    updateNative(value: ResearchLinkFrameAuthorization & {bounds:{x:number;y:number;width:number;height:number};layoutSize:{width:number;height:number};active:boolean;scale:number;radius:number;imageRevision?:number;reloadToken?:number}) { return invoke('research:native-web:update',value) as Promise<{image:string;imageRevision:number;loading:boolean;error:string;inspection:{url:string;title:string;sourceText:string;scrollWidth:number;clientWidth:number}|null}> },
     hideNative() { return invoke('research:native-web:hide',{}) },
     releaseNative(value: ResearchLinkFrameIdentity) { return invoke('research:native-web:release',value) },
     authorize(value: ResearchLinkFrameAuthorization) {
