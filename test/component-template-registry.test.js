@@ -4,7 +4,7 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {generateSimulatedPanel} from '../packages/dsh-research-task-runtime/simulated-workbench-generator.js'
 import {prepareSimulatedArtifact,validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 
-describe('30 reusable component templates',()=>{
+describe('reusable component templates',()=>{
  it('maps keyed financial tables losslessly and retains missing observations',()=>{
   const data={version:1,type:'market',variant:'table',title:'ETF日行情',asOf:'2026-09-24',columns:[{key:'date',label:'日期'},{key:'close',label:'收盘'}],rows:[{close:4.56,date:'2026-09-24'},{close:null,date:'2026-09-23'}]}
   const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
@@ -23,9 +23,9 @@ describe('30 reusable component templates',()=>{
   expect(()=>validateWorkbench(plan)).toThrow(/ETF日行情.*第1行.*1 个单元格.*2 列/)
   expect(()=>validateWorkbench({...plan,panels:[{...plan.panels[0],artifact:null}]})).toThrow(/ETF日行情.*version:1/)
  })
- it('has exactly 30 unique semantic data contracts',()=>{
-  expect(COMPONENT_TEMPLATES).toHaveLength(30)
-  expect(new Set(COMPONENT_TEMPLATES.map(t=>t.id)).size).toBe(30)
+ it('has unique semantic data contracts including the current cartesian chart library',()=>{
+  expect(COMPONENT_TEMPLATES).toHaveLength(40)
+  expect(new Set(COMPONENT_TEMPLATES.map(t=>t.id)).size).toBe(40)
   for(const t of COMPONENT_TEMPLATES){expect(t.version).toBeTruthy();expect(t.interactions.length).toBeGreaterThan(0);expect(t.minWidth).toBeGreaterThan(0)}
  })
  it.each(['metrics','candlestick','heatmap','fund-flow','risk-matrix'])('retains editable %s data without exposing HTML to the model',variant=>{

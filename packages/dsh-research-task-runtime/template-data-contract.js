@@ -1,3 +1,4 @@
+import {chartDataIssue} from './chart-template-contract.js'
 // Shared by prompt construction, renderers and mapping validation. Keep data
 // limits here so a compact prompt cannot promise a shape the renderer rejects.
 export const TEMPLATE_LIMITS=Object.freeze({trendSeries:12,trendPoints:366,scatterItems:20,allocationItems:12,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
@@ -23,6 +24,7 @@ export function normalizeIndexedTableRows(data){
 // Return paths rather than an opaque "format invalid" result. The same rule
 // text is included in the model's original schema and its bounded repair.
 export function templateDataIssue(data){
+ if(data?.type==='chart')return chartDataIssue(data)
  const finite=v=>typeof v==='number'&&Number.isFinite(v)
  const array=(key,max,min=1)=>!Array.isArray(data[key])||data[key].length<min||data[key].length>max?`${key} 必须包含 ${min}–${max} 项`:null
  if(data?.type!=='market')return null

@@ -1,5 +1,6 @@
 // The model supplies data and a semantic type. Geometry and design provenance
 // belong to the client so a prompt cannot silently change the visual system.
+import {CARTESIAN_CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.js';
 import { researchMarketContentDimensions, researchOptimalDimensions } from './bento-layout.js';
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
@@ -40,8 +41,7 @@ export function requiredMarketVariant(prompt) {
 }
 export const TERMINAL_GENERIC_TEMPLATES = Object.freeze({
   'kpi': { figma: '1696:76780', height: 212 },
-  'chart.line': { figma: '1696:76912', height: 320 },
-  'chart.bar': { figma: '1696:77040', height: 320 },
+  ...Object.fromEntries(CARTESIAN_CHART_TEMPLATES.map(t=>['chart.'+t.variant,{figma:t.figma,height:t.height}])),
   'table': { figma: '1696:77348', height: 352 },
   'dashboard': { figma: '1696:77430', height: 238 },
   'news': { figma: '1696:77556', height: 352 },
@@ -118,12 +118,12 @@ export function workbenchDesignTemplate(panel = {}) {
     return { ...market[variant], ...researchMarketContentDimensions(variant, panel.artifact), version: WORKBENCH_DESIGN_VERSION, variant };
   }
   const artifact = panel.artifact ?? {};
-  const semanticType = panel.type === 'chart' ? 'chart.' + (artifact.variant === 'bar' || /chart\.bar|柱状|条形/iu.test(`${panel.title ?? ''} ${panel.prompt ?? ''}`) ? 'bar' : 'line') : panel.type;
+  const semanticType = panel.type === 'chart' ? 'chart.' + (artifact.variant ?? requestedChartVariant(`${panel.title ?? ''} ${panel.prompt ?? ''}`) ?? 'line') : panel.type;
   const terminal = TERMINAL_GENERIC_TEMPLATES[semanticType];
   if (terminal) {
     const hasData = (artifact.items?.length ?? artifact.metrics?.length ?? artifact.rows?.length ?? artifact.labels?.length ?? 0) > 0;
-    const dimensions = hasData ? researchOptimalDimensions({containerSpec:{...artifact,type:panel.type}}) : {width:656,height:terminal.height};
-    return {id:'research.'+semanticType,figma:terminal.figma,version:WORKBENCH_DESIGN_VERSION,
+    const dimensions = panel.type==='chart' && !['line','bar'].includes(semanticType.slice(6)) ? {width:656,height:terminal.height} : hasData ? researchOptimalDimensions({containerSpec:{...artifact,type:panel.type}}) : {width:656,height:terminal.height};
+    return {id:'research.'+semanticType,figma:terminal.figma,version:panel.type==='chart'?'22a-20260930':WORKBENCH_DESIGN_VERSION,
       size:dimensions.height>220?'large':'medium',...dimensions};
   }
   let needed = panel.type === 'chart' || panel.type === 'html' || panel.type === 'reports' ? 'large'

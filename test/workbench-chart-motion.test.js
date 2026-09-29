@@ -28,3 +28,11 @@ it('减少动态效果直接显示完整图表，运行中开启则立即结束�
  const moving=fixture()
  try{await tick();expect(moving.animations.length).toBeGreaterThan(0);moving.media.matches=true;moving.media.change();expect(moving.animations.every(a=>a.cancel.mock.calls.length===1)).toBe(true);await tick();expect(moving.doc.querySelector('[style*="transform-box"]')).toBeNull()}finally{await moving.dispose()}
 })
+
+it('横条沿数轴展开，负值柱从零线向下生长，辅助光标不参与动效',async()=>{
+ const f=fixture()
+ try{
+  const card=f.doc.createElement('section');card.innerHTML='<svg><line class="chart-cursor"/><rect data-grow-axis="x" data-grow-origin="left center" width="80" height="12"/><rect data-grow-origin="center top" width="12" height="80"/><line class="plot-stem" style="fill:none;stroke:blue;stroke-dasharray:none"/></svg>';f.doc.body.append(card);f.prepare();await tick();
+  const calls=f.calls.filter(c=>card.contains(c.el));expect(calls).toHaveLength(3);expect(calls[0].frames[0]).toMatchObject({transform:expect.stringContaining('scaleX(.001)'),transformOrigin:'left center'});expect(calls[1].frames[0]).toMatchObject({transform:expect.stringContaining('scaleY(.001)'),transformOrigin:'center top'});expect(calls[2].frames[0].strokeDashoffset).toBe(100);
+ }finally{await f.dispose()}
+})

@@ -1,5 +1,6 @@
+import { renderCartesianChart } from './cartesian-chart-artifact.js';
 import { normalizeIndexedTableRows } from './template-data-contract.js';
-import {retainTemplateModel} from './component-template-registry.js';
+import {retainTemplateModel,readTemplateModel} from './component-template-registry.js';
 import { renderMarketArtifact } from './market-artifact.js';
 import { requiredMarketVariant } from './workbench-design-contract.js';
 import { parseResearchContainerSpec } from './artifact-validator.js';
@@ -26,8 +27,12 @@ export function acceptArtifactOutput(text) {
   const candidate=normalizeTemplateAliases(normalizeIndexedTableRows(original));
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
-  const chartWithNotes=preserveLongChartCaption(candidate);
-  if(chartWithNotes)return JSON.stringify(retainTemplateModel(chartWithNotes,candidate));
+  const chartWithNotes=renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);
+  if(chartWithNotes){
+   const parsed=parseResearchContainerSpec(chartWithNotes);
+   if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
+   continue;
+  }
   const spec=parseResearchContainerSpec(renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
@@ -83,10 +88,14 @@ export function workbenchMarketRecencyIssue(text, prompt, now = new Date()) {
 }
 
 export function workbenchMarketVariantIssue(output, prompt) {
- const expected=requiredMarketVariant(prompt);
- if(!expected||typeof output!=='string')return null;
+ if(typeof output!=='string')return null;
  let spec;
  try{spec=JSON.parse(output)}catch{return null}
+ const expectedChart=prompt?.match(/必须输出 chart\.([a-zA-Z]+) 的结构化数据/u)?.[1];
+ const chart=spec?.type==='chart'?spec:readTemplateModel(spec)?.data;
+ if(expectedChart&&chart?.type==='chart'&&chart.variant!==expectedChart)return `本面板必须使用 chart.${expectedChart} 宿主模板，当前输出为 chart.${chart.variant}。保留指定图表的数据含义，不得降级为其他变体。`;
+ const expected=requiredMarketVariant(prompt);
+ if(!expected)return null;
  const actual=spec?.type==='html'?spec.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/iu)?.[1]:undefined;
  if(actual&&actual!==expected)return `本面板必须使用 market.${expected} 宿主模板，当前输出为 market.${actual}。请按原需求填充指定模板，不将主要数据放入 note。`;
  const symbols=[...new Set((prompt.match(/\b\d{6}\.(?:SH|SZ|BJ)\b/giu)??[]).map(value=>value.toUpperCase()))];

@@ -1,0 +1,44 @@
+// Semantic chart contracts from the current Figma 22A library. Only implemented
+// variants belong here; the full design inventory remains a separate audit.
+export const CARTESIAN_CHART_TEMPLATES = Object.freeze([
+  ['line', '折线图', '1918:355322'], ['area', '面积图', '1918:355569'],
+  ['stackedArea', '堆叠面积图', '1918:355741'], ['step', '阶梯图', '1918:355950'],
+  ['combo', '柱线组合图', '1918:356137'], ['bar', '柱状图', '1918:356393'],
+  ['groupedBar', '分组柱状图', '1918:356566'], ['stackedBar', '堆叠柱状图', '1918:356817'],
+  ['percentBar', '百分比堆叠柱图', '1918:357044'], ['horizontal', '横向条形图', '1918:357265'],
+  ['lollipop', '棒棒糖图', '1918:357462'], ['dumbbell', '哑铃图', '1918:357677']
+].map(([variant, title, figma]) => Object.freeze({variant, title, figma, width:656, height:412})));
+export const CHART_VARIANTS = Object.freeze(CARTESIAN_CHART_TEMPLATES.map(t => t.variant));
+export function requestedChartVariant(text = '') {
+  const explicit = text.match(/\bchart\.([a-zA-Z]+)\b/u)?.[1];
+  if (CHART_VARIANTS.includes(explicit)) return explicit;
+  const rules = [['percentBar', /百分比.*(?:柱|条)|百分比堆叠/u], ['stackedArea', /堆叠面积/u],
+    ['stackedBar', /堆叠(?:柱|条)/u], ['groupedBar', /分组(?:柱|条)/u], ['combo', /柱线|柱.*折线.*组合/u],
+    ['dumbbell', /哑铃/u], ['lollipop', /棒棒糖/u], ['horizontal', /横向(?:条|柱)|条形图/u],
+    ['step', /阶梯图/u], ['area', /面积图/u], ['bar', /柱状图/u], ['line', /折线|趋势|走势/u]];
+  return rules.find(([, rule]) => rule.test(text))?.[0];
+}
+export function chartTemplateSchema(variant) {
+  return JSON.stringify({version:1,type:'chart',title:'标题',variant:variant ?? CHART_VARIANTS.join('|'),
+    labels:['标签1','标签2'],series:[{name:'系列',values:[12,18]}],unit:'相同数值单位',asOf:'来源及数据时点'}) +
+    '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。' +
+    'percentBar 仅非负原值，由宿主计算各分类百分比；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。可选 subtitle、note，原始单位和来源保留。';
+}
+export function chartDataIssue(spec) {
+  if (spec?.type !== 'chart' || !CHART_VARIANTS.includes(spec.variant)) return '未注册的图表变体';
+  const string = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+  const allowed = ['version','type','title','variant','labels','series','unit','asOf','subtitle','note'];
+  if (spec.version !== 1 || !string(spec.title,256) || Object.keys(spec).some(k => !allowed.includes(k))) return '图表版本、标题或字段无效';
+  for (const key of ['unit','asOf','subtitle','note']) if (spec[key] !== undefined && !string(spec[key], key === 'note' ? 2000 : 256)) return `${key} 无效`;
+  if (!Array.isArray(spec.labels) || !spec.labels.length || spec.labels.length > 366 || !spec.labels.every(v => string(v,128))) return 'labels 必须为1–366个标签';
+  if (!Array.isArray(spec.series) || !spec.series.length || spec.series.length > 12 || spec.labels.length * spec.series.length > 600) return 'series 为1–12组且总数据点不超过600';
+  for (const [i, s] of spec.series.entries()) {
+    if (!s || !string(s.name,128) || Object.keys(s).some(k => !['name','values','kind'].includes(k)) ||
+      !Array.isArray(s.values) || s.values.length !== spec.labels.length ||
+      !s.values.every(v => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e12)) return `series[${i}] 的数值必须与 labels 等长且有限`;
+    if (s.kind !== undefined && (spec.variant !== 'combo' || !['bar','line'].includes(s.kind))) return `series[${i}].kind 仅用于柱线组合图`;
+  }
+  if (spec.variant === 'dumbbell' && spec.series.length !== 2) return '哑铃图必须恰好有两组配对数据';
+  if (spec.variant === 'percentBar' && spec.series.some(s => s.values.some(v => v < 0))) return '百分比堆叠柱图不接受负值';
+  return null;
+}
