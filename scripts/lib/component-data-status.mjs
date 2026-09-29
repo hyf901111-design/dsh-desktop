@@ -66,6 +66,11 @@ export function createComponentRefreshFeedback(card){
  }
  const receive=event=>{
   const data=event.data
+  // Journal rollback owns the next document's controls. The refresh cache must
+  // not restore the just-undone or rejected edit over that authoritative replay.
+  if(event.source===frame?.contentWindow&&data?.type==='sherlock-interaction-reload'&&Object.keys(data).length===1){
+   clearTimeout(timer);timer=0;view=null;baseline=null;readyRevision=null;animate=false;awaitRevision=null;return
+  }
   if(event.source!==frame?.contentWindow||!['sherlock-workbench-ready','sherlock-workbench-view'].includes(data?.type)||Object.keys(data).length!==3||data.revision!==revision||!isWorkbenchViewState(data.state))return
   if(data.type==='sherlock-workbench-ready'){
    clearTimeout(timer);timer=0
