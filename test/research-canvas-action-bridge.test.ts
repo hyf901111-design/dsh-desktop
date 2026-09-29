@@ -20,3 +20,13 @@ it('cancels pending renderer work when its runtime request disconnects',async()=
  await expect(pending).rejects.toThrow(/取消/)
  expect(sent[1]).toEqual({requestId:sent[0].requestId,cancel:true});bridge.dispose()
 })
+it('carries refresh origin without marking ordinary scheduled canvas edits as data refresh',async()=>{
+ let sent:any
+ const bridge=new CanvasActionBridge({send:value=>{sent=value},canRead:()=>true});bridge.bind({sessionId:'s',selectedIds:[]})
+ for(const source of ['component-data-refresh',undefined]){
+  const pending=bridge.execute({sessionId:'s',method:'apply',args:{},scheduled:true,source})
+  expect(sent.source).toBe(source)
+  bridge.respond({requestId:sent.requestId,sessionId:'s',result:{ok:true}});await pending
+ }
+ bridge.dispose()
+})

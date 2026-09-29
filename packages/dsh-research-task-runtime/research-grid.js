@@ -81,6 +81,25 @@ export function createResearchGrid() {
           }
         }
       }
+      // When no whole card fits, let the following spanning card begin in the
+      // shorter column. Keeping its original content height avoids inflating a
+      // short table solely to meet the taller card beside it.
+      if(!best)for(const target of [...next].sort(order)){
+        if(related.has(target.id)||['queued','running','retrying'].includes(byId.get(target.id)?.generationStatus))continue
+        const previous=next.filter(c=>c.id!==target.id&&c.x>=target.x&&c.x+c.w<=target.x+target.w&&c.y+c.h<=target.y)
+        const edges=[...new Set([target.x,target.x+target.w,...previous.flatMap(c=>[c.x,c.x+c.w])])].sort((a,b)=>a-b)
+        for(let i=0;i<edges.length-1;i++){
+          const x=edges[i],w=edges[i+1]-x
+          if(w>=target.w||w<minimum(byId.get(target.id),m).w)continue
+          const above=previous.filter(c=>c.x<x+w&&c.x+c.w>x),bottom=Math.max(0,...above.map(c=>c.y+c.h)),missing=target.y-bottom
+          const growth=Math.min(160,...above.filter(c=>c.y+c.h===bottom).map(c=>(c.h*m.step-m.gap)*.25))
+          if(!previous.length||missing<=0||above.length&&missing*m.step<=growth)continue
+          const placed={...target,x,w,y:bottom}
+          if(previous.some(c=>overlap(placed,c)))continue
+          const packed=compact(next.map(c=>c.id===target.id?placed:c)),rank=[target.y,-missing,Math.abs(x-target.x)]
+          if(!best||rank.some((v,j)=>v!==best.rank[j]&&rank.slice(0,j).every((p,k)=>p===best.rank[k])&&v<best.rank[j]))best={rank,packed}
+        }
+      }
       if(!best)break
       next=best.packed
     }
@@ -140,16 +159,20 @@ export function createResearchGrid() {
     }
     return compact(items.map(c=>changed.get(c.id)||c))
   }
-  // Moving crosses a peer's midpoint before inserting above/below it. Resolve
-  // compaction during the preview so release uses exactly that destination.
-  function move(items,target,visibleItems=items,visibleTarget=target) {
+  // Use the grabbed header's row for insertion. A tall article's distant
+  // centre must not keep the card below the peer under the pointer.
+  function moveSlot(items,target,anchorRow=target.y+target.h/2) {
+    let peer,distance=Infinity
+    for(const c of items)if(overlap(target,c)){const d=Math.abs(anchorRow-c.y-c.h/2);if(d<distance){peer=c;distance=d}}
+    return peer?{id:peer.id,after:anchorRow>=peer.y+peer.h/2}:null
+  }
+  function move(items,target,visibleItems=items,visibleTarget=target,anchorRow=visibleTarget.y+visibleTarget.h/2) {
     const active=bounded(target),original=items.find(c=>c.id===active.id)
     if(original&&['x','y','w','h'].every(k=>original[k]===active[k]))return items.map(bounded)
-    const center=visibleTarget.y+visibleTarget.h/2,peers=visibleItems.filter(c=>overlap(visibleTarget,c)).sort((a,b)=>Math.abs(center-a.y-a.h/2)-Math.abs(center-b.y-b.h/2))
-    const visiblePeer=peers[0],peer=items.find(c=>c.id===visiblePeer?.id)
+    const slot=moveSlot(visibleItems,visibleTarget,anchorRow),peer=items.find(c=>c.id===slot?.id)
     // Local minimum-height projection must not move a peer's physical midpoint
     // into its smaller saved frame. Only the ordering decision uses that view.
-    if(peer)active.y=center>=visiblePeer.y+visiblePeer.h/2?peer.y+peer.h:peer.y
+    if(peer)active.y=slot.after?peer.y+peer.h:peer.y
     const resolved=new Map(compact(place(items,active)).map(c=>[c.id,c]))
     return items.map(c=>resolved.get(c.id))
   }
@@ -228,5 +251,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,place,resize,resizeSelection,move,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,place,resize,resizeSelection,moveSlot,move,arrange,append,draw,migrate,project}
 }

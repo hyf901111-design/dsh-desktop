@@ -37,6 +37,13 @@ it('uses real workspace persistence and one undo for content + geometry changes'
  await w.canvasAction('undo',{requestId:'undo',revision:r.revision,actionId:r.actionId})
  expect(w.getSnapshot().artifacts[0].excerpt).toBe('原始内容')
 })
+it('quiet data refresh commits without an undo receipt while explicit canvas edits still publish one',async()=>{
+ const {workspace:w}=await fixture(),state=await w.canvasAction('inspect',{}),id=state.nodes[0].id
+ const refreshed=await w.canvasAction('apply',{requestId:'refresh',revision:state.revision,changes:[{op:'update',id,fields:{excerpt:'刷新数据'}}]},{silent:true})
+ expect(w.getSnapshot().artifacts[0].excerpt).toBe('刷新数据');expect(w.getCanvasActionReceipt()).toBeNull()
+ const edited=await w.canvasAction('apply',{requestId:'edit',revision:refreshed.revision,changes:[{op:'update',id,fields:{title:'主动改名'}}]})
+ expect(w.getCanvasActionReceipt()).toEqual(edited)
+})
 it('builds generated HTML through the patched client with the full canvas interaction bridge',async()=>{
  const {bundle}=await fixture()
  const html=bundle.buildResearchHtmlPreview('<!doctype html><html><body><button>保存</button></body></html>','交互组件','dark',{notoFont:'runtime'})

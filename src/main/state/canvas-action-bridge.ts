@@ -26,7 +26,7 @@ export class CanvasActionBridge {
       const cleanup=()=>signal?.removeEventListener('abort',abort)
       signal?.addEventListener('abort',abort,{once:true})
       this.pending.set(requestId,{sessionId:value.sessionId,resolve,reject,timer,cleanup})
-      try{this.options.send({requestId,sessionId:value.sessionId,method:value.method,args:value.args,scheduled:value.scheduled===true,selectedIds:binding.selectedIds,expiresAt:Date.now()+35000})}catch{clearTimeout(timer);cleanup();this.pending.delete(requestId);reject(Error('画板窗口不可用。'))}
+      try{this.options.send({requestId,sessionId:value.sessionId,method:value.method,args:value.args,scheduled:value.scheduled===true,...(value.source==='component-data-refresh'?{source:'component-data-refresh'}:{}),selectedIds:binding.selectedIds,expiresAt:Date.now()+35000})}catch{clearTimeout(timer);cleanup();this.pending.delete(requestId);reject(Error('画板窗口不可用。'))}
     })
   }
   respond(value:any):void {

@@ -121,6 +121,34 @@ it('移动按邻居中线插入，覆盖下半部时落到其后，空槽在预�
  expect(g.move([item('a',0,0)],item('a',0,14)).find(c=>c.id==='a').y).toBe(0)
 })
 
+it('长组件跨列按鼠标抓取点让位，组件中心不把落点推到下方',()=>{
+ const g=createResearchGrid(),before=[item('article',0,0,20,40),item('b',20,0,20,10),item('c',20,10,20,10)],target=item('article',20,1,20,40)
+ const next=g.move(before,target,before,target,.5)
+ expect(next.find(c=>c.id==='article')).toMatchObject({x:20,y:0,h:40})
+ expect(next.find(c=>c.id==='b').y).toBe(40);expect(next.find(c=>c.id==='c').y).toBe(50)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+})
+
+it('不同宽高邻居的插入决策在四分之一行切换，不用半格近似',()=>{
+ const g=createResearchGrid(),before=[item('article',0,20,26,40),item('b',14,0,14,9),item('c',28,0,12,16)],target=item('article',14,6,26,40)
+ expect(g.moveSlot(before,target,6.1)).toEqual({id:'b',after:true})
+ expect(g.moveSlot(before,target,6.4)).toEqual({id:'c',after:false})
+ expect(g.move(before,target,before,target,6.1).find(c=>c.id==='article').y).toBe(9)
+ expect(g.move(before,target,before,target,6.4).find(c=>c.id==='article').y).toBe(0)
+})
+
+it('ETF通栏图适配短列补位，避免把短表格拉成长空卡，重复整理稳定',()=>{
+ for(const width of [1000,1400]){
+  const g=createResearchGrid(),m=g.metrics(width),before=[item('donut',0,0,20,20),item('table',20,0,20,11),item('volume',0,20,40,17),item('candle',0,37,40,17)]
+  const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
+  expect(at('donut')).toMatchObject({x:0,y:0,h:20});expect(at('table')).toMatchObject({x:20,y:0,h:11})
+  expect(at('volume')).toMatchObject({x:20,y:11,w:20,h:17})
+  expect(at('candle')).toMatchObject({x:0,y:20,w:20,h:17})
+  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+  expect(g.arrange(nodes,next,width)).toEqual(next)
+ }
+})
+
 it('整理时宽表格缩至可用短列，不跳过短指标下方可容纳的空位',()=>{
  const g=createResearchGrid(),nodes=[
   {id:'metrics',preferred:{width:480,height:240}},
