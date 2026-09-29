@@ -457,10 +457,10 @@ it('工作台Shift多选在sandbox中阻止文本选区和控件点击，普通�
  const ordinary=event(false);inner.window.testPointer(ordinary);expect(ordinary.preventDefault).not.toHaveBeenCalled()
 })
 
-it('工作台表格保留横向滚动条，普通独立预览沿用自身样式',()=>{
+it('工作台表格保留覆盖式横向滚动能力，原生滚动条始终不占布局',()=>{
  const html='<div style="overflow:auto"><table style="min-width:900px"><tr><td>完整列</td></tr></table></div>'
  const result=buildResearchHtmlPreview(html,'表格','dark',{workbench:true})
- expect(result).toContain('--sherlock-scroll-width:thin');expect(result).toContain('--sherlock-scroll-size:5px');expect(result).toContain('--sherlock-scroll-width:none');expect(result).toContain('--sherlock-scroll-size:0px');expect(result).toContain('scrollbar-gutter:auto!important')
+ expect(result).toContain('installWorkbenchScrollbars');expect(result).toContain('--sherlock-scroll-width:none');expect(result).toContain('--sherlock-scroll-size:0px');expect(result).toContain('scrollbar-gutter:auto!important')
 })
 
 it('沙箱工作台滚动条跟随所属组件选择，拒绝其他窗口和多余字段',()=>{

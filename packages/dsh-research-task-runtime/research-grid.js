@@ -20,7 +20,7 @@ export function createResearchGrid() {
     // above it, while keeping short content beside long reports independently
     // sized. Never grow across another card or fill a large void with blank UI.
     for(const target of [...next].sort(order))for(const card of next){
-      if(card.id===target.id||card.w>=target.w||card.x<target.x||card.x+card.w>target.x+target.w)continue
+      if(card.freePosition||card.id===target.id||card.w>=target.w||card.x<target.x||card.x+card.w>target.x+target.w)continue
       const missing=target.y-card.y-card.h
       const maxGrowth=Math.min(160,(card.h*m.rowStep-m.gap)*.25)
       if(missing<=0||missing*m.rowStep>maxGrowth)continue
@@ -38,7 +38,7 @@ export function createResearchGrid() {
       // First resolve collisions downward, then rise only through unobstructed cells.
       let collisions=settled.filter(p=>overlap(n,p))
       while(collisions.length){n.y=Math.max(...collisions.map(p=>p.y+p.h));collisions=settled.filter(p=>overlap(n,p))}
-      while(n.y>0&&!settled.some(p=>overlap({...n,y:n.y-1},p)))n.y--
+      while(!n.freePosition&&n.y>0&&!settled.some(p=>overlap({...n,y:n.y-1},p)))n.y--
       settled.push(n)
     }
     const byId=new Map(settled.map(n=>[n.id,n]))
@@ -61,7 +61,7 @@ export function createResearchGrid() {
         const followingBoundary=Math.min(Infinity,...next.filter(c=>c.id!==target.id&&inside(c)&&c.w>=target.w&&c.y>=target.y+target.h).map(c=>c.y))
         const edges=new Set([target.x,target.x+target.w,...previous.flatMap(c=>[c.x,c.x+c.w])])
         for(const card of next){
-          if(card.w>=target.w||!inside(card)||related.has(card.id)||['queued','running','retrying'].includes(byId.get(card.id)?.generationStatus))continue
+          if(card.freePosition||card.w>=target.w||!inside(card)||related.has(card.id)||['queued','running','retrying'].includes(byId.get(card.id)?.generationStatus))continue
           const earlier=card.y+card.h<=target.y&&card.y>=blockTop,later=card.y>=target.y+target.h&&card.y<followingBoundary
           if(!earlier&&!later)continue
           const intersects=c=>c.x<card.x+card.w&&c.x+c.w>card.x
@@ -86,7 +86,7 @@ export function createResearchGrid() {
       // Keeping its content height avoids inflating a short table to match a
       // taller neighbour. Existing column edges still determine its placement.
       if(!best)for(const target of [...next].sort(order)){
-        if(related.has(target.id)||['queued','running','retrying'].includes(byId.get(target.id)?.generationStatus))continue
+        if(target.freePosition||related.has(target.id)||['queued','running','retrying'].includes(byId.get(target.id)?.generationStatus))continue
         const previous=next.filter(c=>c.id!==target.id&&c.y+c.h<=target.y)
         const edges=[...new Set([0,columns,...previous.flatMap(c=>[c.x,c.x+c.w])])].sort((a,b)=>a-b)
         for(let i=0;i<edges.length-1;i++){
@@ -173,7 +173,7 @@ export function createResearchGrid() {
     const slot=moveSlot(visibleItems,visibleTarget,anchorRow),peer=items.find(c=>c.id===slot?.id)
     // Local minimum-height projection must not move a peer's physical midpoint
     // into its smaller saved frame. Only the ordering decision uses that view.
-    if(peer)active.y=slot.after?peer.y+peer.h:peer.y
+    if(peer&&!active.freePosition)active.y=slot.after?peer.y+peer.h:peer.y
     const resolved=new Map(compact(place(items,active)).map(c=>[c.id,c]))
     return items.map(c=>resolved.get(c.id))
   }
@@ -216,6 +216,7 @@ export function createResearchGrid() {
     }
     const planned=fitted.map(c=>{
       const n=byId.get(c.id),p=n.preferred||n
+      if(c.freePosition)return c
       return {...c,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
     })
     const result=new Map(closeSmallGaps(fillVacancies(planned,nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
