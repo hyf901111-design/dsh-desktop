@@ -13,6 +13,9 @@ export function specialChartView(spec, width=624, options={}){
  const elements=[], rows=[],metrics={};let headers=['项目','数值'+unit],summary='',footnote='',root=spec.root;
  const selected=(i,children)=>node('g',{'data-inspect':i},children);
  const title=s=>node('title',{},[s]);
+ const centerLabel=(cx,cy,value,label,maxWidth,maxHeight,valueClass='center-value',fontSize=24)=>node('g',{
+  class:'chart-center-label','data-center-x':cx,'data-center-y':cy,'data-center-width':maxWidth,'data-center-height':maxHeight
+ },[text(cx,cy+(label?-8:0),value,{class:valueClass,'text-anchor':'middle','dominant-baseline':'central',style:`font-size:${fontSize}px`}),...(label?[text(cx,cy+fontSize/2+3,label,{'text-anchor':'middle','dominant-baseline':'central'})]:[])]);
  const pct=(v,total)=>total?fmt(v/total*100)+'%':'—';
  const polar=(cx,cy,r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
  const arc=(cx,cy,r,inner,a,b)=>{
@@ -43,14 +46,18 @@ export function specialChartView(spec, width=624, options={}){
    const mark=(r,inner,a,b,opacity=1)=>node('path',{class:'composition-sector',d:arc(140,cy,r*ratio,inner*ratio,a,b),fill:color(i),'fill-opacity':opacity,stroke:'var(--sherlock-surface)','stroke-width':1.5,'data-grow-radial':'true'},[title(detail)]);
    const marks=[];
    if(item.value>0){
-    marks.push(mark(kind==='sunburst'&&item.children?77:112,kind==='pie'?0:kind==='donut'?68:40,start,end));
+    marks.push(mark(kind==='sunburst'&&item.children?77:112,kind==='pie'?0:kind==='donut'?68:54,start,end));
     if(kind==='sunburst'&&item.children){let angle=start;item.children.forEach((c,ci)=>{const b=angle+value(c)/item.value*(end-start);marks.push(mark(112,77,angle,b,.55+.4*(ci%3)/2));angle=b;});}
     if(kind==='pie'&&item.value/total>=.08&&radius>=90){const p=polar(140,cy,76*ratio,(start+end)/2);marks.push(text(p[0],p[1]+4,pct(item.value,total),{class:'sector-label','text-anchor':'middle'}));}
    }
    elements.push(selected(i,marks));metrics.sectors.push({start,end,value:item.value});start=end;
   });
   if(!total)elements.push(text(140,cy+4,'总量为 0，暂无占比',{'text-anchor':'middle'}));
-  else if(kind!=='pie')elements.push(text(140,cy-6,fmt(total),{class:'center-value','text-anchor':'middle',style:`font-size:${Math.min(24,Math.max(14,(kind==='donut'?136:80)*ratio/(fmt(total).length*.62)))}px`}),text(140,cy+14,spec.unit??'合计',{'text-anchor':'middle'}));
+  else if(kind!=='pie'){
+   const inner=(kind==='donut'?68:54)*ratio;
+   elements.push(centerLabel(140,cy,fmt(total),spec.unit??'合计',inner*1.55,inner*1.45));
+   metrics.center={x:140,y:cy,innerRadius:inner};
+  }
   footnote=kind==='sunburst'?'父节点等于叶节点合计 · 点击分类下钻':'面积按原值占比 · 悬停分类联动明细';
  }else if(kind==='treemap'){
   const items=(root.children??[root]).map((n,index)=>({n,index,v:value(n)})).sort((a,b)=>b.v-a.v),total=value(root);
@@ -145,7 +152,7 @@ export function specialChartView(spec, width=624, options={}){
   const detail=`当前 ${fmt(spec.value)}${unit}`+(spec.target===undefined?'':` · 目标 ${fmt(spec.target)}${unit} · 差额 ${fmt(spec.value-spec.target)}${differenceUnit}`);
   const marks=[node('path',{'data-grow-radial':'true',d:arc(cx,cy,r,r-22,Math.PI,angle(spec.value)),fill:color(0)},[title(detail)])];
   if(spec.target!==undefined){const a=angle(spec.target),p=polar(cx,cy,r-28,a),q=polar(cx,cy,r+6,a);marks.push(node('line',{class:'target',x1:p[0],y1:p[1],x2:q[0],y2:q[1],stroke:'var(--sherlock-text)','stroke-width':2}));}
-  elements.push(selected(0,marks),text(cx,cy-30,fmt(spec.value),{class:'gauge-value','text-anchor':'middle'}),text(cx,cy-9,spec.unit??'',{'text-anchor':'middle'}),text(cx,cy+22,spec.target===undefined?'固定范围':`目标 ${fmt(spec.target)}${unit}`,{'text-anchor':'middle'}),text(cx-r,cy+20,fmt(spec.min),{'text-anchor':'middle'}),text(cx+r,cy+20,fmt(spec.max),{'text-anchor':'middle'}));
+  elements.push(selected(0,marks),centerLabel(cx,cy-(r-22)*.35,fmt(spec.value),spec.unit??'',(r-28)*1.6,(r-28)*.85,'gauge-value',38),text(cx,cy+22,spec.target===undefined?'固定范围':`目标 ${fmt(spec.target)}${unit}`,{'text-anchor':'middle'}),text(cx-r,cy+20,fmt(spec.min),{'text-anchor':'middle'}),text(cx+r,cy+20,fmt(spec.max),{'text-anchor':'middle'}));
   headers=['指标','数值'];row('当前值',[fmt(spec.value)+unit],detail);row('范围',[`${fmt(spec.min)}–${fmt(spec.max)}${unit}`],`固定范围 ${fmt(spec.min)}–${fmt(spec.max)}${unit}`);
   if(spec.target!==undefined){row('目标',[fmt(spec.target)+unit],detail);row('差额',[fmt(spec.value-spec.target)+differenceUnit],detail);}
   summary='单指标 · 固定范围';footnote='弧长使用固定上下界；数值始终显示';

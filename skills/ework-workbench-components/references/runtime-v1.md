@@ -11,3 +11,5 @@
 - 标准金融、图表、表格、指标、列表先交宿主支持的结构化数据，由宿主统一控制视觉。必要的结构或交互确实无法由模板表达且宿主支持 HTML 时，才使用 HTML，并单独验收视觉。部分数据缺失时保留已核实内容并就近说明缺项；只有完全没有可交付的有效内容或运行能力确实无法表达需求时，返回 `{"version":1,"type":"error","message":"具体缺项"}`；不自行扩写 schema 或交付外观相近的伪成功对象。
 
 直方图与箱线图共用样本：仅在箱线图 artifact.groups 中提供一次原始 samples；直方图 panel 增加 `samplesFromPanel:"箱线图的完整面板标题"`，其 artifact 省略 samples/bins，unit 与源一致。宿主合并源样本并保留重复观测。不要重复抄写导致缺项，不手写未核对的样本数；同一时点同指标的地区/产品拆分总额保持一致。
+
+22A 新增图表契约：waterfall 使用 start:{label,value}、steps:[{label,delta}]、可选 endLabel，期末自动累计；funnel 使用2–12项同单位非递增 stages:[{label,value}]；sankey 使用2–5列 columns、nodes:[{id,label,column}]、links:[{source,target,value}]，最多40节点100边，只连相邻下一列、无重复边，中间节点守恒。scatter/bubble 使用 xAxis/yAxis:{label,unit} 和 points:[{label,x,y,group}]，气泡另加每点非负size及sizeLabel/sizeUnit，以面积编码。heatmap 使用2–16维 labels 与对称 values 方阵，对角线1、范围[-1,1]，缺失null。calendar 使用ISO start/end（≤366天）及 values:[{date,value}]，每日唯一非负值，未提供日期不视为0。candlestick/ohlc 使用日期严格升序 candles:[{date,open,high,low,close,volume}]（≤366条），价格unit与volumeUnit必填，高低包住开收，数值非负。均为type:chart公共结构，详情与主题由宿主负责。

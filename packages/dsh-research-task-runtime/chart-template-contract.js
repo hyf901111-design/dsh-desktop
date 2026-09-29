@@ -1,3 +1,4 @@
+import {ADVANCED_CHART_TEMPLATES,ADVANCED_CHART_VARIANTS,advancedChartSchema,advancedChartDataIssue} from './advanced-chart-contract.js';
 import {SPECIAL_CHART_TEMPLATES,SPECIAL_CHART_VARIANTS,specialChartSchema,specialChartDataIssue} from './special-chart-contract.js';
 // Semantic chart contracts from the current Figma 22A library. Only implemented
 // variants belong here; the full design inventory remains a separate audit.
@@ -9,23 +10,24 @@ export const CARTESIAN_CHART_TEMPLATES = Object.freeze([
   ['percentBar', '百分比堆叠柱图', '1918:357044'], ['horizontal', '横向条形图', '1918:357265'],
   ['lollipop', '棒棒糖图', '1918:357462'], ['dumbbell', '哑铃图', '1918:357677']
 ].map(([variant, title, figma]) => Object.freeze({variant, title, figma, width:656, height:412})));
-export const CHART_TEMPLATES=Object.freeze([...CARTESIAN_CHART_TEMPLATES,...SPECIAL_CHART_TEMPLATES]);
+export const CHART_TEMPLATES=Object.freeze([...CARTESIAN_CHART_TEMPLATES,...SPECIAL_CHART_TEMPLATES,...ADVANCED_CHART_TEMPLATES]);
 export const CHART_VARIANTS = Object.freeze(CHART_TEMPLATES.map(t => t.variant));
 export function requestedChartVariant(text = '') {
   const explicit = text.match(/\bchart\.([a-zA-Z]+)\b/u)?.[1];
   if (CHART_VARIANTS.includes(explicit)) return explicit;
-  const rules = [['sunburst', /旭日图/u], ['treemap', /矩形树图|树矩图/u], ['donut', /环形图|环图/u], ['pie', /饼图/u], ['radar', /雷达图/u], ['histogram', /直方图/u], ['box', /箱线图|箱形图/u], ['bullet', /子弹图|靶心图/u], ['gauge', /仪表图|仪表盘/u], ['percentBar', /百分比.*(?:柱|条)|百分比堆叠/u], ['stackedArea', /堆叠面积/u],
+  const rules = [['waterfall',/瀑布图/u],['funnel',/漏斗图/u],['sankey',/桑基图/u],['bubble',/气泡图/u],['scatter',/散点图/u],['heatmap',/相关性热力图|相关矩阵/u],['calendar',/日历热力图/u],['ohlc',/OHLC图|OHLC 图/iu],['candlestick',/K线图|K 线图|蜡烛图/u],['sunburst', /旭日图/u], ['treemap', /矩形树图|树矩图/u], ['donut', /环形图|环图/u], ['pie', /饼图/u], ['radar', /雷达图/u], ['histogram', /直方图/u], ['box', /箱线图|箱形图/u], ['bullet', /子弹图|靶心图/u], ['gauge', /仪表图|仪表盘/u], ['percentBar', /百分比.*(?:柱|条)|百分比堆叠/u], ['stackedArea', /堆叠面积/u],
     ['stackedBar', /堆叠(?:柱|条)/u], ['groupedBar', /分组(?:柱|条)/u], ['combo', /柱线|柱.*折线.*组合/u],
     ['dumbbell', /哑铃/u], ['lollipop', /棒棒糖/u], ['horizontal', /横向(?:条|柱)|条形图/u],
     ['step', /阶梯图/u], ['area', /面积图/u], ['bar', /柱状图/u], ['line', /折线|趋势|走势/u]];
   return rules.find(([, rule]) => rule.test(text))?.[0];
 }
 export function chartTemplateSchema(variant) {
+  if(ADVANCED_CHART_VARIANTS.includes(variant))return advancedChartSchema(variant);
   if(SPECIAL_CHART_VARIANTS.includes(variant))return specialChartSchema(variant);
   return JSON.stringify({version:1,type:'chart',title:'标题',variant:variant ?? CARTESIAN_CHART_TEMPLATES.map(t=>t.variant).join('|'),
     labels:['标签1','标签2'],series:[{name:'系列',values:[12,18]}],unit:'相同数值单位',asOf:'来源及数据时点'}) +
     '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。' +
-    'percentBar 仅非负原值，由宿主计算各分类百分比；unit 必须是原值单位（如百万元、件），不能把金额原值标为 %，不要在 unit 中填写说明文字；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。可选 subtitle、note，原始单位和来源保留。'+(variant?'':'；其他已实现图表：'+specialChartSchema());
+    'percentBar 仅非负原值，由宿主计算各分类百分比；unit 必须是原值单位（如百万元、件），不能把金额原值标为 %，不要在 unit 中填写说明文字；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。可选 subtitle、note，原始单位和来源保留。'+(variant?'':'；其他已实现图表：'+specialChartSchema()+'；'+advancedChartSchema());
 }
 export function requireSimulatedChartData(panel) {
   if (panel.type !== 'chart' || panel.artifact) return;
@@ -33,6 +35,7 @@ export function requireSimulatedChartData(panel) {
   throw Error(`面板「${panel.title}」需要与需求匹配的模拟图表数据。请在本次工作台调用的 panel.artifact 中补齐 ${chartTemplateSchema(variant)} labels、系列名、单位和数据范围必须对应用户需求；只生成明确标注的虚构值，不联网、不编写 HTML、不启动逐卡模型。宿主不会用通用行业样例替代季度或产品数据。`);
 }
 export function chartDataIssue(spec) {
+  if(ADVANCED_CHART_VARIANTS.includes(spec?.variant))return advancedChartDataIssue(spec);
   if(SPECIAL_CHART_VARIANTS.includes(spec?.variant))return specialChartDataIssue(spec);
   if (spec?.type !== 'chart' || !CHART_VARIANTS.includes(spec.variant)) return '未注册的图表变体';
   const string = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;

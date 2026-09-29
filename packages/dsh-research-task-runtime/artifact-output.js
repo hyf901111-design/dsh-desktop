@@ -1,3 +1,4 @@
+import {renderAdvancedChart} from './advanced-chart-artifact.js';
 import {renderSpecialChart} from './special-chart-artifact.js';
 import { renderCartesianChart } from './cartesian-chart-artifact.js';
 import { normalizeIndexedTableRows } from './template-data-contract.js';
@@ -28,7 +29,7 @@ export function acceptArtifactOutput(text) {
   const candidate=normalizeTemplateAliases(normalizeIndexedTableRows(original));
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
-  const chartWithNotes=renderSpecialChart(candidate) ?? renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);
+  const chartWithNotes=renderAdvancedChart(candidate) ?? renderSpecialChart(candidate) ?? renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);
   if(chartWithNotes){
    const parsed=parseResearchContainerSpec(chartWithNotes);
    if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
