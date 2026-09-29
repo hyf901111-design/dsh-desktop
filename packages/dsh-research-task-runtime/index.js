@@ -1,3 +1,4 @@
+import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
 import { templateSourceDataIssue } from './template-data-contract.js'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
@@ -379,6 +380,7 @@ function legacyWorkbenchPanelHeader(prompt) {
     : /日历|FOMC|CPI|非农/u.test(requirement) ? 'calendar'
       : /要闻|新闻|政策动态/u.test(requirement) ? 'news'
         : /K线|蜡烛图|candlestick|行情热力|市场广度|量价|价量|价格.{0,10}成交量|成交量.{0,10}价格|盘口|买卖[一二三五十]?档|资金流|净流入|净流出|估值分位|估值带|分位带|净值.{0,10}回撤|回撤.{0,10}净值|配置占比|资产配置|持仓占比|瀑布图|增减桥|漏斗|转化率|风险矩阵|风险热力/iu.test(requirement) ? 'market'
+          : requestedChartVariant(requirement)&&!/双轴/u.test(requirement) ? 'chart'
           : /热力|筛选|过滤|搜索|切换|跳转|交互|双轴/u.test(requirement) ? 'html'
             : /走势|趋势|对比|日线|季度/u.test(requirement) ? 'chart'
             : /指标|因子|概览/u.test(requirement) ? 'dashboard' : 'table'
@@ -389,14 +391,15 @@ function workbenchPanelFormat(prompt) {
     // Editing a card replaces its user-facing requirement, which may no longer
     // contain the planner header. An explicit registered preset still carries
     // the same compact data contract and tool scope.
-    const explicit=prompt.match(/\b(market|chart)\.([a-z-]+)\b/u)
+    const explicit=prompt.match(/\b(market|chart)\.([a-zA-Z-]+)\b/u)
     if(explicit&&templateFor({type:explicit[1],variant:explicit[2]}))return explicit[1]
     if(requestedMarketVariant(prompt))return 'market'
+    const chartRequest=prompt.split('\n')[0],chartVariant=requestedChartVariant(chartRequest)
+    if(chartVariant&&!['line','bar'].includes(chartVariant)&&!/网页|网站|仪表盘|工作台|看板|体验地图|双轴/u.test(chartRequest))return 'chart'
     const legacyHeader=legacyWorkbenchPanelHeader(prompt)
     return legacyHeader?workbenchPanelFormat(legacyHeader+prompt.split('\n')[0]):null
   }
-  const explicit=prompt.match(/\b(chart)\.(bar|line)\b/u)
-  if(explicit)return 'chart'
+  if(/\bchart\.[a-zA-Z]+\b/u.test(prompt)&&requestedChartVariant(prompt))return 'chart'
   const type = prompt.match(/优先使用 ([a-z-]+) 类型/u)?.[1]
   if (!WORKBENCH_PANEL_TYPES.has(type)) return null
   if (type === 'kpi' && /(?:每个指标|计算口径|指标口径|定义)/u.test(prompt)) return 'dashboard'
@@ -421,7 +424,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
   const schemas = {
     kpi: '{"version":1,"type":"kpi","title":"标题","items":[{"label":"指标","value":"数值","change":"可选变化"}]}',
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}',
-    chart: '{"version":1,"type":"chart","title":"标题","variant":"bar 或 line","labels":["标签"],"series":[{"name":"系列","values":[1]}]}',
+    chart: chartTemplateSchema(requestedChartVariant(prompt)),
     dashboard: '{"version":1,"type":"dashboard","title":"标题","asOf":"时点/示例口径","items":[{"label":"指标","value":"数值及单位","detail":"口径说明"}]}',
     news: '{"version":1,"type":"news","title":"标题","items":[{"title":"条目","summary":"摘要","date":"发布日期","category":"分类"}]}',
     reports: '{"version":1,"type":"reports","title":"标题","items":[{"title":"条目","summary":"摘要","date":"日期","category":"分类"}]}',
@@ -473,7 +476,7 @@ export function buildResearchTaskPrompt(request) {
       '仅基于以下选中资料的真实正文，按用户需求创建一个独立的 EWork Odyssey 画布交付物。',
       componentSkillInstruction(),
       '只输出以下 JSON schema 之一，不得添加字段：',
-      '{"version": 1, "type": "chart", "title": "标题", "variant": "bar 或 line", "labels": ["标签"], "series": [{"name": "系列名", "values": [1]}]}',
+      chartTemplateSchema(),
       INTERACTIVE_ARTIFACT_PROMPT,
       MARKET_ARTIFACT_PROMPT,
       '{"version": 1, "type": "table", "title": "标题", "columns": ["列名"], "rows": [["单元格"]]}',
@@ -508,7 +511,7 @@ export function buildResearchTaskPrompt(request) {
       ...(allowsWeb ? [
         '{"version": 1, "type": "web", "title": "标题", "url": "https://example.com", "description": "可选说明"}'
       ] : []),
-      '{"version": 1, "type": "chart", "title": "标题", "variant": "bar 或 line", "labels": ["标签"], "series": [{"name": "系列名", "values": [1]}]}',
+      chartTemplateSchema(),
       INTERACTIVE_ARTIFACT_PROMPT,
       MARKET_ARTIFACT_PROMPT,
       '{"version": 1, "type": "table", "title": "标题", "columns": ["列名"], "rows": [["单元格"]]}',

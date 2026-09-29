@@ -15,8 +15,8 @@ export function installWorkbenchChartMotion(root) {
     let marks=[...chart.querySelectorAll('.trend-line,.price-volume-line,.drawdown-primary,.drawdown-benchmark,.drawdown-area,.price-volume-bar,.waterfall-bar,.allocation-arc,[data-scatter-point],.market-tile,.pipeline-progress .stage,.fund-flow-axis i,.order-book-level,.funnel-bar,.risk-cell,.market-bar i,.fund-bar,.gantt-bar')]
     // Custom generated SVGs use their own classes. Exclude neutral axes, labels,
     // crosshairs and hit regions while accepting their normal plotting marks.
-    if(!marks.length&&chart.tagName.toLowerCase()==='svg')marks=[...chart.querySelectorAll('path,polyline,rect,circle,ellipse')].filter(el=>{
-      if(/axis|grid|crosshair|selected|hit|background|clip/i.test(el.getAttribute('class')||'')||el.closest('defs,clipPath,mask'))return false
+    if(!marks.length&&chart.tagName.toLowerCase()==='svg')marks=[...chart.querySelectorAll('path,polyline,rect,circle,ellipse,.plot-stem,.plot-connector')].filter(el=>{
+      if(/axis|grid|crosshair|cursor|selected|hit|background|clip/i.test(el.getAttribute('class')||'')||el.closest('defs,clipPath,mask'))return false
       const s=win.getComputedStyle(el);return s.visibility!=='hidden'&&s.display!=='none'&&(s.fill!=='none'||s.stroke!=='none')
     })
     if(!marks.length)marks=[chart]
@@ -30,12 +30,13 @@ export function installWorkbenchChartMotion(root) {
         const origin=el.matches('.fund-flow-axis i:first-child')?'right center':'left center'
         from={transform:'scaleX(.001)',transformOrigin:origin,opacity:0};to={transform:'scaleX(1)',transformOrigin:origin,opacity:Number(style.opacity)}
       }else if(tag==='rect'){
-        from={transform:'scaleY(.001)',transformOrigin:'center bottom',transformBox:'fill-box',opacity:0};to={transform:'scaleY(1)',transformOrigin:'center bottom',transformBox:'fill-box',opacity:Number(style.opacity)}
+        const axis=el.getAttribute('data-grow-axis')==='x'?'X':'Y',origin=el.getAttribute('data-grow-origin')||(axis==='X'?'left center':'center bottom')
+        from={transform:`scale${axis}(.001)`,transformOrigin:origin,transformBox:'fill-box',opacity:0};to={transform:`scale${axis}(1)`,transformOrigin:origin,transformBox:'fill-box',opacity:Number(style.opacity)}
       }else if(tag==='circle'||tag==='ellipse'||el.hasAttribute('data-scatter-point')||el.matches('.risk-cell')){
         from={transform:'scale(.3)',transformOrigin:'center',transformBox:'fill-box',opacity:0};to={transform:'scale(1)',transformOrigin:'center',transformBox:'fill-box',opacity:Number(style.opacity)}
       }else if(tag==='canvas'){
         from={clipPath:'inset(100% 0 0 0)',opacity:.3};to={clipPath:'inset(0 0 0 0)',opacity:1}
-      }else if((tag==='path'||tag==='polyline')&&style.fill==='none'&&style.stroke!=='none'&&style.strokeDasharray==='none'&&typeof el.getTotalLength==='function'){
+      }else if((tag==='path'||tag==='polyline'||tag==='line')&&style.fill==='none'&&style.stroke!=='none'&&style.strokeDasharray==='none'&&typeof el.getTotalLength==='function'){
         const length=el.getTotalLength();from={strokeDasharray:length+' '+length,strokeDashoffset:length,opacity:0};to={strokeDasharray:length+' '+length,strokeDashoffset:0,opacity:Number(style.opacity)}
       }
       const originalBox=el.style.transformBox

@@ -34,6 +34,7 @@ body :is(.market-table-wrap,.fund-table-wrap){min-width:0!important;min-height:0
 body :is(.market-candle,.market-trend,.market-scatter,.market-price-volume,.market-fund-flow){min-width:0!important;min-height:0!important;background:transparent!important;border:0!important}
 body :is(.trend-head,.trend-legend){font-size:11px!important;line-height:17px!important;gap:8px!important;flex-wrap:wrap!important;color:var(--sherlock-muted)!important}
 body :is(.trend-key,.sample-entry,.allocation-legend button){background:transparent!important;border:0!important;border-radius:0!important;min-height:22px!important;padding:1px 4px!important;color:var(--sherlock-text)!important}
+body button[data-chart-series][aria-pressed]{background:transparent!important;border:0!important;border-radius:0!important;min-height:22px!important;height:22px!important;padding:1px 4px!important;color:var(--sherlock-text)!important}
 body .trend-1{color:var(--sherlock-chart-1)!important}body .trend-2{color:var(--sherlock-chart-2)!important}body .trend-3{color:var(--sherlock-chart-3)!important}
 body :is(.research-feed-item,.risk-item,.event){background:none!important;border:0!important;border-bottom:1px solid var(--sherlock-border)!important;border-radius:0!important;padding:8px 0!important}
 body :is(.feed-copy h2,.event strong){font-size:12px!important;line-height:18px!important;font-weight:500!important;color:var(--sherlock-text)!important}

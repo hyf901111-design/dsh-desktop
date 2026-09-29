@@ -1,0 +1,134 @@
+import {chartDataIssue} from './chart-template-contract.js';
+
+// Pure SVG geometry is also used in the sandbox. Never evaluates model code.
+// Axis domains stay fixed while toggling series, preserving visual comparison.
+export function cartesianChartSvg(spec, width = 620, visible = spec.series.map(() => true)) {
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const node = (tag, attributes = {}, children = []) => ({tag, attributes, children});
+  const serialize = el => typeof el === 'string' ? esc(el) : `<${el.tag}${Object.entries(el.attributes).map(([k,v]) => ` ${k}="${esc(v)}"`).join('')}>${el.children.map(serialize).join('')}</${el.tag}>`;
+  const fmt = v => Number(v.toPrecision(5)).toLocaleString('en-US');
+  const color = i => `var(--sherlock-chart-${i % 8 + 1},var(--sherlock-chart-${i % 6 + 1}))`;
+  const n = spec.labels.length, kind = spec.variant;
+  const horizontal = ['horizontal','lollipop','dumbbell'].includes(kind);
+  const stacked = ['stackedArea','stackedBar','percentBar'].includes(kind);
+  const percent = kind === 'percentBar';
+  const w = Math.max(280, width), h = horizontal ? Math.max(240, n * 30 + 50) : 240;
+  const left = horizontal ? Math.min(110, w * .27) : 48, right = 16, top = 16, bottom = 30;
+  const pw = w-left-right, ph = h-top-bottom;
+  const totals = spec.labels.map((_, i) => spec.series.reduce((sum,s,si) => sum + (visible[si]?s.values[i]:0), 0));
+  const values = spec.series.map(s => s.values.map((v,i) => percent ? (totals[i] ? v / totals[i] * 100 : 0) : v));
+  const positive = Array(n).fill(0), negative = Array(n).fill(0);
+  const ranges = values.map((series,si) => series.map((value,i) => {
+    if (!stacked) return [0,value];
+    const sums = value >= 0 ? positive : negative, start = sums[i];
+    if(visible[si])sums[i] += value; return [start,sums[i]];
+  }));
+  const fullPositive=spec.labels.map((_,i)=>spec.series.reduce((sum,s)=>sum+Math.max(0,s.values[i]),0)),fullNegative=spec.labels.map((_,i)=>spec.series.reduce((sum,s)=>sum+Math.min(0,s.values[i]),0));
+  const all = stacked ? [...fullPositive,...fullNegative] : values.flat();
+  let low = Math.min(0,...all), high = Math.max(0,...all);
+  if (percent) {low=0;high=100;}
+  if (high===low) high=low+1;
+  const pos = value => horizontal ? left+(value-low)/(high-low)*pw : top+(high-value)/(high-low)*ph;
+  const cat = i => horizontal ? top+(i+.5)*ph/n : left+(i+.5)*pw/n;
+  const tickText = value => fmt(value)+(percent?'%':'');
+  const axes = [];
+  for (let i=0;i<=4;i++) {
+    const v=low+(high-low)*i/4, p=pos(v);
+    axes.push(node('line', horizontal ? {class:'grid',x1:p,x2:p,y1:top,y2:h-bottom} : {class:'grid',x1:left,x2:w-right,y1:p,y2:p}));
+    axes.push(node('text', horizontal ? {x:p,y:h-9,'text-anchor':'middle'} : {x:left-8,y:p+4,'text-anchor':'end'}, [tickText(v)]));
+  }
+  const every = horizontal ? 1 : Math.max(1,Math.ceil(n / Math.max(2,Math.floor(pw/75))));
+  for (let i=0;i<n;i++) if (i%every===0 || i===n-1) {
+    const label=spec.labels[i], short=label.length>(horizontal?12:10)?label.slice(0,horizontal?11:9)+'…':label;
+    axes.push(node('text', horizontal ? {x:left-8,y:cat(i)+4,'text-anchor':'end'} : {x:cat(i),y:h-10,'text-anchor':'middle'}, [node('title',{},[label]),short]));
+  }
+  const groups=[], count=spec.series.filter((s,si)=>visible[si] && (kind!=='combo'||(s.kind??(si===0?'bar':'line'))==='bar')).length || 1;
+  let barIndex=0;
+  for (const [si,s] of spec.series.entries()) {
+    if(!visible[si])continue;
+    const type = kind==='combo' ? s.kind??(si===0?'bar':'line') : kind;
+    const marks=[];
+    const line = ['line','area','stackedArea','step'].includes(type);
+    if(line) {
+      const points=ranges[si].map((r,i)=>[cat(i),pos(r[1])]);
+      const d=points.map(([x,y],i)=>i===0?`M${x},${y}`:type==='step'?`H${x}V${y}`:`L${x},${y}`).join(' ');
+      if(type==='area'||type==='stackedArea') {
+        const base=[...ranges[si]].map((r,i)=>[cat(i),pos(r[0])]).reverse();
+        marks.push(node('path',{class:'plot-area',d:`${d} ${base.map(([x,y])=>`L${x},${y}`).join(' ')} Z`,fill:color(si),'fill-opacity':type==='area'?.18:.65}));
+      }
+      marks.push(node('path',{class:'plot-line',d,fill:'none',stroke:color(si),'stroke-width':2}));
+      points.forEach(([x,y],i)=>marks.push(node('circle',{'data-point':i,cx:x,cy:y,r:3,fill:color(si)})));
+    } else if(type==='dumbbell') {
+      for(let i=0;i<n;i++) {
+        if(si===0&&visible[1])marks.push(node('line',{class:'plot-connector',x1:pos(values[0][i]),x2:pos(values[1][i]),y1:cat(i),y2:cat(i),stroke:'var(--sherlock-muted)','stroke-width':3}));
+        marks.push(node('circle',{'data-point':i,cx:pos(values[si][i]),cy:cat(i),r:4,fill:color(si)}));
+      }
+    } else {
+      const band=(horizontal?ph:pw)/n*.7, thickness=band/(stacked?1:count), offset=stacked?0:barIndex*thickness;
+      for(let i=0;i<n;i++) {
+        const [a,b]=ranges[si][i], p=pos(a), q=pos(b), at=cat(i)-band/2+offset;
+        if(type==='lollipop') {
+          marks.push(node('line',{class:'plot-stem',x1:p,x2:q,y1:at+thickness/2,y2:at+thickness/2,stroke:color(si),'stroke-width':2}));
+          marks.push(node('circle',{'data-point':i,cx:q,cy:at+thickness/2,r:4,fill:color(si)}));
+        } else marks.push(node('rect',horizontal
+          ? {'data-point':i,x:Math.min(p,q),y:at,width:Math.abs(q-p),height:Math.max(.5,thickness-2),fill:color(si),'data-grow-axis':'x','data-grow-origin':b<a?'right center':'left center'}
+          : {'data-point':i,x:at,y:Math.min(p,q),width:Math.max(.5,thickness-2),height:Math.abs(q-p),fill:color(si),'data-grow-origin':b<a?'center top':'center bottom'}));
+      }
+      barIndex++;
+    }
+    groups.push(node('g',{'data-series':si},marks));
+  }
+  // Full-band targets keep small points and zero values keyboard/pointer usable.
+  const hits=spec.labels.map((label,i)=>node('rect',horizontal
+    ? {class:'hit','data-point':i,x:left,y:top+i*ph/n,width:pw,height:ph/n,fill:'transparent'}
+    : {class:'hit','data-point':i,x:left+i*pw/n,y:top,width:pw/n,height:ph,fill:'transparent'}));
+  const cursor=node('line',horizontal?{class:'chart-cursor',x1:left,x2:w-right,y1:cat(0),y2:cat(0)}:{class:'chart-cursor',x1:cat(0),x2:cat(0),y1:top,y2:h-bottom});
+  const elements=[...axes,...groups,cursor,...hits];
+  return {markup:elements.map(serialize).join(''),elements,width:w,height:h,horizontal,categoryStart:horizontal?top:left,categorySize:(horizontal?ph:pw)/n};
+}
+
+function cartesianChartRuntime(spec, geometry) {
+  const svg=document.querySelector('.template-chart'),readout=document.querySelector('.chart-readout');
+  const legend=[...document.querySelectorAll('[data-chart-series]')], visible=spec.series.map(()=>true);
+  let selected=0, size=null, frame=0;
+  const describe=()=>{
+    const total=spec.series.reduce((sum,s,i)=>sum+(visible[i]?s.values[selected]:0),0);
+    const parts=spec.series.flatMap((s,i)=>visible[i]?[s.name+' '+s.values[selected]+(spec.unit?' '+spec.unit:'')+(spec.variant==='percentBar'?' ('+(total?s.values[selected]/total*100:0).toFixed(1)+'%)':'')]:[]);
+    readout.textContent=spec.labels[selected]+' · '+parts.join(' · ');
+    svg.setAttribute('aria-label',readout.textContent+'；左右方向键查看相邻数据');
+    if(size){const p=size.categoryStart+(selected+.5)*size.categorySize,cursor=svg.querySelector('.chart-cursor');for(const key of size.horizontal?['y1','y2']:['x1','x2'])cursor.setAttribute(key,String(p));}
+  };
+  // createElementNS/textContent work under the preview's Trusted Types policy.
+  // No HTML parsing or model-supplied markup enters the live SVG.
+  const mount=part=>{
+    if(typeof part==='string')return document.createTextNode(part);
+    const el=document.createElementNS('http://www.w3.org/2000/svg',part.tag);
+    for(const [key,value] of Object.entries(part.attributes))el.setAttribute(key,String(value));
+    el.append(...part.children.map(mount));return el;
+  };
+  let lastWidth=0;
+  const draw=()=>{frame=0;lastWidth=svg.parentElement.clientWidth;size=geometry(spec,lastWidth,visible);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();};
+  const select=i=>{selected=Math.max(0,Math.min(spec.labels.length-1,i));describe();};
+  svg.addEventListener('pointermove',event=>{const el=event.target.closest('[data-point]');if(el)select(Number(el.dataset.point));});
+  svg.addEventListener('click',event=>{const el=event.target.closest('[data-point]');if(el)select(Number(el.dataset.point));});
+  svg.addEventListener('keydown',event=>{const i=['ArrowLeft','ArrowUp'].includes(event.key)?selected-1:['ArrowRight','ArrowDown'].includes(event.key)?selected+1:event.key==='Home'?0:event.key==='End'?spec.labels.length-1:null;if(i===null)return;event.preventDefault();select(i);});
+  legend.forEach((button,i)=>button.addEventListener('click',()=>{
+    if(visible[i]&&visible.filter(Boolean).length===1)return;
+    visible[i]=!visible[i];button.setAttribute('aria-pressed',String(visible[i]));draw();
+  }));
+  const observer=new ResizeObserver(()=>{if(svg.parentElement.clientWidth!==lastWidth&&!frame)frame=requestAnimationFrame(draw);});observer.observe(svg.parentElement);draw();
+  window.addEventListener('pagehide',()=>{observer.disconnect();if(frame)cancelAnimationFrame(frame);},{once:true});
+}
+
+export function renderCartesianChart(spec) {
+  if(chartDataIssue(spec))return undefined;
+  // Keep the original native line/bar data path for existing saved consumers.
+  if(['line','bar'].includes(spec.variant)&&!['asOf','unit','subtitle','note'].some(k=>spec[k]!==undefined)&&spec.labels.length<=24&&spec.series.length<=6)return undefined;
+  const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const geometry=cartesianChartSvg(spec);
+  const rows=spec.labels.map((l,i)=>`<tr><td>${esc(l)}</td>${spec.series.map(s=>`<td>${s.values[i]}</td>`).join('')}</tr>`).join('');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;padding:10px 12px;font:12px/1.5 var(--sherlock-font-sans);color:var(--sherlock-text);background:var(--sherlock-surface)}*{box-sizing:border-box}figure{margin:0;min-width:0}.chart-context,figcaption{color:var(--sherlock-muted);overflow-wrap:anywhere}.chart-context{margin-bottom:4px}.legend{display:flex;gap:4px 12px;flex-wrap:wrap;margin-bottom:6px}.legend button{font:inherit;display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--sherlock-control-text,var(--sherlock-text));padding:3px 0;cursor:pointer}.legend i{width:12px;height:3px;background:var(--series)}.legend button[aria-pressed="false"]{opacity:.4}.legend button:focus-visible{outline:1px solid var(--sherlock-muted)}svg{display:block;width:100%;max-width:100%;overflow:visible}svg text{fill:var(--sherlock-muted);font:11px var(--sherlock-font-sans)}.grid{stroke:var(--sherlock-border);stroke-width:.5}.chart-cursor{stroke:var(--sherlock-muted);stroke-width:1;stroke-dasharray:3 3;pointer-events:none}.chart-readout{background:var(--sherlock-surface-muted);color:var(--sherlock-text);min-height:36px;padding:6px 8px;margin:6px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}figcaption{font-size:11px}details{border-top:1px solid var(--sherlock-border);margin-top:8px;padding-top:6px}summary{cursor:pointer}.data-scroll{max-height:200px;overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:11px}th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--sherlock-border)}th:first-child,td:first-child{text-align:left}thead{color:var(--sherlock-text);background:var(--sherlock-surface-muted)}tbody tr:hover{background:var(--sherlock-surface-muted)}
+</style></head><body data-research-kind="chart" data-chart-template="${spec.variant}"><figure><div class="chart-context">${esc([spec.subtitle,spec.unit].filter(Boolean).join(' · '))}</div><div class="legend">${spec.series.map((s,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" aria-label="显示或隐藏${esc(s.name)}"><i style="--series:var(--sherlock-chart-${i%8+1},var(--sherlock-chart-${i%6+1}))"></i>${esc(s.name)}</button>`).join('')}</div><svg class="template-chart" viewBox="0 0 ${geometry.width} ${geometry.height}" height="240" role="img" tabindex="0" aria-label="${esc(spec.title)}">${geometry.markup}</svg><div class="chart-readout" role="status" aria-live="polite">${esc(spec.labels[0])}</div><figcaption>${esc([spec.asOf,spec.note].filter(Boolean).join(' · '))}</figcaption></figure><details><summary>查看完整数据</summary><div class="data-scroll"><table><thead><tr><th>分类</th>${spec.series.map(s=>`<th>${esc(s.name)}${spec.unit?' ('+esc(spec.unit)+')':''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details><script>(${cartesianChartRuntime.toString()})(${JSON.stringify(spec).replace(/</g,'\\u003c')},${cartesianChartSvg.toString()});</script></body></html>`;
+  return {version:1,type:'html',title:spec.title,html};
+}
