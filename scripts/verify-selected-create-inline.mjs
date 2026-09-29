@@ -287,6 +287,17 @@ try{
  await page.evaluate(async()=>{const s=await workspace.canvasAction('inspect',{});await workspace.canvasAction('apply',{requestId:'explicit-edit',revision:s.revision,changes:[{op:'update',id:'base',fields:{title:'主动编辑'}}]})})
  await page.locator('[data-canvas-action-receipt]').waitFor()
  report.checks.push('data refresh persists without an undo toast; explicit canvas edits still publish their undo receipt')
+ const adjacent=await page.evaluate(()=>{
+   const cells=[{id:'candle',x:0,y:0,w:40,h:14},{id:'donut',x:0,y:14,w:27,h:16},{id:'table',x:27,y:14,w:13,h:9},{id:'volume',x:0,y:30,w:27,h:18}],step=(1000-14)/40
+   workspace.setArtifacts(cells.map(c=>({id:c.id,kind:'generated-container',messageId:c.id,title:c.id,excerpt:'保留指标内容',containerPrompt:'显示指标',refreshMinutes:0,generationStatus:'completed',generationLastSeq:0,containerSpec:{version:1,type:'table',title:c.id,columns:['指标','数值'],rows:[['保留内容','100']]},x:260,y:160,width:480,height:280,sizeMode:'manual'})))
+   workspace.applyWorkbenchCells(cells,true);workspace.updateSelection([],'replace')
+   const measured=new Map(cells.map(c=>[c.id,{width:c.w*step-10,height:c.h*step-10}]))
+   workspace.organizeCanvas(measured);const arranged=workspace.getWorkbenchCells();workspace.organizeCanvas(measured);const repeated=workspace.getWorkbenchCells();workspace.undo();const undone=workspace.getWorkbenchCells();workspace.redo()
+   return {cells,arranged,repeated,undone,redone:workspace.getWorkbenchCells()}
+ })
+ assert.deepEqual(adjacent.arranged.find(c=>c.id==='volume'),{id:'volume',x:27,y:23,w:13,h:18},JSON.stringify(adjacent))
+ assert.deepEqual(adjacent.arranged.slice(0,3),adjacent.cells.slice(0,3));assert.deepEqual(adjacent.repeated,adjacent.arranged);assert.deepEqual(adjacent.undone,adjacent.cells);assert.deepEqual(adjacent.redone,adjacent.arranged)
+ report.checks.push('ETF narrow following card adapts into adjacent short-column vacancy; preceding column widths remain unchanged, repeated arrange is stable and one undo restores the original layout')
  assert.deepEqual(errors,[])
  await writeFile(output+'report.json',JSON.stringify(report,null,2))
  console.log(JSON.stringify(report,null,2))

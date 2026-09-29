@@ -81,19 +81,20 @@ export function createResearchGrid() {
           }
         }
       }
-      // When no whole card fits, let the following spanning card begin in the
-      // shorter column. Keeping its original content height avoids inflating a
-      // short table solely to meet the taller card beside it.
+      // When no whole card fits, let the following card begin in the shorter
+      // column, including a neighbouring column outside its current width.
+      // Keeping its content height avoids inflating a short table to match a
+      // taller neighbour. Existing column edges still determine its placement.
       if(!best)for(const target of [...next].sort(order)){
         if(related.has(target.id)||['queued','running','retrying'].includes(byId.get(target.id)?.generationStatus))continue
-        const previous=next.filter(c=>c.id!==target.id&&c.x>=target.x&&c.x+c.w<=target.x+target.w&&c.y+c.h<=target.y)
-        const edges=[...new Set([target.x,target.x+target.w,...previous.flatMap(c=>[c.x,c.x+c.w])])].sort((a,b)=>a-b)
+        const previous=next.filter(c=>c.id!==target.id&&c.y+c.h<=target.y)
+        const edges=[...new Set([0,columns,...previous.flatMap(c=>[c.x,c.x+c.w])])].sort((a,b)=>a-b)
         for(let i=0;i<edges.length-1;i++){
           const x=edges[i],w=edges[i+1]-x
           if(w>=target.w||w<minimum(byId.get(target.id),m).w)continue
           const above=previous.filter(c=>c.x<x+w&&c.x+c.w>x),bottom=Math.max(0,...above.map(c=>c.y+c.h)),missing=target.y-bottom
           const growth=Math.min(160,...above.filter(c=>c.y+c.h===bottom).map(c=>(c.h*m.step-m.gap)*.25))
-          if(!previous.length||missing<=0||above.length&&missing*m.step<=growth)continue
+          if(!above.length||missing<=0||missing*m.step<=growth)continue
           const placed={...target,x,w,y:bottom}
           if(previous.some(c=>overlap(placed,c)))continue
           const packed=compact(next.map(c=>c.id===target.id?placed:c)),rank=[target.y,-missing,Math.abs(x-target.x)]
