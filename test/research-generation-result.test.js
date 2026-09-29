@@ -1,5 +1,13 @@
 import { expect, it } from 'vitest'
-import { generationContent } from '../packages/dsh-research-collaboration/generation-result.js'
+import { generationContent, mergeGenerationResult } from '../packages/dsh-research-collaboration/generation-result.js'
+import { validateCanvas } from '../packages/dsh-research-collaboration/document.js'
+
+it('工作台自定义生成尺寸作为共享布局保留，结果提交不会覆盖当前框选大小',()=>{
+ const node={id:'drawn',kind:'generated-container',width:420,height:230,preserveGenerationSize:true}
+ expect(()=>validateCanvas({files:[],artifacts:[node]})).not.toThrow()
+ expect(generationContent(node)).toBe(generationContent({...node,preserveGenerationSize:false}))
+ expect(mergeGenerationResult(node,{...node,width:800,height:600,preserveGenerationSize:false})).toMatchObject(node)
+})
 
 it('ignores generated-container status captions but protects real content and prompts', () => {
   const baseline = { id: 'card', kind: 'generated-container', excerpt: '正在准备任务…', containerPrompt: '生成研究卡片', width: 720 }

@@ -41,8 +41,12 @@ export function patchResearchGridWorkbench(source){
   const change=(from,to)=>{if(source.split(from).length!==2)throw Error('Workbench anchor missing or ambiguous: '+from.slice(0,90));changes.push([from,to]);source=source.replace(from,to)}
   change("buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime'})","buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime',workbench:true})")
   change('ComponentDataStatusBar,{sessionId:componentDataSessionId,node}','ComponentDataStatusBar,{sessionId:componentDataSessionId,node,workbench:true}')
+  change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':node.preserveGenerationSize?'':undefined, 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
   change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);')
+  // Explicitly drawn frames retain their size across generation and hydration.
+  // This is distinct from automatic voice/selection cards' readable task size.
+  change('...(selectedCreate ? { creationMode: "selection" } : {}),','...(selectedCreate ? { creationMode: "selection" } : {}),\n...(value.preserveGenerationSize===true?{preserveGenerationSize:true}:{}),')
   change('const persistSnapshot = () => {','const persistSnapshot = () => {\nif(!workbenchGrid.save())return false;')
   change('setCanvasSize(canvasSize) {','setCanvasSize(canvasSize) {\nif(workbenchGrid.enabled()){const size={...snapshot.canvasSize,...canvasSize};workbenchGrid.enable(Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity)));}')
   change("if(document.documentElement.hasAttribute('data-odyssey-window-resizing')){","if(!root.hasAttribute('data-ework-grid')&&document.documentElement.hasAttribute('data-odyssey-window-resizing')){")

@@ -408,6 +408,22 @@ it('拉框松手只创建一次并保持目标格位，缩放更新真实渲染�
  const after=f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id),card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]')
  expect(after.width).toBeGreaterThan(beforeWidth);expect(parseFloat(card.style.width)).toBe(after.width)
 })
+it('工作台拉框智能组件在排队、运行、重试、重新打开和完成时保持自定义尺寸',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>w.setArtifacts([text('peer')]))
+ await f.event('click',f.document.querySelector('[data-research-global-container]'))
+ await f.event('pointerdown',f.canvas,{button:0,pointerId:81,clientX:20,clientY:20})
+ await f.event('pointerup',f.canvas,{pointerId:81,clientX:480,clientY:250})
+ const box=c=>({id:c.id,x:c.x,y:c.y,w:c.w,h:c.h}),draft=w.getSnapshot().artifacts.find(n=>n.id!=='peer'),before=w.getSnapshot().artifacts.map(n=>({id:n.id,width:n.width,height:n.height,x:n.x,y:n.y})),cells=w.getWorkbenchCells().map(box)
+ const same=()=>{expect(w.getSnapshot().artifacts.map(n=>({id:n.id,width:n.width,height:n.height,x:n.x,y:n.y}))).toEqual(before);expect(w.getWorkbenchVisibleCells().map(box)).toEqual(cells)}
+ await act(async()=>w.beginContainerGeneration(draft.id,'生成表格，保留用户框选尺寸'));same()
+ await act(async()=>w.attachGenerationTask(draft.id,{taskId:'drawn-task',canvasNodeId:draft.id,state:'running',lastSeq:0}));same()
+ await act(async()=>w.applyGenerationInspection(draft.id,{taskId:'drawn-task',canvasNodeId:draft.id,state:'retrying',lastSeq:1,events:[]}));same()
+ const reopened=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');reopened.setCanvasSize({width:1000,height:700});reopened.setWorkbenchWidth(1000)
+ expect(reopened.getSnapshot().artifacts.find(n=>n.id===draft.id)).toMatchObject({width:draft.width,height:draft.height,preserveGenerationSize:true})
+ await act(async()=>w.applyGenerationInspection(draft.id,{taskId:'drawn-task',canvasNodeId:draft.id,state:'completed',lastSeq:2,events:[],finalOutput:JSON.stringify({version:1,type:'table',title:'完成',columns:['指标','数值'],rows:[['A','1']]}),completedAt:Date.now()}));same()
+ expect(w.getSnapshot().artifacts.find(n=>n.id===draft.id).generationStatus).toBe('completed')
+})
 it('智能草稿短拉框也达到可编辑最小尺寸，缩放不能收小，窄窗和已有小草稿不污染规范布局',async()=>{
  const f=await fixture(true),w=f.workspace,step=(1000-14)/40
  await f.event('click',f.document.querySelector('[data-research-global-container]'))

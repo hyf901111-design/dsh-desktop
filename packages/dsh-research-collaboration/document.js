@@ -7,6 +7,7 @@ const nodeFields = new Set(
     ' '
   )
 )
+nodeFields.add('preserveGenerationSize')
 const textFields = new Set([
   'title',
   'excerpt',

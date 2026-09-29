@@ -2,6 +2,7 @@
 // Keep nodeVersions for general document/reference revisions; use this narrower
 // comparison only when committing a leased generation result.
 const layoutFields = new Set('x y width height rotation scale stackOrder zIndex order parentId groupId sizeMode aspectRatio containerSizePreset layout collapsed refreshMinutes refreshScheduleId workbenchRevealAt'.split(' '))
+layoutFields.add('preserveGenerationSize')
 const runtimeFields = new Set('generationStatus generationError generationStartedAt generationCompletedAt generationTaskId generationLastSeq generationChildSessionId lastSuccessfulAt refreshError updatedAt'.split(' '))
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable)

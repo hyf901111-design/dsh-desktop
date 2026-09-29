@@ -250,7 +250,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(commit&&op.kind==='draw'){
       workspace.applyWorkbenchCells(op.canonicalBefore,false)
       const n=grid.project([{id:'__draft__'}],[op.target],width())[0]
-      const node=workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,sizeMode:'manual'})
+      const node=workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,sizeMode:'manual',preserveGenerationSize:true})
       if(node)workspace.applyWorkbenchCells(grid.place(op.canonicalBefore,{...op.target,id:node.id},node.id),false)
       workspace.persist();selectTool('select')
     }else if(commit){workspace.applyWorkbenchCells(committed,false);workspace.persist()}

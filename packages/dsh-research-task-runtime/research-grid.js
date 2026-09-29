@@ -8,7 +8,7 @@ export function createResearchGrid() {
     // Both task types use the same generation body. The derived outer shell
     // reserves 50px for its baseline; passive growth never rewrites saved cells.
     const active=['queued','running','retrying'].includes(node.generationStatus)
-    const height=active?(node.creationMode==='selection'?450:400):node.creationMode==='selection'?330:220
+    const height=active&&!node.preserveGenerationSize?(node.creationMode==='selection'?450:400):node.creationMode==='selection'?330:220
     return {w:m.minDraftColumns,h:Math.ceil((height+m.gap)/m.rowStep)}
   }
   const bounded=n=>({...n,w:clamp(Math.round(n.w)||4,4,columns),h:clamp(Math.round(n.h)||3,3,300),x:clamp(Math.round(n.x)||0,0,columns-clamp(Math.round(n.w)||4,4,columns)),y:Math.max(0,Math.round(n.y)||0)})
