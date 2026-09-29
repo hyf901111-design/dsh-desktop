@@ -2,7 +2,7 @@ import {chartDataIssue} from './chart-template-contract.js';
 
 // Pure SVG geometry is also used in the sandbox. Never evaluates model code.
 // Axis domains stay fixed while toggling series, preserving visual comparison.
-export function cartesianChartSvg(spec, width = 620, visible = spec.series.map(() => true)) {
+export function cartesianChartSvg(spec, width = 620, visible = spec.series.map(() => true), availableHeight = 240) {
   const esc = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const node = (tag, attributes = {}, children = []) => ({tag, attributes, children});
   const serialize = el => typeof el === 'string' ? esc(el) : `<${el.tag}${Object.entries(el.attributes).map(([k,v]) => ` ${k}="${esc(v)}"`).join('')}>${el.children.map(serialize).join('')}</${el.tag}>`;
@@ -12,7 +12,7 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   const horizontal = ['horizontal','lollipop','dumbbell'].includes(kind);
   const stacked = ['stackedArea','stackedBar','percentBar'].includes(kind);
   const percent = kind === 'percentBar';
-  const w = Math.max(280, width), h = horizontal ? Math.max(240, n * 30 + 50) : 240;
+  const w = Math.max(280, width), h = horizontal ? Math.max(240, n * 30 + 50) : Math.max(160, Math.min(240, availableHeight));
   const left = horizontal ? Math.min(110, w * .27) : 48, right = 16, top = 16, bottom = 30;
   const pw = w-left-right, ph = h-top-bottom;
   const totals = spec.labels.map((_, i) => spec.series.reduce((sum,s,si) => sum + (visible[si]?s.values[i]:0), 0));
@@ -106,8 +106,14 @@ function cartesianChartRuntime(spec, geometry) {
     for(const [key,value] of Object.entries(part.attributes))el.setAttribute(key,String(value));
     el.append(...part.children.map(mount));return el;
   };
-  let lastWidth=0;
-  const draw=()=>{frame=0;lastWidth=svg.parentElement.clientWidth;size=geometry(spec,lastWidth,visible);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();};
+  let lastWidth=0,lastHeight=0;
+  const draw=()=>{
+    frame=0;lastWidth=svg.parentElement.clientWidth;lastHeight=window.innerHeight;describe();
+    const outerHeight=element=>{const style=getComputedStyle(element);return element.getBoundingClientRect().height+parseFloat(style.marginTop||0)+parseFloat(style.marginBottom||0);};
+    const bodyStyle=getComputedStyle(document.body);
+    const chrome=[...document.querySelectorAll('.chart-context,.legend,.chart-readout,figcaption,summary')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+16;
+    size=geometry(spec,lastWidth,visible,lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();
+  };
   const select=i=>{selected=Math.max(0,Math.min(spec.labels.length-1,i));describe();};
   svg.addEventListener('pointermove',event=>{const el=event.target.closest('[data-point]');if(el)select(Number(el.dataset.point));});
   svg.addEventListener('click',event=>{const el=event.target.closest('[data-point]');if(el)select(Number(el.dataset.point));});
@@ -116,8 +122,9 @@ function cartesianChartRuntime(spec, geometry) {
     if(visible[i]&&visible.filter(Boolean).length===1)return;
     visible[i]=!visible[i];button.setAttribute('aria-pressed',String(visible[i]));draw();
   }));
-  const observer=new ResizeObserver(()=>{if(svg.parentElement.clientWidth!==lastWidth&&!frame)frame=requestAnimationFrame(draw);});observer.observe(svg.parentElement);draw();
-  window.addEventListener('pagehide',()=>{observer.disconnect();if(frame)cancelAnimationFrame(frame);},{once:true});
+  const schedule=()=>{if((svg.parentElement.clientWidth!==lastWidth||window.innerHeight!==lastHeight)&&!frame)frame=requestAnimationFrame(draw);};
+  const observer=new ResizeObserver(schedule);observer.observe(svg.parentElement);window.addEventListener('resize',schedule);draw();
+  window.addEventListener('pagehide',()=>{observer.disconnect();window.removeEventListener('resize',schedule);if(frame)cancelAnimationFrame(frame);},{once:true});
 }
 
 export function renderCartesianChart(spec) {

@@ -36,9 +36,9 @@ describe('真实客户端模拟工作台输入修复', () => {
     }]});
     expect(suppliedKpi.panels[0].artifact.variant).toBe('fund-kpi');
   });
-  it('让通用折线、柱状和表格遵守规划中的月份、行业及行数', () => {
-    const line = generateSimulatedPanel({ title: '近3个月双序列趋势', prompt: '折线图，近3个月，两条序列', type: 'chart', size: 'large' }, '模拟测试工作台');
-    const bar = generateSimulatedPanel({ title: '三行业双序列对比', prompt: '柱状图，3个行业，两条序列', type: 'chart', size: 'large' }, '模拟测试工作台');
+  it('保留图表已规划的数据，表格遵守行数', () => {
+    const line = generateSimulatedPanel({ title: '近3个月双序列趋势', prompt: '折线图，近3个月，两条序列', type: 'chart', size: 'large', artifact: {version:1,type:'chart',title:'模拟趋势',variant:'line',labels:['2026-04','2026-05','2026-06'],series:[{name:'样本',values:[12,15,18]},{name:'基准',values:[10,12,16]}]} }, '模拟测试工作台');
+    const bar = generateSimulatedPanel({ title: '三行业双序列对比', prompt: '柱状图，3个行业，两条序列', type: 'chart', size: 'large', artifact: {version:1,type:'chart',title:'模拟行业',variant:'bar',labels:['医药','科技','消费'],series:[{name:'样本',values:[12,15,18]},{name:'基准',values:[10,12,16]}]} }, '模拟测试工作台');
     const table = generateSimulatedPanel({ title: '三方案对比表', prompt: '3行格式化数值', type: 'table', size: 'large' }, '模拟测试工作台');
     expect(line.artifact.labels).toEqual(['2026-04', '2026-05', '2026-06']);
     expect(bar.artifact.labels).toEqual(['医药', '科技', '消费']);

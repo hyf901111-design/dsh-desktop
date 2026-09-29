@@ -24,6 +24,11 @@ export function chartTemplateSchema(variant) {
     '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。' +
     'percentBar 仅非负原值，由宿主计算各分类百分比；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。可选 subtitle、note，原始单位和来源保留。';
 }
+export function requireSimulatedChartData(panel) {
+  if (panel.type !== 'chart' || panel.artifact) return;
+  const variant = requestedChartVariant(`${panel.title}\n${panel.prompt}`) ?? 'bar';
+  throw Error(`面板「${panel.title}」需要与需求匹配的模拟图表数据。请在本次工作台调用的 panel.artifact 中补齐 ${chartTemplateSchema(variant)} labels、系列名、单位和数据范围必须对应用户需求；只生成明确标注的虚构值，不联网、不编写 HTML、不启动逐卡模型。宿主不会用通用行业样例替代季度或产品数据。`);
+}
 export function chartDataIssue(spec) {
   if (spec?.type !== 'chart' || !CHART_VARIANTS.includes(spec.variant)) return '未注册的图表变体';
   const string = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;

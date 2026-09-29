@@ -3,7 +3,7 @@ import {CHART_VARIANTS,chartDataIssue,requestedChartVariant} from '../packages/d
 import {cartesianChartSvg,renderCartesianChart} from '../packages/dsh-research-task-runtime/cartesian-chart-artifact.js';
 import {acceptArtifactOutput,workbenchMarketVariantIssue} from '../packages/dsh-research-task-runtime/artifact-output.js';
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js';
-import {prepareSimulatedArtifact,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js';
+import {prepareSimulatedArtifact,workbenchPanelPrompt,validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js';
 import {workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
 import {generateSimulatedPanel} from '../packages/dsh-research-task-runtime/simulated-workbench-generator.js';
 
@@ -21,9 +21,21 @@ describe('Figma cartesian templates',()=>{
    expect(templateFor(input).schema).toContain('不超过600');
  });
  it.each(['stackedArea','stackedBar','percentBar','dumbbell','combo'])('simulated generator respects explicit %s rather than silently choosing bar',variant=>{
-   const result=generateSimulatedPanel({type:'chart',title:'模拟经营图表',prompt:'chart.'+variant,size:'large'},'运营');
+   const result=generateSimulatedPanel({type:'chart',title:'模拟经营图表',prompt:'chart.'+variant,size:'large',artifact:data(variant)},'运营');
    expect(result.artifact.variant).toBe(variant);
    expect(acceptArtifactOutput(JSON.stringify(prepareSimulatedArtifact(result)))).toBeTruthy();
+ });
+ it('rejects prompt-only simulated charts before creating cards instead of substituting unrelated samples',()=>{
+   const panel={type:'chart',title:'季度产品收入',prompt:'chart.stackedBar；四季度产品A/B收入，万元',size:'large'};
+   expect(()=>generateSimulatedPanel(panel,'经营分析')).toThrow(/panel.artifact/);
+   expect(()=>validateWorkbench({requestId:'missing-chart-data',title:'经营分析',dataMode:'simulated',panels:[panel]})).toThrow(/模拟图表数据/);
+   const artifact=data('stackedBar');
+   expect(validateWorkbench({requestId:'chart-data',title:'经营分析',dataMode:'simulated',panels:[{...panel,artifact}]}).panels[0].artifact.series).toEqual(artifact.series);
+ });
+ it('fits vertical plot axes into the available card height without changing the data domain',()=>{
+   const full=cartesianChartSvg(data('stackedBar')), compact=cartesianChartSvg(data('stackedBar'),400,[true,true],180);
+   expect(compact.height).toBe(180);expect(compact.markup).toContain('y="170"');
+   expect(compact.markup).toContain('80');expect(full.markup).toContain('80');
  });
  it('rejects malformed and semantically impossible charts without fabricating replacement values',()=>{
    for(const broken of [data('percentBar',{series:[{name:'A',values:[1,-1,0]}]}),data('dumbbell',{series:[{name:'A',values:[1,2,3]}]}),data('area',{series:[{name:'A',values:[1,null,2]}]}),data('combo',{series:[{name:'A',values:[1,2,3],kind:'pie'}]})]){

@@ -1,5 +1,5 @@
 import { researchBentoSize } from './bento-layout.js';
-import {chartTemplateSchema,requestedChartVariant} from './chart-template-contract.js';
+import {chartTemplateSchema,requestedChartVariant,requireSimulatedChartData} from './chart-template-contract.js';
 import { templateFor } from './component-template-registry.js';
 import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
@@ -290,6 +290,7 @@ export function validateWorkbench(value) {
             if (issue) throw Error(issue);
         }
         if (parallel && p.artifact !== undefined) throw Error('并行模拟生成只提交面板规划，不提交 artifact。');
+        if (isSimulated && !parallel) requireSimulatedChartData(p);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
         const panel = { title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}) };
