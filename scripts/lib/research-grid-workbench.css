@@ -118,14 +118,14 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id] .rScV5Q_con
 /* Generation keeps the same reserved workbench header as completed cards. */
 body [data-research-canvas][data-ework-grid] [data-research-node-id]:has([data-research-generation-process])>.rScV5Q_nodeTitle{display:flex!important}
 body [data-ework-grid] .odyssey-generation-surface{border-radius:0 0 4px 4px!important}
-/* Figma's shared 362px body: one composition for ordinary and derived tasks. */
+/* One composition for ordinary and derived tasks, within the existing frame. */
 body [data-ework-grid] [data-research-generation-foreground]{top:54px;gap:10px;overflow:hidden}
 body [data-ework-grid] .odyssey-generation-state-icon{width:16px;height:16px;mask-size:16px 16px;margin-bottom:12px;flex:none}
 body [data-ework-grid] [data-research-generation-foreground]>strong{font-size:15px;line-height:24px;flex:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-height:48px;overflow:hidden}
 body [data-ework-grid] .odyssey-generation-phase{font-size:13px;line-height:20px;flex:none}
 body [data-ework-grid] [data-research-generation-foreground]>[data-research-generation-description]{display:block;-webkit-line-clamp:unset;line-height:20px;flex:1 1 auto;min-height:60px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;scrollbar-width:thin}
 body [data-ework-grid] [data-research-generation-sources]{flex:none}
-/* A user-drawn frame scrolls its task details instead of changing its box. */
+/* Every generation frame scrolls its task details instead of changing its box. */
 body [data-ework-grid] [data-workbench-fixed-generation-size] [data-research-generation-foreground]{overflow:auto;overscroll-behavior:auto}
 body [data-ework-grid] [data-workbench-fixed-generation-size] [data-research-generation-description]{flex:none;overflow:visible}
 /* Canvas notices stay with the visible workbench, above its floating toolbar. */

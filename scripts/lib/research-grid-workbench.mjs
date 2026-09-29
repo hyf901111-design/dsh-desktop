@@ -45,7 +45,7 @@ export function patchResearchGridWorkbench(source){
   const change=(from,to)=>{if(source.split(from).length!==2)throw Error('Workbench anchor missing or ambiguous: '+from.slice(0,90));changes.push([from,to]);source=source.replace(from,to)}
   change("buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime'})","buildResearchHtmlPreview(spec.html, spec.title, readResearchComponentTheme(), {notoFont:'runtime',workbench:true})")
   change('ComponentDataStatusBar,{sessionId:componentDataSessionId,node}','ComponentDataStatusBar,{sessionId:componentDataSessionId,node,workbench:true}')
-  change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':node.preserveGenerationSize?'':undefined, 'data-research-generation-stage': presentation.stage,")
+  change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':'', 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
   change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);')
   change('frame?.contentWindow?.postMessage({ type: \"sherlock-theme\", colorScheme: readResearchComponentTheme(frame.ownerDocument) }, \"*\");','sendWorkbenchFramePresentation(frame);')

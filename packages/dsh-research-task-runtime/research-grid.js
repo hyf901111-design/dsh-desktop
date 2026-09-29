@@ -5,10 +5,9 @@ export function createResearchGrid() {
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
   const minimum=(node,m)=>{
     if(node?.kind!=='generated-container'||node.containerSpec)return {w:m.minColumns,h:m.minRows}
-    // Both task types use the same generation body. The derived outer shell
-    // reserves 50px for its baseline; passive growth never rewrites saved cells.
-    const active=['queued','running','retrying'].includes(node.generationStatus)
-    const height=active&&!node.preserveGenerationSize?(node.creationMode==='selection'?450:400):node.creationMode==='selection'?330:220
+    // Task status changes content, never the frame. Keep the draft minimum
+    // throughout generation; the derived shell also reserves its source strip.
+    const height=node.creationMode==='selection'?330:220
     return {w:m.minDraftColumns,h:Math.ceil((height+m.gap)/m.rowStep)}
   }
   const bounded=n=>({...n,w:clamp(Math.round(n.w)||4,4,columns),h:clamp(Math.round(n.h)||3,3,300),x:clamp(Math.round(n.x)||0,0,columns-clamp(Math.round(n.w)||4,4,columns)),y:Math.max(0,Math.round(n.y)||0)})
