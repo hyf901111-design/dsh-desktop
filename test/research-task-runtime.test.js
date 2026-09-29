@@ -316,6 +316,8 @@ describe('Research task contract and prompt', () => {
     expect(prompt).toContain('实时、监控或最新数据')
     expect(prompt).toContain('用户明确的呈现要求始终优先')
     expect(prompt).toContain('HTML/CSS/JavaScript')
+    expect(prompt).toContain('存在可复用的宿主预置模板时必须优先使用相应结构化 schema')
+    expect(prompt).toContain('.research-metrics > .research-metric')
     expect(prompt).toContain('离线')
     expect(prompt).toContain('制作一张展示月度收入趋势的柱状图')
     expect(prompt).not.toContain('来源 1')

@@ -97,16 +97,22 @@ export function workbenchTemplateIdentity(html) {
 export function installWorkbenchRefresh(createSurface, valid, revision) {
   const start = () => {
     const surface = createSurface(document.body, state => parent.postMessage({ type: 'sherlock-workbench-view', state, revision }, '*'))
-    let token = 0
+    let token = 0, interaction = 0
+    const touched = () => { interaction++ }
+    for (const name of ['input','change','toggle','scroll']) document.body.addEventListener(name,touched,true)
     addEventListener('message', event => {
       const data = event.data
       if (event.source !== parent || data?.type !== 'sherlock-workbench-restore' || Object.keys(data).length !== 4 || data.revision !== revision || typeof data.animate !== 'boolean' || !valid(data.state)) return
-      const request = ++token
+      const request = ++token, requestedInteraction = interaction
       // Await the synchronous journal replay and chart draw, then restore scroll.
-      setTimeout(() => { if (request === token) surface.apply(data.state, data.animate) }, 80)
+      setTimeout(() => {
+        if (request !== token) return
+        const latest=interaction!==requestedInteraction?surface.snapshot():null
+        surface.apply(latest?{...data.state,controls:latest.controls,scroll:latest.scroll}:data.state,data.animate)
+      }, 80)
     })
     parent.postMessage({ type: 'sherlock-workbench-ready', state: surface.snapshot(), revision }, '*')
-    addEventListener('pagehide', () => surface.dispose(), { once: true })
+    addEventListener('pagehide', () => { surface.dispose();for(const name of ['input','change','toggle','scroll'])document.body.removeEventListener(name,touched,true) }, { once: true })
   }
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', start, { once: true }) : start()
 }

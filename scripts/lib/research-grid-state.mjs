@@ -5,7 +5,7 @@ export function createWorkbenchGridState(storage,sessionId) {
   let width=0,cells=[],initialized=false,previous=new Map(),nodesById=new Map(),forced=false,legacyRows=false
   try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1}}catch{}
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
-  const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='generated-container'&&!n.containerSpec&&n.creationMode!=='selection'&&n.generationStatus!=='completed'?{...box,freePosition:true}:box})
+  const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='generated-container'&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
   function visibleCells(){
     const m=grid.metrics(width||1000),limits=c=>grid.minimum(nodesById.get(c.id),m)
     if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
