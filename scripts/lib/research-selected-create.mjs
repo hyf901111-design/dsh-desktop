@@ -30,17 +30,9 @@ export function WorkbenchSelectedCreateContext({node,workspace,onEdit,readOnly,e
   if(node.creationMode!=='selection')return null
   const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
   const sources=node.generationSources||[],labels=sources.map(s=>s.title),active=RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)
-  const viewSource=event=>{
-    const current=workspace?.getSnapshot(),live=new Set([...(current?.files||[]),...(current?.artifacts||[])].map(n=>n.id)),ids=(node.sourceNodeIds||[]).filter(id=>live.has(id))
-    if(!ids.length)return
-    workspace.updateSelection(ids,'replace')
-    const root=event.currentTarget.closest('[data-research-canvas]'),card=root?.querySelector('[data-research-node-id="'+CSS.escape(ids[0])+'"]')
-    card?.scrollIntoView({block:'nearest',inline:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})
-    root?.focus({preventScroll:true})
-  }
   return jsxs('div',{className:'ew-selected-create-context','data-workbench-selected-create-context':node.id,'data-research-preview-interactive':'',children:[
-    jsxs('div',{className:'ew-selected-create-source',children:[jsx('span',{title:labels.join('、'),children:'基于：'+(labels.join('、')||'所选组件')}),jsx('button',{type:'button','data-workbench-view-source':node.id,onClick:viewSource,children:'查看基准'})]}),
-    !editing&&node.generationStatus!=='draft'&&!active&&jsxs('div',{className:'ew-selected-create-requirement',children:[jsx('span',{children:'需求：'+node.containerPrompt}),!readOnly&&jsx('button',{type:'button','data-workbench-edit-selected-create':node.id,onClick:()=>onEdit?.(node),children:'编辑需求'})]})
+    jsx('div',{className:'ew-selected-create-source',children:jsx('span',{title:labels.join('、'),children:'基于：'+(labels.join('、')||'所选组件')})}),
+    !editing&&node.generationStatus!=='draft'&&!active&&jsx('div',{className:'ew-selected-create-requirement',children:jsx('span',{children:'需求：'+node.containerPrompt})})
   ]})
 }
 

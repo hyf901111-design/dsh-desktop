@@ -112,11 +112,12 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id] .rScV5Q_con
 body [data-research-canvas][data-ework-grid] [data-research-node-id]:has([data-research-generation-process])>.rScV5Q_nodeTitle{display:flex!important}
 body [data-ework-grid] .odyssey-generation-surface{border-radius:0 0 4px 4px!important}
 /* Figma's shared 362px body: one composition for ordinary and derived tasks. */
-body [data-ework-grid] [data-research-generation-foreground]{top:54px;gap:10px}
-body [data-ework-grid] .odyssey-generation-state-icon{width:16px;height:16px;mask-size:16px 16px;margin-bottom:12px}
-body [data-ework-grid] [data-research-generation-foreground]>strong{font-size:15px;line-height:24px}
-body [data-ework-grid] .odyssey-generation-phase{font-size:13px;line-height:20px}
-body [data-ework-grid] [data-research-generation-foreground]>[data-research-generation-description]{line-height:20px}
+body [data-ework-grid] [data-research-generation-foreground]{top:54px;gap:10px;overflow:hidden}
+body [data-ework-grid] .odyssey-generation-state-icon{width:16px;height:16px;mask-size:16px 16px;margin-bottom:12px;flex:none}
+body [data-ework-grid] [data-research-generation-foreground]>strong{font-size:15px;line-height:24px;flex:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-height:48px;overflow:hidden}
+body [data-ework-grid] .odyssey-generation-phase{font-size:13px;line-height:20px;flex:none}
+body [data-ework-grid] [data-research-generation-foreground]>[data-research-generation-description]{display:block;-webkit-line-clamp:unset;line-height:20px;flex:1 1 auto;min-height:60px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;scrollbar-width:thin}
+body [data-ework-grid] [data-research-generation-sources]{flex:none}
 /* Canvas notices stay with the visible workbench, above its floating toolbar. */
 [data-workbench-notice] { transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:6px; box-sizing:border-box; width:max-content; max-width:min(460px,calc(100% - 24px)); min-height:40px; padding:6px 8px 6px 12px; border:1px solid #00000014; border-radius:10px; background:#fff; color:#27282c; box-shadow:0 6px 20px #0000001c; font:12px/20px var(--odyssey-font-ui); }
 [data-workbench-notice]>span { min-width:0; overflow-wrap:anywhere; }
