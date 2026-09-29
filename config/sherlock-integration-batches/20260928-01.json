@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "f475742ec0b9127757875ac9f1f01dee4b279503",
-        "tipCommit": "a081025fcd0ebecc24f99b18e35921376ed6eef8",
+        "baseCommit": "a081025fcd0ebecc24f99b18e35921376ed6eef8",
+        "tipCommit": "c9b82ef71df090d4ec04c89e89ab7396f158835e",
         "commits": [
           {
-            "commit": "a081025fcd0ebecc24f99b18e35921376ed6eef8",
+            "commit": "c9b82ef71df090d4ec04c89e89ab7396f158835e",
             "parents": [
-              "f475742ec0b9127757875ac9f1f01dee4b279503"
+              "a081025fcd0ebecc24f99b18e35921376ed6eef8"
             ],
-            "subject": "修复：整理补入邻近空位并减轻组件拖动延迟"
+            "subject": "修复：网页缩放定位、整理补位及基于所选就地创建"
           }
         ],
         "files": [
@@ -33,7 +33,19 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-native-web-client.mjs"
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-selected-create.css"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-selected-create.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-selected-create-inline.mjs"
           },
           {
             "status": "M",
@@ -50,6 +62,10 @@
           {
             "status": "M",
             "path": "test/research-native-web.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-selected-create.test.js"
           }
         ],
         "checks": [
@@ -60,8 +76,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交前端补丁构建通过",
-            "verifiedCommit": "a081025fcd0ebecc24f99b18e35921376ed6eef8",
-            "completedAt": "2026-09-29T04:02:00.710747+00:00",
+            "verifiedCommit": "c9b82ef71df090d4ec04c89e89ab7396f158835e",
+            "completedAt": "2026-09-29T04:47:19.234246+00:00",
             "timeoutMs": 300000
           },
           {
@@ -70,12 +86,13 @@
               "run",
               "test/research-grid-client.test.js",
               "test/research-grid-workbench.test.js",
-              "test/research-native-web.test.ts"
+              "test/research-native-web.test.ts",
+              "test/research-selected-create.test.js"
             ],
             "outcome": "passed",
-            "summary": "97项聚焦检查通过：共有列补位、重复稳定、暂停原生网页、失焦与Esc恢复、迟到快照隔离、同格拖动不重复提交",
-            "verifiedCommit": "a081025fcd0ebecc24f99b18e35921376ed6eef8",
-            "completedAt": "2026-09-29T04:02:00.710747+00:00",
+            "summary": "105项直接聚焦检查通过：hostZoom、有限skyline补位、原位创建及窄窗canonical尺寸保护",
+            "verifiedCommit": "c9b82ef71df090d4ec04c89e89ab7396f158835e",
+            "completedAt": "2026-09-29T04:47:19.234246+00:00",
             "timeoutMs": 300000
           },
           {
@@ -86,14 +103,25 @@
             ],
             "outcome": "passed",
             "summary": "精确提交类型检查通过",
-            "verifiedCommit": "a081025fcd0ebecc24f99b18e35921376ed6eef8",
-            "completedAt": "2026-09-29T04:02:00.710747+00:00",
+            "verifiedCommit": "c9b82ef71df090d4ec04c89e89ab7396f158835e",
+            "completedAt": "2026-09-29T04:47:19.234246+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-selected-create-inline.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "4组真实React工厂浏览器交互通过：同ID、冻源、失败编辑重试停止、网页授权及迟到读取保护",
+            "verifiedCommit": "c9b82ef71df090d4ec04c89e89ab7396f158835e",
+            "completedAt": "2026-09-29T04:47:19.234246+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端；内容适配、网页内导航、横向滚动和导出菜单将在已有集成分支本地包核验。"
+          "summary": "功能worktree不构建共享客户端；原生链接对齐、补位和就地创建由现有integration分支精确包核验。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -144,7 +172,11 @@
           "整理优先当前顺序与列关系；孤立偏移表格吸附邻近共有列、适配宽度、独立内容测高并补位，本轮闭合吸附空位，重复稳定",
           "链接拖动缩放期间隐藏原生网页并暂停捕获及正文提取，松手、失焦、Esc恢复；旧截图与错误响应不回写当前画面",
           "指针同格移动仅更新浮卡位置，不反复解算或提交整张画布",
-          "Figma21Z同步列内补位、孤立偏移宽度适配及链接快照拖动规则"
+          "Figma21Z同步列内补位、孤立偏移宽度适配及链接快照拖动规则",
+          "原生网页边界、圆角和呈现缩放乘宿主窗口缩放，静止/滚动/拖动/缩放与组件内容框重合",
+          "跨列卡片上方的小空隙有限补高，最大160px且不超过原实际像素卡高25%；长文章旁短图不变长空卡，二次测高不撤掉补位",
+          "Figma22B菜单所属组件为基准，完整空右侧优先否则下方插入就地输入卡；同ID原位生成、冻源及来源/需求条保留",
+          "窄窗创建读取可见格位决定落点，保存以canonical格位为基底，已有卡不永久写入被动最小宽高；回宽、重载和一步撤销保持原尺寸"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -153,52 +185,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T04:02:00.710747+00:00"
-      },
-      "merged": {
-        "mergeCommit": "987c75d7a64a153900926dd695d5f75015391005",
-        "verificationCommit": "987c75d7a64a153900926dd695d5f75015391005",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "987c75d7a64a153900926dd695d5f75015391005",
-            "completedAt": "2026-09-29T04:03:09.580Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "987c75d7a64a153900926dd695d5f75015391005",
-            "completedAt": "2026-09-29T04:03:09.580Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "987c75d7a64a153900926dd695d5f75015391005",
-            "completedAt": "2026-09-29T04:03:09.580Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T04:03:09.580Z"
+        "generatedAt": "2026-09-29T04:47:19.234246+00:00"
       }
     }
   ],
