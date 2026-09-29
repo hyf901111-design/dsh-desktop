@@ -1242,17 +1242,26 @@ it('调宽预览压缩同排组件，松手使用预览并一次撤销恢复双�
  await act(async()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
 })
 
-it('宿主组件滚动条仅选中时显示，覆盖旧规则且不改变可滚动尺寸',async()=>{
+it('宿主组件滚动条和占位仅选中时显示，覆盖旧规则并保留滚动能力',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const style=f.document.createElement('style');style.textContent='body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerMarkdown,.rScV5Q_containerTableScroll,.rScV5Q_mindMap,.odyssey-generation-records,textarea){scrollbar-width:none!important}';f.document.head.append(style)
  const scroller=f.host.querySelector('[data-research-preview-body]')
- expect(f.win.getComputedStyle(scroller).getPropertyValue('scrollbar-width')).toBe('thin')
+ // HappyDOM omits cascade layers; Chromium acceptance checks the computed
+ // gutter and scrollbar against the real legacy stylesheet.
+ const css=f.document.querySelector('#ework-grid-workbench-style').textContent
+ expect(css).toContain('@layer ework-workbench{\nbody [data-research-canvas][data-ework-grid] [data-research-node-id] :is(')
+ expect(css).toContain('scrollbar-gutter:auto!important;scrollbar-width:var(--grid-scroll-width)!important')
  expect(f.win.getComputedStyle(scroller).overflow).toBe('auto')
  const card=scroller.closest('[data-research-node-id]'),thumb=()=>f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-thumb')
  expect(thumb()).toBe('transparent')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
  await act(async()=>f.workspace.updateSelection(['a'],'replace'))
  expect(thumb()).toBe('#74778055')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('thin')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('5px')
  await act(async()=>f.workspace.updateSelection([],'replace'))
  expect(thumb()).toBe('transparent')
- expect(f.win.getComputedStyle(scroller).getPropertyValue('scrollbar-width')).toBe('thin')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
 })

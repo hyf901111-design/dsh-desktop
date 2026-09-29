@@ -206,7 +206,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(op.kind==='draw')target=grid.draw(op.start,p,m)
     else{const c=op.cell,dx=(p.x-op.start.x)/m.step,dy=(p.y-op.start.y)/m.rowStep,min=grid.minimum(op.geometry.find(n=>n.id===c.id),m);target=op.kind==='resize'?grid.bounded({...c,w:op.axis==='y'?c.w:Math.max(min.w,c.w+Math.round(dx)),h:op.axis==='x'?c.h:Math.max(min.h,c.h+Math.round(dy))}):grid.bounded({...c,x:c.x+Math.round(dx),y:c.y+Math.round(dy)})}
     floatCard(p)
-    const anchorRow=(p.y-m.inset)/m.rowStep,targetKey=JSON.stringify([target.x,target.y,target.w,target.h,op.kind==='move'?Math.floor(anchorRow*2):op.kind==='resize'?Math.round((op.axis==='x'?p.x-op.start.x:p.y-op.start.y)/m.step):0])
+    const anchorRow=(p.y-m.inset)/m.rowStep,targetKey=JSON.stringify([target.x,target.y,target.w,target.h,op.kind==='move'?grid.moveSlot(op.before,target,anchorRow):op.kind==='resize'?Math.round((op.axis==='x'?p.x-op.start.x:p.y-op.start.y)/m.step):0])
     if(op.targetKey===targetKey)return
     const original=op.canonicalBefore.find(c=>c.id===op.cell?.id)
     const canonicalTarget=op.kind==='draw'?target:{...target,x:op.kind==='resize'||target.x===op.cell.x?original.x:target.x,y:op.kind==='resize'?original.y:Math.max(0,original.y+target.y-op.cell.y),...(op.kind==='move'?{w:original.w,h:original.h}:op.axis==='x'?{w:target.w===op.cell.w?original.w:target.w,h:original.h}:{w:original.w,h:target.h===op.cell.h?original.h:target.h})}

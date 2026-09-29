@@ -36,7 +36,7 @@ export async function createComponentDataService(options:{file:string;integratio
   if(!workspace)throw Error('组件所属工作区未连接，请重新连接原工作区后再绑定或刷新数据；现有内容已保留')
   return {session,workspace}
  }
- async function canvas(target:any,method:string,args:any,signal?:AbortSignal){options.canvas.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]});return options.canvas.execute({sessionId:target.sessionId,method,args,scheduled:true},signal) as Promise<any>}
+ async function canvas(target:any,method:string,args:any,signal?:AbortSignal){options.canvas.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]});return options.canvas.execute({sessionId:target.sessionId,method,args,scheduled:true,source:'component-data-refresh'},signal) as Promise<any>}
  const engine=new ComponentDataRefresh({owner:options.owner,
   onChange:(records)=>{
    const rows=records.filter(row=>row.ownerAccountId===options.owner()),sessions=new Set(rows.map(row=>row.sessionId))

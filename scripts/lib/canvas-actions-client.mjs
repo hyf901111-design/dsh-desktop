@@ -49,7 +49,7 @@ function ResearchCanvasActionReceipt({workspace}) {
 }
 export function patchCanvasActionsClient(source) {
   const definitions=start+'\n'+readFileSync(new URL('../../packages/dsh-research-task-runtime/canvas-actions.js',import.meta.url),'utf8').replace(/^export /gm,'')+'\n'+canvasWorkspaceActions.toString()+'\n'+ResearchCanvasActionReceipt.toString()+'\n'+end+'\n'
-  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return source.slice(0,a)+definitions+source.slice(b+end.length+1)}
+  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return (source.slice(0,a)+definitions+source.slice(b+end.length+1)).replace("if(method!=='inspect'&&result.status!=='unchanged')","if(method!=='inspect'&&result.status!=='unchanged'&&options?.silent!==true)").replace("{isCancelled:request.isCancelled}","{isCancelled:request.isCancelled,silent:request.source==='component-data-refresh'}")}
   source=replace(source,'function createResearchWorkspaceSession(storage, sessionId) {',definitions+'function createResearchWorkspaceSession(storage, sessionId) {')
   source=replace(source,'\t\t\treturn {\n\t\t\t\tsubscribe(listener) { listeners.add(listener);',`\t\t\tlet actionReceipt = null; const actionListeners = new Set();
       const canvasActions = canvasWorkspaceActions({
@@ -77,7 +77,7 @@ export function patchCanvasActionsClient(source) {
 \t\t\treturn {
         subscribeCanvasAction:listener=>{actionListeners.add(listener);return()=>actionListeners.delete(listener);},
         getCanvasActionReceipt:()=>actionReceipt,
-        canvasAction:async(method,args,options)=>{if(!['inspect','apply','undo'].includes(method))throw Error('不支持的画布操作。');const result=await canvasActions[method](args,options);if(method!=='inspect'&&result.status!=='unchanged'){actionReceipt=result;actionListeners.forEach(listener=>listener());}return result;},
+        canvasAction:async(method,args,options)=>{if(!['inspect','apply','undo'].includes(method))throw Error('不支持的画布操作。');const result=await canvasActions[method](args,options);if(method!=='inspect'&&result.status!=='unchanged'&&options?.silent!==true){actionReceipt=result;actionListeners.forEach(listener=>listener());}return result;},
 \t\t\t\tsubscribe(listener) { listeners.add(listener);`)
   source=replace(source,'const composerBlocks = new ComposerBlockRegistry();',`const composerBlocks = new ComposerBlockRegistry();
       ctx.effect(()=>{
@@ -85,7 +85,7 @@ export function patchCanvasActionsClient(source) {
         return window.dshDesktop?.researchCanvasActions?.subscribe(async request=>{
           const workspace=researchWorkspaces.sessions.get(request.sessionId);
           if(!workspace)throw Error('画板未打开，请从画板右侧重新发送指令。');
-          const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});
+          const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled,silent:request.source==='component-data-refresh'});
           if(request.method==='inspect')result.selectedIds=request.selectedIds.filter(id=>workspace.getSnapshot().files.some(n=>n.id===id)||workspace.getSnapshot().artifacts.some(n=>n.id===id));
           return result;
         });
