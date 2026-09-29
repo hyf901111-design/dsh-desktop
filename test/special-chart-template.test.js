@@ -60,6 +60,13 @@ describe('Figma composition, distribution and target templates',()=>{
   expect(bullet.headers.at(-1)).toBe('差额 个百分点');
   expect(bullet.rows[0].detail).toContain('差额 -13 个百分点');
  });
+ it.each(Object.keys(samples))('keeps %s geometry finite inside a short plotting area',variant=>{
+  const view=specialChartView(samples[variant],304,{height:180});
+  expect(view.height).toBeLessThanOrEqual(180);
+  expect(JSON.stringify(view.elements)).not.toMatch(/NaN|Infinity/);
+  const text=[];const visit=el=>{if(typeof el==='string')return;if(el.tag==='text')text.push(el);el.children.forEach(visit);};view.elements.forEach(visit);
+  expect(text.every(el=>Number(el.attributes.y)>=0&&Number(el.attributes.y)<=view.height)).toBe(true);
+ });
  it.each([
   {...samples.pie,items:[{label:'负值',value:-1}]},
   {...samples.pie,items:[{label:'缺失',value:null}]},
