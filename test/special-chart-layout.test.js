@@ -37,7 +37,7 @@ describe('saved special-chart layout refinement',()=>{
  });
  it.each(['sunburst','histogram','gauge'])('preserves %s source, interaction identity, controls and replay routes',variant=>{
   const old=saved(samples[variant]),upgraded=compactHostDashboardHtml(old);
-  expect(upgraded).toContain('data-chart-layout="centered-v1"');
+  expect(upgraded).toContain('data-chart-layout="centered-v2"');
   expect(researchInteractionVersion(upgraded)).toBe(researchInteractionVersion(old));
   expect(readTemplateModel({type:'html',html:upgraded}).data).toEqual(samples[variant]);
   const before=new Window();before.document.write(old);const after=mount(upgraded);
@@ -57,6 +57,15 @@ describe('saved special-chart layout refinement',()=>{
   }else expect(doc.querySelector('.chart-center-label').textContent).toBe('72%');
   expect(refineStoredSpecialChartHtml(upgraded)).toBe(upgraded);
   before.happyDOM.abort();after.happyDOM.abort();
+ });
+ it('refines the previous centered layout without duplicating body markers or changing interaction identity',()=>{
+  const old=saved(samples.sunburst).replace('data-chart-template="sunburst">','data-chart-template="sunburst" data-chart-layout="centered-v1">');
+  const next=refineStoredSpecialChartHtml(old);
+  expect(next.match(/data-chart-layout=/g)).toHaveLength(1);
+  expect(next).toContain('data-chart-layout="centered-v2"');
+  expect(next).toContain('min-height:28px');
+  expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));
+  expect(refineStoredSpecialChartHtml(next)).toBe(next);
  });
  it('leaves current templates, custom HTML, unknown versions and mismatched metadata intact',()=>{
   const current=JSON.parse(acceptArtifactOutput(JSON.stringify(samples.donut))).html;
