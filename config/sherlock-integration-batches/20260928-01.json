@@ -11,25 +11,50 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c3a7c90160cbf4ae669e0787766fa1dffaaee60f",
-        "tipCommit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
+        "baseCommit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
+        "tipCommit": "0a076c726d1c2c00e85181fb8d444d60841eb23f",
         "commits": [
           {
-            "commit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
+            "commit": "b825838780a9e6cac6f3d1ad4a5b74418a7bffcd",
             "parents": [
-              "c3a7c90160cbf4ae669e0787766fa1dffaaee60f"
+              "44f4c34895ce2ba960533d5d960d03d0f7cce8d4"
             ],
-            "subject": "修复整理空带并统一企业控件与灰色悬停样式"
+            "subject": "保留指标主题切换中的涨跌语义颜色"
+          },
+          {
+            "commit": "4fd4f861b3bc917402c99098605c0a30eef7813d",
+            "parents": [
+              "b825838780a9e6cac6f3d1ad4a5b74418a7bffcd"
+            ],
+            "subject": "修复智能容器输入框继承客户端深色背景"
+          },
+          {
+            "commit": "7e369444fdb6ca45571090f7a3e74c1bbf6d5d92",
+            "parents": [
+              "4fd4f861b3bc917402c99098605c0a30eef7813d"
+            ],
+            "subject": "固定各生成入口卡片尺寸并统一失败状态配色"
+          },
+          {
+            "commit": "0a076c726d1c2c00e85181fb8d444d60841eb23f",
+            "parents": [
+              "7e369444fdb6ca45571090f7a3e74c1bbf6d5d92"
+            ],
+            "subject": "为组件图表首次加载添加生长动效"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-chart-motion.js"
           },
           {
             "status": "M",
@@ -37,15 +62,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
@@ -53,19 +82,15 @@
           },
           {
             "status": "M",
-            "path": "test/research-grid-workbench.test.js"
+            "path": "test/research-grid-client.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/research-selected-create.test.js"
           },
           {
-            "status": "M",
-            "path": "test/workbench-refresh.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-style.test.js"
+            "status": "A",
+            "path": "test/workbench-chart-motion.test.js"
           }
         ],
         "checks": [
@@ -75,9 +100,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "前端补丁生成和脚本语法核验通过",
-            "verifiedCommit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
-            "completedAt": "2026-09-29T14:16:09.907446+00:00",
+            "summary": "补丁生成、幂等恢复和语法核验通过",
+            "verifiedCommit": "0a076c726d1c2c00e85181fb8d444d60841eb23f",
+            "completedAt": "2026-09-29T15:29:06.352549+00:00",
             "timeoutMs": 300000
           },
           {
@@ -85,16 +110,14 @@
               "npx",
               "vitest",
               "run",
-              "test/research-grid-workbench.test.js",
               "test/workbench-style.test.js",
               "test/workbench-component-presentation.test.js",
-              "test/research-grid-client.test.js",
-              "test/workbench-refresh.test.js"
+              "test/workbench-chart-motion.test.js"
             ],
             "outcome": "passed",
-            "summary": "140项相关聚焦检查通过；Chromium11项真实渲染检查通过，包括灰色悬停、浅色控件、既有比特币主题响应和不重载保留输入",
-            "verifiedCommit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
-            "completedAt": "2026-09-29T14:16:09.907446+00:00",
+            "summary": "10项主题呈现与动效聚焦检查通过；三主题失败中性色与输入框及五类真实图表动效Chromium验证通过",
+            "verifiedCommit": "0a076c726d1c2c00e85181fb8d444d60841eb23f",
+            "completedAt": "2026-09-29T15:29:06.352549+00:00",
             "timeoutMs": 300000
           },
           {
@@ -102,32 +125,21 @@
               "npx",
               "vitest",
               "run",
-              "test/research-task-runtime.test.js",
+              "test/research-grid-client.test.js",
+              "test/research-selected-create.test.js",
               "-t",
-              "offers native formats"
+              "默认智能组件|衍生生成保持输入卡尺寸|拉框智能组件|重复补丁"
             ],
             "outcome": "passed",
-            "summary": "生成指令复用结构模板的聚焦检查通过",
-            "verifiedCommit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
-            "completedAt": "2026-09-29T14:16:09.907446+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "44f4c34895ce2ba960533d5d960d03d0f7cce8d4",
-            "completedAt": "2026-09-29T14:16:09.907446+00:00",
+            "summary": "默认、拉框、衍生生命周期与补丁幂等4项聚焦检查通过",
+            "verifiedCommit": "0a076c726d1c2c00e85181fb8d444d60841eb23f",
+            "completedAt": "2026-09-29T15:29:06.352549+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree未构建共享客户端。Chromium实际补丁渲染11项核验通过，实际比特币HTML保持数值来源图表并响应三主题；integration本地构建后继续真实客户端核验。"
+          "summary": "功能worktree不构建共享客户端。真实补丁浏览器主题、输入、失败状态和图表加载动效核验通过；五种图表动画不改变框尺寸，主题/筛选不重播，减少动态效果静态。上一集成真实白酒/医药/茅台整理已消除空带；本次在集成重建后检查真实输入与失败卡。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -182,7 +194,7 @@
           "Figma22B菜单所属组件为基准，完整空右侧优先否则下方插入就地输入卡；同ID原位生成、冻源及来源/需求条保留",
           "窄窗创建读取可见格位决定落点，保存以canonical格位为基底，已有卡不永久写入被动最小宽高；回宽、重载和一步撤销保持原尺寸",
           "通栏前大空位先借用邻列末尾组件，否则依原阅读顺序借后续组件；保护基准及衍生关系，不拉高短图；初次及二次测高同事务稳定收敛",
-          "普通及衍生复用同一生成主体，运行至少450px可读，停止回原输入卡并保留证据，重启不重读网页，基准删除仍可用完整快照",
+          "普通及衍生复用同一生成主体，运行维持输入尺寸且过程信息框内滚动，停止回原输入卡并保留证据，重启不重读网页，基准删除仍可用完整快照",
           "画布及非编辑正文支持CmdZ/CmdShiftZ，真实编辑框保留文字撤销，自有选中HTML受限桥接，测高整事务一步撤销",
           "画板所有提示固定在可见画布底部工具栏上方，滚动保持位置，提示按钮标签不继承工具栏图标隐藏样式",
           "Figma21Z同步大空位补入、选中滚动条、常驻网格、固定提示及撤销规则",
@@ -225,7 +237,12 @@
           "企业表格悬停与选中以及图表提示采用灰色，财务正负值语义保留",
           "混合HTML采用研究指标语义或既有kpi角色复用主题预置，生成优先宿主结构模板",
           "初始化恢复延迟内的新用户搜索、展开及滚动优先，不被旧状态覆盖",
-          "Figma22A企业控件与顶栏引用浅色变量，悬停灰色，21Z排布及模板复用规范同步"
+          "Figma22A企业控件与顶栏引用浅色变量，悬停灰色，21Z排布及模板复用规范同步",
+          "普通智能容器、衍生创建、编辑需求及链接输入统一继承看板控件主题，浅色/企业化不被全局深色覆盖，需求输入和焦点保持",
+          "默认创建、手动拉框及衍生创建在排队、运行、失败、重试、重载、完成全程维持生成前尺寸，不临时提升最小高度",
+          "失败卡片使用中性色标题、状态与说明及灰色图标，不混用红色提示与企业蓝色标题；保留真实错误与重试入口",
+          "宿主及HTML图表首次进入视窗播放650ms生长动效；折线绘制、柱形及K线展开、散点与环图渐进，坐标数据和最终尺寸保持；主题、悬停、筛选不重播，减少动态效果静态呈现",
+          "Figma错误状态图标与标题说明中性色，生成固定尺寸与首次图表动效规范同步"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -233,52 +250,7 @@
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。"
         ],
-        "generatedAt": "2026-09-29T14:16:09.907446+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8669828211bdd777b030b9dd1f562a2e992920db",
-        "verificationCommit": "8669828211bdd777b030b9dd1f562a2e992920db",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "8669828211bdd777b030b9dd1f562a2e992920db",
-            "completedAt": "2026-09-29T14:18:17.219Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "8669828211bdd777b030b9dd1f562a2e992920db",
-            "completedAt": "2026-09-29T14:18:17.219Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8669828211bdd777b030b9dd1f562a2e992920db",
-            "completedAt": "2026-09-29T14:18:17.219Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T14:18:17.219Z"
+        "generatedAt": "2026-09-29T15:29:06.352549+00:00"
       }
     }
   ],
