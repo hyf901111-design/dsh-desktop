@@ -11,63 +11,35 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
-        "tipCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+        "baseCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+        "tipCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
         "commits": [
           {
-            "commit": "897a36481c75eeadaa0948753a77ca55119246ba",
+            "commit": "c41e5eb9d58aed43460ba379ef2fa45a9d2665e5",
             "parents": [
-              "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb"
+              "9a9e174251fb24b76f296123396a71a686aa6d40"
             ],
-            "subject": "优化：按内容整理组件并修复补位缩放、网页跳转和可视导出"
+            "subject": "修复：打包去重后恢复运行时补丁并校验版本一致性"
           },
           {
-            "commit": "1f54e1ae5c64b9b4fa904ccd10e16216cf2455b4",
+            "commit": "d0f0e23e65342ea19363722f66ad151fc8d3a7b9",
             "parents": [
-              "897a36481c75eeadaa0948753a77ca55119246ba"
+              "c41e5eb9d58aed43460ba379ef2fa45a9d2665e5"
             ],
-            "subject": "优化：还原新版生成卡片动效并保持数据刷新视图"
+            "subject": "修复：整理忽略隐藏明细并补齐空位，统一拖动坐标和多选缩放"
           },
           {
-            "commit": "0ef34414f7379bdbaa59082ca8607d5bdd61b636",
+            "commit": "eca3576c489bbd21ca550bef9a96624ca3927084",
             "parents": [
-              "1f54e1ae5c64b9b4fa904ccd10e16216cf2455b4"
+              "d0f0e23e65342ea19363722f66ad151fc8d3a7b9"
             ],
-            "subject": "修复：趋势图保留范围后按可见区间定位读数"
-          },
-          {
-            "commit": "9a9e174251fb24b76f296123396a71a686aa6d40",
-            "parents": [
-              "0ef34414f7379bdbaa59082ca8607d5bdd61b636"
-            ],
-            "subject": "修复：图表锁定范围后同步日期刻度和网格"
+            "subject": "修复：多选缩放保留未选草稿的规范宽度"
           }
         ],
         "files": [
           {
-            "status": "C063",
-            "path": "build/figma-generation/LICENSE-react-bits.md",
-            "previousPath": "LICENSE"
-          },
-          {
-            "status": "M",
-            "path": "docs/plans/2026-09-28-openbb-grid-workbench.md"
-          },
-          {
-            "status": "M",
-            "path": "package-lock.json"
-          },
-          {
             "status": "M",
             "path": "package.json"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
@@ -75,43 +47,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-candlestick.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-price-volume.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-valuation-band.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-export.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-export.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
@@ -122,52 +58,12 @@
             "path": "scripts/lib/research-grid-workbench.css"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
+            "status": "A",
+            "path": "scripts/restore-packaged-runtime-patches.mjs"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/research-native-web-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/component-data/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-export.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-native-web.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/component-data.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-refresh.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-status.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-export.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-generation-controls.test.ts"
+            "status": "A",
+            "path": "test/packaged-runtime-patches.test.js"
           },
           {
             "status": "M",
@@ -180,22 +76,6 @@
           {
             "status": "M",
             "path": "test/research-html-theme.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-artifact.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-native-web.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-export.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-refresh.test.js"
           }
         ],
         "checks": [
@@ -206,20 +86,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交前端补丁构建通过",
-            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
-            "completedAt": "2026-09-29T02:12:37.053342+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "精确提交类型检查通过",
-            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
-            "completedAt": "2026-09-29T02:12:37.053342+00:00",
+            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
+            "completedAt": "2026-09-29T03:03:08.235837+00:00",
             "timeoutMs": 300000
           },
           {
@@ -228,14 +96,13 @@
               "run",
               "test/research-grid-client.test.js",
               "test/research-grid-workbench.test.js",
-              "test/research-native-web.test.ts",
-              "test/research-canvas-export.test.ts",
-              "test/workbench-export.test.js"
+              "test/packaged-runtime-patches.test.js",
+              "test/profile-runtime-patches.test.js"
             ],
             "outcome": "passed",
-            "summary": "93项直接相关检查通过：内容二阶段适配、拖动补位、并排调宽最小尺寸、滚动条、原生网页导航与当前内容SVG PNG JPG导出",
-            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
-            "completedAt": "2026-09-29T02:12:37.053342+00:00",
+            "summary": "87项直接相关检查通过，覆盖整理补位、拖动坐标、多选同步缩放、窄窗规范与打包补丁",
+            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
+            "completedAt": "2026-09-29T03:03:08.235837+00:00",
             "timeoutMs": 300000
           },
           {
@@ -247,25 +114,21 @@
               "^(?!.*(?:keeps runtime previews small|keeps chart aliases|defaults cards, controls|places both theme tokens)).*$"
             ],
             "outcome": "passed",
-            "summary": "24项HTML桥接与交互检查通过，4项已知基线隔离",
-            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
-            "completedAt": "2026-09-29T02:12:37.053342+00:00",
+            "summary": "26项HTML检查通过，隐藏明细和内部滚动区测量回归通过；4项既存基线隔离",
+            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
+            "completedAt": "2026-09-29T03:03:08.235837+00:00",
             "timeoutMs": 300000
           },
           {
             "argv": [
-              "./node_modules/.bin/vitest",
+              "npm",
               "run",
-              "test/component-data-refresh.test.js",
-              "test/component-data-status.test.js",
-              "test/workbench-refresh.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/research-market-artifact.test.js"
+              "typecheck"
             ],
             "outcome": "passed",
-            "summary": "110项生成与刷新相关检查通过：34px网格冻结、原控制生命周期、成功快照变化提示、严格iframe版本、两种到达顺序、模板编辑重置及宿主图表范围保留",
-            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
-            "completedAt": "2026-09-29T02:12:37.053342+00:00",
+            "summary": "精确提交类型检查通过",
+            "verifiedCommit": "eca3576c489bbd21ca550bef9a96624ca3927084",
+            "completedAt": "2026-09-29T03:03:08.235837+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -289,7 +152,7 @@
           "窗口宽度实时投影组件格位，不等待缩放结束",
           "Shift多选只选组件，编辑框保留正常输入",
           "底部可多滚一屏用于创建组件",
-          "拖动和缩放活动组件只显示单层网格吸附蓝框，松手或取消恢复选中描边，其他选中组件保持描边",
+          "拖动和缩放活动组件只显示单层网格吸附蓝框，松手或取消恢复选中描边，多选同步缩放时每张活动卡使用单层预览",
           "画板右键菜单独立前景并完整避开底部工具栏，下载格式向右独立展开",
           "创建背景显示正方形格位，格距和滚动原点与真实拖动、绘制和缩放一致",
           "旧布局只迁移一次，窄窗补高不污染保存、取消、撤销或只读共享规范布局",
@@ -311,7 +174,12 @@
           "21Z生成状态34px正方形网格和0.72速度，停止排队离屏及减少动态静止；固定详情文字和左下过程/停止文本按钮",
           "取数立即旋转图标，300ms更新中；保留旧值时间；仅变化数值200ms淡入和1200ms提示，失败或无变化不闪",
           "刷新保留筛选展开滚动，切换模板/编辑清旧视图；HTML和成功状态任意到达顺序使用上一成功基线",
-          "按用户确认，宿主趋势/K线/量价/估值保留原坐标域和历史范围，由范围按钮或趋势双击手动重算"
+          "按用户确认，宿主趋势/K线/量价/估值保留原坐标域和历史范围，由范围按钮或趋势双击手动重算",
+          "打包去重后在签名前恢复同版本运行时补丁并核验独立插件目录与App副本一致",
+          "浮卡和静止卡统一中心坐标，保持指针抓取点，邻居180ms平滑让位",
+          "整理只测可见内容，闭合明细只计摘要，展开长表仅计内部滚动视窗",
+          "宽卡缩入短列可用槽位，后续卡补齐最低空位且保持内容独立高度",
+          "多选可调卡片同轴同增量缩放，共同最小及画板边界限制，一步撤销；未选草稿被动补宽不写回规范"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -320,52 +188,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T02:12:37.053342+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b00a8f84a41bffdee0886074ae78b50a7894857d",
-        "verificationCommit": "b00a8f84a41bffdee0886074ae78b50a7894857d",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "b00a8f84a41bffdee0886074ae78b50a7894857d",
-            "completedAt": "2026-09-29T02:14:46.184Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "b00a8f84a41bffdee0886074ae78b50a7894857d",
-            "completedAt": "2026-09-29T02:14:46.184Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b00a8f84a41bffdee0886074ae78b50a7894857d",
-            "completedAt": "2026-09-29T02:14:46.184Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T02:14:46.184Z"
+        "generatedAt": "2026-09-29T03:03:08.235837+00:00"
       }
     }
   ],
