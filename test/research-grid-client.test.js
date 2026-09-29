@@ -147,6 +147,21 @@ it('宿主窗口调整后即使组件尺寸未变也立即恢复原生网页，�
  expect(bridge.updateNative.mock.lastCall[0]).toMatchObject({active:true,bounds:previous})
  expect(bridge.releaseNative).not.toHaveBeenCalled()
 })
+it('链接临时离开视窗再返回时保留当前网页，只有移除组件才释放原生页面',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge});let node
+ await act(async()=>{node=f.workspace.createWebLink('https://www.cctv.com/');f.workspace.updateSelection([node.id],'replace')})
+ const frame=f.host.querySelector('[data-research-native-web]'),viewport=f.workspace.getSnapshot().viewport
+ await act(async()=>f.workspace.setViewport({...viewport,y:-3000}))
+ expect(f.host.querySelector('[data-research-native-web]')).toBe(frame)
+ expect(bridge.releaseNative).not.toHaveBeenCalled()
+ expect(bridge.hideNative).toHaveBeenCalled()
+ await act(async()=>f.workspace.setViewport(viewport))
+ expect(bridge.resolveEngine).toHaveBeenCalledTimes(1)
+ expect(bridge.releaseNative).not.toHaveBeenCalled()
+ await act(async()=>f.workspace.removeNodes([node.id]))
+ expect(bridge.releaseNative).toHaveBeenCalledExactlyOnceWith({sessionId:'grid-test',nodeId:node.id})
+})
 it('首次打开组件菜单不被右侧会话自动滚动关闭，画板滚动仍关闭',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const conversation=f.document.createElement('div');f.document.body.append(conversation)
