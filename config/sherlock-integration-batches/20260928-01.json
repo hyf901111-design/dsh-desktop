@@ -11,61 +11,41 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "09c53b39e168ddf42ff3b7b5fb618ed05f126675",
-        "tipCommit": "e3b77519f39d5347093ec463582a52b09dbd19b5",
+        "baseCommit": "e3b77519f39d5347093ec463582a52b09dbd19b5",
+        "tipCommit": "a080ba79b481aa94497f6444353cf86197511767",
         "commits": [
           {
-            "commit": "e3b77519f39d5347093ec463582a52b09dbd19b5",
+            "commit": "a080ba79b481aa94497f6444353cf86197511767",
             "parents": [
-              "09c53b39e168ddf42ff3b7b5fb618ed05f126675"
+              "e3b77519f39d5347093ec463582a52b09dbd19b5"
             ],
-            "subject": "禁止模拟图表替换为无关样例并适配固定卡片高度"
+            "subject": "同步内置组件技能的图表数据契约与十二类模板"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/design/component-template-acceptance-20260930.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/simulated-workbench-generator.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "skills/ework-workbench-components/SKILL.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
+            "path": "skills/ework-workbench-components/_meta.json"
           },
           {
             "status": "M",
-            "path": "test/cartesian-chart-template.test.js"
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
           },
           {
             "status": "M",
-            "path": "test/research-simulated-workbench-normalization.test.js"
+            "path": "test/bundled-component-skill.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/structured-workbench-generation.test.js"
+            "path": "test/integration-bundled-skill.test.js"
           }
         ],
         "checks": [
@@ -74,30 +54,14 @@
               "npx",
               "vitest",
               "run",
-              "test/cartesian-chart-template.test.js",
-              "test/research-simulated-workbench-normalization.test.js",
-              "test/structured-workbench-generation.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
               "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "59项图表数据与模拟生成聚焦检查通过。",
-            "verifiedCommit": "e3b77519f39d5347093ec463582a52b09dbd19b5",
-            "completedAt": "2026-09-29T18:46:19.536698+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-workbench.test.js",
-              "-t",
-              "publishes the exact panel plan before preparation"
-            ],
-            "outcome": "passed",
-            "summary": "1项真实挂载时序验证通过，39项无关测试跳过。",
-            "verifiedCommit": "e3b77519f39d5347093ec463582a52b09dbd19b5",
-            "completedAt": "2026-09-29T18:46:19.536698+00:00",
+            "summary": "25项内置技能加载、版本投影及执行策略聚焦检查通过。",
+            "verifiedCommit": "a080ba79b481aa94497f6444353cf86197511767",
+            "completedAt": "2026-09-29T18:52:36.805261+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -222,52 +186,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "Figma全量44组件和30图表仍未全部覆盖；本轮注册表40项包括12类坐标图，完整原生成功率目标尚未验收通过。"
         ],
-        "generatedAt": "2026-09-29T18:46:19.536698+00:00"
-      },
-      "merged": {
-        "mergeCommit": "53ba3863eb126c92abb1e4c55c44414f6d0af6d9",
-        "verificationCommit": "53ba3863eb126c92abb1e4c55c44414f6d0af6d9",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "53ba3863eb126c92abb1e4c55c44414f6d0af6d9",
-            "completedAt": "2026-09-29T18:48:25.294Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "53ba3863eb126c92abb1e4c55c44414f6d0af6d9",
-            "completedAt": "2026-09-29T18:48:25.294Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "53ba3863eb126c92abb1e4c55c44414f6d0af6d9",
-            "completedAt": "2026-09-29T18:48:25.294Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T18:48:25.294Z"
+        "generatedAt": "2026-09-29T18:52:36.805261+00:00"
       }
     }
   ],
