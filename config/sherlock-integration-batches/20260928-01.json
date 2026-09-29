@@ -11,33 +11,25 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "27a0a2df88774b2905fc6e537f960beb4beeafa9",
-        "tipCommit": "c26c8dc058d837d00cb201263bc41a51960e4381",
+        "baseCommit": "c26c8dc058d837d00cb201263bc41a51960e4381",
+        "tipCommit": "d21a174962ce20ee68d45b95641618580ca3ad38",
         "commits": [
           {
-            "commit": "c26c8dc058d837d00cb201263bc41a51960e4381",
+            "commit": "d21a174962ce20ee68d45b95641618580ca3ad38",
             "parents": [
-              "27a0a2df88774b2905fc6e537f960beb4beeafa9"
+              "c26c8dc058d837d00cb201263bc41a51960e4381"
             ],
-            "subject": "统一图表单位导航行高并记录圆心实机复验"
+            "subject": "修复生成卡片无顶栏与进度文字裁切"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/design/component-template-acceptance-20260930.md"
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/special-chart-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/special-chart-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "test/special-chart-layout.test.js"
+            "path": "scripts/lib/research-grid-workbench.css"
           }
         ],
         "checks": [
@@ -46,19 +38,19 @@
               "npx",
               "vitest",
               "run",
-              "test/special-chart-layout.test.js",
-              "test/special-chart-template.test.js"
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js"
             ],
             "outcome": "passed",
-            "summary": "42项圆形图布局、历史预览升级和数据契约聚焦检查通过。",
-            "verifiedCommit": "c26c8dc058d837d00cb201263bc41a51960e4381",
-            "completedAt": "2026-09-29T23:00:34.325539+00:00",
+            "summary": "126项工作台聚焦检查通过；生成卡片脚本语法检查与git diff --check通过。",
+            "verifiedCommit": "d21a174962ce20ee68d45b95641618580ca3ad38",
+            "completedAt": "2026-09-29T23:55:18.521Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chrome生产CSP沙盒验证新九类图表三主题/窄卡及交互；旭日图320x300三主题文字整体中心误差0px，下钻128→80→128。96根K线/OHLC完整，区间筛选20期、主题/宽度变化不重播动效，无控制台告警。原生已保存看板复验待本次集成构建。"
+          "summary": "Figma浅色/深色组件生成态画面已隐藏顶栏、恢复916×396原尺寸且第三行完整可见，截图已目检；真实客户端验收在集成构建后继续。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -176,63 +168,19 @@
           "30类chart图表均采用对应Figma宿主预置，保留独立数据契约、三主题、明细和首次加载动效。",
           "圆环/旭日/仪表数字与单位按整体字形居中，单位与导航共用一行，读数固定高度，旧卡预览原位升级不改变源数据和交互路径。",
           "密集图表保留完整源数据，避免初始SVG/表格重复超限，无数值截断。",
-          "有无层级导航的图表头部统一28px行高；旧centered-v1预览可升级且不改交互身份。"
+          "有无层级导航的图表头部统一28px行高；旧centered-v1预览可升级且不改交互身份。",
+          "规划与生成中卡片无顶栏，默认或手工尺寸稳定，计时、标题、阶段和第三行说明完整可读，长说明在卡内滚动"
         ],
         "risks": [
           "未运行全功能测试。",
           "research-html-theme四项及workbench-component-profiles三项既存基线失败，未宣称修复历史preview-size预算或旧字体几何断言。",
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。",
-          "Figma截图接口返回1×1占位，本轮未宣称像素级复验通过。",
           "当前58项注册含30类chart；44业务/通用组件全量与总体原生成功率>90%仍未验收。",
-          "旧research-board-client-adapter有42项applyRemoteCanvas重复补丁锚点失败；本次客户端预览路径独立验证通过。"
+          "旧research-board-client-adapter有42项applyRemoteCanvas重复补丁锚点失败；本次客户端预览路径独立验证通过。",
+          "本次生成卡片改动的真实客户端创建过程将在集成构建后目检；局部单测使用已打补丁依赖时出现既有重复锚点错误，未作为通过依据。"
         ],
-        "generatedAt": "2026-09-29T22:37:27.672783+00:00"
-      },
-      "merged": {
-        "mergeCommit": "55b8924dc6d2e0fdb5bac196486e605d16a46720",
-        "verificationCommit": "55b8924dc6d2e0fdb5bac196486e605d16a46720",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "55b8924dc6d2e0fdb5bac196486e605d16a46720",
-            "completedAt": "2026-09-29T23:20:03.852Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "55b8924dc6d2e0fdb5bac196486e605d16a46720",
-            "completedAt": "2026-09-29T23:20:03.852Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "55b8924dc6d2e0fdb5bac196486e605d16a46720",
-            "completedAt": "2026-09-29T23:20:03.852Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T23:20:03.852Z"
+        "generatedAt": "2026-09-29T23:55:49.550Z"
       }
     }
   ],
