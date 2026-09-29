@@ -15,7 +15,7 @@ export function installWorkbenchChartMotion(root) {
     let marks=[...chart.querySelectorAll('.trend-line,.price-volume-line,.drawdown-primary,.drawdown-benchmark,.drawdown-area,.price-volume-bar,.waterfall-bar,.allocation-arc,[data-scatter-point],.market-tile,.pipeline-progress .stage,.fund-flow-axis i,.order-book-level,.funnel-bar,.risk-cell,.market-bar i,.fund-bar,.gantt-bar')]
     // Custom generated SVGs use their own classes. Exclude neutral axes, labels,
     // crosshairs and hit regions while accepting their normal plotting marks.
-    if(!marks.length&&chart.tagName.toLowerCase()==='svg')marks=[...chart.querySelectorAll('path,polyline,rect,circle,ellipse,.plot-stem,.plot-connector')].filter(el=>{
+    if(!marks.length&&chart.tagName.toLowerCase()==='svg')marks=[...chart.querySelectorAll('path,polygon,polyline,rect,circle,ellipse,.plot-stem,.plot-connector')].filter(el=>{
       if(/axis|grid|crosshair|cursor|selected|hit|background|clip/i.test(el.getAttribute('class')||'')||el.closest('defs,clipPath,mask'))return false
       const s=win.getComputedStyle(el);return s.visibility!=='hidden'&&s.display!=='none'&&(s.fill!=='none'||s.stroke!=='none')
     })
@@ -23,7 +23,9 @@ export function installWorkbenchChartMotion(root) {
     for(const [index,el] of marks.slice(0,300).entries()){
       const tag=el.tagName.toLowerCase(),style=win.getComputedStyle(el)
       let from={opacity:0,clipPath:'inset(0 100% 0 0)'},to={opacity:Number(style.opacity),clipPath:'inset(0 0 0 0)'}
-      if(el.classList.contains('allocation-arc')){
+      if(el.hasAttribute('data-grow-radial')){
+        from={transform:'scale(.05)',transformOrigin:'center',transformBox:'fill-box',opacity:0};to={transform:'scale(1)',transformOrigin:'center',transformBox:'fill-box',opacity:Number(style.opacity)}
+      }else if(el.classList.contains('allocation-arc')){
         const r=Number(el.getAttribute('r'))||48
         from={strokeDasharray:'0 '+2*Math.PI*r,opacity:0};to={strokeDasharray:style.strokeDasharray,opacity:Number(style.opacity)}
       }else if(el.matches('.fund-flow-axis i,.funnel-bar,.pipeline-progress .stage,.market-bar i,.fund-bar,.gantt-bar')){

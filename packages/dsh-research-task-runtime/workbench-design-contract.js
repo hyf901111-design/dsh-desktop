@@ -1,6 +1,6 @@
 // The model supplies data and a semantic type. Geometry and design provenance
 // belong to the client so a prompt cannot silently change the visual system.
-import {CARTESIAN_CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.js';
+import {CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.js';
 import { researchMarketContentDimensions, researchOptimalDimensions } from './bento-layout.js';
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
@@ -41,7 +41,7 @@ export function requiredMarketVariant(prompt) {
 }
 export const TERMINAL_GENERIC_TEMPLATES = Object.freeze({
   'kpi': { figma: '1696:76780', height: 212 },
-  ...Object.fromEntries(CARTESIAN_CHART_TEMPLATES.map(t=>['chart.'+t.variant,{figma:t.figma,height:t.height}])),
+  ...Object.fromEntries(CHART_TEMPLATES.map(t=>['chart.'+t.variant,{figma:t.figma,height:t.height}])),
   'table': { figma: '1696:77348', height: 352 },
   'dashboard': { figma: '1696:77430', height: 238 },
   'news': { figma: '1696:77556', height: 352 },
