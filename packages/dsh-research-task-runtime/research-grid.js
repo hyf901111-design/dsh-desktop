@@ -7,6 +7,22 @@ export function createResearchGrid() {
   const bounded=n=>({...n,w:clamp(Math.round(n.w)||4,4,columns),h:clamp(Math.round(n.h)||3,3,300),x:clamp(Math.round(n.x)||0,0,columns-clamp(Math.round(n.w)||4,4,columns)),y:Math.max(0,Math.round(n.y)||0)})
   const overlap=(a,b)=>a.id!==b.id&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y
   const order=(a,b)=>a.y-b.y||a.x-b.x
+  function closeSmallGaps(items,width) {
+    const m=metrics(width),next=items.map(bounded)
+    // A spanning card forms a shared row boundary. Close a small skyline gap
+    // above it, while keeping short content beside long reports independently
+    // sized. Never grow across another card or fill a large void with blank UI.
+    for(const target of [...next].sort(order))for(const card of next){
+      if(card.id===target.id||card.w>=target.w||card.x<target.x||card.x+card.w>target.x+target.w)continue
+      const missing=target.y-card.y-card.h
+      const maxGrowth=Math.min(160,(card.h*m.rowStep-m.gap)*.25)
+      if(missing<=0||missing*m.rowStep>maxGrowth)continue
+      const grown={...card,h:card.h+missing}
+      if(grown.h>300||next.some(other=>overlap(grown,other)))continue
+      card.h=grown.h
+    }
+    return next
+  }
   function compact(items,pinned=null) {
     const sorted=items.map(bounded).sort(order), settled=[]
     if(pinned)settled.push(bounded(pinned))
@@ -129,7 +145,7 @@ export function createResearchGrid() {
       const n=byId.get(c.id),p=n.preferred||n
       return {...c,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
     })
-    const result=new Map(compact(planned).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
+    const result=new Map(closeSmallGaps(compact(planned),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
   }
   function append(items,id,w=20,h=7){return bounded({id,x:0,y:Math.max(0,...items.map(n=>n.y+n.h)),w,h})}
   function draw(a,b,m){
@@ -152,5 +168,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,place,resize,resizeSelection,move,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,closeSmallGaps,place,resize,resizeSelection,move,arrange,append,draw,migrate,project}
 }

@@ -17,7 +17,7 @@ it('routes denied and same-origin frames to native views, leaving permitted site
 })
 it('isolates native content, enforces trusted IPC, hides overlays and releases views',async()=>{
  const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
- const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),focus:vi.fn()},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1000,800]}
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),focus:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1000,800]}
  const ipcMain={removeHandler:()=>{},handle:(name:string,fn:Function)=>handlers.set(name,fn)} as any
  const native=registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:ipcMain})
  registerResearchLinkFrameHandlers({registry,getMainWindow:()=>win,ipcMain,inspectNative:native.inspect})
@@ -107,3 +107,21 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
 it('rejects malformed native geometry',()=>{expect(()=>nativeWebBounds({bounds:{x:NaN}})).toThrow()})
 
 it('rejects malformed webpage layout dimensions',()=>{expect(()=>nativeWebViewport({layoutSize:{width:NaN,height:300},scale:1})).toThrow();expect(()=>nativeWebViewport({layoutSize:{width:400,height:300},scale:0})).toThrow()})
+
+it('maps webpage CSS bounds through host window zoom so live surface matches the snapshot',async()=>{
+ const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2};let zoom=1.1
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>zoom},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1400,1000]}
+ registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(n:string,f:Function)=>handlers.set(n,f)} as any})
+ const e={sender:win.webContents,senderFrame:mainFrame},identity={sessionId:'zoom',nodeId:'link',url:'https://www.baidu.com/'},call=(v:any)=>handlers.get('research:native-web:update')!(e,v)
+ registry.authorize(identity)
+ const request={...identity,active:true,bounds:{x:92,y:340,width:780,height:355},layoutSize:{width:780,height:355},scale:1,radius:9}
+ await call(request)
+ expect(views[0].bounds).toEqual({x:101,y:374,width:858,height:391})
+ expect(views[0].webContents.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:request.layoutSize,scale:1.1}))
+ zoom=.8
+ await call(request)
+ expect(views[0].bounds).toEqual({x:74,y:272,width:624,height:284})
+ expect(views[0].webContents.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({scale:.8}))
+ await call({...request,bounds:{...request.bounds,x:1400}})
+ expect(views[0].visible).toBe(false)
+})

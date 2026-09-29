@@ -1,0 +1,18 @@
+body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context){display:flex!important;flex-direction:column;min-height:0;overflow:auto!important}
+body [data-ework-grid] .ew-selected-create-context{flex:none;padding:10px 12px 0;font:400 12px/18px Inter,"Noto Sans SC",system-ui;color:var(--grid-muted)}
+body [data-ework-grid] .ew-selected-create-source{display:flex;align-items:center;gap:12px;padding:6px 10px;background:var(--grid-menu);min-height:30px;box-sizing:border-box}
+body [data-ework-grid] .ew-selected-create-source>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body [data-ework-grid] .ew-selected-create-context button{flex:none;background:none;border:0;color:#139dff;padding:0;font:inherit;cursor:pointer}
+body [data-ework-grid] .ew-selected-create-requirement{display:flex;gap:12px;align-items:flex-start;padding:9px 0;max-height:68px;overflow:auto}
+body [data-ework-grid] .ew-selected-create-requirement>span{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+body [data-ework-grid] .ew-selected-create-draft{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:12px;font:400 12px/18px Inter,"Noto Sans SC",system-ui;color:var(--grid-text)}
+body [data-ework-grid] .ew-selected-create-draft strong{font-weight:600}
+body [data-ework-grid] .ew-selected-create-draft textarea{box-sizing:border-box;display:block;flex:1;min-height:72px;width:100%;padding:10px 12px;resize:none;border:1px solid transparent;border-radius:4px;background:var(--grid-menu);color:var(--grid-text);font:inherit}
+body [data-ework-grid] .ew-selected-create-draft textarea:focus{border-color:#139dff;outline:none}
+body [data-ework-grid] .ew-selected-create-draft textarea::placeholder{color:var(--grid-muted)}
+body [data-ework-grid] .ew-selected-create-actions{display:flex;justify-content:flex-start;align-items:center;gap:12px;flex:none;margin-top:8px}
+body [data-ework-grid] .ew-selected-create-actions button{padding:7px 20px;border:0;border-radius:3px;background:#00a6e9;color:#fff;min-height:32px;font:inherit;cursor:pointer}
+body [data-ework-grid] .ew-selected-create-actions button:disabled{opacity:.45;cursor:default}
+body [data-ework-grid] .ew-selected-create-actions [data-workbench-stop-preparing]{padding:7px 12px;background:var(--grid-menu);color:var(--grid-text)}
+body [data-ework-grid] .ew-selected-create-draft p{margin:0;color:var(--grid-muted);font-size:11px}
+body [data-ework-grid] .ew-selected-create-error{color:#db6262;overflow-wrap:anywhere}

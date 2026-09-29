@@ -225,3 +225,20 @@ it('三列调宽逐个压缩，智能草稿最小宽度保持且规范高度不�
  expect(next.map(c=>c.h)).toEqual([6,7,8]);expect(next.map(c=>c.y)).toEqual([0,0,0])
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
 })
+
+it('整理跨列组件上方的小空格补入相邻较短组件，不拉高长文章旁的短图',()=>{
+ const g=createResearchGrid(),m=g.metrics(800),before=[item('gold',0,0,20,12),item('chart',20,0,20,23),item('pharma',0,12,20,14),item('table',0,26,40,12)]
+ const nodes=before.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,800)
+ const chart=next.find(c=>c.id==='chart'),pharma=next.find(c=>c.id==='pharma'),table=next.find(c=>c.id==='table')
+ expect(chart.y+chart.h).toBe(pharma.y+pharma.h)
+ expect(table.y).toBe(chart.y+chart.h)
+ expect(chart.h-23).toBe(3)
+ expect(g.arrange(nodes,next,800)).toEqual(next)
+ const huge=[item('chart',0,0,20,12),item('article',20,0,20,100),item('link',0,100,40,20)]
+ const arranged=g.arrange(huge.map(c=>({id:c.id,preferred:{height:c.h*m.step-m.gap}})),huge,800)
+ expect(arranged.find(c=>c.id==='chart').h).toBe(12)
+ expect(arranged.every((a,i)=>arranged.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ const short=[item('chart',0,0,20,7),item('peer',20,0,20,9),item('span',0,9,40,10)],sm=g.metrics(1000)
+ const limited=g.arrange(short.map(c=>({id:c.id,preferred:{height:c.h*sm.step-sm.gap}})),short,1000)
+ expect(limited.find(c=>c.id==='chart').h).toBe(7)
+})

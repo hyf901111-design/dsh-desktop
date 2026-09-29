@@ -2,6 +2,7 @@ import {readFileSync} from 'node:fs'
 import {createResearchGrid} from '../../packages/dsh-research-task-runtime/research-grid.js'
 import {createWorkbenchGridState} from './research-grid-state.mjs'
 import * as ui from './research-grid-ui.mjs'
+import {workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,patchWorkbenchSelectedCreate} from './research-selected-create.mjs'
 import {serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg} from '../../packages/dsh-research-task-runtime/workbench-export.js'
 import {installWorkbenchRefresh,workbenchRefreshCss} from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
@@ -19,7 +20,7 @@ const workbenchIcons=workbenchIconNames.map(name=>{
   const normalized='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><g data-icon-family="workbench" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><g transform="translate('+(16-width*scale)/2+' '+(16-height*scale)/2+') scale('+scale+')">'+inner+'</g></g></svg>'
   return `.ew-grid-icon-${name}{mask-image:url("data:image/svg+xml;base64,${Buffer.from(normalized).toString('base64')}");mask-size:16px 16px;${name==='expand'?'transform:rotate(90deg);':''}}`
 }).join('\n')
-const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation
+const css='@layer ework-workbench;'+readFileSync(new URL('./research-grid-workbench.css',import.meta.url),'utf8')+toolbarIcons+workbenchIcons+nativePresentation+readFileSync(new URL('./research-selected-create.css',import.meta.url),'utf8')
 export function restoreResearchGridWorkbench(source){
   const start=source.indexOf(begin);if(start<0)return source
   const finish=source.indexOf(end,start),a=source.indexOf(meta,finish),b=source.indexOf(' */',a)
@@ -99,17 +100,49 @@ export function patchResearchGridWorkbench(source){
       workbenchContextRef.current={html:spec.html,encoded};
       frameRef.current?.contentWindow?.postMessage(context,'*');
     });`)
-  // Original business callbacks stay in this closure. The hidden floating
-  // toolbar remains a stable anchor for the existing selected-create dialog.
+  // Preserve the existing source inspection and generation bridge while the
+  // workbench creates a real inline node before opening its demand editor.
   const hook=`
     useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef:canvasToolRef,selectTool:selectCanvasTool,readOnly:sharedReadOnly});
     const workbenchAsk=node=>{workspace.updateSelection([node.id],'replace');actions?.setResearchRightTab?.('conversation');window.requestAnimationFrame(()=>document.querySelector('.sRp_composer textarea')?.focus());};
-    const workbenchDerived=(kind,detail)=>{
+    const workbenchSelectedDrafts=react.useRef(new Map());
+    const workbenchSelectedState=node=>{
+      let state=workbenchSelectedDrafts.current.get(node.id);
+      if(!state){
+        const current=workspace.getSnapshot(),ids=Object.freeze([...node.sourceNodeIds]);
+        state={nodeId:node.id,ids,files:current.files.filter(n=>ids.includes(n.id)).map(n=>Object.freeze(structuredClone(n))),artifacts:current.artifacts.filter(n=>ids.includes(n.id)).map(n=>Object.freeze(structuredClone(n)))};
+        if(node.generationSources?.every(s=>s.text||s.path))state={...state,files:[],artifacts:[],selectionSources:node.generationSources};
+        workbenchSelectedDrafts.current.set(node.id,state);
+      }
+      return state;
+    };
+    const workbenchFocusSelected=node=>{
+      if(createSelection?.nodeId!==node.id){createAttempt.current=null;setCreatePreparing(false);}
+      setCreateSelection(workbenchSelectedState(node));setCreatePrompt(node.containerPrompt||'');setCreateError(null);
+      window.requestAnimationFrame(()=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');card?.scrollIntoView({block:'nearest',inline:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});card?.querySelector('[data-workbench-selected-create-draft] textarea')?.focus({preventScroll:true});});
+    };
+    const workbenchSelectedPrompt=(node,prompt,persist=false)=>{
+      if(sharedReadOnly)return;
+      if(createSelection?.nodeId!==node.id){createAttempt.current=null;setCreatePreparing(false);}
+      if(workspace.updateSelectedCreateDraft(node.id,prompt)){setCreateSelection(workbenchSelectedState(node));setCreatePrompt(prompt);setCreateError(null);if(persist)workspace.persist();}
+    };
+    const workbenchSelectedSubmit=(node,prompt)=>{
+      if(sharedReadOnly)return;
+      const state=workbenchSelectedState(node);setCreateSelection(state);setCreatePrompt(prompt);void startSelectedCreate(state,prompt);
+    };
+    const workbenchEditSelected=node=>{
+      if(sharedReadOnly)return;
+      workbenchSelectedDrafts.current.delete(node.id);
+      const next=workspace.editSelectedCreateDraft(node.id);if(next)workbenchFocusSelected(next);
+    };
+    react.useEffect(()=>{
+      if(createSelection?.nodeId&&!snapshot.artifacts.some(n=>n.id===createSelection.nodeId)){workbenchSelectedDrafts.current.delete(createSelection.nodeId);closeSelectedCreate();}
+    },[snapshot.artifacts,createSelection,closeSelectedCreate]);
+    const workbenchDerived=(kind,detail,baselineId)=>{
       if(kind!=='create'){void startSelectionGeneration(kind,detail);return;}
-      const current=workspace.getSnapshot(),ids=Object.freeze([...current.selection.selectedNodeIds]);
-      createTriggerRef.current=rootRef.current?.querySelector('[data-workbench-more="'+ids[0]+'"]')||createTriggerRef.current;
-      setCreatePrompt('');setCreateError(ids.length>RESEARCH_GENERATION_MAX_SOURCES?'最多选择24项资料':null);
-      setCreateSelection({ids,files:current.files.filter(n=>ids.includes(n.id)),artifacts:current.artifacts.filter(n=>ids.includes(n.id)),position:selectionActionPosition});
+      if(sharedReadOnly||selectionGeneration?.disabled)return;
+      const ids=baselineId?[baselineId]:[...workspace.getSnapshot().selection.selectedNodeIds];
+      const draft=workspace.beginSelectedCreateDraft(ids);if(draft)workbenchFocusSelected(draft);
     };
     const workbenchLegacy=(node,event,action)=>{if(action){frameAction(node,action);return;}const r=rootRef.current.getBoundingClientRect();setContextMenu({nodeId:node.id,left:event.clientX-r.left,top:event.clientY-r.top});};
   `
@@ -122,7 +155,8 @@ export function patchResearchGridWorkbench(source){
   // Only a valid final recognition reaches onCommand and appends a grid component.
   change('onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft();','onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft(null,"voice");')
   change('...(draftKind === "link" ? {title:"添加链接"} : {}),','...(draftKind === "link" ? {title:"添加链接"} : draftKind === "voice" ? {title:"语音组件"} : {}),')
-  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,...Object.values(ui)].map(fn=>fn.toString()).join('\n')
+  source=patchWorkbenchSelectedCreate(source,change)
+  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui)].map(fn=>fn.toString()).join('\n')
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   return source+'\n'+meta+JSON.stringify(changes)+' */'
 }
