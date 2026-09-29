@@ -29,6 +29,8 @@ body[data-ds-dark-theme] .ew-workbench-modes>button:hover{background:#ffffff0a!i
 body .ew-workbench-modes>button[data-tool-tooltip]:is(:hover,:focus-visible)::after{content:attr(data-tool-tooltip);position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);padding:6px 9px;border-radius:3px;background:#24242b;color:#e8e8ed;font:12px/18px Inter,"Noto Sans SC",system-ui;white-space:nowrap;pointer-events:none;z-index:100}
 
 @layer ework-workbench{
+body [data-ework-grid][data-workbench-style] [data-research-node-id]{--research-completed-surface:var(--grid-card)!important;--research-completed-inset:var(--grid-row)!important;--research-completed-row:var(--grid-row)!important;--research-completed-text:var(--grid-text)!important;--research-completed-muted:var(--grid-muted)!important;--research-completed-divider:var(--grid-border)!important;--research-completed-action:#168cf0!important;--research-completed-control:var(--grid-control)!important;--research-completed-control-border:var(--grid-border)!important;--odyssey-content:var(--grid-card)!important;--odyssey-card:var(--grid-card)!important}
+body [data-ework-grid][data-workbench-style] :is(.odyssey-component-primary,.rScV5Q_generatedContainer,.rScV5Q_artifactBody,.rScV5Q_previewBody){background:var(--grid-card)!important;color:var(--grid-text)!important}
 body [data-ework-grid][data-workbench-style] .rScV5Q_containerTableScroll{background:var(--grid-card)!important;color:var(--grid-text)!important}
 body [data-ework-grid][data-workbench-style] .rScV5Q_chartLabel{fill:var(--sherlock-chart-label)!important}
 body [data-ework-grid][data-workbench-style] :is(.rScV5Q_chartGrid,.rScV5Q_chartAxis){stroke:var(--sherlock-chart-grid)!important}
