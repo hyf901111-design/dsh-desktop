@@ -1,3 +1,4 @@
+import { isWorkbenchScrollbarMessage } from '../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
 import { Window } from 'happy-dom'
@@ -504,4 +505,8 @@ it('工作台展开明细按可滚动区域高度测量，不拉长至全部60�
  }})
  inner.parsed()
  expect(inner.parentMessages.find(m=>m.data.type==='sherlock-workbench-content-size')?.data.height).toBe(308)
+})
+
+it('工作台跨沙盒滚动桥只接受有限尺寸和精确滚动命令',()=>{
+ const metrics={type:'sherlock-workbench-scrollbar-metrics',axes:{x:null,y:{client:300,total:1200,position:250}}};expect(isWorkbenchScrollbarMessage(metrics,'metrics')).toBe(true);expect(isWorkbenchScrollbarMessage({...metrics,extra:true},'metrics')).toBe(false);expect(isWorkbenchScrollbarMessage({...metrics,axes:{x:null,y:{client:300,total:1200,position:2000}}},'metrics')).toBe(false);expect(isWorkbenchScrollbarMessage({type:'sherlock-workbench-scrollbar-scroll',axis:'y',position:20},'scroll')).toBe(true);for(const position of [-1,Infinity,1e8])expect(isWorkbenchScrollbarMessage({type:'sherlock-workbench-scrollbar-scroll',axis:'y',position},'scroll')).toBe(false);expect(isWorkbenchScrollbarMessage({type:'sherlock-workbench-scrollbar-scroll',axis:'z',position:20},'scroll')).toBe(false)
 })

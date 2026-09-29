@@ -35,6 +35,10 @@ body .trend-1{color:var(--sherlock-chart-1)!important}body .trend-2{color:var(--
 body :is(.research-feed-item,.risk-item,.event){background:none!important;border:0!important;border-bottom:1px solid var(--sherlock-border)!important;border-radius:0!important;padding:8px 0!important}
 body :is(.feed-copy h2,.event strong){font-size:12px!important;line-height:18px!important;font-weight:500!important;color:var(--sherlock-text)!important}
 body :is(.feed-meta,.feed-details,.event small){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important}
+body .research-feed-item{min-width:0!important;grid-template-columns:104px minmax(0,1fr)!important;column-gap:10px!important}
+body .feed-meta{display:flex!important;flex-direction:column!important;align-items:flex-start!important;min-width:0!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;gap:2px!important}
+body .feed-meta :is(time,.feed-category){max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important}
+body .feed-copy{min-width:0!important;overflow-wrap:anywhere!important}
 body a{color:var(--sherlock-link)!important}body summary{background:transparent!important;color:var(--sherlock-muted)!important;font-size:11px!important;line-height:17px!important}
 body :is(.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown){padding:8px 10px!important;min-height:0!important;overflow:auto!important}
 body .rScV5Q_containerKpis{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;padding:8px 10px!important;gap:6px 12px!important;overflow:auto!important}
@@ -44,7 +48,7 @@ body .rScV5Q_containerKpis :is(span,em){font-size:12px!important;line-height:18p
 body .rScV5Q_chartLegend{padding:8px 10px!important;gap:10px!important;font-size:11px!important;color:var(--sherlock-muted)!important}
 body .rScV5Q_mindMap{padding:12px!important;gap:20px!important;background:var(--sherlock-bg)!important}
 body .rScV5Q_mindMapNode{border:1px solid var(--sherlock-border)!important;border-radius:3px!important;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important;padding:8px 10px!important;font-size:12px!important}
-@media(max-width:440px){body :is(.controls,.terminal-table-toolbar){align-items:stretch!important}body .terminal-table-toolbar input{flex:1!important;width:100%!important}body .research-feed-item{grid-template-columns:80px minmax(0,1fr)!important;gap:8px!important}body[data-research-kind="calendar"]{display:block!important}body .market-value{font-size:16px!important}}
+@media(max-width:440px){body :is(.controls,.terminal-table-toolbar){align-items:stretch!important}body .terminal-table-toolbar input{flex:1!important;width:100%!important}body .research-feed-item{grid-template-columns:minmax(0,1fr)!important;gap:3px!important}body .feed-meta{flex-direction:row!important;flex-wrap:wrap!important;align-items:baseline!important;gap:2px 6px!important}body[data-research-kind="calendar"]{display:block!important}body .market-value{font-size:16px!important}}
 @media(max-width:360px){body :is(.market-metrics,.fund-kpis){grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:240px){body :is(.market-metrics,.fund-kpis){grid-template-columns:minmax(0,1fr)!important}}
 }`

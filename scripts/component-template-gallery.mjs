@@ -9,6 +9,8 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {buildResearchHtmlPreview,RESEARCH_COMPONENT_THEME_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {researchCompletedDesignCss} from './lib/research-completed-design.mjs'
 import {canvasCss} from './lib/figma-canvas-client.mjs'
+import {WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
+const workbench=process.argv.includes('--workbench')
 const output=resolve(process.argv[2]??'artifacts/component-templates-20260926')
 await mkdir(output,{recursive:true})
 const client=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
@@ -24,7 +26,7 @@ for(const [index,t] of COMPONENT_TEMPLATES.entries()){
  const data=prepareSimulatedArtifact(p),spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
  for(const theme of ['light','dark']){
   const file=t.id+'-'+theme+'.html'
-  const html=spec.type==='html'?buildResearchHtmlPreview(spec.html,spec.title,theme):`<!doctype html><html data-sherlock-theme="${theme}"><head><meta charset="utf-8"><style>${RESEARCH_COMPONENT_THEME_CSS}${canvasCss}${researchCompletedDesignCss}html,body,body>section{height:100%;min-height:100vh}body{margin:0;color:var(--research-completed-text);background:var(--sherlock-surface)}#root{height:100vh}.rScV5Q_containerChart svg{width:100%;height:calc(100vh - 94px)}.rScV5Q_containerKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}</style></head><body ${theme==='dark'?'data-ds-dark-theme':''}><section data-research-artifact-card data-research-compact-chrome data-research-generated-container><main id="root" data-research-container-type="${spec.type}"></main></section><script>window.DATA=${JSON.stringify(spec).replace(/</g,'\\u003c')}</script><script src="native.js"></script></body></html>`
+  const html=spec.type==='html'?buildResearchHtmlPreview(spec.html,spec.title,theme,{workbench}):`<!doctype html><html data-sherlock-theme="${theme}"><head><meta charset="utf-8"><style>${RESEARCH_COMPONENT_THEME_CSS}${canvasCss}${researchCompletedDesignCss}${workbench?WORKBENCH_PRESENTATION_CSS:''}html,body,body>section{height:100%;min-height:100vh}body{margin:0;color:var(--research-completed-text);background:var(--sherlock-surface)}#root{height:100vh}.rScV5Q_containerChart svg{width:100%;height:calc(100vh - 94px)}.rScV5Q_containerKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}</style></head><body ${theme==='dark'?'data-ds-dark-theme':''}><section data-research-artifact-card data-research-compact-chrome data-research-generated-container><main id="root" data-research-container-type="${spec.type}"></main></section><script>window.DATA=${JSON.stringify(spec).replace(/</g,'\\u003c')}</script><script src="native.js"></script></body></html>`
   await writeFile(join(output,file),html)
  }
  manifest.push({id:t.id,width:t.width,height:t.height-32,cardHeight:t.height,data,specType:spec.type})

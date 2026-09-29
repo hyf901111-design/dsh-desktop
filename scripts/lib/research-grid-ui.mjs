@@ -250,7 +250,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(commit&&op.kind==='draw'){
       workspace.applyWorkbenchCells(op.canonicalBefore,false)
       const n=grid.project([{id:'__draft__'}],[op.target],width())[0]
-      const node=workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,sizeMode:'manual'})
+      const node=workspace.createContainerDraft({x:n.x,y:n.y,width:n.width,height:n.height,sizeMode:'manual',preserveGenerationSize:true})
       if(node)workspace.applyWorkbenchCells(grid.place(op.canonicalBefore,{...op.target,id:node.id},node.id),false)
       workspace.persist();selectTool('select')
     }else if(commit){workspace.applyWorkbenchCells(committed,false);workspace.persist()}
@@ -433,7 +433,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       const cards=[...root.querySelectorAll('[data-research-node-id]')]
       for(const [card,bar] of scrollbars)if(!cards.includes(card)){bar.destroy();scrollbars.delete(card)}
       for(const card of cards){
-        if(!scrollbars.has(card))scrollbars.set(card,installWorkbenchScrollbars(card,()=>card.querySelector('[data-research-preview-body]')||card.querySelector('.rScV5Q_containerDraft')||card,()=>card.getAttribute('data-selected')==='true'||card.hasAttribute('open'),()=>[card.querySelector('[data-research-preview-body]'),...card.querySelectorAll('.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_containerDraft,textarea,.odyssey-generation-records')]))
+        if(!scrollbars.has(card))scrollbars.set(card,installWorkbenchScrollbars(card,()=>card.querySelector('[data-research-preview-body]')||card.querySelector('.rScV5Q_containerDraft')||card,()=>card.getAttribute('data-selected')==='true'||card.hasAttribute('open'),()=>[card.querySelector('[data-research-preview-body]'),...card.querySelectorAll('.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_containerDraft,textarea,.odyssey-generation-records')],()=>card.querySelector('iframe[data-research-html-artifact]')))
         scrollbars.get(card).refresh()
       }
     }
@@ -449,7 +449,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).length!==3||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
       const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
       const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
-      if(node?.containerSpec?.type==='html'){contentMeasurements.set(id,{html:node.containerSpec.html,width:data.width,height:data.height});root.__eworkContentFit?.refit()}
+      if(node?.containerSpec?.type==='html'){root.__eworkScrollbars?.();contentMeasurements.set(id,{html:node.containerSpec.html,width:data.width,height:data.height});root.__eworkContentFit?.refit()}
     }
     window.addEventListener('message',contentSize)
     const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect());if(Math.abs(width-(workspace.getSnapshot().canvasSize.availableWidth||width))>1)root.__eworkContentFit?.finish();workspace.setWorkbenchWidth(width);const size={width:bounds.width,height:bounds.height,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}

@@ -82,13 +82,15 @@ body [data-ework-grid] [data-research-preview-body]{border:0!important;border-ra
 body [data-ework-grid] [data-research-preview-body]:has(iframe[data-research-html-artifact]){padding:0!important}
 body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]:not([data-selected=true])::after{display:none!important}
 body [data-ework-grid] .odyssey-data-stamp{border:0!important;background:var(--grid-card)!important;color:var(--grid-muted)!important;font:400 11px/16px Inter,"Noto Sans SC",system-ui!important;padding:3px 10px!important;min-height:20px!important;cursor:default!important}
-/* This first important layer outranks legacy component frame rules. The real
-   overlay is in the chrome host so content/header paint cannot cover its edges. */
+/* The outline is outside the card's bounds: native WebContentsView surfaces
+   paint above renderer overlays, but cannot cover this external edge. */
 @layer ework-workbench{
  body [data-ework-grid] [data-research-node-id]{border:0!important;outline:0!important;box-shadow:none!important;border-radius:4px!important}
+ body [data-ework-grid] [data-research-node-id][data-selected=true]{outline:1px solid #249bfa!important;outline-offset:0!important}
+ body [data-ework-grid]:is([data-grid-operation=move],[data-grid-operation=resize]) [data-research-node-id][data-grid-active]{outline:0!important}
  body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]::after{display:none!important}
 }
-body [data-ework-grid] .ew-grid-selection-ring{position:absolute;inset:0;z-index:100;pointer-events:none;border-radius:4px;box-shadow:inset 0 0 0 1px #249bfa}
+body [data-ework-grid] .ew-grid-selection-ring{position:absolute;inset:0;z-index:100;pointer-events:none;border-radius:4px;box-shadow:none}
 body [data-ework-grid][data-canvas-tool=select] .rScV5Q_previewBody:has(iframe[data-research-html-artifact])>.rScV5Q_previewShield{pointer-events:none!important}
 body [data-ework-grid][data-grid-multiselect] [data-research-node-id],body [data-ework-grid][data-grid-multiselect] [data-research-node-id] *{user-select:none!important;-webkit-user-select:none!important}
 body [data-ework-grid][data-grid-multiselect] [data-research-node-id] :is(input,textarea,[contenteditable=true]){user-select:text!important;-webkit-user-select:text!important}
@@ -120,6 +122,9 @@ body [data-ework-grid] [data-research-generation-foreground]>strong{font-size:15
 body [data-ework-grid] .odyssey-generation-phase{font-size:13px;line-height:20px;flex:none}
 body [data-ework-grid] [data-research-generation-foreground]>[data-research-generation-description]{display:block;-webkit-line-clamp:unset;line-height:20px;flex:1 1 auto;min-height:60px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;scrollbar-width:thin}
 body [data-ework-grid] [data-research-generation-sources]{flex:none}
+/* A user-drawn frame scrolls its task details instead of changing its box. */
+body [data-ework-grid] [data-workbench-fixed-generation-size] [data-research-generation-foreground]{overflow:auto;overscroll-behavior:auto}
+body [data-ework-grid] [data-workbench-fixed-generation-size] [data-research-generation-description]{flex:none;overflow:visible}
 /* Canvas notices stay with the visible workbench, above its floating toolbar. */
 [data-workbench-notice] { transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:6px; box-sizing:border-box; width:max-content; max-width:min(460px,calc(100% - 24px)); min-height:40px; padding:6px 8px 6px 12px; border:1px solid #00000014; border-radius:10px; background:#fff; color:#27282c; box-shadow:0 6px 20px #0000001c; font:12px/20px var(--odyssey-font-ui); }
 [data-workbench-notice]>span { min-width:0; overflow-wrap:anywhere; }
