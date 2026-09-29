@@ -1,0 +1,397 @@
+{
+  "auditedAt": "2026-09-30",
+  "fileKey": "Jkyr5rMvgM8GNH6E68xnqd",
+  "pageId": "111:683",
+  "enterpriseRootId": "1915:341090",
+  "sourceCounts": {
+    "widgets": 44,
+    "charts": 30,
+    "dependenciesAndSwitch": 3
+  },
+  "scope": "Live Figma source inventory, not an implementation or acceptance claim",
+  "components": [
+    {
+      "id": "1917:341137",
+      "name": "EFund / Dependency / OpenBB / Refresh / hover timestamp",
+      "defaultId": "1917:341138"
+    },
+    {
+      "id": "1917:341209",
+      "name": "EFund / Dependency / OpenBB / Refresh / Empty / zh",
+      "defaultId": "1917:341210"
+    },
+    {
+      "id": "1917:341251",
+      "name": "EFund / Widget / Ticker Information",
+      "defaultId": "1917:341252"
+    },
+    {
+      "id": "1917:341348",
+      "name": "EFund / Widget / Key Metrics",
+      "defaultId": "1917:341349"
+    },
+    {
+      "id": "1917:341499",
+      "name": "EFund / Widget / Share Statistics",
+      "defaultId": "1917:341500"
+    },
+    {
+      "id": "1917:341610",
+      "name": "EFund / Widget / Market Overview",
+      "defaultId": "1917:341611"
+    },
+    {
+      "id": "1917:341875",
+      "name": "EFund / Widget / Currency Snapshot",
+      "defaultId": "1917:341876"
+    },
+    {
+      "id": "1917:342632",
+      "name": "EFund / Widget / Watchlist",
+      "defaultId": "1917:342633"
+    },
+    {
+      "id": "1917:342875",
+      "name": "EFund / Widget / Price Performance",
+      "defaultId": "1917:342876"
+    },
+    {
+      "id": "1917:343724",
+      "name": "EFund / Widget / Charting",
+      "defaultId": "1917:343725"
+    },
+    {
+      "id": "1917:344627",
+      "name": "EFund / Widget / Valuation Multiples",
+      "defaultId": "1917:344628"
+    },
+    {
+      "id": "1917:344810",
+      "name": "EFund / Widget / Price Target",
+      "defaultId": "1917:344811"
+    },
+    {
+      "id": "1917:345615",
+      "name": "EFund / Widget / Ticker Profile",
+      "defaultId": "1917:345616"
+    },
+    {
+      "id": "1917:345704",
+      "name": "EFund / Widget / Management Team",
+      "defaultId": "1917:345705"
+    },
+    {
+      "id": "1917:346127",
+      "name": "EFund / Widget / Financial Statements",
+      "defaultId": "1917:346128"
+    },
+    {
+      "id": "1917:347588",
+      "name": "EFund / Widget / Revenue Per Geography",
+      "defaultId": "1917:347589"
+    },
+    {
+      "id": "1917:347931",
+      "name": "EFund / Widget / Revenue Per Business Line",
+      "defaultId": "1917:347932"
+    },
+    {
+      "id": "1917:348282",
+      "name": "EFund / Widget / Dividend Payment",
+      "defaultId": "1917:348283"
+    },
+    {
+      "id": "1917:348905",
+      "name": "EFund / Widget / Stock Splits",
+      "defaultId": "1917:348906"
+    },
+    {
+      "id": "1917:349064",
+      "name": "EFund / Widget / Insider Trading",
+      "defaultId": "1917:349065"
+    },
+    {
+      "id": "1917:350109",
+      "name": "EFund / Widget / Institutional Ownership",
+      "defaultId": "1917:350110"
+    },
+    {
+      "id": "1917:350482",
+      "name": "EFund / Widget / Stock Ownership",
+      "defaultId": "1917:350483"
+    },
+    {
+      "id": "1917:351459",
+      "name": "EFund / Widget / Company Filings",
+      "defaultId": "1917:351460"
+    },
+    {
+      "id": "1917:351968",
+      "name": "EFund / Widget / Historical Stock Price",
+      "defaultId": "1917:351969"
+    },
+    {
+      "id": "1917:352841",
+      "name": "EFund / Widget / Markdown Note",
+      "defaultId": "1917:352842"
+    },
+    {
+      "id": "1917:352946",
+      "name": "EFund / Widget / RSS / Atom Feed",
+      "defaultId": "1917:352947"
+    },
+    {
+      "id": "1917:353041",
+      "name": "EFund / Widget / Iframe",
+      "defaultId": "1917:353042"
+    },
+    {
+      "id": "1917:353092",
+      "name": "EFund / Widget / YouTube",
+      "defaultId": "1917:353093"
+    },
+    {
+      "id": "1917:353139",
+      "name": "EFund / Widget / Clock",
+      "defaultId": "1917:353140"
+    },
+    {
+      "id": "1917:353200",
+      "name": "EFund / Widget / Smart Container"
+    },
+    {
+      "id": "1917:355461",
+      "name": "EFund / Widget / Link"
+    },
+    {
+      "id": "1917:357536",
+      "name": "EFund / Widget / MindMap",
+      "defaultId": "1917:357537"
+    },
+    {
+      "id": "1918:343676",
+      "name": "EFund / Widget / Summary",
+      "defaultId": "1918:343677"
+    },
+    {
+      "id": "1918:343775",
+      "name": "EFund / Widget / CreateSelection",
+      "defaultId": "1918:343776"
+    },
+    {
+      "id": "1918:343978",
+      "name": "EFund / Widget / KPI",
+      "defaultId": "1918:343979"
+    },
+    {
+      "id": "1918:344375",
+      "name": "EFund / Widget / Progress",
+      "defaultId": "1918:344376"
+    },
+    {
+      "id": "1918:344860",
+      "name": "EFund / Widget / Tasks",
+      "defaultId": "1918:344861"
+    },
+    {
+      "id": "1918:345317",
+      "name": "EFund / Widget / Calendar",
+      "defaultId": "1918:345318"
+    },
+    {
+      "id": "1918:346434",
+      "name": "EFund / Widget / Timeline",
+      "defaultId": "1918:346435"
+    },
+    {
+      "id": "1918:346911",
+      "name": "EFund / Widget / Approval",
+      "defaultId": "1918:346912"
+    },
+    {
+      "id": "1918:347372",
+      "name": "EFund / Widget / Files",
+      "defaultId": "1918:347373"
+    },
+    {
+      "id": "1918:347929",
+      "name": "EFund / Widget / Gallery",
+      "defaultId": "1918:347930"
+    },
+    {
+      "id": "1918:353062",
+      "name": "EFund / Widget / Audio",
+      "defaultId": "1918:353063"
+    },
+    {
+      "id": "1918:354019",
+      "name": "EFund / Widget / Form",
+      "defaultId": "1918:354020"
+    },
+    {
+      "id": "1918:354512",
+      "name": "EFund / Widget / Code",
+      "defaultId": "1918:354513"
+    },
+    {
+      "id": "1918:354877",
+      "name": "EFund / Widget / Alerts",
+      "defaultId": "1918:354878"
+    },
+    {
+      "id": "1918:355321",
+      "name": "EFund / Widget / line",
+      "defaultId": "1918:355322"
+    },
+    {
+      "id": "1918:355568",
+      "name": "EFund / Widget / area",
+      "defaultId": "1918:355569"
+    },
+    {
+      "id": "1918:355740",
+      "name": "EFund / Widget / stackedArea",
+      "defaultId": "1918:355741"
+    },
+    {
+      "id": "1918:355949",
+      "name": "EFund / Widget / step",
+      "defaultId": "1918:355950"
+    },
+    {
+      "id": "1918:356136",
+      "name": "EFund / Widget / combo",
+      "defaultId": "1918:356137"
+    },
+    {
+      "id": "1918:356392",
+      "name": "EFund / Widget / bar",
+      "defaultId": "1918:356393"
+    },
+    {
+      "id": "1918:356565",
+      "name": "EFund / Widget / groupedBar",
+      "defaultId": "1918:356566"
+    },
+    {
+      "id": "1918:356816",
+      "name": "EFund / Widget / stackedBar",
+      "defaultId": "1918:356817"
+    },
+    {
+      "id": "1918:357043",
+      "name": "EFund / Widget / percentBar",
+      "defaultId": "1918:357044"
+    },
+    {
+      "id": "1918:357264",
+      "name": "EFund / Widget / horizontal",
+      "defaultId": "1918:357265"
+    },
+    {
+      "id": "1918:357461",
+      "name": "EFund / Widget / lollipop",
+      "defaultId": "1918:357462"
+    },
+    {
+      "id": "1918:357676",
+      "name": "EFund / Widget / dumbbell",
+      "defaultId": "1918:357677"
+    },
+    {
+      "id": "1918:357948",
+      "name": "EFund / Widget / waterfall",
+      "defaultId": "1918:357949"
+    },
+    {
+      "id": "1918:358184",
+      "name": "EFund / Widget / pie",
+      "defaultId": "1918:358185"
+    },
+    {
+      "id": "1918:358449",
+      "name": "EFund / Widget / donut",
+      "defaultId": "1918:358450"
+    },
+    {
+      "id": "1918:358723",
+      "name": "EFund / Widget / treemap",
+      "defaultId": "1918:358724"
+    },
+    {
+      "id": "1918:358884",
+      "name": "EFund / Widget / sunburst",
+      "defaultId": "1918:358885"
+    },
+    {
+      "id": "1918:359236",
+      "name": "EFund / Widget / radar",
+      "defaultId": "1918:359237"
+    },
+    {
+      "id": "1918:359499",
+      "name": "EFund / Widget / funnel",
+      "defaultId": "1918:359500"
+    },
+    {
+      "id": "1918:359693",
+      "name": "EFund / Widget / sankey",
+      "defaultId": "1918:359694"
+    },
+    {
+      "id": "1918:359875",
+      "name": "EFund / Widget / scatter",
+      "defaultId": "1918:359876"
+    },
+    {
+      "id": "1918:360197",
+      "name": "EFund / Widget / bubble",
+      "defaultId": "1918:360198"
+    },
+    {
+      "id": "1918:360474",
+      "name": "EFund / Widget / histogram",
+      "defaultId": "1918:360475"
+    },
+    {
+      "id": "1918:360722",
+      "name": "EFund / Widget / box",
+      "defaultId": "1918:360723"
+    },
+    {
+      "id": "1918:360994",
+      "name": "EFund / Widget / heatmap",
+      "defaultId": "1918:360995"
+    },
+    {
+      "id": "1918:361572",
+      "name": "EFund / Widget / calendar",
+      "defaultId": "1918:361573"
+    },
+    {
+      "id": "1918:362300",
+      "name": "EFund / Widget / candlestick",
+      "defaultId": "1918:362301"
+    },
+    {
+      "id": "1918:363354",
+      "name": "EFund / Widget / ohlc",
+      "defaultId": "1918:363355"
+    },
+    {
+      "id": "1918:364312",
+      "name": "EFund / Widget / bullet",
+      "defaultId": "1918:364313"
+    },
+    {
+      "id": "1918:364548",
+      "name": "EFund / Widget / gauge",
+      "defaultId": "1918:364549"
+    },
+    {
+      "id": "1934:374433",
+      "name": "EW / Enterprise Presentation / Workbench Switch",
+      "defaultId": "1933:373683"
+    }
+  ]
+}

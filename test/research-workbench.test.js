@@ -38,6 +38,15 @@ it('deals six cards into a strict two-column matrix despite a saved leading-stri
  expect(plan[0].workbenchSpan).not.toBe(true);
 });
 describe('研究工作台', () => {
+    it('returns an actionable preset receipt contract for title-only calls without creating placeholder data', () => {
+        for (const dataMode of [undefined, 'simulated', 'source']) {
+            expect(() => validateWorkbench({ requestId:'missing-content', title:'医药复验', dataMode }))
+                .toThrow('缺少工作台内容参数');
+        }
+        const prepared = validateWorkbench({requestId:'preset-retry',title:'医药复验',dataMode:'simulated',preset:'medical-21h'});
+        expect(prepared.panels.map(p=>p.artifact.variant)).toEqual(['metrics','trend','scatter','table','pipeline','events']);
+        expect(() => validateWorkbench({requestId:'source',title:'真实医药',dataMode:'source',preset:'medical-21h'})).toThrow();
+    });
     it('schedules an empty market template draft for fetching without dropping any supplied observations', () => {
         const draft={version:1,type:'market',variant:'metrics',title:'行情快照',asOf:'',items:[]};
         const p={title:'行情快照',prompt:'使用通联获取宁德时代行情',type:'market',size:'medium',artifact:draft};
