@@ -5,6 +5,7 @@ export function createWorkbenchGridState(storage,sessionId) {
   let width=0,cells=[],initialized=false,previous=new Map(),nodesById=new Map(),forced=false,legacyRows=false
   try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1}}catch{}
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
+  const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='generated-container'&&!n.containerSpec&&n.creationMode!=='selection'&&n.generationStatus!=='completed'?{...box,freePosition:true}:box})
   function visibleCells(){
     const m=grid.metrics(width||1000),limits=c=>grid.minimum(nodesById.get(c.id),m)
     if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
@@ -21,6 +22,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     if(!width)return snapshot
     const nodes=[...snapshot.files,...snapshot.artifacts],ids=new Set(nodes.map(n=>n.id))
     nodesById=new Map(nodes.map(n=>[n.id,n]))
+    cells=freeCells(cells)
     // Convert the old fixed 35px rows once, using the first actual viewport.
     // Keep card content and horizontal spans; round vertical bounds to squares.
     if(legacyRows){const m=grid.metrics(width);cells=grid.compact(cells.map(c=>grid.bounded({...c,y:c.y*35/m.rowStep,h:Math.ceil(c.h*35/m.rowStep)})));legacyRows=false;try{storage?.setItem(key,JSON.stringify({version:2,cells}))}catch{}}
@@ -51,8 +53,8 @@ export function createWorkbenchGridState(storage,sessionId) {
     reconcile,receiveCanonical,
     document(snapshot){if(!width)return {files:snapshot.files,artifacts:snapshot.artifacts};const nodes=grid.project([...snapshot.files,...snapshot.artifacts],cells,1000),byId=new Map(nodes.map(n=>[n.id,n]));return {files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id))}},
     enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;forced=true;return true},
-    get:()=>cells.map(n=>({...n})),
-    visible:()=>visibleCells().map(n=>({...n})),
+    get:()=>freeCells(cells),
+    visible:()=>freeCells(visibleCells()),
     set(next){cells=next.map(grid.bounded);forced=true},
     append:id=>grid.append(cells,id),
     save(){if(width)try{return storage?.setItem(key,JSON.stringify({version:2,cells}))!==false}catch{return false}return true},

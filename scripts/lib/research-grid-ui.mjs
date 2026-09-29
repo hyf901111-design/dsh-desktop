@@ -12,6 +12,22 @@ export function workbenchGridPattern(width) {
   const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+m.step+'" height="'+m.step+'" viewBox="0 0 '+m.step+' '+m.step+'"><path d="M '+m.step+' 0 H 0 V '+m.step+'" fill="none" stroke="#8a9099" stroke-opacity="0.2" stroke-width="1"/></svg>'
   return 'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")'
 }
+export function revealWorkbenchNode(root,workspace,id) {
+  if(!root||!id)return
+  const view=root.ownerDocument.defaultView,request={id};root.__eworkReveal=request
+  view.requestAnimationFrame(()=>{
+    if(root.__eworkReveal!==request||!root.isConnected)return
+    delete root.__eworkReveal
+    const node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
+    if(!node)return
+    const height=root.clientHeight||workspace.getSnapshot().canvasSize.height,top=node.y-node.height/2,bottom=node.y+node.height/2,usable=Math.max(100,height-86)
+    if(top>=root.scrollTop+12&&bottom<=root.scrollTop+usable)return
+    const next=Math.max(0,bottom-top>usable-24?top-12:bottom-usable+12)
+    root.scrollTo({top:next,behavior:view.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})
+    // Headless DOM and older hosts may not dispatch a scroll event.
+    if(Math.abs(root.scrollTop-next)<1)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})
+  })
+}
 export function WorkbenchIcon({name}) {
   // Every glyph uses the same optical frame and rounded stroke family.
   return react_jsx_runtime.jsx('span',{className:'ew-grid-icon ew-grid-icon-'+name,'data-workbench-icon':name,'aria-hidden':true})
@@ -412,6 +428,15 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
     root.setAttribute('data-ework-grid','')
+    const scrollbars=new Map()
+    root.__eworkScrollbars=()=>{
+      const cards=[...root.querySelectorAll('[data-research-node-id]')]
+      for(const [card,bar] of scrollbars)if(!cards.includes(card)){bar.destroy();scrollbars.delete(card)}
+      for(const card of cards){
+        if(!scrollbars.has(card))scrollbars.set(card,installWorkbenchScrollbars(card,()=>card.querySelector('[data-research-preview-body]')||card.querySelector('.rScV5Q_containerDraft')||card,()=>card.getAttribute('data-selected')==='true'||card.hasAttribute('open'),()=>[card.querySelector('[data-research-preview-body]'),...card.querySelectorAll('.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_containerDraft,textarea,.odyssey-generation-records')]))
+        scrollbars.get(card).refresh()
+      }
+    }
     const contentMeasurements=new Map();root.__eworkContentMeasurements=contentMeasurements
     const contentSize=event=>{
       const data=event.data
@@ -432,7 +457,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     window.addEventListener('resize',measure)
     const scroll=()=>{const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
-    return()=>{root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
+    return()=>{root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
@@ -440,6 +465,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     for(const [id,value] of root.__eworkContentMeasurements||[])if(!nodes.some(n=>n.id===id&&n.containerSpec?.html===value.html))root.__eworkContentMeasurements.delete(id)
     const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-gap',m.gap+'px');layer.style.setProperty('--grid-step',m.step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
     const viewport=snapshot.viewport;if(!root.hasAttribute('data-grid-operation')){const scrollTop=Math.max(0,Math.min(bottom-visibleHeight,-viewport.y));if(Math.abs(root.scrollTop-scrollTop)>.5)root.scrollTop=scrollTop;if(Math.abs(viewport.y+scrollTop)>.5)workspace.setViewport({x:0,y:-scrollTop,scale:1})}
+    root.__eworkScrollbars?.()
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])
 }

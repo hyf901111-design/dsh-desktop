@@ -84,6 +84,36 @@ it('链接和语音草稿在末尾追加，保留不等大的已有组件',async
  f.workspace.updateSelection([link.id],'replace')
  expect(f.workspace.getWorkbenchCells().find(n=>n.id===link.id).y).toBe(bottom)
 })
+it('未完成智能容器和链接草稿拖到空位后保留落点，生成期间及重新打开不向上吸附',async()=>{
+ const f=await fixture(true),w=f.workspace,step=24.65
+ for(const kind of ['container','link']){
+  let draft;await act(async()=>{w.setArtifacts([]);draft=w.createContainerDraft(null,kind);w.applyWorkbenchCells([{id:draft.id,x:0,y:0,w:14,h:10}],true)})
+  const handle=f.host.querySelector('[data-workbench-drag-handle="'+draft.id+'"]')
+  await f.event('pointerdown',handle,{button:0,pointerId:93,clientX:80,clientY:28})
+  await f.event('pointerup',f.canvas,{pointerId:93,clientX:80,clientY:28+step*10})
+  expect(w.getWorkbenchCells().find(c=>c.id===draft.id).y).toBe(10)
+  if(kind==='container')await act(async()=>w.beginContainerGeneration(draft.id,'保留位置生成组件'))
+  await act(async()=>w.renameNode(draft.id,'位置验证'));expect(w.getWorkbenchCells().find(c=>c.id===draft.id).y).toBe(10)
+  const reopened=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');reopened.setCanvasSize({width:1000,height:700});reopened.setWorkbenchWidth(1000)
+  expect(reopened.getWorkbenchCells().find(c=>c.id===draft.id).y).toBe(10)
+  if(kind==='container'){
+   await act(async()=>w.setArtifacts(w.getSnapshot().artifacts.map(n=>({...n,generationStatus:'completed',containerSpec:{version:1,type:'table',title:'完成结果',columns:['指标','数值'],rows:[['A','1']]}}))))
+   const normalHandle=f.host.querySelector('[data-workbench-drag-handle="'+draft.id+'"]')
+   await f.event('pointerdown',normalHandle,{button:0,pointerId:94,clientX:80,clientY:274.5})
+   await f.event('pointerup',f.canvas,{pointerId:94,clientX:80,clientY:299.15})
+   expect(w.getWorkbenchCells().find(c=>c.id===draft.id).y).toBe(0)
+  }
+ }
+})
+it('点击添加链接后定位到末尾的新输入卡片，卡片完整显示在工具栏上方',async()=>{
+ const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:55}],true)})
+ Object.defineProperty(f.canvas,'scrollHeight',{configurable:true,value:2200});f.win.matchMedia=()=>({matches:true})
+ await f.event('click',f.document.querySelector('[data-research-global-link]'))
+ const node=f.workspace.getSnapshot().artifacts.find(n=>n.id!=='a')
+ expect(f.canvas.scrollTop).toBeGreaterThan(900)
+ expect(node.y-node.height/2-f.canvas.scrollTop).toBeGreaterThanOrEqual(0)
+ expect(node.y+node.height/2-f.canvas.scrollTop).toBeLessThanOrEqual(614)
+})
 it('顶栏问答进入右侧会话，更多菜单包含三项原工具',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  expect(f.host.querySelector('[data-workbench-refresh="a"]')).not.toBeNull()
@@ -1242,7 +1272,7 @@ it('调宽预览压缩同排组件，松手使用预览并一次撤销恢复双�
  await act(async()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
 })
 
-it('宿主组件滚动条和占位仅选中时显示，覆盖旧规则并保留滚动能力',async()=>{
+it('宿主原生滚动条一直不占位，选中仅改变覆盖层颜色并保留滚动能力',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const style=f.document.createElement('style');style.textContent='body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerMarkdown,.rScV5Q_containerTableScroll,.rScV5Q_mindMap,.odyssey-generation-records,textarea){scrollbar-width:none!important}';f.document.head.append(style)
  const scroller=f.host.querySelector('[data-research-preview-body]')
@@ -1250,7 +1280,7 @@ it('宿主组件滚动条和占位仅选中时显示，覆盖旧规则并保留�
  // gutter and scrollbar against the real legacy stylesheet.
  const css=f.document.querySelector('#ework-grid-workbench-style').textContent
  expect(css).toContain('@layer ework-workbench{\nbody [data-research-canvas][data-ework-grid] [data-research-node-id] :is(')
- expect(css).toContain('scrollbar-gutter:auto!important;scrollbar-width:var(--grid-scroll-width)!important')
+ expect(css).toContain('scrollbar-gutter:auto!important;scrollbar-width:none!important')
  expect(f.win.getComputedStyle(scroller).overflow).toBe('auto')
  const card=scroller.closest('[data-research-node-id]'),thumb=()=>f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-thumb')
  expect(thumb()).toBe('transparent')
@@ -1258,8 +1288,8 @@ it('宿主组件滚动条和占位仅选中时显示，覆盖旧规则并保留�
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
  await act(async()=>f.workspace.updateSelection(['a'],'replace'))
  expect(thumb()).toBe('#74778055')
- expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('thin')
- expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('5px')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
+ expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
  await act(async()=>f.workspace.updateSelection([],'replace'))
  expect(thumb()).toBe('transparent')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')

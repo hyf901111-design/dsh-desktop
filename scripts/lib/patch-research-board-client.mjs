@@ -16,11 +16,12 @@ import { candleRuntime, candleControls, refineCandlestickHtml } from '../../pack
 import { MARKET_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/market-presentation.js'
 import { applyTerminalPresentation, TERMINAL_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/terminal-presentation.js'
 import { applyWorkbenchPresentation, WORKBENCH_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
+import { installWorkbenchScrollbars } from '../../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
   .replace(/^export /gm, '')
-  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n')
+  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n'+installWorkbenchScrollbars.toString()+'\n')
   .replace(/\bparseResearchHtmlArtifact\(/g, 'parseResearchContainerSpec(')
 const START = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_BEGIN */',
   END = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_END */'
