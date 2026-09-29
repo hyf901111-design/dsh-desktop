@@ -11,28 +11,107 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "fff5581a7acb7812f7dca996173e309623f41eae",
-        "tipCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
+        "baseCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
+        "tipCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
         "commits": [
           {
-            "commit": "3cc345e06d07c5b09422e6b954d00bc6c6d46900",
+            "commit": "897a36481c75eeadaa0948753a77ca55119246ba",
             "parents": [
-              "fff5581a7acb7812f7dca996173e309623f41eae"
+              "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb"
             ],
-            "subject": "修复：恢复语音录音浮层并在识别后创建组件"
+            "subject": "优化：按内容整理组件并修复补位缩放、网页跳转和可视导出"
           },
           {
-            "commit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
+            "commit": "1f54e1ae5c64b9b4fa904ccd10e16216cf2455b4",
             "parents": [
-              "3cc345e06d07c5b09422e6b954d00bc6c6d46900"
+              "897a36481c75eeadaa0948753a77ca55119246ba"
             ],
-            "subject": "修复：保留链接工具按钮尺寸并隔离录音胶囊样式"
+            "subject": "优化：还原新版生成卡片动效并保持数据刷新视图"
+          },
+          {
+            "commit": "0ef34414f7379bdbaa59082ca8607d5bdd61b636",
+            "parents": [
+              "1f54e1ae5c64b9b4fa904ccd10e16216cf2455b4"
+            ],
+            "subject": "修复：趋势图保留范围后按可见区间定位读数"
+          },
+          {
+            "commit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+            "parents": [
+              "0ef34414f7379bdbaa59082ca8607d5bdd61b636"
+            ],
+            "subject": "修复：图表锁定范围后同步日期刻度和网格"
           }
         ],
         "files": [
           {
+            "status": "C063",
+            "path": "build/figma-generation/LICENSE-react-bits.md",
+            "previousPath": "LICENSE"
+          },
+          {
             "status": "M",
             "path": "docs/plans/2026-09-28-openbb-grid-workbench.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-candlestick.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-price-volume.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-valuation-band.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-export.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-export.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
@@ -48,7 +127,75 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/research-native-web-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/component-data/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-export.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-native-web.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/component-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-refresh.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-status.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-export.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-controls.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-native-web.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-export.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-refresh.test.js"
           }
         ],
         "checks": [
@@ -58,23 +205,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交补丁构建通过",
-            "verifiedCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
-            "completedAt": "2026-09-28T11:47:30.975007+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-voice.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "86项直接相关客户端工厂、网格和原生语音权限所有权检查通过；录音不提前创建、final末尾追加执行、取消空结果错误、Fn与去重、胶囊和四工具按钮样式",
-            "verifiedCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
-            "completedAt": "2026-09-28T11:47:30.975007+00:00",
+            "summary": "精确提交前端补丁构建通过",
+            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+            "completedAt": "2026-09-29T02:12:37.053342+00:00",
             "timeoutMs": 300000
           },
           {
@@ -84,15 +217,61 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "精确功能提交类型检查通过",
-            "verifiedCommit": "bf53435ab0b43f4ed3248b17ce61ef7e0ce18dcb",
-            "completedAt": "2026-09-28T11:47:30.975007+00:00",
+            "summary": "精确提交类型检查通过",
+            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+            "completedAt": "2026-09-29T02:12:37.053342+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-native-web.test.ts",
+              "test/research-canvas-export.test.ts",
+              "test/workbench-export.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "93项直接相关检查通过：内容二阶段适配、拖动补位、并排调宽最小尺寸、滚动条、原生网页导航与当前内容SVG PNG JPG导出",
+            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+            "completedAt": "2026-09-29T02:12:37.053342+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "^(?!.*(?:keeps runtime previews small|keeps chart aliases|defaults cards, controls|places both theme tokens)).*$"
+            ],
+            "outcome": "passed",
+            "summary": "24项HTML桥接与交互检查通过，4项已知基线隔离",
+            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+            "completedAt": "2026-09-29T02:12:37.053342+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-data-status.test.js",
+              "test/workbench-refresh.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/research-market-artifact.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "110项生成与刷新相关检查通过：34px网格冻结、原控制生命周期、成功快照变化提示、严格iframe版本、两种到达顺序、模板编辑重置及宿主图表范围保留",
+            "verifiedCommit": "9a9e174251fb24b76f296123396a71a686aa6d40",
+            "completedAt": "2026-09-29T02:12:37.053342+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端；原生录音胶囊位置、开始不提前创建及取消行为在本次集成包核验。模拟事件去重/陈旧与final执行已验证，不能代替真实讲话识别或实体Fn验收。"
+          "summary": "功能worktree不构建共享客户端；内容适配、网页内导航、横向滚动和导出菜单将在已有集成分支本地包核验。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -122,59 +301,26 @@
           "连续正方形网格与真实吸附共用坐标，绘制/移动/缩放无尺寸文字",
           "真实桌面存储接受精确格位缓存键；新增空白组件、ID与格位跨窗口端口重启保持",
           "未选中组件首次点击更多保持打开；右侧会话自动滚动不关闭组件菜单，画板滚动、窗口缩放、外部点击与Escape仍关闭",
-          "语音开始和识别中不创建组件；保留工具栏上方44px原录音胶囊及32px圆形按钮，最终有效识别才追加并自动执行，取消和失败无草稿，实体Fn生命周期与原权限隔离保持"
+          "语音开始和识别中不创建组件；保留工具栏上方44px原录音胶囊及32px圆形按钮，最终有效识别才追加并自动执行，取消和失败无草稿，实体Fn生命周期与原权限隔离保持",
+          "整理使用各组件当前内容高度，宽度变化后重新测量且整笔一次撤销；图表正文不出现无意义大面积内部空白",
+          "拖动活动组件持续跟随指针、独立占位与邻居平滑让位；release复用预览结果",
+          "同排左侧组件拉宽先压缩右侧，正常组件至少280像素、智能草稿至少320像素，容量不足才换行",
+          "工作台宿主表格与HTML恢复细横向滚动条；未选中内部滚轮仍转交画板",
+          "链接使用授权隔离原生浏览；点击内链后继续显示当前网页，刷新当前页而非初始地址，丢弃跨导航陈旧捕获",
+          "更多菜单只保留导出分支并向右显示SVG PNG JPG；导出当前内容视窗和当前筛选滚动状态，SVG PNG无背景且不含组件顶栏底栏，JPG主题底色",
+          "21Z生成状态34px正方形网格和0.72速度，停止排队离屏及减少动态静止；固定详情文字和左下过程/停止文本按钮",
+          "取数立即旋转图标，300ms更新中；保留旧值时间；仅变化数值200ms淡入和1200ms提示，失败或无变化不闪",
+          "刷新保留筛选展开滚动，切换模板/编辑清旧视图；HTML和成功状态任意到达顺序使用上一成功基线",
+          "按用户确认，宿主趋势/K线/量价/估值保留原坐标域和历史范围，由范围按钮或趋势双击手动重算"
         ],
         "risks": [
-          "本轮功能与factory聚焦检查通过，原生界面需后继集成客户端核验",
-          "固定1000px规范文档保留，窄窗展示投影不等于更改文档",
-          "既存research-html-theme的4项基线失败与本轮修改无关；没有运行全功能测试"
+          "未运行全功能测试。",
+          "research-html-theme四项既存基线检查被隔离；导出增加内嵌helper字节，不宣称解决历史preview-size预算失败。",
+          "网页实际网络与第三方站点行为需原生客户端核验。",
+          "本轮只做本地集成预览，不公开发布或晋升main。",
+          "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-28T11:47:30.975007+00:00"
-      },
-      "merged": {
-        "mergeCommit": "47832ae3470511873e1cc084493c18f6a4edb91b",
-        "verificationCommit": "47832ae3470511873e1cc084493c18f6a4edb91b",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "47832ae3470511873e1cc084493c18f6a4edb91b",
-            "completedAt": "2026-09-28T11:51:22.325Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "47832ae3470511873e1cc084493c18f6a4edb91b",
-            "completedAt": "2026-09-28T11:51:22.325Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "47832ae3470511873e1cc084493c18f6a4edb91b",
-            "completedAt": "2026-09-28T11:51:22.325Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-28T11:51:22.325Z"
+        "generatedAt": "2026-09-29T02:12:37.053342+00:00"
       }
     }
   ],
