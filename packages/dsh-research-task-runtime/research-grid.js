@@ -3,7 +3,14 @@ export function createResearchGrid() {
   const columns=40, gap=10, inset=12
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n))
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
-  const minimum=(node,m)=>node?.kind==='generated-container'&&!node.containerSpec?{w:m.minDraftColumns,h:m.minDraftRows}:{w:m.minColumns,h:m.minRows}
+  const minimum=(node,m)=>{
+    if(node?.kind!=='generated-container'||node.containerSpec)return {w:m.minColumns,h:m.minRows}
+    // Both task types use the same generation body. The derived outer shell
+    // reserves 50px for its baseline; passive growth never rewrites saved cells.
+    const active=['queued','running','retrying'].includes(node.generationStatus)
+    const height=active?(node.creationMode==='selection'?450:400):node.creationMode==='selection'?330:220
+    return {w:m.minDraftColumns,h:Math.ceil((height+m.gap)/m.rowStep)}
+  }
   const bounded=n=>({...n,w:clamp(Math.round(n.w)||4,4,columns),h:clamp(Math.round(n.h)||3,3,300),x:clamp(Math.round(n.x)||0,0,columns-clamp(Math.round(n.w)||4,4,columns)),y:Math.max(0,Math.round(n.y)||0)})
   const overlap=(a,b)=>a.id!==b.id&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y
   const order=(a,b)=>a.y-b.y||a.x-b.x
@@ -36,6 +43,48 @@ export function createResearchGrid() {
     }
     const byId=new Map(settled.map(n=>[n.id,n]))
     return items.map(n=>byId.get(n.id))
+  }
+  function fillVacancies(items,nodes,width) {
+    let next=compact(items)
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),related=new Set()
+    for(const n of nodes)if(n.creationMode==='selection'){related.add(n.id);for(const id of n.sourceNodeIds||[])related.add(id)}
+    // Prefer a neighbouring column's last card. Only when that cannot help,
+    // pull the next cards into a vacant slot above a spanning row boundary.
+    // Width and content height remain intact; this never stretches a chart
+    // to the height of a report or changes the order within a source group.
+    for(let pass=0;pass<items.length*items.length;pass++){
+      let best
+      for(const target of [...next].sort(order)){
+        const inside=c=>c.x>=target.x&&c.x+c.w<=target.x+target.w
+        const previous=next.filter(c=>c.id!==target.id&&inside(c)&&c.y+c.h<=target.y)
+        const blockTop=Math.max(0,...previous.filter(c=>c.w>=target.w).map(c=>c.y+c.h))
+        const followingBoundary=Math.min(Infinity,...next.filter(c=>c.id!==target.id&&inside(c)&&c.w>=target.w&&c.y>=target.y+target.h).map(c=>c.y))
+        const edges=new Set([target.x,target.x+target.w,...previous.flatMap(c=>[c.x,c.x+c.w])])
+        for(const card of next){
+          if(card.w>=target.w||!inside(card)||related.has(card.id)||['queued','running','retrying'].includes(byId.get(card.id)?.generationStatus))continue
+          const earlier=card.y+card.h<=target.y&&card.y>=blockTop,later=card.y>=target.y+target.h&&card.y<followingBoundary
+          if(!earlier&&!later)continue
+          const intersects=c=>c.x<card.x+card.w&&c.x+c.w>card.x
+          // Do not take a middle card out of an existing column sequence.
+          if(earlier&&previous.some(c=>c.id!==card.id&&intersects(c)&&c.y>=card.y+card.h))continue
+          if(later&&next.some(c=>c.id!==card.id&&c.y>=target.y+target.h&&c.y<card.y&&intersects(c)))continue
+          for(const x of edges){
+            if(x<target.x||x+card.w>target.x+target.w)continue
+            const bottom=Math.max(blockTop,...previous.filter(c=>c.id!==card.id&&c.x<x+card.w&&c.x+c.w>x).map(c=>c.y+c.h)),missing=target.y-bottom
+            if(missing<card.h||missing*m.step<=Math.min(160,card.h*m.step*.25))continue
+            const placed={...card,x,y:bottom}
+            if(next.some(c=>overlap(placed,c)))continue
+            const packed=compact(next.map(c=>c.id===card.id?placed:c)),boundary=packed.find(c=>c.id===target.id)
+            if(earlier&&boundary.y>=target.y)continue
+            const rank=[later?1:0,later?card.y-target.y:boundary.y-target.y,later?card.x:Math.abs(x-card.x),Math.abs(x-card.x),card.y]
+            if(!best||rank.some((v,i)=>v!==best.rank[i]&&rank.slice(0,i).every((p,j)=>p===best.rank[j])&&v<best.rank[i]))best={rank,packed}
+          }
+        }
+      }
+      if(!best)break
+      next=best.packed
+    }
+    return next
   }
   function place(items,target,id=target.id) {
     const active=bounded({...target,id}), rest=items.filter(n=>n.id!==id).map(bounded)
@@ -107,7 +156,7 @@ export function createResearchGrid() {
   // Read the current canvas, not insertion order. Repeated horizontal edges
   // identify its columns even when heights change. Snap isolated offsets into
   // those columns, then fill vertical slots without stretching card content.
-  function arrange(nodes,items,width,visibleHeight=0) {
+  function arrangeOnce(nodes,items,width) {
     const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
     if(!ordered.length)return items.map(bounded)
     const min=c=>minimum(byId.get(c.id),m)
@@ -145,7 +194,18 @@ export function createResearchGrid() {
       const n=byId.get(c.id),p=n.preferred||n
       return {...c,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
     })
-    const result=new Map(closeSmallGaps(compact(planned),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
+    const result=new Map(closeSmallGaps(fillVacancies(planned,nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
+  }
+  function arrange(nodes,items,width,visibleHeight=0) {
+    let next=items.map(bounded)
+    // Filling a vacancy may introduce a new repeated column edge. Settle that
+    // edge in the same transaction, including content measurement refits.
+    for(let pass=0;pass<items.length*4+4;pass++){
+      const fitted=arrangeOnce(nodes,next,width)
+      if(fitted.every((c,i)=>['x','y','w','h'].every(k=>c[k]===next[i][k])))return fitted
+      next=fitted
+    }
+    return next
   }
   function append(items,id,w=20,h=7){return bounded({id,x:0,y:Math.max(0,...items.map(n=>n.y+n.h)),w,h})}
   function draw(a,b,m){
@@ -168,5 +228,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,closeSmallGaps,place,resize,resizeSelection,move,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,fillVacancies,closeSmallGaps,place,resize,resizeSelection,move,arrange,append,draw,migrate,project}
 }

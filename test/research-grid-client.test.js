@@ -46,6 +46,34 @@ it('拖动网格事务可撤销并恢复所有让位组件，重新打开保持�
  const restored=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');restored.setCanvasSize({width:1000,height:700});restored.setWorkbenchWidth(1000)
  expect(restored.getWorkbenchCells()).toEqual(f.workspace.getWorkbenchCells())
 })
+it('选中正文后画布撤销重做有效，输入框保留文字撤销',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a'),text('b',740)]))
+ const before=f.workspace.getWorkbenchCells();await act(async()=>f.workspace.applyWorkbenchCells(before.map(c=>({...c,x:c.id==='a'?20:0})),true))
+ const moved=f.workspace.getWorkbenchCells(),card=f.host.querySelector('[data-research-node-id="a"]')
+ await f.event('pointerdown',card,{button:0,pointerId:21});expect(f.document.activeElement).toBe(f.canvas)
+ const body=f.document.createElement('div');body.setAttribute('data-research-preview-interactive','');card.append(body);body.tabIndex=0;body.focus()
+ const undo=await f.event('keydown',body,{metaKey:true,key:'z',code:'KeyZ'});expect(undo.defaultPrevented).toBe(true);expect(f.workspace.getWorkbenchCells()).toEqual(before)
+ await f.event('keydown',body,{metaKey:true,shiftKey:true,key:'Z',code:'KeyZ'});expect(f.workspace.getWorkbenchCells()).toEqual(moved)
+ const input=f.document.createElement('textarea');body.append(input);input.focus()
+ const editing=await f.event('keydown',input,{metaKey:true,key:'z',code:'KeyZ'});expect(editing.defaultPrevented).toBe(false);expect(f.workspace.getWorkbenchCells()).toEqual(moved)
+})
+it('嵌入正文撤销只接受当前选中组件的受限桥接消息',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a'),text('b',740)]))
+ const before=f.workspace.getWorkbenchCells();await act(async()=>f.workspace.applyWorkbenchCells(before.map(c=>({...c,x:c.id==='a'?20:0})),true))
+ const moved=f.workspace.getWorkbenchCells(),card=f.host.querySelector('[data-research-node-id="a"]'),frame=f.document.createElement('iframe');frame.setAttribute('data-research-html-artifact','');card.append(frame)
+ await act(async()=>f.workspace.updateSelection(['a'],'replace'))
+ const data={type:'sherlock-workbench-history',action:'undo'}
+ await f.event('message',f.win,{source:{},data});await f.event('message',f.win,{source:frame.contentWindow,data:{...data,extra:1}});expect(f.workspace.getWorkbenchCells()).toEqual(moved)
+ await f.event('message',f.win,{source:frame.contentWindow,data});expect(f.workspace.getWorkbenchCells()).toEqual(before)
+ await act(async()=>f.workspace.updateSelection(['a'],'replace'));await f.event('message',f.win,{source:frame.contentWindow,data:{...data,action:'redo'}});expect(f.workspace.getWorkbenchCells()).toEqual(moved)
+ await act(async()=>f.workspace.updateSelection([],'replace'));await f.event('message',f.win,{source:frame.contentWindow,data});expect(f.workspace.getWorkbenchCells()).toEqual(moved)
+})
+it('整理提示固定在可见画布底部工具栏上方，滚动保持位置',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ await f.event('contextmenu',f.canvas,{clientX:800,clientY:500,button:2});await f.event('click',f.document.querySelector('[data-research-context-arrange]'))
+ const notice=f.document.querySelector('[data-research-arrange-feedback]'),bottom=Math.max(86,f.win.innerHeight-700+86)+'px';expect(notice).not.toBeNull();expect(notice.hasAttribute('data-ework-toolbar')).toBe(false);expect(f.canvas.contains(notice)).toBe(false);expect(notice.style.position).toBe('fixed');expect(notice.style.bottom).toBe(bottom);expect(notice.style.left).toBe('500px')
+ f.canvas.scrollTop=300;await f.event('scroll',f.canvas);expect(notice.style.bottom).toBe(bottom);expect(notice.style.left).toBe('500px')
+})
 it('链接和语音草稿在末尾追加，保留不等大的已有组件',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a'),{...text('b',740),height:500}]);f.workspace.setWorkbenchWidth(1000)
  const bottom=Math.max(...f.workspace.getWorkbenchCells().map(n=>n.y+n.h))
@@ -738,6 +766,19 @@ it('整理的二次测高保留智能草稿的规范最小尺寸',async()=>{
  expect(f.canvas.__eworkContentFit).toBeUndefined()
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
+it('整理自然高度回报后仍填通栏前的大空位，并把整次补位保存在一步撤销中',async()=>{
+ const f=await fixture(true),w=f.workspace,grid=(await import('../packages/dsh-research-task-runtime/research-grid.js')).createResearchGrid(),m=grid.metrics(1000)
+ const before=[{id:'gold',x:0,y:0,w:20,h:8},{id:'chart',x:20,y:0,w:20,h:15},{id:'derived',x:0,y:8,w:20,h:14},{id:'pharma',x:0,y:22,w:20,h:8},{id:'table',x:0,y:30,w:40,h:9}]
+ await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setArtifacts(before.map(c=>({...text(c.id),kind:'generated-container',containerPrompt:'内容',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:c.id,html:'<p>'+c.id+'</p>'},...(c.id==='derived'?{creationMode:'selection',sourceNodeIds:['gold']}:{})})));w.applyWorkbenchCells(before,true)})
+ const frames=new Map(before.map(c=>[c.id,f.host.querySelector('[data-research-node-id="'+c.id+'"] iframe')]))
+ for(const c of before)await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frames.get(c.id).contentWindow,data:{type:'sherlock-workbench-content-size',width:Math.round(c.w*m.step-m.gap-2),height:Math.floor(c.h*m.step-m.gap-58)}})))
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2});await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ await act(async()=>new Promise(r=>setTimeout(r,700)))
+ const packed=w.getWorkbenchCells(),at=id=>packed.find(c=>c.id===id)
+ expect(at('pharma')).toMatchObject({x:20,y:15,h:8});expect(at('table')).toMatchObject({y:23,h:9})
+ expect(at('chart').h).toBe(15);expect(at('derived').y+at('derived').h).toBe(23)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+})
 it('导出向右展开仅三个格式，SVG按当前内容区比例并拒收非所属窗口回复',async()=>{
  const save=vi.fn(async()=>({status:'saved'})),f=await fixture(true,{researchCanvasExport:{save}})
  await act(async()=>f.workspace.setArtifacts([{...text('export'),kind:'generated-container',containerPrompt:'图表',refreshMinutes:0,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'图表',html:'<svg></svg>'}}]))
@@ -1167,10 +1208,17 @@ it('调宽预览压缩同排组件，松手使用预览并一次撤销恢复双�
  await act(async()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
 })
 
-it('宿主组件滚动条覆盖后注入的旧隐藏规则并保留横向溢出',async()=>{
+it('宿主组件滚动条仅选中时显示，覆盖旧规则且不改变可滚动尺寸',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const style=f.document.createElement('style');style.textContent='body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerMarkdown,.rScV5Q_containerTableScroll,.rScV5Q_mindMap,.odyssey-generation-records,textarea){scrollbar-width:none!important}';f.document.head.append(style)
  const scroller=f.host.querySelector('[data-research-preview-body]')
  expect(f.win.getComputedStyle(scroller).getPropertyValue('scrollbar-width')).toBe('thin')
  expect(f.win.getComputedStyle(scroller).overflow).toBe('auto')
+ const card=scroller.closest('[data-research-node-id]'),thumb=()=>f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-thumb')
+ expect(thumb()).toBe('transparent')
+ await act(async()=>f.workspace.updateSelection(['a'],'replace'))
+ expect(thumb()).toBe('#74778055')
+ await act(async()=>f.workspace.updateSelection([],'replace'))
+ expect(thumb()).toBe('transparent')
+ expect(f.win.getComputedStyle(scroller).getPropertyValue('scrollbar-width')).toBe('thin')
 })

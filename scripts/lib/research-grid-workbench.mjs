@@ -108,10 +108,14 @@ export function patchResearchGridWorkbench(source){
     const workbenchSelectedDrafts=react.useRef(new Map());
     const workbenchSelectedState=node=>{
       let state=workbenchSelectedDrafts.current.get(node.id);
+      if(node.generationSources?.length&&node.generationSources.every(s=>s.text||s.path)){
+        state={nodeId:node.id,ids:Object.freeze([...node.sourceNodeIds]),files:[],artifacts:[],selectionSources:structuredClone(node.generationSources)};
+        workbenchSelectedDrafts.current.set(node.id,state);
+        return state;
+      }
       if(!state){
         const current=workspace.getSnapshot(),ids=Object.freeze([...node.sourceNodeIds]);
         state={nodeId:node.id,ids,files:current.files.filter(n=>ids.includes(n.id)).map(n=>Object.freeze(structuredClone(n))),artifacts:current.artifacts.filter(n=>ids.includes(n.id)).map(n=>Object.freeze(structuredClone(n)))};
-        if(node.generationSources?.every(s=>s.text||s.path))state={...state,files:[],artifacts:[],selectionSources:node.generationSources};
         workbenchSelectedDrafts.current.set(node.id,state);
       }
       return state;
@@ -150,6 +154,12 @@ export function patchResearchGridWorkbench(source){
   change('(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\tclassName: "rScV5Q_globalToolbar",','(0, react_jsx_runtime.jsxs)(WorkbenchToolbar, {rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,\n\t\t\t\t\tclassName: "rScV5Q_globalToolbar",')
   change("const button = root.querySelector('[data-research-global-'+attribute+']')","const button = root.ownerDocument.querySelector('[data-ework-toolbar-owner=\"'+CSS.escape(sessionId)+'\"] [data-research-global-'+attribute+']')")
   change('const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement);','const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement) || document.activeElement?.closest?.("[data-ework-toolbar-owner]")?.getAttribute("data-ework-toolbar-owner")===sessionId;')
+  change('const historyShortcut = event.metaKey && !event.altKey && (event.code === "KeyZ" || event.code === "KeyY");','const historyShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && !event.isComposing && !event.defaultPrevented && (event.code === "KeyZ" || event.code === "KeyY");')
+  change('historyShortcut && canvasOwnsFocus() && !isInteractiveTarget(event.target)','historyShortcut && canvasOwnsFocus() && !(root.hasAttribute("data-ework-grid") ? event.target?.closest?.("input,textarea,select,[contenteditable]:not([contenteditable=false]),[role=textbox]") : isInteractiveTarget(event.target))')
+  change('clipboardFeedback === null ? null : (0, react_jsx_runtime.jsx)("div", {','clipboardFeedback === null ? null : (0, react_jsx_runtime.jsx)(WorkbenchToolbar, {rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,bottomOffset:86,')
+  change('function ResearchCanvasActionReceipt({workspace}) {','function ResearchCanvasActionReceipt({workspace,rootRef,sessionId,availableWidth}) {')
+  change("return react_jsx_runtime.jsxs('div',{'data-canvas-action-receipt':'',","return react_jsx_runtime.jsxs(WorkbenchToolbar,{rootRef,sessionId,availableWidth,bottomOffset:86,'data-workbench-notice':'','data-canvas-action-receipt':'',")
+  change('(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace})','(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace,rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth})')
   change('children: [(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),','children: [(0,react_jsx_runtime.jsx)(WorkbenchChromeLayer,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly,onAsk:workbenchAsk,onDerived:workbenchDerived,onLegacy:workbenchLegacy}),(0,react_jsx_runtime.jsx)(ComponentDataSettings,{sessionId,canvasRoot:rootRef}),')
   // Keep the original recording capsule and lifecycle inside the floating toolbar.
   // Only a valid final recognition reaches onCommand and appends a grid component.

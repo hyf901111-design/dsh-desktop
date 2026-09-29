@@ -111,3 +111,28 @@ it('窄窗就地插入只保存新卡与必要让位，已有卡宽高不会被�
   expect(restored.getWorkbenchDocument().artifacts).toEqual(canonical)
  }finally{f.dispose()}
 })
+
+it('生成正文获得独立高度，取消真实任务后原位恢复需求且拒绝迟到结果',()=>{
+ const f=fixture(),w=f.workspace,draft=w.beginSelectedCreateDraft(['base']),before=w.getWorkbenchCells(),snapshot=w.getSnapshot()
+ try{
+  const placement={x:draft.x,y:draft.y,width:draft.width,height:draft.height,sizeMode:'manual'}
+  const target=w.beginGeneration('create',['base'],placement,'按财年比较收入。',snapshot,draft.id)
+  w.attachGenerationTask(target.id,{taskId:'derived-task',canvasNodeId:target.id,state:'running',lastSeq:0})
+  const m=createResearchGrid().metrics(1000),visible=w.getWorkbenchVisibleCells().find(c=>c.id===target.id)
+  expect(visible.h*m.rowStep-m.gap).toBeGreaterThanOrEqual(450)
+  expect(w.getWorkbenchCells()).toEqual(before)
+  const base=w.getSnapshot().artifacts.find(n=>n.id==='base')
+  expect(w.applyGenerationInspection(target.id,{taskId:'derived-task',canvasNodeId:target.id,state:'cancelled',lastSeq:1,events:[],completedAt:Date.now()})).toBe(true)
+  const stopped=w.getSnapshot().artifacts.find(n=>n.id===target.id)
+  expect(stopped).toMatchObject({generationStatus:'draft',containerPrompt:'按财年比较收入。',sourceNodeIds:['base']})
+  expect(stopped.generationSources).toEqual(target.generationSources)
+  expect(stopped.generationTaskId).toBeUndefined()
+  expect(w.getSnapshot().artifacts.find(n=>n.id==='base')).toEqual(base)
+  expect(w.getWorkbenchCells()).toEqual(before)
+  expect(w.getWorkbenchVisibleCells().find(c=>c.id===target.id).h).toBe(before.find(c=>c.id===target.id).h)
+  expect(w.applyGenerationInspection(target.id,{taskId:'derived-task',canvasNodeId:target.id,state:'completed',lastSeq:2,events:[],finalOutput:'{}'})).toBe(false)
+  w.removeNodes(['base'])
+  const restarted=w.beginGeneration('create',['base'],placement,'继续按财年比较收入。',{selectionSources:stopped.generationSources},stopped.id)
+  expect(restarted).toMatchObject({id:stopped.id,generationStatus:'queued',generationSources:stopped.generationSources})
+ }finally{f.dispose()}
+})

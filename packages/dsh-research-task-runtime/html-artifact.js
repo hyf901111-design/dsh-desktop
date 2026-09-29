@@ -261,7 +261,7 @@ body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile=
 // The first important layer keeps authored page scrollbar rules from diverging.
 function researchComponentScrollbarCss(scope, darkScope, workbench = false) {
   const scrollports = `:is(${scope},${scope} *)`
-  if(workbench)return `@layer sherlock-component-scrollbars{${scope}{--sherlock-scroll-thumb:#74778022}${scope}:is(:hover,:focus-within){--sherlock-scroll-thumb:#74778055}${darkScope}{--sherlock-scroll-thumb:#aaaebb22}${darkScope}:is(:hover,:focus-within){--sherlock-scroll-thumb:#aaaebb55}${scrollports}{scrollbar-width:thin!important;scrollbar-color:var(--sherlock-scroll-thumb) transparent!important}${scrollports}::-webkit-scrollbar{display:block!important;width:5px!important;height:5px!important}${scrollports}::-webkit-scrollbar-thumb{background:var(--sherlock-scroll-thumb)!important;border-radius:4px!important}${scrollports}::-webkit-scrollbar-track{background:transparent!important}}`
+  if(workbench)return `@layer sherlock-component-scrollbars{${scope}{--sherlock-scroll-thumb:transparent}${scope}[data-workbench-selected=true]{--sherlock-scroll-thumb:#74778055}${darkScope}[data-workbench-selected=true]{--sherlock-scroll-thumb:#aaaebb55}${scrollports}{scrollbar-width:thin!important;scrollbar-color:var(--sherlock-scroll-thumb) transparent!important}${scrollports}::-webkit-scrollbar{display:block!important;width:5px!important;height:5px!important}${scrollports}::-webkit-scrollbar-thumb{background:var(--sherlock-scroll-thumb)!important;border-radius:4px!important}${scrollports}::-webkit-scrollbar-track{background:transparent!important}}`
   return `@layer sherlock-component-scrollbars{${scrollports}{scrollbar-width:none!important}${scrollports}::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}}`
 }
 
@@ -413,7 +413,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   }
   const receive = (event) => {
     const data = event.data
-    if (event.source === parent && data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') { workbenchSelected = data.selected; return }
+    if (event.source === parent && data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') { workbenchSelected = data.selected; document.documentElement.dataset.workbenchSelected = String(data.selected); return }
     if (event.source !== parent || !data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length !== 2 ||
         !Object.hasOwn(data, 'type') || !Object.hasOwn(data, 'colorScheme') || data.type !== 'sherlock-theme' ||
         data.colorScheme !== 'light' && data.colorScheme !== 'dark') return
@@ -621,6 +621,9 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     if (button && (button.type === 'submit' || button.type === 'image')) submitLocally(event, button.form, button)
   })
   document.addEventListener('keydown', event => {
+    if(workbenchSelected===true&&!event.defaultPrevented&&!event.isComposing&&!event.altKey&&(event.metaKey||event.ctrlKey)&&['KeyZ','KeyY'].includes(event.code)&&!event.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')){
+      event.preventDefault();event.stopPropagation();parent.postMessage({type:'sherlock-workbench-history',action:event.shiftKey||event.code==='KeyY'?'redo':'undo'},'*');return
+    }
     const input = event.target
     if (event.key !== 'Enter' || event.isComposing || input?.tagName !== 'INPUT' || !['text','search','email','url','tel','number','password'].includes(input.type)) return
     const form = input.form
@@ -745,6 +748,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
     if(!standalone&&event.source===parent&&exportData?.type==='sherlock-workbench-export'&&Object.keys(exportData).length===2&&typeof exportData.id==='string'&&/^export-[a-z0-9-]{1,80}$/.test(exportData.id)){frame.contentWindow?.postMessage(exportData,'*');return}
     if(!standalone&&event.source===frame.contentWindow&&exportData?.type==='sherlock-workbench-export-result'&&Object.keys(exportData).length===3&&typeof exportData.id==='string'&&/^export-[a-z0-9-]{1,80}$/.test(exportData.id)&&typeof exportData.svg==='string'&&exportData.svg.length<=8*1024*1024){parent.postMessage(exportData,'*');return}
     const data = event.data
+    if(!standalone&&event.source===frame.contentWindow&&data?.type==='sherlock-workbench-history'&&!Array.isArray(data)&&Object.keys(data).length===2&&['undo','redo'].includes(data.action)){parent.postMessage(data,'*');return}
     if(!standalone && event.source===parent && data?.type==='sherlock-workbench-restore' && Object.keys(data).length===4 && typeof data.revision==='string' && data.revision.length<=80 && typeof data.animate==='boolean' && isWorkbenchViewState(data.state)){frame.contentWindow?.postMessage(data,'*');return}
     if(!standalone && event.source===frame.contentWindow && ['sherlock-workbench-ready','sherlock-workbench-view'].includes(data?.type) && Object.keys(data).length===3 && typeof data.revision==='string' && data.revision.length<=80 && isWorkbenchViewState(data.state)){parent.postMessage(data,'*');return}
     if (!standalone && event.source === parent && data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') { workbenchSelection = data; frame.contentWindow?.postMessage(data, '*'); return }

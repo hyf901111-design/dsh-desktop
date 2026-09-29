@@ -128,6 +128,16 @@ describe('offline HTML component theme runtime', () => {
     outer.send(zoom, outer.frame.contentWindow);
     expect(outer.parentMessages[0].data).toEqual(zoom);
   });
+  it('工作台撤销桥接仅转发直属正文受限数据', () => {
+    const outer=runtime(buildResearchHtmlPreview('<main>内容</main>','工作台','dark',{workbench:true}));
+    const data={type:'sherlock-workbench-history',action:'undo'};
+    outer.send(data,{});outer.send({...data,action:'delete'},outer.frame.contentWindow);outer.send({...data,extra:true},outer.frame.contentWindow);
+    expect(outer.parentMessages).toHaveLength(0);outer.send(data,outer.frame.contentWindow);expect(outer.parentMessages[0].data).toEqual(data);
+    const inner=runtime(outer.childHtml());inner.send({type:'sherlock-workbench-selection',selected:true});
+    const text=inner.window.document.querySelector('main'),event=new inner.window.KeyboardEvent('keydown',{key:'z',code:'KeyZ',metaKey:true,bubbles:true,cancelable:true});text.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);expect(inner.parentMessages.at(-1).data).toEqual(data);
+    const input=inner.window.document.createElement('textarea');text.append(input);const editing=new inner.window.KeyboardEvent('keydown',{key:'z',code:'KeyZ',metaKey:true,bubbles:true,cancelable:true});input.dispatchEvent(editing);expect(editing.defaultPrevented).toBe(false);
+  });
 
   it('relays ordinary wheel only from the owned inner frame when content cannot scroll', () => {
     const outer = runtime(buildResearchHtmlPreview('<main>内容</main>'));
@@ -451,6 +461,20 @@ it('工作台表格保留横向滚动条，普通独立预览沿用自身样式'
  const html='<div style="overflow:auto"><table style="min-width:900px"><tr><td>完整列</td></tr></table></div>'
  const result=buildResearchHtmlPreview(html,'表格','dark',{workbench:true})
  expect(result).toContain('scrollbar-width:thin!important');expect(result).toContain('height:5px!important');expect(result).not.toContain('scrollbar-width:none!important')
+})
+
+it('沙箱工作台滚动条跟随所属组件选择，拒绝其他窗口和多余字段',()=>{
+ const outer=runtime(buildResearchHtmlPreview('<div style="overflow:auto">内容</div>','滚动','dark',{workbench:true})),inner=runtime(outer.childHtml())
+ const selected={type:'sherlock-workbench-selection',selected:true}
+ inner.send(selected,{})
+ inner.send({...selected,extra:true})
+ expect(inner.window.document.documentElement.dataset.workbenchSelected).toBeUndefined()
+ inner.send(selected)
+ expect(inner.window.document.documentElement.dataset.workbenchSelected).toBe('true')
+ inner.send({...selected,selected:false})
+ expect(inner.window.document.documentElement.dataset.workbenchSelected).toBe('false')
+ expect(outer.childHtml()).toContain('html{--sherlock-scroll-thumb:transparent}')
+ expect(outer.childHtml()).toContain('html[data-sherlock-theme="dark"][data-workbench-selected=true]')
 })
 
 it('工作台整理不把折叠明细的表格布局高度算入内容',()=>{

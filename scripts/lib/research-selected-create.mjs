@@ -40,7 +40,7 @@ export function WorkbenchSelectedCreateContext({node,workspace,onEdit,readOnly})
   }
   return jsxs('div',{className:'ew-selected-create-context','data-workbench-selected-create-context':node.id,'data-research-preview-interactive':'',children:[
     jsxs('div',{className:'ew-selected-create-source',children:[jsx('span',{title:labels.join('、'),children:'基于：'+(labels.join('、')||'所选组件')}),jsx('button',{type:'button','data-workbench-view-source':node.id,onClick:viewSource,children:'查看基准'})]}),
-    node.generationStatus!=='draft'&&jsxs('div',{className:'ew-selected-create-requirement',children:[jsx('span',{children:'需求：'+node.containerPrompt}),!active&&!readOnly&&jsx('button',{type:'button','data-workbench-edit-selected-create':node.id,onClick:()=>onEdit?.(node),children:'编辑需求'})]})
+    node.generationStatus!=='draft'&&!active&&jsxs('div',{className:'ew-selected-create-requirement',children:[jsx('span',{children:'需求：'+node.containerPrompt}),!readOnly&&jsx('button',{type:'button','data-workbench-edit-selected-create':node.id,onClick:()=>onEdit?.(node),children:'编辑需求'})]})
   ]})
 }
 
@@ -68,6 +68,14 @@ export function patchWorkbenchSelectedCreate(source,change) {
   // The pre-generation state is a real selection-created node. Audit sources
   // preserve labels until authorized web text is captured on explicit submit.
   change('generationStatus === "draft" || sourceNodeIds.length === 0','generationStatus === "draft" && !selectedCreate || sourceNodeIds.length === 0')
+  const inspectionAnchor='artifacts2[index] = { ...next, ...researchResolvedGenerationSources(current, inspection) };'
+  change(inspectionAnchor,`if(current.creationMode==='selection'&&state==='cancelled'){
+      // Only a matching terminal task event restores input. Cancellation
+      // acknowledgement alone must keep the ordinary stopping presentation.
+      const {generationTaskId:_task,generationChildSessionId:_child,generationError:_error,generationEvents:_events,generationPartialText:_partial,generationStartedAt:_start,generationCompletedAt:_end,...draft}=next;
+      next={...draft,generationStatus:'draft',generationLastSeq:0,excerpt:'生成已停止，可修改需求后重新生成。'};
+    }
+    `+inspectionAnchor)
   const begin='beginGeneration(kind, sourceNodeIds, placement, requestedDetail = "standard", frozenSnapshot = snapshot) {'
   change(begin,`beginSelectedCreateDraft(sourceNodeIds) {
     if(!collaborationCanWrite())return null;
@@ -104,14 +112,18 @@ export function patchWorkbenchSelectedCreate(source,change) {
     commitUpdate({artifacts:snapshot.artifacts.map(n=>n.id===nodeId?next:n),selection:{selectedNodeIds:[nodeId],orderedFileIds:[]}},true);return next;
   },
   beginGeneration(kind, sourceNodeIds, placement, requestedDetail = "standard", frozenSnapshot = snapshot, existingTargetId = null) {`)
-  change('const generationSources = researchGenerationSources(frozenSnapshot, selectedNodeIds, kind === \'create\');',`const generationSources = frozenSnapshot.selectionSources ? canonicalResearchGenerationSources(frozenSnapshot.selectionSources) : researchGenerationSources(frozenSnapshot, selectedNodeIds, kind === 'create');
+  change('const generationSources = researchGenerationSources(frozenSnapshot, selectedNodeIds, kind === \'create\');',`const generationSources = storedSources ?? (frozenSnapshot.selectionSources ? canonicalResearchGenerationSources(frozenSnapshot.selectionSources) : researchGenerationSources(frozenSnapshot, selectedNodeIds, kind === 'create'));
     if(generationSources && (generationSources.length!==selectedNodeIds.length||generationSources.some((source,i)=>source.id!==selectedNodeIds[i])))return null;`)
   const start=source.indexOf('beginGeneration(kind, sourceNodeIds, placement,'),finish=source.indexOf('attachGenerationTask(nodeId, receipt)',start)
   let block=source.slice(start,finish)
   const replace=(from,to)=>{if(block.split(from).length!==2)throw Error('Selected-create generation anchor changed: '+from);block=block.replace(from,to)}
-  replace('const id = createResearchCanvasArtifactId();',`const existing=existingTargetId===null?null:snapshot.artifacts.find(n=>n.id===existingTargetId&&kind==='create'&&n.creationMode==='selection'&&n.generationStatus==='draft');
-    if(existingTargetId!==null&&!existing)return null;
-    const id = existing?.id ?? createResearchCanvasArtifactId();`)
+  replace('const liveIds = new Set([...snapshot.files, ...snapshot.artifacts].map((node) => node.id));',`const existing=existingTargetId===null?null:snapshot.artifacts.find(n=>n.id===existingTargetId&&kind==='create'&&n.creationMode==='selection'&&n.generationStatus==='draft');
+    if(existingTargetId!==null&&(!existing||existing.sourceNodeIds.length!==selectedNodeIds.length||existing.sourceNodeIds.some((id,i)=>id!==selectedNodeIds[i])))return null;
+    const stored=existing?canonicalResearchGenerationSources(existing.generationSources):null;
+    const storedSources=stored?.length===selectedNodeIds.length&&stored.every((s,i)=>s.id===selectedNodeIds[i]&&(s.text||s.path))?stored:null;
+    const liveIds = new Set([...snapshot.files, ...snapshot.artifacts].map((node) => node.id));`)
+  replace('selectedNodeIds.some((id) => !liveIds.has(id))','(!storedSources && selectedNodeIds.some((id) => !liveIds.has(id)))')
+  replace('const id = createResearchCanvasArtifactId();','const id = existing?.id ?? createResearchCanvasArtifactId();')
   replace('boundedResearchCanvasArtifactNodes([...snapshot.artifacts, artifact])','boundedResearchCanvasArtifactNodes(existing?snapshot.artifacts.map(n=>n.id===id?artifact:n):[...snapshot.artifacts, artifact])')
   change(source.slice(start,finish),block)
   change('if (createSelection === null) return;\n\t\t\t\tcreateInputRef.current?.focus',`if (createSelection === null) return;
