@@ -11,29 +11,33 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "e3b77519f39d5347093ec463582a52b09dbd19b5",
-        "tipCommit": "a080ba79b481aa94497f6444353cf86197511767",
+        "baseCommit": "a080ba79b481aa94497f6444353cf86197511767",
+        "tipCommit": "29d9b7a3d0517eae719417f0ef07304cb2dc4967",
         "commits": [
           {
-            "commit": "a080ba79b481aa94497f6444353cf86197511767",
+            "commit": "29d9b7a3d0517eae719417f0ef07304cb2dc4967",
             "parents": [
-              "e3b77519f39d5347093ec463582a52b09dbd19b5"
+              "a080ba79b481aa94497f6444353cf86197511767"
             ],
-            "subject": "同步内置组件技能的图表数据契约与十二类模板"
+            "subject": "修正百分比图原值单位校验并适配矮卡横向图"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "docs/design/component-template-acceptance-20260930.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
           },
           {
             "status": "M",
@@ -41,11 +45,7 @@
           },
           {
             "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-bundled-skill.test.js"
+            "path": "test/cartesian-chart-template.test.js"
           }
         ],
         "checks": [
@@ -54,20 +54,19 @@
               "npx",
               "vitest",
               "run",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
+              "test/cartesian-chart-template.test.js",
               "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "25项内置技能加载、版本投影及执行策略聚焦检查通过。",
-            "verifiedCommit": "a080ba79b481aa94497f6444353cf86197511767",
-            "completedAt": "2026-09-29T18:52:36.805261+00:00",
+            "summary": "34项原始单位、模拟数据、坐标图与执行策略检查通过。",
+            "verifiedCommit": "29d9b7a3d0517eae719417f0ef07304cb2dc4967",
+            "completedAt": "2026-09-29T19:10:53.741227+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chrome生产沙盒656/320×300显示坐标读数，三主题中性控件，调宽/主题不重播，控制台无错误。原生新包生成路径需再次复验。"
+          "summary": "Chrome生产沙盒中横向图656/320×300完整坐标与读数可见，170px绘图区保留行距；主题与宽度切换动画计数维持12。原生生成复验等待集成包。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -187,51 +186,6 @@
           "Figma全量44组件和30图表仍未全部覆盖；本轮注册表40项包括12类坐标图，完整原生成功率目标尚未验收通过。"
         ],
         "generatedAt": "2026-09-29T18:52:36.805261+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
-        "verificationCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
-            "completedAt": "2026-09-29T18:54:46.242Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
-            "completedAt": "2026-09-29T18:54:46.242Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c1e4ada868d3bd8ebfc207c32236db76d25530a9",
-            "completedAt": "2026-09-29T18:54:46.242Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T18:54:46.242Z"
       }
     }
   ],
