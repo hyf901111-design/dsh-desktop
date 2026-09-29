@@ -77,7 +77,9 @@ export function createComponentRefreshFeedback(card){
    readyRevision=data.revision;const saved=view;view=data.state
    if(saved)view={...retainCharts(view,saved),controls:saved.controls,scroll:saved.scroll}
    if(!baseline)baseline=data.state.values
-   send()
+   // A fresh document already has these defaults. Sending them back can arrive
+   // after journal replay and overwrite its restored selection.
+   if(saved||animate)send()
   }else{
    view=data.state
    if(animate&&revision!==awaitRevision){baseline=data.state.values;animate=false;awaitRevision=null}
