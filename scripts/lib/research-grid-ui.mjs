@@ -323,7 +323,7 @@ export function WorkbenchToolbar({rootRef,sessionId,availableWidth,bottomOffset=
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();window.removeEventListener('resize',measure)}
   },[rootRef,availableWidth,bottomOffset])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':'','data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children}),document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))

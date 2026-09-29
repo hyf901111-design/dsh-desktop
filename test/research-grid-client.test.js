@@ -71,7 +71,7 @@ it('嵌入正文撤销只接受当前选中组件的受限桥接消息',async()=
 it('整理提示固定在可见画布底部工具栏上方，滚动保持位置',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  await f.event('contextmenu',f.canvas,{clientX:800,clientY:500,button:2});await f.event('click',f.document.querySelector('[data-research-context-arrange]'))
- const notice=f.document.querySelector('[data-research-arrange-feedback]'),bottom=Math.max(86,f.win.innerHeight-700+86)+'px';expect(notice).not.toBeNull();expect(f.canvas.contains(notice)).toBe(false);expect(notice.style.position).toBe('fixed');expect(notice.style.bottom).toBe(bottom);expect(notice.style.left).toBe('500px')
+ const notice=f.document.querySelector('[data-research-arrange-feedback]'),bottom=Math.max(86,f.win.innerHeight-700+86)+'px';expect(notice).not.toBeNull();expect(notice.hasAttribute('data-ework-toolbar')).toBe(false);expect(f.canvas.contains(notice)).toBe(false);expect(notice.style.position).toBe('fixed');expect(notice.style.bottom).toBe(bottom);expect(notice.style.left).toBe('500px')
  f.canvas.scrollTop=300;await f.event('scroll',f.canvas);expect(notice.style.bottom).toBe(bottom);expect(notice.style.left).toBe('500px')
 })
 it('链接和语音草稿在末尾追加，保留不等大的已有组件',async()=>{
