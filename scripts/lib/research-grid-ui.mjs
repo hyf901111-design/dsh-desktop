@@ -134,7 +134,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     jsx('div',{className:'ew-grid-divider'}),
     flyout('mind','branch','思维导图',mindRef,readOnly),
     row('summary','总结提炼',()=>onDerived('summary')),
-    row('plus','基于所选创建',()=>onDerived('create')),
+    row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
     jsx('div',{className:'ew-grid-divider'}),
     row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
     settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
@@ -382,7 +382,7 @@ export function arrangeWorkbenchContents(root,workspace,measured) {
       const height=matched?cache.height+58:!target?natural.get(c.id)?.height:null
       return height?{...c,h:Math.max(grid.minimum(currentNodes.find(n=>n.id===c.id),m).h,Math.min(300,Math.ceil((height+m.gap)/m.step)))}:c
     })
-    const packed=grid.compact(next)
+    const packed=grid.closeSmallGaps(grid.compact(next),width)
     if(JSON.stringify(packed)!==encoded){if(!workspace.applyWorkbenchCells(packed,false)){finish();return}cells=packed;encoded=JSON.stringify(cells)}
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }

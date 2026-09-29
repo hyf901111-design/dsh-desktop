@@ -8,10 +8,10 @@ export function requiresNativeWeb(headers: Pick<Headers, 'get'>): boolean {
   const csp = headers.get('content-security-policy') ?? ''
   return /\b(?:deny|sameorigin)\b/i.test(xfo) || /(?:^|;)\s*frame-ancestors\s+(?!\*\s*(?:;|$))/i.test(csp)
 }
-export function nativeWebBounds(value: any) {
+export function nativeWebBounds(value: any, hostZoom = 1) {
   const r = value?.bounds
   if (!r || !['x', 'y', 'width', 'height'].every(k => Number.isFinite(r[k]) && Math.abs(r[k]) <= 30000)) throw Error('Invalid webpage bounds')
-  return { x: Math.round(r.x), y: Math.round(r.y), width: Math.max(1, Math.min(4096, Math.round(r.width))), height: Math.max(1, Math.min(4096, Math.round(r.height))) }
+  return { x: Math.round(r.x * hostZoom), y: Math.round(r.y * hostZoom), width: Math.max(1, Math.min(4096, Math.round(r.width * hostZoom))), height: Math.max(1, Math.min(4096, Math.round(r.height * hostZoom))) }
 }
 export function nativeWebViewport(value: any) {
   const size = value?.layoutSize
@@ -52,7 +52,10 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   bind('research:native-web:update',async value=>{
     const id=key(value),authorization=options.registry.resolve({sessionId:value.sessionId,nodeId:value.nodeId})
     if(!authorization || authorization.url!==normalizeResearchLinkUrl(value.url))throw Error('Webpage not authorized')
-    const bounds=nativeWebBounds(value), viewport=nativeWebViewport(value), win=window()
+    // Renderer rectangles are CSS pixels. Electron child views use window DIP,
+    // just like the conversation browser; Retina density is handled by Electron.
+    const win=window(),hostZoom=win.webContents.getZoomFactor()
+    const bounds=nativeWebBounds(value,hostZoom), viewport=nativeWebViewport(value)
     let entry=entries.get(id)
     if(entry&&entry.url!==authorization.url){release(id);entry=undefined}
     if(!entry){
@@ -78,7 +81,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     }
     entry.touched=Date.now()
     if(Number.isSafeInteger(value.reloadToken)&&value.reloadToken>=0&&value.reloadToken!==entry.reloadToken){entry.reloadToken=value.reloadToken;entry.error='';entry.view.webContents.reload()}
-    entry.view.setBorderRadius(Math.max(0,Math.min(16,Math.round(Number(value.radius)||0))))
+    entry.view.setBorderRadius(Math.max(0,Math.min(16,Math.round((Number(value.radius)||0)*hostZoom))))
     const size=win.getContentSize()
     const show=value.active===true&&!entry.error&&!entry.view.webContents.isLoadingMainFrame()&&bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=(size[0]??0)&&bounds.y+bounds.height<=(size[1]??0)
     // A hidden Chromium surface does not reliably resize its compositor. Keep
@@ -87,7 +90,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     const layout = JSON.stringify(viewport)
     if (!show) entry.view.setVisible(false)
     if (show || entry.layout !== layout) {
-      const displayScale = show || !entry.presentation ? value.scale : entry.surfaceScale
+      const displayScale = show || !entry.presentation ? value.scale * hostZoom : entry.surfaceScale
       const surface = show || !entry.presentation ? bounds : {
         x: bounds.x, y: bounds.y,
         width: Math.max(1, Math.round(viewport.width * displayScale)),
