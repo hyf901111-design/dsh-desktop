@@ -47,7 +47,7 @@ export function compactHostDashboardHtml(html) {
   html = refineCandlestickHtml(html)
   // Previously saved host-rendered market cards keep their original HTML.
   // Apply the same surface and disclosure geometry while loading their preview.
-  if (html.includes('data-sherlock-market=') && html.includes('data-sherlock-design=') && !html.includes('ODYSSEY_MARKET_PRESENTATION_V2'))
+  if (html.includes('data-sherlock-market=') && html.includes('data-sherlock-design=') && !html.includes('ODYSSEY_MARKET_PRESENTATION_V3'))
     html = html.replace('</head>', `<style>${MARKET_PRESENTATION_CSS}</style></head>`)
   // Saved host-rendered cards retain their HTML. Apply the same density fixes
   // on load so users do not need to regenerate a board to see the correction.
