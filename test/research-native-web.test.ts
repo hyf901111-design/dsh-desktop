@@ -29,6 +29,7 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  await expect(call('resolve',{sessionId:'s',nodeId:'bad',url:'javascript:alert(1)',preferNative:true})).rejects.toThrow()
  const layout={...identity,url:'https://www.google.com/',bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},active:true,scale:1,radius:9}
  await call('update',layout)
+ expect(views[0].webContents.capturePage).toHaveBeenLastCalledWith(undefined,{stayHidden:true,stayAwake:true})
  expect(mock.download).toHaveBeenCalledWith('will-download',expect.any(Function))
  expect(views[0].settings.webPreferences).toMatchObject({nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true})
  expect(views[0].visible).toBe(true)

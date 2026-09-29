@@ -200,12 +200,15 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(op.kind==='draw')target=grid.draw(op.start,p,m)
     else{const c=op.cell,dx=(p.x-op.start.x)/m.step,dy=(p.y-op.start.y)/m.rowStep,min=grid.minimum(op.geometry.find(n=>n.id===c.id),m);target=op.kind==='resize'?grid.bounded({...c,w:op.axis==='y'?c.w:Math.max(min.w,c.w+Math.round(dx)),h:op.axis==='x'?c.h:Math.max(min.h,c.h+Math.round(dy))}):grid.bounded({...c,x:c.x+Math.round(dx),y:c.y+Math.round(dy)})}
     floatCard(p)
+    const targetKey=JSON.stringify([target.x,target.y,target.w,target.h,op.kind==='resize'?Math.round((op.axis==='x'?p.x-op.start.x:p.y-op.start.y)/m.step):0])
+    if(op.targetKey===targetKey)return
     const original=op.canonicalBefore.find(c=>c.id===op.cell?.id)
     const canonicalTarget=op.kind==='draw'?target:{...target,x:op.kind==='resize'||target.x===op.cell.x?original.x:target.x,y:op.kind==='resize'?original.y:Math.max(0,original.y+target.y-op.cell.y),...(op.kind==='move'?{w:original.w,h:original.h}:op.axis==='x'?{w:target.w===op.cell.w?original.w:target.w,h:original.h}:{w:original.w,h:target.h===op.cell.h?original.h:target.h})}
     const groupResize=op.kind==='resize'&&op.selectedIds.length>1
     const delta=op.axis==='x'?Math.round((p.x-op.start.x)/m.step):Math.round((p.y-op.start.y)/m.rowStep)
     const proposed=(groupResize?grid.resizeSelection(op.canonicalBefore,op.selectedIds,op.axis,delta,op.geometry,op.width,op.before):op.kind==='move'?grid.move(op.canonicalBefore,canonicalTarget,op.before,target):op.kind==='resize'&&op.axis==='x'?grid.resize(op.canonicalBefore,canonicalTarget,op.geometry,op.width):grid.place(op.canonicalBefore,canonicalTarget,target.id)).filter(c=>c.id!=='__draft__')
     if(!allowed(proposed,op.canonicalBefore))return
+    op.targetKey=targetKey
     op.target=target;op.resolved=proposed
     if(op.kind==='draw')show(target)
     pending=proposed
@@ -259,10 +262,12 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const move=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();lastPointer=e;update(e);if(!autoFrame)autoFrame=view.requestAnimationFrame(autoScroll)}
   const up=e=>{if(!op)return;e.preventDefault();e.stopImmediatePropagation();finish(true,e)}
   const cancel=e=>{if(op){e?.stopImmediatePropagation?.();finish(false,e)}}
-  const key=e=>{if(e.key==='Shift'&&!e.target?.closest?.('input,textarea,[contenteditable=true]'))root.setAttribute('data-grid-multiselect','');if(op&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(false)}}
+  const key=e=>{if(e.key==='Shift'&&!e.target?.closest?.('input,textarea,[contenteditable=true]'))root.setAttribute('data-grid-multiselect','');if(op&&e.key==='Escape'){e.preventDefault();finish(false)}}
   const keyUp=e=>{if(e.key==='Shift')root.removeAttribute('data-grid-multiselect')}
   const click=e=>{if(toolRef.current==='select'&&(e.shiftKey||e.metaKey)&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,[contenteditable=true]')){e.preventDefault();e.stopImmediatePropagation()}}
-  const blur=e=>{root.removeAttribute('data-grid-multiselect');cancel(e)}
+  // Window blur is shared by embedded-content lifecycles; cancel our gesture
+  // without preventing their own held-key/pointer cleanup.
+  const blur=e=>{root.removeAttribute('data-grid-multiselect');if(op)finish(false,e)}
   root.addEventListener('pointerdown',down,true);root.addEventListener('click',click,true);root.addEventListener('pointermove',move,true);root.addEventListener('pointerup',up,true);root.addEventListener('pointercancel',cancel,true);root.addEventListener('lostpointercapture',cancel,true);view.addEventListener('blur',blur);view.addEventListener('keydown',key,true);view.addEventListener('keyup',keyUp,true)
   return()=>{finish(false);preview.remove();root.removeAttribute('data-grid-multiselect');root.removeEventListener('pointerdown',down,true);root.removeEventListener('click',click,true);root.removeEventListener('pointermove',move,true);root.removeEventListener('pointerup',up,true);root.removeEventListener('pointercancel',cancel,true);root.removeEventListener('lostpointercapture',cancel,true);view.removeEventListener('blur',blur);view.removeEventListener('keydown',key,true);view.removeEventListener('keyup',keyUp,true)}
 }

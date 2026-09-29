@@ -88,13 +88,18 @@ export function createResearchGrid() {
     const resolved=new Map(compact(place(items,active)).map(c=>[c.id,c]))
     return items.map(c=>resolved.get(c.id))
   }
-  // Read the current canvas, not insertion order. Compress only horizontal
-  // intervals unused anywhere on the canvas, so staggered columns and cards
-  // spanning several columns survive changes in their content height.
+  // Read the current canvas, not insertion order. Repeated horizontal edges
+  // identify its columns even when heights change. Snap isolated offsets into
+  // those columns, then fill vertical slots without stretching card content.
   function arrange(nodes,items,width,visibleHeight=0) {
     const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
     if(!ordered.length)return items.map(bounded)
-    const min=c=>minimum(byId.get(c.id),m),sized=ordered.map(c=>{const w=Math.max(c.w,min(c).w);return {...c,w,x:Math.min(c.x,columns-w)}}),intervals=[]
+    const min=c=>minimum(byId.get(c.id),m)
+    let fitted=ordered.map(c=>{const w=Math.max(c.w,min(c).w);return {...c,w,x:Math.min(c.x,columns-w)}})
+    // Snapping can vacate an outer interval. Close it in this transaction,
+    // rather than growing the cards again on the next Arrange invocation.
+    for(let pass=0;pass<ordered.length*2+4;pass++){
+    const sized=fitted,intervals=[]
     for(const c of [...sized].sort((a,b)=>a.x-b.x)){
       const last=intervals.at(-1),right=c.x+c.w
       if(last&&c.x<=last.right)last.right=Math.max(last.right,right)
@@ -102,9 +107,27 @@ export function createResearchGrid() {
     }
     const used=intervals.reduce((sum,r)=>sum+r.right-r.left,0)
     const edge=value=>Math.round(intervals.reduce((sum,r)=>sum+clamp(value-r.left,0,r.right-r.left),0)/used*columns)
-    const planned=sized.map(c=>{
-      const n=byId.get(c.id),p=n.preferred||n,w=Math.max(min(c).w,edge(c.x+c.w)-edge(c.x))
-      return {...c,x:Math.min(edge(c.x),columns-w),w,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
+    const mapped=sized.map(c=>({...c,x:edge(c.x),w:edge(c.x+c.w)-edge(c.x)})),counts=new Map()
+    for(const c of mapped)for(const at of [c.x,c.x+c.w])counts.set(at,(counts.get(at)||0)+1)
+    let boundaries=[0,...[...counts].filter(([at,count])=>at>0&&at<columns&&count>1).map(([at])=>at),columns].sort((a,b)=>a-b)
+    if(boundaries.length===2){const lanes=Math.max(1,Math.min(3,ordered.length,Math.floor(columns/Math.max(...ordered.map(c=>min(c).w)))));boundaries=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes))}
+    const slot=c=>{
+      let best
+      for(let i=0;i<boundaries.length-1;i++)for(let j=i+1;j<boundaries.length;j++){
+        const x=boundaries[i],w=boundaries[j]-x
+        if(w<min(c).w)continue
+        const score=Math.abs(w-c.w)*2+Math.abs(x+w/2-(c.x+c.w/2))
+        if(!best||score<best.score)best={x,w,score}
+      }
+      return best
+    }
+    const next=mapped.map(c=>{const target=slot(c);return {...c,x:target.x,w:target.w}})
+    if(next.every((c,i)=>c.x===fitted[i].x&&c.w===fitted[i].w))break
+    fitted=next
+    }
+    const planned=fitted.map(c=>{
+      const n=byId.get(c.id),p=n.preferred||n
+      return {...c,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
     })
     const result=new Map(compact(planned).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
   }
