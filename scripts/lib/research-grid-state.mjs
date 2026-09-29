@@ -36,7 +36,22 @@ export function createWorkbenchGridState(storage,sessionId) {
       cells=cells.map(c=>{const n=nodes.find(n=>n.id===c.id);if(!previous.has(c.id)||previous.get(c.id)===geometry(n))return c;geometryChanged=true;return grid.bounded({id:n.id,x:(n.x-n.width/2-m.inset)/m.step,y:(n.y-n.height/2-m.inset)/m.rowStep,w:(n.width+m.gap)/m.step,h:(n.height+m.gap)/m.rowStep})})
     }
     if(!forced&&(removed||geometryChanged))cells=grid.compact(cells)
-    for(const n of nodes)if(!cells.some(c=>c.id===n.id))cells.push(grid.append(cells,n.id,Math.min(40,Math.max(12,Math.round((n.width+m.gap)/m.step))),Math.max(m.minRows,Math.ceil((n.height+m.gap)/m.rowStep))))
+    // A newly submitted workbench is one layout transaction. Appending each
+    // panel independently stacks the entire group in a narrow left column.
+    // Allocate its default frames once; later generation events reuse them.
+    const known=new Set(cells.map(c=>c.id)),fresh=nodes.filter(n=>!known.has(n.id)),groups=new Map()
+    for(const n of fresh)if(n.workbenchId&&n.sizeMode!=='manual'&&!n.preserveGenerationSize){
+      const group=groups.get(n.workbenchId)||[];group.push(n);groups.set(n.workbenchId,group)
+    }
+    for(const [id,group] of groups){
+      if(group.length<2||nodes.some(n=>n.workbenchId===id&&known.has(n.id)))continue
+      const lanes=width-2*m.inset>=650?2:1,span=40/lanes,bottom=Math.max(0,...cells.map(c=>c.y+c.h)),tails=Array(lanes).fill(bottom)
+      for(const n of group.sort((a,b)=>(a.workbenchIndex??0)-(b.workbenchIndex??0))){
+        const lane=tails.indexOf(Math.min(...tails)),h=Math.max(grid.minimum(n,m).h,Math.ceil((Math.max(320,n.height)+m.gap)/m.rowStep))
+        cells.push(grid.bounded({id:n.id,x:lane*span,y:tails[lane],w:span,h}));tails[lane]+=h;known.add(n.id)
+      }
+    }
+    for(const n of fresh)if(!known.has(n.id))cells.push(grid.append(cells,n.id,Math.min(40,Math.max(12,Math.round((n.width+m.gap)/m.step))),Math.max(m.minRows,Math.ceil((n.height+m.gap)/m.rowStep))))
     const projected=grid.project(nodes,visibleCells(),width),byId=new Map(projected.map(n=>[n.id,n]))
     previous=new Map(projected.map(n=>[n.id,geometry(n)]));forced=false
     projected.forEach(n=>researchGridNodeIds.add(n.id))

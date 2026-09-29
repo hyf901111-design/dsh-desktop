@@ -36,6 +36,19 @@ it('重复补丁恢复原始代码且不积累事件或样式',async()=>{
  expect(restoreResearchGridWorkbench(once).trim()).toBe(base.trim())
  expect(patchResearchGridWorkbench(once)).toBe(once)
 },15000)
+it('真实工作台入口按完整面板规划初始化两列，内容返回不改变卡片框',async()=>{
+ const f=await fixture(),w=f.workspace
+ w.setCanvasSize({width:900,height:700});w.setWorkbenchWidth(900)
+ const plan={id:'fresh-six',createdAt:Date.now(),panels:Array.from({length:6},(_,i)=>({nodeId:'fresh-'+i,title:'验收 '+i,prompt:'模拟指标',pending:true,width:656,height:i===1?352:270,x:i%2*672,y:Math.floor(i/2)*368,size:'large'}))}
+ expect(w.applyWorkbench(plan)).toBe(true)
+ const before=w.getWorkbenchCells().map(({freePosition,...c})=>c)
+ expect(before[0]).toMatchObject({x:0,y:0,w:20});expect(before[1]).toMatchObject({x:20,y:0,w:20})
+ expect(w.getSnapshot().artifacts.every(n=>n.height>=320)).toBe(true)
+ const completed={...plan,panels:plan.panels.map(p=>({...p,taskId:'task-'+p.nodeId,preparedOutput:JSON.stringify({version:1,type:'table',title:p.title,columns:['项目','数值'],rows:[['模拟','123']]})}))}
+ expect(w.applyWorkbench(completed)).toBe(true)
+ expect(w.getWorkbenchCells().map(({freePosition,...c})=>c)).toEqual(before)
+ expect(w.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
+})
 it('拖动网格事务可撤销并恢复所有让位组件，重新打开保持格位',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a'),text('b',740)]);f.workspace.setWorkbenchWidth(1000)
  const before=structuredClone(f.workspace.getSnapshot().artifacts),cells=f.workspace.getWorkbenchCells()
