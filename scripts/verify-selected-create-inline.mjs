@@ -114,6 +114,13 @@ try{
  assert.equal(state.node.generationStatus,'completed');assert.deepEqual(state.cells.find(c=>c.id===id),initial);assert.equal(state.nodes.length,2)
  await page.screenshot({path:output+'inline-completed-dark.png'});report.screenshots.push('inline-completed-dark.png')
  report.checks.push('fixed baseline click target; shared ordinary generation body and process callback; usable generating height; stop waits for real task and restores original demand; other tasks unchanged; retry same id; completed same reserved cell')
+ const completedBefore=state.node,cellsBeforeEdit=state.cells
+ await page.locator('[data-workbench-edit-selected-create="'+id+'"]').click();await draft.waitFor();await input.fill('这条编辑应被取消，不替换原结果。')
+ assert.deepEqual(await page.evaluate(id=>workspace.getSnapshot().artifacts.find(n=>n.id===id),id),completedBefore,'editing keeps original persisted result')
+ await draft.getByRole('button',{name:'取消',exact:true}).click();await draft.waitFor({state:'detached'})
+ assert.deepEqual(await page.evaluate(id=>workspace.getSnapshot().artifacts.find(n=>n.id===id),id),completedBefore);assert.deepEqual(await page.evaluate(()=>workspace.getWorkbenchCells()),cellsBeforeEdit)
+ await page.locator('[data-workbench-edit-selected-create="'+id+'"]').click();await draft.waitFor();assert.equal(await input.inputValue(),completedBefore.containerPrompt);await input.press('Escape');await draft.waitFor({state:'detached'})
+ report.checks.push('completed requirement editor has Cancel and Escape; edits stay local and preserve original content, prompt, frozen sources, id and geometry')
  for(const mode of ['edge','occupied']){
    await page.evaluate(mode=>window.reset(mode),mode);await menu();await draft.waitFor()
    state=await page.evaluate(()=>({nodes:workspace.getSnapshot().artifacts,cells:workspace.getWorkbenchCells()}));const node=state.nodes.find(n=>n.creationMode==='selection'),cell=state.cells.find(c=>c.id===node.id)

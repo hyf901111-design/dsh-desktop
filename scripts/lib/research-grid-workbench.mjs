@@ -120,25 +120,27 @@ export function patchResearchGridWorkbench(source){
       }
       return state;
     };
-    const workbenchFocusSelected=node=>{
+    const workbenchFocusSelected=(node,editing=false)=>{
       if(createSelection?.nodeId!==node.id){createAttempt.current=null;setCreatePreparing(false);}
-      setCreateSelection(workbenchSelectedState(node));setCreatePrompt(node.containerPrompt||'');setCreateError(null);
+      setCreateSelection({...workbenchSelectedState(node),editing});setCreatePrompt(node.containerPrompt||'');setCreateError(null);
       window.requestAnimationFrame(()=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');card?.scrollIntoView({block:'nearest',inline:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});card?.querySelector('[data-workbench-selected-create-draft] textarea')?.focus({preventScroll:true});});
     };
     const workbenchSelectedPrompt=(node,prompt,persist=false)=>{
       if(sharedReadOnly)return;
+      if(createSelection?.nodeId===node.id&&createSelection.editing){setCreatePrompt(prompt);setCreateError(null);return;}
       if(createSelection?.nodeId!==node.id){createAttempt.current=null;setCreatePreparing(false);}
       if(workspace.updateSelectedCreateDraft(node.id,prompt)){setCreateSelection(workbenchSelectedState(node));setCreatePrompt(prompt);setCreateError(null);if(persist)workspace.persist();}
     };
     const workbenchSelectedSubmit=(node,prompt)=>{
       if(sharedReadOnly)return;
-      const state=workbenchSelectedState(node);setCreateSelection(state);setCreatePrompt(prompt);void startSelectedCreate(state,prompt);
+      const state=workbenchSelectedState(node);if(node.generationStatus!=='draft'&&!workspace.editSelectedCreateDraft(node.id))return;setCreateSelection(state);setCreatePrompt(prompt);void startSelectedCreate(state,prompt);
     };
     const workbenchEditSelected=node=>{
       if(sharedReadOnly)return;
       workbenchSelectedDrafts.current.delete(node.id);
-      const next=workspace.editSelectedCreateDraft(node.id);if(next)workbenchFocusSelected(next);
+      workbenchFocusSelected(node,node.generationStatus!=='draft');
     };
+    const workbenchCancelSelectedEdit=()=>{createAttempt.current=null;closeSelectedCreate();rootRef.current?.focus({preventScroll:true});};
     react.useEffect(()=>{
       if(createSelection?.nodeId&&!snapshot.artifacts.some(n=>n.id===createSelection.nodeId)){workbenchSelectedDrafts.current.delete(createSelection.nodeId);closeSelectedCreate();}
     },[snapshot.artifacts,createSelection,closeSelectedCreate]);

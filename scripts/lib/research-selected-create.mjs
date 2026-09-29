@@ -26,7 +26,7 @@ export function workbenchSelectedCreateCells(cells, sourceIds, id, width, visibl
   return [...next,target]
 }
 
-export function WorkbenchSelectedCreateContext({node,workspace,onEdit,readOnly}) {
+export function WorkbenchSelectedCreateContext({node,workspace,onEdit,readOnly,editing}) {
   if(node.creationMode!=='selection')return null
   const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
   const sources=node.generationSources||[],labels=sources.map(s=>s.title),active=RESEARCH_ACTIVE_GENERATION_STATUSES.has(node.generationStatus)
@@ -40,11 +40,11 @@ export function WorkbenchSelectedCreateContext({node,workspace,onEdit,readOnly})
   }
   return jsxs('div',{className:'ew-selected-create-context','data-workbench-selected-create-context':node.id,'data-research-preview-interactive':'',children:[
     jsxs('div',{className:'ew-selected-create-source',children:[jsx('span',{title:labels.join('、'),children:'基于：'+(labels.join('、')||'所选组件')}),jsx('button',{type:'button','data-workbench-view-source':node.id,onClick:viewSource,children:'查看基准'})]}),
-    node.generationStatus!=='draft'&&!active&&jsxs('div',{className:'ew-selected-create-requirement',children:[jsx('span',{children:'需求：'+node.containerPrompt}),!readOnly&&jsx('button',{type:'button','data-workbench-edit-selected-create':node.id,onClick:()=>onEdit?.(node),children:'编辑需求'})]})
+    !editing&&node.generationStatus!=='draft'&&!active&&jsxs('div',{className:'ew-selected-create-requirement',children:[jsx('span',{children:'需求：'+node.containerPrompt}),!readOnly&&jsx('button',{type:'button','data-workbench-edit-selected-create':node.id,onClick:()=>onEdit?.(node),children:'编辑需求'})]})
   ]})
 }
 
-export function WorkbenchSelectedCreateDraft({node,state,inputRef,onPrompt,onSubmit,onStop,readOnly}) {
+export function WorkbenchSelectedCreateDraft({node,state,inputRef,onPrompt,onSubmit,onStop,onCancel,readOnly}) {
   const [prompt,setPrompt]=react.useState(node.containerPrompt||'')
   react.useEffect(()=>setPrompt(node.containerPrompt||''),[node.id,node.containerPrompt])
   const preparing=state?.preparing===true,error=state?.error,jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
@@ -52,12 +52,13 @@ export function WorkbenchSelectedCreateDraft({node,state,inputRef,onPrompt,onSub
   return jsxs('div',{className:'ew-selected-create-draft','data-workbench-selected-create-draft':node.id,'data-research-preview-interactive':'',onKeyDown:event=>{
     event.stopPropagation()
     if(researchDerivedIsComposing(event)||event.repeat)return
+    if(event.key==='Escape'&&state?.editing){event.preventDefault();onCancel?.();return}
     if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();submit()}
   },children:[
     jsx('strong',{children:'希望基于这个组件生成什么？'}),
     jsx('textarea',{ref:inputRef,'aria-label':'创建需求','data-research-create-prompt':'',value:prompt,rows:4,maxLength:RESEARCH_CONTAINER_MAX_PROMPT,disabled:readOnly||preparing,placeholder:'例如：整理为地域收入对比表，保留年份、单位和原始来源。',onInput:event=>{const value=event.currentTarget.value;setPrompt(value);onPrompt?.(node,value)},onBlur:()=>onPrompt?.(node,prompt,true),onCompositionStart:event=>{event.currentTarget.dataset.researchComposing='true'},onCompositionEnd:event=>{delete event.currentTarget.dataset.researchComposing}}),
     error&&jsx('div',{role:'alert',className:'ew-selected-create-error',children:error}),
-    jsxs('div',{className:'ew-selected-create-actions',children:[jsx('button',{type:'button','data-research-create-submit':'',disabled:readOnly||preparing||!prompt.trim()||prompt.length>RESEARCH_CONTAINER_MAX_PROMPT,onClick:submit,children:preparing?'正在读取基准…':'生成组件'}),preparing&&jsx('button',{type:'button','data-workbench-stop-preparing':'',onClick:onStop,children:'停止'})]}),
+    jsxs('div',{className:'ew-selected-create-actions',children:[jsx('button',{type:'button','data-research-create-submit':'',disabled:readOnly||preparing||!prompt.trim()||prompt.length>RESEARCH_CONTAINER_MAX_PROMPT,onClick:submit,children:preparing?'正在读取基准…':'生成组件'}),state?.editing&&jsx('button',{type:'button','data-workbench-cancel-selected-edit':'',onClick:onCancel,children:'取消'}),preparing&&jsx('button',{type:'button','data-workbench-stop-preparing':'',onClick:onStop,children:'停止'})]}),
     jsx('p',{children:'已关联基准内容与来源；原组件保持可见。'})
   ]})
 }
@@ -147,14 +148,14 @@ export function patchWorkbenchSelectedCreate(source,change) {
     if(selectedCreate.nodeId&&!draft)return;
     const target = workspace.beginGeneration('create', selectedNodeIds, draft?{x:draft.x,y:draft.y,width:draft.width,height:draft.height,sizeMode:'manual'}:placement, prompt, frozen, draft?.id??null);`)
   change('createSelection === null ? null : (0, react_jsx_runtime.jsx)(ResearchDerivedCreatePopover,','createSelection === null || createSelection.nodeId ? null : (0, react_jsx_runtime.jsx)(ResearchDerivedCreatePopover,')
-  change('function ResearchCanvasArtifactCard({ node, sessionId, visible = true,','function ResearchCanvasArtifactCard({ node, sessionId, selectedCreateWorkspace, selectedCreateState, onSelectedCreatePrompt, onSelectedCreateSubmit, onSelectedCreateStop, onSelectedCreateEdit, selectedCreateInputRef, visible = true,')
-  change('children: [editingContent ? (0, react_jsx_runtime.jsx)(ResearchCanvasInlineContentEditor,',`children: [selectedCreateWorkspace && (0,react_jsx_runtime.jsx)(WorkbenchSelectedCreateContext,{node,workspace:selectedCreateWorkspace,onEdit:onSelectedCreateEdit,readOnly}),editingContent ? (0, react_jsx_runtime.jsx)(ResearchCanvasInlineContentEditor,`)
-  change('}) : node.kind === "generated-container" && node.generationStatus === "draft" ? (0, react_jsx_runtime.jsx)(ResearchContainerDraft, {',`}) : node.creationMode==='selection' && node.generationStatus==='draft' && selectedCreateWorkspace ? (0,react_jsx_runtime.jsx)(WorkbenchSelectedCreateDraft,{node,state:selectedCreateState,inputRef:selectedCreateInputRef,onPrompt:onSelectedCreatePrompt,onSubmit:onSelectedCreateSubmit,onStop:onSelectedCreateStop,readOnly}) : node.kind === "generated-container" && node.generationStatus === "draft" ? (0, react_jsx_runtime.jsx)(ResearchContainerDraft, {`)
+  change('function ResearchCanvasArtifactCard({ node, sessionId, visible = true,','function ResearchCanvasArtifactCard({ node, sessionId, selectedCreateWorkspace, selectedCreateState, onSelectedCreatePrompt, onSelectedCreateSubmit, onSelectedCreateStop, onSelectedCreateEdit, onSelectedCreateCancel, selectedCreateInputRef, visible = true,')
+  change('children: [editingContent ? (0, react_jsx_runtime.jsx)(ResearchCanvasInlineContentEditor,',`children: [selectedCreateWorkspace && (0,react_jsx_runtime.jsx)(WorkbenchSelectedCreateContext,{node,workspace:selectedCreateWorkspace,onEdit:onSelectedCreateEdit,readOnly,editing:selectedCreateState?.editing}),editingContent ? (0, react_jsx_runtime.jsx)(ResearchCanvasInlineContentEditor,`)
+  change('}) : node.kind === "generated-container" && node.generationStatus === "draft" ? (0, react_jsx_runtime.jsx)(ResearchContainerDraft, {',`}) : node.creationMode==='selection' && (node.generationStatus==='draft'||selectedCreateState?.editing) && selectedCreateWorkspace ? (0,react_jsx_runtime.jsx)(WorkbenchSelectedCreateDraft,{node,state:selectedCreateState,inputRef:selectedCreateInputRef,onPrompt:onSelectedCreatePrompt,onSubmit:onSelectedCreateSubmit,onStop:onSelectedCreateStop,onCancel:onSelectedCreateCancel,readOnly}) : node.kind === "generated-container" && node.generationStatus === "draft" ? (0, react_jsx_runtime.jsx)(ResearchContainerDraft, {`)
   const cards='artifacts.map((node) => node.containerPrompt===\'odyssey:link-draft\''
   const cardStart=source.indexOf(cards),cardEnd=source.indexOf('}, node.id))]',cardStart)
   const from=source.slice(cardStart,cardEnd),to=from.replace('sessionId, readOnly: sharedReadOnly,',`sessionId, readOnly: sharedReadOnly,
-    selectedCreateWorkspace:workspace,selectedCreateState:createSelection?.nodeId===node.id?{preparing:createPreparing,error:createError}:null,selectedCreateInputRef:createSelection?.nodeId===node.id?createInputRef:undefined,
-    onSelectedCreatePrompt:workbenchSelectedPrompt,onSelectedCreateSubmit:workbenchSelectedSubmit,onSelectedCreateStop:()=>{createAttempt.current=null;setCreatePreparing(false);},onSelectedCreateEdit:workbenchEditSelected,
+    selectedCreateWorkspace:workspace,selectedCreateState:createSelection?.nodeId===node.id?{preparing:createPreparing,error:createError,editing:createSelection.editing}:null,selectedCreateInputRef:createSelection?.nodeId===node.id?createInputRef:undefined,
+    onSelectedCreatePrompt:workbenchSelectedPrompt,onSelectedCreateSubmit:workbenchSelectedSubmit,onSelectedCreateStop:()=>{createAttempt.current=null;setCreatePreparing(false);},onSelectedCreateEdit:workbenchEditSelected,onSelectedCreateCancel:workbenchCancelSelectedEdit,
 `)
   if(from===to)throw Error('Selected-create canvas card anchor missing')
   change(from,to)
