@@ -197,7 +197,7 @@ export class ComponentDataRefresh {
  }
  async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>8||!record(b.mapping)))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
  list(sessionId){return structuredClone(this.records.filter(b=>b.ownerAccountId===this.options.owner()&&(!sessionId||b.sessionId===sessionId)).map(b=>({...b,viewPaused:b.enabled&&!this.isVisible(b.sessionId)})))}
- persist(){const snapshot=structuredClone(this.records);const pending=this.chain.then(()=>this.options.save(snapshot));this.chain=pending.catch(()=>{});return pending}
+ persist(){const snapshot=structuredClone(this.records);try{this.options.onChange?.(snapshot)}catch{};const pending=this.chain.then(()=>this.options.save(snapshot));this.chain=pending.catch(()=>{});return pending}
  async bind(input,initialSpec,{preserveSettings=false}={}){
   input=bounded(input);rejectCredentials(input)
   input.intervalMinutes??=1
@@ -284,7 +284,7 @@ export class ComponentDataRefresh {
     if(!unchanged)await this.options.apply(b,live.revision,spec,signal)
    })
    if(!current()||automatic&&!this.isVisible(b.sessionId))return
-   Object.assign(current(),{status:unchanged?'unchanged':'success',lastSuccess:this.now(),dataAsOf:typeof data.asOf==='string'?data.asOf:undefined,error:undefined,failures:0,nextRun:b.enabled?this.now()+b.intervalMinutes*60000:null})
+   Object.assign(current(),{status:unchanged?'unchanged':'success',successSequence:(current().successSequence||0)+1,lastSuccess:this.now(),dataAsOf:typeof data.asOf==='string'?data.asOf:undefined,error:undefined,failures:0,nextRun:b.enabled?this.now()+b.intervalMinutes*60000:null})
   }catch(error){
    if(!current()||signal.aborted)return
    const failures=(current().failures??0)+1

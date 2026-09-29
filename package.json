@@ -153,6 +153,10 @@
     ],
     "extraResources": [
       {
+        "from": "build/figma-generation/LICENSE-react-bits.md",
+        "to": "third-party/React-Bits-ShapeGrid-LICENSE.md"
+      },
+      {
         "from": "build/integration-catalog",
         "to": "integration-catalog"
       },

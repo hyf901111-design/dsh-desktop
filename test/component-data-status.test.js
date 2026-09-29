@@ -9,16 +9,16 @@ import {createRoot} from 'react-dom/client'
 
 const row=(nodeId,lastSuccess=1000,extra={})=>({nodeId,status:'success',lastSuccess,enabled:true,intervalMinutes:1,...extra})
 describe('component refresh status',()=>{
- it('publishes only changed cards and highlights fresh successful reads, including unchanged values',()=>{
+ it('publishes only changed cards and highlights changed successful reads while unchanged values only update time',()=>{
   const store=createComponentDataStatusStore(),a=vi.fn(),b=vi.fn()
   store.subscribe('s','a',a);store.subscribe('s','b',b)
   store.publish('s',[row('a'),row('b')]);a.mockClear();b.mockClear()
   expect(store.read('s','a').refreshSequence).toBe(0)
   store.publish('s',[row('a'),row('b')]);expect(a).not.toHaveBeenCalled()
   store.publish('s',[row('a',2000,{status:'unchanged'}),row('b')])
-  expect(store.read('s','a').refreshSequence).toBe(1);expect(a).toHaveBeenCalledTimes(1);expect(b).not.toHaveBeenCalled()
+  expect(store.read('s','a').refreshSequence).toBe(0);expect(a).toHaveBeenCalledTimes(1);expect(b).not.toHaveBeenCalled()
   store.publish('s',[row('a',2000,{status:'error'}),row('b')])
-  expect(store.read('s','a').refreshSequence).toBe(1)
+  expect(store.read('s','a').refreshSequence).toBe(0)
   expect(componentDataStatusView(store.read('s','a')).detail).toContain('保留')
  })
  it('does not flash historical updates on return, retains timestamps on errors and removes deleted bindings',()=>{
@@ -48,20 +48,22 @@ describe('component refresh status',()=>{
  it('renders the fixed timestamp and highlights only the changed card without remounting its content',async()=>{
   const window=new Window({settings:{disableJavaScriptEvaluation:true}}),document=window.document
   vi.stubGlobal('window',window);vi.stubGlobal('document',document);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);vi.useFakeTimers()
-  document.body.innerHTML='<div data-research-node-id="a"><div data-research-preview-body><input value="保留筛选"><iframe></iframe></div><footer></footer></div><div data-research-node-id="b"><div data-research-preview-body></div><footer></footer></div>'
+  document.body.innerHTML='<div data-research-node-id="a"><div data-research-preview-body><input value="保留筛选"><strong data-refresh-key="price">100</strong></div><footer></footer><iframe></iframe></div><div data-research-node-id="b"><div data-research-preview-body></div><footer></footer></div>'
   const {ComponentDataStatusBar,componentDataStatusStore:store}=vm.runInNewContext(componentDataStatusDefinitions()+';({ComponentDataStatusBar,componentDataStatusStore})',{react,react_dom,react_jsx_runtime,sherlockShared:()=>false,openComponentData:vi.fn(),setTimeout,clearTimeout})
   const roots=[...document.querySelectorAll('footer')].map(el=>createRoot(el)),frame=document.querySelector('iframe'),input=document.querySelector('input')
   try{
-   await react.act(async()=>{store.publish('s',[row('a'),row('b')]);roots.forEach((root,i)=>root.render(react.createElement(ComponentDataStatusBar,{sessionId:'s',node:{id:i?'b':'a'}})))})
-   expect(document.querySelectorAll('time')).toHaveLength(2);expect(document.querySelector('.odyssey-data-update-highlight')).toBe(null)
+   await react.act(async()=>{store.publish('s',[row('a'),row('b')]);roots.forEach((root,i)=>root.render(react.createElement(ComponentDataStatusBar,{sessionId:'s',node:{id:i?'b':'a'},workbench:true})))})
+   expect(document.querySelectorAll('time')).toHaveLength(2);expect(document.querySelector('[data-workbench-value-changed]')).toBe(null)
+   document.querySelector('strong').textContent='101'
    await react.act(async()=>store.publish('s',[row('a',2000),row('b')]))
-   expect(document.querySelectorAll('.odyssey-data-update-highlight')).toHaveLength(1)
-   expect(document.querySelector('.odyssey-data-update-highlight').closest('[data-research-node-id]').getAttribute('data-research-node-id')).toBe('a')
+   await react.act(async()=>{vi.advanceTimersByTime(110)})
+   expect(document.querySelectorAll('[data-workbench-value-changed]')).toHaveLength(1)
+   expect(document.querySelector('[data-workbench-value-changed]').closest('[data-research-node-id]').getAttribute('data-research-node-id')).toBe('a')
    expect(document.querySelector('iframe')).toBe(frame);expect(document.querySelector('input')).toBe(input);expect(input.value).toBe('保留筛选')
    await react.act(async()=>{vi.advanceTimersByTime(1200)})
-   expect(document.querySelector('.odyssey-data-update-highlight')).toBe(null)
+   expect(document.querySelector('[data-workbench-value-changed]')).toBe(null)
    await react.act(async()=>store.publish('s',[row('a',2000,{status:'error'}),row('b')]))
-   expect(document.querySelector('.odyssey-data-update-highlight')).toBe(null)
+   expect(document.querySelector('[data-workbench-value-changed]')).toBe(null)
   }finally{await react.act(async()=>roots.forEach(root=>root.unmount()));vi.useRealTimers();vi.unstubAllGlobals();await window.happyDOM.close()}
  })
 })

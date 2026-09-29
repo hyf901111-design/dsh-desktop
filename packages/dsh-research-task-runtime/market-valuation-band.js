@@ -6,25 +6,27 @@ function valuationBandRuntime(labels,values,bands,unit) {
  const root=document.querySelector('.market-valuation-band'),svg=root?.querySelector('svg'),readout=root?.querySelector('.valuation-readout'),buttons=[...(root?.querySelectorAll('[data-valuation-range]')??[])]
  if(!root||!svg||!readout)return
  const ns='http://www.w3.org/2000/svg',add=(name,attributes)=>{const el=document.createElementNS(ns,name);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));svg.appendChild(el);return el}
- let count=labels.length,selected=labels.length-1
- const range=()=>({start:Math.max(0,labels.length-count),length:Math.min(count,labels.length)})
+ let count=labels.length,selected=labels.length-1,locked=null
+ const range=()=>{if(locked){const start=labels.indexOf(locked.start),end=labels.indexOf(locked.end);return {start,length:end-start+1}}return {start:Math.max(0,labels.length-count),length:Math.min(count,labels.length)}}
  const grade=value=>value<bands.p10?'低于 P10':value<bands.p25?'P10–P25':value<bands.p50?'P25–P50':value<bands.p75?'P50–P75':value<bands.p90?'P75–P90':'高于 P90'
  const draw=()=>{
-  const {start,length}=range(),subset=values.slice(start),low=Math.min(...subset,bands.p10),high=Math.max(...subset,bands.p90),span=high-low||1,min=low-span*.08,max=high+span*.08
-  const y=value=>132-(value-min)/(max-min)*116,x=index=>32+466*index/(length-1)
+  const {start,length}=range(),subset=values.slice(start,start+length),low=Math.min(...subset,bands.p10),high=Math.max(...subset,bands.p90),span=high-low||1,min=locked?.min??low-span*.08,max=locked?.max??high+span*.08
+  const y=value=>132-(value-min)/(max-min)*116,x=index=>32+466*index/Math.max(1,length-1)
+  svg.setAttribute('data-workbench-chart-view',JSON.stringify({min,max,start:labels[start],end:labels[start+length-1]}))
   svg.replaceChildren()
   for(const [a,b,role] of [['p10','p25','outer'],['p25','p75','middle'],['p75','p90','outer']]){const top=y(bands[b]),bottom=y(bands[a]);add('rect',{class:`valuation-band-${role}`,x:32,y:top,width:466,height:Math.max(0,bottom-top)})}
   for(const key of ['p10','p50','p90']){const yy=y(bands[key]);add('line',{class:`valuation-percentile valuation-${key}`,x1:32,y1:yy,x2:498,y2:yy});const text=add('text',{x:30,y:yy+3,'text-anchor':'end'});text.textContent=key.toUpperCase()}
   add('polyline',{class:'valuation-line',points:subset.map((value,index)=>`${x(index)},${y(value)}`).join(' ')})
   for(const index of [...new Set([0,Math.floor((length-1)/2),length-1])]){const text=add('text',{x:x(index),y:158,'text-anchor':index===0?'start':index===length-1?'end':'middle'});text.textContent=labels[start+index]}
-  selected=Math.max(start,Math.min(labels.length-1,selected));const xx=x(selected-start)
-  add('line',{class:'valuation-crosshair',x1:xx,y1:10,x2:xx,y2:136});add('circle',{class:'valuation-dot',cx:xx,cy:y(values[selected]),r:3})
+  selected=Math.max(start,Math.min(start+length-1,selected));const xx=x(selected-start)
+  add('line',{class:'valuation-crosshair',x1:xx,y1:10,x2:xx,y2:136});add('circle',{'data-refresh-key':'valuation:'+labels[selected],'data-refresh-value':values[selected],class:'valuation-dot',cx:xx,cy:y(values[selected]),r:3})
   readout.textContent=`${labels[selected]} · 当前 ${values[selected]} ${unit} · ${grade(values[selected])}`
   svg.dataset.selectedIndex=String(selected);svg.setAttribute('aria-label',readout.textContent+'；方向键切换时点')
  }
  svg.addEventListener('pointermove',event=>{const rect=svg.getBoundingClientRect();if(!rect.width)return;const {start,length}=range();selected=start+Math.round(((event.clientX-rect.left)/rect.width*506-32)/466*(length-1));draw()})
  svg.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const {start}=range();selected=event.key==='Home'?start:event.key==='End'?labels.length-1:selected+(event.key==='ArrowLeft'?-1:1);draw()})
- buttons.forEach(button=>button.addEventListener('click',()=>{count=button.dataset.valuationRange==='all'?labels.length:Number(button.dataset.valuationRange);selected=labels.length-1;buttons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draw()}))
+ buttons.forEach(button=>button.addEventListener('click',()=>{locked=null;count=button.dataset.valuationRange==='all'?labels.length:Number(button.dataset.valuationRange);selected=labels.length-1;buttons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draw()}))
+ svg.addEventListener('sherlock-chart-restore',event=>{const v=event.detail;if(!v||![v.min,v.max].every(Number.isFinite)||v.max<=v.min||typeof v.start!=='string'||typeof v.end!=='string'||labels.indexOf(v.start)<0||labels.indexOf(v.end)<labels.indexOf(v.start))return;locked=v;draw()})
  draw()
 }
 

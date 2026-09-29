@@ -5,6 +5,28 @@ import {acceptArtifactOutput, workbenchMarketVariantIssue, workbenchMarketRecenc
 import {compactHostDashboardHtml,RESEARCH_COMPONENT_CONTROLS_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {marketVariant,workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 const render=spec=>{const out=acceptArtifactOutput(JSON.stringify({version:1,type:'market',title:'源稿行情',asOf:'09.21 15:00 · 情景模拟',...spec}));expect(out).toBeDefined();const w=new Window();w.document.write(JSON.parse(out).html);return w.document}
+it('retains trend axes and historical endpoints on refresh until the reader resets the range',()=>{
+ const old=render({variant:'trend',labels:['01','02','03'],series:[{name:'指标',values:[1,2,3]}]});old.defaultView.eval(old.querySelector('script').textContent)
+ const previous=JSON.parse(old.querySelector('svg').getAttribute('data-workbench-chart-view'))
+ const fresh=render({variant:'trend',labels:['01','02','03','04'],series:[{name:'指标',values:[1,2,30,100]}]});fresh.defaultView.eval(fresh.querySelector('script').textContent)
+ const chart=fresh.querySelector('svg');chart.dispatchEvent(new fresh.defaultView.CustomEvent('sherlock-chart-restore',{detail:previous}))
+ expect(JSON.parse(chart.getAttribute('data-workbench-chart-view'))).toEqual(previous)
+ expect(chart.querySelector('.trend-line').getAttribute('points').split(' ')).toHaveLength(3)
+ expect(chart.querySelector('.trend-date-axis:last-child').textContent).toBe('03')
+ chart.dispatchEvent(new fresh.defaultView.MouseEvent('dblclick'))
+ expect(JSON.parse(chart.getAttribute('data-workbench-chart-view')).max).toBeGreaterThan(100)
+})
+it.each(['price-volume','valuation-band'])('keeps %s axis and time range until a range button is clicked',variant=>{
+ const labels=['01','02','03'],extra=variant==='price-volume'?{prices:[1,2,3],volumes:[5,10,15],priceUnit:'元',volumeUnit:'股'}:{values:[1,2,3],bands:{p10:1,p25:1.5,p50:2,p75:2.5,p90:3},unit:'倍'}
+ const before=render({variant,labels,...extra});before.defaultView.eval(before.querySelector('script').textContent)
+ const previous=JSON.parse(before.querySelector('svg').getAttribute('data-workbench-chart-view'))
+ const fresh=render({variant,labels:[...labels,'04'],...extra,...(variant==='price-volume'?{prices:[1,2,30,100],volumes:[5,10,15,20]}:{values:[1,2,30,100]})});fresh.defaultView.eval(fresh.querySelector('script').textContent)
+ const chart=fresh.querySelector('svg');chart.dispatchEvent(new fresh.defaultView.CustomEvent('sherlock-chart-restore',{detail:previous}))
+ expect(JSON.parse(chart.getAttribute('data-workbench-chart-view'))).toEqual(previous)
+ expect(chart.querySelector('polyline').getAttribute('points').split(' ')).toHaveLength(3)
+ fresh.querySelector(variant==='price-volume'?'[data-price-volume-range="all"]':'[data-valuation-range="all"]').click()
+ expect(JSON.parse(chart.getAttribute('data-workbench-chart-view')).max).toBeGreaterThan(100)
+})
 it('ignores a malformed neutral-only color matrix without losing any table data or inferring financial colors',()=>{
  const spec={version:1,type:'market',variant:'table',title:'一致预期',asOf:'2026-09-24',columns:['年度','净利润','EPS','PE'],rows:[['2026E','961.33','20.83','14.13']],tones:[['neutral','neutral','neutral']]}
  const d=render(spec)

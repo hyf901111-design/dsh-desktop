@@ -20,7 +20,7 @@ export function componentRefreshBindings(requests:Array<{connectionId:string;con
  return [...groups.values()]
 }
 
-export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean}){
+export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean;onStatusChange?:(sessionId:string,rows:unknown[])=>void}){
  const ajv=new Ajv({strict:false,allErrors:false,validateFormats:false})
  async function sessionIdentity(sessionId:string){
   if(options.isShared(sessionId))throw Error('当前数据刷新仅支持个人工作台')
@@ -38,6 +38,10 @@ export async function createComponentDataService(options:{file:string;integratio
  }
  async function canvas(target:any,method:string,args:any,signal?:AbortSignal){options.canvas.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]});return options.canvas.execute({sessionId:target.sessionId,method,args,scheduled:true},signal) as Promise<any>}
  const engine=new ComponentDataRefresh({owner:options.owner,
+  onChange:(records)=>{
+   const rows=records.filter(row=>row.ownerAccountId===options.owner()),sessions=new Set(rows.map(row=>row.sessionId))
+   for(const sessionId of sessions)options.onStatusChange?.(sessionId,rows.filter(row=>row.sessionId===sessionId).map(row=>({nodeId:row.nodeId,status:row.status,lastSuccess:row.lastSuccess,successSequence:row.successSequence,dataAsOf:row.dataAsOf,enabled:row.enabled,intervalMinutes:row.intervalMinutes,viewPaused:row.enabled&&!engine.isVisible(sessionId)})))
+  },
   load:async()=>{try{return JSON.parse(await readFile(options.file,'utf8'))}catch(error:any){if(error.code==='ENOENT')return [];throw error}},
   save:async(value:any)=>{await mkdir(dirname(options.file),{recursive:true});const tmp=options.file+'.'+randomUUID()+'.tmp';await writeFile(tmp,JSON.stringify(value),{encoding:'utf8',mode:0o600});await rename(tmp,options.file)},
   inspect:async(target:any)=>{const result=await canvas(target,'inspect',{ids:[target.nodeId]});const node=result.nodes.find((n:any)=>n.id===target.nodeId);return {revision:result.revision,spec:node?.content?.containerSpec,writable:result.writable&&Boolean(node?.capabilities?.fields?.containerSpec)}},

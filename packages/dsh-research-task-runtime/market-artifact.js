@@ -55,9 +55,17 @@ function trendRuntime(labels, series, low, high) {
  const svg=document.querySelector('.market-trend svg'),readout=document.querySelector('.trend-readout'),crosshair=svg?.querySelector('.trend-crosshair'),dots=[...svg.querySelectorAll('.trend-selected-dot')],lines=[...svg.querySelectorAll('.trend-line')],buttons=[...document.querySelectorAll('[data-trend-series]')]
  if(!svg||!readout||!crosshair)return
  const visible=series.map(()=>true)
- const x=i=>30+472*i/(labels.length-1),y=value=>137-(value-low)/(high-low)*127
+ const original={low,high,start:0,end:labels.length-1};let start=0,end=labels.length-1
+ const x=i=>30+472*(i-start)/Math.max(1,end-start),y=value=>137-(value-low)/(high-low)*127
+ const syncView=()=>{
+  svg.setAttribute('data-workbench-chart-view',JSON.stringify({min:low,max:high,start:labels[start],end:labels[end]}))
+  lines.forEach((line,n)=>{line.setAttribute('points',series[n].values.slice(start,end+1).map((v,i)=>x(start+i)+','+y(v)).join(' '));line.setAttribute('data-refresh-key','trend:'+series[n].name);line.setAttribute('data-refresh-value',String(series[n].values[end]))})
+  const interval=(high-low)/4,decimals=interval<1?2:interval<10?1:0
+  svg.querySelectorAll('.trend-grid:not(.trend-vertical)').forEach((line,i)=>{const text=line.nextElementSibling;if(text?.tagName.toLowerCase()==='text')text.textContent=(high-interval*i).toFixed(decimals)})
+  svg.querySelectorAll('.trend-date-axis').forEach((text,i,all)=>{const index=start+Math.round((end-start)*i/(all.length-1));text.textContent=labels[index]})
+ }
  const update=index=>{
-  const i=Math.max(0,Math.min(labels.length-1,index))
+  const i=Math.max(start,Math.min(end,index))
   svg.dataset.selectedIndex=String(i)
   crosshair.setAttribute('x1',String(x(i)));crosshair.setAttribute('x2',String(x(i)))
   dots.forEach((dot,n)=>{dot.setAttribute('cx',String(x(i)));dot.setAttribute('cy',String(y(series[n].values[i])))})
@@ -68,7 +76,10 @@ function trendRuntime(labels, series, low, high) {
  buttons.forEach((button,n)=>button.addEventListener('click',()=>{if(visible[n]&&visible.filter(Boolean).length===1)return;visible[n]=!visible[n];syncLegend();lines.forEach((line,i)=>{line.style.display=visible[i]?'':'none'});dots.forEach((dot,i)=>{dot.style.display=visible[i]?'':'none'});update(Number(svg.dataset.selectedIndex))}))
  svg.addEventListener('pointermove',event=>{const rect=svg.getBoundingClientRect();if(!rect.width)return;const chartX=(event.clientX-rect.left)/rect.width*506;update(Math.round((chartX-30)/472*(labels.length-1)))})
  svg.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const current=Number(svg.dataset.selectedIndex);update(event.key==='Home'?0:event.key==='End'?labels.length-1:current+(event.key==='ArrowLeft'?-1:1))})
- syncLegend();update(labels.length-1)
+ svg.addEventListener('sherlock-chart-restore',event=>{const v=event.detail;if(!v||![v.min,v.max].every(Number.isFinite)||v.max<=v.min||typeof v.start!=='string'||typeof v.end!=='string'||labels.indexOf(v.start)<0||labels.indexOf(v.end)<labels.indexOf(v.start))return;low=v.min;high=v.max;start=labels.indexOf(v.start);end=labels.indexOf(v.end);syncView();update(Number(svg.dataset.selectedIndex))})
+ svg.addEventListener('dblclick',()=>{low=original.low;high=original.high;start=original.start;end=original.end;syncView();update(end)})
+ svg.setAttribute('title','双击图表恢复完整范围')
+ syncView();syncLegend();update(labels.length-1)
 }
 const trendCss=`body[data-sherlock-market="trend"]{padding-bottom:3px}.market-trend{min-width:0}.market-trend svg{display:block;width:100%;height:clamp(112px,calc(100vh - 68px),148px);overflow:hidden}.trend-grid{stroke:var(--sherlock-chart-grid);stroke-width:.55}.trend-vertical{stroke-dasharray:1 3}.trend-line{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.trend-1{stroke:var(--sherlock-chart-1)}.trend-2{stroke:var(--sherlock-chart-2)}.trend-3{stroke:color-mix(in srgb,var(--sherlock-chart-1) 45%,var(--sherlock-surface));stroke-dasharray:2 4}.market-trend text{fill:var(--sherlock-chart-label);font:11px var(--sherlock-font-sans)}.trend-head,.trend-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--sherlock-muted);font-size:11px;line-height:15px;white-space:nowrap}.trend-head{border-bottom:.5px solid var(--sherlock-border);margin-bottom:3px}.trend-head>span,.trend-footer>span{overflow:hidden;text-overflow:ellipsis}.trend-legend{display:flex;gap:10px;min-width:0;overflow:hidden}.trend-key{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis}.trend-key::before{content:"";width:11px;min-width:11px;height:2px;background:currentColor}.trend-key.trend-1{color:var(--sherlock-chart-1)}.trend-key.trend-2{color:var(--sherlock-chart-2)}.trend-key.trend-3{color:color-mix(in srgb,var(--sherlock-chart-1) 45%,var(--sherlock-surface))}.trend-key.trend-3::before{height:1px;border-top:1px dashed currentColor;background:none}.market-trend details{margin-top:2px}.market-trend details[open]{max-height:160px;overflow:auto}@media(max-width:440px){.trend-head,.trend-footer{font-size:11px}.trend-legend{gap:5px}.trend-key{max-width:31%}}`
 const trendSeriesCss=Array.from({length:TEMPLATE_LIMITS.trendSeries},(_,i)=>{const color=['var(--sherlock-chart-1)','var(--sherlock-chart-2)','var(--sherlock-chart-3)','#ad78cf','#d58a39','#589a8d'][i%6];return `.trend-${i+1}{stroke:${color};stroke-dasharray:${i>=6?'5 3':'none'}}body .trend-key.trend-${i+1}{color:${color}!important}.trend-key.trend-${i+1}::before{background:currentColor;border:0}`}).join('')+'.trend-legend{flex-wrap:wrap;overflow:visible;gap:2px 10px;justify-content:flex-end}.trend-head{align-items:flex-start;white-space:normal}.trend-key{max-width:none!important}.trend-readout{white-space:normal;overflow-wrap:anywhere}';
@@ -136,7 +147,7 @@ function renderTrend(spec) {
  const lines=series.map((item,index)=>`<polyline class="trend-line trend-${index+1}" points="${item.values.map((value,i)=>`${x(i).toFixed(2)},${y(value).toFixed(2)}`).join(' ')}"/>`).join('')
  const marks=[...new Set([0,Math.floor((labels.length-1)/3),Math.floor((labels.length-1)*2/3),labels.length-1])]
  const vertical=marks.map(i=>`<line x1="${x(i).toFixed(2)}" y1="${top}" x2="${x(i).toFixed(2)}" y2="${bottom}" class="trend-grid trend-vertical"/>`).join('')
- const axis=marks.map(i=>`<text x="${x(i).toFixed(2)}" y="158" text-anchor="${i===0?'start':i===labels.length-1?'end':'middle'}">${esc(labels[i])}</text>`).join('')
+ const axis=marks.map(i=>`<text class="trend-date-axis" x="${x(i).toFixed(2)}" y="158" text-anchor="${i===0?'start':i===labels.length-1?'end':'middle'}">${esc(labels[i])}</text>`).join('')
  const legend=series.map((item,index)=>`<button type="button" class="trend-key trend-${index+1}" data-trend-series="${index}" aria-pressed="true" aria-label="显示或隐藏${esc(item.name)}序列">${esc(item.name)}</button>`).join('')
  const table=`<details><summary>完整趋势数据</summary><table><thead><tr><th>时点</th>${series.map(item=>`<th>${esc(item.name)}</th>`).join('')}</tr></thead><tbody>${labels.map((label,i)=>`<tr><td>${esc(label)}</td>${series.map(item=>`<td>${esc(item.values[i])}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`
  const normalized=series.every(item=>Math.abs(item.values[0]-100)<1)

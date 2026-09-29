@@ -257,7 +257,7 @@ contextBridge.exposeInMainWorld(
     researchVoice: createResearchVoiceBridge(ipcRenderer),
     researchCanvasWheel: createResearchCanvasWheelBridge(ipcRenderer),
     scheduledTasks: Object.freeze({list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list')}),
-    componentData: Object.freeze({request:(sessionId:string,args:unknown)=>ipcRenderer.invoke('component-data:request',sessionId,args),setVisible:(sessionId:string,active:boolean)=>ipcRenderer.invoke('component-data:visibility',sessionId,active)}),
+    componentData: Object.freeze({subscribe:(callback:(value:unknown)=>void)=>{const listener=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on('component-data:status',listener);return()=>ipcRenderer.removeListener('component-data:status',listener)},request:(sessionId:string,args:unknown)=>ipcRenderer.invoke('component-data:request',sessionId,args),setVisible:(sessionId:string,active:boolean)=>ipcRenderer.invoke('component-data:visibility',sessionId,active)}),
     researchCanvasActions: createCanvasActionsBridge(ipcRenderer),
     researchContext: createResearchContextBridge(
       (channel, value) => ipcRenderer.invoke(channel, value)

@@ -104,3 +104,7 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-s
 body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar-track{background:transparent!important}
 
 body [data-research-canvas][data-ework-grid] [data-research-node-id] .rScV5Q_containerTableScroll{overflow-x:auto!important;max-width:100%;min-width:0}
+
+/* Generation keeps the same reserved workbench header as completed cards. */
+body [data-research-canvas][data-ework-grid] [data-research-node-id]:has([data-research-generation-process])>.rScV5Q_nodeTitle{display:flex!important}
+body [data-ework-grid] .odyssey-generation-surface{border-radius:0 0 4px 4px!important}

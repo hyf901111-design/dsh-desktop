@@ -3,6 +3,7 @@ import {createResearchGrid} from '../../packages/dsh-research-task-runtime/resea
 import {createWorkbenchGridState} from './research-grid-state.mjs'
 import * as ui from './research-grid-ui.mjs'
 import {serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg} from '../../packages/dsh-research-task-runtime/workbench-export.js'
+import {installWorkbenchRefresh,workbenchRefreshCss} from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
@@ -121,7 +122,7 @@ export function patchResearchGridWorkbench(source){
   // Only a valid final recognition reaches onCommand and appends a grid component.
   change('onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft();','onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft(null,"voice");')
   change('...(draftKind === "link" ? {title:"添加链接"} : {}),','...(draftKind === "link" ? {title:"添加链接"} : draftKind === "voice" ? {title:"语音组件"} : {}),')
-  const definitions=[createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,...Object.values(ui)].map(fn=>fn.toString()).join('\n')
+  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,...Object.values(ui)].map(fn=>fn.toString()).join('\n')
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   return source+'\n'+meta+JSON.stringify(changes)+' */'
 }

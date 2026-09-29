@@ -251,3 +251,13 @@ describe('concurrent data consumers and account changes',()=>{
   f.now(99999999);await f.service.tick();expect(f.execute).toHaveBeenCalledTimes(1)
  })
 })
+
+it('publishes the actual refresh lifecycle before the request resolves and advances a success sequence',async()=>{
+ const f=setup();await f.service.load();const statuses=[];f.service.options.onChange=rows=>statuses.push(rows.map(r=>[r.status,r.successSequence||0]));const b=await f.service.bind(f.input)
+ let release;f.execute.mockImplementationOnce(()=>new Promise(resolve=>release=resolve));const pending=f.service.refresh(b.id)
+ await vi.waitFor(()=>expect(release).toBeTruthy());expect(statuses.at(-1)).toEqual([['refreshing',0]])
+ release({items:[{name:'指数',price:101}],date:'2026-09-26'});await pending
+ expect(statuses.at(-1)).toEqual([['success',1]])
+ await f.service.refresh(b.id);expect(statuses.at(-1)).toEqual([['unchanged',2]])
+ f.execute.mockRejectedValueOnce(Error('离线'));await f.service.refresh(b.id);expect(statuses.at(-1)).toEqual([['error',2]])
+})
