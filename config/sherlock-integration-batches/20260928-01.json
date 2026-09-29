@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "a8e7131d1efbe086e7b31543695132f12adea761",
-        "tipCommit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
+        "baseCommit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
+        "tipCommit": "40c203bef23777d41f3d31a53a292c8c85fb6406",
         "commits": [
           {
-            "commit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
+            "commit": "40c203bef23777d41f3d31a53a292c8c85fb6406",
             "parents": [
-              "a8e7131d1efbe086e7b31543695132f12adea761"
+              "3cb090a66a527a23014bfe3f8a5ff397f9141d9d"
             ],
-            "subject": "修复图表连续交互重置与撤销缓存覆盖"
+            "subject": "避免初始视图默认值覆盖图表交互重放"
           }
         ],
         "files": [
@@ -29,19 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-interaction-state.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/component-interaction-state.test.js"
           },
           {
             "status": "M",
@@ -61,14 +49,14 @@
             ],
             "outcome": "passed",
             "summary": "29项交互部分确认、撤销缓存、刷新、动效和状态栏聚焦检查通过。",
-            "verifiedCommit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
-            "completedAt": "2026-09-29T21:06:16.127050+00:00",
+            "verifiedCommit": "40c203bef23777d41f3d31a53a292c8c85fb6406",
+            "completedAt": "2026-09-29T21:19:34.822559+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "修复前真实客户端59秒完成六卡且90条样本一致；修复后浏览器生产包装4箱明细和主题保持，撤销清空旧刷新缓存。原生集成包交互复验仍待本次构建完成，不宣称工作台完全验收。"
+          "summary": "Chrome真实键盘分箱12→4，展开和切主题不重载；撤销展开只收起表格且保留4箱；拒绝改6箱恢复已保存4箱。日志计数与页面就绪次数核验，证据interaction-ack-browser.png/txt。原生集成包六图完整复验仍待本次构建。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -193,51 +181,6 @@
           "Figma截图接口返回1×1占位，本轮未宣称像素级复验通过。"
         ],
         "generatedAt": "2026-09-29T18:52:36.805261+00:00"
-      },
-      "merged": {
-        "mergeCommit": "21f41328a32a8f97c93b57fd9c3e5f5e1782960d",
-        "verificationCommit": "21f41328a32a8f97c93b57fd9c3e5f5e1782960d",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "21f41328a32a8f97c93b57fd9c3e5f5e1782960d",
-            "completedAt": "2026-09-29T21:08:16.614Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "21f41328a32a8f97c93b57fd9c3e5f5e1782960d",
-            "completedAt": "2026-09-29T21:08:16.614Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "21f41328a32a8f97c93b57fd9c3e5f5e1782960d",
-            "completedAt": "2026-09-29T21:08:16.614Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T21:08:16.614Z"
       }
     }
   ],
