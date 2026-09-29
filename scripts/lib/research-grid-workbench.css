@@ -115,15 +115,14 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-s
 
 body [data-research-canvas][data-ework-grid] [data-research-node-id] .rScV5Q_containerTableScroll{overflow-x:auto!important;max-width:100%;min-width:0}
 
-/* Generation keeps the same reserved workbench header as completed cards. */
-body [data-research-canvas][data-ework-grid] [data-research-node-id]:has([data-research-generation-process])>.rScV5Q_nodeTitle{display:flex!important}
-body [data-ework-grid] .odyssey-generation-surface{border-radius:0 0 4px 4px!important}
-/* One composition for ordinary and derived tasks, within the existing frame. */
-body [data-ework-grid] [data-research-generation-foreground]{top:54px;gap:10px;overflow:hidden}
-body [data-ework-grid] .odyssey-generation-state-icon{width:16px;height:16px;mask-size:16px 16px;margin-bottom:12px;flex:none}
-body [data-ework-grid] [data-research-generation-foreground]>strong{font-size:15px;line-height:24px;flex:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-height:48px;overflow:hidden}
-body [data-ework-grid] .odyssey-generation-phase{font-size:13px;line-height:20px;flex:none}
-body [data-ework-grid] [data-research-generation-foreground]>[data-research-generation-description]{display:block;-webkit-line-clamp:unset;line-height:20px;flex:1 1 auto;min-height:60px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;scrollbar-width:thin}
+/* In-progress cards share the planning card's full-bleed, headerless frame. */
+body [data-ework-grid] .odyssey-generation-surface{border-radius:8px!important}
+/* Keep all progress rows available inside a fixed-size card. */
+body [data-ework-grid] [data-research-generation-foreground]{top:66px;bottom:16px;gap:8px;overflow:auto}
+body [data-ework-grid] .odyssey-generation-state-icon{width:16px;height:16px;mask-size:16px 16px;margin-bottom:6px;flex:none}
+body [data-ework-grid] [data-research-generation-foreground]>strong{font-size:15px;line-height:22px;flex:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-height:44px;overflow:hidden}
+body [data-ework-grid] .odyssey-generation-phase{font-size:13px;line-height:18px;flex:none}
+body [data-ework-grid] [data-research-generation-foreground]>[data-research-generation-description]{display:block;-webkit-line-clamp:unset;line-height:18px;flex:none;min-height:0;overflow:visible;white-space:pre-wrap;overflow-wrap:anywhere}
 body [data-ework-grid] [data-research-generation-sources]{flex:none}
 /* Every generation frame scrolls its task details instead of changing its box. */
 body [data-ework-grid] [data-workbench-fixed-generation-size] [data-research-generation-foreground]{overflow:auto;overscroll-behavior:auto}
