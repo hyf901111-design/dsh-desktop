@@ -163,6 +163,18 @@ it('整理时宽表格缩至可用短列，不跳过短指标下方可容纳的�
  expect(g.arrange(nodes,next,1148)).toEqual(next)
 })
 
+it('ETF后续窄量价卡补入相邻短列，保持已有两列比例和重复稳定',()=>{
+ for(const width of [1000,1334,1400]){
+  const g=createResearchGrid(),m=g.metrics(width),before=[item('candle',0,0,40,14),item('donut',0,14,27,16),item('table',27,14,13,9),item('volume',0,30,27,18)]
+  const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width),at=id=>next.find(c=>c.id===id)
+  expect(at('candle')).toEqual(before[0]);expect(at('donut')).toEqual(before[1]);expect(at('table')).toEqual(before[2])
+  expect(at('volume')).toMatchObject({x:27,y:23,w:13,h:18})
+  expect(at('volume').w*m.step-m.gap).toBeGreaterThanOrEqual(280)
+  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+  expect(g.arrange(nodes,next,width)).toEqual(next)
+ }
+})
+
 it('整理以当前左右列及列内顺序为准，忽略创建顺序并保留宽度比例',()=>{
  const g=createResearchGrid(),nodes=[
   {id:'right-bottom',preferred:{width:800,height:260}},
