@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "3cb090a66a527a23014bfe3f8a5ff397f9141d9d",
-        "tipCommit": "40c203bef23777d41f3d31a53a292c8c85fb6406",
+        "baseCommit": "40c203bef23777d41f3d31a53a292c8c85fb6406",
+        "tipCommit": "27a0a2df88774b2905fc6e537f960beb4beeafa9",
         "commits": [
           {
-            "commit": "40c203bef23777d41f3d31a53a292c8c85fb6406",
+            "commit": "1708993c8c02fc1b6fd58ca6d4a687a0c42656a3",
             "parents": [
-              "3cb090a66a527a23014bfe3f8a5ff397f9141d9d"
+              "40c203bef23777d41f3d31a53a292c8c85fb6406"
             ],
-            "subject": "避免初始视图默认值覆盖图表交互重放"
+            "subject": "记录六类图表真实客户端交互与主题复验"
+          },
+          {
+            "commit": "27a0a2df88774b2905fc6e537f960beb4beeafa9",
+            "parents": [
+              "1708993c8c02fc1b6fd58ca6d4a687a0c42656a3"
+            ],
+            "subject": "补齐九类预置图表并修正圆心文字与紧凑布局"
           }
         ],
         "files": [
@@ -28,12 +35,76 @@
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/advanced-chart-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/advanced-chart-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/advanced-chart-view.js"
           },
           {
             "status": "M",
-            "path": "test/workbench-refresh.test.js"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/special-chart-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/special-chart-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/special-chart-view.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "A",
+            "path": "test/advanced-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/advanced-chart-samples.js"
+          },
+          {
+            "status": "A",
+            "path": "test/special-chart-layout.test.js"
           }
         ],
         "checks": [
@@ -42,21 +113,40 @@
               "npx",
               "vitest",
               "run",
-              "test/component-interaction-state.test.js",
-              "test/workbench-refresh.test.js",
+              "test/special-chart-layout.test.js",
+              "test/special-chart-template.test.js",
+              "test/advanced-chart-template.test.js",
               "test/workbench-chart-motion.test.js",
-              "test/component-data-status.test.js"
+              "test/component-template-registry.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/research-artifact-resilience.test.js"
             ],
             "outcome": "passed",
-            "summary": "29项交互部分确认、撤销缓存、刷新、动效和状态栏聚焦检查通过。",
-            "verifiedCommit": "40c203bef23777d41f3d31a53a292c8c85fb6406",
-            "completedAt": "2026-09-29T21:19:34.822559+00:00",
+            "summary": "132项图表契约、密集数据、保存预览升级、动效检查通过；随后补充客户端序列化核验。",
+            "verifiedCommit": "27a0a2df88774b2905fc6e537f960beb4beeafa9",
+            "completedAt": "2026-09-29T22:37:27.672783+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/special-chart-layout.test.js",
+              "test/terminal-component-presentation.test.js",
+              "test/research-canvas-actions-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "19项客户端定义与预览路径聚焦检查通过。",
+            "verifiedCommit": "27a0a2df88774b2905fc6e537f960beb4beeafa9",
+            "completedAt": "2026-09-29T22:37:27.672783+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chrome真实键盘分箱12→4，展开和切主题不重载；撤销展开只收起表格且保留4箱；拒绝改6箱恢复已保存4箱。日志计数与页面就绪次数核验，证据interaction-ack-browser.png/txt。原生集成包六图完整复验仍待本次构建。"
+          "summary": "Chrome生产CSP沙盒验证新九类图表三主题/窄卡及交互；旭日图320x300三主题文字整体中心误差0px，下钻128→80→128。96根K线/OHLC完整，区间筛选20期、主题/宽度变化不重播动效，无控制台告警。原生已保存看板复验待本次集成构建。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -170,62 +260,21 @@
           "预置饼环、树图、旭日、雷达、直方、箱线、子弹、仪表九类独立数据契约；保留原值与样本，三主题、键盘读数和首次生长动效。",
           "同批直方图使用samplesFromPanel精确复用箱线图原始样本；重复抄写有遗漏的旧式同批输入在创建前拒绝。",
           "短卡保持外框尺寸，绘图区自适应剩余高度；圆环、仪表、坐标和读数完整可见。",
-          "连续本地交互的部分确认不误判撤销；原生select仅保存change；拒绝操作和真实撤销清除旧刷新缓存后按日志重放。"
+          "连续本地交互的部分确认不误判撤销；原生select仅保存change；拒绝操作和真实撤销清除旧刷新缓存后按日志重放。",
+          "30类chart图表均采用对应Figma宿主预置，保留独立数据契约、三主题、明细和首次加载动效。",
+          "圆环/旭日/仪表数字与单位按整体字形居中，单位与导航共用一行，读数固定高度，旧卡预览原位升级不改变源数据和交互路径。",
+          "密集图表保留完整源数据，避免初始SVG/表格重复超限，无数值截断。"
         ],
         "risks": [
           "未运行全功能测试。",
           "research-html-theme四项及workbench-component-profiles三项既存基线失败，未宣称修复历史preview-size预算或旧字体几何断言。",
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。",
-          "Figma全量44组件和30图表仍未全部覆盖；本轮注册表49项包括21类图表，完整原生成功率目标尚未验收通过。",
-          "Figma截图接口返回1×1占位，本轮未宣称像素级复验通过。"
+          "Figma截图接口返回1×1占位，本轮未宣称像素级复验通过。",
+          "当前58项注册含30类chart；44业务/通用组件全量与总体原生成功率>90%仍未验收。",
+          "旧research-board-client-adapter有42项applyRemoteCanvas重复补丁锚点失败；本次客户端预览路径独立验证通过。"
         ],
-        "generatedAt": "2026-09-29T18:52:36.805261+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
-        "verificationCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
-            "completedAt": "2026-09-29T21:24:02.480Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
-            "completedAt": "2026-09-29T21:24:02.480Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a04297efe324f8c7660f8a31539c2759972e41e5",
-            "completedAt": "2026-09-29T21:24:02.480Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T21:24:02.480Z"
+        "generatedAt": "2026-09-29T22:37:27.672783+00:00"
       }
     }
   ],
