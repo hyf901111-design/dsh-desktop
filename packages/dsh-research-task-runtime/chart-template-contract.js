@@ -22,7 +22,7 @@ export function chartTemplateSchema(variant) {
   return JSON.stringify({version:1,type:'chart',title:'标题',variant:variant ?? CHART_VARIANTS.join('|'),
     labels:['标签1','标签2'],series:[{name:'系列',values:[12,18]}],unit:'相同数值单位',asOf:'来源及数据时点'}) +
     '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。' +
-    'percentBar 仅非负原值，由宿主计算各分类百分比；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。可选 subtitle、note，原始单位和来源保留。';
+    'percentBar 仅非负原值，由宿主计算各分类百分比；unit 必须是原值单位（如百万元、件），不能把金额原值标为 %，不要在 unit 中填写说明文字；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。可选 subtitle、note，原始单位和来源保留。';
 }
 export function requireSimulatedChartData(panel) {
   if (panel.type !== 'chart' || panel.artifact) return;
@@ -45,5 +45,9 @@ export function chartDataIssue(spec) {
   }
   if (spec.variant === 'dumbbell' && spec.series.length !== 2) return '哑铃图必须恰好有两组配对数据';
   if (spec.variant === 'percentBar' && spec.series.some(s => s.values.some(v => v < 0))) return '百分比堆叠柱图不接受负值';
+  if (spec.variant === 'percentBar' && /[%％]|百分比/u.test(spec.unit ?? '') &&
+    spec.labels.some((_,i) => spec.series.reduce((sum,s) => sum+s.values[i],0) > 100+1e-8)) {
+    return '百分比堆叠图的 unit 是原始数据单位（如百万元、件），不能把未归一化原值标成百分比；占比由宿主计算，说明放入 note';
+  }
   return null;
 }

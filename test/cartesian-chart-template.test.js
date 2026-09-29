@@ -42,6 +42,20 @@ describe('Figma cartesian templates',()=>{
      expect(chartDataIssue(broken)).toBeTruthy();expect(acceptArtifactOutput(JSON.stringify(broken))).toBeUndefined();
    }
  });
+ it('keeps percent-chart source units honest before creating a simulated workbench',()=>{
+   const misleading=data('percentBar',{unit:'%（提交非负原值，模板自动换算占比）',series:[{name:'收入',values:[120,150,210]}]});
+   expect(chartDataIssue(misleading)).toContain('原始数据单位');
+   expect(acceptArtifactOutput(JSON.stringify(misleading))).toBeUndefined();
+   expect(()=>validateWorkbench({title:'收入结构',requestId:'percent-units',dataMode:'simulated',panels:[{title:'收入结构',prompt:'chart.percentBar',type:'chart',size:'large',artifact:misleading}]})).toThrow();
+   const corrected={...misleading,unit:'百万元'};
+   expect(chartDataIssue(corrected)).toBeNull();
+   expect(renderCartesianChart(corrected).html).toContain('占比 · 原值单位：百万元');
+   expect(chartDataIssue(data('percentBar',{unit:'%'}))).toBeNull();
+ });
+ it('fits short horizontal plots while retaining readable row pitch',()=>{
+   const compact=cartesianChartSvg(data('dumbbell'),400,[true,true],160);
+   expect(compact.height).toBe(160);expect(compact.categorySize).toBeGreaterThanOrEqual(30);
+ });
  it('stacks positive and negative values separately and re-stacks visible series in a fixed domain',()=>{
    const spec=data('stackedBar',{labels:['A'],series:[{name:'up1',values:[20]},{name:'up2',values:[30]},{name:'down',values:[-10]}]});
    const full=cartesianChartSvg(spec), hidden=cartesianChartSvg(spec,620,[false,true,true]);
