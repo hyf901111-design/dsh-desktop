@@ -2,6 +2,17 @@ import { describe, it, expect } from 'vitest'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('普通组件最小280×160，智能草稿320×220，窄画板仅限制可用宽度',()=>{
+ const g=createResearchGrid()
+ for(const width of [1000,700,500,240]){
+  const m=g.metrics(width)
+  for(const [node,w,h] of [[{kind:'pasted-text'},280,160],[{kind:'generated-container',containerSpec:{}},280,160],[{kind:'generated-container'},320,220]]){
+   const min=g.minimum(node,m)
+   expect(min.w*m.step-m.gap).toBeGreaterThanOrEqual(Math.min(w,width-24))
+   expect(min.h*m.step-m.gap).toBeGreaterThanOrEqual(h)
+  }
+ }
+})
 it('创建、投影和吸附共同使用实时正方形格位',()=>{
  const grid=createResearchGrid()
  for(const width of [824,1000,1376]){
@@ -63,7 +74,7 @@ describe('研究工作台网格事务',()=>{
 })
 
 it('整理填满可用宽度，按内容分配独立高度和不等宽模块并保持稳定',()=>{
- const g=createResearchGrid(),nodes=[{id:'a',preferred:{width:640,height:290}},{id:'b',preferred:{width:340,height:200}},{id:'c',preferred:{width:600,height:460}}],before=[item('a',6,0,10,6),item('b',30,20,10,5),item('c',5,45,15,13)]
+ const g=createResearchGrid(),nodes=[{id:'a',preferred:{width:640,height:290}},{id:'b',preferred:{width:340,height:200}},{id:'c',preferred:{width:600,height:460}}],before=[item('a',0,0,26,6),item('b',26,0,14,5),item('c',0,45,26,13)]
  const next=g.arrange(nodes,before,1000,700),bottom=Math.max(...next.map(c=>c.y+c.h))
  expect(next.map(c=>c.id)).toEqual(['a','b','c']);expect(new Set(next.map(c=>c.w)).size).toBeGreaterThan(1)
  expect(Math.max(...next.map(c=>c.x+c.w))).toBe(40)
@@ -122,6 +133,35 @@ it('整理时宽表格缩至可用短列，不跳过短指标下方可容纳的�
  expect(table.w*g.metrics(1148).step-g.metrics(1148).gap).toBeGreaterThanOrEqual(280)
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
  expect(g.arrange(nodes,next,1148)).toEqual(next)
+})
+
+it('整理以当前左右列及列内顺序为准，忽略创建顺序并保留宽度比例',()=>{
+ const g=createResearchGrid(),nodes=[
+  {id:'right-bottom',preferred:{width:800,height:260}},
+  {id:'left-bottom',preferred:{width:320,height:260}},
+  {id:'right-top',preferred:{width:800,height:460}},
+  {id:'left-top',preferred:{width:320,height:200}}
+ ],before=[item('right-bottom',24,40,16,24),item('left-bottom',0,40,24,24),item('right-top',24,0,16,32),item('left-top',0,0,24,32)]
+ const next=g.arrange(nodes,before,1000),left=next.find(c=>c.id==='left-top'),right=next.find(c=>c.id==='right-top')
+ expect(left).toMatchObject({x:0,y:0,w:24})
+ expect(right).toMatchObject({x:24,y:0,w:16})
+ expect(next.find(c=>c.id==='left-bottom')).toMatchObject({x:0,y:left.h,w:24})
+ expect(next.find(c=>c.id==='right-bottom')).toMatchObject({x:24,y:right.h,w:16})
+ expect(left.h).toBeLessThan(right.h)
+ expect(g.arrange(nodes,next,1000)).toEqual(next)
+ expect(next.map(c=>c.id)).toEqual(before.map(c=>c.id))
+})
+
+it('整理保留错位的两列，内容高度变化不丢失下面的细分列',()=>{
+ const g=createResearchGrid(),staggered=[item('left',0,0,20,10),item('right',20,20,20,10)],nodes=staggered.map(c=>({id:c.id,preferred:{height:220}}))
+ const next=g.arrange(nodes,staggered,1400)
+ expect(next).toEqual([expect.objectContaining({id:'left',x:0,y:0,w:20}),expect.objectContaining({id:'right',x:20,y:0,w:20})])
+ const before=[item('span',0,0,26,25),item('right',26,0,14,26),item('left',0,25,13,17),item('middle',13,25,13,10)]
+ const nested=before.map((c,i)=>({id:c.id,preferred:{height:[651,421,185,663][i]}})),arranged=g.arrange(nested,before,1400)
+ expect(arranged.map(c=>[c.x,c.w])).toEqual(before.map(c=>[c.x,c.w]))
+ expect(arranged.find(c=>c.id==='left').y).toBe(arranged.find(c=>c.id==='span').h)
+ expect(arranged.find(c=>c.id==='middle').y).toBe(arranged.find(c=>c.id==='span').h)
+ expect(g.arrange(nested,arranged,1400)).toEqual(arranged)
 })
 
 it('多选调高共用尺寸增量，底下未选卡片让位且最小尺寸统一限制',()=>{

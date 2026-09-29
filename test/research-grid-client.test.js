@@ -410,13 +410,32 @@ it('拖动期间窗口缩窄后失焦取消仍恢复原跨度',async()=>{
  expect(f.workspace.getWorkbenchCells()).toEqual(cells)
 })
 
-it('窄窗口的合法小跨度不会被渲染器放大而重叠',async()=>{
+it('历史过小的普通组件显示补足最小尺寸并让位，规范布局不被被动改写',async()=>{
  const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a'),text('b')]);f.workspace.setCanvasSize({width:500,height:700,availableWidth:500});f.workspace.setWorkbenchWidth(500);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:4,h:7},{id:'b',x:4,y:0,w:4,h:7}],true)})
  const [a,b]=f.workspace.getSnapshot().artifacts
  expect(parseFloat(f.host.querySelector('[data-research-node-id="a"]').style.width)).toBeCloseTo(a.width,5)
  expect(parseFloat(f.host.querySelector('[data-research-node-id="b"]').style.width)).toBeCloseTo(b.width,5)
  expect(a.x-a.width/2).toBeGreaterThanOrEqual(12)
- expect(a.x+a.width/2).toBeLessThan(b.x-b.width/2)
+ expect(a.width).toBeGreaterThanOrEqual(280);expect(a.height).toBeGreaterThanOrEqual(160)
+ expect(b.width).toBeGreaterThanOrEqual(280);expect(b.height).toBeGreaterThanOrEqual(160)
+ expect(a.y+a.height/2).toBeLessThan(b.y-b.height/2)
+ expect(f.workspace.getWorkbenchCells().map(c=>c.w)).toEqual([4,4])
+})
+
+it('普通组件单轴及多选缩小都限制280×160，整笔撤销恢复',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await act(async()=>{w.setArtifacts([text('a'),text('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:12},{id:'b',x:20,y:0,w:20,h:12}],true);w.updateSelection(['a'],'replace')})
+ const before=w.getWorkbenchCells(),handle=axis=>f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="'+axis+'"]')
+ await f.event('pointerdown',handle('x'),{button:0,pointerId:120,clientX:480,clientY:150})
+ await f.event('pointerup',f.canvas,{pointerId:120,clientX:480-step*30,clientY:150})
+ expect(w.getSnapshot().artifacts.find(n=>n.id==='a').width).toBeGreaterThanOrEqual(280)
+ expect(w.getSnapshot().artifacts.find(n=>n.id==='a').width).toBeLessThan(310)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+ await act(async()=>w.updateSelection(['a','b'],'replace'))
+ await f.event('pointerdown',handle('y'),{button:0,pointerId:121,clientX:250,clientY:300})
+ await f.event('pointerup',f.canvas,{pointerId:121,clientX:250,clientY:300-step*30})
+ expect(w.getSnapshot().artifacts.every(n=>n.height>=160&&n.height<185)).toBe(true)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
 
 it('滚动后的导出子菜单在可见区域打开',async()=>{
@@ -534,12 +553,15 @@ it('未选中时组件滚轮交给工作台，选中后仅在内部可滚时消�
  const relayed=await f.event('wheel',preview,{deltaX:0,deltaY:80,deltaMode:0,__sherlockCanvasPan:true})
  expect(relayed.defaultPrevented).toBe(true);expect(f.canvas.scrollTop).toBe(208)
 })
-it('整理走网格铺满布局，可撤销且再次整理结果稳定',async()=>{
+it('整理保留当前左右位置关系并紧凑补位，可撤销且再次整理结果稳定',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a',160,120),text('b',900,1000),text('c',250,2000)]);f.workspace.setWorkbenchWidth(1000)
  const before=f.workspace.getWorkbenchCells()
  expect(f.workspace.organizeCanvas()).toBe(true)
- const arranged=f.workspace.getWorkbenchCells(),bottom=Math.max(...arranged.map(c=>c.y+c.h))
- for(let y=0;y<bottom;y++)for(let x=0;x<40;x++)expect(arranged.filter(c=>x>=c.x&&x<c.x+c.w&&y>=c.y&&y<c.y+c.h)).toHaveLength(1)
+ const arranged=f.workspace.getWorkbenchCells(),a=arranged.find(c=>c.id==='a'),b=arranged.find(c=>c.id==='b'),c=arranged.find(c=>c.id==='c')
+ expect(a.x).toBeLessThan(b.x);expect(c.x).toBeLessThan(b.x);expect(c.y).toBe(a.y+a.h)
+ expect(Math.min(...arranged.map(c=>c.x))).toBe(0);expect(Math.max(...arranged.map(c=>c.x+c.w))).toBe(40)
+ const grid=(await import('../packages/dsh-research-task-runtime/research-grid.js')).createResearchGrid()
+ expect(arranged.every((a,i)=>arranged.every((b,j)=>i===j||!grid.overlap(a,b)))).toBe(true)
  f.workspace.organizeCanvas();expect(f.workspace.getWorkbenchCells()).toEqual(arranged)
  f.workspace.undo();expect(f.workspace.getWorkbenchCells()).toEqual(before)
 })
@@ -606,10 +628,10 @@ it('原生表格按完整行内容整理，不使用大号默认高度',async()=
 
 it('一次整理等待改宽后的HTML自然高度，整次操作只撤销一步',async()=>{
  const f=await fixture(true),w=f.workspace,n=id=>({...text(id),kind:'generated-container',containerPrompt:'文章',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:id,html:'<p>文章 '+id+'</p>'}})
- await act(async()=>{w.setArtifacts([n('a'),n('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:40,h:20},{id:'b',x:0,y:20,w:40,h:20}],true)})
+ await act(async()=>{w.setArtifacts([n('a'),n('b')]);w.applyWorkbenchCells([{id:'a',x:2,y:0,w:15,h:20},{id:'b',x:23,y:0,w:15,h:20}],true)})
  const before=w.getWorkbenchCells(),frames=['a','b'].map(id=>f.host.querySelector('[data-research-node-id="'+id+'"] iframe'))
  const send=async(frame,width,height)=>act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width,height}})))
- for(const frame of frames)await send(frame,974,300)
+ for(const frame of frames)await send(frame,358,300)
  await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
  await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
  expect(w.getSnapshot().artifacts.every(n=>n.width<600)).toBe(true)
@@ -871,20 +893,20 @@ it('窄窗多选调宽从草稿实际宽度同步增量，边界限制不会反�
 })
 
 it('窄窗多选调宽不保存未选草稿的被动补宽，恢复宽窗及撤销取消不漂移',async()=>{
- const f=await fixture(true),w=f.workspace,step=(500-14)/40;let draft
- await act(async()=>{w.setArtifacts([text('a'),text('c')]);draft=w.createContainerDraft();w.applyWorkbenchCells([{id:'a',x:0,y:0,w:4,h:5},{id:draft.id,x:4,y:0,w:8,h:10},{id:'c',x:0,y:10,w:4,h:5}],true);w.updateSelection(['a','c'],'replace')})
+ const f=await fixture(true),w=f.workspace,step=(700-14)/40;let draft
+ await act(async()=>{w.setArtifacts([text('a'),text('c')]);draft=w.createContainerDraft();w.applyWorkbenchCells([{id:'a',x:0,y:0,w:17,h:10},{id:draft.id,x:17,y:0,w:8,h:10},{id:'c',x:0,y:10,w:17,h:10}],true);w.updateSelection(['a','c'],'replace')})
  const canonical=w.getWorkbenchCells(),wideWidth=w.getSnapshot().artifacts.find(n=>n.id===draft.id).width
- await act(async()=>{w.setCanvasSize({width:500,height:700,availableWidth:500});w.setWorkbenchWidth(500)})
- expect(w.getWorkbenchVisibleCells().find(c=>c.id===draft.id).w).toBe(28)
+ await act(async()=>{w.setCanvasSize({width:700,height:700,availableWidth:700});w.setWorkbenchWidth(700)})
+ expect(w.getWorkbenchVisibleCells().find(c=>c.id===draft.id).w).toBe(20)
  const handle=()=>f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]')
  await f.event('pointerdown',handle(),{button:0,pointerId:96,clientX:100,clientY:100})
  await f.event('pointerup',f.canvas,{pointerId:96,clientX:100+step,clientY:100})
- expect(w.getWorkbenchCells().filter(c=>['a','c'].includes(c.id)).map(c=>c.w)).toEqual([5,5])
- expect(w.getWorkbenchCells().find(c=>c.id===draft.id)).toMatchObject({x:5,w:8,h:10})
+ expect(w.getWorkbenchCells().filter(c=>['a','c'].includes(c.id)).map(c=>c.w)).toEqual([18,18])
+ expect(w.getWorkbenchCells().find(c=>c.id===draft.id)).toMatchObject({x:18,w:8,h:10})
  await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
  expect(w.getSnapshot().artifacts.find(n=>n.id===draft.id).width).toBe(wideWidth)
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(canonical)
- await act(async()=>{w.setCanvasSize({width:500,height:700,availableWidth:500});w.setWorkbenchWidth(500)})
+ await act(async()=>{w.setCanvasSize({width:700,height:700,availableWidth:700});w.setWorkbenchWidth(700)})
  await f.event('pointerdown',handle(),{button:0,pointerId:97,clientX:100,clientY:100})
  await f.event('pointermove',f.canvas,{pointerId:97,clientX:100+step*2,clientY:100})
  await f.event('pointercancel',f.canvas,{pointerId:97});expect(w.getWorkbenchCells()).toEqual(canonical)
@@ -1022,7 +1044,7 @@ it('窄窗口移动不写回本地补高，缩放仅改变目标尺寸且可撤�
  const afterMove=w.getWorkbenchCells()
  await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="y"]'),{button:0,pointerId:66,clientX:230,clientY:100})
  await f.event('pointerup',f.canvas,{pointerId:66,clientX:230,clientY:100+step})
- expect(w.getWorkbenchCells().find(c=>c.id==='a').h).toBe(10)
+ expect(w.getWorkbenchCells().find(c=>c.id==='a').h).toBe(15)
  expect(w.getWorkbenchCells().find(c=>c.id==='b').h).toBe(5)
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(afterMove)
  await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
@@ -1035,7 +1057,7 @@ it('单轴缩放保留未操作轴的规范尺寸，窄窗补高和小草稿补�
  const step=parseFloat(f.canvas.querySelector('[data-research-content-layer]').style.getPropertyValue('--grid-step'))
  await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize-axis=x]'),{button:0,pointerId:74,clientX:230,clientY:100})
  await f.event('pointerup',f.canvas,{pointerId:74,clientX:230+step,clientY:100+step*3})
- expect(w.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:21,h:5})
+ expect(w.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:25,h:5})
  await act(async()=>{w.undo();w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
  let draft;await act(async()=>{draft=w.createContainerDraft();w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:5},{id:draft.id,x:32,y:10,w:4,h:3}],true);w.updateSelection([draft.id],'replace')})
  const wideStep=parseFloat(f.canvas.querySelector('[data-research-content-layer]').style.getPropertyValue('--grid-step'))

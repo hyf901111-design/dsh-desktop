@@ -2,8 +2,8 @@
 export function createResearchGrid() {
   const columns=40, gap=10, inset=12
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n))
-  const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minRows:Math.ceil(105/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
-  const minimum=(node,m)=>node?.kind==='generated-container'&&!node.containerSpec?{w:m.minDraftColumns,h:m.minDraftRows}:{w:4,h:m.minRows}
+  const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
+  const minimum=(node,m)=>node?.kind==='generated-container'&&!node.containerSpec?{w:m.minDraftColumns,h:m.minDraftRows}:{w:m.minColumns,h:m.minRows}
   const bounded=n=>({...n,w:clamp(Math.round(n.w)||4,4,columns),h:clamp(Math.round(n.h)||3,3,300),x:clamp(Math.round(n.x)||0,0,columns-clamp(Math.round(n.w)||4,4,columns)),y:Math.max(0,Math.round(n.y)||0)})
   const overlap=(a,b)=>a.id!==b.id&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y
   const order=(a,b)=>a.y-b.y||a.x-b.x
@@ -88,47 +88,25 @@ export function createResearchGrid() {
     const resolved=new Map(compact(place(items,active)).map(c=>[c.id,c]))
     return items.map(c=>resolved.get(c.id))
   }
-  // Plan widths by content, then fill the lowest usable space. A wide next
-  // card can narrow to that space; independent content heights never stretch.
+  // Read the current canvas, not insertion order. Compress only horizontal
+  // intervals unused anywhere on the canvas, so staggered columns and cards
+  // spanning several columns survive changes in their content height.
   function arrange(nodes,items,width,visibleHeight=0) {
-    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),cellsById=new Map(items.map(n=>[n.id,bounded(n)])),ordered=nodes.map(n=>cellsById.get(n.id)).filter(Boolean)
-    const preferred=ordered.map(c=>{const n=byId.get(c.id)||{},p=n.preferred||n,min=minimum(n,m),minWidth=Math.min(m.width-2*inset,n.kind==='generated-container'&&!n.containerSpec?320:280);return {w:Math.max(minWidth,Math.min(m.width-2*inset,p.width||480)),h:Math.max(min.h*m.step-m.gap,p.height||260),minCols:Math.min(columns,Math.ceil((minWidth+m.gap)/m.step)),minRows:min.h}})
-    const maxPeers=Math.max(1,Math.min(3,Math.floor((width-2*inset+gap)/300))),cost=Array(ordered.length+1).fill(Infinity),choices=[];cost[ordered.length]=0
-    for(let start=ordered.length-1;start>=0;start--)for(let count=1;count<=Math.min(maxPeers,ordered.length-start);count++){
-      const peers=preferred.slice(start,start+count),sum=peers.reduce((v,p)=>v+p.w,0),scale=(width-2*inset-(count-1)*gap)/sum
-      if(peers.reduce((v,p)=>v+p.minCols,0)>columns)continue
-      const heights=peers.map(p=>p.h),mismatch=Math.max(...heights)/Math.min(...heights)-1
-      const score=cost[start+count]+Math.abs(Math.log(scale))*2+Math.max(0,1-scale)*2+mismatch*.7+.2
-      if(score<cost[start]){cost[start]=score;choices[start]=count}
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
+    if(!ordered.length)return items.map(bounded)
+    const min=c=>minimum(byId.get(c.id),m),sized=ordered.map(c=>{const w=Math.max(c.w,min(c).w);return {...c,w,x:Math.min(c.x,columns-w)}}),intervals=[]
+    for(const c of [...sized].sort((a,b)=>a.x-b.x)){
+      const last=intervals.at(-1),right=c.x+c.w
+      if(last&&c.x<=last.right)last.right=Math.max(last.right,right)
+      else intervals.push({left:c.x,right})
     }
-    const shelves=[];let y=0
-    for(let start=0;start<ordered.length;){const count=choices[start]||1,peers=preferred.slice(start,start+count),sum=peers.reduce((v,p)=>v+p.w,0)
-      let x=0;const shelf=[]
-      for(let j=0;j<count;j++){const w=j===count-1?columns-x:clamp(Math.round(peers[j].w/sum*columns),peers[j].minCols,columns-x-peers.slice(j+1).reduce((v,p)=>v+p.minCols,0)),h=clamp(Math.max(peers[j].minRows,Math.ceil((peers[j].h+m.gap)/m.rowStep)),3,300);shelf.push({...ordered[start+j],x,y,w,h});x+=w}
-      const h=Math.max(...shelf.map(c=>c.h))
-      shelves.push({cells:shelf,h});y+=h;start+=count
-    }
-    const planned=shelves.flatMap(s=>s.cells),skyline=Array(columns).fill(0),result=[],waiting=planned.map((c,i)=>({c,minCols:preferred[i].minCols}))
-    while(waiting.length){
-      let slot
-      // A later normal card can use a gap too narrow for the next draft. Keep
-      // source order whenever candidates share the same vertical position.
-      for(let i=0;i<waiting.length;i++){
-        const {c,minCols}=waiting[i]
-        for(const level of [...new Set(skyline)].sort((a,b)=>a-b)){
-          let found=false
-          for(let x=0;x<columns;){if(skyline[x]>level){x++;continue}let right=x;while(right<columns&&skyline[right]<=level)right++
-            if(right-x>=minCols){if(!slot||level<slot.y)slot={index:i,x,y:level,available:right-x};found=true;break}x=right}
-          if(found)break
-        }
-      }
-      const [{c}]=waiting.splice(slot.index,1),remainingMin=waiting.length?Math.min(...waiting.map(n=>n.minCols)):columns
-      let w=Math.min(c.w,slot.available)
-      if(slot.available-w<remainingMin)w=slot.available
-      const next={...c,x:slot.x,y:slot.y,w};result.push(next)
-      for(let x=next.x;x<next.x+w;x++)skyline[x]=next.y+next.h
-    }
-    const resultById=new Map(result.map(c=>[c.id,c]));return items.map(c=>resultById.get(c.id))
+    const used=intervals.reduce((sum,r)=>sum+r.right-r.left,0)
+    const edge=value=>Math.round(intervals.reduce((sum,r)=>sum+clamp(value-r.left,0,r.right-r.left),0)/used*columns)
+    const planned=sized.map(c=>{
+      const n=byId.get(c.id),p=n.preferred||n,w=Math.max(min(c).w,edge(c.x+c.w)-edge(c.x))
+      return {...c,x:Math.min(edge(c.x),columns-w),w,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
+    })
+    const result=new Map(compact(planned).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
   }
   function append(items,id,w=20,h=7){return bounded({id,x:0,y:Math.max(0,...items.map(n=>n.y+n.h)),w,h})}
   function draw(a,b,m){

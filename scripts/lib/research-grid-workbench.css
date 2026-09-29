@@ -97,10 +97,14 @@ html[data-odyssey-window-resizing] body [data-ework-grid] [data-research-node-id
 /* The active card uses only the grid target outline until release or cancel. */
 body [data-ework-grid]:is([data-grid-operation=move],[data-grid-operation=resize]) [data-grid-active] .ew-grid-selection-ring{display:none!important}
 
-/* Workbench content keeps its own scrollbars visible above the data stamp. */
-body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-research-preview-body],.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_mindMap,.odyssey-generation-records,.rScV5Q_textPreview,textarea){scrollbar-width:thin!important;scrollbar-color:#a1a4ad transparent!important}
-body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar{display:block!important;width:7px!important;height:7px!important}
-body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar-thumb{background:#a1a4ad!important;border-radius:4px!important}
+/* Keep both axes discoverable without competing with the component content. */
+body [data-research-canvas][data-ework-grid] [data-research-node-id]{--grid-scroll-thumb:#74778022}
+body [data-research-canvas][data-ework-grid] [data-research-node-id]:is(:hover,:focus-within){--grid-scroll-thumb:#74778055}
+body[data-ds-dark-theme] [data-research-canvas][data-ework-grid] [data-research-node-id]{--grid-scroll-thumb:#aaaebb22}
+body[data-ds-dark-theme] [data-research-canvas][data-ework-grid] [data-research-node-id]:is(:hover,:focus-within){--grid-scroll-thumb:#aaaebb55}
+body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-research-preview-body],.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_mindMap,.odyssey-generation-records,.rScV5Q_textPreview,textarea){scrollbar-width:thin!important;scrollbar-color:var(--grid-scroll-thumb) transparent!important}
+body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar{display:block!important;width:5px!important;height:5px!important}
+body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar-thumb{background:var(--grid-scroll-thumb)!important;border-radius:4px!important}
 body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar-track{background:transparent!important}
 
 body [data-research-canvas][data-ework-grid] [data-research-node-id] .rScV5Q_containerTableScroll{overflow-x:auto!important;max-width:100%;min-width:0}

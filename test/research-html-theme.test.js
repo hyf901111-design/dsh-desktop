@@ -450,7 +450,7 @@ it('工作台Shift多选在sandbox中阻止文本选区和控件点击，普通�
 it('工作台表格保留横向滚动条，普通独立预览沿用自身样式',()=>{
  const html='<div style="overflow:auto"><table style="min-width:900px"><tr><td>完整列</td></tr></table></div>'
  const result=buildResearchHtmlPreview(html,'表格','dark',{workbench:true})
- expect(result).toContain('scrollbar-width:thin!important');expect(result).toContain('height:7px!important');expect(result).not.toContain('scrollbar-width:none!important')
+ expect(result).toContain('scrollbar-width:thin!important');expect(result).toContain('height:5px!important');expect(result).not.toContain('scrollbar-width:none!important')
 })
 
 it('工作台整理不把折叠明细的表格布局高度算入内容',()=>{
