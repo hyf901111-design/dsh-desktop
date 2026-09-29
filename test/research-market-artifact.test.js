@@ -13,6 +13,7 @@ it('retains trend axes and historical endpoints on refresh until the reader rese
  expect(JSON.parse(chart.getAttribute('data-workbench-chart-view'))).toEqual(previous)
  expect(chart.querySelector('.trend-line').getAttribute('points').split(' ')).toHaveLength(3)
  expect(chart.querySelector('.trend-date-axis:last-child').textContent).toBe('03')
+ expect([...chart.querySelectorAll('.trend-date-axis')].map(el=>[el.textContent,el.getAttribute('x')])).toEqual([['01','30'],['02','266'],['03','502']])
  chart.getBoundingClientRect=()=>({left:0,width:506});chart.dispatchEvent(new fresh.defaultView.PointerEvent('pointermove',{clientX:266}))
  expect(chart.dataset.selectedIndex).toBe('1');expect(chart.querySelector('.trend-crosshair').getAttribute('x1')).toBe('266')
  chart.dispatchEvent(new fresh.defaultView.MouseEvent('dblclick'))

@@ -62,7 +62,9 @@ function trendRuntime(labels, series, low, high) {
   lines.forEach((line,n)=>{line.setAttribute('points',series[n].values.slice(start,end+1).map((v,i)=>x(start+i)+','+y(v)).join(' '));line.setAttribute('data-refresh-key','trend:'+series[n].name);line.setAttribute('data-refresh-value',String(series[n].values[end]))})
   const interval=(high-low)/4,decimals=interval<1?2:interval<10?1:0
   svg.querySelectorAll('.trend-grid:not(.trend-vertical)').forEach((line,i)=>{const text=line.nextElementSibling;if(text?.tagName.toLowerCase()==='text')text.textContent=(high-interval*i).toFixed(decimals)})
-  svg.querySelectorAll('.trend-date-axis').forEach((text,i,all)=>{const index=start+Math.round((end-start)*i/(all.length-1));text.textContent=labels[index]})
+  svg.querySelectorAll('.trend-date-axis,.trend-vertical').forEach(el=>el.remove())
+  const marks=[...new Set([start,start+Math.floor((end-start)/3),start+Math.floor((end-start)*2/3),end])]
+  for(const i of marks){const line=document.createElementNS('http://www.w3.org/2000/svg','line');for(const [k,v] of Object.entries({class:'trend-grid trend-vertical',x1:x(i),x2:x(i),y1:10,y2:137}))line.setAttribute(k,String(v));svg.appendChild(line);const text=document.createElementNS('http://www.w3.org/2000/svg','text');for(const [k,v] of Object.entries({class:'trend-date-axis',x:x(i),y:158,'text-anchor':i===start?'start':i===end?'end':'middle'}))text.setAttribute(k,String(v));text.textContent=labels[i];svg.appendChild(text)}
  }
  const update=index=>{
   const i=Math.max(start,Math.min(end,index))
