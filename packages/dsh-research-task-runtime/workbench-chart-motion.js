@@ -4,7 +4,7 @@ export function installWorkbenchChartMotion(root) {
   const win=root.ownerDocument.defaultView,seen=new WeakMap(),observed=new WeakSet(),active=new Set()
   const media=win.matchMedia?.('(prefers-reduced-motion: reduce)')
   let frame=0,disposed=false
-  const selector='svg,canvas,.market-heatmap,.market-pipeline,.fund-flow-bars,.order-book-grid,.funnel-stage-list,.risk-grid'
+  const selector='svg,canvas,.market-heatmap,.market-pipeline,.fund-flow-bars,.order-book-grid,.funnel-stage-list,.risk-grid,.market-bar,.fund-industries,.gantt-rows'
   const play=chart=>{
     if(disposed||!chart.isConnected||chart.closest('button,[data-research-generation-process],.rScV5Q_nodeTitle,.rScV5Q_mindMap'))return
     const bounds=chart.getBoundingClientRect();if(bounds.width<80||bounds.height<(chart.matches('svg,canvas')?40:8))return
@@ -12,7 +12,7 @@ export function installWorkbenchChartMotion(root) {
     const slot=[...owner.querySelectorAll(selector)].indexOf(chart),slots=seen.get(owner)||new Set()
     if(slots.has(slot))return;slots.add(slot);seen.set(owner,slots)
     if(media?.matches||typeof chart.animate!=='function')return
-    let marks=[...chart.querySelectorAll('.trend-line,.price-volume-line,.drawdown-primary,.drawdown-benchmark,.drawdown-area,.price-volume-bar,.waterfall-bar,.allocation-arc,[data-scatter-point],.market-tile,.pipeline-progress .stage,.fund-flow-axis i,.order-book-level,.funnel-bar,.risk-cell')]
+    let marks=[...chart.querySelectorAll('.trend-line,.price-volume-line,.drawdown-primary,.drawdown-benchmark,.drawdown-area,.price-volume-bar,.waterfall-bar,.allocation-arc,[data-scatter-point],.market-tile,.pipeline-progress .stage,.fund-flow-axis i,.order-book-level,.funnel-bar,.risk-cell,.market-bar i,.fund-bar,.gantt-bar')]
     // Custom generated SVGs use their own classes. Exclude neutral axes, labels,
     // crosshairs and hit regions while accepting their normal plotting marks.
     if(!marks.length&&chart.tagName.toLowerCase()==='svg')marks=[...chart.querySelectorAll('path,polyline,rect,circle,ellipse')].filter(el=>{
@@ -26,7 +26,7 @@ export function installWorkbenchChartMotion(root) {
       if(el.classList.contains('allocation-arc')){
         const r=Number(el.getAttribute('r'))||48
         from={strokeDasharray:'0 '+2*Math.PI*r,opacity:0};to={strokeDasharray:style.strokeDasharray,opacity:Number(style.opacity)}
-      }else if(el.matches('.fund-flow-axis i,.funnel-bar,.pipeline-progress .stage')){
+      }else if(el.matches('.fund-flow-axis i,.funnel-bar,.pipeline-progress .stage,.market-bar i,.fund-bar,.gantt-bar')){
         const origin=el.matches('.fund-flow-axis i:first-child')?'right center':'left center'
         from={transform:'scaleX(.001)',transformOrigin:origin,opacity:0};to={transform:'scaleX(1)',transformOrigin:origin,opacity:Number(style.opacity)}
       }else if(tag==='rect'){
