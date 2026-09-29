@@ -11,89 +11,25 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "45ed5eaf5c88c1ad07830e0e9dfaeee9a43dbf95",
-        "tipCommit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
+        "baseCommit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
+        "tipCommit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
         "commits": [
           {
-            "commit": "5056149ba3d0d10dcee2106ebf91c34be5c7290d",
+            "commit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
             "parents": [
-              "45ed5eaf5c88c1ad07830e0e9dfaeee9a43dbf95"
+              "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82"
             ],
-            "subject": "修复：整理菜单关闭后返回画布焦点以立即支持撤销"
-          },
-          {
-            "commit": "5d0436621ac2cd515363283674e1c3f3229e05d2",
-            "parents": [
-              "5056149ba3d0d10dcee2106ebf91c34be5c7290d"
-            ],
-            "subject": "修复：整理时扩宽错位列组件填补局部中间空条"
-          },
-          {
-            "commit": "f24d543ba13f4e1e9b2cc71c5e8131fb12eef364",
-            "parents": [
-              "5d0436621ac2cd515363283674e1c3f3229e05d2"
-            ],
-            "subject": "优化：链接网页正文就绪即显示且尺寸适配不等待截图与正文读取"
-          },
-          {
-            "commit": "72ecfe653e121cd150ec23c9cf215bfdf9a50a63",
-            "parents": [
-              "f24d543ba13f4e1e9b2cc71c5e8131fb12eef364"
-            ],
-            "subject": "验证：补充整理宽度填充即时撤销与网页边框稳定检查"
-          },
-          {
-            "commit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
-            "parents": [
-              "72ecfe653e121cd150ec23c9cf215bfdf9a50a63"
-            ],
-            "subject": "修复：窗口缩放时立即恢复网页视图并跳过静止轮询等待"
+            "subject": "修复：链接临时离屏保留当前网页并避免窗口缩放重复加载"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-native-web-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/verify-research-native-web.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-selected-create-inline.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-native-web.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-link-frame.ts"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-native-web.test.ts"
           }
         ],
         "checks": [
@@ -104,8 +40,8 @@
             ],
             "outcome": "passed",
             "summary": "前端补丁构建通过",
-            "verifiedCommit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
-            "completedAt": "2026-09-29T09:50:13.917544+00:00",
+            "verifiedCommit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
+            "completedAt": "2026-09-29T10:24:06.666041+00:00",
             "timeoutMs": 300000
           },
           {
@@ -118,9 +54,9 @@
               "test/research-link-frame.test.ts"
             ],
             "outcome": "passed",
-            "summary": "128项画布布局、原生网页、授权桥接聚焦检查通过",
-            "verifiedCommit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
-            "completedAt": "2026-09-29T09:50:13.917544+00:00",
+            "summary": "129项画布布局、原生网页、授权桥接聚焦检查通过；离屏保留页面和移除才释放检查通过",
+            "verifiedCommit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
+            "completedAt": "2026-09-29T10:24:06.666041+00:00",
             "timeoutMs": 300000
           },
           {
@@ -131,8 +67,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
-            "completedAt": "2026-09-29T09:50:13.917544+00:00",
+            "verifiedCommit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
+            "completedAt": "2026-09-29T10:24:06.666041+00:00",
             "timeoutMs": 300000
           },
           {
@@ -142,8 +78,8 @@
             ],
             "outcome": "passed",
             "summary": "23组真实React画布和Chromium交互检查通过",
-            "verifiedCommit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
-            "completedAt": "2026-09-29T09:50:13.917544+00:00",
+            "verifiedCommit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
+            "completedAt": "2026-09-29T10:24:06.666041+00:00",
             "timeoutMs": 300000
           },
           {
@@ -153,8 +89,8 @@
             ],
             "outcome": "passed",
             "summary": "隔离Electron实测慢资源加载前交互、固定网页适配及非阻塞尺寸更新通过",
-            "verifiedCommit": "e44c9e17d40693d8f41a2ef7c8c79dd1cd9fbc82",
-            "completedAt": "2026-09-29T09:50:13.917544+00:00",
+            "verifiedCommit": "7981ce5c46f33a93a3c52b7225ece149270357d6",
+            "completedAt": "2026-09-29T10:24:06.666041+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -243,7 +179,8 @@
           "原生网页框固定内缩2px保护四边蓝框，选中前后正文区域不变",
           "原生网页DOM就绪即显示；截图与正文提取独立后台执行，调宽不因捕获或正文读取延迟，过期尺寸及导航快照丢弃",
           "固定桌面网页按当前组件宽度自动适配，导航/调宽重算且不重载网页",
-          "窗口缩放即使正文尺寸未变化也立即恢复原生视图，不等待一秒静止轮询"
+          "窗口缩放即使正文尺寸未变化也立即恢复原生视图，不等待一秒静止轮询",
+          "链接暂时离开视窗不销毁原生页面，滚动返回及窗口缩放保留当前导航；移除组件和源网址改变仍释放"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -252,52 +189,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T09:50:13.917544+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5d854f6fce8ad44e73acab1c1fe4c334741ca63f",
-        "verificationCommit": "5d854f6fce8ad44e73acab1c1fe4c334741ca63f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "5d854f6fce8ad44e73acab1c1fe4c334741ca63f",
-            "completedAt": "2026-09-29T09:54:07.813Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "5d854f6fce8ad44e73acab1c1fe4c334741ca63f",
-            "completedAt": "2026-09-29T09:54:07.813Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5d854f6fce8ad44e73acab1c1fe4c334741ca63f",
-            "completedAt": "2026-09-29T09:54:07.813Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T09:54:07.813Z"
+        "generatedAt": "2026-09-29T10:24:06.666041+00:00"
       }
     }
   ],
