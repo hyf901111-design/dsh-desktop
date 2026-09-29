@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
-        "tipCommit": "38ec04262c33f0b4e3993465922d579dbb208d23",
+        "baseCommit": "38ec04262c33f0b4e3993465922d579dbb208d23",
+        "tipCommit": "09c53b39e168ddf42ff3b7b5fb618ed05f126675",
         "commits": [
           {
-            "commit": "38ec04262c33f0b4e3993465922d579dbb208d23",
+            "commit": "aa032964b6d0b62e3b6aac9246d45054c1630369",
             "parents": [
-              "c09dee7824a52b8ead97abcff21999f808bbf2a0"
+              "38ec04262c33f0b4e3993465922d579dbb208d23"
             ],
-            "subject": "修复管线阶段条与窄列事件阅读并兼容已保存组件"
+            "subject": "补齐十二类坐标图模板并统一图例与加载生长动效"
+          },
+          {
+            "commit": "09c53b39e168ddf42ff3b7b5fb618ed05f126675",
+            "parents": [
+              "aa032964b6d0b62e3b6aac9246d45054c1630369"
+            ],
+            "subject": "记录图表动效及医药组件原生复核结果"
           }
         ],
         "files": [
@@ -29,15 +36,71 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-presentation.js"
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
           },
           {
             "status": "M",
-            "path": "test/workbench-component-presentation.test.js"
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/simulated-workbench-generator.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-chart-motion.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "A",
+            "path": "test/cartesian-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-chart-motion.test.js"
           }
         ],
         "checks": [
@@ -46,18 +109,37 @@
               "npx",
               "vitest",
               "run",
+              "test/cartesian-chart-template.test.js",
+              "test/component-template-registry.test.js",
+              "test/workbench-chart-motion.test.js",
+              "test/research-artifact-resilience.test.js",
               "test/workbench-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "已保存组件样式升级及内容保留3项聚焦验证通过",
-            "verifiedCommit": "38ec04262c33f0b4e3993465922d579dbb208d23",
-            "completedAt": "2026-09-29T17:10:27.617929+00:00",
+            "summary": "74项聚焦验证通过：12种图表数据语义、固定模板、来源保留、动效方向及旧格式兼容。",
+            "verifiedCommit": "09c53b39e168ddf42ff3b7b5fb618ed05f126675",
+            "completedAt": "2026-09-29T18:21:40.076372+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "Research task contract and prompt|does not append generic chart advice"
+            ],
+            "outcome": "passed",
+            "summary": "26项提示路由与既有合同验证通过，152项无关测试未运行。",
+            "verifiedCommit": "09c53b39e168ddf42ff3b7b5fb618ed05f126675",
+            "completedAt": "2026-09-29T18:21:40.076372+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "0c27c65e原生医药工作台首次调用匹配6预设，整轮13秒；修复阶段条及窄列事件排版，浏览器实际筛选1/4通过，原生新包待复核。"
+          "outcome": "passed",
+          "summary": "Chrome生产沙盒实际验证12类图表 × 三主题、656/320px、图例筛选、完整数据、生长动效一次播放；无控制台错误。原生新包生成路径仍待复核。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -162,61 +244,19 @@
           "宿主及HTML图表首次进入视窗播放650ms生长动效；折线绘制、柱形及K线展开、散点与环图渐进，资金流/漏斗/盘口/风险矩阵/市场广度/基金行业/甘特图覆盖，坐标数据和最终尺寸保持；主题、悬停、筛选不重播，减少动态效果静态呈现",
           "Figma错误状态图标与标题说明中性色，生成固定尺寸与首次图表动效规范同步",
           "自然语言工作台首次挂载按组填满可用双列或窄窗单列，后续内容返回保持默认框，已有组件不被重新布局",
-          "管线阶段条不被通用折叠样式压缩，窄列事件纵向排列且筛选隐藏仍生效，已保存V2页面预览自动使用V3共享样式"
+          "管线阶段条不被通用折叠样式压缩，窄列事件纵向排列且筛选隐藏仍生效，已保存V2页面预览自动使用V3共享样式",
+          "12种坐标系图表精确模板匹配，堆叠正负分开、百分比使用原值、哑铃恰好两组；同轴组合保留原单位和来源",
+          "图表首次加载生长650ms，横条沿数轴、负柱从零线向下；图例/主题/筛选/调宽不重播，减少动态效果直接显示完整图表",
+          "Figma现有说明1935:376338同步动效方向、时长和不重播规则"
         ],
         "risks": [
           "未运行全功能测试。",
           "research-html-theme四项及workbench-component-profiles三项既存基线失败，未宣称修复历史preview-size预算或旧字体几何断言。",
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。",
-          "当前Figma为44类组件+30类图表；旧30模板注册表不代表全覆盖。原生生成成功率目标未验收通过。"
+          "Figma全量44组件和30图表仍未全部覆盖；本轮注册表40项包括12类坐标图，完整原生成功率目标尚未验收通过。"
         ],
-        "generatedAt": "2026-09-29T17:10:27.618174+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6b2ff95ad57a0cdeca601bc030fdadc8e2a1fe35",
-        "verificationCommit": "6b2ff95ad57a0cdeca601bc030fdadc8e2a1fe35",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "6b2ff95ad57a0cdeca601bc030fdadc8e2a1fe35",
-            "completedAt": "2026-09-29T17:10:32.759Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "6b2ff95ad57a0cdeca601bc030fdadc8e2a1fe35",
-            "completedAt": "2026-09-29T17:10:32.759Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6b2ff95ad57a0cdeca601bc030fdadc8e2a1fe35",
-            "completedAt": "2026-09-29T17:10:32.759Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T17:10:32.759Z"
+        "generatedAt": "2026-09-29T18:21:40.076372+00:00"
       }
     }
   ],
