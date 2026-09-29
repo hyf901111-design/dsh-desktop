@@ -296,28 +296,30 @@ export function patchGenerationLifecycle(source) {
 }
 
 export const generationCss = `
-[data-research-generation-description]{overflow:hidden;min-height:16px}
+[data-research-generation-description]{flex:none;overflow:visible;min-height:0}
 [data-progress-detail]{display:block;transform:none;animation:none}
 /* Figma 21Z: square Shape Grid background and stable, readable foreground. */
-[data-research-compact-chrome]:has([data-research-generation-process]){border-width:0!important;border-radius:8px!important}
-[data-research-compact-chrome]:has([data-research-generation-process])[data-selected=true]::after{inset:0;border-radius:8px}
-[data-research-compact-chrome]:has([data-research-generation-process])>.rScV5Q_nodeTitle{display:none!important}
-[data-research-compact-chrome]:has([data-research-generation-process])>.rScV5Q_previewBody{height:100%!important;border-radius:8px!important}
-[data-research-compact-chrome]:has([data-research-generation-process]) .rScV5Q_artifactBody{height:100%;padding:0!important;gap:0}
+/* The node status is present before the process body mounts. Suppress chrome
+   for every transient state without depending on :has() or mount order. */
+[data-research-compact-chrome][data-research-artifact-card]:is([data-research-generation-state=queued],[data-research-generation-state=running],[data-research-generation-state=retrying],[data-research-generation-state=failed],[data-research-generation-state=cancelled],[data-research-generation-state=interrupted]){border-width:0!important;border-radius:8px!important}
+[data-research-compact-chrome][data-research-artifact-card]:is([data-research-generation-state=queued],[data-research-generation-state=running],[data-research-generation-state=retrying],[data-research-generation-state=failed],[data-research-generation-state=cancelled],[data-research-generation-state=interrupted])[data-selected=true]::after{inset:0;border-radius:8px}
+[data-research-compact-chrome][data-research-artifact-card]:is([data-research-generation-state=queued],[data-research-generation-state=running],[data-research-generation-state=retrying],[data-research-generation-state=failed],[data-research-generation-state=cancelled],[data-research-generation-state=interrupted])>.rScV5Q_nodeTitle{display:none!important}
+[data-research-compact-chrome][data-research-artifact-card]:is([data-research-generation-state=queued],[data-research-generation-state=running],[data-research-generation-state=retrying],[data-research-generation-state=failed],[data-research-generation-state=cancelled],[data-research-generation-state=interrupted])>.rScV5Q_previewBody{height:100%!important;border-radius:8px!important}
+[data-research-compact-chrome][data-research-artifact-card]:is([data-research-generation-state=queued],[data-research-generation-state=running],[data-research-generation-state=retrying],[data-research-generation-state=failed],[data-research-generation-state=cancelled],[data-research-generation-state=interrupted]) .rScV5Q_artifactBody{height:100%;padding:0!important;gap:0}
 [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#fafafa;--generation-title:#262626;--generation-phase:#575757;--generation-detail:#6e6e6e;--generation-icon:#666;--generation-action-icon:#666;--generation-time:#59636d;--generation-button:#eceef3;--generation-border:rgba(0,0,0,.12);box-sizing:border-box;position:relative;isolation:isolate;display:flex;justify-content:center;min-height:0;height:100%;width:100%;padding:50px 20px!important;overflow:hidden;border-radius:8px;background:var(--generation-bg);color:var(--generation-title);filter:none!important;backdrop-filter:none!important}
 body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#131315;--generation-title:#f5f5f5;--generation-phase:#dbdbdb;--generation-detail:#b0b0b0;--generation-icon:#bdbdbd;--generation-time:#b3bcc4;--generation-button:#242428;--generation-border:#696969;--generation-action-icon:#ccc}
 body [data-research-compact-chrome][data-research-artifact-card] .odyssey-generation-surface{background:var(--generation-bg)!important}
 .odyssey-generation-shape-grid{position:absolute;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;border-radius:inherit;mask-image:none;opacity:1}
-[data-research-generation-foreground]{position:absolute;top:calc(50% - 65px);left:20px;right:20px;bottom:54px;display:flex;flex-direction:column;gap:10px;min-width:0;flex:none;max-height:100%;overflow:auto;scrollbar-width:none}
+[data-research-generation-foreground]{position:absolute;top:max(66px,calc(50% - 65px));left:20px;right:20px;bottom:16px;display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;flex:none;overflow:auto;scrollbar-width:none}
 .odyssey-generation-surface[data-process-expanded=true]>[data-research-generation-foreground]{visibility:hidden}
-.odyssey-generation-state-icon{display:block;flex:none;width:18px;height:18px;margin-bottom:14px;background:var(--generation-icon);mask-position:center;mask-size:18px 18px;mask-repeat:no-repeat}
+.odyssey-generation-state-icon{display:block;flex:none;width:18px;height:18px;margin-bottom:6px;background:var(--generation-icon);mask-position:center;mask-size:18px 18px;mask-repeat:no-repeat}
 .odyssey-generation-state-icon[data-generation-spinning=true]{animation:odyssey-generation-ring 1.2s linear infinite}
 [data-research-generation-foreground]>strong{font:700 14px/20px 'Noto Sans SC',sans-serif;overflow-wrap:anywhere}
 .odyssey-generation-phase{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-phase)}
 [data-research-generation-foreground]>[data-research-generation-description]{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-detail);overflow-wrap:anywhere}
 [data-research-generation-foreground]>[data-research-generation-sources]{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-detail)}
 .odyssey-generation-surface>[data-research-generation-elapsed]{position:absolute;top:16px;left:20px;font:500 12px/18px DINPro,sans-serif;font-variant-numeric:tabular-nums;color:var(--generation-time)}
-.odyssey-generation-actions{position:absolute;bottom:18px;left:20px;z-index:4;padding:0;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .12s}
+.odyssey-generation-actions{position:absolute;top:12px;right:16px;z-index:4;padding:0;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .12s}
 .odyssey-generation-surface:hover .odyssey-generation-actions,.odyssey-generation-surface:focus-within .odyssey-generation-actions{opacity:1;pointer-events:auto}
 .odyssey-generation-action{position:relative;display:flex;flex:none}
 .odyssey-generation-action>button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:auto;height:28px;min-width:56px;min-height:28px;padding:0 10px;font:400 11px/18px "Noto Sans SC",sans-serif;border:1px solid var(--generation-border);border-radius:3px;background:var(--generation-button);color:var(--generation-action-icon);cursor:pointer}
@@ -331,8 +333,8 @@ body[data-ds-dark-theme] .odyssey-generation-tooltip{background:#383838;color:#f
 [data-research-compact-chrome] .odyssey-generation-surface>[data-research-generation-records]{position:absolute;inset:48px 20px 20px;z-index:2;margin:0;background:var(--generation-bg);border:1px solid var(--generation-border);border-radius:6px;padding:12px;font:400 12px/20px 'Noto Sans SC',sans-serif;color:var(--generation-phase);overflow:auto}
 .odyssey-generation-surface>[data-research-generation-records]>div{display:flex;gap:8px;overflow-wrap:anywhere}.odyssey-generation-surface>[data-research-generation-records] time{flex:none;color:var(--generation-detail)}
 /* Breakpoints are implementation choices; source anchors: wide 99, tall 251, compact 62. */
-@container(max-width:300px){[data-research-generation-foreground]{top:calc(50% - 59px)}}
-@container(max-height:240px){[data-research-generation-foreground]{top:calc(50% - 38px)}}
+@container(max-width:300px){[data-research-generation-foreground]{top:66px}}
+@container(max-height:240px){[data-research-generation-foreground]{top:66px}}
 @keyframes odyssey-generation-ring{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.odyssey-generation-state-icon{animation:none!important}.odyssey-generation-actions{transition:none}}
 @media(hover:none){.odyssey-generation-actions{opacity:1;pointer-events:auto}}
