@@ -79,9 +79,9 @@ it('initializes new templates and ordinary edits from their defaults without res
  const before=html('old',100),changed=html('new',100),edited=html('new',101)
  feedback.update({status:'idle',refreshSequence:0},before);ready(before,'old-filter')
  send.mockClear();feedback.update({status:'idle',refreshSequence:0},changed);ready(changed,'new-default')
- expect(send).toHaveBeenLastCalledWith(expect.objectContaining({animate:false,state:expect.objectContaining({controls:[expect.objectContaining({value:'new-default'})]})}),'*')
+ expect(send).not.toHaveBeenCalled()
  feedback.update({status:'idle',refreshSequence:0},edited);ready(edited,'edited-default')
- expect(send).toHaveBeenLastCalledWith(expect.objectContaining({animate:false,state:expect.objectContaining({controls:[expect.objectContaining({value:'edited-default'})]})}),'*')
+ expect(send).not.toHaveBeenCalled()
 })
 
 it('journal rollback clears cached controls only for the owning iframe',()=>{
@@ -93,8 +93,8 @@ it('journal rollback clears cached controls only for the owning iframe',()=>{
  ready('4')
  win.dispatchEvent(new win.MessageEvent('message',{source:win,data:{type:'sherlock-interaction-reload'}}));ready('12')
  expect(send.mock.calls.at(-1)[0].state.controls[0].value).toBe('4')
- win.dispatchEvent(new win.MessageEvent('message',{source:inner,data:{type:'sherlock-interaction-reload'}}));ready('12')
- expect(send.mock.calls.at(-1)[0].state.controls[0].value).toBe('12')
+ send.mockClear();win.dispatchEvent(new win.MessageEvent('message',{source:inner,data:{type:'sherlock-interaction-reload'}}));ready('12')
+ expect(send).not.toHaveBeenCalled()
 })
 
 it('waits for new iframe content when success status arrives before the replacement HTML',()=>{
