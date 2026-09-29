@@ -191,7 +191,7 @@ describe('模拟工作台结构化生成', () => {
   it('validates locally generated examples across market, chart, lists and schedule components', () => {
     const definitions = [
       ...MARKET_VARIANT_NAMES.map(variant => ({type:'market', prompt:`variant: ${variant}`})),
-      {type:'chart',prompt:'折线趋势图'}, {type:'chart',prompt:'柱状对比图'},
+      ...['line','bar'].map(variant=>({type:'chart',prompt:'chart.'+variant,artifact:{version:1,type:'chart',variant,title:'模拟图表',labels:['A','B'],series:[{name:'模拟值',values:[12,18]}]}})),
       ...['table','kpi','dashboard','news','reports','calendar','gantt'].map(type => ({type,prompt:type}))
     ]
     expect(definitions).toHaveLength(30)

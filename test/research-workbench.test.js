@@ -385,7 +385,7 @@ describe('研究工作台', () => {
         const read = async () => { let result; await handler({ method: 'POST' }, { writeHead: () => {}, end: text => { result = JSON.parse(text); } }); return result; };
         let pending;
         try {
-            pending = tool.execute({ requestId:'staged', title:'五组件工作台', dataMode:'simulated', panels:['kpi','chart','table','news','reports'].map((type,i)=>({title:`面板${i}`,prompt:`展示面板${i}的模拟内容`,type,size:'medium'})) }, {agent:{session:{id:'parent'}}});
+            pending = tool.execute({ requestId:'staged', title:'五组件工作台', dataMode:'simulated', panels:['kpi','chart','table','news','reports'].map((type,i)=>({title:`面板${i}`,prompt:`展示面板${i}的模拟内容`,type,size:'medium',...(type==='chart'?{artifact:{version:1,type:'chart',title:`模拟面板${i}`,variant:'bar',labels:['A','B'],series:[{name:'样本',values:[12,18]}]}}:{})})) }, {agent:{session:{id:'parent'}}});
             let announced;
             for (let attempt = 0; attempt < 40 && !announced; attempt++) {
                 announced = (await read()).plans[0];

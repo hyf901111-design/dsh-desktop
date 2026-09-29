@@ -1,4 +1,4 @@
-import { requestedChartVariant } from './chart-template-contract.js';
+import { requireSimulatedChartData } from './chart-template-contract.js';
 import { marketVariant } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 
@@ -46,6 +46,7 @@ function simulatedFundKpis(intent) {
 
 export function generateSimulatedPanel(panel, workbenchTitle) {
     if (panel.artifact) return panel;
+    requireSimulatedChartData(panel);
     // Planners sometimes call a financial template by its generic canvas type.
     // Preserve the requested fixed template before choosing sample data.
     if (['kpi', 'table'].includes(panel.type)) {
@@ -180,23 +181,6 @@ export function generateSimulatedPanel(panel, workbenchTitle) {
             }))
         };
         artifact.items = artifact.items.map((item, index) => ({ ...item, label: index === 0 ? `${subject}模拟指标` : item.label }));
-    } else if (panel.type === 'chart') {
-        artifact = sample('chart');
-        artifact.variant = requestedChartVariant(intent) ?? 'bar';
-        if(artifact.variant==='dumbbell')artifact.series=artifact.series.slice(0,2);
-        artifact.series = artifact.series.map((item, index) => ({ ...item, name: `${subject}${index ? '对比' : '样本'}` }));
-        const months = requestedCount(intent, '月', 24);
-        const industries = requestedCount(intent, '行业', 20);
-        if (months && ['line','area','stackedArea','step','combo'].includes(artifact.variant)) {
-            artifact.labels = Array.from({ length: months }, (_, index) => {
-                const date = new Date(Date.UTC(2026, 6 - months + index, 1));
-                return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-            });
-        } else if (industries) {
-            artifact.labels = Array.from({ length: industries }, (_, index) =>
-                artifact.labels[index] ?? `模拟行业 ${index + 1}`);
-        }
-        artifact.series = simulatedSeries(artifact.series, artifact.labels.length);
     } else if (panel.type === 'table') {
         artifact = { columns: ['模拟样本', '数值', '变化', '观察重点'], rows: [
             [`${subject} A`, '148.60', '+0.62%', '量价观察'],
