@@ -11,21 +11,49 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
-        "tipCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+        "baseCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+        "tipCommit": "30efe0af0719ca780ce5dca7a9db163cb29528dd",
         "commits": [
           {
-            "commit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+            "commit": "30efe0af0719ca780ce5dca7a9db163cb29528dd",
             "parents": [
-              "3a155fac7b6994339dc349d1947ce4ef18ac124a"
+              "81a288bd4ae6c322d3d3bf42857408d50df03be9"
             ],
-            "subject": "修复：后续窄卡片补入相邻短列空挡"
+            "subject": "修复：保留未完成组件落点并自动定位新增卡片及统一覆盖滚动条"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-scrollbars.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
@@ -33,7 +61,11 @@
           },
           {
             "status": "M",
-            "path": "test/research-grid-workbench.test.js"
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -43,9 +75,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "精确提交前端补丁构建通过",
-            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
-            "completedAt": "2026-09-29T07:27:22.147530+00:00",
+            "summary": "前端补丁构建通过",
+            "verifiedCommit": "30efe0af0719ca780ce5dca7a9db163cb29528dd",
+            "completedAt": "2026-09-29T08:09:03.832031+00:00",
             "timeoutMs": 300000
           },
           {
@@ -55,15 +87,12 @@
               "test/research-grid-client.test.js",
               "test/research-grid-workbench.test.js",
               "test/research-selected-create.test.js",
-              "test/research-canvas-actions-client.test.js",
-              "test/research-canvas-action-bridge.test.ts",
-              "test/component-data-service.test.ts",
-              "test/component-data-refresh.test.js"
+              "test/research-voice.test.ts"
             ],
             "outcome": "passed",
-            "summary": "161项聚焦检查通过，包含窄卡片适配相邻短列且保留已有列宽和重复稳定",
-            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
-            "completedAt": "2026-09-29T07:27:22.147530+00:00",
+            "summary": "140项草稿位置、定位、滚动和现有交互聚焦检查通过",
+            "verifiedCommit": "30efe0af0719ca780ce5dca7a9db163cb29528dd",
+            "completedAt": "2026-09-29T08:09:03.832031+00:00",
             "timeoutMs": 300000
           },
           {
@@ -75,9 +104,9 @@
               "工作台"
             ],
             "outcome": "passed",
-            "summary": "7项HTML工作台检查通过，包含选中滚动条与受限撤销桥接",
-            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
-            "completedAt": "2026-09-29T07:27:22.147530+00:00",
+            "summary": "7项HTML工作台检查通过",
+            "verifiedCommit": "30efe0af0719ca780ce5dca7a9db163cb29528dd",
+            "completedAt": "2026-09-29T08:09:03.832031+00:00",
             "timeoutMs": 300000
           },
           {
@@ -87,9 +116,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "精确提交类型检查通过",
-            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
-            "completedAt": "2026-09-29T07:27:22.147530+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "30efe0af0719ca780ce5dca7a9db163cb29528dd",
+            "completedAt": "2026-09-29T08:09:03.832031+00:00",
             "timeoutMs": 300000
           },
           {
@@ -98,15 +127,15 @@
               "scripts/verify-selected-create-inline.mjs"
             ],
             "outcome": "passed",
-            "summary": "16组Chromium检查通过，新增实际工作台事务窄卡相邻补位、重复整理与一次撤销",
-            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
-            "completedAt": "2026-09-29T07:27:22.147530+00:00",
+            "summary": "18组Chromium交互检查通过，含草稿落点、链接及语音自动定位、HTML覆盖滚动条拖动与选中前后布局一致",
+            "verifiedCommit": "30efe0af0719ca780ce5dca7a9db163cb29528dd",
+            "completedAt": "2026-09-29T08:09:03.832031+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能分支不构建共享客户端；实际原生验收在现有integration精确构建进行。"
+          "summary": "功能分支不构建共享客户端；Chromium真实补丁工厂18组交互检查已通过，原生客户端在integration精确构建后验收。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -173,7 +202,11 @@
           "未选中组件宿主与HTML内部滚动条为none/0px，滚动条轨道透明且gutter:auto，无灰色占位；选中后显示5px细条",
           "鼠标路径经过不同邻居中线时，以真实peer和前后位置更新布局；相同终点结果一致，松手等于预览",
           "真实组件数据刷新经主桥与preload传递来源，正常提交数据与历史但不显示撤销提示；主动画布编辑仍有撤销反馈",
-          "后续已变窄卡片也可适配相邻短列补位；以现有列边界定位，保留此前组件宽度比例、来源关系与内容高度"
+          "后续已变窄卡片也可适配相邻短列补位；以现有列边界定位，保留此前组件宽度比例、来源关系与内容高度",
+          "工具栏智能容器与链接输入草稿在完成生成前保留创建及拖动落点，生成中与重载保持位置；最小尺寸和邻居让位仍有效，完成后恢复正常整理",
+          "新增链接自动滚动定位输入卡；语音仅有效最终识别后创建并自动定位生成卡，识别中不创建",
+          "宿主与HTML统一5px覆盖滚动条，距右边2px，仅选中显示；始终无滚动条占位，选中前后文字换行、表格列宽和图表尺寸不变",
+          "Figma21Z同步草稿自由落点、自动定位及统一覆盖滚动条规范"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -182,52 +215,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T07:27:22.147530+00:00"
-      },
-      "merged": {
-        "mergeCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
-        "verificationCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
-            "completedAt": "2026-09-29T07:28:24.437Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
-            "completedAt": "2026-09-29T07:28:24.437Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
-            "completedAt": "2026-09-29T07:28:24.437Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T07:28:24.437Z"
+        "generatedAt": "2026-09-29T08:09:03.832031+00:00"
       }
     }
   ],
