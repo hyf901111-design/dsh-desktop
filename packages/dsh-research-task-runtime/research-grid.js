@@ -71,7 +71,7 @@ export function createResearchGrid() {
     if(axis==='x'&&change>0)for(const {first,row,peerMin} of rows){
       const widths=row.map(c=>changed.get(c.id)?.w??c.w)
       let deficit=Math.max(0,first+widths.reduce((sum,w)=>sum+w,0)-columns),x=first
-      row.forEach((c,i)=>{if(!selected.has(c.id)){const shrink=Math.min(deficit,Math.max(0,widths[i]-peerMin(c)));widths[i]-=shrink;deficit-=shrink}changed.set(c.id,{...(changed.get(c.id)||items.find(n=>n.id===c.id)),x,w:widths[i]});x+=widths[i]})
+      row.forEach((c,i)=>{let shrink=0;if(!selected.has(c.id)){shrink=Math.min(deficit,Math.max(0,widths[i]-peerMin(c)));widths[i]-=shrink;deficit-=shrink}const original=changed.get(c.id)||items.find(n=>n.id===c.id);changed.set(c.id,{...original,x,w:selected.has(c.id)||shrink?widths[i]:original.w});x+=widths[i]})
     }
     return compact(items.map(c=>changed.get(c.id)||c))
   }

@@ -870,6 +870,26 @@ it('窄窗多选调宽从草稿实际宽度同步增量，边界限制不会反�
  await f.event('pointercancel',f.canvas,{pointerId:95})
 })
 
+it('窄窗多选调宽不保存未选草稿的被动补宽，恢复宽窗及撤销取消不漂移',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(500-14)/40;let draft
+ await act(async()=>{w.setArtifacts([text('a'),text('c')]);draft=w.createContainerDraft();w.applyWorkbenchCells([{id:'a',x:0,y:0,w:4,h:5},{id:draft.id,x:4,y:0,w:8,h:10},{id:'c',x:0,y:10,w:4,h:5}],true);w.updateSelection(['a','c'],'replace')})
+ const canonical=w.getWorkbenchCells(),wideWidth=w.getSnapshot().artifacts.find(n=>n.id===draft.id).width
+ await act(async()=>{w.setCanvasSize({width:500,height:700,availableWidth:500});w.setWorkbenchWidth(500)})
+ expect(w.getWorkbenchVisibleCells().find(c=>c.id===draft.id).w).toBe(28)
+ const handle=()=>f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]')
+ await f.event('pointerdown',handle(),{button:0,pointerId:96,clientX:100,clientY:100})
+ await f.event('pointerup',f.canvas,{pointerId:96,clientX:100+step,clientY:100})
+ expect(w.getWorkbenchCells().filter(c=>['a','c'].includes(c.id)).map(c=>c.w)).toEqual([5,5])
+ expect(w.getWorkbenchCells().find(c=>c.id===draft.id)).toMatchObject({x:5,w:8,h:10})
+ await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
+ expect(w.getSnapshot().artifacts.find(n=>n.id===draft.id).width).toBe(wideWidth)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(canonical)
+ await act(async()=>{w.setCanvasSize({width:500,height:700,availableWidth:500});w.setWorkbenchWidth(500)})
+ await f.event('pointerdown',handle(),{button:0,pointerId:97,clientX:100,clientY:100})
+ await f.event('pointermove',f.canvas,{pointerId:97,clientX:100+step*2,clientY:100})
+ await f.event('pointercancel',f.canvas,{pointerId:97});expect(w.getWorkbenchCells()).toEqual(canonical)
+})
+
 it('滚动条占宽时缩放预览四边与实际组件使用同一可用宽度',async()=>{
  const f=await fixture(true)
  await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:8,y:6,w:24,h:8}],true);f.workspace.updateSelection(['a'],'replace')})
