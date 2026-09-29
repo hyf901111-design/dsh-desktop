@@ -6,30 +6,32 @@ function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit) {
  const svg=document.querySelector('.price-volume svg'),readout=document.querySelector('.price-volume-readout'),buttons=[...document.querySelectorAll('[data-price-volume-range]')]
  if(!svg||!readout)return
  const ns='http://www.w3.org/2000/svg',add=(name,attributes,parent=svg)=>{const el=document.createElementNS(ns,name);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));parent.appendChild(el);return el}
- let count=labels.length,selected=labels.length-1
- const visible=()=>({start:Math.max(0,labels.length-count),length:Math.min(count,labels.length)})
+ let count=labels.length,selected=labels.length-1,locked=null
+ const visible=()=>{if(locked){const start=labels.indexOf(locked.start),end=labels.indexOf(locked.end);return {start,length:end-start+1}}return {start:Math.max(0,labels.length-count),length:Math.min(count,labels.length)}}
  const draw=()=>{
-  const {start,length}=visible(),subset=prices.slice(start),low=Math.min(...subset),high=Math.max(...subset),span=high-low||Math.max(1,Math.abs(high)*.02),min=low-span*.08,max=high+span*.08
+  const {start,length}=visible(),subset=prices.slice(start,start+length),low=Math.min(...subset),high=Math.max(...subset),span=high-low||Math.max(1,Math.abs(high)*.02),min=locked?.min??low-span*.08,max=locked?.max??high+span*.08
   const x=i=>34+466*(length===1?0:i/(length-1)),y=value=>98-(value-min)/(max-min)*87
-  const maxVolume=Math.max(1,...volumes.slice(start).map(value=>value??0)),barWidth=Math.max(1,Math.min(8,450/length*.7))
+  const maxVolume=Math.max(1,...volumes.slice(start,start+length).map(value=>value??0)),barWidth=Math.max(1,Math.min(8,450/length*.7))
+  svg.setAttribute('data-workbench-chart-view',JSON.stringify({min,max,start:labels[start],end:labels[start+length-1]}))
   svg.replaceChildren()
   for(let step=0;step<=4;step++){const value=max-(max-min)*step/4,yy=y(value);add('line',{x1:34,y1:yy,x2:500,y2:yy,class:'price-volume-grid'});const label=add('text',{x:30,y:yy+3,'text-anchor':'end'});label.textContent=value.toFixed(Math.abs(max-min)<5?2:0)}
   const line=add('polyline',{class:'price-volume-line',points:subset.map((value,i)=>`${x(i)},${y(value)}`).join(' ')})
   line.setAttribute('aria-hidden','true')
-  volumes.slice(start).forEach((volume,i)=>{if(volume===null)return;const h=volume/maxVolume*23;add('rect',{class:'price-volume-bar',x:x(i)-barWidth/2,y:142-h,width:barWidth,height:Math.max(1,h)})})
+  volumes.slice(start,start+length).forEach((volume,i)=>{if(volume===null)return;const h=volume/maxVolume*23;add('rect',{class:'price-volume-bar',x:x(i)-barWidth/2,y:142-h,width:barWidth,height:Math.max(1,h)})})
   add('line',{class:'price-volume-divider',x1:34,y1:110,x2:500,y2:110})
   for(const index of [...new Set([0,Math.floor((length-1)/2),length-1])]){const label=add('text',{x:x(index),y:158,'text-anchor':index===0?'start':index===length-1?'end':'middle'});label.textContent=labels[start+index]}
-  selected=Math.max(start,Math.min(labels.length-1,selected))
+  selected=Math.max(start,Math.min(start+length-1,selected))
   const selectedX=x(selected-start)
   add('line',{class:'price-volume-crosshair',x1:selectedX,y1:10,x2:selectedX,y2:142})
-  add('circle',{class:'price-volume-dot',cx:selectedX,cy:y(prices[selected]),r:3})
+  add('circle',{'data-refresh-key':'price-volume:'+labels[selected],'data-refresh-value':prices[selected],class:'price-volume-dot',cx:selectedX,cy:y(prices[selected]),r:3})
   readout.textContent=`${labels[selected]}  ·  价格 ${prices[selected]} ${priceUnit}  ·  成交量 ${volumes[selected]??'—'} ${volumes[selected]===null?'':volumeUnit}`
   svg.setAttribute('aria-label',readout.textContent+'；方向键切换时点')
   svg.dataset.selectedIndex=String(selected)
  }
  svg.addEventListener('pointermove',event=>{const rect=svg.getBoundingClientRect();if(!rect.width)return;const chartX=(event.clientX-rect.left)/rect.width*506;const {start,length}=visible();selected=start+Math.round((chartX-34)/466*(length-1));draw()})
  svg.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const {start}=visible();selected=event.key==='Home'?start:event.key==='End'?labels.length-1:selected+(event.key==='ArrowLeft'?-1:1);draw()})
- buttons.forEach(button=>button.addEventListener('click',()=>{count=button.dataset.priceVolumeRange==='all'?labels.length:Number(button.dataset.priceVolumeRange);selected=labels.length-1;buttons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draw()}))
+ buttons.forEach(button=>button.addEventListener('click',()=>{locked=null;count=button.dataset.priceVolumeRange==='all'?labels.length:Number(button.dataset.priceVolumeRange);selected=labels.length-1;buttons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draw()}))
+ svg.addEventListener('sherlock-chart-restore',event=>{const v=event.detail;if(!v||![v.min,v.max].every(Number.isFinite)||v.max<=v.min||typeof v.start!=='string'||typeof v.end!=='string'||labels.indexOf(v.start)<0||labels.indexOf(v.end)<labels.indexOf(v.start))return;locked=v;draw()})
  draw()
 }
 

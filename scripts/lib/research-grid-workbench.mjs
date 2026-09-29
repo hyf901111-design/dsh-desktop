@@ -2,6 +2,8 @@ import {readFileSync} from 'node:fs'
 import {createResearchGrid} from '../../packages/dsh-research-task-runtime/research-grid.js'
 import {createWorkbenchGridState} from './research-grid-state.mjs'
 import * as ui from './research-grid-ui.mjs'
+import {serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg} from '../../packages/dsh-research-task-runtime/workbench-export.js'
+import {installWorkbenchRefresh,workbenchRefreshCss} from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
@@ -73,12 +75,14 @@ export function patchResearchGridWorkbench(source){
   change('downloadMenuNodeId !== contextNode.id ? null : (0, react_jsx_runtime.jsx)("div", {','downloadMenuNodeId !== contextNode.id ? null : (0, react_jsx_runtime.jsx)(WorkbenchDownloadMenu, {canvasRoot:rootRef,onClose:()=>setContextMenu(null),onMouseEnter:()=>window.clearTimeout(workbenchDownloadLeave.current),onMouseLeave:()=>{window.clearTimeout(workbenchDownloadLeave.current);workbenchDownloadLeave.current=window.setTimeout(()=>setDownloadMenuNodeId(null),200);},')
   change('function normalizeResearchCanvasNodeGeometry(node) {','function normalizeResearchCanvasNodeGeometry(node) {\nif(researchGridNodeIds.has(node?.id))return {width:Math.max(1,node.width),height:Math.max(1,node.height),sizeMode:"manual",resizable:true};')
   change('const onWheel = (event) => {','const onWheel = (event) => {\nif(root.hasAttribute("data-ework-grid")){handleWorkbenchWheel(root,workspace,event);return;}')
+  change('function researchCanvasMeasureForArrange(root,nodes) {','function researchCanvasMeasureForArrange(root,nodes) {\nif(root?.hasAttribute("data-ework-grid"))return measureWorkbenchContents(root,nodes);')
+  change('function researchCanvasArrangeWithMotion(root, workspace, measured) {','function researchCanvasArrangeWithMotion(root, workspace, measured) {\nif(root?.hasAttribute("data-ework-grid"))return arrangeWorkbenchContents(root,workspace,measured);')
   change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map()) {
     if(workbenchGrid.enabled()){
       if(!collaborationCanWrite())return false;
       const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts].map(n=>({...n,preferred:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
       if(!nodes.length)return false;
-      return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.get(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0),true);
+      return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.get(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0),!measured.__workbenchDeferred);
     }`)
   change('const onPointerDown = (event) => {','const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid")){if(canvasToolRef.current==="select"&&handleWorkbenchMultiSelect(root,workspace,event))return;const card=event.target?.closest?.("[data-research-node-id]");if(card){const id=card.getAttribute("data-research-node-id");if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id))workspace.updateSelection([id],"replace");return;}if(spacePressedRef.current)return;}')
   change('const onContentSelect = (event) => {','const onContentSelect = (event) => {\nif(root.hasAttribute("data-ework-grid")){const frame=event.target,id=frame?.matches?.("iframe[data-research-html-artifact]")&&frame.closest("[data-research-node-id]")?.getAttribute("data-research-node-id");if(!id||!workspace.getSnapshot().artifacts.some(n=>n.id===id))return;const modified=event.detail?.shiftKey||event.detail?.metaKey;if(modified){root.ownerDocument.defaultView.getSelection()?.removeAllRanges();workspace.updateSelection([id],"toggle");}else if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id))workspace.updateSelection([id],"replace");return;}')
@@ -118,7 +122,7 @@ export function patchResearchGridWorkbench(source){
   // Only a valid final recognition reaches onCommand and appends a grid component.
   change('onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft();','onCommand: async (prompt) => {\n\t\t\t\t\t\t\tconst node = workspace.createContainerDraft(null,"voice");')
   change('...(draftKind === "link" ? {title:"添加链接"} : {}),','...(draftKind === "link" ? {title:"添加链接"} : draftKind === "voice" ? {title:"语音组件"} : {}),')
-  const definitions=[createResearchGrid,createWorkbenchGridState,...Object.values(ui)].map(fn=>fn.toString()).join('\n')
+  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,...Object.values(ui)].map(fn=>fn.toString()).join('\n')
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   return source+'\n'+meta+JSON.stringify(changes)+' */'
 }

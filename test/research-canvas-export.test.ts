@@ -32,6 +32,12 @@ function dependencies(options: {
 }
 
 describe('Research canvas export service', () => {
+  it('accepts passive viewport SVG but rejects decoded external references and active markup',async()=>{
+    const f=dependencies(),save=(content:string)=>saveResearchCanvasExport({kind:'text',format:'svg',suggestedName:'图.svg',content},f.value)
+    for(const content of ['<svg><image href="//example.com/track.png"/></svg>','<svg><image href="file:///tmp/local.png"/></svg>','<svg><path fill="u\\72l(file:///tmp/local.svg#x)"/></svg>', '<svg><path style="fill:u\\72l(https://example.com/a.svg#x)"/></svg>','<svg><a href="&#x6a;avascript:alert(1)"><text>click</text></a></svg>','<svg><style>@import "https://example.com/a.css";</style></svg>','<svg><animate attributeName="href" values="javascript:alert(1)"/></svg>','<?xml-stylesheet href="https://example.com/a.css"?><svg/>'])expect(await save(content)).toMatchObject({status:'error'})
+    expect(f.showSaveDialog).not.toHaveBeenCalled()
+    expect(await save('<svg xmlns="http://www.w3.org/2000/svg" width="460" height="280"><image href="data:image/png;base64,iVBORw=="/></svg>')).toEqual({status:'saved'})
+  })
   it('saves HTML through the parent-owned save dialog without opening it', async () => {
     const f = dependencies()
     const html = '<!doctype html><iframe sandbox="allow-scripts" srcdoc="&lt;h1&gt;活动&lt;/h1&gt;"></iframe>'

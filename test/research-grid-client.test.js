@@ -66,6 +66,16 @@ it('顶栏问答进入右侧会话，更多菜单包含三项原工具',async()=
  expect(f.document.querySelector('.ew-grid-menu').textContent).toContain('总结提炼')
  expect(f.document.querySelector('.ew-grid-menu').textContent).toContain('基于所选创建')
 })
+it('链接组件使用隔离网页容器，顶栏刷新复用当前网页',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:''})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge})
+ let node;await act(async()=>{node=f.workspace.createWebLink('https://www.baidu.com/')})
+ expect(bridge.resolveEngine).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:node.id,url:'https://www.baidu.com/',preferNative:true})
+ const element=f.host.querySelector('[data-research-native-web]'),reload=vi.fn(element.__eworkReloadWeb)
+ element.__eworkReloadWeb=reload
+ await f.event('click',f.host.querySelector('[data-workbench-refresh="'+node.id+'"]'))
+ expect(reload).toHaveBeenCalledTimes(1);expect(bridge.releaseNative).not.toHaveBeenCalled()
+})
 it('首次打开组件菜单不被右侧会话自动滚动关闭，画板滚动仍关闭',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const conversation=f.document.createElement('div');f.document.body.append(conversation)
@@ -114,7 +124,7 @@ it('工作台和菜单图标统一16px视口与1.5px线宽，Figma路径离线�
   expect([...svg.querySelectorAll('path')].every(path=>!path.hasAttribute('stroke-width'))).toBe(true)
  }
  await f.event('click',header.querySelector('[data-workbench-more]'))
- for(const name of ['duplicate','expand','rename','edit','branch','summary','plus','data','remove']){
+ for(const name of ['duplicate','expand','rename','download','branch','summary','plus','data','remove']){
   const icon=f.document.querySelector('.ew-grid-menu .ew-grid-icon-'+name)
   expect(icon,name).not.toBeNull()
  }
@@ -328,7 +338,10 @@ it('失焦取消拖动，受协作占用的让位组件不会移动',async()=>{
  await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="a"]'),{button:0,pointerId:8,clientX:200,clientY:24})
  f.host.querySelector('[data-research-node-id="b"]').setAttribute('data-research-geometry-blocked','')
  await f.event('pointerup',f.canvas,{pointerId:8,clientX:680,clientY:24})
- expect(f.workspace.getSnapshot().artifacts).toEqual(before)
+ // Crossing the midpoint may place the active card below the locked peer;
+ // that is allowed when the peer's own geometry remains untouched.
+ expect(f.workspace.getSnapshot().artifacts.find(n=>n.id==='b')).toEqual(before.find(n=>n.id==='b'))
+ expect(f.workspace.getWorkbenchCells().find(n=>n.id==='a').y).toBeGreaterThanOrEqual(f.workspace.getWorkbenchCells().find(n=>n.id==='b').h)
 })
 it('语音取消、空识别和错误不创建草稿，重试拒绝迟到的旧识别',async()=>{
  let subscriber
@@ -406,14 +419,17 @@ it('窄窗口的合法小跨度不会被渲染器放大而重叠',async()=>{
  expect(a.x+a.width/2).toBeLessThan(b.x-b.width/2)
 })
 
-it('滚动后的编辑与导出菜单在可见区域打开',async()=>{
+it('滚动后的导出子菜单在可见区域打开',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  f.canvas.scrollTop=600;await f.event('scroll',f.canvas)
  await f.event('click',f.host.querySelector('[data-workbench-more="a"]'),{clientX:800,clientY:110})
- await f.event('click',[...f.document.querySelectorAll('.ew-grid-menu button')].find(n=>n.textContent==='编辑与导出'))
- const menu=f.document.querySelector('.rScV5Q_contextMenu')
- expect(menu.parentElement).toBe(f.document.body)
- expect(parseFloat(menu.style.top)).toBe(110)
+ const parent=f.document.querySelector('.ew-grid-menu'),trigger=parent.querySelector('[aria-label="导出"]')
+ parent.getBoundingClientRect=()=>({left:400,top:110,right:606,bottom:505,width:206,height:395})
+ trigger.getBoundingClientRect=()=>({left:408,top:210,right:598,bottom:243,width:190,height:33})
+ await f.event('click',trigger)
+ const menu=f.document.querySelector('[aria-label="导出格式"]')
+ expect(menu.parentElement).toBe(f.document.body);expect(parseFloat(menu.style.top)).toBe(210)
+ expect(parseFloat(menu.style.left)).toBe(610)
 })
 
 it('底部工具栏通过 React 挂载到页面，避开滚动容器的固定定位边界',async()=>{
@@ -452,9 +468,45 @@ it('工作台顶栏下的组件拖动使用滚动区域原点进行格位换算'
  await act(async()=>f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:8}],true))
  await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="a"]'),{button:0,pointerId:11,clientX:200,clientY:90})
  await f.event('pointermove',f.canvas,{pointerId:11,clientX:200,clientY:160})
- expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:3,w:20,h:8})
+ expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:20,h:8})
  await f.event('pointerup',f.canvas,{pointerId:11,clientX:200,clientY:160})
  expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:20,h:8})
+})
+
+it('浮卡按像素连续跟手，预览补位与松手完全一致，撤销恢复邻居',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await act(async()=>{w.setArtifacts([text('a'),text('b',260,500),text('c',740)]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:6},{id:'b',x:0,y:6,w:20,h:9},{id:'c',x:20,y:0,w:20,h:5}],true)})
+ const before=w.getWorkbenchCells(),card=f.host.querySelector('[data-research-node-id="a"]'),handle=card.querySelector('[data-workbench-drag-handle]')
+ await f.event('pointerdown',handle,{button:0,pointerId:81,clientX:200,clientY:24})
+ await f.event('pointermove',f.canvas,{pointerId:81,clientX:207,clientY:24+step*12+7})
+ expect(parseFloat(card.style.getPropertyValue('--grid-float-left'))).toBeCloseTo(19)
+ expect(parseFloat(card.style.getPropertyValue('--grid-float-top'))).toBeCloseTo(12+step*12+7)
+ const resolved=w.getWorkbenchCells(),preview=f.canvas.querySelector('.ew-grid-placeholder'),destination=resolved.find(c=>c.id==='a')
+ expect(destination.y).toBe(9)
+ expect(parseFloat(preview.style.top)).toBeCloseTo(12+destination.y*step)
+ expect(parseFloat(preview.style.top)).not.toBeCloseTo(parseFloat(card.style.getPropertyValue('--grid-float-top')))
+ expect(w.getWorkbenchCells().find(c=>c.id==='b').y).toBe(0)
+ await f.event('pointerup',f.canvas,{pointerId:81,clientX:207,clientY:24+step*12+7})
+ expect(w.getWorkbenchCells()).toEqual(resolved)
+ expect(card.style.getPropertyValue('--grid-float-top')).toBe('')
+ expect(preview.hidden).toBe(true)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+})
+
+it('窄窗补高后的可见中线决定换位，不提前按保存高度换位',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setArtifacts([text('a'),text('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:5},{id:'b',x:0,y:5,w:20,h:5}],true);w.setCanvasSize({width:240,height:700,availableWidth:240});w.setWorkbenchWidth(240)})
+ const before=w.getWorkbenchCells(),visible=w.getWorkbenchVisibleCells(),h=visible[0].h
+ const cellStep=(240-24+(240-24-40*4)/39)/40
+ await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="a"]'),{button:0,pointerId:82,clientX:40,clientY:24})
+ await f.event('pointermove',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*h/2})
+ expect(w.getWorkbenchCells()).toEqual(before)
+ await f.event('pointermove',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*(h+1)})
+ expect(w.getWorkbenchCells().find(c=>c.id==='a')).toMatchObject({y:5,h:5})
+ const resolved=w.getWorkbenchCells()
+ await f.event('pointerup',f.canvas,{pointerId:82,clientX:40,clientY:24+cellStep*(h+1)})
+ expect(w.getWorkbenchCells()).toEqual(resolved)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
 
 it('未选中时组件滚轮交给工作台，选中后仅在内部可滚时消费',async()=>{
@@ -510,6 +562,89 @@ it('整理保持行情指标的紧凑高度，不把视口余量灌入指标卡'
  expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:40})
 })
 
+it('整理使用当前HTML的内容测量收紧尺寸，拒绝其他窗口的测量',async()=>{
+ const f=await fixture(true),n={...text('html'),kind:'generated-container',containerPrompt:'图表',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'图表',html:'<svg height="200"></svg>'}}
+ await act(async()=>f.workspace.setArtifacts([n]))
+ const frame=f.host.querySelector('iframe[data-research-html-artifact]'),source=frame.contentWindow
+ const size={type:'sherlock-workbench-content-size',width:481,height:230}
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:{},data:size})))
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
+ await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ const fallbackHeight=f.workspace.getSnapshot().artifacts[0].height
+ expect(fallbackHeight).toBeLessThan(280)
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source,data:size})))
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
+ await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(288)
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThan(315)
+ await act(async()=>f.workspace.undo())
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBe(fallbackHeight)
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source,data:{...size,height:900,html:'extra'}})))
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
+ await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThan(315)
+})
+
+it('原生表格按完整行内容整理，不使用大号默认高度',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('table')]))
+ const card=f.host.querySelector('[data-research-node-id="table"]'),body=card.querySelector('[data-research-preview-body]'),table=f.document.createElement('table')
+ body.appendChild(table);card.getBoundingClientRect=()=>({left:12,top:12,width:483,height:700,right:495,bottom:712})
+ table.getBoundingClientRect=()=>({left:22,top:74,width:463,height:182,right:485,bottom:256})
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
+ await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ const height=f.workspace.getSnapshot().artifacts[0].height
+ expect(height).toBeGreaterThanOrEqual(252);expect(height).toBeLessThan(280)
+})
+
+it('一次整理等待改宽后的HTML自然高度，整次操作只撤销一步',async()=>{
+ const f=await fixture(true),w=f.workspace,n=id=>({...text(id),kind:'generated-container',containerPrompt:'文章',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:id,html:'<p>文章 '+id+'</p>'}})
+ await act(async()=>{w.setArtifacts([n('a'),n('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:40,h:20},{id:'b',x:0,y:20,w:40,h:20}],true)})
+ const before=w.getWorkbenchCells(),frames=['a','b'].map(id=>f.host.querySelector('[data-research-node-id="'+id+'"] iframe'))
+ const send=async(frame,width,height)=>act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width,height}})))
+ for(const frame of frames)await send(frame,974,300)
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
+ await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ expect(w.getSnapshot().artifacts.every(n=>n.width<600)).toBe(true)
+ for(const frame of frames)await send(frame,481,600)
+ await act(async()=>new Promise(r=>setTimeout(r,450)))
+ expect(w.getSnapshot().artifacts.every(n=>n.height>=658&&n.height<690)).toBe(true)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+ await send(frames[0],481,900)
+ expect(w.getWorkbenchCells()).toEqual(before)
+})
+it('整理的二次测高保留智能草稿的规范最小尺寸',async()=>{
+ const f=await fixture(true),w=f.workspace;let node
+ await act(async()=>{node=w.createContainerDraft()})
+ const before=w.getWorkbenchCells(),card=f.host.querySelector('[data-research-node-id="'+node.id+'"]')
+ card.getBoundingClientRect=()=>({left:12,top:12,width:500,height:300,right:512,bottom:312})
+ for(const element of card.querySelectorAll('textarea,input,p'))element.getBoundingClientRect=()=>({left:22,top:60,width:400,height:25,right:422,bottom:85})
+ await f.event('contextmenu',f.canvas,{clientX:650,clientY:500,button:2})
+ await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
+ await act(async()=>new Promise(r=>setTimeout(r,700)))
+ expect(w.getWorkbenchDocument().artifacts[0].height).toBeGreaterThanOrEqual(220)
+ expect(f.canvas.__eworkContentFit).toBeUndefined()
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+})
+it('导出向右展开仅三个格式，SVG按当前内容区比例并拒收非所属窗口回复',async()=>{
+ const save=vi.fn(async()=>({status:'saved'})),f=await fixture(true,{researchCanvasExport:{save}})
+ await act(async()=>f.workspace.setArtifacts([{...text('export'),kind:'generated-container',containerPrompt:'图表',refreshMinutes:0,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'图表',html:'<svg></svg>'}}]))
+ await f.event('click',f.host.querySelector('[data-workbench-more="export"]'))
+ const menu=f.document.querySelector('.ew-grid-menu'),trigger=menu.querySelector('[aria-label="导出"]')
+ expect(menu.textContent).not.toContain('编辑与导出')
+ menu.getBoundingClientRect=()=>({left:210,top:80,right:416,bottom:475,width:206,height:395})
+ trigger.getBoundingClientRect=()=>({left:218,top:170,right:408,bottom:203,width:190,height:33})
+ await f.event('mouseover',trigger)
+ const popup=f.document.querySelector('[aria-label="导出格式"]');expect(popup.textContent).toBe('SVGPNGJPG');expect(parseFloat(popup.style.left)).toBeGreaterThanOrEqual(420)
+ const frame=f.host.querySelector('iframe[data-research-html-artifact]'),post=vi.spyOn(frame.contentWindow,'postMessage')
+ await f.event('click',popup.querySelector('button'))
+ const request=post.mock.calls.find(([d])=>d.type==='sherlock-workbench-export')[0],svg='<svg xmlns="http://www.w3.org/2000/svg" width="460" height="280" viewBox="0 0 460 280"><text x="1" y="10">当前筛选数据</text></svg>'
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:f.win,data:{type:'sherlock-workbench-export-result',id:request.id,svg}})))
+ expect(save).not.toHaveBeenCalled()
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-export-result',id:request.id,svg}})))
+ expect(save).toHaveBeenCalledWith({kind:'text',format:'svg',suggestedName:'export.svg',content:svg})
+ expect(f.document.querySelector('.ew-grid-menu')).toBeNull()
+})
+
 it('思维导图在右侧独立展开二级菜单，菜单图标不再用列表图标代替',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  await f.event('click',f.host.querySelector('[data-workbench-more="a"]'))
@@ -521,7 +656,7 @@ it('思维导图在右侧独立展开二级菜单，菜单图标不再用列表�
  expect(child).not.toBeNull();expect(menu.contains(child)).toBe(false)
  expect(parseFloat(child.style.left)).toBeGreaterThanOrEqual(416)
  expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['简要','常规','详细'])
- const paths=['重命名','编辑与导出','数据源与自动更新'].map(label=>{const button=[...menu.querySelectorAll('button')].find(n=>n.textContent===label);return button.querySelector('[data-workbench-icon]')?.getAttribute('data-workbench-icon')||button.querySelector('path')?.getAttribute('d')})
+ const paths=['重命名','导出','数据源与自动更新'].map(label=>{const button=[...menu.querySelectorAll('button')].find(n=>n.textContent===label||n.getAttribute('aria-label')===label);return button.querySelector('[data-workbench-icon]')?.getAttribute('data-workbench-icon')||button.querySelector('path')?.getAttribute('d')})
  expect(new Set(paths).size).toBe(3)
  expect(paths).not.toContain(menu.querySelector('[aria-label="思维导图"] [data-workbench-icon]').getAttribute('data-workbench-icon'))
 })
@@ -833,4 +968,25 @@ it('单轴缩放保留未操作轴的规范尺寸，窄窗补高和小草稿补�
  await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="'+draft.id+'"]'),{button:0,pointerId:76,clientX:800,clientY:500})
  await f.event('pointerup',f.canvas,{pointerId:76,clientX:800,clientY:500+wideStep*2})
  expect(w.getWorkbenchCells().find(c=>c.id===draft.id)).toMatchObject({x:32,w:4,h:3})
+})
+
+it('调宽预览压缩同排组件，松手使用预览并一次撤销恢复双方',async()=>{
+ const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a'),text('b')]);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:10},{id:'b',x:20,y:0,w:20,h:10}],true);f.workspace.updateSelection(['a'],'replace')})
+ const before=f.workspace.getWorkbenchCells(),step=(1000-14)/40,handle=f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]')
+ await f.event('pointerdown',handle,{button:0,pointerId:87,clientX:490,clientY:200})
+ await f.event('pointermove',f.canvas,{pointerId:87,clientX:490+step*6,clientY:200})
+ await act(async()=>new Promise(r=>setTimeout(r,40)))
+ const preview=f.workspace.getWorkbenchCells()
+ expect(preview.find(c=>c.id==='b')).toMatchObject({x:26,y:0,w:14,h:10})
+ await f.event('pointerup',f.canvas,{pointerId:87,clientX:490+step*6,clientY:200})
+ expect(f.workspace.getWorkbenchCells()).toEqual(preview)
+ await act(async()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
+})
+
+it('宿主组件滚动条覆盖后注入的旧隐藏规则并保留横向溢出',async()=>{
+ const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
+ const style=f.document.createElement('style');style.textContent='body [data-research-artifact-card]:not(:has(.rScV5Q_webFrame)) :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerMarkdown,.rScV5Q_containerTableScroll,.rScV5Q_mindMap,.odyssey-generation-records,textarea){scrollbar-width:none!important}';f.document.head.append(style)
+ const scroller=f.host.querySelector('[data-research-preview-body]')
+ expect(f.win.getComputedStyle(scroller).getPropertyValue('scrollbar-width')).toBe('thin')
+ expect(f.win.getComputedStyle(scroller).overflow).toBe('auto')
 })

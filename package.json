@@ -90,6 +90,7 @@
     "@deepseek-ai/dsh-timeout": "0.1.0-rc.7",
     "@deepseek-ai/dsh-workflow": "0.1.0-rc.7",
     "@trycua/cua-driver": "0.28.2",
+    "@xmldom/xmldom": "0.9.12",
     "apache-arrow": "18.1.0",
     "cheerio": "^1.2.0",
     "dsh-desktop-market-installer": "file:packages/dsh-desktop-market-installer",
@@ -151,6 +152,10 @@
       "!**/node_modules/@mistralai/mistralai/src/**"
     ],
     "extraResources": [
+      {
+        "from": "build/figma-generation/LICENSE-react-bits.md",
+        "to": "third-party/React-Bits-ShapeGrid-LICENSE.md"
+      },
       {
         "from": "build/integration-catalog",
         "to": "integration-catalog"

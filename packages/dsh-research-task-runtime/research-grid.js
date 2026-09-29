@@ -28,12 +28,47 @@ export function createResearchGrid() {
     for(const n of rest)if(overlap(n,active))n.y=active.y+active.h
     return compact([...rest,active],active)
   }
-  // Explicit Arrange uses justified shelves. Every shelf fills all 40 columns;
-  // DP groups compatible content heights and widths instead of stretching a
-  // tiny KPI beside a long article. Pointer compaction keeps its own semantics.
+  // Growing a card borrows width from its same-row neighbours before wrapping.
+  // Resize always starts from the saved transaction, so reversing the pointer
+  // restores each neighbour's width instead of accumulating shrinkage.
+  function resize(items,target,nodes,width) {
+    const original=items.find(c=>c.id===target.id)
+    if(!original)return place(items,target)
+    const active=bounded({...target,x:original.x,w:Math.min(target.w,columns-original.x)})
+    if(['x','y','w','h'].every(k=>active[k]===original[k]))return items.map(bounded)
+    if(active.w<=original.w||active.h!==original.h){const next=new Map(place(items,active).map(c=>[c.id,c]));return items.map(c=>next.get(c.id))}
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),peers=items.filter(c=>c.id!==active.id&&c.y===original.y&&c.x>=original.x+original.w).map(bounded).sort((a,b)=>a.x-b.x)
+    if(!peers.length)return place(items,active)
+    const minima=peers.map(c=>Math.max(minimum(byId.get(c.id),m).w,Math.min(columns,Math.ceil((280+m.gap)/m.step))))
+    const widths=peers.map(c=>c.w),kept=peers.length
+    let count=kept
+    while(count&&minima.slice(0,count).reduce((a,b)=>a+b,0)>columns-active.x-active.w)count--
+    let deficit=Math.max(0,active.x+active.w+widths.slice(0,count).reduce((a,b)=>a+b,0)-columns)
+    for(let i=0;i<count;i++){const shrink=Math.min(deficit,Math.max(0,widths[i]-minima[i]));widths[i]-=shrink;deficit-=shrink}
+    let cursor=active.x+active.w
+    const changed=new Map([[active.id,active]])
+    peers.forEach((c,i)=>{if(i<count){changed.set(c.id,{...c,x:cursor,w:widths[i]});cursor+=widths[i]}else changed.set(c.id,{...c,y:active.y+active.h})})
+    return compact(items.map(c=>changed.get(c.id)||c),active)
+  }
+  // Moving crosses a peer's midpoint before inserting above/below it. Resolve
+  // compaction during the preview so release uses exactly that destination.
+  function move(items,target,visibleItems=items,visibleTarget=target) {
+    const active=bounded(target),original=items.find(c=>c.id===active.id)
+    if(original&&['x','y','w','h'].every(k=>original[k]===active[k]))return items.map(bounded)
+    const center=visibleTarget.y+visibleTarget.h/2,peers=visibleItems.filter(c=>overlap(visibleTarget,c)).sort((a,b)=>Math.abs(center-a.y-a.h/2)-Math.abs(center-b.y-b.h/2))
+    const visiblePeer=peers[0],peer=items.find(c=>c.id===visiblePeer?.id)
+    // Local minimum-height projection must not move a peer's physical midpoint
+    // into its smaller saved frame. Only the ordering decision uses that view.
+    if(peer)active.y=center>=visiblePeer.y+visiblePeer.h/2?peer.y+peer.h:peer.y
+    const resolved=new Map(compact(place(items,active)).map(c=>[c.id,c]))
+    return items.map(c=>resolved.get(c.id))
+  }
+  // Widths fill each shelf; each card keeps its own intrinsic content height.
+  // Compact the finished shelves into shorter columns instead of filling cards
+  // with blank space. Source order makes repeated Arrange deterministic.
   function arrange(nodes,items,width,visibleHeight=0) {
-    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])), ordered=items.map(bounded).sort(order)
-    const preferred=ordered.map(c=>{const n=byId.get(c.id)||{},p=n.preferred||n,min=minimum(n,m),minWidth=Math.min(m.width-2*inset,n.kind==='generated-container'&&!n.containerSpec?320:280);return {w:Math.max(minWidth,Math.min(m.width-2*inset,p.width||480)),h:Math.max(min.h*m.step-m.gap,Math.min(1600,p.height||260)),minCols:Math.min(columns,Math.ceil((minWidth+m.gap)/m.step)),minRows:min.h,flex:!n.gridCompact}})
+    const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),cellsById=new Map(items.map(n=>[n.id,bounded(n)])),ordered=nodes.map(n=>cellsById.get(n.id)).filter(Boolean)
+    const preferred=ordered.map(c=>{const n=byId.get(c.id)||{},p=n.preferred||n,min=minimum(n,m),minWidth=Math.min(m.width-2*inset,n.kind==='generated-container'&&!n.containerSpec?320:280);return {w:Math.max(minWidth,Math.min(m.width-2*inset,p.width||480)),h:Math.max(min.h*m.step-m.gap,p.height||260),minCols:Math.min(columns,Math.ceil((minWidth+m.gap)/m.step)),minRows:min.h}})
     const maxPeers=Math.max(1,Math.min(3,Math.floor((width-2*inset+gap)/300))),cost=Array(ordered.length+1).fill(Infinity),choices=[];cost[ordered.length]=0
     for(let start=ordered.length-1;start>=0;start--)for(let count=1;count<=Math.min(maxPeers,ordered.length-start);count++){
       const peers=preferred.slice(start,start+count),sum=peers.reduce((v,p)=>v+p.w,0),scale=(width-2*inset-(count-1)*gap)/sum
@@ -45,15 +80,11 @@ export function createResearchGrid() {
     const shelves=[];let y=0
     for(let start=0;start<ordered.length;){const count=choices[start]||1,peers=preferred.slice(start,start+count),sum=peers.reduce((v,p)=>v+p.w,0)
       let x=0;const shelf=[]
-      for(let j=0;j<count;j++){const w=j===count-1?columns-x:clamp(Math.round(peers[j].w/sum*columns),peers[j].minCols,columns-x-peers.slice(j+1).reduce((v,p)=>v+p.minCols,0));shelf.push({...ordered[start+j],x,y,w});x+=w}
-      const h=clamp(Math.max(...peers.map(p=>p.minRows),Math.ceil((Math.max(...peers.map((p,j)=>p.h*(p.flex?Math.max(.8,Math.min(1.5,p.w/(shelf[j].w*m.step-m.gap))):1)))+m.gap)/m.rowStep)),3,300)
-      shelves.push({cells:shelf,h,flex:peers.some(p=>p.flex)});y+=h;start+=count
+      for(let j=0;j<count;j++){const w=j===count-1?columns-x:clamp(Math.round(peers[j].w/sum*columns),peers[j].minCols,columns-x-peers.slice(j+1).reduce((v,p)=>v+p.minCols,0)),h=clamp(Math.max(peers[j].minRows,Math.ceil((peers[j].h+m.gap)/m.rowStep)),3,300);shelf.push({...ordered[start+j],x,y,w,h});x+=w}
+      const h=Math.max(...shelf.map(c=>c.h))
+      shelves.push({cells:shelf,h});y+=h;start+=count
     }
-    // If a small board fits in one viewport, give flexible content the remaining
-    // room. Reserve the floating toolbar area and keep compact metrics compact.
-    let extra=Math.max(0,Math.ceil((visibleHeight-2*inset-72+gap)/m.rowStep)-y),flex=shelves.filter(s=>s.flex)
-    for(let i=0;i<flex.length&&extra;i++){const add=Math.min(300-flex[i].h,Math.ceil(extra/(flex.length-i)));flex[i].h+=add;extra-=add}
-    y=0;const result=[];for(const shelf of shelves){result.push(...shelf.cells.map(c=>({...c,y,h:shelf.h})));y+=shelf.h}
+    const result=compact(shelves.flatMap(s=>s.cells))
     const resultById=new Map(result.map(c=>[c.id,c]));return items.map(c=>resultById.get(c.id))
   }
   function append(items,id,w=20,h=7){return bounded({id,x:0,y:Math.max(0,...items.map(n=>n.y+n.h)),w,h})}
@@ -77,5 +108,5 @@ export function createResearchGrid() {
     const m=metrics(width), byId=new Map(items.map(n=>[n.id,n]))
     return nodes.map(n=>{const c=byId.get(n.id);if(!c)return n;const width=c.w*m.step-m.gap,height=c.h*m.rowStep-m.gap;return {...n,x:inset+c.x*m.step+width/2,y:inset+c.y*m.rowStep+height/2,width,height,sizeMode:'manual'}})
   }
-  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,place,arrange,append,draw,migrate,project}
+  return {columns,gap,inset,metrics,minimum,bounded,overlap,compact,place,resize,move,arrange,append,draw,migrate,project}
 }

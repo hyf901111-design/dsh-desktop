@@ -2,6 +2,8 @@ import { copyFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-trust'
 import { normalizeResearchLinkUrl } from './research-link-frame'
+import { DOMParser } from '@xmldom/xmldom'
+import { isPassiveWorkbenchSvg } from '../../../packages/dsh-research-task-runtime/workbench-export.js'
 
 const MAX_ID_LENGTH = 512
 const MAX_NAME_LENGTH = 160
@@ -101,8 +103,11 @@ function outputPath(selectedPath: string, extension: string): string {
 }
 
 function validSvg(value: string): boolean {
-  return /^(?:\s*<\?xml[^>]*>\s*)?<svg(?:\s|\/?>)/i.test(value) &&
-    !/<(?:script|foreignObject)\b|\son\w+\s*=|(?:href|src)\s*=\s*["'](?:https?:|data:)/i.test(value)
+  try {
+    let invalid=false
+    const parser=new DOMParser({onError:()=>{invalid=true}})
+    return isPassiveWorkbenchSvg(value,(s:string)=>parser.parseFromString(s,'image/svg+xml'))&&!invalid
+  } catch { return false }
 }
 
 function validRequest(value: unknown): ResearchCanvasExportRequest | null {

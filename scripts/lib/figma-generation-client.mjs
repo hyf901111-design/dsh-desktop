@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
 
 const asset = name => 'data:image/svg+xml;base64,' + readFileSync(new URL(`../../build/figma-generation/${name}.svg`, import.meta.url)).toString('base64')
-const dotFieldData = JSON.parse(readFileSync(new URL('../../build/figma-generation/dot-fields.json', import.meta.url), 'utf8'))
 const icons = Object.fromEntries(['stop', 'retry', 'restart', 'resume', 'process', 'running', 'waiting', 'error', 'stopped'].map(name => [name, asset(name)]))
 
 function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExpand, onRetry, retryDisabled, retryLabel, onResume, phaseOverride, detailOverride }) {
@@ -89,101 +88,79 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
  'data-research-generation-failure': ['error', 'stopped'].includes(state) ? '' : undefined,
     'aria-busy': active,
     children: [
-      (0, react_jsx_runtime.jsx)(ResearchGenerationDots, { moving }),
+      (0, react_jsx_runtime.jsx)(ResearchGenerationGrid, { moving: moving && !reduceMotion }),
       (0, react_jsx_runtime.jsx)('time', { 'data-research-generation-elapsed': '', children: time, title: elapsed + ' 秒' }),
       (0, react_jsx_runtime.jsxs)('div', { 'data-research-generation-foreground': '', children: [
         (0, react_jsx_runtime.jsx)('span', { className: 'odyssey-generation-state-icon', 'aria-hidden': true, style: { maskImage: 'url("' + glyphs[glyph] + '")', animationPlayState: moving ? 'running' : 'paused' }, 'data-generation-spinning': moving }),
         (0, react_jsx_runtime.jsx)('strong', { children: researchPublicProgress(node.title || '当前组件') }),
         (0, react_jsx_runtime.jsx)('div', { className: 'odyssey-generation-phase', role: 'status', children: phase }),
-        (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: (0, react_jsx_runtime.jsx)('span', { 'data-progress-ticker': moving && !reduceMotion ? '' : undefined, children: detail }, node.generationTaskId + ':' + detail) }),
+        (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: (0, react_jsx_runtime.jsx)('span', { 'data-progress-detail': '', children: detail }, node.generationTaskId + ':' + detail) }),
         derived ? (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-sources': '', children: node.kind === 'generated-summary' ? '基于所选 ' + sourceCount + ' 个组件' : '来源：' + sourceCount + ' 个组件' }) : null
       ] }),
       (0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-generation-actions', 'aria-label': '生成操作', children: [
-        action ? (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { ...action, icon: glyphs[action.name] }) : null,
-        (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { name: 'process', label: '查看过程', icon: glyphs.process, invoke: openProcess })
+        (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { name: 'process', label: '查看过程', icon: glyphs.process, invoke: openProcess }),
+        action ? (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { ...action, icon: glyphs[action.name] }) : null
       ] })
     ]
   })
 }
 
-// Keep the source dots fixed. A soft diagonal light crosses their opacity;
-// limiting paint work also keeps live window resizing responsive.
-function ResearchGenerationDots({ moving }) {
-  /* GENERATION_DOT_FIELDS */
-  const element = (0, react.useRef)(null)
-  const gloss = (0, react.useRef)(null)
+// Square branch adapted from React Bits ShapeGrid (David Haz, 2026).
+// Source and license are retained in build/figma-generation/LICENSE-react-bits.md.
+function ResearchGenerationGrid({ moving }) {
+  const element = (0, react.useRef)(null), phase = (0, react.useRef)(0)
   ;(0, react.useEffect)(() => {
-    const canvas = element.current
-    const shine = gloss.current
-    const context = canvas?.getContext?.('2d')
-    if (!context || typeof Path2D === 'undefined') return
-    const paths = ResearchGenerationDots.paths || (ResearchGenerationDots.paths = fields.shapes.map(path => new Path2D(path)))
-    let layoutTimer = 0, windowResizeTimer = 0
-    let width = 0, height = 0, scale = 1, points = [], color = ''
-    const grid = fields.grid
+    const canvas = element.current, ctx = canvas?.getContext?.('2d')
+    if (!ctx) return
+    const size = 34, speed = .72
+    let width = 0, height = 0, scale = 1, offset = phase.current, frame = 0, last = 0
+    let visible = true, pageVisible = !document.hidden, hovered = null, dark = false
     const draw = () => {
-      context.setTransform(1, 0, 0, 1, 0, 0)
-      context.clearRect(0, 0, canvas.width, canvas.height)
-      context.globalCompositeOperation = 'lighter'
-      context.fillStyle = color
-      for (const point of points) {
-        context.setTransform(scale, 0, 0, scale, point.x * scale, point.y * scale)
-        context.globalAlpha = point.alpha
-        context.fill(point.path)
+      ctx.setTransform(scale, 0, 0, scale, 0, 0); ctx.clearRect(0, 0, width, height)
+      ctx.strokeStyle = dark ? '#292929' : '#e1e4e7'; ctx.lineWidth = 1
+      if (hovered && moving) {
+        const col = Math.floor((hovered.x - offset) / size), row = Math.floor((hovered.y - offset) / size)
+        ctx.fillStyle = dark ? 'rgba(255,255,255,.075)' : 'rgba(0,0,0,.035)'
+        ctx.fillRect(col * size + offset, row * size + offset, size, size)
       }
-      context.globalAlpha = 1
-      canvas.dataset.dotPhase = '0'
-      canvas.dataset.dotReady = 'true'
-      // The dot geometry is painted once. The compositor moves only the
-      // masked light layer, so active cards do not redraw thousands of paths.
-      if (shine) {
-        const mask = 'url("' + canvas.toDataURL('image/png') + '")'
-        shine.style.maskImage = mask
-        shine.style.webkitMaskImage = mask
-      }
+      ctx.beginPath()
+      for (let x = offset; x <= width; x += size) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, height) }
+      for (let y = offset; y <= height; y += size) { ctx.moveTo(0, y + .5); ctx.lineTo(width, y + .5) }
+      ctx.stroke()
+      canvas.dataset.gridPhase = offset.toFixed(2); canvas.dataset.gridReady = 'true'
     }
     const layout = () => {
       width = canvas.clientWidth; height = canvas.clientHeight
       if (!width || !height) return
       scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
       canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale)
-      const shape = height <= 240 ? 'compact' : width <= 300 ? 'tall' : 'wide'
-      const theme = document.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
-      const field = fields.fields[theme + '-' + shape]
-      color = field.color
-      const cols = Math.max(1, Math.round(width / field.width * field.cols)), rows = Math.max(1, Math.round(height / field.height * field.rows))
-      const sample = (row, col) => {
-        const sourceRow = Math.min(field.rows - 1, Math.max(0, Math.round(row * (field.rows - 1) / Math.max(1, rows - 1))))
-        const sourceCol = Math.min(field.cols - 1, Math.max(0, Math.round(col * (field.cols - 1) / Math.max(1, cols - 1))))
-        const point = field.points[sourceRow * field.cols + sourceCol]
-        return { x: point[0] + (col - sourceCol) * grid, y: point[1] + (row - sourceRow) * grid, alpha: field.alphas[point[2]], path: paths[point[3]] }
-      }
-      points = []
-      for (let row = 0; row < rows + 1; row++) for (let col = 0; col < cols + 1; col++) points.push(sample(row, col))
-      canvas.dataset.dotGeometry = [width, height, points.length, points[0]?.x, points[0]?.y, points.at(-1)?.x, points.at(-1)?.y].join(':')
-      canvas.dataset.dotProfile = theme + '-' + shape
-      draw()
+      dark = document.body.hasAttribute('data-ds-dark-theme'); draw()
     }
-    const scheduleLayout = () => {
-      const themeName = document.body.hasAttribute('data-ds-dark-theme') ? 'dark-' : 'light-'
-      if (canvas.clientWidth === width && canvas.clientHeight === height && canvas.dataset.dotProfile?.startsWith(themeName)) return
-      clearTimeout(layoutTimer); layoutTimer = setTimeout(layout, 80)
+    const stop = () => { if (frame) cancelAnimationFrame(frame); frame = 0; last = 0 }
+    const tick = time => {
+      frame = 0
+      if (!moving || !visible || !pageVisible) return
+      // .72px per 60Hz frame, normalized for high refresh rate displays.
+      if (last) offset = (offset - speed * Math.min(50, time - last) / (1000 / 60)) % size
+      last = time; phase.current = offset; draw(); frame = requestAnimationFrame(tick)
     }
-    const pauseWindowResize = () => {
-      clearTimeout(windowResizeTimer)
-      windowResizeTimer = setTimeout(scheduleLayout, 180)
-    }
-    const resize = new ResizeObserver(scheduleLayout)
-    const theme = new MutationObserver(scheduleLayout)
+    const start = () => { if (moving && visible && pageVisible && !frame) frame = requestAnimationFrame(tick) }
+    const resize = new ResizeObserver(layout), theme = new MutationObserver(layout)
     resize.observe(canvas); theme.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
-    window.addEventListener('resize', pauseWindowResize)
-    layout()
-    return () => { clearTimeout(layoutTimer); clearTimeout(windowResizeTimer); resize.disconnect(); theme.disconnect(); window.removeEventListener('resize', pauseWindowResize) }
-  }, [])
-  return (0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-generation-dot-field', 'aria-hidden': true, children: [
-    (0, react_jsx_runtime.jsx)('canvas', { ref: element, 'data-research-generation-dots': '', 'data-dot-moving': moving, style: { animationPlayState: moving ? 'running' : 'paused' } }),
-    (0, react_jsx_runtime.jsx)('div', { ref: gloss, 'data-research-generation-gloss': '', 'data-gloss-moving': moving, children: (0, react_jsx_runtime.jsx)('span', {}) })
-  ] })
+    const intersection = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
+      visible = entries.some(entry => entry.isIntersecting); visible ? start() : stop()
+    }) : null
+    intersection?.observe(canvas)
+    const visibility = () => { pageVisible = !document.hidden; pageVisible ? start() : stop() }
+    const surface = canvas.parentElement
+    const hover = event => { const rect = canvas.getBoundingClientRect(); hovered = { x: event.clientX - rect.left, y: event.clientY - rect.top }; if (!moving) draw() }
+    const leave = () => { hovered = null; if (!moving) draw() }
+    surface.addEventListener('pointermove', hover); surface.addEventListener('pointerleave', leave)
+    document.addEventListener('visibilitychange', visibility)
+    layout(); start()
+    return () => { stop(); resize.disconnect(); theme.disconnect(); intersection?.disconnect(); surface.removeEventListener('pointermove', hover); surface.removeEventListener('pointerleave', leave); document.removeEventListener('visibilitychange', visibility) }
+  }, [moving])
+  return (0, react_jsx_runtime.jsx)('canvas', { ref: element, className: 'odyssey-generation-shape-grid', 'aria-hidden': true, 'data-research-generation-grid': '', 'data-grid-moving': moving, 'data-grid-size': 34, 'data-grid-speed': .72 })
 }
 
 function ResearchGenerationAction({ name, label, icon, invoke, expanded, disabled }) {
@@ -225,7 +202,7 @@ function ResearchGenerationAction({ name, label, icon, invoke, expanded, disable
       onPointerDown: event => event.stopPropagation(),
       onKeyDown: event => { event.stopPropagation(); if (event.key === 'Escape') { event.preventDefault(); suppressed.current = true; hide() } },
       onClick: event => { event.preventDefault(); event.stopPropagation(); suppressed.current = true; hide(); invoke() },
-      children: (0, react_jsx_runtime.jsx)('span', { 'aria-hidden': true, style: { maskImage: 'url("' + icon + '")' } })
+      children: ({process:'过程',stop:'停止',retry:'重试',restart:'重新生成',resume:'继续'}[name] || label)
     })
   })
 }
@@ -240,7 +217,7 @@ function researchTerminalGenerationEvents(events) {
     ...(typeof event.text === 'string' ? { text: researchPublicProgress(event.text) } : {})
   })))
 }
-export const generationSource = ResearchGenerationProcess.toString().replace('/* GENERATION_ICONS */', 'const glyphs=' + JSON.stringify(icons) + ';') + '\n' + ResearchGenerationDots.toString().replace('/* GENERATION_DOT_FIELDS */', 'const fields=ResearchGenerationDots.fields||(ResearchGenerationDots.fields=' + JSON.stringify(dotFieldData) + ');') + '\n' + ResearchGenerationAction.toString() + '\n' + researchTerminalGenerationEvents.toString()
+export const generationSource = ResearchGenerationProcess.toString().replace('/* GENERATION_ICONS */', 'const glyphs=' + JSON.stringify(icons) + ';') + '\n' + ResearchGenerationGrid.toString() + '\n' + ResearchGenerationAction.toString() + '\n' + researchTerminalGenerationEvents.toString()
 
 function researchComponentPrompt(node, prompt) {
   const manual = node.sizeMode === 'manual'
@@ -319,40 +296,32 @@ export function patchGenerationLifecycle(source) {
 
 export const generationCss = `
 [data-research-generation-description]{overflow:hidden;min-height:16px}
-[data-progress-ticker]{display:block;animation:odyssey-progress-ticker .22s ease-out}
-@keyframes odyssey-progress-ticker{from{transform:translateY(100%);opacity:.25}to{transform:translateY(0);opacity:1}}
-@media(prefers-reduced-motion:reduce){[data-progress-ticker]{animation:none}}
-
-/* Figma 1300:300378 / 09-09C: an independent dot layer, fixed foreground. */
+[data-progress-detail]{display:block;transform:none;animation:none}
+/* Figma 21Z: square Shape Grid background and stable, readable foreground. */
 [data-research-compact-chrome]:has([data-research-generation-process]){border-width:0!important;border-radius:8px!important}
 [data-research-compact-chrome]:has([data-research-generation-process])[data-selected=true]::after{inset:0;border-radius:8px}
 [data-research-compact-chrome]:has([data-research-generation-process])>.rScV5Q_nodeTitle{display:none!important}
 [data-research-compact-chrome]:has([data-research-generation-process])>.rScV5Q_previewBody{height:100%!important;border-radius:8px!important}
 [data-research-compact-chrome]:has([data-research-generation-process]) .rScV5Q_artifactBody{height:100%;padding:0!important;gap:0}
-[data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#fafafa;--generation-title:#262626;--generation-phase:#575757;--generation-detail:#6e6e6e;--generation-icon:#666;--generation-action-icon:#666;--generation-time:#59636d;--generation-button:#fff;--generation-border:rgba(0,0,0,.12);box-sizing:border-box;position:relative;isolation:isolate;display:flex;justify-content:center;min-height:0;height:100%;width:100%;padding:50px 20px!important;overflow:hidden;border-radius:8px;background:var(--generation-bg);color:var(--generation-title);filter:none!important;backdrop-filter:none!important}
-body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#030303;--generation-title:#f5f5f5;--generation-phase:#dbdbdb;--generation-detail:#b0b0b0;--generation-icon:#bdbdbd;--generation-time:#b3bcc4;--generation-button:#353535;--generation-border:#696969;--generation-action-icon:#ccc}
+[data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#fafafa;--generation-title:#262626;--generation-phase:#575757;--generation-detail:#6e6e6e;--generation-icon:#666;--generation-action-icon:#666;--generation-time:#59636d;--generation-button:#eceef3;--generation-border:rgba(0,0,0,.12);box-sizing:border-box;position:relative;isolation:isolate;display:flex;justify-content:center;min-height:0;height:100%;width:100%;padding:50px 20px!important;overflow:hidden;border-radius:8px;background:var(--generation-bg);color:var(--generation-title);filter:none!important;backdrop-filter:none!important}
+body[data-ds-dark-theme] [data-research-compact-chrome] .odyssey-generation-surface{--generation-bg:#131315;--generation-title:#f5f5f5;--generation-phase:#dbdbdb;--generation-detail:#b0b0b0;--generation-icon:#bdbdbd;--generation-time:#b3bcc4;--generation-button:#242428;--generation-border:#696969;--generation-action-icon:#ccc}
 body [data-research-compact-chrome][data-research-artifact-card] .odyssey-generation-surface{background:var(--generation-bg)!important}
-.odyssey-generation-dot-field{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
-[data-research-generation-dots]{position:absolute;inset:0;pointer-events:none;width:100%;height:100%;opacity:1;mask-image:none}
-[data-research-generation-gloss]{position:absolute;inset:0;pointer-events:none;mask-size:100% 100%;mask-repeat:no-repeat;overflow:hidden}
-[data-research-generation-gloss][data-gloss-moving=false]{opacity:0}
-[data-research-generation-gloss]>span{position:absolute;top:-40%;left:-60%;width:55%;height:180%;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.16) 25%,rgba(255,255,255,.88) 50%,rgba(255,255,255,.16) 75%,transparent 100%);transform:skewX(-14deg);animation:odyssey-generation-gloss 7s linear infinite;will-change:transform}
-@keyframes odyssey-generation-gloss{to{transform:translate3d(310%,0,0) skewX(-14deg)}}
-[data-research-generation-foreground]{position:absolute;top:calc(50% - 51px);left:20px;right:20px;bottom:20px;display:flex;flex-direction:column;gap:10px;min-width:0;flex:none;max-height:100%;overflow:auto;scrollbar-width:none}
+.odyssey-generation-shape-grid{position:absolute;inset:0;z-index:0;pointer-events:none;width:100%;height:100%;border-radius:inherit;mask-image:none;opacity:1}
+[data-research-generation-foreground]{position:absolute;top:calc(50% - 65px);left:20px;right:20px;bottom:54px;display:flex;flex-direction:column;gap:10px;min-width:0;flex:none;max-height:100%;overflow:auto;scrollbar-width:none}
 .odyssey-generation-surface[data-process-expanded=true]>[data-research-generation-foreground]{visibility:hidden}
-.odyssey-generation-state-icon{display:block;flex:none;width:18px;height:18px;background:var(--generation-icon);mask-position:center;mask-size:18px 18px;mask-repeat:no-repeat}
+.odyssey-generation-state-icon{display:block;flex:none;width:18px;height:18px;margin-bottom:14px;background:var(--generation-icon);mask-position:center;mask-size:18px 18px;mask-repeat:no-repeat}
 .odyssey-generation-state-icon[data-generation-spinning=true]{animation:odyssey-generation-ring 1.2s linear infinite}
 [data-research-generation-foreground]>strong{font:700 14px/20px 'Noto Sans SC',sans-serif;overflow-wrap:anywhere}
 .odyssey-generation-phase{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-phase)}
-[data-research-generation-foreground]>[data-research-generation-description]{font:400 10px/16px 'Noto Sans SC',sans-serif;color:var(--generation-detail);overflow-wrap:anywhere}
-[data-research-generation-foreground]>[data-research-generation-sources]{font:400 10px/16px 'Noto Sans SC',sans-serif;color:var(--generation-detail)}
+[data-research-generation-foreground]>[data-research-generation-description]{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-detail);overflow-wrap:anywhere}
+[data-research-generation-foreground]>[data-research-generation-sources]{font:400 12px/18px 'Noto Sans SC',sans-serif;color:var(--generation-detail)}
 [data-generation-ui-state=error] .odyssey-generation-phase{color:#b94739}[data-generation-ui-state=error] .odyssey-generation-state-icon{background:#bd4a3d}
 body[data-ds-dark-theme] [data-generation-ui-state=error] .odyssey-generation-phase{color:#f09b91}body[data-ds-dark-theme] [data-generation-ui-state=error] .odyssey-generation-state-icon{background:#f09b91}
 .odyssey-generation-surface>[data-research-generation-elapsed]{position:absolute;top:16px;left:20px;font:500 12px/18px DINPro,sans-serif;font-variant-numeric:tabular-nums;color:var(--generation-time)}
-.odyssey-generation-actions{position:absolute;top:9px;right:9px;z-index:4;padding:3px;display:flex;gap:6px;opacity:0;pointer-events:none;transition:opacity .12s}
+.odyssey-generation-actions{position:absolute;bottom:18px;left:20px;z-index:4;padding:0;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .12s}
 .odyssey-generation-surface:hover .odyssey-generation-actions,.odyssey-generation-surface:focus-within .odyssey-generation-actions{opacity:1;pointer-events:auto}
 .odyssey-generation-action{position:relative;display:flex;flex:none}
-.odyssey-generation-action>button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:24px;height:24px;min-width:24px;min-height:24px;padding:0;border:1px solid var(--generation-border);border-radius:6px;background:var(--generation-button);color:var(--generation-action-icon);cursor:pointer}
+.odyssey-generation-action>button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:auto;height:28px;min-width:56px;min-height:28px;padding:0 10px;font:400 11px/18px "Noto Sans SC",sans-serif;border:1px solid var(--generation-border);border-radius:3px;background:var(--generation-button);color:var(--generation-action-icon);cursor:pointer}
 .odyssey-generation-action>button:hover,.odyssey-generation-action>button:focus-visible{background:var(--generation-button);color:var(--generation-action-icon)}
 .odyssey-generation-action>button:focus-visible{outline:1px solid currentColor;outline-offset:2px}
 .odyssey-generation-action>button:disabled{opacity:.4;cursor:default}
@@ -366,6 +335,6 @@ body[data-ds-dark-theme] .odyssey-generation-tooltip{background:#383838;color:#f
 @container(max-width:300px){[data-research-generation-foreground]{top:calc(50% - 59px)}}
 @container(max-height:240px){[data-research-generation-foreground]{top:calc(50% - 38px)}}
 @keyframes odyssey-generation-ring{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){[data-research-generation-gloss]>span,.odyssey-generation-state-icon{animation:none!important}[data-research-generation-gloss]{opacity:0!important}.odyssey-generation-actions{transition:none}}
+@media(prefers-reduced-motion:reduce){.odyssey-generation-state-icon{animation:none!important}.odyssey-generation-actions{transition:none}}
 @media(hover:none){.odyssey-generation-actions{opacity:1;pointer-events:auto}}
 `
