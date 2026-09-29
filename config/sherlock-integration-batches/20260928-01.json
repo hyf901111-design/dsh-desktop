@@ -275,6 +275,51 @@
           "旧research-board-client-adapter有42项applyRemoteCanvas重复补丁锚点失败；本次客户端预览路径独立验证通过。"
         ],
         "generatedAt": "2026-09-29T22:37:27.672783+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ef0980596f826a5b83624f57780c28fd076471f8",
+        "verificationCommit": "ef0980596f826a5b83624f57780c28fd076471f8",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ef0980596f826a5b83624f57780c28fd076471f8",
+            "completedAt": "2026-09-29T22:38:57.050Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "ef0980596f826a5b83624f57780c28fd076471f8",
+            "completedAt": "2026-09-29T22:38:57.050Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ef0980596f826a5b83624f57780c28fd076471f8",
+            "completedAt": "2026-09-29T22:38:57.050Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-29T22:38:57.050Z"
       }
     }
   ],
