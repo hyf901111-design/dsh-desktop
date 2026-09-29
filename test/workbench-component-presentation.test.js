@@ -4,6 +4,17 @@ import {renderMarketArtifact} from '../packages/dsh-research-task-runtime/market
 import {applyTerminalPresentation} from '../packages/dsh-research-task-runtime/terminal-presentation.js'
 import {applyWorkbenchPresentation,WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
 
+it('已保存V2管线预览升级共享排版且保留阶段数据和展开入口',()=>{
+  const spec={version:1,type:'market',variant:'pipeline',title:'研发管线',asOf:'模拟数据',stages:['I期','II期','III期'],items:[{name:'ABC-101',target:'靶点',stage:2,nextDate:'2026-10-01'}]}
+  const legacy=renderMarketArtifact(spec).html.replace('ODYSSEY_MARKET_PRESENTATION_V3','ODYSSEY_MARKET_PRESENTATION_V2')
+  const preview=buildResearchHtmlPreview(legacy,spec.title,'light',{notoFont:'runtime',workbench:true})
+  expect(preview).toContain('ODYSSEY_MARKET_PRESENTATION_V3')
+  expect(preview).toContain('ABC-101')
+  expect(preview).toContain('查看ABC-101项目详情')
+  expect(preview).toContain(String.raw`data-active=\"true\"`)
+  expect(legacy).not.toContain('ODYSSEY_MARKET_PRESENTATION_V3')
+})
+
 it('新版预览移除旧终端主题，保留原始行情和表格交互',()=>{
   const spec={version:1,type:'market',variant:'table',title:'财务摘要',asOf:'模拟数据',columns:['报告期','收入'],rows:[['2026E','2,096.0']]}
   const original=renderMarketArtifact(spec).html,legacy=applyTerminalPresentation(original)
