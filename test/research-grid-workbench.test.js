@@ -2,6 +2,17 @@ import { describe, it, expect } from 'vitest'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('整理补满局部两列之间的空条，不因首排已覆盖全宽而保留下方错位列',()=>{
+ for(const width of [1000,1230,1400]){
+  const g=createResearchGrid(),m=g.metrics(width),before=[item('gold',0,0,20,8),item('pharma',20,0,20,9),item('table',0,8,20,10),item('btc',22,9,18,10),item('stocks',0,18,20,12),item('news',22,19,18,22),item('report',0,30,20,36)]
+  const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width)
+  expect(next.find(c=>c.id==='gold')).toMatchObject({x:0,w:20})
+  expect(next.find(c=>c.id==='pharma')).toMatchObject({x:20,w:20})
+  for(const id of ['btc','news'])expect(next.find(c=>c.id===id)).toMatchObject({x:20,w:20})
+  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+  expect(g.arrange(nodes,next,width)).toEqual(next)
+ }
+})
 it('整理单列连续堆积的后续组件补入短列，大面积空缺不需要通栏边界才能消除',()=>{
  for(const width of [1000,1230,1400]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('gold',0,0,22,8),item('pharma',22,0,18,8),item('table',0,8,22,10),item('btc',22,8,18,7),item('stocks',22,15,18,11),item('news',22,26,18,22),item('report',22,48,18,40),item('candle',22,88,18,16),item('heatmap',22,104,18,12)]

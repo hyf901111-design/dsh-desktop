@@ -134,6 +134,19 @@ it('链接组件使用隔离网页容器，顶栏刷新复用当前网页',async
  await f.event('click',f.host.querySelector('[data-workbench-refresh="'+node.id+'"]'))
  expect(reload).toHaveBeenCalledTimes(1);expect(bridge.releaseNative).not.toHaveBeenCalled()
 })
+it('宿主窗口调整后即使组件尺寸未变也立即恢复原生网页，不等待一秒轮询',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge});let node
+ await act(async()=>{node=f.workspace.createWebLink('https://www.baidu.com/');f.workspace.updateSelection([node.id],'replace')})
+ const el=f.host.querySelector('[data-research-native-web]');el.getBoundingClientRect=()=>({left:12,top:46,right:492,bottom:346,width:480,height:300});Object.defineProperties(el,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>el
+ await act(async()=>{await new Promise(r=>setTimeout(r,150))})
+ expect(bridge.updateNative.mock.lastCall[0].active).toBe(true)
+ const count=bridge.updateNative.mock.calls.length,previous=bridge.updateNative.mock.lastCall[0].bounds
+ await f.event('resize',f.win)
+ expect(bridge.updateNative.mock.calls.length).toBeGreaterThan(count)
+ expect(bridge.updateNative.mock.lastCall[0]).toMatchObject({active:true,bounds:previous})
+ expect(bridge.releaseNative).not.toHaveBeenCalled()
+})
 it('首次打开组件菜单不被右侧会话自动滚动关闭，画板滚动仍关闭',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const conversation=f.document.createElement('div');f.document.body.append(conversation)
@@ -792,6 +805,19 @@ it('整理使用当前HTML的内容测量收紧尺寸，拒绝其他窗口的测
  await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
  await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
  expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThan(315)
+})
+
+it('整理菜单关闭后焦点返回画布，立即按Command Z能撤销整理',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setArtifacts([text('a'),text('b',740)]);w.applyWorkbenchCells([{id:'a',x:0,y:10,w:20,h:18},{id:'b',x:20,y:0,w:20,h:10}],true)})
+ const before=w.getWorkbenchCells()
+ await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
+ const button=[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布');button.focus()
+ await f.event('click',button)
+ expect(f.document.activeElement).toBe(f.canvas)
+ expect(w.getWorkbenchCells()).not.toEqual(before)
+ await f.event('keydown',f.document.activeElement,{key:'z',code:'KeyZ',metaKey:true})
+ expect(w.getWorkbenchCells()).toEqual(before)
 })
 
 it('原生表格按完整行内容整理，不使用大号默认高度',async()=>{

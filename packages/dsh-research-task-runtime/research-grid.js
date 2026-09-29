@@ -30,6 +30,23 @@ export function createResearchGrid() {
     }
     return next
   }
+  function closeColumnGaps(items) {
+    const next=compact(items)
+    // A full-width first row can mask an empty strip further down. Use the
+    // actual neighbours alongside each card, not the union of all X intervals.
+    // Extend into that strip only when the entire new rectangle is unobstructed.
+    for(const card of [...next].sort(order)){
+      if(card.freePosition||card.x===0)continue
+      const beside=next.filter(c=>c.id!==card.id&&c.y<card.y+card.h&&c.y+c.h>card.y&&c.x+c.w<=card.x)
+      if(!beside.length)continue
+      const x=Math.max(...beside.map(c=>c.x+c.w))
+      if(x===card.x)continue
+      const grown={...card,x,w:card.x+card.w-x}
+      if(next.some(other=>overlap(grown,other)))continue
+      card.x=grown.x;card.w=grown.w
+    }
+    return next
+  }
   function compact(items,pinned=null) {
     const sorted=items.map(bounded).sort(order), settled=[]
     if(pinned)settled.push(bounded(pinned))
@@ -251,7 +268,7 @@ export function createResearchGrid() {
       if(c.freePosition)return c
       return {...c,h:clamp(Math.max(min(c).h,Math.ceil(((p.height||260)+m.gap)/m.rowStep)),3,300)}
     })
-    const result=new Map(closeSmallGaps(fillColumnTails(fillVacancies(planned,nodes,width),nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
+    const result=new Map(closeSmallGaps(fillColumnTails(fillVacancies(closeColumnGaps(planned),nodes,width),nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
   }
   function arrange(nodes,items,width,visibleHeight=0) {
     let next=items.map(bounded)

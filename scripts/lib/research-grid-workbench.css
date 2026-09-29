@@ -16,6 +16,9 @@ body [data-ework-grid] [data-research-node-id] [data-research-resize-handle]{dis
 body [data-research-canvas][data-ework-grid] [data-research-node-id]:not([open]) [data-research-preview-body]{box-sizing:border-box;flex:1;min-width:0;min-height:0;width:100%!important;height:calc(100% - 34px)!important;overflow:auto!important}
 body [data-ework-grid] [data-research-node-id]:has(>.odyssey-data-stamp) [data-research-preview-body]{height:calc(100% - 58px)!important}
 body [data-ework-grid] [data-research-node-id] iframe[data-research-html-artifact]{display:block;width:100%!important;height:100%!important;min-width:0;min-height:0}
+/* Native child views are above renderer painting. A constant inner clearance
+   protects the selection edge, including pixel rounding at fractional zoom. */
+body [data-ework-grid] [data-research-node-id] [data-research-preview-body]:has([data-research-native-web]){padding:0 2px 2px!important;overflow:hidden!important}
 body [data-ework-grid] [data-research-node-id] :is(.rScV5Q_containerDraft,.rScV5Q_textPreview){flex:1;min-width:0;min-height:0;overflow:auto;padding:12px!important}
 body [data-ework-grid] .rScV5Q_containerDraft textarea{flex:1;min-height:48px!important;width:100%;box-sizing:border-box;font-size:13px!important;resize:none!important}
 body [data-ework-grid] .rScV5Q_containerDraftFooter{flex:none}
