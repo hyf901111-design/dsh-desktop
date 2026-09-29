@@ -11,21 +11,45 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "47f312ce399ae59653f0f10a6eb8e9988feb16ae",
-        "tipCommit": "2921330cc27f10caac6844856a336e62fa40ed07",
+        "baseCommit": "2921330cc27f10caac6844856a336e62fa40ed07",
+        "tipCommit": "c3a7c90160cbf4ae669e0787766fa1dffaaee60f",
         "commits": [
           {
-            "commit": "2921330cc27f10caac6844856a336e62fa40ed07",
+            "commit": "c3a7c90160cbf4ae669e0787766fa1dffaaee60f",
             "parents": [
-              "47f312ce399ae59653f0f10a6eb8e9988feb16ae"
+              "2921330cc27f10caac6844856a336e62fa40ed07"
             ],
-            "subject": "修复：看板样式覆盖宿主组件外层的旧底色变量"
+            "subject": "优化：统一企业化控件配色并增加看板主题扫光过渡"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-style.test.js"
           }
         ],
         "checks": [
@@ -35,21 +59,24 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "前端补丁生成通过",
-            "verifiedCommit": "2921330cc27f10caac6844856a336e62fa40ed07",
-            "completedAt": "2026-09-29T12:20:42.597948+00:00",
+            "summary": "前端补丁生成和脚本语法核验通过",
+            "verifiedCommit": "c3a7c90160cbf4ae669e0787766fa1dffaaee60f",
+            "completedAt": "2026-09-29T13:00:21.199865+00:00",
             "timeoutMs": 300000
           },
           {
             "argv": [
-              "./node_modules/.bin/vitest",
+              "npx",
+              "vitest",
               "run",
-              "test/research-grid-client.test.js"
+              "test/workbench-style.test.js",
+              "test/research-grid-client.test.js",
+              "test/workbench-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "85项画布客户端聚焦检查通过；Chromium三种模式同时核验外层和表格底色",
-            "verifiedCommit": "2921330cc27f10caac6844856a336e62fa40ed07",
-            "completedAt": "2026-09-29T12:20:42.597948+00:00",
+            "summary": "93项相关聚焦检查通过；Chromium十项配色和动效核验通过",
+            "verifiedCommit": "c3a7c90160cbf4ae669e0787766fa1dffaaee60f",
+            "completedAt": "2026-09-29T13:00:21.199865+00:00",
             "timeoutMs": 300000
           },
           {
@@ -60,14 +87,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "2921330cc27f10caac6844856a336e62fa40ed07",
-            "completedAt": "2026-09-29T12:20:42.597948+00:00",
+            "verifiedCommit": "c3a7c90160cbf4ae669e0787766fa1dffaaee60f",
+            "completedAt": "2026-09-29T13:00:21.199865+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "共享客户端现场已定位旧生成组件外壳的底色；临时预览及Chromium均已核验修正后的三模式，下一次integration精确构建后核验，临时CSS不作为最终验收证据。"
+          "summary": "按规则不在功能worktree构建共享客户端。Chromium真实补丁渲染已核验控件、正文、动画、减少动态效果和状态保留；下一次integration精确构建后核验真实客户端。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -156,7 +183,10 @@
           "三模式切换不重载HTML或原生网页，不改变组件数据、筛选、选择、格位和撤销历史，新增组件继承当前样式",
           "易方达模式白色内容、品牌八色、青色表头及深蓝图表；运行生成卡片跟随当前看板样式",
           "每张看板分别保存样式偏好，桌面重启保持；无效或超界偏好不覆盖已有值",
-          "英文模式工作台更多/设置/导出/衍生/生成/语音等新增控件翻译，切回中文恢复；业务内容和用户输入不替换"
+          "英文模式工作台更多/设置/导出/衍生/生成/语音等新增控件翻译，切回中文恢复；业务内容和用户输入不替换",
+          "企业化搜索框、下拉、按钮统一浅灰底、品牌深蓝文字；客户端深色主题不覆盖组件控件，总结正文保持可读",
+          "实际主题切换显示480ms蓝青扫光、260ms平滑换色；只覆盖可见画板，不截获点击或影响位置，连续切换替换旧动效，首屏和重复选择不播放，减少动态效果时无扫光",
+          "英文新闻筛选计数、搜索与分类辅助标签翻译，动态筛选和切回中文恢复，原文及输入保持"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -164,52 +194,7 @@
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
           "本轮只做本地集成预览，不公开发布或晋升main。"
         ],
-        "generatedAt": "2026-09-29T12:20:42.597948+00:00"
-      },
-      "merged": {
-        "mergeCommit": "95b571a7f85385a3eefdf132fa6482f33deb607b",
-        "verificationCommit": "95b571a7f85385a3eefdf132fa6482f33deb607b",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "95b571a7f85385a3eefdf132fa6482f33deb607b",
-            "completedAt": "2026-09-29T12:21:35.533Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "95b571a7f85385a3eefdf132fa6482f33deb607b",
-            "completedAt": "2026-09-29T12:21:35.533Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "95b571a7f85385a3eefdf132fa6482f33deb607b",
-            "completedAt": "2026-09-29T12:21:35.533Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T12:21:35.533Z"
+        "generatedAt": "2026-09-29T13:00:21.199865+00:00"
       }
     }
   ],
