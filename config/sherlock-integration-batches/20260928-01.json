@@ -11,44 +11,21 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "6746adeb94c657763f1744a8de0f693a928a5561",
-        "tipCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
+        "baseCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
+        "tipCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
         "commits": [
           {
-            "commit": "ee8c771cb7492dd7433bbd3b5ff2865274915457",
+            "commit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
             "parents": [
-              "6746adeb94c657763f1744a8de0f693a928a5561"
+              "3a155fac7b6994339dc349d1947ce4ef18ac124a"
             ],
-            "subject": "修复：长组件拖动按抓取点让位并收紧画布底部留白"
-          },
-          {
-            "commit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
-            "parents": [
-              "ee8c771cb7492dd7433bbd3b5ff2865274915457"
-            ],
-            "subject": "修复：整理短列空挡并移除未选滚动占位和刷新撤销提示"
+            "subject": "修复：后续窄卡片补入相邻短列空挡"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-actions-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
@@ -56,35 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/main/component-data/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/canvas-action-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-action-bridge.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-actions-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/research-grid-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -95,8 +44,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交前端补丁构建通过",
-            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
-            "completedAt": "2026-09-29T07:05:49.864810+00:00",
+            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+            "completedAt": "2026-09-29T07:27:22.147530+00:00",
             "timeoutMs": 300000
           },
           {
@@ -112,9 +61,9 @@
               "test/component-data-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "160项聚焦检查通过：短列补位、最小尺寸、拖动邻居让位、撤销、刷新来源和静默提示",
-            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
-            "completedAt": "2026-09-29T07:05:49.864810+00:00",
+            "summary": "161项聚焦检查通过，包含窄卡片适配相邻短列且保留已有列宽和重复稳定",
+            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+            "completedAt": "2026-09-29T07:27:22.147530+00:00",
             "timeoutMs": 300000
           },
           {
@@ -127,8 +76,8 @@
             ],
             "outcome": "passed",
             "summary": "7项HTML工作台检查通过，包含选中滚动条与受限撤销桥接",
-            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
-            "completedAt": "2026-09-29T07:05:49.864810+00:00",
+            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+            "completedAt": "2026-09-29T07:27:22.147530+00:00",
             "timeoutMs": 300000
           },
           {
@@ -139,8 +88,8 @@
             ],
             "outcome": "passed",
             "summary": "精确提交类型检查通过",
-            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
-            "completedAt": "2026-09-29T07:05:49.864810+00:00",
+            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+            "completedAt": "2026-09-29T07:27:22.147530+00:00",
             "timeoutMs": 300000
           },
           {
@@ -149,9 +98,9 @@
               "scripts/verify-selected-create-inline.mjs"
             ],
             "outcome": "passed",
-            "summary": "15组真实Chromium检查通过：真实鼠标路径一致、选中零占位切换、静默刷新、15格尾部及生成菜单等直接影响路径",
-            "verifiedCommit": "3a155fac7b6994339dc349d1947ce4ef18ac124a",
-            "completedAt": "2026-09-29T07:05:49.864810+00:00",
+            "summary": "16组Chromium检查通过，新增实际工作台事务窄卡相邻补位、重复整理与一次撤销",
+            "verifiedCommit": "81a288bd4ae6c322d3d3bf42857408d50df03be9",
+            "completedAt": "2026-09-29T07:27:22.147530+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -223,7 +172,8 @@
           "同排高卡旁大空位无完整供体时，后续通栏卡适配短列宽度并接续补位；不拉高短表，保持最小尺寸、来源组关系和重复稳定",
           "未选中组件宿主与HTML内部滚动条为none/0px，滚动条轨道透明且gutter:auto，无灰色占位；选中后显示5px细条",
           "鼠标路径经过不同邻居中线时，以真实peer和前后位置更新布局；相同终点结果一致，松手等于预览",
-          "真实组件数据刷新经主桥与preload传递来源，正常提交数据与历史但不显示撤销提示；主动画布编辑仍有撤销反馈"
+          "真实组件数据刷新经主桥与preload传递来源，正常提交数据与历史但不显示撤销提示；主动画布编辑仍有撤销反馈",
+          "后续已变窄卡片也可适配相邻短列补位；以现有列边界定位，保留此前组件宽度比例、来源关系与内容高度"
         ],
         "risks": [
           "未运行全功能测试。",
@@ -232,52 +182,7 @@
           "本轮只做本地集成预览，不公开发布或晋升main。",
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
-        "generatedAt": "2026-09-29T07:05:49.864810+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a582b3620fd3b8b817948f00db64303fe9525449",
-        "verificationCommit": "a582b3620fd3b8b817948f00db64303fe9525449",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a582b3620fd3b8b817948f00db64303fe9525449",
-            "completedAt": "2026-09-29T07:06:34.235Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a582b3620fd3b8b817948f00db64303fe9525449",
-            "completedAt": "2026-09-29T07:06:34.235Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a582b3620fd3b8b817948f00db64303fe9525449",
-            "completedAt": "2026-09-29T07:06:34.235Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T07:06:34.235Z"
+        "generatedAt": "2026-09-29T07:27:22.147530+00:00"
       }
     }
   ],
