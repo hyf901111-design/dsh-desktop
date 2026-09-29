@@ -11,65 +11,60 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "229981b1fb0887b2c438bb9b6e1f91b2b992e648",
-        "tipCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
+        "baseCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
+        "tipCommit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
         "commits": [
           {
-            "commit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
+            "commit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
             "parents": [
-              "229981b1fb0887b2c438bb9b6e1f91b2b992e648"
+              "4f1a45e1a590e78077e58cd6a7964b581f2c3123"
             ],
-            "subject": "修复新工作台首次生成挤入单列并保留规划尺寸"
+            "subject": "补全工作台预设调用提示并记录新版设计与真实验收缺口"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "status": "A",
+            "path": "docs/design/component-template-acceptance-20260930.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/design/figma-template-inventory-20260930.json"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-workbench-growth.mjs"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
-            "path": "test/research-grid-client.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
           },
           {
             "status": "M",
-            "path": "test/research-grid-workbench.test.js"
+            "path": "test/research-workbench.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "补丁应用与幂等恢复通过",
-            "verifiedCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
-            "completedAt": "2026-09-29T16:21:49.410952+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
               "npx",
               "vitest",
               "run",
-              "test/research-grid-workbench.test.js",
-              "test/research-grid-client.test.js"
+              "test/workbench-execution-policy.test.js",
+              "test/research-workbench.test.js",
+              "-t",
+              "workbench execution policy|actionable preset receipt"
             ],
             "outcome": "passed",
-            "summary": "125项原有与新增网格检查通过；新增真实 applyWorkbench 生命周期与补丁幂等2项通过",
-            "verifiedCommit": "4f1a45e1a590e78077e58cd6a7964b581f2c3123",
-            "completedAt": "2026-09-29T16:21:49.410952+00:00",
+            "summary": "执行策略与缺参恢复契约7项聚焦验证通过；旧画布补丁锚点失败单独记录",
+            "verifiedCommit": "c09dee7824a52b8ead97abcff21999f808bbf2a0",
+            "completedAt": "2026-09-29T16:46:05.742956+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "真实自然语言医药工作台18秒生成六卡，但首次布局单列留白未通过。已修复新组初始化填满双列，生成全程保持既定格位；待集成客户端重建复验。"
+          "summary": "b231d53a原生新六卡布局和企业配色交互通过；真实模型7次缺参后误选管线普通表格，不计内容验收成功。新参数说明待集成后复验。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -179,54 +174,10 @@
           "未运行全功能测试。",
           "research-html-theme四项及workbench-component-profiles三项既存基线失败，未宣称修复历史preview-size预算或旧字体几何断言。",
           "第三方网页保持网站原有配色，宿主边框及看板遵循当前样式。",
-          "本轮只做本地集成预览，不公开发布或晋升main。"
+          "本轮只做本地集成预览，不公开发布或晋升main。",
+          "当前Figma为44类组件+30类图表；旧30模板注册表不代表全覆盖。原生生成成功率目标未验收通过。"
         ],
-        "generatedAt": "2026-09-29T16:21:49.410952+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4e58fc6c8884393307e1e3d933e85a193d3863d2",
-        "verificationCommit": "4e58fc6c8884393307e1e3d933e85a193d3863d2",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "4e58fc6c8884393307e1e3d933e85a193d3863d2",
-            "completedAt": "2026-09-29T16:22:14.971Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "4e58fc6c8884393307e1e3d933e85a193d3863d2",
-            "completedAt": "2026-09-29T16:22:14.971Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4e58fc6c8884393307e1e3d933e85a193d3863d2",
-            "completedAt": "2026-09-29T16:22:14.971Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T16:22:14.971Z"
+        "generatedAt": "2026-09-29T16:46:05.742956+00:00"
       }
     }
   ],
