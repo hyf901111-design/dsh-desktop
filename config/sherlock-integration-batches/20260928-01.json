@@ -183,6 +183,51 @@
           "通用自定义及其他宿主图表仍使用原交互日志，不能宣称所有第三方图表坐标域均已适配。"
         ],
         "generatedAt": "2026-09-29T07:27:22.147530+00:00"
+      },
+      "merged": {
+        "mergeCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
+        "verificationCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
+            "completedAt": "2026-09-29T07:28:24.437Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
+            "completedAt": "2026-09-29T07:28:24.437Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "66d5ee0f4465d0c758efa41e91d480378d37f93b",
+            "completedAt": "2026-09-29T07:28:24.437Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-29T07:28:24.437Z"
       }
     }
   ],
