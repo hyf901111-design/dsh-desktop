@@ -44,7 +44,7 @@ export function patchResearchNativeWeb(source) {
       const element=ref.current;if(element)element.__eworkReloadWeb=reload;
       const canvas=element?.closest('[data-research-canvas]');
       const moving=()=>canvas?.hasAttribute('data-grid-operation')||canvas?.hasAttribute('data-research-operation');
-      const schedule=()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=null;tick()})};
+      const schedule=()=>{lastSent=0;if(!frame)frame=requestAnimationFrame(()=>{frame=null;tick()})};
       const hide=()=>{motionEpoch++;last='';lastSent=0;bridge.hideNative().catch(()=>{});};
       const motionObserver=new MutationObserver(()=>{if(moving())hide();else{held=false;schedule()}});
       if(canvas)motionObserver.observe(canvas,{attributes:true,attributeFilter:['data-grid-operation','data-research-operation']});

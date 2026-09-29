@@ -134,6 +134,19 @@ it('链接组件使用隔离网页容器，顶栏刷新复用当前网页',async
  await f.event('click',f.host.querySelector('[data-workbench-refresh="'+node.id+'"]'))
  expect(reload).toHaveBeenCalledTimes(1);expect(bridge.releaseNative).not.toHaveBeenCalled()
 })
+it('宿主窗口调整后即使组件尺寸未变也立即恢复原生网页，不等待一秒轮询',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge});let node
+ await act(async()=>{node=f.workspace.createWebLink('https://www.baidu.com/');f.workspace.updateSelection([node.id],'replace')})
+ const el=f.host.querySelector('[data-research-native-web]');el.getBoundingClientRect=()=>({left:12,top:46,right:492,bottom:346,width:480,height:300});Object.defineProperties(el,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>el
+ await act(async()=>{await new Promise(r=>setTimeout(r,150))})
+ expect(bridge.updateNative.mock.lastCall[0].active).toBe(true)
+ const count=bridge.updateNative.mock.calls.length,previous=bridge.updateNative.mock.lastCall[0].bounds
+ await f.event('resize',f.win)
+ expect(bridge.updateNative.mock.calls.length).toBeGreaterThan(count)
+ expect(bridge.updateNative.mock.lastCall[0]).toMatchObject({active:true,bounds:previous})
+ expect(bridge.releaseNative).not.toHaveBeenCalled()
+})
 it('首次打开组件菜单不被右侧会话自动滚动关闭，画板滚动仍关闭',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
  const conversation=f.document.createElement('div');f.document.body.append(conversation)
