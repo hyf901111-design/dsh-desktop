@@ -3,7 +3,7 @@ const handlers=new Map<string,Function>(), views:any[]=[]
 const mock=vi.hoisted(()=>({fetch:vi.fn(),permission:vi.fn(),download:vi.fn()}))
 vi.mock('electron',()=>({net:{fetch:mock.fetch},session:{fromPartition:()=>({setPermissionRequestHandler:mock.permission,setPermissionCheckHandler:mock.permission,on:mock.download})},WebContentsView:class {
   visible=false;bounds:any; webContents:any
-  constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),loadURL:vi.fn(async()=>{}),setZoomFactor:vi.fn(),enableDeviceEmulation:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
+  constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),reload:vi.fn(),loadURL:vi.fn(async()=>{}),setZoomFactor:vi.fn(),enableDeviceEmulation:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
   setVisible(v:boolean){this.visible=v} setBounds(v:any){this.bounds=v} setBorderRadius(){}
 }}))
 import {nativeWebBounds,nativeWebViewport,registerResearchNativeWeb,requiresNativeWeb} from '../src/main/state/research-native-web'
@@ -24,12 +24,34 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  const event={sender:win.webContents,senderFrame:mainFrame},identity={sessionId:'s',nodeId:'n'},call=(name:string,value:any)=>handlers.get('research:native-web:'+name)!(event,value)
  mock.fetch.mockResolvedValue({headers:new Headers({'x-frame-options':'SAMEORIGIN'})})
  await expect(call('resolve',{...identity,url:'https://www.google.com/'})).resolves.toEqual({engine:'native'})
+ mock.fetch.mockResolvedValue({headers:new Headers()})
+ await expect(call('resolve',{sessionId:'s',nodeId:'baidu',url:'https://www.baidu.com/',preferNative:true})).resolves.toEqual({engine:'native'})
+ await expect(call('resolve',{sessionId:'s',nodeId:'bad',url:'javascript:alert(1)',preferNative:true})).rejects.toThrow()
  const layout={...identity,url:'https://www.google.com/',bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},active:true,scale:1,radius:9}
  await call('update',layout)
  expect(mock.download).toHaveBeenCalledWith('will-download',expect.any(Function))
  expect(views[0].settings.webPreferences).toMatchObject({nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true})
  expect(views[0].visible).toBe(true)
  const wc=views[0].webContents
+ const fire=(name:string,...args:any[])=>wc.on.mock.calls.find(([n]:any[])=>n===name)?.[1](...args)
+ const initialImage=(await call('update',layout)).image
+ wc.isLoadingMainFrame=()=>true
+ fire('did-start-navigation',{},'https://www.google.com/search',false,true)
+ const captures=wc.capturePage.mock.calls.length
+ expect((await call('update',layout)).image).toBe(initialImage)
+ expect(wc.capturePage.mock.calls.length).toBe(captures)
+ expect(views[0].visible).toBe(false)
+ wc.isLoadingMainFrame=()=>false
+ fire('did-finish-load')
+ const configurations=wc.enableDeviceEmulation.mock.calls.length
+ await call('update',layout)
+ expect(wc.enableDeviceEmulation.mock.calls.length).toBe(configurations+1)
+ await call('update',{...layout,reloadToken:1})
+ await call('update',{...layout,reloadToken:1})
+ expect(wc.reload).toHaveBeenCalledTimes(1)
+ expect(wc.loadURL).toHaveBeenCalledTimes(1)
+ await call('update',layout)
+ expect(wc.enableDeviceEmulation.mock.calls.length).toBe(configurations+1)
  for (const scale of [.08,.5,1.5]) {
    await call('update',{...layout,scale,bounds:{x:100,y:100,width:400*scale,height:300*scale}})
    expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:400,height:300},scale}))

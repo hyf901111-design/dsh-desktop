@@ -62,11 +62,13 @@ describe('研究工作台网格事务',()=>{
  })
 })
 
-it('整理铺满可用网格，按内容分配不等宽模块并保持稳定',()=>{
+it('整理填满可用宽度，按内容分配独立高度和不等宽模块并保持稳定',()=>{
  const g=createResearchGrid(),nodes=[{id:'a',preferred:{width:640,height:290}},{id:'b',preferred:{width:340,height:200}},{id:'c',preferred:{width:600,height:460}}],before=[item('a',6,0,10,6),item('b',30,20,10,5),item('c',5,45,15,13)]
  const next=g.arrange(nodes,before,1000,700),bottom=Math.max(...next.map(c=>c.y+c.h))
  expect(next.map(c=>c.id)).toEqual(['a','b','c']);expect(new Set(next.map(c=>c.w)).size).toBeGreaterThan(1)
- for(let y=0;y<bottom;y++)for(let x=0;x<40;x++)expect(next.filter(c=>x>=c.x&&x<c.x+c.w&&y>=c.y&&y<c.y+c.h)).toHaveLength(1)
+ expect(Math.max(...next.map(c=>c.x+c.w))).toBe(40)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(g.project(nodes,next,1000).map(n=>n.height)).toEqual(nodes.map(n=>expect.closeTo(Math.ceil((n.preferred.height+10)/g.metrics(1000).step)*g.metrics(1000).step-10)))
  expect(g.arrange(nodes,next,1000,700)).toEqual(next)
  expect(Math.min(...next.map(c=>c.w*g.metrics(1000).step-10))).toBeGreaterThanOrEqual(280)
 })
@@ -77,4 +79,52 @@ it('整理智能草稿仍满足输入区最小尺寸，三个草稿不会挤入�
  expect(shown.every(n=>n.width>=320&&n.height>=220)).toBe(true)
  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
  expect(new Set(next.map(n=>n.y)).size).toBeGreaterThan(1)
+})
+
+it('整理短图表不拉高到视口或同排长内容，长文章保持内容高度',()=>{
+ const g=createResearchGrid(),nodes=[{id:'chart',preferred:{width:480,height:280}},{id:'article',preferred:{width:480,height:3400}}],before=[item('chart',0,0,20,25),item('article',20,0,20,25)]
+ const shown=g.project(nodes,g.arrange(nodes,before,1000,1600),1000)
+ expect(shown.find(n=>n.id==='chart').height).toBeGreaterThanOrEqual(280)
+ expect(shown.find(n=>n.id==='chart').height).toBeLessThan(315)
+ expect(shown.find(n=>n.id==='article').height).toBeGreaterThanOrEqual(3400)
+})
+
+it('整理同排不等高卡片各自贴合内容，下面组件补入较短列',()=>{
+ const g=createResearchGrid(),nodes=[{id:'a',preferred:{width:480,height:280}},{id:'b',preferred:{width:480,height:460}},{id:'c',preferred:{width:480,height:220}},{id:'d',preferred:{width:480,height:330}}],before=nodes.map((n,i)=>item(n.id,i%2*20,Math.floor(i/2)*24,20,24))
+ const next=g.arrange(nodes,before,1000,1400),shown=g.project(nodes,next,1000)
+ expect(shown.find(n=>n.id==='a').height).toBeLessThan(315)
+ expect(shown.find(n=>n.id==='b').height).toBeGreaterThanOrEqual(460)
+ expect(next.find(n=>n.id==='c').y).toBe(next.find(n=>n.id==='a').h)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(g.arrange(nodes,next,1000,1400)).toEqual(next)
+})
+
+it('移动按邻居中线插入，覆盖下半部时落到其后，空槽在预览阶段补位',()=>{
+ const g=createResearchGrid(),before=[item('a',0,0,20,6),item('b',0,6,20,9),item('c',20,0,20,5)]
+ expect(g.move(before,item('a',0,3,20,6)).find(c=>c.id==='a').y).toBe(0)
+ const next=g.move(before,item('a',0,12,20,6))
+ expect(next.find(c=>c.id==='b').y).toBe(0)
+ expect(next.find(c=>c.id==='a').y).toBe(9)
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(g.move(before,item('a',0,0,20,6))).toEqual(before)
+ expect(g.move([item('a',0,0)],item('a',0,14)).find(c=>c.id==='a').y).toBe(0)
+})
+
+it('并排组件调宽先压缩右侧到最小宽度，再让无法容纳的组件换行',()=>{
+ const g=createResearchGrid(),before=[item('a',0,0,20,8),item('b',20,0,20,10),item('c',0,10,40,6)],nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{}}))
+ const next=g.resize(before,{...before[0],w:26},nodes,1000)
+ expect(next.find(c=>c.id==='a')).toMatchObject({x:0,y:0,w:26,h:8})
+ expect(next.find(c=>c.id==='b')).toMatchObject({x:26,y:0,w:14,h:10})
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ const limit=g.resize(before,{...before[0],w:30},nodes,1000)
+ expect(limit.find(c=>c.id==='b').y).toBeGreaterThanOrEqual(8)
+ expect(limit.find(c=>c.id==='b').w).toBe(20)
+ expect(g.resize(before,{...before[0]},nodes,1000)).toEqual(before)
+})
+it('三列调宽逐个压缩，智能草稿最小宽度保持且规范高度不变',()=>{
+ const g=createResearchGrid(),before=[item('a',0,0,12,6),item('b',12,0,14,7),item('c',26,0,14,8)]
+ const next=g.resize(before,{...before[0],w:16},[{id:'b',kind:'generated-container'},{id:'c'}],1400),m=g.metrics(1400)
+ expect(next.find(c=>c.id==='b').w*m.step-m.gap).toBeGreaterThanOrEqual(320)
+ expect(next.map(c=>c.h)).toEqual([6,7,8]);expect(next.map(c=>c.y)).toEqual([0,0,0])
+ expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
 })

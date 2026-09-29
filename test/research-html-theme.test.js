@@ -148,6 +148,12 @@ describe('offline HTML component theme runtime', () => {
     outer.send(pointer, outer.frame.contentWindow);
     expect(outer.parentMessages[0].data).toEqual(pointer);
   });
+  it('relays component export only between its parent and owned inner frame',()=>{
+    const outer=runtime(buildResearchHtmlPreview('<svg></svg>','图表','dark',{workbench:true})),reply={type:'sherlock-workbench-export-result',id:'export-test',svg:'<svg width="460" height="280"/>'}
+    outer.send(reply,{});expect(outer.parentMessages).toHaveLength(0)
+    outer.send({...reply,extra:true},outer.frame.contentWindow);expect(outer.parentMessages).toHaveLength(0)
+    outer.send(reply,outer.frame.contentWindow);expect(outer.parentMessages[0].data).toEqual(reply)
+  })
 
   it('applies an explicit initial dark palette before artifact scripts, and normalizes unknown themes', () => {
     const outer = runtime(buildResearchHtmlPreview('<main>内容</main>', '报告', 'dark'))
@@ -363,6 +369,25 @@ describe('offline HTML component theme runtime', () => {
     for (let height = 1500; height < 1520; height++) outer.send({ ...size, height }, outer.frame.contentWindow)
     expect(outer.parentMessages.length).toBeLessThanOrEqual(6)
   })
+
+  it('workbench reports intrinsic content including trailing padding instead of its tall viewport', () => {
+    const preview=runtime(buildResearchHtmlPreview('<main style="min-height:100vh"><svg width="400" height="200"></svg></main>', '图表', 'dark', {workbench:true}))
+    const inner=runtime(preview.childHtml(),{configure:window=>{
+      Object.defineProperty(window.document.documentElement,'clientWidth',{value:520})
+      Object.defineProperty(window.document.documentElement,'clientHeight',{value:600})
+      window.document.body.style.paddingBottom='8px'
+      window.document.querySelector('svg').getBoundingClientRect=()=>({left:10,right:410,top:8,bottom:208,width:400,height:200})
+    }})
+    inner.parsed()
+    const natural=inner.parentMessages.find(m=>m.data.type==='sherlock-workbench-content-size')?.data
+    expect(natural).toEqual({type:'sherlock-workbench-content-size',width:520,height:216})
+    preview.send(natural,{})
+    expect(preview.parentMessages).toHaveLength(0)
+    preview.send(natural,preview.frame.contentWindow)
+    expect(preview.parentMessages).toEqual([{data:natural,origin:'*'}])
+    preview.send({...natural,height:Infinity},preview.frame.contentWindow)
+    expect(preview.parentMessages).toHaveLength(1)
+  })
 })
 
 it('relays hover only from the current embedded component using a boolean state', () => {
@@ -420,4 +445,10 @@ it('工作台Shift多选在sandbox中阻止文本选区和控件点击，普通�
  const select=inner.window.document.querySelector('select'),click={...event(true),target:select}
  inner.window.capturedClicks.forEach(fn=>fn(click));expect(click.preventDefault).toHaveBeenCalled()
  const ordinary=event(false);inner.window.testPointer(ordinary);expect(ordinary.preventDefault).not.toHaveBeenCalled()
+})
+
+it('工作台表格保留横向滚动条，普通独立预览沿用自身样式',()=>{
+ const html='<div style="overflow:auto"><table style="min-width:900px"><tr><td>完整列</td></tr></table></div>'
+ const result=buildResearchHtmlPreview(html,'表格','dark',{workbench:true})
+ expect(result).toContain('scrollbar-width:thin!important');expect(result).toContain('height:7px!important');expect(result).not.toContain('scrollbar-width:none!important')
 })

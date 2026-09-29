@@ -1,4 +1,5 @@
 import { refineCandlestickHtml } from './market-candlestick.js'
+import { serializeWorkbenchContent, installWorkbenchExport } from './workbench-export.js'
 import { sharedComponentRuntime } from './shared-component-runtime.js'
 import { createCanvasUseSurface, installCanvasUseSurface } from './canvas-use-surface.js'
 import { researchNotoFontCss } from './component-noto-font.js'
@@ -257,8 +258,9 @@ body:has(> :is([data-sherlock-profile="fund72-holdings"],[data-sherlock-profile=
 
 // Scrollbars belong to the canvas chrome, including inside sandboxed HTML.
 // The first important layer keeps authored page scrollbar rules from diverging.
-function researchComponentScrollbarCss(scope, darkScope) {
+function researchComponentScrollbarCss(scope, darkScope, workbench = false) {
   const scrollports = `:is(${scope},${scope} *)`
+  if(workbench)return `@layer sherlock-component-scrollbars{${scrollports}{scrollbar-width:thin!important;scrollbar-color:#a1a4ad transparent!important}${scrollports}::-webkit-scrollbar{display:block!important;width:7px!important;height:7px!important}${scrollports}::-webkit-scrollbar-thumb{background:#a1a4ad!important;border-radius:4px!important}${scrollports}::-webkit-scrollbar-track{background:transparent!important}${darkScope}{scrollbar-color:#686b75 transparent!important}${darkScope} *{scrollbar-color:#686b75 transparent!important}}`
   return `@layer sherlock-component-scrollbars{${scrollports}{scrollbar-width:none!important}${scrollports}::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}}`
 }
 
@@ -460,10 +462,11 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     let stopped = false
     let reports = 0
     let previous = ''
+    let previousIntrinsic = ''
     let pending
     let observer
     const measure = () => {
-      if (stopped || reports >= 6 || !document.body) return
+      if (stopped || !workbench && reports >= 6 || !document.body) return
       const viewportWidth = document.documentElement.clientWidth
       const viewportHeight = document.documentElement.clientHeight
       if (!(viewportWidth > 0 && viewportHeight > 0)) return
@@ -513,13 +516,21 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
       const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 32 : viewportHeight))
       const key = width + ':' + height
-      if (key === previous) return
-      previous = key
-      reports++
-      parent.postMessage({ type: 'sherlock-content-size', width, height }, '*')
+      if (workbench && bottom > 0) {
+        const naturalHeight = Math.min(12000, Math.ceil(bottom)), intrinsicKey = viewportWidth + ':' + naturalHeight
+        if (intrinsicKey !== previousIntrinsic) {
+          previousIntrinsic = intrinsicKey
+          parent.postMessage({ type: 'sherlock-workbench-content-size', width: Math.min(2400, viewportWidth), height: naturalHeight }, '*')
+        }
+      }
+      if (reports < 6 && key !== previous) {
+        previous = key
+        reports++
+        parent.postMessage({ type: 'sherlock-content-size', width, height }, '*')
+      }
     }
     const schedule = () => {
-      if (stopped || reports >= 6 || pending !== undefined) return
+      if (stopped || !workbench && reports >= 6 || pending !== undefined) return
       if (typeof setTimeout !== 'function') { measure(); return }
       pending = setTimeout(() => { pending = undefined; measure() }, 180)
     }
@@ -529,15 +540,19 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     }
     addEventListener('resize', schedule)
     document.addEventListener('load', schedule, true)
+    if (workbench) document.addEventListener('toggle', schedule, true)
     document.fonts?.ready?.then(schedule).catch(() => {})
     measure()
-    if (typeof setTimeout === 'function') setTimeout(() => {
+    const stop = () => {
       stopped = true
       if (pending !== undefined) clearTimeout(pending)
       observer?.disconnect()
       removeEventListener('resize', schedule)
       document.removeEventListener('load', schedule, true)
-    }, 8000)
+      document.removeEventListener('toggle', schedule, true)
+    }
+    if (workbench) addEventListener('pagehide', stop, { once: true })
+    else if (typeof setTimeout === 'function') setTimeout(stop, 8000)
   }
   // Error text and stack traces never leave the sandbox. The host can show retained text.
   addEventListener('error', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
@@ -701,6 +716,7 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
   let colorScheme = media ? media.matches ? 'dark' : 'light' : initialTheme
   let sizeReports = 0
   let previousSize = ''
+  let previousIntrinsicSize = ''
   let fontBlob
   let interactionState
   let workbenchSelection
@@ -712,6 +728,9 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
     if (workbenchSelection) frame.contentWindow?.postMessage(workbenchSelection, '*')
   }
   addEventListener('message', (event) => {
+    const exportData=event.data
+    if(!standalone&&event.source===parent&&exportData?.type==='sherlock-workbench-export'&&Object.keys(exportData).length===2&&typeof exportData.id==='string'&&/^export-[a-z0-9-]{1,80}$/.test(exportData.id)){frame.contentWindow?.postMessage(exportData,'*');return}
+    if(!standalone&&event.source===frame.contentWindow&&exportData?.type==='sherlock-workbench-export-result'&&Object.keys(exportData).length===3&&typeof exportData.id==='string'&&/^export-[a-z0-9-]{1,80}$/.test(exportData.id)&&typeof exportData.svg==='string'&&exportData.svg.length<=8*1024*1024){parent.postMessage(exportData,'*');return}
     const data = event.data
     if (!standalone && event.source === parent && data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') { workbenchSelection = data; frame.contentWindow?.postMessage(data, '*'); return }
     if(!standalone && event.source===parent && data?.type==='sherlock-canvas-use-request') { frame.contentWindow?.postMessage(data,'*'); return }
@@ -771,9 +790,16 @@ const RESEARCH_HTML_OUTER_THEME_RUNTIME = String.raw`function researchHtmlOuterT
     }
     if (!standalone && event.source === frame.contentWindow && data && typeof data === 'object' && !Array.isArray(data) &&
         Object.keys(data).length === 3 && Object.hasOwn(data, 'type') && Object.hasOwn(data, 'width') && Object.hasOwn(data, 'height') &&
-        data.type === 'sherlock-content-size' && Number.isInteger(data.width) && Number.isInteger(data.height) &&
+        ['sherlock-content-size', 'sherlock-workbench-content-size'].includes(data.type) && Number.isInteger(data.width) && Number.isInteger(data.height) &&
         data.width >= 1 && data.width <= 2400 && data.height >= 1 && data.height <= 12000) {
       const key = data.width + ':' + data.height
+      if (data.type === 'sherlock-workbench-content-size') {
+        if (key !== previousIntrinsicSize) {
+          previousIntrinsicSize = key
+          parent.postMessage({ type: data.type, width: data.width, height: data.height }, '*')
+        }
+        return
+      }
       if (sizeReports < 6 && key !== previousSize) {
         previousSize = key
         sizeReports++
@@ -817,12 +843,12 @@ export function buildResearchHtmlPreview(html, title = '交互网页', initialTh
   // CSP currently does not constrain WebRTC in our Chromium. Remove its entry
   // points before any artifact code; Trusted Types and the parser's frame ban
   // prevent string-created documents/scripts from obtaining a fresh realm.
-  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)},${options.workbench === true});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
+  const lockedRuntime = `<script>for(const key of ['RTCPeerConnection','webkitRTCPeerConnection'])Object.defineProperty(globalThis,key,{value:undefined,configurable:false,writable:false});${runtimeFont ? `(${RESEARCH_HTML_INNER_FONT_RUNTIME.replace(/^[ \t]+/gm, '')})();` : `(${RESEARCH_HTML_PROFILE_PUNCTUATION_RUNTIME})();`}(${RESEARCH_HTML_INNER_THEME_RUNTIME.replace(/^[ \t]+/gm, '')})(${JSON.stringify(fixedTheme)},${options.workbench === true});(()=>{const authorizedEvents=new WeakSet();${runtimeFont ? `(${RESEARCH_HTML_INTERACTION_RUNTIME})(authorizedEvents);` : ''}${options.workbench ? `(${installWorkbenchExport.toString()})(${serializeWorkbenchContent.toString()});` : ''}(${sharedComponentRuntime.toString()})();(${installCanvasUseSurface.toString()})(${createCanvasUseSurface.toString()},(el,event)=>{authorizedEvents.add(event);try{return el.dispatchEvent(event)}finally{authorizedEvents.delete(event)}});})();</script>`
   // An unlayered :where() rule still outranks every user-authored normal layer.
   // Declare all defaults first in their own layer, including theme variables.
   // Keep THEME_CSS unwrapped for the separate trusted native-canvas consumer.
   const baseStyle = `${options.workbench ? '@layer ework-workbench;' + WORKBENCH_PRESENTATION_CSS : ''}@layer sherlock-terminal;@layer sherlock-component-defaults{${RESEARCH_COMPONENT_THEME_CSS}${RESEARCH_COMPONENT_BASE_CSS}}`
-  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]')}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${displayHtml}</body></html>`
+  const inner = `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'; trusted-types 'none'"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${baseStyle}</style><style>${RESEARCH_COMPONENT_CONTROLS_CSS}${RESEARCH_COMPONENT_PROFILE_CSS}${researchComponentScrollbarCss('html', 'html[data-sherlock-theme="dark"]', options.workbench === true)}${researchComponentTypographyCss('html', { notoFont: runtimeFont ? 'runtime' : 'embedded' })}</style>${lockedRuntime}</head><body>${displayHtml}</body></html>`
   const serialized = JSON.stringify(inner).replace(/</g, '\\u003c')
   const outerRuntime = `(${RESEARCH_HTML_OUTER_THEME_RUNTIME})(${serialized},${JSON.stringify(theme)},${JSON.stringify(fixedTheme)},${runtimeFont});`
   return `<!doctype html><html data-sherlock-theme="${fixedTheme || theme}"><head><meta charset="utf-8">${policy}<meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeAttribute(title)}</title><style>${RESEARCH_COMPONENT_THEME_CSS}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--sherlock-bg);color:var(--sherlock-text)}iframe{display:block;border:0;width:100%;height:100%;background:var(--sherlock-bg)}iframe[hidden]{display:none}p{padding:24px;font:14px var(--sherlock-font-sans)}</style></head><body><p id="notice">当前浏览器不支持安全交互网页，请使用 EWork Odyssey 或支持 Trusted Types 的新版浏览器。</p><iframe id="preview" hidden title="${escapeAttribute(title)}" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe><script>${outerRuntime}</script></body></html>`

@@ -20,7 +20,7 @@ export function nativeWebViewport(value: any) {
   return { width: Math.round(size.width), height: Math.round(size.height) }
 }
 export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry }) {
-  const entries = new Map<string, { view: WebContentsView; url: string; image: string; error: string; busy: boolean; typing: boolean; touched: number; presentation: string; layout: string; surfaceScale: number }>()
+  const entries = new Map<string, { view: WebContentsView; url: string; image: string; error: string; busy: boolean; typing: boolean; touched: number; presentation: string; layout: string; surfaceScale: number; generation: number; reloadToken: number }>()
   const routes = new Map<string, Promise<boolean>>()
   const key = (v: any) => { if (!v || typeof v.sessionId !== 'string' || typeof v.nodeId !== 'string' || v.sessionId.length > 256 || v.nodeId.length > 256) throw Error('Invalid webpage identity'); return JSON.stringify([v.sessionId,v.nodeId]) }
   const release = (id: string) => { const e=entries.get(id); if(e){ options.getMainWindow()?.contentView.removeChildView(e.view); e.view.webContents.close(); entries.delete(id) } }
@@ -39,7 +39,10 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   }
   const bind=(name:string,fn:(v:any)=>unknown)=>{options.ipcMain.removeHandler(name);registerTrustedMainWindowHandler(options.ipcMain,name,options.getMainWindow,(_e,v)=>fn(v))}
   bind('research:native-web:resolve',async value=>{
-    key(value); const {url}=options.registry.authorize(value)
+    key(value); const {url}=options.registry.authorize({sessionId:value.sessionId,nodeId:value.nodeId,url:value.url})
+    // A workbench link is a browsing surface: subsequent pages and new-window
+    // links must retain a top-level Chromium document, including frame policies.
+    if(value.preferNative===true)return {engine:'native'}
     if(!routes.has(url)){
       if(routes.size>128)routes.clear()
       routes.set(url,(async()=>{try{const r=await net.fetch(url,{method:'HEAD',redirect:'follow',signal:AbortSignal.timeout(7000)});return requiresNativeWeb(r.headers)}catch{return /(^|\.)(google\.com|bing\.com)$/.test(new URL(url).hostname)}})())
@@ -59,23 +62,25 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})
-      entry={view,url:authorization.url,image:'',error:'',busy:false,typing:false,touched:Date.now(),presentation:'',layout:'',surfaceScale:1};entries.set(id,entry)
+      entry={view,url:authorization.url,image:'',error:'',busy:false,typing:false,touched:Date.now(),presentation:'',layout:'',surfaceScale:1,generation:0,reloadToken:Number(value.reloadToken)||0};entries.set(id,entry)
       const current=entry
       view.setVisible(false);win.contentView.addChildView(view)
       view.webContents.setWindowOpenHandler(({url})=>{if(normalizeResearchLinkUrl(url))void view.webContents.loadURL(url).catch(()=>{});return {action:'deny'}})
       view.webContents.on('will-navigate',(event,url)=>{if(!normalizeResearchLinkUrl(url))event.preventDefault()})
       view.webContents.on('will-redirect',(event,url)=>{if(!normalizeResearchLinkUrl(url))event.preventDefault()})
+      view.webContents.on('did-start-navigation',(_event,_url,inPlace,isMainFrame)=>{if(isMainFrame&&!inPlace){current.generation++;current.error='';view.setVisible(false)}})
       view.webContents.on('did-fail-load',(_event,code,description,_url,isMainFrame)=>{if(isMainFrame&&code!==-3)current.error=description})
-      view.webContents.on('did-finish-load',()=>{current.error=''})
+      view.webContents.on('did-finish-load',()=>{current.error='';current.presentation='';current.layout=''})
       view.webContents.on('before-input-event',(event,input)=>{
         if(input.type==='keyDown'&&input.code==='Space'&&!current.typing){event.preventDefault();view.setVisible(false);win.webContents.focus();win.webContents.sendInputEvent({type:'keyDown',keyCode:'Space'})}
       })
       void view.webContents.loadURL(authorization.url).catch(error=>{current.error=String(error.message)})
     }
     entry.touched=Date.now()
+    if(Number.isSafeInteger(value.reloadToken)&&value.reloadToken>=0&&value.reloadToken!==entry.reloadToken){entry.reloadToken=value.reloadToken;entry.error='';entry.view.webContents.reload()}
     entry.view.setBorderRadius(Math.max(0,Math.min(16,Math.round(Number(value.radius)||0))))
     const size=win.getContentSize()
-    const show=value.active===true&&bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=(size[0]??0)&&bounds.y+bounds.height<=(size[1]??0)
+    const show=value.active===true&&!entry.error&&!entry.view.webContents.isLoadingMainFrame()&&bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=(size[0]??0)&&bounds.y+bounds.height<=(size[1]??0)
     // A hidden Chromium surface does not reliably resize its compositor. Keep
     // the last complete surface and let the canvas scale its snapshot. Only a
     // real component resize or entering interaction may configure the surface.
@@ -101,11 +106,11 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       }
     }
     entry.view.setVisible(show)
-    if(!entry.busy){
-      entry.busy=true;const current=entry
+    if(!entry.busy&&!entry.error&&!entry.view.webContents.isLoadingMainFrame()){
+      entry.busy=true;const current=entry,generation=entry.generation
       try {
         const image=await entry.view.webContents.capturePage(undefined,{stayHidden:!show,stayAwake:true})
-        if(!image.isEmpty())current.image=image.toDataURL()
+        if(current.generation===generation&&!entry.view.webContents.isLoadingMainFrame()&&!image.isEmpty())current.image=image.toDataURL()
         current.typing=await entry.view.webContents.executeJavaScript("!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]')").catch(()=>false)
       } catch {} finally {current.busy=false}
     }

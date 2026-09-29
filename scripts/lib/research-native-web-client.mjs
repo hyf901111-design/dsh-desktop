@@ -34,12 +34,14 @@ export function patchResearchNativeWeb(source) {
   if(!source.includes(anchor))throw Error('Missing web frame renderer')
   source=source.replace(anchor,`/* ODYSSEY_HYBRID_WEB */
   function ResearchNativeWebFrame({node,sessionId,visible=true,onInspection}) {
-    const ref=(0,react.useRef)(null),imageRef=(0,react.useRef)(null);
-    const [error,setError]=(0,react.useState)(''),[ready,setReady]=(0,react.useState)(false),[attempt,setAttempt]=(0,react.useState)(0);
+    const ref=(0,react.useRef)(null),imageRef=(0,react.useRef)(null),reloadRef=(0,react.useRef)(0);
+    const [error,setError]=(0,react.useState)(''),[ready,setReady]=(0,react.useState)(false);
     (0,react.useEffect)(()=>{
       const bridge=window.dshDesktop?.researchLinkFrame,identity={sessionId,nodeId:node.id};
       if(!visible||!bridge?.updateNative)return;
       let stopped=false,busy=false,last='',lastSent=0,lastMotion=Date.now(),held=false,space=false,timer,lastInspection='';
+      const reload=()=>{setError('');reloadRef.current++;lastSent=0};
+      const element=ref.current;if(element)element.__eworkReloadWeb=reload;
       const hide=()=>{lastMotion=Date.now();last='';bridge.hideNative().catch(()=>{});};
       const down=()=>{held=true;hide();},up=()=>{held=false;lastMotion=Date.now();},keyDown=e=>{if(e.code==='Space'&&!e.target?.closest?.('input,textarea,[contenteditable=true]')){space=true;hide();}},keyUp=e=>{if(e.code==='Space'){space=false;lastMotion=Date.now();}};
       document.addEventListener('pointerdown',down,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('wheel',hide,true);document.addEventListener('keydown',keyDown,true);document.addEventListener('keyup',keyUp,true);
@@ -58,23 +60,24 @@ export function patchResearchNativeWeb(source) {
         const signature=rectKey+active;
         if(busy||r.width<1||r.height<1||signature===tick.signature&&Date.now()-lastSent<1000)return;
         tick.signature=signature;lastSent=Date.now();busy=true;
-        try {const state=await bridge.updateNative({...identity,url:node.url,bounds,layoutSize,scale,radius:Math.round(9*scale),active});if(stopped)return;
+        try {const state=await bridge.updateNative({...identity,url:node.url,bounds,layoutSize,scale,radius:Math.round(9*scale),active,reloadToken:reloadRef.current});if(stopped)return;
           if(state.image&&imageRef.current){imageRef.current.src=state.image;setReady(true)}setError(state.error||'');
           if(state.inspection){const signature=JSON.stringify(state.inspection);if(signature!==lastInspection){lastInspection=signature;onInspection?.(node.url,state.inspection)}}
         }catch{if(!stopped)setError('网页暂时无法加载')}finally{busy=false}
       };
       timer=setInterval(tick,100);tick();
-      return()=>{stopped=true;clearInterval(timer);document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointerup',up,true);document.removeEventListener('pointercancel',up,true);document.removeEventListener('wheel',hide,true);document.removeEventListener('keydown',keyDown,true);document.removeEventListener('keyup',keyUp,true);bridge.releaseNative(identity).catch(()=>{});};
-    },[sessionId,node.id,node.url,visible,attempt]);
+      return()=>{stopped=true;clearInterval(timer);if(element?.__eworkReloadWeb===reload)delete element.__eworkReloadWeb;document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointerup',up,true);document.removeEventListener('pointercancel',up,true);document.removeEventListener('wheel',hide,true);document.removeEventListener('keydown',keyDown,true);document.removeEventListener('keyup',keyUp,true);bridge.releaseNative(identity).catch(()=>{});};
+    },[sessionId,node.id,node.url,visible]);
     return (0,react_jsx_runtime.jsxs)('div',{ref,'data-research-native-web':'',style:{position:'relative',width:'100%',height:'100%',minHeight:0,flex:1,overflow:'hidden',background:'#fff'},children:[
+      (0,react_jsx_runtime.jsx)('div',{className:'rScV5Q_webFrameControls',hidden:true,children:(0,react_jsx_runtime.jsx)('button',{type:'button','aria-label':'重新载入网页',onClick:()=>ref.current?.__eworkReloadWeb?.(),children:'刷新'})}),
       (0,react_jsx_runtime.jsx)('img',{ref:imageRef,alt:'',draggable:false,style:{width:'100%',height:'100%',objectFit:'fill',display:ready?'block':'none',pointerEvents:'none'}}),
-      error?(0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_previewPlaceholder',style:{position:'absolute',inset:0},children:[(0,react_jsx_runtime.jsx)('span',{children:'网页暂时无法加载'}),(0,react_jsx_runtime.jsx)('button',{onClick:()=>{setError('');setAttempt(n=>n+1)},children:'重试'}),(0,react_jsx_runtime.jsx)('a',{href:node.url,target:'_blank',rel:'noopener noreferrer',children:'浏览器打开'})]}):!ready?(0,react_jsx_runtime.jsx)('div',{className:'rScV5Q_previewPlaceholder',style:{position:'absolute',inset:0},children:'正在载入网页…'}):null]});
+      error?(0,react_jsx_runtime.jsxs)('div',{className:'rScV5Q_previewPlaceholder',style:{position:'absolute',inset:0},children:[(0,react_jsx_runtime.jsx)('span',{children:'网页暂时无法加载'}),(0,react_jsx_runtime.jsx)('button',{onClick:()=>ref.current?.__eworkReloadWeb?.(),children:'重试'}),(0,react_jsx_runtime.jsx)('a',{href:node.url,target:'_blank',rel:'noopener noreferrer',children:'浏览器打开'})]}):!ready?(0,react_jsx_runtime.jsx)('div',{className:'rScV5Q_previewPlaceholder',style:{position:'absolute',inset:0},children:'正在载入网页…'}):null]});
   }
   function ResearchHybridWebFrame(props) {
     const [engine,setEngine]=(0,react.useState)(null);
     (0,react.useEffect)(()=>{let active=true;setEngine(null);const bridge=window.dshDesktop?.researchLinkFrame;
       if(!bridge?.resolveEngine){setEngine('iframe');return;}
-      bridge.resolveEngine({sessionId:props.sessionId,nodeId:props.node.id,url:props.node.url}).then(r=>{if(active)setEngine(r.engine)}).catch(()=>{if(active)setEngine('iframe')});return()=>{active=false};
+      bridge.resolveEngine({sessionId:props.sessionId,nodeId:props.node.id,url:props.node.url,preferNative:!!bridge.updateNative}).then(r=>{if(active)setEngine(r.engine)}).catch(()=>{if(active)setEngine('iframe')});return()=>{active=false};
     },[props.sessionId,props.node.id,props.node.url]);
     if(!engine)return (0,react_jsx_runtime.jsx)('div',{className:'rScV5Q_previewPlaceholder',children:'正在载入网页…'});
     return (0,react_jsx_runtime.jsx)(engine==='native'?ResearchNativeWebFrame:ResearchCanvasStandardWebFrame,props);

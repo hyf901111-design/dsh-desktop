@@ -5,12 +5,15 @@ body [data-ework-grid] [data-research-dot-grid],body [data-ework-grid] [data-res
 body [data-ework-grid] [data-research-content-layer]{position:relative!important;inset:0!important;transform:none!important;min-height:100%;pointer-events:none;transform-origin:0 0}
 body [data-ework-grid] [data-research-node-id]{pointer-events:auto;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;border-radius:4px!important;background:var(--grid-card)!important;color:var(--grid-text);transition:left 180ms cubic-bezier(.2,.8,.2,1),top 180ms cubic-bezier(.2,.8,.2,1),width 180ms cubic-bezier(.2,.8,.2,1),height 180ms cubic-bezier(.2,.8,.2,1);overflow:hidden!important}
 body [data-ework-grid] [data-research-node-id][data-grid-active]{transition:none!important;z-index:50!important;box-shadow:0 4px 20px #0006!important}
+body [data-ework-grid][data-grid-operation=move] [data-grid-active]{left:var(--grid-float-left)!important;top:var(--grid-float-top)!important;cursor:grabbing}
+body [data-ework-grid][data-grid-operation=move] .ew-grid-resize-layer{display:none}
+body [data-ework-grid][data-grid-operation=move]>.ew-grid-placeholder{z-index:40}
 body [data-ework-grid] [data-research-node-id]>.rScV5Q_nodeTitle{box-sizing:border-box;height:34px!important;min-height:34px!important;flex-basis:34px!important;padding:0!important;visibility:hidden!important}
 body [data-ework-grid] [data-research-node-id]>.rScV5Q_nodeTitle>*{display:none!important}
 body [data-ework-grid] [data-research-node-id]>.rScV5Q_nodeTitle:has(input){visibility:visible!important;z-index:70;background:var(--grid-card)!important;padding:0 12px!important;align-items:center!important}
 body [data-ework-grid] [data-research-node-id]>.rScV5Q_nodeTitle:has(input)>.rScV5Q_nodeTitleText{display:flex!important;width:100%;min-width:0}
 body [data-ework-grid] [data-research-node-id] [data-research-resize-handle]{display:none!important}
-body [data-ework-grid] [data-research-node-id] [data-research-preview-body]{box-sizing:border-box;flex:1;min-width:0;min-height:0;width:100%!important;height:calc(100% - 34px)!important;overflow:auto}
+body [data-research-canvas][data-ework-grid] [data-research-node-id]:not([open]) [data-research-preview-body]{box-sizing:border-box;flex:1;min-width:0;min-height:0;width:100%!important;height:calc(100% - 34px)!important;overflow:auto!important}
 body [data-ework-grid] [data-research-node-id]:has(>.odyssey-data-stamp) [data-research-preview-body]{height:calc(100% - 58px)!important}
 body [data-ework-grid] [data-research-node-id] iframe[data-research-html-artifact]{display:block;width:100%!important;height:100%!important;min-width:0;min-height:0}
 body [data-ework-grid] [data-research-node-id] :is(.rScV5Q_containerDraft,.rScV5Q_textPreview){flex:1;min-width:0;min-height:0;overflow:auto;padding:12px!important}
@@ -93,3 +96,11 @@ html[data-odyssey-window-resizing] body [data-ework-grid] [data-research-node-id
 
 /* The active card uses only the grid target outline until release or cancel. */
 body [data-ework-grid]:is([data-grid-operation=move],[data-grid-operation=resize]) [data-grid-active] .ew-grid-selection-ring{display:none!important}
+
+/* Workbench content keeps its own scrollbars visible above the data stamp. */
+body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-research-preview-body],.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_mindMap,.odyssey-generation-records,.rScV5Q_textPreview,textarea){scrollbar-width:thin!important;scrollbar-color:#a1a4ad transparent!important}
+body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar{display:block!important;width:7px!important;height:7px!important}
+body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar-thumb{background:#a1a4ad!important;border-radius:4px!important}
+body [data-research-canvas][data-ework-grid] [data-research-node-id] ::-webkit-scrollbar-track{background:transparent!important}
+
+body [data-research-canvas][data-ework-grid] [data-research-node-id] .rScV5Q_containerTableScroll{overflow-x:auto!important;max-width:100%;min-width:0}
