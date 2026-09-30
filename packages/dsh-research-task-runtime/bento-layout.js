@@ -37,7 +37,7 @@ export function researchMarketContentDimensions(variant, data = {}) {
         + (Array.isArray(data.sources) && data.sources.length ? 1 : 0);
     // Reserve the enterprise tile padding and a readable provenance footer in
     // every mode. Resizing keeps a fixed card; excess content scrolls internally.
-    const columns = availableWidth <= 240 ? 1 : availableWidth <= 360 ? 2 : 3;
+    const columns = availableWidth <= 240 ? 1 : availableWidth <= 480 ? 2 : 3;
     const metricRows = Math.max(1, Math.ceil(rows / columns));
     return {width:656,height:Math.min(456, 104 + metricRows * 112 + (metricRows - 1) * 6 + Math.min(4, footerLines) * 17)};
   }

@@ -1071,6 +1071,24 @@ it.each([{count:3,legacy:false},{count:4,legacy:false},{count:5,legacy:true},{co
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
 
+it('完整指标自然高度取代保守预留，重复整理不留下过高空白',async()=>{
+ const f=await fixture(true),w=f.workspace
+ const {renderMarketArtifact}=await import('../packages/dsh-research-task-runtime/market-artifact.js')
+ const spec=renderMarketArtifact({version:1,type:'market',variant:'metrics',title:'完整指标',asOf:'2026-09-30',items:Array.from({length:6},(_,i)=>({label:'指标 '+i,value:'123'}))})
+ const node={...text('metrics'),kind:'generated-container',containerPrompt:'行情',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:spec}
+ await act(async()=>w.setArtifacts([node]))
+ const frame=f.host.querySelector('iframe[data-research-html-artifact]')
+ const send=async()=>act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:974,height:230,intrinsicMetrics:true}})))
+ await send();await f.event('click',f.document.querySelector('[data-research-global-arrange]'));await send()
+ await act(async()=>new Promise(r=>setTimeout(r,750)))
+ expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(288)
+ expect(w.getSnapshot().artifacts[0].height).toBeLessThan(313)
+ const arranged=w.getWorkbenchCells()
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await act(async()=>new Promise(r=>setTimeout(r,750)))
+ expect(w.getWorkbenchCells()).toEqual(arranged)
+})
+
 it('整理使用当前HTML的内容测量收紧尺寸，拒绝其他窗口的测量',async()=>{
  const f=await fixture(true),n={...text('html'),kind:'generated-container',containerPrompt:'图表',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'图表',html:'<svg height="200"></svg>'}}
  await act(async()=>f.workspace.setArtifacts([n]))
