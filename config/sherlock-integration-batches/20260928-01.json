@@ -9,31 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "世界时钟预置与数据刷新状态反馈",
+        "featureName": "保留手动刷新与行情来源说明及真实类型尺寸",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "e069dd6cd15380580db84be9e6d19f4572592393",
-        "tipCommit": "a426254c1b5baeabaa33dd6bc9d1125db35e25c0",
+        "baseCommit": "a426254c1b5baeabaa33dd6bc9d1125db35e25c0",
+        "tipCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
         "commits": [
           {
-            "commit": "c8e2911256168bc5b836394cb7ec75221be59988",
+            "commit": "a460aef2953edb48871240bb1ed337c755e14b28",
             "parents": [
-              "e069dd6cd15380580db84be9e6d19f4572592393"
+              "a426254c1b5baeabaa33dd6bc9d1125db35e25c0"
             ],
-            "subject": "验收：记录输入模板首次布局与会话恢复结果"
+            "subject": "修复：明确实时与固定时钟首次交付时区配置"
           },
           {
-            "commit": "321fecea5018e721f20cb22d19be8bf62d209c35",
+            "commit": "1b39dcd1de4c78ea42fafe1e4d19117b1a3f9329",
             "parents": [
-              "c8e2911256168bc5b836394cb7ec75221be59988"
+              "a460aef2953edb48871240bb1ed337c755e14b28"
             ],
-            "subject": "功能：预置世界时钟模板及三模式时区交互"
+            "subject": "修复：保留用户仅手动刷新设置并阻止默认自动调度"
           },
           {
-            "commit": "a426254c1b5baeabaa33dd6bc9d1125db35e25c0",
+            "commit": "2a788eb3689787a9bf6b57f8b468b505003b3800",
             "parents": [
-              "321fecea5018e721f20cb22d19be8bf62d209c35"
+              "1b39dcd1de4c78ea42fafe1e4d19117b1a3f9329"
             ],
-            "subject": "优化：补齐组件刷新反馈并保留表格交互视图"
+            "subject": "修复：保留行情来源说明并按真实组件类型整理尺寸"
+          },
+          {
+            "commit": "516b740241e65cacb013860d179fdbdd5cab8932",
+            "parents": [
+              "2a788eb3689787a9bf6b57f8b468b505003b3800"
+            ],
+            "subject": "测试：同步运营模板内置技能版本验收断言"
           }
         ],
         "files": [
@@ -43,23 +50,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/bento-layout.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/clock-artifact.js"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/clock-template-contract.js"
           },
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-refresh-policy.js"
+          },
+          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
@@ -67,11 +70,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
@@ -83,15 +86,15 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
+            "path": "scripts/lib/component-data-refresh.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
           },
           {
             "status": "M",
@@ -99,27 +102,19 @@
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/references/panel-runtime.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
             "path": "test/bundled-component-skill.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/clock-template.test.js"
           },
           {
-            "status": "M",
-            "path": "test/component-data-status.test.js"
+            "status": "A",
+            "path": "test/component-refresh-policy.test.js"
           },
           {
             "status": "M",
-            "path": "test/component-template-registry.test.js"
+            "path": "test/component-source-binding.test.js"
           },
           {
             "status": "M",
@@ -127,7 +122,11 @@
           },
           {
             "status": "M",
-            "path": "test/workbench-refresh.test.js"
+            "path": "test/research-market-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-design-contract.test.js"
           },
           {
             "status": "M",
@@ -149,12 +148,16 @@
               "test/workbench-refresh.test.js",
               "test/component-data-refresh.test.js",
               "test/component-interaction-state.test.js",
-              "test/workbench-component-presentation.test.js"
+              "test/workbench-component-presentation.test.js",
+              "test/component-refresh-policy.test.js",
+              "test/component-source-binding.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/research-market-artifact.test.js"
             ],
             "outcome": "passed",
-            "summary": "时钟、输入、业务契约及刷新交互聚焦检查通过",
-            "verifiedCommit": "a426254c1b5baeabaa33dd6bc9d1125db35e25c0",
-            "completedAt": "2026-09-30T12:39:43.701512+00:00",
+            "summary": "225项直接相关及继承门禁通过",
+            "verifiedCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
+            "completedAt": "2026-09-30T13:37:59.548495+00:00",
             "timeoutMs": 300000
           },
           {
@@ -165,71 +168,27 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a426254c1b5baeabaa33dd6bc9d1125db35e25c0",
-            "completedAt": "2026-09-30T12:39:49.389184+00:00",
+            "verifiedCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
+            "completedAt": "2026-09-30T13:37:59.548495+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "输入首次生成已原生验收；时钟与刷新完成生产沙盒验证，等待新集成包原生复验"
+          "summary": "67ee原生刷新反馈与时钟通过；新源码9项生产沙盒排版通过，手动设置与尺寸新包原生待验"
         },
         "acceptanceCriteria": [
-          "世界时钟按城市时区正确显示并恢复选项",
-          "刷新四种状态可感知且保留筛选排序滚动和卡片尺寸",
-          "三模式和减少动效均可读"
+          "直接用户仅手动刷新设置保存为0并能手动刷新",
+          "行情默认尺寸来源说明完整且三模式可读",
+          "按body真实类型整理尺寸、不受共享CSS影响"
         ],
         "risks": [
           "整体44类业务模板仍待完成",
           "总体组件成功率超过90%仍待验证",
-          "真实客户端绑定来源刷新尚待复验"
+          "本轮修复须新包原生复验",
+          "旧research-workbench套件存在重复打补丁依赖与模拟fixture问题，未计为通过"
         ],
-        "generatedAt": "2026-09-30T12:39:49.389225+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c6f7fb1bce968373560691fdeb6ed4e08c0d7ea7",
-        "verificationCommit": "c6f7fb1bce968373560691fdeb6ed4e08c0d7ea7",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "c6f7fb1bce968373560691fdeb6ed4e08c0d7ea7",
-            "completedAt": "2026-09-30T12:40:58.537Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "c6f7fb1bce968373560691fdeb6ed4e08c0d7ea7",
-            "completedAt": "2026-09-30T12:40:58.537Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c6f7fb1bce968373560691fdeb6ed4e08c0d7ea7",
-            "completedAt": "2026-09-30T12:40:58.537Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T12:40:58.537Z"
+        "generatedAt": "2026-09-30T13:37:59.548495+00:00"
       }
     }
   ],
