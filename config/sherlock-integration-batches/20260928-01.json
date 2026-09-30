@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修正输入模板布局和工作台参数清单",
+        "featureName": "修复旧代码卡客户端预览序列化依赖",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "b44f7837f2bfcdc2459e4c700627bc89920ab04e",
-        "tipCommit": "582ffa42587ff226940237eed65f4818ba165f47",
+        "baseCommit": "582ffa42587ff226940237eed65f4818ba165f47",
+        "tipCommit": "07e2a9d54b91633a231ad0dc7aeab23eed0fded2",
         "commits": [
           {
-            "commit": "d75822a8b3654793f54e3c10ca4aac165e1f49a7",
+            "commit": "07e2a9d54b91633a231ad0dc7aeab23eed0fded2",
             "parents": [
-              "b44f7837f2bfcdc2459e4c700627bc89920ab04e"
+              "582ffa42587ff226940237eed65f4818ba165f47"
             ],
-            "subject": "修复：代码卡片为底部控件预留空间并保留旧操作路由"
-          },
-          {
-            "commit": "582ffa42587ff226940237eed65f4818ba165f47",
-            "parents": [
-              "d75822a8b3654793f54e3c10ca4aac165e1f49a7"
-            ],
-            "subject": "修复：要求工作台完整清单并兼容表单本地模式"
+            "subject": "修复：客户端预览打包带齐代码卡修正依赖"
           }
         ],
         "files": [
@@ -36,167 +29,43 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/input-artifact.js"
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/input-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/simulated-workbench-presets.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/input-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/operations-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/stored-template-refinements.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workflow-template.test.js"
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/stored-template-refinements.test.js",
-              "test/input-template.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/operations-template.test.js",
-              "test/workflow-template.test.js",
-              "test/research-simulated-workbench-normalization.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "73项直接相关检查与类型检查；36组安全沙盒宽窄高低及三模式通过",
-            "verifiedCommit": "582ffa42587ff226940237eed65f4818ba165f47",
-            "completedAt": "2026-09-30T10:53:46.518377+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-workbench.test.js",
-              "-t",
-              "returns an actionable|generates a stable omitted"
-            ],
-            "outcome": "passed",
-            "summary": "73项直接相关检查与类型检查；36组安全沙盒宽窄高低及三模式通过",
-            "verifiedCommit": "582ffa42587ff226940237eed65f4818ba165f47",
-            "completedAt": "2026-09-30T10:53:46.518377+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "73项直接相关检查与类型检查；36组安全沙盒宽窄高低及三模式通过",
-            "verifiedCommit": "582ffa42587ff226940237eed65f4818ba165f47",
-            "completedAt": "2026-09-30T10:53:46.518377+00:00",
-            "timeoutMs": 300000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "旧集成包自然输入与真实复制保存已验证；本次布局及参数修正等待新集成包原生复验"
-        },
-        "acceptanceCriteria": [
-          "已有代码卡底部控件完整并保留交互日志",
-          "工具明确要求完整panels且旧preset兼容",
-          "表单保留本地模式需求",
-          "原生重新生成与会话恢复验收"
-        ],
-        "risks": [
-          "整体44类业务模板及总体成功率仍待完成",
-          "旧研究工作台整文件存在23项已记录失败，未计为通过",
-          "Figma截图占位图，精确像素比对未通过"
-        ],
-        "generatedAt": "2026-09-30T10:53:46.518377+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6d05ded656009750113cac9689e69e9bb8821d1e",
-        "verificationCommit": "6d05ded656009750113cac9689e69e9bb8821d1e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "6d05ded656009750113cac9689e69e9bb8821d1e",
-            "completedAt": "2026-09-30T10:54:48.778Z",
-            "timeoutMs": 300000
-          },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
+              "test/stored-template-refinements.test.js",
+              "test/input-template.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "6d05ded656009750113cac9689e69e9bb8821d1e",
-            "completedAt": "2026-09-30T10:54:48.778Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6d05ded656009750113cac9689e69e9bb8821d1e",
-            "completedAt": "2026-09-30T10:54:48.778Z",
+            "summary": "实际安装模块恢复旧代码卡回归及128项直接相关检查通过",
+            "verifiedCommit": "07e2a9d54b91633a231ad0dc7aeab23eed0fded2",
+            "completedAt": "2026-09-30T11:06:41.886305+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-30T10:54:48.778Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "fa5429ca旧会话空白原生验收失败，本次等待新包复验"
+        },
+        "acceptanceCriteria": [
+          "旧输入会话画布可见",
+          "原有字段和格式状态恢复",
+          "三模式与底部控件可读"
+        ],
+        "risks": [
+          "整体44类业务模板仍待完成",
+          "总体成功率超过90%仍待验证"
+        ],
+        "generatedAt": "2026-09-30T11:06:41.886305+00:00"
       }
     }
   ],
