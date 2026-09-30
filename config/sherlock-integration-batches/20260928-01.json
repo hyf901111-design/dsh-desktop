@@ -9,81 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究画布工具栏与链接预览优化",
+        "featureName": "研究画布链接网页预览性能与缩放验收",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "830ac87663f36435e8a586d2d4598e0b4ed0bccb",
-        "tipCommit": "3e946ebb827812a5f107beec148a80a5a5c345ae",
+        "baseCommit": "3e946ebb827812a5f107beec148a80a5a5c345ae",
+        "tipCommit": "26d4f1a10b122e01f749a086b849b3a3e6d5bf9e",
         "commits": [
           {
-            "commit": "e33c814411f14d0ac3f938e73778909d96219505",
+            "commit": "895bd4d1343e16a05fc858a03c92c3411608ecbe",
             "parents": [
-              "830ac87663f36435e8a586d2d4598e0b4ed0bccb"
+              "3e946ebb827812a5f107beec148a80a5a5c345ae"
             ],
-            "subject": "在画布底部工具栏加入一键整理入口"
+            "subject": "补充原生网页缩放验收断言"
           },
           {
-            "commit": "5b697688e0202112a00d5a06a68615cad64aed1a",
+            "commit": "26d4f1a10b122e01f749a086b849b3a3e6d5bf9e",
             "parents": [
-              "e33c814411f14d0ac3f938e73778909d96219505"
+              "895bd4d1343e16a05fc858a03c92c3411608ecbe"
             ],
-            "subject": "优化链接组件网页适配与预览控制"
-          },
-          {
-            "commit": "3e946ebb827812a5f107beec148a80a5a5c345ae",
-            "parents": [
-              "5b697688e0202112a00d5a06a68615cad64aed1a"
-            ],
-            "subject": "保留用户指定的模拟指标数值"
+            "subject": "减少链接网页交互时的整页截图卡顿"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "build/figma-canvas-icons/tool-arrange.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-workbench-icons/zoom-in.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-workbench-icons/zoom-out.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-workbench-icons/zoom-reset.svg"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/research-native-web-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/workbench-style.css"
+            "path": "scripts/verify-research-native-web.mjs"
           },
           {
             "status": "M",
@@ -92,47 +45,20 @@
           {
             "status": "M",
             "path": "src/preload/research-link-frame.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-native-web.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-design-contract.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npx",
-              "vitest",
+              "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
               "test/research-native-web.test.ts"
             ],
             "outcome": "passed",
-            "summary": "画布90项及原生网页7项聚焦检查通过；缩放、重置、刷新及动态尺寸覆盖。",
-            "verifiedCommit": "3e946ebb827812a5f107beec148a80a5a5c345ae",
-            "completedAt": "2026-09-30T01:03:29Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-link-frame.test.ts",
-              "test/workbench-design-contract.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "网页授权及模板数值契约18项聚焦检查通过。",
-            "verifiedCommit": "3e946ebb827812a5f107beec148a80a5a5c345ae",
-            "completedAt": "2026-09-30T01:03:29Z",
+            "summary": "链接菜单与原生网页聚焦检查97项通过。",
+            "verifiedCommit": "26d4f1a10b122e01f749a086b849b3a3e6d5bf9e",
+            "completedAt": "2026-09-30T01:27:43.627107Z",
             "timeoutMs": 300000
           },
           {
@@ -142,9 +68,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "3e946ebb827812a5f107beec148a80a5a5c345ae",
-            "completedAt": "2026-09-30T01:03:29Z",
+            "summary": "TypeScript类型检查通过。",
+            "verifiedCommit": "26d4f1a10b122e01f749a086b849b3a3e6d5bf9e",
+            "completedAt": "2026-09-30T01:27:43.627107Z",
             "timeoutMs": 300000
           },
           {
@@ -153,74 +79,27 @@
               "scripts/verify-research-native-web.mjs"
             ],
             "outcome": "passed",
-            "summary": "隔离 Electron 原生网页首次显示约106毫秒，慢资源下可交互，尺寸更新小于1毫秒。",
-            "verifiedCommit": "3e946ebb827812a5f107beec148a80a5a5c345ae",
-            "completedAt": "2026-09-30T01:03:29Z",
+            "summary": "隔离Electron验证原生网页适配、连续缩放、组件尺寸变化、交互期免截屏和退出交互更新预览；首次显示约78毫秒。",
+            "verifiedCommit": "26d4f1a10b122e01f749a086b849b3a3e6d5bf9e",
+            "completedAt": "2026-09-30T01:27:43.627107Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能 worktree 不构建共享客户端；集成后核验真实网页菜单、缩放和页面适配。"
+          "summary": "功能worktree不构建共享客户端；待集成客户端验证真实菜单和交互。"
         },
         "acceptanceCriteria": [
-          "底部工具栏选择工具右侧的一键整理与右键整理画布复用同一布局动作，空画布禁用且整理可撤销",
-          "链接组件更多菜单显示缩小10%、放大10%、重置页面大小、刷新，连续缩放与重置准确",
-          "原生网页画布缩放不抹掉用户页面缩放，组件宽度变化重新计算固定网页适配",
-          "后台截图和正文提取不阻塞网页操作，隐藏组件不持续重复捕获",
-          "用户明确给出的模拟指标数值不被预置模板替换"
+          "链接组件更多菜单提供缩小10%、放大10%、重置页面大小与刷新",
+          "固定宽度网页适配卡片且画布缩放不抹掉手动页面缩放",
+          "选中交互时免周期整页截图，离开交互后更新静态预览"
         ],
         "risks": [
-          "未运行全功能测试。",
-          "第三方网页内容与登录状态需在真实客户端继续核验。",
-          "本轮仅本地集成预览，不公开发布或晋升 main。"
+          "不运行全功能测试",
+          "第三方私有网页登录状态不在自动化验收中操作",
+          "仅本地集成预览，不公开发布或晋升main"
         ],
-        "generatedAt": "2026-09-30T01:03:29Z"
-      },
-      "merged": {
-        "mergeCommit": "89d9750dc3ad5b031ee4e540124ee70d1e1dca5f",
-        "verificationCommit": "89d9750dc3ad5b031ee4e540124ee70d1e1dca5f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "89d9750dc3ad5b031ee4e540124ee70d1e1dca5f",
-            "completedAt": "2026-09-30T01:05:16.542Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "89d9750dc3ad5b031ee4e540124ee70d1e1dca5f",
-            "completedAt": "2026-09-30T01:05:16.542Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "89d9750dc3ad5b031ee4e540124ee70d1e1dca5f",
-            "completedAt": "2026-09-30T01:05:16.542Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T01:05:16.542Z"
+        "generatedAt": "2026-09-30T01:27:43.627107Z"
       }
     }
   ],
