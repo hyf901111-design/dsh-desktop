@@ -931,6 +931,29 @@ it('原生表格按完整行内容整理，不使用大号默认高度',async()=
  expect(height).toBeGreaterThanOrEqual(252);expect(height).toBeLessThan(280)
 })
 
+it('整理原生柱状图不把当前拉伸的 SVG 高度当成自然内容高度',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{
+  w.setArtifacts([{...text('bar'),kind:'generated-container',containerPrompt:'研究产出',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'chart',variant:'bar',title:'研究产出',labels:['医药','科技'],series:[{name:'报告 / 篇',values:[12,9]}]}}])
+  w.applyWorkbenchCells([{id:'bar',x:15,y:0,w:15,h:90}],true)
+ })
+ const card=f.host.querySelector('[data-research-node-id="bar"]'),svg=card.querySelector('.odyssey-native-chart svg')
+ card.getBoundingClientRect=()=>({left:380,top:12,width:360,height:2208,right:740,bottom:2220})
+ svg.getBoundingClientRect=()=>({left:400,top:112,width:320,height:2000,right:720,bottom:2112})
+ for(let i=0;i<2;i++){
+  await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+  await act(async()=>new Promise(r=>setTimeout(r,700)))
+  expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(320)
+  expect(w.getSnapshot().artifacts[0].height).toBeLessThan(350)
+ }
+ const details=card.querySelector('.odyssey-native-chart-data');details.open=true
+ details.querySelector('div').getBoundingClientRect=()=>({left:400,top:2120,width:320,height:180,right:720,bottom:2300})
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await act(async()=>new Promise(r=>setTimeout(r,700)))
+ expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(500)
+ expect(w.getSnapshot().artifacts[0].height).toBeLessThan(530)
+})
+
 it('一次整理等待改宽后的HTML自然高度，整次操作只撤销一步',async()=>{
  const f=await fixture(true),w=f.workspace,n=id=>({...text(id),kind:'generated-container',containerPrompt:'文章',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:id,html:'<p>文章 '+id+'</p>'}})
  await act(async()=>{w.setArtifacts([n('a'),n('b')]);w.applyWorkbenchCells([{id:'a',x:2,y:0,w:15,h:20},{id:'b',x:23,y:0,w:15,h:20}],true)})

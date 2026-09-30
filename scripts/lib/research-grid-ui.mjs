@@ -379,6 +379,14 @@ export function measureWorkbenchContents(root,nodes) {
     if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,{width:preferred.width,height:value.height+58});continue}
     const card=root?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]'),body=card?.querySelector('[data-research-preview-body]')
     if(!body||body.querySelector('iframe')||card.hasAttribute('open'))continue
+    // Native line/bar SVGs fill the current frame. Measuring that SVG feeds
+    // an arbitrary resized height back into Arrange instead of recovering the
+    // template's readable plot. Only an expanded data viewport adds height.
+    if(node.containerSpec?.type==='chart'){
+      const details=body.querySelector('.odyssey-native-chart-data[open]>div')
+      const detailHeight=details?Math.min(180,Math.max(0,details.getBoundingClientRect().height)):0
+      measured.set(node.id,{width:preferred.width,height:preferred.height+detailHeight});continue
+    }
     const origin=card.getBoundingClientRect();let bottom=0
     // Native tables and markdown use the same content fit policy. Read content
     // boxes rather than a stretched flex wrapper or its viewport scrollHeight.
