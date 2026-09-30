@@ -25,7 +25,7 @@ export function normalizeIndexedTableRows(data){
 // Return paths rather than an opaque "format invalid" result. The same rule
 // text is included in the model's original schema and its bounded repair.
 export function templateDataIssue(data){
- if(['progress','tasks','approval','alerts'].includes(data?.type))return operationsDataIssue(data)
+ if(['progress','tasks','approval','alerts','form','code'].includes(data?.type))return operationsDataIssue(data)
  if(data?.type==='chart')return chartDataIssue(data)
  const finite=v=>typeof v==='number'&&Number.isFinite(v)
  const array=(key,max,min=1)=>!Array.isArray(data[key])||data[key].length<min||data[key].length>max?`${key} 必须包含 ${min}–${max} 项`:null

@@ -471,6 +471,12 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const contentMeasurements=new Map();root.__eworkContentMeasurements=contentMeasurements
     const contentSize=event=>{
       const data=event.data
+      if(data?.type==='sherlock-code-action'){
+        const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
+        const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
+        if(!frame||!node)return
+        void performWorkbenchCodeAction(frame,node,data);return
+      }
       if(data?.type==='sherlock-workbench-history'){
         if(readOnly||Array.isArray(data)||Object.keys(data).length!==2||!['undo','redo'].includes(data.action))return
         const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source),id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id')
@@ -499,4 +505,22 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     root.__eworkScrollbars?.()
   },[snapshot])
   react.useEffect(()=>{const root=rootRef.current;if(!root)return;return installWorkbenchPointer(root,workspace,toolRef,selectTool,readOnly)},[workspace,sessionId,readOnly])
+}
+
+export async function performWorkbenchCodeAction(frame,node,data) {
+  if(!data||Array.isArray(data)||Object.keys(data).length!==4||data.type!=='sherlock-code-action'||typeof data.id!=='string'||!/^code-[a-z0-9-]{1,80}$/.test(data.id)||!['copy','download'].includes(data.action)||!['original','formatted'].includes(data.format))return
+  const reply=status=>frame.contentWindow?.postMessage({type:'sherlock-code-action-result',id:data.id,status},'*')
+  try{
+    const view=frame.ownerDocument.defaultView
+    if(!view.navigator.userActivation?.isActive)throw Error('需要用户操作')
+    const html=node.containerSpec?.html,source=typeof html==='string'&&html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
+    if(!source||source.length>512000)throw Error('无有效模板数据')
+    const model=JSON.parse(source),payload=model.templateId==='code'&&codeTemplatePayload(model.data,data.format)
+    if(!payload)throw Error('无有效代码内容')
+    if(data.action==='copy'){await view.navigator.clipboard.writeText(payload.content);reply('copied')}
+    else{
+      const save=view.dshDesktop?.researchCanvasExport?.save;if(!save)throw Error('无法保存')
+      const result=await save({kind:'text',...payload});reply(['saved','cancelled'].includes(result?.status)?result.status:'error')
+    }
+  }catch{reply('error')}
 }

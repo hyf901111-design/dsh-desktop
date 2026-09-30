@@ -17,7 +17,7 @@ export const COMPONENT_TEMPLATES=Object.freeze([
  ...CHART_TEMPLATES.map(t=>({...t,id:`chart.${t.variant}`,type:'chart',schema:chartTemplateSchema(t.variant),interactions:t.interactions??['系列切换','逐点数值','完整数据'],version:'22a-20260930'})),
  ...Object.entries(MARKET_DESIGN_TEMPLATES).map(([variant,t])=>({id:`market.${variant}`,type:'market',variant,title:t.id,width:t.width,height:t.height,figma:t.figma,interactions:interactions[variant]})),
  ...generic.map(([id,title,interactions,width,height])=>({id,type:id.split('.')[0],...(id.startsWith('chart.')?{variant:id.split('.')[1]}:{}),title,interactions,width,height,figma:TERMINAL_GENERIC_TEMPLATES[id].figma}))
-].map(t=>Object.freeze({...t,version:t.version??WORKBENCH_DESIGN_VERSION,minWidth:280,minHeight:180,responsive:'控件换行；内容按可用宽度布局；长列表内部滚动；不缩小正文',maxDataBytes:256000})))
+].map(t=>Object.freeze({...t,version:t.version??WORKBENCH_DESIGN_VERSION,minWidth:t.minWidth??280,minHeight:t.minHeight??180,responsive:'控件换行；内容按可用宽度布局；长列表内部滚动；不缩小正文',maxDataBytes:256000})))
 const templates=new Map(COMPONENT_TEMPLATES.map(t=>[t.id,t]))
 export function templateFor(data){return templates.get(data?.type==='market'||data?.type==='chart'?`${data.type}.${data.variant}`:data?.type)??null}
 export function retainTemplateModel(spec,data){
