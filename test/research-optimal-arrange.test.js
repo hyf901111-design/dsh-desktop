@@ -5,6 +5,14 @@ const node=(id,spec,width=656,height=456)=>({id,kind:'generated-container',gener
 const feed=rows=>node('feed',{type:'html',html:`<body data-research-kind="news">${'<article class="research-feed-item"></article>'.repeat(rows)}</body>`});
 
 describe('content-sized workbench arrangement',()=>{
+  it('gives old saved metrics the current enterprise row space and accounts for narrow columns',()=>{
+    const html='<body data-sherlock-market="metrics"><div class="market-metrics">'+ '<div class="market-metric"></div>'.repeat(6)+'</div><footer class="market-footer"><span>2026-09-30</span><span>完整来源和单位说明</span></footer></body>';
+    const old=node('old',{type:'html',html});
+    expect(researchMarketDimensions(old)).toEqual({width:656,height:368});
+    expect(researchMarketDimensions(old,true,320)).toEqual({width:656,height:456});
+    old.sizeMode='manual';expect(researchMarketDimensions(old)).toBeNull();
+    expect(researchMarketDimensions(old,true).height).toBe(368);
+  });
   it('sizes short and long components from actual content without the old large-card height cap',()=>{
     expect(researchOptimalDimensions(node('short',{type:'markdown',content:'简短结论'}))).toEqual({width:320,height:220});
     expect(researchOptimalDimensions(node('news',{type:'news',items:Array.from({length:9},()=>({title:'资讯'}))}))).toEqual({width:656,height:356});

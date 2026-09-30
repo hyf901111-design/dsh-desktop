@@ -373,6 +373,12 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
 }
+export function workbenchMeasuredDimensions(node,value,width=value?.width||node.width) {
+  const preferred=researchOptimalDimensions({...node,width:0,height:0})
+  const metrics=/<body\b[^>]*data-sherlock-market="metrics"/.test(node.containerSpec?.html||'')
+    ?researchMarketDimensions(node,true,width):null
+  return {width:preferred.width,height:Math.max(metrics?.height||0,value?.height?value.height+58:preferred.height)}
+}
 export function measureWorkbenchContents(root,nodes) {
   const measured=new Map(),cache=root?.__eworkContentMeasurements
   for(const node of nodes){
@@ -380,7 +386,7 @@ export function measureWorkbenchContents(root,nodes) {
     const preferred=researchOptimalDimensions({...node,width:0,height:0})
     // Header and provenance occupy 34 + 24px outside the sandbox. The sandbox
     // reports natural content bounds, never its current frame height.
-    if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,{width:preferred.width,height:value.height+58});continue}
+    if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,workbenchMeasuredDimensions(node,value));continue}
     const card=root?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]'),body=card?.querySelector('[data-research-preview-body]')
     if(!body||body.querySelector('iframe')||card.hasAttribute('open'))continue
     // Native line/bar SVGs fill the current frame. Measuring that SVG feeds
@@ -434,7 +440,8 @@ export function arrangeWorkbenchContents(root,workspace,measured) {
       const target=expected.get(c.id),cache=root.__eworkContentMeasurements?.get(c.id)
       const matched=target&&cache?.html===target.html&&Math.abs(cache.width-target.width)<=2
       if(target&&!matched)complete=false
-      const height=matched?cache.height+58:!target?natural.get(c.id)?.height:null
+      const node=currentNodes.find(n=>n.id===c.id)
+      const height=matched?workbenchMeasuredDimensions(node,cache,target.width).height:!target?natural.get(c.id)?.height:null
       return height?{...c,h:Math.max(grid.minimum(currentNodes.find(n=>n.id===c.id),m).h,Math.min(300,Math.ceil((height+m.gap)/m.step)))}:c
     })
     const measuredCells=new Map(next.map(c=>[c.id,c]))

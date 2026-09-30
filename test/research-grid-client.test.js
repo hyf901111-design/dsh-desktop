@@ -21,7 +21,7 @@ async function fixture(mount=false,desktop={}){
  let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
+ runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake)
  const registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('grid-test'),host=document.createElement('div');document.body.append(host)
@@ -1035,14 +1035,40 @@ it('延迟挂载的HTML预览收到真实选择状态，取消选择和载入同
  expect(f.host.querySelector('.ew-grid-selection-ring')).not.toBeNull()
 })
 
-it('整理保持行情指标的紧凑高度，不把视口余量灌入指标卡',async()=>{
+it('整理给行情指标及来源留足高度，不把视口余量灌入指标卡',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});
  const {renderMarketArtifact}=await import('../packages/dsh-research-task-runtime/market-artifact.js')
  const spec=renderMarketArtifact({version:1,type:'market',variant:'metrics',title:'行情',asOf:'模拟数据',items:[{label:'现价',value:'1478.60'},{label:'涨幅',value:'+0.45%'}]})
  f.workspace.setArtifacts([{...text('metrics'),kind:'generated-container',containerPrompt:'行情',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:spec}]);f.workspace.setWorkbenchWidth(1000)
  expect(f.workspace.organizeCanvas()).toBe(true)
- expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThanOrEqual(200)
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(233)
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThan(260)
  expect(f.workspace.getWorkbenchCells()[0]).toMatchObject({x:0,y:0,w:40})
+})
+
+it.each([{count:3,legacy:false},{count:4,legacy:false},{count:5,legacy:true},{count:6,legacy:true}])('整理不会用裁切高度覆盖 $count 个指标的可读尺寸，旧模板 $legacy',async({count,legacy})=>{
+ const f=await fixture(true),w=f.workspace
+ const {renderMarketArtifact}=await import('../packages/dsh-research-task-runtime/market-artifact.js')
+ const {researchMarketDimensions}=await import('../packages/dsh-research-task-runtime/bento-layout.js')
+ const spec=renderMarketArtifact({version:1,type:'market',variant:'metrics',title:'整理回归',asOf:'2026-09-30 收盘 · 指定来源',note:'说明实际数据单位和换算口径，失败保留旧值，仅手动刷新。',items:Array.from({length:count},(_,i)=>({label:'指标 '+i,value:'3842.19 点',detail:'完整单位与来源说明'}))})
+ if(legacy)spec.html=spec.html.replace(/ data-sherlock-design="[^"]*"| data-metrics-footer-lines="\d+"/g,'')
+ const node={...text('metrics'),kind:'generated-container',containerPrompt:'行情',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:spec}
+ await act(async()=>{w.setArtifacts([node]);w.applyWorkbenchCells([{id:'metrics',x:0,y:5,w:40,h:30}],true)})
+ const before=w.getWorkbenchCells(),frame=f.host.querySelector('iframe[data-research-html-artifact]')
+ const send=async height=>act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:974,height}})))
+ await send(120)
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await send(129)
+ await act(async()=>new Promise(r=>setTimeout(r,750)))
+ const expected=researchMarketDimensions(node,true,974).height
+ const arranged=w.getWorkbenchCells()
+ expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(expected)
+ expect(w.getSnapshot().artifacts[0].height).toBeLessThan(expected+25)
+ expect(w.getSnapshot().artifacts[0].height).toBeLessThan(456)
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await act(async()=>new Promise(r=>setTimeout(r,750)))
+ expect(w.getWorkbenchCells()).toEqual(arranged)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
 
 it('整理使用当前HTML的内容测量收紧尺寸，拒绝其他窗口的测量',async()=>{

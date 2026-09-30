@@ -532,6 +532,28 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       for (const element of Array.from(document.body.querySelectorAll('svg,canvas,img,video,audio,table,input,textarea,select,button,[role="img"]')).slice(0, 1000)) {
         if (visible(element)) include(element.getBoundingClientRect(), element, true)
       }
+      // Metrics are a bounded scrolling grid. Its visible clipping edge is not
+      // the natural height of its rows. Max-content tracks keep these tile
+      // boxes intrinsic even when the user has made the card too short.
+      if (workbench && document.body.dataset.sherlockMarket === 'metrics') {
+        const grid = document.body.querySelector('.market-metrics');
+        const tiles = Array.from(grid?.children ?? []).filter(visible).map(el => el.getBoundingClientRect());
+        if (tiles.length) {
+          const pixels = value => Math.max(0, parseFloat(value) || 0);
+          const bodyStyle = getComputedStyle(document.body);
+          const rowsHeight = Math.max(...tiles.map(box => box.bottom)) - Math.min(...tiles.map(box => box.top));
+          const footer = document.body.querySelector(':scope > .market-footer');
+          let footerHeight = 0;
+          if (footer) {
+            const boxes = Array.from(footer.children).filter(visible).map(el => el.getBoundingClientRect()).filter(box => box.height > 0);
+            const style = getComputedStyle(footer);
+            footerHeight = (boxes.length ? Math.max(...boxes.map(box => box.bottom)) - Math.min(...boxes.map(box => box.top)) : 0)
+              + pixels(style.paddingTop) + pixels(style.paddingBottom) + pixels(style.borderTopWidth) + pixels(style.borderBottomWidth)
+              + pixels(style.marginTop) + pixels(style.marginBottom);
+          }
+          bottom = pixels(bodyStyle.paddingTop) + rowsHeight + footerHeight + pixels(bodyStyle.paddingBottom);
+        }
+      }
       const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
       const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 32 : viewportHeight))
       const key = width + ':' + height
@@ -559,7 +581,10 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     }
     addEventListener('resize', schedule)
     document.addEventListener('load', schedule, true)
-    if (workbench) document.addEventListener('toggle', schedule, true)
+    if (workbench) {
+      document.addEventListener('toggle', schedule, true)
+      addEventListener('sherlock-presentation-change', schedule)
+    }
     document.fonts?.ready?.then(schedule).catch(() => {})
     measure()
     const stop = () => {
@@ -569,6 +594,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       removeEventListener('resize', schedule)
       document.removeEventListener('load', schedule, true)
       document.removeEventListener('toggle', schedule, true)
+      removeEventListener('sherlock-presentation-change', schedule)
     }
     if (workbench) addEventListener('pagehide', stop, { once: true })
     else if (typeof setTimeout === 'function') setTimeout(stop, 8000)
