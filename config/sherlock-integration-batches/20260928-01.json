@@ -11,22 +11,18 @@
         "schemaVersion": 1,
         "featureName": "OpenBB 风格网格研究工作台",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c26c8dc058d837d00cb201263bc41a51960e4381",
-        "tipCommit": "d21a174962ce20ee68d45b95641618580ca3ad38",
+        "baseCommit": "d21a174962ce20ee68d45b95641618580ca3ad38",
+        "tipCommit": "830ac87663f36435e8a586d2d4598e0b4ed0bccb",
         "commits": [
           {
-            "commit": "d21a174962ce20ee68d45b95641618580ca3ad38",
+            "commit": "830ac87663f36435e8a586d2d4598e0b4ed0bccb",
             "parents": [
-              "c26c8dc058d837d00cb201263bc41a51960e4381"
+              "d21a174962ce20ee68d45b95641618580ca3ad38"
             ],
-            "subject": "修复生成卡片无顶栏与进度文字裁切"
+            "subject": "隐藏生成卡片工作台顶栏并释放内容高度"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
@@ -42,15 +38,15 @@
               "test/research-grid-workbench.test.js"
             ],
             "outcome": "passed",
-            "summary": "126项工作台聚焦检查通过；生成卡片脚本语法检查与git diff --check通过。",
-            "verifiedCommit": "d21a174962ce20ee68d45b95641618580ca3ad38",
-            "completedAt": "2026-09-29T23:55:18.521Z",
+            "summary": "126项工作台聚焦检查和diff检查通过；实机复现确认工作台额外顶栏，已针对该层修复。",
+            "verifiedCommit": "830ac87663f36435e8a586d2d4598e0b4ed0bccb",
+            "completedAt": "2026-09-30T00:10:10.443Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Figma浅色/深色组件生成态画面已隐藏顶栏、恢复916×396原尺寸且第三行完整可见，截图已目检；真实客户端验收在集成构建后继续。"
+          "summary": "真实客户端已观察规划卡第三行完整显示；逐卡生成时复现工作台叠加顶栏并定位到ew-grid-chrome-host。Figma浅深色卡片无顶栏画面通过目检；本次叠加层修复待集成新包复验。"
         },
         "acceptanceCriteria": [
           "真实 EWork Research 显示40列不等大网格，顶栏拖动、选中后右中调宽与底中调高、碰撞让位和格位吸附",
@@ -180,52 +176,7 @@
           "旧research-board-client-adapter有42项applyRemoteCanvas重复补丁锚点失败；本次客户端预览路径独立验证通过。",
           "本次生成卡片改动的真实客户端创建过程将在集成构建后目检；局部单测使用已打补丁依赖时出现既有重复锚点错误，未作为通过依据。"
         ],
-        "generatedAt": "2026-09-29T23:55:49.550Z"
-      },
-      "merged": {
-        "mergeCommit": "b3c0821ad9054c76026bf453a5f271ca81564523",
-        "verificationCommit": "b3c0821ad9054c76026bf453a5f271ca81564523",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "b3c0821ad9054c76026bf453a5f271ca81564523",
-            "completedAt": "2026-09-29T23:57:43.951Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "b3c0821ad9054c76026bf453a5f271ca81564523",
-            "completedAt": "2026-09-29T23:57:43.951Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b3c0821ad9054c76026bf453a5f271ca81564523",
-            "completedAt": "2026-09-29T23:57:43.951Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-29T23:57:43.951Z"
+        "generatedAt": "2026-09-30T00:10:10.444Z"
       }
     }
   ],
