@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "已有客户端整理图标更新修复",
+        "featureName": "生成卡片拖动与思维导图主题统一",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c",
-        "tipCommit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
+        "baseCommit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
+        "tipCommit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
         "commits": [
           {
-            "commit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
+            "commit": "a0c001c1d3d401eb0b413bfbd6a603ba535758bb",
             "parents": [
-              "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c"
+              "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c"
             ],
-            "subject": "修复已安装客户端整理图标缓存未随设计更新"
+            "subject": "支持生成卡片整卡拖动并统一思维导图主题和模型菜单标题"
+          },
+          {
+            "commit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
+            "parents": [
+              "a0c001c1d3d401eb0b413bfbd6a603ba535758bb"
+            ],
+            "subject": "保持生成结果回写时的卡片占位尺寸并补充生命周期验证"
           }
         ],
         "files": [
@@ -29,71 +36,56 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
+            "path": "scripts/lib/figma-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-grid-workbench.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-model-empty-style.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-controls.test.ts"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
-          }
-        ],
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "93项客户端聚焦检查通过，含缓存图标升级和整理回调",
-            "verifiedCommit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
-            "completedAt": "2026-09-30T03:19:59.980754+00:00",
-            "timeoutMs": 300000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "功能工作树不构建共享客户端，待集成后实际窗口复验。"
-        },
-        "acceptanceCriteria": [
-          "已有安装刷新整理图标",
-          "不重复增加按钮或丢失整理回调",
-          "保留紧凑工具栏尺寸"
-        ],
-        "risks": [
-          "整体44类业务模板接入尚未完成",
-          "九图真实输入首次失败，仍需复验",
-          "仅聚焦检查和本地测试，无公开发布"
-        ],
-        "generatedAt": "2026-09-30T03:19:59.980754+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0f4618d48f74bdca3a4b8d6acab010f31e4f7220",
-        "verificationCommit": "0f4618d48f74bdca3a4b8d6acab010f31e4f7220",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "0f4618d48f74bdca3a4b8d6acab010f31e4f7220",
-            "completedAt": "2026-09-30T03:20:46.204Z",
-            "timeoutMs": 300000
           },
+          {
+            "status": "M",
+            "path": "test/workbench-style.test.js"
+          }
+        ],
+        "checks": [
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
+              "test/workbench-style.test.js",
+              "test/figma-model-empty-style.test.ts",
+              "test/figma-model-menu.test.ts",
+              "test/research-generation-controls.test.ts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "0f4618d48f74bdca3a4b8d6acab010f31e4f7220",
-            "completedAt": "2026-09-30T03:20:46.204Z",
+            "summary": "五文件129项聚焦检查通过，含旧生成卡片结果回写和重新打开的尺寸验证",
+            "verifiedCommit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
+            "completedAt": "2026-09-30T04:01:28.595864+00:00",
             "timeoutMs": 300000
           },
           {
@@ -103,13 +95,28 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0f4618d48f74bdca3a4b8d6acab010f31e4f7220",
-            "completedAt": "2026-09-30T03:20:46.204Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
+            "completedAt": "2026-09-30T04:01:28.595864+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-30T03:20:46.204Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能工作树不构建共享客户端，待集成本地包真实窗口复验"
+        },
+        "acceptanceCriteria": [
+          "生成卡片正文拖动并保留尺寸和让位",
+          "过程与停止按钮不拖动",
+          "思维导图跟随画布三模式",
+          "模型分组标题透明底"
+        ],
+        "risks": [
+          "整体44类业务模板接入尚未完成",
+          "九图自然输入重试待复验",
+          "只做聚焦检查和本地构建，无公开发布"
+        ],
+        "generatedAt": "2026-09-30T04:01:28.595864+00:00"
       }
     }
   ],
