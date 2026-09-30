@@ -388,13 +388,13 @@ it('shows only moving averages supported by the available candle count',()=>{
 it('uses one market surface and readable disclosure controls for new and saved charts',()=>{
  const candle={date:'2026-09-18',open:4493.21,high:4541.82,low:4480.46,close:4528.61,volume:128}
  const generated=render({variant:'candlestick',candles:[candle]}).documentElement.outerHTML
- expect(generated).toContain('ODYSSEY_MARKET_PRESENTATION_V2')
+ expect(generated).toContain('ODYSSEY_MARKET_PRESENTATION_V3')
  expect(generated).toContain('background:var(--sherlock-surface)!important')
  expect(generated).toContain('min-height:32px')
  expect(compactHostDashboardHtml(generated)).toBe(generated)
  const legacy='<html><head><style>body{background:#292929}details{font-size:10px}</style></head><body data-sherlock-market="trend" data-sherlock-design="21m-20260923-v1"><details><summary>完整趋势数据</summary><table><tr><td>数据</td></tr></table></details></body></html>'
  const upgraded=compactHostDashboardHtml(legacy)
- expect(upgraded).toContain('ODYSSEY_MARKET_PRESENTATION_V2')
+ expect(upgraded).toContain('ODYSSEY_MARKET_PRESENTATION_V3')
  expect(upgraded).toContain('min-height:32px')
  expect(upgraded).toContain('max-height:min(168px,calc(100vh - 72px))')
  expect(compactHostDashboardHtml(upgraded)).toBe(upgraded)

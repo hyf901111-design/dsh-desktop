@@ -27,7 +27,17 @@ export function researchMarketContentDimensions(variant, data = {}) {
   const count = (array, explicit) => Number.isInteger(explicit) ? explicit : Array.isArray(array) ? array.length : 0;
   const rows = count(data.items ?? data.rows, data.itemCount || data.rowCount);
   if (!rows) return { width: base[0], height: base[1] };
-  if (variant === 'metrics' || variant === 'fund-kpi')
+  if (variant === 'metrics') {
+    const widthUnits = text => [...String(text ?? '')].reduce((sum, char) => sum + (/[^\x00-\xff]/u.test(char) ? 2 : 1), 0);
+    const footerLines = Number.isInteger(data.footerLines) ? data.footerLines
+      : (data.note ? Math.max(1, Math.ceil(widthUnits(data.note) / 105)) : 0)
+        + (Array.isArray(data.sources) && data.sources.length ? 1 : 0);
+    // Reserve the enterprise tile padding and a readable provenance footer in
+    // every mode. Resizing keeps a fixed card; excess content scrolls internally.
+    const metricRows = Math.max(1, Math.ceil(rows / 3));
+    return {width:656,height:Math.min(456, 80 + metricRows * 90 + (metricRows - 1) * 6 + Math.min(3, footerLines) * 17)};
+  }
+  if (variant === 'fund-kpi')
     return {width:656,height:48 + Math.max(1, Math.ceil((rows || 6) / 3)) * 82};
   // Short datasets collapse; large datasets get a readable viewport with scrolling.
   // Never make a 100-row feed turn into a multi-screen canvas column.
@@ -50,11 +60,14 @@ export function researchGanttContentDimensions(items = 0) {
 export function researchMarketDimensions(node, includeManual = false) {
   if (node.sizeMode === 'manual' && !includeManual) return null;
   const spec=node.containerSpec, html=spec?.type==='html'?spec.html:'';
-  if (html?.includes('data-sherlock-template="clock"')) return { width:980, height:200 };
-  if (html?.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:656, height:316 };
-  if (html?.includes('data-research-kind="dashboard"')) return researchDashboardContentDimensions((html.match(/class="research-metric"/g) || []).length);
-  if (html?.includes('data-research-kind="gantt"')) return researchGanttContentDimensions((html.match(/class="gantt-row"/g) || []).length);
-  if (/data-research-kind="(?:news|reports)"/.test(html)) {
+  // Shared presentation CSS contains selectors for every template. Only DOM
+  // attributes establish the current kind; searching CSS misclassifies cards.
+  const bodyTag=html?.match(/<body\b[^>]*>/)?.[0] ?? '';
+  if (bodyTag.includes('data-sherlock-template="clock"')) return { width:980, height:200 };
+  if (bodyTag.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:656, height:316 };
+  if (bodyTag.includes('data-research-kind="dashboard"')) return researchDashboardContentDimensions((html.match(/class="research-metric"/g) || []).length);
+  if (bodyTag.includes('data-research-kind="gantt"')) return researchGanttContentDimensions((html.match(/class="gantt-row"/g) || []).length);
+  if (/data-research-kind="(?:news|reports)"/.test(bodyTag)) {
     const rows=(html.match(/class="research-feed-item"/g) || []).length;
     return {width:656,height:Math.max(220,80+Math.min(6,rows)*46)};
   }
@@ -67,7 +80,8 @@ export function researchMarketDimensions(node, includeManual = false) {
     return researchMarketContentDimensions(kind, {
       itemCount:(html.match(/class="(?:market-metric|fund-kpi|fund-industry|market-event|sample-entry|pipeline-row)"/g) || []).length,
       columnCount:(head.match(/<th\b/g) || []).length,
-      rowCount:(body.match(/<tr\b/g) || []).length
+      rowCount:(body.match(/<tr\b/g) || []).length,
+      footerLines:Number(html.match(/data-metrics-footer-lines="(\d+)"/)?.[1] ?? 0)
     });
   }
   if(kind==='metrics')return {width:896,height:144};
