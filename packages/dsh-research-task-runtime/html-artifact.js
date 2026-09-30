@@ -556,6 +556,43 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
           intrinsicMetrics = true;
         }
       }
+      // Quote tables and overview strips have bounded scroll viewports. Their
+      // clipped boxes must not feed a progressively smaller height to Arrange.
+      // Measure the intrinsic controls, a bounded set of rows, and provenance
+      // independently of the current iframe height.
+      if (workbench && ['share-statistics','market-overview','currency-snapshot','watchlist'].includes(document.body.dataset.sherlockMarket)) {
+        const profile = document.body.querySelector('.financial-profile');
+        if (profile) {
+          const pixels = value => Math.max(0, parseFloat(value) || 0);
+          const insets = element => {
+            const style = getComputedStyle(element);
+            return pixels(style.paddingTop) + pixels(style.paddingBottom) + pixels(style.borderTopWidth) + pixels(style.borderBottomWidth);
+          };
+          const margins = element => { const style = getComputedStyle(element); return pixels(style.marginTop) + pixels(style.marginBottom); };
+          let contentHeight = insets(profile);
+          for (const element of Array.from(profile.children).filter(visible)) {
+            let height = element.getBoundingClientRect().height;
+            if (element.classList.contains('snapshot-table-wrap')) {
+              const table = element.querySelector('table');
+              const header = table?.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+              const rows = Array.from(table?.querySelectorAll('tbody tr') ?? []).filter(visible).slice(0, 6);
+              height = Math.max(120, Math.min(320, header + rows.reduce((total,row) => total + row.getBoundingClientRect().height, 0))) + insets(element);
+            } else if (element.classList.contains('snapshot-overview-strip')) {
+              height = Math.min(320, Math.max(0, ...Array.from(element.children).filter(visible).map(child => child.getBoundingClientRect().height + margins(child)))) + insets(element);
+            }
+            contentHeight += height + margins(element);
+          }
+          const footer = document.body.querySelector(':scope > .market-footer');
+          let footerHeight = 0;
+          if (footer) {
+            // An empty source slot still occupies a wrapped flex line and its
+            // trailing gap; include its position even when its height is zero.
+            const boxes = Array.from(footer.children).filter(visible).map(element => element.getBoundingClientRect());
+            footerHeight = (boxes.length ? Math.max(...boxes.map(box => box.bottom)) - Math.min(...boxes.map(box => box.top)) : 0) + insets(footer) + margins(footer);
+          }
+          bottom = insets(document.body) + contentHeight + margins(profile) + footerHeight;
+        }
+      }
       const width = Math.min(2400, Math.ceil(right > viewportWidth + 2 ? right + 16 : viewportWidth))
       const height = Math.min(12000, Math.ceil(bottom > viewportHeight + 2 ? bottom + 32 : viewportHeight))
       const key = width + ':' + height

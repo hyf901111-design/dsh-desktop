@@ -3,7 +3,12 @@ export function createResearchGrid() {
   const columns=40, gap=10, inset=12
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n))
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
-  const minimum=(node,m)=>{
+  const minimum=(node,m,arranging=false)=>{
+    // Wide quote templates need their first identifying and value columns.
+    // Only the current body's kind establishes this; shared CSS lists every kind.
+    const kind=node?.containerSpec?.type==='html'&&node.containerSpec.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1]
+    const readable={'share-statistics':320,'market-overview':arranging?980:480,'currency-snapshot':arranging?980:480,'watchlist':arranging?980:480}[kind]
+    if(readable)return {w:Math.min(columns,Math.ceil((readable+m.gap)/m.step)),h:m.minRows}
     if(!['generated-container','planning-card'].includes(node?.kind)||node.containerSpec)return {w:m.minColumns,h:m.minRows}
     // Task status changes content, never the frame. Keep the draft minimum
     // throughout generation; the derived shell also reserves its source strip.
@@ -107,7 +112,7 @@ export function createResearchGrid() {
         const edges=[...new Set([0,columns,...previous.flatMap(c=>[c.x,c.x+c.w])])].sort((a,b)=>a-b)
         for(let i=0;i<edges.length-1;i++){
           const x=edges[i],w=edges[i+1]-x
-          if(w>=target.w||w<minimum(byId.get(target.id),m).w)continue
+          if(w>=target.w||w<minimum(byId.get(target.id),m,true).w)continue
           const above=previous.filter(c=>c.x<x+w&&c.x+c.w>x),bottom=Math.max(0,...above.map(c=>c.y+c.h)),missing=target.y-bottom
           const growth=Math.min(160,...above.filter(c=>c.y+c.h===bottom).map(c=>(c.h*m.step-m.gap)*.25))
           if(!above.length||missing<=0||missing*m.step<=growth)continue
@@ -152,7 +157,7 @@ export function createResearchGrid() {
         // A wider existing column is still a valid vacancy. Restricting the
         // width ratio strands narrow cards in a tall stack beside empty space.
         // Keep their content height and check the complete target rectangle.
-        if(x===card.x||w<card.w||w<minimum(node,m).w)continue
+        if(x===card.x||w<card.w||w<minimum(node,m,true).w)continue
         const above=previous.filter(c=>c.x<x+w&&c.x+c.w>x),y=Math.max(0,...above.map(c=>c.y+c.h))
         if(!above.length||(card.y-y)*m.rowStep<=160)continue
         const placed={...card,x,w,y}
@@ -233,7 +238,7 @@ export function createResearchGrid() {
   function arrangeOnce(nodes,items,width) {
     const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
     if(!ordered.length)return items.map(bounded)
-    const min=c=>minimum(byId.get(c.id),m)
+    const min=c=>minimum(byId.get(c.id),m,true)
     let fitted=ordered.map(c=>{const w=Math.max(c.w,min(c).w);return {...c,w,x:Math.min(c.x,columns-w)}})
     // Snapping can vacate an outer interval. Close it in this transaction,
     // rather than growing the cards again on the next Arrange invocation.

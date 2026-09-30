@@ -3,6 +3,27 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('金融快照整理遵守模板阅读宽度，窄两列合并且重复整理稳定',()=>{
+ const g=createResearchGrid(),variants=['share-statistics','market-overview','currency-snapshot','watchlist']
+ for(const width of [900,1000,1400,320]){
+  const nodes=variants.map((variant,i)=>({id:variant,kind:'generated-container',containerSpec:{type:'html',html:`<style>body[data-sherlock-market="watchlist"]{}</style><body data-sherlock-market="${variant}"></body>`},preferred:{height:330+i*25}}))
+  const before=nodes.map((n,i)=>item(n.id,i%2*20,Math.floor(i/2)*20,20,20)),next=g.arrange(nodes,before,width),shown=g.project(nodes,next,width)
+  expect(shown.every(n=>n.width>=Math.min(n.id==='share-statistics'?320:480,width-24)-.001)).toBe(true)
+  if(width===900)expect(shown.filter(n=>n.id!=='share-statistics').every(n=>n.width>=width-24-.001)).toBe(true)
+  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+  expect(g.arrange(nodes,next,width)).toEqual(next)
+ }
+ const m=g.metrics(1000),ordinary={kind:'generated-container',containerSpec:{type:'html',html:'<style>body[data-sherlock-market="watchlist"]{}</style><body data-sherlock-market="metrics"></body>'}}
+ expect(g.minimum(ordinary,m).w).toBe(m.minColumns)
+})
+it('预置宽快照首次挂载使用整行，手动宽度仍可收窄到契约最小值',()=>{
+ const g=createResearchGrid(),state=createWorkbenchGridState(null,'wide-snapshots');state.enable(900)
+ const base={files:[],artifacts:[],viewport:{y:0}};state.reconcile(base)
+ const nodes=['currency-snapshot','watchlist'].map((kind,i)=>({id:kind,kind:'generated-container',workbenchId:'snapshot',workbenchIndex:i,width:980,height:430,sizeMode:'auto',containerSpec:{type:'html',html:`<body data-sherlock-market="${kind}"></body>`}}))
+ state.reconcile({...base,artifacts:nodes})
+ expect(state.get().every(c=>c.x===0&&c.w===40)).toBe(true)
+ const min=g.minimum(nodes[0],g.metrics(900));expect(min.w*g.metrics(900).step-10).toBeGreaterThanOrEqual(480);expect(min.w).toBeLessThan(40)
+})
 it('整理旧研究运营看板的窄列长尾补入宽列，柱状图保持模板高度',()=>{
  for(const width of [810,1000]){
   const g=createResearchGrid(),m=g.metrics(width),before=[item('metrics',0,0,15,20),item('calendar',15,0,25,15),item('gantt',0,20,15,14),item('news',0,34,15,15),item('reports',0,49,15,29),item('bar',0,78,15,17)]
