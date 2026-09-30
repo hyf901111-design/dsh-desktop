@@ -31,9 +31,22 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let server,win;
  const durations=[];for(const width of [600,480,720]){request={...request,bounds:{...request.bounds,width},layoutSize:{...request.layoutSize,width}};const start=performance.now();await call(request);durations.push(performance.now()-start);assert.equal(view.getBounds().width,width)}
  assert.ok(Math.max(...durations)<100,'geometry IPC finishes independently of capture and inspection');
  for(let i=0;i<30;i++){await call(request);size=await wc.executeJavaScript('({viewport:innerWidth,content:document.documentElement.scrollWidth})');if(size.content<=size.viewport+2)break;await delay(50)}
- assert.ok(size.content<=size.viewport+2);const stableBounds=view.getBounds();await call({...request,active:false});await call(request);assert.deepEqual(view.getBounds(),stableBounds);
+ assert.ok(size.content<=size.viewport+2);const fittedZoom=wc.getZoomFactor();
+ await call({...request,pageZoom:1.2});assert.ok(Math.abs(wc.getZoomFactor()-fittedZoom*1.2)<.005,'manual zoom changes actual Chromium zoom');
+ await call({...request,pageZoom:1.2,scale:.8,bounds:{...request.bounds,width:request.bounds.width*.8,height:request.bounds.height*.8}});
+ assert.ok(Math.abs(wc.getZoomFactor()-fittedZoom*1.2)<.005,'canvas scale preserves manual zoom');
+ await call({...request,pageZoom:1});assert.ok(Math.abs(wc.getZoomFactor()-fittedZoom)<.005,'reset restores fitted page size');
+ let firstSnapshot;for(let i=0;i<25;i++){firstSnapshot=await call(request);if(firstSnapshot.imageRevision>0)break;await delay(80)}
+ assert.ok(firstSnapshot.imageRevision>0,'live view has an initial fallback snapshot');
+ const beforeInteraction=firstSnapshot.imageRevision;
+ await wc.executeJavaScript("document.body.style.background='#dbeafe'");
+ const quietStart=performance.now();while(performance.now()-quietStart<1800){await call(request);await delay(120)}
+ assert.equal((await call(request)).imageRevision,beforeInteraction,'interactive browsing does not repeatedly capture the full page');
+ let afterInteraction;for(let i=0;i<30;i++){afterInteraction=await call({...request,active:false});if(afterInteraction.imageRevision>beforeInteraction)break;await delay(80)}
+ assert.ok(afterInteraction.imageRevision>beforeInteraction,'leaving interaction refreshes the fallback preview');
+ const stableBounds=view.getBounds();await call({...request,active:false});await call(request);assert.deepEqual(view.getBounds(),stableBounds);
  await writeFile(${JSON.stringify(join(output,'native-web.png'))},(await win.webContents.capturePage()).toPNG());
- await writeFile(${JSON.stringify(join(output,'report.json'))},JSON.stringify({firstVisibleMs:firstVisible,slowAssetMs:3000,geometryUpdateMs:durations,firstFitZoom:firstZoom,finalFitZoom:wc.getZoomFactor(),finalViewport:size,selectionPreservesBounds:true},null,2));
+ await writeFile(${JSON.stringify(join(output,'report.json'))},JSON.stringify({firstVisibleMs:firstVisible,slowAssetMs:3000,geometryUpdateMs:durations,firstFitZoom:firstZoom,finalFitZoom:wc.getZoomFactor(),manualZoomVerified:true,activeCaptureSuppressed:true,leaveCaptureVerified:true,finalViewport:size,selectionPreservesBounds:true},null,2));
  console.log('native focused fixture passed');
 })().then(()=>{server.closeAllConnections();server.close();app.exit(0)}).catch(error=>{console.error(error);server?.closeAllConnections();server?.close();app.exit(1)});
 `},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron']})
