@@ -125,13 +125,17 @@ export function patchCanvasCreationTools(source) {
 function patchCanvasArrangeTool(source) {
   const marker="'data-research-global-arrange':''",start=source.indexOf(marker)
   if(start>=0){
-    // Cached client bundles already contain the button. Refresh its image from
-    // the current asset instead of leaving the first installed glyph forever.
-    const end=source.indexOf("className:'odyssey-tool-icon'",start)
-    if(end<0)throw Error('Canvas arrange icon anchor missing')
-    const segment=source.slice(start,end)
-    if(!/src:"data:image\/svg\+xml;base64,[^"]+"/.test(segment))throw Error('Canvas arrange image source missing')
-    return source.slice(0,start)+segment.replace(/src:"data:image\/svg\+xml;base64,[^"]+"/,'src:'+JSON.stringify(icon('arrange')))+source.slice(end)
+    // Existing installations keep their actions, while all image glyphs update
+    // together. Link, voice and presentation glyphs are refreshed by their CSS.
+    for(const [attribute,name] of [['select','select'],['arrange','arrange'],['container','frame']]){
+      const begin=source.indexOf("'data-research-global-"+attribute+"':''")
+      const end=source.indexOf("className:'odyssey-tool-icon'",begin)
+      if(begin<0||end<0)throw Error('Canvas toolbar icon anchor missing: '+name)
+      const segment=source.slice(begin,end)
+      if(!/src:"data:image\/svg\+xml;base64,[^"]+"/.test(segment))throw Error('Canvas toolbar image source missing: '+name)
+      source=source.slice(0,begin)+segment.replace(/src:"data:image\/svg\+xml;base64,[^"]+"/,'src:'+JSON.stringify(icon(name)))+source.slice(end)
+    }
+    return source
   }
   const nextButton="(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-global-container'"
   const position=source.indexOf(nextButton)
