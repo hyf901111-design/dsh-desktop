@@ -560,7 +560,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       // clipped boxes must not feed a progressively smaller height to Arrange.
       // Measure the intrinsic controls, a bounded set of rows, and provenance
       // independently of the current iframe height.
-      if (workbench && ['share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements'].includes(document.body.dataset.sherlockMarket)) {
+      if (workbench && ['share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business'].includes(document.body.dataset.sherlockMarket)) {
         const profile = document.body.querySelector('.financial-profile');
         if (profile) {
           const pixels = value => Math.max(0, parseFloat(value) || 0);

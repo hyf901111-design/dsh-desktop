@@ -7,7 +7,7 @@ export function createResearchGrid() {
     // Wide quote templates need their first identifying and value columns.
     // Only the current body's kind establishes this; shared CSS lists every kind.
     const kind=node?.containerSpec?.type==='html'&&node.containerSpec.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1]
-    const readable={'share-statistics':320,'market-overview':arranging?980:480,'currency-snapshot':arranging?980:480,'watchlist':arranging?980:480,'price-performance':arranging?980:480,'valuation-multiples':arranging?980:480,'price-target':arranging?980:480,'company-profile':arranging?980:480,'financial-statements':arranging?980:480}[kind]
+    const readable={'revenue-geography':arranging?980:480,'revenue-business':arranging?980:480,'share-statistics':320,'market-overview':arranging?980:480,'currency-snapshot':arranging?980:480,'watchlist':arranging?980:480,'price-performance':arranging?980:480,'valuation-multiples':arranging?980:480,'price-target':arranging?980:480,'company-profile':arranging?980:480,'financial-statements':arranging?980:480}[kind]
     if(readable)return {w:Math.min(columns,Math.ceil((readable+m.gap)/m.step)),h:m.minRows}
     if(!['generated-container','planning-card'].includes(node?.kind)||node.containerSpec)return {w:m.minColumns,h:m.minRows}
     // Task status changes content, never the frame. Keep the draft minimum
