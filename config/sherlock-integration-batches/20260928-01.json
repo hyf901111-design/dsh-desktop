@@ -100,6 +100,51 @@
           "整体44类业务模板接入和九图自然输入重试仍待完成"
         ],
         "generatedAt": "2026-09-30T05:16:10.722716+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
+        "verificationCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
+            "completedAt": "2026-09-30T05:17:33.738Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
+            "completedAt": "2026-09-30T05:17:33.738Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
+            "completedAt": "2026-09-30T05:17:33.738Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-30T05:17:33.738Z"
       }
     }
   ],
