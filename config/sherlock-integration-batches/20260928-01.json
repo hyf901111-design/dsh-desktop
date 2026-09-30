@@ -9,31 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "预置目标进度与任务清单并精简图表重试提示",
+        "featureName": "修正既有图表涨跌配色、瀑布刻度与任务排版",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "9482d10516d8a393a87c86f73535548db47a7c1d",
-        "tipCommit": "3da32832ca472244e0ad319009d200341813a258",
+        "baseCommit": "3da32832ca472244e0ad319009d200341813a258",
+        "tipCommit": "ee446e3147c159300866c1f4f87e60589850d9f3",
         "commits": [
           {
-            "commit": "c03584d7337d3ad47fa3f0b3d150014a9704d453",
+            "commit": "558c57da16134562e00ba29a2086d84c2350cd23",
             "parents": [
-              "9482d10516d8a393a87c86f73535548db47a7c1d"
+              "3da32832ca472244e0ad319009d200341813a258"
             ],
-            "subject": "记录顶栏对齐的原生窗口及设计稿验收"
+            "subject": "优化：收紧任务清单排版并记录原生保存验收"
           },
           {
-            "commit": "76b3bfaf333a0a6cc762cca8b95215a837afd370",
+            "commit": "ee446e3147c159300866c1f4f87e60589850d9f3",
             "parents": [
-              "c03584d7337d3ad47fa3f0b3d150014a9704d453"
+              "558c57da16134562e00ba29a2086d84c2350cd23"
             ],
-            "subject": "修复：图表重试只提示当前模板错误并定位桑基节点"
-          },
-          {
-            "commit": "3da32832ca472244e0ad319009d200341813a258",
-            "parents": [
-              "76b3bfaf333a0a6cc762cca8b95215a837afd370"
-            ],
-            "subject": "功能：预置目标进度与任务清单并保持三模式交互状态"
+            "subject": "修复：行情涨跌色与瀑布刻度并升级旧卡片显示"
           }
         ],
         "files": [
@@ -43,43 +36,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/advanced-chart-contract.js"
+            "path": "packages/dsh-research-task-runtime/advanced-chart-view.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/operations-artifact.js"
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
           },
           {
             "status": "M",
@@ -87,15 +56,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
@@ -103,15 +64,11 @@
           },
           {
             "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
+            "path": "test/operations-template.test.js"
           },
           {
             "status": "A",
-            "path": "test/operations-template.test.js"
+            "path": "test/stored-template-refinements.test.js"
           }
         ],
         "checks": [
@@ -119,81 +76,40 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/stored-template-refinements.test.js",
+              "test/advanced-chart-template.test.js",
+              "test/workbench-chart-motion.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-client.test.js",
               "test/operations-template.test.js",
               "test/component-template-registry.test.js",
               "test/workbench-execution-policy.test.js",
               "test/bundled-component-skill.test.js",
-              "test/component-source-binding.test.js",
-              "test/advanced-chart-template.test.js"
+              "test/component-source-binding.test.js"
             ],
             "outcome": "passed",
-            "summary": "93项直接相关检查通过；两类业务模板及当前图表错误诊断",
-            "verifiedCommit": "3da32832ca472244e0ad319009d200341813a258",
-            "completedAt": "2026-09-30T07:36:35.430529+00:00",
+            "summary": "214项直接相关检查通过；另有54组真实生成数据宽窄三模式沙盒检查与交互重放",
+            "verifiedCommit": "ee446e3147c159300866c1f4f87e60589850d9f3",
+            "completedAt": "2026-09-30T08:41:26.936063+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "生产沙盒12组宽窄三模式与交互日志重放已检查；待集成包原生自然输入及会话往返"
+          "summary": "九类图表自然输入101秒首轮生成完成，数据与原生交互已验收；此轮修正待新集成包验证既有卡片"
         },
         "acceptanceCriteria": [
-          "两类运营模板按来源数据和宿主布局呈现",
-          "三模式及窄宽可读且控件保持中性",
-          "个人任务和进度操作可重放并不写外部来源",
-          "图表重试只提示当前类型问题和格式"
+          "已有卡片保留原始数据、控件路径与交互日志并加载视觉修正",
+          "瀑布图窄宽末尾刻度不重叠",
+          "K线与OHLC遵循红涨绿跌且三模式明细可读",
+          "任务负责人紧凑排版且个人状态持久保存"
         ],
         "risks": [
-          "Figma截图服务为1x1占位图，视觉稿截图对比尚未通过",
           "整体44类业务模板及总体成功率仍待完成",
-          "通用主题旧文件4项基线失败仍保留"
+          "通用主题旧文件4项基线失败保留",
+          "Figma截图服务占位图，精确截图对比未通过"
         ],
-        "generatedAt": "2026-09-30T07:36:35.430529+00:00"
-      },
-      "merged": {
-        "mergeCommit": "869f9463a05df494f6fc47e2347d0c6ebc249995",
-        "verificationCommit": "869f9463a05df494f6fc47e2347d0c6ebc249995",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "869f9463a05df494f6fc47e2347d0c6ebc249995",
-            "completedAt": "2026-09-30T07:38:12.959Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "869f9463a05df494f6fc47e2347d0c6ebc249995",
-            "completedAt": "2026-09-30T07:38:12.959Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "869f9463a05df494f6fc47e2347d0c6ebc249995",
-            "completedAt": "2026-09-30T07:38:12.959Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T07:38:12.959Z"
+        "generatedAt": "2026-09-30T08:41:26.936063+00:00"
       }
     }
   ],
