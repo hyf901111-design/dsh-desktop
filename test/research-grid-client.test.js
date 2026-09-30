@@ -1049,6 +1049,21 @@ it.each(['price-performance','valuation-multiples','price-target'])('金融序�
  expect(w.getWorkbenchCells()).toEqual(before)
 })
 
+it('首次批量完成的金融序列半栏被最小可读宽度撑开后仍按实际宽度补高',async()=>{
+ const f=await fixture(true),w=f.workspace,{seriesFixtures}=await import('./fixtures/financial-series.js')
+ const plan={id:'first-prepared-series',createdAt:Date.now(),panels:seriesFixtures.map((s,i)=>({nodeId:'ready-'+i,title:s.variant,prompt:s.variant,taskId:'prepared-'+i,preparedOutput:acceptArtifactOutput(JSON.stringify(s)),width:656,height:456,x:i%2*672,y:Math.floor(i/2)*472,size:'large'}))}
+ await act(async()=>{w.setCanvasSize({width:880,height:700,availableWidth:880});w.setWorkbenchWidth(880);w.applyWorkbench({...plan,panels:plan.panels.map(({taskId,preparedOutput,...p})=>({...p,pending:true}))})})
+ await act(async()=>w.applyWorkbench(plan))
+ const canonical=w.getWorkbenchCells(),before=structuredClone(canonical),node=w.getSnapshot().artifacts[0]
+ expect(canonical[0].w).toBe(20)
+ expect(node.width).toBeGreaterThan(470)
+ const frame=f.host.querySelector('[data-research-node-id="ready-0"] iframe[data-research-html-artifact]')
+ expect(frame).not.toBeNull()
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:Math.round(node.width-40),height:570}})))
+ expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(638)
+ expect(w.getWorkbenchCells()).toEqual(before)
+})
+
 it('金融快照在侧栏挤窄后按可信内容报告补足显示高度，保持逻辑布局',async()=>{
  const f=await fixture(true),w=f.workspace,html='<body data-sherlock-market="share-statistics"></body>'
  await act(async()=>{w.setArtifacts([{...text('snapshot'),kind:'generated-container',containerPrompt:'股本统计',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'快照',html}}]);w.applyWorkbenchCells([{id:'snapshot',x:0,y:0,w:40,h:12}],true)})
