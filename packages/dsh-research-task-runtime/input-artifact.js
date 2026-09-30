@@ -1,5 +1,8 @@
 import {INPUT_TEMPLATES,inputDataIssue} from './input-template-contract.js';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Reserve room for controls, status and provenance in the existing card size.
+// Expanded code can scroll in the card; collapsed code scrolls in its own box.
+export const CODE_VIEWPORT_CSS='body[data-research-kind="code"] main{height:calc(100vh - 28px);min-height:0;gap:10px}body[data-research-kind="code"] main>*{flex-shrink:0}body[data-research-kind="code"] #code-status:empty{display:none}body[data-research-kind="code"] .code-content{flex:1 1 180px;min-height:64px;max-height:180px}body[data-research-kind="code"] .code-content.expanded{flex:none;max-height:none}';
 function inputRuntime(spec){
  const get=id=>document.getElementById(id);
  if(spec.type==='form'){
@@ -32,7 +35,9 @@ function inputRuntime(spec){
    // Replaying a saved view must never copy or open a save dialog again.
    if(!event.isTrusted||requestId)return;
    requestId='code-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);status.textContent=button.dataset.codeAction==='copy'?'正在复制…':'请选择保存位置…';
-   requestTimer=setTimeout(()=>{requestId=null;status.textContent='操作未完成，请重试';},60000);
+   // A native save dialog may legitimately stay open for several minutes.
+   // Its definitive result releases the request; copying has a short timeout.
+   requestTimer=button.dataset.codeAction==='copy'?setTimeout(()=>{requestId=null;status.textContent='操作未完成，请重试';},10000):null;
    parent.postMessage({type:'sherlock-code-action',id:requestId,action:button.dataset.codeAction,format:format.value},'*');
   });
   addEventListener('message',event=>{const d=event.data;if(event.source!==parent||d?.type!=='sherlock-code-action-result'||d.id!==requestId||Object.keys(d).length!==3||!['copied','saved','cancelled','error'].includes(d.status))return;clearTimeout(requestTimer);requestId=null;status.textContent={copied:'代码已复制',saved:'代码已保存',cancelled:'已取消保存',error:'操作失败，请重试'}[d.status];});
@@ -49,5 +54,5 @@ export function renderInputArtifact(spec){
  }).join('')}</div></form><div class="input-tools"><button type="button" id="form-submit">保存输入记录</button><button type="button" id="form-reset">重置填写</button></div><p id="form-status" class="input-muted" role="status"></p><section id="form-records" class="input-records" aria-label="本地输入记录" hidden></section><p class="input-muted">输入记录仅保存到本画布</p>`:
  `<div class="input-tools"><span class="input-tag">${escape(spec.language.toUpperCase())}</span><select id="code-format" aria-label="代码格式"${spec.language!=='json'?' hidden':''}><option value="original">原始格式</option>${spec.language==='json'?'<option value="formatted">格式化 JSON</option>':''}</select><button type="button" data-code-action="copy">复制代码</button><button type="button" data-code-action="download">下载</button></div><p id="code-error" class="input-error" role="alert"></p><div id="code-content" class="code-content" tabindex="0" aria-label="代码内容"></div><div class="input-tools"><span id="code-lines" class="input-muted"></span><button type="button" id="code-expand">展开长内容</button></div><p id="code-status" class="input-muted" role="status"></p>`;
  const json=JSON.stringify(spec).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
- return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body data-research-kind="${spec.type}" data-sherlock-template="${spec.type}"><main>${content}<p class="input-muted">${escape([spec.asOf,spec.note].filter(Boolean).join(' · '))}</p></main><script>(${inputRuntime.toString()})(${json});</script></body></html>`};
+ return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body data-research-kind="${spec.type}" data-sherlock-template="${spec.type}"><main>${content}<p class="input-muted">${escape([spec.asOf,spec.note].filter(Boolean).join(' · '))}</p></main><script>(${inputRuntime.toString()})(${json});</script></body></html>${spec.type==='code'?`<style data-code-viewport="v2">${CODE_VIEWPORT_CSS}</style>`:''}`};
 }

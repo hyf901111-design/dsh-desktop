@@ -1,5 +1,6 @@
 import {specialChartRuntime} from './special-chart-artifact.js';
 import {advancedChartView} from './advanced-chart-view.js';
+import {CODE_VIEWPORT_CSS} from './input-artifact.js';
 
 export const ADVANCED_VISUAL_RUNTIME=specialChartRuntime.toString();
 export const ADVANCED_VISUAL_VIEW=advancedChartView.toString();
@@ -13,6 +14,9 @@ export function refineStoredTemplateHtml(html){
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
+ if(model.templateId==='code'&&model.data.type==='code'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="code" data-sherlock-template="code">')&&!html.includes('data-code-viewport="v2"')){
+  return html+`<style data-code-viewport="v2">${CODE_VIEWPORT_CSS}</style>`;
+ }
  if(model.templateId==='tasks'&&model.data.type==='tasks'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="tasks" data-sherlock-template="tasks">')&&!html.includes('data-operations-density="v2"')){
   // The production preview embeds the saved document inside its own body.
   // A style added to the saved head becomes a body child in Chromium and
