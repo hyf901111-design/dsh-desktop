@@ -7,6 +7,18 @@ export function workbenchRefreshTooltip(lastSuccess,now=Date.now()) {
   const relative='上次刷新：'+(seconds<60?'刚刚':seconds<3600?Math.floor(seconds/60)+' 分钟前':seconds<86400?Math.floor(seconds/3600)+' 小时前':Math.floor(seconds/86400)+' 天前')
   return {relative,absolute:new Date(at).toLocaleString('zh-CN',{month:'long',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
 }
+export function controlWorkbenchWebZoom(card,step) {
+  const native=card?.querySelector('[data-research-native-web]')
+  if(typeof native?.__eworkAdjustWebZoom==='function')return native.__eworkAdjustWebZoom(step)
+  const frame=card?.querySelector('iframe[data-research-web-frame]')
+  if(!frame)return null
+  const current=Number(frame.getAttribute('data-web-page-zoom'))||1
+  const next=step===0?1:Math.max(.5,Math.min(2,Math.round((current+step)*10)/10))
+  frame.setAttribute('data-web-page-zoom',String(next))
+  frame.style.zoom=String(next)
+  frame.style.width=100/next+'%';frame.style.height=100/next+'%'
+  return next
+}
 export function workbenchGridPattern(width) {
   const m=createResearchGrid().metrics(width)
   const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+m.step+'" height="'+m.step+'" viewBox="0 0 '+m.step+' '+m.step+'"><path d="M '+m.step+' 0 H 0 V '+m.step+'" fill="none" stroke="#8a9099" stroke-opacity="0.2" stroke-width="1"/></svg>'
@@ -127,6 +139,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const cancelLeave=()=>{clearTimeout(leaveTimer.current);leaveTimer.current=null}
   const leave=()=>{cancelLeave();leaveTimer.current=setTimeout(()=>setDetail(null),200)}
   const card=()=>document.querySelector('[data-research-node-id="'+CSS.escape(target.node.id)+'"]')
+  const webLink=target.node.kind==='web-link'
   const settings=card()?.querySelector('[data-research-container-more]')?.__eworkWorkbenchSettings
   const openDetail=(kind,focus=false)=>{
     if(kind==='mind'&&readOnly)return
@@ -141,10 +154,14 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{await exportWorkbenchContent(card(),target.node,format);onClose()}catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
   const row=(icon,label,action,disabled=readOnly,attributes={})=>jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
   const flyout=(kind,icon,label,trigger,disabled=false)=>jsxs('button',{ref:trigger,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
-  const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-(target.node.creationMode==='selection'?486:420),target.top)),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
+  const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-(webLink?560:target.node.creationMode==='selection'?486:420),target.top)),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
   return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作',style,onMouseLeave:leave,children:[
     row('duplicate','复制组件',()=>{workspace.copySelectedNodes().then(()=>workspace.pasteClipboardNodes(null)).catch(error=>console.error(error))}),
     row('expand','放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
+    webLink&&row('zoom-out','缩小10%',()=>controlWorkbenchWebZoom(card(),-.1),false,{'data-workbench-web-zoom':'out'}),
+    webLink&&row('zoom-in','放大10%',()=>controlWorkbenchWebZoom(card(),.1),false,{'data-workbench-web-zoom':'in'}),
+    webLink&&row('zoom-reset','重置页面大小',()=>controlWorkbenchWebZoom(card(),0),false,{'data-workbench-web-zoom':'reset'}),
+    webLink&&row('refresh','刷新',()=>card()?.querySelector('[data-workbench-refresh="'+CSS.escape(target.node.id)+'"]')?.click(),false,{'data-workbench-web-refresh':''}),
     row('rename','重命名',()=>onLegacy(target.node,target.event,'rename')),
     target.node.creationMode==='selection'&&row('rename','编辑需求',()=>onEditSelected?.(target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-workbench-edit-selected-create':target.node.id}),
     target.node.creationMode==='selection'&&row('branch','查看基准',()=>{

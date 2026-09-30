@@ -160,12 +160,32 @@ it('链接组件使用隔离网页容器，顶栏刷新复用当前网页',async
  await f.event('click',f.host.querySelector('[data-workbench-refresh="'+node.id+'"]'))
  expect(reload).toHaveBeenCalledTimes(1);expect(bridge.releaseNative).not.toHaveBeenCalled()
 })
+it('链接组件更多菜单按 10% 缩放并重置当前网页，刷新沿用顶栏动作',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge});let node
+ await act(async()=>{node=f.workspace.createWebLink('https://www.baidu.com/');f.workspace.updateSelection([node.id],'replace')})
+ const element=f.host.querySelector('[data-research-native-web]')
+ element.getBoundingClientRect=()=>({left:12,top:46,right:492,bottom:346,width:480,height:300})
+ Object.defineProperties(element,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>element
+ await act(async()=>{await new Promise(r=>setTimeout(r,300))})
+ const open=async()=>f.event('click',f.host.querySelector('[data-workbench-more="'+node.id+'"]'))
+ const choose=async name=>{await open();const item=f.document.querySelector('[data-workbench-web-zoom="'+name+'"]');expect(item).not.toBeNull();await f.event('click',item)}
+ await choose('in');expect(f.host.querySelector('[data-research-native-web]').getAttribute('data-web-page-zoom')).toBe('1.1')
+ await choose('in');expect(f.host.querySelector('[data-research-native-web]').getAttribute('data-web-page-zoom')).toBe('1.2')
+ await choose('out');expect(f.host.querySelector('[data-research-native-web]').getAttribute('data-web-page-zoom')).toBe('1.1')
+ await choose('reset');expect(f.host.querySelector('[data-research-native-web]').getAttribute('data-web-page-zoom')).toBe('1')
+ expect(bridge.updateNative.mock.lastCall[0].pageZoom).toBe(1)
+ const reload=vi.fn(f.host.querySelector('[data-research-native-web]').__eworkReloadWeb)
+ f.host.querySelector('[data-research-native-web]').__eworkReloadWeb=reload
+ await open();await f.event('click',f.document.querySelector('[data-workbench-web-refresh]'))
+ expect(reload).toHaveBeenCalledOnce()
+})
 it('宿主窗口调整后即使组件尺寸未变也立即恢复原生网页，不等待一秒轮询',async()=>{
  const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
  const f=await fixture(true,{researchLinkFrame:bridge});let node
  await act(async()=>{node=f.workspace.createWebLink('https://www.baidu.com/');f.workspace.updateSelection([node.id],'replace')})
  const el=f.host.querySelector('[data-research-native-web]');el.getBoundingClientRect=()=>({left:12,top:46,right:492,bottom:346,width:480,height:300});Object.defineProperties(el,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>el
- await act(async()=>{await new Promise(r=>setTimeout(r,150))})
+ await act(async()=>{await new Promise(r=>setTimeout(r,350))})
  expect(bridge.updateNative.mock.lastCall[0].active).toBe(true)
  const count=bridge.updateNative.mock.calls.length,previous=bridge.updateNative.mock.lastCall[0].bounds
  await f.event('resize',f.win)
@@ -251,7 +271,7 @@ it('链接拖动前发出的迟到截图在松手后也不能覆盖当前快照'
  const el=f.host.querySelector('[data-research-native-web]')
  el.getBoundingClientRect=()=>({left:12,top:46,right:492,bottom:346,width:480,height:300})
  Object.defineProperties(el,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>el
- await act(async()=>{await new Promise(r=>setTimeout(r,150))})
+ await act(async()=>{await new Promise(r=>setTimeout(r,350))})
  expect(resolve).toBeTypeOf('function')
  await f.event('pointerdown',f.host.querySelector('[data-workbench-drag-handle="'+node.id+'"]'),{button:0,pointerId:93,clientX:100,clientY:24})
  await f.event('pointerup',f.canvas,{pointerId:93,clientX:100,clientY:24})

@@ -6,7 +6,7 @@ vi.mock('electron',()=>({net:{fetch:mock.fetch},session:{fromPartition:()=>({set
   constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),reload:vi.fn(),loadURL:vi.fn(async()=>{this.webContents.on.mock.calls.find(([n]:any[])=>n==='dom-ready')?.[1]()}),setZoomFactor:vi.fn(),enableDeviceEmulation:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),executeJavaScriptInIsolatedWorld:vi.fn(async()=>({viewport:400,content:400})),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
   setVisible(v:boolean){this.visible=v} setBounds(v:any){this.bounds=v} setBorderRadius(){}
 }}))
-import {nativeWebBounds,nativeWebViewport,registerResearchNativeWeb,requiresNativeWeb} from '../src/main/state/research-native-web'
+import {nativeWebBounds,nativeWebViewport,nativeWebPageZoom,registerResearchNativeWeb,requiresNativeWeb} from '../src/main/state/research-native-web'
 import {registerResearchLinkFrameHandlers,ResearchLinkFrameRegistry} from '../src/main/state/research-link-frame'
 beforeEach(()=>{handlers.clear();views.length=0;mock.fetch.mockReset()})
 it('routes denied and same-origin frames to native views, leaving permitted sites in iframes',()=>{
@@ -54,10 +54,11 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  expect(wc.loadURL).toHaveBeenCalledTimes(1)
  await call('update',layout)
  expect(wc.enableDeviceEmulation.mock.calls.length).toBe(configurations+1)
+ wc.setZoomFactor.mockClear()
  for (const scale of [.08,.5,1.5]) {
    await call('update',{...layout,scale,bounds:{x:100,y:100,width:400*scale,height:300*scale}})
    expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:400,height:300},scale}))
-   expect(wc.setZoomFactor).toHaveBeenLastCalledWith(1)
+   expect(wc.setZoomFactor).not.toHaveBeenCalled()
  }
  await call('update',{...layout,layoutSize:{width:600,height:450},bounds:{x:100,y:100,width:600,height:450}})
  expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:600,height:450},scale:1}))
@@ -128,6 +129,21 @@ it('慢截图和正文提取不阻塞网页尺寸更新，正文就绪即可显�
 })
 
 it('rejects malformed webpage layout dimensions',()=>{expect(()=>nativeWebViewport({layoutSize:{width:NaN,height:300},scale:1})).toThrow();expect(()=>nativeWebViewport({layoutSize:{width:400,height:300},scale:0})).toThrow()})
+it('manual webpage zoom survives canvas scaling and resets independently',async()=>{
+ const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1200,900]}
+ registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(n:string,f:Function)=>handlers.set(n,f)} as any})
+ const identity={sessionId:'zoom-control',nodeId:'link',url:'https://www.baidu.com/'},event={sender:win.webContents,senderFrame:mainFrame},call=(v:any)=>handlers.get('research:native-web:update')!(event,v)
+ registry.authorize(identity)
+ const request={...identity,active:true,bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},scale:1,radius:3}
+ await call(request);const wc=views[0].webContents
+ await call({...request,pageZoom:1.1});expect(wc.setZoomFactor).toHaveBeenLastCalledWith(1.1)
+ wc.setZoomFactor.mockClear()
+ await call({...request,pageZoom:1.1,scale:.8,bounds:{x:100,y:100,width:320,height:240}})
+ expect(wc.setZoomFactor).not.toHaveBeenCalled()
+ await call({...request,pageZoom:1});expect(wc.setZoomFactor).toHaveBeenLastCalledWith(1)
+ expect(()=>nativeWebPageZoom({pageZoom:2.1})).toThrow();expect(()=>nativeWebPageZoom({pageZoom:NaN})).toThrow()
+})
 
 it('maps webpage CSS bounds through host window zoom so live surface matches the snapshot',async()=>{
  const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2};let zoom=1.1
