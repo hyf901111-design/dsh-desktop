@@ -1,5 +1,6 @@
 import {chartDataIssue} from './chart-template-contract.js'
 import {operationsDataIssue} from './operations-template-contract.js'
+import {FINANCIAL_PROFILE_VARIANTS,financialProfileDataIssue} from './financial-profile.js'
 // Shared by prompt construction, renderers and mapping validation. Keep data
 // limits here so a compact prompt cannot promise a shape the renderer rejects.
 export const TEMPLATE_LIMITS=Object.freeze({trendSeries:12,trendPoints:366,scatterItems:20,allocationItems:12,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
@@ -30,6 +31,7 @@ export function templateDataIssue(data){
  const finite=v=>typeof v==='number'&&Number.isFinite(v)
  const array=(key,max,min=1)=>!Array.isArray(data[key])||data[key].length<min||data[key].length>max?`${key} 必须包含 ${min}–${max} 项`:null
  if(data?.type!=='market')return null
+ if(FINANCIAL_PROFILE_VARIANTS.includes(data.variant))return financialProfileDataIssue(data)
  const rule=TEMPLATE_RULES[data.variant],fail=issue=>issue?`${data.variant}.${issue}。${rule??''}`:null
  if(data.variant==='trend'){
   const issue=array('labels',TEMPLATE_LIMITS.trendPoints,2)||array('series',TEMPLATE_LIMITS.trendSeries);if(issue)return fail(issue)
@@ -54,6 +56,10 @@ export function templateDataIssue(data){
 // Empty retrieval is a source problem, not malformed visual JSON. A bounded
 // repair must retain tools so it can correct the query's time direction.
 export function templateSourceDataIssue(data) {
+  if(data?.type==='market'&&data.variant==='ticker-information'&&data.price===null&&data.dayChange===null&&data.dayChangePercent===null&&!data.sparkline?.values?.some(v=>typeof v==='number'&&Number.isFinite(v)))
+    return '个股信息尚无可核验的报价或历史观测。必须取得业务响应，不能把证券名称和全空报价当成取数成功。'
+  if(data?.type==='market'&&data.variant==='key-metrics'&&data.items?.length&&data.items.every(i=>i.value===null))
+    return '核心指标全部未提供。必须先实际取得业务响应，不把全空指标面板标为生成完成。'
   if(['dashboard','market'].includes(data?.type)&&Array.isArray(data.items)&&data.items.length&&data.items.every(item=>typeof item.value==='string'&&/^(?:—|--|N\/A)(?:[（(].*)?$/iu.test(item.value.trim()))&&/不可用|未提供|未取得/u.test(JSON.stringify(data)))
     return '全部核心指标为空，尚无业务数据。必须先实际调用当前可用的数据工具；接口目录或无工具声明不能代替取数。若数据源确实无法提供，说明具体查询和缺失原因，不把全空面板标为生成完成。'
 

@@ -4,6 +4,7 @@ import {applyTerminalPresentation} from './terminal-presentation.js'
 import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
 
 const interactions = {
+ 'ticker-information':['历史报价','逐点读数'],'key-metrics':['搜索','指标口径'],'management-team':['搜索','报酬排序','成员披露详情'],
  metrics:['详情'],candlestick:['标的','交易区间','逐点行情'],trend:['系列','逐点数值'],scatter:['点选详情'],table:['搜索','排序','行详情'],pipeline:['阶段筛选','详情'],events:['详情'],heatmap:['选择区块','详情'],breadth:['区间分布'],
  'fund-kpi':['指标详情'],'fund-holdings':['搜索','排序'],'fund-industry':['行业比较'],'price-volume':['区间','逐点量价'],'order-book':['盘口档位'],'fund-flow':['行业','周期'],'valuation-band':['区间','分位比较'],'equity-drawdown':['区间','基准比较'],'allocation-donut':['选择分类'],'waterfall':['项目详情'],'funnel':['阶段详情'],'risk-matrix':['风险详情']
 }
@@ -15,7 +16,7 @@ const generic=[
 export const COMPONENT_TEMPLATES=Object.freeze([
  ...OPERATIONS_TEMPLATES.map(t=>({...t,schema:operationsTemplateSchema(t.id)})),
  ...CHART_TEMPLATES.map(t=>({...t,id:`chart.${t.variant}`,type:'chart',schema:chartTemplateSchema(t.variant),interactions:t.interactions??['系列切换','逐点数值','完整数据'],version:'22a-20260930'})),
- ...Object.entries(MARKET_DESIGN_TEMPLATES).map(([variant,t])=>({id:`market.${variant}`,type:'market',variant,title:t.id,width:t.width,height:t.height,figma:t.figma,interactions:interactions[variant]})),
+ ...Object.entries(MARKET_DESIGN_TEMPLATES).map(([variant,t])=>({id:`market.${variant}`,type:'market',variant,title:t.id,width:t.width,height:t.height,minWidth:t.minWidth,minHeight:t.minHeight,figma:t.figma,interactions:interactions[variant]})),
  ...generic.map(([id,title,interactions,width,height])=>({id,type:id.split('.')[0],...(id.startsWith('chart.')?{variant:id.split('.')[1]}:{}),title,interactions,width,height,figma:TERMINAL_GENERIC_TEMPLATES[id].figma}))
 ].map(t=>Object.freeze({...t,version:t.version??WORKBENCH_DESIGN_VERSION,minWidth:t.minWidth??280,minHeight:t.minHeight??180,responsive:'控件换行；内容按可用宽度布局；长列表内部滚动；不缩小正文',maxDataBytes:256000})))
 const templates=new Map(COMPONENT_TEMPLATES.map(t=>[t.id,t]))
