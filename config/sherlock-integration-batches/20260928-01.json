@@ -110,6 +110,51 @@
           "Figma截图服务占位图，精确截图对比未通过"
         ],
         "generatedAt": "2026-09-30T08:41:26.936063+00:00"
+      },
+      "merged": {
+        "mergeCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
+        "verificationCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
+            "completedAt": "2026-09-30T08:42:08.660Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
+            "completedAt": "2026-09-30T08:42:08.660Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
+            "completedAt": "2026-09-30T08:42:08.660Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-30T08:42:08.660Z"
       }
     }
   ],
