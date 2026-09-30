@@ -149,8 +149,10 @@ export function createResearchGrid() {
       let best
       for(let i=0;i<edges.length-1;i++){
         const x=edges[i],w=edges[i+1]-x
-        // Retain content height and use an existing comparable-width column.
-        if(x===card.x||w<card.w||w>card.w*1.5||w<minimum(node,m).w)continue
+        // A wider existing column is still a valid vacancy. Restricting the
+        // width ratio strands narrow cards in a tall stack beside empty space.
+        // Keep their content height and check the complete target rectangle.
+        if(x===card.x||w<card.w||w<minimum(node,m).w)continue
         const above=previous.filter(c=>c.x<x+w&&c.x+c.w>x),y=Math.max(0,...above.map(c=>c.y+c.h))
         if(!above.length||(card.y-y)*m.rowStep<=160)continue
         const placed={...card,x,w,y}

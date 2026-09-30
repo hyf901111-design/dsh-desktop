@@ -3,6 +3,17 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('整理旧研究运营看板的窄列长尾补入宽列，柱状图保持模板高度',()=>{
+ for(const width of [810,1000]){
+  const g=createResearchGrid(),m=g.metrics(width),before=[item('metrics',0,0,15,20),item('calendar',15,0,25,15),item('gantt',0,20,15,14),item('news',0,34,15,15),item('reports',0,49,15,29),item('bar',0,78,15,17)]
+  const nodes=before.map(c=>({id:c.id,kind:'generated-container',containerSpec:{},preferred:{height:c.h*m.step-m.gap}})),next=g.arrange(nodes,before,width)
+  expect(next.filter(c=>c.x===15).length).toBeGreaterThanOrEqual(3)
+  expect(Math.max(...next.map(c=>c.y+c.h))).toBeLessThan(before.find(c=>c.id==='bar').y)
+  expect(next.find(c=>c.id==='bar').h).toBe(17)
+  expect(next.every((a,i)=>next.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+  expect(g.arrange(nodes,next,width)).toEqual(next)
+ }
+})
 it('空画板首次挂载工作台占满两列，排队到完成保持默认格位，后续批次不改已有布局',()=>{
  const state=createWorkbenchGridState(null,'new-workbench'),g=createResearchGrid()
  state.enable(900)
