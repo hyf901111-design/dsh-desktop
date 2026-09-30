@@ -56,6 +56,10 @@ export function templateDataIssue(data){
 // Empty retrieval is a source problem, not malformed visual JSON. A bounded
 // repair must retain tools so it can correct the query's time direction.
 export function templateSourceDataIssue(data) {
+  if(data?.type==='market'&&data.variant==='company-profile'&&data.companies?.length&&data.companies.every(r=>['address','phone','website','sector','industry','employeeCount','exchange','ipoDate'].every(k=>r[k]===null)&&!r.registrations?.length&&!r.description?.length))
+    return '公司资料全部未提供。必须取得来源记录，不能只用公司名称和全空信息标为取数完成。'
+  if(data?.type==='market'&&data.variant==='financial-statements'&&data.datasets?.length&&data.datasets.every(d=>d.rows.every(r=>r.values.every(v=>v===null))))
+    return '财务报表尚无已披露数值。必须取得来源记录，不能用全空科目表标为取数完成。'
   if(data?.type==='market'&&data.variant==='price-performance'&&!data.candles?.length)
     return '价格表现尚无已取得OHLCV。检查实际业务查询，不把示意蜡烛或空历史标为取数完成。'
   if(data?.type==='market'&&data.variant==='valuation-multiples'&&data.datasets?.length&&data.datasets.every(d=>d.series.every(r=>r.values.every(v=>v===null))))
