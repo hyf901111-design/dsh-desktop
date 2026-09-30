@@ -11,22 +11,15 @@
         "schemaVersion": 1,
         "featureName": "修复整理指标裁切和旧模板窄列排版并集成财务模板",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
-        "tipCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
+        "baseCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
+        "tipCommit": "e6bc892d052932b4ce3fdac624d03a7b13e99003",
         "commits": [
           {
-            "commit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
+            "commit": "e6bc892d052932b4ce3fdac624d03a7b13e99003",
             "parents": [
-              "cf02939ec36b70818b33d4b644c82f9ef0073c5f"
+              "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d"
             ],
-            "subject": "组件：补齐三类财务模板并保留指标来源阅读空间"
-          },
-          {
-            "commit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
-            "parents": [
-              "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b"
-            ],
-            "subject": "画布：修复整理后指标裁切及旧模板窄列文字重叠"
+            "subject": "画布：按完整指标内容收紧整理高度并优化窄列"
           }
         ],
         "files": [
@@ -40,39 +33,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/financial-profile.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
           },
           {
             "status": "M",
@@ -80,35 +41,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-profile.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/operations-template.test.js"
           },
           {
             "status": "M",
@@ -116,15 +49,7 @@
           },
           {
             "status": "M",
-            "path": "test/research-optimal-arrange.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-design-contract.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workflow-template.test.js"
+            "path": "test/research-html-theme.test.js"
           }
         ],
         "checks": [
@@ -155,9 +80,9 @@
               "test/research-optimal-arrange.test.js"
             ],
             "outcome": "passed",
-            "summary": "429项直接相关及继承门禁通过",
-            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
-            "completedAt": "2026-09-30T15:48:55.775Z",
+            "summary": "430项直接相关及继承门禁通过",
+            "verifiedCommit": "e6bc892d052932b4ce3fdac624d03a7b13e99003",
+            "completedAt": "2026-09-30T16:16:29.272609+00:00",
             "timeoutMs": 300000
           },
           {
@@ -170,8 +95,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
-            "completedAt": "2026-09-30T15:48:55.775Z",
+            "verifiedCommit": "e6bc892d052932b4ce3fdac624d03a7b13e99003",
+            "completedAt": "2026-09-30T16:16:29.272609+00:00",
             "timeoutMs": 300000
           },
           {
@@ -182,8 +107,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
-            "completedAt": "2026-09-30T15:48:55.775Z",
+            "verifiedCommit": "e6bc892d052932b4ce3fdac624d03a7b13e99003",
+            "completedAt": "2026-09-30T16:16:29.272609+00:00",
             "timeoutMs": 300000
           },
           {
@@ -194,8 +119,22 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
-            "completedAt": "2026-09-30T15:48:55.775Z",
+            "verifiedCommit": "e6bc892d052932b4ce3fdac624d03a7b13e99003",
+            "completedAt": "2026-09-30T16:16:29.272609+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "overflowing text/media bounds|bounded content dimensions|workbench reports intrinsic|完整指标尺寸标记|工作台整理|工作台展开|工作台跨沙盒滚动桥"
+            ],
+            "outcome": "passed",
+            "summary": "7项尺寸与沙盒桥检查通过，27项跳过；四项既存旧合同失败已基线重现",
+            "verifiedCommit": "e6bc892d052932b4ce3fdac624d03a7b13e99003",
+            "completedAt": "2026-09-30T16:16:29.272609+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -211,60 +150,18 @@
           "真实取数工具权限和仅手动设置继承",
           "旧五六指标和上证三四指标整理后完整可读",
           "测量及二次测高不使用裁切框高度",
-          "重复整理稳定且整次可一步撤销"
+          "重复整理稳定且整次可一步撤销",
+          "完整自然指标测量取代保守高度，避免额外留白",
+          "480px以下指标两列，单位阅读自然"
         ],
         "risks": [
           "最新44类业务模板尚未全部覆盖",
           "总体成功率超过90%尚未验证",
           "新模板及指标空间需集成包原生复验",
-          "旧全量workbench夹具及依赖补丁问题未计为通过"
+          "旧全量workbench夹具及依赖补丁问题未计为通过",
+          "HTML主题旧文件四项既存失败已在修改前548e33基线重现，未计通过"
         ],
-        "generatedAt": "2026-09-30T15:48:55.775Z"
-      },
-      "merged": {
-        "mergeCommit": "0d7bcf24e86dae323decef095d81b437083d9dab",
-        "verificationCommit": "0d7bcf24e86dae323decef095d81b437083d9dab",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "0d7bcf24e86dae323decef095d81b437083d9dab",
-            "completedAt": "2026-09-30T15:50:53.434Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "0d7bcf24e86dae323decef095d81b437083d9dab",
-            "completedAt": "2026-09-30T15:50:53.434Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0d7bcf24e86dae323decef095d81b437083d9dab",
-            "completedAt": "2026-09-30T15:50:53.434Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T15:50:53.434Z"
+        "generatedAt": "2026-09-30T16:16:29.272609+00:00"
       }
     }
   ],
