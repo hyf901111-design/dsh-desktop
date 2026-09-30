@@ -126,6 +126,23 @@ it('materializes observed data and saves the same mapping for model-free updates
  expect(readTemplateModel(saved[0]).data.items).toEqual([{label:'沪深300ETF',value:'4.6 元'}])
  expect(b.intervalMinutes).toBe(1)
 })
+it('binds manual-only source data with automatic scheduling disabled while allowing a manual refresh',async()=>{
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start:async()=>({childSessionId:'child',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records}),dispose:async()=>{}}),bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try {
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'使用通联生成ETF行情指标面板，variant: metrics。设置仅手动刷新，失败保留旧数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(bindData.mock.calls[0][1].intervalMinutes).toBe(0)
+  const result=resolveBoundComponent(JSON.stringify(draft),records,now,{intervalMinutes:0})
+  const execute=vi.fn(async()=>response)
+  const engine=new ComponentDataRefresh({now:()=>now.getTime(),owner:()=> 'o',load:async()=>[],save:async()=>{},inspect:async()=>({writable:true,spec:JSON.parse(result.output),revision:'r'}),validateRequest:async r=>r,execute,apply:async()=>{}})
+  const binding=await engine.bind({...result.recipe,sessionId:'s',nodeId:'n',workspaceId:'w'},JSON.parse(result.output))
+  expect(binding).toMatchObject({intervalMinutes:0,enabled:false})
+  expect(execute).not.toHaveBeenCalled()
+  await engine.refresh(binding.id)
+  expect(execute).toHaveBeenCalledOnce()
+ } finally {await runtime.dispose()}
+})
 it('rejects unobserved requests, changed securities, failed calls and invented fields',()=>{
  expect(()=>resolveBoundComponent(JSON.stringify(draft),[],now)).toThrow(/本轮已成功/)
  const changed=structuredClone(draft);changed.requests[0].args.url_params.ticker='600519'

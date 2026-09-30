@@ -306,7 +306,7 @@ export function validateWorkbench(value) {
             throw Error(`面板「${p.title}」已给出具体指标数值，请在 artifact.items 中逐项提交原数值与单位；不能以通用模拟模板数值替代。`);
         if (isSimulated && !parallel) requireSimulatedChartData(p);
         if (isSimulated && ['progress','tasks','approval','alerts','form','code','clock'].includes(p.type) && p.artifact === undefined)
-            throw Error(`面板「${p.title}」需要 artifact 中的实际需求记录；不能生成无关清单或进度样例。${operationsTemplateSchema(p.type)}`);
+            throw Error(`面板「${p.title}」需要完整 artifact ${p.type==='clock'?'时区配置；live设备时钟同样需要明确城市和IANA时区':'中的实际需求记录；不能生成无关清单或进度样例'}。${operationsTemplateSchema(p.type)}`);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
         const panel = { title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}) };

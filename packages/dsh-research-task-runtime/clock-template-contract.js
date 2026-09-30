@@ -2,7 +2,7 @@ export const CLOCK_TEMPLATES=Object.freeze([
  Object.freeze({id:'clock',type:'clock',title:'世界时钟',figma:'1917:353139',width:980,height:200,minWidth:320,minHeight:180,version:'21z-20260930',interactions:['城市与时区','12/24小时制']})
 ]);
 export function clockTemplateSchema(type){
- if(type==='clock')return 'version:1,type:"clock",title,asOf,locations:[{id:"ny",label:"纽约 · 美国",timeZone:"America/New_York"}]；1–12个唯一id，timeZone必须为有效IANA时区。可选selectedId、hourCycle:"h23"或"h12"、note。mode默认live，从设备时钟实时计算；mode:"snapshot"必须提供带Z或时区偏移的ISO currentTime（如2026-09-30T12:00:00Z），固定展示该时刻并明确标注快照。按IANA规则计算夏令时与跨日，不把时钟更新时间写成行情刷新时间。';
+ if(type==='clock')return 'version:1,type:"clock",title,asOf,locations:[{id:"ny",label:"纽约 · 美国",timeZone:"America/New_York"}]；1–12个唯一id，timeZone必须为有效IANA时区。可选selectedId、hourCycle:"h23"或"h12"、note。mode默认live，从设备时钟实时计算；mode:"snapshot"必须提供带Z或时区偏移的ISO currentTime（如2026-09-30T12:00:00Z），固定展示该时刻并明确标注快照。按IANA规则计算夏令时与跨日，不把时钟更新时间写成行情刷新时间。时钟的live和snapshot均必须在首次工作台调用提供完整panel.artifact时区配置，不能仅传title/prompt。';
 }
 export function clockDataIssue(s){
  const text=(v,n=256)=>typeof v==='string'&&v.trim().length>0&&v.length<=n;
