@@ -177,6 +177,51 @@
           "本次生成卡片改动的真实客户端创建过程将在集成构建后目检；局部单测使用已打补丁依赖时出现既有重复锚点错误，未作为通过依据。"
         ],
         "generatedAt": "2026-09-30T00:10:10.444Z"
+      },
+      "merged": {
+        "mergeCommit": "e740d910741be0bed7ce39e9b1fc4026118d2f38",
+        "verificationCommit": "e740d910741be0bed7ce39e9b1fc4026118d2f38",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "e740d910741be0bed7ce39e9b1fc4026118d2f38",
+            "completedAt": "2026-09-30T00:11:27.969Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "e740d910741be0bed7ce39e9b1fc4026118d2f38",
+            "completedAt": "2026-09-30T00:11:27.969Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e740d910741be0bed7ce39e9b1fc4026118d2f38",
+            "completedAt": "2026-09-30T00:11:27.969Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-30T00:11:27.969Z"
       }
     }
   ],
