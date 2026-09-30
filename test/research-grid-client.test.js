@@ -1035,6 +1035,20 @@ it('延迟挂载的HTML预览收到真实选择状态，取消选择和载入同
  expect(f.host.querySelector('.ew-grid-selection-ring')).not.toBeNull()
 })
 
+it.each(['price-performance','valuation-multiples','price-target'])('金融序列 %s 初次完成后按可信内容报告补足高度，无需整理',async variant=>{
+ const f=await fixture(true),w=f.workspace,{seriesFixtures}=await import('./fixtures/financial-series.js')
+ const panel={nodeId:'series',title:'序列',prompt:variant,pending:true,width:656,height:456,x:0,y:0,size:'large'}
+ const plan={id:'series-workbench',createdAt:Date.now(),panels:[panel]}
+ await act(async()=>w.applyWorkbench(plan))
+ const before=w.getWorkbenchCells().map(({freePosition,...c})=>c)
+ await act(async()=>w.applyWorkbench({...plan,panels:[{...panel,taskId:'prepared-series',preparedOutput:acceptArtifactOutput(JSON.stringify(seriesFixtures.find(s=>s.variant===variant)))}]}))
+ await vi.waitFor(async()=>{await act(async()=>{});expect(f.host.querySelector('iframe[data-research-html-artifact]')).not.toBeNull()},{timeout:2000,interval:50})
+ const frame=f.host.querySelector('iframe[data-research-html-artifact]')
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:520,height:570}})))
+ expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(638)
+ expect(w.getWorkbenchCells()).toEqual(before)
+})
+
 it('金融快照在侧栏挤窄后按可信内容报告补足显示高度，保持逻辑布局',async()=>{
  const f=await fixture(true),w=f.workspace,html='<body data-sherlock-market="share-statistics"></body>'
  await act(async()=>{w.setArtifacts([{...text('snapshot'),kind:'generated-container',containerPrompt:'股本统计',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'快照',html}}]);w.applyWorkbenchCells([{id:'snapshot',x:0,y:0,w:40,h:12}],true)})

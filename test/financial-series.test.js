@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest'
 import {JSDOM} from 'jsdom'
-import {financialSeriesDataIssue,renderFinancialSeries} from '../packages/dsh-research-task-runtime/financial-series.js'
+import {financialSeriesDataIssue,renderFinancialSeries,FINANCIAL_SERIES_FIELDS} from '../packages/dsh-research-task-runtime/financial-series.js'
+import {WORKBENCH_EARLY_PLAN} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {marketVariant,workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
@@ -17,6 +18,13 @@ function dom(data){
 }
 const event=(d,el,type,props={})=>el.dispatchEvent(new d.window.KeyboardEvent(type,{bubbles:true,...props}))
 describe('latest financial series data and interactions',()=>{
+ it('makes exact series schemas available to the parent before its first batch submission',()=>{
+  for(const [variant,fields] of Object.entries(FINANCIAL_SERIES_FIELDS)){
+   expect(WORKBENCH_EARLY_PLAN).toContain(`artifact.variant="${variant}"`)
+   expect(WORKBENCH_EARLY_PLAN).toContain(fields)
+  }
+  expect(WORKBENCH_EARLY_PLAN).toContain('不猜别名或用嵌套对象代替数字')
+ })
  it.each(seriesFixtures)('retains $variant as its independent sourced model and dimensions',data=>{
   expect(financialSeriesDataIssue(data)).toBeNull();const out=acceptArtifactOutput(JSON.stringify(data));expect(out).toBeTruthy();const spec=JSON.parse(out)
   expect(readTemplateModel(spec).data).toEqual(data);expect(templateFor(data).figma).toMatch(/^1917:/);expect(templateFor(data).interactions.length).toBeGreaterThan(2)
