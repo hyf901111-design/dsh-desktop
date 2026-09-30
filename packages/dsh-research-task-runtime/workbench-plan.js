@@ -11,6 +11,7 @@ const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', '
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
+const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
     dashboard: 'dashboard 应包含 asOf 和 items:[{label,value:"带单位的字符串",detail?}]（也接受 metrics 中的数值和 unit）。',
     chart: chartTemplateSchema(),
@@ -291,6 +292,8 @@ export function validateWorkbench(value) {
             if (issue) throw Error(issue);
         }
         if (parallel && p.artifact !== undefined) throw Error('并行模拟生成只提交面板规划，不提交 artifact。');
+        if (isSimulated && !parallel && p.artifact === undefined && ['dashboard', 'kpi'].includes(p.type) && explicitMetricValue(`${p.title} ${p.prompt}`))
+            throw Error(`面板「${p.title}」已给出具体指标数值，请在 artifact.items 中逐项提交原数值与单位；不能以通用模拟模板数值替代。`);
         if (isSimulated && !parallel) requireSimulatedChartData(p);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
