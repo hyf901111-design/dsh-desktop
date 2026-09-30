@@ -7,6 +7,7 @@ import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
 import {afterEach,it,expect,vi} from 'vitest'
 import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {patchCanvasCreationTools} from '../scripts/lib/canvas-creation-tools.mjs'
 import {workbenchRefreshTooltip} from '../scripts/lib/research-grid-ui.mjs'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
@@ -36,6 +37,17 @@ it('重复补丁恢复原始代码且不积累事件或样式',async()=>{
  expect(restoreResearchGridWorkbench(once).trim()).toBe(base.trim())
  expect(patchResearchGridWorkbench(once)).toBe(once)
 },15000)
+it('已有补丁客户端升级整理图标，不重复添加按钮或丢失回调',async()=>{
+ const original=restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const start=original.indexOf("'data-research-global-arrange':''"),end=original.indexOf("className:'odyssey-tool-icon'",start)
+ const legacy=original.slice(0,start)+original.slice(start,end).replace(/src:"data:image\/svg\+xml;base64,[^"]+"/,'src:"data:image/svg+xml;base64,b2xkLWFkZC1zeW1ib2w="')+original.slice(end)
+ const updated=patchCanvasCreationTools(legacy),button=updated.slice(start,updated.indexOf("className:'odyssey-tool-icon'",start))
+ expect(button).not.toContain('b2xkLWFkZC1zeW1ib2w=')
+ expect(Buffer.from(button.match(/src:"data:image\/svg\+xml;base64,([^"]+)"/)[1],'base64').toString()).toContain('M4 3v18')
+ expect(updated.match(/'data-research-global-arrange':''/g)).toHaveLength(1)
+ expect(button).toContain('researchCanvasArrangeWithMotion')
+ expect(patchCanvasCreationTools(updated)).toBe(updated)
+})
 it('真实工作台入口按完整面板规划初始化两列，内容返回不改变卡片框',async()=>{
  const f=await fixture(),w=f.workspace
  w.setCanvasSize({width:900,height:700});w.setWorkbenchWidth(900)
