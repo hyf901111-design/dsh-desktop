@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "规划卡片支持缩放与自由落点，限定子代理过程入口",
+        "featureName": "收矮会话顶栏并统一右栏按钮垂直对齐",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "17c39e5996ad43fd67a26d68e2bc807183bbe091",
-        "tipCommit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
+        "baseCommit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
+        "tipCommit": "9482d10516d8a393a87c86f73535548db47a7c1d",
         "commits": [
           {
-            "commit": "46a701868f6a86fc09e0eb4ee3e7d06c2e0b3b28",
+            "commit": "9482d10516d8a393a87c86f73535548db47a7c1d",
             "parents": [
-              "17c39e5996ad43fd67a26d68e2bc807183bbe091"
+              "1b1357c18fbe8d3360782c8e8e5a94d6194b114f"
             ],
-            "subject": "记录工具栏图标与网页会话的原生客户端验收结果"
-          },
-          {
-            "commit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
-            "parents": [
-              "46a701868f6a86fc09e0eb4ee3e7d06c2e0b3b28"
-            ],
-            "subject": "支持规划卡片调整尺寸和自由落点，仅子代理生成卡显示过程"
+            "subject": "收矮会话顶栏并统一右栏按钮的垂直对齐"
           }
         ],
         "files": [
@@ -36,27 +29,23 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
+            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
+            "path": "src/preload/figma-panels.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "src/preload/figma-refinements.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
+            "path": "test/figma-header-layout.test.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
+            "path": "test/figma-home-materials.test.js"
           }
         ],
         "checks": [
@@ -64,76 +53,32 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
-              "test/research-creation-progress.test.js",
-              "test/research-planning-occupancy.test.js"
+              "test/figma-header-layout.test.js",
+              "test/figma-home-materials.test.js",
+              "test/figma-responsive-header.test.ts",
+              "test/panel-toggle-drag-region.test.js"
             ],
             "outcome": "passed",
-            "summary": "112项直接相关检查通过，包含缩放撤销重做及三类子代理入口",
-            "verifiedCommit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
-            "completedAt": "2026-09-30T05:59:20.699886+00:00",
+            "summary": "22项直接相关检查通过，包含实际原生顶栏结构与浅深色展开收起几何对齐",
+            "verifiedCommit": "9482d10516d8a393a87c86f73535548db47a7c1d",
+            "completedAt": "2026-09-30T06:32:12.287383+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能分支完成实际React画布交互检查，待集成本地包原生复验"
+          "summary": "实际样式级联的Chromium布局检查完成，等待本地包原生窗口复验"
         },
         "acceptanceCriteria": [
-          "规划卡片允许选中、整卡拖动和调整宽高",
-          "规划卡片拖到空位后保留落点，继续网格占位挤压",
-          "规划卡片无过程按钮，仅已启动子代理生成卡片显示过程",
-          "状态变化保留用户尺寸，临时选中与格位不持久化"
+          "主顶栏由56px缩至44px",
+          "标题、模式、导航和操作按钮与右栏展开按钮中心对齐",
+          "画布起点和高度同步",
+          "浅深色与展开收起宽度切换保持对齐"
         ],
         "risks": [
           "整体44类业务模板接入和总体原生成功率目标仍待完成"
         ],
-        "generatedAt": "2026-09-30T05:59:48.092687+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e37ff52aa52f7a0cc70895fe43bf87a54cf5cd80",
-        "verificationCommit": "e37ff52aa52f7a0cc70895fe43bf87a54cf5cd80",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "e37ff52aa52f7a0cc70895fe43bf87a54cf5cd80",
-            "completedAt": "2026-09-30T06:00:56.662Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "e37ff52aa52f7a0cc70895fe43bf87a54cf5cd80",
-            "completedAt": "2026-09-30T06:00:56.662Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e37ff52aa52f7a0cc70895fe43bf87a54cf5cd80",
-            "completedAt": "2026-09-30T06:00:56.662Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T06:00:56.662Z"
+        "generatedAt": "2026-09-30T06:32:12.287383+00:00"
       }
     }
   ],
