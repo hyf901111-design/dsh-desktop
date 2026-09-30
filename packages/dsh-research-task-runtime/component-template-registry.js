@@ -1,6 +1,7 @@
 import {CHART_TEMPLATES,chartTemplateSchema} from './chart-template-contract.js'
 import {MARKET_DESIGN_TEMPLATES,TERMINAL_GENERIC_TEMPLATES,WORKBENCH_DESIGN_VERSION} from './workbench-design-contract.js'
 import {applyTerminalPresentation} from './terminal-presentation.js'
+import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
 
 const interactions = {
  metrics:['详情'],candlestick:['标的','交易区间','逐点行情'],trend:['系列','逐点数值'],scatter:['点选详情'],table:['搜索','排序','行详情'],pipeline:['阶段筛选','详情'],events:['详情'],heatmap:['选择区块','详情'],breadth:['区间分布'],
@@ -12,6 +13,7 @@ const generic=[
  ['reports','研报',['搜索','分类','展开','来源'],656,352],['calendar','日程',['日期','事件详情'],656,316],['gantt','甘特图',['筛选','日期','任务详情'],656,352]
 ]
 export const COMPONENT_TEMPLATES=Object.freeze([
+ ...OPERATIONS_TEMPLATES.map(t=>({...t,schema:operationsTemplateSchema(t.id)})),
  ...CHART_TEMPLATES.map(t=>({...t,id:`chart.${t.variant}`,type:'chart',schema:chartTemplateSchema(t.variant),interactions:t.interactions??['系列切换','逐点数值','完整数据'],version:'22a-20260930'})),
  ...Object.entries(MARKET_DESIGN_TEMPLATES).map(([variant,t])=>({id:`market.${variant}`,type:'market',variant,title:t.id,width:t.width,height:t.height,figma:t.figma,interactions:interactions[variant]})),
  ...generic.map(([id,title,interactions,width,height])=>({id,type:id.split('.')[0],...(id.startsWith('chart.')?{variant:id.split('.')[1]}:{}),title,interactions,width,height,figma:TERMINAL_GENERIC_TEMPLATES[id].figma}))
