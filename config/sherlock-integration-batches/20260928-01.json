@@ -105,6 +105,51 @@
           "旧research-workbench套件存在重复打补丁依赖与模拟fixture问题，未计为通过"
         ],
         "generatedAt": "2026-09-30T14:23:29.603030+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
+        "verificationCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
+            "completedAt": "2026-09-30T14:25:18.440Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
+            "completedAt": "2026-09-30T14:25:18.440Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
+            "completedAt": "2026-09-30T14:25:18.440Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-09-30T14:25:18.440Z"
       }
     }
   ],
