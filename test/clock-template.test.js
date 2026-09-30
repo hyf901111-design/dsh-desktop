@@ -61,6 +61,6 @@ describe('21Z world clock template',()=>{
   expect(clockDataIssue(data)).toBeTruthy();expect(acceptArtifactOutput(JSON.stringify(data))).toBeUndefined();
  });
  it('requires real clock configuration when a simulated panel is planned',()=>{
-  expect(()=>validateWorkbench({requestId:'clock-missing',title:'时钟',dataMode:'simulated',panels:[{title:'世界时钟',type:'clock',prompt:'展示所需时区',size:'large'}]})).toThrow(/artifact.*IANA/);
+  expect(()=>validateWorkbench({requestId:'clock-missing',title:'时钟',dataMode:'simulated',panels:[{title:'世界时钟',type:'clock',prompt:'展示所需时区',size:'large'}]})).toThrow(/artifact.*时区配置.*live设备时钟.*IANA/);
  });
 });

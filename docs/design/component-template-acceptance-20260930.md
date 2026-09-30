@@ -263,3 +263,8 @@ Figma已更新可编辑浅色/深色工具栏175:2、175:54为320×46，新增�
 - 浏览器验收发现异步交互日志重放被当成刷新期间的新操作，造成滚动位置归零。修复重放标记与刷新视图守卫；真正的新输入仍优先。另将持仓表格改为按剩余空间滚动，确保底部模拟口径完整显示；不改卡片位置或尺寸。
 - 62项直接相关检查通过。隔离浏览器使用实际ComponentDataRefresh、映射、固定持仓模板、生产HTML沙盒、交互日志和状态栏代码，调用明确标记的模拟来源10次；三模式各测试成功、无变化、失败，共9种结果，另验证减少动效及656/430/320宽度的底部说明。筛选“MOCK”、按占比排序、表格滚动96px、卡片尺寸和同一iframe元素均保持。没有绕过CSP或权限边界，未把模拟工具算成真实金融取数验收。
 - 证据refresh-final-focused.log、refresh-feedback-browser-checks.json及refresh-dark-loading.png、refresh-enterprise-changed.png。真实客户端绑定数据的刷新过程尚待新包验证；这组测试不计入自然语言组件生成成功率，整体模板覆盖与成功率目标仍未完成。
+
+
+原生时钟复验：集成67ee518a本地构建、深度签名与package检查通过，端口53441。自然输入两张时钟卡40秒完成，首次调用遗漏live配置被拒，第二次完整调用prepared，planId a833ea90-73df-4898-bc40-a579e1aa73f1；不能算首轮成功。首次布局未点击整理，两张卡的城市、小时制、时间、日期、偏移和来源均完整。实际将live切到纽约24小时（GMT-4）并观察走秒，将snapshot切到伦敦12小时（GMT+1、下午01:00:00）；三模式实际切换。切到本次创建的月度登记会话再返回，两项选项恢复，live继续走秒、snapshot时刻不变。证据clock-native-first-67ee.png、clock-native-light-67ee.png、clock-native-enterprise-67ee.png、clock-native-return-67ee.png。该轮未做Figma像素比对。
+
+由真实遗漏配置的重试补充clock的首次调用说明，live与snapshot都须完整artifact.locations；错误提示改为时区配置，不再把时钟说成任务清单。工具、早期规划策略和内置技能v1.11.1同步，仍须下一包自然输入确认降低重试。
