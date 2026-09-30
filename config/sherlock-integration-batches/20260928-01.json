@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复旧代码卡客户端预览序列化依赖",
+        "featureName": "修复工作台首次挂载占位尺寸",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "582ffa42587ff226940237eed65f4818ba165f47",
-        "tipCommit": "07e2a9d54b91633a231ad0dc7aeab23eed0fded2",
+        "baseCommit": "07e2a9d54b91633a231ad0dc7aeab23eed0fded2",
+        "tipCommit": "e069dd6cd15380580db84be9e6d19f4572592393",
         "commits": [
           {
-            "commit": "07e2a9d54b91633a231ad0dc7aeab23eed0fded2",
+            "commit": "e069dd6cd15380580db84be9e6d19f4572592393",
             "parents": [
-              "582ffa42587ff226940237eed65f4818ba165f47"
+              "07e2a9d54b91633a231ad0dc7aeab23eed0fded2"
             ],
-            "subject": "修复：客户端预览打包带齐代码卡修正依赖"
+            "subject": "修复：工作台首次挂载保留模板占位尺寸"
           }
         ],
         "files": [
@@ -29,7 +29,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
+            "path": "scripts/lib/figma-canvas-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
@@ -42,59 +46,13 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/input-template.test.js"
+              "-t",
+              "对话视图先收到"
             ],
             "outcome": "passed",
-            "summary": "实际安装模块恢复旧代码卡回归及128项直接相关检查通过",
-            "verifiedCommit": "07e2a9d54b91633a231ad0dc7aeab23eed0fded2",
-            "completedAt": "2026-09-30T11:06:41.886305+00:00",
-            "timeoutMs": 300000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "fa5429ca旧会话空白原生验收失败，本次等待新包复验"
-        },
-        "acceptanceCriteria": [
-          "旧输入会话画布可见",
-          "原有字段和格式状态恢复",
-          "三模式与底部控件可读"
-        ],
-        "risks": [
-          "整体44类业务模板仍待完成",
-          "总体成功率超过90%仍待验证"
-        ],
-        "generatedAt": "2026-09-30T11:06:41.886305+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2920f7246f7e744cac060bf0ab92928824196535",
-        "verificationCommit": "2920f7246f7e744cac060bf0ab92928824196535",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "2920f7246f7e744cac060bf0ab92928824196535",
-            "completedAt": "2026-09-30T11:08:18.275Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "2920f7246f7e744cac060bf0ab92928824196535",
-            "completedAt": "2026-09-30T11:08:18.275Z",
+            "summary": "首次挂载尺寸回归通过",
+            "verifiedCommit": "e069dd6cd15380580db84be9e6d19f4572592393",
+            "completedAt": "2026-09-30T11:34:06.662535+00:00",
             "timeoutMs": 300000
           },
           {
@@ -104,13 +62,26 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2920f7246f7e744cac060bf0ab92928824196535",
-            "completedAt": "2026-09-30T11:08:18.275Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "e069dd6cd15380580db84be9e6d19f4572592393",
+            "completedAt": "2026-09-30T11:34:12.436695+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-30T11:08:18.275Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "851068旧代码卡原生恢复通过；首次生成尺寸修正等待新包复验"
+        },
+        "acceptanceCriteria": [
+          "对话视图先收到规划不缩为默认草稿",
+          "内容完成保留原框",
+          "实际首次显示可读"
+        ],
+        "risks": [
+          "整体44类业务模板仍待完成",
+          "总体成功率超过90%仍待验证"
+        ],
+        "generatedAt": "2026-09-30T11:34:12.436750+00:00"
       }
     }
   ],
