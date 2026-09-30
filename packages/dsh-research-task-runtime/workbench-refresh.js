@@ -32,7 +32,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
       if (el.scrollTop || el.scrollLeft) scroll.push({ path: route(el), x: el.scrollLeft, y: el.scrollTop })
     }
     const values = [...entries()].map(([key, entry]) => [key, entry.value])
-    for (const el of root.querySelectorAll('[data-workbench-chart-view]')) { if (values.length >= 5000) break; const value = el.getAttribute('data-workbench-chart-view'); if (value?.length <= 512) values.push(['chart-view:' + JSON.stringify(route(el)), value]) }
+    for (const el of root.querySelectorAll('[data-workbench-chart-view]')) { if (values.length >= 5000) break; const value = el.getAttribute('data-workbench-chart-view'),key=el.getAttribute('data-workbench-view-key'); if (value?.length <= 512) values.push([key&&key.length<=120?'chart-view-key:'+key:'chart-view:' + JSON.stringify(route(el)), value]) }
     return { values, controls, scroll }
   }
   const publish = () => { timer = 0; if (!disposed && !applying) onState(snapshot()) }
@@ -50,8 +50,8 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
         el.dispatchEvent(new win.Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }))
       }
     }
-    for (const [key, value] of state.values || []) if (key.startsWith('chart-view:')) {
-      try { const el = resolve(JSON.parse(key.slice(11))), view = JSON.parse(value); if (el?.hasAttribute('data-workbench-chart-view')) el.dispatchEvent(new win.CustomEvent('sherlock-chart-restore', { detail: view })) } catch {}
+    for (const [key, value] of state.values || []) if (key.startsWith('chart-view:')||key.startsWith('chart-view-key:')) {
+      try { const el = key.startsWith('chart-view-key:')?[...root.querySelectorAll('[data-workbench-view-key]')].find(el=>el.getAttribute('data-workbench-view-key')===key.slice(15)):resolve(JSON.parse(key.slice(11))), view = JSON.parse(value); if (el?.hasAttribute('data-workbench-chart-view')) el.dispatchEvent(new win.CustomEvent('sherlock-chart-restore', { detail: view })) } catch {}
     }
     for (const item of state.scroll || []) { const el = resolve(item.path); if (el && Number.isFinite(item.x) && Number.isFinite(item.y)) { el.scrollLeft = Math.max(0, Math.min(12000, item.x)); el.scrollTop = Math.max(0, Math.min(12000, item.y)) } }
     if (animate && state.values?.length) {

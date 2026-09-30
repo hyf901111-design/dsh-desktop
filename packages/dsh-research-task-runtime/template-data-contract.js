@@ -56,6 +56,14 @@ export function templateDataIssue(data){
 // Empty retrieval is a source problem, not malformed visual JSON. A bounded
 // repair must retain tools so it can correct the query's time direction.
 export function templateSourceDataIssue(data) {
+  if(data?.type==='market'&&data.variant==='share-statistics'&&['totalShares','floatShares','freeFloatPercent'].every(k=>data[k]===null))
+    return '股本统计全部未提供。必须取得业务响应，不能把全空股本标为取数完成。'
+  if(data?.type==='market'&&data.variant==='market-overview'&&data.indices?.length&&data.indices.every(r=>r.price===null&&r.changePercent===null&&!r.sparkline?.values?.some(v=>typeof v==='number'&&Number.isFinite(v))))
+    return '市场概览尚无报价或历史观测。必须取得业务响应，不能把指数名称当成取数完成。'
+  if(data?.type==='market'&&data.variant==='currency-snapshot'&&data.pairs?.length&&data.pairs.every(r=>r.rate===null))
+    return '外汇快照尚无汇率观测。必须取得业务响应，不把全空货币对标为取数完成。'
+  if(data?.type==='market'&&data.variant==='watchlist'&&data.quotes?.length&&data.quotes.every(r=>r.price===null))
+    return '自选股尚无行情观测。必须取得业务响应，不把全空列表标为取数完成。'
   if(data?.type==='market'&&data.variant==='ticker-information'&&data.price===null&&data.dayChange===null&&data.dayChangePercent===null&&!data.sparkline?.values?.some(v=>typeof v==='number'&&Number.isFinite(v)))
     return '个股信息尚无可核验的报价或历史观测。必须取得业务响应，不能把证券名称和全空报价当成取数成功。'
   if(data?.type==='market'&&data.variant==='key-metrics'&&data.items?.length&&data.items.every(i=>i.value===null))

@@ -22,6 +22,8 @@ export function researchBentoSize(node = {}, measured) {
 // The source frame is a starting point. Dense content earns room for legible
 // labels and rows; sparse content keeps the source proportions.
 export function researchMarketContentDimensions(variant, data = {}) {
+  const snapshots={'share-statistics':[485,330],'market-overview':[980,380],'currency-snapshot':[980,430],'watchlist':[980,460]}[variant];
+  if(snapshots)return {width:snapshots[0],height:snapshots[1]};
   const base = {'ticker-information':[980,296],'key-metrics':[485,380],'management-team':[980,380],'metrics': [656, 334], 'candlestick': [656, 352], 'trend': [656, 300], 'price-volume': [656, 310], 'order-book': [656, 250], 'fund-flow': [656, 352], 'valuation-band': [656, 310], 'equity-drawdown': [656, 310], 'allocation-donut': [656, 300], 'waterfall': [656, 280], 'funnel': [656, 256], 'risk-matrix': [656, 310], 'scatter': [656, 376], 'table': [656, 352], 'pipeline': [656, 270], 'events': [656, 264], 'heatmap': [656, 320], 'breadth': [656, 200], 'fund-kpi': [656, 212], 'fund-holdings': [656, 352], 'fund-industry': [656, 352]}[variant];
   if (!base) return null;
   const count = (array, explicit) => Number.isInteger(explicit) ? explicit : Array.isArray(array) ? array.length : 0;

@@ -19,6 +19,8 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 
 - 个股报价简介用 `market.ticker-information`，核心指标清单用 `market.key-metrics`，管理团队与报酬披露用 `market.management-team`。首次自定义模拟工作台调用同时附完整 artifact 中的证券/记录与 asOf；不能以通用行情样例替代。ticker-information 保留证券代码、名称、报价单位、涨跌值与百分数、info 字段和历史 sparkline（缺历史用 sparklineMissing 说明）；key-metrics 逐项提供 label/value/period；management-team 提供 period 及 members 的 name/role/compensation/currency。未知值为 null 并提供 missing 原因；不同币种不合计，不把财年周期冒充最新报价日期。
 
+- 最新金融专用模板：股本统计用 `market.share-statistics`；市场概览用 `market.market-overview`；外汇快照用 `market.currency-snapshot`；自选股用 `market.watchlist`。首次自定义模拟调用附完整 artifact（真实数据缺失时先规划再取数），不替换成通用指标或明细。股数与自由流通百分数分开，逐市场保留各自交易状态和时点；外汇明确 1 单位基准币兑换报价币、precision 小数位，宿主按同一快照精确换算逆向报价；自选股逐行保留币种、原币市值、成交股数、缺失原因，并支持搜索、排序、已取得记录内的增删和刷新状态保留。所有百分比填百分数（0.5 表示 0.5%），未知填 null 并说明 missing。
+
 - 21Z 表单与代码已有固定模板：`form` 提供字段定义、默认值和就地校验，保存本画布的本地输入记录；`code` 提供原始代码和语言，支持 JSON 格式化、复制及下载，不执行代码。
 
 ## 选型与尺寸
