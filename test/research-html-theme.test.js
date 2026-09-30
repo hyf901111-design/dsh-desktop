@@ -478,6 +478,17 @@ it('沙箱工作台滚动条跟随所属组件选择，拒绝其他窗口和多�
  expect(outer.childHtml()).toContain('html[data-sherlock-theme="dark"][data-workbench-selected=true]')
 })
 
+it('完整指标尺寸标记跨沙盒保留，拒绝多余字段及非指标尺寸标记',()=>{
+ const outer=runtime(buildResearchHtmlPreview('<p>指标</p>','指标','light',{workbench:true}))
+ const size={type:'sherlock-workbench-content-size',width:430,height:300,intrinsicMetrics:true}
+ outer.send(size,outer.frame.contentWindow)
+ expect(outer.parentMessages.at(-1)?.data).toEqual(size)
+ const before=outer.parentMessages.length
+ for(const invalid of [{...size,intrinsicMetrics:false},{...size,extra:true},{...size,type:'sherlock-content-size'}])outer.send(invalid,outer.frame.contentWindow)
+ outer.send({...size,height:301},{})
+ expect(outer.parentMessages).toHaveLength(before)
+})
+
 it('工作台整理不把折叠明细的表格布局高度算入内容',()=>{
  const outer=runtime(buildResearchHtmlPreview('<svg width="500" height="120"></svg><p>图表说明</p><details><summary>完整行情数据</summary><table><tr><td>隐藏的第60行</td></tr></table></details>','图表','dark',{workbench:true}))
  const inner=runtime(outer.childHtml(),{configure:win=>{
