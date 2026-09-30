@@ -9,78 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "画布整理空隙、日历自适应和紧凑工具栏",
+        "featureName": "已有客户端整理图标更新修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "2a0cb9b807d58bd0083ef3ce7c6f357cafe33915",
-        "tipCommit": "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c",
+        "baseCommit": "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c",
+        "tipCommit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
         "commits": [
           {
-            "commit": "e359055cb5758900e94d599d92176fec5adf8f7b",
+            "commit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
             "parents": [
-              "2a0cb9b807d58bd0083ef3ce7c6f357cafe33915"
+              "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c"
             ],
-            "subject": "修复整理画布时窄组件无法填补宽列空隙"
-          },
-          {
-            "commit": "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c",
-            "parents": [
-              "e359055cb5758900e94d599d92176fec5adf8f7b"
-            ],
-            "subject": "优化日历自适应并缩小画布工具栏和更换整理图标"
+            "subject": "修复已安装客户端整理图标缓存未随设计更新"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "build/figma-canvas-icons/tool-arrange.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/tools-source.md"
-          },
-          {
-            "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/calendar-presentation.js"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/workbench-style.css"
+            "path": "scripts/lib/canvas-creation-tools.mjs"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-workbench.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-interactive-artifact.test.js"
           }
         ],
         "checks": [
@@ -88,30 +41,12 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-planning-occupancy.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/research-interactive-artifact.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/workbench-style.test.js"
+              "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "152项直接相关聚焦检查通过，含旧宽列空隙、日历交互及工具栏整理",
-            "verifiedCommit": "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c",
-            "completedAt": "2026-09-30T03:02:53.311709+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "4187b4a5eb8ec9bfe20f58ea52e612d856f4006c",
-            "completedAt": "2026-09-30T03:02:53.311709+00:00",
+            "summary": "93项客户端聚焦检查通过，含缓存图标升级和整理回调",
+            "verifiedCommit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
+            "completedAt": "2026-09-30T03:19:59.980754+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -120,62 +55,16 @@
           "summary": "功能工作树不构建共享客户端，待集成后实际窗口复验。"
         },
         "acceptanceCriteria": [
-          "窄组件可填补现有宽列且无重叠",
-          "日历六周月份页脚不遮挡末行",
-          "窄卡上下布局不横向溢出",
-          "工具栏320×46且整理图标不含添加符号"
+          "已有安装刷新整理图标",
+          "不重复增加按钮或丢失整理回调",
+          "保留紧凑工具栏尺寸"
         ],
         "risks": [
           "整体44类业务模板接入尚未完成",
           "九图真实输入首次失败，仍需复验",
           "仅聚焦检查和本地测试，无公开发布"
         ],
-        "generatedAt": "2026-09-30T03:02:53.311709+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a0545928bfd4daff5c4b43d23466f03b55cd0a4a",
-        "verificationCommit": "a0545928bfd4daff5c4b43d23466f03b55cd0a4a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a0545928bfd4daff5c4b43d23466f03b55cd0a4a",
-            "completedAt": "2026-09-30T03:03:37.098Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a0545928bfd4daff5c4b43d23466f03b55cd0a4a",
-            "completedAt": "2026-09-30T03:03:37.098Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a0545928bfd4daff5c4b43d23466f03b55cd0a4a",
-            "completedAt": "2026-09-30T03:03:37.098Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T03:03:37.098Z"
+        "generatedAt": "2026-09-30T03:19:59.980754+00:00"
       }
     }
   ],
