@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复否定模拟数据误禁取数工具并严验指定来源",
+        "featureName": "固定插件打包中可下载的source-map-js依赖",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
-        "tipCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
+        "baseCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
+        "tipCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
         "commits": [
           {
-            "commit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
+            "commit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
             "parents": [
-              "516b740241e65cacb013860d179fdbdd5cab8932"
+              "1033816cfc19f6f1d8b9748a2370667ef02bdb2c"
             ],
-            "subject": "修复：保留拒绝模拟数据时的真实取数工具并严验来源"
+            "subject": "构建：固定可下载的源码映射依赖版本"
           }
         ],
         "files": [
@@ -29,31 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-source-binding.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-market-artifact.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-design-contract.test.js"
+            "path": "scripts/prepare-bundled-plugin-profile.mjs"
           }
         ],
         "checks": [
@@ -75,12 +51,13 @@
               "test/component-refresh-policy.test.js",
               "test/component-source-binding.test.js",
               "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js"
+              "test/research-market-artifact.test.js",
+              "test/bundled-plugin-profile.test.ts"
             ],
             "outcome": "passed",
-            "summary": "226项直接相关及继承门禁通过",
-            "verifiedCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
-            "completedAt": "2026-09-30T14:10:27.950194+00:00",
+            "summary": "238项直接相关及继承门禁通过，插件profile的12项包含在内",
+            "verifiedCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
+            "completedAt": "2026-09-30T14:23:29.603030+00:00",
             "timeoutMs": 300000
           },
           {
@@ -93,8 +70,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
-            "completedAt": "2026-09-30T14:10:27.950194+00:00",
+            "verifiedCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
+            "completedAt": "2026-09-30T14:23:29.603030+00:00",
             "timeoutMs": 300000
           },
           {
@@ -105,20 +82,21 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
-            "completedAt": "2026-09-30T14:10:27.950194+00:00",
+            "verifiedCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
+            "completedAt": "2026-09-30T14:23:29.603030+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "a49原生取数被否定模拟误分类判失败；新源码9项三模式生产排版通过，下一包自然输入待复验"
+          "summary": "实际插件profile重新安装完成并确认source-map-js为1.2.1；新包原生验证待执行"
         },
         "acceptanceCriteria": [
           "否定模拟数据不会移除已授权取数工具",
           "指定通联来源缺少实际响应与映射不能成功交付",
           "数据日期与来源说明在metrics正文可见",
-          "仅手动刷新设置首次绑定为0"
+          "仅手动刷新设置首次绑定为0",
+          "公开依赖404不会中断插件profile准备"
         ],
         "risks": [
           "整体44类业务模板仍待完成",
@@ -126,52 +104,7 @@
           "本轮修复须新包原生复验",
           "旧research-workbench套件存在重复打补丁依赖与模拟fixture问题，未计为通过"
         ],
-        "generatedAt": "2026-09-30T14:10:27.950194+00:00"
-      },
-      "merged": {
-        "mergeCommit": "894f0ccbfd0f6f7709ca3282d52882d2e838fcce",
-        "verificationCommit": "894f0ccbfd0f6f7709ca3282d52882d2e838fcce",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "894f0ccbfd0f6f7709ca3282d52882d2e838fcce",
-            "completedAt": "2026-09-30T14:11:32.971Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "894f0ccbfd0f6f7709ca3282d52882d2e838fcce",
-            "completedAt": "2026-09-30T14:11:32.971Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "894f0ccbfd0f6f7709ca3282d52882d2e838fcce",
-            "completedAt": "2026-09-30T14:11:32.971Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T14:11:32.971Z"
+        "generatedAt": "2026-09-30T14:23:29.603030+00:00"
       }
     }
   ],
