@@ -23,6 +23,7 @@ export function createWorkbenchGridState(storage,sessionId) {
   function reconcile(snapshot) {
     if(!width)return snapshot
     const nodes=[...snapshot.files,...snapshot.artifacts,...planning.values()],ids=new Set(nodes.map(n=>n.id))
+    const priorNodes=nodesById
     nodesById=new Map(nodes.map(n=>[n.id,n]))
     cells=freeCells(cells)
     // Convert the old fixed 35px rows once, using the first actual viewport.
@@ -31,6 +32,13 @@ export function createWorkbenchGridState(storage,sessionId) {
     if(!initialized){cells=grid.migrate(nodes,width);initialized=true}
     const removed=cells.some(n=>!ids.has(n.id));cells=cells.filter(n=>ids.has(n.id))
     const m=grid.metrics(width)
+    // A draft's visible minimum can exceed its saved cell span. Preserve that
+    // actual frame when content arrives, before switching to the result minimum.
+    cells=cells.map(c=>{
+      const old=priorNodes.get(c.id),n=nodesById.get(c.id)
+      if(old?.kind!=='generated-container'||old.containerSpec||!n?.containerSpec||previous.get(c.id)!==geometry(n))return c
+      return grid.bounded({...c,x:(n.x-n.width/2-m.inset)/m.step,y:(n.y-n.height/2-m.inset)/m.rowStep,w:(n.width+m.gap)/m.step,h:(n.height+m.gap)/m.rowStep})
+    })
     let geometryChanged=false
     // External geometry transactions include undo, redo, collaboration and model
     // actions. Convert those boxes back to cells instead of overwriting history.
@@ -53,7 +61,10 @@ export function createWorkbenchGridState(storage,sessionId) {
         cells.push(grid.bounded({id:n.id,x:lane*span,y:tails[lane],w:span,h}));tails[lane]+=h;known.add(n.id)
       }
     }
-    for(const n of fresh)if(!known.has(n.id))cells.push(grid.append(cells,n.id,Math.min(40,Math.max(12,Math.round((n.width+m.gap)/m.step))),Math.max(m.minRows,Math.ceil((n.height+m.gap)/m.rowStep))))
+    for(const n of fresh)if(!known.has(n.id)){
+      const min=grid.minimum(n,m)
+      cells.push(grid.append(cells,n.id,Math.min(40,Math.max(min.w,Math.round((n.width+m.gap)/m.step))),Math.max(min.h,Math.ceil((n.height+m.gap)/m.rowStep))))
+    }
     const projected=grid.project(nodes,visibleCells(),width),byId=new Map(projected.map(n=>[n.id,n]))
     previous=new Map(projected.map(n=>[n.id,geometry(n)]));forced=false
     projected.forEach(n=>researchGridNodeIds.add(n.id))
