@@ -284,8 +284,11 @@ export function validateWorkbench(value) {
         }
         const requestsCandlestick = /K\s*线|蜡烛图|candlestick/iu.test(p.title) ||
             (p.type === 'chart' && /(?:绘制|显示|生成|展示|画).{0,12}(?:K\s*线|蜡烛图|candlestick)/iu.test(p.prompt));
-        if (requestsCandlestick && (p.type !== 'market' || marketVariant(p) !== 'candlestick'))
-            throw Error(`面板「${p.title}」必须使用 market.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
+        const chartVariant = p.type === 'chart' ? p.artifact?.variant ?? requestedChartVariant(`${p.title} ${p.prompt}`) : null;
+        if (requestsCandlestick && !(p.type === 'market' && marketVariant(p) === 'candlestick') && chartVariant !== 'candlestick')
+            throw Error(`面板「${p.title}」必须使用 market.candlestick 或 chart.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
+        if (/OHLC\s*(?:图|走势)/iu.test(p.title) && chartVariant !== 'ohlc')
+            throw Error(`面板「${p.title}」必须使用 chart.ohlc，绘制高低竖线与左开右收刻度；保留完整 OHLC/成交量数据，不能用蜡烛图替代。`);
         if (!isSimulated && p.artifact !== undefined) {
             if (!templateFor(p.artifact) || p.artifact.type !== p.type || !acceptArtifactOutput(JSON.stringify(p.artifact))) throw Error(`面板「${p.title}」的真实数据格式无效。${simulatedArtifactProblem(p.artifact)} 请复用已取得的数据，只修正字段格式，不重新取数或编写 HTML。`);
             const issue = workbenchMarketRecencyIssue(JSON.stringify(p.artifact), p.prompt);
