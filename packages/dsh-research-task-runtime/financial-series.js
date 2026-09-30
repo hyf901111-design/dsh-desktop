@@ -163,9 +163,10 @@ function multiplesRuntime(s,names) {
 function targetRuntime(s) {
  const root=document.querySelector('.financial-series'),svg=root.querySelector('svg'),sort=root.querySelector('[data-target-sort]'),expired=root.querySelector('[data-target-expired]'),table=root.querySelector('tbody'),readout=root.querySelector('[data-series-readout]')
  const key=r=>r.institution+':'+r.issuedDate,isExpired=r=>r.validUntil!==undefined&&r.validUntil<s.evaluationDate,ns='http://www.w3.org/2000/svg';let selected=''
+ const saveView=()=>{root.dataset.workbenchChartView=JSON.stringify({selected,sort:sort.value,includeExpired:expired.checked})}
  const add=(tag,attrs,label)=>{const el=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,String(v));if(label!==undefined)el.textContent=label;svg.appendChild(el);return el}
  const records=()=>s.forecasts.filter(r=>expired.checked||!isExpired(r)).sort((a,b)=>sort.value==='price'?(a.targetPrice===null?b.targetPrice===null?0:1:b.targetPrice===null?-1:b.targetPrice-a.targetPrice):b.issuedDate.localeCompare(a.issuedDate))
- const select=r=>{selected=key(r);readout.textContent=`${r.institution} · 预测目标 ${r.targetPrice===null?'未提供':r.targetPrice+' '+s.currency} · 发布 ${r.issuedDate} · ${r.validUntil?'有效至 '+r.validUntil:'未提供有效截止日'}${isExpired(r)?' · 已过期':''}${r.missing?' · '+r.missing:''}`;root.dataset.workbenchChartView=JSON.stringify({selected});root.querySelectorAll('[data-target-key]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.targetKey===selected)))}
+ const select=r=>{selected=key(r);readout.textContent=`${r.institution} · 预测目标 ${r.targetPrice===null?'未提供':r.targetPrice+' '+s.currency} · 发布 ${r.issuedDate} · ${r.validUntil?'有效至 '+r.validUntil:'未提供有效截止日'}${isExpired(r)?' · 已过期':''}${r.missing?' · '+r.missing:''}`;saveView();root.querySelectorAll('[data-target-key]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.targetKey===selected)))}
  const draw=()=>{
   const rows=records(),w=Math.max(300,svg.clientWidth),left=44,right=w-12,observations=[...rows.map(r=>r.targetPrice),s.currentPrice,...(s.history??[]).map(r=>r.value)].filter(v=>v!==null),lo=Math.min(...observations),hi=Math.max(...observations),span=hi-lo||Math.max(1,hi*.01),min=Number.isFinite(lo)?Math.max(0,lo-span*.15):0,max=Number.isFinite(hi)?hi+span*.15:1,dates=[s.evaluationDate,...rows.map(r=>r.issuedDate),...(s.history??[]).map(r=>r.date)].map(v=>Date.parse(v)),first=Math.min(...dates),last=Math.max(...dates),x=d=>last===first?(left+right)/2:left+(right-left)*(Date.parse(d)-first)/(last-first),y=v=>190-(v-min)/(max-min)*174
   svg.setAttribute('viewBox',`0 0 ${w} 230`);svg.replaceChildren();table.replaceChildren()
@@ -177,10 +178,10 @@ function targetRuntime(s) {
    if(r.targetPrice!==null){const dot=add('circle',{cx:x(r.issuedDate),cy:y(r.targetPrice),r:4,class:isExpired(r)?'target-dot target-expired':'target-dot',tabindex:0,role:'button','aria-label':`${r.institution}，${r.issuedDate}预测目标价${r.targetPrice} ${s.currency}${isExpired(r)?'，已过期':''}`,'data-target-key':id,'aria-selected':selected===id});const title=document.createElementNS(ns,'title');title.textContent=dot.getAttribute('aria-label');dot.appendChild(title);dot.addEventListener('click',show);dot.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show()}})}
   }
   root.querySelector('[data-target-count]').textContent=rows.length+' / '+s.forecasts.length+' 条机构预测'
-  const r=rows.find(r=>key(r)===selected);if(r)select(r);else{selected='';readout.textContent=rows.length?'点选预测散点或机构记录，查看完整日期与状态':'没有当前筛选下的机构记录';root.dataset.workbenchChartView=JSON.stringify({selected})}
+  const r=rows.find(r=>key(r)===selected);if(r)select(r);else{selected='';readout.textContent=rows.length?'点选预测散点或机构记录，查看完整日期与状态':'没有当前筛选下的机构记录';saveView()}
  }
  sort.addEventListener('change',draw);expired.addEventListener('change',draw)
- root.addEventListener('sherlock-chart-restore',e=>{if(e.target===root&&typeof e.detail?.selected==='string'){selected=e.detail.selected;draw()}})
+ root.addEventListener('sherlock-chart-restore',e=>{if(e.target!==root)return;const v=e.detail;if(typeof v?.selected!=='string'||v.sort!==undefined&&!['date','price'].includes(v.sort)||v.includeExpired!==undefined&&typeof v.includeExpired!=='boolean')return;selected=v.selected;if(v.sort!==undefined)sort.value=v.sort;if(v.includeExpired!==undefined)expired.checked=v.includeExpired;draw()})
  let observedWidth=svg.clientWidth
  new ResizeObserver(()=>{const width=svg.clientWidth;if(width===observedWidth)return;observedWidth=width;requestAnimationFrame(draw)}).observe(root);draw()
 }

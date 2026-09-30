@@ -78,6 +78,20 @@ describe('latest financial series data and interactions',()=>{
   for(const patch of [{currentPrice:undefined},{currency:'美元'},{forecasts:[{...target.forecasts[0],currency:'USD'}]},{forecasts:[{...target.forecasts[0],issuedDate:'2026-10-02'}]},{forecasts:[{...target.forecasts[0],validUntil:'2026-08-01'}]},{forecasts:[{...target.forecasts[0],targetPrice:null}]},{history:[...target.history,{date:'2026-10-02',value:13}]}])expect(financialSeriesDataIssue({...target,...patch})).toBeTruthy()
   expect(financialSeriesDataIssue({...target,forecasts:[target.forecasts[0],target.forecasts[0]]})).toMatch(/重复/)
  })
+ it('restores target filters semantically when a session recreates the graph',()=>{
+  const before=dom(target),after=dom({...target,forecasts:[...target.forecasts].reverse()})
+  try{
+   const doc=before.window.document,sort=doc.querySelector('[data-target-sort]'),expired=doc.querySelector('[data-target-expired]')
+   sort.value='price';sort.dispatchEvent(new before.window.Event('change'));expired.checked=false;expired.dispatchEvent(new before.window.Event('change'))
+   const view=JSON.parse(doc.querySelector('.financial-series').dataset.workbenchChartView),fresh=after.window.document,root=fresh.querySelector('.financial-series')
+   root.dispatchEvent(new after.window.CustomEvent('sherlock-chart-restore',{detail:view}))
+   expect(fresh.querySelector('[data-target-sort]').value).toBe('price')
+   expect(fresh.querySelector('[data-target-expired]').checked).toBe(false)
+   expect(fresh.querySelector('[data-target-count]').textContent).toBe('2 / 3 条机构预测')
+   expect(fresh.querySelector('tbody').textContent).not.toContain('机构乙')
+   expect(fresh.querySelectorAll('.target-dot')).toHaveLength(1)
+  }finally{before.window.close();after.window.close()}
+ })
  it('does not count all-empty financial observations as retrieved data',()=>{
   expect(templateSourceDataIssue({...performance,candles:[]})).toBeTruthy()
   expect(templateSourceDataIssue({...multiples,datasets:[{...multiples.datasets[0],series:[{metric:'pe',values:[null,null,null],missing:'未返回'}]}]})).toBeTruthy()
