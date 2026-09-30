@@ -31,6 +31,9 @@ function dependencies(options: {
   return { value, showSaveDialog, writeFile, copyFile, resolveExportSource }
 }
 
+describe('structured code export',()=>{
+ it('saves exact JSON UTF8 without evaluating its contents',async()=>{const f=dependencies({filePath:'/tmp/research.json'}),content='{"name":"研究","text":"</script>"}';expect(await saveResearchCanvasExport({kind:'text',format:'json',suggestedName:'研究.json',content},f.value)).toEqual({status:'saved'});expect(f.writeFile).toHaveBeenCalledWith('/tmp/research.json',content,{mode:0o600});});
+});
 describe('Research canvas export service', () => {
   it('accepts passive viewport SVG but rejects decoded external references and active markup',async()=>{
     const f=dependencies(),save=(content:string)=>saveResearchCanvasExport({kind:'text',format:'svg',suggestedName:'图.svg',content},f.value)

@@ -1,3 +1,4 @@
+import {renderInputArtifact} from './input-artifact.js';
 import {renderAdvancedChart} from './advanced-chart-artifact.js';
 import {renderSpecialChart} from './special-chart-artifact.js';
 import { renderCartesianChart } from './cartesian-chart-artifact.js';
@@ -37,7 +38,7 @@ export function acceptArtifactOutput(text) {
    if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
    continue;
   }
-  const spec=parseResearchContainerSpec(renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.

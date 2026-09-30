@@ -10,7 +10,7 @@ const MAX_NAME_LENGTH = 160
 const MAX_TEXT_BYTES = 8 * 1024 * 1024
 const MAX_BINARY_BYTES = 16 * 1024 * 1024
 
-type TextFormat = 'md' | 'csv' | 'txt' | 'svg' | 'html'
+type TextFormat = 'md' | 'csv' | 'json' | 'txt' | 'svg' | 'html'
 type BinaryFormat = 'png' | 'jpg'
 
 export type ResearchCanvasExportRequest =
@@ -49,6 +49,7 @@ const formatMetadata: Record<TextFormat | BinaryFormat | 'webloc', {
   md: { extension: 'md', label: 'Markdown' },
   csv: { extension: 'csv', label: 'CSV' },
   txt: { extension: 'txt', label: '文本' },
+  json: { extension: 'json', label: 'JSON' },
   svg: { extension: 'svg', label: 'SVG' },
   html: { extension: 'html', label: '离线交互网页' },
   png: { extension: 'png', label: 'PNG' },
@@ -124,7 +125,7 @@ function validRequest(value: unknown): ResearchCanvasExportRequest | null {
   }
   if (input?.kind === 'text') {
     const record = exactRecord(value, ['kind', 'format', 'suggestedName', 'content'])
-    if (record === null || !['md', 'csv', 'txt', 'svg', 'html'].includes(String(record.format)) ||
+    if (record === null || !['md', 'csv', 'json', 'txt', 'svg', 'html'].includes(String(record.format)) ||
         typeof record.suggestedName !== 'string' || record.suggestedName.length > MAX_NAME_LENGTH ||
         typeof record.content !== 'string' || Buffer.byteLength(record.content, 'utf8') > MAX_TEXT_BYTES) {
       return null

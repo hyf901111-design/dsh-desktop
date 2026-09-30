@@ -24,8 +24,8 @@ describe('reusable component templates',()=>{
   expect(()=>validateWorkbench({...plan,panels:[{...plan.panels[0],artifact:null}]})).toThrow(/ETF日行情.*version:1/)
  })
  it('has unique semantic data contracts including the current cartesian chart library',()=>{
-  expect(COMPONENT_TEMPLATES).toHaveLength(62)
-  expect(new Set(COMPONENT_TEMPLATES.map(t=>t.id)).size).toBe(62)
+  expect(COMPONENT_TEMPLATES).toHaveLength(64)
+  expect(new Set(COMPONENT_TEMPLATES.map(t=>t.id)).size).toBe(64)
   for(const t of COMPONENT_TEMPLATES){expect(t.version).toBeTruthy();expect(t.interactions.length).toBeGreaterThan(0);expect(t.minWidth).toBeGreaterThan(0)}
  })
  it.each(['metrics','candlestick','heatmap','fund-flow','risk-matrix'])('retains editable %s data without exposing HTML to the model',variant=>{
