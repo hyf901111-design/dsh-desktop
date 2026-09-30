@@ -20,8 +20,13 @@ export function nativeWebViewport(value: any) {
   if (!Number.isFinite(value.scale) || value.scale <= 0 || value.scale > 16) throw Error('Invalid webpage display scale')
   return { width: Math.round(size.width), height: Math.round(size.height) }
 }
+export function nativeWebPageZoom(value: any): number {
+  const zoom=value?.pageZoom ?? 1
+  if(!Number.isFinite(zoom)||zoom<.5||zoom>2)throw Error('Invalid webpage zoom')
+  return zoom
+}
 export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry }) {
-  const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; fittedAt: number; fitting: boolean; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
+  const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; pageZoom: number; fittedAt: number; fitting: boolean; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
   const routes = new Map<string, Promise<boolean>>()
   const key = (v: any) => { if (!v || typeof v.sessionId !== 'string' || typeof v.nodeId !== 'string' || v.sessionId.length > 256 || v.nodeId.length > 256) throw Error('Invalid webpage identity'); return JSON.stringify([v.sessionId,v.nodeId]) }
   const release = (id: string) => { const e=entries.get(id); if(e){ entries.delete(id);const win=options.getMainWindow();if(win&&!win.isDestroyed())win.contentView.removeChildView(e.view);if(!e.view.webContents.isDestroyed())e.view.webContents.close() } }
@@ -58,7 +63,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     // Renderer rectangles are CSS pixels. Electron child views use window DIP,
     // just like the conversation browser; Retina density is handled by Electron.
     const win=window(),hostZoom=win.webContents.getZoomFactor()
-    const bounds=nativeWebBounds(value,hostZoom), viewport=nativeWebViewport(value)
+    const bounds=nativeWebBounds(value,hostZoom), viewport=nativeWebViewport(value),pageZoom=nativeWebPageZoom(value)
     let entry=entries.get(id)
     if(entry&&entry.url!==authorization.url){release(id);entry=undefined}
     if(!entry){
@@ -68,7 +73,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})
-      entry={view,url:authorization.url,image:'',imageRevision:0,error:'',busy:false,typing:false,ready:false,touched:Date.now(),presentation:'',bounds:'',layout:'',surfaceScale:1,generation:0,reloadToken:Number(value.reloadToken)||0,capturedAt:0,inspectedAt:0,inspecting:false,fitZoom:1,fittedAt:0,fitting:false,inspection:null};entries.set(id,entry)
+      entry={view,url:authorization.url,image:'',imageRevision:0,error:'',busy:false,typing:false,ready:false,touched:Date.now(),presentation:'',bounds:'',layout:'',surfaceScale:1,generation:0,reloadToken:Number(value.reloadToken)||0,capturedAt:0,inspectedAt:0,inspecting:false,fitZoom:1,pageZoom,fittedAt:0,fitting:false,inspection:null};entries.set(id,entry)
       const current=entry
       view.setVisible(false);win.contentView.addChildView(view)
       view.webContents.setWindowOpenHandler(({url})=>{if(normalizeResearchLinkUrl(url))void view.webContents.loadURL(url).catch(()=>{});return {action:'deny'}})
@@ -85,6 +90,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       void view.webContents.loadURL(authorization.url).catch(error=>{current.error=String(error.message)})
     }
     entry.touched=Date.now()
+    if(entry.pageZoom!==pageZoom){entry.pageZoom=pageZoom;entry.view.webContents.setZoomFactor(entry.fitZoom*pageZoom);entry.capturedAt=0;if(pageZoom===1)entry.fittedAt=0}
     if(Number.isSafeInteger(value.reloadToken)&&value.reloadToken>=0&&value.reloadToken!==entry.reloadToken){entry.reloadToken=value.reloadToken;entry.error='';entry.view.webContents.reload()}
     entry.view.setBorderRadius(Math.max(0,Math.min(16,Math.round((Number(value.radius)||0)*hostZoom))))
     const size=win.getContentSize()
@@ -107,8 +113,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       const surfaceKey=JSON.stringify(surface)
       if(entry.bounds!==surfaceKey){entry.view.setBounds(surface);entry.bounds=surfaceKey}
       if (entry.presentation !== presentation) {
-        entry.view.webContents.setZoomFactor(1)
-        entry.fitZoom=1;entry.fittedAt=0
+        if(entry.layout!==layout){entry.fitZoom=1;entry.fittedAt=0;entry.view.webContents.setZoomFactor(entry.pageZoom)}
         entry.view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:viewport,viewPosition:{x:0,y:0},deviceScaleFactor:0,viewSize:viewport,scale:displayScale})
         entry.presentation = presentation
         entry.surfaceScale = displayScale
@@ -119,17 +124,17 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     // Geometry IPC must finish immediately. Snapshot capture and body extraction
     // run independently, are rate limited, and cannot hold up the next resize.
     const now=Date.now()
-    if(!entry.fitting&&!entry.error&&entry.ready&&now-entry.fittedAt>=1000){
+    if(!entry.fitting&&entry.pageZoom===1&&!entry.error&&entry.ready&&now-entry.fittedAt>=1000){
       entry.fitting=true;entry.fittedAt=now;const current=entry,generation=entry.generation,presentation=entry.presentation
       // Responsive pages retain their normal size. Fixed desktop pages fit
       // horizontally; navigation and resize reset the fit to this viewport.
       void entry.view.webContents.executeJavaScriptInIsolatedWorld(991,[{code:"new Promise(resolve=>requestAnimationFrame(()=>resolve({viewport:innerWidth,content:Math.max(document.documentElement.clientWidth,document.documentElement.scrollWidth,document.body?.scrollWidth||0)})))"}]).then(size=>{
-        if(entries.get(id)!==current||current.generation!==generation||current.presentation!==presentation||!size)return
+        if(entries.get(id)!==current||current.generation!==generation||current.presentation!==presentation||current.pageZoom!==1||!size)return
         const zoom=fittedBrowserZoom(1,current.fitZoom,Number(size.viewport),Number(size.content))
-        if(Math.abs(zoom-current.fitZoom)>.002){current.view.webContents.setZoomFactor(zoom);current.fitZoom=zoom;current.capturedAt=0}
+        if(Math.abs(zoom-current.fitZoom)>.002){current.view.webContents.setZoomFactor(zoom*current.pageZoom);current.fitZoom=zoom;current.capturedAt=0}
       }).catch(()=>{}).finally(()=>{current.fitting=false})
     }
-    if(!entry.busy&&!entry.error&&entry.ready&&now-entry.capturedAt>=1000){
+    if(!entry.busy&&!entry.error&&entry.ready&&(show||!entry.image)&&now-entry.capturedAt>=(show?1600:5000)){
       entry.busy=true;entry.capturedAt=now;const current=entry,generation=entry.generation,presentation=entry.presentation,fitZoom=entry.fitZoom
       void (async()=>{try {
         // Capturing an interactive page must not resurrect its compositor after
@@ -141,7 +146,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
         current.typing=await entry.view.webContents.executeJavaScript("!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]')").catch(()=>false)
       } catch {} finally {current.busy=false}})()
     }
-    if(!entry.inspecting&&!entry.error&&entry.ready&&now-entry.inspectedAt>=(show?2500:5000)){
+    if(!entry.inspecting&&!entry.error&&entry.ready&&(show||!entry.inspection)&&now-entry.inspectedAt>=(show?8000:30000)){
       entry.inspecting=true;entry.inspectedAt=now;const current=entry,generation=entry.generation
       void inspect({sessionId:value.sessionId,nodeId:value.nodeId}).then(inspection=>{
         if(entries.get(id)===current&&current.generation===generation)current.inspection=inspection

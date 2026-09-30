@@ -93,6 +93,19 @@ describe('research workbench Figma design contract', () => {
     expect(validateWorkbench(bad).panels[0]).toMatchObject({ type: 'chart', artifact: { variant: 'bar' } });
   });
 
+  it('keeps user supplied simulated KPI values instead of substituting template samples', () => {
+    const input={requestId:'explicit-metrics',title:'客服运营工作台',dataMode:'simulated',panels:[
+      {title:'咨询量指标',type:'dashboard',size:'small',prompt:'电话420次、在线580次、合计1000次'}
+    ]};
+    expect(()=>validateWorkbench(input)).toThrow(/原数值与单位/);
+    input.panels[0].artifact={asOf:'2026-09',items:[
+      {label:'电话咨询',value:'420 次'},
+      {label:'在线咨询',value:'580 次'},
+      {label:'合计',value:'1000 次'}
+    ]};
+    expect(validateWorkbench(input).panels[0].artifact.items.map(item=>item.value)).toEqual(['420 次','580 次','1000 次']);
+  });
+
   it('sizes dense finance data for reading while retaining source size for sparse data', () => {
     const denseTable = {version:1,type:'market',variant:'table',title:'银行明细',asOf:'模拟',
       columns:['名称','代码','价格','涨跌','市盈率','市净率','市值'],rows:Array.from({length:8},(_,i)=>[`银行${i}`,'600000.SH','8.5','+0.2','6.2','0.8','1000'])};
