@@ -495,6 +495,9 @@ body .odyssey-subagent-composer-popover .odyssey-run-info{flex:0 0 100%;width:10
 
 /* Preserve the original model / reasoning directory and native option states. */
 body .odyssey-restored-model-menu { z-index:3000; box-sizing:border-box; overflow:auto; }
+/* The restored picker uses a portal and does not carry the old menu class. */
+body .odyssey-restored-model-menu ._7KE1Ra_groupTitle{position:static;background:transparent;padding:6px 8px 4px;font:400 11px/18px var(--odyssey-font-ui);color:#757575}
+body[data-ds-dark-theme] .odyssey-restored-model-menu ._7KE1Ra_groupTitle{color:#9c9c9c}
 body .odyssey-restored-model-menu :is(button,[role=menuitemradio]):hover { background:var(--odyssey-menu-row); }
 body .odyssey-restored-model-menu :is(button,[role=menuitemradio]):focus-visible { outline:2px solid var(--odyssey-active); outline-offset:-2px; }
 body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { transition:background-color 120ms ease,box-shadow 120ms ease; }

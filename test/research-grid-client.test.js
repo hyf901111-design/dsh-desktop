@@ -61,6 +61,57 @@ it('真实工作台入口按完整面板规划初始化两列，内容返回不�
  expect(w.getWorkbenchCells().map(({freePosition,...c})=>c)).toEqual(before)
  expect(w.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
 })
+it.each(['generated-container','generated-mind-map','generated-summary'])('生成中的 %s 可从正文拖动，过程与停止按钮不触发拖动',async kind=>{
+ const f=await fixture(true),w=f.workspace
+ const node={...text('moving'),kind,generationStatus:'running',generationTaskId:'moving-task',generationStartedAt:Date.now(),generationEvents:[],sourceNodeIds:['peer'],containerPrompt:'模拟验证',refreshMinutes:0}
+ await act(async()=>w.setArtifacts([node,text('peer')]))
+ const card=f.host.querySelector('[data-research-node-id="moving"]'),body=card.querySelector('[data-research-generation-foreground] strong')
+ expect(body).not.toBeNull()
+ const before=structuredClone(w.getWorkbenchCells()),old=before.find(c=>c.id==='moving'),step=24.65
+ await f.event('pointerdown',body,{button:0,pointerId:144,clientX:100,clientY:100})
+ expect(f.canvas.getAttribute('data-grid-operation')).toBe('move')
+ await f.event('pointerup',f.canvas,{pointerId:144,clientX:100+step*4,clientY:100+step*5})
+ const moved=w.getWorkbenchCells().find(c=>c.id==='moving')
+ expect(moved.x!==old.x||moved.y!==old.y).toBe(true)
+ expect(moved.w).toBe(old.w);expect(moved.h).toBe(old.h)
+ for(const button of card.querySelectorAll('.odyssey-generation-actions button')){
+  await f.event('pointerdown',button,{button:0,pointerId:145,clientX:100,clientY:100})
+  expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ }
+ const cells=w.getWorkbenchCells();expect(cells.every((a,i)=>cells.every((b,j)=>i===j||!(a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y)))).toBe(true)
+ expect(w.undo()).toBe(true);expect(w.getWorkbenchCells()).toEqual(before)
+})
+it.each(['generated-container','generated-mind-map','generated-summary'])('自动尺寸的 %s 在生成挂载、拖动和完成后保留原有占位',async kind=>{
+ const f=await fixture(),w=f.workspace
+ w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)
+ const node={...text('fixed'),kind,sizeMode:'auto',width:656,height:456,generationStatus:'running',generationTaskId:'fixed-task',generationLastSeq:0,generationStartedAt:Date.now(),generationEvents:[],sourceNodeIds:['peer'],containerPrompt:'模拟验证',refreshMinutes:0}
+ w.setArtifacts([node,text('peer')])
+ const initial=structuredClone(w.getWorkbenchCells())
+ await f.render()
+ expect(w.getWorkbenchCells()).toEqual(initial)
+ const body=f.host.querySelector('[data-research-node-id="fixed"] [data-research-generation-foreground] strong')
+ await f.event('pointerdown',body,{button:0,pointerId:146,clientX:100,clientY:100})
+ await f.event('pointerup',f.canvas,{pointerId:146,clientX:198.6,clientY:223.25})
+ const moved=structuredClone(w.getWorkbenchCells()),frame=w.getSnapshot().artifacts.find(n=>n.id==='fixed')
+ expect(moved.find(c=>c.id==='fixed').w).toBe(initial.find(c=>c.id==='fixed').w)
+ await act(async()=>w.applyGenerationInspection('fixed',{taskId:'fixed-task',canvasNodeId:'fixed',state:'completed',lastSeq:1,finalOutput:kind==='generated-container'?JSON.stringify({version:1,type:'table',title:'模拟验证',columns:['项目','数值'],rows:[['样本','123']]}):'# 中心\n## 说明\n- 模拟内容',completedAt:Date.now(),events:[]}))
+ expect(w.getSnapshot().artifacts.find(n=>n.id==='fixed')).toMatchObject({generationStatus:'completed',x:frame.x,y:frame.y,width:frame.width,height:frame.height})
+ const boxes=cells=>cells.map(({freePosition,...box})=>box)
+ expect(boxes(w.getWorkbenchCells())).toEqual(boxes(moved))
+})
+it('旧生成卡片的可见最小宽度在结果加载与重新打开后不回落',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{
+  w.setArtifacts([{...text('legacy-task'),kind:'generated-container',generationStatus:'running',generationTaskId:'legacy-task-id',generationStartedAt:Date.now(),containerPrompt:'模拟验证',refreshMinutes:0}])
+  w.applyWorkbenchCells([{id:'legacy-task',x:0,y:0,w:13,h:10}],true)
+ })
+ const old=w.getSnapshot().artifacts[0]
+ await act(async()=>w.applyGenerationInspection('legacy-task',{taskId:'legacy-task-id',canvasNodeId:'legacy-task',state:'completed',lastSeq:1,events:[],finalOutput:JSON.stringify({version:1,type:'table',title:'模拟验证',columns:['项目','数值'],rows:[['样本','123']]})}))
+ expect(w.getSnapshot().artifacts[0]).toMatchObject({generationStatus:'completed',x:old.x,y:old.y,width:old.width,height:old.height})
+ const reopened=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test')
+ reopened.setCanvasSize({width:1000,height:700,availableWidth:1000});reopened.setWorkbenchWidth(1000)
+ expect(reopened.getSnapshot().artifacts[0]).toMatchObject({x:old.x,y:old.y,width:old.width,height:old.height})
+})
 it('规划卡片接入实际网格拖动，普通组件避让且挂载工作台释放临时占位',async()=>{
  const f=await fixture(true),w=f.workspace
  await act(async()=>{w.setArtifacts([text('a'),text('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:12},{id:'b',x:20,y:0,w:20,h:12}],true)})

@@ -24,3 +24,14 @@ for (const dark of [false, true]) it(`model search-empty geometry and palette ($
     expect(style('#other').color).toBe('#888')
   } finally { await win.happyDOM.close() }
 })
+
+for (const dark of [false,true]) it(`restored model provider titles blend into the menu (${dark?'dark':'light'})`,async()=>{
+ const win=new Window(),doc=win.document
+ doc.head.innerHTML='<style>:root{--dsw-specific-menu:white}._7KE1Ra_groupTitle{background:var(--dsw-specific-menu);position:sticky}'+readFileSync('src/preload/figma-refinements.css','utf8')+'</style>'
+ if(dark)doc.body.setAttribute('data-ds-dark-theme','')
+ doc.body.innerHTML='<div class="odyssey-restored-model-menu"><div class="_7KE1Ra_groupTitle">Kimi</div><button>Kimi K3</button></div><div id="unrelated" class="_7KE1Ra_groupTitle">Other</div>'
+ const heading=win.getComputedStyle(doc.querySelector('.odyssey-restored-model-menu ._7KE1Ra_groupTitle')!)
+ expect(heading.backgroundColor).toBe('transparent');expect(heading.position).toBe('static')
+ expect(heading.color).toBe(dark?'#9c9c9c':'#757575')
+ expect(win.getComputedStyle(doc.querySelector('#unrelated')!).backgroundColor).toBe('white');await win.happyDOM.close()
+})
