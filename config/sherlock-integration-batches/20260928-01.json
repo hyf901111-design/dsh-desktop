@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补齐财务报价核心指标与管理团队模板并修复来源阅读空间",
+        "featureName": "修复整理指标裁切和旧模板窄列排版并集成财务模板",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
         "baseCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
-        "tipCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
+        "tipCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
         "commits": [
           {
             "commit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
@@ -20,6 +20,13 @@
               "cf02939ec36b70818b33d4b644c82f9ef0073c5f"
             ],
             "subject": "组件：补齐三类财务模板并保留指标来源阅读空间"
+          },
+          {
+            "commit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
+            "parents": [
+              "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b"
+            ],
+            "subject": "画布：修复整理后指标裁切及旧模板窄列文字重叠"
           }
         ],
         "files": [
@@ -38,6 +45,10 @@
           {
             "status": "A",
             "path": "packages/dsh-research-task-runtime/financial-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
@@ -65,7 +76,15 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
@@ -90,6 +109,14 @@
           {
             "status": "M",
             "path": "test/operations-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-optimal-arrange.test.js"
           },
           {
             "status": "M",
@@ -121,12 +148,16 @@
               "test/component-source-binding.test.js",
               "test/workbench-design-contract.test.js",
               "test/research-market-artifact.test.js",
-              "test/bundled-plugin-profile.test.ts"
+              "test/bundled-plugin-profile.test.ts",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/research-optimal-arrange.test.js"
             ],
             "outcome": "passed",
-            "summary": "247项直接相关及继承门禁通过",
-            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
-            "completedAt": "2026-09-30T15:23:10.177905+00:00",
+            "summary": "429项直接相关及继承门禁通过",
+            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
+            "completedAt": "2026-09-30T15:48:55.775Z",
             "timeoutMs": 300000
           },
           {
@@ -139,8 +170,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
-            "completedAt": "2026-09-30T15:23:10.177905+00:00",
+            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
+            "completedAt": "2026-09-30T15:48:55.775Z",
             "timeoutMs": 300000
           },
           {
@@ -151,8 +182,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
-            "completedAt": "2026-09-30T15:23:10.177905+00:00",
+            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
+            "completedAt": "2026-09-30T15:48:55.775Z",
             "timeoutMs": 300000
           },
           {
@@ -163,21 +194,24 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
-            "completedAt": "2026-09-30T15:23:10.177905+00:00",
+            "verifiedCommit": "548e33e1aa5a1b774f6bcbc6044f69e43ad9de3d",
+            "completedAt": "2026-09-30T15:48:55.775Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产CSP沙盒39组财务与指标三模式默认及窄宽度验收通过，原生新包仍待复验；b7a955已核验真实DataYes调用、仅手动和刷新进度，但首次展示失败未计入成功"
+          "summary": "生产CSP沙盒60组新旧指标自然测高及39组财务三模式展示通过；三个原生用户页面待新包复验，未计入完成"
         },
         "acceptanceCriteria": [
           "三类财务数据保留证券币种披露周期和明确缺失值",
           "自定义模拟财务模板首次提供完整记录",
           "指标页脚和企业格内说明完整可读",
           "用户手动框保持尺寸并内部滚动",
-          "真实取数工具权限和仅手动设置继承"
+          "真实取数工具权限和仅手动设置继承",
+          "旧五六指标和上证三四指标整理后完整可读",
+          "测量及二次测高不使用裁切框高度",
+          "重复整理稳定且整次可一步撤销"
         ],
         "risks": [
           "最新44类业务模板尚未全部覆盖",
@@ -185,7 +219,7 @@
           "新模板及指标空间需集成包原生复验",
           "旧全量workbench夹具及依赖补丁问题未计为通过"
         ],
-        "generatedAt": "2026-09-30T15:23:10.177905+00:00"
+        "generatedAt": "2026-09-30T15:48:55.775Z"
       }
     }
   ],
