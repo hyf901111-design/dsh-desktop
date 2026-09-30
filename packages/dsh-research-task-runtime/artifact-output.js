@@ -7,6 +7,7 @@ import { renderMarketArtifact } from './market-artifact.js';
 import { requiredMarketVariant } from './workbench-design-contract.js';
 import { parseResearchContainerSpec } from './artifact-validator.js';
 import { renderInteractiveArtifact } from './interactive-artifact.js';
+import {renderWorkflowArtifact} from './workflow-artifact.js';
 import {renderOperationsArtifact} from './operations-artifact.js';
 import { renderGanttArtifact } from './gantt-artifact.js';
 import { researchHtmlText } from './html-artifact.js';
@@ -36,7 +37,7 @@ export function acceptArtifactOutput(text) {
    if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
    continue;
   }
-  const spec=parseResearchContainerSpec(renderOperationsArtifact(candidate) ?? renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.
