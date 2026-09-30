@@ -1,6 +1,7 @@
 import {assertPrivateResearchSession} from './board-runtime.js'
 import { createHash, randomUUID } from 'node:crypto';
 import { canvasHumanRequest } from './canvas-task-routing.js';
+import { preserveWorkbenchRefreshPreference } from './component-refresh-policy.js';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { defineTool } from '@deepseek-ai/dsh-tools';
@@ -61,6 +62,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         await rename(tmp, filePath);
     };
     const create = (args, exec) => {
+        args = preserveWorkbenchRefreshPreference(args, canvasHumanRequest(exec.agent?.session)?.text);
         if (args?.requestId === undefined) {
             const messageId = canvasHumanRequest(exec.agent?.session)?.messageId;
             if (messageId) args = { ...args, requestId: `auto-${createHash('sha256').update(messageId).digest('hex')}` };

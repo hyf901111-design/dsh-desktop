@@ -45,7 +45,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
 }
 
 export const COMPONENT_BOUND_DATA_PROMPT = `
-自动绑定数据交付协议：通过已配置插件取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并自动保存一分钟刷新。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：
+自动绑定数据交付协议：通过已配置插件取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并保存刷新设置；未指定时默认一分钟，用户或宿主明确要求仅手动时 intervalMinutes=0。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：
 {"version":1,"type":"data-bound","requests":[{"key":"q","tool":"实际成功调用的 ework__ 工具名","args":{"原参数":"原值"}}],"mapping":{"version":1,"type":"market","variant":"本面板模板","title":"标题","asOf":{"$from":"q","$path":"真实日期路径","$suffix":" · 通联 DataYes"},"items":{"$from":"q","$each":"真实数组路径","$map":{"label":{"$path":"名称字段"},"value":{"$path":"数值字段","$as":"string"}}}}}
 mapping 内的整体结构必须符合上文当前模板 schema；例子里的 items 仅演示指标映射，K线须用 candles，表格须用 columns/rows。$from 指 requests.key，$path 是点分路径或数组下标，$each/$map 映射原始数组，数组可加 $sortBy:"实际日期字段"、$order:"asc|desc" 排序，$take:5 取前5条、$take:-20 取最后20条；$single:true 要求恰好一条并返回单值，用于最新行情或数据日期，避免写死随分页变化的数组下标。$as 为 string/number；放在 $each 同层时逐项转换标量列表，放在 $map 字段内时转换该字段；$single:true 后转换单值。表格的 $map 必须是单元格数组，例如 [{"$path":"name"},{"$path":"weight","$as":"number"}]。$scale 换算单位，$digits:2 在换算后控制小数位（0–8）；百分比与亿元通常保留2位，价格按精度保留2–3位，避免显示浮点长尾。$prefix/$suffix 加文字，$optional:true 将来源缺失值保留为 null；文本字段可用 $default:"来源未提供摘要" 为缺失、null 或空字符串提供明确的缺失说明，不能用假数值填补。列表中存在 url 时将其映射到条目 url，保留来源链接。无脚本。请求 args 必须原样复制本轮成功业务调用，包括日期值和所有参数类型；无需创建日期表达式。宿主会为最新数据自动推导滚动窗口，固定历史需求保持原日期。不要把日期写成表达式字符串。通联 ai_search 的 SOURCES/EVIDENCE 文本由宿主按实际来源规范化为 {sources:[{id,category,source,date,title,url,summary,excerpts}]}；summary 是第一条证据原句，excerpts 为全部原句，可直接绑定 news.items。除此之外只引用实际 JSON 结构，不猜字段。
 批量多证券列表先使用 $filter:{"ticker":"实际证券代码"} 按行字段等值筛选，再排序和截取；$filter 只支持 1–16 个标量条件，多个条件同时成立，不支持表达式。近20日曲线的 labels 和每条 series.values 必须使用相同的日期排序及 $take:-20，保证日期和值对齐。单对象接口响应使用 {"$from":"q","$map":{"label":{"$path":"data.data.name"},"weight":{"$path":"data.data.marketValue","$scale":1e-8}}}，路径相对该请求响应根对象，无需 $each；$single:true 可省略。
@@ -161,5 +161,5 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   if(issue)throw Error(issue)
   const output=acceptArtifactOutput(JSON.stringify(data))
   if(!output)throw Error('数据映射结果不符合当前组件模板，请根据真实响应修正路径、类型或单位。')
-  return {data,output,recipe:{requests,mapping,intervalMinutes:1}}
+  return {data,output,recipe:{requests,mapping,intervalMinutes:options.intervalMinutes===0?0:1}}
 }
