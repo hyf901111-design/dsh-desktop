@@ -44,8 +44,8 @@ it('research header keeps its vertical fade at both edges and covers the top-rig
     const bar = await page.locator('header').boundingBox()
     const { data, info } = await sharp(await page.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true })
     const green = (x, y) => data[(Math.round(y) * info.width + Math.round(x)) * info.channels + 1]
-    const left = green(bar.x + 100, bar.y + 44)
-    const right = green(bar.x + bar.width - 25, bar.y + 44)
+    const left = green(bar.x + 100, bar.y + bar.height * .8)
+    const right = green(bar.x + bar.width - 25, bar.y + bar.height * .8)
     expect(Math.abs(left - right)).toBeLessThan(6)
     expect(left).toBeGreaterThan(green(bar.x + 100, bar.y + 8) + 20)
     expect(green(bar.x + bar.width - 5, bar.y + 8)).toBeLessThan(80)
@@ -53,7 +53,7 @@ it('research header keeps its vertical fade at both edges and covers the top-rig
 })
 
 for (const dark of [false, true]) {
-  it(`${dark ? 'dark' : 'light'} research header overlays the canvas within the Figma 56 px bar`, async () => {
+  it(`${dark ? 'dark' : 'light'} research header overlays the canvas within the compact 44 px bar`, async () => {
     const page = await browser.newPage()
     try {
       await page.setContent(`<style>${css}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
@@ -78,9 +78,9 @@ for (const dark of [false, true]) {
           belowHit: document.elementFromPoint(bar.left + 5, bar.bottom + 5)?.closest('header') === header,
         }
       })
-      expect(result.height).toBe(56)
+      expect(result.height).toBe(44)
       expect(result.canvasTop).toBe(result.barTop)
-      expect(result.barBottom - result.canvasTop).toBe(56)
+      expect(result.barBottom - result.canvasTop).toBe(44)
       expect(result.canvasOverlay).toBe('none')
       expect(result.topHit).toBe(true)
       expect(result.belowHit).toBe(false)

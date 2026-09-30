@@ -4,6 +4,7 @@
  */
 
 body {
+  --odyssey-workspace-header-height:44px;
   --odyssey-right-occupancy: 0px;
   --odyssey-panel-edge:10px;
   --odyssey-panel-gap:10px;
@@ -95,7 +96,7 @@ body:has([data-odyssey-page]) .t8lSSG_bottomPanel {
 /* Compact the right conversation header while keeping tabs and window
    controls on one axis. */
 .t8lSSG_panel:not(.t8lSSG_panelHidden) .t8lSSG_tabBar {
-  box-sizing:border-box; height:44px; min-height:44px; flex:0 0 44px;
+  box-sizing:border-box; height:var(--odyssey-workspace-header-height,44px); min-height:var(--odyssey-workspace-header-height,44px); flex:0 0 var(--odyssey-workspace-header-height,44px);
   align-items:center; padding:6px 72px 6px 8px;
 }
 .t8lSSG_panel .t8lSSG_tabList { align-items:center; }
