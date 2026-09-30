@@ -227,7 +227,9 @@ async function main() {
       ),
       writeFile(
         path.join(stagedProfile, 'pnpm-workspace.yaml'),
-        'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n',
+        // The registry advertises 1.2.2 while its tarball returns 404. Keep the
+        // previously packaged, compatible source-map-js until the source is valid.
+        'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\noverrides:\n  source-map-js: 1.2.1\n',
         'utf8'
       ),
       writeFile(
