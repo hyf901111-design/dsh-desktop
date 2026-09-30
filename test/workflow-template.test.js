@@ -28,7 +28,7 @@ describe('Figma 21Z workflow templates',()=>{
   expect(plan.panels[0].artifact).toEqual(artifact);expect(readTemplateModel(render(artifact)).data).toEqual(artifact);
   expect(templateFor(artifact).schema).toBe(operationsTemplateSchema(type));expect(workbenchDesignTemplate(panel).figma).toBe(type==='approval'?'1918:346911':'1918:354877');
   const prompt=buildResearchTaskPrompt({parentSessionId:'session',canvasNodeId:'panel',kind:'container',prompt:workbenchPanelPrompt({title:'运营'},panel)});
-  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('v1.13.0');
+  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('v1.14.0');
   expect(renderOperationsArtifact(artifact)).toBeNull();
  });
  it('resolves explicit workflow types and familiar user requests',()=>{

@@ -4,6 +4,7 @@ import {applyTerminalPresentation} from './terminal-presentation.js'
 import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
 
 const interactions = {
+ 'price-performance':['市场时区与复权','交易范围','OHLCV读数','缩放平移'],'valuation-multiples':['财年季度','图例','缺失与负倍数','期间读数','完整记录'],'price-target':['机构预测','发布日期与有效期','当前价比较','目标价排序','记录详情'],
  'share-statistics':['股数与比例','统计口径'],'market-overview':['市场筛选','历史读数'],'currency-snapshot':['报价方向','精度','货币筛选'],'watchlist':['搜索','排序','行情详情','管理自选'],
  'ticker-information':['历史报价','逐点读数'],'key-metrics':['搜索','指标口径'],'management-team':['搜索','报酬排序','成员披露详情'],
  metrics:['详情'],candlestick:['标的','交易区间','逐点行情'],trend:['系列','逐点数值'],scatter:['点选详情'],table:['搜索','排序','行详情'],pipeline:['阶段筛选','详情'],events:['详情'],heatmap:['选择区块','详情'],breadth:['区间分布'],

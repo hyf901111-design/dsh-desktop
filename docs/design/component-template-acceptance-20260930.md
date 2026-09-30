@@ -373,3 +373,13 @@ metrics正文新增完整asOf，来源不可用的说明也必须可见，不只
 追加生产双层 CSP 检查使用原生实际 HTML 并加入 20px 外容器间距，790/586/480 宽度 × 三模式 × 四模板 × 180/720 初始高度共 72 组，0 页面错误。证据目录 `/tmp/ework-template-acceptance-20260930/`：`snapshot-responsive-browser-checks.json`、`snapshot-responsive-native-session-return.png`、`snapshot-responsive-native-watch-last-columns.png`、`snapshot-responsive-native-repeat-wide.png`、`snapshot-responsive-native-manual-resize.png`、`snapshot-responsive-original-user-board.png`、构建及包检查日志。应用保持用户原看板打开。
 
 此次四卡自然输入样本成功、耗时低于五分钟；它不是总体成功率统计。本轮最新设计直接覆盖仍为 44/74，剩余 30 类业务模板继续实施和验收，未宣称目标整体完成。
+
+## 10月1日金融序列三模板实现及生产沙盒检查
+
+- 使用最新 Figma 默认节点而非示例数据：价格表现 `1917:342876`、估值倍数 `1917:344628`、分析师目标价 `1917:344811`。源截图在 `/tmp/ework-template-acceptance-20260930/figma-{price-performance,valuation-multiples,price-target}.png`。原设计的示例年度或预测值不作为实际取数结果。
+- 三种独立数据契约接入模板登记、生成提示、数据有效性检查和整理布局。价格表现保留实际 OHLCV 日期、市场、时区、复权、币种和成交量缺失原因；估值保留年度/季度期间、负市盈率与空点；目标价分别呈现当前参考价、机构预测和实际历史，标明有效期与过期记录。只提供已有数据可用的控件。
+- 交互覆盖真实记录范围缩放/移动、键盘读数、估值期间和图例切换、目标价排序与有效期筛选；完整 OHLCV、估值、机构预测和历史报价均保留，长表采用有界滚动。刷新恢复按语义期间、指标和机构记录定位。
+- 修复自然测高遗漏收起的 `details` 自身高度，保留其摘要行、外边距和弹性布局间距；隐藏表格仍不计入自然高度。新增回归证明旧框 160/720px 得到相同结果。
+- 生产双层 CSP 沙盒 54 组检查通过（3 模板 × 3 模式 × 3 宽度 × 2 旧高度），展开数据及实际交互另 9 组通过。按钮文字对比度最低 10.75，无脚本错误；截图和检查结果为 `financial-series-natural-*`、`financial-series-interaction-*`、`financial-series-browser-checks.json`、`financial-series-interactions.json`。
+- 本轮 24 个聚焦及继承门禁文件 460 项通过；类型检查、取数权限、规划策略、尺寸桥检查分别记录，未运行全功能测试。旧 HTML 主题/档案完整文件的 7 项既存失败不计为通过（默认层测试适配、预览字节阈值及旧字号断言）；直接相关尺寸桥使用指定测试筛选。
+- 实现覆盖增至 **47/74**；三种新增序列还须最终本地包普通输入及原生界面复验后才计为原生通过。尚缺 27 类业务模板，整体生成成功率超过 90% 仍未达成验收。

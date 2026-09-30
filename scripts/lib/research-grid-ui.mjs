@@ -381,7 +381,7 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   // provenance. Its actual height replaces the conservative starting estimate.
   // Older clipped viewport reports still need that estimate as a safety floor.
   const floor=metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0
-  const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist)"/.test(node.containerSpec?.html||'')
+  const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target)"/.test(node.containerSpec?.html||'')
   const chrome=value?.chromeHeight??(snapshot?68:58)
   return {width:preferred.width,height:Math.max(floor,value?.height?value.height+chrome:preferred.height)}
 }
