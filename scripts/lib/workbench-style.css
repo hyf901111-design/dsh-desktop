@@ -9,16 +9,16 @@ body [data-ework-grid][data-workbench-style] :is(.rScV5Q_containerDraft,.ew-sele
 body [data-ework-grid][data-workbench-style=enterprise] .ew-grid-header{color:#25252b}
 body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}
 body [data-ework-grid][data-workbench-style] .odyssey-generation-surface{--generation-bg:var(--grid-card)!important;--generation-title:var(--grid-text)!important;--generation-phase:var(--grid-text)!important;--generation-detail:var(--grid-muted)!important;--generation-icon:var(--grid-muted)!important;--generation-time:var(--grid-muted)!important;--generation-border:var(--grid-border)!important;--generation-button:var(--grid-row)!important;--generation-action-icon:var(--grid-text)!important}
-body [data-ework-toolbar]:has(.ew-workbench-mode-slot){width:382px!important}
-.ew-workbench-mode-slot{display:flex;align-items:center;gap:8px;box-sizing:border-box;flex:0 0 128px;width:128px;height:40px;padding-left:7px}
-.ew-workbench-mode-divider{flex:none;width:1px;height:24px;background:#0000001f}
-.ew-workbench-modes{display:flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;width:112px;height:36px;padding:0 4px;border-radius:8px;background:#eff0f2}
-body .ew-workbench-modes>button{position:relative;display:grid;place-items:center;flex:none;width:32px;height:28px;padding:0;border:1px solid transparent;border-radius:5px;background:transparent!important;color:#747780!important;cursor:pointer}
+body [data-ework-toolbar]:has(.ew-workbench-mode-slot){width:320px!important}
+.ew-workbench-mode-slot{display:flex;align-items:center;gap:6px;box-sizing:border-box;flex:0 0 110px;width:110px;height:34px;padding-left:5px}
+.ew-workbench-mode-divider{flex:none;width:1px;height:22px;background:#0000001f}
+.ew-workbench-modes{display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;width:98px;height:32px;padding:0 4px;border-radius:7px;background:#eff0f2}
+body .ew-workbench-modes>button{position:relative;display:grid;place-items:center;flex:none;width:28px;height:26px;padding:0;border:1px solid transparent;border-radius:5px;background:transparent!important;color:#747780!important;cursor:pointer}
 body .ew-workbench-modes>button[aria-checked=true]{border-color:#00000012;background:#fff!important;color:#0d99ff!important}
 body .ew-workbench-modes>button:focus-visible{outline:2px solid #0d99ff;outline-offset:2px}
 body .ew-workbench-modes>button:hover{background:#0000000a!important}
-body .ew-workbench-mode-icon{display:block;width:18px;height:18px;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
-body .ew-workbench-mode-enterprise{width:23px;height:14px}
+body .ew-workbench-mode-icon{display:block;width:16px;height:16px;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
+body .ew-workbench-mode-enterprise{width:20px;height:12px}
 body[data-ds-dark-theme] .ew-workbench-mode-divider{background:#ffffff26}
 body[data-ds-dark-theme] .ew-workbench-modes{background:#333}
 body[data-ds-dark-theme] .ew-workbench-modes>button{color:#ddd!important}

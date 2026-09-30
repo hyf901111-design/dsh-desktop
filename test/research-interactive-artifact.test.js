@@ -1,7 +1,35 @@
 import { expect, it } from 'vitest';
 import { Window } from 'happy-dom';
+import { runInNewContext } from 'node:vm';
 import { renderInteractiveArtifact } from '../packages/dsh-research-task-runtime/interactive-artifact.js';
 import { compactHostDashboardHtml } from '../packages/dsh-research-task-runtime/html-artifact.js';
+import { CALENDAR_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/calendar-presentation.js';
+import { WORKBENCH_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/workbench-presentation.js';
+
+it('calendar layout preserves six weeks, a separate footer and working saved interactions',()=>{
+ const output=renderInteractiveArtifact({version:1,type:'calendar',title:'模拟事件日历',items:[
+  {title:'行业例会',summary:'确认研究进度',date:'2026-07-03'},
+  {title:'模型复核',summary:'检查假设与结果',date:'2026-08-31'}
+ ]}),w=new Window(),doc=w.document;
+ doc.write(output.html);
+ runInNewContext(doc.querySelector('script').textContent,{document:doc,Date});
+ const select=doc.querySelector('#month');select.value='2026-08';select.onchange();
+ expect(doc.querySelector('#days').children).toHaveLength(36);
+ expect(doc.querySelector('#days').querySelectorAll('button')).toHaveLength(31);
+ doc.querySelector('[aria-label="2026-08-31"]').click();
+ expect(doc.querySelector('[aria-pressed="true"]').textContent).toBe('31');
+ expect(doc.querySelector('#agenda-title').textContent).toBe('当日安排');
+ expect(doc.querySelectorAll('.event')).toHaveLength(1);
+ doc.querySelector('#clear-day').click();
+ expect(doc.querySelector('[aria-pressed="true"]')).toBeNull();
+ doc.querySelector('#previous').click();
+ expect(select.value).toBe('2026-07');
+ expect(doc.querySelector('#events').textContent).toContain('行业例会');
+ expect(doc.querySelector('footer').previousElementSibling.className).toBe('agenda');
+ expect(output.html).toContain(CALENDAR_PRESENTATION_CSS);
+ expect(WORKBENCH_PRESENTATION_CSS).toContain(CALENDAR_PRESENTATION_CSS);
+ w.close();
+});
 
 it('shows a short metric note once and reserves disclosure for a full methodology', () => {
   const output=renderInteractiveArtifact({version:1,type:'dashboard',title:'运营指标',asOf:'模拟数据',items:[
