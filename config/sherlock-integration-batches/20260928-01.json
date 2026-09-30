@@ -9,58 +9,55 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "生成卡片拖动与思维导图主题统一",
+        "featureName": "链接预览尺寸与登录会话保留、菜单分隔和宫格整理图标",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c",
-        "tipCommit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
+        "baseCommit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
+        "tipCommit": "e80cbfabb6061fd89c4c5e0b5942e9118507ec1e",
         "commits": [
           {
-            "commit": "a0c001c1d3d401eb0b413bfbd6a603ba535758bb",
+            "commit": "e80cbfabb6061fd89c4c5e0b5942e9118507ec1e",
             "parents": [
-              "cb2f9727f3b53970a4e0c4f6fcfcd69e549b051c"
+              "5704300ed6ab6380627ab7d97afc90e5ec1a088e"
             ],
-            "subject": "支持生成卡片整卡拖动并统一思维导图主题和模型菜单标题"
-          },
-          {
-            "commit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
-            "parents": [
-              "a0c001c1d3d401eb0b413bfbd6a603ba535758bb"
-            ],
-            "subject": "保持生成结果回写时的卡片占位尺寸并补充生命周期验证"
+            "subject": "修复链接预览尺寸更新并保留会话网页，分隔菜单及更换整理图标"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "build/figma-canvas-icons/tool-arrange.svg"
+          },
+          {
+            "status": "M",
+            "path": "build/figma-canvas-icons/tools-source.md"
+          },
           {
             "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
             "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/research-grid-workbench.d.mts"
+            "path": "scripts/lib/research-native-web-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/workbench-style.css"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "path": "src/main/state/research-link-frame.ts"
           },
           {
             "status": "M",
-            "path": "test/figma-model-empty-style.test.ts"
+            "path": "src/main/state/research-native-web.ts"
           },
           {
             "status": "M",
-            "path": "test/research-generation-controls.test.ts"
+            "path": "src/preload/research-link-frame.ts"
           },
           {
             "status": "M",
@@ -68,7 +65,7 @@
           },
           {
             "status": "M",
-            "path": "test/workbench-style.test.js"
+            "path": "test/research-native-web.test.ts"
           }
         ],
         "checks": [
@@ -76,16 +73,14 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
-              "test/workbench-style.test.js",
-              "test/figma-model-empty-style.test.ts",
-              "test/figma-model-menu.test.ts",
-              "test/research-generation-controls.test.ts"
+              "test/research-native-web.test.ts",
+              "test/research-link-frame.test.ts",
+              "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "五文件129项聚焦检查通过，含旧生成卡片结果回写和重新打开的尺寸验证",
-            "verifiedCommit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
-            "completedAt": "2026-09-30T04:01:28.595864+00:00",
+            "summary": "三个文件119项聚焦检查通过，含截图更新、会话保留、菜单分隔与图标升级",
+            "verifiedCommit": "e80cbfabb6061fd89c4c5e0b5942e9118507ec1e",
+            "completedAt": "2026-09-30T04:54:28.712731+00:00",
             "timeoutMs": 300000
           },
           {
@@ -96,8 +91,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "5704300ed6ab6380627ab7d97afc90e5ec1a088e",
-            "completedAt": "2026-09-30T04:01:28.595864+00:00",
+            "verifiedCommit": "e80cbfabb6061fd89c4c5e0b5942e9118507ec1e",
+            "completedAt": "2026-09-30T04:54:28.712731+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -106,62 +101,17 @@
           "summary": "功能工作树不构建共享客户端，待集成本地包真实窗口复验"
         },
         "acceptanceCriteria": [
-          "生成卡片正文拖动并保留尺寸和让位",
-          "过程与停止按钮不拖动",
-          "思维导图跟随画布三模式",
-          "模型分组标题透明底"
+          "组件尺寸变化后更新网页预览",
+          "会话切换保留原网页与登录状态",
+          "更多菜单分隔且无类型标题",
+          "整理图标按用户参考实现"
         ],
         "risks": [
           "整体44类业务模板接入尚未完成",
           "九图自然输入重试待复验",
           "只做聚焦检查和本地构建，无公开发布"
         ],
-        "generatedAt": "2026-09-30T04:01:28.595864+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0cae366f582aef406865a6ad71b03fee14b6c4dd",
-        "verificationCommit": "0cae366f582aef406865a6ad71b03fee14b6c4dd",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "0cae366f582aef406865a6ad71b03fee14b6c4dd",
-            "completedAt": "2026-09-30T04:06:28.602Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "0cae366f582aef406865a6ad71b03fee14b6c4dd",
-            "completedAt": "2026-09-30T04:06:28.602Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0cae366f582aef406865a6ad71b03fee14b6c4dd",
-            "completedAt": "2026-09-30T04:06:28.602Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T04:06:28.602Z"
+        "generatedAt": "2026-09-30T04:54:28.712731+00:00"
       }
     }
   ],
