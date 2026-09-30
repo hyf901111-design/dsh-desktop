@@ -194,3 +194,10 @@ Figma已更新可编辑浅色/深色工具栏175:2、175:54为320×46，新增�
 - 实际窗口发现窄卡瀑布末尾标签相邻挤压，以及行情图说明红涨绿跌却被通用业务状态色覆盖。现为最后类别预留刻度间隔，行情使用独立price-up/price-down色，业务状态原色保留。
 - 保存的宿主图表在预览加载时更新这三类图形的可信渲染函数，任务卡补充紧凑排版；保留来源模型、交互版本和全部控件祖先路径，不要求重新生成工作台。153项直接相关检查通过。修正后的生产沙盒覆盖本次九图数据54组（430/320px与三模式），明细可选、无横向溢出、涨跌方向颜色和瀑布刻度不碰撞；仍需下一集成包真实窗口复验。
 - 证据nine-native-tool.txt、nine-native-data-checks.json、nine-native-plan.json、nine-native-selected-details.png、nine-native-dark-candles.png、nine-visual-browser-checks.json、stored-visual-focused.log。前两轮九图失败及任务卡4次title-only失败仍保留；本节不宣称总体成功率已超过90%，也不代替44类业务模板覆盖。
+
+### 旧任务卡的安全预览路由回归（2026-09-30）
+
+- 集成包 cf13c179f99431ba98f7cb92990d20297de9b0bb 已构建、签名和包完整性验证。真实窗口端口55031；既有九图中的瀑布末尾刻度分开，K线/OHLC红涨绿跌；懒加载进入可见区后恢复“最近20期”。
+- 发现旧任务卡初始显示2/5：保存的操作仍有9条，插入旧文档head的style被安全预览的浏览器解析成body孩子，原控制路由从[2,...]变成[3,...]。原有单独文档DOM测试未覆盖这种嵌入解析。
+- 已把补入样式放在既有节点之后，并增加相同嵌入结构的JSDOM路由对比。使用仅本次创建的原生模拟卡片及9条原生操作，在当前安全沙盒重放后恢复3/6及“补充本地验收记录”，未改存储数据；修复后的集成包原生复验待下一次构建。
+- 证据：`/tmp/ework-template-acceptance-20260930/nine-refined-native-enterprise-top.png`、`nine-refined-native-dark-candles.png`、`operations-native-replay.mjs`。之前的操作持久保存结论不得扩展为本次出错版本的重启验收通过。

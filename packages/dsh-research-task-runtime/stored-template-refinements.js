@@ -14,7 +14,10 @@ export function refineStoredTemplateHtml(html){
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
  if(model.templateId==='tasks'&&model.data.type==='tasks'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="tasks" data-sherlock-template="tasks">')&&!html.includes('data-operations-density="v2"')){
-  return html.replace('</head>',`<style data-operations-density="v2">${OPERATIONS_DENSITY_CSS}</style></head>`);
+  // The production preview embeds the saved document inside its own body.
+  // A style added to the saved head becomes a body child in Chromium and
+  // shifts every recorded route. Append it after all existing controls.
+  return html+`<style data-operations-density="v2">${OPERATIONS_DENSITY_CSS}</style>`;
  }
  const body=html.match(/<body data-research-kind="chart" data-chart-template="(waterfall|candlestick|ohlc)" data-chart-layout="centered-v2">/);
  if(!body||html.includes('data-chart-visual="v2"')||model.version!=='22a-20260930'||model.templateId!=='chart.'+body[1]||model.data.type!=='chart'||model.data.variant!==body[1])return html;
