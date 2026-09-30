@@ -17,6 +17,15 @@ function run(html,configure) {
 }
 
 describe('financial series intrinsic reading size',()=>{
+ it.each(['ResizeObserver loop completed with undelivered notifications.','ResizeObserver loop limit exceeded'])('keeps an interactive document after the browser resize notification %s',message=>{
+  const outer=run(buildResearchHtmlPreview('<p>可读内容</p>','价格表现','dark',{workbench:true})),inner=run(outer.innerHtml)
+  try{
+   inner.window.dispatchEvent(new inner.window.ErrorEvent('error',{message}))
+   expect(inner.messages.filter(m=>m.type==='sherlock-content-failed')).toEqual([])
+   inner.window.dispatchEvent(new inner.window.ErrorEvent('error',{message:'真实运行时异常'}))
+   expect(inner.messages.filter(m=>m.type==='sherlock-content-failed')).toEqual([{type:'sherlock-content-failed'}])
+  }finally{inner.window.happyDOM.abort();outer.window.happyDOM.abort()}
+ })
  it('counts the closed data summary and flex gaps without measuring its hidden rows or old viewport',()=>{
   const html='<body data-sherlock-market="price-performance" style="padding:8px"><section class="financial-profile" style="display:flex;flex-direction:column;gap:4px;row-gap:4px"><p>来源期间</p><canvas></canvas><details style="margin-top:6px"><summary>完整数据</summary><table><tr><td>隐藏的第366行</td></tr></table></details></section><footer class="market-footer" style="margin-top:5px"><span>来源与时点</span></footer></body>'
   const outer=run(buildResearchHtmlPreview(html,'价格表现','dark',{workbench:true})),measured=[]

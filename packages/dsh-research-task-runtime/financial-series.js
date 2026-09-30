@@ -153,7 +153,11 @@ function multiplesRuntime(s,names) {
  svg.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();selected=e.key==='Home'?0:e.key==='End'?s.datasets[current].periods.length-1:selected+(e.key==='ArrowLeft'?-1:1);draw()}})
  svg.addEventListener('sherlock-chart-restore',e=>{const v=e.detail,d=s.datasets[current];if(v&&[v.min,v.max].every(Number.isFinite)&&v.max>v.min&&d.periods.includes(v.start)&&d.periods.indexOf(v.end)>=d.periods.indexOf(v.start)){locked=v;draw()}})
  root.addEventListener('sherlock-chart-restore',e=>{if(e.target!==root)return;const v=e.detail,index=s.datasets.findIndex(d=>d.periodType===v?.period);if(index<0||!Array.isArray(v.hidden)||v.hidden.length>5||v.hidden.some(k=>!Object.hasOwn(names,k)))return;current=index;select.value=String(index);hidden=new Set(v.hidden);if(s.datasets[index].series.every(r=>hidden.has(r.metric)))hidden.delete(s.datasets[index].series[0].metric);selected=s.datasets[index].periods.indexOf(v.selected);locked=null;rebuild()})
- svg.addEventListener('dblclick',()=>{locked=null;draw()});new ResizeObserver(draw).observe(svg);rebuild()
+ // SVG's observed box also changes when its own plot children are redrawn.
+ // Observe the HTML container and redraw only when the available width changes.
+ let observedWidth=svg.clientWidth
+ new ResizeObserver(()=>{const width=svg.clientWidth;if(width===observedWidth)return;observedWidth=width;requestAnimationFrame(draw)}).observe(root)
+ svg.addEventListener('dblclick',()=>{locked=null;draw()});rebuild()
 }
 
 function targetRuntime(s) {
@@ -177,7 +181,8 @@ function targetRuntime(s) {
  }
  sort.addEventListener('change',draw);expired.addEventListener('change',draw)
  root.addEventListener('sherlock-chart-restore',e=>{if(e.target===root&&typeof e.detail?.selected==='string'){selected=e.detail.selected;draw()}})
- new ResizeObserver(draw).observe(svg);draw()
+ let observedWidth=svg.clientWidth
+ new ResizeObserver(()=>{const width=svg.clientWidth;if(width===observedWidth)return;observedWidth=width;requestAnimationFrame(draw)}).observe(root);draw()
 }
 
 export const FINANCIAL_SERIES_CSS = `
