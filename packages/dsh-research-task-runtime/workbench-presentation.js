@@ -12,7 +12,7 @@ body :is(p,span,label,div,button,input,select,textarea,th,td,summary,small,stron
 body :is(button,input,select,textarea){font-size:12px!important;line-height:18px!important;border-radius:3px!important;box-shadow:none!important;accent-color:var(--sherlock-control-primary)}
 body :is(input,select,textarea){background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border:1px solid var(--sherlock-control-border)!important;padding:2px 7px!important;box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
 body :is(input,textarea)::placeholder{color:var(--sherlock-control-muted,var(--sherlock-muted))!important;opacity:1}
-body :is(input,select){height:26px!important;min-height:26px!important}
+body :is(input:not([type="checkbox"]):not([type="radio"]),select){height:26px!important;min-height:26px!important}
 body :is(button,input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-primary)!important;outline-offset:1px}
 body :is(.controls,.fund-filters,.fund-industry-filters,.market-candle-controls,.price-volume-controls,.order-book-controls,.fund-flow-controls,.valuation-controls,.equity-controls,.risk-controls,.event-filters,.terminal-table-toolbar){gap:6px!important;flex-wrap:wrap!important}
 body :is(.controls,.fund-filters,.fund-industry-filters,.market-candle-controls,.price-volume-controls,.order-book-controls,.fund-flow-controls,.valuation-controls,.equity-controls,.risk-controls,.event-filters,.terminal-table-toolbar) button{background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border:1px solid var(--sherlock-control-border)!important;min-height:26px!important;padding:2px 7px!important}

@@ -1,6 +1,7 @@
 // The model supplies data and a semantic type. Geometry and design provenance
 // belong to the client so a prompt cannot silently change the visual system.
 import {CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.js';
+import {OPERATIONS_TEMPLATES} from './operations-template-contract.js';
 import { researchMarketContentDimensions, researchOptimalDimensions } from './bento-layout.js';
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
@@ -112,6 +113,8 @@ export function marketVariant(panel = {}) {
 }
 
 export function workbenchDesignTemplate(panel = {}) {
+  const operation=OPERATIONS_TEMPLATES.find(t=>t.type===panel.type);
+  if(operation)return {...operation,size:'large',id:'research.'+operation.id};
   if (panel.type === 'market') {
     const variant = marketVariant(panel);
     if (!variant) throw Error(`面板「${panel.title ?? '未命名'}」需指定 market variant。`);

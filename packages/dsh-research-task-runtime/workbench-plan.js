@@ -1,15 +1,16 @@
 import { researchBentoSize } from './bento-layout.js';
 import { resolveWorkbenchSamples } from './workbench-shared-samples.js';
-import {chartTemplateSchema,requestedChartVariant,requireSimulatedChartData} from './chart-template-contract.js';
+import {chartDataIssue,chartTemplateSchema,requestedChartVariant,requireSimulatedChartData} from './chart-template-contract.js';
 import { templateFor } from './component-template-registry.js';
+import {operationsDataIssue,operationsTemplateSchema} from './operations-template-contract.js';
 import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt'];
+const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt']);
+const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
 const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
@@ -169,6 +170,12 @@ function normalizeSimulatedCalendar(artifact) {
 }
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
+    if (['progress','tasks'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
+    if (artifact.type === 'chart') {
+        const template = templateFor(artifact);
+        const issue = chartDataIssue(artifact);
+        return `${issue ? issue + '。' : ''}${template?.schema ?? chartTemplateSchema()}；保留已提供的数据，仅修正上述字段后重试。`;
+    }
     if (artifact.type === 'market' && artifact.variant === 'scatter' && Array.isArray(artifact.items)) {
         const index = artifact.items.findIndex(i => !str(i?.label, 200) || !Number.isFinite(i?.x) || !Number.isFinite(i?.y));
         if (index !== -1) return `散点第${index + 1}项需有 label、有限数值 x 和 y（允许负值）；已提供的 name/company 可作为 label。`;
@@ -298,6 +305,8 @@ export function validateWorkbench(value) {
         if (isSimulated && !parallel && p.artifact === undefined && ['dashboard', 'kpi'].includes(p.type) && explicitMetricValue(`${p.title} ${p.prompt}`))
             throw Error(`面板「${p.title}」已给出具体指标数值，请在 artifact.items 中逐项提交原数值与单位；不能以通用模拟模板数值替代。`);
         if (isSimulated && !parallel) requireSimulatedChartData(p);
+        if (isSimulated && ['progress','tasks'].includes(p.type) && p.artifact === undefined)
+            throw Error(`面板「${p.title}」需要 artifact 中的实际需求记录；不能生成无关清单或进度样例。${operationsTemplateSchema(p.type)}`);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
         const panel = { title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}) };

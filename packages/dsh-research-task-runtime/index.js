@@ -1,4 +1,5 @@
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
+import {operationsTemplateSchema,requestedOperationsType} from './operations-template-contract.js'
 import { templateSourceDataIssue } from './template-data-contract.js'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
@@ -367,7 +368,7 @@ const COMPONENT_STYLE_INSTRUCTION = [
   'HTML 默认随 EWork Odyssey 当前主题自动切换；宿主会更新根元素 data-sherlock-theme（light 或 dark）和 color-scheme，不能只依赖系统 matchMedia。CSS/SVG 直接引用变量即可联动。Canvas 绘图用 getComputedStyle(document.documentElement).getPropertyValue 读取角色变量，并监听 window 的 sherlock-theme-change 事件（detail.colorScheme 为 light 或 dark）重绘；只更新颜色，不得重建页面、清空输入或重置交互状态。仅当用户明确要求固定浅色或固定深色时，才加入 <meta name="sherlock-theme" content="light"> 或 <meta name="sherlock-theme" content="dark">；除此之外不加入固定主题标记。'
 ].join('\n')
 
-const WORKBENCH_PANEL_TYPES = new Set(['kpi', 'table', 'chart', 'news', 'reports', 'calendar', 'dashboard', 'market', 'html'])
+const WORKBENCH_PANEL_TYPES = new Set(['kpi', 'table', 'chart', 'news', 'reports', 'calendar', 'dashboard', 'market', 'html', 'progress', 'tasks'])
 function legacyWorkbenchPanelHeader(prompt) {
   // Earlier workbench plans marked automatic layout but omitted the typed
   // panel header. Sending those cards through the full 30 KB manual-component
@@ -391,6 +392,7 @@ function workbenchPanelFormat(prompt) {
     // Editing a card replaces its user-facing requirement, which may no longer
     // contain the planner header. An explicit registered preset still carries
     // the same compact data contract and tool scope.
+    const operation=requestedOperationsType(prompt.split('\n')[0]);if(operation)return operation
     const explicit=prompt.match(/\b(market|chart)\.([a-zA-Z-]+)\b/u)
     if(explicit&&templateFor({type:explicit[1],variant:explicit[2]}))return explicit[1]
     if(requestedMarketVariant(prompt))return 'market'
@@ -422,6 +424,8 @@ function workbenchPanelPrompt(prompt, boundData = false) {
   if (!type) return null
   const selectedMarketVariant = type === 'market' ? requestedMarketVariant(prompt) : undefined
   const schemas = {
+    progress: operationsTemplateSchema('progress'),
+    tasks: operationsTemplateSchema('tasks'),
     kpi: '{"version":1,"type":"kpi","title":"标题","items":[{"label":"指标","value":"数值","change":"可选变化"}]}',
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}',
     chart: chartTemplateSchema(requestedChartVariant(prompt)),
