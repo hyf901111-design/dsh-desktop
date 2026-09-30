@@ -641,7 +641,13 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
     else if (typeof setTimeout === 'function') setTimeout(stop, 8000)
   }
   // Error text and stack traces never leave the sandbox. The host can show retained text.
-  addEventListener('error', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
+  addEventListener('error', event => {
+    // Chromium defers undelivered resize notifications to the next frame. This
+    // layout warning does not mean the document's script failed: replacing a
+    // live chart with plain text here also prevents the deferred resize settling.
+    if (!event.error && /^ResizeObserver loop (?:completed with undelivered notifications\.|limit exceeded)$/.test(event.message ?? '')) return
+    parent.postMessage({ type: 'sherlock-content-failed' }, '*')
+  })
   addEventListener('unhandledrejection', () => parent.postMessage({ type: 'sherlock-content-failed' }, '*'))
   const publishHover = (active) => parent.postMessage({ type: 'sherlock-content-hover', active }, '*')
   document.documentElement.addEventListener('pointerenter', () => publishHover(true))
