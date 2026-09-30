@@ -399,6 +399,25 @@ describe('offline HTML component theme runtime', () => {
     preview.send({...natural,height:Infinity},preview.frame.contentWindow)
     expect(preview.parentMessages).toHaveLength(1)
   })
+  it('金融快照尺寸从完整控件与有界行情行计算，矮框不反馈剪裁高度',()=>{
+    const html='<body data-sherlock-market="watchlist"><section class="financial-profile"><div class="snapshot-toolbar" style="margin-bottom:6px"><input></div><div class="snapshot-table-wrap"><table><thead><tr><th>名称</th></tr></thead><tbody>'+Array.from({length:100},()=>'<tr><td>来源行</td></tr>').join('')+'</tbody></table></div></section><footer class="market-footer" style="margin-top:5px"><span>来源与时点</span></footer></body>'
+    const measured=[]
+    for(const viewport of [160,600]){
+      const outer=runtime(buildResearchHtmlPreview(html,'自选股','dark',{workbench:true})),inner=runtime(outer.childHtml(),{configure:win=>{
+        const box=height=>({left:0,right:520,top:8,bottom:8+height,width:520,height})
+        Object.defineProperty(win.document.documentElement,'clientWidth',{value:520});Object.defineProperty(win.document.documentElement,'clientHeight',{value:viewport})
+        win.document.body.style.padding='8px'
+        win.document.querySelector('.snapshot-toolbar').getBoundingClientRect=()=>box(26)
+        win.document.querySelector('.snapshot-table-wrap').getBoundingClientRect=()=>box(viewport-70)
+        win.document.querySelector('thead').getBoundingClientRect=()=>box(36)
+        for(const row of win.document.querySelectorAll('tbody tr'))row.getBoundingClientRect=()=>box(70)
+        win.document.querySelector('footer span').getBoundingClientRect=()=>box(17)
+      }})
+      inner.parsed();measured.push(inner.parentMessages.find(m=>m.data.type==='sherlock-workbench-content-size')?.data)
+    }
+    expect(measured[0]).toEqual(measured[1]);expect(measured[0]).toMatchObject({width:520})
+    expect(measured[0].height).toBeGreaterThan(380);expect(measured[0].height).toBeLessThan(450)
+  })
 })
 
 it('relays hover only from the current embedded component using a boolean state', () => {
