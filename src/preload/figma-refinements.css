@@ -4,11 +4,11 @@ body { --odyssey-menu:rgba(255, 255, 255, 0.86); --odyssey-menu-border:rgba(0, 0
 body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-menu:rgba(43, 43, 43, 0.82); --odyssey-menu-border:rgba(255, 255, 255, 0.10); --odyssey-menu-row:rgba(255, 255, 255, 0.075); --odyssey-menu-muted:#999; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.32); --odyssey-scroll-ink:255 255 255; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
-  height:56px!important; min-height:56px!important; flex:0 0 56px!important;
+  height:var(--odyssey-workspace-header-height,44px)!important; min-height:var(--odyssey-workspace-header-height,44px)!important; flex:0 0 var(--odyssey-workspace-header-height,44px)!important;
   padding:0 20px; grid-template-rows:none!important; overflow:visible;
   background:transparent; backdrop-filter:blur(32px); border:0; box-shadow:none;
 }
-/* Figma 361:6112: the 56 px header floats over the research canvas. The
+/* The compact workspace header floats over the research canvas. The
    canvas must reach behind the gradient or its transparent stop is invisible. */
 body .wSkVaW_root[data-odyssey-page="research"] {
   background:var(--odyssey-canvas);

@@ -7,31 +7,44 @@ import { runInNewContext } from 'node:vm'
 import { createElement, Fragment } from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { patchFigmaFinalConversation } from '../scripts/lib/patch-figma-final-shell.mjs'
 
-let browser, page, script, Header, baseCss, installedCss
-function clientFunction(source, name) {
-  const start = source.indexOf(`\t\tfunction ${name}(`)
-  if (start < 0) throw Error(`Missing native function: ${name}`)
-  return source.slice(start, source.indexOf('\n\t\t}', start) + '\n\t\t}'.length)
+let browser, page, script, Header, baseCss, installedCss, gridCss
+function clientFunctions(source) {
+  const syntax = createSourceFile('client.js', source, ScriptTarget.Latest, false, ScriptKind.JS)
+  const functions = new Map()
+  function visit(node) {
+    if (isFunctionDeclaration(node) && node.name) functions.set(node.name.text, node.getText(syntax))
+    forEachChild(node, visit)
+  }
+  visit(syntax)
+  return functions
 }
 beforeAll(async () => {
   const source = patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
   const block = source.slice(source.indexOf('/* ODYSSEY_FIGMA_FINAL_SHELL_START */'), source.indexOf('/* ODYSSEY_FIGMA_FINAL_SHELL_END */'))
   installedCss = JSON.parse(block.match(/style.textContent=("[^\n]+");}/)[1])
+  const functions = clientFunctions(source)
   // Render the installed native header tree; only its stores and extension slots are fixtures.
-  Header = runInNewContext(['deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'ConversationSessionHeader'].map(name => clientFunction(source, name)).join('\n') + '\nConversationSessionHeader', {
+  Header = runInNewContext(['deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'ConversationSessionHeader'].map(name => {
+    if (!functions.has(name)) throw Error(`Missing native function: ${name}`)
+    return functions.get(name)
+  }).join('\n') + '\nConversationSessionHeader', {
     react: { useSyncExternalStore() {}, useCallback: fn => fn, useRef: () => ({ current: 'current' }), Fragment },
     react_jsx_runtime: jsxRuntime,
     ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => 'wSkVaW_' + String(key) }),
     clsx: (...values) => values.filter(Boolean).join(' '),
     isInitialResearchSession: () => false, isPersistedResearchSession: () => false,
+    useSherlockBoardOnly: () => false,
+    EditableSessionTitle: ({ rename: _rename, ...props }) => createElement('button', props),
     explicitResearchViewSessions: new Set(), explicitHomeViewSessions: new Set(['current']),
     resolveActiveView: (tabs, selected) => tabs.find(tab => tab.id === selected)
   })
   const cssLiteral = source.match(/const css\$\d+ = ("\.wSkVaW_root\{[^\n]+);/)
   if (!cssLiteral) throw Error('Missing native ConversationRoot CSS')
   baseCss = JSON.parse(cssLiteral[1])
+  gridCss = await readFile('scripts/lib/research-grid-workbench.css', 'utf8')
   const bundled = await build({
     stdin: { contents: `import {mountDesktopShellStyles} from './src/preload/shell-style';
       import {mountFigmaResponsiveHeader} from './src/preload/figma-responsive-header';
@@ -72,13 +85,17 @@ async function open({ view = 'research', dark = false, width = 740, closed = fal
   page = await (await browser.newContext({ viewport: { width: 1380, height: 900 } })).newPage()
   const markup = headerMarkup(view, crowded)
   // Native slots are layout-transparent but remain real CSS ancestors.
-  await page.setContent(`<style>${baseCss}</style><style>body{margin:0;--dsw-alias-label-primary:#0f1115;--dsw-alias-label-secondary:#81858c}body[data-ds-dark-theme]{--dsw-alias-label-primary:#f9fafb;--dsw-alias-label-secondary:#adb2b8}</style>
+  await page.setContent(`<style>${baseCss}</style><style>${gridCss}</style><style>body{margin:0;--dsw-alias-label-primary:#0f1115;--dsw-alias-label-secondary:#81858c}body[data-ds-dark-theme]{--dsw-alias-label-primary:#f9fafb;--dsw-alias-label-secondary:#adb2b8}</style>
     <body ${dark ? 'data-ds-dark-theme' : ''}>
-      <div data-dsh-panel-host data-odyssey-panel-right="${closed ? 'closed' : 'open'}"></div>
+      <div data-dsh-panel-host data-odyssey-panel-right="${closed ? 'closed' : 'open'}" style="position:fixed;inset:0">
+        <div class="t8lSSG_toggleCluster" style="position:absolute"><button data-odyssey-panel-entry="right" style="box-sizing:border-box;width:28px;height:28px">展开</button></div>
+        <aside class="t8lSSG_panel" style="position:absolute"><div class="t8lSSG_tabBar" style="display:flex"><div class="t8lSSG_tabList"><button class="t8lSSG_tab">对话</button></div></div></aside>
+      </div>
       <div id="root"><div data-slot="root" style="display:contents"><div class="pI_x6G_frame" data-dsh-frame="true">
         <main class="pI_x6G_centerCol" data-pane="conversation" style="width:${width}px;height:880px">
           <div data-slot="conversation" style="display:contents"><div class="wSkVaW_root" data-odyssey-page="${view === 'home' ? 'home' : view === 'research' ? 'research' : 'conversation'}">
             <div data-slot="conversation.session.header" style="display:contents">${markup}</div>
+            ${view === 'research' ? '<div data-research-canvas data-ework-grid style="position:absolute;inset:0"></div>' : ''}
           </div></div>
         </main>
       </div></div></div>
@@ -105,6 +122,12 @@ async function measure() {
       membersGap: el('.srb-presence') && css('.srb-presence').gap,
       membersDisplay: el('.srb-presence') && css('.odyssey-members-compact').display,
       utilitiesRight: rect('[data-srb-utilities]').right, headerRight: header.getBoundingClientRect().right,
+      height: header.getBoundingClientRect().height,
+      centers: ['.wSkVaW_crumbs', '[data-srb-tabs]', '.wSkVaW_headerActions', '[data-srb-utilities]'].filter(selector => el(selector)?.getBoundingClientRect().height).map(selector => { const r = rect(selector); return r.top + r.height / 2 }),
+      toggleCenter: (() => { const r = document.querySelector('[data-odyssey-panel-entry="right"]').getBoundingClientRect(); return r.top + r.height / 2 })(),
+      sideHeaderCenter: (() => { const r = document.querySelector('.t8lSSG_tabBar').getBoundingClientRect(); return r.top + r.height / 2 })(),
+      canvasTop: document.querySelector('[data-ework-grid]')?.getBoundingClientRect().top,
+      headerBottom: header.getBoundingClientRect().bottom,
       overflow: header.scrollWidth > header.clientWidth
     }
   })
@@ -116,6 +139,10 @@ for (const dark of [false, true]) for (const view of ['home', 'chat', 'research'
       await page.evaluate(closed => { document.querySelector('[data-dsh-panel-host]').dataset.odysseyPanelRight = closed ? 'closed' : 'open'; document.querySelector('main').style.width = closed ? '1090px' : '740px' }, closed)
       const m = await measure()
       expect(m.layout).toBe('regular')
+      expect(m.height).toBe(44)
+      for (const center of m.centers) expect(center).toBeCloseTo(m.toggleCenter, 1)
+      expect(m.sideHeaderCenter).toBeCloseTo(m.toggleCenter, 1)
+      if (view === 'research') expect(m.canvasTop).toBe(m.headerBottom)
       expect(m.home).toBe(view === 'home' ? 'true' : 'false')
       expect(m.tabs.filter(tab => tab.active).map(tab => tab.viewId)).toEqual([view === 'home' ? 'chat' : view])
       expect(m.title).toMatchObject({ fontSize: '14px', lineHeight: '20px', color: dark ? 'rgb(229, 229, 229)' : 'rgb(37, 37, 37)' })
@@ -146,6 +173,8 @@ for (const closed of [false, true]) it(`right ${closed ? 'closed' : 'open'} thre
     await page.locator('main').evaluate((el, width) => { el.style.width = width + 'px' }, width + (closed ? 36 : 0))
     await expect.poll(() => page.locator('main header').getAttribute('data-odyssey-header-layout')).toBe(layout)
     const m = await measure()
+    expect(m.height).toBe(44)
+    for (const center of m.centers) expect(center).toBeCloseTo(m.toggleCenter, 1)
     expect(m.gap).toBe(layout === 'regular' ? 24 : 12)
     expect(m.title.lineHeight).toBe(layout === 'regular' ? '20px' : '21px')
     expect(m.title.width).toBeLessThanOrEqual(layout === 'narrow' ? 80 : layout === 'compact' ? 96 : 200)
