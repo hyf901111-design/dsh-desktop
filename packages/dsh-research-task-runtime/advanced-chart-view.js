@@ -31,7 +31,9 @@ export function advancedChartView(spec,width=624,options={}){
    elements.push(group(i,[node('rect',{class:'waterfall-bar',x:x-bw/2,y:Math.min(y(s.from),y(s.to)),width:bw,height:Math.max(1,Math.abs(y(s.from)-y(s.to))),fill:color(s.total?0:s.value>=0?1:2),'data-grow-origin':s.to>=s.from?'center bottom':'center top'})]));
    if(step>=46)elements.push(text(x,Math.min(y(s.from),y(s.to))-5,(!s.total&&s.value>0?'+':'')+fmt(s.value),{'text-anchor':'middle'}));
    const stride=Math.max(1,Math.ceil(steps.length/Math.max(3,Math.floor((right-left)/64))));
-   if(i%stride===0||i===steps.length-1)elements.push(text(x,h-15,short(s.label,6),{'text-anchor':'middle'}));
+   // Reserve one full tick interval for the final total. Adding the final
+   // category beside a regular tick makes their labels overlap on narrow cards.
+   if(i===0||i===steps.length-1||i%stride===0&&steps.length-1-i>=stride)elements.push(text(x,h-15,short(s.label,6),{'text-anchor':'middle'}));
   });
   headers=['项目','本项'+unit,'累计'+unit];summary=`期初 ${fmt(spec.start.value)} → 期末 ${fmt(current)}${unit}`;footnote='期末由期初与全部有符号增减累计；方向键查看每项';
  }else if(kind==='funnel'){
@@ -123,7 +125,9 @@ export function advancedChartView(spec,width=624,options={}){
   const y=yGrid(lo-pad,hi+pad,left,right,top,priceBottom),step=(right-left)/candles.length,bw=Math.min(18,step*.62),maxVolume=Math.max(0,...candles.map(c=>c.volume)),vy=v=>bottom-(maxVolume?v/maxVolume:0)*(bottom-volumeTop);
   metrics.candles=[];
   candles.forEach((c,i)=>{
-   const x=left+(i+.5)*step,col=c.close>=c.open?'var(--sherlock-market-positive,#ee4c61)':'var(--sherlock-market-negative,#00b050)',highY=y(c.high),lowY=y(c.low),openY=y(c.open),closeY=y(c.close);
+   // Price direction follows the displayed red-up/green-down convention;
+   // business status tokens can use the opposite positive/negative palette.
+   const x=left+(i+.5)*step,col=c.close>=c.open?'var(--sherlock-price-up,#df4f57)':'var(--sherlock-price-down,#00a83e)',highY=y(c.high),lowY=y(c.low),openY=y(c.open),closeY=y(c.close);
    const ri=row(c.date,[fmt(c.open),fmt(c.high),fmt(c.low),fmt(c.close),fmt(c.volume)],`${c.date} · 开 ${fmt(c.open)} · 高 ${fmt(c.high)} · 低 ${fmt(c.low)} · 收 ${fmt(c.close)}${unit} · 成交量 ${fmt(c.volume)} ${spec.volumeUnit}`);
    const marks=[line(x,highY,x,lowY,{class:'plot-stem',stroke:col,'stroke-width':1}),node('rect',{class:'volume-bar',x:x-bw/2,y:vy(c.volume),width:bw,height:bottom-vy(c.volume),fill:col,'fill-opacity':.65})];
    if(kind==='candlestick')marks.push(node('rect',{class:'candle-body',x:x-bw/2,y:Math.min(openY,closeY),width:bw,height:Math.max(1,Math.abs(openY-closeY)),fill:col}));
