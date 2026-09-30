@@ -2,6 +2,7 @@ import {it,expect,vi} from 'vitest'
 import {Window} from 'happy-dom'
 import {runInNewContext} from 'node:vm'
 import {validWorkbenchStyleMessage,installWorkbenchStyleMessages,workbenchStylePalette,workbenchModeCss,installWorkbenchLocaleMessages} from '../packages/dsh-research-task-runtime/workbench-style.js'
+import {WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
 import {WORKBENCH_ENGLISH} from '../packages/dsh-research-task-runtime/workbench-locale.js'
 import {createWorkbenchStyleState} from '../scripts/lib/workbench-style-client.mjs'
 import {workbenchText} from '../scripts/lib/workbench-localization.mjs'
@@ -27,6 +28,23 @@ it('企业化控件完整复用浅色配色，悬停为灰色且不受客户端�
  for(const key of ['control-bg','control-border','control-text','control-muted','control-primary','control-on-primary'])expect(p.getPropertyValue('--sherlock-'+key)).toBe(workbenchStylePalette('light')[key])
  expect(p.getPropertyValue('--sherlock-row-selected')).toBe('#e8e8eb')
  expect(p.getPropertyValue('--sherlock-tooltip-bg')).toBe('#e8e8eb')
+})
+it('旧基金组件的选中行保持灰底深色文字，指标口径在企业色背景上反白',()=>{
+ const w=new Window(),doc=w.document,style=doc.createElement('style')
+ // HappyDOM has no cascade-layer implementation. The real preview keeps the
+ // layer; here exercise the same declarations and legacy control conflicts.
+ style.textContent=WORKBENCH_PRESENTATION_CSS.replace('@layer ework-workbench {','').replace(/}\s*$/,'')
+ doc.head.append(style)
+ doc.documentElement.dataset.workbenchStyle='enterprise'
+ doc.body.innerHTML='<div class="fund-kpi"><strong class="fund-value">4.4181 元</strong><details class="fund-detail fund-detail-disclosure"><summary>fund_market · 2026-09-29</summary><p>原始数据口径和完整来源</p></details></div><button class="fund-industry" aria-pressed="true"><span class="fund-industry-label">电子</span><span class="fund-track"><i class="fund-bar"></i></span><span class="fund-industry-value">15.4%</span></button>'
+ for(const n of doc.querySelectorAll('.fund-kpi summary,.fund-kpi p'))expect(w.getComputedStyle(n).color).toBe('white')
+ const row=doc.querySelector('.fund-industry')
+ expect(w.getComputedStyle(row).backgroundColor).toBe('#e8e8eb')
+ for(const n of row.querySelectorAll('.fund-industry-label,.fund-industry-value'))expect(w.getComputedStyle(n).color).toBe('#3c3c3c')
+ expect(w.getComputedStyle(row).borderRadius).toBe('0px')
+ doc.documentElement.dataset.workbenchStyle='dark'
+ expect(w.getComputedStyle(row).backgroundColor).toBe('#223147')
+ expect(w.getComputedStyle(row.querySelector('.fund-industry-label')).color).toBe('#e8e8ed')
 })
 it('新闻筛选计数和控件辅助标签随语言切换，原文和用户输入保持',async()=>{
  const w=new Window(),doc=w.document;doc.body.dataset.researchKind='news';doc.body.innerHTML='<input aria-label="搜索条目" value="用户输入"><select aria-label="筛选分类"></select><p id="count" role="status">2 / 6 条</p><p id="business">2 / 6 条</p>'
