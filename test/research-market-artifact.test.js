@@ -43,6 +43,15 @@ it('renders source metrics with exact data and typography rather than free-form 
  const d=render({variant:'metrics',items:[{label:'上证指数',value:'3,912.48',detail:'+0.64%'},{label:'深证成指',value:'12,648.32',detail:'+1.12%'}]})
  expect(d.querySelector('h1')).toBeNull();expect(d.querySelectorAll('.market-value')).toHaveLength(2)
  expect(d.querySelector('.market-value').textContent).toBe('3,912.48');expect(d.querySelector('style').textContent).toContain('font-size:21px')
+ expect(d.querySelector('.market-asof').textContent).toBe('09.21 15:00 · 情景模拟')
+})
+it('shows the actual quote date and unavailable-source disclosure in the metrics body',()=>{
+ const asOf='2026-09-30 收盘 · 腾讯行情（通联本次不可用）'
+ const d=render({variant:'metrics',asOf,items:[{label:'点位',value:'100 点'}],note:'已保留来源原始单位。',sources:[{label:'实际来源'}]})
+ expect(d.body.querySelector('.market-footer').textContent).toContain(asOf)
+ expect(d.body.querySelector('.market-footer').textContent).toContain('已保留来源原始单位')
+ expect(d.body.querySelector('.market-footer').textContent).toContain('实际来源')
+ expect(d.body.dataset.metricsFooterLines).toBe('3')
 })
 it('retains every table column, decimal, time and neutral sorting control',()=>{
  const d=render({variant:'table',columns:['时间','成交价','量 / 手','金额 / 万','方向'],rows:[['14:59:58.124','4.521','128','5.79','主动卖']],tones:[['','','','','negative']]})

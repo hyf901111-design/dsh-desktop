@@ -30,12 +30,13 @@ export function researchMarketContentDimensions(variant, data = {}) {
   if (variant === 'metrics') {
     const widthUnits = text => [...String(text ?? '')].reduce((sum, char) => sum + (/[^\x00-\xff]/u.test(char) ? 2 : 1), 0);
     const footerLines = Number.isInteger(data.footerLines) ? data.footerLines
-      : (data.note ? Math.max(1, Math.ceil(widthUnits(data.note) / 105)) : 0)
+      : (data.asOf ? Math.max(1, Math.ceil(widthUnits(data.asOf) / 105)) : 0)
+        + (data.note ? Math.max(1, Math.ceil(widthUnits(data.note) / 105)) : 0)
         + (Array.isArray(data.sources) && data.sources.length ? 1 : 0);
     // Reserve the enterprise tile padding and a readable provenance footer in
     // every mode. Resizing keeps a fixed card; excess content scrolls internally.
     const metricRows = Math.max(1, Math.ceil(rows / 3));
-    return {width:656,height:Math.min(456, 80 + metricRows * 90 + (metricRows - 1) * 6 + Math.min(3, footerLines) * 17)};
+    return {width:656,height:Math.min(456, 80 + metricRows * 90 + (metricRows - 1) * 6 + Math.min(4, footerLines) * 17)};
   }
   if (variant === 'fund-kpi')
     return {width:656,height:48 + Math.max(1, Math.ceil((rows || 6) / 3)) * 82};

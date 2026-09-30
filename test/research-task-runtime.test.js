@@ -535,6 +535,33 @@ describe('Research task contract and prompt', () => {
     } finally {await runtime.dispose()}
   })
 
+  it.each([true,false])('requires the named connected source instead of accepting a static website quote (repair=%s)', async repair => {
+    const {ResearchTaskRuntime}=await runtimeModule()
+    const calls=[],bindData=vi.fn(async()=>{})
+    const staticQuote={version:1,type:'market',variant:'metrics',title:'指数概览',asOf:'2026-09-30 · 腾讯行情（通联不可用）',items:[{label:'点位',value:'100 点'}],sources:[{label:'腾讯行情',url:'https://example.com/quote'}]}
+    const mapped={version:1,type:'data-bound',requests:[{key:'q',tool:'ework__t_abc123',args:{ticker:'000001'}}],mapping:{version:1,type:'market',variant:'metrics',title:'指数概览',asOf:{$from:'q',$path:'date',$suffix:' · 通联 DataYes'},items:[{label:'点位',value:{$from:'q',$path:'close',$as:'string',$suffix:' 点'}}],sources:[{label:'通联 DataYes'}]}}
+    const runtime=new ResearchTaskRuntime({adapter:{bindData,start:async request=>{
+      calls.push(request)
+      const useMapping=repair&&calls.length===2
+      return {childSessionId:'named-source-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(useMapping?mapped:staticQuote)}],sourceRecords:useMapping?[{tool:'ework__t_abc123',args:{ticker:'000001'},response:{date:'2026-09-30',close:100}}]:[]})}
+    },dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try{
+      await runtime.start({...containerRequest('source-required'),prompt:'工作台：指数概览\n本面板：指数概览\n优先使用 market 类型\n模板：market.metrics\n数据源：通联 DataYes。仅手动刷新。不使用模拟数据。'})
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe(repair?'completed':'failed'))
+      expect(calls).toHaveLength(2)
+      expect(calls[1].synthesisOnly).toBe(false)
+      expect(calls[1].prompt).toContain('不能用其他网站的静态行情')
+      if(repair){
+        expect(bindData).toHaveBeenCalledOnce()
+        expect(bindData.mock.calls[0][1]).toMatchObject({intervalMinutes:0,requests:[{toolId:'t_abc123'}]})
+        expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput).toContain('通联 DataYes')
+      }else{
+        expect(bindData).not.toHaveBeenCalled()
+        expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput).toBeUndefined()
+      }
+    }finally{await runtime.dispose()}
+  })
+
   it.each(['RATE_LIMIT','EMPTY_RESPONSE','SERVER'])('keeps source tools on a %s provider retry when only API discovery evidence was returned', async code => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const calls=[]
@@ -1207,6 +1234,21 @@ describe('Research task Subagent adapter', () => {
     const handle = await fixture.start('必须本次实际调用网页搜索工具 web_search 查询国家药监局最近60天公告，不得复用画布旧结果或示例数据。')
     expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(['financial_query', 'web_search', 'web_fetch'])
     expect(fixture.ctx.web.search).toHaveBeenCalled()
+    await handle.dispose()
+  })
+
+  it.each(['不使用模拟数据', '不要用示例数据', '不得使用虚构数据', 'Do not use sample data'])('keeps connected quote retrieval enabled when rejecting invented data: %s', async rejection => {
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[
+      {name:'ework__datayes_call',description:'调用通联 DataYes 金融数据 API'},
+      {name:'financial_query'},{name:'web_search'},{name:'web_fetch'},{name:'bash'},{name:'subagent'}
+    ]}
+    const handle=await fixture.start(`工作台：指数概览\n本面板：上证指数行情\n优先使用 market 类型\n模板：market.metrics\n数据源：通联 DataYes。最近交易日收盘点位、涨跌幅及成交额。${rejection}。仅手动刷新。`)
+    const child=fixture.ctx.subagents.start.mock.calls[0][1]
+    expect(child.toolFilter.allow).toEqual(['ework__datayes_call','web_search','web_fetch'])
+    expect(child.prompt[0].text).toContain('mapping 的模板结构')
+    expect(child.prompt[0].text).toContain('intervalMinutes=0')
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled()
     await handle.dispose()
   })
 

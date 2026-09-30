@@ -266,7 +266,12 @@ function containerAllowsWebSearch(prompt) {
   if (/(?:使用|通过|调用|接入)[^。；;\n]{0,40}(?:通联|DataYes|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实数据)/iu.test(value)) return true
   if (/离线(?:页面|模式|运行)?/u.test(value)) return false
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
-  const illustrative = /(?:演示|示例|示意|模拟|虚构|样例)(?:数据|合同|记录|条目|明细|案例|样本)|(?:数据|合同|记录|条目|明细|案例|样本).{0,12}(?:虚构|仅供演示|仅为示例)|\b(?:sample|demo|mock|synthetic|illustrative)\s+(?:data|contracts?|records?|entries|examples?)\b/iu.test(value)
+  // Rejecting invented observations is a retrieval requirement, not permission
+  // to remove the connected source tools. Keep affirmative sample/supplied-data
+  // requests offline, including when both appear elsewhere in the same prompt.
+  const sampleIntent = value.replace(/(?:不(?:再)?(?:使用|用|采用|允许|接受)|不要(?:再)?(?:使用|用)|禁止(?:使用|用)|不得(?:使用|用)|不能(?:使用|用)|无需(?:使用|用))\s*(?:任何|这些|上述)?\s*(?:演示|示例|示意|模拟|虚构|样例)(?:数据|合同|记录|条目|明细|案例|样本)/gu, '')
+    .replace(/\b(?:do not|don't|never)\s+use\s+(?:any\s+)?(?:sample|demo|mock|synthetic|illustrative)\s+(?:data|contracts?|records?|entries|examples?)\b/giu, '')
+  const illustrative = /(?:演示|示例|示意|模拟|虚构|样例)(?:数据|合同|记录|条目|明细|案例|样本)|(?:数据|合同|记录|条目|明细|案例|样本).{0,12}(?:虚构|仅供演示|仅为示例)|\b(?:sample|demo|mock|synthetic|illustrative)\s+(?:data|contracts?|records?|entries|examples?)\b/iu.test(sampleIntent)
   const supplied = /(?:以下|这些|给定|上述|下列).{0,12}(?:数据|数值)|(?:我|用户)(?:已|已经)?提供的(?:数据|数值)|数据(?:如下|为|是)[：:\s]*|数据[：:]\s*(?:[-+]?\d|[\[{]|\|)|(?:收入|成本|销量|收益率|价格|净值)[：:\s]*[-+]?\d+(?:[、,，]\s*[-+]?\d+){1,}/u.test(value)
   if ((illustrative || supplied) && !explicitFresh) return false
   if (/静态图形|\bstatic (?:graphic|shape)/iu.test(value)) return false
@@ -1315,6 +1320,15 @@ export class ResearchTaskRuntime {
           if(mapped)deliveredText=JSON.stringify(mapped.data)
           const sourceIssue=extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
           if(sourceIssue)throw new ResearchTaskError('GENERATION_FAILED',sourceIssue)
+          // A named connected source is part of the requested result. Static
+          // quotes from a different website cannot satisfy it, even if the
+          // model writes the unavailable-source disclaimer into metadata.
+          if(!mapped&&task.kind==='container'&&workbenchPanelFormat(task.prompt)&&
+            /(?:数据源\s*[:：]\s*|使用\s*|通过\s*|调用\s*|接入\s*)(?:已连接的\s*)?(?:通联|DataYes)/iu.test(task.prompt)){
+            bindingRepairEvidence=componentBindingEvidence(sourceRecords)
+            throw new ResearchTaskError(bindingRepairEvidence?'INVALID_OUTPUT':'GENERATION_FAILED',
+              '该组件指定通联 DataYes 来源，必须实际取得业务响应并提交可刷新映射；不能用其他网站的静态行情或接口目录代替。')
+          }
           output = finalText(mapped?[{type:'text',text:deliveredText}]:result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && task.kind === 'container' && workbenchPanelFormat(task.prompt) && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
