@@ -1,6 +1,6 @@
 import { researchBentoSize } from './bento-layout.js';
 import { resolveWorkbenchSamples } from './workbench-shared-samples.js';
-import {chartTemplateSchema,requestedChartVariant,requireSimulatedChartData} from './chart-template-contract.js';
+import {chartDataIssue,chartTemplateSchema,requestedChartVariant,requireSimulatedChartData} from './chart-template-contract.js';
 import { templateFor } from './component-template-registry.js';
 import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
@@ -169,6 +169,11 @@ function normalizeSimulatedCalendar(artifact) {
 }
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
+    if (artifact.type === 'chart') {
+        const template = templateFor(artifact);
+        const issue = chartDataIssue(artifact);
+        return `${issue ? issue + '。' : ''}${template?.schema ?? chartTemplateSchema()}；保留已提供的数据，仅修正上述字段后重试。`;
+    }
     if (artifact.type === 'market' && artifact.variant === 'scatter' && Array.isArray(artifact.items)) {
         const index = artifact.items.findIndex(i => !str(i?.label, 200) || !Number.isFinite(i?.x) || !Number.isFinite(i?.y));
         if (index !== -1) return `散点第${index + 1}项需有 label、有限数值 x 和 y（允许负值）；已提供的 name/company 可作为 label。`;

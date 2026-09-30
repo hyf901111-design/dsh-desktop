@@ -50,7 +50,10 @@ export function advancedChartDataIssue(s){
    seen.add(key);a.output+=l.value;b.input+=l.value;
   }
   for(let i=0;i<s.columns.length;i++)if(!s.nodes.some(n=>n.column===i)||s.nodes.filter(n=>n.column===i).length>10)return '桑基图每列需1–10个节点';
-  for(const n of nodes.values())if(!n.input&&!n.output||n.column>0&&n.column<s.columns.length-1&&Math.abs(n.input-n.output)>Math.max(1e-8,Math.max(n.input,n.output)*1e-8))return '桑基图不能有孤立节点，中间节点输入输出必须守恒';
+  for(const n of nodes.values()){
+   if(!n.input&&!n.output)return `桑基图节点「${n.label}」没有输入或输出流量；不能有孤立节点`;
+   if(n.column>0&&n.column<s.columns.length-1&&Math.abs(n.input-n.output)>Math.max(1e-8,Math.max(n.input,n.output)*1e-8))return `桑基图节点「${n.label}」输入 ${n.input}、输出 ${n.output}；中间节点输入输出必须守恒`;
+  }
  }else if(['scatter','bubble'].includes(s.variant)){
   for(const a of [s.xAxis,s.yAxis])if(!obj(a,['label','unit'])||!text(a.label,128)||!text(a.unit,64))return '散点图每条轴必须标注名称与原始单位';
   const bubble=s.variant==='bubble';

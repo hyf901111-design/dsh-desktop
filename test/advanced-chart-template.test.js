@@ -64,6 +64,24 @@ describe('remaining Figma 22A chart families',()=>{
   {...samples.candlestick,candles:[{date:'2026-09-21',open:10,high:9,low:8,close:10,volume:2}]},
   {...samples.ohlc,candles:[...samples.ohlc.candles].reverse()}
  ])('rejects misleading chart data before creating cards: %#',s=>{expect(chartDataIssue(s)).toBeTruthy();expect(acceptArtifactOutput(JSON.stringify(s))).toBeUndefined();});
+ it('returns a focused Sankey repair hint with the failing node and preserves supplied data',()=>{
+  const artifact=structuredClone(samples.sankey);artifact.links[4].value=44;
+  const original=structuredClone(artifact);
+  const panel={title:artifact.title,type:'chart',prompt:'chart.sankey',size:'large',artifact};
+  for(const dataMode of ['simulated','source']){
+   let message='';try{validateWorkbench({requestId:'repair-'+dataMode,title:'验收',dataMode,panels:[panel]});}catch(error){message=error.message;}
+   expect(message).toContain('新客');expect(message).toContain('65');expect(message).toContain('64');
+   expect(message).toContain('chart.sankey');expect(message).not.toContain('chart.waterfall');expect(message).not.toContain('chart.candlestick');
+  }
+  expect(artifact).toEqual(original);
+  artifact.links[4].value=45;
+  expect(prepareSimulatedArtifact({...panel,artifact})).toEqual(samples.sankey);
+ });
+ it('reports a heatmap matrix error with only its own schema',()=>{
+  const artifact={...samples.heatmap,values:[[1,.6,0],[.5,1,0],[0,0,1]]};
+  let message='';try{prepareSimulatedArtifact({title:artifact.title,type:'chart',artifact});}catch(error){message=error.message;}
+  expect(message).toContain('矩阵必须对称');expect(message).toContain('chart.heatmap');expect(message).not.toContain('chart.sankey');
+ });
  it('escapes text without allowing chart labels to become HTML',()=>{
   const s={...samples.scatter,points:[{label:'</script><img src=x onerror=alert(1)>',x:1,y:2}]};const out=JSON.parse(acceptArtifactOutput(JSON.stringify(s)));expect(out.html).not.toContain('<img src=x');expect(out.html).not.toContain('innerHTML');expect(readTemplateModel(out).data).toEqual(s);
  });
