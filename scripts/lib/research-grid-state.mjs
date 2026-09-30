@@ -4,12 +4,19 @@ export function createWorkbenchGridState(storage,sessionId) {
   const grid=createResearchGrid(), key='ework.research.grid.v1:'+sessionId
   let width=0,cells=[],initialized=false,previous=new Map(),nodesById=new Map(),forced=false,legacyRows=false
   const planning=new Map()
+  // Responsive content floors belong to this viewport, not the shared document.
+  // An explicit resize overrides them until the viewport changes again.
+  const contentHeights=new Map(),contentOverrides=new Set()
   const durableCells=()=>cells.filter(c=>!planning.has(c.id))
   try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1}}catch{}
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
   const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
   function visibleCells(){
-    const m=grid.metrics(width||1000),limits=c=>grid.minimum(nodesById.get(c.id),m)
+    const m=grid.metrics(width||1000),limits=c=>{
+      const node=nodesById.get(c.id),min=grid.minimum(node,m),value=contentHeights.get(c.id)
+      if(value&&!contentOverrides.has(c.id)&&value.html===node?.containerSpec?.html&&Math.abs(value.width-(c.w*m.step-m.gap))<=2)min.h=Math.max(min.h,Math.ceil((value.height+m.gap)/m.rowStep))
+      return min
+    }
     if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
     const placed=[]
     for(const cell of [...cells].sort((a,b)=>a.y-b.y||a.x-b.x)){
@@ -95,10 +102,18 @@ export function createWorkbenchGridState(storage,sessionId) {
     releasePlanning(id){if(!planning.delete(id))return false;cells=grid.compact(cells.filter(c=>c.id!==id));previous.delete(id);researchGridNodeIds.delete(id);forced=true;return true},
     planningNodes:()=>grid.project([...planning.values()],visibleCells(),width||1000),
     document(snapshot){if(!width)return {files:snapshot.files,artifacts:snapshot.artifacts};const nodes=grid.project([...snapshot.files,...snapshot.artifacts],cells,1000),byId=new Map(nodes.map(n=>[n.id,n]));return {files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id))}},
-    enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;forced=true;return true},
+    enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();contentOverrides.clear();forced=true;return true},
+    contentHeight(id,value){
+      const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1]
+      if(node?.containerSpec?.type!=='html'||!['share-statistics','market-overview','currency-snapshot','watchlist'].includes(kind)||value.html!==node.containerSpec.html||contentOverrides.has(id))return false
+      const old=contentHeights.get(id)
+      if(old?.html===value.html&&old.width===value.width&&old.height===value.height)return false
+      contentHeights.set(id,value);forced=true;return true
+    },
+    clearContentOverrides(){contentOverrides.clear()},
     get:()=>freeCells(cells),
     visible:()=>freeCells(visibleCells()),
-    set(next){cells=next.map(grid.bounded);forced=true},
+    set(next){for(const c of next){const old=cells.find(n=>n.id===c.id);if(old&&(old.w!==c.w||old.h!==c.h))contentOverrides.add(c.id)}cells=next.map(grid.bounded);forced=true},
     append:id=>grid.append(cells,id),
     save(){if(width)try{return storage?.setItem(key,JSON.stringify({version:2,cells:durableCells()}))!==false}catch{return false}return true},
     enabled:()=>width>0

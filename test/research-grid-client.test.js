@@ -1035,6 +1035,18 @@ it('延迟挂载的HTML预览收到真实选择状态，取消选择和载入同
  expect(f.host.querySelector('.ew-grid-selection-ring')).not.toBeNull()
 })
 
+it('金融快照在侧栏挤窄后按可信内容报告补足显示高度，保持逻辑布局',async()=>{
+ const f=await fixture(true),w=f.workspace,html='<body data-sherlock-market="share-statistics"></body>'
+ await act(async()=>{w.setArtifacts([{...text('snapshot'),kind:'generated-container',containerPrompt:'股本统计',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'快照',html}}]);w.applyWorkbenchCells([{id:'snapshot',x:0,y:0,w:40,h:12}],true)})
+ const canonical=w.getWorkbenchDocument()
+ await act(async()=>{w.setCanvasSize({width:600,height:700,availableWidth:600});w.setWorkbenchWidth(600)})
+ const frame=f.host.querySelector('iframe[data-research-html-artifact]')
+ const send=async source=>act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source,data:{type:'sherlock-workbench-content-size',width:584,height:240}})))
+ await send({});expect(w.getSnapshot().artifacts[0].height).toBeLessThan(308)
+ await send(frame.contentWindow);expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(308)
+ expect(w.getWorkbenchDocument()).toEqual(canonical)
+})
+
 it('整理给行情指标及来源留足高度，不把视口余量灌入指标卡',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});
  const {renderMarketArtifact}=await import('../packages/dsh-research-task-runtime/market-artifact.js')

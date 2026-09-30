@@ -69,6 +69,7 @@ export function patchResearchGridWorkbench(source){
     setWorkbenchStyle(mode){if(workbenchStyleState.set(mode)){update({},false);return true}return false},
     getWorkbenchCells:()=>workbenchGrid.get(),
     getWorkbenchVisibleCells:()=>workbenchGrid.visible(),
+    setWorkbenchContentHeight(id,value){if(workbenchGrid.contentHeight(id,value)){update({},false);return true}return false},
     getWorkbenchDocument:()=>workbenchGrid.document(snapshot),
     getWorkbenchPlanningNodes:()=>workbenchGrid.planningNodes(),
     reserveWorkbenchPlanning(intent,position){if(workbenchGrid.reservePlanning(intent,snapshot,position)){update({},false);return true}return false},
@@ -103,6 +104,7 @@ export function patchResearchGridWorkbench(source){
   change('function researchCanvasArrangeWithMotion(root, workspace, measured) {','function researchCanvasArrangeWithMotion(root, workspace, measured) {\nif(root?.hasAttribute("data-ework-grid"))return arrangeWorkbenchContents(root,workspace,measured);')
   change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map()) {
     if(workbenchGrid.enabled()){
+      workbenchGrid.clearContentOverrides();
       if(!collaborationCanWrite())return false;
       const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts,...workbenchGrid.planningNodes()].map(n=>({...n,preferred:n.kind==='planning-card'?n:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
       if(!nodes.length)return false;

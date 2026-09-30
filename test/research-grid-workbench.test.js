@@ -3,6 +3,26 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('快照随画布变窄保留完整内容占位，不改共享逻辑布局，手动缩高仍有效',()=>{
+ const state=createWorkbenchGridState(null,'responsive-snapshots'),g=createResearchGrid(),html='<body data-sherlock-market="share-statistics"></body>'
+ state.enable(1000)
+ let snap=state.reconcile({files:[],artifacts:[{id:'a',kind:'generated-container',width:980,height:330,containerSpec:{type:'html',html}},{id:'b',kind:'pasted-text',width:480,height:200}],viewport:{y:0}})
+ state.set([item('a',0,0,40,15),item('b',0,15,40,12)]);snap=state.reconcile(snap)
+ const canonical=state.document(snap)
+ state.enable(600);snap=state.reconcile(snap)
+ expect(state.contentHeight('a',{html,width:576,height:290})).toBe(true);snap=state.reconcile(snap)
+ expect(snap.artifacts[0].height).toBeGreaterThanOrEqual(290)
+ expect(g.overlap(...state.visible())).toBe(false)
+ expect(state.document(snap)).toEqual(canonical)
+ const small=state.get().map(c=>c.id==='a'?{...c,h:12}:c);state.set(small);snap=state.reconcile(snap)
+ expect(snap.artifacts[0].height).toBeLessThan(290)
+ expect(state.contentHeight('a',{html,width:576,height:300})).toBe(false)
+ state.enable(500);snap=state.reconcile(snap)
+ expect(state.contentHeight('a',{html,width:476,height:310})).toBe(true);snap=state.reconcile(snap)
+ expect(snap.artifacts[0].height).toBeGreaterThanOrEqual(310)
+ expect(state.contentHeight('b',{html,width:484,height:1000})).toBe(false)
+ expect(state.contentHeight('a',{html:'stale',width:484,height:1000})).toBe(false)
+})
 it('金融快照整理遵守模板阅读宽度，窄两列合并且重复整理稳定',()=>{
  const g=createResearchGrid(),variants=['share-statistics','market-overview','currency-snapshot','watchlist']
  for(const width of [900,1000,1400,320]){

@@ -381,7 +381,9 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   // provenance. Its actual height replaces the conservative starting estimate.
   // Older clipped viewport reports still need that estimate as a safety floor.
   const floor=metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0
-  return {width:preferred.width,height:Math.max(floor,value?.height?value.height+58:preferred.height)}
+  const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist)"/.test(node.containerSpec?.html||'')
+  const chrome=value?.chromeHeight??(snapshot?68:58)
+  return {width:preferred.width,height:Math.max(floor,value?.height?value.height+chrome:preferred.height)}
 }
 export function measureWorkbenchContents(root,nodes) {
   const measured=new Map(),cache=root?.__eworkContentMeasurements
@@ -497,7 +499,10 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       if(!data||typeof data!=='object'||Array.isArray(data)||!(Object.keys(data).length===3||Object.keys(data).length===4&&data.intrinsicMetrics===true)||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
       const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
       const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
-      if(node?.containerSpec?.type==='html'){root.__eworkScrollbars?.();contentMeasurements.set(id,{html:node.containerSpec.html,width:data.width,height:data.height,...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:{})});root.__eworkContentFit?.refit()}
+      if(node?.containerSpec?.type==='html'){
+        root.__eworkScrollbars?.();const value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil(node.height-frame.clientHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:{})};contentMeasurements.set(id,value)
+        workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height});root.__eworkContentFit?.refit()
+      }
     }
     window.addEventListener('message',contentSize)
     const measure=()=>{const bounds=root.getBoundingClientRect();if(!(bounds.width>0))return;const panel=root.ownerDocument.querySelector('.t8lSSG_panel:not(.t8lSSG_panelHidden)'),width=workbenchAvailableWidth(root,bounds,panel?.getBoundingClientRect());if(Math.abs(width-(workspace.getSnapshot().canvasSize.availableWidth||width))>1)root.__eworkContentFit?.finish();workspace.setWorkbenchWidth(width);const size={width:bounds.width,height:bounds.height,availableWidth:width,visibleHeight:Math.max(0,Math.min(bounds.height,window.innerHeight-bounds.top))},previous=workspace.getSnapshot().canvasSize;if(Object.keys(size).some(k=>previous[k]!==size[k]))workspace.setCanvasSize(size)}
