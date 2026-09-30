@@ -9,38 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留手动刷新与行情来源说明及真实类型尺寸",
+        "featureName": "修复否定模拟数据误禁取数工具并严验指定来源",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "a426254c1b5baeabaa33dd6bc9d1125db35e25c0",
-        "tipCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
+        "baseCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
+        "tipCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
         "commits": [
           {
-            "commit": "a460aef2953edb48871240bb1ed337c755e14b28",
+            "commit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
             "parents": [
-              "a426254c1b5baeabaa33dd6bc9d1125db35e25c0"
+              "516b740241e65cacb013860d179fdbdd5cab8932"
             ],
-            "subject": "修复：明确实时与固定时钟首次交付时区配置"
-          },
-          {
-            "commit": "1b39dcd1de4c78ea42fafe1e4d19117b1a3f9329",
-            "parents": [
-              "a460aef2953edb48871240bb1ed337c755e14b28"
-            ],
-            "subject": "修复：保留用户仅手动刷新设置并阻止默认自动调度"
-          },
-          {
-            "commit": "2a788eb3689787a9bf6b57f8b468b505003b3800",
-            "parents": [
-              "1b39dcd1de4c78ea42fafe1e4d19117b1a3f9329"
-            ],
-            "subject": "修复：保留行情来源说明并按真实组件类型整理尺寸"
-          },
-          {
-            "commit": "516b740241e65cacb013860d179fdbdd5cab8932",
-            "parents": [
-              "2a788eb3689787a9bf6b57f8b468b505003b3800"
-            ],
-            "subject": "测试：同步运营模板内置技能版本验收断言"
+            "subject": "修复：保留拒绝模拟数据时的真实取数工具并严验来源"
           }
         ],
         "files": [
@@ -54,18 +33,6 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/clock-template-contract.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-refresh-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
@@ -74,51 +41,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-data-refresh.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/clock-template.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/component-refresh-policy.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/component-source-binding.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/operations-template.test.js"
           },
           {
             "status": "M",
@@ -126,11 +49,11 @@
           },
           {
             "status": "M",
-            "path": "test/workbench-design-contract.test.js"
+            "path": "test/research-task-runtime.test.js"
           },
           {
             "status": "M",
-            "path": "test/workflow-template.test.js"
+            "path": "test/workbench-design-contract.test.js"
           }
         ],
         "checks": [
@@ -155,9 +78,23 @@
               "test/research-market-artifact.test.js"
             ],
             "outcome": "passed",
-            "summary": "225项直接相关及继承门禁通过",
-            "verifiedCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
-            "completedAt": "2026-09-30T13:37:59.548495+00:00",
+            "summary": "226项直接相关及继承门禁通过",
+            "verifiedCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
+            "completedAt": "2026-09-30T14:10:27.950194+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "binding contract|retrieval enabled|rejecting invented|self-contained data|offline component offline|inherits the parent agent scoped|named connected source"
+            ],
+            "outcome": "passed",
+            "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
+            "verifiedCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
+            "completedAt": "2026-09-30T14:10:27.950194+00:00",
             "timeoutMs": 300000
           },
           {
@@ -168,19 +105,20 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "516b740241e65cacb013860d179fdbdd5cab8932",
-            "completedAt": "2026-09-30T13:37:59.548495+00:00",
+            "verifiedCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
+            "completedAt": "2026-09-30T14:10:27.950194+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "67ee原生刷新反馈与时钟通过；新源码9项生产沙盒排版通过，手动设置与尺寸新包原生待验"
+          "summary": "a49原生取数被否定模拟误分类判失败；新源码9项三模式生产排版通过，下一包自然输入待复验"
         },
         "acceptanceCriteria": [
-          "直接用户仅手动刷新设置保存为0并能手动刷新",
-          "行情默认尺寸来源说明完整且三模式可读",
-          "按body真实类型整理尺寸、不受共享CSS影响"
+          "否定模拟数据不会移除已授权取数工具",
+          "指定通联来源缺少实际响应与映射不能成功交付",
+          "数据日期与来源说明在metrics正文可见",
+          "仅手动刷新设置首次绑定为0"
         ],
         "risks": [
           "整体44类业务模板仍待完成",
@@ -188,52 +126,7 @@
           "本轮修复须新包原生复验",
           "旧research-workbench套件存在重复打补丁依赖与模拟fixture问题，未计为通过"
         ],
-        "generatedAt": "2026-09-30T13:37:59.548495+00:00"
-      },
-      "merged": {
-        "mergeCommit": "08b495ef099e65c5b5a1df34d70c43bdae79f5e4",
-        "verificationCommit": "08b495ef099e65c5b5a1df34d70c43bdae79f5e4",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "08b495ef099e65c5b5a1df34d70c43bdae79f5e4",
-            "completedAt": "2026-09-30T13:39:05.994Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "08b495ef099e65c5b5a1df34d70c43bdae79f5e4",
-            "completedAt": "2026-09-30T13:39:05.994Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "08b495ef099e65c5b5a1df34d70c43bdae79f5e4",
-            "completedAt": "2026-09-30T13:39:05.994Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T13:39:05.994Z"
+        "generatedAt": "2026-09-30T14:10:27.950194+00:00"
       }
     }
   ],
