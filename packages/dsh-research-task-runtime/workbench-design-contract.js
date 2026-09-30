@@ -2,10 +2,15 @@
 // belong to the client so a prompt cannot silently change the visual system.
 import {CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.js';
 import {OPERATIONS_TEMPLATES} from './operations-template-contract.js';
+import {inferFinancialSnapshotVariant} from './financial-snapshot.js';
 import { researchMarketContentDimensions, researchOptimalDimensions } from './bento-layout.js';
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
 const market = Object.freeze({
+  'share-statistics': {id:'financial.share-statistics',figma:'1917:341499',sourceHeight:330,width:485,height:330,minWidth:320,minHeight:200,size:'medium'},
+  'market-overview': {id:'financial.market-overview',figma:'1917:341610',sourceHeight:170,width:980,height:380,minWidth:480,minHeight:160,size:'medium'},
+  'currency-snapshot': {id:'financial.currency-snapshot',figma:'1917:341875',sourceHeight:410,width:980,height:430,minWidth:480,minHeight:320,size:'large'},
+  'watchlist': {id:'financial.watchlist',figma:'1917:342632',sourceHeight:260,width:980,height:460,minWidth:480,minHeight:240,size:'large'},
   'ticker-information': {id:'financial.ticker-information',figma:'1917:341251',sourceHeight:165,width:980,height:296,minWidth:480,minHeight:160,size:'medium'},
   'key-metrics': {id:'financial.key-metrics',figma:'1917:341348',sourceHeight:330,width:485,height:380,minWidth:320,minHeight:260,size:'large'},
   'management-team': {id:'financial.management-team',figma:'1917:345704',sourceHeight:330,width:980,height:380,minWidth:480,minHeight:288,size:'large'},
@@ -63,6 +68,8 @@ const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
+  const snapshotTitle=inferFinancialSnapshotVariant(panel.title),declaredSnapshot=requestedMarketVariant(panel.prompt);
+  if(snapshotTitle&&(!declaredSnapshot||declaredSnapshot===snapshotTitle))return snapshotTitle;
   if(/管理团队|管理层团队|高管.{0,8}(?:薪酬|报酬)|management.team/iu.test(panel.title??''))return 'management-team';
   if(/核心指标|关键指标|key.metrics/iu.test(panel.title??''))return 'key-metrics';
   if(/个股信息|证券信息|ticker.information/iu.test(panel.title??''))return 'ticker-information';
@@ -92,6 +99,7 @@ export function marketVariant(panel = {}) {
   if (!primaryCandle &&
       /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
+    const snapshot=inferFinancialSnapshotVariant(text);if(snapshot)return snapshot;
     if(/管理团队|管理层团队|高管.{0,8}(?:薪酬|报酬)|management.team/iu.test(text))return 'management-team';
     if(/核心指标|关键指标|key.metrics/iu.test(text))return 'key-metrics';
     if(/个股信息|证券信息|ticker.information/iu.test(text))return 'ticker-information';

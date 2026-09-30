@@ -26,6 +26,9 @@ body button.fund-industry :is(.fund-industry-label,.fund-industry-value){color:v
 body .fund-industry-readout:empty{display:none!important}
 body :is(table,.fund-table){width:100%!important;border-collapse:collapse!important;font:400 12px/18px var(--sherlock-font-sans)!important;color:var(--sherlock-text)!important;background:var(--sherlock-bg)!important}
 body :is(th,td){height:26px!important;box-sizing:border-box!important;padding:4px 8px!important;border:0!important;white-space:nowrap!important;font-size:12px!important;line-height:18px!important}
+/* These source tables contain full amounts, names and disclosure times.
+   Wrapping belongs to their cells so values never paint over adjacent columns. */
+body .financial-profile :is(th,td){white-space:normal!important;overflow-wrap:anywhere!important}
 body th{position:sticky;top:0;z-index:1;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important;font-weight:500!important}
 body th button{border:0!important;background:none!important;color:inherit!important;padding:0!important;text-align:inherit!important;font:inherit!important;min-height:0!important}
 body tbody tr{background:var(--sherlock-bg)!important}body tbody tr:nth-child(even){background:var(--sherlock-row-alternate)!important}body tbody tr:hover,body tbody tr[aria-selected="true"]{background:var(--sherlock-row-selected)!important}

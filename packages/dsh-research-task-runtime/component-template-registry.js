@@ -4,6 +4,7 @@ import {applyTerminalPresentation} from './terminal-presentation.js'
 import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
 
 const interactions = {
+ 'share-statistics':['股数与比例','统计口径'],'market-overview':['市场筛选','历史读数'],'currency-snapshot':['报价方向','精度','货币筛选'],'watchlist':['搜索','排序','行情详情','管理自选'],
  'ticker-information':['历史报价','逐点读数'],'key-metrics':['搜索','指标口径'],'management-team':['搜索','报酬排序','成员披露详情'],
  metrics:['详情'],candlestick:['标的','交易区间','逐点行情'],trend:['系列','逐点数值'],scatter:['点选详情'],table:['搜索','排序','行详情'],pipeline:['阶段筛选','详情'],events:['详情'],heatmap:['选择区块','详情'],breadth:['区间分布'],
  'fund-kpi':['指标详情'],'fund-holdings':['搜索','排序'],'fund-industry':['行业比较'],'price-volume':['区间','逐点量价'],'order-book':['盘口档位'],'fund-flow':['行业','周期'],'valuation-band':['区间','分位比较'],'equity-drawdown':['区间','基准比较'],'allocation-donut':['选择分类'],'waterfall':['项目详情'],'funnel':['阶段详情'],'risk-matrix':['风险详情']
