@@ -9,142 +9,86 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一工具栏线性功能图标及实心模式点阵图标",
+        "featureName": "规划卡片支持缩放与自由落点，限定子代理过程入口",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "e80cbfabb6061fd89c4c5e0b5942e9118507ec1e",
-        "tipCommit": "17c39e5996ad43fd67a26d68e2bc807183bbe091",
+        "baseCommit": "17c39e5996ad43fd67a26d68e2bc807183bbe091",
+        "tipCommit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
         "commits": [
           {
-            "commit": "17c39e5996ad43fd67a26d68e2bc807183bbe091",
+            "commit": "46a701868f6a86fc09e0eb4ee3e7d06c2e0b3b28",
             "parents": [
-              "e80cbfabb6061fd89c4c5e0b5942e9118507ec1e"
+              "17c39e5996ad43fd67a26d68e2bc807183bbe091"
             ],
-            "subject": "统一底部工具栏图标并采用实心模式与渐隐点阵样式"
+            "subject": "记录工具栏图标与网页会话的原生客户端验收结果"
+          },
+          {
+            "commit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
+            "parents": [
+              "46a701868f6a86fc09e0eb4ee3e7d06c2e0b3b28"
+            ],
+            "subject": "支持规划卡片调整尺寸和自由落点，仅子代理生成卡显示过程"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/mode-dark.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/mode-enterprise.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/mode-light.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/tool-arrange.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/tool-frame.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/tool-link.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/tool-select.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/tool-voice.svg"
-          },
-          {
-            "status": "M",
-            "path": "build/figma-canvas-icons/tools-source.md"
-          },
           {
             "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
             "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/workbench-style.css"
-          }
-        ],
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "101项直接相关画布客户端检查通过",
-            "verifiedCommit": "17c39e5996ad43fd67a26d68e2bc807183bbe091",
-            "completedAt": "2026-09-30T05:15:54.458644+00:00",
-            "timeoutMs": 300000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "Figma矢量已目检；待集成本地包核验新图标"
-        },
-        "acceptanceCriteria": [
-          "统一五个功能图标的线条和视觉尺寸",
-          "右侧三模式使用实心图标",
-          "易方达采用用户给定渐隐点阵",
-          "保留整理图标形状和原功能"
-        ],
-        "risks": [
-          "整体44类业务模板接入和九图自然输入重试仍待完成"
-        ],
-        "generatedAt": "2026-09-30T05:16:10.722716+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
-        "verificationCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
-            "completedAt": "2026-09-30T05:17:33.738Z",
-            "timeoutMs": 300000
+            "path": "scripts/lib/research-creation-progress.mjs"
           },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          }
+        ],
+        "checks": [
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
+              "test/research-creation-progress.test.js",
+              "test/research-planning-occupancy.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
-            "completedAt": "2026-09-30T05:17:33.738Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8520e4937401fd2a27b09f087a1dcf2d09d7a2af",
-            "completedAt": "2026-09-30T05:17:33.738Z",
+            "summary": "112项直接相关检查通过，包含缩放撤销重做及三类子代理入口",
+            "verifiedCommit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
+            "completedAt": "2026-09-30T05:59:20.699886+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-30T05:17:33.738Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能分支完成实际React画布交互检查，待集成本地包原生复验"
+        },
+        "acceptanceCriteria": [
+          "规划卡片允许选中、整卡拖动和调整宽高",
+          "规划卡片拖到空位后保留落点，继续网格占位挤压",
+          "规划卡片无过程按钮，仅已启动子代理生成卡片显示过程",
+          "状态变化保留用户尺寸，临时选中与格位不持久化"
+        ],
+        "risks": [
+          "整体44类业务模板接入和总体原生成功率目标仍待完成"
+        ],
+        "generatedAt": "2026-09-30T05:59:48.092687+00:00"
       }
     }
   ],
