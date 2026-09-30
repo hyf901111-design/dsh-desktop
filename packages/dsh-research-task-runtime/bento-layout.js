@@ -22,21 +22,24 @@ export function researchBentoSize(node = {}, measured) {
 // The source frame is a starting point. Dense content earns room for legible
 // labels and rows; sparse content keeps the source proportions.
 export function researchMarketContentDimensions(variant, data = {}) {
-  const base = {'metrics': [656, 212], 'candlestick': [656, 352], 'trend': [656, 300], 'price-volume': [656, 310], 'order-book': [656, 250], 'fund-flow': [656, 352], 'valuation-band': [656, 310], 'equity-drawdown': [656, 310], 'allocation-donut': [656, 300], 'waterfall': [656, 280], 'funnel': [656, 256], 'risk-matrix': [656, 310], 'scatter': [656, 376], 'table': [656, 352], 'pipeline': [656, 270], 'events': [656, 264], 'heatmap': [656, 320], 'breadth': [656, 200], 'fund-kpi': [656, 212], 'fund-holdings': [656, 352], 'fund-industry': [656, 352]}[variant];
+  const base = {'ticker-information':[980,296],'key-metrics':[485,380],'management-team':[980,380],'metrics': [656, 334], 'candlestick': [656, 352], 'trend': [656, 300], 'price-volume': [656, 310], 'order-book': [656, 250], 'fund-flow': [656, 352], 'valuation-band': [656, 310], 'equity-drawdown': [656, 310], 'allocation-donut': [656, 300], 'waterfall': [656, 280], 'funnel': [656, 256], 'risk-matrix': [656, 310], 'scatter': [656, 376], 'table': [656, 352], 'pipeline': [656, 270], 'events': [656, 264], 'heatmap': [656, 320], 'breadth': [656, 200], 'fund-kpi': [656, 212], 'fund-holdings': [656, 352], 'fund-industry': [656, 352]}[variant];
   if (!base) return null;
   const count = (array, explicit) => Number.isInteger(explicit) ? explicit : Array.isArray(array) ? array.length : 0;
   const rows = count(data.items ?? data.rows, data.itemCount || data.rowCount);
   if (!rows) return { width: base[0], height: base[1] };
   if (variant === 'metrics') {
     const widthUnits = text => [...String(text ?? '')].reduce((sum, char) => sum + (/[^\x00-\xff]/u.test(char) ? 2 : 1), 0);
+    const availableWidth = data.availableWidth > 0 ? data.availableWidth : 656;
+    const capacity = Math.max(24, Math.floor((availableWidth - 20) * 96 / 636));
     const footerLines = Number.isInteger(data.footerLines) ? data.footerLines
-      : (data.asOf ? Math.max(1, Math.ceil(widthUnits(data.asOf) / 105)) : 0)
-        + (data.note ? Math.max(1, Math.ceil(widthUnits(data.note) / 105)) : 0)
+      : (data.asOf ? Math.max(1, Math.ceil(widthUnits(data.asOf) / capacity)) : 0)
+        + (data.note ? Math.max(1, Math.ceil(widthUnits(data.note) / capacity)) : 0)
         + (Array.isArray(data.sources) && data.sources.length ? 1 : 0);
     // Reserve the enterprise tile padding and a readable provenance footer in
     // every mode. Resizing keeps a fixed card; excess content scrolls internally.
-    const metricRows = Math.max(1, Math.ceil(rows / 3));
-    return {width:656,height:Math.min(456, 80 + metricRows * 90 + (metricRows - 1) * 6 + Math.min(4, footerLines) * 17)};
+    const columns = availableWidth <= 240 ? 1 : availableWidth <= 360 ? 2 : 3;
+    const metricRows = Math.max(1, Math.ceil(rows / columns));
+    return {width:656,height:Math.min(456, 104 + metricRows * 112 + (metricRows - 1) * 6 + Math.min(4, footerLines) * 17)};
   }
   if (variant === 'fund-kpi')
     return {width:656,height:48 + Math.max(1, Math.ceil((rows || 6) / 3)) * 82};
@@ -58,7 +61,7 @@ export function researchGanttContentDimensions(items = 0) {
 }
 // Source 42 financial panels have content-specific geometry. The generic S/M/L
 // grid is a different source family and must not stretch compact market tables.
-export function researchMarketDimensions(node, includeManual = false) {
+export function researchMarketDimensions(node, includeManual = false, availableWidth = 656) {
   if (node.sizeMode === 'manual' && !includeManual) return null;
   const spec=node.containerSpec, html=spec?.type==='html'?spec.html:'';
   // Shared presentation CSS contains selectors for every template. Only DOM
@@ -73,6 +76,22 @@ export function researchMarketDimensions(node, includeManual = false) {
     return {width:656,height:Math.max(220,80+Math.min(6,rows)*46)};
   }
   const kind=html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1];
+  // Old saved metrics use the same current presentation. Their original
+  // 896x144 strip cannot hold wrapped values or enterprise tile insets.
+  if (kind === 'metrics') {
+    const footer = html.match(/<footer\b[^>]*class="market-footer"[^>]*>[\s\S]*?<\/footer>/)?.[0] ?? '';
+    const capacity = Math.max(24, Math.floor((availableWidth - 20) * 96 / 636));
+    const spans = [...footer.matchAll(/<span\b[^>]*>([\s\S]*?)<\/span>/g)];
+    const footerLines = spans.reduce((total, match) => {
+      const text = match[1].replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim();
+      const units = [...text].reduce((sum, char) => sum + (/[^\x00-\xff]/u.test(char) ? 2 : 1), 0);
+      return total + (units ? Math.max(1, Math.ceil(units / capacity)) : 0);
+    }, 0);
+    return researchMarketContentDimensions(kind, {
+      itemCount:(html.match(/class="market-metric"/g) || []).length,
+      availableWidth, footerLines
+    });
+  }
   // This function is serialized into the patched client; keep its contract
   // values self-contained and assert parity with workbench-design-contract.
   if (kind && html.includes('data-sherlock-design="21m-20260923-v1"')) {
@@ -85,7 +104,6 @@ export function researchMarketDimensions(node, includeManual = false) {
       footerLines:Number(html.match(/data-metrics-footer-lines="(\d+)"/)?.[1] ?? 0)
     });
   }
-  if(kind==='metrics')return {width:896,height:144};
   if(kind==='candlestick')return {width:562,height:264};
   if(kind==='heatmap')return {width:434,height:258};
   if(kind==='breadth') {

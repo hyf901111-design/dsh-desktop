@@ -17,7 +17,7 @@ describe('research workbench Figma design contract', () => {
     const quote={version:1,type:'market',variant:'metrics',title:'指数行情',asOf:'2026-09-30',items:Array.from({length:4},(_,i)=>({label:`指标${i}`,value:'100',detail:'来源返回'})),note:'最近交易日指数，人民币口径；来源数据时点为2026-09-30。',sources:[{label:'已验证行情接口'}]};
     const containerSpec=JSON.parse(acceptArtifactOutput(JSON.stringify(quote)));
     expect(containerSpec.html).toContain('body[data-research-kind="calendar"]');
-    expect(researchMarketDimensions({containerSpec})).toEqual({width:656,height:317});
+    expect(researchMarketDimensions({containerSpec})).toEqual({width:656,height:385});
     expect(researchMarketDimensions({containerSpec,sizeMode:'manual'})).toBeNull();
     expect(researchMarketDimensions({containerSpec:{type:'html',html:`<style>body[data-research-kind="calendar"]{color:red}body[data-research-kind="dashboard"]{color:black}</style><body data-sherlock-market="trend" data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"></body>`}})).toEqual({width:656,height:300});
     const huge={...quote,items:Array.from({length:12},(_,i)=>({label:`指标${i}`,value:'100'})),note:'来源说明'.repeat(128)};
@@ -30,7 +30,7 @@ describe('research workbench Figma design contract', () => {
     ] });
     const [candle, metrics] = layoutWorkbench(input.panels);
     expect(candle).toMatchObject({ width: 656, height: 352 });
-    expect(metrics).toMatchObject({ width: 656, height: 187 });
+    expect(metrics).toMatchObject({ width: 656, height: 233 });
     for (const p of [candle, metrics]) {
       const rendered = renderMarketArtifact(p.artifact);
       expect(rendered?.html).toContain(`data-sherlock-design="${WORKBENCH_DESIGN_VERSION}"`);
@@ -67,7 +67,7 @@ describe('research workbench Figma design contract', () => {
 
   it('keeps host dimensions and source nodes in one versioned mapping', () => {
     expect(workbenchDesignTemplate({ type: 'market', title: '指标', prompt: 'variant: metrics' })).toMatchObject({
-      version: WORKBENCH_DESIGN_VERSION, figma: '1696:73546', width: 656, height: 212
+      version: WORKBENCH_DESIGN_VERSION, figma: '1696:73546', width: 656, height: 334
     });
     expect(MARKET_DESIGN_TEMPLATES.table).toMatchObject({ figma: '1696:75648', width: 656, height: 352 });
     for (const [variant, template] of Object.entries(MARKET_DESIGN_TEMPLATES)) {
@@ -95,7 +95,7 @@ describe('research workbench Figma design contract', () => {
       panel('交易明细', 'table', '交易数据', { columns: ['时间', '价格'], rows: [['09:30', '1462']] })
     ] });
     expect(input.panels.map(p => [p.type, p.artifact.variant])).toEqual([['market', 'metrics'], ['market', 'trend'], ['market', 'table']]);
-    expect(layoutWorkbench(input.panels).map(p => [p.width, p.height])).toEqual([[656, 187], [656, 300], [656, 155]]);
+    expect(layoutWorkbench(input.panels).map(p => [p.width, p.height])).toEqual([[656, 233], [656, 300], [656, 155]]);
     expect(input.panels.map(p => renderMarketArtifact(p.artifact)?.html.includes('data-sherlock-design'))).toEqual([true, true, true]);
     const bad = { requestId: 'no-financial-bar', title: '金融分析工作台', dataMode: 'simulated', panels: [
       panel('柱图', 'chart', '财务柱图', { variant: 'bar', labels: ['一','二'], series: [{ name: '值', values: [1,2] }] }),
@@ -123,9 +123,9 @@ describe('research workbench Figma design contract', () => {
     const denseMetrics = {version:1,type:'market',variant:'metrics',title:'关键指标',asOf:'模拟',
       items:Array.from({length:9},(_,i)=>({label:`指标${i}`,value:String(i)}))};
     expect(workbenchDesignTemplate({type:'market',artifact:denseTable})).toMatchObject({width:656,height:280});
-    expect(workbenchDesignTemplate({type:'market',artifact:denseMetrics})).toMatchObject({width:656,height:379});
+    expect(workbenchDesignTemplate({type:'market',artifact:denseMetrics})).toMatchObject({width:656,height:456});
     expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseTable).html}})).toEqual({width:656,height:280});
-    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseMetrics).html}})).toEqual({width:656,height:379});
+    expect(researchMarketDimensions({containerSpec:{type:'html',html:renderMarketArtifact(denseMetrics).html}})).toEqual({width:656,height:456});
     expect(workbenchDesignTemplate({type:'market',artifact:{...denseTable,columns:['名称','价格'],rows:[['A','8.5']]}})).toMatchObject({width:656,height:155});
   });
 

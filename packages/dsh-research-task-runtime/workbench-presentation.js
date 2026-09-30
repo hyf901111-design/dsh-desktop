@@ -40,8 +40,10 @@ body :is(.market-detail,.fund-detail,.research-metric-detail,.kpi-detail){font-s
 body :is(.market-footer,.fund-footer,.fund-industry-footer,.market-ohlc,.trend-readout,.scatter-readout,.terminal-table-readout){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important;background:transparent!important;border-color:var(--sherlock-border)!important;min-width:0!important;overflow-wrap:anywhere!important}
 body :is(.market-table-wrap,.fund-table-wrap){min-width:0!important;min-height:0!important;overflow:auto!important;max-height:calc(100vh - 68px)!important;border:0!important}
 body[data-sherlock-market="metrics"]{display:flex!important;flex-direction:column!important;height:100vh!important;overflow:hidden!important}
-body[data-sherlock-market="metrics"] .market-metrics{flex:1 1 auto;overflow:auto!important;align-content:start!important}
-body[data-sherlock-market="metrics"]>.market-footer{flex:0 1 auto;max-height:40%;overflow:auto;min-height:17px;margin-top:8px!important}
+body[data-sherlock-market="metrics"] .market-metrics{flex:1 1 auto;overflow:auto!important;align-content:start!important;grid-auto-rows:max-content!important}
+body[data-sherlock-market="metrics"] .market-metric{display:flex!important;flex-direction:column!important;align-items:stretch!important}
+body[data-sherlock-market="metrics"] .market-metric>:is(.market-label,.market-value,.market-detail){display:block!important;flex:none!important}
+body[data-sherlock-market="metrics"]>.market-footer{flex:0 1 auto;max-height:calc(100% - 64px);overflow:auto;min-height:17px;margin-top:8px!important}
 body[data-sherlock-market="metrics"]>.market-footer>span{flex:1 1 100%;min-width:0}
 body[data-sherlock-market="fund-holdings"]{display:flex!important;flex-direction:column!important;height:100vh!important;overflow:hidden!important}
 body[data-sherlock-market="fund-holdings"] .fund-filters{flex:0 0 auto;margin-bottom:12px!important}

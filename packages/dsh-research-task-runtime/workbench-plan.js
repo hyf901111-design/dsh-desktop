@@ -3,6 +3,7 @@ import { resolveWorkbenchSamples } from './workbench-shared-samples.js';
 import {chartDataIssue,chartTemplateSchema,requestedChartVariant,requireSimulatedChartData} from './chart-template-contract.js';
 import { templateFor } from './component-template-registry.js';
 import {operationsDataIssue,operationsTemplateSchema} from './operations-template-contract.js';
+import {FINANCIAL_PROFILE_VARIANTS,FINANCIAL_PROFILE_FIELDS,financialProfileDataIssue} from './financial-profile.js';
 import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
@@ -170,6 +171,7 @@ function normalizeSimulatedCalendar(artifact) {
 }
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
+    if (artifact.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(artifact.variant)) return `${financialProfileDataIssue(artifact) ?? ''}。${FINANCIAL_PROFILE_FIELDS[artifact.variant]}`;
     if (['progress','tasks','approval','alerts','form','code','clock'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
     if (artifact.type === 'chart') {
         const template = templateFor(artifact);
@@ -305,6 +307,8 @@ export function validateWorkbench(value) {
         if (isSimulated && !parallel && p.artifact === undefined && ['dashboard', 'kpi'].includes(p.type) && explicitMetricValue(`${p.title} ${p.prompt}`))
             throw Error(`面板「${p.title}」已给出具体指标数值，请在 artifact.items 中逐项提交原数值与单位；不能以通用模拟模板数值替代。`);
         if (isSimulated && !parallel) requireSimulatedChartData(p);
+        if (isSimulated && !parallel && p.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(marketVariant(p)) && p.artifact === undefined)
+            throw Error(`面板「${p.title}」需要完整 artifact 中的证券、指标或成员记录；不能生成无关金融样例。${FINANCIAL_PROFILE_FIELDS[marketVariant(p)]}`);
         if (isSimulated && ['progress','tasks','approval','alerts','form','code','clock'].includes(p.type) && p.artifact === undefined)
             throw Error(`面板「${p.title}」需要完整 artifact ${p.type==='clock'?'时区配置；live设备时钟同样需要明确城市和IANA时区':'中的实际需求记录；不能生成无关清单或进度样例'}。${operationsTemplateSchema(p.type)}`);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;

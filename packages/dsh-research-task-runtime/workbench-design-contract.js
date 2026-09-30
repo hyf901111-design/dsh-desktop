@@ -6,7 +6,10 @@ import { researchMarketContentDimensions, researchOptimalDimensions } from './be
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
 const market = Object.freeze({
-  metrics: { id: 'financial.metrics', figma: '1696:73546', width: 656, height: 212, size: 'medium' },
+  'ticker-information': {id:'financial.ticker-information',figma:'1917:341251',sourceHeight:165,width:980,height:296,minWidth:480,minHeight:160,size:'medium'},
+  'key-metrics': {id:'financial.key-metrics',figma:'1917:341348',sourceHeight:330,width:485,height:380,minWidth:320,minHeight:260,size:'large'},
+  'management-team': {id:'financial.management-team',figma:'1917:345704',sourceHeight:330,width:980,height:380,minWidth:480,minHeight:288,size:'large'},
+  metrics: { id: 'financial.metrics', figma: '1696:73546', sourceHeight:212, width: 656, height: 334, size: 'medium' },
   candlestick: { id: 'financial.candlestick', figma: '1696:73786', width: 656, height: 352, size: 'large' },
   trend: { id: 'financial.trend', figma: '1696:73878', width: 656, height: 300, size: 'large' },
   'price-volume': { id: 'financial.price-volume', figma: '1696:74110', width: 656, height: 310, size: 'large' },
@@ -60,6 +63,9 @@ const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
+  if(/管理团队|管理层团队|高管.{0,8}(?:薪酬|报酬)|management.team/iu.test(panel.title??''))return 'management-team';
+  if(/核心指标|关键指标|key.metrics/iu.test(panel.title??''))return 'key-metrics';
+  if(/个股信息|证券信息|ticker.information/iu.test(panel.title??''))return 'ticker-information';
   // A chart named explicitly by the user must not degrade to generic metrics.
   if (/散点|scatter/iu.test(panel.title ?? '')) return 'scatter';
   // A planner may repeat the whole workbench request in every panel prompt.
@@ -86,6 +92,9 @@ export function marketVariant(panel = {}) {
   if (!primaryCandle &&
       /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
+    if(/管理团队|管理层团队|高管.{0,8}(?:薪酬|报酬)|management.team/iu.test(text))return 'management-team';
+    if(/核心指标|关键指标|key.metrics/iu.test(text))return 'key-metrics';
+    if(/个股信息|证券信息|ticker.information/iu.test(text))return 'ticker-information';
     if (/fund[.-]kpi/iu.test(text)) return 'fund-kpi';
     if (/fund[.-]holdings/iu.test(text)) return 'fund-holdings';
     if (/fund[.-]industry/iu.test(text)) return 'fund-industry';
