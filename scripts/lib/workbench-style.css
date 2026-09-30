@@ -9,7 +9,7 @@ body [data-ework-grid][data-workbench-style] :is(.rScV5Q_containerDraft,.ew-sele
 body [data-ework-grid][data-workbench-style=enterprise] .ew-grid-header{color:#25252b}
 body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}
 body [data-ework-grid][data-workbench-style] .odyssey-generation-surface{--generation-bg:var(--grid-card)!important;--generation-title:var(--grid-text)!important;--generation-phase:var(--grid-text)!important;--generation-detail:var(--grid-muted)!important;--generation-icon:var(--grid-muted)!important;--generation-time:var(--grid-muted)!important;--generation-border:var(--grid-border)!important;--generation-button:var(--grid-row)!important;--generation-action-icon:var(--grid-text)!important}
-body [data-ework-toolbar]:has(.ew-workbench-mode-slot){width:334px!important}
+body [data-ework-toolbar]:has(.ew-workbench-mode-slot){width:382px!important}
 .ew-workbench-mode-slot{display:flex;align-items:center;gap:8px;box-sizing:border-box;flex:0 0 128px;width:128px;height:40px;padding-left:7px}
 .ew-workbench-mode-divider{flex:none;width:1px;height:24px;background:#0000001f}
 .ew-workbench-modes{display:flex;align-items:center;justify-content:center;gap:4px;box-sizing:border-box;width:112px;height:36px;padding:0 4px;border-radius:8px;background:#eff0f2}

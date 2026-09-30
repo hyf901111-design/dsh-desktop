@@ -75,7 +75,7 @@ export function patchCanvasCreationTools(source) {
   source = patchComponentDraftFocus(source)
   source = patchComponentDraftKeyboard(source)
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
-  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(installCreationStyle(source)))
+  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(installCreationStyle(patchCanvasArrangeTool(source))))
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
     source = source.replace(from, to)
@@ -120,7 +120,15 @@ export function patchCanvasCreationTools(source) {
   // Labels are kept in markup for older patch compatibility but visually hidden.
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
   source = installCreationStyle(source)
-  return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(source))
+  return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(patchCanvasArrangeTool(source)))
+}
+function patchCanvasArrangeTool(source) {
+  if (source.includes("'data-research-global-arrange':''")) return source
+  const nextButton="(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-global-container'"
+  const position=source.indexOf(nextButton)
+  if (position<0 || !source.slice(Math.max(0,position-2000),position).includes("'data-research-global-select':''")) throw Error('Canvas arrange toolbar anchor missing')
+  const arrange=`(0,react_jsx_runtime.jsx)('button',{type:'button','data-research-global-arrange':'','aria-label':'一键整理画布','data-tool-tooltip':'一键整理画布',disabled:sharedReadOnly||canvasNodes.length===0,onClick:()=>{if(researchCanvasArrangeWithMotion(rootRef.current,workspace,researchCanvasMeasureForArrange(rootRef.current,canvasNodes)))setClipboardFeedback({state:'success',kind:'arrange',message:'已整理 '+canvasNodes.length+' 个组件'});},children:(0,react_jsx_runtime.jsx)('img',{src:${JSON.stringify(icon('arrange'))},width:20,height:20,alt:'',className:'odyssey-tool-icon'})})`
+  return source.slice(0,position)+arrange+','+source.slice(position)
 }
 function patchNativeLinkDraft(source) {
   if(source.includes('/* ODYSSEY_NATIVE_LINK_DRAFT */')&&!source.includes('/* ODYSSEY_LINK_GEOMETRY */'))source=source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
@@ -255,7 +263,7 @@ function patchComponentMarquee(source) {
     children:operationRef.current?.createComponent?[(0,react_jsx_runtime.jsx)('span',{className:'odyssey-frame-label',children:'智能组件'},'label'),...['nw','ne','sw','se'].map(corner=>(0,react_jsx_runtime.jsx)('i',{'data-frame-corner':corner},corner))]:undefined,`)
 }
 function installCreationStyle(source) {
-  source = source.replace(/\n;\(\(\)=>\{const id='odyssey-creation-tools-style';[^\n]+\n/g, '\n')
+  source = source.replace(/\n;\(\(\)=>\{(?:if\(typeof document==='undefined'\)return;)?const id='odyssey-creation-tools-style';[^\n]+\n/g, '\n')
   return source.trimEnd() + `\n;(()=>{if(typeof document==='undefined')return;const id='odyssey-creation-tools-style';document.getElementById(id)?.remove();const style=document.createElement('style');style.id=id;style.textContent=${JSON.stringify(creationToolsCss)};document.head.append(style)})();\n`
 }
 export const creationToolsCss = `
@@ -266,7 +274,7 @@ export const creationToolsCss = `
 [data-frame-corner]{position:absolute;width:7px;height:7px;box-sizing:border-box;background:white;border:1px solid #0d99ff;pointer-events:none}
 [data-frame-corner=nw]{left:-4px;top:-4px}[data-frame-corner=ne]{right:-4px;top:-4px}[data-frame-corner=sw]{left:-4px;bottom:-4px}[data-frame-corner=se]{right:-4px;bottom:-4px}
 
-[data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar{width:188px!important;height:48px!important;padding:6px!important;gap:4px!important;overflow:visible;display:flex!important;align-items:center}
+[data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar{width:232px!important;height:48px!important;padding:6px!important;gap:4px!important;overflow:visible;display:flex!important;align-items:center}
 [data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar>button,[data-canvas-tool] [data-research-global-toolbar].rScV5Q_globalToolbar .rScV5Q_globalToolSlot>button{position:relative;width:40px!important;height:36px!important;min-width:40px!important;max-width:40px!important;flex:0 0 40px!important;padding:0!important;display:flex!important;align-items:center;justify-content:center;background:transparent!important;border-radius:7px;gap:0;color:var(--odyssey-tool-color,#333)!important}
 [data-canvas-tool] [data-research-global-toolbar] button>span:not(.odyssey-global-icon){display:none}
 [data-canvas-tool] [data-research-global-toolbar] .rScV5Q_globalToolSlot{width:40px!important;min-width:40px!important;flex:0 0 40px!important;display:flex}
