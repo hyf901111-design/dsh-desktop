@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "金融序列三模板及完整摘要占位",
+        "featureName": "金融序列父级契约与主题图例修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c56da5f27025218de07999f1092783780b1ac2ea",
-        "tipCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
+        "baseCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
+        "tipCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
         "commits": [
           {
-            "commit": "a5100659deef0f5eeadf21a063cfecba1d85e6bf",
+            "commit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
             "parents": [
-              "c56da5f27025218de07999f1092783780b1ac2ea"
+              "159a766843b4870e9d8eda72dcb2c0d38e644757"
             ],
-            "subject": "验收：记录金融快照尺寸自适应实机通过"
-          },
-          {
-            "commit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
-            "parents": [
-              "a5100659deef0f5eeadf21a063cfecba1d85e6bf"
-            ],
-            "subject": "组件：预置价格表现估值倍数和机构目标价模板"
+            "subject": "组件：补全父级金融序列契约并统一目标价图例"
           }
         ],
         "files": [
@@ -36,99 +29,15 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-profile.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/financial-series.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/figma-21m.md"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-series-intrinsic.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/financial-series.test.js"
           },
           {
-            "status": "A",
-            "path": "test/fixtures/financial-series.js"
-          },
-          {
             "status": "M",
-            "path": "test/operations-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workflow-template.test.js"
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -162,9 +71,9 @@
               "test/financial-series-intrinsic.test.js"
             ],
             "outcome": "passed",
-            "summary": "24个相关及继承门禁文件460项通过",
-            "verifiedCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
-            "completedAt": "2026-09-30T20:14:51.348048+00:00",
+            "summary": "24个相关及继承门禁文件464项通过，含初次完成后三种金融序列补高回归",
+            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+            "completedAt": "2026-09-30T20:50:47.673056+00:00",
             "timeoutMs": 300000
           },
           {
@@ -177,8 +86,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
-            "completedAt": "2026-09-30T20:14:51.348048+00:00",
+            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+            "completedAt": "2026-09-30T20:50:47.673056+00:00",
             "timeoutMs": 300000
           },
           {
@@ -189,8 +98,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
-            "completedAt": "2026-09-30T20:14:51.348048+00:00",
+            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+            "completedAt": "2026-09-30T20:50:47.673056+00:00",
             "timeoutMs": 300000
           },
           {
@@ -201,8 +110,8 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
-            "completedAt": "2026-09-30T20:14:51.348048+00:00",
+            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+            "completedAt": "2026-09-30T20:50:47.673056+00:00",
             "timeoutMs": 300000
           },
           {
@@ -215,14 +124,14 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥检查通过，27项既有非相关检查跳过",
-            "verifiedCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
-            "completedAt": "2026-09-30T20:14:51.348048+00:00",
+            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+            "completedAt": "2026-09-30T20:50:47.673056+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP54个尺寸案例和9个交互主题案例通过，无脚本错误，按钮对比度至少10.75；最终包普通输入与原生复验待构建"
+          "summary": "生产双层CSP54个尺寸案例和9个交互主题案例通过；首轮普通输入四次格式退回不计通过，最终包修正后普通输入和初次显示复验待构建"
         },
         "acceptanceCriteria": [
           "最新Figma三个金融序列默认节点与独立数据契约",
@@ -232,7 +141,8 @@
           "完整记录有界滚动与键盘读数，刷新恢复语义选择",
           "三模式按钮文字可读",
           "摘要占位与弹性间距纳入自然测高，隐藏表行不扩高",
-          "旧指标与快照整理门禁保留"
+          "旧指标与快照整理门禁保留",
+          "父级复用完整字段契约，避免猜测别名；目标价图例标记随主题切换"
         ],
         "risks": [
           "最新设计实现47/74，仍缺27类业务模板",
@@ -240,52 +150,7 @@
           "三类新模板最终包普通输入及原生验收待执行",
           "7项既存HTML完整文件失败未计为通过"
         ],
-        "generatedAt": "2026-09-30T20:14:51.348048+00:00"
-      },
-      "merged": {
-        "mergeCommit": "278d71154564e00f1ee5b85392219beba08e978b",
-        "verificationCommit": "278d71154564e00f1ee5b85392219beba08e978b",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "278d71154564e00f1ee5b85392219beba08e978b",
-            "completedAt": "2026-09-30T20:16:52.661Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "278d71154564e00f1ee5b85392219beba08e978b",
-            "completedAt": "2026-09-30T20:16:52.661Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "278d71154564e00f1ee5b85392219beba08e978b",
-            "completedAt": "2026-09-30T20:16:52.661Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T20:16:52.661Z"
+        "generatedAt": "2026-09-30T20:50:47.673056+00:00"
       }
     }
   ],
