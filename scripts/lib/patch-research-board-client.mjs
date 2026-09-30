@@ -16,6 +16,7 @@ import { resolve, join } from 'node:path'
 import { compactHostDashboardHtml, researchComponentTypographyCss } from '../../packages/dsh-research-task-runtime/html-artifact.js'
 import { candleRuntime, candleControls, refineCandlestickHtml } from '../../packages/dsh-research-task-runtime/market-candlestick.js'
 import { refineStoredSpecialChartHtml, SPECIAL_CHART_LAYOUT_RUNTIME, SPECIAL_CHART_LAYOUT_VIEW, SPECIAL_CHART_LAYOUT_CSS } from '../../packages/dsh-research-task-runtime/special-chart-layout.js'
+import { refineStoredTemplateHtml, ADVANCED_VISUAL_RUNTIME, ADVANCED_VISUAL_VIEW, OPERATIONS_DENSITY_CSS } from '../../packages/dsh-research-task-runtime/stored-template-refinements.js'
 import { MARKET_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/market-presentation.js'
 import { applyTerminalPresentation, TERMINAL_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/terminal-presentation.js'
 import { applyWorkbenchPresentation, WORKBENCH_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
@@ -725,7 +726,7 @@ export function patchLegacyDashboardPreview(source) {
   refreshDefinition('function candleControls(groups) {', 'function refineCandlestickHtml(html) {', candleControls.toString())
   refreshDefinition('function refineCandlestickHtml(html) {', 'const MARKET_PRESENTATION_CSS = ', refineCandlestickHtml.toString())
   refreshDefinition('const MARKET_PRESENTATION_CSS = ', 'const TERMINAL_PRESENTATION_CSS = ',
-    `const MARKET_PRESENTATION_CSS = ${JSON.stringify(MARKET_PRESENTATION_CSS)};\nconst SPECIAL_CHART_LAYOUT_RUNTIME = ${JSON.stringify(SPECIAL_CHART_LAYOUT_RUNTIME)};\nconst SPECIAL_CHART_LAYOUT_VIEW = ${JSON.stringify(SPECIAL_CHART_LAYOUT_VIEW)};\nconst SPECIAL_CHART_LAYOUT_CSS = ${JSON.stringify(SPECIAL_CHART_LAYOUT_CSS)};\n${refineStoredSpecialChartHtml.toString()}\n${compactHostDashboardHtml.toString()}`)
+    `const MARKET_PRESENTATION_CSS = ${JSON.stringify(MARKET_PRESENTATION_CSS)};\nconst SPECIAL_CHART_LAYOUT_RUNTIME = ${JSON.stringify(SPECIAL_CHART_LAYOUT_RUNTIME)};\nconst SPECIAL_CHART_LAYOUT_VIEW = ${JSON.stringify(SPECIAL_CHART_LAYOUT_VIEW)};\nconst SPECIAL_CHART_LAYOUT_CSS = ${JSON.stringify(SPECIAL_CHART_LAYOUT_CSS)};\nconst ADVANCED_VISUAL_RUNTIME = ${JSON.stringify(ADVANCED_VISUAL_RUNTIME)};\nconst ADVANCED_VISUAL_VIEW = ${JSON.stringify(ADVANCED_VISUAL_VIEW)};\nconst OPERATIONS_DENSITY_CSS = ${JSON.stringify(OPERATIONS_DENSITY_CSS)};\n${refineStoredSpecialChartHtml.toString()}\n${refineStoredTemplateHtml.toString()}\n${compactHostDashboardHtml.toString()}`)
   refreshDefinition('const TERMINAL_PRESENTATION_CSS = ', previewStart,
     `const TERMINAL_PRESENTATION_CSS = ${JSON.stringify(TERMINAL_PRESENTATION_CSS)};\n${applyTerminalPresentation.toString()}\nconst WORKBENCH_PRESENTATION_CSS = ${JSON.stringify(WORKBENCH_PRESENTATION_CSS)};\n${applyWorkbenchPresentation.toString()}`)
   if (!source.includes('const displayHtml = ')) {

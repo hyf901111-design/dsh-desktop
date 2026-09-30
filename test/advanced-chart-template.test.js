@@ -23,6 +23,15 @@ describe('remaining Figma 22A chart families',()=>{
   const v=advancedChartView(samples.waterfall);expect(v.metrics.steps.map(s=>s.to)).toEqual([120,146,128,160,150,150]);
   const negative=advancedChartView({...samples.waterfall,start:{label:'起点',value:2},steps:[{label:'减少',delta:-5}]});expect(negative.metrics.steps.map(s=>s.to)).toEqual([2,-3,-3]);expect(negative.rows[1].detail).toContain('-3');
  });
+ it('keeps the final waterfall category separate from the previous tick on narrow cards',()=>{
+  const data={...samples.waterfall,start:{label:'期初MRR',value:1000},steps:[{label:'新增',delta:260},{label:'扩容',delta:140},{label:'挽回',delta:60},{label:'降档',delta:-85},{label:'流失',delta:-120},{label:'退款',delta:-30}],endLabel:'期末MRR'};
+  for(const width of [280,376,624]){
+   const view=advancedChartView(data,width),ticks=view.elements.filter(n=>n.tag==='text'&&n.attributes.y===view.height-15);
+   expect(ticks[0].children).toEqual(['期初MRR']);expect(ticks.at(-1).children).toEqual(['期末MRR']);
+   expect(ticks.at(-1).attributes.x-ticks.at(-2).attributes.x).toBeGreaterThan(60);
+   expect(view.rows).toHaveLength(8);expect(view.metrics.steps.at(-1).to).toBe(1225);
+  }
+ });
  it('encodes funnel width as count and reports both conversion denominators',()=>{
   const v=advancedChartView(samples.funnel);expect(v.metrics.stages[2].ratio).toBe(.42);expect(v.metrics.stages[2].stepRatio).toBeCloseTo(4200/6800);expect(v.rows.at(-1).cells).toContain('9.6%');
   const z=advancedChartView({...samples.funnel,stages:[{label:'无',value:0},{label:'终点',value:0}]});expect(z.rows[1].detail).toContain('—');
@@ -48,6 +57,15 @@ describe('remaining Figma 22A chart families',()=>{
    expect(v.metrics.candles.every(c=>c.highY<=c.openY&&c.highY<=c.closeY&&c.lowY>=c.openY&&c.lowY>=c.closeY)).toBe(true);
    expect(advancedChartView(samples[variant],320,{limit:2}).metrics.candles.map(c=>c.date)).toEqual(['2026-09-22','2026-09-23']);
   }
+ });
+ it.each(['candlestick','ohlc'])('uses dedicated red-up/green-down price colors for %s, independent of business status colors',variant=>{
+  const view=advancedChartView(samples[variant]);
+  const groups=view.elements.filter(n=>n.tag==='g'&&n.attributes['data-inspect']!==undefined);
+  groups.forEach((group,i)=>{
+   const expected=samples[variant].candles[i].close>=samples[variant].candles[i].open?'var(--sherlock-price-up,#df4f57)':'var(--sherlock-price-down,#00a83e)';
+   expect(group.children.filter(n=>['plot-stem','volume-bar','candle-body'].includes(n.attributes?.class)).every(n=>(n.attributes.stroke??n.attributes.fill)===expected)).toBe(true);
+  });
+  expect(view.footnote).toContain('红：收≥开，绿：收<开');
  });
  it.each([
   {...samples.waterfall,steps:[{label:'缺失',delta:null}]},
