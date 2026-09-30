@@ -124,7 +124,6 @@ function odysseyCreationRetry(sessionId) {
   if (!detail.handled) { odysseyCreationIntents.set(sessionId, current); odysseyCreationEmit(sessionId); }
 }
 function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize, workspace, onDismiss }) {
-  const [processOpen, setProcessOpen] = react.useState(false);
   const [position, setPosition] = react.useState(() => planningCardPosition(viewport, canvasSize));
   const drag = react.useRef(null);
   const measured = react.useRef((canvasSize?.width ?? 0) > 0);
@@ -142,7 +141,6 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
       if (!drag.current) setPosition(planningCardPosition(viewport, canvasSize));
     }
   }, [canvasSize?.width, canvasSize?.height, canvasSize?.availableWidth, canvasSize?.visibleHeight]);
-  react.useEffect(() => setProcessOpen(false), [intent.id]);
   const planning = intent.state === 'planning', stopping = intent.state === 'stopping';
   const label = intent.kind === 'workbench' ? '工作台组件规划' : intent.types[0] || '组件规划';
   const phase = intent.state === 'failed' ? '生成失败 · 未形成组件计划' : intent.state === 'stopped' ? '已停止生成' : intent.state === 'dealing' ? '正在展开组件' : stopping ? '正在停止生成…' : '正在规划组件';
@@ -150,6 +148,7 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
   const node = { id: intent.id, kind: 'generated-container', title: label, generationStatus: intent.state === 'failed' ? 'failed' : intent.state === 'stopped' ? 'cancelled' : 'running', generationTaskId: intent.id, generationStartedAt: intent.startedAt, generationCompletedAt: intent.completedAt, generationError: detail, generationEvents: [] };
   return react_jsx_runtime.jsxs('section', { className: 'odyssey-creation-planning-card', 'data-research-compact-chrome': '', 'data-research-creation-planning': intent.state,
     'data-research-node-id': occupied ? intent.id : undefined, 'data-workbench-drag-handle': occupied ? intent.id : undefined,
+    'data-selected': occupied && workspace.getSnapshot().selection.selectedNodeIds.includes(intent.id) ? true : undefined,
     'data-planning-grid': frame ? '' : undefined,
     'aria-label': label + '生成进度', style: frame ? {left:frame.x, top:frame.y, width:frame.width, height:frame.height, transform:'translate(-50%, -50%)'} : { left: position.x, top: position.y, visibility:workspace?.reserveWorkbenchPlanning && intent.state !== 'dealing' ? 'hidden' : undefined },
     onPointerDown: event => {
@@ -170,15 +169,7 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
     children: [
       react_jsx_runtime.jsx(ResearchGenerationProcess, { node, sessionId, phaseOverride: phase, detailOverride: detail,
         onCancel: planning && intent.sawRunning ? () => odysseyCreationStop(sessionId) : undefined,
-        onRetry: ['failed', 'stopped'].includes(intent.state) ? () => odysseyCreationRetry(sessionId) : undefined,
-        onProcess: () => setProcessOpen(value => !value) }),
-      processOpen ? react_jsx_runtime.jsxs('div', { className: 'odyssey-creation-process', role: 'region', 'aria-label': '生成过程', children: [
-        react_jsx_runtime.jsx('strong', { children: '当前生成过程' }),
-        react_jsx_runtime.jsx('p', { children: intent.description }),
-        react_jsx_runtime.jsx('p', { children: phase + ' · ' + detail }),
-        react_jsx_runtime.jsx('button', { type: 'button', onClick: () => setProcessOpen(false), children: '返回卡片' }),
-        !planning && !stopping ? react_jsx_runtime.jsx('button', { type: 'button', onClick: onDismiss, children: '关闭状态卡片' }) : null
-      ] }) : null
+        onRetry: ['failed', 'stopped'].includes(intent.state) ? () => odysseyCreationRetry(sessionId) : undefined })
     ] });
 }
 `
@@ -192,8 +183,6 @@ const css = `
 @keyframes odyssey-planning-grid-deal{to{opacity:0;transform:translate(-50%,-50%) scale(.72)}}
 @media(prefers-reduced-motion:reduce){.odyssey-creation-planning-card[data-research-creation-planning=dealing]{animation:none}}
 body [data-research-compact-chrome].odyssey-creation-planning-card>.odyssey-generation-surface{width:100%;height:100%;background:var(--generation-bg)!important}
-.odyssey-creation-process{position:absolute;inset:48px 20px 20px;z-index:5;box-sizing:border-box;overflow:auto;border:1px solid var(--generation-border);border-radius:6px;background:var(--generation-bg);color:var(--generation-phase);padding:10px 12px;font:11px/17px 'Noto Sans SC',sans-serif}
-.odyssey-creation-process strong{display:block;color:var(--generation-title);font-size:12px}.odyssey-creation-process p{margin:7px 0;overflow-wrap:anywhere}.odyssey-creation-process button{border:0;background:transparent;color:inherit;padding:4px 8px 4px 0;cursor:pointer;font:inherit}
 `
 const themeCss = `
 body[data-ds-dark-theme] .odyssey-creation-planning-card{--generation-bg:#030303;--generation-border:#696969;--generation-phase:#dbdbdb;--generation-title:#f5f5f5}

@@ -136,6 +136,57 @@ it('规划卡片接入实际网格拖动，普通组件避让且挂载工作台�
  await f.event('odyssey:creation-progress',f.win,{detail:{sessionId:'grid-test',intent:null}})
  expect(f.host.querySelector('[data-research-creation-planning]')).toBeNull()
 })
+it('规划卡片可选中缩放并保留拖动落点，临时选中不保存，释放后清理手柄',async()=>{
+ const f=await fixture(true),w=f.workspace,step=24.65
+ const intent={id:'resizable-plan',kind:'workbench',state:'planning',types:[],startedAt:Date.now(),sawRunning:true,description:'规划交互验证'}
+ await f.event('odyssey:creation-progress',f.win,{detail:{sessionId:'grid-test',intent}})
+ const planning=f.host.querySelector('[data-research-creation-planning]')
+ expect(planning.querySelector('[data-research-generation-toggle]')).toBeNull()
+ await f.event('pointerdown',planning.querySelector('strong'),{button:0,pointerId:150,clientX:450,clientY:300})
+ await f.event('pointerup',f.canvas,{pointerId:150,clientX:450,clientY:300+step*6})
+ const moved=w.getWorkbenchCells().find(c=>c.id===intent.id)
+ expect(moved.freePosition).toBe(true);expect(moved.y).toBeGreaterThanOrEqual(6)
+ expect(w.getSnapshot().selection.selectedNodeIds).toEqual([intent.id])
+ expect(planning.hasAttribute('data-selected')).toBe(true)
+ const widthHandle=f.host.querySelector('[data-workbench-resize="'+intent.id+'"][data-workbench-resize-axis="x"]')
+ expect(widthHandle).not.toBeNull()
+ await f.event('pointerdown',widthHandle,{button:0,pointerId:151,clientX:750,clientY:400})
+ await f.event('pointerup',f.canvas,{pointerId:151,clientX:750+step*3,clientY:400})
+ const heightHandle=f.host.querySelector('[data-workbench-resize="'+intent.id+'"][data-workbench-resize-axis="y"]')
+ await f.event('pointerdown',heightHandle,{button:0,pointerId:152,clientX:450,clientY:550})
+ await f.event('pointerup',f.canvas,{pointerId:152,clientX:450,clientY:550+step*4})
+ const resized=w.getWorkbenchCells().find(c=>c.id===intent.id)
+ expect(resized).toMatchObject({x:moved.x,y:moved.y,w:moved.w+3,h:moved.h+4,freePosition:true})
+ await act(async()=>w.undo())
+ expect(w.getWorkbenchCells().find(c=>c.id===intent.id)).toMatchObject({w:resized.w,h:moved.h,y:moved.y})
+ await act(async()=>w.redo())
+ expect(w.getWorkbenchCells().find(c=>c.id===intent.id)).toEqual(resized)
+ for(const state of ['stopping','failed','stopped']){
+  await f.event('odyssey:creation-progress',f.win,{detail:{sessionId:'grid-test',intent:{...intent,state}}})
+  expect(w.getWorkbenchCells().find(c=>c.id===intent.id)).toEqual(resized)
+  expect(planning.querySelector('[data-research-generation-toggle]')).toBeNull()
+ }
+ await act(async()=>w.persist())
+ expect(w.getWorkbenchDocument().artifacts).toEqual([])
+ const saved=Array.from({length:f.win.localStorage.length},(_,i)=>f.win.localStorage.getItem(f.win.localStorage.key(i))).join('\n')
+ expect(saved).not.toContain(intent.id)
+ await f.event('odyssey:creation-progress',f.win,{detail:{sessionId:'grid-test',intent:null}})
+ expect(w.getSnapshot().selection.selectedNodeIds).toEqual([])
+ expect(f.host.querySelector('[data-workbench-resize="'+intent.id+'"]')).toBeNull()
+})
+it.each(['generated-container','generated-mind-map','generated-summary'])('%s 的过程入口只在子 Agent 已启动时显示并打开对应子会话',async kind=>{
+ const f=await fixture(true),w=f.workspace
+ const node={...text('process-card'),kind,generationStatus:'running',generationTaskId:'task-id',generationStartedAt:Date.now(),generationEvents:[],sourceNodeIds:['source'],containerPrompt:'模拟验证',refreshMinutes:0}
+ await act(async()=>w.setArtifacts([node]))
+ expect(f.host.querySelector('[data-research-generation-toggle]')).toBeNull()
+ await act(async()=>w.setArtifacts([{...node,generationChildSessionId:'child-agent'}]))
+ const process=f.host.querySelector('[data-research-generation-toggle]')
+ expect(process).not.toBeNull()
+ let opened
+ f.win.addEventListener('sherlock:component-process',event=>{opened=event.detail.childSessionId;event.detail.handled=true;event.detail.resolve()})
+ await f.event('click',process)
+ expect(opened).toBe('child-agent')
+})
 it('拖动网格事务可撤销并恢复所有让位组件，重新打开保持格位',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a'),text('b',740)]);f.workspace.setWorkbenchWidth(1000)
  const before=structuredClone(f.workspace.getSnapshot().artifacts),cells=f.workspace.getWorkbenchCells()
