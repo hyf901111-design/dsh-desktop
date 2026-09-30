@@ -9,24 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "预置审批提醒与修复旧任务卡操作恢复",
+        "featureName": "预置结构化输入表单与代码并支持复制保存",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "ee446e3147c159300866c1f4f87e60589850d9f3",
-        "tipCommit": "4fa574620bf76d308f86305b68593dc4f3d27d3c",
+        "baseCommit": "4fa574620bf76d308f86305b68593dc4f3d27d3c",
+        "tipCommit": "b44f7837f2bfcdc2459e4c700627bc89920ab04e",
         "commits": [
           {
-            "commit": "74349558305d4222fe3502ff9a72cb235ac62bec",
+            "commit": "8aeca80df32ab741f8e2255ee8626d9a8103817c",
             "parents": [
-              "ee446e3147c159300866c1f4f87e60589850d9f3"
+              "4fa574620bf76d308f86305b68593dc4f3d27d3c"
             ],
-            "subject": "修复：旧任务卡样式更新保持原生操作重放路由"
+            "subject": "文档：记录审批提醒原生交互及旧任务恢复验收"
           },
           {
-            "commit": "4fa574620bf76d308f86305b68593dc4f3d27d3c",
+            "commit": "3294aa949ed4d7c659ea92ec519876cb19b5da16",
             "parents": [
-              "74349558305d4222fe3502ff9a72cb235ac62bec"
+              "8aeca80df32ab741f8e2255ee8626d9a8103817c"
             ],
-            "subject": "功能：预置审批记录与工作台提醒并保存个人操作"
+            "subject": "功能：预置表单与代码模板并提供真实复制和保存"
+          },
+          {
+            "commit": "b44f7837f2bfcdc2459e4c700627bc89920ab04e",
+            "parents": [
+              "3294aa949ed4d7c659ea92ec519876cb19b5da16"
+            ],
+            "subject": "修复：代码模板保留等宽字体避免宿主字体覆盖"
           }
         ],
         "files": [
@@ -40,19 +47,27 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-artifact.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/input-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/input-template-contract.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
           },
           {
             "status": "M",
@@ -71,12 +86,12 @@
             "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workflow-artifact.js"
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workflow-template-contract.js"
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
@@ -88,7 +103,15 @@
           },
           {
             "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
             "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-export.ts"
           },
           {
             "status": "M",
@@ -99,15 +122,19 @@
             "path": "test/component-template-registry.test.js"
           },
           {
+            "status": "A",
+            "path": "test/input-template.test.js"
+          },
+          {
             "status": "M",
             "path": "test/operations-template.test.js"
           },
           {
             "status": "M",
-            "path": "test/stored-template-refinements.test.js"
+            "path": "test/research-canvas-export.test.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/workflow-template.test.js"
           }
         ],
@@ -126,76 +153,33 @@
               "test/component-template-registry.test.js",
               "test/workbench-execution-policy.test.js",
               "test/bundled-component-skill.test.js",
-              "test/component-source-binding.test.js"
+              "test/component-source-binding.test.js",
+              "test/input-template.test.js",
+              "test/research-canvas-export.test.ts"
             ],
             "outcome": "passed",
-            "summary": "228项直接相关检查通过；新增两类模板12组三模式宽窄及真实沙盒重放通过；旧原生任务9事件恢复3/6",
-            "verifiedCommit": "4fa574620bf76d308f86305b68593dc4f3d27d3c",
-            "completedAt": "2026-09-30T09:22:50.522758+00:00",
+            "summary": "251项直接相关检查、类型检查和12组三模式宽窄及真实沙盒恢复通过；代码复制实际剪贴板内容一致、代码字体确认为等宽",
+            "verifiedCommit": "b44f7837f2bfcdc2459e4c700627bc89920ab04e",
+            "completedAt": "2026-09-30T10:20:44.866250+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "当前cf13集成包发现旧任务路由回归，原始记录未丢失；新tip修复与审批提醒等待新集成包原生复验"
+          "summary": "新增表单和代码等待集成包原生自然输入及保存对话框验收"
         },
         "acceptanceCriteria": [
-          "原生旧任务卡操作重放恢复3/6与新增中文任务",
-          "审批个人意见不改来源状态且重放保存",
-          "提醒分类未读筛选与本地读标记持久保存",
-          "三模式窄宽控件可读且完整保留来源记录"
+          "表单字段校验与本地记录持久恢复",
+          "代码原始与格式化内容保留、用户主动复制和保存",
+          "三模式控件可读与代码等宽字体",
+          "自然输入采用预置模板并保持实际输入内容"
         ],
         "risks": [
           "整体44类业务模板及总体成功率仍待完成",
           "通用主题旧文件4项基线失败保留",
           "Figma截图服务占位图，精确截图对比未通过"
         ],
-        "generatedAt": "2026-09-30T09:22:50.522758+00:00"
-      },
-      "merged": {
-        "mergeCommit": "924af8c92b32165bb862192b38d158fe5a1a53f8",
-        "verificationCommit": "924af8c92b32165bb862192b38d158fe5a1a53f8",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "924af8c92b32165bb862192b38d158fe5a1a53f8",
-            "completedAt": "2026-09-30T09:23:51.918Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "924af8c92b32165bb862192b38d158fe5a1a53f8",
-            "completedAt": "2026-09-30T09:23:51.918Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "924af8c92b32165bb862192b38d158fe5a1a53f8",
-            "completedAt": "2026-09-30T09:23:51.918Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T09:23:51.918Z"
+        "generatedAt": "2026-09-30T10:20:44.866250+00:00"
       }
     }
   ],
