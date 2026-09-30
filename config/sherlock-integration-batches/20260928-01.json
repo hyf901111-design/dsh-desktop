@@ -9,24 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修正既有图表涨跌配色、瀑布刻度与任务排版",
+        "featureName": "预置审批提醒与修复旧任务卡操作恢复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "3da32832ca472244e0ad319009d200341813a258",
-        "tipCommit": "ee446e3147c159300866c1f4f87e60589850d9f3",
+        "baseCommit": "ee446e3147c159300866c1f4f87e60589850d9f3",
+        "tipCommit": "4fa574620bf76d308f86305b68593dc4f3d27d3c",
         "commits": [
           {
-            "commit": "558c57da16134562e00ba29a2086d84c2350cd23",
+            "commit": "74349558305d4222fe3502ff9a72cb235ac62bec",
             "parents": [
-              "3da32832ca472244e0ad319009d200341813a258"
+              "ee446e3147c159300866c1f4f87e60589850d9f3"
             ],
-            "subject": "优化：收紧任务清单排版并记录原生保存验收"
+            "subject": "修复：旧任务卡样式更新保持原生操作重放路由"
           },
           {
-            "commit": "ee446e3147c159300866c1f4f87e60589850d9f3",
+            "commit": "4fa574620bf76d308f86305b68593dc4f3d27d3c",
             "parents": [
-              "558c57da16134562e00ba29a2086d84c2350cd23"
+              "74349558305d4222fe3502ff9a72cb235ac62bec"
             ],
-            "subject": "修复：行情涨跌色与瀑布刻度并升级旧卡片显示"
+            "subject": "功能：预置审批记录与工作台提醒并保存个人操作"
           }
         ],
         "files": [
@@ -36,39 +36,79 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/advanced-chart-view.js"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/operations-artifact.js"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
-            "path": "test/advanced-chart-template.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workflow-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workflow-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
           },
           {
             "status": "M",
             "path": "test/operations-template.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/stored-template-refinements.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workflow-template.test.js"
           }
         ],
         "checks": [
@@ -82,79 +122,35 @@
               "test/workbench-component-presentation.test.js",
               "test/research-grid-client.test.js",
               "test/operations-template.test.js",
+              "test/workflow-template.test.js",
               "test/component-template-registry.test.js",
               "test/workbench-execution-policy.test.js",
               "test/bundled-component-skill.test.js",
               "test/component-source-binding.test.js"
             ],
             "outcome": "passed",
-            "summary": "214项直接相关检查通过；另有54组真实生成数据宽窄三模式沙盒检查与交互重放",
-            "verifiedCommit": "ee446e3147c159300866c1f4f87e60589850d9f3",
-            "completedAt": "2026-09-30T08:41:26.936063+00:00",
+            "summary": "228项直接相关检查通过；新增两类模板12组三模式宽窄及真实沙盒重放通过；旧原生任务9事件恢复3/6",
+            "verifiedCommit": "4fa574620bf76d308f86305b68593dc4f3d27d3c",
+            "completedAt": "2026-09-30T09:22:50.522758+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "九类图表自然输入101秒首轮生成完成，数据与原生交互已验收；此轮修正待新集成包验证既有卡片"
+          "summary": "当前cf13集成包发现旧任务路由回归，原始记录未丢失；新tip修复与审批提醒等待新集成包原生复验"
         },
         "acceptanceCriteria": [
-          "已有卡片保留原始数据、控件路径与交互日志并加载视觉修正",
-          "瀑布图窄宽末尾刻度不重叠",
-          "K线与OHLC遵循红涨绿跌且三模式明细可读",
-          "任务负责人紧凑排版且个人状态持久保存"
+          "原生旧任务卡操作重放恢复3/6与新增中文任务",
+          "审批个人意见不改来源状态且重放保存",
+          "提醒分类未读筛选与本地读标记持久保存",
+          "三模式窄宽控件可读且完整保留来源记录"
         ],
         "risks": [
           "整体44类业务模板及总体成功率仍待完成",
           "通用主题旧文件4项基线失败保留",
           "Figma截图服务占位图，精确截图对比未通过"
         ],
-        "generatedAt": "2026-09-30T08:41:26.936063+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
-        "verificationCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
-            "completedAt": "2026-09-30T08:42:08.660Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
-            "completedAt": "2026-09-30T08:42:08.660Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e672f1ed321ceb54112c11e8aab352286dc67661",
-            "completedAt": "2026-09-30T08:42:08.660Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T08:42:08.660Z"
+        "generatedAt": "2026-09-30T09:22:50.522758+00:00"
       }
     }
   ],
