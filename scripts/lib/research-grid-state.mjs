@@ -3,6 +3,8 @@ export const researchGridNodeIds=new Set()
 export function createWorkbenchGridState(storage,sessionId) {
   const grid=createResearchGrid(), key='ework.research.grid.v1:'+sessionId
   let width=0,cells=[],initialized=false,previous=new Map(),nodesById=new Map(),forced=false,legacyRows=false
+  const planning=new Map()
+  const durableCells=()=>cells.filter(c=>!planning.has(c.id))
   try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1}}catch{}
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
   const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='generated-container'&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
@@ -20,12 +22,12 @@ export function createWorkbenchGridState(storage,sessionId) {
   }
   function reconcile(snapshot) {
     if(!width)return snapshot
-    const nodes=[...snapshot.files,...snapshot.artifacts],ids=new Set(nodes.map(n=>n.id))
+    const nodes=[...snapshot.files,...snapshot.artifacts,...planning.values()],ids=new Set(nodes.map(n=>n.id))
     nodesById=new Map(nodes.map(n=>[n.id,n]))
     cells=freeCells(cells)
     // Convert the old fixed 35px rows once, using the first actual viewport.
     // Keep card content and horizontal spans; round vertical bounds to squares.
-    if(legacyRows){const m=grid.metrics(width);cells=grid.compact(cells.map(c=>grid.bounded({...c,y:c.y*35/m.rowStep,h:Math.ceil(c.h*35/m.rowStep)})));legacyRows=false;try{storage?.setItem(key,JSON.stringify({version:2,cells}))}catch{}}
+    if(legacyRows){const m=grid.metrics(width);cells=grid.compact(cells.map(c=>grid.bounded({...c,y:c.y*35/m.rowStep,h:Math.ceil(c.h*35/m.rowStep)})));legacyRows=false;try{storage?.setItem(key,JSON.stringify({version:2,cells:durableCells()}))}catch{}}
     if(!initialized){cells=grid.migrate(nodes,width);initialized=true}
     const removed=cells.some(n=>!ids.has(n.id));cells=cells.filter(n=>ids.has(n.id))
     const m=grid.metrics(width)
@@ -33,7 +35,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     // External geometry transactions include undo, redo, collaboration and model
     // actions. Convert those boxes back to cells instead of overwriting history.
     if(!forced){
-      cells=cells.map(c=>{const n=nodes.find(n=>n.id===c.id);if(!previous.has(c.id)||previous.get(c.id)===geometry(n))return c;geometryChanged=true;return grid.bounded({id:n.id,x:(n.x-n.width/2-m.inset)/m.step,y:(n.y-n.height/2-m.inset)/m.rowStep,w:(n.width+m.gap)/m.step,h:(n.height+m.gap)/m.rowStep})})
+      cells=cells.map(c=>{const n=nodes.find(n=>n.id===c.id);if(planning.has(c.id)||!previous.has(c.id)||previous.get(c.id)===geometry(n))return c;geometryChanged=true;return grid.bounded({id:n.id,x:(n.x-n.width/2-m.inset)/m.step,y:(n.y-n.height/2-m.inset)/m.rowStep,w:(n.width+m.gap)/m.step,h:(n.height+m.gap)/m.rowStep})})
     }
     if(!forced&&(removed||geometryChanged))cells=grid.compact(cells)
     // A newly submitted workbench is one layout transaction. Appending each
@@ -66,13 +68,24 @@ export function createWorkbenchGridState(storage,sessionId) {
   }
   return {
     reconcile,receiveCanonical,
+    reservePlanning(intent,snapshot,position){
+      if(!width||!intent?.id)return false
+      if(planning.has(intent.id))return false
+      reconcile(snapshot)
+      const m=grid.metrics(width),node={id:intent.id,kind:'planning-card',generationStatus:'running',startedAt:intent.startedAt,width:320,height:220}
+      planning.set(node.id,node);nodesById.set(node.id,node)
+      const cell=grid.bounded({id:node.id,x:(position.x-m.inset)/m.step,y:(position.y-m.inset)/m.rowStep,w:Math.ceil((320+m.gap)/m.step),h:Math.ceil((220+m.gap)/m.rowStep)})
+      cells=grid.place([...cells,cell],cell);forced=true;return true
+    },
+    releasePlanning(id){if(!planning.delete(id))return false;cells=grid.compact(cells.filter(c=>c.id!==id));previous.delete(id);researchGridNodeIds.delete(id);forced=true;return true},
+    planningNodes:()=>grid.project([...planning.values()],visibleCells(),width||1000),
     document(snapshot){if(!width)return {files:snapshot.files,artifacts:snapshot.artifacts};const nodes=grid.project([...snapshot.files,...snapshot.artifacts],cells,1000),byId=new Map(nodes.map(n=>[n.id,n]));return {files:snapshot.files.map(n=>byId.get(n.id)),artifacts:snapshot.artifacts.map(n=>byId.get(n.id))}},
     enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;forced=true;return true},
     get:()=>freeCells(cells),
     visible:()=>freeCells(visibleCells()),
     set(next){cells=next.map(grid.bounded);forced=true},
     append:id=>grid.append(cells,id),
-    save(){if(width)try{return storage?.setItem(key,JSON.stringify({version:2,cells}))!==false}catch{return false}return true},
+    save(){if(width)try{return storage?.setItem(key,JSON.stringify({version:2,cells:durableCells()}))!==false}catch{return false}return true},
     enabled:()=>width>0
   }
 }

@@ -40,6 +40,9 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+`
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n+2){background:var(--sherlock-chart-5)!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n){background:var(--sherlock-chart-4)!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div) :is(.market-value,.market-label,.market-detail,.fund-value,.fund-label,.fund-detail,.research-metric-value,.research-metric-label,.research-metric-detail,.kpi-label,.kpi-value,.kpi-detail,span,strong,em){color:white!important}
+:root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi) :is(summary,p,a){color:white!important}
+:root[data-workbench-style="enterprise"] body .fund-detail-disclosure{border-top:1px solid #ffffff55!important;padding-top:4px!important;margin-top:6px!important}
+:root[data-workbench-style="enterprise"] body .fund-detail-disclosure summary::marker{color:white!important}
 @media(prefers-reduced-motion:no-preference){
  :root[data-workbench-transition] body,:root[data-workbench-transition] body *{transition:background-color 260ms cubic-bezier(.2,.7,.2,1),color 260ms cubic-bezier(.2,.7,.2,1),border-color 260ms cubic-bezier(.2,.7,.2,1)}
  :root[data-workbench-transition] svg :is(rect,path,line,text,circle){transition:fill 260ms cubic-bezier(.2,.7,.2,1),stroke 260ms cubic-bezier(.2,.7,.2,1)}

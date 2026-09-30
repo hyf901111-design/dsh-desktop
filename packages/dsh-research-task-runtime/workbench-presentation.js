@@ -16,6 +16,11 @@ body :is(button,input,select,textarea):focus-visible{outline:1px solid var(--she
 body :is(.controls,.fund-filters,.fund-industry-filters,.market-candle-controls,.price-volume-controls,.order-book-controls,.fund-flow-controls,.valuation-controls,.equity-controls,.risk-controls,.event-filters,.terminal-table-toolbar){gap:6px!important;flex-wrap:wrap!important}
 body :is(.controls,.fund-filters,.fund-industry-filters,.market-candle-controls,.price-volume-controls,.order-book-controls,.fund-flow-controls,.valuation-controls,.equity-controls,.risk-controls,.event-filters,.terminal-table-toolbar) button{background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border:1px solid var(--sherlock-control-border)!important;min-height:26px!important;padding:2px 7px!important}
 body button[aria-pressed="true"]{color:var(--sherlock-control-primary)!important;border-color:var(--sherlock-control-primary)!important}
+body button.fund-industry{background:var(--sherlock-row-alternate)!important;color:var(--sherlock-text)!important;border:0!important;border-radius:0!important;outline:0!important;min-height:30px!important;padding:4px 8px!important;grid-template-columns:minmax(72px,90px) minmax(0,1fr) 48px!important;gap:8px!important}
+body button.fund-industry:is(:hover,[aria-pressed="true"]){background:var(--sherlock-row-selected)!important;color:var(--sherlock-text)!important;border:0!important;outline:0!important}
+body button.fund-industry:focus-visible{outline:1px solid var(--sherlock-muted)!important;outline-offset:1px}
+body button.fund-industry :is(.fund-industry-label,.fund-industry-value){color:var(--sherlock-text)!important;font-size:12px!important;line-height:18px!important}
+body .fund-industry-readout:empty{display:none!important}
 body :is(table,.fund-table){width:100%!important;border-collapse:collapse!important;font:400 12px/18px var(--sherlock-font-sans)!important;color:var(--sherlock-text)!important;background:var(--sherlock-bg)!important}
 body :is(th,td){height:26px!important;box-sizing:border-box!important;padding:4px 8px!important;border:0!important;white-space:nowrap!important;font-size:12px!important;line-height:18px!important}
 body th{position:sticky;top:0;z-index:1;background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important;font-weight:500!important}

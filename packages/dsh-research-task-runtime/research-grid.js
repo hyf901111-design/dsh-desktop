@@ -4,7 +4,7 @@ export function createResearchGrid() {
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n))
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
   const minimum=(node,m)=>{
-    if(node?.kind!=='generated-container'||node.containerSpec)return {w:m.minColumns,h:m.minRows}
+    if(!['generated-container','planning-card'].includes(node?.kind)||node.containerSpec)return {w:m.minColumns,h:m.minRows}
     // Task status changes content, never the frame. Keep the draft minimum
     // throughout generation; the derived shell also reserves its source strip.
     const height=node.creationMode==='selection'?330:220

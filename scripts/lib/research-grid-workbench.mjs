@@ -65,10 +65,15 @@ export function patchResearchGridWorkbench(source){
     getWorkbenchCells:()=>workbenchGrid.get(),
     getWorkbenchVisibleCells:()=>workbenchGrid.visible(),
     getWorkbenchDocument:()=>workbenchGrid.document(snapshot),
+    getWorkbenchPlanningNodes:()=>workbenchGrid.planningNodes(),
+    reserveWorkbenchPlanning(intent,position){if(workbenchGrid.reservePlanning(intent,snapshot,position)){update({},false);return true}return false},
+    releaseWorkbenchPlanning(id){if(workbenchGrid.releasePlanning(id)){update({},false);return true}return false},
     setWorkbenchWidth(width){if(workbenchGrid.enable(width)){initialWorkbenchFit=false;autoFitManaged=false;autoFitActive=false;update({},false);}},
     applyWorkbenchCells(cells,persist=false){if(!collaborationCanWrite())return false;if(pendingHistoryTransaction===null)pendingHistoryTransaction=historyState();workbenchGrid.set(cells);const nodes=createResearchGrid().project([...snapshot.files,...snapshot.artifacts],cells,Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)));this.applyPointerGeometry(nodes);if(persist)this.persist();return true;},
   `
   change('subscribeCanvasAction:listener=>{',methods+'subscribeCanvasAction:listener=>{')
+  change('const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);',`for(const node of workbenchGrid.planningNodes())if((plan.createdAt??0)>=node.startedAt-1000)workbenchGrid.releasePlanning(node.id);
+                    const artifacts = boundedResearchCanvasArtifactNodes([...snapshot.artifacts, ...nodes]);`)
   change('return structuredClone({ files: s.files, artifacts: s.artifacts });','return structuredClone(w.getWorkbenchDocument?.()??{ files: s.files, artifacts: s.artifacts });')
   change('files: value.files,','files: value.files,\nworkbenchCells:workbenchGrid.get(),')
   change('const restoreHistory = (entry) => {','const restoreHistory = (entry) => {\nif(entry.workbenchCells)workbenchGrid.set(entry.workbenchCells);')
@@ -94,7 +99,7 @@ export function patchResearchGridWorkbench(source){
   change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map()) {
     if(workbenchGrid.enabled()){
       if(!collaborationCanWrite())return false;
-      const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts].map(n=>({...n,preferred:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
+      const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts,...workbenchGrid.planningNodes()].map(n=>({...n,preferred:n.kind==='planning-card'?n:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
       if(!nodes.length)return false;
       return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.visible(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0),!measured.__workbenchDeferred);
     }`)

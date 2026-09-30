@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition } from '../scripts/lib/research-creation-progress.mjs'
-import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs'
+import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition, patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
+import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 
 it('shows early progress for explicit workbench and component creation, not product questions', () => {
   expect(classifyResearchCreationRequest('请用模拟数据创建金融行情工作台，包含K线、热力图和新闻列表')).toMatchObject({
@@ -30,15 +30,15 @@ it('centers the first planning card in the visible research canvas', () => {
 })
 
 it('keeps the submit, canvas and workbench handoff patch stable on reinstall', () => {
-  const source = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
-  const patched = patchFigmaFinalCanvas(source)
+  const source = restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const patched = patchResearchCreationProgress(source)
   expect(patched.includes('ODYSSEY_CREATION_PROGRESS_V3')).toBe(true)
   expect(patched.includes('ODYSSEY_CREATION_PROGRESS_V2')).toBe(false)
   expect(patched.includes('ODYSSEY_CREATION_PROGRESS_V1')).toBe(false)
   expect(patched).toContain('data-research-creation-planning')
   expect(patched.includes('ODYSSEY_CREATION_CANVAS_CARD_V3')).toBe(true)
   expect(patched).toContain("/* ODYSSEY_CREATION_POINTER_ISOLATION */ if (event.target?.closest?.('[data-research-create-popover],[data-research-voice-feedback],[data-research-creation-planning]')) return;")
-  expect(patched.includes('sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId)')).toBe(true)
+  expect(patched.includes('sessionId, viewport, canvasSize:snapshot.canvasSize, workspace, onDismiss: () => odysseyCreationFinish(sessionId)')).toBe(true)
   expect(patched.includes('onPointerMove: event => {')).toBe(true)
   expect(patched).toContain('ResearchGenerationProcess, { node, sessionId, phaseOverride: phase')
   expect(patched).toContain('ODYSSEY_CREATION_CARD_ACTIONS')
@@ -59,5 +59,5 @@ it('keeps the submit, canvas and workbench handoff patch stable on reinstall', (
   expect(patched).toContain('if (session?.running) { if (!intent.sawRunning)')
   expect(patched).toContain('[sessionId, session?.running]')
   expect(patched).not.toContain('[sessionId, session.running]')
-  expect(patchFigmaFinalCanvas(patched)).toBe(patched)
+  expect(patchResearchCreationProgress(patched)).toBe(patched)
 })
