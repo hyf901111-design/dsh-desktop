@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复宽金融快照首次占位和整理自然高度",
+        "featureName": "金融快照随视口自动补足自然高度",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "ffbc8a9a5daaca634ba2d6c5c2a0148533d56015",
-        "tipCommit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
+        "baseCommit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
+        "tipCommit": "c56da5f27025218de07999f1092783780b1ac2ea",
         "commits": [
           {
-            "commit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
+            "commit": "c56da5f27025218de07999f1092783780b1ac2ea",
             "parents": [
-              "ffbc8a9a5daaca634ba2d6c5c2a0148533d56015"
+              "9416c7c72f313d149ff6a4a4714b90f04a41fb90"
             ],
-            "subject": "画布：修复宽快照占位和整理尺寸反复缩小"
+            "subject": "画布：快照卡随视口补足高度并保留手动尺寸"
           }
         ],
         "files": [
@@ -29,23 +29,23 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
-            "path": "test/research-grid-workbench.test.js"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "test/research-html-theme.test.js"
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -77,9 +77,9 @@
               "test/research-optimal-arrange.test.js"
             ],
             "outcome": "passed",
-            "summary": "22个相关及继承门禁文件444项通过",
-            "verifiedCommit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
-            "completedAt": "2026-09-30T18:16:21.387329+00:00",
+            "summary": "22个相关及继承门禁文件446项通过",
+            "verifiedCommit": "c56da5f27025218de07999f1092783780b1ac2ea",
+            "completedAt": "2026-09-30T18:51:37.331685+00:00",
             "timeoutMs": 300000
           },
           {
@@ -92,8 +92,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
-            "completedAt": "2026-09-30T18:16:21.387329+00:00",
+            "verifiedCommit": "c56da5f27025218de07999f1092783780b1ac2ea",
+            "completedAt": "2026-09-30T18:51:37.331685+00:00",
             "timeoutMs": 300000
           },
           {
@@ -104,8 +104,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
-            "completedAt": "2026-09-30T18:16:21.387329+00:00",
+            "verifiedCommit": "c56da5f27025218de07999f1092783780b1ac2ea",
+            "completedAt": "2026-09-30T18:51:37.331685+00:00",
             "timeoutMs": 300000
           },
           {
@@ -116,8 +116,8 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
-            "completedAt": "2026-09-30T18:16:21.387329+00:00",
+            "verifiedCommit": "c56da5f27025218de07999f1092783780b1ac2ea",
+            "completedAt": "2026-09-30T18:51:37.331685+00:00",
             "timeoutMs": 300000
           },
           {
@@ -130,14 +130,14 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥检查通过，27项既有非相关检查跳过",
-            "verifiedCommit": "9416c7c72f313d149ff6a4a4714b90f04a41fb90",
-            "completedAt": "2026-09-30T18:16:21.387329+00:00",
+            "verifiedCommit": "c56da5f27025218de07999f1092783780b1ac2ea",
+            "completedAt": "2026-09-30T18:51:37.331685+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "72组实际自然输入产生卡片的生产双层CSP尺寸回放通过；从矮框和高框得到一致完整尺寸，0页面错误；真实包复验待下一集成包"
+          "summary": "先前集成包宽画布和三模式交互通过；侧栏展开发现不足，新增视口级高度回归通过；修复包原生复验进行中"
         },
         "acceptanceCriteria": [
           "四个最新Figma金融模板使用独立数据契约",
@@ -151,60 +151,17 @@
           "旧指标整理回归门禁保持",
           "宽模板首次挂载及整理恢复设计源宽，手动缩窄仍可用",
           "真实内容尺寸包括完整可读行情视口和来源尾部空行间距",
-          "尺寸结果与旧卡片高矮无关，重复整理稳定"
+          "尺寸结果与旧卡片高矮无关，重复整理稳定",
+          "侧栏挤窄时按可信宿主实际外侧空间补足高度",
+          "自动显示高度不写共享逻辑坐标，主动缩高仍优先"
         ],
         "risks": [
           "最新设计源44/74已覆盖，仍缺30类业务模板",
           "总体生成成功率超过90%尚未验证",
-          "这四类模板原生自然输入与会话往返待集成包复验",
+          "四类快照的侧栏往返与会话返回待修复包原生复验",
           "HTML旧文件四项既存失败未计为通过"
         ],
-        "generatedAt": "2026-09-30T18:16:21.387329+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f2994afe30a56743d4ad30478d42f55736884da1",
-        "verificationCommit": "f2994afe30a56743d4ad30478d42f55736884da1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "f2994afe30a56743d4ad30478d42f55736884da1",
-            "completedAt": "2026-09-30T18:17:50.790Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "f2994afe30a56743d4ad30478d42f55736884da1",
-            "completedAt": "2026-09-30T18:17:50.790Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f2994afe30a56743d4ad30478d42f55736884da1",
-            "completedAt": "2026-09-30T18:17:50.790Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T18:17:50.790Z"
+        "generatedAt": "2026-09-30T18:51:37.331685+00:00"
       }
     }
   ],
