@@ -39,9 +39,14 @@ describe('Figma 21Z operations data templates',()=>{
  it('never turns a source snapshot into a business write control',()=>{
   const window=runtime(samples.tasks);expect(window.document.querySelector('input[type="checkbox"]').disabled).toBe(true);
   expect(window.document.getElementById('add-task')).toBeNull();
+  expect(window.document.getElementById('task-visible').hidden).toBe(true);
   const filter=window.document.getElementById('task-filter');filter.value='todo';filter.dispatchEvent(new window.Event('change'));
   expect(window.document.querySelectorAll('.task-entry:not([hidden])')).toHaveLength(1);
+  expect(window.document.getElementById('task-visible').hidden).toBe(false);
+  expect(window.document.getElementById('task-visible').textContent).toBe('显示 1 / 2 条');
   expect(window.document.getElementById('operation-count').textContent).toBe('1 / 2 已完成');
+  filter.value='';filter.dispatchEvent(new window.Event('change'));
+  expect(window.document.getElementById('task-visible').hidden).toBe(true);
  });
  it('completes, filters, adds and reverses local tasks without dropping original details',()=>{
   const window=runtime({...samples.tasks,mode:'local'}),document=window.document,input=document.getElementById('task-1');
