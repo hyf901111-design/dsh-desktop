@@ -351,7 +351,7 @@ function patchFigmaCanvasContent(source) {
     const {width,height}=RESEARCH_BENTO_SIZES[researchBentoSize(node)];return {width,height};
   }`);
   source=block(source,'function researchGenerationSizedNode(', 'function researchGenerationAutoGeometry(',`function researchGenerationSizedNode(node, geometry, snapshot = null) {
-    if(geometry===null)return node;
+    if(geometry===null||node.workbenchId)return node;
     const next={...node,...geometry};
     if(node.sizeMode!=='manual'&&['generated-container','generated-summary','generated-mind-map','pasted-text','assistant-result'].includes(node.kind)){
       const dimensions=researchOptimalDimensions(next);

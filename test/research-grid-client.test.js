@@ -72,6 +72,26 @@ it('真实工作台入口按完整面板规划初始化两列，内容返回不�
  expect(w.getWorkbenchCells().map(({freePosition,...c})=>c)).toEqual(before)
  expect(w.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
 })
+it('对话视图先收到工作台规划时保留模板尺寸，首次打开研究画布无需整理',async()=>{
+ const f=await fixture(),w=f.workspace
+ const plan={id:'before-canvas',createdAt:Date.now(),panels:[
+  {nodeId:'before-form',title:'需求表单',prompt:'模拟需求',pending:true,width:656,height:428,x:0,y:0,size:'large'},
+  {nodeId:'before-code',title:'JSON 配置',prompt:'模拟配置',pending:true,width:656,height:328,x:672,y:0,size:'medium'}
+ ]}
+ expect(w.applyWorkbench(plan)).toBe(true)
+ expect(w.getSnapshot().artifacts.map(n=>[n.width,n.height])).toEqual([[656,428],[656,328]])
+ const specs=[{version:1,type:'form',title:'需求表单',asOf:'2026-09-30 模拟',fields:[{id:'subject',label:'研究主题',kind:'text',required:true}]},
+  {version:1,type:'code',title:'JSON 配置',asOf:'2026-09-30 模拟',language:'json',content:'{"status":"draft"}'}].map(s=>acceptArtifactOutput(JSON.stringify(s)))
+ expect(specs.every(s=>JSON.parse(s).type==='html')).toBe(true)
+ expect(w.applyWorkbench({...plan,panels:plan.panels.map((p,i)=>({...p,taskId:'prepared-'+i,preparedOutput:specs[i]}))})).toBe(true)
+ expect(w.getSnapshot().artifacts.map(n=>[n.width,n.height])).toEqual([[656,428],[656,328]])
+ await f.render()
+ const nodes=w.getSnapshot().artifacts
+ expect(Math.abs(nodes[0].height-428)).toBeLessThan(25)
+ expect(Math.abs(nodes[1].height-328)).toBeLessThan(25)
+ expect(nodes.every(n=>n.width>=400&&n.containerSpec)).toBe(true)
+ await vi.waitFor(async()=>{await act(async()=>{});expect(f.host.querySelectorAll('iframe[data-research-html-artifact]')).toHaveLength(2)},{timeout:2000,interval:50})
+})
 it.each(['generated-container','generated-mind-map','generated-summary'])('生成中的 %s 可从正文拖动，过程与停止按钮不触发拖动',async kind=>{
  const f=await fixture(true),w=f.workspace
  const node={...text('moving'),kind,generationStatus:'running',generationTaskId:'moving-task',generationStartedAt:Date.now(),generationEvents:[],sourceNodeIds:['peer'],containerPrompt:'模拟验证',refreshMinutes:0}

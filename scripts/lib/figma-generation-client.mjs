@@ -261,10 +261,16 @@ export function patchGenerationLifecycle(source) {
     /* ODYSSEY_MANUAL_COMPONENT_BOUNDS */
     if(node?.kind==='generated-container'&&node.sizeMode==='manual'&&node.containerPrompt!=='odyssey:link-draft'&&Number.isFinite(node.width)&&node.width>0&&Number.isFinite(node.height)&&node.height>0)return {width:Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.width),height:Math.min(RESEARCH_CANVAS_MAX_GENERATED_HEIGHT,node.height),sizeMode:'manual',resizable:true};`)
   }
+  const oldAutoBounds = "if(node?.kind==='generated-container'&&node.sizeMode!=='manual'&&!node.containerSpec&&['queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus))return {width:320,height:220,sizeMode:'auto',resizable:true};"
+  // A workbench can arrive while the conversation view has no mounted canvas.
+  // Its pending cards already have template geometry; retain it until the grid
+  // is measured instead of canonicalizing every panel to the draft's 320×220.
+  const autoBounds = oldAutoBounds.replace("return {width:320", "return node.workbenchId&&Number.isFinite(node.width)&&node.width>0&&Number.isFinite(node.height)&&node.height>0?{width:Math.min(RESEARCH_CANVAS_MAX_NODE_SIZE,node.width),height:Math.min(RESEARCH_CANVAS_MAX_GENERATED_HEIGHT,node.height),sizeMode:'auto',resizable:true}:{width:320")
+  source = source.replace(oldAutoBounds, autoBounds)
   if (!source.includes('/* ODYSSEY_AUTO_GENERATION_BOUNDS */')) {
     source = source.replace('function normalizeResearchCanvasNodeGeometry(node) {', `function normalizeResearchCanvasNodeGeometry(node) {
     /* ODYSSEY_AUTO_GENERATION_BOUNDS */
-    if(node?.kind==='generated-container'&&node.sizeMode!=='manual'&&!node.containerSpec&&['queued','running','retrying','failed','cancelled','interrupted'].includes(node.generationStatus))return {width:320,height:220,sizeMode:'auto',resizable:true};`)
+    ${autoBounds}`)
   }
   const retryStart = source.indexOf('retryGeneration(nodeId) {'), retryEnd = source.indexOf('setGenerationCancelSink(', retryStart)
   if (retryStart < 0 || retryEnd < retryStart) throw Error('Missing generation retry lifecycle')
