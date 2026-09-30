@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "金融模板半栏撑宽后的首屏自然补高",
+        "featureName": "金融图表尺寸反馈与浏览器通知误降级修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
-        "tipCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+        "baseCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+        "tipCommit": "095a5888021644656275f2614a6335b3e4488f49",
         "commits": [
           {
-            "commit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+            "commit": "095a5888021644656275f2614a6335b3e4488f49",
             "parents": [
-              "c728d74a9398b649deeeb3b045fe868fb05debcd"
+              "720da9a54e1410bd84e52f27e62a8300ac986750"
             ],
-            "subject": "画布：按实际撑开的可读宽度接收内容高度"
+            "subject": "组件：避免图表重绘触发尺寸反馈和误降级"
           }
         ],
         "files": [
@@ -29,11 +29,15 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "packages/dsh-research-task-runtime/financial-series.js"
           },
           {
             "status": "M",
-            "path": "test/research-grid-client.test.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-series-intrinsic.test.js"
           }
         ],
         "checks": [
@@ -67,9 +71,9 @@
               "test/financial-series-intrinsic.test.js"
             ],
             "outcome": "passed",
-            "summary": "24个相关及继承门禁文件465项通过，半栏撑宽后仍按实际宽度接收可信自然高度",
-            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
-            "completedAt": "2026-09-30T21:10:16.907157+00:00",
+            "summary": "24个相关与继承门禁文件467项通过，浏览器尺寸延迟通知不降级，真实运行时错误仍有文字退路",
+            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
+            "completedAt": "2026-09-30T21:33:58.393842+00:00",
             "timeoutMs": 300000
           },
           {
@@ -82,8 +86,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
-            "completedAt": "2026-09-30T21:10:16.907157+00:00",
+            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
+            "completedAt": "2026-09-30T21:33:58.394146+00:00",
             "timeoutMs": 300000
           },
           {
@@ -94,8 +98,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
-            "completedAt": "2026-09-30T21:10:16.907157+00:00",
+            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
+            "completedAt": "2026-09-30T21:33:58.394166+00:00",
             "timeoutMs": 300000
           },
           {
@@ -106,8 +110,8 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
-            "completedAt": "2026-09-30T21:10:16.907157+00:00",
+            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
+            "completedAt": "2026-09-30T21:33:58.394177+00:00",
             "timeoutMs": 300000
           },
           {
@@ -120,14 +124,14 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥检查通过，27项既有非相关检查跳过",
-            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
-            "completedAt": "2026-09-30T21:10:16.907157+00:00",
+            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
+            "completedAt": "2026-09-30T21:33:58.394179+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "继承同内容版本54+9双CSP尺寸主题交互案例通过；原生普通输入66.601秒一次成功，发现半栏宽度校验错误并由实际客户端回归复现修正，最终包复验待构建"
+          "summary": "54组生产CSP自然尺寸、9组交互、3组连续尺寸主题切换通过；原生33.791秒一次生成首屏完整，模式整理发现降级，最后修正待下一集成包复验"
         },
         "acceptanceCriteria": [
           "最新Figma三个金融序列默认节点与独立数据契约",
@@ -142,57 +146,12 @@
           "待生成半栏完成后自动撑至可读宽度时，自然高度按实际显示宽度匹配，共享格位不改写"
         ],
         "risks": [
-          "最新设计实现47/74，仍缺27类业务模板",
-          "总体生成成功率超过90%尚未验证",
-          "三类新模板最终包普通输入及原生验收待执行",
+          "47/74实现，仍缺27类模板",
+          "全局成功率高于90%未验证",
+          "最后尺寸反馈修正待原生三模式与整理复验",
           "7项既存HTML完整文件失败未计为通过"
         ],
         "generatedAt": "2026-09-30T21:10:16.907157+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c845e7522840b1e0fc739df68e54fe84a7b8d695",
-        "verificationCommit": "c845e7522840b1e0fc739df68e54fe84a7b8d695",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "c845e7522840b1e0fc739df68e54fe84a7b8d695",
-            "completedAt": "2026-09-30T21:11:04.413Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "c845e7522840b1e0fc739df68e54fe84a7b8d695",
-            "completedAt": "2026-09-30T21:11:04.413Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c845e7522840b1e0fc739df68e54fe84a7b8d695",
-            "completedAt": "2026-09-30T21:11:04.413Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T21:11:04.413Z"
       }
     }
   ],
