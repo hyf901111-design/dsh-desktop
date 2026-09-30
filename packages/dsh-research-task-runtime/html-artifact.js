@@ -484,7 +484,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
         // Chromium still returns table/range layout boxes inside a closed
         // details element. Only its first summary is actually displayed.
         for(let ancestor=element;ancestor&&ancestor!==document.body;ancestor=ancestor.parentElement){
-          if(ancestor.tagName==='DETAILS'&&!ancestor.open){const summary=Array.from(ancestor.children).find(child=>child.tagName==='SUMMARY');if(!summary?.contains(element))return false}
+          if(ancestor.tagName==='DETAILS'&&!ancestor.open&&ancestor!==element){const summary=Array.from(ancestor.children).find(child=>child.tagName==='SUMMARY');if(!summary?.contains(element))return false}
         }
         const style = getComputedStyle(element)
         return style.display !== 'none' && style.visibility !== 'hidden' && style.position !== 'fixed'
@@ -560,7 +560,7 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
       // clipped boxes must not feed a progressively smaller height to Arrange.
       // Measure the intrinsic controls, a bounded set of rows, and provenance
       // independently of the current iframe height.
-      if (workbench && ['share-statistics','market-overview','currency-snapshot','watchlist'].includes(document.body.dataset.sherlockMarket)) {
+      if (workbench && ['share-statistics','market-overview','currency-snapshot','watchlist','price-performance','valuation-multiples','price-target'].includes(document.body.dataset.sherlockMarket)) {
         const profile = document.body.querySelector('.financial-profile');
         if (profile) {
           const pixels = value => Math.max(0, parseFloat(value) || 0);
@@ -570,7 +570,9 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
           };
           const margins = element => { const style = getComputedStyle(element); return pixels(style.marginTop) + pixels(style.marginBottom); };
           let contentHeight = insets(profile);
-          for (const element of Array.from(profile.children).filter(visible)) {
+          const children = Array.from(profile.children).filter(visible);
+          contentHeight += Math.max(0,children.length - 1) * pixels(getComputedStyle(profile).rowGap);
+          for (const element of children) {
             let height = element.getBoundingClientRect().height;
             if (element.classList.contains('snapshot-table-wrap')) {
               const table = element.querySelector('table');

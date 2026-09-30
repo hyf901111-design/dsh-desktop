@@ -56,6 +56,12 @@ export function templateDataIssue(data){
 // Empty retrieval is a source problem, not malformed visual JSON. A bounded
 // repair must retain tools so it can correct the query's time direction.
 export function templateSourceDataIssue(data) {
+  if(data?.type==='market'&&data.variant==='price-performance'&&!data.candles?.length)
+    return '价格表现尚无已取得OHLCV。检查实际业务查询，不把示意蜡烛或空历史标为取数完成。'
+  if(data?.type==='market'&&data.variant==='valuation-multiples'&&data.datasets?.length&&data.datasets.every(d=>d.series.every(r=>r.values.every(v=>v===null))))
+    return '估值倍数尚无来源观测。必须取得业务响应，不能把全空年度/季度数据标为完成。'
+  if(data?.type==='market'&&data.variant==='price-target'&&data.currentPrice===null&&data.forecasts?.every(r=>r.targetPrice===null)&&!data.history?.some(p=>p.value!==null))
+    return '目标价和实际报价均未提供。必须保留实际查询与缺失原因，不能把全空机构名单标为取数完成。'
   if(data?.type==='market'&&data.variant==='share-statistics'&&['totalShares','floatShares','freeFloatPercent'].every(k=>data[k]===null))
     return '股本统计全部未提供。必须取得业务响应，不能把全空股本标为取数完成。'
   if(data?.type==='market'&&data.variant==='market-overview'&&data.indices?.length&&data.indices.every(r=>r.price===null&&r.changePercent===null&&!r.sparkline?.values?.some(v=>typeof v==='number'&&Number.isFinite(v))))
