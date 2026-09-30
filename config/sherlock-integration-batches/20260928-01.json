@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "金融序列父级契约与主题图例修正",
+        "featureName": "金融模板半栏撑宽后的首屏自然补高",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "159a766843b4870e9d8eda72dcb2c0d38e644757",
-        "tipCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+        "baseCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+        "tipCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
         "commits": [
           {
-            "commit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
+            "commit": "720da9a54e1410bd84e52f27e62a8300ac986750",
             "parents": [
-              "159a766843b4870e9d8eda72dcb2c0d38e644757"
+              "c728d74a9398b649deeeb3b045fe868fb05debcd"
             ],
-            "subject": "组件：补全父级金融序列契约并统一目标价图例"
+            "subject": "画布：按实际撑开的可读宽度接收内容高度"
           }
         ],
         "files": [
@@ -29,11 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-series.js"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-series.test.js"
+            "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
@@ -71,9 +67,9 @@
               "test/financial-series-intrinsic.test.js"
             ],
             "outcome": "passed",
-            "summary": "24个相关及继承门禁文件464项通过，含初次完成后三种金融序列补高回归",
-            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
-            "completedAt": "2026-09-30T20:50:47.673056+00:00",
+            "summary": "24个相关及继承门禁文件465项通过，半栏撑宽后仍按实际宽度接收可信自然高度",
+            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+            "completedAt": "2026-09-30T21:10:16.907157+00:00",
             "timeoutMs": 300000
           },
           {
@@ -86,8 +82,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
-            "completedAt": "2026-09-30T20:50:47.673056+00:00",
+            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+            "completedAt": "2026-09-30T21:10:16.907157+00:00",
             "timeoutMs": 300000
           },
           {
@@ -98,8 +94,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
-            "completedAt": "2026-09-30T20:50:47.673056+00:00",
+            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+            "completedAt": "2026-09-30T21:10:16.907157+00:00",
             "timeoutMs": 300000
           },
           {
@@ -110,8 +106,8 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
-            "completedAt": "2026-09-30T20:50:47.673056+00:00",
+            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+            "completedAt": "2026-09-30T21:10:16.907157+00:00",
             "timeoutMs": 300000
           },
           {
@@ -124,14 +120,14 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥检查通过，27项既有非相关检查跳过",
-            "verifiedCommit": "c728d74a9398b649deeeb3b045fe868fb05debcd",
-            "completedAt": "2026-09-30T20:50:47.673056+00:00",
+            "verifiedCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
+            "completedAt": "2026-09-30T21:10:16.907157+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP54个尺寸案例和9个交互主题案例通过；首轮普通输入四次格式退回不计通过，最终包修正后普通输入和初次显示复验待构建"
+          "summary": "继承同内容版本54+9双CSP尺寸主题交互案例通过；原生普通输入66.601秒一次成功，发现半栏宽度校验错误并由实际客户端回归复现修正，最终包复验待构建"
         },
         "acceptanceCriteria": [
           "最新Figma三个金融序列默认节点与独立数据契约",
@@ -142,7 +138,8 @@
           "三模式按钮文字可读",
           "摘要占位与弹性间距纳入自然测高，隐藏表行不扩高",
           "旧指标与快照整理门禁保留",
-          "父级复用完整字段契约，避免猜测别名；目标价图例标记随主题切换"
+          "父级复用完整字段契约，避免猜测别名；目标价图例标记随主题切换",
+          "待生成半栏完成后自动撑至可读宽度时，自然高度按实际显示宽度匹配，共享格位不改写"
         ],
         "risks": [
           "最新设计实现47/74，仍缺27类业务模板",
@@ -150,52 +147,7 @@
           "三类新模板最终包普通输入及原生验收待执行",
           "7项既存HTML完整文件失败未计为通过"
         ],
-        "generatedAt": "2026-09-30T20:50:47.673056+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9536e2c56e5ff01391eb88560c2fd315ac5cbf53",
-        "verificationCommit": "9536e2c56e5ff01391eb88560c2fd315ac5cbf53",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "9536e2c56e5ff01391eb88560c2fd315ac5cbf53",
-            "completedAt": "2026-09-30T20:53:05.992Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "9536e2c56e5ff01391eb88560c2fd315ac5cbf53",
-            "completedAt": "2026-09-30T20:53:05.992Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9536e2c56e5ff01391eb88560c2fd315ac5cbf53",
-            "completedAt": "2026-09-30T20:53:05.992Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T20:53:05.992Z"
+        "generatedAt": "2026-09-30T21:10:16.907157+00:00"
       }
     }
   ],
