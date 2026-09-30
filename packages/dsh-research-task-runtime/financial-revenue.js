@@ -122,6 +122,7 @@ body .revenue-incomplete{fill:none;stroke:var(--sherlock-muted);stroke-width:1;s
 body .financial-revenue svg:focus-visible{outline:1px solid var(--sherlock-control-primary);outline-offset:-1px}
 body .financial-revenue p{margin:0;font-size:11px!important;line-height:16px!important;color:var(--sherlock-muted);overflow-wrap:anywhere}
 body [data-revenue-readout]{max-height:80px;overflow:auto}
+body .financial-revenue details[open]{max-height:none!important;overflow:visible!important}
 body .revenue-table-wrap{max-height:280px;overflow:auto;scrollbar-width:thin}
 body .revenue-table-wrap table{min-width:600px;table-layout:auto!important}
 body .revenue-table-wrap th{position:sticky;top:0;background:var(--sherlock-surface-muted)}
