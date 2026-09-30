@@ -39,6 +39,10 @@ body :is(.market-value,.fund-value,.research-metric-value,.kpi-value):where(:not
 body :is(.market-detail,.fund-detail,.research-metric-detail,.kpi-detail){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important}
 body :is(.market-footer,.fund-footer,.fund-industry-footer,.market-ohlc,.trend-readout,.scatter-readout,.terminal-table-readout){font-size:11px!important;line-height:17px!important;color:var(--sherlock-muted)!important;background:transparent!important;border-color:var(--sherlock-border)!important;min-width:0!important;overflow-wrap:anywhere!important}
 body :is(.market-table-wrap,.fund-table-wrap){min-width:0!important;min-height:0!important;overflow:auto!important;max-height:calc(100vh - 68px)!important;border:0!important}
+body[data-sherlock-market="fund-holdings"]{display:flex!important;flex-direction:column!important;height:100vh!important;overflow:hidden!important}
+body[data-sherlock-market="fund-holdings"] .fund-filters{flex:0 0 auto;margin-bottom:12px!important}
+body[data-sherlock-market="fund-holdings"] .fund-table-wrap{flex:1 1 auto;max-height:none!important}
+body[data-sherlock-market="fund-holdings"] .fund-footer{flex:0 0 auto;min-height:17px;margin-top:6px!important}
 body :is(.market-candle,.market-trend,.market-scatter,.market-price-volume,.market-fund-flow){min-width:0!important;min-height:0!important;background:transparent!important;border:0!important}
 body :is(.trend-head,.trend-legend){font-size:11px!important;line-height:17px!important;gap:8px!important;flex-wrap:wrap!important;color:var(--sherlock-muted)!important}
 body :is(.trend-key,.sample-entry,.allocation-legend button){background:transparent!important;border:0!important;border-radius:0!important;min-height:22px!important;padding:1px 4px!important;color:var(--sherlock-text)!important}

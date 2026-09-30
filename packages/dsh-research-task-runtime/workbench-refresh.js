@@ -7,7 +7,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
   const resolve = path => Array.isArray(path) && path.length < 40 ? path.reduce((el, index) => Number.isInteger(index) && index >= 0 && index < 10000 ? el?.children[index] : null, root) : null
   const entries = () => {
     const out = new Map()
-    for (const el of root.querySelectorAll('td,strong,[data-refresh-key],.metric-value,.market-metric-value')) {
+    for (const el of root.querySelectorAll('td,strong,[data-refresh-key],.metric-value,.market-metric-value,.research-metric-value,.fund-value')) {
       if (out.size >= 5000 || el.closest('button,input,select,textarea,[role=status],.asof,.source,.market-asof')) continue
       const text = el.getAttribute('data-refresh-value') || el.textContent.trim()
       if (!text || text.length > 512 || !/[0-9]/.test(text) || el.children.length && el.tagName.toLowerCase() !== 'td') continue
@@ -16,7 +16,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
         const row = el.closest('tr'), table = el.closest('table'), col = [...row.children].indexOf(el)
         key = 'table:' + JSON.stringify(route(table)) + ':' + row.children[0]?.textContent.trim() + ':' + col
       }
-      if (!key) { const label = el.parentElement?.querySelector('label,dt,.label,.metric-label,.market-label'); const section = el.closest('[data-refresh-series],section'); key = label ? 'metric:' + (section?.getAttribute('data-refresh-series') || section?.querySelector('h1,h2,h3')?.textContent.trim() || '') + ':' + label.textContent.trim() : JSON.stringify(route(el)) }
+      if (!key) { const label = el.parentElement?.querySelector('label,dt,.label,.metric-label,.market-label,.research-metric-label,.fund-label'); const section = el.closest('[data-refresh-series],section'); key = label ? 'metric:' + (section?.getAttribute('data-refresh-series') || section?.querySelector('h1,h2,h3')?.textContent.trim() || '') + ':' + label.textContent.trim() : JSON.stringify(route(el)) }
       out.set(key, { element: el, value: text })
     }
     return out
@@ -98,7 +98,9 @@ export function installWorkbenchRefresh(createSurface, valid, revision) {
   const start = () => {
     const surface = createSurface(document.body, state => parent.postMessage({ type: 'sherlock-workbench-view', state, revision }, '*'))
     let token = 0, interaction = 0
-    const touched = () => { interaction++ }
+    // Journal replay restores existing decisions; it is not a newer edit made
+    // while this document is loading. Keep its filter/sort and the saved scroll.
+    const touched = () => { if(!document.documentElement.hasAttribute('data-sherlock-interaction-replaying'))interaction++ }
     for (const name of ['input','change','toggle','scroll']) document.body.addEventListener(name,touched,true)
     addEventListener('message', event => {
       const data = event.data
