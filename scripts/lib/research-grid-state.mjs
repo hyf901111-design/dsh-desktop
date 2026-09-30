@@ -14,7 +14,11 @@ export function createWorkbenchGridState(storage,sessionId) {
   function visibleCells(){
     const m=grid.metrics(width||1000),limits=c=>{
       const node=nodesById.get(c.id),min=grid.minimum(node,m),value=contentHeights.get(c.id)
-      if(value&&!contentOverrides.has(c.id)&&value.html===node?.containerSpec?.html&&Math.abs(value.width-(c.w*m.step-m.gap))<=2)min.h=Math.max(min.h,Math.ceil((value.height+m.gap)/m.rowStep))
+      // A narrow viewport can expand a saved half-column to the template's
+      // readable minimum. The sandbox measured that displayed width; comparing
+      // it with the smaller saved span discards the first content height.
+      const displayedWidth=Math.max(c.w,min.w)*m.step-m.gap
+      if(value&&!contentOverrides.has(c.id)&&value.html===node?.containerSpec?.html&&Math.abs(value.width-displayedWidth)<=2)min.h=Math.max(min.h,Math.ceil((value.height+m.gap)/m.rowStep))
       return min
     }
     if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
