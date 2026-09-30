@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "金融图表尺寸反馈与浏览器通知误降级修正",
+        "featureName": "目标价排序与过期筛选语义恢复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "720da9a54e1410bd84e52f27e62a8300ac986750",
-        "tipCommit": "095a5888021644656275f2614a6335b3e4488f49",
+        "baseCommit": "095a5888021644656275f2614a6335b3e4488f49",
+        "tipCommit": "aee3096d88e35ff873358b8b695f689a531d4bdd",
         "commits": [
           {
-            "commit": "095a5888021644656275f2614a6335b3e4488f49",
+            "commit": "aee3096d88e35ff873358b8b695f689a531d4bdd",
             "parents": [
-              "720da9a54e1410bd84e52f27e62a8300ac986750"
+              "095a5888021644656275f2614a6335b3e4488f49"
             ],
-            "subject": "组件：避免图表重绘触发尺寸反馈和误降级"
+            "subject": "组件：按语义恢复目标价排序与过期筛选"
           }
         ],
         "files": [
@@ -33,11 +33,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-series-intrinsic.test.js"
+            "path": "test/financial-series.test.js"
           }
         ],
         "checks": [
@@ -71,9 +67,9 @@
               "test/financial-series-intrinsic.test.js"
             ],
             "outcome": "passed",
-            "summary": "24个相关与继承门禁文件467项通过，浏览器尺寸延迟通知不降级，真实运行时错误仍有文字退路",
-            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
-            "completedAt": "2026-09-30T21:33:58.393842+00:00",
+            "summary": "24个相关与继承门禁文件468项通过，目标价排序与过期筛选恢复回归通过",
+            "verifiedCommit": "aee3096d88e35ff873358b8b695f689a531d4bdd",
+            "completedAt": "2026-09-30T21:53:04.085845+00:00",
             "timeoutMs": 300000
           },
           {
@@ -86,8 +82,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
-            "completedAt": "2026-09-30T21:33:58.394146+00:00",
+            "verifiedCommit": "aee3096d88e35ff873358b8b695f689a531d4bdd",
+            "completedAt": "2026-09-30T21:53:04.085845+00:00",
             "timeoutMs": 300000
           },
           {
@@ -98,8 +94,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
-            "completedAt": "2026-09-30T21:33:58.394166+00:00",
+            "verifiedCommit": "aee3096d88e35ff873358b8b695f689a531d4bdd",
+            "completedAt": "2026-09-30T21:53:04.085845+00:00",
             "timeoutMs": 300000
           },
           {
@@ -110,8 +106,8 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
-            "completedAt": "2026-09-30T21:33:58.394177+00:00",
+            "verifiedCommit": "aee3096d88e35ff873358b8b695f689a531d4bdd",
+            "completedAt": "2026-09-30T21:53:04.085845+00:00",
             "timeoutMs": 300000
           },
           {
@@ -124,14 +120,14 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥检查通过，27项既有非相关检查跳过",
-            "verifiedCommit": "095a5888021644656275f2614a6335b3e4488f49",
-            "completedAt": "2026-09-30T21:33:58.394179+00:00",
+            "verifiedCommit": "aee3096d88e35ff873358b8b695f689a531d4bdd",
+            "completedAt": "2026-09-30T21:53:04.085845+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "54组生产CSP自然尺寸、9组交互、3组连续尺寸主题切换通过；原生33.791秒一次生成首屏完整，模式整理发现降级，最后修正待下一集成包复验"
+          "summary": "9组生产CSP交互通过；095版33.066秒自然生成，三模式整理无降级、原贵金属指标完整；筛选补丁待最终包往返复验"
         },
         "acceptanceCriteria": [
           "最新Figma三个金融序列默认节点与独立数据契约",
@@ -148,55 +144,10 @@
         "risks": [
           "47/74实现，仍缺27类模板",
           "全局成功率高于90%未验证",
-          "最后尺寸反馈修正待原生三模式与整理复验",
+          "目标价筛选补丁待最终包自然输入与往返复验",
           "7项既存HTML完整文件失败未计为通过"
         ],
-        "generatedAt": "2026-09-30T21:10:16.907157+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b4739819b355610b44fd7b217a758aa1fa03391f",
-        "verificationCommit": "b4739819b355610b44fd7b217a758aa1fa03391f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "b4739819b355610b44fd7b217a758aa1fa03391f",
-            "completedAt": "2026-09-30T21:35:59.945Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "b4739819b355610b44fd7b217a758aa1fa03391f",
-            "completedAt": "2026-09-30T21:35:59.945Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b4739819b355610b44fd7b217a758aa1fa03391f",
-            "completedAt": "2026-09-30T21:35:59.945Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T21:35:59.945Z"
+        "generatedAt": "2026-09-30T21:53:04.085845+00:00"
       }
     }
   ],
