@@ -13,7 +13,7 @@ import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runti
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
-const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/22px 22px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
+const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/20px 20px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
 // Preserve Figma path geometry while giving all workbench glyphs one frame and
 // stroke family. Supplementary glyphs use the same pipeline as reference assets.
 const workbenchIconNames=['refresh','ask','more','close','expand','duplicate','rename','edit','settings','branch','summary','plus','download','link','voice','schedule','data','remove','zoom-in','zoom-out','zoom-reset']

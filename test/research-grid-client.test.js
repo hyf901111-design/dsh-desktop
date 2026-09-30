@@ -452,11 +452,11 @@ it('更多菜单先就地插入关联草稿，提交调用原生成流程且保�
 })
 it('恢复录音胶囊不改变工具栏链接按钮的尺寸、图标或隐藏文字',async()=>{
  const f=await fixture(true),toolbar=f.document.querySelector('[data-ework-toolbar]')
- for(const name of ['select','container','link','voice']){
+ for(const name of ['select','arrange','container','link','voice']){
   const button=toolbar.querySelector('[data-research-global-'+name+']'),style=f.win.getComputedStyle(button)
-  expect(style.width,name).toBe('44px');expect(style.height,name).toBe('40px')
+  expect(style.width,name).toBe('36px');expect(style.height,name).toBe('34px')
   const icon=button.querySelector('svg,img,.odyssey-global-icon')
-  expect(f.win.getComputedStyle(icon).width,name).toBe('22px')
+  expect(f.win.getComputedStyle(icon).width,name).toBe('20px')
   for(const label of button.querySelectorAll('span:not(.odyssey-global-icon)'))expect(f.win.getComputedStyle(label).display,name).toBe('none')
  }
 })
