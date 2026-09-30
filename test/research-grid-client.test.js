@@ -9,6 +9,7 @@ import {afterEach,it,expect,vi} from 'vitest'
 import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {patchCanvasCreationTools} from '../scripts/lib/canvas-creation-tools.mjs'
 import {workbenchRefreshTooltip} from '../scripts/lib/research-grid-ui.mjs'
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
 afterEach(async()=>{for(const dispose of disposals.splice(0).reverse())await dispose()})
@@ -32,6 +33,13 @@ async function fixture(mount=false,desktop={}){
  if(mount)await render()
  return {source,win,document,bundle,workspace,registry,host,get canvas(){return canvas},event,render,actions,generation}
 }
+it('实际客户端模块能恢复旧代码卡并带齐视区修正依赖',async()=>{
+ const f=await fixture(true),spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'code',title:'研究配置',asOf:'2026-09-30 模拟',language:'json',content:'{"name":"季度经营表现分析"}'})));
+ spec.html=spec.html.replace(/<style data-code-viewport="v2">[\s\S]*?<\/style>/,'');
+ await act(async()=>f.workspace.setArtifacts([{...text('old-code'),kind:'generated-container',containerPrompt:'配置',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]));
+ const frame=f.host.querySelector('[data-research-node-id="old-code"] iframe');
+ expect(frame).not.toBeNull();expect(frame.srcdoc).toContain('data-code-viewport');expect(frame.srcdoc).toContain('请选择保存位置');
+});
 it('重复补丁恢复原始代码且不积累事件或样式',async()=>{
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),base=restoreResearchGridWorkbench(source),once=patchResearchGridWorkbench(base)
  expect(restoreResearchGridWorkbench(once).trim()).toBe(base.trim())

@@ -232,3 +232,6 @@ Figma已更新可编辑浅色/深色工具栏175:2、175:54为320×46，新增�
 为减少上述参数重试，工具声明panels必填，标准preset用panels:[]；旧preset省略panels仍兼容。表单允许语义相同的显式mode:local，其他mode拒绝，未知字段提示字段名。73项直接相关检查通过。扩展运行旧research-workbench整文件的23项失败没有计作通过：22项在重复补丁的依赖锚点失败，1项旧测试的面板0文本误触已知具体数值校验；修改前d75822a8对这两类代表用例复现相同失败，原先技能版本正则的一项失败已修正并通过。新缺参约束与preset兼容单独2项检查通过；未运行全功能测试。
 
 证据input-native-plan.json、input-native-tool-calls.json、input-native-dark.png、input-short-browser.mjs、input-browser-checks.json、input-arguments-final.log、input-workbench-contract.log、input-workbench-baseline.log。整体业务模板覆盖与总体成功率>90%继续待验，未对外发布。
+
+
+本次集成 `fa5429ca` 构建、签名、package与v1.10.1来源检查通过，但原生端口63256打开旧输入会话时画布空白，因此该包原生验收失败。原因是旧代码卡预览修正函数在客户端序列化时引用了新常量，而补丁生成器没有将CODE_VIEWPORT_CSS和INPUT_VIEW_RUNTIME一并带入模块；浏览器的直接函数调用没有覆盖这条打包路径。已补齐两个依赖，新增通过实际已安装客户端模块挂载旧代码卡的回归检查；修正前失败、重补依赖后通过。完整106项网格客户端及22项相关输入/旧模板检查共128项通过。未修改实际存储；等待新集成包复验旧会话。
