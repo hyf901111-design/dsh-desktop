@@ -54,6 +54,10 @@ export function patchResearchGridWorkbench(source){
   // This is distinct from automatic voice/selection cards' readable task size.
   change('...(selectedCreate ? { creationMode: "selection" } : {}),','...(selectedCreate ? { creationMode: "selection" } : {}),\n...(value.preserveGenerationSize===true?{preserveGenerationSize:true}:{}),')
   change('const persistSnapshot = () => {','const persistSnapshot = () => {\nif(!workbenchGrid.save())return false;')
+  // Planning participates in local selection and geometry, but is not a
+  // document node. Persist only selection belonging to durable components.
+  change('setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, snapshot.artifacts) }, true); },','setSelection(selection) { update({ selection: parseResearchCanvasSelection(JSON.stringify(selection), snapshot.files, [...snapshot.artifacts,...workbenchGrid.planningNodes()]) }, true); },')
+  change('saveResearchCanvasSelection(storage, sessionId, snapshot.selection);','saveResearchCanvasSelection(storage, sessionId, parseResearchCanvasSelection(JSON.stringify(snapshot.selection),snapshot.files,snapshot.artifacts));')
   change('setCanvasSize(canvasSize) {','setCanvasSize(canvasSize) {\nif(workbenchGrid.enabled()){const size={...snapshot.canvasSize,...canvasSize};workbenchGrid.enable(Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity)));}')
   change("if(document.documentElement.hasAttribute('data-odyssey-window-resizing')){","if(!root.hasAttribute('data-ework-grid')&&document.documentElement.hasAttribute('data-odyssey-window-resizing')){")
   change('const availableWidth=researchCanvasUnobscuredWidth(bounds,panelBounds);','const availableWidth=root.hasAttribute("data-ework-grid")?workbenchAvailableWidth(root,bounds,panelBounds):researchCanvasUnobscuredWidth(bounds,panelBounds);')
