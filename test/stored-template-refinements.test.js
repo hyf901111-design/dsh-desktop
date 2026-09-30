@@ -47,4 +47,13 @@ describe('saved host template display refinements',()=>{
   const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(samples.ohlc)));
   const mismatch=spec.html.replace('"templateId":"chart.ohlc"','"templateId":"chart.scatter"');expect(refineStoredTemplateHtml(mismatch)).toBe(mismatch);
  });
+ it('updates an existing code viewport without shifting recorded controls or changing content',()=>{
+  const data={version:1,type:'code',title:'研究配置',asOf:'2026-09-30 模拟',language:'json',content:'{"name":"季度经营表现分析"}'};
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)));
+  const old=spec.html.replace(/<style data-code-viewport="v2">[\s\S]*?<\/style>/,'');
+  const next=refineStoredTemplateHtml(old);
+  expect(next).toContain('data-code-viewport="v2"');expect(embeddedRoutes(next)).toEqual(embeddedRoutes(old));
+  expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));
+  expect(readTemplateModel({...spec,html:next}).data).toEqual(data);expect(refineStoredTemplateHtml(next)).toBe(next);
+ });
 });

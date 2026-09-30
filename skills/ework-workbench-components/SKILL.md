@@ -9,7 +9,7 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 
 ## 接单与证据
 
-客户端内创建工作台时，标的和面板类型明确就立即调用 `research_workbench_create` 提交完整清单，先将规划卡展开为矩阵。真实数据用 `dataMode:"source"`，各面板 prompt 写清已启用的数据来源、字段和日期范围；已有完整数据附 artifact，其余由面板任务独立取数。不要在主会话取齐全部接口、复算大量序列、手写整套 JSON 后才创建工作台。固定模板已经负责样式、均线和交互；不要为这些任务阅读 Figma 文档或搜索客户端源码。需要数据契约时直接调用 `research_component_data` 的 `templates`。下列设计复核步骤仅在用户要求设计或改造模板时执行。
+客户端内创建工作台时，标的和面板类型明确就立即调用 `research_workbench_create` 提交完整清单，先将规划卡展开为矩阵。工具的 `panels` 为必填；自定义需求填写完整面板，内置 preset 填 `panels:[]`，不能仅传 title。真实数据用 `dataMode:"source"`，各面板 prompt 写清已启用的数据来源、字段和日期范围；已有完整数据附 artifact，其余由面板任务独立取数。不要在主会话取齐全部接口、复算大量序列、手写整套 JSON 后才创建工作台。固定模板已经负责样式、均线和交互；不要为这些任务阅读 Figma 文档或搜索客户端源码。需要数据契约时直接调用 `research_component_data` 的 `templates`。下列设计复核步骤仅在用户要求设计或改造模板时执行。
 
 1. 明确用户要解决的业务问题、读者、数据来源和时间口径，选一个具体内容案例；区分真实数据、缺失数据和演示数据。没有真实数据时，在标题或内容中显著标为演示，绝不编造事实、实时性、来源或链接。
 2. 确定 `contentProfileId`（金融图表/指标/明细、日常协作、Lumos 等）、目标 Light/Dark、`creationMode`（auto/manual）以及目标运行版本。读取 [Figma 来源与视觉规则](references/figma-21m.md) 中匹配的源节点；设计复核时重新核对可访问的当前原稿与目标主题，不以本 skill 的历史摘录冒充实时设计快照。客户端内的组件生成子任务没有 Figma 工具时，使用本版内置摘录作为设计基线，不因此中断生成，也不声称已经现场复核。缺数据或运行能力时明确列出缺项。
@@ -20,7 +20,7 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 ## 选型与尺寸
 
 - 先选与信息任务匹配的组件族和图表语法：趋势用时间序列，比较用可比较的量，明细用保留列含义的表格，任务跟进用待办/日历/时间轴。图例、轴、精度、币种、周期、来源及缺失说明就近放置。
-- 21H 医药金融组合是一个完整阅读单元：六指标横条，趋势图与估值增长散点并排，覆盖估值表与研发管线并排，事件条横跨底部。用户要求标准六卡**模拟**工作台时，`research_workbench_create` 只提交 `requestId`、`title`、`dataMode:"simulated"` 和 `preset:"medical-21h"`，省略 `panels`；宿主一次填充统一口径的虚构数据及来源布局。用户给出自己的数据或只需要子集时，按需要提交 `market.metrics`、`trend`、`scatter`、`table`、`pipeline`、`events` 的独立数据对象；相邻行的宽度分别为 536+12+348，不把侧栏改成通用宽卡，不用空白卡凑数。
+- 21H 医药金融组合是一个完整阅读单元：六指标横条，趋势图与估值增长散点并排，覆盖估值表与研发管线并排，事件条横跨底部。用户要求标准六卡**模拟**工作台时，`research_workbench_create` 只提交 `requestId`、`title`、`dataMode:"simulated"` 、`preset:"medical-21h"` 和 `panels:[]`；宿主一次填充统一口径的虚构数据及来源布局。用户给出自己的数据或只需要子集时，按需要提交 `market.metrics`、`trend`、`scatter`、`table`、`pipeline`、`events` 的独立数据对象；相邻行的宽度分别为 536+12+348，不把侧栏改成通用宽卡，不用空白卡凑数。
 - 自定义模拟工作台先确定面板清单，立即调用 `research_workbench_create`：设置 `dataMode:"simulated"`；panels 填 `title/prompt/type/size`，省略 `generationMode`。其中自定义 `type:chart` 必须在同一次调用附 `artifact:{version:1,type:"chart",title,variant,unit,asOf,...对应模板数据字段}`，按用户指定季度、产品、指标与单位生成明确虚构数据；百分比图复用原值，哑铃图保留前后两组，同轴组合仅用相同单位。不能把季度收入替换为通用行业样例。其他模板可由宿主填充已定义模拟数据。无需联网或逐卡模型；宿主在本地批量校验并套用模板。标准预设仍走 `preset` 快速路径；真实数据不混入模拟值。
 - 21Z 审批记录与工作台提醒已有固定模板：分别使用 `approval` 和 `alerts`，只提交来源记录与数据时点。审批状态由来源提供；个人审阅与已读操作通过 `mode:local` 保存到本画布，不能声称更新审批系统或发送通知。自定义模拟记录在同一次工作台调用附 artifact。
 - 占比图优先 `chart.pie/donut`（items 原值），层级构成用 `chart.treemap/sunburst`（root 树，父节点 children、叶节点 value）；能力评分用 `chart.radar`（统一0–100及 normalization）；连续分布用 `chart.histogram`（samples/binCount 或连续 bins），组间分布用 `chart.box`（groups 原始样本或有序五数摘要与 whiskerMethod）；实际/目标用 `chart.bullet`，单指标固定范围用 `chart.gauge`。这些均已有宿主模板，不输出自定义 HTML，也不套用 labels/series 通用字段。完整契约可用 templates 查询。
