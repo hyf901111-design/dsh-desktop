@@ -1,10 +1,3 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="&#229;&#155;&#190;&#230;&#160;&#135; / sun" clip-path="url(#clip0_0_6)">
-<path id="Vector" d="M9 2.25V1.125M9 16.875V15.75M2.25 9H1.125M16.875 9H15.75M4.23 4.23L3.435 3.435M14.565 14.565L13.77 13.77M4.23 13.77L3.435 14.565M14.565 3.435L13.77 4.23M12.375 9C12.375 9.89511 12.0194 10.7535 11.3865 11.3865C10.7535 12.0194 9.89511 12.375 9 12.375C8.10489 12.375 7.24645 12.0194 6.61351 11.3865C5.98058 10.7535 5.625 9.89511 5.625 9C5.625 8.10489 5.98058 7.24645 6.61351 6.61351C7.24645 5.98058 8.10489 5.625 9 5.625C9.89511 5.625 10.7535 5.98058 11.3865 6.61351C12.0194 7.24645 12.375 8.10489 12.375 9Z" stroke="#0D99FF" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
-<defs>
-<clipPath id="clip0_0_6">
-<rect width="18" height="18" fill="white"/>
-</clipPath>
-</defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>

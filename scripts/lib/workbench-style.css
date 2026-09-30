@@ -26,8 +26,7 @@ body .ew-workbench-modes>button{position:relative;display:grid;place-items:cente
 body .ew-workbench-modes>button[aria-checked=true]{border-color:#00000012;background:#fff!important;color:#0d99ff!important}
 body .ew-workbench-modes>button:focus-visible{outline:2px solid #0d99ff;outline-offset:2px}
 body .ew-workbench-modes>button:hover{background:#0000000a!important}
-body .ew-workbench-mode-icon{display:block;width:16px;height:16px;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
-body .ew-workbench-mode-enterprise{width:20px;height:12px}
+body .ew-workbench-mode-icon{display:block;width:20px;height:20px;background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
 body[data-ds-dark-theme] .ew-workbench-mode-divider{background:#ffffff26}
 body[data-ds-dark-theme] .ew-workbench-modes{background:#333}
 body[data-ds-dark-theme] .ew-workbench-modes>button{color:#ddd!important}
