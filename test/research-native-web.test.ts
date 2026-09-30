@@ -108,6 +108,63 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
 })
 it('rejects malformed native geometry',()=>{expect(()=>nativeWebBounds({bounds:{x:NaN}})).toThrow()})
 
+it('离屏网页改变卡片尺寸后重新生成预览，不一直显示旧尺寸的截图',async()=>{
+ const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1000,800]}
+ registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(n:string,f:Function)=>handlers.set(n,f)} as any})
+ const identity={sessionId:'resize-preview',nodeId:'link',url:'https://example.com/'},event={sender:win.webContents,senderFrame:mainFrame},call=(v:any)=>handlers.get('research:native-web:update')!(event,v)
+ registry.authorize(identity)
+ const request={...identity,active:false,bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},scale:1,radius:3}
+ await call(request)
+ await vi.waitFor(async()=>expect((await call(request)).image).toBe('data:image/png;base64,test'))
+ const wc=views[0].webContents,captured=wc.capturePage.mock.calls.length
+ wc.capturePage.mockResolvedValue({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,resized'})
+ const resized={...request,bounds:{x:100,y:100,width:600,height:900},layoutSize:{width:600,height:900}}
+ await call(resized)
+ expect(wc.capturePage.mock.calls.length).toBeGreaterThan(captured)
+ await vi.waitFor(async()=>expect((await call(resized)).image).toBe('data:image/png;base64,resized'))
+ expect(wc.loadURL).toHaveBeenCalledTimes(1);expect(wc.reload).not.toHaveBeenCalled()
+})
+
+it('会话隐藏后复用同一网页和当前导航，旧刷新计数不会触发重新加载',async()=>{
+ const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1200,900]}
+ const ipcMain={removeHandler:()=>{},handle:(n:string,f:Function)=>handlers.set(n,f)} as any
+ const native=registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain})
+ registerResearchLinkFrameHandlers({registry,getMainWindow:()=>win,ipcMain,releaseNative:native.release})
+ const identity={sessionId:'remember-page',nodeId:'link',url:'https://example.com/'},event={sender:win.webContents,senderFrame:mainFrame},call=(name:string,v:any)=>handlers.get('research:native-web:'+name)!(event,v)
+ registry.authorize(identity)
+ const request={...identity,active:true,bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},scale:1,radius:3,reloadToken:0}
+ await call('update',request);const wc=views[0].webContents
+ wc.getURL=()=> 'https://example.com/account/inbox'
+ await call('update',{...request,reloadToken:1})
+ await call('hide',{sessionId:identity.sessionId})
+ expect(views[0].visible).toBe(false);expect(wc.close).not.toHaveBeenCalled()
+ win.webContents.on.mock.calls.find(([name]:any[])=>name==='did-start-navigation')?.[1]({},'https://ework.local/#another-session',true,true)
+ expect(wc.close).not.toHaveBeenCalled()
+ await call('resolve',{...identity,preferNative:true});await call('update',request)
+ expect(views).toHaveLength(1);expect(wc.loadURL).toHaveBeenCalledTimes(1);expect(wc.reload).toHaveBeenCalledTimes(1)
+ expect(native.contents(identity)?.getURL()).toBe('https://example.com/account/inbox')
+ await handlers.get('research:link-frame:release')!(event,{sessionId:identity.sessionId,nodeId:identity.nodeId})
+ expect(wc.close).toHaveBeenCalledOnce();expect(native.contents(identity)).toBeUndefined()
+})
+
+it('网页焦点探针迟迟不返回也不阻塞下一次尺寸预览，空截图仍会重试',async()=>{
+ const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1000,800]}
+ registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(n:string,f:Function)=>handlers.set(n,f)} as any})
+ const identity={sessionId:'stalled-probe',nodeId:'link',url:'https://example.com/'},event={sender:win.webContents,senderFrame:mainFrame},call=(v:any)=>handlers.get('research:native-web:update')!(event,v)
+ registry.authorize(identity)
+ const request={...identity,active:false,bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},scale:1,radius:3}
+ await call(request);await vi.waitFor(async()=>expect((await call(request)).image).toBe('data:image/png;base64,test'))
+ const wc=views[0].webContents;wc.executeJavaScript.mockImplementation(()=>new Promise(()=>{}))
+ wc.capturePage.mockResolvedValueOnce({isEmpty:()=>true,toDataURL:()=>''}).mockResolvedValue({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,recovered'})
+ const resized={...request,layoutSize:{width:600,height:900}}
+ await call(resized)
+ expect((await call(resized)).snapshotPending).toBe(true)
+ await vi.waitFor(async()=>expect((await call(resized)).image).toBe('data:image/png;base64,recovered'))
+})
+
 it('慢截图和正文提取不阻塞网页尺寸更新，正文就绪即可显示而无需等待图片全部加载',async()=>{
  const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
  const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1200,900]}

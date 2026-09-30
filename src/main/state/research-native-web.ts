@@ -25,6 +25,11 @@ export function nativeWebPageZoom(value: any): number {
   if(!Number.isFinite(zoom)||zoom<.5||zoom>2)throw Error('Invalid webpage zoom')
   return zoom
 }
+function nativeWebResultBefore<T>(operation: Promise<T>, milliseconds: number): Promise<T | undefined> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout=new Promise<undefined>(resolve=>{timer=setTimeout(()=>resolve(undefined),milliseconds)})
+  return Promise.race([operation,timeout]).finally(()=>clearTimeout(timer))
+}
 export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry }) {
   const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; pageZoom: number; fittedAt: number; fitting: boolean; wasShown: boolean; snapshotRequested: number; snapshotCompleted: number; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
   const routes = new Map<string, Promise<boolean>>()
@@ -42,7 +47,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   let hooked: BrowserWindow | undefined
   const window = () => {
     const win=options.getMainWindow(); if(!win||win.isDestroyed())throw Error('Window unavailable')
-    if(hooked!==win){hooked=win;win.once('closed',clear);win.webContents.on('did-start-navigation',(_e,_url,_inPlace,isMainFrame)=>{if(isMainFrame)clear()});win.on('resize',()=>{for(const e of entries.values())e.view.setVisible(false)})}
+    if(hooked!==win){hooked=win;win.once('closed',clear);win.webContents.on('did-start-navigation',(_e,_url,inPlace,isMainFrame)=>{if(isMainFrame&&!inPlace)clear()});win.on('resize',()=>{for(const e of entries.values())e.view.setVisible(false)})}
     return win
   }
   const bind=(name:string,fn:(v:any)=>unknown)=>{options.ipcMain.removeHandler(name);registerTrustedMainWindowHandler(options.ipcMain,name,options.getMainWindow,(_e,v)=>fn(v))}
@@ -90,8 +95,10 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       void view.webContents.loadURL(authorization.url).catch(error=>{current.error=String(error.message)})
     }
     entry.touched=Date.now()
-    if(entry.pageZoom!==pageZoom){entry.pageZoom=pageZoom;entry.view.webContents.setZoomFactor(entry.fitZoom*pageZoom);entry.capturedAt=0;if(pageZoom===1)entry.fittedAt=0}
-    if(Number.isSafeInteger(value.reloadToken)&&value.reloadToken>=0&&value.reloadToken!==entry.reloadToken){entry.reloadToken=value.reloadToken;entry.error='';entry.view.webContents.reload()}
+    if(entry.pageZoom!==pageZoom){entry.pageZoom=pageZoom;entry.view.webContents.setZoomFactor(entry.fitZoom*pageZoom);entry.capturedAt=0;entry.snapshotRequested++;if(pageZoom===1)entry.fittedAt=0}
+    // A remounted renderer starts at zero. Only a new refresh request may reload
+    // the retained page; switching sessions must preserve its navigation/state.
+    if(Number.isSafeInteger(value.reloadToken)&&value.reloadToken>entry.reloadToken){entry.reloadToken=value.reloadToken;entry.error='';entry.view.webContents.reload()}
     entry.view.setBorderRadius(Math.max(0,Math.min(16,Math.round((Number(value.radius)||0)*hostZoom))))
     const size=win.getContentSize()
     const show=value.active===true&&entry.ready&&!entry.error&&bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=(size[0]??0)&&bounds.y+bounds.height<=(size[1]??0)
@@ -118,7 +125,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       const surfaceKey=JSON.stringify(surface)
       if(entry.bounds!==surfaceKey){entry.view.setBounds(surface);entry.bounds=surfaceKey}
       if (entry.presentation !== presentation) {
-        if(entry.layout!==layout){entry.fitZoom=1;entry.fittedAt=0;entry.view.webContents.setZoomFactor(entry.pageZoom)}
+        if(entry.layout!==layout){entry.fitZoom=1;entry.fittedAt=0;entry.view.webContents.setZoomFactor(entry.pageZoom);entry.capturedAt=0;entry.snapshotRequested++}
         entry.view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:viewport,viewPosition:{x:0,y:0},deviceScaleFactor:0,viewSize:viewport,scale:displayScale})
         entry.presentation = presentation
         entry.surfaceScale = displayScale
@@ -133,10 +140,10 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       entry.fitting=true;entry.fittedAt=now;const current=entry,generation=entry.generation,presentation=entry.presentation
       // Responsive pages retain their normal size. Fixed desktop pages fit
       // horizontally; navigation and resize reset the fit to this viewport.
-      void entry.view.webContents.executeJavaScriptInIsolatedWorld(991,[{code:"new Promise(resolve=>requestAnimationFrame(()=>resolve({viewport:innerWidth,content:Math.max(document.documentElement.clientWidth,document.documentElement.scrollWidth,document.body?.scrollWidth||0)})))"}]).then(size=>{
+      void nativeWebResultBefore(entry.view.webContents.executeJavaScriptInIsolatedWorld(991,[{code:"new Promise(resolve=>requestAnimationFrame(()=>resolve({viewport:innerWidth,content:Math.max(document.documentElement.clientWidth,document.documentElement.scrollWidth,document.body?.scrollWidth||0)})))"}]),1200).then(size=>{
         if(entries.get(id)!==current||current.generation!==generation||current.presentation!==presentation||current.pageZoom!==1||!size)return
         const zoom=fittedBrowserZoom(1,current.fitZoom,Number(size.viewport),Number(size.content))
-        if(Math.abs(zoom-current.fitZoom)>.002){current.view.webContents.setZoomFactor(zoom*current.pageZoom);current.fitZoom=zoom;current.capturedAt=0}
+        if(Math.abs(zoom-current.fitZoom)>.002){current.view.webContents.setZoomFactor(zoom*current.pageZoom);current.fitZoom=zoom;current.capturedAt=0;current.snapshotRequested++}
       }).catch(()=>{}).finally(()=>{current.fitting=false})
     }
     if(!entry.busy&&!entry.error&&entry.ready&&(!entry.image||entry.snapshotCompleted<entry.snapshotRequested)&&now-entry.capturedAt>=(!entry.image?1000:0)){
@@ -144,12 +151,14 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       void (async()=>{try {
         // Capturing an interactive page must not resurrect its compositor after
         // the renderer hides it to drag/resize the snapshot in the canvas.
-        const image=await entry.view.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})
-        if(entries.get(id)===current&&current.generation===generation&&current.presentation===presentation&&current.fitZoom===fitZoom&&current.pageZoom===pageZoom&&current.ready&&!image.isEmpty()){
+        const image=await nativeWebResultBefore(entry.view.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true}),1500)
+        if(entries.get(id)===current&&current.generation===generation&&current.presentation===presentation&&current.fitZoom===fitZoom&&current.pageZoom===pageZoom&&current.ready&&image&&!image.isEmpty()){
           const data=image.toDataURL();if(data!==current.image){current.image=data;current.imageRevision++}
+          current.snapshotCompleted=Math.max(current.snapshotCompleted,snapshotRequested)
         }
-        current.typing=await entry.view.webContents.executeJavaScript("!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]')").catch(()=>false)
-      } catch {} finally {current.snapshotCompleted=Math.max(current.snapshotCompleted,snapshotRequested);current.busy=false}})()
+        // An unresponsive focus probe must never lock subsequent preview renders.
+        void nativeWebResultBefore(entry.view.webContents.executeJavaScript("!!document.activeElement?.matches('input,textarea,select,[contenteditable=true]')"),1200).then(typing=>{if(entries.get(id)===current&&current.generation===generation&&typeof typing==='boolean')current.typing=typing}).catch(()=>{})
+      } catch {} finally {current.busy=false}})()
     }
     if(!entry.inspecting&&!entry.error&&entry.ready&&(show||!entry.inspection)&&now-entry.inspectedAt>=(show?8000:30000)){
       entry.inspecting=true;entry.inspectedAt=now;const current=entry,generation=entry.generation
@@ -159,7 +168,12 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     }
     return {image:value.imageRevision===entry.imageRevision?'':entry.image,imageRevision:entry.imageRevision,error:entry.error,loading:!entry.ready,snapshotPending:!entry.image||entry.snapshotCompleted<entry.snapshotRequested,inspection:entry.inspection}
   })
-  bind('research:native-web:hide',()=>{for(const e of entries.values())e.view.setVisible(false);return true})
+  bind('research:native-web:hide',value=>{
+    if(value?.sessionId!==undefined&&(typeof value.sessionId!=='string'||!value.sessionId||value.sessionId.length>256))throw Error('Invalid webpage identity')
+    if(value?.nodeId!==undefined)key(value)
+    for(const [id,e] of entries){const [sessionId,nodeId]=JSON.parse(id);if(value?.sessionId!==undefined&&value.sessionId!==sessionId||value?.nodeId!==undefined&&value.nodeId!==nodeId)continue;e.view.setVisible(false)}
+    return true
+  })
   bind('research:native-web:release',value=>{release(key(value));return true})
-  return { inspect, contents:(value:any)=>entries.get(key(value))?.view.webContents }
+  return { inspect, release:(value:any)=>release(key(value)), contents:(value:any)=>entries.get(key(value))?.view.webContents }
 }

@@ -260,6 +260,7 @@ export function registerResearchLinkFrameHandlers(options: {
   getMainWindow(): TrustedWindow | undefined
   registry: ResearchLinkFrameRegistry
   inspectNative?(value: unknown): Promise<ResearchLinkFrameInspection | null>
+  releaseNative?(value: unknown): void
 }): void {
   const handlers: Array<[string, (value: unknown) => unknown]> = [
     ['research:link-frame:authorize', (value) => options.registry.authorize(value)],
@@ -275,7 +276,11 @@ export function registerResearchLinkFrameHandlers(options: {
       }) | undefined
       return options.registry.inspect(value, window?.webContents.mainFrame.framesInSubtree ?? [])
     }],
-    ['research:link-frame:release', (value) => ({ ok: options.registry.release(value) })],
+    ['research:link-frame:release', (value) => {
+      const ok=options.registry.release(value)
+      options.releaseNative?.(value)
+      return {ok}
+    }],
     ['research:link-frame:release-session', (value) => ({
       ok: true,
       removed: options.registry.releaseSession(value)

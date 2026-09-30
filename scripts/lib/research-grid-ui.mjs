@@ -153,15 +153,17 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const choose=action=>{onClose();action?.()}
   const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{await exportWorkbenchContent(card(),target.node,format);onClose()}catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
   const row=(icon,label,action,disabled=readOnly,attributes={})=>jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
+  const separator=key=>jsx('div',{className:'ew-grid-divider',role:'separator'},key)
   const flyout=(kind,icon,label,trigger,disabled=false)=>jsxs('button',{ref:trigger,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
   const style={left:Math.max(8,Math.min(window.innerWidth-214,target.left)),top:Math.max(8,Math.min(window.innerHeight-(webLink?560:target.node.creationMode==='selection'?486:420),target.top)),maxHeight:'calc(100vh - 16px)',overflowY:'auto'}
   return react_dom.createPortal(jsxs(react.Fragment,{children:[jsxs('div',{ref,className:'ew-grid-menu',role:'menu','aria-label':'组件更多操作',style,onMouseLeave:leave,children:[
-    row('duplicate','复制组件',()=>{workspace.copySelectedNodes().then(()=>workspace.pasteClipboardNodes(null)).catch(error=>console.error(error))}),
     row('expand','放大阅读',()=>card()?.querySelector('[data-research-container-expand]')?.click(),false),
     webLink&&row('zoom-out','缩小10%',()=>controlWorkbenchWebZoom(card(),-.1),false,{'data-workbench-web-zoom':'out'}),
     webLink&&row('zoom-in','放大10%',()=>controlWorkbenchWebZoom(card(),.1),false,{'data-workbench-web-zoom':'in'}),
     webLink&&row('zoom-reset','重置页面大小',()=>controlWorkbenchWebZoom(card(),0),false,{'data-workbench-web-zoom':'reset'}),
     webLink&&row('refresh','刷新',()=>card()?.querySelector('[data-workbench-refresh="'+CSS.escape(target.node.id)+'"]')?.click(),false,{'data-workbench-web-refresh':''}),
+    separator('view'),
+    row('duplicate','复制组件',()=>{workspace.copySelectedNodes().then(()=>workspace.pasteClipboardNodes(null)).catch(error=>console.error(error))}),
     row('rename','重命名',()=>onLegacy(target.node,target.event,'rename')),
     target.node.creationMode==='selection'&&row('rename','编辑需求',()=>onEditSelected?.(target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-workbench-edit-selected-create':target.node.id}),
     target.node.creationMode==='selection'&&row('branch','查看基准',()=>{
@@ -169,13 +171,14 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
       if(!ids.length)return;workspace.updateSelection(ids,'replace');root?.querySelector('[data-research-node-id="'+CSS.escape(ids[0])+'"]')?.scrollIntoView({block:'nearest',inline:'nearest',behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});root?.focus({preventScroll:true})
     },!(target.node.sourceNodeIds||[]).some(id=>[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts].some(n=>n.id===id)),{'data-workbench-view-source':target.node.id}),
     flyout('export','download','导出',exportRef),
-    jsx('div',{className:'ew-grid-divider'}),
+    separator('component'),
     flyout('mind','branch','思维导图',mindRef,readOnly),
     row('summary','总结提炼',()=>onDerived('summary')),
     row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
-    jsx('div',{className:'ew-grid-divider'}),
+    separator('generate'),
     row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
     settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
+    separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))
   ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...['svg','png','jpg'].map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),document.body)
 }
