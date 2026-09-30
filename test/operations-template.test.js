@@ -23,7 +23,7 @@ function runtime(data){
 describe('Figma 21Z operations data templates',()=>{
  it.each(['progress','tasks'])('gives a %s generation child the selected contract instead of custom HTML',type=>{
   const prompt=buildResearchTaskPrompt({parentSessionId:'session',canvasNodeId:'panel',kind:'container',prompt:workbenchPanelPrompt({title:'运营'}, {title:type,type,prompt:'展示本周运营记录',size:'large'})});
-  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('v1.8.0');
+  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('v1.9.0');
  });
  it.each(['progress','tasks'])('retains complete %s source data through the public creation path',type=>{
   const artifact=samples[type],panel={title:artifact.title,type,prompt:'按提供记录展示',size:'large',artifact};

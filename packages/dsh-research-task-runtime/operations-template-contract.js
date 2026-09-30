@@ -1,5 +1,7 @@
 // Figma 21Z / enterprise 22: the model supplies records, the host owns layout.
+import {WORKFLOW_TEMPLATES,workflowDataIssue,workflowTemplateSchema} from "./workflow-template-contract.js";
 export const OPERATIONS_TEMPLATES = Object.freeze([
+ ...WORKFLOW_TEMPLATES,
  {id:'progress',title:'目标与进度',figma:'1918:344375',width:656,height:354,interactions:['分项目进度','完整口径','本地更新']},
  {id:'tasks',title:'任务清单',figma:'1918:344860',width:656,height:364,interactions:['筛选','任务详情','本地完成与撤销','添加本地任务']}
 ].map(t=>Object.freeze({...t,type:t.id,version:'21z-20260930',minWidth:400,minHeight:320})));
@@ -8,10 +10,12 @@ const shapes = {
  tasks:'items:[{id:"a",title:"核对财务来源",completed:false,owner:"研究组",due:"2026-10-15",priority:"高",detail:"逐项核验披露日期"}]；1–100条不同id，completed是布尔值，owner/due/priority/detail可选。'
 };
 export function operationsTemplateSchema(type){
- const common='公共字段 version:1,type,title,asOf（来源及数据时点）；可选 subject（正文业务标题）、note、mode:"snapshot"或"local"。默认snapshot仅展示来源记录；local支持保存到本画布的个人进度/清单操作，不向外部业务系统写入，也不声称已更新原始数据源。';
- return common+(type&&shapes[type]?`${type}：${shapes[type]}`:Object.entries(shapes).map(([k,v])=>`${k}：${v}`).join('；'));
+ const common='公共字段 version:1,type,title,asOf（来源及数据时点）；可选 subject（正文业务标题）、note、mode:"snapshot"或"local"。默认snapshot仅展示来源记录；local支持保存到本画布的个人进度、清单、审阅意见和已读标记，不向外部业务系统写入，也不声称已更新原始数据源。';
+ if(workflowTemplateSchema(type))return common+`${type}：${workflowTemplateSchema(type)}`;
+ return common+(type&&shapes[type]?`${type}：${shapes[type]}`:Object.entries(shapes).map(([k,v])=>`${k}：${v}`).join('；')+'；'+WORKFLOW_TEMPLATES.map(t=>`${t.id}：${workflowTemplateSchema(t.id)}`).join('；'));
 }
 export function operationsDataIssue(s){
+ if(WORKFLOW_TEMPLATES.some(t=>t.id===s?.type))return workflowDataIssue(s);
  const text=(v,n=256)=>typeof v==='string'&&v.trim().length>0&&v.length<=n;
  const number=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=1e12;
  const object=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>keys.includes(k));
@@ -36,5 +40,5 @@ export function operationsDataIssue(s){
 }
 export function requestedOperationsType(value){
  if(typeof value!=='string')return undefined;
- return value.match(/\b(?:type[:=\s]+|operations\.)(progress|tasks)\b/iu)?.[1]?.toLowerCase()??(/任务清单|任务列表|待办|checklist/iu.test(value)?'tasks':/目标与进度|目标进度|分项进度|progress/iu.test(value)?'progress':undefined);
+ return value.match(/\b(?:type[:=\s]+|operations\.)(progress|tasks|approval|alerts)\b/iu)?.[1]?.toLowerCase()??(/审批记录|审批流程|approval/iu.test(value)?'approval':/工作台提醒|通知列表|alerts/iu.test(value)?'alerts':/任务清单|任务列表|待办|checklist/iu.test(value)?'tasks':/目标与进度|目标进度|分项进度|progress/iu.test(value)?'progress':undefined);
 }

@@ -368,7 +368,7 @@ const COMPONENT_STYLE_INSTRUCTION = [
   'HTML 默认随 EWork Odyssey 当前主题自动切换；宿主会更新根元素 data-sherlock-theme（light 或 dark）和 color-scheme，不能只依赖系统 matchMedia。CSS/SVG 直接引用变量即可联动。Canvas 绘图用 getComputedStyle(document.documentElement).getPropertyValue 读取角色变量，并监听 window 的 sherlock-theme-change 事件（detail.colorScheme 为 light 或 dark）重绘；只更新颜色，不得重建页面、清空输入或重置交互状态。仅当用户明确要求固定浅色或固定深色时，才加入 <meta name="sherlock-theme" content="light"> 或 <meta name="sherlock-theme" content="dark">；除此之外不加入固定主题标记。'
 ].join('\n')
 
-const WORKBENCH_PANEL_TYPES = new Set(['kpi', 'table', 'chart', 'news', 'reports', 'calendar', 'dashboard', 'market', 'html', 'progress', 'tasks'])
+const WORKBENCH_PANEL_TYPES = new Set(['kpi', 'table', 'chart', 'news', 'reports', 'calendar', 'dashboard', 'market', 'html', 'progress', 'tasks', 'approval', 'alerts'])
 function legacyWorkbenchPanelHeader(prompt) {
   // Earlier workbench plans marked automatic layout but omitted the typed
   // panel header. Sending those cards through the full 30 KB manual-component
@@ -424,6 +424,8 @@ function workbenchPanelPrompt(prompt, boundData = false) {
   if (!type) return null
   const selectedMarketVariant = type === 'market' ? requestedMarketVariant(prompt) : undefined
   const schemas = {
+    approval: operationsTemplateSchema('approval'),
+    alerts: operationsTemplateSchema('alerts'),
     progress: operationsTemplateSchema('progress'),
     tasks: operationsTemplateSchema('tasks'),
     kpi: '{"version":1,"type":"kpi","title":"标题","items":[{"label":"指标","value":"数值","change":"可选变化"}]}',

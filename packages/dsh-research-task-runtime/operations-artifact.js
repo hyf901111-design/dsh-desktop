@@ -48,6 +48,7 @@ const css=`
 @layer ework-workbench{body:is([data-research-kind="progress"],[data-research-kind="tasks"]){padding:12px 16px 16px!important}body .task-entry input[type="checkbox"]{width:16px!important;height:16px!important;min-height:0!important;padding:0!important}@media(max-width:360px){body:is([data-research-kind="progress"],[data-research-kind="tasks"]){padding:10px 12px!important}}}
 `;
 export function renderOperationsArtifact(spec){
+ if(!['progress','tasks'].includes(spec?.type))return null;
  const template=OPERATIONS_TEMPLATES.find(t=>t.id===spec?.type);
  if(!template||operationsDataIssue(spec))return null;
  const local=spec.mode==='local',isProgress=spec.type==='progress';
