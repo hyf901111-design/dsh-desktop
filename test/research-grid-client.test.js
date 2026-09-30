@@ -61,6 +61,26 @@ it('真实工作台入口按完整面板规划初始化两列，内容返回不�
  expect(w.getWorkbenchCells().map(({freePosition,...c})=>c)).toEqual(before)
  expect(w.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
 })
+it.each(['generated-container','generated-mind-map','generated-summary'])('生成中的 %s 可从正文拖动，过程与停止按钮不触发拖动',async kind=>{
+ const f=await fixture(true),w=f.workspace
+ const node={...text('moving'),kind,generationStatus:'running',generationTaskId:'moving-task',generationStartedAt:Date.now(),generationEvents:[],sourceNodeIds:['peer'],containerPrompt:'模拟验证',refreshMinutes:0}
+ await act(async()=>w.setArtifacts([node,text('peer')]))
+ const card=f.host.querySelector('[data-research-node-id="moving"]'),body=card.querySelector('[data-research-generation-foreground] strong')
+ expect(body).not.toBeNull()
+ const before=structuredClone(w.getWorkbenchCells()),old=before.find(c=>c.id==='moving'),step=24.65
+ await f.event('pointerdown',body,{button:0,pointerId:144,clientX:100,clientY:100})
+ expect(f.canvas.getAttribute('data-grid-operation')).toBe('move')
+ await f.event('pointerup',f.canvas,{pointerId:144,clientX:100+step*4,clientY:100+step*5})
+ const moved=w.getWorkbenchCells().find(c=>c.id==='moving')
+ expect(moved.x!==old.x||moved.y!==old.y).toBe(true)
+ expect(moved.w).toBe(old.w);expect(moved.h).toBe(old.h)
+ for(const button of card.querySelectorAll('.odyssey-generation-actions button')){
+  await f.event('pointerdown',button,{button:0,pointerId:145,clientX:100,clientY:100})
+  expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ }
+ const cells=w.getWorkbenchCells();expect(cells.every((a,i)=>cells.every((b,j)=>i===j||!(a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y)))).toBe(true)
+ expect(w.undo()).toBe(true);expect(w.getWorkbenchCells()).toEqual(before)
+})
 it('规划卡片接入实际网格拖动，普通组件避让且挂载工作台释放临时占位',async()=>{
  const f=await fixture(true),w=f.workspace
  await act(async()=>{w.setArtifacts([text('a'),text('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:12},{id:'b',x:20,y:0,w:20,h:12}],true)})

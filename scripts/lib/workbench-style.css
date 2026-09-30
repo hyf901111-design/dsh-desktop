@@ -9,6 +9,15 @@ body [data-ework-grid][data-workbench-style] :is(.rScV5Q_containerDraft,.ew-sele
 body [data-ework-grid][data-workbench-style=enterprise] .ew-grid-header{color:#25252b}
 body [data-ework-grid][data-workbench-style=enterprise] .rScV5Q_containerContent th{background:#1eb9e1!important;color:white!important}
 body [data-ework-grid][data-workbench-style] .odyssey-generation-surface{--generation-bg:var(--grid-card)!important;--generation-title:var(--grid-text)!important;--generation-phase:var(--grid-text)!important;--generation-detail:var(--grid-muted)!important;--generation-icon:var(--grid-muted)!important;--generation-time:var(--grid-muted)!important;--generation-border:var(--grid-border)!important;--generation-button:var(--grid-row)!important;--generation-action-icon:var(--grid-text)!important}
+/* Derived mind maps inherit the current board even when the app theme differs. */
+body [data-ework-grid][data-workbench-style] [data-research-generated-mind-map] :is(.rScV5Q_previewBody,.rScV5Q_artifactBody,.rScV5Q_mindMap){background:var(--grid-card)!important;color:var(--grid-text)!important}
+body [data-ework-grid][data-workbench-style] .rScV5Q_mindMapNode[data-research-mind-map-depth]{background:var(--sherlock-surface-muted)!important;color:var(--sherlock-text)!important}
+body [data-ework-grid][data-workbench-style] [data-research-mind-map-edges]{color:var(--grid-muted)!important}
+body [data-ework-grid][data-workbench-style=enterprise] [data-research-generated-mind-map] .rScV5Q_mindMapNode[data-research-mind-map-depth]{background:var(--sherlock-chart-2)!important;color:#fff!important}
+body [data-ework-grid][data-workbench-style=enterprise] [data-research-generated-mind-map] .rScV5Q_mindMapNode[data-research-mind-map-depth="0"]{background:var(--sherlock-chart-1)!important}
+body [data-ework-grid][data-workbench-style=enterprise] [data-research-generated-mind-map] .rScV5Q_mindMapNode[data-research-mind-map-depth="1"]{background:var(--sherlock-chart-5)!important}
+body [data-ework-grid] .odyssey-generation-surface[data-workbench-drag-handle]{cursor:grab;touch-action:none;user-select:none}
+body [data-ework-grid][data-grid-operation=move] [data-grid-active] .odyssey-generation-surface{cursor:grabbing}
 body [data-ework-toolbar]:has(.ew-workbench-mode-slot){width:320px!important}
 .ew-workbench-mode-slot{display:flex;align-items:center;gap:6px;box-sizing:border-box;flex:0 0 110px;width:110px;height:34px;padding-left:5px}
 .ew-workbench-mode-divider{flex:none;width:1px;height:22px;background:#0000001f}

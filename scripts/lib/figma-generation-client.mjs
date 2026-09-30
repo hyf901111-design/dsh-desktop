@@ -83,7 +83,7 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
   }
   const glyph = moving ? 'running' : state === 'waiting' ? 'waiting' : state === 'error' ? 'error' : 'stopped'
   return (0, react_jsx_runtime.jsxs)('div', {
-    className: 'rScV5Q_generationProcess odyssey-generation-surface', 'data-research-generation-process': '',
+    className: 'rScV5Q_generationProcess odyssey-generation-surface', 'data-research-generation-process': '', 'data-workbench-drag-handle': node.id,
     'data-research-generation-stage': presentation.stage, 'data-generation-ui-state': state,
  'data-research-generation-failure': ['error', 'stopped'].includes(state) ? '' : undefined,
     'aria-busy': active,
