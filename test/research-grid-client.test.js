@@ -26,7 +26,7 @@ async function fixture(mount=false,desktop={}){
  const registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('grid-test'),host=document.createElement('div');document.body.append(host)
  let root,canvas
  const generation={disabled:false,generate:vi.fn(async()=>({ok:true,taskId:'t'}))},actions={setResearchRightTab:vi.fn()}
- const render=async({measure=true}={})=>{root??=createRoot(host);await act(async()=>root.render(createElement(bundle.ResearchCanvas,{sessionId:'grid-test',t:x=>x,researchWorkspaces:registry,selectionGeneration:generation,actions})));canvas=host.querySelector('[data-research-canvas]');canvas.getBoundingClientRect=()=>({left:0,top:0,right:1000,bottom:700,width:1000,height:700});Object.defineProperty(canvas,'clientWidth',{configurable:true,value:1000});Object.defineProperty(canvas,'clientHeight',{configurable:true,value:700});if(measure)await act(async()=>{workspace.setCanvasSize({width:1000,height:700,availableWidth:1000});workspace.setWorkbenchWidth(1000)})}
+ const render=async({measure=true,sessionId='grid-test'}={})=>{root??=createRoot(host);await act(async()=>root.render(createElement(bundle.ResearchCanvas,{sessionId,t:x=>x,researchWorkspaces:registry,selectionGeneration:generation,actions})));canvas=host.querySelector('[data-research-canvas]');canvas.getBoundingClientRect=()=>({left:0,top:0,right:1000,bottom:700,width:1000,height:700});Object.defineProperty(canvas,'clientWidth',{configurable:true,value:1000});Object.defineProperty(canvas,'clientHeight',{configurable:true,value:700});if(measure)await act(async()=>{workspace.setCanvasSize({width:1000,height:700,availableWidth:1000});workspace.setWorkbenchWidth(1000)})}
  const event=async(type,target,props={})=>{const e=new win.Event(type,{bubbles:true,cancelable:true});Object.defineProperties(e,Object.fromEntries(Object.entries(props).map(([k,v])=>[k,{value:v}])));await act(async()=>{target.dispatchEvent(e);await new Promise(r=>setTimeout(r,30))});return e}
  disposals.push(async()=>{if(root)await act(async()=>root.unmount());await win.happyDOM.abort();keys.forEach((k,i)=>original[i]?Object.defineProperty(globalThis,k,original[i]):delete globalThis[k])})
  if(mount)await render()
@@ -43,7 +43,10 @@ it('已有补丁客户端升级整理图标，不重复添加按钮或丢失回�
  const legacy=original.slice(0,start)+original.slice(start,end).replace(/src:"data:image\/svg\+xml;base64,[^"]+"/,'src:"data:image/svg+xml;base64,b2xkLWFkZC1zeW1ib2w="')+original.slice(end)
  const updated=patchCanvasCreationTools(legacy),button=updated.slice(start,updated.indexOf("className:'odyssey-tool-icon'",start))
  expect(button).not.toContain('b2xkLWFkZC1zeW1ib2w=')
- expect(Buffer.from(button.match(/src:"data:image\/svg\+xml;base64,([^"]+)"/)[1],'base64').toString()).toContain('M4 3v18')
+ const svg=Buffer.from(button.match(/src:"data:image\/svg\+xml;base64,([^"]+)"/)[1],'base64').toString()
+ expect(svg.match(/<rect /g)).toHaveLength(1)
+ expect(svg).toContain('M12 3.5v17M12 12h8.5')
+ expect(svg).not.toContain('M4 3v18')
  expect(updated.match(/'data-research-global-arrange':''/g)).toHaveLength(1)
  expect(button).toContain('researchCanvasArrangeWithMotion')
  expect(patchCanvasCreationTools(updated)).toBe(updated)
@@ -253,6 +256,10 @@ it('链接组件更多菜单按 10% 缩放并重置当前网页，刷新沿用�
  Object.defineProperties(element,{offsetWidth:{value:480},offsetHeight:{value:300}});f.document.elementFromPoint=()=>element
  await act(async()=>{await new Promise(r=>setTimeout(r,300))})
  const open=async()=>f.event('click',f.host.querySelector('[data-workbench-more="'+node.id+'"]'))
+ await open()
+ const groups=[[]];for(const child of f.document.querySelector('[role="menu"][aria-label="组件更多操作"]').children){if(child.getAttribute('role')==='separator')groups.push([]);else groups.at(-1).push(child.textContent.replace('›',''))}
+ expect(groups).toEqual([['放大阅读','缩小10%','放大10%','重置页面大小','刷新'],['复制组件','重命名','导出'],['思维导图','总结提炼','基于所选创建'],['数据源与自动更新','组件设置'],['移除组件']])
+ await f.event('keydown',f.document.body,{key:'Escape'})
  const choose=async name=>{await open();const item=f.document.querySelector('[data-workbench-web-zoom="'+name+'"]');expect(item).not.toBeNull();await f.event('click',item)}
  await choose('in');expect(f.host.querySelector('[data-research-native-web]').getAttribute('data-web-page-zoom')).toBe('1.1')
  await choose('in');expect(f.host.querySelector('[data-research-native-web]').getAttribute('data-web-page-zoom')).toBe('1.2')
@@ -278,7 +285,7 @@ it('宿主窗口调整后即使组件尺寸未变也立即恢复原生网页，�
  expect(bridge.releaseNative).not.toHaveBeenCalled()
 })
 it('链接临时离开视窗再返回时保留当前网页，只有移除组件才释放原生页面',async()=>{
- const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),release:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
  const f=await fixture(true,{researchLinkFrame:bridge});let node
  await act(async()=>{node=f.workspace.createWebLink('https://www.cctv.com/');f.workspace.updateSelection([node.id],'replace')})
  const frame=f.host.querySelector('[data-research-native-web]'),viewport=f.workspace.getSnapshot().viewport
@@ -290,7 +297,19 @@ it('链接临时离开视窗再返回时保留当前网页，只有移除组件�
  expect(bridge.resolveEngine).toHaveBeenCalledTimes(1)
  expect(bridge.releaseNative).not.toHaveBeenCalled()
  await act(async()=>f.workspace.removeNodes([node.id]))
- expect(bridge.releaseNative).toHaveBeenCalledExactlyOnceWith({sessionId:'grid-test',nodeId:node.id})
+ expect(bridge.release).toHaveBeenCalledExactlyOnceWith({sessionId:'grid-test',nodeId:node.id})
+ expect(bridge.releaseNative).not.toHaveBeenCalled()
+})
+it('切出会话只隐藏链接页面，回到原会话不关闭网页或释放其登录授权',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:'',loading:false})),hideNative:vi.fn(async()=>{}),release:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{}),releaseSession:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge});let node
+ await act(async()=>{node=f.workspace.createWebLink('https://example.com/')})
+ await f.render({sessionId:'other',measure:false});f.registry.release('grid-test')
+ expect(bridge.hideNative).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:node.id})
+ expect(bridge.hideNative).toHaveBeenCalledWith({sessionId:'grid-test'})
+ await f.render({measure:false})
+ expect(f.host.querySelector('[data-research-node-id="'+node.id+'"]')).not.toBeNull()
+ expect(bridge.release).not.toHaveBeenCalled();expect(bridge.releaseNative).not.toHaveBeenCalled();expect(bridge.releaseSession).not.toHaveBeenCalled()
 })
 it('首次打开组件菜单不被右侧会话自动滚动关闭，画板滚动仍关闭',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))

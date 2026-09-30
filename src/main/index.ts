@@ -849,7 +849,8 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     ipcMain,
     getMainWindow: () => mainWindow,
     registry: researchLinkFrameRegistry,
-    inspectNative: nativeResearchWeb.inspect
+    inspectNative: nativeResearchWeb.inspect,
+    releaseNative: nativeResearchWeb.release
   })
   registerResearchWebReaderHandlers({
     ipcMain,
