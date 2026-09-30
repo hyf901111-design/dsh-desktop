@@ -9,17 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "收矮会话顶栏并统一右栏按钮垂直对齐",
+        "featureName": "预置目标进度与任务清单并精简图表重试提示",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "1b1357c18fbe8d3360782c8e8e5a94d6194b114f",
-        "tipCommit": "9482d10516d8a393a87c86f73535548db47a7c1d",
+        "baseCommit": "9482d10516d8a393a87c86f73535548db47a7c1d",
+        "tipCommit": "3da32832ca472244e0ad319009d200341813a258",
         "commits": [
           {
-            "commit": "9482d10516d8a393a87c86f73535548db47a7c1d",
+            "commit": "c03584d7337d3ad47fa3f0b3d150014a9704d453",
             "parents": [
-              "1b1357c18fbe8d3360782c8e8e5a94d6194b114f"
+              "9482d10516d8a393a87c86f73535548db47a7c1d"
             ],
-            "subject": "收矮会话顶栏并统一右栏按钮的垂直对齐"
+            "subject": "记录顶栏对齐的原生窗口及设计稿验收"
+          },
+          {
+            "commit": "76b3bfaf333a0a6cc762cca8b95215a837afd370",
+            "parents": [
+              "c03584d7337d3ad47fa3f0b3d150014a9704d453"
+            ],
+            "subject": "修复：图表重试只提示当前模板错误并定位桑基节点"
+          },
+          {
+            "commit": "3da32832ca472244e0ad319009d200341813a258",
+            "parents": [
+              "76b3bfaf333a0a6cc762cca8b95215a837afd370"
+            ],
+            "subject": "功能：预置目标进度与任务清单并保持三模式交互状态"
           }
         ],
         "files": [
@@ -29,23 +43,75 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
+            "path": "packages/dsh-research-task-runtime/advanced-chart-contract.js"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-panels.css"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
           },
           {
             "status": "M",
-            "path": "test/figma-header-layout.test.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/operations-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
           },
           {
             "status": "M",
-            "path": "test/figma-home-materials.test.js"
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "test/advanced-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/operations-template.test.js"
           }
         ],
         "checks": [
@@ -53,77 +119,36 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/figma-header-layout.test.js",
-              "test/figma-home-materials.test.js",
-              "test/figma-responsive-header.test.ts",
-              "test/panel-toggle-drag-region.test.js"
+              "test/operations-template.test.js",
+              "test/component-template-registry.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/component-source-binding.test.js",
+              "test/advanced-chart-template.test.js"
             ],
             "outcome": "passed",
-            "summary": "22项直接相关检查通过，包含实际原生顶栏结构与浅深色展开收起几何对齐",
-            "verifiedCommit": "9482d10516d8a393a87c86f73535548db47a7c1d",
-            "completedAt": "2026-09-30T06:32:12.287383+00:00",
+            "summary": "93项直接相关检查通过；两类业务模板及当前图表错误诊断",
+            "verifiedCommit": "3da32832ca472244e0ad319009d200341813a258",
+            "completedAt": "2026-09-30T07:36:35.430529+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "实际样式级联的Chromium布局检查完成，等待本地包原生窗口复验"
+          "summary": "生产沙盒12组宽窄三模式与交互日志重放已检查；待集成包原生自然输入及会话往返"
         },
         "acceptanceCriteria": [
-          "主顶栏由56px缩至44px",
-          "标题、模式、导航和操作按钮与右栏展开按钮中心对齐",
-          "画布起点和高度同步",
-          "浅深色与展开收起宽度切换保持对齐"
+          "两类运营模板按来源数据和宿主布局呈现",
+          "三模式及窄宽可读且控件保持中性",
+          "个人任务和进度操作可重放并不写外部来源",
+          "图表重试只提示当前类型问题和格式"
         ],
         "risks": [
-          "整体44类业务模板接入和总体原生成功率目标仍待完成"
+          "Figma截图服务为1x1占位图，视觉稿截图对比尚未通过",
+          "整体44类业务模板及总体成功率仍待完成",
+          "通用主题旧文件4项基线失败仍保留"
         ],
-        "generatedAt": "2026-09-30T06:32:12.287383+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ce40f1b3fd243616ea0400ccc4b446ff2a8c614e",
-        "verificationCommit": "ce40f1b3fd243616ea0400ccc4b446ff2a8c614e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "ce40f1b3fd243616ea0400ccc4b446ff2a8c614e",
-            "completedAt": "2026-09-30T06:34:18.479Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "ce40f1b3fd243616ea0400ccc4b446ff2a8c614e",
-            "completedAt": "2026-09-30T06:34:18.479Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ce40f1b3fd243616ea0400ccc4b446ff2a8c614e",
-            "completedAt": "2026-09-30T06:34:18.479Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T06:34:18.479Z"
+        "generatedAt": "2026-09-30T07:36:35.430529+00:00"
       }
     }
   ],
