@@ -50,6 +50,7 @@ export function researchGanttContentDimensions(items = 0) {
 export function researchMarketDimensions(node, includeManual = false) {
   if (node.sizeMode === 'manual' && !includeManual) return null;
   const spec=node.containerSpec, html=spec?.type==='html'?spec.html:'';
+  if (html?.includes('data-sherlock-template="clock"')) return { width:980, height:200 };
   if (html?.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:656, height:316 };
   if (html?.includes('data-research-kind="dashboard"')) return researchDashboardContentDimensions((html.match(/class="research-metric"/g) || []).length);
   if (html?.includes('data-research-kind="gantt"')) return researchGanttContentDimensions((html.match(/class="gantt-row"/g) || []).length);
