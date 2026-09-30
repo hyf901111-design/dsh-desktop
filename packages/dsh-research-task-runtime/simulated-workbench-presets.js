@@ -148,7 +148,7 @@ const presets = { 'medical-21h': medical21h, 'market-overview-21h': marketOvervi
 export const SIMULATED_WORKBENCH_PRESETS = Object.keys(presets);
 export function expandSimulatedWorkbenchPreset(value) {
     if (value?.preset === undefined) return value;
-    if (value.dataMode !== 'simulated' || !Object.hasOwn(presets, value.preset) || value.panels !== undefined)
+    if (value.dataMode !== 'simulated' || !Object.hasOwn(presets, value.preset) || value.panels !== undefined && (!Array.isArray(value.panels) || value.panels.length !== 0))
         throw Error('模拟工作台预设无效；预设需单独提交，不能混用自定义面板。');
     return { ...value, panels: structuredClone(presets[value.preset]) };
 }

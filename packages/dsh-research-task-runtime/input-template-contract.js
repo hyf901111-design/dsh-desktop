@@ -11,7 +11,10 @@ export function inputDataIssue(s){
  const text=(v,n=256)=>typeof v==='string'&&v.trim().length>0&&v.length<=n;
  const object=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>keys.includes(k));
  if(!INPUT_TEMPLATES.some(t=>t.id===s?.type))return '未注册的输入组件类型';
- if(!object(s,['version','type','title','asOf','subject','note',...(s.type==='form'?['fields']:['content','language'])])||s.version!==1||!text(s.title)||!text(s.asOf))return '输入组件需 version:1、title、asOf 和对应内容';
+ const keys=['version','type','title','asOf','subject','note',...(s.type==='form'?['fields','mode']:['content','language'])];
+ if(!object(s,keys))return '输入组件有不支持的字段：'+Object.keys(s).filter(k=>!keys.includes(k)).join('、');
+ if(s.version!==1||!text(s.title)||!text(s.asOf))return '输入组件需 version:1、title、asOf 和对应内容';
+ if(s.type==='form'&&s.mode!==undefined&&s.mode!=='local')return 'form.mode仅支持local，本地输入记录不更新外部系统';
  if(s.subject!==undefined&&!text(s.subject)||s.note!==undefined&&!text(s.note,2000))return 'subject 或 note 无效';
  if(new TextEncoder().encode(JSON.stringify(s)).length>240000)return '组件输入超过240000字节';
  if(s.type==='code')return s.content?.split?.('\n').length>4000?'代码最多4000行':!languages.includes(s.language)||!text(s.content,128000)?'代码需有效 language 和1–128000字符 content':null;

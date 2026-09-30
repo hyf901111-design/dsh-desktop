@@ -45,6 +45,8 @@ describe('研究工作台', () => {
         }
         const prepared = validateWorkbench({requestId:'preset-retry',title:'医药复验',dataMode:'simulated',preset:'medical-21h'});
         expect(prepared.panels.map(p=>p.artifact.variant)).toEqual(['metrics','trend','scatter','table','pipeline','events']);
+        expect(validateWorkbench({requestId:'preset-retry',title:'医药复验',dataMode:'simulated',preset:'medical-21h',panels:[]}).panels).toEqual(prepared.panels);
+        expect(()=>validateWorkbench({requestId:'preset-retry',title:'医药复验',dataMode:'simulated',preset:'medical-21h',panels:[toolPanel(0)]})).toThrow('混用');
         expect(() => validateWorkbench({requestId:'source',title:'真实医药',dataMode:'source',preset:'medical-21h'})).toThrow();
     });
     it('schedules an empty market template draft for fetching without dropping any supplied observations', () => {
@@ -367,6 +369,7 @@ describe('研究工作台', () => {
         const session = { id: 'parent', events: [{ type: 'user/message', data: { id: 'human-1', source: { kind: 'user' }, content: [{ type: 'text', text: '创建工作台' }] } }] };
         try {
             expect(tool.parameters.required ?? []).not.toContain('requestId');
+            expect(tool.parameters.required).toContain('panels');
             const first = await tool.execute(args, { agent: { session } });
             expect((await tool.execute(args, { agent: { session } })).planId).toBe(first.planId);
             expect(start).toHaveBeenCalledTimes(1);
