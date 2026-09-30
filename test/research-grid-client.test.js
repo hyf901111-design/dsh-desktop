@@ -49,6 +49,27 @@ it('真实工作台入口按完整面板规划初始化两列，内容返回不�
  expect(w.getWorkbenchCells().map(({freePosition,...c})=>c)).toEqual(before)
  expect(w.getSnapshot().artifacts.every(n=>n.generationStatus==='completed')).toBe(true)
 })
+it('规划卡片接入实际网格拖动，普通组件避让且挂载工作台释放临时占位',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setArtifacts([text('a'),text('b')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:12},{id:'b',x:20,y:0,w:20,h:12}],true)})
+ const startedAt=Date.now(),intent={id:'plan',kind:'workbench',state:'planning',types:[],startedAt,description:'测试规划'}
+ await f.event('odyssey:creation-progress',f.win,{detail:{sessionId:'grid-test',intent}})
+ const planning=f.host.querySelector('[data-research-creation-planning]')
+ expect(planning.getAttribute('data-workbench-drag-handle')).toBe('plan')
+ expect(w.getWorkbenchCells().some(c=>c.id==='plan')).toBe(true)
+ const step=24.65,before=w.getWorkbenchCells().find(c=>c.id==='plan')
+ await f.event('pointerdown',planning,{button:0,pointerId:143,clientX:350,clientY:300})
+ await f.event('pointerup',f.canvas,{pointerId:143,clientX:350-before.x*step,clientY:300-before.y*step})
+ const cells=w.getWorkbenchVisibleCells();expect(cells.find(c=>c.id==='plan')).toMatchObject({x:0,y:0})
+ const overlaps=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y
+ expect(cells.every((a,i)=>cells.every((b,j)=>i===j||!overlaps(a,b)))).toBe(true)
+ const plan={id:'new-wb',createdAt:startedAt,panels:[{nodeId:'new-panel',title:'模拟数据',prompt:'模拟',pending:true,width:656,height:320,x:0,y:0,size:'large'}]}
+ await act(async()=>w.applyWorkbench(plan))
+ expect(w.getWorkbenchPlanningNodes()).toEqual([]);expect(w.getWorkbenchCells().some(c=>c.id==='plan')).toBe(false)
+ expect(w.getSnapshot().artifacts.map(n=>n.id)).toEqual(['a','b','new-panel'])
+ await f.event('odyssey:creation-progress',f.win,{detail:{sessionId:'grid-test',intent:null}})
+ expect(f.host.querySelector('[data-research-creation-planning]')).toBeNull()
+})
 it('拖动网格事务可撤销并恢复所有让位组件，重新打开保持格位',async()=>{
  const f=await fixture();f.workspace.setCanvasSize({width:1000,height:700});f.workspace.setArtifacts([text('a'),text('b',740)]);f.workspace.setWorkbenchWidth(1000)
  const before=structuredClone(f.workspace.getSnapshot().artifacts),cells=f.workspace.getWorkbenchCells()

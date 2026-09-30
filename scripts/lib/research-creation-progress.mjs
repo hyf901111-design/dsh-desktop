@@ -123,11 +123,19 @@ function odysseyCreationRetry(sessionId) {
   window.dispatchEvent(new CustomEvent('odyssey:creation-retry', { detail }));
   if (!detail.handled) { odysseyCreationIntents.set(sessionId, current); odysseyCreationEmit(sessionId); }
 }
-function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize, onDismiss }) {
+function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize, workspace, onDismiss }) {
   const [processOpen, setProcessOpen] = react.useState(false);
   const [position, setPosition] = react.useState(() => planningCardPosition(viewport, canvasSize));
   const drag = react.useRef(null);
   const measured = react.useRef((canvasSize?.width ?? 0) > 0);
+  const gridFrame = react.useRef(null);
+  react.useLayoutEffect(() => {
+    if (intent.state !== 'dealing') workspace?.reserveWorkbenchPlanning?.(intent, planningCardPosition(viewport, canvasSize));
+  }, [workspace, intent.id, intent.state, canvasSize?.width, canvasSize?.availableWidth]);
+  react.useEffect(() => () => workspace?.releaseWorkbenchPlanning?.(intent.id), [workspace, intent.id]);
+  const occupied = workspace?.getWorkbenchPlanningNodes?.().find(node => node.id === intent.id);
+  if (occupied) gridFrame.current = occupied;
+  const frame = occupied || (intent.state === 'dealing' ? gridFrame.current : null);
   react.useEffect(() => {
     if (!measured.current && canvasSize?.width > 0) {
       measured.current = true;
@@ -141,8 +149,11 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
   const detail = intent.state === 'failed' ? '本次未生成组件；原因见右侧对话' : intent.state === 'stopped' ? '已保留需求，可以重新生成' : intent.state === 'dealing' ? intent.panelCount + ' 张组件卡片正在排入画布' : intent.sawRunning ? '执行者正在确定面板清单；确认后会按实际数量放入画布' : '任务已发送，等待执行者开始规划';
   const node = { id: intent.id, kind: 'generated-container', title: label, generationStatus: intent.state === 'failed' ? 'failed' : intent.state === 'stopped' ? 'cancelled' : 'running', generationTaskId: intent.id, generationStartedAt: intent.startedAt, generationCompletedAt: intent.completedAt, generationError: detail, generationEvents: [] };
   return react_jsx_runtime.jsxs('section', { className: 'odyssey-creation-planning-card', 'data-research-compact-chrome': '', 'data-research-creation-planning': intent.state,
-    'aria-label': label + '生成进度', style: { left: position.x, top: position.y },
+    'data-research-node-id': occupied ? intent.id : undefined, 'data-workbench-drag-handle': occupied ? intent.id : undefined,
+    'data-planning-grid': frame ? '' : undefined,
+    'aria-label': label + '生成进度', style: frame ? {left:frame.x, top:frame.y, width:frame.width, height:frame.height, transform:'translate(-50%, -50%)'} : { left: position.x, top: position.y, visibility:workspace?.reserveWorkbenchPlanning && intent.state !== 'dealing' ? 'hidden' : undefined },
     onPointerDown: event => {
+      if (occupied) return;
       event.stopPropagation();
       if (event.button !== 0 || event.target.closest('button,[role=button]')) return;
       event.preventDefault();
@@ -174,8 +185,11 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
 const css = `
 .odyssey-creation-planning-card{--generation-bg:#fafafa;--generation-border:rgba(0,0,0,.12);--generation-phase:#575757;--generation-title:#262626;position:absolute;top:0;left:0;z-index:42;box-sizing:border-box;width:320px;height:220px;container-type:size;border-radius:8px;background:var(--generation-bg);pointer-events:auto;overflow:hidden;touch-action:none;cursor:grab}
 .odyssey-creation-planning-card:active{cursor:grabbing}
+.odyssey-creation-planning-card[data-planning-grid][data-grid-active]{left:var(--grid-float-left)!important;top:var(--grid-float-top)!important}
 .odyssey-creation-planning-card[data-research-creation-planning=dealing]{pointer-events:none;animation:odyssey-planning-deal .42s cubic-bezier(.22,1,.36,1) both}
+.odyssey-creation-planning-card[data-planning-grid][data-research-creation-planning=dealing]{animation-name:odyssey-planning-grid-deal}
 @keyframes odyssey-planning-deal{to{opacity:0;transform:scale(.72)}}
+@keyframes odyssey-planning-grid-deal{to{opacity:0;transform:translate(-50%,-50%) scale(.72)}}
 @media(prefers-reduced-motion:reduce){.odyssey-creation-planning-card[data-research-creation-planning=dealing]{animation:none}}
 body [data-research-compact-chrome].odyssey-creation-planning-card>.odyssey-generation-surface{width:100%;height:100%;background:var(--generation-bg)!important}
 .odyssey-creation-process{position:absolute;inset:48px 20px 20px;z-index:5;box-sizing:border-box;overflow:auto;border:1px solid var(--generation-border);border-radius:6px;background:var(--generation-bg);color:var(--generation-phase);padding:10px 12px;font:11px/17px 'Noto Sans SC',sans-serif}
@@ -261,6 +275,8 @@ export function patchResearchCreationProgress(source) {
     `children: [/* ODYSSEY_CREATION_CANVAS_CARD_V3 */ creationIntent ? react_jsx_runtime.jsx(ResearchCreationPlanningCard, { key: creationIntent.id, intent: creationIntent, sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId) }) : null,files.map((node) =>`)
   source = source.replace('sessionId, viewport, onDismiss: () => odysseyCreationFinish(sessionId)',
     'sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId)')
+  source = source.replace('sessionId, viewport, canvasSize:snapshot.canvasSize, onDismiss: () => odysseyCreationFinish(sessionId)',
+    'sessionId, viewport, canvasSize:snapshot.canvasSize, workspace, onDismiss: () => odysseyCreationFinish(sessionId)')
   const actionAnchor = 'workbenchActions.current = resolvedActions;'
   if (!source.includes('/* ODYSSEY_CREATION_SESSION_LIFECYCLE */')) source = replaceOnce(source, actionAnchor, `${actionAnchor}
             /* ODYSSEY_CREATION_SESSION_LIFECYCLE */

@@ -1,0 +1,55 @@
+import {expect,it} from 'vitest'
+import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
+import {createResearchGrid} from '../packages/dsh-research-task-runtime/research-grid.js'
+
+const grid=createResearchGrid()
+const empty={files:[],artifacts:[],viewport:{x:0,y:0,scale:1}}
+const card=id=>({id,kind:'generated-container',containerSpec:{type:'table'},x:250,y:170,width:480,height:320})
+const clear=cells=>expect(cells.every((a,i)=>cells.every((b,j)=>i===j||!grid.overlap(a,b)))).toBe(true)
+it('规划卡片占位挤开已有组件，普通组件移动和追加也避让规划卡片',()=>{
+ const state=createWorkbenchGridState(null,'planning');state.enable(1000)
+ let snapshot=state.reconcile({...empty,artifacts:[card('a'),card('b')]})
+ state.reservePlanning({id:'plan',startedAt:100},snapshot,{x:12,y:12})
+ snapshot=state.reconcile(snapshot)
+ expect(state.get().find(c=>c.id==='plan')).toMatchObject({x:0,y:0})
+ expect(state.get().find(c=>c.id==='a').y).toBeGreaterThan(0)
+ clear(state.visible())
+ const active=state.get().find(c=>c.id==='a')
+ state.set(grid.place(state.get(),{...active,x:0,y:0}))
+ snapshot=state.reconcile(snapshot);clear(state.visible())
+ expect(state.planningNodes()).toHaveLength(1)
+ state.enable(500);snapshot=state.reconcile(snapshot)
+ expect(state.planningNodes()[0].height).toBeGreaterThanOrEqual(220);clear(state.visible())
+ snapshot=state.reconcile({...snapshot,artifacts:[...snapshot.artifacts,card('new')]});clear(state.visible())
+ expect(snapshot.artifacts).toHaveLength(3)
+})
+it('临时占位不写入持久化和共享内容，失败保留，释放后普通组件补位',()=>{
+ const saved=new Map(),storage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}
+ const state=createWorkbenchGridState(storage,'planning');state.enable(1000)
+ let snapshot=state.reconcile({...empty,artifacts:[card('a')]})
+ state.reservePlanning({id:'plan',startedAt:100},snapshot,{x:12,y:12})
+ snapshot=state.reconcile(snapshot);state.save()
+ expect(JSON.parse(saved.values().next().value).cells.map(c=>c.id)).toEqual(['a'])
+ expect(state.document(snapshot).artifacts.map(n=>n.id)).toEqual(['a'])
+ const before=state.get()
+ state.reservePlanning({id:'plan',startedAt:100,state:'failed'},snapshot,{x:900,y:900})
+ expect(state.get()).toEqual(before)
+ expect(state.releasePlanning('wrong')).toBe(false)
+ expect(state.releasePlanning('plan')).toBe(true)
+ snapshot=state.reconcile(snapshot)
+ expect(state.get().map(c=>c.id)).toEqual(['a']);expect(state.get()[0].y).toBe(0)
+ const restored=createWorkbenchGridState(storage,'planning');restored.enable(1000);restored.reconcile(snapshot)
+ expect(restored.planningNodes()).toEqual([])
+})
+it('规划占位参与窄窗补高和整理，实际面板挂载前释放且不残留格位',()=>{
+ const state=createWorkbenchGridState(null,'planning');state.enable(500)
+ let snapshot=state.reconcile({...empty,artifacts:[card('a')]})
+ state.reservePlanning({id:'plan',startedAt:100},snapshot,{x:12,y:12});snapshot=state.reconcile(snapshot)
+ const nodes=[...snapshot.artifacts,...state.planningNodes()]
+ state.set(grid.arrange(nodes,state.visible(),500));snapshot=state.reconcile(snapshot);clear(state.visible())
+ expect(state.planningNodes()[0].height).toBeGreaterThanOrEqual(220)
+ state.releasePlanning('plan')
+ snapshot=state.reconcile({...snapshot,artifacts:[...snapshot.artifacts,...['p1','p2'].map((id,i)=>({...card(id),containerSpec:null,workbenchId:'wb',workbenchIndex:i,sizeMode:'auto',generationStatus:'queued'}))]})
+ clear(state.visible());expect(state.get().some(c=>c.id==='plan')).toBe(false)
+ expect(state.get().filter(c=>c.id.startsWith('p')).every(c=>c.w===40)).toBe(true)
+})
