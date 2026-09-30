@@ -4,6 +4,7 @@ import {applyTerminalPresentation} from './terminal-presentation.js'
 import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
 
 const interactions = {
+ 'revenue-geography':['公司与财年季度','固定分项颜色','图例切换','收入占比','来源总额核对','完整披露记录'],'revenue-business':['公司与财年季度','跨期固定颜色','图例分页','收入占比','来源总额核对','完整披露记录'],
  'company-profile':['公司切换','原登记资料','资料披露日期','完整简介'],'financial-statements':['财年季度','报表切换','披露日期','科目折叠','逐行单位','选中明细'],
  'price-performance':['市场时区与复权','交易范围','OHLCV读数','缩放平移'],'valuation-multiples':['财年季度','图例','缺失与负倍数','期间读数','完整记录'],'price-target':['机构预测','发布日期与有效期','当前价比较','目标价排序','记录详情'],
  'share-statistics':['股数与比例','统计口径'],'market-overview':['市场筛选','历史读数'],'currency-snapshot':['报价方向','精度','货币筛选'],'watchlist':['搜索','排序','行情详情','管理自选'],

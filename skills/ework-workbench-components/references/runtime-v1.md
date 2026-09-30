@@ -21,3 +21,6 @@
 21Z 通用表单：type:form，version:1/title/asOf/fields，每字段需唯一安全id、label、kind（text/textarea/select/number/date），可选required/value/help/placeholder/maxLength；select需options:[{value,label}]，number可设min/max。支持本地输入记录、字段旁校验和重置，不创建智能体任务、不向外部系统写入。代码：type:code，version:1/title/asOf/language/content，language为json/javascript/typescript/python/sql/text；保留原文，JSON可格式化并明确提示错误，用户主动复制与下载，不自动执行。来源 Figma 1918:354019/354512，三模式控制保持中性。
 
 21Z 世界时钟：type:clock，version:1/title/asOf/locations，城市含唯一id、label、IANA timeZone。可选selectedId、hourCycle:h23或h12、note。mode默认live使用设备时钟；固定时刻需mode:snapshot和带Z或偏移的ISO currentTime。来源Figma 1917:353139，三模式中性控件、居中时间，按时区规则计算夏令时和跨日；固定快照明确标注，不能把时间变化写成行情刷新。
+
+
+地域收入使用 `market.revenue-geography`，业务线收入使用 `market.revenue-business`，均按独立预置堆叠柱模板绘制。数据字段完整契约由父级创建工具与模板列表提供：datasets 是已取得公司/annual或quarterly组合；每组保留currency/unit/basis、覆盖complete或partial、periods的label/endDate/disclosedAt、totals原总收入、segments唯一id/name/等长values。null须totalMissing或missing解释，partial须coverageNote。完整已知分项合计须与来源总收入核对，不能造其他项补差，不把未知补0；负数、0及原币种原单位保留。分项颜色按id跨期稳定，业务图例分页；来源总收入与已知分项合计分开显示，占比仅以非零已知来源总额计算。
