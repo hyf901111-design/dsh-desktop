@@ -9,89 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "规划卡片网格占位及旧基金组件可读性修复",
+        "featureName": "整理原生图表高度修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "26d4f1a10b122e01f749a086b849b3a3e6d5bf9e",
-        "tipCommit": "1d1c433359b9543125b3902d223f6014772575b6",
+        "baseCommit": "1d1c433359b9543125b3902d223f6014772575b6",
+        "tipCommit": "2a0cb9b807d58bd0083ef3ce7c6f357cafe33915",
         "commits": [
           {
-            "commit": "7766a7b95ebc6633636610b440e85704ebad4b52",
+            "commit": "2a0cb9b807d58bd0083ef3ce7c6f357cafe33915",
             "parents": [
-              "26d4f1a10b122e01f749a086b849b3a3e6d5bf9e"
+              "1d1c433359b9543125b3902d223f6014772575b6"
             ],
-            "subject": "修复工作台 K 线与 OHLC 宿主模板的校验冲突"
-          },
-          {
-            "commit": "2437d25751287bd69ba11bbe298f77e59b8668d9",
-            "parents": [
-              "7766a7b95ebc6633636610b440e85704ebad4b52"
-            ],
-            "subject": "让规划卡片参与工作台网格占位和拖动挤压"
-          },
-          {
-            "commit": "1d1c433359b9543125b3902d223f6014772575b6",
-            "parents": [
-              "2437d25751287bd69ba11bbe298f77e59b8668d9"
-            ],
-            "subject": "修正旧基金组件的来源反白和行业选中行对比度"
+            "subject": "修复整理画布时原生柱状图被拉得过高"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/design/component-template-acceptance-20260930.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-style.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/research-creation-progress.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-planning-occupancy.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-ohlc-routing.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-style.test.js"
           }
         ],
         "checks": [
@@ -100,18 +38,15 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/research-grid-client.test.js",
-              "test/research-planning-occupancy.test.js",
               "test/research-grid-workbench.test.js",
-              "test/research-creation-progress.test.js",
+              "test/research-planning-occupancy.test.js",
               "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/workbench-ohlc-routing.test.js",
-              "test/workbench-design-contract.test.js"
+              "test/research-optimal-arrange.test.js"
             ],
             "outcome": "passed",
-            "summary": "158项聚焦检查通过；修正断言格式后颜色样式6项复验通过，共159项。",
-            "verifiedCommit": "1d1c433359b9543125b3902d223f6014772575b6",
-            "completedAt": "2026-09-30T02:10:08.327010+00:00",
+            "summary": "144项直接相关聚焦检查通过，含拉伸柱状图两次整理和展开明细",
+            "verifiedCommit": "2a0cb9b807d58bd0083ef3ce7c6f357cafe33915",
+            "completedAt": "2026-09-30T02:22:08.765918+00:00",
             "timeoutMs": 300000
           },
           {
@@ -122,8 +57,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "1d1c433359b9543125b3902d223f6014772575b6",
-            "completedAt": "2026-09-30T02:10:08.327010+00:00",
+            "verifiedCommit": "2a0cb9b807d58bd0083ef3ce7c6f357cafe33915",
+            "completedAt": "2026-09-30T02:22:08.765918+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -132,62 +67,16 @@
           "summary": "功能工作树不构建共享客户端，待集成后实际窗口复验。"
         },
         "acceptanceCriteria": [
-          "规划卡片与普通组件互相挤压避让",
-          "规划结束释放占位，失败保留且不污染持久化",
-          "旧基金来源反白、行业行灰色选中且文字可读",
-          "宿主 K线与OHLC正确路由"
+          "整理原生柱状图恢复可读模板高度",
+          "多次整理不累积拉高",
+          "展开明细增加受限阅读空间"
         ],
         "risks": [
           "整体44类业务模板接入尚未完成",
           "九图真实输入首次失败，仍需复验",
           "仅聚焦检查和本地测试，无公开发布"
         ],
-        "generatedAt": "2026-09-30T02:10:08.327010+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e703daad92c8073cbffbd141836d41aa8dd7f3c1",
-        "verificationCommit": "e703daad92c8073cbffbd141836d41aa8dd7f3c1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "e703daad92c8073cbffbd141836d41aa8dd7f3c1",
-            "completedAt": "2026-09-30T02:10:59.522Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "e703daad92c8073cbffbd141836d41aa8dd7f3c1",
-            "completedAt": "2026-09-30T02:10:59.522Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e703daad92c8073cbffbd141836d41aa8dd7f3c1",
-            "completedAt": "2026-09-30T02:10:59.522Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-09-30T02:10:59.522Z"
+        "generatedAt": "2026-09-30T02:22:08.765918+00:00"
       }
     }
   ],
