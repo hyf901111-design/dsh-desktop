@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "固定插件打包中可下载的source-map-js依赖",
+        "featureName": "补齐财务报价核心指标与管理团队模板并修复来源阅读空间",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "1033816cfc19f6f1d8b9748a2370667ef02bdb2c",
-        "tipCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
+        "baseCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
+        "tipCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
         "commits": [
           {
-            "commit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
+            "commit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
             "parents": [
-              "1033816cfc19f6f1d8b9748a2370667ef02bdb2c"
+              "cf02939ec36b70818b33d4b644c82f9ef0073c5f"
             ],
-            "subject": "构建：固定可下载的源码映射依赖版本"
+            "subject": "组件：补齐三类财务模板并保留指标来源阅读空间"
           }
         ],
         "files": [
@@ -29,7 +29,75 @@
           },
           {
             "status": "M",
-            "path": "scripts/prepare-bundled-plugin-profile.mjs"
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/financial-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-profile.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/operations-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-design-contract.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workflow-template.test.js"
           }
         ],
         "checks": [
@@ -37,6 +105,7 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/financial-profile.test.js",
               "test/clock-template.test.js",
               "test/component-template-registry.test.js",
               "test/bundled-component-skill.test.js",
@@ -55,9 +124,9 @@
               "test/bundled-plugin-profile.test.ts"
             ],
             "outcome": "passed",
-            "summary": "238项直接相关及继承门禁通过，插件profile的12项包含在内",
-            "verifiedCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
-            "completedAt": "2026-09-30T14:23:29.603030+00:00",
+            "summary": "247项直接相关及继承门禁通过",
+            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
+            "completedAt": "2026-09-30T15:23:10.177905+00:00",
             "timeoutMs": 300000
           },
           {
@@ -70,8 +139,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
-            "completedAt": "2026-09-30T14:23:29.603030+00:00",
+            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
+            "completedAt": "2026-09-30T15:23:10.177905+00:00",
             "timeoutMs": 300000
           },
           {
@@ -82,74 +151,41 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "cf02939ec36b70818b33d4b644c82f9ef0073c5f",
-            "completedAt": "2026-09-30T14:23:29.603030+00:00",
-            "timeoutMs": 300000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "实际插件profile重新安装完成并确认source-map-js为1.2.1；新包原生验证待执行"
-        },
-        "acceptanceCriteria": [
-          "否定模拟数据不会移除已授权取数工具",
-          "指定通联来源缺少实际响应与映射不能成功交付",
-          "数据日期与来源说明在metrics正文可见",
-          "仅手动刷新设置首次绑定为0",
-          "公开依赖404不会中断插件profile准备"
-        ],
-        "risks": [
-          "整体44类业务模板仍待完成",
-          "总体组件成功率超过90%仍待验证",
-          "本轮修复须新包原生复验",
-          "旧research-workbench套件存在重复打补丁依赖与模拟fixture问题，未计为通过"
-        ],
-        "generatedAt": "2026-09-30T14:23:29.603030+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
-        "verificationCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
-            "completedAt": "2026-09-30T14:25:18.440Z",
+            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
+            "completedAt": "2026-09-30T15:23:10.177905+00:00",
             "timeoutMs": 300000
           },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
+              "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
-            "completedAt": "2026-09-30T14:25:18.440Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7db174fceb34cfc458eb8f831bd61fcfe2bca3be",
-            "completedAt": "2026-09-30T14:25:18.440Z",
+            "summary": "早期工作台规划政策检查通过",
+            "verifiedCommit": "ca4ed0be3390bd02c828ce04bbb9a30f85e1553b",
+            "completedAt": "2026-09-30T15:23:10.177905+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-09-30T14:25:18.440Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产CSP沙盒39组财务与指标三模式默认及窄宽度验收通过，原生新包仍待复验；b7a955已核验真实DataYes调用、仅手动和刷新进度，但首次展示失败未计入成功"
+        },
+        "acceptanceCriteria": [
+          "三类财务数据保留证券币种披露周期和明确缺失值",
+          "自定义模拟财务模板首次提供完整记录",
+          "指标页脚和企业格内说明完整可读",
+          "用户手动框保持尺寸并内部滚动",
+          "真实取数工具权限和仅手动设置继承"
+        ],
+        "risks": [
+          "最新44类业务模板尚未全部覆盖",
+          "总体成功率超过90%尚未验证",
+          "新模板及指标空间需集成包原生复验",
+          "旧全量workbench夹具及依赖补丁问题未计为通过"
+        ],
+        "generatedAt": "2026-09-30T15:23:10.177905+00:00"
       }
     }
   ],
