@@ -42,7 +42,7 @@ export function patchResearchNativeWeb(source) {
     (0,react.useEffect)(()=>{
       const bridge=window.dshDesktop?.researchLinkFrame,identity={sessionId,nodeId:node.id};
       if(!visible||!bridge?.updateNative)return;
-      let stopped=false,busy=false,last='',lastSent=0,held=false,space=false,timer,lastInspection='',lastImage='',imageRevision=0,loading=true,motionEpoch=0,frame;
+      let stopped=false,busy=false,last='',lastSent=0,held=false,space=false,timer,lastInspection='',lastImage='',imageRevision=0,loading=true,snapshotPending=false,motionEpoch=0,frame;
       const reload=()=>{motionEpoch++;setError('');reloadRef.current++;lastSent=0};
       const element=ref.current;if(element)element.__eworkReloadWeb=reload;
       const canvas=element?.closest('[data-research-canvas]');
@@ -69,10 +69,10 @@ export function patchResearchNativeWeb(source) {
         const overlay=Array.from(document.querySelectorAll('[role=menu],dialog[open],[aria-modal=true],[data-research-context-menu]')).some(e=>!e.contains(el)&&e.getBoundingClientRect().width>0);
         const active=!held&&!space&&!overlay&&unobscured&&card.getAttribute('data-selected')==='true'&&root.querySelectorAll('[data-research-node-id][data-selected=true]').length===1&&!root.hasAttribute('data-research-operation')&&!root.querySelector('[data-research-marquee]')&&r.left>=c.left&&r.right<=c.right&&r.top>=c.top&&r.bottom<=c.bottom;
         const signature=rectKey+active;
-        if(busy||r.width<1||r.height<1||signature===tick.signature&&Date.now()-lastSent<(loading?250:active?1200:2500))return;
+        if(busy||r.width<1||r.height<1||signature===tick.signature&&Date.now()-lastSent<(loading||snapshotPending?250:active?1200:2500))return;
         tick.signature=signature;lastSent=Date.now();busy=true;const requestEpoch=motionEpoch;
         try {const state=await bridge.updateNative({...identity,url:node.url,bounds,layoutSize,scale,radius:Math.round(2*scale),active,pageZoom:zoomRef.current,imageRevision,reloadToken:reloadRef.current});if(stopped||requestEpoch!==motionEpoch||held||space||moving())return;
-          loading=state.loading===true;if(Number.isSafeInteger(state.imageRevision))imageRevision=state.imageRevision;
+          loading=state.loading===true;snapshotPending=state.snapshotPending===true;if(Number.isSafeInteger(state.imageRevision))imageRevision=state.imageRevision;
           if(state.image&&state.image!==lastImage&&imageRef.current){lastImage=state.image;imageRef.current.src=state.image;setReady(true)}setError(state.error||'');
           if(state.inspection){const signature=JSON.stringify(state.inspection);if(signature!==lastInspection){lastInspection=signature;onInspection?.(node.url,state.inspection)}}
         }catch{if(!stopped&&requestEpoch===motionEpoch&&!held&&!space&&!moving())setError('网页暂时无法加载')}finally{busy=false}
