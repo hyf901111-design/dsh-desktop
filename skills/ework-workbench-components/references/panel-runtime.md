@@ -8,3 +8,5 @@
 - 通用正文 12/18px；金融指标值按源节点 `1217:225751` 为 DINPro 21/26px，金融外壳和表格按各自源节点，不把通用 23/26px 和 12px 内边距覆盖到金融模板。组件控件黑白灰；行情和风险的业务色只表达实际数据语义。支持深浅主题，来源、日期、单位就近标注。
 
 结构化输入用type=form、代码阅读用type=code，均有宿主固定模板。form提供fields:[{id,label,kind,required,value}]，select提供options:[{value,label}]；仅保存本画布输入记录。code提供language和content字符串，不执行代码；JSON格式化、复制和下载由宿主完成。
+
+世界时钟用type=clock，提供version:1/title/asOf和locations:[{id,label,timeZone}]，timeZone必须为有效IANA时区（如Asia/Shanghai、America/New_York）。mode默认live使用设备当前时间；固定时间用mode:snapshot及带Z或偏移的ISO currentTime。可选selectedId、hourCycle:h23或h12，宿主负责夏令时、跨日、城市切换和小时制。时钟更新时间不等于行情刷新时间。

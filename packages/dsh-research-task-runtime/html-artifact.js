@@ -709,8 +709,8 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     // in flight. A matching prefix is not an undo until that tail was accepted.
     if(!readOnly && events.length<applied.length && events.every((e,i)=>applied[i]===e.id) && applied.slice(events.length).every(id=>pending.has(id))){initialized=true;return;}
     if(applied.some((id,i)=>events[i]?.id!==id)){post('sherlock-interaction-reload');return;}
-    replaying=true;
-    try {for(const e of events.slice(applied.length)){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {replaying=false;initialized=true;}
+    replaying=true;document.documentElement.setAttribute('data-sherlock-interaction-replaying','');
+    try {for(const e of events.slice(applied.length)){apply(e);applied.push(e.id);clock=Math.max(clock,e.clock);}} finally {document.documentElement.removeAttribute('data-sherlock-interaction-replaying');replaying=false;initialized=true;}
   });
   for(const type of ['click','input','change','keydown']) document.addEventListener(type,event=>{
     if((!event.isTrusted && !authorizedEvents.has(event)) || replaying || document.documentElement.hasAttribute('data-sherlock-shared-state'))return;

@@ -10,7 +10,7 @@ import {SIMULATED_WORKBENCH_PRESETS} from './simulated-workbench-presets.js';
 import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 import {marketVariant} from './workbench-design-contract.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
-const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code'];
+const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 const templateIds = panels => panels.map(panel => panel.type === 'market'
     ? `market.${panel.artifact?.variant ?? marketVariant(panel) ?? 'unspecified'}`

@@ -140,6 +140,30 @@ it('restores chart viewport metadata while keeping it separate from value highli
  expect(f.body.querySelectorAll('[data-workbench-value-changed]')).toHaveLength(1)
 })
 
+it('keys research and fund metrics by their visible labels instead of their reordered position',()=>{
+ const f=fixture();f.body.innerHTML='<main><article><h2 class="research-metric-label">营收</h2><div class="research-metric-value">100</div></article><article><h2 class="research-metric-label">利润</h2><div class="research-metric-value">20</div></article><div><span class="fund-label">资产规模</span><strong class="fund-value">300</strong></div></main>'
+ const state=f.surface.snapshot(),main=f.body.firstElementChild
+ main.prepend(main.children[1]);f.surface.apply(state,true)
+ expect(f.body.querySelector('[data-workbench-value-changed]')).toBeNull()
+ main.firstElementChild.querySelector('.research-metric-value').textContent='21';f.body.querySelector('.fund-value').textContent='310'
+ f.surface.apply(state,true)
+ expect([...f.body.querySelectorAll('[data-workbench-value-changed]')].map(el=>el.textContent)).toEqual(['21','310'])
+})
+
+it('delays the loading stripe, keeps old content readable, and clears feedback immediately on failure and disposal',()=>{
+ vi.useFakeTimers();const win=new Window(),doc=win.document;doc.body.innerHTML='<article><div data-research-preview-body><input value="保留筛选"><strong>100</strong></div></article>'
+ const card=doc.querySelector('article'),body=doc.querySelector('[data-research-preview-body]'),feedback=createComponentRefreshFeedback(card),input=doc.querySelector('input')
+ clean.push(async()=>{feedback.dispose();await win.happyDOM.abort()})
+ feedback.update({status:'refreshing'});expect(body.getAttribute('aria-busy')).toBe('true')
+ vi.advanceTimersByTime(299);expect(card.hasAttribute('data-component-updating')).toBe(false)
+ vi.advanceTimersByTime(2);expect(card.hasAttribute('data-component-updating')).toBe(true)
+ expect(input.disabled).toBe(false);expect(doc.querySelector('strong').textContent).toBe('100')
+ feedback.update({status:'error'});expect(card.hasAttribute('data-component-updating')).toBe(false);expect(body.hasAttribute('aria-busy')).toBe(false)
+ expect(doc.querySelector('input')).toBe(input);expect(doc.querySelector('strong').textContent).toBe('100')
+ feedback.update({status:'refreshing'});feedback.dispose();vi.advanceTimersByTime(400)
+ expect(card.hasAttribute('data-component-updating')).toBe(false);expect(body.hasAttribute('aria-busy')).toBe(false)
+})
+
 it('pending initial restoration keeps a newer user input',()=>{
  vi.useFakeTimers();const win=new Window();win.document.body.innerHTML='<iframe></iframe>'
  const inner=win.document.querySelector('iframe').contentWindow,doc=inner.document;inner.setTimeout=setTimeout;inner.clearTimeout=clearTimeout;doc.body.innerHTML='<input value=""><details><summary>Sources</summary></details>'
@@ -150,4 +174,16 @@ it('pending initial restoration keeps a newer user input',()=>{
  const input=doc.querySelector('input');restore();vi.advanceTimersByTime(81);expect(input.value).toBe('saved search')
  restore();input.value='new search';input.dispatchEvent(new inner.Event('input',{bubbles:true}));vi.advanceTimersByTime(81)
  expect(input.value).toBe('new search')
+})
+
+it('journal replay during pending restoration keeps saved scroll instead of treating replay as a new user edit',()=>{
+ vi.useFakeTimers();const win=new Window();win.document.body.innerHTML='<iframe></iframe>'
+ const inner=win.document.querySelector('iframe').contentWindow,doc=inner.document;inner.setTimeout=setTimeout;inner.clearTimeout=clearTimeout;doc.body.innerHTML='<input value=""><div style="overflow:auto">可滚动表格</div>'
+ clean.push(async()=>{inner.dispatchEvent(new inner.Event('pagehide'));await win.happyDOM.abort()})
+ inner.eval('('+installWorkbenchRefresh.toString()+')('+createWorkbenchRefreshSurface.toString()+','+isWorkbenchViewState.toString()+',"revision")');doc.dispatchEvent(new inner.Event('DOMContentLoaded'))
+ const state={values:[],controls:[{path:[0],tag:'INPUT',value:'已保存筛选',checked:false}],scroll:[{path:[1],x:0,y:96}]}
+ inner.dispatchEvent(new inner.MessageEvent('message',{source:inner.parent,data:{type:'sherlock-workbench-restore',state,animate:false,revision:'revision'}}))
+ doc.documentElement.setAttribute('data-sherlock-interaction-replaying','');doc.querySelector('input').value='已保存筛选';doc.querySelector('input').dispatchEvent(new inner.Event('input',{bubbles:true}));doc.documentElement.removeAttribute('data-sherlock-interaction-replaying')
+ vi.advanceTimersByTime(81)
+ expect(doc.querySelector('input').value).toBe('已保存筛选');expect(doc.querySelector('div').scrollTop).toBe(96)
 })

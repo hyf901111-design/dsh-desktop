@@ -16,7 +16,8 @@ export function createComponentDataStatusStore(){
     const old=previous.rows.get(row.nodeId)
     const advanced=Number.isInteger(row.successSequence)?row.successSequence>(old?.successSequence||0):row.lastSuccess>old?.lastSuccess
     const snapshot={successSequence:row.successSequence||0,nodeId:row.nodeId,status:row.status,lastSuccess:row.lastSuccess||null,dataAsOf:row.dataAsOf||'',enabled:row.enabled,viewPaused:row.viewPaused,intervalMinutes:row.intervalMinutes,
-     refreshSequence:(old?.refreshSequence||0)+(previous.ready&&old&&advanced&&row.status==='success'?1:0)}
+     refreshSequence:(old?.refreshSequence||0)+(previous.ready&&old&&advanced&&row.status==='success'?1:0),
+     completionSequence:(old?.completionSequence||0)+(previous.ready&&old&&advanced&&['success','unchanged'].includes(row.status)?1:0)}
     next.set(row.nodeId,JSON.stringify(old)===JSON.stringify(snapshot)?old:snapshot)
    }
    sessions.set(sessionId,{rows:next,ready:true})
@@ -43,12 +44,13 @@ export function createComponentDataStatusMonitor({sessionId,bridge,store,isVisib
  return {refresh,dispose(){disposed=true;epoch++;unsubscribe?.();clearInterval(timer);store.clear(sessionId);void Promise.resolve(bridge.setVisible(sessionId,false)).catch(()=>{})}}
 }
 
-export function componentDataStatusView(binding){
+export function componentDataStatusView(binding,completion=null){
  const valid=binding?.lastSuccess&&Number.isFinite(new Date(binding.lastSuccess).getTime())
  const time=valid?'刷新 '+new Date(binding.lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未刷新'
  const frequency=binding?.intervalMinutes===1?'每分钟':binding?.intervalMinutes>0?'每 '+binding.intervalMinutes+' 分钟':'仅手动'
- const detail=!binding?'未绑定数据源':binding.status==='refreshing'?'正在取数':binding.status==='error'?'更新失败 · 保留上次数据':binding.viewPaused?'离开看板已暂停':!binding.enabled?'已暂停':frequency
- return {time,detail,title:(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(binding?.dataAsOf?'\n数据时点：'+binding.dataAsOf:'')+'\n点击设置数据源与刷新频率'}
+ const phase=binding?.status==='refreshing'?'refreshing':binding?.status==='error'?'error':completion===binding?.status&&['success','unchanged'].includes(completion)?completion:null
+ const detail=!binding?'未绑定数据源':phase==='refreshing'?'正在更新数据…':phase==='error'?'更新失败 · 保留上次数据':phase==='success'?'已更新':phase==='unchanged'?'已检查 · 数据无变化':binding.viewPaused?'离开看板已暂停':!binding.enabled&&binding.intervalMinutes>0?'已暂停':frequency
+ return {time,detail,phase,title:(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(binding?.dataAsOf?'\n数据时点：'+binding.dataAsOf:'')+'\n点击设置数据源与刷新频率'}
 }
 
 export function createComponentRefreshFeedback(card){
@@ -97,6 +99,7 @@ export function createComponentRefreshFeedback(card){
   identity=templateIdentity;revision=nextRevision
   clearTimeout(loadingTimer)
   card.toggleAttribute('data-component-refreshing',binding?.status==='refreshing')
+  if(binding?.status==='refreshing')body.setAttribute('aria-busy','true');else body.removeAttribute('aria-busy')
   if(binding?.status==='refreshing')loadingTimer=setTimeout(()=>{card.setAttribute('data-component-updating','')},300)
   else card.removeAttribute('data-component-updating')
   if(!binding)return
@@ -105,34 +108,53 @@ export function createComponentRefreshFeedback(card){
    sequence=next;animate=true;awaitRevision=frame?(refreshOrigin||previousRevision):null;refreshOrigin=null
    clearTimeout(timer);timer=setTimeout(()=>{if(surface){const current=surface.snapshot();view={...retainCharts(current,view),controls:view?.controls||current.controls,scroll:view?.scroll||current.scroll}}send();if(surface){baseline=surface.snapshot().values;animate=false}},100)
   }else if(binding.status==='unchanged'){if(surface)view=surface.snapshot();if(view)baseline=view.values}
- },dispose(){disposed=true;clearTimeout(timer);clearTimeout(loadingTimer);win.removeEventListener('message',receive);surface?.dispose();card.removeAttribute('data-component-refreshing');card.removeAttribute('data-component-updating')}}
+ },dispose(){disposed=true;clearTimeout(timer);clearTimeout(loadingTimer);win.removeEventListener('message',receive);surface?.dispose();card.removeAttribute('data-component-refreshing');card.removeAttribute('data-component-updating');body.removeAttribute('aria-busy')}}
 }
 
 export function ComponentDataStatusBar({sessionId,node,workbench=false}){
  const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
  const ref=react.useRef(null),feedback=react.useRef(null)
+ const completion=react.useRef({key:null,sequence:0}),[notice,setNotice]=react.useState(null),key=JSON.stringify([sessionId,node.id])
+ react.useEffect(()=>{
+  const sequence=binding?.completionSequence||0,previous=completion.current
+  completion.current={key,sequence}
+  // Entering a session starts from its current snapshot. Historical refreshes
+  // must not be announced as a new update or flash the existing values.
+  if(previous.key!==key||!binding){setNotice(null);return}
+  if(!['success','unchanged'].includes(binding.status)){setNotice(null);return}
+  if(sequence<=previous.sequence||!['success','unchanged'].includes(binding.status))return
+  setNotice({key,status:binding.status})
+  const timer=setTimeout(()=>setNotice(null),2400)
+  return()=>clearTimeout(timer)
+ },[key,binding?.completionSequence,binding?.status])
  const content=node.containerSpec?.html||JSON.stringify(node.containerSpec||{}),identity=node.containerSpec?.type==='html'?workbenchTemplateIdentity(content):node.containerSpec?.type+':'+node.containerSpec?.variant
  react.useLayoutEffect(()=>{const card=ref.current?.closest('[data-research-node-id]');if(workbench&&card){feedback.current=createComponentRefreshFeedback(card);feedback.current.update(binding,content,identity)}return()=>{feedback.current?.dispose();feedback.current=null}},[sessionId,node.id,workbench,node.containerSpec?.type==='html'])
  react.useLayoutEffect(()=>{feedback.current?.update(binding,content,identity)},[binding,content,identity])
- const view=componentDataStatusView(binding),shared=sherlockShared(sessionId)
- return react_jsx_runtime.jsxs(workbench?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':binding?.status||'unbound','aria-label':view.detail+'，'+view.time+(workbench||shared?'':'，设置刷新频率'),...(!workbench?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node)}}:{}),children:[react_jsx_runtime.jsx('span',{className:'odyssey-data-frequency',children:shared?'静态组件':view.detail}),react_jsx_runtime.jsx('time',{dateTime:binding?.lastSuccess?new Date(binding.lastSuccess).toISOString():undefined,children:view.time})]})
+ const view=componentDataStatusView(binding,notice?.key===key?notice.status:null),shared=sherlockShared(sessionId)
+ return react_jsx_runtime.jsxs(workbench?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':view.detail+'，'+view.time+(workbench||shared?'':'，设置刷新频率'),...(!workbench?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:shared?'静态组件':view.detail})]}),react_jsx_runtime.jsx('time',{dateTime:binding?.lastSuccess?new Date(binding.lastSuccess).toISOString():undefined,children:view.time})]})
 }
 
 export const componentDataStatusCss=workbenchRefreshCss+`
 [data-research-generated-container]:has(>.odyssey-data-stamp)>[data-research-preview-body]{position:relative;height:calc(100% - 56px);min-height:0}
 [data-research-generated-container]>.odyssey-data-stamp{box-sizing:border-box;flex:0 0 24px;height:24px;min-height:24px;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin:0;padding:0 8px;border:0;border-top:1px solid var(--research-completed-divider,#8883);border-radius:0 0 2px 2px;background:var(--research-completed-surface,var(--odyssey-card));color:var(--research-completed-muted,var(--odyssey-card-muted));font:10px/20px "EWork DIN Pro","Noto Sans SC",system-ui;cursor:pointer;text-align:left}
-.odyssey-data-stamp .odyssey-data-frequency{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.odyssey-data-stamp .odyssey-data-frequency{display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;min-width:0}
+.odyssey-data-frequency>span{overflow:hidden;text-overflow:ellipsis}
 .odyssey-data-stamp time{flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
 .odyssey-data-stamp:hover:not(:disabled){background:var(--research-completed-inset,#8882);color:var(--research-completed-text,inherit)}
 .odyssey-data-stamp:focus-visible{outline:2px solid #258bea;outline-offset:-2px}
 .odyssey-data-stamp:disabled{cursor:default}
 
-.odyssey-data-stamp[data-component-data-status=error] .odyssey-data-frequency{color:#c07832}
+.odyssey-refresh-indicator{box-sizing:border-box;display:inline-block;position:relative;flex:0 0 10px;width:10px;height:10px;border:1.5px solid currentColor;border-radius:50%}
+[data-refresh-feedback=refreshing] .odyssey-refresh-indicator{border-right-color:transparent;animation:ew-grid-spin 850ms linear infinite}
+[data-refresh-feedback=success] .odyssey-refresh-indicator::after{content:"";position:absolute;left:1.5px;top:1px;width:4px;height:2.5px;border-left:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(-45deg)}
+[data-refresh-feedback=unchanged] .odyssey-refresh-indicator::after{content:"";position:absolute;left:2px;top:3px;width:3px;border-top:1px solid currentColor}
+[data-refresh-feedback=error] .odyssey-refresh-indicator::after{content:"!";position:absolute;inset:-1px 0 0;text-align:center;font:700 8px/9px system-ui}
+.odyssey-data-stamp[data-component-data-status=error] .odyssey-data-frequency{color:var(--research-completed-text,inherit)}
 [data-component-refreshing] [data-workbench-refresh] .ew-grid-icon{animation:ew-grid-spin 1s linear infinite}
 [data-component-refreshing] [data-workbench-refresh]{pointer-events:none}
-[data-component-updating] .odyssey-data-frequency{color:#258bea}
-[data-component-updating] .odyssey-data-frequency::after{content:" · 更新中…"}
-@media(prefers-reduced-motion:reduce){[data-component-refreshing] [data-workbench-refresh] .ew-grid-icon{animation:none!important}}
+[data-component-updating]>[data-research-preview-body]::after{content:"";position:absolute;z-index:2;top:0;left:0;width:30%;height:2px;background:#258bea;pointer-events:none;animation:ework-refresh-progress 1300ms ease-in-out infinite}
+@keyframes ework-refresh-progress{from{transform:translateX(-100%)}to{transform:translateX(334%)}}
+@media(prefers-reduced-motion:reduce){[data-component-refreshing] [data-workbench-refresh] .ew-grid-icon,.odyssey-refresh-indicator{animation:none!important}[data-component-updating]>[data-research-preview-body]::after{animation:none;transform:none;width:100%;opacity:.65}}
 
 `
 
