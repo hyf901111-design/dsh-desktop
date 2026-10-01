@@ -10,6 +10,7 @@ import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench
 import {templateSourceDataIssue} from '../packages/dsh-research-task-runtime/template-data-contract.js'
 import {createWorkbenchRefreshSurface} from '../packages/dsh-research-task-runtime/workbench-refresh.js'
 import {seriesFixtures,performance,multiples,target} from './fixtures/financial-series.js'
+import {refineStoredTemplateHtml} from '../packages/dsh-research-task-runtime/stored-template-refinements.js'
 function dom(data){
  const out=renderFinancialSeries(data),d=new JSDOM(out.body,{runScripts:'outside-only'})
  d.window.ResizeObserver=class{observe(){}disconnect(){}}
@@ -18,6 +19,36 @@ function dom(data){
 }
 const event=(d,el,type,props={})=>el.dispatchEvent(new d.window.KeyboardEvent(type,{bubbles:true,...props}))
 describe('latest financial series data and interactions',()=>{
+ it('keeps endpoint dates readable and hides a colliding middle tick after narrowing or range changes',()=>{
+  for(const width of [240,280,320,586]){
+   const out=renderFinancialSeries(performance),d=new JSDOM(out.body,{runScripts:'outside-only'}),ticks=[]
+   try{
+    const canvas=d.window.document.querySelector('canvas');Object.defineProperty(canvas,'clientWidth',{value:width})
+    d.window.ResizeObserver=class{observe(){}disconnect(){}}
+    canvas.getContext=()=>new Proxy({measureText:text=>({width:String(text).length*6}),clearRect:()=>{ticks.length=0},fillText:(text,x,y)=>{if(y===232)ticks.push({text,x,end:x+String(text).length*6})}},{get:(o,k)=>o[k]??(()=>{}),set:(o,k,v)=>(o[k]=v,true)})
+    d.window.eval(out.script)
+    for(const action of [null,'5','all']){
+     if(action)d.window.document.querySelector(`[data-performance-range="${action}"]`).click()
+     const count=action==='5'?5:performance.candles.length,rows=performance.candles.slice(-count)
+     expect(ticks[0].text).toBe(rows[0].date);expect(ticks.at(-1).text).toBe(rows.at(-1).date)
+     expect(ticks.length).toBeGreaterThanOrEqual(2)
+     if(width===240)expect(ticks.length).toBe(2)
+     if(width===586)expect(ticks.length).toBe(3)
+     for(let i=1;i<ticks.length;i++)expect(ticks[i].x-ticks[i-1].end).toBeGreaterThanOrEqual(6)
+     expect(ticks.at(-1).end).toBeLessThanOrEqual(width-60)
+    }
+   }finally{d.window.close()}
+  }
+ })
+ it('upgrades saved price plots without replacing controls, source data or their recorded routes',()=>{
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(performance))),saved=spec.html.replace(' data-series-date-labels="v2"','').replace(/  const marks=\[\.\.\.new Set\(\[0,Math\.floor\(\(rows.length-1\)\/2\),rows.length-1\]\)\][\s\S]*?  const c=rows\[selected\];/,"  for (const i of [...new Set([0,Math.floor((rows.length-1)/2),rows.length-1])]) { const value=rows[i].date;ctx.fillText(value,Math.max(4,Math.min(right-ctx.measureText(value).width,x(i))),232) }\n  const c=rows[selected];")
+  expect(saved).not.toContain('previousEnd+6')
+  const next=refineStoredTemplateHtml(saved)
+  expect(next).not.toBe(saved);expect(next).toContain('previousEnd+6');expect(next).toContain('data-series-date-labels="v2"')
+  expect(refineStoredTemplateHtml(next)).toBe(next);expect(readTemplateModel({type:'html',html:next}).data).toEqual(performance)
+  const before=new JSDOM(saved),after=new JSDOM(next)
+  try{for(const d of [before,after])d.window.document.querySelectorAll('script').forEach(el=>el.remove());expect(after.window.document.body.innerHTML).toBe(before.window.document.body.innerHTML.replace('class="financial-profile financial-series"','class="financial-profile financial-series" data-series-date-labels="v2"'))}finally{before.window.close();after.window.close()}
+ })
  it('makes exact series schemas available to the parent before its first batch submission',()=>{
   for(const [variant,fields] of Object.entries(FINANCIAL_SERIES_FIELDS)){
    expect(WORKBENCH_EARLY_PLAN).toContain(`artifact.variant="${variant}"`)
