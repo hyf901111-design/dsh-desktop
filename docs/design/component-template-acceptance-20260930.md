@@ -904,3 +904,11 @@ HTTP下载在用户选择原生保存目标后才获取原始字节，不复用�
 19项直接相关检查及项目typecheck通过：契约/原始字节/零字节/实际流式上限/注册表/技能10项，生产安装模块附件、弹窗边界、删除撤销、会话返回、重新载入、补丁幂等和既有最小尺寸9项。首次父卡释放测试使用setArtifacts替代真实删除入口而失败，改用removeNodes并补齐真实移除入口释放后通过；保留原失败日志，不据此宣称原生接受。生产模块浏览器检查三主题280px卡片横向溢出均0、长名称white-space:normal；完整原图naturalWidth/Height为1200×640，翻页保持原网址。
 
 证据attachment-contract-focused-final.log、attachment-client-focused-final.log、attachment-typecheck-final.log、attachment-browser-narrow-audit.json、attachment-browser-original-view.png。两个新增独立类型源码实现后累计74/74，严格原生接受仍71/74；本地集成包、普通输入生成、真实原文件预览/导入/下载、主题/整理/返回继续验证。未运行全功能测试或公开发布。
+
+### 附件原文件弹窗授权回归（2026-10-02）
+
+- 当前原生包首次普通输入完成文件与图库两张 prepared 卡片，完整原字段、零字节、缺失来源及独立权限保留；首次观察完成上界 59.748 秒。
+- 原生一键整理后完整显示三份附件和两张图片；原图翻页弹窗与实际 PNG 下载成功，保存字节 SHA-256 与原文件一致。
+- 原生 CSV 网页预览失败，文件服务实际返回 200；定位为直接调用 NativeWebFrame 遗漏网址授权初始化。
+- 改用既有 HybridWebFrame 先执行 resolveEngine 授权，再展示原生弹窗。回归先红（授权调用 0 次），修复后 7 项附件及网页聚焦检查通过。
+- 尚需重建集成客户端复测 CSV 原文件预览、实际导入恢复、三主题及最终日常输入样本；不提前计为最终原生接受。
