@@ -1,3 +1,4 @@
+import {KPI_GUIDANCE,kpiDataIssue} from './kpi-template-contract.js';
 import {CALENDAR_GUIDANCE} from './calendar-template-contract.js';
 import { researchBentoSize } from './bento-layout.js';
 import { resolveWorkbenchSamples } from './workbench-shared-samples.js';
@@ -19,7 +20,7 @@ const schemaHints = {
     dashboard: 'dashboard 应包含 asOf 和 items:[{label,value:"带单位的字符串",detail?}]（也接受 metrics 中的数值和 unit）。',
     chart: chartTemplateSchema(),
     table: 'table 应包含 columns:[列名] 和 rows:[[单元格]]，每行列数一致。',
-    kpi: 'kpi 应包含 items:[{label,value,change?}]，最多 12 项。',
+    kpi: KPI_GUIDANCE,
     market: 'market 应包含 variant、asOf 和对应数据；metrics 用 items:[{label,value}]，trend 用等长 labels/series.values，量价联动用 price-volume 的等长 labels/prices/volumes 与 priceUnit/volumeUnit，盘口用 order-book 的 bids/asks 与 priceUnit/sizeUnit，资金流向用 fund-flow 的 records:[{period,industry,inflow,outflow}] 与 unit，估值分位带用 valuation-band 的等长 labels/values 与 bands:{p10,p25,p50,p75,p90}，净值回撤用 equity-drawdown 的等长 labels/equity/benchmark 与 unit，配置占比用 allocation-donut 的 items:[{label,value}] 与 unit，瀑布图用 waterfall 的 start/changes:[{label,value}]/unit，漏斗用 funnel 的 stages:[{label,count}]，风险矩阵用 risk-matrix 的 items:[{label,probability,impact,detail?}]，table 用等宽 columns/rows；医药侧图、管线、事件依次用 scatter 的 xLabel/yLabel/items、pipeline 的 stages/items、events 的 items；基金三件套分别用 fund-kpi items、fund-holdings columns/rows、fund-industry items:[{label,weight,benchmark}]。',
     news: 'news 应包含 items:[{title,summary,date?,category?}]。',
     reports: 'reports 应包含 items:[{title,summary,date?,category?}]。',
@@ -92,7 +93,7 @@ function normalizeMetrics(metrics, type) {
     return metrics.map(metric => {
         if (!metric || typeof metric !== 'object') return metric;
         const change = [Number.isFinite(metric.delta) ? `变动 ${metric.delta}${str(metric.unit, 40) ? ` ${metric.unit}` : ''}` : '', Number.isFinite(metric.deltaPct) ? `变动比例 ${metric.deltaPct}（原始模拟值）` : ''].filter(Boolean).join(' · ');
-        if (type === 'kpi') return { label: metric.label, value: metricValue(metric), ...(change ? { change } : {}) };
+        if (type === 'kpi') return {...metric,label:metric.label,value:metric.value,...(change&&!metric.change?{change}:{})};
         const detail = [str(metric.detail, 2000) ? metric.detail : '', change].filter(Boolean).join(' · ');
         return { label: metric.label, value: metricValue(metric), ...(detail ? { detail } : {}) };
     });
@@ -174,6 +175,7 @@ function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
     if (artifact.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(artifact.variant)) return `${financialProfileDataIssue(artifact) ?? ''}。${FINANCIAL_PROFILE_FIELDS[artifact.variant]}`;
     if (['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
+    if (artifact.type === 'kpi') return `${kpiDataIssue(artifact) ?? ''}。${KPI_GUIDANCE}`;
     if (artifact.type === 'chart') {
         const template = templateFor(artifact);
         const issue = chartDataIssue(artifact);
@@ -216,10 +218,10 @@ export function prepareSimulatedArtifact(panel) {
     // Simulated data must never smuggle invented citations into a trusted host template.
     const hasLink = value => value && typeof value === 'object' && Object.entries(value).some(([key, item]) =>
         key === 'url' || key === 'sources' || (item && typeof item === 'object' && hasLink(item)));
-    // A local calendar may reference user-supplied documents alongside virtual
-    // appointments. Its strict URL contract and simulated label remain active;
+    // Local calendars and KPI cards may reference user-supplied documents alongside
+    // virtual records. Their strict URL contracts and simulated label remain active;
     // preserve those fields without fetching or inventing a citation.
-    if (panel.type !== 'calendar' && hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
+    if (!['calendar','kpi'].includes(panel.type) && hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
     const artifact = structuredClone(source);
     artifact.version = 1;
     artifact.type = panel.type;
@@ -244,7 +246,7 @@ export function prepareSimulatedArtifact(panel) {
     }
     // Native canvas schemas are exact-key contracts. Keep the data fields and
     // carry a supplied snapshot time into the visible title when applicable.
-    if (['table', 'kpi'].includes(artifact.type)) {
+    if (artifact.type === 'table') {
         const allowed = { chart: ['version', 'type', 'title', 'variant', 'labels', 'series'], table: ['version', 'type', 'title', 'columns', 'rows'], kpi: ['version', 'type', 'title', 'items'] }[artifact.type];
         const asOf = str(artifact.asOf, 80) ? artifact.asOf : undefined;
         for (const key of Object.keys(artifact)) if (!allowed.includes(key)) delete artifact[key];

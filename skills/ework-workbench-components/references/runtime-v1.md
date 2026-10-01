@@ -30,3 +30,5 @@ RSS/Atom 固定模板 type:rss，version:1/title/asOf/feeds。每源 {id,url,tit
 21Z 日程日历 type:calendar：version:1/title/items，0–40条完整 title、summary 或真实 url，可选 date/time/category；确定日期 YYYY-MM-DD，日期未知保留原文，不用抓取时间补日期。可选 asOf/note/month/timeZone。Figma 1918:345317，656×424、统一最小280×180；月历在上、当天安排在下，今天与前后月、来源展开、待定日期和本画布个人日程。个人记录20条/24KB、共享及只读禁止新增；不向外部日历预约。与 chart.calendar 的自然日热力契约分开。
 
 日历首次完整提交直接 prepared。原文字段不改写；已提供的原文 URL 独立保留（模拟日历同样允许），不联网读取、不把链接拼入摘要。
+
+- `kpi` 使用当前 EFund/Widget/KPI 1918:343978 源模板（656×286，三主题与内容自适应）。一次提交 version:1/type:kpi/title/items:[{label,value,unit?,change?,detail?,missing?,source?,url?}]；1–12项，完整JSON≤32KB，可加 subject/asOf/range/note/sources:[{name,url?}]。保留原0、负数、原单位、完整口径和来源；value允许有限数值、原字符串或null（null必须给missing原因），不得补零或套源设计的128/24等样例。用户明确提供的安全HTTP原文链接可独立保留，无须联网。刷新指标沿用组件真实数据源刷新；未绑定时打开数据源设置，不能以新时间戳或随机值伪装刷新。展开指标查看完整原字段。

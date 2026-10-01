@@ -1,3 +1,4 @@
+import {renderKpiArtifact} from './kpi-artifact.js';
 import {renderNoteArtifact} from './note-artifact.js';
 import {renderRssArtifact} from './rss-artifact.js';
 import {renderClockArtifact} from './clock-artifact.js';
@@ -41,12 +42,12 @@ export function acceptArtifactOutput(text) {
    if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
    continue;
   }
-  const spec=parseResearchContainerSpec(renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(detailedKpiMarket(candidate) ?? candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderKpiArtifact(candidate) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.
   if(spec.type==='html' && researchHtmlText(spec.html).length===0 && !/<(?:svg|canvas)\b/i.test(spec.html))continue;
-  return JSON.stringify(retainTemplateModel(spec,detailedKpiMarket(candidate) ?? candidate));
+  return JSON.stringify(retainTemplateModel(spec,candidate));
  }
  return undefined;
 }
@@ -116,22 +117,6 @@ export function workbenchMarketVariantIssue(output, prompt) {
   if(symbols.some(symbol=>!rows.includes(symbol)))return '多标的行情表必须在表格行中保留所请求的证券代码；缺失标的须明确说明，不能只写在 note。';
  }
  return null;
-}
-
-// A KPI item can carry source/date details even though the older native KPI
-// schema only has change. Render that complete data with the trusted metrics
-// template instead of discarding the panel or squeezing evidence into a value.
-function detailedKpiMarket(candidate) {
- const scalar=value=>typeof value==='string'&&value.trim().length>0&&value.length<=512||typeof value==='number'&&Number.isFinite(value);
- if(candidate?.version!==1||candidate.type!=='kpi'||!Array.isArray(candidate.items)||
-   Object.keys(candidate).some(key=>!['version','type','title','items'].includes(key))||
-   !candidate.items.some(item=>typeof item?.detail==='string'&&item.detail.trim()))return null;
- if(candidate.items.some(item=>!item||Object.keys(item).some(key=>!['label','value','change','detail'].includes(key))||
-   typeof item.label!=='string'||!item.label.trim()||!scalar(item.value)||item.change!==undefined&&!scalar(item.change)||
-   item.detail!==undefined&&(typeof item.detail!=='string'||item.detail.length>2000)))return null;
- return {version:1,type:'market',variant:'metrics',title:candidate.title,asOf:'数据时点见各指标说明',
-  items:candidate.items.map(item=>{const detail=[item.change,item.detail].filter(value=>value!==undefined&&value!==null&&String(value).trim()).map(String).join(' · ');
-   return {label:item.label,value:String(item.value),...(detail?{detail}:{})}})};
 }
 
 // A source outage is useful research context, but an empty plot is neither a
