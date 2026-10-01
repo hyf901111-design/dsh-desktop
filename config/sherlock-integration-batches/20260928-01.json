@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "技术图表SVG交互恢复修正",
+        "featureName": "Markdown笔记预置与完整草稿保存",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
-        "tipCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
+        "baseCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
+        "tipCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
         "commits": [
           {
-            "commit": "ce8a837fcef63faf4953738a19672307f97315c0",
+            "commit": "695889abebed49bba55f02b68016a063895a1ae8",
             "parents": [
-              "8ecefbd0a4363b75c84db5ab32482cd6ec740823"
+              "ce8a837fcef63faf4953738a19672307f97315c0"
             ],
-            "subject": "修复：恢复SVG图标交互时避免图表退回文字视图"
+            "subject": "验收：技术图表三模式与个人绘图持久恢复通过原生验证"
+          },
+          {
+            "commit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
+            "parents": [
+              "695889abebed49bba55f02b68016a063895a1ae8"
+            ],
+            "subject": "功能：预置Markdown笔记工具栏并完整保存草稿与原始材料"
           }
         ],
         "files": [
@@ -29,11 +36,79 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
           },
           {
             "status": "M",
-            "path": "test/component-interaction-state.test.js"
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/note-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/note-template-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/note-toolbar-assets.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-interaction-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/markdown-note.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/operations-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-refresh.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workflow-template.test.js"
           }
         ],
         "checks": [
@@ -41,17 +116,20 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/markdown-note.test.js",
               "test/workbench-refresh.test.js",
-              "test/component-data-status.test.js",
-              "test/financial-charting.test.js",
+              "test/component-template-registry.test.js",
               "test/component-interaction-state.test.js",
-              "test/workbench-component-presentation.test.js",
+              "test/operations-template.test.js",
+              "test/workflow-template.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-design-contract.test.js",
               "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "177项相关视图、交互、呈现、客户端与重复补丁检查通过",
-            "verifiedCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
-            "completedAt": "2026-10-01T05:21:44.020069+00:00",
+            "summary": "222项笔记、草稿、來源桥、生成契约及客户端聚焦检查通过",
+            "verifiedCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
+            "completedAt": "2026-10-01T06:13:28.883785+00:00",
             "timeoutMs": 300000
           },
           {
@@ -62,70 +140,26 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
-            "completedAt": "2026-10-01T05:21:44.020069+00:00",
+            "verifiedCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
+            "completedAt": "2026-10-01T06:13:28.883785+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原会话42条交互日志生产双层CSP复现SVG错误后修复，四条实际绘图三模式及卡片重建与整页重开精确恢复，0页面错误；原生新包待验"
+          "summary": "生产双层CSP九组宽度及模式检查、10008字草稿组件重建与整页重开逐字恢复，0页面错误；实际客户端新包待验"
         },
         "acceptanceCriteria": [
-          "技术图表个人绘图在会话切换后精确恢复",
-          "三模式与整理保持参数和绘图",
-          "应用重启后保存状态可恢复"
+          "Figma原工具栏与三模式窄卡可读",
+          "原材料与长草稿完整保存",
+          "普通中文直接匹配note预置",
+          "真实客户端会话及重启恢复"
         ],
         "risks": [
-          "最终本地包会话与重启恢复仍待复验",
-          "全74类目标未完成"
+          "最终本地包自然语言创建与草稿恢复待复验",
+          "实现60/74、原生接受59/74，整体目标未完成"
         ],
-        "generatedAt": "2026-10-01T05:21:44.020069+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4e38e176cdf5f7c1162544faa4bbb8f1f86c70d1",
-        "verificationCommit": "4e38e176cdf5f7c1162544faa4bbb8f1f86c70d1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "4e38e176cdf5f7c1162544faa4bbb8f1f86c70d1",
-            "completedAt": "2026-10-01T05:22:55.638Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "4e38e176cdf5f7c1162544faa4bbb8f1f86c70d1",
-            "completedAt": "2026-10-01T05:22:55.638Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4e38e176cdf5f7c1162544faa4bbb8f1f86c70d1",
-            "completedAt": "2026-10-01T05:22:55.638Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T05:22:55.638Z"
+        "generatedAt": "2026-10-01T06:13:28.883785+00:00"
       }
     }
   ],
