@@ -24,6 +24,7 @@ export function researchBentoSize(node = {}, measured) {
 export function researchMarketContentDimensions(variant, data = {}) {
   if(variant==='dividends')return {width:980,height:330};
   if(variant==='stock-splits')return {width:485,height:330};
+  if(['insider-trading','institutional-ownership'].includes(variant))return {width:980,height:410};
   if(['revenue-geography','revenue-business'].includes(variant))return {width:980,height:410};
   const fundamental={'company-profile':[980,550],'financial-statements':[980,500]}[variant];
   if(fundamental)return {width:fundamental[0],height:fundamental[1]};

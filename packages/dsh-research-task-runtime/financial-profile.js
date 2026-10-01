@@ -2,6 +2,7 @@
 // the host owns the quote summary, key/value rows and disclosure table.
 import {FINANCIAL_SNAPSHOT_VARIANTS,FINANCIAL_SNAPSHOT_FIELDS,financialSnapshotDataIssue,renderFinancialSnapshot,FINANCIAL_SNAPSHOT_CSS} from './financial-snapshot.js'
 import {FINANCIAL_SERIES_VARIANTS,FINANCIAL_SERIES_FIELDS,financialSeriesDataIssue,renderFinancialSeries,FINANCIAL_SERIES_CSS} from './financial-series.js'
+import {FINANCIAL_OWNERSHIP_VARIANTS,FINANCIAL_OWNERSHIP_FIELDS,financialOwnershipDataIssue,renderFinancialOwnership,FINANCIAL_OWNERSHIP_CSS} from './financial-ownership.js'
 import {FINANCIAL_ACTION_VARIANTS,FINANCIAL_ACTION_FIELDS,financialActionDataIssue,renderFinancialActions,FINANCIAL_ACTION_CSS} from './financial-actions.js'
 import {FINANCIAL_REVENUE_VARIANTS,FINANCIAL_REVENUE_FIELDS,financialRevenueDataIssue,renderFinancialRevenue,FINANCIAL_REVENUE_CSS} from './financial-revenue.js'
 import {FINANCIAL_FUNDAMENTAL_VARIANTS,FINANCIAL_FUNDAMENTAL_FIELDS,financialFundamentalDataIssue,renderFinancialFundamental,FINANCIAL_FUNDAMENTAL_CSS} from './financial-fundamentals.js'
@@ -9,13 +10,14 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const text=v=>typeof v==='string'&&v.trim().length>0&&v.length<=2000
 const finite=v=>typeof v==='number'&&Number.isFinite(v)
 const encode=v=>JSON.stringify(v).replace(/</g,'\\u003c')
-export const FINANCIAL_PROFILE_VARIANTS=Object.freeze(['ticker-information','key-metrics','management-team',...FINANCIAL_SNAPSHOT_VARIANTS,...FINANCIAL_SERIES_VARIANTS,...FINANCIAL_FUNDAMENTAL_VARIANTS,...FINANCIAL_REVENUE_VARIANTS,...FINANCIAL_ACTION_VARIANTS])
+export const FINANCIAL_PROFILE_VARIANTS=Object.freeze(['ticker-information','key-metrics','management-team',...FINANCIAL_SNAPSHOT_VARIANTS,...FINANCIAL_SERIES_VARIANTS,...FINANCIAL_FUNDAMENTAL_VARIANTS,...FINANCIAL_REVENUE_VARIANTS,...FINANCIAL_ACTION_VARIANTS,...FINANCIAL_OWNERSHIP_VARIANTS])
 export const FINANCIAL_PROFILE_FIELDS=Object.freeze({
  ...FINANCIAL_SNAPSHOT_FIELDS,
  ...FINANCIAL_SERIES_FIELDS,
  ...FINANCIAL_FUNDAMENTAL_FIELDS,
  ...FINANCIAL_REVENUE_FIELDS,
  ...FINANCIAL_ACTION_FIELDS,
+ ...FINANCIAL_OWNERSHIP_FIELDS,
  'ticker-information':'"symbol":"证券代码","name":"名称","price":数字或null,"priceUnit":"币种/单位","dayChange":数字或null,"dayChangePercent":百分数数字或null,"info":[{"label":"成交量/行业/国家/市场等","value":"保留单位的来源值"}]；可选 sparkline:{labels:[时点],values:[数字或null]}，2–366个等长时点，缺失保留null、不能补0；没有走势图时用sparklineMissing说明。任一报价字段为null时必须提供missing说明，宿主不从历史序列猜当前报价',
  'key-metrics':'"symbol":"证券代码","items":[{"label":"指标","value":"保留单位的值"或null,"period":"该指标的统计/披露周期","detail":"可选计算口径","missing":"value为null时必填的缺失原因"}]；1–40项，不把估值、成交量、股本等不同单位混成同一序列，不编造缺失值',
  'management-team':'"symbol":"证券代码","period":"报酬披露周期","members":[{"name":"姓名","role":"完整职位","compensation":非负数字或null,"currency":"币种"或null,"period":"可选该成员不同披露周期","missing":"报酬为null时必填的缺失原因"}]；1–100人，金额按原币种原单位，不能合计不同币种或把未披露填成0；可选compensationBasis说明税前/总报酬等口径'
@@ -28,6 +30,7 @@ export function financialProfileDataIssue(s){
  if(FINANCIAL_FUNDAMENTAL_VARIANTS.includes(s.variant))return financialFundamentalDataIssue(s)
  if(FINANCIAL_REVENUE_VARIANTS.includes(s.variant))return financialRevenueDataIssue(s)
  if(FINANCIAL_ACTION_VARIANTS.includes(s.variant))return financialActionDataIssue(s)
+ if(FINANCIAL_OWNERSHIP_VARIANTS.includes(s.variant))return financialOwnershipDataIssue(s)
  if(!text(s.symbol))return 'symbol 必须提供证券代码'
  if(s.variant==='ticker-information'){
   if(!text(s.name)||!text(s.priceUnit))return 'name/priceUnit 必须提供名称及价格单位'
@@ -124,7 +127,7 @@ body .ticker-info span{color:var(--sherlock-muted)}
 body .ticker-missing{font-size:11px;line-height:16px;color:var(--sherlock-muted);margin:4px 0 0}
 body .ticker-history table{min-width:0}
 @media(max-width:600px){body .ticker-summary{grid-template-columns:1fr;gap:6px}body .ticker-spark{max-width:260px;width:100%}body .ticker-spark svg{height:64px}body .ticker-quotes{gap:4px 12px}}
-`+FINANCIAL_SNAPSHOT_CSS+FINANCIAL_SERIES_CSS+FINANCIAL_FUNDAMENTAL_CSS+FINANCIAL_REVENUE_CSS+FINANCIAL_ACTION_CSS
+`+FINANCIAL_SNAPSHOT_CSS+FINANCIAL_SERIES_CSS+FINANCIAL_FUNDAMENTAL_CSS+FINANCIAL_REVENUE_CSS+FINANCIAL_ACTION_CSS+FINANCIAL_OWNERSHIP_CSS
 export function renderFinancialProfile(s){
  if(financialProfileDataIssue(s))return null
  if(FINANCIAL_SNAPSHOT_VARIANTS.includes(s.variant))return renderFinancialSnapshot(s)
@@ -132,6 +135,7 @@ export function renderFinancialProfile(s){
  if(FINANCIAL_FUNDAMENTAL_VARIANTS.includes(s.variant))return renderFinancialFundamental(s)
  if(FINANCIAL_REVENUE_VARIANTS.includes(s.variant))return renderFinancialRevenue(s)
  if(FINANCIAL_ACTION_VARIANTS.includes(s.variant))return renderFinancialActions(s)
+ if(FINANCIAL_OWNERSHIP_VARIANTS.includes(s.variant))return renderFinancialOwnership(s)
  if(s.variant==='ticker-information'){
   const signed=v=>v===null?'—':(v>0?'+':'')+String(v)
   const direction=s.dayChangePercent??s.dayChange
