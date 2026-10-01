@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "嵌入网页画布主题与加载失败提示修复",
+        "featureName": "最小尺寸嵌入网页表单滚动修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
-        "tipCommit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
+        "baseCommit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
+        "tipCommit": "4d108ad6caf962d4bf4e125b98c33db842b2b675",
         "commits": [
           {
-            "commit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
+            "commit": "4d108ad6caf962d4bf4e125b98c33db842b2b675",
             "parents": [
-              "843278c8e4d52a65d0f1ca9318bf9a44fcecb807"
+              "6dbfc1b6960dbe5fb1eda71e1facf22e28106724"
             ],
-            "subject": "修复嵌入网页按钮与失败提示的画布主题颜色"
+            "subject": "修复最小尺寸网页卡片表单的居中裁切与按钮挤压"
           }
         ],
         "files": [
@@ -30,10 +30,6 @@
           {
             "status": "M",
             "path": "scripts/lib/iframe-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -49,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "12项嵌入网页与画布主题聚焦通过",
-            "verifiedCommit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
-            "completedAt": "2026-10-01T13:03:51.696993+00:00",
+            "verifiedCommit": "4d108ad6caf962d4bf4e125b98c33db842b2b675",
+            "completedAt": "2026-10-01T13:20:45.132367+00:00",
             "timeoutMs": 300000
           },
           {
@@ -61,14 +57,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
-            "completedAt": "2026-10-01T13:03:51.696993+00:00",
+            "verifiedCommit": "4d108ad6caf962d4bf4e125b98c33db842b2b675",
+            "completedAt": "2026-10-01T13:20:45.132367+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实集成客户端首提19.782秒prepared无子代理，保存与非法拒绝、网页切回保留、刷新与失败重试通过；本次主题颜色最终包待复验"
+          "summary": "真实Chrome生产渲染器280x180表单完整滚动，按钮30px不挤压且可达；真实集成包主题与重启Cookie通过；本次最小表单最终包待复验"
         },
         "acceptanceCriteria": [
           "Figma485×340空态、14px源加号、统一最小尺寸",
@@ -76,67 +72,10 @@
           "真实客户端网页加载失败重试与往返保留"
         ],
         "risks": [
-          "本次画布模式颜色修复最终本地包尚待验证",
+          "本次最小表单最终本地包尚待验证",
           "实现65/74原生接受64/74，总目标仍在执行"
         ],
-        "generatedAt": "2026-10-01T13:03:51.696993+00:00"
-      },
-      "merged": {
-        "mergeCommit": "21fcf8654832d82e403d90f0289a3e6ac8ffbb81",
-        "verificationCommit": "21fcf8654832d82e403d90f0289a3e6ac8ffbb81",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "21fcf8654832d82e403d90f0289a3e6ac8ffbb81",
-            "completedAt": "2026-10-01T13:05:10.519Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "21fcf8654832d82e403d90f0289a3e6ac8ffbb81",
-            "completedAt": "2026-10-01T13:05:10.519Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "21fcf8654832d82e403d90f0289a3e6ac8ffbb81",
-            "completedAt": "2026-10-01T13:05:10.519Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "21fcf8654832d82e403d90f0289a3e6ac8ffbb81",
-            "completedAt": "2026-10-01T13:05:10.519Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T13:05:10.519Z"
+        "generatedAt": "2026-10-01T13:20:45.132367+00:00"
       }
     },
     {
