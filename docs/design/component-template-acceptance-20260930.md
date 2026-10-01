@@ -561,3 +561,9 @@ Figma源1917:343725完整980×550截图已目检，临时副本已删除。独�
 10项来源与数值、缺失断线、参数、绘图和重排恢复检查通过。生产双层CSP沙盒980/480/320/280px×三模式×两种旧高度共24组自然尺寸检查与3组三模式绘图交互通过，0页面错误；控件不溢出，日期不重叠，图中文字保持实际字号。客户端初次完成高度检查先暴露白名单缺失，补齐接受及整理阅读宽度并重新生成实际客户端模块后通过。16个直接相关及继承门禁文件360项、20项来源权限、6项规划政策、8项尺寸桥与类型检查通过，未运行全功能测试。
 
 证据charting-source.png、charting-red.log、charting-height-green.log、charting-gate0-final.log、charting-gate1..4.log、charting-browser-checks.json、charting-natural-*、charting-interaction-*与charting-browser-final.log位于/tmp/ework-template-acceptance-20260930/。实现59/74，原生接受仍58/74；技术图表需最终本地包普通中文输入、字段审计、三模式、整理和实际绘图及恢复检查。剩余15类未实现；不能宣称整体成功率已达标。
+
+### 技术图表原生中间验收与参数标签修正
+
+e7c068dc本地包签名、来源与完整包检查通过，端口64638。普通中文单张创建首次75.355秒完成，market.charting一次prepared；195个来源字段逐项一致。原生首次显示、零及未知成交量、不同币种比较缺失不连线、实际趋势线绘制、SMA3改为5计算、整理、三条完整周线原始表已核验。展开表位于组件内部滚动区，实际向下滚动后全部三行与缺失原因可达。
+
+原生修改周期暴露辅助名称仍为旧周期和指标模板仍显示原配置；同步复现测试在旧源码失败。修正后辅助名称随当前周期更新，非预置参数显示自定义参数，恢复时同步。11项技术图表与18项直接相关刷新/呈现检查、类型检查及三模式生产双层沙盒参数与绘图交互通过，0页面错误。最终新包的参数标签、三模式及切换会话恢复继续待验；原生接受仍58/74。证据charting-parameter-sync-red.log、charting-parameters-gate.log、charting-parameters-typecheck.log、charting-parameters-browser-checks.json与charting-native-*.png位于上述临时目录。
