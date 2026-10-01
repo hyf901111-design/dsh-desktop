@@ -509,3 +509,13 @@ metrics正文新增完整asOf，来源不可用的说明也必须可见，不只
 14项来源、日期、零/null、披露链接安全、空结果、原汇总、季度选项、键盘选择和语义恢复测试通过。生产双层CSP36组980/480/320px×三模式×两种旧高度验证收敛且无裁切，6组三模式交互检查通过，0页面错误。长表固定日期/项目列，横纵滚动有界；窄控件整行换行。生产检查先发现买卖颜色被通用表格覆盖，补齐专用语义色规则后通过。29个直接相关及继承门禁文件524项、20项来源权限、6项规划政策、8项尺寸桥和类型检查通过，未运行全功能测试。
 
 证据ownership-red.log、ownership-empty-red.log、ownership-direction-color-red.log、ownership-focused-final.log、ownership-browser-checks.json、ownership-natural-*、ownership-interaction-*、ownership-gate0-final.log与ownership-gate1..4.log位于/tmp/ework-template-acceptance-20260930/。实现55/74，原生接受53/74；新增两类仍需最终本地包普通中文输入、原字段审计与原生模式/整理/会话返回检查。剩余19类未实现；不宣称整体生成成功率超过90%。
+
+### 内幕交易与机构持仓最终本地包接受
+
+源码2500f567受管集成至6cbd68cd，本地构建、完整包检查、签名与v1.18.0技能源码一致性通过，真实主界面端口54760。普通中文输入自身验证会话34630f6f-841e-40ce-99dc-bca5b9f7cc19，一次批量创建两张预置卡，77.191秒完成、首次提交成功、无其他取数工具或联网。独立审计235个来源字段均与原输入一致。生产双层CSP追加280px宽度后，48组宽度/三模式/旧高度及6组交互检查全部通过，0页面错误。
+
+首次显示五条交易完整，机构12项长表有界滚动，来源说明与数据时点可读。原生深色、浅色、企业模式及整理均通过。奖励授予筛选1/5条，原数量0、持有0与未知金额、披露日、人员编号分开展示。机构年度2025只显示已取得Q4报告与1000/800/200/25%；恢复2026后显示Q2来源12项汇总，普通股与优先股分别保留，第三条未知持仓可以滚到并选中查看原缺失原因。优先股筛选只改变明细行数，汇总仍1200股、12%及-3百分点，不以50股部分明细替换来源总额。
+
+切至另一自身验证会话再返回，交易搜索“奖励授予”及已选明细、机构2026-Q2、“优先股”搜索、展开明细及已选股类均恢复。展开左栏后的窄画布控件整行换行，长表滚动和完整来源说明可达；没有改动其他工作台。精确280×160客户端拖拽两次未可靠改变框，不计为该原生路径通过，此前约315px原生渐隐/悬停证据与统一下限聚焦检查继续有效。
+
+证据ownership-native-audit.json、ownership-native-first-dark.png、ownership-native-light.png、ownership-native-enterprise.png、ownership-native-grant.png、ownership-native-institution-details.png、ownership-native-restored-narrow.png、ownership-native-restored-details.png与本地构建/包检查日志。新增两类计入接受，实现及原生接受均55/74，剩余19类；该次一次成功、低于五分钟不能替代整体成功率统计。
