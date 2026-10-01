@@ -9,6 +9,7 @@ const MAX_ID_LENGTH = 512
 const MAX_NAME_LENGTH = 160
 const MAX_TEXT_BYTES = 8 * 1024 * 1024
 const MAX_BINARY_BYTES = 16 * 1024 * 1024
+const MAX_REMOTE_FILE_BYTES = 32 * 1024 * 1024
 
 type TextFormat = 'md' | 'csv' | 'json' | 'txt' | 'svg' | 'html'
 type BinaryFormat = 'png' | 'jpg'
@@ -24,6 +25,7 @@ export type ResearchCanvasExportRequest =
   | { kind: 'text'; format: TextFormat; suggestedName: string; content: string }
   | { kind: 'binary'; format: BinaryFormat; suggestedName: string; base64: string }
   | { kind: 'webloc'; suggestedName: string; url: string }
+  | { kind: 'remote-original'; suggestedName: string; url: string }
 
 export type ResearchCanvasExportResult =
   | { status: 'saved' }
@@ -38,6 +40,7 @@ export type ResearchCanvasExportDependencies = {
   writeFile(targetPath: string, data: string | Uint8Array, options: { mode: number }): Promise<void>
   copyFile(sourcePath: string, targetPath: string): Promise<void>
   resolveExportSource(value: unknown): Promise<{ path: string; name: string } | null>
+  fetchOriginal?(url: string, options: RequestInit): Promise<Response>
 }
 
 const defaultFileOperations = { writeFile, copyFile }
@@ -113,6 +116,14 @@ function validSvg(value: string): boolean {
 
 function validRequest(value: unknown): ResearchCanvasExportRequest | null {
   const input = value as Record<string, unknown> | null
+  if (input?.kind === 'remote-original') {
+    const record = exactRecord(value, ['kind', 'suggestedName', 'url'])
+    if (!record || typeof record.suggestedName !== 'string' || !record.suggestedName.trim() ||
+        record.suggestedName.length > MAX_NAME_LENGTH || typeof record.url !== 'string' ||
+        record.url !== record.url.trim() || /[\u0000-\u0020\u007f]/.test(record.url) ||
+        normalizeResearchLinkUrl(record.url) === null) return null
+    return record as ResearchCanvasExportRequest
+  }
   if (input?.kind === 'original') {
     const record = exactRecord(value, [
       'kind', 'sessionId', 'nodeId', 'authorizationId', 'suggestedName'
@@ -199,6 +210,48 @@ export async function saveResearchCanvasExport(
   if (request === null) return { status: 'error', message: '下载内容无效。' }
 
   try {
+    if (request.kind === 'remote-original') {
+      if (!dependencies.fetchOriginal) return { status: 'error', message: '当前客户端不支持原文件下载。' }
+      const name = cleanName(request.suggestedName)
+      const extension = path.extname(name).slice(1).toLowerCase()
+      const selection = await dependencies.showSaveDialog({
+        title: '下载原文件', defaultPath: name,
+        ...(extension ? { filters: [{ name: '原始文件', extensions: [extension] }] } : {})
+      })
+      if (selection.canceled || !selection.filePath) return { status: 'cancelled' }
+      // Original downloads never reuse authenticated web-page cookies and do
+      // not follow redirects into an unreviewed destination.
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 60000)
+      try {
+        const response = await dependencies.fetchOriginal(request.url, {
+          credentials: 'omit', redirect: 'error', signal: controller.signal
+        })
+        const declared = Number(response.headers.get('content-length'))
+        if (!response.ok || !response.body || declared > MAX_REMOTE_FILE_BYTES) {
+          controller.abort()
+          return { status: 'error', message: '原文件不可用或超过32MB，请从原来源下载。' }
+        }
+        const reader = response.body.getReader(), chunks: Uint8Array[] = []
+        let length = 0
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          length += value.byteLength
+          if (length > MAX_REMOTE_FILE_BYTES) {
+            controller.abort()
+            await reader.cancel().catch(() => {})
+            return { status: 'error', message: '原文件超过32MB，请从原来源下载。' }
+          }
+          chunks.push(value)
+        }
+        const bytes = new Uint8Array(length)
+        let offset = 0
+        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+        await dependencies.writeFile(selection.filePath, bytes, { mode: 0o600 })
+        return { status: 'saved' }
+      } finally { clearTimeout(timer) }
+    }
     if (request.kind === 'original') {
       const source = await dependencies.resolveExportSource({
         sessionId: request.sessionId,

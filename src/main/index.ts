@@ -875,6 +875,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
       },
       writeFile: exportFileOperations.writeFile,
       copyFile: exportFileOperations.copyFile,
+      fetchOriginal: (url, options) => net.fetch(url, options),
       resolveExportSource: (value) => researchFilePreviewRegistry!.resolveExportSource(value)
     }
   })

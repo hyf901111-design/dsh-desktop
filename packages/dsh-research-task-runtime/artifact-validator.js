@@ -1,3 +1,4 @@
+import {parseAttachmentSpec} from './attachment-template-contract.js';
 import {parseDerivedSpec} from './derived-template-contract.js';
 import {parseAudioSpec} from './audio-template-contract.js';
 import {parseYoutubeSpec} from './youtube-template-contract.js';
@@ -5,7 +6,7 @@ import {parseIframeSpec} from './iframe-template-contract.js';
 // Host-side acceptance uses the same schema as the canvas parser. Covered by parity tests.
 import { MAX_RESEARCH_HTML_BYTES } from "./html-artifact.js";
 const RESEARCH_CONTAINER_MAX_MARKDOWN = 32e3;
-const RESEARCH_CONTAINER_TYPES = new Set(["audio","summary","youtube","iframe","web","chart","table","kpi","markdown","mind-map","html"]);
+const RESEARCH_CONTAINER_TYPES = new Set(["files","gallery","audio","summary","youtube","iframe","web","chart","table","kpi","markdown","mind-map","html"]);
 		function normalizeResearchWebUrl(value) {
 			if (typeof value !== "string") return null;
 			const source = value.trim().replace(/^(https?:\/\/)(?:(?:%0[9a-d])|%20|[\u0009-\u000d\u0020])+/i, "$1");
@@ -58,6 +59,7 @@ const RESEARCH_CONTAINER_TYPES = new Set(["audio","summary","youtube","iframe","
 			}
 			if (value.type === "summary" || value.type === "mind-map" && Object.hasOwn(value,'source')) return parseDerivedSpec(value);
 			if (value.type === "youtube") return parseYoutubeSpec(value);
+			if (value.type === "files" || value.type === "gallery") return parseAttachmentSpec(value);
 			if (value.type === "audio") return parseAudioSpec(value);
 			if (value.type === "iframe") return parseIframeSpec(value);
 			if (value.type === "web") {

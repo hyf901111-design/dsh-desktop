@@ -36,7 +36,7 @@ export function patchResearchNativeWeb(source) {
   const anchor='function ResearchCanvasWebFrame(props) {'
   if(!source.includes(anchor))throw Error('Missing web frame renderer')
   source=source.replace(anchor,`/* ODYSSEY_HYBRID_WEB */
-  function ResearchNativeWebFrame({node,sessionId,visible=true,onInspection}) {
+  function ResearchNativeWebFrame({node,sessionId,visible=true,onInspection,inDialog=false}) {
     const ref=(0,react.useRef)(null),imageRef=(0,react.useRef)(null),reloadRef=(0,react.useRef)(0),zoomRef=(0,react.useRef)(1);
     const [error,setError]=(0,react.useState)(''),[ready,setReady]=(0,react.useState)(false);
     // Scrolling or changing the window can temporarily mark a card offscreen.
@@ -62,7 +62,7 @@ export function patchResearchNativeWeb(source) {
       document.addEventListener('pointerdown',down,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('lostpointercapture',up,true);document.addEventListener('wheel',wheel,true);document.addEventListener('keydown',keyDown,true);document.addEventListener('keyup',keyUp,true);window.addEventListener('blur',reset);
       const tick=async()=>{
         if(stopped||!ref.current||held||space||moving())return;
-        const el=ref.current,card=el.closest('[data-research-node-id]'),root=el.closest('[data-research-canvas]'),r=el.getBoundingClientRect(),c=root?.getBoundingClientRect();
+        const el=ref.current,card=el.closest('[data-research-node-id]'),root=el.closest('[data-research-canvas]'),r=el.getBoundingClientRect(),c=inDialog?{left:0,top:0,right:window.innerWidth,bottom:window.innerHeight}:root?.getBoundingClientRect();
         if(!card||!c)return;
         const layoutSize={width:el.offsetWidth,height:el.offsetHeight};
         const scale=r.width/(layoutSize.width||r.width||1);
@@ -71,7 +71,8 @@ export function patchResearchNativeWeb(source) {
         const points=[[r.left+4,r.top+4],[r.right-4,r.top+4],[r.left+4,r.bottom-4],[r.right-4,r.bottom-4],[(r.left+r.right)/2,(r.top+r.bottom)/2]];
         const unobscured=points.every(([x,y])=>document.elementFromPoint(x,y)?.closest('[data-research-node-id]')===card);
         const overlay=Array.from(document.querySelectorAll('[role=menu],dialog[open],[aria-modal=true],[data-research-context-menu]')).some(e=>!e.contains(el)&&e.getBoundingClientRect().width>0);
-        const active=!held&&!space&&!overlay&&unobscured&&card.getAttribute('data-selected')==='true'&&root.querySelectorAll('[data-research-node-id][data-selected=true]').length===1&&!root.hasAttribute('data-research-operation')&&!root.querySelector('[data-research-marquee]')&&r.left>=c.left&&r.right<=c.right&&r.top>=c.top&&r.bottom<=c.bottom;
+        const selection=inDialog?!!el.closest('dialog[open]'):card.getAttribute('data-selected')==='true'&&root.querySelectorAll('[data-research-node-id][data-selected=true]').length===1;
+        const active=!held&&!space&&!overlay&&unobscured&&selection&&!root.hasAttribute('data-research-operation')&&!root.querySelector('[data-research-marquee]')&&r.left>=c.left&&r.right<=c.right&&r.top>=c.top&&r.bottom<=c.bottom;
         const signature=rectKey+active;
         if(busy||r.width<1||r.height<1||signature===tick.signature&&Date.now()-lastSent<(loading||snapshotPending?250:active?1200:2500))return;
         tick.signature=signature;lastSent=Date.now();busy=true;const requestEpoch=motionEpoch;
@@ -86,7 +87,7 @@ export function patchResearchNativeWeb(source) {
       canvas?.addEventListener('scroll',schedule);window.addEventListener('resize',schedule);
       timer=setInterval(tick,250);tick();
       return()=>{stopped=true;clearInterval(timer);if(frame)cancelAnimationFrame(frame);resizeObserver.disconnect();selectionObserver.disconnect();canvas?.removeEventListener('scroll',schedule);window.removeEventListener('resize',schedule);motionObserver.disconnect();if(element?.__eworkReloadWeb===reload)delete element.__eworkReloadWeb;if(element?.__eworkAdjustWebZoom===zoom)delete element.__eworkAdjustWebZoom;document.removeEventListener('pointerdown',down,true);document.removeEventListener('pointerup',up,true);document.removeEventListener('pointercancel',up,true);document.removeEventListener('lostpointercapture',up,true);document.removeEventListener('wheel',wheel,true);document.removeEventListener('keydown',keyDown,true);document.removeEventListener('keyup',keyUp,true);window.removeEventListener('blur',reset);bridge.hideNative(identity).catch(()=>{});};
-    },[sessionId,node.id,node.url,visible]);
+    },[sessionId,node.id,node.url,visible,inDialog]);
     return (0,react_jsx_runtime.jsxs)('div',{ref,'data-research-native-web':'',style:{position:'relative',width:'100%',height:'100%',minHeight:0,flex:1,overflow:'hidden',background:'#fff'},children:[
       (0,react_jsx_runtime.jsx)('div',{className:'rScV5Q_webFrameControls',hidden:true,children:(0,react_jsx_runtime.jsx)('button',{type:'button','aria-label':'重新载入网页',onClick:()=>ref.current?.__eworkReloadWeb?.(),children:'刷新'})}),
       (0,react_jsx_runtime.jsx)('img',{ref:imageRef,alt:'',draggable:false,style:{width:'100%',height:'100%',objectFit:'fill',display:ready?'block':'none',pointerEvents:'none'}}),

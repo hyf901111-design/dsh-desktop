@@ -1,3 +1,4 @@
+import {ATTACHMENT_TEMPLATES} from './attachment-template-contract.js';
 import {DERIVED_TEMPLATES} from './derived-template-contract.js';
 import {AUDIO_TEMPLATES} from './audio-template-contract.js';
 import {YOUTUBE_TEMPLATES} from './youtube-template-contract.js';
@@ -176,6 +177,7 @@ export function marketVariant(panel = {}) {
 }
 
 export function workbenchDesignTemplate(panel = {}) {
+  if(['files','gallery'].includes(panel.type))return {...ATTACHMENT_TEMPLATES.find(t=>t.type===panel.type),id:'research.'+panel.type,size:'medium'};
   if(panel.type==='audio')return {...AUDIO_TEMPLATES[0],id:'research.audio',size:'medium'};
   if(['summary','mind-map'].includes(panel.type))return {...DERIVED_TEMPLATES.find(t=>t.type===panel.type),id:'research.'+panel.type,size:'medium'};
   if(panel.type==='youtube')return {...YOUTUBE_TEMPLATES[0],id:'research.youtube',size:'medium'};

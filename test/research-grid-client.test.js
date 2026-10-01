@@ -8,11 +8,54 @@ import {Window} from 'happy-dom'
 import {afterEach,it,expect,vi} from 'vitest'
 import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {patchCanvasCreationTools} from '../scripts/lib/canvas-creation-tools.mjs'
+import {patchAttachmentClient} from '../scripts/lib/attachment-client.mjs'
 import {workbenchRefreshTooltip,measureWorkbenchContents} from '../scripts/lib/research-grid-ui.mjs'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {researchOptimalDimensions} from '../packages/dsh-research-task-runtime/bento-layout.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
+it('附件列表完整保留长名称、零字节和说明，下载与移除权限独立',async()=>{
+ const save=vi.fn(async()=>({status:'saved'})),f=await fixture(true,{researchCanvasExport:{save}}),spec={version:1,type:'files',title:'本人原文件',items:[{id:'csv',name:'本人虚构收入记录-这是一个超过窄卡宽度的完整文件名.csv',url:'http://127.0.0.1:58207/own.csv#original',sizeBytes:0,description:'0万元，变化-120万元，缺失原因未提供',permissions:{download:true,remove:false}}]}
+ await act(async()=>f.workspace.setArtifacts([{...text('files-own'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))
+ const root=f.host.querySelector('[data-research-attachment-preset=files]');expect(root).not.toBeNull();expect(root.textContent).toContain(spec.items[0].name);expect(root.textContent).toContain('0 字节');expect(root.textContent).toContain(spec.items[0].description)
+ const buttons=Array.from(root.querySelectorAll('button'));expect(buttons.find(b=>b.textContent==='移除').disabled).toBe(true);await f.event('click',buttons.find(b=>b.textContent==='下载原文件'));expect(save).toHaveBeenCalledWith({kind:'remote-original',suggestedName:spec.items[0].name,url:spec.items[0].url});expect(root.textContent).toContain('原文件已保存');expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('附件图集使用完整原图与alt，失败不替换样例；只读禁止导入移除',async()=>{
+ let shared=false;const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'gallery',title:'本人图集',items:[{id:'one',name:'本人原图.png',url:'http://127.0.0.1:58207/chart.png#original',alt:'本人0与-120原数据',description:'本人合成图',permissions:{download:false}},{id:'missing',name:'缺失图.png',url:null,description:'尚未提供原图'}]}
+ await act(async()=>f.workspace.setArtifacts([{...text('gallery-own'),kind:'generated-container',containerPrompt:'本人图',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]));await f.render()
+ let root=f.host.querySelector('[data-research-attachment-preset=gallery]');const image=root.querySelector('img');expect(image.getAttribute('src')).toBe(spec.items[0].url);expect(image.alt).toBe(spec.items[0].alt);expect(root.textContent).toContain('原图未提供');await f.event('error',image);expect(root.textContent).toContain('未替换成样例');expect(root.querySelector('img')).toBeNull()
+ shared=true;await f.render();root=f.host.querySelector('[data-research-attachment-preset=gallery]');expect(Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='导入图片').disabled).toBe(true);expect(Array.from(root.querySelectorAll('button')).filter(b=>b.textContent==='移除').every(b=>b.disabled)).toBe(true);expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('附件本地导入保留原名和真实字节数，保存授权后可恢复，不生成逐卡模型',async()=>{
+ const admitFinderFile=vi.fn(async()=>({authorizationId:'own-authorization',capabilityToken:'own-token',contentType:'text/csv',name:'本人.csv',url:'sherlock-preview://own'})),restore=vi.fn(async()=>null),release=vi.fn(),f=await fixture(true,{researchPreview:{admitFinderFile,restore,release}}),spec={version:1,type:'files',title:'本人空文件',items:[]}
+ await act(async()=>f.workspace.setArtifacts([{...text('files-import'),kind:'generated-container',containerPrompt:'本人附件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))
+ const input=f.host.querySelector('[data-research-attachment-preset=files] input[type=file]'),file=new f.win.File(['项目,数值\n变化,-120万元'], '本人.csv',{type:'text/csv',lastModified:0});await f.event('change',input,{target:input});
+ Object.defineProperty(input,'files',{configurable:true,value:[file]});await f.event('change',input)
+ expect(admitFinderFile).toHaveBeenCalled();const stored=f.workspace.getSnapshot().artifacts[0].containerSpec;expect(stored.items[0]).toMatchObject({name:'本人.csv',sizeBytes:file.size,authorizationId:'own-authorization'});expect(stored.items[0]).not.toHaveProperty('path');expect(f.generation.generate).not.toHaveBeenCalled();expect(f.host.textContent).toContain('已导入 1 个原文件')
+ const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test');expect(restored.getSnapshot().artifacts[0].containerSpec).toEqual(stored)
+})
+it('附件预览失败可重试原图，跳过禁止预览项，会话返回保留选择',async()=>{
+ const f=await fixture(true),spec={version:1,type:'gallery',title:'本人图集',items:[{id:'one',name:'本人第一张.png',url:'https://example.org/one.png#original'},{id:'denied',name:'无预览权限.png',url:'https://example.org/denied.png',permissions:{preview:false}},{id:'three',name:'本人第三张.png',url:'https://example.org/three.png'}]},node={...text('gallery-state'),kind:'generated-container',containerPrompt:'本人图',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}
+ await act(async()=>f.workspace.setArtifacts([node]));let root=f.host.querySelector('[data-research-attachment-preset=gallery]');expect(root.querySelector('img[src="'+spec.items[1].url+'"]')).toBeNull()
+ await f.event('error',root.querySelector('img'));await f.event('click',root.querySelector('[aria-label="预览 本人第一张.png"]'));let dialog=root.querySelector('dialog');expect(dialog.textContent).toContain('未替换成样例');await f.event('click',Array.from(dialog.querySelectorAll('button')).find(b=>b.textContent==='重试预览'));expect(dialog.querySelector('img').getAttribute('src')).toBe(spec.items[0].url)
+ await f.event('click',Array.from(dialog.querySelectorAll('button')).find(b=>b.textContent==='下一张'));expect(dialog.querySelector('.ew-attachment-toolbar').textContent).toContain(spec.items[2].name);expect(dialog.querySelector('img').getAttribute('src')).toBe(spec.items[2].url)
+ await f.render({sessionId:'grid-other'});await f.render();root=f.host.querySelector('[data-research-attachment-preset=gallery]');dialog=root.querySelector('dialog');expect(dialog.querySelector('.ew-attachment-toolbar').textContent).toContain(spec.items[2].name);expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ expect(await f.host.querySelector('[data-workbench-refresh="gallery-state"]').__eworkRefresh()).toEqual({message:'已请求重新载入原文件预览'});expect(f.generation.generate).not.toHaveBeenCalled();expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('附件父卡移除释放原网页视图，恢复后仍保留完整来源',async()=>{
+ const releaseNative=vi.fn(),f=await fixture(true,{researchLinkFrame:{releaseNative}}),spec={version:1,type:'files',title:'本人文件',items:[{id:'csv',name:'本人.csv',url:'https://example.org/own.csv#original'}]},node={...text('files-remove'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}
+ await act(async()=>f.workspace.setArtifacts([node]));await act(async()=>f.workspace.removeNodes([node.id]));expect(releaseNative).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:'files-remove:attachment:csv'});await act(async()=>f.workspace.undo());expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('附件补丁重复应用不积累类型、订阅或释放回调',async()=>{
+ const source=restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')),patched=patchAttachmentClient(source)
+ expect(patchAttachmentClient(patched)).toBe(patched);expect(patched.match(/ODYSSEY_ATTACHMENT_PRESET_V1/g)).toHaveLength(1)
+})
+it('附件原文件弹窗可在卡片之外交互，普通画布网页仍由原选择规则控制',async()=>{
+ const updateNative=vi.fn(async()=>({loading:false,snapshotPending:false})),hideNative=vi.fn(async()=>({})),f=await fixture(true,{researchLinkFrame:{updateNative,hideNative}}),spec={version:1,type:'files',title:'本人原文件',items:[{id:'txt',name:'本人.txt',url:'https://example.org/owned.txt#original'}]},node={...text('files-dialog'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}
+ await act(async()=>f.workspace.setArtifacts([node]));const root=f.host.querySelector('[data-research-attachment-preset=files]');await f.event('click',Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='预览'))
+ const frame=root.querySelector('[data-research-native-web]');frame.getBoundingClientRect=()=>({left:600,top:100,right:1100,bottom:500,width:500,height:400});Object.defineProperties(f.win,{innerWidth:{configurable:true,value:1200},innerHeight:{configurable:true,value:800}});f.document.elementFromPoint=()=>frame
+ await vi.waitFor(async()=>{await act(async()=>{});expect(updateNative).toHaveBeenCalledWith(expect.objectContaining({nodeId:'files-dialog:attachment:txt',url:spec.items[0].url,active:true,bounds:{x:600,y:100,width:500,height:400}}))},{timeout:1000,interval:50});expect(f.workspace.getSnapshot().selection.selectedNodeIds).not.toContain(node.id)
+})
 it('智能组件默认草稿保留设计说明，组合回车不提交，普通回车仍走原生成入口',async()=>{
  const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft()})
  const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.textContent).toContain('描述要创建的内容');expect(card.textContent).toContain('结果将作为独立组件保留在当前工作台。')
