@@ -2,6 +2,9 @@ import {specialChartRuntime} from './special-chart-artifact.js';
 import {advancedChartView} from './advanced-chart-view.js';
 import {CODE_VIEWPORT_CSS,INPUT_VIEW_RUNTIME} from './input-artifact.js';
 import {REVENUE_EXPANSION_CSS} from './financial-revenue.js';
+import {FINANCIAL_PERFORMANCE_RUNTIME} from './financial-series.js';
+
+export {FINANCIAL_PERFORMANCE_RUNTIME};
 
 export const ADVANCED_VISUAL_RUNTIME=specialChartRuntime.toString();
 export const ADVANCED_VISUAL_VIEW=advancedChartView.toString();
@@ -15,6 +18,12 @@ export function refineStoredTemplateHtml(html){
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
+ if(model.templateId==='market.price-performance'&&model.data.type==='market'&&model.data.variant==='price-performance'&&html.includes('class="financial-profile financial-series"')&&!html.includes('data-series-date-labels="v2"')){
+  const script=/<script>\(function performanceRuntime\(s\)\s*\{[\s\S]*?<\/script>/;
+  if(!script.test(html))return html;
+  const data=JSON.stringify(model.data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+  return html.replace(script,()=>`<script>(${FINANCIAL_PERFORMANCE_RUNTIME})(${data});</script>`).replace('class="financial-profile financial-series"','class="financial-profile financial-series" data-series-date-labels="v2"');
+ }
  if(['market.revenue-geography','market.revenue-business'].includes(model.templateId)&&model.data.type==='market'&&model.templateId==='market.'+model.data.variant&&html.includes('class="financial-profile financial-revenue"')&&!html.includes('data-revenue-viewport="v2"'))return html+`<style data-revenue-viewport="v2">${REVENUE_EXPANSION_CSS}</style>`;
  if(model.templateId==='code'&&model.data.type==='code'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="code" data-sherlock-template="code">')&&!html.includes('data-code-viewport="v2"')){
   const data=JSON.stringify(model.data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
