@@ -675,3 +675,11 @@ Figma源1918:343978，656×286、正文248、三块197×117、间隔16、数值2
 240项直接相关检查和项目typecheck通过。旧research-workbench文件另有24项失败：23项旧Figma二次补丁夹具缺少derived-menu锚点，1项既有marketVariant期望metrics但当前key-metrics；该文件及相关补丁没有改动，不将这轮失败计为通过。新增首次KPI补高回归在旧客户端模块失败；重新应用生产补丁后通过。浏览器双层CSP/Trusted Types沙盒九组及完整字段、真实宿主回复桥、只读/共享权限通过，零页面错误。主题截屏等待卡片颜色完成过渡，避免将动画中间色当最终样式。
 
 证据kpi-source.png、kpi-contract-red.log、kpi-refresh-red.log、kpi-focused.log、kpi-affected-green.log、kpi-typecheck-final.log、kpi-browser-checks.json和kpi-*.png均位于/tmp/ework-template-acceptance-20260930/。技能v1.24.0；实现63/74、原生接受62/74，最终包普通中文首次生成、真实整理、刷新与会话恢复仍待验。未运行全功能测试；整体目标尚未完成。
+
+### KPI首轮原生复验及来源链接/刷新结果修正
+
+08406e75受管集成至670f4755，本地构建和完整包检查通过，技能v1.24.0、端口59457。普通中文「创建项目指标复验卡片」首次24.535秒、一次research_workbench_create即prepared，无逐卡子任务。18个原字段逐项一致，原说明文字保留在模型追加的模拟数据与仅手动刷新说明中；该增补明确记录，未称19个字段逐字一致。原严格审计及增补核对分别保留于kpi-native-audit-strict.json和kpi-native-audit.json。首次完整显示、原始口径展开、浅/深/企业模式、整理、侧栏展开、点击内部刷新实际打开未绑定来源设置并返回真实反馈，以及跨自身会话恢复open:[0]均通过。原生手动缩宽尝试未发生尺寸变化，不计为最小尺寸拖拽验证；280px换行由生产浏览器路径核验。
+
+原生发现企业蓝色指标块中的原文链接仍继承通用蓝色规则，对比度不足；生产双层CSP回归显示rgb(0,120,180)而非白色。增加指标明细链接的重要继承色与下划线；九组新模板及九组该真实旧卡片原HTML均通过，零页面错误。保存记录与来源无需重写。
+
+核对真实刷新引擎发现失败会返回status:error对象，未抛出异常；原头部调用会将该结果及unchanged均报告为已更新。实际React头部与内部KPI回复联动的错误/未变化回归先失败；改为发布真实状态后区分success、unchanged、error及取消/未完成，不伪造成功。35项直接相关检查及类型检查通过。最终后继包旧卡片的白色链接、完整明细与应用重启恢复仍待接受；实现63/74、原生接受62/74。证据kpi-link-contrast-red/green.log、kpi-old-browser-checks.json、kpi-bound-status-red.log、kpi-native-fix-gate/typecheck.log及kpi-native-*.png均位于既有目录。
