@@ -397,7 +397,7 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   // provenance. Its actual height replaces the conservative starting estimate.
   // Older clipped viewport reports still need that estimate as a safety floor.
   const floor=metrics&&value?.intrinsicMetrics===true?160:metrics?.height||0
-  const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target|company-profile|financial-statements|revenue-geography|revenue-business|dividends|stock-splits|insider-trading|institutional-ownership)"/.test(node.containerSpec?.html||'')
+  const snapshot=/<body\b[^>]*data-sherlock-market="(?:share-statistics|market-overview|currency-snapshot|watchlist|price-performance|valuation-multiples|price-target|company-profile|financial-statements|revenue-geography|revenue-business|dividends|stock-splits|insider-trading|institutional-ownership|stock-ownership|company-filings|historical-price)"/.test(node.containerSpec?.html||'')
   const chrome=value?.chromeHeight??(snapshot?68:58)
   return {width:preferred.width,height:Math.max(floor,value?.height?value.height+chrome:preferred.height)}
 }
@@ -500,6 +500,12 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const contentMeasurements=new Map();root.__eworkContentMeasurements=contentMeasurements
     const contentSize=event=>{
       const data=event.data
+      if(data?.type==='sherlock-records-action'){
+        const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
+        const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
+        if(!frame||!node)return
+        void performWorkbenchRecordsAction(frame,node,data);return
+      }
       if(data?.type==='sherlock-code-action'){
         const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
         const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
@@ -555,4 +561,17 @@ export async function performWorkbenchCodeAction(frame,node,data) {
       const result=await save({kind:'text',...payload});reply(['saved','cancelled'].includes(result?.status)?result.status:'error')
     }
   }catch{reply('error')}
+}
+
+export async function performWorkbenchRecordsAction(frame,node,data){
+ if(!data||Array.isArray(data)||Object.keys(data).length!==5||data.type!=='sherlock-records-action'||typeof data.id!=='string'||!/^records-[a-z0-9-]{1,80}$/.test(data.id)||!['export','copy-link'].includes(data.action)||typeof data.dataset!=='string'||data.dataset.length>2000||!Array.isArray(data.rows)||data.rows.length>1000)return
+ const reply=status=>frame.contentWindow?.postMessage({type:'sherlock-records-action-result',id:data.id,status},'*')
+ try{
+  const view=frame.ownerDocument.defaultView;if(!view.navigator.userActivation?.isActive)throw Error('需要用户操作')
+  const source=node.containerSpec?.html?.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
+  if(!source||source.length>512000)throw Error('无有效模板数据')
+  const payload=financialRecordsActionPayload(JSON.parse(source),data);if(!payload)throw Error('无有效来源记录')
+  if(data.action==='copy-link'){await view.navigator.clipboard.writeText(payload.content);reply('copied')}
+  else{const save=view.dshDesktop?.researchCanvasExport?.save;if(!save)throw Error('无法保存');const result=await save({kind:'text',...payload});reply(['saved','cancelled'].includes(result?.status)?result.status:'error')}
+ }catch{reply('error')}
 }

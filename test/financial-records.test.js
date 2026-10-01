@@ -1,0 +1,60 @@
+import vm from 'node:vm';
+import {performWorkbenchRecordsAction} from '../scripts/lib/research-grid-ui.mjs';
+import {describe,it,expect,vi} from 'vitest';
+import {JSDOM} from 'jsdom';
+import {recordsFixtures,stockOwnership,companyFilings,historicalPrices} from './fixtures/financial-records.js';
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js';
+import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js';
+import {marketVariant} from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
+import {templateSourceDataIssue} from '../packages/dsh-research-task-runtime/template-data-contract.js';
+import {WORKBENCH_EARLY_PLAN} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js';
+import {createWorkbenchRefreshSurface} from '../packages/dsh-research-task-runtime/workbench-refresh.js';
+import {financialRecordsDataIssue,renderFinancialRecords,financialRecordsCsv,financialRecordsActionPayload} from '../packages/dsh-research-task-runtime/financial-records.js';
+const dom=s=>{const out=renderFinancialRecords(s),d=new JSDOM(out.body,{runScripts:'outside-only'});d.window.eval(out.script);return d;};
+const choose=(d,q,v,event='change')=>{const el=d.window.document.querySelector(q);el.value=v;el.dispatchEvent(new d.window.Event(event));};
+const codes={'stock-ownership':'1917:350483','company-filings':'1917:351460','historical-price':'1917:351969'};
+describe('remaining source financial record templates',()=>{
+ it.each(recordsFixtures)('retains every supplied $variant field in a trusted template',s=>{
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(s)));expect(readTemplateModel(spec).data).toEqual(s);expect(templateFor(s)?.figma).toBe(codes[s.variant]);expect(WORKBENCH_EARLY_PLAN).toContain('market.'+s.variant);
+ });
+ it('routes each requested card before a repeated workbench request',()=>{
+  const prompt='创建股东持仓、公司公告和历史行情';for(const [title,variant]of [['股东持仓','stock-ownership'],['公司公告与披露','company-filings'],['历史行情逐日核对','historical-price']])expect(marketVariant({title,prompt})).toBe(variant);
+ });
+ it.each(recordsFixtures)('does not accept omitted source fields, duplicate IDs or unsafe links for $variant',s=>{
+  const d=s.datasets[0],r=d.rows[0],patches=[{id:''},{link:'javascript:alert(1)'},{link:'https://user:password@example.com/'}];
+  patches.push(...(s.variant==='stock-ownership'?[{investorName:''},{shares:undefined},{investorId:1},{ownershipPercent:101},{quarterEndPrice:-1},{shares:null,missing:''}]:s.variant==='company-filings'?[{filedDate:'2026-02-30'},{cik:1},{title:undefined},{summary:'摘要',summarySource:null},{link:null,missing:''}]:[{date:'2026-02-30'},{volume:undefined},{open:-1},{high:1},{vwap:null,missing:''}]));
+  for(const patch of patches)expect(financialRecordsDataIssue({...s,datasets:[{...d,rows:[{...r,...patch}]}]})).toBeTruthy();
+  expect(financialRecordsDataIssue({...s,datasets:[{...d,rows:[r,r]}]})).toMatch(/唯一/);
+  expect(financialRecordsDataIssue({...s,datasets:[{...d,rows:[]}]})).toMatch(/emptyReason/);
+ });
+ it('requires aligned ownership denominators and keeps duplicate investor IDs in separate share classes',()=>{
+  const s=stockOwnership,d=s.datasets[0];expect(financialRecordsDataIssue({...s,datasets:[{...d,denominatorDate:'2026-03-31'}]})).toMatch(/期末日/);
+  const a=dom(s);try{const doc=a.window.document;expect(doc.querySelectorAll('[data-records-row]')).toHaveLength(13);doc.querySelector('[data-records-row=preferred]').click();expect(doc.querySelector('[data-records-readout]').textContent).toContain('优先股');expect(doc.querySelector('[data-records-readout]').textContent).toContain('持股比例 / %：未提供');choose(a,'[data-records-search]','虚构机构甲','input');expect(doc.querySelector('[data-records-count]').textContent).toBe('2 / 13 条');choose(a,'[data-records-dataset]','empty');expect(doc.querySelector('[data-records-count]').textContent).toBe('0 / 0 条');expect(doc.querySelector('[data-records-group=empty] [data-records-empty]').textContent).toContain('来源明确确认');}finally{a.window.close();}
+ });
+ it('retains all filings, separates original and summary attribution and keeps unavailable links',async()=>{
+  const d=dom(companyFilings);try{const doc=d.window.document;expect(doc.querySelectorAll('[data-records-row]')).toHaveLength(15);doc.querySelector('[data-records-row=full]').click();const r=doc.querySelector('[data-records-readout]');expect(r.textContent).toContain('摘要来源：用户提供的摘录');expect(r.textContent).toContain('发布机构：虚构披露机构');expect(r.textContent).toContain('CIK编号：0000320193');expect(r.querySelector('a').rel).toBe('noopener noreferrer');const send=vi.spyOn(d.window.parent,'postMessage');r.querySelector('button').click();expect(send).not.toHaveBeenCalled();doc.querySelector('[data-records-row=unavailable]').click();expect(r.textContent).toContain('保留公告记录');expect(r.querySelector('button')).toBeNull();choose(d,'[data-records-form]','4');expect(doc.querySelector('[data-records-count]').textContent).toBe('7 / 15 条');choose(d,'[data-records-from]','2026-09-01');choose(d,'[data-records-to]','2026-09-05');expect(doc.querySelector('[data-records-count]').textContent).toBe('3 / 15 条');}finally{d.window.close();}
+ });
+ it('uses actual dates and numeric sort, keeps zero volume distinct from unknown and offers complete row readout',()=>{
+  const d=dom(historicalPrices);try{const doc=d.window.document;choose(d,'[data-records-from]','2026-09-01');choose(d,'[data-records-to]','2026-09-05');expect(doc.querySelector('[data-records-count]').textContent).toBe('5 / 16 条');doc.querySelector('[data-records-sort=volume]').click();expect([...doc.querySelectorAll('tbody tr')].filter(r=>!r.hidden).map(r=>r.dataset.recordsRow)).toEqual(['day-0','day-2','day-3','day-4','day-1']);doc.querySelector('[data-records-row=day-0]').dispatchEvent(new d.window.KeyboardEvent('keydown',{key:'Enter'}));expect(doc.querySelector('[data-records-readout]').textContent).toContain('成交量：0');doc.querySelector('[data-records-row=day-1]').click();expect(doc.querySelector('[data-records-readout]').textContent).toContain('成交量：未提供');expect(doc.querySelector('[data-records-readout]').textContent).toContain('VWAP：未提供');doc.querySelector('[data-records-row=day-1]').dispatchEvent(new d.window.KeyboardEvent('keydown',{key:'Home'}));expect(doc.querySelector('[data-records-readout]').textContent).toContain('来源记录id：day-0');choose(d,'[data-records-search]','没有该记录','input');expect(doc.querySelector('[data-records-empty]').hidden).toBe(false);expect(doc.querySelectorAll('[aria-selected=true]')).toHaveLength(0);}finally{d.window.close();}
+ });
+ it.each(recordsFixtures)('restores $variant state using dataset and source IDs even after source reorder',s=>{
+  const shuffled=structuredClone(s);shuffled.datasets.reverse();shuffled.datasets.forEach(d=>d.rows.reverse());const a=dom(s),b=dom(shuffled);let before,after;try{before=createWorkbenchRefreshSurface(a.window.document.body);choose(a,'[data-records-search]',s.variant==='stock-ownership'?'优先股':s.variant==='company-filings'?'半年':'成交量','input');if(s.variant==='historical-price')choose(a,'[data-records-search]','','input');const id=s.variant==='stock-ownership'?'preferred':s.variant==='company-filings'?'full':'day-1';a.window.document.querySelector('[data-records-row="'+id+'"]').click();a.window.document.querySelector('[data-records-sort="'+(s.variant==='stock-ownership'?'shares':s.variant==='company-filings'?'cik':'volume')+'"]').click();after=createWorkbenchRefreshSurface(b.window.document.body);after.apply(before.snapshot(),true);const doc=b.window.document;expect(doc.querySelector('[data-records-dataset]').value).toBe('demo');expect(doc.querySelector('[data-records-readout]').textContent).toContain(id);expect(doc.querySelector('[aria-selected=true]').dataset.recordsRow).toBe(id);expect(doc.querySelector('[data-records-search]').value).toBe(a.window.document.querySelector('[data-records-search]').value);}finally{before?.dispose();after?.dispose();a.window.close();b.window.close();}
+ });
+ it('exports only the given filtered source rows with original units, null reasons and formula-safe text',()=>{
+  const d=historicalPrices.datasets[0],csv=financialRecordsCsv('historical-price',d,d.rows.slice(0,2));expect(csv).toContain('"timeZone","Asia/Shanghai"');expect(csv).toContain('"adjustment","未复权"');expect(csv).toContain('"volumeUnit","股"');expect(csv).toContain('"day-0","2026-09-01","10",');
+  expect(csv).toContain('来源未返回成交量、VWAP和复权价格');expect(csv).not.toContain('day-2');expect(csv).toContain('"未提供"');const malicious=financialRecordsCsv('company-filings',companyFilings.datasets[0],[{id:'a',title:'=HYPERLINK("x")',change:-2}]);expect(malicious).toContain("\"'=HYPERLINK");expect(malicious).toContain('"-2"');
+ });
+ it('does not label all-null source numbers as retrieval success, while an actual zero and confirmed empty source remain valid',()=>{
+  for(const s of [stockOwnership,historicalPrices]){const empty=structuredClone(s);for(const d of empty.datasets)for(const r of d.rows)for(const k of Object.keys(r))if(typeof r[k]==='number')r[k]=null;expect(templateSourceDataIssue(empty)).toMatch(/尚无来源/);empty.datasets[0].rows[0][s.variant==='stock-ownership'?'shares':'volume']=0;expect(templateSourceDataIssue(empty)).toBeNull();expect(templateSourceDataIssue({...s,datasets:[{...s.datasets[0],rows:[],emptyReason:'来源确认无记录'}]})).toBeNull();}
+ });
+ it('escapes labels and prevents source strings from closing executable scripts',()=>{
+  const s=structuredClone(companyFilings);s.datasets[0].rows[0].title='</script><script>alert(1)</script>';const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(s)));expect(spec.html).not.toContain('<script>alert(1)</script>');expect(readTemplateModel(spec).data).toEqual(s);
+ });
+});
+
+describe('bounded source record export actions',()=>{
+ const run=async(overrides={})=>{const replies=[],writeText=vi.fn(async()=>{}),save=vi.fn(async()=>({status:'saved'})),frame={contentWindow:{postMessage:d=>replies.push(d)},ownerDocument:{defaultView:{navigator:{userActivation:{isActive:overrides.active??true},clipboard:{writeText}},dshDesktop:{researchCanvasExport:{save}}}}},spec=JSON.parse(acceptArtifactOutput(JSON.stringify(overrides.source??historicalPrices))),data={type:'sherlock-records-action',id:'records-qa-1',action:'export',dataset:'demo',rows:['day-1','day-0'],...overrides.request},context=vm.createContext({financialRecordsActionPayload,financialRecordsCsv,URL});await vm.runInContext('('+performWorkbenchRecordsAction.toString()+')',context)(frame,{containerSpec:spec},data);return {replies,writeText,save};};
+ it('exports filtered source IDs through the native dialog, retaining requested sort order and source metadata',async()=>{const r=await run();expect(r.save).toHaveBeenCalledOnce();const p=r.save.mock.calls[0][0];expect(p.kind).toBe('text');expect(p.format).toBe('csv');expect(p.suggestedName).toBe('historical-price-DEMO.CNY.csv');expect(p.content.indexOf('day-1')).toBeLessThan(p.content.indexOf('day-0'));expect(p.content).not.toContain('day-2');expect(r.replies[0].status).toBe('saved');});
+ it('copies only the retained original URL and blocks unavailable sources',async()=>{const r=await run({source:companyFilings,request:{action:'copy-link',rows:['full']}});expect(r.writeText).toHaveBeenCalledWith('https://example.com/filings/report');expect(r.replies[0].status).toBe('copied');const moved=await run({source:companyFilings,request:{action:'copy-link',rows:['unavailable']}});expect(moved.writeText).not.toHaveBeenCalled();expect(moved.replies[0].status).toBe('error');});
+ it('rejects inactive requests, absent or duplicate source IDs and iframe-provided content or filenames',async()=>{for(const options of [{active:false},{request:{rows:['missing']}},{request:{rows:['day-1','day-1']}},{request:{dataset:'missing'}},{request:{content:'untrusted'}},{request:{suggestedName:'/tmp/untrusted'}}]){const r=await run(options);expect(r.save).not.toHaveBeenCalled();expect(r.writeText).not.toHaveBeenCalled();}});
+});

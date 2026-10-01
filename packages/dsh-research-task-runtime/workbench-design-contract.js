@@ -4,6 +4,7 @@ import {CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.j
 import {OPERATIONS_TEMPLATES} from './operations-template-contract.js';
 import {inferFinancialSnapshotVariant} from './financial-snapshot.js';
 import {inferFinancialSeriesVariant} from './financial-series.js';
+import {inferFinancialRecordsVariant} from './financial-records.js';
 import {inferFinancialOwnershipVariant} from './financial-ownership.js';
 import {inferFinancialActionVariant} from './financial-actions.js';
 import {inferFinancialRevenueVariant} from './financial-revenue.js';
@@ -12,6 +13,9 @@ import { researchMarketContentDimensions, researchOptimalDimensions } from './be
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
 const market = Object.freeze({
+  'stock-ownership': {id:'financial.stock-ownership',figma:'1917:350483',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
+  'company-filings': {id:'financial.company-filings',figma:'1917:351460',sourceHeight:270,width:980,height:330,minWidth:480,minHeight:240,size:'large'},
+  'historical-price': {id:'financial.historical-price',figma:'1917:351969',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
   'insider-trading': {id:'financial.insider-trading',figma:'1917:349065',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
   'institutional-ownership': {id:'financial.institutional-ownership',figma:'1917:350110',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
   dividends: {id:'financial.dividends',figma:'1917:348283',sourceHeight:330,width:980,height:330,minWidth:480,minHeight:280,size:'large'},
@@ -84,6 +88,8 @@ const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
+  const recordsTitle=inferFinancialRecordsVariant(panel.title),declaredRecords=requestedMarketVariant(panel.prompt);
+  if(recordsTitle&&(!declaredRecords||declaredRecords===recordsTitle))return recordsTitle;
   const ownershipTitle=inferFinancialOwnershipVariant(panel.title),declaredOwnership=requestedMarketVariant(panel.prompt);
   if(ownershipTitle&&(!declaredOwnership||declaredOwnership===ownershipTitle))return ownershipTitle;
   const actionTitle=inferFinancialActionVariant(panel.title),declaredAction=requestedMarketVariant(panel.prompt);
@@ -125,6 +131,7 @@ export function marketVariant(panel = {}) {
   if (!primaryCandle &&
       /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
+    const records=inferFinancialRecordsVariant(text);if(records)return records;
     const ownership=inferFinancialOwnershipVariant(text);if(ownership)return ownership;
     const action=inferFinancialActionVariant(text);if(action)return action;
     const revenue=inferFinancialRevenueVariant(text);if(revenue)return revenue;
