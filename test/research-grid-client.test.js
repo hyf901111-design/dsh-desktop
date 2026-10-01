@@ -2033,3 +2033,19 @@ it('派生预置原生摘要可再次一键总结，冻结当前完整正文而�
  const derived=f.workspace.getSnapshot().artifacts.find(n=>n.kind==='generated-summary')
  expect(derived.generationSources).toEqual([{id:'summary-source',type:'artifact',title:'收入摘要',text:spec.content}])
 })
+it.each([false,true])('派生预置来源按钮在只读%s时直接聚焦来源，不依赖对话区事件捕获',async readOnly=>{
+ let shared=false
+ const f=await fixture(true,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'summary',title:'收入摘要',content:'收入0，变化-120。',source:{title:'本人来源',text:'原文保持',nodeId:'source-own'}}
+ await act(async()=>f.workspace.setArtifacts([text('source-own'),{...text('derived-own'),kind:'generated-container',generationStatus:'completed',containerPrompt:'摘要',refreshMinutes:0,containerSpec:spec}]))
+ shared=readOnly;if(readOnly)await act(async()=>f.workspace.setCollaborationAccess(false))
+ await act(async()=>f.workspace.updateSelection(['derived-own'],'replace'))
+ await f.event('click',f.host.querySelector('[data-research-reference-node-id="source-own"]'))
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual(['source-own'])
+ expect(f.workspace.getSnapshot().artifacts.find(n=>n.id==='derived-own').containerSpec).toEqual(spec)
+ if(!readOnly){
+  await act(async()=>f.workspace.removeNodes(['source-own']))
+  await f.event('click',f.host.querySelector('[data-research-reference-node-id="source-own"]'))
+  expect(f.host.querySelector('[role="alert"]').textContent).toContain('来源组件已删除或不可用')
+  expect(f.host.querySelector('.ew-derived-original pre').textContent).toBe(spec.source.text)
+ }
+})

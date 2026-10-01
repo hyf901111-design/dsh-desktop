@@ -42,23 +42,30 @@ export function ResearchDerivedPreset({node,sessionId}){
   if(!researchDerivedSinks.get(sessionId)?.(node.id,spec.content,next)){setError('结果尚未保存，请重试。');return}
   cancel()
  }
+ const focusSource=e=>{
+  e.stopPropagation()
+  if(!researchDerivedFocus.get(sessionId)?.(spec.source.nodeId)){setError('来源组件已删除或不可用，完整原文仍保留。');return}
+  setError('');host.current?.closest('dialog[open]')?.close()
+  window.requestAnimationFrame(()=>host.current?.closest('[data-research-canvas]')?.querySelector('[data-research-node-id="'+CSS.escape(spec.source.nodeId)+'"]')?.scrollIntoView({block:'nearest',inline:'nearest'}))
+ }
  const outline=spec.type==='mind-map'?researchDerivedOutline(spec.content):null
  const list=items=>react_jsx_runtime.jsx('ul',{children:items.map(item=>react_jsx_runtime.jsxs('li',{children:[item.label,item.children.length?list(item.children):null]},item.line))})
  const result=outline?react_jsx_runtime.jsx('div',{className:'ew-derived-branches',role:'group','aria-label':outline.label,children:outline.children.map(branch=>react_jsx_runtime.jsxs('section',{className:'ew-derived-branch','data-derived-branch':branch.line,children:[react_jsx_runtime.jsx('strong',{children:branch.label}),branch.children.length?list(branch.children):null]},branch.line))}):react_jsx_runtime.jsx('div',{className:'ew-derived-result',children:react_jsx_runtime.jsx(_deepseek_ai_dsh_client_ui_primitives.MarkdownText,{text:spec.content,streaming:false})})
  return react_jsx_runtime.jsxs('div',{ref:host,className:'ew-derived-preset','data-research-derived-preset':spec.type,onDoubleClick:e=>{e.stopPropagation();open()},children:[
-  react_jsx_runtime.jsxs('div',{className:'ew-derived-source',children:['来源组件：',spec.source.nodeId?react_jsx_runtime.jsx('button',{type:'button','data-research-reference-node-id':spec.source.nodeId,onDoubleClick:e=>e.stopPropagation(),children:spec.source.title}):spec.source.title,react_jsx_runtime.jsxs('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'查看来源原文'}),react_jsx_runtime.jsx('pre',{children:spec.source.text})]})]}),
+  react_jsx_runtime.jsxs('div',{className:'ew-derived-source',children:['来源组件：',spec.source.nodeId?react_jsx_runtime.jsx('button',{type:'button','data-research-reference-node-id':spec.source.nodeId,onClick:focusSource,onDoubleClick:e=>e.stopPropagation(),children:spec.source.title}):spec.source.title,react_jsx_runtime.jsxs('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'查看来源原文'}),react_jsx_runtime.jsx('pre',{children:spec.source.text})]})]}),
   editing?react_jsx_runtime.jsxs('div',{className:'ew-derived-editor',onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),children:[
    react_jsx_runtime.jsx('textarea',{ref:editor,'aria-label':'编辑派生结果',defaultValue:spec.content,autoFocus:true,disabled:readOnly,onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape')cancel();else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)&&!e.nativeEvent?.isComposing&&e.keyCode!==229){e.preventDefault();save()}}}),
    error&&react_jsx_runtime.jsx('div',{role:'alert',children:error}),
    react_jsx_runtime.jsxs('div',{className:'ew-derived-actions',children:[react_jsx_runtime.jsx('button',{type:'button',disabled:readOnly,onClick:save,children:'保存结果'}),react_jsx_runtime.jsx('button',{type:'button',onClick:cancel,children:'取消'})]})
   ]}):result,
+  error&&!editing&&react_jsx_runtime.jsx('div',{role:'alert',children:error}),
   spec.type==='summary'&&react_jsx_runtime.jsx('div',{className:'ew-derived-note',children:'仅根据来源组件内的内容生成。'}),
   react_jsx_runtime.jsx('style',{children:RESEARCH_DERIVED_PRESET_CSS})
  ]})
 }
 export function patchDerivedPresetClient(source){
  const start='/* ODYSSEY_DERIVED_PRESET_V1 */',end='/* ODYSSEY_DERIVED_PRESET_END */'
- const definitions=`${start}\nconst researchDerivedSinks=new Map(),RESEARCH_DERIVED_PRESET_CSS=${JSON.stringify(derivedPresetCss)};\nconst researchDerivedOutline=${derivedOutline.toString()},researchDerivedSpec=${parseDerivedSpec.toString().replaceAll('derivedOutline(','researchDerivedOutline(')};\n${researchLegacyDerivedSpec.toString()}\n${ResearchDerivedPreset.toString()}\n${end}`
+ const definitions=`${start}\nconst researchDerivedSinks=new Map(),researchDerivedFocus=new Map(),RESEARCH_DERIVED_PRESET_CSS=${JSON.stringify(derivedPresetCss)};\nconst researchDerivedOutline=${derivedOutline.toString()},researchDerivedSpec=${parseDerivedSpec.toString().replaceAll('derivedOutline(','researchDerivedOutline(')};\n${researchLegacyDerivedSpec.toString()}\n${ResearchDerivedPreset.toString()}\n${end}`
  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)throw Error('Derived preset definitions boundary missing');source=source.slice(0,a)+definitions+source.slice(b+end.length)}
  else{const anchor='function createResearchWorkspaceSession(storage, sessionId) {';if(source.split(anchor).length!==2)throw Error('Derived preset definitions host missing');source=source.replace(anchor,definitions+'\n'+anchor)}
  const once=(a,b)=>{if(source.includes(b))return;if(source.split(a).length!==2)throw Error('Derived preset anchor missing or ambiguous: '+a.slice(0,90));source=source.replace(a,b)}
@@ -67,6 +74,10 @@ export function patchDerivedPresetClient(source){
  if(!source.includes(parse))once('if (value.type === "web") {',parse+'\nif (value.type === "web") {')
  once("if (spec.type === 'markdown' || spec.type === 'mind-map') return spec.content;","if (spec.type === 'markdown' || spec.type === 'mind-map' || spec.type === 'summary') return spec.content;")
  const sink=`/* ODYSSEY_DERIVED_SINK_V1 */
+ researchDerivedFocus.set(sessionId,nodeId=>{
+  const source=[...snapshot.files,...snapshot.artifacts].find(n=>n.id===nodeId);if(!source)return false;
+  update({selection:updateResearchSelection(snapshot.selection,[nodeId],'replace',snapshot.files),viewport:researchCanvasFocusViewport(source,snapshot.viewport,snapshot.canvasSize)},true);return true;
+ });
  researchDerivedSinks.set(sessionId,(nodeId,expectedContent,spec)=>{
   if(!collaborationCanWrite())return false;
   const node=snapshot.artifacts.find(n=>n.id===nodeId),next=researchDerivedSpec(spec);
