@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "技术图表个人视图持久恢复",
+        "featureName": "技术图表SVG交互恢复修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "ddf75c266cf910c9c55f27b69fe98a443114a63c",
-        "tipCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
+        "baseCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
+        "tipCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
         "commits": [
           {
-            "commit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
+            "commit": "ce8a837fcef63faf4953738a19672307f97315c0",
             "parents": [
-              "ddf75c266cf910c9c55f27b69fe98a443114a63c"
+              "8ecefbd0a4363b75c84db5ab32482cd6ec740823"
             ],
-            "subject": "修复：持久保存技术图表个人视图并在会话返回时恢复"
-          },
-          {
-            "commit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
-            "parents": [
-              "b5cb92ee4b6bbaf9a957250306c175e733fa1fee"
-            ],
-            "subject": "修复：保持个人图表保存补丁与工具栏补丁重复执行稳定"
+            "subject": "修复：恢复SVG图标交互时避免图表退回文字视图"
           }
         ],
         "files": [
@@ -36,19 +29,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-status.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-refresh.test.js"
+            "path": "test/component-interaction-state.test.js"
           }
         ],
         "checks": [
@@ -64,9 +49,9 @@
               "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "176项相关视图、交互、呈现、客户端与重复补丁检查通过",
-            "verifiedCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
-            "completedAt": "2026-10-01T05:05:12.592269+00:00",
+            "summary": "177项相关视图、交互、呈现、客户端与重复补丁检查通过",
+            "verifiedCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
+            "completedAt": "2026-10-01T05:21:44.020069+00:00",
             "timeoutMs": 300000
           },
           {
@@ -77,14 +62,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
-            "completedAt": "2026-10-01T05:05:12.592269+00:00",
+            "verifiedCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
+            "completedAt": "2026-10-01T05:21:44.020069+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP三模式实际四条绘图经卡片卸载重建、整页重开均精确恢复；最终本地包恢复待复验"
+          "summary": "原会话42条交互日志生产双层CSP复现SVG错误后修复，四条实际绘图三模式及卡片重建与整页重开精确恢复，0页面错误；原生新包待验"
         },
         "acceptanceCriteria": [
           "技术图表个人绘图在会话切换后精确恢复",
@@ -95,52 +80,7 @@
           "最终本地包会话与重启恢复仍待复验",
           "全74类目标未完成"
         ],
-        "generatedAt": "2026-10-01T05:05:12.592269+00:00"
-      },
-      "merged": {
-        "mergeCommit": "719f15b3fe2423850a425416cf1043cf7227d518",
-        "verificationCommit": "719f15b3fe2423850a425416cf1043cf7227d518",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "719f15b3fe2423850a425416cf1043cf7227d518",
-            "completedAt": "2026-10-01T05:06:43.998Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "719f15b3fe2423850a425416cf1043cf7227d518",
-            "completedAt": "2026-10-01T05:06:43.998Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "719f15b3fe2423850a425416cf1043cf7227d518",
-            "completedAt": "2026-10-01T05:06:43.998Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T05:06:43.998Z"
+        "generatedAt": "2026-10-01T05:21:44.020069+00:00"
       }
     }
   ],
