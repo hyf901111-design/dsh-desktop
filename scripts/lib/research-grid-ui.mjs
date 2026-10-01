@@ -66,7 +66,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const rss=componentRssStatusView(node)
   const time=workbenchRefreshTooltip(rss?rss.lastSuccess:binding?.lastSuccess||node.lastSuccessfulAt||(node.generationStatus==='completed'?node.generationCompletedAt:null),now)
   const refresh=async()=>{
-    if(busy||readOnly)return
+    if(busy||readOnly)return {error:'组件当前不可刷新'}
     setBusy(true);setError('')
     try{
       if(node.kind==='web-link'){
@@ -76,15 +76,16 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
         if(nativeReload)nativeReload();else if(reload)reload.click();else throw Error('网页尚未载入，请稍后刷新')
       }else if(/<body\b[^>]*data-sherlock-template="rss"/.test(node.containerSpec?.html??'')){await window.dshDesktop.researchRss.request({sessionId,nodeId:node.id,action:'refresh'})}
       else if(binding){await window.dshDesktop.componentData.request(sessionId,{action:'refresh',nodeId:node.id});const rows=await window.dshDesktop.componentData.request(sessionId,{action:'list'});componentDataStatusStore.publish(sessionId,rows)}
-      else openComponentData(sessionId,node)
+      else {openComponentData(sessionId,node);return {message:'未绑定数据源，已打开数据源设置'}}
       setNow(Date.now());window.dispatchEvent(new Event('sherlock:component-data-changed'))
-    }catch(e){setError(e?.message||'刷新失败，保留上次数据')}finally{setBusy(false)}
+      return {message:'指标数据已更新'}
+    }catch(e){const error=e?.message||'刷新失败，保留上次数据';setError(error);return {error}}finally{setBusy(false)}
   }
   const button=(name,label,onClick,extra={})=>react_jsx_runtime.jsx('button',{type:'button','aria-label':label,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();onClick?.(e)},...extra,children:react_jsx_runtime.jsx(WorkbenchIcon,{name})})
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
-      react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
+      react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件'}),
       button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
@@ -502,6 +503,11 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const contentMeasurements=new Map();root.__eworkContentMeasurements=contentMeasurements
     const contentSize=event=>{
       const data=event.data
+      if(data?.type==='sherlock-kpi-refresh-request'){
+        const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
+        const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
+        if(frame&&node)void performWorkbenchKpiRefresh(frame,node,data,readOnly);return
+      }
       if(data?.type==='sherlock-records-action'){
         const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
         const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
@@ -576,4 +582,18 @@ export async function performWorkbenchRecordsAction(frame,node,data){
   if(data.action==='copy-link'){await view.navigator.clipboard.writeText(payload.content);reply('copied')}
   else{const save=view.dshDesktop?.researchCanvasExport?.save;if(!save)throw Error('无法保存');const result=await save({kind:'text',...payload});reply(['saved','cancelled'].includes(result?.status)?result.status:'error')}
  }catch{reply('error')}
+}
+
+export async function performWorkbenchKpiRefresh(frame,node,data,readOnly){
+ if(!data||Array.isArray(data)||Object.keys(data).length!==3||data.type!=='sherlock-kpi-refresh-request'||data.action!=='refresh'||typeof data.requestId!=='string'||!/^[a-z0-9-]{1,80}$/.test(data.requestId))return
+ const reply=value=>frame.contentWindow?.postMessage({type:'sherlock-kpi-refresh-result',requestId:data.requestId,...value},'*')
+ try{
+  const card=frame.closest('[data-research-node-id]'),html=node?.containerSpec?.html
+  if(readOnly||card?.getAttribute('data-research-node-id')!==node?.id||!frame.ownerDocument.defaultView.navigator.userActivation?.isActive)throw Error('需要在可编辑画布中点击刷新')
+  const source=typeof html==='string'&&html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
+  if(node.containerSpec.type!=='html'||!/<body\b[^>]*data-sherlock-template="kpi"/.test(html)||!source||source.length>512000||JSON.parse(source).templateId!=='kpi')throw Error('无有效指标模板数据')
+  const control=card.querySelector('[data-workbench-refresh]')
+  if(control?.getAttribute('data-workbench-refresh')!==node.id||control.disabled||typeof control.__eworkRefresh!=='function')throw Error('刷新正在进行或组件尚未就绪')
+  const result=await control.__eworkRefresh();reply(result?.error?{error:String(result.error).slice(0,1000)}:{message:result?.message||'刷新请求已提交，结果见组件数据提示'})
+ }catch(error){reply({error:String(error?.message||'刷新失败，原数据保留').slice(0,1000)})}
 }

@@ -1,3 +1,4 @@
+import {KPI_TEMPLATES} from './kpi-template-contract.js';
 // The model supplies data and a semantic type. Geometry and design provenance
 // belong to the client so a prompt cannot silently change the visual system.
 import {CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.js';
@@ -70,7 +71,7 @@ export function requiredMarketVariant(prompt) {
   return typeof prompt === 'string' ? prompt.match(new RegExp(`必须输出 market\\.(${MARKET_VARIANT_PATTERN}) 的结构化数据`, 'iu'))?.[1]?.toLowerCase() : undefined;
 }
 export const TERMINAL_GENERIC_TEMPLATES = Object.freeze({
-  'kpi': { figma: '1696:76780', height: 212 },
+  'kpi': { figma: '1918:343978', height: 286 },
   ...Object.fromEntries(CHART_TEMPLATES.map(t=>['chart.'+t.variant,{figma:t.figma,height:t.height}])),
   'table': { figma: '1696:77348', height: 352 },
   'dashboard': { figma: '1696:77430', height: 238 },
@@ -170,6 +171,7 @@ export function marketVariant(panel = {}) {
 }
 
 export function workbenchDesignTemplate(panel = {}) {
+  if(panel.type==='kpi')return {...KPI_TEMPLATES[0],id:'research.kpi',size:'medium'};
   const operation=OPERATIONS_TEMPLATES.find(t=>t.type===panel.type);
   if(operation)return {...operation,size:'large',id:'research.'+operation.id};
   if (panel.type === 'market') {

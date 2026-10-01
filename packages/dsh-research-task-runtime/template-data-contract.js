@@ -1,3 +1,4 @@
+import {kpiDataIssue} from './kpi-template-contract.js'
 import {chartDataIssue} from './chart-template-contract.js'
 import {operationsDataIssue} from './operations-template-contract.js'
 import {FINANCIAL_PROFILE_VARIANTS,financialProfileDataIssue} from './financial-profile.js'
@@ -26,6 +27,7 @@ export function normalizeIndexedTableRows(data){
 // Return paths rather than an opaque "format invalid" result. The same rule
 // text is included in the model's original schema and its bounded repair.
 export function templateDataIssue(data){
+ if(data?.type==='kpi')return kpiDataIssue(data)
  if(['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(data?.type))return operationsDataIssue(data)
  if(data?.type==='chart')return chartDataIssue(data)
  const finite=v=>typeof v==='number'&&Number.isFinite(v)

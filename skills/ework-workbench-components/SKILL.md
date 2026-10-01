@@ -70,3 +70,5 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 股东持仓表用 `market.stock-ownership`：按原报告期保留投资者、股类、投资决定权、股数、市值、原组合权重/上期权重与持股比例。分母日期须与期末一致，不合并重复机构不同股类或自行重算比例。公司公告用 `market.company-filings`：完整标题、披露日期、CIK原字符串、类型、发布机构和原文链接，摘要另标summarySource；失效原文仍保留公告记录。历史行情表用 `market.historical-price`：每个已取得日期的OHLCV、VWAP、原变动/百分比与复权收盘，并提供市场、时区、复权和币种/单位，未知字段保留null及missing，不补交易日或推算复权价。三类首次同次附完整datasets和rows，确认空来源必须emptyReason；不为通过验证伪造数值或链接。筛选/排序和范围导出由宿主提供，宽表内滚动而不缩小正文字号。
 
 日历原标题、原摘要、原日期和时间字段保持原文；用户已提供或已核验的链接独立放入 url，不拼入摘要。模拟日历允许保留用户提供的原文链接，不为虚构记录编造链接，也不自动读取链接。
+
+- `kpi` 使用当前 EFund/Widget/KPI 1918:343978 源模板（656×286，三主题与内容自适应）。一次提交 version:1/type:kpi/title/items:[{label,value,unit?,change?,detail?,missing?,source?,url?}]；1–12项，完整JSON≤32KB，可加 subject/asOf/range/note/sources:[{name,url?}]。保留原0、负数、原单位、完整口径和来源；value允许有限数值、原字符串或null（null必须给missing原因），不得补零或套源设计的128/24等样例。用户明确提供的安全HTTP原文链接可独立保留，无须联网。刷新指标沿用组件真实数据源刷新；未绑定时打开数据源设置，不能以新时间戳或随机值伪装刷新。展开指标查看完整原字段。

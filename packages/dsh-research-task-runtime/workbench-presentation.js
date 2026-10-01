@@ -1,3 +1,4 @@
+import {KPI_PRESENTATION_CSS} from './kpi-presentation.js';
 import {WORKBENCH_MODE_CSS} from './workbench-style.js'
 import {CALENDAR_PRESENTATION_CSS} from './calendar-presentation.js'
 // Presentation only: the artifact's data, DOM and event handlers stay intact.
@@ -79,6 +80,7 @@ body .rScV5Q_mindMapNode{border:1px solid var(--sherlock-border)!important;borde
 @media(max-width:440px){body :is(.controls,.terminal-table-toolbar){align-items:stretch!important}body .terminal-table-toolbar input{flex:1!important;width:100%!important}body .research-feed-item{grid-template-columns:minmax(0,1fr)!important;gap:3px!important}body .feed-meta{flex-direction:row!important;flex-wrap:wrap!important;align-items:baseline!important;gap:2px 6px!important}body[data-research-kind="calendar"]{display:block!important}body .market-value{font-size:16px!important}}
 @media(max-width:480px){body :is(.market-metrics,.fund-kpis){grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:240px){body :is(.market-metrics,.fund-kpis){grid-template-columns:minmax(0,1fr)!important}}
+${KPI_PRESENTATION_CSS}
 ${CALENDAR_PRESENTATION_CSS}
 ${WORKBENCH_MODE_CSS}
 }`
