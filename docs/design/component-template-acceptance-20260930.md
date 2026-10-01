@@ -659,3 +659,9 @@ Figma源1918:345317、默认1918:345318/345690，656×424、标题栏38、正文
 升级前日历的个人记录亦恢复，但旧HTML自身未分层的48px列优先于新版展示层，仍使“时间待确认”换为两行。以该真实旧卡片HTML和已保存个人状态在生产双层CSP下复现，时间高度36px；仅将可信日历展示层的时间列设为重要规则后，656/280px均18px、无横向溢出、零页面错误。原HTML、来源与个人记录不重写。186项直接相关检查和项目类型检查通过；误用裸tsc扫描了生成目录的第三方测试，该调用不计通过，改用项目typecheck入口通过。
 
 证据calendar-native-final-audit.json、calendar-native-final-*.png、calendar-native-focus-form.png、calendar-old-browser-red/green.log、calendar-old-browser-checks.json、calendar-old-layout-gate/typecheck.log均位于既有临时目录。旧卡片列宽修正的最终包和两代个人记录重启复验仍待完成，接受保持61/74。
+
+### 日历两代卡片最终本地包接受
+
+源码c0491159受管集成至330d18f3，本地构建与完整包检查通过，组件技能v1.23.0，真实主界面端口56341。构建退出并重启应用后，旧日历的9月29日个人日程和新日历的「后继包个人日程 0 -5」均恢复；「时间待确认」保持单行。两代卡片留存HTML SHA-256和sharedComponentState（包括个人记录ID、日期、视图和修订号）与构建前完全一致，4条原来源均未改写。证据calendar-final-old-compat.png、calendar-final-new-restored.png、calendar-two-generations-after-final.json、calendar-accepted-build.log与calendar-accepted-package.log。
+
+新日历普通中文首次一次prepared、23.083秒完成；首次完整显示、浅色/深色/企业模式、整理、日期待定、今天/上月、个人日程新建、紧凑缩宽及会话往返均已接受。旧首次请求存在拒绝重试，保持失败记录，未纳入首次成功样本。日历计为已接受：实现62/74、原生接受62/74；KPI正在开发，不计为已实现或接受。整体目标仍未完成。
