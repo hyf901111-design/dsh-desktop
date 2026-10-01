@@ -9,24 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "所选创建提示预算修正及摘要导图最终验收",
+        "featureName": "音频原生预置及所选创建两列表格换行",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
-        "tipCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
+        "baseCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
+        "tipCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
         "commits": [
           {
-            "commit": "123a196f0cb4c03b4583a2f4a7e0772d615ff519",
+            "commit": "8940c40a2e94a06c7c1c6654b8519490867f5f22",
             "parents": [
-              "21e3c494614266f4bd6a54a347f6ac7ea52ba90f"
+              "1048cdd1184b7fbd60be8084236c87ae862bceeb"
             ],
-            "subject": "记录摘要和思维导图最终客户端验收及头像居中复验"
+            "subject": "修复所选创建两列表格长说明换行并记录首次提交验收"
           },
           {
-            "commit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
+            "commit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
             "parents": [
-              "123a196f0cb4c03b4583a2f4a7e0772d615ff519"
+              "8940c40a2e94a06c7c1c6654b8519490867f5f22"
             ],
-            "subject": "精简所选创建技能规范并保留完整来源执行空间"
+            "subject": "新增音频原生预置播放器及完整来源交付契约"
           }
         ],
         "files": [
@@ -36,23 +36,87 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-skill.js"
+            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/audio-template-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/audio-template-contract.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/audio-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-selected-create.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
           },
           {
             "status": "M",
             "path": "skills/ework-workbench-components/_meta.json"
           },
           {
-            "status": "A",
-            "path": "skills/ework-workbench-components/references/selection-runtime.md"
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-clipboard.ts"
           },
           {
             "status": "A",
-            "path": "test/research-selected-create-prompt.test.js"
+            "path": "test/audio-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-clipboard.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -60,15 +124,17 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-selected-create-prompt.test.js",
-              "test/research-task-runtime.test.js",
+              "test/audio-template.test.js",
+              "test/research-grid-client.test.js",
+              "test/component-template-registry.test.js",
+              "test/research-canvas-clipboard.test.ts",
               "-t",
-              "所选创建保留短来源|selected-source create contract|uses the selected document body|gives .* deliverables the same"
+              "音频|native audio|unique semantic"
             ],
             "outcome": "passed",
-            "summary": "9项直接相关检查通过；保留冻结证据、失败整选拒绝及原生和HTML输出边界",
-            "verifiedCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
-            "completedAt": "2026-10-01T17:14:58.040319+00:00",
+            "summary": "9项音频数据契约、播放器、整理及复制直接聚焦通过",
+            "verifiedCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
+            "completedAt": "2026-10-01T18:02:08.421117+00:00",
             "timeoutMs": 300000
           },
           {
@@ -79,82 +145,25 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
-            "completedAt": "2026-10-01T17:14:58.040319+00:00",
+            "verifiedCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
+            "completedAt": "2026-10-01T18:02:08.421117+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "本修正仅改变后端规范装配；已在446a9c4d观察首次预算错误和完整需求保留，最终包原位重试待验。摘要导图三主题、整理和来源定位已在同包通过。"
+          "outcome": "passed",
+          "summary": "生产渲染器实际播放本人12秒合成音源，三主题280px无横向溢出，完整转写保留；真实3cd4d226所选创建首提8.049秒但两列换行最终包待验。"
         },
         "acceptanceCriteria": [
-          "所选创建短来源正常提交，提示保留完整schema和冻结正文",
-          "不增加执行预算，不放宽HTML沙盒或联网权限",
-          "本人来源和需求保留，同ID失败重试完成；三主题和整理可读"
+          "只保存明确原音源，未知信息不编造且无自动播放",
+          "完整转写/章节/来源保留，离开暂停、返回由用户继续播放",
+          "三主题、窄卡、整理保留完整可读内容"
         ],
         "risks": [
-          "所选创建最终包重试待验，当前原生接受67/74",
-          "YouTube原生播放仍需本人登录，总体目标继续"
+          "最终集成包音频及两列换行待原生复验，原生接受67/74",
+          "YouTube原生播放仍需本人登录，其他5类和总体目标继续"
         ],
-        "generatedAt": "2026-10-01T17:14:58.040319+00:00"
-      },
-      "merged": {
-        "mergeCommit": "80d639a3910c3ee49bbc7c014d73603694bb5424",
-        "verificationCommit": "80d639a3910c3ee49bbc7c014d73603694bb5424",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "80d639a3910c3ee49bbc7c014d73603694bb5424",
-            "completedAt": "2026-10-01T17:18:31.338Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "80d639a3910c3ee49bbc7c014d73603694bb5424",
-            "completedAt": "2026-10-01T17:18:31.338Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "80d639a3910c3ee49bbc7c014d73603694bb5424",
-            "completedAt": "2026-10-01T17:18:31.338Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "80d639a3910c3ee49bbc7c014d73603694bb5424",
-            "completedAt": "2026-10-01T17:18:31.338Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T17:18:31.338Z"
+        "generatedAt": "2026-10-01T18:02:08.421117+00:00"
       }
     },
     {
