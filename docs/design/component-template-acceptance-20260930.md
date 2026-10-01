@@ -892,3 +892,15 @@ Figma智能组件Draft1917:353201、链接Draft1917:355462均为485×400、38高
 证据smart-link-final-native-audit.json、smart-link-native-final.png、smart-link-native-unified-minimum.png、smart-native-input-focus.png、link-native-session-return.png、smart-link-arranged-native-{light,dark,enterprise}.png、smart-draft-native-{light,dark,enterprise}.png、link-draft-native-*-error.png和owned-link-http-events.json，均位于/tmp/ework-template-acceptance-20260930/。网页AX按钮调用未触发两次实际操作，随后按可见位置点击成功；这些工具操作问题保留，不混入组件生成首次成功统计。只验证本地虚构来源，不声称外部网站的服务端登录策略永不过期。
 
 智能组件、链接按Figma独立交互类型计入覆盖：累计实现72/74、严格原生接受71/74；文件、图集及YouTube登录后的真实播放仍继续，全量首次成功率目标尚未宣布完成。未运行全功能测试或正式发布。
+
+## 文件与图库预置实现与聚焦验证（原生接受前，2026-10-02）
+
+按Figma文件1918:347373（656×410）与图库1918:347930（656×364）接入原生files/gallery契约，统一最小280×180。首次同次提交完整原文件清单，source模式直接prepared；HTTP原网址、当前工作目录相对路径或客户端导入授权只能选择一种来源，模型不能创建授权或用样例替代缺失文件。保留完整名称、原说明、来源、日期、真实字节数和图片alt；零字节与未知大小分别显示。预览、下载、移除权限独立，共享只读不能导入和移除，移除只删除卡片引用并允许画布撤销。
+
+原生组件支持文件搜索、安全预览、实际文件导入、完成文件数进度与失败重试；图库缩略图、完整原图、上一张下一张、原图下载和失败重试。会话返回保留所选图片；父卡删除释放其原网页视图，撤销恢复仍使用原来源。附件弹窗以真实窗口边界控制原网页交互，不受原卡片或画布宽度裁切；普通画布链接保留原选择规则。刷新只请求重新载入原文件预览，不修改清单或启动生成模型。
+
+HTTP下载在用户选择原生保存目标后才获取原始字节，不复用网页登录Cookie、不自动跟随重定向；单文件32MB、60秒。取消不取数，失败不报告保存成功。客户端导入保存授权而非绝对路径或临时capabilityToken；已完成导入可恢复，未完成File句柄和重试进度不声称跨重启恢复。内置组件技能更新v1.31.0。
+
+19项直接相关检查及项目typecheck通过：契约/原始字节/零字节/实际流式上限/注册表/技能10项，生产安装模块附件、弹窗边界、删除撤销、会话返回、重新载入、补丁幂等和既有最小尺寸9项。首次父卡释放测试使用setArtifacts替代真实删除入口而失败，改用removeNodes并补齐真实移除入口释放后通过；保留原失败日志，不据此宣称原生接受。生产模块浏览器检查三主题280px卡片横向溢出均0、长名称white-space:normal；完整原图naturalWidth/Height为1200×640，翻页保持原网址。
+
+证据attachment-contract-focused-final.log、attachment-client-focused-final.log、attachment-typecheck-final.log、attachment-browser-narrow-audit.json、attachment-browser-original-view.png。两个新增独立类型源码实现后累计74/74，严格原生接受仍71/74；本地集成包、普通输入生成、真实原文件预览/导入/下载、主题/整理/返回继续验证。未运行全功能测试或公开发布。

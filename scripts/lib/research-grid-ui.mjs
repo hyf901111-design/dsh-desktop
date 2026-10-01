@@ -74,6 +74,10 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
         const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-audio-preset]')
         if(!player?.__eworkReloadAudio)throw Error('请先添加音频网址');
         player.__eworkReloadAudio();message='已请求重新加载音源'
+      }else if(['files','gallery'].includes(node.containerSpec?.type)){
+        const files=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-attachment-preset]')
+        if(!files?.__eworkReloadAttachments)throw Error('原文件预览尚未就绪');
+        files.__eworkReloadAttachments();message='已请求重新载入原文件预览'
       }else if(node.containerSpec?.type==='youtube'){
         const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-youtube-preset]')
         if(!player?.__eworkReloadYoutube)throw Error('视频尚未载入，请先添加视频网址');
@@ -453,6 +457,8 @@ export function measureWorkbenchContents(root,nodes) {
     // content. Native snapshots are images of that viewport, so they must not
     // replace the readable template height after a manual resize.
     if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
+    const attachments=body.querySelector('[data-research-attachment-preset]');
+    if(attachments){measured.set(node.id,{width:preferred.width,height:Math.max(180,38+Math.max(attachments.offsetHeight,attachments.scrollHeight)+(card.querySelector('.odyssey-data-stamp')?24:0))});continue}
     const audio=body.querySelector('[data-research-audio-preset]')
     if(audio){
       let inset=0

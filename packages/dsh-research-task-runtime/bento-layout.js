@@ -137,6 +137,8 @@ export function researchMarketDimensions(node, includeManual = false, availableW
 // A completed card owns its readable frame. Presets describe a starting slot,
 // not a reason to leave blank space or clip longer content after generation.
 export function researchOptimalDimensions(node = {}, measured = null) {
+  if(node.containerSpec?.type==='files')return {width:656,height:410};
+  if(node.containerSpec?.type==='gallery')return {width:656,height:364};
   if(node.containerSpec?.type==='audio')return {width:656,height:264};
   if(['summary','mind-map'].includes(node.containerSpec?.type))return {width:980,height:280};
   if(['iframe','youtube'].includes(node.containerSpec?.type))return {width:485,height:340};
