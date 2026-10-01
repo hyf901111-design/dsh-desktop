@@ -56,7 +56,7 @@ it('counts JSON escaping in bounded draft transport without truncating control c
 it('ordinary Chinese editable-note intent selects the compact note contract',()=>{
  expect(requestedOperationsType('创建一张可编辑Markdown笔记')).toBe('note');expect(requestedOperationsType('请总结这份研究报告')).toBeUndefined();
  const prompt=buildResearchTaskPrompt({parentSessionId:'synthetic',canvasNodeId:'note',kind:'container',prompt:workbenchPanelPrompt({title:'笔记工作台'},{title:'研究笔记',type:'note',size:'large',prompt:'保留提供的本地材料，可编辑Markdown笔记'})});
- expect(prompt).toContain('type:"note"');expect(prompt).toContain('完整Markdown原文');expect(prompt).toContain('v1.21.0');
+ expect(prompt).toContain('type:"note"');expect(prompt).toContain('完整Markdown原文');expect(prompt).toContain('v1.22.0');
 })
 
 it('模型看到的工具支持note，完整原材料同次准备且不启动逐卡模型',async()=>{

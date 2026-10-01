@@ -79,6 +79,7 @@ export function researchMarketDimensions(node, includeManual = false, availableW
   // Shared presentation CSS contains selectors for every template. Only DOM
   // attributes establish the current kind; searching CSS misclassifies cards.
   const bodyTag=html?.match(/<body\b[^>]*>/)?.[0] ?? '';
+  if (bodyTag.includes('data-sherlock-template="rss"')) return { width:980, height:410 };
   if (bodyTag.includes('data-sherlock-template="note"')) return { width:980, height:340 };
   if (bodyTag.includes('data-sherlock-template="clock"')) return { width:980, height:200 };
   if (bodyTag.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:656, height:316 };

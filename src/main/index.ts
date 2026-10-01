@@ -137,6 +137,7 @@ import {
   registerResearchLinkFrameHandlers
 } from './state/research-link-frame'
 import { registerResearchWebReaderHandlers } from './state/research-web-reader'
+import {createResearchRssService,registerResearchRssHandlers} from './state/research-rss'
 import {
   registerResearchCanvasExportHandlers,
   researchCanvasExportFileOperations
@@ -1216,6 +1217,8 @@ async function bootstrap(): Promise<void> {
   })
   const disposeCanvasActions = registerCanvasActionHandlers({ipcMain,getMainWindow:()=>mainWindow,bridge:canvasActions})
   app.once('before-quit',disposeCanvasActions)
+  const rssService=createResearchRssService({canvas:canvasActions,isShared:id=>researchBoardsService?.isSharedSession(id)===true})
+  app.once('before-quit',registerResearchRssHandlers({ipcMain,getMainWindow:()=>mainWindow,service:rssService}))
   let isScheduledSession = (_id: string) => false
   const notifiedSessionTurns = new Map<string, number>()
   researchContextBridge = new ResearchContextBridge({

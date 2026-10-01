@@ -607,3 +607,13 @@ ce8a837f受管集成至69c957e2，本地包签名、来源及完整包检查通�
 证据位于既有临时目录：markdown-note-corrected-native-build/package.log、markdown-note-corrected-native-created/session-return-audit.json、markdown-note-native-corrected-arranged-audit.json、markdown-note-corrected-native-{old-dark-arranged,light-arranged,enterprise-arranged,dark-narrow-arranged,session-return}.png。补跑research-html-theme的4项失败在修改前4d37基线均存在（预览旧字节上限和Happy DOM旧layer前缀解析），本次9组真实浏览器级联检查通过；记录markdown-note-contrast-tip-tests.log与markdown-note-contrast-baseline-theme.log，不把这两次检查写为全绿。
 
 note计入原生接受：实现60/74、接受60/74。其余14类模板及全量普通中文成功率统计仍未完成。
+
+## RSS/Atom 订阅模板实现与宿主读取（2026-10-01）
+
+Figma 1917:352946（Default 1917:352947）980×410：订阅内容/管理订阅、34px搜索栏、250px空状态及两颗添加按钮。警告、搜索和加号使用原始SVG导出；导出时复制源节点到临时页范围并在finally移除，不改原稿。统一最小280×180，窄框按钮整行换行，长条目在独立列表内滚动，全文和原文来源可展开。
+
+新增严格rss数据契约、公开工具类型与首次完整artifact直达prepared路径；最多10源/每源100条/全量来源32KB，超容量明确拒绝、不截断或生成示例新闻。RSS guid/Atom id、完整标题和摘要、原文链接、原发布时间与更新时间保留，缺失日期不使用抓取时间补充。实际宿主公开读取限制标准HTTP端口、DNS全部地址验证与固定解析地址连接、重定向逐次检查、15秒期限及512KB XML上限，拒绝实体/DOCTYPE。共享和只读写入拒绝；刷新失败保留原条目与抓取时间，画布只更新所属组件且绑定原revision。
+
+直接调用生产读取函数实际取得Federal Reserve公开默认源https://www.federalreserve.gov/feeds/press_all.xml，20条、10006字节结构化来源，原发布时间与2026-10-01T07:37:50.857Z抓取时间分开。生产双层CSP浏览器使用该实际来源快照和宿主服务，新增默认源、搜索、页签/筛选重建恢复、失败保留及移除通过；980/480/280px×三模式9组无溢出，34px搜索与32px页签不被通用控件压缩，原图标完整，0页面错误。首轮沙盒检查暴露消息转发插在字体监听器和样式优先级问题，均修复后重跑通过。证据rss-default-live.json、rss-browser-checks.json及rss-*.png位于既有临时证据目录。
+
+186项直接相关检查、类型检查通过，未运行全功能测试。新增DNS超时与RSS状态显示回归先失败再通过。实际客户端新包普通中文首次创建、实际新增来源及读取、主题/整理与会话返回仍待验收；目前实现61/74、原生接受60/74，整体成功率目标未完成。

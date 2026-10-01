@@ -73,7 +73,8 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
         const reload=frame?.querySelector('.rScV5Q_webFrameControls button')
         const nativeReload=frame?.querySelector('[data-research-native-web]')?.__eworkReloadWeb
         if(nativeReload)nativeReload();else if(reload)reload.click();else throw Error('网页尚未载入，请稍后刷新')
-      }else if(binding){await window.dshDesktop.componentData.request(sessionId,{action:'refresh',nodeId:node.id});const rows=await window.dshDesktop.componentData.request(sessionId,{action:'list'});componentDataStatusStore.publish(sessionId,rows)}
+      }else if(/<body\b[^>]*data-sherlock-template="rss"/.test(node.containerSpec?.html??'')){await window.dshDesktop.researchRss.request({sessionId,nodeId:node.id,action:'refresh'})}
+      else if(binding){await window.dshDesktop.componentData.request(sessionId,{action:'refresh',nodeId:node.id});const rows=await window.dshDesktop.componentData.request(sessionId,{action:'list'});componentDataStatusStore.publish(sessionId,rows)}
       else openComponentData(sessionId,node)
       setNow(Date.now());window.dispatchEvent(new Event('sherlock:component-data-changed'))
     }catch(e){setError(e?.message||'刷新失败，保留上次数据')}finally{setBusy(false)}
