@@ -7,7 +7,8 @@ body[data-ds-dark-theme] .ew-iframe-preset{--iframe-control:#25242a;}
 body [data-ework-grid][data-workbench-style=dark] .ew-iframe-preset{--iframe-control:#25242a;}
 body [data-ework-grid][data-workbench-style=light] .ew-iframe-preset{--iframe-control:#e9ebef;}
 body [data-ework-grid][data-workbench-style=enterprise] .ew-iframe-preset{--iframe-control:#e9ebef;}
-.ew-iframe-empty{display:flex;flex:1;min-height:0;min-width:0;flex-direction:column;align-items:center;justify-content:center;gap:15px;padding:12px 10px;box-sizing:border-box;overflow:auto;}
+.ew-iframe-empty{display:flex;flex:1;min-height:0;min-width:0;flex-direction:column;align-items:center;justify-content:safe center;gap:15px;padding:12px 10px;box-sizing:border-box;overflow:auto;}
+.ew-iframe-empty>*{flex-shrink:0;}
 .ew-iframe-empty strong{font-size:14px;line-height:16px;}
 .ew-iframe-hint{max-width:405px;text-align:center;color:var(--grid-muted,#666);overflow-wrap:anywhere;}
 .ew-iframe-preset button,.ew-iframe-preset input{font:inherit;box-sizing:border-box;}
