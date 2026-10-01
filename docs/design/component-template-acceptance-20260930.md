@@ -539,3 +539,15 @@ Figma源节点1917:350483、1917:351460、1917:351969完整截图已目检，临
 ### 控件聚焦最终本地包接受
 
 源码6f5aceed受管集成至bfce326d，本地构建与完整包检查通过，真实主界面端口61189。原内幕交易验证会话同一搜索框在深色、浅色及企业模式鼠标聚焦后均显示完整四边；浅色按Tab移至重置筛选按钮，键盘蓝色轮廓完整可见。没有改变输入值或触发重置。客户端保持打开。证据focus-native-dark.png、focus-native-light.png、focus-native-keyboard.png、focus-native-enterprise.png及focus-native-build.log、focus-native-package.log。聚焦问题计为已接受；三条来源表的剩余原生接受项继续待验。
+
+展开左侧栏，在用户截图对应的窄内幕交易卡片中再次聚焦人员搜索框；处于滚动视口顶部与右侧边界时，四边仍完整。补充证据focus-native-narrow-enterprise.png。
+
+### 三类来源表最终原生接受
+
+最终包bfce326d、端口61189及v1.19.0完成三卡剩余检查。公司披露按类型4与“迁移”筛选为1/15条，失效原文保留来源说明、原前导0编号及摘要未提供原因；半年报筛选单条完整记录，原文来源与“用户提供的摘录”摘要来源分别显示。历史价格按2026-09-01至09-05筛选为5/16条，保留虚构周末日期；日期升序、选中day-1、成交量0与未知成交量、VWAP及复权价格和缺失原因分别可读。
+
+原生系统保存窗口导出当前五条历史记录至EWork-records-native-20261001-bfce326d.csv，994字节、UTF-8 BOM。独立逐项核对60个来源字段及币种、单位、时区和复权元信息一致，0、负数、null与原缺失原因均保留。滚动条实际拖动到右端，完整“复权收盘”及其值可达，首列仍固定；CUA横向滚轮本身未可靠移动，不计为该输入路径通过。整理与三模式显示保持可读高度、五条行、数据时点和来源底栏。
+
+切换另一自身验证会话再返回，股东持仓“虚构机构甲”2/13条和普通股common选择、披露类型4和“迁移”1/15条及unavailable选择、历史五日范围与day-1选择全部恢复。离屏卡片在进入可见区时才恢复其预览状态，已实际滚到上方两卡核验，没有将首次离屏AX默认值当成丢失状态。559个来源字段输入审计、首次批量124.363秒成功及此前首次显示检查继续有效。
+
+证据records-native-export-audit.json、records-native-restored-dark.png、records-native-filing-missing.png、records-native-filing-source-summary.png、records-native-history-zero.png、records-native-history-null.png、records-native-history-horizontal.png、records-native-final-arranged-dark.png、records-native-final-history-light.png及records-native-final-history-enterprise.png，均位于/tmp/ework-template-acceptance-20260930/。三类补齐接受，实现及原生接受均58/74，剩余16类；尚不能宣称整体首次成功率已超过90%。
