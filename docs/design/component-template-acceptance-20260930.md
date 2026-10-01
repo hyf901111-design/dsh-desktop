@@ -691,3 +691,13 @@ Figma源1918:343978，656×286、正文248、三块197×117、间隔16、数值2
 原卡片HTML SHA-256仍为1c8cbfafdb1f813cc9052a38924f86139b338a6c4075137252608c5c1fdf9e54；sharedComponentState版本21z、open:[0]及revision:1与构建退出重启前完全一致。24.535秒首次一次prepared、18个原字段逐项一致和说明增补记录、三模式及未绑定来源真实设置反馈的首轮证据继续有效。原生最小280px拖拽未验证；绑定来源成功、未变化、失败三种回复经过实际React刷新入口的聚焦验证，未将其称为本卡片原生真实联网取数。
 
 证据kpi-final-build.log、kpi-final-package.log、kpi-native-final-old-enterprise.png、kpi-native-final-arranged-enterprise.png及kpi-native-final-restarted-audit.json位于/tmp/ework-template-acceptance-20260930/。客户端保持打开；未运行全功能测试。KPI计入接受：实现63/74、原生接受63/74，剩余11类与全量普通中文成功率统计继续进行，整体目标尚未完成。
+
+## 活动时间线预置模板（2026-10-01，原生待接受）
+
+Figma源1918:346434及Default 346435/Active 346523，656×374、38px标题栏、336px正文、44px时间列、24px间隔、6px原始SVG节点与1.5px连续连线。源截图在临时副本取得并清除；节点SVG根尺寸保持6×6，本地嵌入，运行时没有临时Figma链接。16px正文标题、12px事件、11px摘要与28px“显示最新动态”按钮遵从源几何；三模式共用既有主题及控件变量，最小尺寸按用户要求统一280×180。
+
+新增timeline严格来源契约、专属渲染器、公开工具与一次prepared路径。0–60条/32KB，稳定ID、原发生时间、参与人、关联对象、完整摘要、来源和独立已提供原文链接保留；附加原标量及0/-5/null不改写。明确偏移的ISO按实际时刻排序，同一时刻保持原次序；共同date/timeZone的HH:mm支持排序，口径无法比较时保留原序并说明。未知时间必须说明缺失，不补创建时间或当前时间。最新动态按钮只定位已有最新事件，不冒充取数刷新。展开及定位状态通过现有桥恢复，只读查看不写持久记录；来源更新移除事件后仍保留其他事件的展开状态。
+
+公开类型与首次补高回归先失败：旧客户端显示高度433.7而实际内容需628，专属白名单修正后通过。254项直接相关门禁与项目typecheck通过；后续来源更新状态回归先失败，再在最后实现上重跑时间线及真实首次补高10项通过，其余131项在该聚焦轮跳过。生产双层CSP/Trusted Types none沙盒656/480/280px×浅/深/企业9组通过，时间列、节点/标题对齐和原SVG天然6×6核验，零脚本错误。12条长来源在480px有界列表内滚动，280px无横向溢出；全文展开、相同时刻统一展示、原链接、完整重建/整页重开、只读/共享查看均通过。首次浏览器企业文字期望误用普通浅色rgb(37,37,43)，读取实际rgb(60,60,60)与源稿一致后修正夹具，失败日志保留，未修改正确的企业文字色。
+
+证据timeline-red.log、timeline-updated-source-red.log、timeline-height-red.log、timeline-focused-gate.log、timeline-final-focused.log、timeline-typecheck-final.log、timeline-browser-theme-assumption.log、timeline-browser-checks.json及timeline-*.png位于/tmp/ework-template-acceptance-20260930/。技能v1.25.0；实现64/74、原生接受63/74。普通中文最终本地包首次生成、实际主题/整理与会话返回仍待验收；剩余10类及总体首次成功率继续进行，未运行全功能测试，整体目标尚未完成。

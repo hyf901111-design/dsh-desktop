@@ -83,6 +83,7 @@ export function researchMarketDimensions(node, includeManual = false, availableW
   if (bodyTag.includes('data-sherlock-template="note"')) return { width:980, height:340 };
   if (bodyTag.includes('data-sherlock-template="clock"')) return { width:980, height:200 };
   if (bodyTag.includes('data-sherlock-template="kpi"')) return { width:656, height:286 };
+  if (bodyTag.includes('data-sherlock-template="timeline"')) return { width:656, height:374 };
   if (bodyTag.includes('data-sherlock-template="calendar"')) return { width:656, height:424 };
   if (bodyTag.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:656, height:316 };
   if (bodyTag.includes('data-research-kind="dashboard"')) return researchDashboardContentDimensions((html.match(/class="research-metric"/g) || []).length);

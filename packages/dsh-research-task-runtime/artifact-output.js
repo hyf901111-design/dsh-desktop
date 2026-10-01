@@ -1,3 +1,4 @@
+import {renderTimelineArtifact} from './timeline-artifact.js';
 import {renderKpiArtifact} from './kpi-artifact.js';
 import {renderNoteArtifact} from './note-artifact.js';
 import {renderRssArtifact} from './rss-artifact.js';
@@ -42,7 +43,7 @@ export function acceptArtifactOutput(text) {
    if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
    continue;
   }
-  const spec=parseResearchContainerSpec(renderKpiArtifact(candidate) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderTimelineArtifact(candidate) ?? renderKpiArtifact(candidate) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.

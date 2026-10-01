@@ -72,3 +72,5 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 日历原标题、原摘要、原日期和时间字段保持原文；用户已提供或已核验的链接独立放入 url，不拼入摘要。模拟日历允许保留用户提供的原文链接，不为虚构记录编造链接，也不自动读取链接。
 
 - `kpi` 使用当前 EFund/Widget/KPI 1918:343978 源模板（656×286，三主题与内容自适应）。一次提交 version:1/type:kpi/title/items:[{label,value,unit?,change?,detail?,missing?,source?,url?}]；1–12项，完整JSON≤32KB，可加 subject/asOf/range/note/sources:[{name,url?}]。保留原0、负数、原单位、完整口径和来源；value允许有限数值、原字符串或null（null必须给missing原因），不得补零或套源设计的128/24等样例。用户明确提供的安全HTTP原文链接可独立保留，无须联网。刷新指标沿用组件真实数据源刷新；未绑定时打开数据源设置，不能以新时间戳或随机值伪装刷新。展开指标查看完整原字段。
+
+- 活动/事件时间线使用 `timeline`（EFund/Widget/Timeline 1918:346434，656×374），panel.type和artifact.type都为timeline，首次同次附完整artifact:{version:1,type:"timeline",title,items:[{id,title,time,summary?,actor?,object?,source?,url?}]}。最多60条/32KB，可加subject/range/date/timeZone/asOf/note；唯一稳定ID及原发生时间必需，未知用time:null和timeMissing原原因，不用当前时间、抓取时间或创建时间补齐。明确偏移的ISO时间按实际时刻排序；HH:mm必须提供共同date和IANA timeZone才排序，同一时刻保留原次序。无法比较则保留原记录并标明原因，不删除未知记录。保留完整原摘要、来源、参与人、关联对象、原0/负值/未知和附加标量字段。原HTTP链接独立url保留，不联网读取或虚构。展开完整事件和“显示最新动态”由宿主实现；该按钮只定位已取得记录，不代表刷新取数或自动订阅工作台动态。
