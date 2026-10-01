@@ -9,34 +9,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "活动时间线预置与完整事件来源",
+        "featureName": "嵌入网页原生预置与网址会话恢复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "9b96f994f4fd8c2fd6f677952ae0df32f41a405f",
-        "tipCommit": "9937b5c6848424dc3b1b9556814cb51ebffdd2c0",
+        "baseCommit": "9937b5c6848424dc3b1b9556814cb51ebffdd2c0",
+        "tipCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
         "commits": [
           {
-            "commit": "acd49928ad870e831d2023c1f1997f29c5bb0655",
+            "commit": "e5cda980e4c93a33f92f72ba435063e51a7b008e",
             "parents": [
-              "9b96f994f4fd8c2fd6f677952ae0df32f41a405f"
+              "9937b5c6848424dc3b1b9556814cb51ebffdd2c0"
             ],
-            "subject": "记录项目指标模板最终客户端与重启验收"
+            "subject": "记录活动时间线最终客户端验收与来源恢复"
           },
           {
-            "commit": "9937b5c6848424dc3b1b9556814cb51ebffdd2c0",
+            "commit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
             "parents": [
-              "acd49928ad870e831d2023c1f1997f29c5bb0655"
+              "e5cda980e4c93a33f92f72ba435063e51a7b008e"
             ],
-            "subject": "预置活动时间线并保留原时间来源与展开状态"
+            "subject": "预置嵌入网页空状态并保留网址与原生浏览会话"
           }
         ],
         "files": [
+          {
+            "status": "C081",
+            "path": "build/figma-iframe-icons/add.svg",
+            "previousPath": "build/figma-workbench-icons/plus.svg"
+          },
           {
             "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
           },
           {
             "status": "M",
@@ -47,28 +52,12 @@
             "path": "packages/dsh-research-task-runtime/component-template-registry.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/iframe-template-contract.d.ts"
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/timeline-artifact.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/timeline-assets.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/timeline-dot-source.svg"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/timeline-presentation.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/timeline-template-contract.js"
+            "path": "packages/dsh-research-task-runtime/iframe-template-contract.js"
           },
           {
             "status": "M",
@@ -80,15 +69,23 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/iframe-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
             "status": "M",
@@ -100,19 +97,23 @@
           },
           {
             "status": "M",
-            "path": "test/bundled-component-skill.test.js"
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
           },
           {
             "status": "M",
-            "path": "test/component-template-registry.test.js"
+            "path": "src/main/state/research-canvas-clipboard.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/iframe-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-clipboard.test.ts"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/timeline-template.test.js"
           }
         ],
         "checks": [
@@ -120,15 +121,16 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/timeline-template.test.js",
+              "test/iframe-template.test.js",
               "test/research-grid-client.test.js",
+              "test/research-canvas-clipboard.test.ts",
               "-t",
-              "时间线|未知时间|模拟时间线|同一时区|完整事件|公开工具首次|首次完成按可信内容报告"
+              "嵌入网页|公开工具第一次提交空网页|copies native iframe|重复补丁恢复原始代码|组件设置向右展开|只读链接"
             ],
             "outcome": "passed",
-            "summary": "10项时间线来源、实际公开工具、更新状态与真实首次补高通过，131项聚焦跳过",
-            "verifiedCommit": "9937b5c6848424dc3b1b9556814cb51ebffdd2c0",
-            "completedAt": "2026-10-01T11:41:42.634148+00:00",
+            "summary": "11项嵌入网页原字段、公开工具、生产宿主、只读、重载与复制聚焦通过",
+            "verifiedCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
+            "completedAt": "2026-10-01T12:42:45.986715+00:00",
             "timeoutMs": 300000
           },
           {
@@ -139,83 +141,25 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "9937b5c6848424dc3b1b9556814cb51ebffdd2c0",
-            "completedAt": "2026-10-01T11:41:42.634148+00:00",
+            "verifiedCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
+            "completedAt": "2026-10-01T12:42:45.986715+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层沙盒三宽度三模式9组、全文原链接、重建恢复、只读/共享查看及长列表通过；最终原生包待验"
+          "summary": "CUA真实Chrome生产渲染器485浅色、280深色/企业聚焦、非法拒绝、保存与重建、只读通过，控制台无错误；最终原生包待验"
         },
         "acceptanceCriteria": [
-          "按Figma预置时间线，完整来源一次prepared不启动逐卡模型",
-          "原发生时间与时区排序一致，同一时刻稳定，未知不补造",
-          "三模式窄卡及来源更新后完整事件和展开状态保持"
+          "Figma485×340空态、14px源加号、统一最小尺寸",
+          "用户实际HTTP网址与说明保留，一次prepared",
+          "真实客户端网页加载失败重试与往返保留"
         ],
         "risks": [
-          "最终本地包普通中文首次、主题整理与会话恢复待验",
-          "原生280px最小宽度尚未验收，不把隔离沙盒替代原生",
-          "实现64/74原生接受63/74，目标仍未完成"
+          "最终本地包普通中文首次及真实网页加载尚待验证",
+          "实现65/74原生接受64/74，总目标仍在执行"
         ],
-        "generatedAt": "2026-10-01T11:41:42.634148+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ed91f5c6b33bc47ce7683b3a3dc335bb3efd6d97",
-        "verificationCommit": "ed91f5c6b33bc47ce7683b3a3dc335bb3efd6d97",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "ed91f5c6b33bc47ce7683b3a3dc335bb3efd6d97",
-            "completedAt": "2026-10-01T11:43:50.046Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "ed91f5c6b33bc47ce7683b3a3dc335bb3efd6d97",
-            "completedAt": "2026-10-01T11:43:50.046Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ed91f5c6b33bc47ce7683b3a3dc335bb3efd6d97",
-            "completedAt": "2026-10-01T11:43:50.046Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "ed91f5c6b33bc47ce7683b3a3dc335bb3efd6d97",
-            "completedAt": "2026-10-01T11:43:50.046Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T11:43:50.046Z"
+        "generatedAt": "2026-10-01T12:42:45.986715+00:00"
       }
     },
     {
