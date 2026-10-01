@@ -432,7 +432,10 @@ export function measureWorkbenchContents(root,nodes) {
       // manually resized frame. Refit it at the arranged available width.
       const player=body?.querySelector('[data-youtube-player]')
       const width=player?.getBoundingClientRect().width||Math.max(200,(body?.clientWidth||node.width)-20)
-      measured.set(node.id,{width:preferred.width,height:Math.max(340,Math.ceil(Math.max(200,width*9/16)+38+12+40+(node.containerSpec.description||node.containerSpec.subtitles||node.containerSpec.thumbnailUrl?26:0)))})
+      // The loaded column has natural height: expanded supplied notes and
+      // subtitles, wrapped actions and thumbnails must remain readable too.
+      const naturalHeight=body?.querySelector('.ew-youtube-loaded')?.offsetHeight||0
+      measured.set(node.id,{width:preferred.width,height:Math.max(340,38+naturalHeight,Math.ceil(Math.max(200,width*9/16)+38+12+40+(node.containerSpec.description||node.containerSpec.subtitles||node.containerSpec.thumbnailUrl?26:0)))})
       continue
     }
     // Both iframe engines show a viewport rather than the page's intrinsic
