@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "Markdown笔记预置与完整草稿保存",
+        "featureName": "笔记公开工具类型契约修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "ce8a837fcef63faf4953738a19672307f97315c0",
-        "tipCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
+        "baseCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
+        "tipCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
         "commits": [
           {
-            "commit": "695889abebed49bba55f02b68016a063895a1ae8",
+            "commit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
             "parents": [
-              "ce8a837fcef63faf4953738a19672307f97315c0"
+              "a53b7613f6029a3371fc6580abf08c73f4d9638e"
             ],
-            "subject": "验收：技术图表三模式与个人绘图持久恢复通过原生验证"
-          },
-          {
-            "commit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
-            "parents": [
-              "695889abebed49bba55f02b68016a063895a1ae8"
-            ],
-            "subject": "功能：预置Markdown笔记工具栏并完整保存草稿与原始材料"
+            "subject": "修复：公开笔记模板类型并统一工作台规划契约"
           }
         ],
         "files": [
@@ -36,35 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/note-artifact.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/note-template-contract.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/note-toolbar-assets.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
@@ -72,43 +37,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
+            "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-interaction-state.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/markdown-note.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/operations-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-refresh.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workflow-template.test.js"
           }
         ],
         "checks": [
@@ -117,19 +50,12 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/markdown-note.test.js",
-              "test/workbench-refresh.test.js",
-              "test/component-template-registry.test.js",
-              "test/component-interaction-state.test.js",
-              "test/operations-template.test.js",
-              "test/workflow-template.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-grid-client.test.js"
+              "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "222项笔记、草稿、來源桥、生成契约及客户端聚焦检查通过",
-            "verifiedCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
-            "completedAt": "2026-10-01T06:13:28.883785+00:00",
+            "summary": "15项检查含实际注册工具note枚举及prepared路径，不启动逐卡模型",
+            "verifiedCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
+            "completedAt": "2026-10-01T06:38:44.814590+00:00",
             "timeoutMs": 300000
           },
           {
@@ -140,71 +66,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
-            "completedAt": "2026-10-01T06:13:28.883785+00:00",
+            "verifiedCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
+            "completedAt": "2026-10-01T06:38:44.814590+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP九组宽度及模式检查、10008字草稿组件重建与整页重开逐字恢复，0页面错误；实际客户端新包待验"
+          "summary": "d06前包原生10151字保存、只读原材料、会话往返与来源面板通过；首轮三次提交失败原因已修复，后继包中文首轮待复验"
         },
         "acceptanceCriteria": [
-          "Figma原工具栏与三模式窄卡可读",
-          "原材料与长草稿完整保存",
-          "普通中文直接匹配note预置",
-          "真实客户端会话及重启恢复"
+          "模型公开类型与规划器共享note枚举",
+          "完整原材料直接prepared",
+          "原生普通中文首次创建复验"
         ],
         "risks": [
-          "最终本地包自然语言创建与草稿恢复待复验",
-          "实现60/74、原生接受59/74，整体目标未完成"
+          "后继客户端普通中文首轮创建待验",
+          "实现60/74接受59/74，整体目标仍未完成"
         ],
-        "generatedAt": "2026-10-01T06:13:28.883785+00:00"
-      },
-      "merged": {
-        "mergeCommit": "67db2236c41e781c2269d22c125e9e017d8781fa",
-        "verificationCommit": "67db2236c41e781c2269d22c125e9e017d8781fa",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "67db2236c41e781c2269d22c125e9e017d8781fa",
-            "completedAt": "2026-10-01T06:17:57.312Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "67db2236c41e781c2269d22c125e9e017d8781fa",
-            "completedAt": "2026-10-01T06:17:57.312Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "67db2236c41e781c2269d22c125e9e017d8781fa",
-            "completedAt": "2026-10-01T06:17:57.312Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T06:17:57.312Z"
+        "generatedAt": "2026-10-01T06:38:44.814590+00:00"
       }
     }
   ],
