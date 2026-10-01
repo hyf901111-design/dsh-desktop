@@ -1,5 +1,7 @@
 import {describe,it,expect,vi} from 'vitest'
-import {createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentDataStatusDefinitions} from '../scripts/lib/component-data-status.mjs'
+import {createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentDataStatusDefinitions,createPersonalChartViewSink,readPersonalChartView,patchComponentDataStatus} from '../scripts/lib/component-data-status.mjs'
+import {workbenchContentRevision} from '../packages/dsh-research-task-runtime/workbench-refresh.js'
+import {readFileSync} from 'node:fs'
 import vm from 'node:vm'
 import {Window} from 'happy-dom'
 import * as react from 'react'
@@ -9,6 +11,28 @@ import {createRoot} from 'react-dom/client'
 
 const row=(nodeId,lastSuccess=1000,extra={})=>({nodeId,status:'success',lastSuccess,enabled:true,intervalMinutes:1,...extra})
 describe('component refresh status',()=>{
+ it('persists only the owning technical chart semantic state, preserving geometry and source while refusing stale or shared writes',()=>{
+  const html='<script id="sherlock-template-data" type="application/json">{"templateId":"market.charting","version":"1"}</script>',revision=workbenchContentRevision(html)
+  let nodes=[{id:'a',x:100,y:200,width:480,height:620,containerSpec:{type:'html',html},config:{interactionState:{version:'v',events:{}}}}],writable=true
+  const write=vi.fn((id,config)=>{nodes=nodes.map(n=>n.id===id?{...n,config}:n);return true}),sink=createPersonalChartViewSink({read:()=>nodes,write,canWrite:()=>writable})
+  const state={values:[['source-value','100'],['chart-view-key:technical-controls','{"drawings":[{"kind":"trend"}]}']],controls:[{path:[0],tag:'INPUT',value:'private query',checked:false}],scroll:[]},source=nodes[0]
+  expect(sink('a',revision,state)).toBe(true)
+  const durable=JSON.parse(JSON.stringify(nodes[0])),restored=readPersonalChartView(durable)
+  expect(restored).toEqual({values:[state.values[1]],controls:[],scroll:[]})
+  expect({...durable,config:source.config}).toEqual(source)
+  expect(sink('a',revision,state)).toBe(true);expect(write).toHaveBeenCalledTimes(1)
+  for(const [id,rev,v]of [['other',revision,state],['a','stale',state],['a',revision,{...state,values:[['chart-view-key:technical-controls','x'.repeat(65537)]]}]])expect(sink(id,rev,v)).toBe(false)
+  writable=false;expect(sink('a',revision,state)).toBe(false)
+  expect(readPersonalChartView({...durable,containerSpec:{...durable.containerSpec,html:html+'edited'}})).toBeNull()
+  expect(readPersonalChartView({...durable,containerSpec:{...durable.containerSpec,html:html.replace('market.charting','market.metrics')}})).toBeNull()
+ })
+ it('installs the native personal view sink and preserves it through the actual canvas parser',()=>{
+  const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchComponentDataStatus(source)
+  expect(patchComponentDataStatus(patched)).toBe(patched)
+  expect(patched).toContain('researchPersonalChartViewSinks.set(sessionId,createPersonalChartViewSink')
+  expect(patched).toContain('personalChartView:value.config.personalChartView')
+  expect(patched).toContain('canWrite:()=>!sherlockShared(sessionId)&&collaborationCanWrite()')
+ })
  it('publishes only changed cards and highlights changed successful reads while unchanged values only update time',()=>{
   const store=createComponentDataStatusStore(),a=vi.fn(),b=vi.fn()
   store.subscribe('s','a',a);store.subscribe('s','b',b)
