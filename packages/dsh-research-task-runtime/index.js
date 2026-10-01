@@ -491,7 +491,7 @@ export function buildResearchTaskPrompt(request) {
   if (validated.kind === 'create') {
     return [
       '仅基于以下选中资料的真实正文，按用户需求创建一个独立的 EWork Odyssey 画布交付物。',
-      componentSkillInstruction(),
+      componentSkillInstruction('selection'),
       '只输出以下 JSON schema 之一，不得添加字段：',
       chartTemplateSchema(),
       INTERACTIVE_ARTIFACT_PROMPT,
