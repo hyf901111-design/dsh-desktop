@@ -8,6 +8,10 @@ import {renderNoteArtifact} from '../packages/dsh-research-task-runtime/note-art
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench.js'
+import {mkdtemp,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
 const note={version:1,type:'note',title:'研究笔记',asOf:'用户提供的本地材料 · 2026-10-01',content:'# 观察\n\n**原值**：0、-5、未提供。\n\n- 核对单位\n- 保留来源\n\n[来源](https://example.com/source)'}
 it('完整笔记与空白笔记都可预置，超过容量或缺少来源必须明确拒绝',()=>{
  expect(noteDataIssue(note)).toBe(null);expect(noteDataIssue({...note,content:''})).toBe(null)
@@ -53,4 +57,16 @@ it('ordinary Chinese editable-note intent selects the compact note contract',()=
  expect(requestedOperationsType('创建一张可编辑Markdown笔记')).toBe('note');expect(requestedOperationsType('请总结这份研究报告')).toBeUndefined();
  const prompt=buildResearchTaskPrompt({parentSessionId:'synthetic',canvasNodeId:'note',kind:'container',prompt:workbenchPanelPrompt({title:'笔记工作台'},{title:'研究笔记',type:'note',size:'large',prompt:'保留提供的本地材料，可编辑Markdown笔记'})});
  expect(prompt).toContain('type:"note"');expect(prompt).toContain('完整Markdown原文');expect(prompt).toContain('v1.21.0');
+})
+
+it('模型看到的工具支持note，完整原材料同次准备且不启动逐卡模型',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'note-tool-contract-'));let tool,prepared=[];let childCalls=0;
+ const ctx={agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}};
+ const runtime={startPreparedBatch:async({panels})=>{prepared=panels;return panels.map(p=>({taskId:p.canvasNodeId}))},start:async()=>{childCalls++;return{taskId:'unexpected-child'}}};
+ const dispose=await registerWorkbench(ctx,runtime,{filePath:join(dir,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async()=>({})});
+ try{
+  expect(tool.parameters.properties.panels.items.properties.type.enum).toContain('note');
+  const result=await tool.execute({requestId:'note-source-once',title:'研究笔记',panels:[{type:'note',size:'large',title:note.title,prompt:'可编辑Markdown笔记，完整保留用户原文',artifact:note}]},{agent:{session:{id:'synthetic-note'}}});
+  expect(result.status).toBe('prepared');expect(result.templateIds).toEqual(['note']);expect(prepared[0].artifact).toEqual(note);expect(childCalls).toBe(0);
+ }finally{await dispose();await rm(dir,{recursive:true,force:true})}
 })

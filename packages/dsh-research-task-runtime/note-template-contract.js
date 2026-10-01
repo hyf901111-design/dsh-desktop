@@ -1,4 +1,5 @@
 export const NOTE_TEMPLATES=Object.freeze([{id:'note',type:'note',title:'Markdown 笔记',figma:'1917:352841',width:980,height:340,minWidth:280,minHeight:180,version:'21m-note-20261001',interactions:['编辑与格式预览','加粗斜体下划线删除线','链接与列表','对齐与颜色','草稿恢复','原始材料']}]);
+export const NOTE_WORKBENCH_GUIDANCE='可编辑Markdown笔记的panel.type与artifact.type都必须为note，不能选旧的markdown摘要。用户提供原文或新建空白笔记时，在首次调用同次附完整artifact:{version:1,type:"note",title:"笔记标题",asOf:"用户提供的材料来源及日期",content:"完整Markdown原文"}，空白content可为""。artifact只含这五个字段，来源写在asOf，不另加source字段。宿主直接准备工具栏和草稿保存，不启动逐卡模型；保留原文，不改写或截断。';
 export function validNoteContent(value){return typeof value==='string'&&value.length<=16000&&new TextEncoder().encode(value).length<=32000&&new TextEncoder().encode(JSON.stringify(value)).length<=60000;}
 export function noteDataIssue(s){
  if(!s||typeof s!=='object'||Array.isArray(s)||s.version!==1||s.type!=='note'||typeof s.title!=='string'||!s.title.trim()||s.title.length>256||typeof s.asOf!=='string'||!s.asOf.trim()||s.asOf.length>2000)return '笔记需version:1、type:note、title、asOf及完整content';
