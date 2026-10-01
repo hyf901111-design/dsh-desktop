@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "派生来源按钮的画布定位导航修正",
+        "featureName": "所选创建提示预算修正及摘要导图最终验收",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
-        "tipCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
+        "baseCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
+        "tipCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
         "commits": [
           {
-            "commit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
+            "commit": "123a196f0cb4c03b4583a2f4a7e0772d615ff519",
             "parents": [
-              "db4a069b2b756c920d59c11c4a9bd3fa07e299eb"
+              "21e3c494614266f4bd6a54a347f6ac7ea52ba90f"
             ],
-            "subject": "修复派生来源按钮在画布中的定位导航"
+            "subject": "记录摘要和思维导图最终客户端验收及头像居中复验"
+          },
+          {
+            "commit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
+            "parents": [
+              "123a196f0cb4c03b4583a2f4a7e0772d615ff519"
+            ],
+            "subject": "精简所选创建技能规范并保留完整来源执行空间"
           }
         ],
         "files": [
@@ -29,11 +36,23 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/derived-preset-client.mjs"
+            "path": "packages/dsh-research-task-runtime/component-skill.js"
           },
           {
             "status": "M",
-            "path": "test/research-grid-client.test.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/references/selection-runtime.md"
+          },
+          {
+            "status": "A",
+            "path": "test/research-selected-create-prompt.test.js"
           }
         ],
         "checks": [
@@ -41,17 +60,15 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/derived-template-contract.test.js",
-              "test/research-grid-client.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-template-registry.test.js",
+              "test/research-selected-create-prompt.test.js",
+              "test/research-task-runtime.test.js",
               "-t",
-              "派生预置|导图即prepared|derived presets|unique semantic|重复补丁恢复"
+              "所选创建保留短来源|selected-source create contract|uses the selected document body|gives .* deliverables the same"
             ],
             "outcome": "passed",
-            "summary": "16项相关检查通过，含来源点击直接定位、只读导航、删除来源保留原文及prepared",
-            "verifiedCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
-            "completedAt": "2026-10-01T16:47:51.006020+00:00",
+            "summary": "9项直接相关检查通过；保留冻结证据、失败整选拒绝及原生和HTML输出边界",
+            "verifiedCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
+            "completedAt": "2026-10-01T17:14:58.040319+00:00",
             "timeoutMs": 300000
           },
           {
@@ -62,94 +79,25 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
-            "completedAt": "2026-10-01T16:47:51.006020+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "完整前端补丁重复执行通过",
-            "verifiedCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
-            "completedAt": "2026-10-01T16:47:51.006020+00:00",
+            "verifiedCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
+            "completedAt": "2026-10-01T17:14:58.040319+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "e2537bb0实际日常双卡首提26.217秒、完整来源、再次总结与整篇编辑通过；实际来源返回定位问题已修复，字体和导航最终同包待验"
+          "outcome": "not-applicable",
+          "summary": "本修正仅改变后端规范装配；已在446a9c4d观察首次预算错误和完整需求保留，最终包原位重试待验。摘要导图三主题、整理和来源定位已在同包通过。"
         },
         "acceptanceCriteria": [
-          "Figma摘要与导图980×280及统一最小280×180，来源11px正文12px",
-          "单一完整冻结原文、整篇结果、零负值和缺失说明保留；首提prepared无逐卡模型",
-          "三主题、整理自然高度、编辑和一键派生、会话恢复"
+          "所选创建短来源正常提交，提示保留完整schema和冻结正文",
+          "不增加执行预算，不放宽HTML沙盒或联网权限",
+          "本人来源和需求保留，同ID失败重试完成；三主题和整理可读"
         ],
         "risks": [
-          "字体颜色及来源导航修正最终包待复验；实现68/74，原生接受65/74",
-          "原生直接双击未观测到编辑，设置菜单编辑已通过；不计双击通过",
-          "YouTube原生播放仍需本人登录；总体目标继续"
+          "所选创建最终包重试待验，当前原生接受67/74",
+          "YouTube原生播放仍需本人登录，总体目标继续"
         ],
-        "generatedAt": "2026-10-01T16:47:51.006020+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d91a8911f450dec70fe0726a514e70f4a0c06f22",
-        "verificationCommit": "d91a8911f450dec70fe0726a514e70f4a0c06f22",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "d91a8911f450dec70fe0726a514e70f4a0c06f22",
-            "completedAt": "2026-10-01T16:50:08.202Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "d91a8911f450dec70fe0726a514e70f4a0c06f22",
-            "completedAt": "2026-10-01T16:50:08.202Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d91a8911f450dec70fe0726a514e70f4a0c06f22",
-            "completedAt": "2026-10-01T16:50:08.202Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "d91a8911f450dec70fe0726a514e70f4a0c06f22",
-            "completedAt": "2026-10-01T16:50:08.202Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T16:50:08.202Z"
+        "generatedAt": "2026-10-01T17:14:58.040319+00:00"
       }
     },
     {
