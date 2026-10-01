@@ -4,6 +4,7 @@ import {applyTerminalPresentation} from './terminal-presentation.js'
 import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
 
 const interactions = {
+ charting:['已取得证券周期','K线OHLC收盘线','独立量纲比较','本地技术指标参数','绘图与锁定撤销','范围及视图恢复','完整来源记录'],
  'stock-ownership':['证券报告期','完整股东记录','原比例分母','股类明细','排序','范围导出'],'company-filings':['公告标题','表单类型','日期范围','原文与摘要来源','复制原文链接','范围导出'],'historical-price':['日期范围','时区复权币种','OHLCV与VWAP','排序','原缺失记录','范围导出'],
  'insider-trading':['公司与人员筛选','原交易类型和方向','交易日与披露日','日期排序','完整来源记录','披露链接'],'institutional-ownership':['已取得公司年度季度','本期比较期原值','原变化及单位','来源汇总与部分明细','机构与股类筛选','语义状态恢复'],
  dividends:['公司筛选','日期范围','状态筛选','日期排序','事件详情','原公告'],

@@ -22,6 +22,7 @@ export function researchBentoSize(node = {}, measured) {
 // The source frame is a starting point. Dense content earns room for legible
 // labels and rows; sparse content keeps the source proportions.
 export function researchMarketContentDimensions(variant, data = {}) {
+  if(variant==='charting')return {width:980,height:620};
   if(variant==='dividends')return {width:980,height:330};
   if(variant==='stock-splits')return {width:485,height:330};
   if(variant==='company-filings')return {width:980,height:330};

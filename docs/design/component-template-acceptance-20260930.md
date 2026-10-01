@@ -535,3 +535,29 @@ Figma源节点1917:350483、1917:351460、1917:351969完整截图已目检，临
 实际滚动祖先几何回归修复前失败、修复后通过。280/640px宽度×浅色/深色/企业模式×公司、人员、方向、搜索框鼠标聚焦和重置按钮Tab聚焦共30组通过，四边在裁切视口内、字段四边同色、键盘轮廓可见，0页面错误。3项共享展示、8项尺寸桥及类型检查通过。额外运行完整HTML主题文件时，发现4项既有失败；恢复到本次改动前的已提交源码后仍为相同4项失败（运行时预览大小阈值、HappyDOM层样式提取2项、旧CSS层前缀假设），不计为本次通过项，也未修改无关测试。证据focus-red.log、focus-green.log、focus-baseline.log、focus-controls-checks.json、focus-controls-*及focus-*-gate.log，均位于/tmp/ework-template-acceptance-20260930/。
 
 股票持仓、公司披露及历史价格三卡已在最终包普通中文验证会话session-caee15b8-cb9c-4164-8ed6-3ed04daafce4一次提交完成，耗时124.363秒、首次成功、无取数工具或联网；559个来源字段独立审计一致。已通过首次深色显示、整理后浅色/企业模式、机构甲两种股类明细与原文链接复制。其余原生导出、披露与历史筛选、会话恢复待继续，因此接受仍55/74。
+
+### 控件聚焦最终本地包接受
+
+源码6f5aceed受管集成至bfce326d，本地构建与完整包检查通过，真实主界面端口61189。原内幕交易验证会话同一搜索框在深色、浅色及企业模式鼠标聚焦后均显示完整四边；浅色按Tab移至重置筛选按钮，键盘蓝色轮廓完整可见。没有改变输入值或触发重置。客户端保持打开。证据focus-native-dark.png、focus-native-light.png、focus-native-keyboard.png、focus-native-enterprise.png及focus-native-build.log、focus-native-package.log。聚焦问题计为已接受；三条来源表的剩余原生接受项继续待验。
+
+展开左侧栏，在用户截图对应的窄内幕交易卡片中再次聚焦人员搜索框；处于滚动视口顶部与右侧边界时，四边仍完整。补充证据focus-native-narrow-enterprise.png。
+
+### 三类来源表最终原生接受
+
+最终包bfce326d、端口61189及v1.19.0完成三卡剩余检查。公司披露按类型4与“迁移”筛选为1/15条，失效原文保留来源说明、原前导0编号及摘要未提供原因；半年报筛选单条完整记录，原文来源与“用户提供的摘录”摘要来源分别显示。历史价格按2026-09-01至09-05筛选为5/16条，保留虚构周末日期；日期升序、选中day-1、成交量0与未知成交量、VWAP及复权价格和缺失原因分别可读。
+
+原生系统保存窗口导出当前五条历史记录至EWork-records-native-20261001-bfce326d.csv，994字节、UTF-8 BOM。独立逐项核对60个来源字段及币种、单位、时区和复权元信息一致，0、负数、null与原缺失原因均保留。滚动条实际拖动到右端，完整“复权收盘”及其值可达，首列仍固定；CUA横向滚轮本身未可靠移动，不计为该输入路径通过。整理与三模式显示保持可读高度、五条行、数据时点和来源底栏。
+
+切换另一自身验证会话再返回，股东持仓“虚构机构甲”2/13条和普通股common选择、披露类型4和“迁移”1/15条及unavailable选择、历史五日范围与day-1选择全部恢复。离屏卡片在进入可见区时才恢复其预览状态，已实际滚到上方两卡核验，没有将首次离屏AX默认值当成丢失状态。559个来源字段输入审计、首次批量124.363秒成功及此前首次显示检查继续有效。
+
+证据records-native-export-audit.json、records-native-restored-dark.png、records-native-filing-missing.png、records-native-filing-source-summary.png、records-native-history-zero.png、records-native-history-null.png、records-native-history-horizontal.png、records-native-final-arranged-dark.png、records-native-final-history-light.png及records-native-final-history-enterprise.png，均位于/tmp/ework-template-acceptance-20260930/。三类补齐接受，实现及原生接受均58/74，剩余16类；尚不能宣称整体首次成功率已超过90%。
+
+### 技术图表预置模板实现（最终本地包待接受）
+
+Figma源1917:343725完整980×550截图已目检，临时副本已删除。独立charting来源契约接入普通中文路由、一次创建、技能v1.20.0和首次显示补高。只接受实际已提供的1–8组证券周期及各组完整OHLCV、单位、时区和复权口径；源设计120根示例蜡烛不作为数据。零与未知成交量、比较原价及其独立单位分开；240KB以上来源须分卡，不截断来源模型。
+
+宿主本地计算完整来源序列的SMA、以首个完整窗口均值预热的EMA、总体标准差BOLL和Wilder RSI；预热不足保留未提供，缩放不改变计算基础。支持周期、K线/OHLC/收盘线、线性/对数/百分比轴、指标参数与预置组合、范围前后移动、独立百分比比较。个人趋势线、水平线、斐波那契、自由绘图和文字标注按日期与原价锚定，切换指标/周期/主题和刷新语义恢复后保留；锁定、显示和撤销作用于个人标注。原来源数据有完整表格及有界滚动。
+
+10项来源与数值、缺失断线、参数、绘图和重排恢复检查通过。生产双层CSP沙盒980/480/320/280px×三模式×两种旧高度共24组自然尺寸检查与3组三模式绘图交互通过，0页面错误；控件不溢出，日期不重叠，图中文字保持实际字号。客户端初次完成高度检查先暴露白名单缺失，补齐接受及整理阅读宽度并重新生成实际客户端模块后通过。16个直接相关及继承门禁文件360项、20项来源权限、6项规划政策、8项尺寸桥与类型检查通过，未运行全功能测试。
+
+证据charting-source.png、charting-red.log、charting-height-green.log、charting-gate0-final.log、charting-gate1..4.log、charting-browser-checks.json、charting-natural-*、charting-interaction-*与charting-browser-final.log位于/tmp/ework-template-acceptance-20260930/。实现59/74，原生接受仍58/74；技术图表需最终本地包普通中文输入、字段审计、三模式、整理和实际绘图及恢复检查。剩余15类未实现；不能宣称整体成功率已达标。

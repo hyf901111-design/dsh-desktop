@@ -1038,13 +1038,13 @@ it('延迟挂载的HTML预览收到真实选择状态，取消选择和载入同
  expect(f.host.querySelector('.ew-grid-selection-ring')).not.toBeNull()
 })
 
-it.each(['price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price'])('金融序列及资料 %s 初次完成后按可信内容报告补足高度，无需整理',async variant=>{
- const f=await fixture(true),w=f.workspace,{seriesFixtures}=await import('./fixtures/financial-series.js'),{fundamentalFixtures}=await import('./fixtures/financial-fundamentals.js'),{revenueFixtures}=await import('./fixtures/financial-revenue.js'),{actionFixtures}=await import('./fixtures/financial-actions.js'),{ownershipFixtures}=await import('./fixtures/financial-ownership.js'),{recordsFixtures}=await import('./fixtures/financial-records.js')
+it.each(['price-performance','valuation-multiples','price-target','company-profile','financial-statements','revenue-geography','revenue-business','dividends','stock-splits','insider-trading','institutional-ownership','stock-ownership','company-filings','historical-price','charting'])('金融序列及资料 %s 初次完成后按可信内容报告补足高度，无需整理',async variant=>{
+ const f=await fixture(true),w=f.workspace,{seriesFixtures}=await import('./fixtures/financial-series.js'),{fundamentalFixtures}=await import('./fixtures/financial-fundamentals.js'),{revenueFixtures}=await import('./fixtures/financial-revenue.js'),{actionFixtures}=await import('./fixtures/financial-actions.js'),{ownershipFixtures}=await import('./fixtures/financial-ownership.js'),{recordsFixtures}=await import('./fixtures/financial-records.js'),{technical}=await import('./fixtures/financial-charting.js')
  const panel={nodeId:'series',title:'序列',prompt:variant,pending:true,width:656,height:456,x:0,y:0,size:'large'}
  const plan={id:'series-workbench',createdAt:Date.now(),panels:[panel]}
  await act(async()=>w.applyWorkbench(plan))
  const before=w.getWorkbenchCells().map(({freePosition,...c})=>c)
- await act(async()=>w.applyWorkbench({...plan,panels:[{...panel,taskId:'prepared-series',preparedOutput:acceptArtifactOutput(JSON.stringify([...seriesFixtures,...fundamentalFixtures,...revenueFixtures,...actionFixtures,...ownershipFixtures,...recordsFixtures].find(s=>s.variant===variant)))}]}))
+ await act(async()=>w.applyWorkbench({...plan,panels:[{...panel,taskId:'prepared-series',preparedOutput:acceptArtifactOutput(JSON.stringify([...seriesFixtures,...fundamentalFixtures,...revenueFixtures,...actionFixtures,...ownershipFixtures,...recordsFixtures,technical].find(s=>s.variant===variant)))}]}))
  await vi.waitFor(async()=>{await act(async()=>{});expect(f.host.querySelector('iframe[data-research-html-artifact]')).not.toBeNull()},{timeout:2000,interval:50})
  const frame=f.host.querySelector('iframe[data-research-html-artifact]')
  await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:520,height:570}})))

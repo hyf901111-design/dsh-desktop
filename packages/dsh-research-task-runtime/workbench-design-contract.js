@@ -13,6 +13,7 @@ import { researchMarketContentDimensions, researchOptimalDimensions } from './be
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
 const market = Object.freeze({
+  charting: {id:'financial.charting',figma:'1917:343725',sourceHeight:550,width:980,height:620,minWidth:480,minHeight:420,size:'large'},
   'stock-ownership': {id:'financial.stock-ownership',figma:'1917:350483',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
   'company-filings': {id:'financial.company-filings',figma:'1917:351460',sourceHeight:270,width:980,height:330,minWidth:480,minHeight:240,size:'large'},
   'historical-price': {id:'financial.historical-price',figma:'1917:351969',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
@@ -88,6 +89,7 @@ const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
+  if(/技术图表|技术指标|技术分析|可绘图.?K线|market\.charting/iu.test(panel.title??'')&&(!requestedMarketVariant(panel.prompt)||requestedMarketVariant(panel.prompt)==='charting'))return 'charting';
   const recordsTitle=inferFinancialRecordsVariant(panel.title),declaredRecords=requestedMarketVariant(panel.prompt);
   if(recordsTitle&&(!declaredRecords||declaredRecords===recordsTitle))return recordsTitle;
   const ownershipTitle=inferFinancialOwnershipVariant(panel.title),declaredOwnership=requestedMarketVariant(panel.prompt);
