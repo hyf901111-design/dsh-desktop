@@ -10,3 +10,6 @@
 结构化输入用type=form、代码阅读用type=code，均有宿主固定模板。form提供fields:[{id,label,kind,required,value}]，select提供options:[{value,label}]；仅保存本画布输入记录。code提供language和content字符串，不执行代码；JSON格式化、复制和下载由宿主完成。
 
 世界时钟用type=clock，提供version:1/title/asOf和locations:[{id,label,timeZone}]，timeZone必须为有效IANA时区（如Asia/Shanghai、America/New_York）。mode默认live使用设备当前时间；固定时间用mode:snapshot及带Z或偏移的ISO currentTime。可选selectedId、hourCycle:h23或h12，宿主负责夏令时、跨日、城市切换和小时制。时钟更新时间不等于行情刷新时间。
+
+
+YouTube视频用panel.type=youtube，首次同时提交artifact:{version:1,type:"youtube",title,url,description?,durationSeconds?,thumbnailUrl?,subtitles?}，使用source模式。不提供网址时url:null，宿主显示Figma网址输入空态；只使用用户原视频网址，不猜测视频、不生成HTML或逐卡任务。已取得的时长秒数、封面原网址、完整字幕和说明保留，未知资料不编造。支持watch、youtu.be、shorts、embed、live视频地址；宿主采用YouTube官方播放器，不自动播放，重新载入仅表示加载请求。

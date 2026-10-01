@@ -70,7 +70,11 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     setBusy(true);setError('')
     let message='指标数据已更新'
     try{
-      if(node.kind==='web-link'||node.containerSpec?.type==='iframe'){
+      if(node.containerSpec?.type==='youtube'){
+        const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-youtube-preset]')
+        if(!player?.__eworkReloadYoutube)throw Error('视频尚未载入，请先添加视频网址');
+        player.__eworkReloadYoutube();message='已请求重新载入视频'
+      }else if(node.kind==='web-link'||node.containerSpec?.type==='iframe'){
         const frame=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')
         const reload=frame?.querySelector('.rScV5Q_webFrameControls button')
         const nativeReload=frame?.querySelector('[data-research-native-web]')?.__eworkReloadWeb
@@ -103,7 +107,11 @@ export function useWorkbenchSettings({triggerRef,sessionId,node,disabled,editing
   react.useLayoutEffect(()=>{
     const trigger=triggerRef.current;if(!trigger)return
     const shared=sherlockShared(sessionId),entry=(icon,label,run,blocked=false,writes=true)=>({icon,label,run,disabled:!!blocked,writes})
-    const actions=node.containerSpec?.type==='iframe'?[
+    const actions=node.containerSpec?.type==='youtube'?[
+      entry('edit','修改视频网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-youtube-preset]')?.__eworkEditYoutube?.()),
+      entry('refresh','重新载入视频',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
+      entry('link','打开原视频',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
+    ]:node.containerSpec?.type==='iframe'?[
       entry('edit','修改网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-iframe-preset]')?.__eworkEditIframe?.()),
       entry('refresh','重新载入网页',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
       entry('link','浏览器打开',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
@@ -419,6 +427,14 @@ export function measureWorkbenchContents(root,nodes) {
     // reports natural content bounds, never its current frame height.
     if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,workbenchMeasuredDimensions(node,value));continue}
     const card=root?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]'),body=card?.querySelector('[data-research-preview-body]')
+    if(node.containerSpec?.type==='youtube'&&node.containerSpec.url){
+      // The official video has a stable aspect ratio, independent of the
+      // manually resized frame. Refit it at the arranged available width.
+      const player=body?.querySelector('[data-youtube-player]')
+      const width=player?.getBoundingClientRect().width||Math.max(200,(body?.clientWidth||node.width)-20)
+      measured.set(node.id,{width:preferred.width,height:Math.max(340,Math.ceil(Math.max(200,width*9/16)+38+12+40+(node.containerSpec.description||node.containerSpec.subtitles||node.containerSpec.thumbnailUrl?26:0)))})
+      continue
+    }
     // Both iframe engines show a viewport rather than the page's intrinsic
     // content. Native snapshots are images of that viewport, so they must not
     // replace the readable template height after a manual resize.

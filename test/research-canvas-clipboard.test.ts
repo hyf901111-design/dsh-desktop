@@ -43,6 +43,16 @@ async function source(f: Awaited<ReturnType<typeof fixture>>, name = 'report.pdf
 afterEach(async () => { await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))) })
 
 describe('durable research clipboard', () => {
+  it('copies native YouTube original URL and supplied metadata without executable clipboard HTML', async()=>{
+    const f=await fixture()
+    for(const url of [null,'https://www.youtube.com/watch?v=M7lc1UVf-VE&t=1m30s#original']){
+      const spec={version:1,type:'youtube',title:'原视频',url,description:'原说明',durationSeconds:0,subtitles:'第一行\n第二行'}
+      const node={id:'youtube',kind:'generated-container',title:spec.title,x:0,y:0,containerSpec:spec,generationStatus:'completed',containerPrompt:'视频',refreshMinutes:0}
+      expect(await f.service.copy({sessionId:'s',nodes:[node]})).toEqual({ok:true})
+      expect(await f.service.read()).toMatchObject({kind:'components',nodes:[{containerSpec:spec}]})
+      expect((await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...spec,url:'https://youtube.com.attacker.invalid/watch?v=M7lc1UVf-VE'}}]})).ok).toBe(false)
+    }
+  })
   it('copies native iframe empty and supplied URLs exactly without executable HTML', async()=>{
     const f=await fixture()
     for(const url of [null,'https://EXAMPLE.org/path?q=0#original']){

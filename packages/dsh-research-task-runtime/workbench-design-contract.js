@@ -1,3 +1,4 @@
+import {YOUTUBE_TEMPLATES} from './youtube-template-contract.js';
 import {IFRAME_TEMPLATES} from './iframe-template-contract.js';
 import {TIMELINE_TEMPLATES} from './timeline-template-contract.js';
 import {KPI_TEMPLATES} from './kpi-template-contract.js';
@@ -173,6 +174,7 @@ export function marketVariant(panel = {}) {
 }
 
 export function workbenchDesignTemplate(panel = {}) {
+  if(panel.type==='youtube')return {...YOUTUBE_TEMPLATES[0],id:'research.youtube',size:'medium'};
   if(panel.type==='iframe')return {...IFRAME_TEMPLATES[0],id:'research.iframe',size:'medium'};
   if(panel.type==='timeline')return {...TIMELINE_TEMPLATES[0],id:'research.timeline',size:'medium'};
   if(panel.type==='kpi')return {...KPI_TEMPLATES[0],id:'research.kpi',size:'medium'};
