@@ -855,3 +855,11 @@ Figma 总结 `1918:343676` / 完整规范 `1876:331976`，导图 `1917:357536` /
 94b655af受管集成至698a1e5f，本地构建、签名和包检查通过，端口57362。真实窄卡仍复现音频末行裁切与两列表格单行；保留反例audio-final-native-narrow-enterprise.png和selected-create-layer-red-native.png，不能当作最终接受。确认主题的ework-workbench层中important规则优先于层外important修正，且音频嵌套containerContent另有8px上下内边距，之前仅计算外层previewBody。增加实际嵌套边距回归，旧测量806px而完整应为822px，先失败后通过。
 
 将音频相关祖先清除内边距和所选两列表格换行放入同一生产主题层，以实际卡片选择器覆盖，音频测量累计播放器到预览体的全部祖先上下边距。预览补齐实际主题层和卡片容器属性后，三主题280px两列单元格全部white-space:normal、水平溢出0、最长行60.806px，音频宿主padding为0。9项直接聚焦和项目类型检查通过，证据audio-ancestor-padding-red.log、audio-layer-focused.log、audio-layer-typecheck.log及audio-layer-browser-audit.json。空音频卡真实添加表单拒绝带凭据网址，不存在音源保存后显示失败，重试未误报成功；这是本人第二张卡的故障演练，原第一张卡完整来源不变。最终新包目检继续，原生接受保持67/74。
+
+### 所选创建最终原生接受与音频结束定位修正（2026-10-02）
+
+503d0591受管集成至3ee1bca6，清洁本地构建、签名及完整包检查通过，技能v1.30.0、真实主界面端口58829。侧栏展开后的两列表格实际宽288px；真实整理后，浅色、深色、易方达三主题全部7行长值自然换行，末行验收标记完整，原失败草稿重试形成的另一张表格也完整。5个节点的结果、来源、冻结资料和原需求逐字段不变；保留旧首次预算失败，不将12.881秒重试计作首次成功，新草稿8.049秒首次成功。所选创建按Figma1918:343775独立交互类型计入覆盖，累计实现70/74、原生接受68/74。证据selected-create-layer-final-native-{light,dark,enterprise}.png、selected-create-retry-layer-final-native-dark.png及selected-create-layer-final-native-audit.json。
+
+两张音频卡在最终包三主题窄尺寸下完整显示来源、控件和全部三行转写，没有先前末行裁切；本人故障演练卡已通过实际设置入口改为第二个原音源，完整网址含hash保存，原第一张来源不变。切出音频再返回，6秒/1.5倍速/音量0.25保持，已暂停且不自动播放。证据audio-layer-final-native-{light,dark,enterprise}.png、audio-layer-native-return.png及audio-native-input-audit.json。
+
+实际播放结束后点击6秒章节，定位成功但提示仍是“播放结束”。回归先失败，再按媒体元素实际paused状态在未到结尾且没有音源错误时恢复已暂停；播放中的章节定位不覆盖实际缓冲提示，也不调用播放。首次修正验证因测试读取尚未安装的生产模块仍失败，完成补丁安装后9项直接聚焦全部通过，项目typecheck通过；证据audio-ended-seek-red.log、audio-ended-seek-final-focused.log和audio-ended-seek-typecheck.log。此状态修正新包仍待目检，音频尚未计入严格接受；整体成功率与剩余模板目标继续，未公开发布或运行全功能测试。
