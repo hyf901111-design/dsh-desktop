@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "RSS原生读取时点与摘要显示修正",
+        "featureName": "源设计日历与本画布日程",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
-        "tipCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
+        "baseCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
+        "tipCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
         "commits": [
           {
-            "commit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
+            "commit": "0df9f6bf39356ecf3b9a01a933699053fdc75fa4",
             "parents": [
-              "3853c963e061a8930220127d34efb4c92b1e88ab"
+              "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5"
             ],
-            "subject": "修复：RSS刷新提示绑定真实读取时点并明确初始说明"
+            "subject": "验收：确认RSS读取提示和重启恢复通过"
+          },
+          {
+            "commit": "63da840c0c8ee6079df352379ad1be0b94132801",
+            "parents": [
+              "0df9f6bf39356ecf3b9a01a933699053fdc75fa4"
+            ],
+            "subject": "功能：按源设计预置日历并保存个人画布日程"
           }
         ],
         "files": [
@@ -29,15 +36,79 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/rss-artifact.js"
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/calendar-artifact.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
+            "path": "packages/dsh-research-task-runtime/calendar-presentation.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/calendar-template-contract.js"
           },
           {
             "status": "M",
-            "path": "test/research-grid-client.test.js"
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/calendar-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/helpers/calendar-window.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-artifact-resilience.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-interactive-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-medical-source-panels.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-design-contract.test.js"
           }
         ],
         "checks": [
@@ -45,16 +116,34 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/rss-template.test.js",
-              "test/research-rss.test.ts",
-              "test/rss-status.test.js",
-              "test/component-data-status.test.js",
-              "test/research-grid-client.test.js"
+              "test/calendar-template.test.js",
+              "test/research-interactive-artifact.test.js",
+              "test/research-artifact-resilience.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/component-template-registry.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/component-shared-state.test.js"
             ],
             "outcome": "passed",
-            "summary": "149项直接相关检查通过",
-            "verifiedCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
-            "completedAt": "2026-10-01T08:23:01.692277+00:00",
+            "summary": "115项相关检查通过",
+            "verifiedCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
+            "completedAt": "2026-10-01T09:06:40.408146+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-medical-source-panels.test.js",
+              "test/research-simulated-workbench-normalization.test.js",
+              "-t",
+              "calendar|日历"
+            ],
+            "outcome": "passed",
+            "summary": "两项日历规划与整理检查通过",
+            "verifiedCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
+            "completedAt": "2026-10-01T09:06:40.408146+00:00",
             "timeoutMs": 300000
           },
           {
@@ -65,69 +154,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
-            "completedAt": "2026-10-01T08:23:01.692277+00:00",
+            "verifiedCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
+            "completedAt": "2026-10-01T09:06:40.408146+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "RSS真实原生首次prepared、默认源读取20条和搜索恢复通过；修正后双层CSP九组与摘要展开通过"
+          "summary": "生产双层CSP九组尺寸主题检查、完整来源与个人日程重建重开恢复通过"
         },
         "acceptanceCriteria": [
-          "普通中文首次直接prepared创建rss",
-          "原生实际添加公开RSS及来源、刷新、主题整理、会话恢复"
+          "首次完整calendar提交prepared，无逐卡子模型",
+          "源月历与日程三模式可读，个人记录恢复且来源不变"
         ],
         "risks": [
-          "后继包旧卡实际刷新、时间提示一致与重启恢复仍待复验",
-          "实现61/74，原生接受60/74，整体任务未完成"
+          "最终本地包普通中文创建、三模式整理与原生恢复仍待接受",
+          "实现62/74，原生接受61/74，整体未完成",
+          "六项既有市场模板失败精确基线重现，不计通过项"
         ],
-        "generatedAt": "2026-10-01T08:23:01.692277+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a89865782a75b6575af125fae8e3db53d3310400",
-        "verificationCommit": "a89865782a75b6575af125fae8e3db53d3310400",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a89865782a75b6575af125fae8e3db53d3310400",
-            "completedAt": "2026-10-01T08:27:13.764Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a89865782a75b6575af125fae8e3db53d3310400",
-            "completedAt": "2026-10-01T08:27:13.764Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a89865782a75b6575af125fae8e3db53d3310400",
-            "completedAt": "2026-10-01T08:27:13.764Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T08:27:13.764Z"
+        "generatedAt": "2026-10-01T09:06:40.408146+00:00"
       }
     }
   ],
