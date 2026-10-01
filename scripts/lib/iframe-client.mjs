@@ -4,12 +4,16 @@ const plus='data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-
 const css=`
 .ew-iframe-preset{--iframe-control:#e9ebef;position:relative;display:flex;flex-direction:column;width:100%;height:100%;min-width:0;min-height:0;color:var(--grid-text,#252a33);font-size:12px;line-height:16px;}
 body[data-ds-dark-theme] .ew-iframe-preset{--iframe-control:#25242a;}
+body [data-ework-grid][data-workbench-style=dark] .ew-iframe-preset{--iframe-control:#25242a;}
+body [data-ework-grid][data-workbench-style=light] .ew-iframe-preset{--iframe-control:#e9ebef;}
 body [data-ework-grid][data-workbench-style=enterprise] .ew-iframe-preset{--iframe-control:#e9ebef;}
 .ew-iframe-empty{display:flex;flex:1;min-height:0;min-width:0;flex-direction:column;align-items:center;justify-content:center;gap:15px;padding:12px 10px;box-sizing:border-box;overflow:auto;}
 .ew-iframe-empty strong{font-size:14px;line-height:16px;}
 .ew-iframe-hint{max-width:405px;text-align:center;color:var(--grid-muted,#666);overflow-wrap:anywhere;}
 .ew-iframe-preset button,.ew-iframe-preset input{font:inherit;box-sizing:border-box;}
 .ew-iframe-preset button{min-height:30px;border:0;border-radius:4px;background:var(--iframe-control);color:inherit;padding:7px 14px;cursor:pointer;}
+body [data-ework-grid] .ew-iframe-preset button{background:var(--iframe-control)!important;color:var(--grid-text,#252a33)!important;}
+body [data-ework-grid] .ew-iframe-preset .rScV5Q_previewPlaceholder{background:var(--grid-card,#fff)!important;color:var(--grid-muted,#666)!important;}
 .ew-iframe-preset button:disabled{cursor:default;opacity:.5;}
 .ew-iframe-add{display:flex;align-items:center;justify-content:center;gap:6px;width:115px;height:30px;}
 .ew-iframe-add-icon{display:inline-block;width:14px;height:14px;flex:none;background:currentColor;mask:center/14px 14px no-repeat url("${plus}");}
