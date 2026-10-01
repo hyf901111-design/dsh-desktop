@@ -43,7 +43,7 @@ export function ResearchDerivedPreset({node,sessionId}){
  const outline=spec.type==='mind-map'?researchDerivedOutline(spec.content):null
  const list=items=>react_jsx_runtime.jsx('ul',{children:items.map(item=>react_jsx_runtime.jsxs('li',{children:[item.label,item.children.length?list(item.children):null]},item.line))})
  const result=outline?react_jsx_runtime.jsx('div',{className:'ew-derived-branches',role:'group','aria-label':outline.label,children:outline.children.map(branch=>react_jsx_runtime.jsxs('section',{className:'ew-derived-branch','data-derived-branch':branch.line,children:[react_jsx_runtime.jsx('strong',{children:branch.label}),branch.children.length?list(branch.children):null]},branch.line))}):react_jsx_runtime.jsx('div',{className:'ew-derived-result',children:react_jsx_runtime.jsx(_deepseek_ai_dsh_client_ui_primitives.MarkdownText,{text:spec.content,streaming:false})})
- return react_jsx_runtime.jsxs('div',{ref:host,className:'ew-derived-preset','data-research-derived-preset':spec.type,onDoubleClick:open,children:[
+ return react_jsx_runtime.jsxs('div',{ref:host,className:'ew-derived-preset','data-research-derived-preset':spec.type,onDoubleClick:e=>{e.stopPropagation();open()},children:[
   react_jsx_runtime.jsxs('div',{className:'ew-derived-source',children:['来源组件：',spec.source.nodeId?react_jsx_runtime.jsx('button',{type:'button','data-research-reference-node-id':spec.source.nodeId,onDoubleClick:e=>e.stopPropagation(),children:spec.source.title}):spec.source.title,react_jsx_runtime.jsxs('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'查看来源原文'}),react_jsx_runtime.jsx('pre',{children:spec.source.text})]})]}),
   editing?react_jsx_runtime.jsxs('div',{className:'ew-derived-editor',onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),children:[
    react_jsx_runtime.jsx('textarea',{ref:editor,'aria-label':'编辑派生结果',defaultValue:spec.content,autoFocus:true,disabled:readOnly,onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape')cancel();else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)&&!e.nativeEvent?.isComposing&&e.keyCode!==229){e.preventDefault();save()}}}),
@@ -63,6 +63,7 @@ export function patchDerivedPresetClient(source){
  const types=/const RESEARCH_CONTAINER_TYPES = (?:\/\* @__PURE__ \*\/ )?new Set\(\[[^\]]+\]/,match=source.match(types);if(!match)throw Error('Derived native types missing');if(!match[0].includes('"summary"'))source=source.replace(types,s=>s.replace('new Set([','new Set(["summary", '))
  const parse='if(value.type==="summary"||value.type==="mind-map"&&Object.hasOwn(value,"source"))return researchDerivedSpec(value);'
  if(!source.includes(parse))once('if (value.type === "web") {',parse+'\nif (value.type === "web") {')
+ once("if (spec.type === 'markdown' || spec.type === 'mind-map') return spec.content;","if (spec.type === 'markdown' || spec.type === 'mind-map' || spec.type === 'summary') return spec.content;")
  const sink=`/* ODYSSEY_DERIVED_SINK_V1 */
  researchDerivedSinks.set(sessionId,(nodeId,expectedContent,spec)=>{
   if(!collaborationCanWrite())return false;

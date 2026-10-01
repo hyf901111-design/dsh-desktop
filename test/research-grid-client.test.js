@@ -2024,3 +2024,12 @@ it('派生预置只读画布拒绝双击与旧编辑入口，但保留来源原�
  expect(host.querySelector('textarea')).toBeNull();expect(host.querySelector('pre').textContent).toBe(spec.source.text)
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
 })
+it('派生预置原生摘要可再次一键总结，冻结当前完整正文而不读取图表字段',async()=>{
+ const f=await fixture(true),spec={version:1,type:'summary',title:'收入摘要',content:'# 当前结果\n\n收入0、变化-120；原因未提供。最后证据END',source:{title:'本人材料',text:'旧来源原文'}}
+ await act(async()=>f.workspace.setArtifacts([{...text('summary-source'),title:spec.title,kind:'generated-container',generationStatus:'completed',containerPrompt:'总结',refreshMinutes:0,containerSpec:spec}]))
+ await f.event('click',f.host.querySelector('[data-workbench-more="summary-source"]'))
+ await f.event('click',[...f.document.querySelectorAll('.ew-grid-menu button')].find(n=>n.textContent==='总结提炼'))
+ expect(f.generation.generate).toHaveBeenCalledOnce()
+ const derived=f.workspace.getSnapshot().artifacts.find(n=>n.kind==='generated-summary')
+ expect(derived.generationSources).toEqual([{id:'summary-source',type:'artifact',title:'收入摘要',text:spec.content}])
+})
