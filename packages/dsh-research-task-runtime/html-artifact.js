@@ -188,7 +188,9 @@ textarea{border:.65px solid var(--sherlock-control-border)!important;border-radi
 [data-sherlock-market="table"] th button{height:auto!important;min-height:0!important;padding:0!important;border-radius:0!important;font-size:11px!important;line-height:16px!important;font-weight:400!important;background-color:transparent!important;color:var(--sherlock-market-table-muted)!important}
 :is(input[type="checkbox"],input[type="radio"]){width:13px!important;height:13px!important;min-height:0!important;padding:0!important;accent-color:var(--sherlock-control-primary)!important}
 input[type="checkbox"]{border-radius:3px!important}
-:is(button:not(.market-tile),[role="button"],input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-text)!important;outline-offset:2px!important}
+/* Controls can sit against a scroll viewport; keep every focus edge inside it. */
+:is(button:not(.market-tile),[role="button"]:not(rect):not(circle),input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-primary)!important;outline-offset:-1px!important}
+:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),select,textarea):focus{border-color:var(--sherlock-control-primary)!important;outline:1px solid var(--sherlock-control-primary)!important;outline-offset:-1px!important}
 :is(input,textarea)::placeholder{color:var(--sherlock-control-muted)!important;opacity:1!important}
 :is(button:not(.market-tile),[role="button"],input,select,textarea):disabled{opacity:.45!important;cursor:not-allowed!important}
 a[href],a[href]:visited{color:var(--sherlock-control-text)!important;text-underline-offset:3px;text-decoration-thickness:1px}
