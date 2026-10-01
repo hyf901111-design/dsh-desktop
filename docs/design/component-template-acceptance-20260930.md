@@ -783,3 +783,9 @@ Figma1917:353092/353093默认稿485×340、38px顶栏/302px正文；标题14/16�
 浅色、深色网址编辑、企业播放器已复核。实际拖至网格最小范围，输入框聚焦四边可见，伪装域名回车被拒绝，原已保存网址不变。Tab使内部表单滚动并完整显示确认/取消；语义点击取消返回原视频。滚轮工具调用未观察到滚动，不计为原生滚轮通过；实际React宿主的两种表单滚轮检查通过。切换到自己的网页验证会话后再返回，原视频、完整原网址及说明保持。折叠侧栏头像和消息图标同轴再次确认。
 
 发现展开已提供说明后固定摘要高度不足，原说明在视区底部被截住。整理改为同时测量自然内容列实际高度，包含展开说明/字幕、换行操作按钮及封面；不将外层视口高度反馈为内容高度。实际整理回归先失败655.55px，修正后按720px内容和38px顶栏保留至少758px。29项直接相关聚焦及项目类型检查通过。证据youtube-expanded-details-red.log、youtube-final-fit-tests.log、youtube-final-fit-typecheck.log、youtube-native-play-login-required.png、youtube-native-minimum-focus.png、youtube-native-minimum-keyboard-buttons.png及youtube-native-enterprise-arranged.png。此高度修正后最终包仍待复验，原生接受保持65/74，整体目标继续。
+
+### YouTube展开资料高度最终包复验及侧栏对齐
+
+1ed5f340受管集成至e2097749，清洁本地构建、深度签名及完整包检查通过，技能v1.27.0；实际主界面端口60617。返回本人验证会话后展开说明，再点击真实一键整理，播放器、重试/原视频入口、说明标题与完整说明均可见，无底部裁切。保存记录为795.772×574.185，同一节点、完整原网址（含t参数和hash）及原说明逐字保留。证据/tmp/ework-template-acceptance-20260930/youtube-final-fit-native-sidebar.png、youtube-final-fit-native-audit.json、youtube-final-fit-native-build.log及youtube-final-fit-native-package.log。
+
+当前真实客户端收起侧栏，底部头像、消息中心和上方工具图标中心线一致（截图x约43px），复核先前头像修正7e26eb0b已在包内生效；应用保持打开。此轮只接受展开资料后的整理高度和侧栏对齐，YouTube原生实际播放仍需本人登录，原生滚轮未验证通过。实现66/74、严格原生接受65/74；整体目标尚未完成，未运行全功能测试、发布或推送。
