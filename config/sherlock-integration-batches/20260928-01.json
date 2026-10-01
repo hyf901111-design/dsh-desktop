@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "旧日历时间列展示兼容",
+        "featureName": "KPI预置模板及真实刷新",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "5f203c35a3920b02c6d47ec56d460e3afdad0a12",
-        "tipCommit": "c0491159b73b0ed312b1e65406ba383d84da81e7",
+        "baseCommit": "c0491159b73b0ed312b1e65406ba383d84da81e7",
+        "tipCommit": "08406e754bcd2ff39b9057df06159dcc7688061b",
         "commits": [
           {
-            "commit": "c0491159b73b0ed312b1e65406ba383d84da81e7",
+            "commit": "5c8b02c2c71b3fc63218f5c06eeb0a1834f6f5d2",
             "parents": [
-              "5f203c35a3920b02c6d47ec56d460e3afdad0a12"
+              "c0491159b73b0ed312b1e65406ba383d84da81e7"
             ],
-            "subject": "修复：旧日历卡片的时间列兼容与原生首次生成核验"
+            "subject": "验收：确认日历两代个人日程在最终包重启恢复"
+          },
+          {
+            "commit": "08406e754bcd2ff39b9057df06159dcc7688061b",
+            "parents": [
+              "5c8b02c2c71b3fc63218f5c06eeb0a1834f6f5d2"
+            ],
+            "subject": "功能：预置完整指标卡并接通真实刷新和尺寸恢复"
           }
         ],
         "files": [
@@ -29,7 +36,87 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/calendar-presentation.js"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/kpi-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-kpi-refresh.test.js"
           }
         ],
         "checks": [
@@ -37,15 +124,19 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/calendar-template.test.js",
+              "test/kpi-template.test.js",
+              "test/workbench-kpi-refresh.test.js",
+              "test/bundled-component-skill.test.js",
               "test/research-grid-client.test.js",
               "test/research-grid-workbench.test.js",
-              "test/bundled-component-skill.test.js"
+              "test/research-artifact-resilience.test.js",
+              "test/research-interactive-artifact.test.js",
+              "test/workbench-design-contract.test.js"
             ],
             "outcome": "passed",
-            "summary": "186项直接相关检查通过",
-            "verifiedCommit": "c0491159b73b0ed312b1e65406ba383d84da81e7",
-            "completedAt": "2026-10-01T09:51:31.581466+00:00",
+            "summary": "240项直接相关检查通过",
+            "verifiedCommit": "08406e754bcd2ff39b9057df06159dcc7688061b",
+            "completedAt": "2026-10-01T10:40:10.349538+00:00",
             "timeoutMs": 300000
           },
           {
@@ -55,70 +146,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "c0491159b73b0ed312b1e65406ba383d84da81e7",
-            "completedAt": "2026-10-01T09:51:31.581466+00:00",
+            "summary": "项目类型检查通过",
+            "verifiedCommit": "08406e754bcd2ff39b9057df06159dcc7688061b",
+            "completedAt": "2026-10-01T10:40:10.349538+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实旧卡片CSP内36px换行复现并修为18px；新日历原生首次23.083秒一次prepared，三模式及会话恢复通过；最终旧卡片包与重启待验"
+          "summary": "生产双层CSP九组尺寸主题和完整字段、刷新回复、权限通过，最终原生包待验"
         },
         "acceptanceCriteria": [
-          "首次完整calendar提交prepared，无逐卡子模型",
-          "源月历与日程三模式可读，个人记录恢复且来源不变"
+          "首次完整KPI来源一次prepared，不启逐卡模型",
+          "原数值零负数缺失及三模式整理可读",
+          "真实刷新结果与未绑定状态清楚，完整口径恢复"
         ],
         "risks": [
-          "旧卡片展示兼容最终本地包与两代个人记录重启待验",
-          "实现62/74接受61/74，整体任务仍未完成"
+          "最终本地包原生接受仍待验",
+          "旧research-workbench夹具23个Figma重复补丁锚点失败和1个既有marketVariant断言失败，未改动该文件",
+          "实现63/74接受62/74，整体目标未完成"
         ],
-        "generatedAt": "2026-10-01T09:51:31.581466+00:00"
-      },
-      "merged": {
-        "mergeCommit": "74a235f588f0231e97b08f30d3efc8a7882e1ee0",
-        "verificationCommit": "74a235f588f0231e97b08f30d3efc8a7882e1ee0",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "74a235f588f0231e97b08f30d3efc8a7882e1ee0",
-            "completedAt": "2026-10-01T09:53:19.755Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "74a235f588f0231e97b08f30d3efc8a7882e1ee0",
-            "completedAt": "2026-10-01T09:53:19.755Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "74a235f588f0231e97b08f30d3efc8a7882e1ee0",
-            "completedAt": "2026-10-01T09:53:19.755Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T09:53:19.755Z"
+        "generatedAt": "2026-10-01T10:40:10.349538+00:00"
       }
     },
     {
