@@ -1,3 +1,4 @@
+import {derivedOutline} from '../packages/dsh-research-task-runtime/derived-template-contract.js'
 import {it,expect} from 'vitest'
 import {parseResearchContainerSpec} from '../packages/dsh-research-task-runtime/artifact-validator.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
@@ -26,4 +27,9 @@ it('公开工具同次提交摘要和导图即prepared，保留来源并不启�
   const result=await tool.execute({requestId:'derived-once',title:'本人材料派生复验',dataMode:'source',panels:[summary,mindmap].map(spec=>({type:spec.type,size:'medium',title:spec.title,prompt:'仅根据本人材料',artifact:spec}))},{agent:{session:{id:'own-derived'}}})
   expect(result.status).toBe('prepared');expect(result.templateIds).toEqual(['summary','mind-map']);expect(prepared.map(p=>p.artifact)).toEqual([summary,mindmap]);expect(childCalls).toBe(0)
  }finally{await dispose();await rm(dir,{recursive:true,force:true})}
+})
+
+it('根标题下两空格起始的完整导图等价保留全部原分支和来源',()=>{
+ const indented={...mindmap,content:mindmap.content.replace(/\n/g,'\n  ')};expect(parseResearchContainerSpec(indented)).toEqual(indented);expect(derivedOutline(indented.content)).toEqual(derivedOutline(mindmap.content));expect(validateWorkbench({requestId:'indented-original',title:indented.title,dataMode:'source',panels:[{title:indented.title,prompt:'完整原导图',type:'mind-map',size:'medium',artifact:indented}]}).panels[0].artifact).toEqual(indented);
+ for(const content of ['# 根\n    - 跳过第一层','# 根\n  - 第一分支\n- 混用起始层级','# 根\n  - 分支\n      - 跳层'])expect(derivedOutline(content)).toBeNull();
 })

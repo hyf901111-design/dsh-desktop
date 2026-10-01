@@ -52,3 +52,8 @@ it('公开工作台调用第一次提交完整日历即prepared，不启逐卡�
  const ctx={agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}},runtime={startPreparedBatch:async({panels})=>{prepared=panels;return panels.map(p=>({taskId:p.canvasNodeId}))},start:async()=>{childCalls++;return{taskId:'unexpected'}}};
  const dispose=await registerWorkbench(ctx,runtime,{filePath:join(dir,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async()=>({})});try{const result=await tool.execute({requestId:'calendar-source-once',title:'日历',panels:[{type:'calendar',size:'large',title:calendar.title,prompt:'来源日程月历',artifact:calendar}]},{agent:{session:{id:'own-calendar-test'}}});expect(result.status).toBe('prepared');expect(result.templateIds).toEqual(['calendar']);expect(prepared[0].artifact).toEqual(calendar);expect(childCalls).toBe(0);}finally{await dispose();await rm(dir,{recursive:true,force:true})}
 })
+
+it('完整虚构日历的模拟标识不改写本人提供的分类与待定日期',async()=>{
+ const {prepareSimulatedArtifact}=await import('../packages/dsh-research-task-runtime/workbench-plan.js');const original={version:1,type:'calendar',title:'本人虚构日程',month:'2026-10',items:[{title:'核对记录',date:'2026-10-02',time:'09:00',category:'本人测试',summary:'核对0与-120万元'},{title:'补充记录',date:'日期待定',category:'待补资料',summary:'本人尚未提供退款记录'}]};
+ const next=prepareSimulatedArtifact({type:'calendar',title:original.title,artifact:original});expect(next.items).toEqual(original.items);expect(next.title).toContain('模拟');
+})
