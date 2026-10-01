@@ -60,18 +60,19 @@ export function patchIframeClient(source){
  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)throw Error('Iframe definitions boundary missing');source=source.slice(0,a)+definitions+source.slice(b+end.length)}
  else{const anchor='function createResearchWorkspaceSession(storage, sessionId) {';if(source.split(anchor).length!==2)throw Error('Iframe definitions host missing');source=source.replace(anchor,definitions+'\n'+anchor)}
  const once=(a,b)=>{if(source.includes(b))return;if(source.split(a).length!==2)throw Error('Iframe anchor missing or ambiguous: '+a.slice(0,90));source=source.replace(a,b)}
- const types=/const RESEARCH_CONTAINER_TYPES = (?:\/\* @__PURE__ \*\/ )?new Set\(\[/;if(!types.test(source))throw Error('Iframe native types anchor missing');if(!/new Set\(\["iframe",/.test(source))source=source.replace(types,m=>m+'"iframe", ')
- once('if (value.type === "web") {','if (value.type === "iframe") return researchIframeSpec(value);\n\t\t\tif (value.type === "web") {')
- once("if (spec === null || spec.type === 'web') return '';","if (spec === null || spec.type === 'web' || spec.type === 'iframe') return '';")
+ const types=/const RESEARCH_CONTAINER_TYPES = (?:\/\* @__PURE__ \*\/ )?new Set\(\[[^\]]+\]/,match=source.match(types);if(!match)throw Error('Iframe native types anchor missing');if(!match[0].includes('"iframe"'))source=source.replace(types,s=>s.replace('new Set([','new Set(["iframe", '))
+ if(!source.includes('if (value.type === "iframe") return researchIframeSpec(value);'))once('if (value.type === "web") {','if (value.type === "iframe") return researchIframeSpec(value);\n\t\t\tif (value.type === "web") {')
+ if(!source.includes("if (spec === null || ['web','iframe','youtube'].includes(spec.type)) return '';"))once("if (spec === null || spec.type === 'web') return '';","if (spec === null || spec.type === 'web' || spec.type === 'iframe') return '';")
  once("node.containerSpec?.type === 'web' ? normalizeResearchWebUrl(node.containerSpec.url)","['web','iframe'].includes(node.containerSpec?.type) ? normalizeResearchWebUrl(node.containerSpec.url)")
  once("artifact.containerSpec.type === 'web' ? artifact.sourceText","['web','iframe'].includes(artifact.containerSpec.type) ? artifact.sourceText")
- once('const htmlFitStates = new Map();',`researchIframeSinks.set(sessionId,(nodeId,expectedUrl,spec)=>{
+ if(!source.includes('researchIframeSinks.set(sessionId,'))once('const htmlFitStates = new Map();',`researchIframeSinks.set(sessionId,(nodeId,expectedUrl,spec)=>{
   if(!collaborationCanWrite())return false;
   const node=snapshot.artifacts.find(n=>n.id===nodeId),next=researchIframeSpec(spec);
   if(node?.kind!=='generated-container'||node.containerSpec?.type!=='iframe'||node.containerSpec.url!==expectedUrl||!next)return false;
   return commitUpdate({artifacts:snapshot.artifacts.map(n=>n.id===nodeId?{...n,containerSpec:next,sourceText:undefined,sourceTitle:undefined,sourceUpdatedAt:undefined}:n)},true)!==false;
  });\nconst htmlFitStates = new Map();`)
  const body='function ResearchContainerBody({ node, sessionId, visible, onHtmlSize, preserveHeading = false }) {'
- once(body,body+"\nif(node.containerSpec.type==='iframe')return react_jsx_runtime.jsx(ResearchIframePreset,{node,sessionId,visible});")
+ const branch="if(node.containerSpec.type==='iframe')return react_jsx_runtime.jsx(ResearchIframePreset,{node,sessionId,visible});"
+ if(!source.includes(branch))once(body,body+'\n'+branch)
  return source
 }

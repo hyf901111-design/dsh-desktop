@@ -1,3 +1,4 @@
+import {parseYoutubeSpec} from '../../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 import {parseIframeSpec} from '../../../packages/dsh-research-task-runtime/iframe-template-contract.js'
 import { createHash, randomBytes } from 'node:crypto'
 import { parseResearchHtmlArtifact, RESEARCH_HTML_LIMIT_ERROR } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
@@ -88,7 +89,11 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = ['custom', 'manual'].includes(String(input.titleMode)) ? 'custom' : 'auto' }
   if (input.containerSpec !== undefined) {
     const spec = record(input.containerSpec)
-    if (spec.type === 'iframe') {
+    if (spec.type === 'youtube') {
+      const youtube=parseYoutubeSpec(spec)
+      if(youtube===null)throw new Error('YouTube视频组件格式无效。')
+      output.containerSpec=youtube
+    } else if (spec.type === 'iframe') {
       const iframe=parseIframeSpec(spec)
       if(iframe===null)throw new Error('嵌入网页组件格式无效。')
       output.containerSpec=iframe

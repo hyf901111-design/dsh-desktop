@@ -755,3 +755,15 @@ Figma 1917:353041/353042 当前默认稿为485×340，38px顶栏与302px正文�
 修复3cda1a43受管集成至bdfe37d8，清洁本地包构建、深度签名及完整包检查通过；技能v1.26.0，真实主界面端口55641。返回同一合成会话，原网址和合成Cookie保留；载入次数4、当前页点击0符合新文档重建。点击一键整理后，可读预置高度恢复且测试文字和按钮完整可见；保存记录确认高度不少于340px，同一节点、原标题、原说明、原网址逐字段一致。证据iframe-native-final-arrange.png、iframe-native-final-arrange-audit.json、iframe-arrange-native-build.log及iframe-arrange-native-package.log。
 
 该结果结合上述首次prepared、三模式、统一最小表单、焦点、键盘拒绝和保存、失败重试、会话保留及重启Cookie复验，计入最终原生接受。客户端保持打开；实现65/74、原生接受65/74，剩余9类与总体首次成功率统计继续，整体目标尚未完成。折叠侧栏头像与工具图标同轴再次确认；未运行全功能测试或公开发布。
+
+## 2026-10-01 YouTube视频原生预置（待最终包验收）
+
+Figma1917:353092/353093默认稿485×340、38px顶栏/302px正文；标题14/16、输入465×34、间隔15px、确认80×30、圆角4。源PNG已从只读副本取得后清除副本，原节点未修改；证据youtube-source.png与youtube-design-metadata.json。沿用用户统一最小280×180，输入框聚焦线向内绘制，错误较长时安全居中并内部滚动，不挤压标题、输入或按钮。
+
+新增严格原生youtube契约、工具枚举和首提prepared路径，url:null明确空态；保留用户原网址、说明及实际取得的时长、封面和完整字幕，拒绝伪装域名、凭据、非视频页、重复v参数、未知字段与非法元数据。支持watch、youtu.be、shorts、embed、live；不猜视频，不启动逐卡模型，不放宽生成HTML沙盒。采用[官方iframe播放器](https://developers.google.com/youtube/player_parameters)，autoplay=0、原播放器控件、有效起始秒数；至少200px高、16:9及可见重试/原视频入口。重新载入只报告请求，不冒充数据刷新。画布整理按实际播放器宽度恢复可读高度。原始字幕只作为已提供资料展示，不编造下载结果。
+
+公开契约先红后绿；生产React宿主中原网址保存、非法拒绝、组合输入、只读、恢复、重新载入、三模式、宽度整理和复制粘贴均通过。发现两个原生补丁相互插入会重复分支，改为独立成员、解析、保存和渲染标记；重复安装及HTML沙盒限制回归通过。26项直接聚焦通过，类型检查通过。初轮宽度测试误在独立模块调用需工厂依赖的函数而失败，已改从实际一键整理入口复验，没有修改正确生产逻辑。
+
+真实Chrome加载生产渲染器：485×340浅色空态、280×180深色非法输入/四边聚焦、错误后的完整按钮滚动、企业色播放器加载、用户主动播放、字幕显示和键盘k暂停均已观察。官方文档示例M7lc1UVf-VE从90秒开始，实际播放至2分14秒，非自动播放声明。重新挂载保留完整原网址和说明，共享只读点击修改未进入编辑；未接受实际账户或新凭据。无相关控制台错误。证据youtube-browser-light-empty.png、youtube-browser-dark-minimum-focus.png、youtube-browser-enterprise-player.png、youtube-browser-play-attempt.png、youtube-red.log、youtube-client-red.log、youtube-client-diagnostic.log及youtube-gate-final.log位于/tmp/ework-template-acceptance-20260930/。播放器恢复保留来源而不声明跨文档保留临时播放进度。
+
+技能v1.27.0；实现66/74、原生接受65/74。最终包普通中文首提、实际播放、主题、整理与会话返回仍待核验；整体目标未完成，未运行全功能测试或公开发布。

@@ -1795,6 +1795,64 @@ it('笔记完整长草稿随所属卡片保留，仅当前版本正文链接进�
  await request('https://example.com/new');expect(f.host.textContent).toContain('打开来源：新来源');
  const restored=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');expect(restored.getSnapshot().artifacts[0].config.sharedComponentState.state.content).toBe(state.content);
 })
+it('YouTube实际宿主输入原视频后保留同一节点，官方播放器不自动播放且允许重试',async()=>{
+ const f=await fixture(true),spec={version:1,type:'youtube',title:'原视频标题',url:null,description:'用户原说明'}
+ await act(async()=>f.workspace.setArtifacts([{...text('youtube-own'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ const input=f.host.querySelector('[aria-label="YouTube视频网址"]');expect(input).not.toBeNull();input.focus()
+ input.value='https://youtube.com.attacker.invalid/watch?v=M7lc1UVf-VE';await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ expect(f.host.textContent).toContain('完整YouTube视频网址')
+ input.value='https://www.youtube.com/watch?v=M7lc1UVf-VE&t=1m30s#original'
+ await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false})
+ const frame=f.host.querySelector('iframe[data-youtube-player]');expect(frame).not.toBeNull()
+ expect(frame.src).toBe('https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=0&controls=1&playsinline=1&start=90')
+ expect(frame.getAttribute('referrerpolicy')).toBe('strict-origin-when-cross-origin')
+ expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin allow-presentation')
+ expect(frame.hasAttribute('allowfullscreen')).toBe(true)
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual({...spec,url:input.value})
+ const refresh=await f.host.querySelector('[data-workbench-refresh="youtube-own"]').__eworkRefresh()
+ expect(refresh).toEqual({message:'已请求重新载入视频'});expect(f.generation.generate).not.toHaveBeenCalled()
+ const settings=f.host.querySelector('[data-research-container-more]').__eworkWorkbenchSettings
+ expect(settings.map(a=>a.label)).toEqual(['修改视频网址','重新载入视频','打开原视频'])
+ const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test');expect(restored.getSnapshot().artifacts).toHaveLength(1);expect(restored.getSnapshot().artifacts[0].containerSpec.url).toBe(input.value)
+})
+it('YouTube共享只读可播放但不进入编辑，刷新不冒充数据更新',async()=>{
+ let shared=false;const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'youtube',title:'只读原视频',url:'https://youtu.be/M7lc1UVf-VE',subtitles:'已取得的完整字幕'}
+ f.workspace.setArtifacts([{...text('youtube-readonly'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]);shared=true;await f.render()
+ expect(f.host.querySelector('iframe[data-youtube-player]')).not.toBeNull()
+ expect(f.host.querySelector('.odyssey-data-stamp')).toBeNull()
+ await act(async()=>f.host.querySelector('[data-research-youtube-preset]').__eworkEditYoutube());expect(f.host.querySelector('form')).toBeNull()
+ expect(f.host.textContent).toContain('已取得的完整字幕');expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('YouTube控件跟随实际画布三种主题，不继承应用深色控件背景',async()=>{
+ const f=await fixture(true),spec={version:1,type:'youtube',title:'视频主题复验',url:null}
+ f.win.document.body.setAttribute('data-ds-dark-theme','')
+ await act(async()=>f.workspace.setArtifacts([{...text('youtube-style'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ for(const [mode,expected] of [['dark','#25242a'],['light','#e9ebef'],['enterprise','#e9ebef']]){
+  await act(async()=>f.workspace.setWorkbenchStyle(mode))
+  const styles=new Window();styles.document.body.setAttribute('data-ds-dark-theme','');styles.document.body.innerHTML=f.host.innerHTML
+  expect(styles.getComputedStyle(styles.document.querySelector('.ew-youtube-preset')).getPropertyValue('--youtube-control').trim(),mode).toBe(expected)
+  await styles.happyDOM.abort()
+ }
+})
+it('YouTube整理按播放器实际宽度恢复16比9可读高度，并保留原视频',async()=>{
+ const f=await fixture(true),spec={version:1,type:'youtube',title:'视频宽度复验',url:'https://youtu.be/M7lc1UVf-VE'}
+ await act(async()=>f.workspace.setArtifacts([{...text('youtube-arrange'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ f.host.querySelector('[data-youtube-player]').getBoundingClientRect=()=>({left:0,top:38,right:900,bottom:180,width:900,height:142})
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await act(async()=>new Promise(resolve=>setTimeout(resolve,700)))
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(597)
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('YouTube补丁重复安装不重复原生类型，不放开生成HTML的iframe限制',async()=>{
+ const {patchYoutubeClient}=await import('../scripts/lib/youtube-client.mjs'),{patchIframeClient}=await import('../scripts/lib/iframe-client.mjs')
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const once=patchYoutubeClient(patchIframeClient(source)),twice=patchYoutubeClient(patchIframeClient(once));expect(twice).toBe(once)
+ const types=once.match(/const RESEARCH_CONTAINER_TYPES = [^;]+;/)?.[0]
+ expect(types.match(/"youtube"/g)).toHaveLength(1);expect(types.match(/"iframe"/g)).toHaveLength(1)
+ expect(once).toContain('/<(?:iframe|frame|object|embed)\\b/i')
+})
 it('嵌入网页在实际宿主空状态添加网址，保存后仍是同一组件且会话重建保留',async()=>{
  const f=await fixture(true),spec={version:1,type:'iframe',title:'网页原标题',url:null,description:'原始说明'}
  await act(async()=>f.workspace.setArtifacts([{...text('iframe-own'),kind:'generated-container',containerPrompt:'嵌入网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))

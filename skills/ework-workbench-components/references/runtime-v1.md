@@ -35,3 +35,6 @@ RSS/Atom 固定模板 type:rss，version:1/title/asOf/feeds。每源 {id,url,tit
 
 
 嵌入网页使用 panel.type=iframe，第一次提交 artifact:{version:1,type:"iframe",title,url,description?}。未提供网址时显式 url:null，宿主显示添加网址空状态；只使用用户明确提供的 HTTP/HTTPS 网址，不猜测、不联网寻找替代、不生成 HTML 或逐卡任务。使用 source 模式，网站登录和浏览会话沿用客户端原生浏览能力。网页重新载入只表示已请求加载，不声称取数成功。
+
+
+YouTube视频用panel.type=youtube，首次同时提交artifact:{version:1,type:"youtube",title,url,description?,durationSeconds?,thumbnailUrl?,subtitles?}，使用source模式。不提供网址时url:null，宿主显示Figma网址输入空态；只使用用户原视频网址，不猜测视频、不生成HTML或逐卡任务。已取得的时长秒数、封面原网址、完整字幕和说明保留，未知资料不编造。支持watch、youtu.be、shorts、embed、live视频地址；宿主采用YouTube官方播放器，不自动播放，重新载入仅表示加载请求。
