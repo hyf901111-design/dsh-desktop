@@ -42,7 +42,7 @@ export function ResearchAttachmentPreset({node,sessionId,visible=true,officePrev
    if(controller.signal.aborted||!reload.current.active)break
    try{const response=await window.fetch(item.url,{cache:'reload',credentials:'omit',signal:controller.signal});if(!response.ok)throw Error('原图暂不可用');const blob=await response.blob();if(blob.size>32*1024*1024||!/^image\//i.test(blob.type))throw Error('原图响应不是受支持的图片');if(controller.signal.aborted||!reload.current.active)break;if(!current.current.items.some(next=>next.id===item.id&&next.url===item.url))continue
     const url=window.URL.createObjectURL(blob),previous=reload.current.urls[item.id];reload.current.urls[item.id]=url;setReloadUrls(old=>({...old,[item.id]:url}));setFailures(old=>{const next={...old};delete next[item.id];return next});if(previous)window.URL.revokeObjectURL(previous)
-   }catch(error){if(!reload.current.active)break;failed++;setReloadFailures(old=>({...old,[item.id]:(error.name==='AbortError'?'原图重载超时':error.message)+'；保留上次已载入原图。'}))}
+   }catch(error){if(!reload.current.active)break;failed++;setReloadFailures(old=>({...old,[item.id]:(error.name==='AbortError'?'原图重载超时':error.message==='Failed to fetch'?'无法访问原图':error.message)+'；保留上次已载入原图。'}))}
   }
   for(const frame of root.current?.querySelectorAll('[data-research-native-web]')??[])frame.__eworkReloadWeb?.()
   if(reload.current.active){setNotice(failed?'部分原图重载失败；保留上次已载入原图。':images.length?'原图重新载入完成。':'已请求重新载入原文件预览。');setBusy(false)}

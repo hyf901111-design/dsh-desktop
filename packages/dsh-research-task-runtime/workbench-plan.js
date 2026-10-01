@@ -278,7 +278,8 @@ export function prepareSimulatedArtifact(panel) {
         if (!str(artifact.asOf, 256)) throw Error(`面板「${panel.title}」缺少模拟数据时点。`);
         if (!simulated(artifact.asOf)) artifact.asOf = `模拟数据 · ${artifact.asOf}`;
     }
-    if (['news', 'reports', 'calendar'].includes(artifact.type) && Array.isArray(artifact.items))
+    // Calendar simulation is visible in its title; retain original category values.
+    if (['news', 'reports'].includes(artifact.type) && Array.isArray(artifact.items))
         artifact.items = artifact.items.map(item => ({ ...item, category: simulated(item.category) ? item.category : `模拟 · ${item.category || '信息'}` }));
     if (!acceptArtifactOutput(JSON.stringify(artifact))) throw Error(`面板「${panel.title}」的模拟数据格式无效。${simulatedArtifactProblem(artifact)}`);
     return artifact;
