@@ -4,4 +4,10 @@
 
 直接读取生产侧栏、账户和看板样式，完成浅色/深色、展开/收起、更新按钮显示/隐藏共8组几何检查；原基线简化夹具未复现原生偏移，因此最终结果以真实本地包截图为准。没有运行全功能单元测试。
 
-证据位于/tmp/ework-template-acceptance-20260930/sidebar-avatar-*。本地包与真实侧栏接受将在集成后补记。
+证据位于/tmp/ework-template-acceptance-20260930/sidebar-avatar-*。
+
+## 真实客户端验证
+
+源码提交7e26eb0b经Plan A合入集成提交ff8c669b。从干净的集成提交执行本地构建启动和macOS包验证，均通过；未公证、未上传、未递增版本、未推送。本地客户端端口58194，应用保持打开。
+
+深色客户端收起侧栏后，头像、消息图标和上方按钮中线一致；头像账户菜单和消息中心可以打开，侧栏展开、再收起正常。浅色与更新按钮状态的几何验证为生产样式浏览器检查，没有宣称原生浅色客户端已验证。截图sidebar-avatar-native-after-dark.png及sidebar-avatar-native-expanded.png，构建和包验证日志sidebar-avatar-build.log及sidebar-avatar-package.log。
