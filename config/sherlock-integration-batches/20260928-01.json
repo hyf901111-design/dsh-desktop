@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "KPI预置模板及真实刷新",
+        "featureName": "指标来源对比度与真实刷新结果",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c0491159b73b0ed312b1e65406ba383d84da81e7",
-        "tipCommit": "08406e754bcd2ff39b9057df06159dcc7688061b",
+        "baseCommit": "08406e754bcd2ff39b9057df06159dcc7688061b",
+        "tipCommit": "9b96f994f4fd8c2fd6f677952ae0df32f41a405f",
         "commits": [
           {
-            "commit": "5c8b02c2c71b3fc63218f5c06eeb0a1834f6f5d2",
+            "commit": "9b96f994f4fd8c2fd6f677952ae0df32f41a405f",
             "parents": [
-              "c0491159b73b0ed312b1e65406ba383d84da81e7"
+              "08406e754bcd2ff39b9057df06159dcc7688061b"
             ],
-            "subject": "验收：确认日历两代个人日程在最终包重启恢复"
-          },
-          {
-            "commit": "08406e754bcd2ff39b9057df06159dcc7688061b",
-            "parents": [
-              "5c8b02c2c71b3fc63218f5c06eeb0a1834f6f5d2"
-            ],
-            "subject": "功能：预置完整指标卡并接通真实刷新和尺寸恢复"
+            "subject": "修复：补足指标来源对比度并如实呈现刷新结果"
           }
         ],
         "files": [
@@ -36,55 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/kpi-presentation.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/kpi-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
@@ -92,30 +37,6 @@
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/kpi-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/workbench-kpi-refresh.test.js"
           }
         ],
@@ -124,19 +45,14 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/kpi-template.test.js",
               "test/workbench-kpi-refresh.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-artifact-resilience.test.js",
-              "test/research-interactive-artifact.test.js",
-              "test/workbench-design-contract.test.js"
+              "test/kpi-template.test.js",
+              "test/workbench-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "240项直接相关检查通过",
-            "verifiedCommit": "08406e754bcd2ff39b9057df06159dcc7688061b",
-            "completedAt": "2026-10-01T10:40:10.349538+00:00",
+            "summary": "35项直接相关检查通过",
+            "verifiedCommit": "9b96f994f4fd8c2fd6f677952ae0df32f41a405f",
+            "completedAt": "2026-10-01T11:04:53.253154+00:00",
             "timeoutMs": 300000
           },
           {
@@ -147,14 +63,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "08406e754bcd2ff39b9057df06159dcc7688061b",
-            "completedAt": "2026-10-01T10:40:10.349538+00:00",
+            "verifiedCommit": "9b96f994f4fd8c2fd6f677952ae0df32f41a405f",
+            "completedAt": "2026-10-01T11:04:53.253154+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP九组尺寸主题和完整字段、刷新回复、权限通过，最终原生包待验"
+          "summary": "首轮原生一次prepared24.535秒、三主题整理、真实未绑定提示及会话恢复通过；链接对比度18组新旧HTML修正后通过；后继包待验"
         },
         "acceptanceCriteria": [
           "首次完整KPI来源一次prepared，不启逐卡模型",
@@ -162,68 +78,11 @@
           "真实刷新结果与未绑定状态清楚，完整口径恢复"
         ],
         "risks": [
-          "最终本地包原生接受仍待验",
-          "旧research-workbench夹具23个Figma重复补丁锚点失败和1个既有marketVariant断言失败，未改动该文件",
-          "实现63/74接受62/74，整体目标未完成"
+          "最终后继包旧卡片链接对比度与重启恢复待验",
+          "原生最小尺寸拖动未可靠改变宽度，不计通过，生产浏览器280px三主题通过",
+          "实现63/74接受62/74，整体目标尚未完成"
         ],
-        "generatedAt": "2026-10-01T10:40:10.349538+00:00"
-      },
-      "merged": {
-        "mergeCommit": "730d28b0e684b92d273470500f6090cfe4d001ad",
-        "verificationCommit": "730d28b0e684b92d273470500f6090cfe4d001ad",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "730d28b0e684b92d273470500f6090cfe4d001ad",
-            "completedAt": "2026-10-01T10:42:27.604Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "730d28b0e684b92d273470500f6090cfe4d001ad",
-            "completedAt": "2026-10-01T10:42:27.604Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "730d28b0e684b92d273470500f6090cfe4d001ad",
-            "completedAt": "2026-10-01T10:42:27.604Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "730d28b0e684b92d273470500f6090cfe4d001ad",
-            "completedAt": "2026-10-01T10:42:27.604Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T10:42:27.604Z"
+        "generatedAt": "2026-10-01T11:04:53.253154+00:00"
       }
     },
     {
