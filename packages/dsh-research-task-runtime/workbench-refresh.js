@@ -32,7 +32,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
       if (el.scrollTop || el.scrollLeft) scroll.push({ path: route(el), x: el.scrollLeft, y: el.scrollTop })
     }
     const values = [...entries()].map(([key, entry]) => [key, entry.value])
-    for (const el of root.querySelectorAll('[data-workbench-chart-view]')) { if (values.length >= 5000) break; const value = el.getAttribute('data-workbench-chart-view'),key=el.getAttribute('data-workbench-view-key'); if (value?.length <= 512) values.push([key&&key.length<=120?'chart-view-key:'+key:'chart-view:' + JSON.stringify(route(el)), value]) }
+    for (const el of root.querySelectorAll('[data-workbench-chart-view]')) { if (values.length >= 5000) break; const value = el.getAttribute('data-workbench-chart-view'),key=el.getAttribute('data-workbench-view-key'); if (value?.length <= (key==='technical-controls'?65536:512)) values.push([key&&key.length<=120?'chart-view-key:'+key:'chart-view:' + JSON.stringify(route(el)), value]) }
     return { values, controls, scroll }
   }
   const publish = () => { timer = 0; if (!disposed && !applying) onState(snapshot()) }
@@ -77,7 +77,7 @@ svg [data-workbench-value-changed]{filter:drop-shadow(0 0 3px rgba(45,153,255,.6
 
 export function isWorkbenchViewState(state) {
   const path = value => Array.isArray(value) && value.length < 40 && value.every(n => Number.isInteger(n) && n >= 0 && n < 10000)
-  try { return Boolean(state && Object.keys(state).length === 3 && Array.isArray(state.values) && state.values.length <= 5000 && state.values.every(row => Array.isArray(row) && row.length === 2 && row.every(text => typeof text === 'string' && text.length <= 512)) && Array.isArray(state.controls) && state.controls.length <= 200 && state.controls.every(c => c && path(c.path) && ['INPUT','SELECT','TEXTAREA','DETAILS'].includes(c.tag) && (c.tag === 'DETAILS' ? typeof c.open === 'boolean' : typeof c.value === 'string' && c.value.length <= 8192 && typeof c.checked === 'boolean')) && Array.isArray(state.scroll) && state.scroll.length <= 200 && state.scroll.every(s => s && path(s.path) && [s.x,s.y].every(n => Number.isFinite(n) && n >= 0 && n <= 12000)) && JSON.stringify(state).length <= 256000) } catch { return false }
+  try { return Boolean(state && Object.keys(state).length === 3 && Array.isArray(state.values) && state.values.length <= 5000 && state.values.every(row => Array.isArray(row) && row.length === 2 && typeof row[0] === 'string' && row[0].length <= 512 && typeof row[1] === 'string' && row[1].length <= (row[0]==='chart-view-key:technical-controls'?65536:512)) && Array.isArray(state.controls) && state.controls.length <= 200 && state.controls.every(c => c && path(c.path) && ['INPUT','SELECT','TEXTAREA','DETAILS'].includes(c.tag) && (c.tag === 'DETAILS' ? typeof c.open === 'boolean' : typeof c.value === 'string' && c.value.length <= 8192 && typeof c.checked === 'boolean')) && Array.isArray(state.scroll) && state.scroll.length <= 200 && state.scroll.every(s => s && path(s.path) && [s.x,s.y].every(n => Number.isFinite(n) && n >= 0 && n <= 12000)) && JSON.stringify(state).length <= 256000) } catch { return false }
 }
 
 export function workbenchContentRevision(html) {
