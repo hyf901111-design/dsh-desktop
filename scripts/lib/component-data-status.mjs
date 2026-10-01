@@ -191,10 +191,12 @@ export function patchComponentDataStatus(source){
  replace('"data-research-generated-container": node.kind === "generated-container" ? "" : void 0,','"data-research-generated-container": node.kind === "generated-container" ? "" : void 0,\ncomponentDataSessionId:sessionId,')
  replace('}), !expanded && geometry.resizable ?', `}), /* ODYSSEY_COMPONENT_DATA_STAMP */ node.kind==='generated-container'&&node.containerSpec?(0,react_jsx_runtime.jsx)(ComponentDataStatusBar,{sessionId:componentDataSessionId,node}):null, !expanded && geometry.resizable ?`)
  }
- if(source.includes('/* ODYSSEY_PERSONAL_CHART_VIEW_V1 */'))return source
- replace('const researchSharedStateSinks = new Map();','const researchSharedStateSinks = new Map(); const researchPersonalChartViewSinks = new Map();')
+ const marker='/* ODYSSEY_PERSONAL_CHART_VIEW_V1 */'
+ // Keep patch markers beside their code. A trailing marker changes the final
+ // stylesheet boundary and makes the creation-tools patch append it twice.
+ if(source.includes(marker))return source.includes('\n'+marker)?source.replace('\n'+marker,'').replace('const researchPersonalChartViewSinks = new Map();',marker+' const researchPersonalChartViewSinks = new Map();'):source
+ replace('const researchSharedStateSinks = new Map();','const researchSharedStateSinks = new Map(); '+marker+' const researchPersonalChartViewSinks = new Map();')
  replace('researchSharedStateSinks.set(sessionId,',`researchPersonalChartViewSinks.set(sessionId,createPersonalChartViewSink({read:()=>snapshot.artifacts,canWrite:()=>!sherlockShared(sessionId)&&collaborationCanWrite(),write:(nodeId,config)=>update({artifacts:snapshot.artifacts.map(n=>n.id===nodeId?{...n,config}:n)},true)}));\n  researchSharedStateSinks.set(sessionId,`)
  replace('...(container && Object.hasOwn({small:1,medium:1,large:1}, value.containerSizePreset)',`...(container && readPersonalChartView(value) ? {config:{...(validResearchInteractionState(value.config?.interactionState)?{interactionState:value.config.interactionState}:{}),...(value.config?.sharedComponentState && JSON.stringify(value.config.sharedComponentState).length<66000?{sharedComponentState:value.config.sharedComponentState}:{}),personalChartView:value.config.personalChartView}} : {}),\n                ...(container && Object.hasOwn({small:1,medium:1,large:1}, value.containerSizePreset)`)
- source+='\n/* ODYSSEY_PERSONAL_CHART_VIEW_V1 */'
  return source
 }

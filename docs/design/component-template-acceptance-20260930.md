@@ -573,3 +573,5 @@ e7c068dc本地包签名、来源与完整包检查通过，端口64638。普通�
 dc5ee271最终本地包签名与完整包检查通过，普通中文创建54.521秒、一次prepared，195个来源字段一致。原生SMA5/自定义参数、四条实际趋势线、锁定、浅色与企业模式窄卡整理通过；切至自身另一验证会话再返回却丢失四条绘图。该失败未计为接受，证据charting-final-native-restore-enterprise.png，原生接受维持58/74。
 
 进一步定位：刷新视图缓存仅存在于组件反馈实例，卡片卸载后丢失；普通参数可由交互记录重放，pointer绘图无法重放。新增卡片重建回归先失败，修正将个人技术图表语义键保存到所属卡片配置，绑定HTML版本与market.charting身份，拒绝跨节点、陈旧及共享画板写入，不缓存普通字段与来源值。组件重建从持久语义恢复；刷新保留同时识别chart-view-key前缀；pointerup及键盘选择也触发快照。47项直接相关检查、类型检查及实际客户端补丁语法通过。生产双层CSP三模式真实绘制四条线、完整卸载/重建卡片及整页重开后日期价格锚点、SMA5、自定义参数和锁定保留，0页面错误。证据charting-session-state-red.log、charting-session-gate.log、charting-session-state-browser-checks.json；最终本地包会话恢复及重启仍待复验。
+
+首次受管集成因客户端重复补丁检查失败而未合并：新增标记位于文件末尾，改变原创建工具样式的末尾边界，重复执行会累积样式。将标记移至对应保存注册代码旁；实际客户端及状态两文件136项检查通过，补丁再次执行保持逐字相同。证据charting-session-integration-merge.log保留失败、charting-session-idempotency-green.log记录修复；没有跳过该门禁。
