@@ -1818,6 +1818,20 @@ it('嵌入网页共享只读禁止网址修改但仍允许查看与浏览器打�
  await act(async()=>f.host.querySelector('[data-research-iframe-preset]').__eworkEditIframe());expect(f.host.querySelector('form')).toBeNull()
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
 })
+it('嵌入网页按钮跟随画布三种模式而非应用深色主题',async()=>{
+ const f=await fixture(true),spec={version:1,type:'iframe',title:'主题切换复验',url:null}
+ f.win.document.body.setAttribute('data-ds-dark-theme','')
+ await act(async()=>f.workspace.setArtifacts([{...text('iframe-style'),kind:'generated-container',containerPrompt:'网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ for(const [mode,expected] of [['dark','#25242a'],['light','#e9ebef'],['enterprise','#e9ebef']]){
+  await act(async()=>f.workspace.setWorkbenchStyle(mode))
+  expect(f.canvas.dataset.workbenchStyle).toBe(mode)
+  // Reparse the rendered snapshot to avoid happy-dom selector caches across React updates.
+  const styles=new Window();styles.document.body.setAttribute('data-ds-dark-theme','')
+  styles.document.body.innerHTML=f.host.innerHTML
+  expect(styles.getComputedStyle(styles.document.querySelector('.ew-iframe-preset')).getPropertyValue('--iframe-control').trim(),mode).toBe(expected)
+  await styles.happyDOM.abort()
+ }
+})
 it('嵌入网页生产补丁幂等且不解除HTML沙盒限制',async()=>{
  const {patchIframeClient}=await import('../scripts/lib/iframe-client.mjs'),f=await fixture(),once=patchIframeClient(f.source)
  expect(patchIframeClient(once)).toBe(once);expect(once.match(/const researchIframeSinks=new Map/g)).toHaveLength(1)
