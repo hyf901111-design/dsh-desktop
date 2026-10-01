@@ -1795,6 +1795,23 @@ it('笔记完整长草稿随所属卡片保留，仅当前版本正文链接进�
  await request('https://example.com/new');expect(f.host.textContent).toContain('打开来源：新来源');
  const restored=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');expect(restored.getSnapshot().artifacts[0].config.sharedComponentState.state.content).toBe(state.content);
 })
+it('YouTube客户端等待现有网页授权桥后才挂载官方播放器，失败可重试',async()=>{
+ let resolve,failed=false;const authorize=vi.fn(()=>failed?Promise.reject(Error('blocked')):new Promise(r=>resolve=r)),release=vi.fn(async()=>({ok:true}))
+ const f=await fixture(true,{researchLinkFrame:{authorize,release}}),spec={version:1,type:'youtube',title:'原生授权视频',url:'https://youtu.be/M7lc1UVf-VE'}
+ await act(async()=>f.workspace.setArtifacts([{...text('youtube-authorized'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ expect(authorize).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:'youtube-authorized',url:'https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=0&controls=1&playsinline=1'})
+ expect(f.host.querySelector('iframe[data-youtube-player]')).toBeNull()
+ await act(async()=>resolve({url:'https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=0&controls=1&playsinline=1',frameName:'sherlock-research-link-'+'a'.repeat(32)}))
+ expect(f.host.querySelector('iframe[data-youtube-player]').name).toBe('sherlock-research-link-'+'a'.repeat(32))
+ failed=true;await f.event('click',Array.from(f.host.querySelectorAll('button')).find(b=>b.textContent==='重试载入'))
+ expect(f.host.querySelector('iframe[data-youtube-player]')).toBeNull()
+ expect(f.host.textContent).toContain('视频载入授权失败，请重试或打开原视频。')
+ expect(release).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:'youtube-authorized'})
+ failed=false;await f.event('click',Array.from(f.host.querySelectorAll('button')).find(b=>b.textContent==='重试载入'))
+ await act(async()=>resolve({url:'https://attacker.invalid/',frameName:'sherlock-research-link-'+'b'.repeat(32)}))
+ expect(f.host.querySelector('iframe[data-youtube-player]')).toBeNull()
+ expect(f.host.textContent).toContain('视频载入授权失败，请重试或打开原视频。')
+})
 it('YouTube实际宿主输入原视频后保留同一节点，官方播放器不自动播放且允许重试',async()=>{
  const f=await fixture(true),spec={version:1,type:'youtube',title:'原视频标题',url:null,description:'用户原说明'}
  await act(async()=>f.workspace.setArtifacts([{...text('youtube-own'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))

@@ -767,3 +767,11 @@ Figma1917:353092/353093默认稿485×340、38px顶栏/302px正文；标题14/16�
 真实Chrome加载生产渲染器：485×340浅色空态、280×180深色非法输入/四边聚焦、错误后的完整按钮滚动、企业色播放器加载、用户主动播放、字幕显示和键盘k暂停均已观察。官方文档示例M7lc1UVf-VE从90秒开始，实际播放至2分14秒，非自动播放声明。重新挂载保留完整原网址和说明，共享只读点击修改未进入编辑；未接受实际账户或新凭据。无相关控制台错误。证据youtube-browser-light-empty.png、youtube-browser-dark-minimum-focus.png、youtube-browser-enterprise-player.png、youtube-browser-play-attempt.png、youtube-red.log、youtube-client-red.log、youtube-client-diagnostic.log及youtube-gate-final.log位于/tmp/ework-template-acceptance-20260930/。播放器恢复保留来源而不声明跨文档保留临时播放进度。
 
 技能v1.27.0；实现66/74、原生接受65/74。最终包普通中文首提、实际播放、主题、整理与会话返回仍待核验；整体目标未完成，未运行全功能测试或公开发布。
+
+### YouTube首轮原生生成及网页登记修正
+
+44b172b8受管集成至39ccbe12，本地构建、深度签名及完整包检查通过，技能v1.27.0，实际主界面端口57782。普通中文空态请求17.428秒完成，仅一次research_workbench_create即prepared，无子代理或联网工具；原空网址、原标题和原说明五字段完全一致。证据youtube-native-audit.json、youtube-native-light-empty.png。
+
+保存本人用于核验的官方示例完整原网址后，原生播放器持续空白。源码确认安全导航需要既有researchLinkFrame.authorize登记，新的YouTube渲染器尚未接入。现改为先通过既有可信主界面桥登记本卡精确官方embed网址，再挂载具登记名称的播放器；不修改全局安全策略。登记失败或返回其他网址时不挂载，显示真实失败提示和重试入口；离开或换来源释放登记，异步过期回复不挂载。浏览器独立夹具无桌面桥时保留原路径。
+
+新增实际React宿主的等待登记、名称绑定、失败重试及异址拒绝回归通过；首轮夹具遗漏生成卡片必需的containerPrompt，修正夹具后重跑。27项直接相关聚焦和项目类型检查通过。证据youtube-native-before-authorization.png、youtube-native-authorization-red.log、youtube-native-authorization-diagnostic.log、youtube-native-authorization-final.log及youtube-native-authorization-typecheck.log。修正后的最终包待复验，实现66/74、原生接受65/74，未提前接受播放。
