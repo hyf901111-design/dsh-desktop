@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "YouTube原生播放器网页登记修复",
+        "featureName": "YouTube展开说明字幕的整理高度修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "44b172b8a3ff851d6d439afdcf00c0a586af1b39",
-        "tipCommit": "1b8f6b65eae3dfea0de2cc1d3a65937e631ad843",
+        "baseCommit": "1b8f6b65eae3dfea0de2cc1d3a65937e631ad843",
+        "tipCommit": "1ed5f34043b9938a8c72b21877fd2db3a2bdb4c2",
         "commits": [
           {
-            "commit": "1b8f6b65eae3dfea0de2cc1d3a65937e631ad843",
+            "commit": "1ed5f34043b9938a8c72b21877fd2db3a2bdb4c2",
             "parents": [
-              "44b172b8a3ff851d6d439afdcf00c0a586af1b39"
+              "1b8f6b65eae3dfea0de2cc1d3a65937e631ad843"
             ],
-            "subject": "修复YouTube播放器未登记原生网页导航而持续空白"
+            "subject": "修复YouTube整理后展开说明和字幕高度不足"
           }
         ],
         "files": [
@@ -29,7 +29,7 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/youtube-client.mjs"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
@@ -49,9 +49,9 @@
               "YouTube|嵌入网页|公开工具第一次提交空网页|copies native iframe|重复补丁恢复原始代码|组件设置向右展开|只读链接|链接组件使用隔离网页"
             ],
             "outcome": "passed",
-            "summary": "27项直接相关聚焦通过，包含登记等待、异址拒绝与失败重试",
-            "verifiedCommit": "1b8f6b65eae3dfea0de2cc1d3a65937e631ad843",
-            "completedAt": "2026-10-01T14:48:43.167009+00:00",
+            "summary": "29项视频网页直接聚焦通过，包含自然内容高度和内部滚轮事件",
+            "verifiedCommit": "1ed5f34043b9938a8c72b21877fd2db3a2bdb4c2",
+            "completedAt": "2026-10-01T15:15:06.922367+00:00",
             "timeoutMs": 300000
           },
           {
@@ -62,14 +62,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "1b8f6b65eae3dfea0de2cc1d3a65937e631ad843",
-            "completedAt": "2026-10-01T14:48:43.167009+00:00",
+            "verifiedCommit": "1ed5f34043b9938a8c72b21877fd2db3a2bdb4c2",
+            "completedAt": "2026-10-01T15:15:06.922367+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "既有生产浏览器路径和原生首次空态生成通过；新增实际React登记失败与重试通过；修正后最终原生播放待接受"
+          "summary": "真实包官方播放器载入、三模式、最小表单和会话恢复通过；展开资料高度回归通过；修正后最终包待验，播放被YouTube本人登录要求阻止"
         },
         "acceptanceCriteria": [
           "Figma485×340网址输入空態与统一最小尺寸",
@@ -77,67 +77,11 @@
           "三模式与整理保持可读播放器；真实用户主动播放和失败恢复入口"
         ],
         "risks": [
-          "首轮原生播放器空白，精确来源登记修正后最终包需核验",
-          "实现66/74，原生接受65/74，不提前接受播放"
+          "实际YouTube播放需要用户本人登录，仍未计入原生接受",
+          "高度修正的最终客户端展开资料待验",
+          "实现66/74，原生接受65/74，总体目标继续"
         ],
-        "generatedAt": "2026-10-01T14:48:43.167009+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
-        "verificationCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
-            "completedAt": "2026-10-01T14:50:03.549Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
-            "completedAt": "2026-10-01T14:50:03.549Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
-            "completedAt": "2026-10-01T14:50:03.549Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
-            "completedAt": "2026-10-01T14:50:03.549Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T14:50:03.549Z"
+        "generatedAt": "2026-10-01T15:15:06.922367+00:00"
       }
     },
     {
