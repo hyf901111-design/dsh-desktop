@@ -21,3 +21,7 @@ body [data-ework-grid] .ew-selected-create-error{color:#db6262;overflow-wrap:any
 /* The outer derived shell adds only the baseline strip to the shared body. */
 body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context)>.odyssey-generation-surface{flex:1;height:auto!important;min-height:0}
 body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context) [data-research-generation-sources]{display:none}
+/* Two-column derived descriptions stay readable at the uniform minimum width. */
+body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context) .odyssey-native-table-grid table:has(th:nth-child(2):last-child){width:100%!important;min-width:0!important;table-layout:fixed}
+body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context) .odyssey-native-table-grid table:has(th:nth-child(2):last-child) :is(th,td){min-width:0!important;white-space:normal!important;overflow-wrap:anywhere}
+body [data-ework-grid] [data-research-artifact-content]:has(>.ew-selected-create-context) .odyssey-native-table-grid table:has(th:nth-child(2):last-child) :is(th,td):first-child{width:30%}
