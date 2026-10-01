@@ -9,17 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件控件完整聚焦边框",
+        "featureName": "技术图表指标与个人绘图",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
-        "tipCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
+        "baseCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
+        "tipCommit": "9fc28344552e791e9887d380feedbdd338c1ab51",
         "commits": [
           {
-            "commit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
+            "commit": "07f6a7b24a391bf35da96213b98ed0aad86401b9",
             "parents": [
-              "40a41da3410e73ed07e8b9edee4846ef409f9867"
+              "6f5aceeddd7ef3461f6fd62e539440d49daa614b"
             ],
-            "subject": "修复：完整显示组件控件鼠标和键盘聚焦边框"
+            "subject": "验收：确认三模式控件完整聚焦及键盘提示"
+          },
+          {
+            "commit": "4c94afc0bb3a56f4e9d659ca24a03202c5b101a8",
+            "parents": [
+              "07f6a7b24a391bf35da96213b98ed0aad86401b9"
+            ],
+            "subject": "验收：确认来源表原生导出筛选恢复及窄框聚焦"
+          },
+          {
+            "commit": "9fc28344552e791e9887d380feedbdd338c1ab51",
+            "parents": [
+              "4c94afc0bb3a56f4e9d659ca24a03202c5b101a8"
+            ],
+            "subject": "功能：预置技术图表指标计算与个人绘图模板"
           }
         ],
         "files": [
@@ -29,11 +43,83 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/financial-charting.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-profile.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-charting.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/financial-charting.js"
+          },
+          {
+            "status": "M",
+            "path": "test/operations-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workflow-template.test.js"
           }
         ],
         "checks": [
@@ -41,12 +127,65 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/workbench-component-presentation.test.js"
+              "test/financial-charting.test.js",
+              "test/financial-series.test.js",
+              "test/financial-series-intrinsic.test.js",
+              "test/component-template-registry.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/research-market-artifact.test.js",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/workbench-refresh.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/terminal-component-presentation.test.js",
+              "test/operations-template.test.js",
+              "test/workflow-template.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
             ],
             "outcome": "passed",
-            "summary": "3项共享展示检查通过",
-            "verifiedCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
-            "completedAt": "2026-10-01T02:48:59.592952+00:00",
+            "summary": "16个直接相关及继承门禁文件360项通过",
+            "verifiedCommit": "9fc28344552e791e9887d380feedbdd338c1ab51",
+            "completedAt": "2026-10-01T03:47:47.979Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "binding contract|retrieval enabled|rejecting invented|self-contained data|offline component offline|inherits the parent agent scoped|named connected source"
+            ],
+            "outcome": "passed",
+            "summary": "20项来源权限通过，164项非相关跳过",
+            "verifiedCommit": "9fc28344552e791e9887d380feedbdd338c1ab51",
+            "completedAt": "2026-10-01T03:47:47.979Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "9fc28344552e791e9887d380feedbdd338c1ab51",
+            "completedAt": "2026-10-01T03:47:47.979Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-execution-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "6项规划政策通过",
+            "verifiedCommit": "9fc28344552e791e9887d380feedbdd338c1ab51",
+            "completedAt": "2026-10-01T03:47:47.979Z",
             "timeoutMs": 300000
           },
           {
@@ -59,83 +198,26 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥通过，27项非相关跳过",
-            "verifiedCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
-            "completedAt": "2026-10-01T02:49:01.041589+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
-            "completedAt": "2026-10-01T02:48:57.308350+00:00",
+            "verifiedCommit": "9fc28344552e791e9887d380feedbdd338c1ab51",
+            "completedAt": "2026-10-01T03:47:47.979Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP30组280/640px三模式鼠标字段及Tab按钮聚焦通过，0脚本错误；原生最终包待复验"
+          "summary": "生产双层CSP24组尺寸和三模式实际绘图交互通过，0脚本错误；最终本地包待原生接受"
         },
         "acceptanceCriteria": [
-          "滚动视口边缘四边完整",
-          "键盘焦点可见",
-          "不改变控件尺寸和数据"
+          "完整已取得来源记录与单位",
+          "技术指标数值准确且预热明确",
+          "三模式窄宽度和整理可读",
+          "个人绘图与视图恢复"
         ],
         "risks": [
-          "完整HTML主题文件的4项既有失败已在改动前源码复现",
-          "最终包原生聚焦复验仍待完成",
-          "三条来源表原生接受仍待补齐"
+          "最终本地包普通中文生成与原生绘图待接受",
+          "全74类目标尚未完成"
         ],
-        "generatedAt": "2026-10-01T02:53:20.331588+00:00"
-      },
-      "merged": {
-        "mergeCommit": "41c8b03f22b198e91e6dd0605400e904c5480526",
-        "verificationCommit": "41c8b03f22b198e91e6dd0605400e904c5480526",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "41c8b03f22b198e91e6dd0605400e904c5480526",
-            "completedAt": "2026-10-01T02:54:33.276Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "41c8b03f22b198e91e6dd0605400e904c5480526",
-            "completedAt": "2026-10-01T02:54:33.276Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "41c8b03f22b198e91e6dd0605400e904c5480526",
-            "completedAt": "2026-10-01T02:54:33.276Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T02:54:33.276Z"
+        "generatedAt": "2026-10-01T03:47:47.979Z"
       }
     }
   ],
