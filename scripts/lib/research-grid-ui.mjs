@@ -77,7 +77,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
       }else if(['files','gallery'].includes(node.containerSpec?.type)){
         const files=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-attachment-preset]')
         if(!files?.__eworkReloadAttachments)throw Error('原文件预览尚未就绪');
-        files.__eworkReloadAttachments();message='已请求重新载入原文件预览'
+        const result=await files.__eworkReloadAttachments();if(result?.error)throw Error(result.error);message=result?.message||'已请求重新载入原文件预览'
       }else if(node.containerSpec?.type==='youtube'){
         const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-youtube-preset]')
         if(!player?.__eworkReloadYoutube)throw Error('视频尚未载入，请先添加视频网址');
