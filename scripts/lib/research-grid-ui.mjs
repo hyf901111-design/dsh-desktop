@@ -419,7 +419,10 @@ export function measureWorkbenchContents(root,nodes) {
     // reports natural content bounds, never its current frame height.
     if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,workbenchMeasuredDimensions(node,value));continue}
     const card=root?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]'),body=card?.querySelector('[data-research-preview-body]')
-    if(!body||body.querySelector('iframe')||card.hasAttribute('open'))continue
+    // Both iframe engines show a viewport rather than the page's intrinsic
+    // content. Native snapshots are images of that viewport, so they must not
+    // replace the readable template height after a manual resize.
+    if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
     // Native line/bar SVGs fill the current frame. Measuring that SVG feeds
     // an arbitrary resized height back into Arrange instead of recovering the
     // template's readable plot. Only an expanded data viewport adds height.

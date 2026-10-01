@@ -1811,6 +1811,22 @@ it('嵌入网页在实际宿主空状态添加网址，保存后仍是同一组�
  expect(trigger.__eworkWorkbenchSettings.map(a=>a.label)).toContain('修改网址')
  expect(trigger.__eworkWorkbenchSettings.map(a=>a.label)).not.toContain('编辑需求')
 })
+it('嵌入网页整理后恢复可读高度，不将原生网页截图的旧视口当成内容尺寸',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:''})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge})
+ await act(async()=>f.workspace.setArtifacts([{...text('iframe-arrange'),kind:'generated-container',containerPrompt:'网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,width:280,height:180,containerSpec:{version:1,type:'iframe',title:'已缩小的网页',url:'https://example.org/'}}]))
+ const card=f.host.querySelector('[data-research-node-id="iframe-arrange"]'),image=card.querySelector('[data-research-native-web] img')
+ expect(image).not.toBeNull()
+ card.getBoundingClientRect=()=>({left:0,top:0,right:280,bottom:180,width:280,height:180})
+ image.getBoundingClientRect=()=>({left:0,top:38,right:280,bottom:180,width:280,height:142})
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ // The delayed second content-fit pass must also ignore the old viewport.
+ await act(async()=>new Promise(resolve=>setTimeout(resolve,700)))
+ const node=f.workspace.getSnapshot().artifacts[0]
+ expect(node.height).toBeGreaterThanOrEqual(340)
+ expect(node.containerSpec.url).toBe('https://example.org/')
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(1)
+})
 it('嵌入网页网址输入支持回车校验与保存，中文组合输入不提前提交',async()=>{
  const f=await fixture(true),spec={version:1,type:'iframe',title:'键盘网页复验',url:null,description:'保留原说明'}
  await act(async()=>f.workspace.setArtifacts([{...text('iframe-keyboard'),kind:'generated-container',containerPrompt:'网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))

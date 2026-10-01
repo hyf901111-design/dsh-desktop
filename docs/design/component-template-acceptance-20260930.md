@@ -743,3 +743,9 @@ Figma 1917:353041/353042 当前默认稿为485×340，38px顶栏与302px正文�
 集成包381756e6本地构建、深度签名与完整包检查通过，技能v1.26.0；真实主界面端口53550返回同一合成会话。在保存的网格统一最小宽高下，编辑表单初始标题完整，滚动到末端后保存及取消均完整且可点击；输入框四边聚焦线可见。空网址通过保存按钮返回空态，原说明与节点保留。证据iframe-native-minimum-form-top.png、iframe-native-minimum-form-buttons.png及iframe-minimum-native-package.log。
 
 实际鼠标聚焦后清空并按回车未保存，记录为未通过。添加独立的回车校验/保存处理，阻止中文组合输入提前提交；真实宿主键盘回归先失败，修正后13项直接相关聚焦及项目类型检查通过。保留iframe-keyboard-red.log、iframe-keyboard-tests.log和iframe-keyboard-typecheck.log。此键盘修正后最终包尚待复验；实现65/74、原生接受64/74，不提前计为完成。
+
+### 嵌入网页键盘最终包与整理测量修复（2026-10-01）
+
+集成包2a3fb09c本地构建、深度签名和完整包检查通过，端口54542。实际输入带合成凭据的网址后按回车，显示拒绝提示且不保存；输入本人本地测试页58169后按回车，同一组件加载网页，原标题和说明保留。证据iframe-native-keyboard-rejected.png与iframe-keyboard-native-package.log。最小尺寸表单标题、按钮滚动和聚焦边框通过，折叠侧栏头像仍与工具图标同轴。
+
+随后点击真实一键整理，发现原生网页预览截图被通用img测量当成自然内容，网页高度降为211.587px。浏览器iframe已有跳过条件，但原生网页没有iframe元素。现将原生网页视口同样排除，沿用预置可读高度。真实宿主回归先失败（211.85px），修正后首次及380ms延迟补高均保留至少340px；15项直接聚焦与项目类型检查通过。证据iframe-arrange-red.log、iframe-arrange-tests.log和iframe-arrange-typecheck.log。修正后的最终包整理仍待复验，不提前计入接受；实现65/74、原生接受64/74。
