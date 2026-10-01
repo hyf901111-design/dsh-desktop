@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "附件原网址预览授权修复",
+        "featureName": "附件本地预览渲染服务修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
-        "tipCommit": "fa09af3864975e46c1df8305ed6a545846f055e4",
+        "baseCommit": "fa09af3864975e46c1df8305ed6a545846f055e4",
+        "tipCommit": "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad",
         "commits": [
           {
-            "commit": "fa09af3864975e46c1df8305ed6a545846f055e4",
+            "commit": "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad",
             "parents": [
-              "50fa485f4548083eb3efb08a4f35fa4de8aa72d2"
+              "fa09af3864975e46c1df8305ed6a545846f055e4"
             ],
-            "subject": "修复：附件网页弹窗先授权原网址再加载预览"
+            "subject": "修复：显式传递附件本地预览服务防止画布崩溃"
           }
         ],
         "files": [
@@ -43,85 +43,28 @@
               "run",
               "test/research-grid-client.test.js",
               "-t",
-              "附件|网页原生"
+              "附件|网页原生|重复补丁恢复"
             ],
             "outcome": "passed",
-            "summary": "7项附件和原生网页直接相关检查通过，回归先红后绿",
-            "verifiedCommit": "fa09af3864975e46c1df8305ed6a545846f055e4",
-            "completedAt": "2026-10-01T21:20:37.601Z",
+            "summary": "9项原文本读取、网址授权、弹窗几何与幂等检查通过",
+            "verifiedCommit": "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad",
+            "completedAt": "2026-10-01T21:28:12.954Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生预览失败已复现并定位遗漏网址授权，PNG原图弹窗与下载完整；修复后原生复测待进行"
+          "summary": "原生导入长名101字节成功，随后本地预览崩溃已定位与回归修复，最终原生复测继续"
         },
         "acceptanceCriteria": [
-          "原网址先授权，原文件弹窗成功加载",
-          "原文件下载字节与来源一致",
-          "三主题、整理与会话返回保留来源"
+          "本地原文件预览不崩溃",
+          "真实Office服务显式传递",
+          "保存与恢复来源保持"
         ],
         "risks": [
-          "修复后原生包预览复测待完成"
+          "最终包原生复测待进行"
         ],
-        "generatedAt": "2026-10-01T21:20:37.602Z"
-      },
-      "merged": {
-        "mergeCommit": "c74659a14c537baafd59b675e537a67364aca177",
-        "verificationCommit": "c74659a14c537baafd59b675e537a67364aca177",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "c74659a14c537baafd59b675e537a67364aca177",
-            "completedAt": "2026-10-01T21:21:58.739Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "c74659a14c537baafd59b675e537a67364aca177",
-            "completedAt": "2026-10-01T21:21:58.739Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c74659a14c537baafd59b675e537a67364aca177",
-            "completedAt": "2026-10-01T21:21:58.739Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "c74659a14c537baafd59b675e537a67364aca177",
-            "completedAt": "2026-10-01T21:21:58.739Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T21:21:58.739Z"
+        "generatedAt": "2026-10-01T21:28:12.958Z"
       }
     },
     {
