@@ -9,31 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "预置摘要和思维导图并保留完整冻结来源",
+        "featureName": "摘要正文三主题字体和颜色修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "1ed5f34043b9938a8c72b21877fd2db3a2bdb4c2",
-        "tipCommit": "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40",
+        "baseCommit": "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40",
+        "tipCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
         "commits": [
           {
-            "commit": "60389c2a7e9653a78cd2c99bb19914e2bc08f460",
+            "commit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
             "parents": [
-              "1ed5f34043b9938a8c72b21877fd2db3a2bdb4c2"
+              "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40"
             ],
-            "subject": "记录最终客户端展开资料整理和侧栏对齐复验"
-          },
-          {
-            "commit": "df8802cc4647966259bf7459decaa299c46dfd42",
-            "parents": [
-              "60389c2a7e9653a78cd2c99bb19914e2bc08f460"
-            ],
-            "subject": "预置摘要和思维导图模板并保留完整冻结来源"
-          },
-          {
-            "commit": "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40",
-            "parents": [
-              "df8802cc4647966259bf7459decaa299c46dfd42"
-            ],
-            "subject": "修复摘要再次总结的正文读取及派生编辑事件"
+            "subject": "修正摘要正文三主题字体和颜色继承"
           }
         ],
         "files": [
@@ -43,79 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/derived-template-contract.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/derived-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/derived-preset-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-clipboard.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/derived-template-contract.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-clipboard.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -132,8 +46,8 @@
             ],
             "outcome": "passed",
             "summary": "14项直接相关检查通过，含再次总结完整来源、prepared、窄卡自然高度和只读限制",
-            "verifiedCommit": "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40",
-            "completedAt": "2026-10-01T16:16:33.388917+00:00",
+            "verifiedCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
+            "completedAt": "2026-10-01T16:38:26.894852+00:00",
             "timeoutMs": 300000
           },
           {
@@ -144,8 +58,8 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40",
-            "completedAt": "2026-10-01T16:16:33.388917+00:00",
+            "verifiedCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
+            "completedAt": "2026-10-01T16:38:26.894852+00:00",
             "timeoutMs": 300000
           },
           {
@@ -155,14 +69,14 @@
             ],
             "outcome": "passed",
             "summary": "完整前端补丁重复执行通过",
-            "verifiedCommit": "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40",
-            "completedAt": "2026-10-01T16:16:33.388917+00:00",
+            "verifiedCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
+            "completedAt": "2026-10-01T16:38:26.894852+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产React和MarkdownText预览三主题、980及280px、完整原文、编辑保存、只读入口均通过；最终集成原生客户端待验"
+          "summary": "集成e2537bb0真实客户端双卡首提26.217秒、冻结原文、再次总结、整篇设置编辑保存通过；实际浅色正文继承问题已修正，最终包待复验"
         },
         "acceptanceCriteria": [
           "Figma摘要与导图980×280及统一最小280×180，来源11px正文12px",
@@ -170,67 +84,11 @@
           "三主题、整理自然高度、编辑和一键派生、会话恢复"
         ],
         "risks": [
-          "摘要与导图最终原生验收待完成；实现68/74，原生接受65/74",
+          "字体颜色修正最终包待复验；实现68/74，原生接受65/74",
+          "原生直接双击未观测到编辑，设置菜单编辑已通过；不计双击通过",
           "YouTube原生播放仍需本人登录；总体目标继续"
         ],
-        "generatedAt": "2026-10-01T16:16:33.388917+00:00"
-      },
-      "merged": {
-        "mergeCommit": "bf3b96e07948ec85db09bce454154d12005afdb1",
-        "verificationCommit": "bf3b96e07948ec85db09bce454154d12005afdb1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "bf3b96e07948ec85db09bce454154d12005afdb1",
-            "completedAt": "2026-10-01T16:18:05.913Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "bf3b96e07948ec85db09bce454154d12005afdb1",
-            "completedAt": "2026-10-01T16:18:05.913Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "bf3b96e07948ec85db09bce454154d12005afdb1",
-            "completedAt": "2026-10-01T16:18:05.913Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "bf3b96e07948ec85db09bce454154d12005afdb1",
-            "completedAt": "2026-10-01T16:18:05.913Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T16:18:05.913Z"
+        "generatedAt": "2026-10-01T16:38:26.894852+00:00"
       }
     },
     {
