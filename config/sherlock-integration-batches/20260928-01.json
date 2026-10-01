@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "音频原生预置及所选创建两列表格换行",
+        "featureName": "修复窄音频转写裁切和真实所选表格换行",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "1048cdd1184b7fbd60be8084236c87ae862bceeb",
-        "tipCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
+        "baseCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
+        "tipCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
         "commits": [
           {
-            "commit": "8940c40a2e94a06c7c1c6654b8519490867f5f22",
+            "commit": "94b655af8237b118b321c8dbef79be2945537aaa",
             "parents": [
-              "1048cdd1184b7fbd60be8084236c87ae862bceeb"
+              "291eeac9d816eb746ac71579e4a048f3bbf81003"
             ],
-            "subject": "修复所选创建两列表格长说明换行并记录首次提交验收"
-          },
-          {
-            "commit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
-            "parents": [
-              "8940c40a2e94a06c7c1c6654b8519490867f5f22"
-            ],
-            "subject": "新增音频原生预置播放器及完整来源交付契约"
+            "subject": "修复窄音频卡转写高度及所选表格实际宿主换行"
           }
         ],
         "files": [
@@ -36,38 +29,6 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/audio-template-contract.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/audio-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/audio-client.mjs"
           },
           {
@@ -77,42 +38,6 @@
           {
             "status": "M",
             "path": "scripts/lib/research-selected-create.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/panel-runtime.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-clipboard.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/audio-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-clipboard.test.ts"
           },
           {
             "status": "M",
@@ -132,9 +57,9 @@
               "音频|native audio|unique semantic"
             ],
             "outcome": "passed",
-            "summary": "9项音频数据契约、播放器、整理及复制直接聚焦通过",
-            "verifiedCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
-            "completedAt": "2026-10-01T18:02:08.421117+00:00",
+            "summary": "9项音频契约、真实事件、完整转写含宿主边距测量、复制聚焦通过",
+            "verifiedCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
+            "completedAt": "2026-10-01T18:36:22.845249+00:00",
             "timeoutMs": 300000
           },
           {
@@ -145,14 +70,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
-            "completedAt": "2026-10-01T18:02:08.421117+00:00",
+            "verifiedCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
+            "completedAt": "2026-10-01T18:36:22.845249+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产渲染器实际播放本人12秒合成音源，三主题280px无横向溢出，完整转写保留；真实3cd4d226所选创建首提8.049秒但两列换行最终包待验。"
+          "summary": "a713b744真实音频首提23.476秒一次prepared，实际播放、章节及会话状态保持通过；窄转写和两列表格发现问题，当前修正待新包接受"
         },
         "acceptanceCriteria": [
           "只保存明确原音源，未知信息不编造且无自动播放",
@@ -160,67 +85,10 @@
           "三主题、窄卡、整理保留完整可读内容"
         ],
         "risks": [
-          "最终集成包音频及两列换行待原生复验，原生接受67/74",
-          "YouTube原生播放仍需本人登录，其他5类和总体目标继续"
+          "新包窄音频及所选表格实际目检待完成，原生接受保持67/74",
+          "整体模板及成功率目标继续，YouTube真实播放仍需用户登录"
         ],
-        "generatedAt": "2026-10-01T18:02:08.421117+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a47fd8c9d4dd3f3eb1959da36cda1be6a5825a2b",
-        "verificationCommit": "a47fd8c9d4dd3f3eb1959da36cda1be6a5825a2b",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a47fd8c9d4dd3f3eb1959da36cda1be6a5825a2b",
-            "completedAt": "2026-10-01T18:03:30.401Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a47fd8c9d4dd3f3eb1959da36cda1be6a5825a2b",
-            "completedAt": "2026-10-01T18:03:30.401Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a47fd8c9d4dd3f3eb1959da36cda1be6a5825a2b",
-            "completedAt": "2026-10-01T18:03:30.401Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "a47fd8c9d4dd3f3eb1959da36cda1be6a5825a2b",
-            "completedAt": "2026-10-01T18:03:30.401Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T18:03:30.401Z"
+        "generatedAt": "2026-10-01T18:36:22.845249+00:00"
       }
     },
     {
