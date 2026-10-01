@@ -56,6 +56,11 @@ it('附件原文件弹窗先授权原网址，再允许在卡片之外交互',as
  expect(resolveEngine).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:'files-dialog:attachment:txt',url:spec.items[0].url,preferNative:true});const frame=root.querySelector('[data-research-native-web]');frame.getBoundingClientRect=()=>({left:600,top:100,right:1100,bottom:500,width:500,height:400});Object.defineProperties(f.win,{innerWidth:{configurable:true,value:1200},innerHeight:{configurable:true,value:800}});f.document.elementFromPoint=()=>frame
  await vi.waitFor(async()=>{await act(async()=>{});expect(updateNative).toHaveBeenCalledWith(expect.objectContaining({nodeId:'files-dialog:attachment:txt',url:spec.items[0].url,active:true,bounds:{x:600,y:100,width:500,height:400}}))},{timeout:1000,interval:50});expect(f.workspace.getSnapshot().selection.selectedNodeIds).not.toContain(node.id)
 })
+it('附件导入后的文本预览读取真实文件，预览不使画布消失',async()=>{
+ const restore=vi.fn(async()=>({authorizationId:'own-csv',capabilityToken:'own-token',url:'sherlock-preview://own-csv'})),f=await fixture(true,{researchPreview:{restore,release:vi.fn()}}),content='项目,数值\n收入,0万元\n变化,-120万元\n缺失原因,未提供';f.win.fetch=vi.fn(async()=>new Response(content));const spec={version:1,type:'files',title:'本人本地文件',items:[{id:'csv',name:'本人.csv',authorizationId:'own-csv',sizeBytes:101}]}
+ await act(async()=>f.workspace.setArtifacts([{...text('local-file-preview'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))
+ const root=f.host.querySelector('[data-research-attachment-preset=files]');await f.event('click',Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='预览'));expect(root.querySelector('[data-research-text-preview]').textContent).toBe(content);expect(f.host.querySelector('[data-research-canvas]')).not.toBeNull();expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
 it('智能组件默认草稿保留设计说明，组合回车不提交，普通回车仍走原生成入口',async()=>{
  const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft()})
  const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.textContent).toContain('描述要创建的内容');expect(card.textContent).toContain('结果将作为独立组件保留在当前工作台。')
