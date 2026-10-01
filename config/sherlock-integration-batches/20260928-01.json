@@ -9,24 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "智能组件与链接草稿设计及只读输入",
+        "featureName": "文件和图库原生预置及原文件导入下载",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c9a94b395f4e4003ab10c0f0cbaaa69a60d543b8",
-        "tipCommit": "611491c23bb96569caabd6005d20af09c0668752",
+        "baseCommit": "611491c23bb96569caabd6005d20af09c0668752",
+        "tipCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
         "commits": [
           {
-            "commit": "39699047eb96e8adff20af01c16d0c7a62c86f4b",
+            "commit": "a81d1f069eab389905d218afe7c4041f5b2ed63d",
             "parents": [
-              "c9a94b395f4e4003ab10c0f0cbaaa69a60d543b8"
+              "611491c23bb96569caabd6005d20af09c0668752"
             ],
-            "subject": "记录音频真实播放最终接受和侧栏头像对齐证据"
+            "subject": "记录智能组件与链接真实客户端接受证据"
           },
           {
-            "commit": "611491c23bb96569caabd6005d20af09c0668752",
+            "commit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
             "parents": [
-              "39699047eb96e8adff20af01c16d0c7a62c86f4b"
+              "a81d1f069eab389905d218afe7c4041f5b2ed63d"
             ],
-            "subject": "补齐智能组件与链接草稿设计和只读输入限制"
+            "subject": "补齐文件和图库原生模板及原文件导入下载"
           }
         ],
         "files": [
@@ -36,19 +36,87 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-creation-tools.mjs"
+            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
           },
           {
             "status": "A",
-            "path": "scripts/lib/canvas-draft-templates.mjs"
+            "path": "packages/dsh-research-task-runtime/attachment-template-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/attachment-template-contract.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/attachment-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-native-web-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-export.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/attachment-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-attachment-download.test.ts"
           },
           {
             "status": "M",
@@ -60,14 +128,30 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
+              "test/attachment-template.test.js",
+              "test/research-attachment-download.test.ts",
+              "test/component-template-registry.test.js",
               "-t",
-              "智能组件默认草稿|链接默认草稿|链接草稿按统一|共享只读禁用智能组件|重复补丁|已有补丁客户端升级整理图标|组件草稿|链接草稿|拖动框选"
+              "附件|files |gallery |文件与图库|下载|unique semantic"
             ],
             "outcome": "passed",
-            "summary": "7项直接聚焦通过，说明和只读回归先红后绿，组合输入和普通Enter、ShiftEnter及补丁幂等通过",
-            "verifiedCommit": "611491c23bb96569caabd6005d20af09c0668752",
-            "completedAt": "2026-10-01T19:57:05.729Z",
+            "summary": "10项附件契约、直接prepared、技能、原始字节和容量边界检查通过",
+            "verifiedCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
+            "completedAt": "2026-10-01T21:01:56.762358+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "-t",
+              "附件|重复补丁恢复|链接草稿按统一|网页原生"
+            ],
+            "outcome": "passed",
+            "summary": "9项实际生产模块附件、弹窗、会话返回、删除撤销与幂等检查通过",
+            "verifiedCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
+            "completedAt": "2026-10-01T21:01:56.762358+00:00",
             "timeoutMs": 300000
           },
           {
@@ -78,82 +162,26 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "611491c23bb96569caabd6005d20af09c0668752",
-            "completedAt": "2026-10-01T19:57:05.729Z",
+            "verifiedCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
+            "completedAt": "2026-10-01T21:01:56.762358+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产安装模块浏览器复验：默认输入196/60及按钮104×32正确；三主题最小宽度无横向溢出、滚动后可操作；最终原生包待接受"
+          "summary": "生产安装模块浏览器三主题280px无横向溢出，长名称换行，完整原图1200×640及翻页保持原网址；最终原生包接受继续"
         },
         "acceptanceCriteria": [
-          "草稿说明和原始需求完整保留",
-          "共享只读禁止更改，中文组合输入不误提交",
-          "链接走原同节点入口，默认及最小尺寸三主题可操作"
+          "本人完整原文件数据首次prepared，无逐卡模型和样例替代",
+          "三主题及最小尺寸可读，独立预览下载移除权限",
+          "真实导入保存授权、原文件下载字节保持、失败可重试"
         ],
         "risks": [
-          "最终原生生成、链接加载及会话返回待接受",
-          "严格原生累计69/74，Files/Gallery及YouTube真实播放继续"
+          "原生普通输入与真实导入下载仍须验证",
+          "HTTP下载32MB且不跟随重定向、不复用网页登录Cookie",
+          "严格原生接受71/74，YouTube外部登录后播放待接受"
         ],
-        "generatedAt": "2026-10-01T19:57:05.729Z"
-      },
-      "merged": {
-        "mergeCommit": "57f59b1a0b7a12c43fc43771175928e98c76b665",
-        "verificationCommit": "57f59b1a0b7a12c43fc43771175928e98c76b665",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "57f59b1a0b7a12c43fc43771175928e98c76b665",
-            "completedAt": "2026-10-01T19:58:52.946Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "57f59b1a0b7a12c43fc43771175928e98c76b665",
-            "completedAt": "2026-10-01T19:58:52.946Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "57f59b1a0b7a12c43fc43771175928e98c76b665",
-            "completedAt": "2026-10-01T19:58:52.946Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "57f59b1a0b7a12c43fc43771175928e98c76b665",
-            "completedAt": "2026-10-01T19:58:52.946Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T19:58:52.946Z"
+        "generatedAt": "2026-10-01T21:01:56.762358+00:00"
       }
     },
     {
