@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "多条技术绘图有界恢复",
+        "featureName": "技术图表个人视图持久恢复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "064caf217d37baa5e9b049e0e014d58b1ffccbb2",
-        "tipCommit": "ddf75c266cf910c9c55f27b69fe98a443114a63c",
+        "baseCommit": "ddf75c266cf910c9c55f27b69fe98a443114a63c",
+        "tipCommit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
         "commits": [
           {
-            "commit": "ddf75c266cf910c9c55f27b69fe98a443114a63c",
+            "commit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
             "parents": [
-              "064caf217d37baa5e9b049e0e014d58b1ffccbb2"
+              "ddf75c266cf910c9c55f27b69fe98a443114a63c"
             ],
-            "subject": "修复：保留多条技术绘图的有界视图恢复状态"
+            "subject": "修复：持久保存技术图表个人视图并在会话返回时恢复"
           }
         ],
         "files": [
@@ -29,15 +29,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-charting.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
           },
           {
             "status": "M",
-            "path": "test/financial-charting.test.js"
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-status.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-refresh.test.js"
           }
         ],
         "checks": [
@@ -45,14 +49,16 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/financial-charting.test.js",
               "test/workbench-refresh.test.js",
+              "test/component-data-status.test.js",
+              "test/financial-charting.test.js",
+              "test/component-interaction-state.test.js",
               "test/workbench-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "30项参数绘图恢复和刷新呈现检查通过",
-            "verifiedCommit": "ddf75c266cf910c9c55f27b69fe98a443114a63c",
-            "completedAt": "2026-10-01T04:28:13.147899+00:00",
+            "summary": "47项持久视图恢复及相关交互刷新呈现检查通过",
+            "verifiedCommit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
+            "completedAt": "2026-10-01T04:56:50.382693+00:00",
             "timeoutMs": 300000
           },
           {
@@ -63,71 +69,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "ddf75c266cf910c9c55f27b69fe98a443114a63c",
-            "completedAt": "2026-10-01T04:28:13.147899+00:00",
+            "verifiedCommit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
+            "completedAt": "2026-10-01T04:56:50.382693+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层沙盒三模式四条909字符绘图重载恢复通过；最终包原生会话恢复待接受"
+          "summary": "生产双层CSP三模式实际四条绘图经卡片卸载重建、整页重开均精确恢复；最终本地包恢复待复验"
         },
         "acceptanceCriteria": [
-          "指标周期辅助名称与当前参数一致",
-          "指标模板与参数组合一致",
-          "三模式及个人绘图和会话恢复",
-          "多条绘图的完整有界状态恢复"
+          "技术图表个人绘图在会话切换后精确恢复",
+          "三模式与整理保持参数和绘图",
+          "应用重启后保存状态可恢复"
         ],
         "risks": [
-          "新包原生参数与恢复待接受",
+          "最终本地包会话与重启恢复仍待复验",
           "全74类目标未完成"
         ],
-        "generatedAt": "2026-10-01T04:28:13.147899+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4b5147e74b09bd7fc22e23754f5e031e9ac74700",
-        "verificationCommit": "4b5147e74b09bd7fc22e23754f5e031e9ac74700",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "4b5147e74b09bd7fc22e23754f5e031e9ac74700",
-            "completedAt": "2026-10-01T04:29:50.760Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "4b5147e74b09bd7fc22e23754f5e031e9ac74700",
-            "completedAt": "2026-10-01T04:29:50.760Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4b5147e74b09bd7fc22e23754f5e031e9ac74700",
-            "completedAt": "2026-10-01T04:29:50.760Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T04:29:50.760Z"
+        "generatedAt": "2026-10-01T04:56:50.382693+00:00"
       }
     }
   ],
