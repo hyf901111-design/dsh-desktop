@@ -1077,9 +1077,9 @@ it('首次批量完成的金融序列保持半栏并按实际宽度补高',async
  expect(w.getWorkbenchCells()).toEqual(before)
 })
 
-it.each(['calendar','kpi'])('$0首次完成按可信内容报告补足说明高度，保留逻辑布局',async type=>{
+it.each(['calendar','kpi','timeline'])('$0首次完成按可信内容报告补足说明高度，保留逻辑布局',async type=>{
  const f=await fixture(true),w=f.workspace;
- const spec=type==='calendar'?{version:1,type,title:'日历',asOf:'用户提供的虚构记录',note:'完整来源说明',items:[{title:'会议',summary:'原摘要',date:'2026-09-28'}]}:{version:1,type,title:'指标',asOf:'用户提供的虚构记录',items:[{label:'数量',value:0,detail:'完整来源口径'}]};
+ const spec=type==='timeline'?{version:1,type,title:'时间线',asOf:'用户提供的虚构记录',items:[{id:'original',title:'来源事件',summary:'完整原摘要',time:'2026-10-01T14:18:00+08:00'}]}:type==='calendar'?{version:1,type,title:'日历',asOf:'用户提供的虚构记录',note:'完整来源说明',items:[{title:'会议',summary:'原摘要',date:'2026-09-28'}]}:{version:1,type,title:'指标',asOf:'用户提供的虚构记录',items:[{label:'数量',value:0,detail:'完整来源口径'}]};
  const plan={id:'calendar-first',createdAt:Date.now(),panels:[{nodeId:'calendar-first-card',title:spec.title,prompt:'日历',taskId:'calendar-first-task',preparedOutput:acceptArtifactOutput(JSON.stringify(spec)),width:656,height:424,x:0,y:0,size:'large'}]};
  await act(async()=>w.applyWorkbench(plan));
  const before=structuredClone(w.getWorkbenchCells()),frame=f.host.querySelector('iframe[data-research-html-artifact]');

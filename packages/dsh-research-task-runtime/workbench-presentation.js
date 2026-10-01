@@ -1,3 +1,4 @@
+import {TIMELINE_PRESENTATION_CSS} from './timeline-presentation.js';
 import {KPI_PRESENTATION_CSS} from './kpi-presentation.js';
 import {WORKBENCH_MODE_CSS} from './workbench-style.js'
 import {CALENDAR_PRESENTATION_CSS} from './calendar-presentation.js'
@@ -81,6 +82,7 @@ body .rScV5Q_mindMapNode{border:1px solid var(--sherlock-border)!important;borde
 @media(max-width:480px){body :is(.market-metrics,.fund-kpis){grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:240px){body :is(.market-metrics,.fund-kpis){grid-template-columns:minmax(0,1fr)!important}}
 ${KPI_PRESENTATION_CSS}
+${TIMELINE_PRESENTATION_CSS}
 ${CALENDAR_PRESENTATION_CSS}
 ${WORKBENCH_MODE_CSS}
 }`

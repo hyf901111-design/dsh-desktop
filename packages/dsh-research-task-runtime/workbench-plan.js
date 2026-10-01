@@ -1,3 +1,4 @@
+import {TIMELINE_GUIDANCE,timelineDataIssue} from './timeline-template-contract.js';
 import {KPI_GUIDANCE,kpiDataIssue} from './kpi-template-contract.js';
 import {CALENDAR_GUIDANCE} from './calendar-template-contract.js';
 import { researchBentoSize } from './bento-layout.js';
@@ -11,12 +12,13 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-export const WORKBENCH_PANEL_TYPES = Object.freeze(['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss']);
+export const WORKBENCH_PANEL_TYPES = Object.freeze(['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline']);
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss']);
+const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
 const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
+    timeline: TIMELINE_GUIDANCE,
     dashboard: 'dashboard 应包含 asOf 和 items:[{label,value:"带单位的字符串",detail?}]（也接受 metrics 中的数值和 unit）。',
     chart: chartTemplateSchema(),
     table: 'table 应包含 columns:[列名] 和 rows:[[单元格]]，每行列数一致。',
@@ -173,6 +175,7 @@ function normalizeSimulatedCalendar(artifact) {
 }
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
+    if (artifact.type === 'timeline') return `${timelineDataIssue(artifact) ?? ''}。${TIMELINE_GUIDANCE}`;
     if (artifact.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(artifact.variant)) return `${financialProfileDataIssue(artifact) ?? ''}。${FINANCIAL_PROFILE_FIELDS[artifact.variant]}`;
     if (['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
     if (artifact.type === 'kpi') return `${kpiDataIssue(artifact) ?? ''}。${KPI_GUIDANCE}`;
@@ -218,10 +221,10 @@ export function prepareSimulatedArtifact(panel) {
     // Simulated data must never smuggle invented citations into a trusted host template.
     const hasLink = value => value && typeof value === 'object' && Object.entries(value).some(([key, item]) =>
         key === 'url' || key === 'sources' || (item && typeof item === 'object' && hasLink(item)));
-    // Local calendars and KPI cards may reference user-supplied documents alongside
+    // Local calendars, timelines and KPI cards may reference user-supplied documents alongside
     // virtual records. Their strict URL contracts and simulated label remain active;
     // preserve those fields without fetching or inventing a citation.
-    if (!['calendar','kpi'].includes(panel.type) && hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
+    if (!['calendar','kpi','timeline'].includes(panel.type) && hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
     const artifact = structuredClone(source);
     artifact.version = 1;
     artifact.type = panel.type;
@@ -315,7 +318,7 @@ export function validateWorkbench(value) {
         if (isSimulated && !parallel) requireSimulatedChartData(p);
         if (isSimulated && !parallel && p.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(marketVariant(p)) && p.artifact === undefined)
             throw Error(`面板「${p.title}」需要完整 artifact 中的证券、指标或成员记录；不能生成无关金融样例。${FINANCIAL_PROFILE_FIELDS[marketVariant(p)]}`);
-        if (isSimulated && ['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(p.type) && p.artifact === undefined)
+        if (isSimulated && ['progress','tasks','approval','alerts','form','code','clock','note','rss','timeline'].includes(p.type) && p.artifact === undefined)
             throw Error(`面板「${p.title}」需要完整 artifact ${p.type==='clock'?'时区配置；live设备时钟同样需要明确城市和IANA时区':'中的实际需求记录；不能生成无关清单或进度样例'}。${operationsTemplateSchema(p.type)}`);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;

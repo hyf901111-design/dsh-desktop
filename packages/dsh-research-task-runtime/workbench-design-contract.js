@@ -1,3 +1,4 @@
+import {TIMELINE_TEMPLATES} from './timeline-template-contract.js';
 import {KPI_TEMPLATES} from './kpi-template-contract.js';
 // The model supplies data and a semantic type. Geometry and design provenance
 // belong to the client so a prompt cannot silently change the visual system.
@@ -171,6 +172,7 @@ export function marketVariant(panel = {}) {
 }
 
 export function workbenchDesignTemplate(panel = {}) {
+  if(panel.type==='timeline')return {...TIMELINE_TEMPLATES[0],id:'research.timeline',size:'medium'};
   if(panel.type==='kpi')return {...KPI_TEMPLATES[0],id:'research.kpi',size:'medium'};
   const operation=OPERATIONS_TEMPLATES.find(t=>t.type===panel.type);
   if(operation)return {...operation,size:'large',id:'research.'+operation.id};

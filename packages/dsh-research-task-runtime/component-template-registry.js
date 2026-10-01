@@ -1,3 +1,4 @@
+import {TIMELINE_TEMPLATES,TIMELINE_GUIDANCE} from './timeline-template-contract.js'
 import {KPI_TEMPLATES,KPI_GUIDANCE} from './kpi-template-contract.js'
 import {CALENDAR_TEMPLATES,CALENDAR_GUIDANCE} from './calendar-template-contract.js'
 import {CHART_TEMPLATES,chartTemplateSchema} from './chart-template-contract.js'
@@ -24,6 +25,7 @@ const generic=[
  ['reports','研报',['搜索','分类','展开','来源'],656,352],['gantt','甘特图',['筛选','日期','任务详情'],656,352]
 ]
 export const COMPONENT_TEMPLATES=Object.freeze([
+ ...TIMELINE_TEMPLATES.map(t=>({...t,schema:TIMELINE_GUIDANCE})),
  ...KPI_TEMPLATES.map(t=>({...t,schema:KPI_GUIDANCE})),
  ...CALENDAR_TEMPLATES.map(t=>({...t,schema:CALENDAR_GUIDANCE})),
  ...OPERATIONS_TEMPLATES.map(t=>({...t,schema:operationsTemplateSchema(t.id)})),

@@ -1,3 +1,4 @@
+import {timelineDataIssue} from './timeline-template-contract.js'
 import {kpiDataIssue} from './kpi-template-contract.js'
 import {chartDataIssue} from './chart-template-contract.js'
 import {operationsDataIssue} from './operations-template-contract.js'
@@ -27,6 +28,7 @@ export function normalizeIndexedTableRows(data){
 // Return paths rather than an opaque "format invalid" result. The same rule
 // text is included in the model's original schema and its bounded repair.
 export function templateDataIssue(data){
+ if(data?.type==='timeline')return timelineDataIssue(data)
  if(data?.type==='kpi')return kpiDataIssue(data)
  if(['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(data?.type))return operationsDataIssue(data)
  if(data?.type==='chart')return chartDataIssue(data)
