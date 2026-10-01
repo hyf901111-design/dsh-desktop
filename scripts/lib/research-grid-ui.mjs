@@ -63,7 +63,8 @@ export function WorkbenchTitle({title}){
 export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
   const [busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[now,setNow]=react.useState(Date.now()),[tip,setTip]=react.useState(null)
-  const time=workbenchRefreshTooltip(binding?.lastSuccess||node.lastSuccessfulAt||(node.generationStatus==='completed'?node.generationCompletedAt:null),now)
+  const rss=componentRssStatusView(node)
+  const time=workbenchRefreshTooltip(rss?rss.lastSuccess:binding?.lastSuccess||node.lastSuccessfulAt||(node.generationStatus==='completed'?node.generationCompletedAt:null),now)
   const refresh=async()=>{
     if(busy||readOnly)return
     setBusy(true);setError('')
