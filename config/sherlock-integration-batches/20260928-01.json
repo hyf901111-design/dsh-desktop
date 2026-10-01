@@ -120,6 +120,60 @@
         ],
         "recordedAt": "2026-10-01T09:53:19.755Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "收起侧栏底部头像对齐",
+        "branch": "codex/feat/sidebar-avatar-alignment-20261001",
+        "baseCommit": "7a8ca47e78b047dc308388f2f18624347ef8923a",
+        "tipCommit": "7e26eb0b0834454b15b145f0cde742883052ebdc",
+        "commits": [
+          {
+            "commit": "7e26eb0b0834454b15b145f0cde742883052ebdc",
+            "parents": [
+              "7a8ca47e78b047dc308388f2f18624347ef8923a"
+            ],
+            "subject": "修复：统一收起侧栏底部头像和消息按钮中线"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/design/sidebar-avatar-alignment-20261001.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-dialogs.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
+              "."
+            ],
+            "outcome": "passed",
+            "summary": "两种主题及侧栏和更新按钮状态共8组生产样式几何检查通过",
+            "verifiedCommit": "7e26eb0b0834454b15b145f0cde742883052ebdc",
+            "completedAt": "2026-10-01T10:16:45.511056+00:00",
+            "timeoutMs": 60000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产样式浏览器8组几何检查通过；真实56341修正前截图已保留，修正后包待复验"
+        },
+        "acceptanceCriteria": [
+          "收起侧栏头像和消息图标与上方图标同中线",
+          "展开侧栏用户名与消息入口可用"
+        ],
+        "risks": [
+          "真实集成包修正后的底部对齐待验证"
+        ],
+        "generatedAt": "2026-10-01T10:16:45.511056+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -148,6 +202,14 @@
         "typecheck"
       ],
       "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
+        "."
+      ],
+      "timeoutMs": 60000
     }
   ],
   "mainSynchronizations": []
