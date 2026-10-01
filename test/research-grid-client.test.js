@@ -46,9 +46,9 @@ it('音频播放状态来自实际媒体事件，章节倍速音量及会话返�
 it('音频整理保留展开的完整转写高度，不把默认播放器高度裁切成内容高度',async()=>{
  const f=await fixture(true),spec={version:1,type:'audio',title:'长转写',url:'http://127.0.0.1:58183/tone.wav',transcript:'本人完整转写\n'.repeat(60)},node={...text('audio-fit'),kind:'generated-container',containerPrompt:'音频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}
  await act(async()=>f.workspace.setArtifacts([node]));const preset=f.host.querySelector('[data-research-audio-preset]');preset.querySelector('details').open=true
- Object.defineProperties(preset,{offsetHeight:{configurable:true,value:720},scrollHeight:{configurable:true,value:720}})
+ Object.defineProperties(preset,{offsetHeight:{configurable:true,value:720},scrollHeight:{configurable:true,value:720}});f.host.querySelector('[data-research-preview-body]').style.setProperty('padding','12px','important')
  await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
- await vi.waitFor(async()=>{await act(async()=>{});expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(782)},{timeout:1500,interval:50})
+ await vi.waitFor(async()=>{await act(async()=>{});expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(806)},{timeout:1500,interval:50})
  expect(preset.querySelector('.ew-audio-transcript').textContent).toBe(spec.transcript);expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
 })
 it('音频共享只读禁止更改音源但保留完整转写和浏览功能',async()=>{

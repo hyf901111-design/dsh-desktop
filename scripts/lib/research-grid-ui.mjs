@@ -455,7 +455,7 @@ export function measureWorkbenchContents(root,nodes) {
     if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
     const audio=body.querySelector('[data-research-audio-preset]')
     if(audio){
-      measured.set(node.id,{width:preferred.width,height:Math.max(264,38+Math.max(audio.offsetHeight,audio.scrollHeight)+(card.querySelector('.odyssey-data-stamp')?24:0))})
+      measured.set(node.id,{width:preferred.width,height:Math.max(264,38+Math.max(audio.offsetHeight,audio.scrollHeight)+(parseFloat(root.ownerDocument.defaultView.getComputedStyle(body).paddingTop)||0)+(parseFloat(root.ownerDocument.defaultView.getComputedStyle(body).paddingBottom)||0)+(card.querySelector('.odyssey-data-stamp')?24:0))})
       continue
     }
     const derived=body.querySelector('[data-research-derived-preset]')
