@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记公开工具类型契约修复",
+        "featureName": "笔记控件尺寸与深色对比度修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "a53b7613f6029a3371fc6580abf08c73f4d9638e",
-        "tipCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
+        "baseCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
+        "tipCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
         "commits": [
           {
-            "commit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
+            "commit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
             "parents": [
-              "a53b7613f6029a3371fc6580abf08c73f4d9638e"
+              "4d37ce212fcfd63f66066d9d211baf2175f3834e"
             ],
-            "subject": "修复：公开笔记模板类型并统一工作台规划契约"
+            "subject": "修复：统一笔记工具栏尺寸并提高深色图标对比度"
           }
         ],
         "files": [
@@ -29,19 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/note-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "test/markdown-note.test.js"
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           }
         ],
         "checks": [
@@ -53,9 +41,9 @@
               "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "15项检查含实际注册工具note枚举及prepared路径，不启动逐卡模型",
-            "verifiedCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
-            "completedAt": "2026-10-01T06:38:44.814590+00:00",
+            "summary": "15项相关检查通过",
+            "verifiedCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
+            "completedAt": "2026-10-01T06:52:16.867007+00:00",
             "timeoutMs": 300000
           },
           {
@@ -66,70 +54,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
-            "completedAt": "2026-10-01T06:38:44.814590+00:00",
+            "verifiedCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
+            "completedAt": "2026-10-01T06:52:16.867007+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "d06前包原生10151字保存、只读原材料、会话往返与来源面板通过；首轮三次提交失败原因已修复，后继包中文首轮待复验"
+          "summary": "生产双层沙盒980/480/280宽度与三模式9组；源图标对比度、32px工具栏及10k草稿重建通过"
         },
         "acceptanceCriteria": [
-          "模型公开类型与规划器共享note枚举",
-          "完整原材料直接prepared",
-          "原生普通中文首次创建复验"
+          "旧笔记无需改写内容获得深色对比度修复",
+          "普通中文首轮prepared创建复验"
         ],
         "risks": [
-          "后继客户端普通中文首轮创建待验",
-          "实现60/74接受59/74，整体目标仍未完成"
+          "research-html-theme 4项旧失败在4d37基线同样失败，具体日志markdown-note-contrast-baseline-theme.log；新增补丁未增加失败",
+          "后继包原生创建及旧卡复验仍待完成",
+          "实现60/74接受59/74整体目标继续进行"
         ],
-        "generatedAt": "2026-10-01T06:38:44.814590+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1630fc91411b449883dceea8de6966d407a7dbca",
-        "verificationCommit": "1630fc91411b449883dceea8de6966d407a7dbca",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "1630fc91411b449883dceea8de6966d407a7dbca",
-            "completedAt": "2026-10-01T06:41:33.786Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "1630fc91411b449883dceea8de6966d407a7dbca",
-            "completedAt": "2026-10-01T06:41:33.786Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1630fc91411b449883dceea8de6966d407a7dbca",
-            "completedAt": "2026-10-01T06:41:33.786Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T06:41:33.786Z"
+        "generatedAt": "2026-10-01T06:52:16.867007+00:00"
       }
     }
   ],
