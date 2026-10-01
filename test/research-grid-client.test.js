@@ -1756,3 +1756,17 @@ it('模式组支持方向键且与组件工具选中相互独立，英文新增�
  await f.event('click',f.document.querySelector('[data-workbench-more="style-a"]'),{clientX:600,clientY:100})
  const menu=f.document.querySelector('.ew-grid-menu');expect(menu.textContent).toContain('Duplicate component');expect(menu.textContent).toContain('Create from selection');expect(menu.textContent).not.toMatch(/[\u4e00-\u9fff]/)
 })
+
+it('笔记完整长草稿随所属卡片保留，仅当前版本正文链接进入宿主来源面板',async()=>{
+ const {researchInteractionVersion}=await import('../packages/dsh-research-task-runtime/html-artifact.js'),f=await fixture(true);
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'note',title:'研究笔记',asOf:'本地虚构材料',content:'原始材料'})));
+ const state={content:'中'.repeat(10000)+'\n[新来源](https://example.com/new)',view:'preview',align:'left'};
+ await act(async()=>f.workspace.setArtifacts([{...text('owned-note'),kind:'generated-container',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerPrompt:'可编辑Markdown笔记',containerSpec:spec,config:{sharedComponentState:{version:researchInteractionVersion(spec.html),state,revision:1}}}]));
+ expect(f.workspace.getSnapshot().artifacts[0].config.sharedComponentState.state.content).toBe(state.content);
+ const frame=f.host.querySelector('[data-research-html-artifact]'),ownWindow={postMessage:vi.fn()};Object.defineProperty(frame,'contentWindow',{configurable:true,value:ownWindow});
+ const request=async(url,source=ownWindow)=>act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source,data:{type:'sherlock-source-request',url}})));
+ await request('https://attacker.invalid');expect(f.host.textContent).not.toContain('打开来源：');
+ await request('https://example.com/new',f.win);expect(f.host.textContent).not.toContain('打开来源：');
+ await request('https://example.com/new');expect(f.host.textContent).toContain('打开来源：新来源');
+ const restored=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');expect(restored.getSnapshot().artifacts[0].config.sharedComponentState.state.content).toBe(state.content);
+})

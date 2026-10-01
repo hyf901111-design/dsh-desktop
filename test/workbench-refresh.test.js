@@ -214,3 +214,11 @@ it('journal replay during pending restoration keeps saved scroll instead of trea
  vi.advanceTimersByTime(81)
  expect(doc.querySelector('input').value).toBe('已保存筛选');expect(doc.querySelector('div').scrollTop).toBe(96)
 })
+
+it('leaves dedicated long draft state intact when an old generic 8k control snapshot arrives',()=>{
+ const f=fixture();f.body.innerHTML='<section data-workbench-state-owned><textarea></textarea></section><input value="ordinary">';
+ const editor=f.body.querySelector('textarea'),ordinary=f.body.querySelector('input');editor.value='中'.repeat(10000);const input=vi.fn();editor.addEventListener('input',input);
+ const state=f.surface.snapshot();expect(state.controls).toHaveLength(1);expect(state.controls[0].value).toBe('ordinary');
+ f.surface.apply({...state,controls:[{path:[0,0],tag:'TEXTAREA',value:'中'.repeat(8192),checked:false},...state.controls]});
+ expect(editor.value).toHaveLength(10000);expect(input).not.toHaveBeenCalled();expect(ordinary.value).toBe('ordinary');
+})

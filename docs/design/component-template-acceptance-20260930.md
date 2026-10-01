@@ -577,3 +577,19 @@ dc5ee271最终本地包签名与完整包检查通过，普通中文创建54.521
 首次受管集成因客户端重复补丁检查失败而未合并：新增标记位于文件末尾，改变原创建工具样式的末尾边界，重复执行会累积样式。将标记移至对应保存注册代码旁；实际客户端及状态两文件136项检查通过，补丁再次执行保持逐字相同。证据charting-session-integration-merge.log保留失败、charting-session-idempotency-green.log记录修复；没有跳过该门禁。
 
 a6b5713d本地包与完整包检查通过，但打开原验证会话时退回文字视图。读取仅该合成验证卡片的保存记录，在生产双层CSP中复现报错el.click is not a function：无尺寸SVG路径点击没有坐标，恢复调用不存在的HTMLElement.click方法，后续交互中断。新增回归在旧源码失败；无click方法的元素改派发冒泡MouseEvent，保留实际目标与委托处理。原会话42条交互记录再次恢复无脚本错误，SMA5、自定义参数及锁定恢复。证据charting-svg-replay-red.log、charting-svg-replay-green.log、charting-session-owned-replay.png；实际新包会话恢复仍须继续，不计为第59类接受。
+
+### 技术图表最终原生接受
+
+ce8a837f受管集成至69c957e2，本地包签名、来源及完整包检查通过。原验证会话在实际客户端端口54530打开交互视图，没有退回文字；SMA5、自定义参数和锁定恢复。实际拖动画出四条趋势线并锁定；完整日期/原价锚点已保存到所属卡片个人配置。浅色整理、展开侧栏后的企业模式窄画布整理及深色显示均保持可读，控件整行换行、价格日期坐标不堆叠，四条线完整。
+
+切到自身另一验证会话再返回，四条锚点及参数/锁定完全一致；退出同一应用并重新打开（端口54865），四条绘图和参数再次恢复。补验实际文字标注anchor-check，锚定2026-09-19/12.4928 CNY；切到完整三条原始周线再回到日线，五条个人标注保留。再次退出重开（端口55076）后，四条趋势线与文字标注实际可见，标注输入、SMA5、自定义参数和锁定恢复。所属合成卡片的保存配置逐项核对五条完整浮点日期/原价锚点及指标配置一致，原来源HTML未改变；没有读取其他会话或凭据。
+
+此前该会话普通中文一次prepared耗时54.521秒、195个来源字段审计一致继续有效；本次未再次生成卡片。177项直接相关检查与类型检查通过，未运行全功能测试。证据charting-svg-native-acceptance-audit.json、charting-svg-native-light.png、charting-svg-native-arranged-enterprise.png、charting-svg-native-session-restored-enterprise.png、charting-svg-native-dark.png、charting-svg-native-restarted-dark.png、charting-svg-native-five-restarted.png和charting-svg-native-build.log、charting-svg-native-package.log位于/tmp/ework-template-acceptance-20260930/。技术图表补齐接受，实现与原生接受均59/74，剩余15类未实现；整体目标仍未完成，不能宣称全模板首次成功率已超过90%。客户端保持打开。
+
+
+## Markdown 笔记预置与草稿恢复（2026-10-01）
+
+- 新增Figma 1917:352841的note模板，源框980×340、统一最小280×180；1917:352855工具栏11枚原始SVG按源顺序嵌入，运行时不访问远端资源。编辑、格式预览、加粗/斜体/下划线/删除线、列表、链接、对齐、五种颜色及原始材料查看由宿主提供；普通摘要格式保留。
+- 原材料完整保存在模板数据中，草稿通过现有画布状态桥保存。最长16000字符/32000 UTF-8字节，同时计入JSON转义容量；编辑分成≤4096字节的补丁，拒绝超容量并提示分卡，不截断。专属草稿控件不受旧8192字符通用视图快照覆盖。
+- 格式预览通过限定DOM节点生成，在Trusted Types none的双层生产沙盒中可用；原HTML保留为文字，链接只允许无登录信息的http/https。新草稿来源仅在该note、当前HTML版本与已保存正文匹配时进入宿主来源面板，普通HTML权限不变。
+- 生产沙盒980/480/280px与浅/深/企业三模式9组通过，无横向溢出、11个源图标完整。10008字中文草稿在组件完整重建、整页重开后逐字一致，原材料未改变，0页面错误。证据markdown-note-browser-checks.json及markdown-note-*.png位于既有临时证据目录。实际客户端新包创建、整理及会话恢复仍待复验，暂不计原生接受；实现60/74、接受59/74。

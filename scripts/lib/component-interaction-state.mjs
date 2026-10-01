@@ -1,3 +1,4 @@
+import {validNoteContent,validNoteState,noteMarkdownHtml,noteDraftSource} from '../../packages/dsh-research-task-runtime/note-template-contract.js';
 function patchLegacyComponentInteractionState(source) {
   if(source.includes('/* ODYSSEY_COMPONENT_INTERACTION_V1 */'))return source;
   const once=(a,b)=>{if(!source.includes(a)||source.indexOf(a)!==source.lastIndexOf(a))throw Error('Interaction anchor missing or ambiguous: '+a.slice(0,90));source=source.replace(a,b);};
@@ -103,8 +104,22 @@ function patchSharedComponentInteractionState(source) {
   return source+'\n/* ODYSSEY_COMPONENT_SHARED_STATE_V1 */';
 }
 
+function patchNoteDraftSources(source){
+ const marker='/* ODYSSEY_NOTE_DRAFT_SOURCES_V1 */',endMarker='/* ODYSSEY_NOTE_DRAFT_SOURCES_END */';
+ const definitions=`${marker}
+ const validNoteContent=${validNoteContent.toString()},validNoteState=${validNoteState.toString()},noteMarkdownHtml=${noteMarkdownHtml.toString()},noteDraftSource=${noteDraftSource.toString()};
+ ${endMarker}`;
+ const prior=source.indexOf(marker);
+ if(prior>=0){let end=source.indexOf(endMarker,prior);if(end>=0)end+=endMarker.length;else{end=source.indexOf('const [readable, setReadable]',prior);if(end<0)throw Error('Note source helper boundary missing');}source=source.slice(0,prior)+definitions+'\n'+source.slice(end).replace(/^\s*\n/,'');}
+ else{const anchor='function ResearchHtmlArtifact({ spec, node, onSize }) {';if(source.split(anchor).length!==2)throw Error('Note source host anchor missing');source=source.replace(anchor,`${anchor}\n ${definitions}`);}
+ const original='const source = sources.find(s => s.href === normalizeResearchWebUrl(data.url));';
+ if(source.includes(original)){if(source.split(original).length!==2)throw Error('Note source request anchor ambiguous');source=source.replace(original,'const source = sources.find(s => s.href === normalizeResearchWebUrl(data.url)) ?? noteDraftSource(current.node,data.url,researchInteractionVersion(spec.html));');}
+ else if(!source.includes('?? noteDraftSource(current.node,data.url,researchInteractionVersion(spec.html))'))throw Error('Note source request anchor missing');
+ return source;
+}
+
 export function patchComponentInteractionState(source) {
-  source=patchSharedComponentInteractionState(source);
+  source=patchNoteDraftSources(patchSharedComponentInteractionState(source));
   if(source.includes('/* ODYSSEY_COMPONENT_INTERACTION_ACK_V2 */'))return source;
   const once=(a,b)=>{if(source.split(a).length!==2)throw Error('Interaction acknowledgement anchor missing: '+a.slice(0,90));source=source.replace(a,b);};
   once('const sendInteraction=()=>{','const sendInteraction=(rejectedEventId)=>{');
