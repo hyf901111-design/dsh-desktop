@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "RSS订阅预置与宿主实际公开读取",
+        "featureName": "RSS原生读取时点与摘要显示修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
-        "tipCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
+        "baseCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
+        "tipCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
         "commits": [
           {
-            "commit": "53504ef92e3a9955bddd15b2c82623cdd05cfd7c",
+            "commit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
             "parents": [
-              "8ca702c425c516bca99c9c086801bdcfd631cd71"
+              "3853c963e061a8930220127d34efb4c92b1e88ab"
             ],
-            "subject": "验证：记录预置笔记首次生成与原生草稿恢复通过"
-          },
-          {
-            "commit": "3853c963e061a8930220127d34efb4c92b1e88ab",
-            "parents": [
-              "53504ef92e3a9955bddd15b2c82623cdd05cfd7c"
-            ],
-            "subject": "功能：预置RSS订阅模板并接通公开来源读取和失败保留"
+            "subject": "修复：RSS刷新提示绑定真实读取时点并明确初始说明"
           }
         ],
         "files": [
@@ -35,120 +28,16 @@
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/artifact-output.d.ts"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/rss-artifact.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/rss-assets.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/rss-template-contract.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/rss-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-interaction-state.mjs"
           },
           {
             "status": "M",
             "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/rss-client.mjs"
-          },
-          {
             "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/state/research-rss.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/markdown-note.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/operations-template.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-rss.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/rss-status.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/rss-template.test.js"
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -160,16 +49,12 @@
               "test/research-rss.test.ts",
               "test/rss-status.test.js",
               "test/component-data-status.test.js",
-              "test/operations-template.test.js",
-              "test/markdown-note.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/component-interaction-state.test.js",
               "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "186项相关检查通过",
-            "verifiedCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
-            "completedAt": "2026-10-01T07:57:16.978211+00:00",
+            "summary": "149项直接相关检查通过",
+            "verifiedCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
+            "completedAt": "2026-10-01T08:23:01.692277+00:00",
             "timeoutMs": 300000
           },
           {
@@ -180,69 +65,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
-            "completedAt": "2026-10-01T07:57:16.978211+00:00",
+            "verifiedCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
+            "completedAt": "2026-10-01T08:23:01.692277+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP三模式与三宽度9组；实际20条公开RSS快照、添加刷新失败保留、搜索页签恢复及移除通过"
+          "summary": "RSS真实原生首次prepared、默认源读取20条和搜索恢复通过；修正后双层CSP九组与摘要展开通过"
         },
         "acceptanceCriteria": [
           "普通中文首次直接prepared创建rss",
           "原生实际添加公开RSS及来源、刷新、主题整理、会话恢复"
         ],
         "risks": [
-          "原生新包创建和实际读取仍待复验",
+          "后继包旧卡实际刷新、时间提示一致与重启恢复仍待复验",
           "实现61/74，原生接受60/74，整体任务未完成"
         ],
-        "generatedAt": "2026-10-01T07:57:16.978211+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d19d7303a8633de9f71946c6063e0a9b6be2fa0a",
-        "verificationCommit": "d19d7303a8633de9f71946c6063e0a9b6be2fa0a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "d19d7303a8633de9f71946c6063e0a9b6be2fa0a",
-            "completedAt": "2026-10-01T07:59:27.126Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "d19d7303a8633de9f71946c6063e0a9b6be2fa0a",
-            "completedAt": "2026-10-01T07:59:27.126Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d19d7303a8633de9f71946c6063e0a9b6be2fa0a",
-            "completedAt": "2026-10-01T07:59:27.126Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T07:59:27.126Z"
+        "generatedAt": "2026-10-01T08:23:01.692277+00:00"
       }
     }
   ],
