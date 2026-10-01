@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "文件和图库原生预置及原文件导入下载",
+        "featureName": "附件原网址预览授权修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "611491c23bb96569caabd6005d20af09c0668752",
-        "tipCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
+        "baseCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
+        "tipCommit": "fa09af3864975e46c1df8305ed6a545846f055e4",
         "commits": [
           {
-            "commit": "a81d1f069eab389905d218afe7c4041f5b2ed63d",
+            "commit": "fa09af3864975e46c1df8305ed6a545846f055e4",
             "parents": [
-              "611491c23bb96569caabd6005d20af09c0668752"
+              "50fa485f4548083eb3efb08a4f35fa4de8aa72d2"
             ],
-            "subject": "记录智能组件与链接真实客户端接受证据"
-          },
-          {
-            "commit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
-            "parents": [
-              "a81d1f069eab389905d218afe7c4041f5b2ed63d"
-            ],
-            "subject": "补齐文件和图库原生模板及原文件导入下载"
+            "subject": "修复：附件网页弹窗先授权原网址再加载预览"
           }
         ],
         "files": [
@@ -36,87 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/attachment-template-contract.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/attachment-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/attachment-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-native-web-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/panel-runtime.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-export.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/attachment-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-attachment-download.test.ts"
           },
           {
             "status": "M",
@@ -128,117 +41,30 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/attachment-template.test.js",
-              "test/research-attachment-download.test.ts",
-              "test/component-template-registry.test.js",
-              "-t",
-              "附件|files |gallery |文件与图库|下载|unique semantic"
-            ],
-            "outcome": "passed",
-            "summary": "10项附件契约、直接prepared、技能、原始字节和容量边界检查通过",
-            "verifiedCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
-            "completedAt": "2026-10-01T21:01:56.762358+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
               "test/research-grid-client.test.js",
               "-t",
-              "附件|重复补丁恢复|链接草稿按统一|网页原生"
+              "附件|网页原生"
             ],
             "outcome": "passed",
-            "summary": "9项实际生产模块附件、弹窗、会话返回、删除撤销与幂等检查通过",
-            "verifiedCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
-            "completedAt": "2026-10-01T21:01:56.762358+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "项目类型检查通过",
-            "verifiedCommit": "50fa485f4548083eb3efb08a4f35fa4de8aa72d2",
-            "completedAt": "2026-10-01T21:01:56.762358+00:00",
+            "summary": "7项附件和原生网页直接相关检查通过，回归先红后绿",
+            "verifiedCommit": "fa09af3864975e46c1df8305ed6a545846f055e4",
+            "completedAt": "2026-10-01T21:20:37.601Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产安装模块浏览器三主题280px无横向溢出，长名称换行，完整原图1200×640及翻页保持原网址；最终原生包接受继续"
+          "summary": "原生预览失败已复现并定位遗漏网址授权，PNG原图弹窗与下载完整；修复后原生复测待进行"
         },
         "acceptanceCriteria": [
-          "本人完整原文件数据首次prepared，无逐卡模型和样例替代",
-          "三主题及最小尺寸可读，独立预览下载移除权限",
-          "真实导入保存授权、原文件下载字节保持、失败可重试"
+          "原网址先授权，原文件弹窗成功加载",
+          "原文件下载字节与来源一致",
+          "三主题、整理与会话返回保留来源"
         ],
         "risks": [
-          "原生普通输入与真实导入下载仍须验证",
-          "HTTP下载32MB且不跟随重定向、不复用网页登录Cookie",
-          "严格原生接受71/74，YouTube外部登录后播放待接受"
+          "修复后原生包预览复测待完成"
         ],
-        "generatedAt": "2026-10-01T21:01:56.762358+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3117c88836e703e320178535437c7f04f5c05f80",
-        "verificationCommit": "3117c88836e703e320178535437c7f04f5c05f80",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "3117c88836e703e320178535437c7f04f5c05f80",
-            "completedAt": "2026-10-01T21:03:58.859Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "3117c88836e703e320178535437c7f04f5c05f80",
-            "completedAt": "2026-10-01T21:03:58.859Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3117c88836e703e320178535437c7f04f5c05f80",
-            "completedAt": "2026-10-01T21:03:58.859Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "3117c88836e703e320178535437c7f04f5c05f80",
-            "completedAt": "2026-10-01T21:03:58.859Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T21:03:58.859Z"
+        "generatedAt": "2026-10-01T21:20:37.602Z"
       }
     },
     {
