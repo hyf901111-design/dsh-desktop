@@ -198,6 +198,12 @@ a[href]:hover{text-decoration:underline}
 :is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[stroke]:not([stroke="none"]){stroke:currentColor!important}
 :is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],a[href],[role="tab"]) :is(span,svg){color:inherit!important}
 :is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"]) :is(svg,img){filter:grayscale(1)!important}
+/* Fixed note controls keep source geometry and also apply to retained artifacts. */
+body[data-research-kind="note"] .note-toolbar button{height:24px!important;min-height:24px!important;padding:3px!important;border-radius:3px!important;background-color:transparent!important}
+body[data-research-kind="note"] .note-toolbar button:is(:hover,[aria-pressed="true"]){background-color:var(--sherlock-row-selected)!important}
+body[data-research-kind="note"] .note-surface textarea{border:0!important;padding:4px!important;font-size:12px!important;line-height:20px!important;background-color:var(--sherlock-bg)!important;color:var(--sherlock-text)!important}
+/* Note assets retain their source paths; adapt contrast in the host layer for saved notes too. */
+:root:is([data-workbench-style="dark"],[data-sherlock-theme="dark"]:not([data-workbench-style])) body[data-research-kind="note"] .note-toolbar img{filter:brightness(0) invert(1)!important}
 :is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg{fill:currentColor!important}
 :is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg[fill="none"]{fill:none!important}
 :is(button:not(.market-tile),[role="button"],[role="checkbox"],[role="radio"],[role="switch"],[role="tab"],a[href]) svg [fill]:not([fill="none"]){fill:currentColor!important}

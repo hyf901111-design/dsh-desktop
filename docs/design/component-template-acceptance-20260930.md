@@ -595,3 +595,5 @@ ce8a837f受管集成至69c957e2，本地包签名、来源及完整包检查通�
 - 生产沙盒980/480/280px与浅/深/企业三模式9组通过，无横向溢出、11个源图标完整。10008字中文草稿在组件完整重建、整页重开后逐字一致，原材料未改变，0页面错误。证据markdown-note-browser-checks.json及markdown-note-*.png位于既有临时证据目录。实际客户端新包创建、整理及会话恢复仍待复验，暂不计原生接受；实现60/74、接受59/74。
 
 原生首轮：集成d06ae213本地构建、签名和包检查通过，端口58274。普通中文请求单张可编辑笔记134.833秒完成；工具调用三次、前两次格式拒绝，最终走逐卡子任务，不能算首次提交成功。完整117字来源逐字一致；实际加粗、原始材料只读和10151字中文草稿保存检查通过，HTML原材料未改变。根因是工具公开类型枚举遗漏note、与规划器枚举不一致，模型被迫选择旧markdown。改为共用同一类型数组并提供双type=note的五字段契约；新增实际注册工具→prepared调用检查，不启动逐卡模型。15项相关检查、类型检查通过。证据markdown-note-tool-contract-red/green.log、markdown-note-native-created-audit.json、markdown-note-native-long-draft-audit.json。后继客户端普通中文首次生成和完整恢复仍待验收，计数仍60/74实现、59/74接受。
+
+笔记深色工具栏复验：实际原生卡片揭示宿主最早 important 层的通用 grayscale 规则覆盖源模板深色滤镜，简单提高源 CSS 优先级仍无效。已在同一宿主控件层增加 note 专属对比度及 24px 工具按钮规则，保留源 SVG 内容并覆盖旧卡片。生产双层沙盒 980/480/280px × 浅/深/企业 9 组通过：深色 filter=brightness(0) invert(1)、其余 grayscale(1)，宽版工具栏32px、280px换行58px，固定正文190px、无横向溢出，10008字草稿重建/重载逐字一致。15项相关检查及类型检查通过。证据 markdown-note-contrast-red/green.log、markdown-note-contrast-browser-checks.json。后继包原生首轮创建与深色旧卡复验仍待完成；实现60/74、接受59/74。
