@@ -42,7 +42,7 @@ it('预置宽快照首次挂载使用整行，手动宽度仍可收窄到契约�
  const nodes=['currency-snapshot','watchlist'].map((kind,i)=>({id:kind,kind:'generated-container',workbenchId:'snapshot',workbenchIndex:i,width:980,height:430,sizeMode:'auto',containerSpec:{type:'html',html:`<body data-sherlock-market="${kind}"></body>`}}))
  state.reconcile({...base,artifacts:nodes})
  expect(state.get().every(c=>c.x===0&&c.w===40)).toBe(true)
- const min=g.minimum(nodes[0],g.metrics(900));expect(min.w*g.metrics(900).step-10).toBeGreaterThanOrEqual(480);expect(min.w).toBeLessThan(40)
+ const min=g.minimum(nodes[0],g.metrics(900));expect(min.w*g.metrics(900).step-10).toBeGreaterThanOrEqual(280);expect(min.w).toBeLessThan(40)
 })
 it('整理旧研究运营看板的窄列长尾补入宽列，柱状图保持模板高度',()=>{
  for(const width of [810,1000]){
@@ -104,14 +104,15 @@ it('整理单列连续堆积的后续组件补入短列，大面积空缺不需�
   expect(g.arrange(nodes,next,width)).toEqual(next)
  }
 })
-it('普通组件最小280×160，智能草稿320×220，窄画板仅限制可用宽度',()=>{
+it('手动调整所有组件统一最小280×160，窄画板仅限制可用宽度',()=>{
  const g=createResearchGrid()
  for(const width of [1000,700,500,240]){
   const m=g.metrics(width)
-  for(const [node,w,h] of [[{kind:'pasted-text'},280,160],[{kind:'generated-container',containerSpec:{}},280,160],[{kind:'generated-container'},320,220]]){
+  for(const node of [{kind:'pasted-text'},{kind:'link'},{kind:'planning-card'},{kind:'generated-container'},{kind:'generated-container',containerSpec:{}},...['price-performance','financial-statements','dividends'].flatMap(kind=>['短标题','很长的来源说明、证券名称与单位 '.repeat(20)].map(title=>({kind:'generated-container',title,containerSpec:{type:'html',html:'<body data-sherlock-market="'+kind+'"></body>'}})))]){
    const min=g.minimum(node,m)
-   expect(min.w*m.step-m.gap).toBeGreaterThanOrEqual(Math.min(w,width-24))
-   expect(min.h*m.step-m.gap).toBeGreaterThanOrEqual(h)
+   expect(min).toEqual({w:m.minColumns,h:m.minRows})
+   expect(min.w*m.step-m.gap).toBeGreaterThanOrEqual(Math.min(280,width-24))
+   expect(min.h*m.step-m.gap).toBeGreaterThanOrEqual(160)
   }
  }
 })

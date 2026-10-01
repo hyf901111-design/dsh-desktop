@@ -44,6 +44,22 @@ export function WorkbenchIcon({name}) {
   // Every glyph uses the same optical frame and rounded stroke family.
   return react_jsx_runtime.jsx('span',{className:'ew-grid-icon ew-grid-icon-'+name,'data-workbench-icon':name,'aria-hidden':true})
 }
+export function installWorkbenchTitle(el){
+  const text=el.firstElementChild;let animation=null;
+  const stop=()=>{animation?.cancel();animation=null};
+  const measure=()=>{el.dataset.overflow=String(text.scrollWidth>el.clientWidth+1);stop()};
+  const start=()=>{stop();const distance=text.scrollWidth-el.clientWidth;if(distance<=1||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+    const travel=Math.max(1000,distance/30*1000),pause=900,total=travel*2+pause*2;
+    animation=text.animate([{transform:'translateX(0)',offset:0},{transform:'translateX(0)',offset:pause/total},{transform:'translateX(-'+distance+'px)',offset:(pause+travel)/total},{transform:'translateX(-'+distance+'px)',offset:(pause*2+travel)/total},{transform:'translateX(0)',offset:1}],{duration:total,iterations:Infinity,easing:'linear'});
+  };
+  const observer=new ResizeObserver(measure);observer.observe(el);observer.observe(text);measure();
+  el.addEventListener('mouseenter',start);el.addEventListener('mouseleave',stop);el.addEventListener('focus',start);el.addEventListener('blur',stop);document.fonts?.addEventListener('loadingdone',measure);
+  return ()=>{stop();observer.disconnect();el.removeEventListener('mouseenter',start);el.removeEventListener('mouseleave',stop);el.removeEventListener('focus',start);el.removeEventListener('blur',stop);document.fonts?.removeEventListener('loadingdone',measure)};
+}
+export function WorkbenchTitle({title}){
+  const ref=react.useRef(null);react.useEffect(()=>installWorkbenchTitle(ref.current),[title]);
+  return react_jsx_runtime.jsx('span',{ref,className:'ew-grid-title',title,tabIndex:0,children:react_jsx_runtime.jsx('span',{className:'ew-grid-title-copy',children:title})});
+}
 export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
   const [busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[now,setNow]=react.useState(Date.now()),[tip,setTip]=react.useState(null)
@@ -67,7 +83,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
-      react_jsx_runtime.jsx('span',{className:'ew-grid-title',title:node.displayName||node.title||node.name,children:node.displayName||node.title||node.name||'组件'}),
+      react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件'}),
       button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
       button('close','移除组件',()=>onRemove(node),{disabled:readOnly})

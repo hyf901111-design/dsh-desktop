@@ -5,6 +5,7 @@ const finite=v=>typeof v==='number'&&Number.isFinite(v)
 const date=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v
 const encode=v=>JSON.stringify(v).replace(/</g,'\\u003c')
 export const FINANCIAL_REVENUE_VARIANTS=Object.freeze(['revenue-geography','revenue-business'])
+export const REVENUE_EXPANSION_CSS='@layer ework-workbench{body .financial-revenue details[open]{max-height:none!important;overflow:visible!important}}'
 const fields='"datasets":[{"symbol":"代码","name":"公司名","periodType":"annual/quarterly","currency":"CNY等3位币种","unit":"百万元等来源单位","basis":"合并/母公司等来源口径","coverage":"complete/partial","coverageNote":"partial时必填未覆盖说明","periods":[{"label":"财年/季度","endDate":"YYYY-MM-DD","disclosedAt":"YYYY-MM-DD"}],"totals":[来源总收入数字或null],"totalMissing":"含null总额时的缺失原因","segments":[{"id":"跨期间一致的分项id","name":"原地区/业务名","values":[来源收入数字或null],"missing":"含null时的缺失原因"}]}]；1–12组已取得公司/周期组合，组合唯一；1–40个截止日严格递增的期间，披露日不得早于截止日；1–24个唯一分项，values和totals与periods等长；覆盖全部且各项均已知时分项合计须与来源总收入一致；其他项只有来源明确披露时才提供，不从差额编造；缺失不补0，0和负收入原样保留，不转换币种或单位，不把已知部分合计当公司总收入'
 export const FINANCIAL_REVENUE_FIELDS=Object.freeze(Object.fromEntries(FINANCIAL_REVENUE_VARIANTS.map(v=>[v,fields])))
 export const FINANCIAL_REVENUE_GUIDANCE=' 地域收入用market.revenue-geography，业务线收入用market.revenue-business；首次提交完整结构化artifact，不输出HTML。'+FINANCIAL_REVENUE_VARIANTS.map(v=>v+'：'+fields).join('。')

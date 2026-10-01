@@ -4,10 +4,13 @@ export function createResearchGrid() {
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n))
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
   const minimum=(node,m,arranging=false)=>{
+    // Manual resizing uses one base frame for every component. Readable
+    // template widths guide Arrange only; titles never constrain the frame.
+    if(!arranging)return {w:m.minColumns,h:m.minRows}
     // Wide quote templates need their first identifying and value columns.
     // Only the current body's kind establishes this; shared CSS lists every kind.
     const kind=node?.containerSpec?.type==='html'&&node.containerSpec.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1]
-    const readable={'revenue-geography':arranging?980:480,'revenue-business':arranging?980:480,'share-statistics':320,'market-overview':arranging?980:480,'currency-snapshot':arranging?980:480,'watchlist':arranging?980:480,'price-performance':arranging?980:480,'valuation-multiples':arranging?980:480,'price-target':arranging?980:480,'company-profile':arranging?980:480,'financial-statements':arranging?980:480}[kind]
+    const readable={dividends:980,'stock-splits':320,'revenue-geography':980,'revenue-business':980,'share-statistics':320,'market-overview':980,'currency-snapshot':980,'watchlist':980,'price-performance':980,'valuation-multiples':980,'price-target':980,'company-profile':980,'financial-statements':980}[kind]
     if(readable)return {w:Math.min(columns,Math.ceil((readable+m.gap)/m.step)),h:m.minRows}
     if(!['generated-container','planning-card'].includes(node?.kind)||node.containerSpec)return {w:m.minColumns,h:m.minRows}
     // Task status changes content, never the frame. Keep the draft minimum

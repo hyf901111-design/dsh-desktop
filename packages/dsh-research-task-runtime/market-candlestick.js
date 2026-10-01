@@ -1,3 +1,5 @@
+export const CANDLE_CONTROLS_CSS='body[data-sherlock-market="candlestick"] .market-candle-controls{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px}body[data-sherlock-market="candlestick"] .market-candle-symbol,body[data-sherlock-market="candlestick"] [data-candle-range]{font:11px var(--sherlock-font-sans);color:var(--sherlock-control-text);background:var(--sherlock-control-bg);border:1px solid var(--sherlock-control-border);border-radius:4px;padding:3px 6px;cursor:pointer}body[data-sherlock-market="candlestick"] .market-candle-ranges{display:flex;gap:3px;flex-wrap:wrap;min-width:0;max-width:100%}body[data-sherlock-market="candlestick"] [data-candle-range]{flex:0 0 auto;white-space:nowrap;min-width:max-content;line-height:18px;box-sizing:border-box}body[data-sherlock-market="candlestick"] .market-candle-symbol{max-width:100%;min-width:0}body[data-sherlock-market="candlestick"] [data-candle-range][aria-pressed="true"]{background:var(--sherlock-control-primary);color:var(--sherlock-control-on-primary)}';
+
 export function candleRuntime(groups) {
  const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),label=document.querySelector('.market-ohlc');if(!ctx)return
  const symbol=document.querySelector('.market-candle-symbol'),ranges=[...document.querySelectorAll('[data-candle-range]')]
@@ -19,7 +21,7 @@ export function candleRuntime(groups) {
   for(let i=0;i<4;i++){const value=lo+(hi-lo)*i/3,yy=y(value);ctx.strokeStyle=color('chart-grid');ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(right,yy);ctx.stroke();ctx.fillStyle=color('chart-label');ctx.fillText(value.toFixed(hi-lo<5?2:0),right+5,yy)}
   for(const [i,d]of data.entries()){ctx.strokeStyle=ctx.fillStyle=color(d.close>=d.open?'market-positive':'market-negative');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x(i),y(d.high));ctx.lineTo(x(i),y(d.low));ctx.stroke();const bw=Math.max(1,Math.min(8,step*.65));ctx.fillRect(x(i)-bw/2,Math.min(y(d.open),y(d.close)),bw,Math.max(1,Math.abs(y(d.open)-y(d.close))));if(d.volume!==null)ctx.fillRect(x(i)-bw/2,volumeBottom-d.volume/vol*17,bw,d.volume/vol*17)}
   for(const [period,token]of [[5,'chart-1'],[20,'chart-4'],[60,'chart-3']]){ctx.strokeStyle=color(token);ctx.lineWidth=1;ctx.beginPath();let points=0;for(let i=0;i<data.length;i++){const absolute=all.indexOf(data[i]);if(absolute<period-1)continue;const v=all.slice(absolute-period+1,absolute+1).reduce((sum,d)=>sum+d.close,0)/period;if(points++===0)ctx.moveTo(x(i),y(v));else ctx.lineTo(x(i),y(v))}if(points)ctx.stroke()}
-  const marks=[...new Set([0,Math.floor((data.length-1)/2),data.length-1])];ctx.fillStyle=color('chart-label');ctx.textBaseline='top';for(const i of marks){const text=data[i].date;ctx.fillText(text,Math.max(left,Math.min(right-ctx.measureText(text).width,x(i))),h-14)}
+  const marks=[...new Set([0,Math.floor((data.length-1)/2),data.length-1])];ctx.fillStyle=color('chart-label');ctx.textBaseline='top';let previousEnd=-Infinity;const lastWidth=ctx.measureText(data.at(-1).date).width,lastStart=Math.max(left,right-lastWidth);for(const i of marks){const text=data[i].date,width=ctx.measureText(text).width,start=i===0?left:i===data.length-1?lastStart:Math.max(left,Math.min(right-width,x(i)-width/2));if(start<previousEnd+6||i!==data.length-1&&i!==0&&start+width+6>lastStart)continue;ctx.fillText(text,start,h-14);previousEnd=start+width}
   const d=data[selected];label.textContent=d.date+'  O '+d.open+'  H '+d.high+'  L '+d.low+'  C '+d.close+'  成交量 '+(d.volume??'—')
   if(selected!==data.length-1){ctx.strokeStyle=color('chart-crosshair');ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x(selected),top);ctx.lineTo(x(selected),volumeBottom);ctx.stroke();ctx.setLineDash([])}
  }
@@ -50,5 +52,6 @@ export function refineCandlestickHtml(html) {
  if(!html.includes('data-candle-controls-v2')&&!controls.test(html))return html;
  const data=JSON.stringify(groups).replace(/</g,'\\u003c').replace(/>/g,'\\u003e');
  const next=html.includes('data-candle-controls-v2')?html:html.replace(controls,()=>candleControls(groups));
- return next.replace(pattern,()=>`<script>(${candleRuntime.toString()})(${data});</script>`);
+ const upgraded=next.replace(pattern,()=>`<script>(${candleRuntime.toString()})(${data});</script>`);
+ return upgraded.includes('data-candle-viewport="v3"')?upgraded:upgraded+`<style data-candle-viewport="v3">${CANDLE_CONTROLS_CSS}</style>`;
 }
