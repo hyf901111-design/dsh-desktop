@@ -701,3 +701,15 @@ Figma源1918:346434及Default 346435/Active 346523，656×374、38px标题栏、
 公开类型与首次补高回归先失败：旧客户端显示高度433.7而实际内容需628，专属白名单修正后通过。254项直接相关门禁与项目typecheck通过；后续来源更新状态回归先失败，再在最后实现上重跑时间线及真实首次补高10项通过，其余131项在该聚焦轮跳过。生产双层CSP/Trusted Types none沙盒656/480/280px×浅/深/企业9组通过，时间列、节点/标题对齐和原SVG天然6×6核验，零脚本错误。12条长来源在480px有界列表内滚动，280px无横向溢出；全文展开、相同时刻统一展示、原链接、完整重建/整页重开、只读/共享查看均通过。首次浏览器企业文字期望误用普通浅色rgb(37,37,43)，读取实际rgb(60,60,60)与源稿一致后修正夹具，失败日志保留，未修改正确的企业文字色。
 
 证据timeline-red.log、timeline-updated-source-red.log、timeline-height-red.log、timeline-focused-gate.log、timeline-final-focused.log、timeline-typecheck-final.log、timeline-browser-theme-assumption.log、timeline-browser-checks.json及timeline-*.png位于/tmp/ework-template-acceptance-20260930/。技能v1.25.0；实现64/74、原生接受63/74。普通中文最终本地包首次生成、实际主题/整理与会话返回仍待验收；剩余10类及总体首次成功率继续进行，未运行全功能测试，整体目标尚未完成。
+
+### 活动时间线最终本地包原生接受
+
+9937b5c6受管集成至7e3410ec，本地构建、深度签名与完整最终包检查通过，bundled ework-workbench-components v1.25.0，端口63482。普通中文新建“研究活动时间线复验卡”（session-a70bae27-6268-4117-a1d5-e6f66b0337a1）首次30.776秒完成，仅一次research_workbench_create，真实工具结果prepared、templateIds=[timeline]，没有逐卡子任务或联网工具。29个来源字段核对：28个逐字或数值一致；note保留原文“本地虚构测试记录”，模型追加“。仅手动刷新。”，明确记录该增补，不称29个字段逐字一致。
+
+原生首次完成完整显示四条来源与时区、时点、说明、定位按钮和未绑定来源页脚。14:18+08:00与06:18Z统一显示14:18，零值事件在负值事件之前；13:55排在其后，未知时间保留“时间待定”。实际展开zero、negative和unknown，原时间、count:0、delta:-5、null与完整缺失原因均可查；独立example.org/record-0链接保留，未打开或读取。点击“显示最新动态”只定位并选择已提供首条，显示“已定位已提供的最新动态，未重新取数。”，不改变数据时点。点击真实组件刷新入口打开“尚未绑定数据源”的设置与反馈，未伪造更新成功；本卡未作绑定来源实际联网取数声明。
+
+浅色、深色、企业样式与一键整理均核验，完整明细和来源页脚可见；展开侧栏后按实际变窄的画布整理仍可读。手动拖动宽度柄一次未发生缩窄，不计为原生280px最小尺寸验证；280px无横向溢出仍由生产浏览器路径证明。切到自己的KPI验证会话再返回，open:[zero]与selected:zero恢复。退出同一本地应用并重开，端口64110，在研究页再次看到原明细与选择，重启后整理仍完整显示。
+
+只读取该合成节点7f1567fe-baf9-4206-a9fc-104a07255211-0的保存记录，HTML SHA-256持续为294a6621fc995607ce9a6ea75cbf638c710fab93b403018559e7c3f6d17b3a5b；sharedComponentState版本21z-timeline-20261001、open:[zero]、selected:zero及revision:8在会话往返与重启后完全一致。最新定位提示为本次操作反馈，重新打开后不显示旧操作提示，原数据和选中状态保留。
+
+证据timeline-native-build.log、timeline-native-package.log、timeline-native-audit.json、timeline-native-first-dark.png、timeline-native-arranged-light.png、timeline-native-expanded-enterprise.png、timeline-native-negative-enterprise.png、timeline-native-unknown-enterprise.png、timeline-native-unbound-refresh.png、timeline-native-session-restored-dark.png、timeline-native-restarted-arranged-dark.png及timeline-native-*-audit.json位于/tmp/ework-template-acceptance-20260930/。未运行全功能测试；客户端保持打开。时间线计入接受：实现64/74、原生接受64/74，剩余10类及全量普通中文首次成功率统计继续进行，整体目标尚未完成。
