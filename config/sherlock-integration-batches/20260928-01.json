@@ -233,6 +233,51 @@
           "整体首次成功率超过90%未证实"
         ],
         "generatedAt": "2026-10-01T02:25:13.837475+00:00"
+      },
+      "merged": {
+        "mergeCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
+        "verificationCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
+            "completedAt": "2026-10-01T02:26:12.953Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
+            "completedAt": "2026-10-01T02:26:12.953Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
+            "completedAt": "2026-10-01T02:26:12.953Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-10-01T02:26:12.953Z"
       }
     }
   ],
