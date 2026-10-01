@@ -43,6 +43,17 @@ async function source(f: Awaited<ReturnType<typeof fixture>>, name = 'report.pdf
 afterEach(async () => { await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))) })
 
 describe('durable research clipboard', () => {
+  it('copies derived presets with full original and result independently, preserving zero and missing reasons',async()=>{
+    const f=await fixture()
+    for(const type of ['summary','mind-map']){
+      const content=type==='summary'?'# 原结果\n\n收入0，变化-120；原因未提供。':'# 原结果\n- 收入0\n- 变化-120\n- 原因未提供'
+      const spec={version:1,type,title:'本人材料结果',content,source:{title:'本人原材料',text:'收入0；变化-120；原因未提供。',nodeId:'original-source'}}
+      const node={id:'derived',kind:'generated-container',title:spec.title,x:0,y:0,containerSpec:spec,generationStatus:'completed',containerPrompt:'仅根据原文',refreshMinutes:0}
+      expect(await f.service.copy({sessionId:'own',nodes:[node]})).toEqual({ok:true})
+      expect(await f.service.read()).toMatchObject({kind:'components',nodes:[{containerSpec:spec}]})
+      expect((await f.service.copy({sessionId:'own',nodes:[{...node,containerSpec:{...spec,source:{...spec.source,url:'https://unverified.invalid'}}}]})).ok).toBe(false)
+    }
+  })
   it('copies native YouTube original URL and supplied metadata without executable clipboard HTML', async()=>{
     const f=await fixture()
     for(const url of [null,'https://www.youtube.com/watch?v=M7lc1UVf-VE&t=1m30s#original']){

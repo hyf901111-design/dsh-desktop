@@ -1,3 +1,4 @@
+import {parseDerivedSpec} from '../../../packages/dsh-research-task-runtime/derived-template-contract.js'
 import {parseYoutubeSpec} from '../../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 import {parseIframeSpec} from '../../../packages/dsh-research-task-runtime/iframe-template-contract.js'
 import { createHash, randomBytes } from 'node:crypto'
@@ -89,7 +90,11 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = ['custom', 'manual'].includes(String(input.titleMode)) ? 'custom' : 'auto' }
   if (input.containerSpec !== undefined) {
     const spec = record(input.containerSpec)
-    if (spec.type === 'youtube') {
+    if (spec.type === 'summary' || spec.type === 'mind-map' && Object.hasOwn(spec,'source')) {
+      const derived=parseDerivedSpec(spec)
+      if(derived===null)throw new Error('派生组件结果或来源无效。')
+      output.containerSpec=derived
+    } else if (spec.type === 'youtube') {
       const youtube=parseYoutubeSpec(spec)
       if(youtube===null)throw new Error('YouTube视频组件格式无效。')
       output.containerSpec=youtube

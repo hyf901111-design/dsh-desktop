@@ -38,3 +38,6 @@ RSS/Atom 固定模板 type:rss，version:1/title/asOf/feeds。每源 {id,url,tit
 
 
 YouTube视频用panel.type=youtube，首次同时提交artifact:{version:1,type:"youtube",title,url,description?,durationSeconds?,thumbnailUrl?,subtitles?}，使用source模式。不提供网址时url:null，宿主显示Figma网址输入空态；只使用用户原视频网址，不猜测视频、不生成HTML或逐卡任务。已取得的时长秒数、封面原网址、完整字幕和说明保留，未知资料不编造。支持watch、youtu.be、shorts、embed、live视频地址；宿主采用YouTube官方播放器，不自动播放，重新载入仅表示加载请求。
+
+
+总结提炼使用 panel.type=summary；思维导图使用 panel.type=mind-map。首次同时提交完整 artifact:{version:1,type,title,content,source:{title,text,nodeId?}}。content保留完整结果；source冻结一个所选组件的原标题和原文，用户直接提供材料时明确写“本人提供材料”。只有实际已知画布ID才填nodeId，不猜测来源链接。摘要分清事实、推断和待验证，不扩展到整个工作台，不增加来源没有的事实。导图只用一个“# ”根标题和两空格缩进的完整列表，不把普通正文悄悄丢弃；最多500节点。结果和原文独立保存，结果可编辑，来源可返回，支持三主题及内容适配。单项原文/结果各≤32000字符，完整JSON≤64KB。两类套用Figma 1918:343676/1917:357536，不生成HTML，不启动逐卡模型。
