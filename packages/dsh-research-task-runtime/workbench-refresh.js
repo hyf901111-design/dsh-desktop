@@ -8,7 +8,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
   const entries = () => {
     const out = new Map()
     for (const el of root.querySelectorAll('td,strong,[data-refresh-key],.metric-value,.market-metric-value,.research-metric-value,.fund-value')) {
-      if (out.size >= 5000 || el.closest('button,input,select,textarea,[role=status],.asof,.source,.market-asof')) continue
+      if (out.size >= 5000 || el.closest('button,input,select,textarea,[role=status],.asof,.source,.market-asof,[data-workbench-state-owned]')) continue
       const text = el.getAttribute('data-refresh-value') || el.textContent.trim()
       if (!text || text.length > 512 || !/[0-9]/.test(text) || el.children.length && el.tagName.toLowerCase() !== 'td') continue
       let key = el.getAttribute('data-refresh-key')
@@ -24,7 +24,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
   const snapshot = () => {
     const controls = [], scroll = []
     for (const el of root.querySelectorAll('input,select,textarea,details')) {
-      if (controls.length >= 200 || el.type === 'password' || el.type === 'file') continue
+      if (controls.length >= 200 || el.closest('[data-workbench-state-owned]') || el.type === 'password' || el.type === 'file') continue
       controls.push({ path: route(el), tag: el.tagName, ...(el.tagName === 'DETAILS' ? { open: el.open } : { value: String(el.value).slice(0, 8192), checked: Boolean(el.checked) }) })
     }
     for (const el of [root, ...root.querySelectorAll('*')]) {
@@ -43,7 +43,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
     // The journal restores filters/sort/ranges before this view restoration.
     for (const control of state.controls || []) {
       const el = resolve(control.path)
-      if (!el || el.tagName !== control.tag) continue
+      if (!el || el.tagName !== control.tag || el.closest('[data-workbench-state-owned]')) continue
       if (el.tagName === 'DETAILS') el.open = control.open === true
       else if (typeof control.value === 'string' && el.type !== 'password' && el.type !== 'file' && el.value !== control.value) {
         el.value = control.value; if ('checked' in el) el.checked = control.checked === true

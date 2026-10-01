@@ -9,9 +9,9 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock'];
+const types = ['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note'];
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock']);
+const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
 const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
@@ -172,7 +172,7 @@ function normalizeSimulatedCalendar(artifact) {
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
     if (artifact.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(artifact.variant)) return `${financialProfileDataIssue(artifact) ?? ''}。${FINANCIAL_PROFILE_FIELDS[artifact.variant]}`;
-    if (['progress','tasks','approval','alerts','form','code','clock'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
+    if (['progress','tasks','approval','alerts','form','code','clock','note'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
     if (artifact.type === 'chart') {
         const template = templateFor(artifact);
         const issue = chartDataIssue(artifact);
@@ -309,7 +309,7 @@ export function validateWorkbench(value) {
         if (isSimulated && !parallel) requireSimulatedChartData(p);
         if (isSimulated && !parallel && p.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(marketVariant(p)) && p.artifact === undefined)
             throw Error(`面板「${p.title}」需要完整 artifact 中的证券、指标或成员记录；不能生成无关金融样例。${FINANCIAL_PROFILE_FIELDS[marketVariant(p)]}`);
-        if (isSimulated && ['progress','tasks','approval','alerts','form','code','clock'].includes(p.type) && p.artifact === undefined)
+        if (isSimulated && ['progress','tasks','approval','alerts','form','code','clock','note'].includes(p.type) && p.artifact === undefined)
             throw Error(`面板「${p.title}」需要完整 artifact ${p.type==='clock'?'时区配置；live设备时钟同样需要明确城市和IANA时区':'中的实际需求记录；不能生成无关清单或进度样例'}。${operationsTemplateSchema(p.type)}`);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
