@@ -70,11 +70,12 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     setBusy(true);setError('')
     let message='指标数据已更新'
     try{
-      if(node.kind==='web-link'){
+      if(node.kind==='web-link'||node.containerSpec?.type==='iframe'){
         const frame=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')
         const reload=frame?.querySelector('.rScV5Q_webFrameControls button')
         const nativeReload=frame?.querySelector('[data-research-native-web]')?.__eworkReloadWeb
-        if(nativeReload)nativeReload();else if(reload)reload.click();else throw Error('网页尚未载入，请稍后刷新')
+        if(nativeReload)nativeReload();else if(reload)reload.click();else throw Error('网页尚未载入，请先添加网址或等待加载');
+        message='已请求重新载入网页'
       }else if(/<body\b[^>]*data-sherlock-template="rss"/.test(node.containerSpec?.html??'')){await window.dshDesktop.researchRss.request({sessionId,nodeId:node.id,action:'refresh'})}
       else if(binding){const result=await window.dshDesktop.componentData.request(sessionId,{action:'refresh',nodeId:node.id});const rows=await window.dshDesktop.componentData.request(sessionId,{action:'list'});componentDataStatusStore.publish(sessionId,rows);if(result?.status==='error')throw Error(result.error||'刷新失败，保留上次数据');if(!['success','unchanged'].includes(result?.status))throw Error('刷新尚未完成，保留上次数据');if(result.status==='unchanged')message='已检查数据，指标值未变化'}
       else {openComponentData(sessionId,node);return {message:'未绑定数据源，已打开数据源设置'}}
@@ -102,7 +103,11 @@ export function useWorkbenchSettings({triggerRef,sessionId,node,disabled,editing
   react.useLayoutEffect(()=>{
     const trigger=triggerRef.current;if(!trigger)return
     const shared=sherlockShared(sessionId),entry=(icon,label,run,blocked=false,writes=true)=>({icon,label,run,disabled:!!blocked,writes})
-    const actions=node.kind==='web-link'?[
+    const actions=node.containerSpec?.type==='iframe'?[
+      entry('edit','修改网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-iframe-preset]')?.__eworkEditIframe?.()),
+      entry('refresh','重新载入网页',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
+      entry('link','浏览器打开',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
+    ]:node.kind==='web-link'?[
       entry('rename','修改名称',()=>onFrameAction?.(node,'rename')),
       ...(researchCanvasArtifactContentEditable(node)?[entry('edit','编辑内容',()=>onFrameAction?.(node,'edit'))]:[]),
       entry('refresh','刷新',()=>onRefresh?.(node)),

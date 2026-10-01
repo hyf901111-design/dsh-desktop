@@ -713,3 +713,13 @@ Figma源1918:346434及Default 346435/Active 346523，656×374、38px标题栏、
 只读取该合成节点7f1567fe-baf9-4206-a9fc-104a07255211-0的保存记录，HTML SHA-256持续为294a6621fc995607ce9a6ea75cbf638c710fab93b403018559e7c3f6d17b3a5b；sharedComponentState版本21z-timeline-20261001、open:[zero]、selected:zero及revision:8在会话往返与重启后完全一致。最新定位提示为本次操作反馈，重新打开后不显示旧操作提示，原数据和选中状态保留。
 
 证据timeline-native-build.log、timeline-native-package.log、timeline-native-audit.json、timeline-native-first-dark.png、timeline-native-arranged-light.png、timeline-native-expanded-enterprise.png、timeline-native-negative-enterprise.png、timeline-native-unknown-enterprise.png、timeline-native-unbound-refresh.png、timeline-native-session-restored-dark.png、timeline-native-restarted-arranged-dark.png及timeline-native-*-audit.json位于/tmp/ework-template-acceptance-20260930/。未运行全功能测试；客户端保持打开。时间线计入接受：实现64/74、原生接受64/74，剩余10类及全量普通中文首次成功率统计继续进行，整体目标尚未完成。
+
+## 2026-10-01 嵌入网页原生预置（待最终包验收）
+
+Figma 1917:353041/353042 当前默认稿为485×340，38px顶栏与302px正文。空态标题14/16、提示12/16、15px间距及115×30添加按钮；加号保留353056源SVG路径，以14px容器显示。统一最小尺寸沿用用户要求280×180，不按标题长度限制。
+
+新增严格原生 `iframe` 数据契约，url:null为明确空态，用户提供的HTTP/HTTPS原网址及说明逐字保留；拒绝凭据、脚本、本地文件、控制字符及未知字段。首次必须带完整artifact，直接prepared，不启动逐卡模型；不生成模拟网址。实际宿主支持添加/修改网址，沿用已有隔离原生网页及会话保留能力；请求重载如实返回“已请求重新载入网页”，不冒充取数完成。网页无绑定数据刷新页脚。只读权限在编辑界面和保存回调均检查。复制粘贴保留空态和原网址，不把原网址规范化后冒充原值。
+
+11项直接相关聚焦验证通过：公开工具第一次空卡、真实宿主保存/非法拒绝/重建恢复、只读、重载反馈、原生隐藏不销毁、补丁重复安装、复制及原组件菜单；项目类型检查通过。CUA实际Chrome中核验生产渲染器485px浅色空态、280px深色、企业聚焦四边、凭据拒绝、本地合成网页保存恢复及只读不打开编辑，控制台无相关错误。此浏览器夹具使用生产预置渲染器和自身保存回调，不代替最终原生客户端。证据 iframe-tests.log、iframe-typecheck.log、iframe-browser-dark-280.png、iframe-browser-enterprise-focus-280.png、iframe-browser-restored-readonly.png。最终包普通中文、真实网页失败重试与会话保留待验。
+
+实现65/74，最终原生接受64/74。整体90%以上首次成功率目标仍未完成，不用单模板的聚焦结果代替总体统计。

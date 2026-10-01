@@ -1,3 +1,4 @@
+import {patchIframeClient} from './lib/iframe-client.mjs'
 import { patchComponentDataRefresh } from './lib/component-data-refresh.mjs'
 import { patchResearchGridWorkbench, restoreResearchGridWorkbench } from './lib/research-grid-workbench.mjs'
 import { patchResearchCreationProgress } from './lib/research-creation-progress.mjs'
@@ -233,4 +234,4 @@ writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversati
 writeFileSync(conversationPath, patchComponentScheduledTasks(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchComponentDataRefresh(readFileSync(conversationPath, 'utf8')))
-writeFileSync(conversationPath, patchResearchGridWorkbench(readFileSync(conversationPath, 'utf8')))
+writeFileSync(conversationPath, patchResearchGridWorkbench(patchIframeClient(readFileSync(conversationPath, 'utf8'))))

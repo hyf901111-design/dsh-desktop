@@ -21,7 +21,7 @@ async function fixture(mount=false,desktop={}){
  let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
+ runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake)
  const registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('grid-test'),host=document.createElement('div');document.body.append(host)
@@ -1794,4 +1794,43 @@ it('笔记完整长草稿随所属卡片保留，仅当前版本正文链接进�
  await request('https://example.com/new',f.win);expect(f.host.textContent).not.toContain('打开来源：');
  await request('https://example.com/new');expect(f.host.textContent).toContain('打开来源：新来源');
  const restored=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');expect(restored.getSnapshot().artifacts[0].config.sharedComponentState.state.content).toBe(state.content);
+})
+it('嵌入网页在实际宿主空状态添加网址，保存后仍是同一组件且会话重建保留',async()=>{
+ const f=await fixture(true),spec={version:1,type:'iframe',title:'网页原标题',url:null,description:'原始说明'}
+ await act(async()=>f.workspace.setArtifacts([{...text('iframe-own'),kind:'generated-container',containerPrompt:'嵌入网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ expect(f.host.textContent).toContain('尚未添加网址')
+ await f.event('click',f.host.querySelector('[data-iframe-add]'))
+ const input=f.host.querySelector('[aria-label="网页网址"]');expect(input).not.toBeNull()
+ input.value='javascript:alert(1)';await f.event('submit',f.host.querySelector('form'))
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);expect(f.host.textContent).toContain('HTTP')
+ input.value='https://example.org/demo?q=0#original';await f.event('submit',f.host.querySelector('form'))
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual({...spec,url:input.value})
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(1);expect(f.generation.generate).not.toHaveBeenCalled()
+ const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test');expect(restored.getSnapshot().artifacts[0].containerSpec).toEqual({...spec,url:input.value})
+ const card=f.host.querySelector('[data-research-node-id="iframe-own"]'),trigger=card.querySelector('[data-research-container-more]')
+ expect(trigger.__eworkWorkbenchSettings.map(a=>a.label)).toContain('修改网址')
+ expect(trigger.__eworkWorkbenchSettings.map(a=>a.label)).not.toContain('编辑需求')
+})
+it('嵌入网页共享只读禁止网址修改但仍允许查看与浏览器打开',async()=>{
+ let shared=false;const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'iframe',title:'只读网页',url:null}
+ f.workspace.setArtifacts([{...text('iframe-readonly'),kind:'generated-container',containerPrompt:'网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]);shared=true;await f.render()
+ expect(f.host.querySelector('[data-iframe-add]').disabled).toBe(true)
+ await act(async()=>f.host.querySelector('[data-research-iframe-preset]').__eworkEditIframe());expect(f.host.querySelector('form')).toBeNull()
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('嵌入网页生产补丁幂等且不解除HTML沙盒限制',async()=>{
+ const {patchIframeClient}=await import('../scripts/lib/iframe-client.mjs'),f=await fixture(),once=patchIframeClient(f.source)
+ expect(patchIframeClient(once)).toBe(once);expect(once.match(/const researchIframeSinks=new Map/g)).toHaveLength(1)
+ expect(once).toContain('/<(?:iframe|frame|object|embed)');expect(once).toContain('ODYSSEY_RETAIN_WEB_SESSION')
+})
+it('嵌入网页刷新只报告重载请求，往返会话隐藏原生网页而不销毁',async()=>{
+ const bridge={resolveEngine:vi.fn(async()=>({engine:'native'})),updateNative:vi.fn(async()=>({image:'',error:''})),hideNative:vi.fn(async()=>{}),releaseNative:vi.fn(async()=>{}),releaseSession:vi.fn(async()=>{}),release:vi.fn(async()=>{})}
+ const f=await fixture(true,{researchLinkFrame:bridge}),spec={version:1,type:'iframe',title:'网页原来源',url:'https://example.org/demo'}
+ await act(async()=>f.workspace.setArtifacts([{...text('iframe-live'),kind:'generated-container',containerPrompt:'网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ expect(bridge.resolveEngine).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:'iframe-live',url:spec.url,preferNative:true})
+ const native=f.host.querySelector('[data-research-native-web]'),reload=vi.fn(native.__eworkReloadWeb);native.__eworkReloadWeb=reload
+ let result;await act(async()=>{result=await f.host.querySelector('[data-workbench-refresh]').__eworkRefresh()})
+ expect(result).toEqual({message:'已请求重新载入网页'});expect(reload).toHaveBeenCalledOnce();expect(f.host.querySelector('.odyssey-data-stamp')).toBeNull()
+ await f.render({sessionId:'other',measure:false});f.registry.release('grid-test');await f.render({measure:false})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);expect(bridge.hideNative).toHaveBeenCalled();expect(bridge.releaseNative).not.toHaveBeenCalled();expect(bridge.releaseSession).not.toHaveBeenCalled()
 })
