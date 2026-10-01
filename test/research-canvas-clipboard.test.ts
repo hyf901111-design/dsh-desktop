@@ -43,6 +43,17 @@ async function source(f: Awaited<ReturnType<typeof fixture>>, name = 'report.pdf
 afterEach(async () => { await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))) })
 
 describe('durable research clipboard', () => {
+  it('copies native iframe empty and supplied URLs exactly without executable HTML', async()=>{
+    const f=await fixture()
+    for(const url of [null,'https://EXAMPLE.org/path?q=0#original']){
+      const spec={version:1,type:'iframe',title:'嵌入网页',url,description:'原说明'}
+      const node={id:'iframe',kind:'generated-container',title:spec.title,x:0,y:0,containerSpec:spec,generationStatus:'completed',containerPrompt:'网页',refreshMinutes:0}
+      expect(await f.service.copy({sessionId:'s',nodes:[node]})).toEqual({ok:true})
+      expect(await f.service.read()).toMatchObject({kind:'components',nodes:[{containerSpec:spec}]})
+      expect((await f.service.copy({sessionId:'s',nodes:[{...node,containerSpec:{...spec,url:'https://user:secret@example.org/'}}]})).ok).toBe(false)
+    }
+  })
+
   it('copies exact bounded HTML artifact source without publishing executable clipboard HTML', async () => {
     const f = await fixture()
     const spec = { version: 1, type: 'html', title: '活动页', html: '<main>活动正文</main><script>window.localInteraction=true</script>' }

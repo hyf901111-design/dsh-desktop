@@ -1,3 +1,4 @@
+import {parseIframeSpec} from '../../../packages/dsh-research-task-runtime/iframe-template-contract.js'
 import { createHash, randomBytes } from 'node:crypto'
 import { parseResearchHtmlArtifact, RESEARCH_HTML_LIMIT_ERROR } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import { constants, realpathSync } from 'node:fs'
@@ -87,12 +88,16 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.kind === 'web-link') { output.url = publicUrl(input.url); output.titleMode = ['custom', 'manual'].includes(String(input.titleMode)) ? 'custom' : 'auto' }
   if (input.containerSpec !== undefined) {
     const spec = record(input.containerSpec)
-    if (spec.type === 'html') {
+    if (spec.type === 'iframe') {
+      const iframe=parseIframeSpec(spec)
+      if(iframe===null)throw new Error('嵌入网页组件格式无效。')
+      output.containerSpec=iframe
+    } else if (spec.type === 'html') {
       const html = parseResearchHtmlArtifact(spec)
       if (html === null) throw new Error(`网页组件格式无效；${RESEARCH_HTML_LIMIT_ERROR}`)
       output.containerSpec = html
     } else {
-      if (!['markdown', 'table', 'chart', 'kpi', 'web', 'mind-map'].includes(String(spec.type))) throw new Error('组件类型不支持复制。')
+      if (!['markdown', 'table', 'chart', 'kpi', 'web', 'iframe', 'mind-map'].includes(String(spec.type))) throw new Error('组件类型不支持复制。')
       output.containerSpec = safeSpec(spec)
     }
   }

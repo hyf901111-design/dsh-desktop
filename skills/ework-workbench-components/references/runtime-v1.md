@@ -32,3 +32,6 @@ RSS/Atom 固定模板 type:rss，version:1/title/asOf/feeds。每源 {id,url,tit
 日历首次完整提交直接 prepared。原文字段不改写；已提供的原文 URL 独立保留（模拟日历同样允许），不联网读取、不把链接拼入摘要。
 
 - `kpi` 使用当前 EFund/Widget/KPI 1918:343978 源模板（656×286，三主题与内容自适应）。一次提交 version:1/type:kpi/title/items:[{label,value,unit?,change?,detail?,missing?,source?,url?}]；1–12项，完整JSON≤32KB，可加 subject/asOf/range/note/sources:[{name,url?}]。保留原0、负数、原单位、完整口径和来源；value允许有限数值、原字符串或null（null必须给missing原因），不得补零或套源设计的128/24等样例。用户明确提供的安全HTTP原文链接可独立保留，无须联网。刷新指标沿用组件真实数据源刷新；未绑定时打开数据源设置，不能以新时间戳或随机值伪装刷新。展开指标查看完整原字段。
+
+
+嵌入网页使用 panel.type=iframe，第一次提交 artifact:{version:1,type:"iframe",title,url,description?}。未提供网址时显式 url:null，宿主显示添加网址空状态；只使用用户明确提供的 HTTP/HTTPS 网址，不猜测、不联网寻找替代、不生成 HTML 或逐卡任务。使用 source 模式，网站登录和浏览会话沿用客户端原生浏览能力。网页重新载入只表示已请求加载，不声称取数成功。

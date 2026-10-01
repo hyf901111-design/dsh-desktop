@@ -1,3 +1,4 @@
+import {IFRAME_GUIDANCE} from './iframe-template-contract.js';
 import {TIMELINE_GUIDANCE,timelineDataIssue} from './timeline-template-contract.js';
 import {KPI_GUIDANCE,kpiDataIssue} from './kpi-template-contract.js';
 import {CALENDAR_GUIDANCE} from './calendar-template-contract.js';
@@ -12,12 +13,13 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-export const WORKBENCH_PANEL_TYPES = Object.freeze(['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline']);
+export const WORKBENCH_PANEL_TYPES = Object.freeze(['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe']);
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline']);
+const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
 const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
+    iframe: IFRAME_GUIDANCE,
     timeline: TIMELINE_GUIDANCE,
     dashboard: 'dashboard 应包含 asOf 和 items:[{label,value:"带单位的字符串",detail?}]（也接受 metrics 中的数值和 unit）。',
     chart: chartTemplateSchema(),
@@ -175,6 +177,7 @@ function normalizeSimulatedCalendar(artifact) {
 }
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
+    if (artifact.type === 'iframe') return IFRAME_GUIDANCE;
     if (artifact.type === 'timeline') return `${timelineDataIssue(artifact) ?? ''}。${TIMELINE_GUIDANCE}`;
     if (artifact.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(artifact.variant)) return `${financialProfileDataIssue(artifact) ?? ''}。${FINANCIAL_PROFILE_FIELDS[artifact.variant]}`;
     if (['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
@@ -224,7 +227,7 @@ export function prepareSimulatedArtifact(panel) {
     // Local calendars, timelines and KPI cards may reference user-supplied documents alongside
     // virtual records. Their strict URL contracts and simulated label remain active;
     // preserve those fields without fetching or inventing a citation.
-    if (!['calendar','kpi','timeline'].includes(panel.type) && hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
+    if (!['calendar','kpi','timeline','iframe'].includes(panel.type) && hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
     const artifact = structuredClone(source);
     artifact.version = 1;
     artifact.type = panel.type;
@@ -276,6 +279,7 @@ export function validateWorkbench(value) {
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
     const isSimulated = value.dataMode === 'simulated';
     const parallel = value.generationMode === 'parallel';
+    if (isSimulated && value.panels.some(p=>p?.type==='iframe')) throw Error('嵌入网页需要用户实际提供的网址或 url:null；请使用 source 模式提交，不生成模拟网址。');
     if (value.generationMode !== undefined && !parallel) throw Error('工作台生成模式无效。');
     if (parallel && !isSimulated) throw Error('并行模拟生成仅适用于模拟数据工作台。');
     const seen = new Set();
@@ -307,6 +311,7 @@ export function validateWorkbench(value) {
             throw Error(`面板「${p.title}」必须使用 market.candlestick 或 chart.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
         if (/OHLC\s*(?:图|走势)/iu.test(p.title) && chartVariant !== 'ohlc')
             throw Error(`面板「${p.title}」必须使用 chart.ohlc，绘制高低竖线与左开右收刻度；保留完整 OHLC/成交量数据，不能用蜡烛图替代。`);
+        if(p.type==='iframe' && p.artifact===undefined)throw Error('嵌入网页必须同时提供 artifact 及用户网址或显式 url:null。'+IFRAME_GUIDANCE);
         if (!isSimulated && p.artifact !== undefined) {
             if (!templateFor(p.artifact) || p.artifact.type !== p.type || !acceptArtifactOutput(JSON.stringify(p.artifact))) throw Error(`面板「${p.title}」的真实数据格式无效。${simulatedArtifactProblem(p.artifact)} 请复用已取得的数据，只修正字段格式，不重新取数或编写 HTML。`);
             const issue = workbenchMarketRecencyIssue(JSON.stringify(p.artifact), p.prompt);
