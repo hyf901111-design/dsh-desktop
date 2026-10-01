@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "源设计日历与本画布日程",
+        "featureName": "日历首次内容补高与原链接修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5",
-        "tipCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
+        "baseCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
+        "tipCommit": "5f203c35a3920b02c6d47ec56d460e3afdad0a12",
         "commits": [
           {
-            "commit": "0df9f6bf39356ecf3b9a01a933699053fdc75fa4",
+            "commit": "5f203c35a3920b02c6d47ec56d460e3afdad0a12",
             "parents": [
-              "d6c5fc9ae94693b37af19c79c6a90d839ae0aaa5"
+              "63da840c0c8ee6079df352379ad1be0b94132801"
             ],
-            "subject": "验收：确认RSS读取提示和重启恢复通过"
-          },
-          {
-            "commit": "63da840c0c8ee6079df352379ad1be0b94132801",
-            "parents": [
-              "0df9f6bf39356ecf3b9a01a933699053fdc75fa4"
-            ],
-            "subject": "功能：按源设计预置日历并保存个人画布日程"
+            "subject": "修复：日历首次补足内容高度并保留独立来源"
           }
         ],
         "files": [
@@ -36,31 +29,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/calendar-artifact.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/calendar-presentation.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/calendar-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
           },
           {
             "status": "M",
@@ -68,11 +41,15 @@
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
+            "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
           },
           {
             "status": "M",
@@ -80,35 +57,11 @@
           },
           {
             "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/calendar-template.test.js"
           },
           {
             "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/helpers/calendar-window.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-artifact-resilience.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-interactive-artifact.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-medical-source-panels.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-design-contract.test.js"
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -117,33 +70,14 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/calendar-template.test.js",
-              "test/research-interactive-artifact.test.js",
-              "test/research-artifact-resilience.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/component-template-registry.test.js",
-              "test/bundled-component-skill.test.js",
+              "test/research-grid-client.test.js",
               "test/research-grid-workbench.test.js",
-              "test/component-shared-state.test.js"
+              "test/bundled-component-skill.test.js"
             ],
             "outcome": "passed",
-            "summary": "115项相关检查通过",
-            "verifiedCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
-            "completedAt": "2026-10-01T09:06:40.408146+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-medical-source-panels.test.js",
-              "test/research-simulated-workbench-normalization.test.js",
-              "-t",
-              "calendar|日历"
-            ],
-            "outcome": "passed",
-            "summary": "两项日历规划与整理检查通过",
-            "verifiedCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
-            "completedAt": "2026-10-01T09:06:40.408146+00:00",
+            "summary": "186项直接相关检查通过",
+            "verifiedCommit": "5f203c35a3920b02c6d47ec56d460e3afdad0a12",
+            "completedAt": "2026-10-01T09:27:19.274192+00:00",
             "timeoutMs": 300000
           },
           {
@@ -154,70 +88,25 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "63da840c0c8ee6079df352379ad1be0b94132801",
-            "completedAt": "2026-10-01T09:06:40.408146+00:00",
+            "verifiedCommit": "5f203c35a3920b02c6d47ec56d460e3afdad0a12",
+            "completedAt": "2026-10-01T09:27:19.274192+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层CSP九组尺寸主题检查、完整来源与个人日程重建重开恢复通过"
+          "summary": "两个实际原生问题已复现RED/GREEN，生产双层CSP九组与长时间字段通过；最终后继本地包原生仍待复验"
         },
         "acceptanceCriteria": [
           "首次完整calendar提交prepared，无逐卡子模型",
           "源月历与日程三模式可读，个人记录恢复且来源不变"
         ],
         "risks": [
-          "最终本地包普通中文创建、三模式整理与原生恢复仍待接受",
-          "实现62/74，原生接受61/74，整体未完成",
-          "六项既有市场模板失败精确基线重现，不计通过项"
+          "原生首轮2次创建调用，不能计首次成功",
+          "最终后继包首次来源与补高、三模式和重启恢复待验",
+          "实现62/74接受61/74，整体任务仍未完成"
         ],
-        "generatedAt": "2026-10-01T09:06:40.408146+00:00"
-      },
-      "merged": {
-        "mergeCommit": "488e60854a891eb6a13b9808e78dd94fe6185532",
-        "verificationCommit": "488e60854a891eb6a13b9808e78dd94fe6185532",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "488e60854a891eb6a13b9808e78dd94fe6185532",
-            "completedAt": "2026-10-01T09:07:42.430Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "488e60854a891eb6a13b9808e78dd94fe6185532",
-            "completedAt": "2026-10-01T09:07:42.430Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "488e60854a891eb6a13b9808e78dd94fe6185532",
-            "completedAt": "2026-10-01T09:07:42.430Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T09:07:42.430Z"
+        "generatedAt": "2026-10-01T09:27:19.274192+00:00"
       }
     }
   ],
