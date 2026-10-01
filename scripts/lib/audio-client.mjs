@@ -1,5 +1,6 @@
 import {parseAudioSpec} from '../../packages/dsh-research-task-runtime/audio-template-contract.js'
 export const AUDIO_CSS=`
+body [data-research-canvas][data-ework-grid] [data-research-node-id] [data-research-preview-body]:has([data-research-audio-preset]){padding:0!important}
 .ew-audio-preset{box-sizing:border-box;display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0;padding:12px 16px 16px;color:var(--grid-text);font:400 12px/18px var(--sherlock-font-sans);overflow-wrap:anywhere}
 .ew-audio-preset strong{font-size:16px;line-height:24px;font-weight:700;color:inherit}
 body [data-ework-grid] .ew-audio-preset{color:var(--grid-text)!important;font-size:12px!important;line-height:18px!important}

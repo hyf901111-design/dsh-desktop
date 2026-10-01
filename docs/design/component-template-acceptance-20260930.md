@@ -841,3 +841,11 @@ Figma 总结 `1918:343676` / 完整规范 `1876:331976`，导图 `1917:357536` /
 播放器依据媒体事件显示加载、缓冲、播放、暂停、结束和失败；支持进度、音量、倍速及章节定位，离开暂停，返回保留当前客户端内的进度/速度/音量但不自动播放。重新加载只提示已请求，未将URL保存当作取数成功。共享只读禁止修改音源。整理测量包含展开转写，复制保留完整数据且不生成可执行剪贴板HTML。全补丁重复安装通过，9项直接相关聚焦及项目类型检查通过；证据audio-fit-clipboard-focused.log、audio-final-typecheck.log、audio-final-patch.log。
 
 生产渲染器浏览器实际播放本人本地合成12秒正弦波，章节定位、1.5倍速及三主题280px控制区换行通过，水平溢出0；未知波形不绘制样例。证据audio-selected-browser-checks.json，合成音源tone.wav仅供验收，无真实访谈或转写。浏览器截屏视口较小，不能替代最终包目检。技能v1.30.0；待受管集成包日常输入、真实播放、整理、窄卡与会话返回复验，不提前计作原生接受。累计原生接受保持67/74，整体目标继续。
+
+### 音频首次提交与最终包发现的裁切（2026-10-02）
+
+291eeac9受管集成至a713b744，清洁本地构建和完整包检查通过，真实主界面端口55076。本人普通中文输入一次创建两张audio卡：12秒本地合成音源和url:null空态，约23秒完成；同一次research_workbench_create、source模式、无逐卡模型。完整来源、日期、章节和三行转写逐字段保留，未知波形未编造。真实播放、暂停、6秒章节、1.5倍速和25%音量通过。验收用音源服务器补齐HTTP字节范围后章节精确定位，之前服务器不支持范围请求造成的回零未归为客户端问题。
+
+整理后展开转写，窄画布（三主题、世界宽度292.884px）仍有末行少量裁切；所选创建的两列表格在实际包内仍单行截断。浏览器预览不能代替这两项客户端接受。音频现去除宿主与播放器重复内边距，并在内容测量中纳入实际宿主上下边距；两列表格换行规则改为实际画布卡片祖先范围。9项直接聚焦和项目typecheck通过，最终新包复验待完成。切出音频会话后再返回，实际进度6秒、1.5倍速、音量0.25保持，状态已暂停，无自动播放。
+
+证据audio-native-created.png、audio-native-arrange-transcript.png、audio-native-narrow-{light,dark,enterprise}.png、audio-native-narrow-state.json、audio-own-export.zip、selected-create-final-native-narrow.png，以及audio-padding-wrap-focused.log和typecheck.log，均位于/tmp/ework-template-acceptance-20260930/。最新头像截图sidebar-avatar-current-native.png再次确认收起侧栏与上方工具图标同轴。原生接受仍67/74，不提前接受修正后的表格和音频；未公开发布或运行全功能测试。
