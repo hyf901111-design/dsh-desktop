@@ -575,3 +575,5 @@ dc5ee271最终本地包签名与完整包检查通过，普通中文创建54.521
 进一步定位：刷新视图缓存仅存在于组件反馈实例，卡片卸载后丢失；普通参数可由交互记录重放，pointer绘图无法重放。新增卡片重建回归先失败，修正将个人技术图表语义键保存到所属卡片配置，绑定HTML版本与market.charting身份，拒绝跨节点、陈旧及共享画板写入，不缓存普通字段与来源值。组件重建从持久语义恢复；刷新保留同时识别chart-view-key前缀；pointerup及键盘选择也触发快照。47项直接相关检查、类型检查及实际客户端补丁语法通过。生产双层CSP三模式真实绘制四条线、完整卸载/重建卡片及整页重开后日期价格锚点、SMA5、自定义参数和锁定保留，0页面错误。证据charting-session-state-red.log、charting-session-gate.log、charting-session-state-browser-checks.json；最终本地包会话恢复及重启仍待复验。
 
 首次受管集成因客户端重复补丁检查失败而未合并：新增标记位于文件末尾，改变原创建工具样式的末尾边界，重复执行会累积样式。将标记移至对应保存注册代码旁；实际客户端及状态两文件136项检查通过，补丁再次执行保持逐字相同。证据charting-session-integration-merge.log保留失败、charting-session-idempotency-green.log记录修复；没有跳过该门禁。
+
+a6b5713d本地包与完整包检查通过，但打开原验证会话时退回文字视图。读取仅该合成验证卡片的保存记录，在生产双层CSP中复现报错el.click is not a function：无尺寸SVG路径点击没有坐标，恢复调用不存在的HTMLElement.click方法，后续交互中断。新增回归在旧源码失败；无click方法的元素改派发冒泡MouseEvent，保留实际目标与委托处理。原会话42条交互记录再次恢复无脚本错误，SMA5、自定义参数及锁定恢复。证据charting-svg-replay-red.log、charting-svg-replay-green.log、charting-session-owned-replay.png；实际新包会话恢复仍须继续，不计为第59类接受。

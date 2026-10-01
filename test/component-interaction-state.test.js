@@ -67,6 +67,22 @@ it('replays coordinate clicks on a resized canvas in another client and after re
  expect(validResearchInteractionEvent({...event,y:2})).toBe(false);
 });
 
+it('恢复没有尺寸的SVG图标点击时保留委托事件并继续恢复后续操作',async()=>{
+ const {JSDOM}=await import('jsdom')
+ const dom=new JSDOM('<button><svg><path></path></svg></button><input>',{runScripts:'outside-only'}),w=dom.window,errors=[],out=[],parent={postMessage:m=>out.push(m)}
+ const runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1]
+ let clicks=0;w.document.querySelector('button').onclick=()=>clicks++
+ w.addEventListener('error',event=>{errors.push(event.error?.message);event.preventDefault()})
+ vm.runInNewContext('('+runtime+')()', {document:w.document,parent,addEventListener:w.addEventListener.bind(w),Element:w.Element,Event:w.Event,MouseEvent:w.MouseEvent,KeyboardEvent:w.KeyboardEvent,HTMLInputElement:w.HTMLInputElement,HTMLSelectElement:w.HTMLSelectElement,HTMLTextAreaElement:w.HTMLTextAreaElement,crypto:{randomUUID:()=> 'unused'}})
+ const events={icon:{id:'icon',clock:1,targetRoute:[0,0,0],tag:'PATH',type:'click'},input:{id:'input',clock:2,targetRoute:[1],tag:'INPUT',type:'input',value:'5'}}
+ try{
+  expect(typeof w.document.querySelector('path').click).toBe('undefined')
+  const receive=()=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events},readOnly:false}}))
+  receive();receive()
+  expect(errors).toEqual([]);expect(clicks).toBe(1);expect(w.document.querySelector('input').value).toBe('5');expect(out).toEqual([])
+ }finally{w.close()}
+})
+
 it('journals authorized agent clicks across two independent legacy closures but never loops remote replay',async()=>{
  const {JSDOM}=await import('jsdom');const {createCanvasUseSurface}=await import('../packages/dsh-research-task-runtime/canvas-use-surface.js');let serial=0
  const runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1]

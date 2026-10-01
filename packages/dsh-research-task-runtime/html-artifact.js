@@ -762,7 +762,10 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
       if(typeof e.x==='number' && typeof e.y==='number'){
         const r=el.getBoundingClientRect();
         el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:document.defaultView,clientX:r.left+e.x*r.width,clientY:r.top+e.y*r.height,button:0}));
-      } else el.click();
+      } else if(typeof el.click==='function')el.click();
+      // SVG descendants can have no rendered bounds and do not implement
+      // HTMLElement.click(). Keep their delegated click without aborting replay.
+      else el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:document.defaultView,button:0}));
       return;
     }
     if(typeof e.value==='string' && 'value' in el) {
