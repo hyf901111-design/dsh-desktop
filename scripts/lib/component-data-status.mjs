@@ -135,6 +135,15 @@ export function createComponentRefreshFeedback(card,{initialState=null,onState=(
  },dispose(){disposed=true;clearTimeout(timer);clearTimeout(loadingTimer);win.removeEventListener('message',receive);surface?.dispose();card.removeAttribute('data-component-refreshing');card.removeAttribute('data-component-updating');body.removeAttribute('aria-busy')}}
 }
 
+export function componentRssStatusView(node){
+ const html=node?.containerSpec?.html;if(typeof html!=='string')return null
+ const source=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];if(!source)return null
+ let model;try{model=JSON.parse(source)}catch{return null}
+ if(model.templateId!=='rss'||!Array.isArray(model.data?.feeds))return null
+ const feeds=model.data.feeds,times=feeds.map(f=>f.fetchedAt).filter(t=>typeof t==='string'&&Number.isFinite(new Date(t).getTime())).sort((a,b)=>new Date(b)-new Date(a)),lastSuccess=times[0]||null,failed=feeds.some(f=>f.error)
+ return {lastSuccess,time:lastSuccess?'读取 '+new Date(lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未读取',detail:!feeds.length?'尚未添加订阅':failed?'读取失败 · 保留上次条目':lastSuccess?'订阅 · 仅手动':'尚未读取订阅源',phase:failed?'error':null,title:feeds.map(f=>(f.title||f.url)+'：'+(f.error||'抓取 '+(f.fetchedAt||'尚未读取'))).join('\n')}
+}
+
 export function ComponentDataStatusBar({sessionId,node,workbench=false}){
  const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
  const ref=react.useRef(null),feedback=react.useRef(null)
@@ -154,8 +163,8 @@ export function ComponentDataStatusBar({sessionId,node,workbench=false}){
  const content=node.containerSpec?.html||JSON.stringify(node.containerSpec||{}),identity=node.containerSpec?.type==='html'?workbenchTemplateIdentity(content):node.containerSpec?.type+':'+node.containerSpec?.variant
  react.useLayoutEffect(()=>{const card=ref.current?.closest('[data-research-node-id]');if(workbench&&card){feedback.current=createComponentRefreshFeedback(card,{initialState:readPersonalChartView(node),onState:(state,revision)=>{if(typeof researchPersonalChartViewSinks!=='undefined')researchPersonalChartViewSinks.get(sessionId)?.(node.id,revision,state)}});feedback.current.update(binding,content,identity)}return()=>{feedback.current?.dispose();feedback.current=null}},[sessionId,node.id,workbench,node.containerSpec?.type==='html'])
  react.useLayoutEffect(()=>{feedback.current?.update(binding,content,identity)},[binding,content,identity])
- const view=componentDataStatusView(binding,notice?.key===key?notice.status:null),shared=sherlockShared(sessionId)
- return react_jsx_runtime.jsxs(workbench?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':view.detail+'，'+view.time+(workbench||shared?'':'，设置刷新频率'),...(!workbench?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:shared?'静态组件':view.detail})]}),react_jsx_runtime.jsx('time',{dateTime:binding?.lastSuccess?new Date(binding.lastSuccess).toISOString():undefined,children:view.time})]})
+ const rss=componentRssStatusView(node),view=rss||componentDataStatusView(binding,notice?.key===key?notice.status:null),shared=sherlockShared(sessionId),plain=workbench||Boolean(rss),lastSuccess=rss?rss.lastSuccess:binding?.lastSuccess
+ return react_jsx_runtime.jsxs(plain?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':rss?(rss.phase||'manual'):binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':view.detail+'，'+view.time+(plain||shared?'':'，设置刷新频率'),...(!plain?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:shared?'静态组件':view.detail})]}),react_jsx_runtime.jsx('time',{dateTime:lastSuccess?new Date(lastSuccess).toISOString():undefined,children:view.time})]})
 }
 
 export const componentDataStatusCss=workbenchRefreshCss+`
@@ -182,7 +191,7 @@ export const componentDataStatusCss=workbenchRefreshCss+`
 
 `
 
-export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
+export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentRssStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
 
 export function patchComponentDataStatus(source){
  const replace=(a,b)=>{if(source.split(a).length!==2)throw Error('Component status anchor drifted: '+a.slice(0,80));source=source.replace(a,b)}

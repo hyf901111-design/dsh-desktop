@@ -597,3 +597,23 @@ ce8a837f受管集成至69c957e2，本地包签名、来源及完整包检查通�
 原生首轮：集成d06ae213本地构建、签名和包检查通过，端口58274。普通中文请求单张可编辑笔记134.833秒完成；工具调用三次、前两次格式拒绝，最终走逐卡子任务，不能算首次提交成功。完整117字来源逐字一致；实际加粗、原始材料只读和10151字中文草稿保存检查通过，HTML原材料未改变。根因是工具公开类型枚举遗漏note、与规划器枚举不一致，模型被迫选择旧markdown。改为共用同一类型数组并提供双type=note的五字段契约；新增实际注册工具→prepared调用检查，不启动逐卡模型。15项相关检查、类型检查通过。证据markdown-note-tool-contract-red/green.log、markdown-note-native-created-audit.json、markdown-note-native-long-draft-audit.json。后继客户端普通中文首次生成和完整恢复仍待验收，计数仍60/74实现、59/74接受。
 
 笔记深色工具栏复验：实际原生卡片揭示宿主最早 important 层的通用 grayscale 规则覆盖源模板深色滤镜，简单提高源 CSS 优先级仍无效。已在同一宿主控件层增加 note 专属对比度及 24px 工具按钮规则，保留源 SVG 内容并覆盖旧卡片。生产双层沙盒 980/480/280px × 浅/深/企业 9 组通过：深色 filter=brightness(0) invert(1)、其余 grayscale(1)，宽版工具栏32px、280px换行58px，固定正文190px、无横向溢出，10008字草稿重建/重载逐字一致。15项相关检查及类型检查通过。证据 markdown-note-contrast-red/green.log、markdown-note-contrast-browser-checks.json。后继包原生首轮创建与深色旧卡复验仍待完成；实现60/74、接受59/74。
+
+### 笔记实际客户端通过（2026-10-01）
+
+集成提交26d2deb9的本地包构建、深度签名及最终包检查通过，端口60881，bundled ework-workbench-components v1.21.0。普通中文新建会话“预置笔记首次生成·本地复验”（session-062f4665-c16b-4e09-85d6-ac328c589e3e）只调用一次research_workbench_create，15.204秒结束，结果prepared、templateIds=[note]，无逐卡子任务；117字原材料、零值、负值、缺失说明完整。实际编辑保存135字补充草稿、只读原始材料查看、浅/深/企业切换、侧栏展开后整理及会话往返通过；草稿逐字一致、view=preview、align=left、原HTML完全不变。源码模板图标保留，深色对比度修复在新旧卡片均可见。
+
+既有“Markdown笔记与草稿恢复·本地验收”（session-714c91aa-9a84-4e32-abd2-3f25197e0330）的10151字草稿在退出重启和升级该包后仍逐字一致，center/preview保持；原HTML哈希ea91c28fc318c6d1031f4e77a9c71d8b50ab1c4d1f8dc84aaf2bfd9bca4f4f7f不变。新包旧卡深色工具栏及整理复验通过。原生最小280px拖拽未验证，不能把浏览器280px检查替代这项证据。
+
+证据位于既有临时目录：markdown-note-corrected-native-build/package.log、markdown-note-corrected-native-created/session-return-audit.json、markdown-note-native-corrected-arranged-audit.json、markdown-note-corrected-native-{old-dark-arranged,light-arranged,enterprise-arranged,dark-narrow-arranged,session-return}.png。补跑research-html-theme的4项失败在修改前4d37基线均存在（预览旧字节上限和Happy DOM旧layer前缀解析），本次9组真实浏览器级联检查通过；记录markdown-note-contrast-tip-tests.log与markdown-note-contrast-baseline-theme.log，不把这两次检查写为全绿。
+
+note计入原生接受：实现60/74、接受60/74。其余14类模板及全量普通中文成功率统计仍未完成。
+
+## RSS/Atom 订阅模板实现与宿主读取（2026-10-01）
+
+Figma 1917:352946（Default 1917:352947）980×410：订阅内容/管理订阅、34px搜索栏、250px空状态及两颗添加按钮。警告、搜索和加号使用原始SVG导出；导出时复制源节点到临时页范围并在finally移除，不改原稿。统一最小280×180，窄框按钮整行换行，长条目在独立列表内滚动，全文和原文来源可展开。
+
+新增严格rss数据契约、公开工具类型与首次完整artifact直达prepared路径；最多10源/每源100条/全量来源32KB，超容量明确拒绝、不截断或生成示例新闻。RSS guid/Atom id、完整标题和摘要、原文链接、原发布时间与更新时间保留，缺失日期不使用抓取时间补充。实际宿主公开读取限制标准HTTP端口、DNS全部地址验证与固定解析地址连接、重定向逐次检查、15秒期限及512KB XML上限，拒绝实体/DOCTYPE。共享和只读写入拒绝；刷新失败保留原条目与抓取时间，画布只更新所属组件且绑定原revision。
+
+直接调用生产读取函数实际取得Federal Reserve公开默认源https://www.federalreserve.gov/feeds/press_all.xml，20条、10006字节结构化来源，原发布时间与2026-10-01T07:37:50.857Z抓取时间分开。生产双层CSP浏览器使用该实际来源快照和宿主服务，新增默认源、搜索、页签/筛选重建恢复、失败保留及移除通过；980/480/280px×三模式9组无溢出，34px搜索与32px页签不被通用控件压缩，原图标完整，0页面错误。首轮沙盒检查暴露消息转发插在字体监听器和样式优先级问题，均修复后重跑通过。证据rss-default-live.json、rss-browser-checks.json及rss-*.png位于既有临时证据目录。
+
+186项直接相关检查、类型检查通过，未运行全功能测试。新增DNS超时与RSS状态显示回归先失败再通过。实际客户端新包普通中文首次创建、实际新增来源及读取、主题/整理与会话返回仍待验收；目前实现61/74、原生接受60/74，整体成功率目标未完成。

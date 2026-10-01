@@ -1,4 +1,5 @@
 import {validNoteContent,validNoteState,noteMarkdownHtml,noteDraftSource} from '../../packages/dsh-research-task-runtime/note-template-contract.js';
+import {patchRssClient} from './rss-client.mjs';
 function patchLegacyComponentInteractionState(source) {
   if(source.includes('/* ODYSSEY_COMPONENT_INTERACTION_V1 */'))return source;
   const once=(a,b)=>{if(!source.includes(a)||source.indexOf(a)!==source.lastIndexOf(a))throw Error('Interaction anchor missing or ambiguous: '+a.slice(0,90));source=source.replace(a,b);};
@@ -119,7 +120,7 @@ function patchNoteDraftSources(source){
 }
 
 export function patchComponentInteractionState(source) {
-  source=patchNoteDraftSources(patchSharedComponentInteractionState(source));
+  source=patchRssClient(patchNoteDraftSources(patchSharedComponentInteractionState(source)));
   if(source.includes('/* ODYSSEY_COMPONENT_INTERACTION_ACK_V2 */'))return source;
   const once=(a,b)=>{if(source.split(a).length!==2)throw Error('Interaction acknowledgement anchor missing: '+a.slice(0,90));source=source.replace(a,b);};
   once('const sendInteraction=()=>{','const sendInteraction=(rejectedEventId)=>{');
