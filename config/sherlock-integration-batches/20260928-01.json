@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修正生产主题样式层及音频完整祖先边距",
+        "featureName": "音频结束定位状态与所选创建最终排版接受",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
-        "tipCommit": "503d05910308e1179cec306a3322ad33083cc737",
+        "baseCommit": "503d05910308e1179cec306a3322ad33083cc737",
+        "tipCommit": "c9a94b395f4e4003ab10c0f0cbaaa69a60d543b8",
         "commits": [
           {
-            "commit": "503d05910308e1179cec306a3322ad33083cc737",
+            "commit": "c9a94b395f4e4003ab10c0f0cbaaa69a60d543b8",
             "parents": [
-              "94b655af8237b118b321c8dbef79be2945537aaa"
+              "503d05910308e1179cec306a3322ad33083cc737"
             ],
-            "subject": "修正主题样式层覆盖并完整计算音频祖先内边距"
+            "subject": "修复音频结束后章节定位提示并接受所选创建排版"
           }
         ],
         "files": [
@@ -30,14 +30,6 @@
           {
             "status": "M",
             "path": "scripts/lib/audio-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-selected-create.css"
           },
           {
             "status": "M",
@@ -57,9 +49,9 @@
               "音频|native audio|unique semantic"
             ],
             "outcome": "passed",
-            "summary": "9项聚焦通过，嵌套边距822px回归先红后绿",
-            "verifiedCommit": "503d05910308e1179cec306a3322ad33083cc737",
-            "completedAt": "2026-10-01T18:55:03.504062+00:00",
+            "summary": "9项直接聚焦通过，结束后章节定位回归先红后绿",
+            "verifiedCommit": "c9a94b395f4e4003ab10c0f0cbaaa69a60d543b8",
+            "completedAt": "2026-10-01T19:16:36.400443+00:00",
             "timeoutMs": 300000
           },
           {
@@ -70,14 +62,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "503d05910308e1179cec306a3322ad33083cc737",
-            "completedAt": "2026-10-01T18:55:03.504062+00:00",
+            "verifiedCommit": "c9a94b395f4e4003ab10c0f0cbaaa69a60d543b8",
+            "completedAt": "2026-10-01T19:16:36.400443+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "补齐实际生产主题层和宿主属性后，三主题280px两列自然换行无溢出、音频宿主边距0；698a1e5f真实反例已记录，修正新包待验"
+          "summary": "3ee1bca6最终包：所选创建三主题窄表格完整7行，原结果及冻结来源不变；音频三主题裁切修正通过，结束定位提示新包待验"
         },
         "acceptanceCriteria": [
           "只保存明确原音源，未知信息不编造且无自动播放",
@@ -85,67 +77,10 @@
           "三主题、窄卡、整理保留完整可读内容"
         ],
         "risks": [
-          "新包窄音频及所选表格实际目检待完成，原生接受保持67/74",
-          "整体模板及成功率目标继续，YouTube真实播放仍需用户登录"
+          "音频结束定位状态修正待最终包，严格原生接受68/74",
+          "整体模板及成功率目标继续，YouTube真实播放仍需本人登录"
         ],
-        "generatedAt": "2026-10-01T18:55:03.504062+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0989f59f2b28414e2bae6e18baccd5a135c60337",
-        "verificationCommit": "0989f59f2b28414e2bae6e18baccd5a135c60337",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "0989f59f2b28414e2bae6e18baccd5a135c60337",
-            "completedAt": "2026-10-01T18:57:52.789Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "0989f59f2b28414e2bae6e18baccd5a135c60337",
-            "completedAt": "2026-10-01T18:57:52.789Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0989f59f2b28414e2bae6e18baccd5a135c60337",
-            "completedAt": "2026-10-01T18:57:52.789Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "0989f59f2b28414e2bae6e18baccd5a135c60337",
-            "completedAt": "2026-10-01T18:57:52.789Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T18:57:52.789Z"
+        "generatedAt": "2026-10-01T19:16:36.400443+00:00"
       }
     },
     {
