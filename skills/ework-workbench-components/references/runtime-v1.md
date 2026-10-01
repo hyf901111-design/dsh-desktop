@@ -41,3 +41,5 @@ YouTube视频用panel.type=youtube，首次同时提交artifact:{version:1,type:
 
 
 总结提炼使用 panel.type=summary；思维导图使用 panel.type=mind-map。首次同时提交完整 artifact:{version:1,type,title,content,source:{title,text,nodeId?}}。content保留完整结果；source冻结一个所选组件的原标题和原文，用户直接提供材料时明确写“本人提供材料”。只有实际已知画布ID才填nodeId，不猜测来源链接。摘要分清事实、推断和待验证，不扩展到整个工作台，不增加来源没有的事实。导图只用一个“# ”根标题和两空格缩进的完整列表，不把普通正文悄悄丢弃；最多500节点。结果和原文独立保存，结果可编辑，来源可返回，支持三主题及内容适配。单项原文/结果各≤32000字符，完整JSON≤64KB。两类套用Figma 1918:343676/1917:357536，不生成HTML，不启动逐卡模型。
+
+音频使用 panel.type=audio，首次提交 artifact:{version:1,type:"audio",title,url,description?,source?,date?,durationSeconds?,waveform?,transcript?,chapters?}。仅使用本人明确提供的无凭据HTTP/HTTPS音频原网址；未提供时url:null显示添加音频空态。时长单位秒，waveform仅为实际取得的0至1振幅数组，chapters:[{title,startSeconds}]，转写完整保留。未知时长、波形和转写不编造；不合成音频或HTML、不启动逐卡模型、不自动播放。采用source模式。 宿主保留完整转写、章节和来源，播放器控制随窄卡换行；会话切换暂停音频并记住当前进度、速度和音量，返回后由用户继续播放。重新加载只表示已请求加载音源，实际成功或失败由媒体事件显示。Figma 1918:353063，默认656×264，统一最小280×180；来源网址保存不代表应用重启后恢复临时播放进度。

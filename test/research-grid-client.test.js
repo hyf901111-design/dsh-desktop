@@ -12,6 +12,51 @@ import {workbenchRefreshTooltip} from '../scripts/lib/research-grid-ui.mjs'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
+it('音频原生宿主校验网址和中文组合输入，同节点保存且更换音源不沿用旧转写',async()=>{
+ const f=await fixture(true),spec={version:1,type:'audio',title:'本人音频',url:null,description:'保留原说明'}
+ await act(async()=>f.workspace.setArtifacts([{...text('audio-input'),kind:'generated-container',containerPrompt:'音频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ const preset=f.host.querySelector('[data-research-audio-preset]');expect(preset).not.toBeNull()
+ await f.event('click',Array.from(preset.querySelectorAll('button')).find(b=>b.textContent==='添加音频'))
+ const input=preset.querySelector('[aria-label="音频网址"]');input.value='https://user:secret@example.com/audio.wav'
+ await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false});expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);expect(preset.textContent).toContain('HTTP')
+ input.value='http://127.0.0.1:58183/tone.wav#original';await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false})
+ const next=f.workspace.getSnapshot().artifacts[0];expect(next.id).toBe('audio-input');expect(next.containerSpec).toEqual({...spec,url:input.value});expect(f.generation.generate).not.toHaveBeenCalled()
+ expect(preset.querySelector('audio').hasAttribute('autoplay')).toBe(false);expect(preset.querySelectorAll('.ew-audio-wave i')).toHaveLength(0);expect(preset.textContent).toContain('波形未提供')
+ const provided={...next,containerSpec:{...next.containerSpec,transcript:'本人旧音源转写',waveform:[0,1],source:'旧音源来源',durationSeconds:90}}
+ await act(async()=>f.workspace.setArtifacts([provided]));await act(async()=>preset.__eworkEditAudio());const changed=preset.querySelector('[aria-label="音频网址"]');changed.value='https://example.org/other.wav';await f.event('keydown',changed,{key:'Enter',keyCode:13,isComposing:false})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual({...spec,url:'https://example.org/other.wav'})
+ const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test');expect(restored.getSnapshot().artifacts[0].containerSpec).toEqual({...spec,url:'https://example.org/other.wav'})
+})
+it('音频播放状态来自实际媒体事件，章节倍速音量及会话返回保留进度但不自动播放',async()=>{
+ const f=await fixture(true),spec={version:1,type:'audio',title:'测试音频',url:'https://example.org/test.wav',waveform:[0,.5,1],transcript:'本人完整转写\n0和-120',chapters:[{title:'后半段',startSeconds:60}]},node={...text('audio-playback'),kind:'generated-container',containerPrompt:'音频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}
+ await act(async()=>f.workspace.setArtifacts([node]));let preset=f.host.querySelector('[data-research-audio-preset]'),element=preset.querySelector('audio'),isPaused=true
+ const play=vi.fn(async()=>{}),pause=vi.fn(()=>{isPaused=true});Object.defineProperties(element,{duration:{value:90,configurable:true},paused:{get:()=>isPaused,configurable:true},play:{value:play,configurable:true},pause:{value:pause,configurable:true}})
+ expect(play).not.toHaveBeenCalled();await f.event('loadedmetadata',element);expect(preset.textContent).toContain('已暂停')
+ await f.event('click',preset.querySelector('[data-audio-play]'));expect(play).toHaveBeenCalledTimes(1);expect(preset.textContent).toContain('正在加载');expect(preset.querySelector('[data-audio-play]').textContent).toBe('播放')
+ isPaused=false;await f.event('playing',element);expect(preset.querySelector('[data-audio-play]').textContent).toBe('暂停');await f.event('waiting',element);expect(preset.textContent).toContain('正在缓冲')
+ await f.event('click',Array.from(preset.querySelectorAll('button')).find(b=>b.textContent.includes('后半段')));expect(element.currentTime).toBe(60)
+ const rate=preset.querySelector('[aria-label="播放速度"]');rate.value='1.5';await f.event('change',rate);expect(element.playbackRate).toBe(1.5)
+ const volume=preset.querySelector('[aria-label="音量"]');volume.value='.25';await f.event('input',volume);expect(element.volume).toBe(.25)
+ const refreshed=await f.host.querySelector('[data-workbench-refresh="audio-playback"]').__eworkRefresh();expect(refreshed).toEqual({message:'已请求重新加载音源'});expect(f.generation.generate).not.toHaveBeenCalled()
+ await act(async()=>f.workspace.setArtifacts([]));expect(pause).toHaveBeenCalled();await act(async()=>f.workspace.setArtifacts([node]));preset=f.host.querySelector('[data-research-audio-preset]');element=preset.querySelector('audio');Object.defineProperty(element,'duration',{value:90,configurable:true});await f.event('loadedmetadata',element)
+ expect(element.currentTime).toBe(60);expect(element.playbackRate).toBe(1.5);expect(element.volume).toBe(.25);expect(preset.querySelector('[data-audio-play]').textContent).toBe('播放')
+ expect(preset.querySelector('.ew-audio-transcript').textContent).toBe(spec.transcript)
+})
+it('音频整理保留展开的完整转写高度，不把默认播放器高度裁切成内容高度',async()=>{
+ const f=await fixture(true),spec={version:1,type:'audio',title:'长转写',url:'http://127.0.0.1:58183/tone.wav',transcript:'本人完整转写\n'.repeat(60)},node={...text('audio-fit'),kind:'generated-container',containerPrompt:'音频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}
+ await act(async()=>f.workspace.setArtifacts([node]));const preset=f.host.querySelector('[data-research-audio-preset]');preset.querySelector('details').open=true
+ Object.defineProperties(preset,{offsetHeight:{configurable:true,value:720},scrollHeight:{configurable:true,value:720}})
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await vi.waitFor(async()=>{await act(async()=>{});expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(782)},{timeout:1500,interval:50})
+ expect(preset.querySelector('.ew-audio-transcript').textContent).toBe(spec.transcript);expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('音频共享只读禁止更改音源但保留完整转写和浏览功能',async()=>{
+ let shared=false;const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'audio',title:'只读音频',url:null,transcript:'本人提供的完整转写'}
+ f.workspace.setArtifacts([{...text('audio-readonly'),kind:'generated-container',containerPrompt:'音频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]);shared=true;await f.render()
+ const preset=f.host.querySelector('[data-research-audio-preset]');expect(preset).not.toBeNull();expect(Array.from(preset.querySelectorAll('button')).find(b=>b.textContent==='添加音频').disabled).toBe(true)
+ await act(async()=>preset.__eworkEditAudio());expect(preset.querySelector('form')).toBeNull();expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);expect(preset.querySelector('.ew-audio-transcript').textContent).toBe(spec.transcript)
+})
 afterEach(async()=>{for(const dispose of disposals.splice(0).reverse())await dispose()})
 const text=(id,x=260,y=160)=>({id,kind:'pasted-text',messageId:id,title:id,excerpt:'# 真实组件\n保留正文',x,y,width:480,height:280,sizeMode:'manual'})
 async function fixture(mount=false,desktop={}){

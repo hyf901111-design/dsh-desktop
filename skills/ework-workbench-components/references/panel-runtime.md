@@ -13,3 +13,5 @@
 
 
 YouTube视频用panel.type=youtube，首次同时提交artifact:{version:1,type:"youtube",title,url,description?,durationSeconds?,thumbnailUrl?,subtitles?}，使用source模式。不提供网址时url:null，宿主显示Figma网址输入空态；只使用用户原视频网址，不猜测视频、不生成HTML或逐卡任务。已取得的时长秒数、封面原网址、完整字幕和说明保留，未知资料不编造。支持watch、youtu.be、shorts、embed、live视频地址；宿主采用YouTube官方播放器，不自动播放，重新载入仅表示加载请求。
+
+音频使用 panel.type=audio，首次提交 artifact:{version:1,type:"audio",title,url,description?,source?,date?,durationSeconds?,waveform?,transcript?,chapters?}。仅使用本人明确提供的无凭据HTTP/HTTPS音频原网址；未提供时url:null显示添加音频空态。时长单位秒，waveform仅为实际取得的0至1振幅数组，chapters:[{title,startSeconds}]，转写完整保留。未知时长、波形和转写不编造；不合成音频或HTML、不启动逐卡模型、不自动播放。采用source模式。 宿主保留完整转写、章节和来源，播放器控制随窄卡换行；会话切换暂停音频并记住当前进度、速度和音量，返回后由用户继续播放。重新加载只表示已请求加载音源，实际成功或失败由媒体事件显示。Figma 1918:353063，默认656×264，统一最小280×180；来源网址保存不代表应用重启后恢复临时播放进度。

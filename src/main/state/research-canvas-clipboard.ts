@@ -1,3 +1,4 @@
+import {parseAudioSpec} from '../../../packages/dsh-research-task-runtime/audio-template-contract.js'
 import {parseDerivedSpec} from '../../../packages/dsh-research-task-runtime/derived-template-contract.js'
 import {parseYoutubeSpec} from '../../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 import {parseIframeSpec} from '../../../packages/dsh-research-task-runtime/iframe-template-contract.js'
@@ -94,6 +95,10 @@ function sanitizeNode(value: unknown): ClipboardNode {
       const derived=parseDerivedSpec(spec)
       if(derived===null)throw new Error('派生组件结果或来源无效。')
       output.containerSpec=derived
+    } else if (spec.type === 'audio') {
+      const audio=parseAudioSpec(spec)
+      if(audio===null)throw new Error('音频组件格式无效。')
+      output.containerSpec=audio
     } else if (spec.type === 'youtube') {
       const youtube=parseYoutubeSpec(spec)
       if(youtube===null)throw new Error('YouTube视频组件格式无效。')
