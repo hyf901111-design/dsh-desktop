@@ -9,30 +9,70 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "事件模板首次显示自动补高与原生验收记录",
+        "featureName": "内幕交易机构持仓来源模板及事件首次显示原生接受",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
-        "tipCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+        "baseCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+        "tipCommit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
         "commits": [
           {
-            "commit": "3c59d3bf55ac71966b75d163769ff5861b0abbcf",
+            "commit": "76663ea2d1d758df0fd8858693ac517e950895df",
             "parents": [
-              "4cb597d3eb63f31e739a1023c7965ce371829563"
+              "35f4bb247cc4319cda9c5dcf71becb93f6196c85"
             ],
-            "subject": "验收：记录标题悬停旧控件及收入展开原生结果"
+            "subject": "验收：确认分红拆股首次补高与整理原生显示"
           },
           {
-            "commit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+            "commit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
             "parents": [
-              "3c59d3bf55ac71966b75d163769ff5861b0abbcf"
+              "76663ea2d1d758df0fd8858693ac517e950895df"
             ],
-            "subject": "修复：分红拆股首次显示按可信内容自动补高"
+            "subject": "功能：预置内幕交易与机构持仓来源模板并统一内容补高"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/financial-ownership.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
@@ -44,7 +84,39 @@
           },
           {
             "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-template-registry.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-ownership.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/financial-ownership.js"
+          },
+          {
+            "status": "M",
+            "path": "test/operations-template.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workflow-template.test.js"
           }
         ],
         "checks": [
@@ -79,12 +151,13 @@
               "test/financial-fundamentals.test.js",
               "test/financial-revenue.test.js",
               "test/financial-actions.test.js",
-              "test/terminal-component-presentation.test.js"
+              "test/terminal-component-presentation.test.js",
+              "test/financial-ownership.test.js"
             ],
             "outcome": "passed",
-            "summary": "28个直接相关及继承门禁文件508项通过，包含事件首次补高回归",
-            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
-            "completedAt": "2026-10-01T01:01:40.713Z",
+            "summary": "29个直接相关及继承门禁文件524项通过，含两种持仓模板和首次补高回归",
+            "verifiedCommit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
+            "completedAt": "2026-10-01T01:26:41.396004+00:00",
             "timeoutMs": 300000
           },
           {
@@ -97,8 +170,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
-            "completedAt": "2026-10-01T01:00:57.062Z",
+            "verifiedCommit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
+            "completedAt": "2026-10-01T01:26:41.396004+00:00",
             "timeoutMs": 300000
           },
           {
@@ -109,8 +182,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
-            "completedAt": "2026-10-01T01:01:03.793Z",
+            "verifiedCommit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
+            "completedAt": "2026-10-01T01:26:41.396004+00:00",
             "timeoutMs": 300000
           },
           {
@@ -121,8 +194,8 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
-            "completedAt": "2026-10-01T01:00:53.659Z",
+            "verifiedCommit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
+            "completedAt": "2026-10-01T01:26:41.396004+00:00",
             "timeoutMs": 300000
           },
           {
@@ -135,71 +208,26 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥检查通过，27项既有非相关检查跳过",
-            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
-            "completedAt": "2026-10-01T01:00:58.980Z",
+            "verifiedCommit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
+            "completedAt": "2026-10-01T01:26:41.396004+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "此前三模式与会话往返已记录，本次首次显示补高还须最终包复验"
+          "summary": "两种持仓模板生产双层CSP36组尺寸模式和6组交互无脚本错误；最终包原生接受待验。事件卡首次显示及整理已真实客户端接受。"
         },
         "acceptanceCriteria": [
-          "首次事件卡按可信自然内容补足本地高度",
-          "手动最小框与标题预览不受影响",
-          "原始来源记录与共享格位保持"
+          "内幕交易原类型与两种日期、单位及零未知字段完整",
+          "机构汇总和部分明细分别保留，不推导总额",
+          "三模式及窄宽度不裁切，首次内容补高与语义恢复"
         ],
         "risks": [
-          "53/74实现，51/74原生接受",
-          "事件初次显示修正待最终包验证",
-          "整体成功率>90%未证实"
+          "55/74实现、53/74原生接受",
+          "两种持仓模板最终本地包仍待验",
+          "整体成功率超过90%未证实"
         ],
-        "generatedAt": "2026-10-01T01:01:40.713Z"
-      },
-      "merged": {
-        "mergeCommit": "b8c10a616fb050956fff1b176eefc4d08dde372b",
-        "verificationCommit": "b8c10a616fb050956fff1b176eefc4d08dde372b",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "b8c10a616fb050956fff1b176eefc4d08dde372b",
-            "completedAt": "2026-10-01T01:03:12.127Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "b8c10a616fb050956fff1b176eefc4d08dde372b",
-            "completedAt": "2026-10-01T01:03:12.127Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b8c10a616fb050956fff1b176eefc4d08dde372b",
-            "completedAt": "2026-10-01T01:03:12.127Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T01:03:12.127Z"
+        "generatedAt": "2026-10-01T01:26:41.396004+00:00"
       }
     }
   ],
