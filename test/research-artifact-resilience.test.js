@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import {calendarWindow} from './helpers/calendar-window.js';
 import { Window } from 'happy-dom';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
@@ -97,12 +98,12 @@ describe('stable interactive collections',()=>{
  const base={version:1,type:'calendar',title:'事件日历',items:[{title:'会议 A',summary:'公开会议议程',date:'2026-09-08',category:'会议',url:'https://example.org/a'},{title:'报告 B',summary:'年度研究报告',date:'2026-10-12',category:'报告',url:'https://example.org/b'},{title:'时间待定',summary:'日期尚未确认',date:'预计四季度',category:'会议'}]};
  it('renders the source-style calendar with month navigation and date selection',()=>{
   const s=renderInteractiveArtifact(base);expect(parseResearchContainerSpec(s)).not.toBeNull();
-  const w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.body.innerHTML=s.html;w.eval(w.document.querySelector('script').textContent);
+  const runtime=calendarWindow(s.html),w=runtime.window;
   const doc=w.document,visible=()=>[...doc.querySelectorAll('.event')];
   const month=doc.getElementById('month');expect(month.value).toBe('2026-09');expect(visible()).toHaveLength(1);
-  doc.querySelector('[aria-label="2026-09-08"]').click();expect(doc.getElementById('agenda-title').textContent).toBe('当日安排');expect(visible()).toHaveLength(1);
+  doc.querySelector('[aria-label="2026-09-08"]').click();expect(doc.getElementById('agenda-title').textContent).toBe('9 月 8 日 · 1 项安排');expect(visible()).toHaveLength(1);
   doc.getElementById('next').click();expect(month.value).toBe('2026-10');expect(visible()[0].textContent).toContain('报告 B');
-  doc.getElementById('clear-day').click();expect(doc.getElementById('agenda-title').textContent).toBe('本月安排');
+  doc.getElementById('clear-day').click();expect(doc.getElementById('agenda-title').textContent).toBe('本月安排 · 1 项安排');
   month.value='uncertain';month.dispatchEvent(new w.Event('change'));expect(visible()[0].textContent).toContain('时间待定');
   month.value='';month.dispatchEvent(new w.Event('change'));expect(visible()).toHaveLength(3);w.happyDOM.abort();
  });

@@ -1,3 +1,4 @@
+import {CALENDAR_TEMPLATES,CALENDAR_GUIDANCE} from './calendar-template-contract.js'
 import {CHART_TEMPLATES,chartTemplateSchema} from './chart-template-contract.js'
 import {MARKET_DESIGN_TEMPLATES,TERMINAL_GENERIC_TEMPLATES,WORKBENCH_DESIGN_VERSION} from './workbench-design-contract.js'
 import {applyTerminalPresentation} from './terminal-presentation.js'
@@ -20,9 +21,10 @@ const interactions = {
 const generic=[
  ['kpi','指标卡',['详情'],656,212],
  ['table','明细表',['搜索','排序','完整表格'],656,352],['dashboard','概览',['指标详情'],656,238],['news','资讯',['搜索','分类','展开','来源'],656,352],
- ['reports','研报',['搜索','分类','展开','来源'],656,352],['calendar','日程',['日期','事件详情'],656,316],['gantt','甘特图',['筛选','日期','任务详情'],656,352]
+ ['reports','研报',['搜索','分类','展开','来源'],656,352],['gantt','甘特图',['筛选','日期','任务详情'],656,352]
 ]
 export const COMPONENT_TEMPLATES=Object.freeze([
+ ...CALENDAR_TEMPLATES.map(t=>({...t,schema:CALENDAR_GUIDANCE})),
  ...OPERATIONS_TEMPLATES.map(t=>({...t,schema:operationsTemplateSchema(t.id)})),
  ...CHART_TEMPLATES.map(t=>({...t,id:`chart.${t.variant}`,type:'chart',schema:chartTemplateSchema(t.variant),interactions:t.interactions??['系列切换','逐点数值','完整数据'],version:'22a-20260930'})),
  ...Object.entries(MARKET_DESIGN_TEMPLATES).map(([variant,t])=>({id:`market.${variant}`,type:'market',variant,title:t.id,width:t.width,height:t.height,minWidth:t.minWidth,minHeight:t.minHeight,figma:t.figma,interactions:interactions[variant]})),

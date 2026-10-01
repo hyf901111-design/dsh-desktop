@@ -78,7 +78,7 @@ describe('research workbench Figma design contract', () => {
 
   it('keeps the source calendar size and fits six operational metrics in a compact card', () => {
     expect(workbenchDesignTemplate({ type: 'calendar', artifact: { items: Array(8).fill({}) } })).toMatchObject({
-      figma: '1696:77848', width: 656, height: 316
+      figma: '1918:345317', width: 656, height: 424
     });
     expect(workbenchDesignTemplate({ type: 'dashboard', artifact: { items: Array(6).fill({}) } })).toMatchObject({
       width: 656, height: 238

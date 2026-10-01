@@ -82,6 +82,7 @@ export function researchMarketDimensions(node, includeManual = false, availableW
   if (bodyTag.includes('data-sherlock-template="rss"')) return { width:980, height:410 };
   if (bodyTag.includes('data-sherlock-template="note"')) return { width:980, height:340 };
   if (bodyTag.includes('data-sherlock-template="clock"')) return { width:980, height:200 };
+  if (bodyTag.includes('data-sherlock-template="calendar"')) return { width:656, height:424 };
   if (bodyTag.includes('data-research-kind="calendar"') || html?.includes('<section class="month" aria-label="月历"')) return { width:656, height:316 };
   if (bodyTag.includes('data-research-kind="dashboard"')) return researchDashboardContentDimensions((html.match(/class="research-metric"/g) || []).length);
   if (bodyTag.includes('data-research-kind="gantt"')) return researchGanttContentDimensions((html.match(/class="gantt-row"/g) || []).length);
@@ -153,7 +154,7 @@ export function researchOptimalDimensions(node = {}, measured = null) {
     width = 656;
     height = Math.max(220, 80 + Math.min(6, rows) * 46);
   } else if (type === 'calendar') {
-    width = 656; height = 316;
+    width = 656; height = 424;
   } else if (type === 'gantt') {
     width = 656; height = Math.max(320, 80 + rows * 36);
   } else if (type === 'chart') {
