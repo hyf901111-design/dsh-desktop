@@ -81,6 +81,63 @@
           "实现66/74，原生接受65/74，不提前接受播放"
         ],
         "generatedAt": "2026-10-01T14:48:43.167009+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
+        "verificationCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
+            "completedAt": "2026-10-01T14:50:03.549Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
+            "completedAt": "2026-10-01T14:50:03.549Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
+            "completedAt": "2026-10-01T14:50:03.549Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
+              "."
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
+            "verifiedCommit": "8ea43cd59453c9506b1d457f3c5cbe41db20e220",
+            "completedAt": "2026-10-01T14:50:03.549Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-01T14:50:03.549Z"
       }
     },
     {
