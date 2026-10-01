@@ -4,6 +4,14 @@ import {calendarWindow} from './helpers/calendar-window.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 const calendar={version:1,type:'calendar',title:'本地事件日历',asOf:'用户提供的虚构记录',items:[{title:'研究晨会',summary:'会议室 A · 原摘要',date:'2026-09-28',time:'09:30',url:'https://example.org/original'},{title:'数据发布时间待定',summary:'保留原日期说明',date:'预计四季度'}]}
+it('虚构日历保留用户提供的独立来源链接和原摘要，禁止不安全链接',async()=>{
+ const {prepareSimulatedArtifact}=await import('../packages/dsh-research-task-runtime/workbench-plan.js');
+ const panel={title:calendar.title,type:'calendar',artifact:calendar};
+ const prepared=prepareSimulatedArtifact(panel);
+ expect(prepared.items[0]).toMatchObject({summary:calendar.items[0].summary,url:calendar.items[0].url});
+ expect(()=>prepareSimulatedArtifact({...panel,artifact:{...calendar,items:[{...calendar.items[0],url:'https://user:secret@example.org/'}]}})).toThrow();
+ expect(()=>prepareSimulatedArtifact({...panel,type:'news',artifact:{...calendar,type:'news'}})).toThrow('模拟数据不能包含外部链接');
+})
 it('日历首次呈现完整月份与当天来源安排，保留源链接及待定日期',()=>{
  const output=JSON.parse(acceptArtifactOutput(JSON.stringify(calendar)));const w=new Window();w.document.write(output.html)
  expect(templateFor(calendar)).toMatchObject({figma:'1918:345317',width:656,height:424,minWidth:280,minHeight:180})

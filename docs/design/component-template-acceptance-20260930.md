@@ -642,3 +642,12 @@ Figma源1918:345317、默认1918:345318/345690，656×424、标题栏38、正文
 生产构建renderer与双层CSP/Trusted Types none，656/480/280px×三模式共九组通过：按钮高度30、导航28、日程行18、无横向溢出、零页面错误。实际完整来源展开、待定筛选、月份/今天、个人日程保存、完整组件重建和整页重开均通过，原来源JSON不变；只读和共享拒绝写入。证据calendar-source.png、calendar-source-red.log、calendar-runtime-green.log、calendar-final-gate.log、calendar-source-normalization.log、calendar-typecheck.log、calendar-browser-checks.json与calendar-*.png位于/tmp/ework-template-acceptance-20260930/。
 
 实现62/74、原生接受61/74。最终本地包的普通中文首次提交、原生三模式整理、窄卡、个人日程与会话/重启恢复仍待核验；未运行全功能测试，整体目标尚未完成。
+
+
+### 日历原生首轮与首次补高/来源修正
+
+63da840c集成至4d53e1ab，本地构建、深度签名及最终完整包检查通过，端口53458，技能v1.23.0。普通中文首轮约64秒prepared，但创建工具两次调用：第一提交的独立url被通用模拟外链规则拒绝，模型重试把链接拼入摘要，因此不计首次成功。原生首次高度433px遮住底部说明；一键整理后能补足，但首次完成缺少日历自然高度白名单。
+
+新增实际注册数据与实际客户端模块回归在旧代码分别失败，修正仅日历允许保留用户已提供的安全原链接（仍校验http/https且禁止嵌入登录信息、不联网读取；其余模拟模板拒绝外链不变），并接通首次完成与窄框真实内容补高。原文保持要求进入公开工具和技能，链接不拼入摘要。长时间说明采用有界内容列，保留48px短时间宽度并避免单字悬落。两个回归、186项直接相关检查及类型检查通过；生产双层CSP九组再次通过，个人日程“时间待确认”一行完整。
+
+原生实际在9月29日保存个人日程“本画布复验 0 -5”、时间“时间待确认”、说明“仅个人画布保留，原来源记录不变”；来源仍四条。后继最终包普通中文首次来源保留、三模式、旧卡升级恢复及重启仍待接受。证据calendar-native-first-audit.json、calendar-native-regression-red/green.log、calendar-native-fix-gate/typecheck/browser.log，均位于既有临时目录；实现62/74、接受仍61/74。

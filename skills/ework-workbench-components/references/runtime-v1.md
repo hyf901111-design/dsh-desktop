@@ -28,3 +28,5 @@
 RSS/Atom 固定模板 type:rss，version:1/title/asOf/feeds。每源 {id,url,title,format:"rss"|"atom"|"unknown",fetchedAt:string|null,error:string|null,entries:[{id,title,url:string|null,summary,publishedAt:string|null,updatedAt:string|null}]}。首次可用 feeds:[]，通过添加默认订阅或添加公开 RSS 地址实际读取；最多10源/每源100条/完整JSON32KB。新闻原发布时间、更新时间与抓取时间分开；失败保留原条目，不编造或截断。
 
 21Z 日程日历 type:calendar：version:1/title/items，0–40条完整 title、summary 或真实 url，可选 date/time/category；确定日期 YYYY-MM-DD，日期未知保留原文，不用抓取时间补日期。可选 asOf/note/month/timeZone。Figma 1918:345317，656×424、统一最小280×180；月历在上、当天安排在下，今天与前后月、来源展开、待定日期和本画布个人日程。个人记录20条/24KB、共享及只读禁止新增；不向外部日历预约。与 chart.calendar 的自然日热力契约分开。
+
+日历首次完整提交直接 prepared。原文字段不改写；已提供的原文 URL 独立保留（模拟日历同样允许），不联网读取、不把链接拼入摘要。
