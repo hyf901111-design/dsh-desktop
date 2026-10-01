@@ -13,6 +13,32 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {researchOptimalDimensions} from '../packages/dsh-research-task-runtime/bento-layout.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
+it('智能组件默认草稿保留设计说明，组合回车不提交，普通回车仍走原生成入口',async()=>{
+ const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft()})
+ const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.textContent).toContain('描述要创建的内容');expect(card.textContent).toContain('结果将作为独立组件保留在当前工作台。')
+ const input=card.querySelector('textarea');input.value='本人虚构记录：0万元，变化-120万元，原因未提供。生成预置两列表格。';await act(async()=>input.focus());await f.event('input',input);expect(input.isConnected).toBe(true);expect(card.querySelector('button[data-research-container-submit],button[data-research-link-submit]').disabled).toBe(false)
+ await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.generation.generate).not.toHaveBeenCalled();expect(input.isConnected).toBe(true)
+ await f.event('keydown',input,{key:'Enter',keyCode:13,shiftKey:true,isComposing:false});expect(f.generation.generate).not.toHaveBeenCalled()
+ await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false});expect(f.generation.generate).toHaveBeenCalledTimes(1);expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({targetNodeId:draft.id,prompt:input.value}))
+})
+it('链接默认草稿完整显示说明，中文组合回车不完成且同节点接纳原链接',async()=>{
+ const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft(null,'link')})
+ const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.textContent).toContain('添加网页链接');expect(card.textContent).toContain('支持网页与文章链接')
+ const input=card.querySelector('textarea');input.value='http://127.0.0.1:58169/?source=owned#keep';await act(async()=>input.focus());await f.event('input',input);expect(input.isConnected).toBe(true);expect(card.querySelector('button[data-research-container-submit],button[data-research-link-submit]').disabled).toBe(false)
+ await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.workspace.getSnapshot().artifacts[0].containerPrompt).toBe('odyssey:link-draft');expect(input.isConnected).toBe(true)
+ await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false});expect(f.workspace.getSnapshot().artifacts[0]).toMatchObject({id:draft.id,kind:'web-link',url:input.value});expect(f.generation.generate).not.toHaveBeenCalled()
+})
+it('链接草稿按统一最小尺寸对齐网格，不受标题长度限制',async()=>{
+ const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft(null,'link');f.workspace.setArtifacts([{...draft,title:'短标题',width:280,height:180,sizeMode:'manual'}])})
+ const short=f.workspace.getSnapshot().artifacts[0];await act(async()=>f.workspace.setArtifacts([{...draft,title:'本人用于验证标题长度的完整原题'.repeat(8),width:280,height:180,sizeMode:'manual'}]))
+ const long=f.workspace.getSnapshot().artifacts[0];expect([long.width,long.height]).toEqual([short.width,short.height]);expect(long.width).toBeGreaterThanOrEqual(280);expect(long.width).toBeLessThan(304);expect(long.height).toBeGreaterThanOrEqual(180);expect(long.height).toBeLessThan(204);expect(f.host.querySelector('textarea')).not.toBeNull()
+})
+it('共享只读禁用智能组件及链接草稿输入和提交',async()=>{
+ let shared=false;const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}});let smart,link
+ await act(async()=>{smart=f.workspace.createContainerDraft();link=f.workspace.createContainerDraft(null,'link')});shared=true;await f.render()
+ for(const node of [smart,link]){const card=f.host.querySelector('[data-research-node-id="'+node.id+'"]');expect(card.querySelector('textarea').disabled).toBe(true);expect(card.querySelector('[data-research-container-submit],[data-research-link-submit]').disabled).toBe(true)}
+ expect(f.generation.generate).not.toHaveBeenCalled();expect(f.workspace.getSnapshot().artifacts).toHaveLength(2)
+})
 it('音频原生宿主校验网址和中文组合输入，同节点保存且更换音源不沿用旧转写',async()=>{
  const f=await fixture(true),spec={version:1,type:'audio',title:'本人音频',url:null,description:'保留原说明'}
  await act(async()=>f.workspace.setArtifacts([{...text('audio-input'),kind:'generated-container',containerPrompt:'音频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))

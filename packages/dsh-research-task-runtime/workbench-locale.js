@@ -1,4 +1,5 @@
 export const WORKBENCH_ENGLISH={
+'编辑组件需求':'Edit component request','描述要创建的内容':'Describe what to create','Enter 创建 · Shift Enter 换行':'Enter to create · Shift Enter for a new line','结果将作为独立组件保留在当前工作台。':'The result stays as a separate component in this workspace.','添加网页链接':'Add a web link','粘贴网页或文章链接…':'Paste a web or article link…','网页内容在这里呈现':'Web content appears here','添加后自动读取标题，并按组件宽度展示。':'The title loads automatically and the page fits the component width.','支持网页与文章链接':'Supports web and article links',
 '字体加载失败':'Font loading failed','正在加载字体…':'Loading fonts…',
 "任务开始后，进展会显示在这里":"Progress will appear here when the task starts.",
 "正在调整检索":"Refining search",

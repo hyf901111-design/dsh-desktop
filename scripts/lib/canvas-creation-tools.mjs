@@ -1,5 +1,6 @@
 import { patchCanvasToolShortcuts } from './canvas-tool-shortcuts.mjs'
 import { patchResearchCanvasRenderPerformance } from './research-canvas-render-performance.mjs'
+import { patchCanvasDraftTemplates, canvasDraftTemplatesCss } from './canvas-draft-templates.mjs'
 import { readFileSync } from 'node:fs'
 const icon = name => `data:image/svg+xml;base64,${readFileSync(new URL(`../../build/figma-canvas-icons/tool-${name}.svg`, import.meta.url)).toString('base64')}`
 export function componentPlacement(rect, viewport) {
@@ -75,7 +76,7 @@ export function patchCanvasCreationTools(source) {
   source = patchComponentDraftFocus(source)
   source = patchComponentDraftKeyboard(source)
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
-  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(installCreationStyle(patchCanvasArrangeTool(source))))
+  if (source.includes('/* ODYSSEY_CREATION_TOOLS */')) return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(installCreationStyle(patchCanvasDraftTemplates(patchCanvasArrangeTool(source)))))
   const replace = (from, to) => {
     if (!source.includes(from)) throw Error('Canvas creation anchor missing: ' + from.slice(0, 100))
     source = source.replace(from, to)
@@ -119,7 +120,7 @@ export function patchCanvasCreationTools(source) {
   replace('children: "输入网页地址" }),', 'children: "输入网页地址" }), (0,react_jsx_runtime.jsx)("button",{type:"button",className:"odyssey-link-close","aria-label":"关闭链接输入",onClick:()=>setLinkPopoverOpen(false),children:"×"}),')
   // Labels are kept in markup for older patch compatibility but visually hidden.
   source = patchLinkDraftActions(patchNativeLinkDraft(patchLinkSelection(patchLinkDraftChrome(patchLinkCanvasFrame(source)))))
-  source = installCreationStyle(source)
+  source = installCreationStyle(patchCanvasDraftTemplates(source))
   return patchCanvasToolShortcuts(patchResearchCanvasRenderPerformance(patchCanvasArrangeTool(source)))
 }
 function patchCanvasArrangeTool(source) {
@@ -330,6 +331,7 @@ body [data-research-compact-chrome].odyssey-link-draft[data-selected=true]::afte
 [data-research-canvas] [data-research-node-id][data-research-node-id][data-selected=true]::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1.5px var(--odyssey-select,#1b77ff),0 0 0 2px #60a5fa66,0 0 20px 3px #3b82f640;pointer-events:none;z-index:50}
 [data-research-canvas] [data-research-node-id]:not([data-selected=true]){box-shadow:none!important}
 [data-research-canvas] [data-research-marquee]{z-index:25!important;pointer-events:none}
+${canvasDraftTemplatesCss}
 `
 
 // Draft links share the exact frame, hover actions, modal and resize handles.
