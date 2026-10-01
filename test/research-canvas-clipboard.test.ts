@@ -54,6 +54,17 @@ describe('durable research clipboard', () => {
       expect((await f.service.copy({sessionId:'own',nodes:[{...node,containerSpec:{...spec,source:{...spec.source,url:'https://unverified.invalid'}}}]})).ok).toBe(false)
     }
   })
+  it('copies native audio with exact URL, zero duration and full transcript without executable HTML', async()=>{
+    const f=await fixture()
+    for(const url of [null,'http://127.0.0.1:58183/tone.wav#original']){
+      const spec={version:1,type:'audio',title:'本人合成音频',url,durationSeconds:0,transcript:'完整转写\n收入0，变化-120，原因未提供。',waveform:[0,.5,1],chapters:[{title:'开始',startSeconds:0}]}
+      const node={id:'audio',kind:'generated-container',title:spec.title,x:0,y:0,containerSpec:spec,generationStatus:'completed',containerPrompt:'音频',refreshMinutes:0}
+      expect(await f.service.copy({sessionId:'own',nodes:[node]})).toEqual({ok:true})
+      expect(await f.service.read()).toMatchObject({kind:'components',nodes:[{containerSpec:spec}]})
+      expect(f.clipboard.html).not.toContain('<audio')
+      expect((await f.service.copy({sessionId:'own',nodes:[{...node,containerSpec:{...spec,url:'https://user:secret@example.com/test.wav'}}]})).ok).toBe(false)
+    }
+  })
   it('copies native YouTube original URL and supplied metadata without executable clipboard HTML', async()=>{
     const f=await fixture()
     for(const url of [null,'https://www.youtube.com/watch?v=M7lc1UVf-VE&t=1m30s#original']){

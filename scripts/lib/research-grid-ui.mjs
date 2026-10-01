@@ -70,7 +70,11 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     setBusy(true);setError('')
     let message='指标数据已更新'
     try{
-      if(node.containerSpec?.type==='youtube'){
+      if(node.containerSpec?.type==='audio'){
+        const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-audio-preset]')
+        if(!player?.__eworkReloadAudio)throw Error('请先添加音频网址');
+        player.__eworkReloadAudio();message='已请求重新加载音源'
+      }else if(node.containerSpec?.type==='youtube'){
         const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-youtube-preset]')
         if(!player?.__eworkReloadYoutube)throw Error('视频尚未载入，请先添加视频网址');
         player.__eworkReloadYoutube();message='已请求重新载入视频'
@@ -110,6 +114,10 @@ export function useWorkbenchSettings({triggerRef,sessionId,node,disabled,editing
     const actions=['summary','mind-map'].includes(node.containerSpec?.type)&&node.containerSpec.source?[
       entry('edit','编辑结果',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-derived-preset]')?.__eworkEditDerived?.()),
       entry('summary','复制完整结果',()=>navigator.clipboard.writeText(node.containerSpec.content),false,false)
+    ]:node.containerSpec?.type==='audio'?[
+      entry('edit','修改音频网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-audio-preset]')?.__eworkEditAudio?.()),
+      entry('refresh','重新加载音源',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
+      entry('link','打开原音频',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
     ]:node.containerSpec?.type==='youtube'?[
       entry('edit','修改视频网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-youtube-preset]')?.__eworkEditYoutube?.()),
       entry('refresh','重新载入视频',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
@@ -445,6 +453,11 @@ export function measureWorkbenchContents(root,nodes) {
     // content. Native snapshots are images of that viewport, so they must not
     // replace the readable template height after a manual resize.
     if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
+    const audio=body.querySelector('[data-research-audio-preset]')
+    if(audio){
+      measured.set(node.id,{width:preferred.width,height:Math.max(264,38+Math.max(audio.offsetHeight,audio.scrollHeight)+(card.querySelector('.odyssey-data-stamp')?24:0))})
+      continue
+    }
     const derived=body.querySelector('[data-research-derived-preset]')
     if(derived){
       // Branch backgrounds, source controls and open original text belong to

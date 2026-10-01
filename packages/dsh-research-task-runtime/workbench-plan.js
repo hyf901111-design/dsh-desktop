@@ -1,3 +1,4 @@
+import {AUDIO_GUIDANCE} from './audio-template-contract.js';
 import {DERIVED_GUIDANCE} from './derived-template-contract.js';
 import {YOUTUBE_GUIDANCE} from './youtube-template-contract.js';
 import {IFRAME_GUIDANCE} from './iframe-template-contract.js';
@@ -15,12 +16,13 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-export const WORKBENCH_PANEL_TYPES = Object.freeze(['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
+export const WORKBENCH_PANEL_TYPES = Object.freeze(['audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
+const preparedTypes = new Set(['audio', 'chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
 const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
+    audio: AUDIO_GUIDANCE,
     summary: DERIVED_GUIDANCE,
     'mind-map': DERIVED_GUIDANCE,
     youtube: YOUTUBE_GUIDANCE,
@@ -182,6 +184,7 @@ function normalizeSimulatedCalendar(artifact) {
 }
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
+    if (artifact.type === 'audio') return AUDIO_GUIDANCE;
     if (artifact.type === 'youtube') return YOUTUBE_GUIDANCE;
     if (artifact.type === 'iframe') return IFRAME_GUIDANCE;
     if (artifact.type === 'timeline') return `${timelineDataIssue(artifact) ?? ''}。${TIMELINE_GUIDANCE}`;
@@ -285,6 +288,7 @@ export function validateWorkbench(value) {
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
     const isSimulated = value.dataMode === 'simulated';
     const parallel = value.generationMode === 'parallel';
+    if (isSimulated && value.panels.some(p=>p?.type==='audio')) throw Error('音频需要本人实际音频网址或 url:null；请使用 source 模式，不生成模拟音频。');
     if (isSimulated && value.panels.some(p=>p?.type==='youtube')) throw Error('YouTube需要用户实际提供的视频网址或 url:null；请使用 source 模式提交，不猜测视频。');
     if (isSimulated && value.panels.some(p=>p?.type==='iframe')) throw Error('嵌入网页需要用户实际提供的网址或 url:null；请使用 source 模式提交，不生成模拟网址。');
     if (value.generationMode !== undefined && !parallel) throw Error('工作台生成模式无效。');
@@ -319,6 +323,7 @@ export function validateWorkbench(value) {
         if (/OHLC\s*(?:图|走势)/iu.test(p.title) && chartVariant !== 'ohlc')
             throw Error(`面板「${p.title}」必须使用 chart.ohlc，绘制高低竖线与左开右收刻度；保留完整 OHLC/成交量数据，不能用蜡烛图替代。`);
         if(['summary','mind-map'].includes(p.type)&&p.artifact===undefined)throw Error('派生组件必须同时提供完整artifact和一个来源快照。'+DERIVED_GUIDANCE);
+        if(p.type==='audio' && p.artifact===undefined)throw Error('音频必须提供 artifact 及音频原网址或显式 url:null。'+AUDIO_GUIDANCE);
         if(p.type==='youtube' && p.artifact===undefined)throw Error('YouTube必须同时提供 artifact 及视频原网址或显式 url:null。'+YOUTUBE_GUIDANCE);
         if(p.type==='iframe' && p.artifact===undefined)throw Error('嵌入网页必须同时提供 artifact 及用户网址或显式 url:null。'+IFRAME_GUIDANCE);
         if (!isSimulated && p.artifact !== undefined) {
