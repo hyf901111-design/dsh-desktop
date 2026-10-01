@@ -216,7 +216,10 @@ export function prepareSimulatedArtifact(panel) {
     // Simulated data must never smuggle invented citations into a trusted host template.
     const hasLink = value => value && typeof value === 'object' && Object.entries(value).some(([key, item]) =>
         key === 'url' || key === 'sources' || (item && typeof item === 'object' && hasLink(item)));
-    if (hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
+    // A local calendar may reference user-supplied documents alongside virtual
+    // appointments. Its strict URL contract and simulated label remain active;
+    // preserve those fields without fetching or inventing a citation.
+    if (panel.type !== 'calendar' && hasLink(source)) throw Error(`面板「${panel.title}」的模拟数据不能包含外部链接。`);
     const artifact = structuredClone(source);
     artifact.version = 1;
     artifact.type = panel.type;

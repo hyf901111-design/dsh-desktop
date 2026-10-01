@@ -1077,6 +1077,21 @@ it('首次批量完成的金融序列保持半栏并按实际宽度补高',async
  expect(w.getWorkbenchCells()).toEqual(before)
 })
 
+it('日历首次完成按可信内容报告补足说明高度，保留逻辑布局',async()=>{
+ const f=await fixture(true),w=f.workspace;
+ const spec={version:1,type:'calendar',title:'日历',asOf:'用户提供的虚构记录',note:'完整来源说明',items:[{title:'会议',summary:'原摘要',date:'2026-09-28'}]};
+ const plan={id:'calendar-first',createdAt:Date.now(),panels:[{nodeId:'calendar-first-card',title:spec.title,prompt:'日历',taskId:'calendar-first-task',preparedOutput:acceptArtifactOutput(JSON.stringify(spec)),width:656,height:424,x:0,y:0,size:'large'}]};
+ await act(async()=>w.applyWorkbench(plan));
+ const before=structuredClone(w.getWorkbenchCells()),frame=f.host.querySelector('iframe[data-research-html-artifact]');
+ expect(frame).not.toBeNull();
+ const message={type:'sherlock-workbench-content-size',width:640,height:570};
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:{},data:message})));
+ expect(w.getSnapshot().artifacts[0].height).toBeLessThan(628);
+ await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:message})));
+ expect(w.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(628);
+ expect(w.getWorkbenchCells()).toEqual(before);
+})
+
 it('金融快照在侧栏挤窄后按可信内容报告补足显示高度，保持逻辑布局',async()=>{
  const f=await fixture(true),w=f.workspace,html='<body data-sherlock-market="share-statistics"></body>'
  await act(async()=>{w.setArtifacts([{...text('snapshot'),kind:'generated-container',containerPrompt:'股本统计',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'快照',html}}]);w.applyWorkbenchCells([{id:'snapshot',x:0,y:0,w:40,h:12}],true)})
