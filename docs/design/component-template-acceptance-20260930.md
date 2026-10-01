@@ -683,3 +683,11 @@ Figma源1918:343978，656×286、正文248、三块197×117、间隔16、数值2
 原生发现企业蓝色指标块中的原文链接仍继承通用蓝色规则，对比度不足；生产双层CSP回归显示rgb(0,120,180)而非白色。增加指标明细链接的重要继承色与下划线；九组新模板及九组该真实旧卡片原HTML均通过，零页面错误。保存记录与来源无需重写。
 
 核对真实刷新引擎发现失败会返回status:error对象，未抛出异常；原头部调用会将该结果及unchanged均报告为已更新。实际React头部与内部KPI回复联动的错误/未变化回归先失败；改为发布真实状态后区分success、unchanged、error及取消/未完成，不伪造成功。35项直接相关检查及类型检查通过。最终后继包旧卡片的白色链接、完整明细与应用重启恢复仍待接受；实现63/74、原生接受62/74。证据kpi-link-contrast-red/green.log、kpi-old-browser-checks.json、kpi-bound-status-red.log、kpi-native-fix-gate/typecheck.log及kpi-native-*.png均位于既有目录。
+
+### KPI最终本地包与旧卡片重启接受
+
+源码9b96f994受管集成至f315cb5b，本地构建、深度签名和完整包检查通过，包内组件技能v1.24.0与源码一致。真实主界面端口61132返回原验证会话，累计完成0项、运行任务-5个、未知耗时及原缺失说明完整；此前展开的第一项口径自动恢复。企业模式中原文链接显示白色并带下划线，完整来源与原口径可读；一键整理后组件收至实际内容高度，明细及页脚未遮挡。此次直接使用留存旧HTML，没有重新生成卡片或改写来源。
+
+原卡片HTML SHA-256仍为1c8cbfafdb1f813cc9052a38924f86139b338a6c4075137252608c5c1fdf9e54；sharedComponentState版本21z、open:[0]及revision:1与构建退出重启前完全一致。24.535秒首次一次prepared、18个原字段逐项一致和说明增补记录、三模式及未绑定来源真实设置反馈的首轮证据继续有效。原生最小280px拖拽未验证；绑定来源成功、未变化、失败三种回复经过实际React刷新入口的聚焦验证，未将其称为本卡片原生真实联网取数。
+
+证据kpi-final-build.log、kpi-final-package.log、kpi-native-final-old-enterprise.png、kpi-native-final-arranged-enterprise.png及kpi-native-final-restarted-audit.json位于/tmp/ework-template-acceptance-20260930/。客户端保持打开；未运行全功能测试。KPI计入接受：实现63/74、原生接受63/74，剩余11类与全量普通中文成功率统计继续进行，整体目标尚未完成。
