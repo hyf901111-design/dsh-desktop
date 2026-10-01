@@ -20,7 +20,7 @@ export function refineStoredTemplateHtml(html){
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
- if(model.templateId==='kpi'&&model.data.type==='kpi'&&html.includes('EWORK_KPI_SOURCE_V1')&&!html.includes('data-kpi-value-fit="v2"'))return html+`<style data-kpi-value-fit="v2">${KPI_VALUE_FIT_CSS}</style>`;
+ if(model.templateId==='kpi'&&model.data.type==='kpi'&&html.includes('EWORK_KPI_SOURCE_V1')&&!html.includes('data-kpi-value-fit="v3"'))return html+`<style data-kpi-value-fit="v3">${KPI_VALUE_FIT_CSS}</style>`;
  if(model.templateId==='market.price-performance'&&model.data.type==='market'&&model.data.variant==='price-performance'&&html.includes('class="financial-profile financial-series"')&&!html.includes('data-series-date-labels="v2"')){
   const script=/<script>\(function performanceRuntime\(s\)\s*\{[\s\S]*?<\/script>/;
   if(!script.test(html))return html;

@@ -29,11 +29,20 @@ it('空附件不填充样例、未知大小不补零、来源字段不能互相�
  expect(parseResearchContainerSpec(files).items[1]).not.toHaveProperty('sizeBytes')
  expect(parseResearchContainerSpec({...gallery,items:[{...gallery.items[0],relativePath:'chart.png'}]})).toBeNull()
 })
+it('文件与图库接受独立数据时点，不将它填入原文件日期或改写原始清单',()=>{
+ for(const spec of [files,gallery]){
+  const dated={...spec,asOf:'2026-10-02'};
+  expect(parseResearchContainerSpec(dated)).toEqual(dated);
+  expect(JSON.parse(acceptArtifactOutput(JSON.stringify(dated)))).toEqual(dated);
+  expect(validateWorkbench({requestId:spec.type+'-asof',title:'本人数据时点复验',dataMode:'source',panels:[{title:spec.title,type:spec.type,size:'medium',prompt:'原资料数据时点2026-10-02',artifact:dated}]}).panels[0].artifact).toEqual(dated);
+  expect(dated.items).toEqual(spec.items);expect(parseResearchContainerSpec({...dated,asOf:''})).toBeNull();expect(parseResearchContainerSpec({...dated,asOf:{date:'2026-10-02'}})).toBeNull();
+ }
+})
 it('文件与图库一次prepared完整原始清单，不启动逐卡生成',async()=>{
  const {registerWorkbench}=await import('../packages/dsh-research-task-runtime/workbench.js'),{mkdtemp,rm}=await import('node:fs/promises'),{tmpdir}=await import('node:os'),{join}=await import('node:path'),dir=await mkdtemp(join(tmpdir(),'attachment-contract-'));let tool,prepared=[],childCalls=0
  const ctx={agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}},runtime={startPreparedBatch:async({panels})=>{prepared=panels;return panels.map(p=>({taskId:p.canvasNodeId}))},start:async()=>{childCalls++;return{taskId:'unexpected'}}},dispose=await registerWorkbench(ctx,runtime,{filePath:join(dir,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async()=>({})})
  try{const result=await tool.execute({requestId:'own-attachment-prepared',title:'本人文件与图集',dataMode:'source',panels:[files,gallery].map(artifact=>({title:artifact.title,type:artifact.type,size:'medium',prompt:'只使用本人提供的原文件，不编造样例',artifact}))},{agent:{session:{id:'own-attachments'}}});expect(result.status).toBe('prepared');expect(result.templateIds).toEqual(['files','gallery']);expect(prepared.map(p=>p.artifact)).toEqual([files,gallery]);expect(childCalls).toBe(0)}finally{await dispose();await rm(dir,{recursive:true,force:true})}
 })
 it('附件内置技能完整模式与逐卡模式均使用当前预置契约',()=>{
- for(const profile of ['full','panel']){const content=loadBundledComponentSkill(undefined,{profile});expect(content).toContain('v1.31.0');for(const text of ['panel.type=files','panel.type=gallery','sizeBytes','不编造样例','不生成HTML或逐卡模型','权限独立','32MB'])expect(content).toContain(text)}
+ for(const profile of ['full','panel']){const content=loadBundledComponentSkill(undefined,{profile});expect(content).toContain('v1.33.0');for(const text of ['panel.type=files','panel.type=gallery','sizeBytes','不编造样例','不生成HTML或逐卡模型','权限独立','32MB'])expect(content).toContain(text)}
 })

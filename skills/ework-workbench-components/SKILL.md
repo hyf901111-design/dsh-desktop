@@ -9,7 +9,7 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 
 ## 接单与证据
 
-用户已经提供完整原始记录时，包括虚构验收记录，使用 dataMode:"source" 和对应预置 artifact 原样提交。数据范围、分类、日期和缺失原因均按原文；不从另一张表的最新月份推断指标的“本月”范围。不将完整虚构原材料当成需要生成的模拟样例。
+用户已经提供完整原始记录时，包括虚构验收记录，使用 dataMode:"source" 和对应预置 artifact 原样提交。数据范围、分类、日期和缺失原因均按原文；不从另一张表的最新月份推断指标的“本月”范围。change/detail/source等附加字段只复制该原指标明示说明；没有原口径时省略，不补上月月份、基数或计算解释。不将完整虚构原材料当成需要生成的模拟样例。
 
 客户端内创建工作台时，标的和面板类型明确就立即调用 `research_workbench_create` 提交完整清单，先将规划卡展开为矩阵。工具的 `panels` 为必填；自定义需求填写完整面板，内置 preset 填 `panels:[]`，不能仅传 title。真实数据用 `dataMode:"source"`，各面板 prompt 写清已启用的数据来源、字段和日期范围；已有完整数据附 artifact，其余由面板任务独立取数。不要在主会话取齐全部接口、复算大量序列、手写整套 JSON 后才创建工作台。固定模板已经负责样式、均线和交互；不要为这些任务阅读 Figma 文档或搜索客户端源码。需要数据契约时直接调用 `research_component_data` 的 `templates`。下列设计复核步骤仅在用户要求设计或改造模板时执行。
 
@@ -84,8 +84,8 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 YouTube视频用panel.type=youtube，首次同时提交artifact:{version:1,type:"youtube",title,url,description?,durationSeconds?,thumbnailUrl?,subtitles?}，使用source模式。不提供网址时url:null，宿主显示Figma网址输入空态；只使用用户原视频网址，不猜测视频、不生成HTML或逐卡任务。已取得的时长秒数、封面原网址、完整字幕和说明保留，未知资料不编造。支持watch、youtu.be、shorts、embed、live视频地址；宿主采用YouTube官方播放器，不自动播放，重新载入仅表示加载请求。
 
 
-总结提炼使用 panel.type=summary；思维导图使用 panel.type=mind-map。首次同时提交完整 artifact:{version:1,type,title,content,source:{title,text,nodeId?}}。content保留完整结果；source冻结一个所选组件的原标题和原文，用户直接提供材料时明确写“本人提供材料”。只有实际已知画布ID才填nodeId，不猜测来源链接。摘要分清事实、推断和待验证，不扩展到整个工作台，不增加来源没有的事实。导图只用一个“# ”根标题和两空格缩进的完整列表，不把普通正文悄悄丢弃；最多500节点。结果和原文独立保存，结果可编辑，来源可返回，支持三主题及内容适配。单项原文/结果各≤32000字符，完整JSON≤64KB。两类套用Figma 1918:343676/1917:357536，不生成HTML，不启动逐卡模型。
+总结提炼使用 panel.type=summary；思维导图使用 panel.type=mind-map。首次同时提交完整 artifact:{version:1,type,title,asOf?（材料数据时点）,content,source:{title,text,nodeId?}}。content保留完整结果；source冻结一个所选组件的原标题和原文，用户直接提供材料时明确写“本人提供材料”。只有实际已知画布ID才填nodeId，不猜测来源链接。摘要分清事实、推断和待验证，不扩展到整个工作台，不增加来源没有的事实。导图只用一个“# ”根标题和两空格缩进的完整列表，不把普通正文悄悄丢弃；最多500节点。结果和原文独立保存，结果可编辑，来源可返回，支持三主题及内容适配。单项原文/结果各≤32000字符，完整JSON≤64KB。两类套用Figma 1918:343676/1917:357536，不生成HTML，不启动逐卡模型。
 
 音频使用 panel.type=audio，首次提交 artifact:{version:1,type:"audio",title,url,description?,source?,date?,durationSeconds?,waveform?,transcript?,chapters?}。仅使用本人明确提供的无凭据HTTP/HTTPS音频原网址；未提供时url:null显示添加音频空态。时长单位秒，waveform仅为实际取得的0至1振幅数组，chapters:[{title,startSeconds}]，转写完整保留。未知时长、波形和转写不编造；不合成音频或HTML、不启动逐卡模型、不自动播放。采用source模式。 宿主保留完整转写、章节和来源，播放器控制随窄卡换行；会话切换暂停音频并记住当前进度、速度和音量，返回后由用户继续播放。重新加载只表示已请求加载音源，实际成功或失败由媒体事件显示。Figma 1918:353063，默认656×264，统一最小280×180；来源网址保存不代表应用重启后恢复临时播放进度。
 
-文件使用 panel.type=files，图集使用 panel.type=gallery。首次同时提供完整 artifact:{version:1,type,title,items:[{id,name,url或relativePath,description?,source?,date?,sizeBytes?,mimeType?,alt?,permissions?:{preview?,download?,remove?}}]}，采用 source 模式，宿主直接 prepared，不生成HTML或逐卡模型。每项只允许一个原来源：本人明确提供的无凭据HTTP/HTTPS网址或当前工作目录内相对路径；未提供时url:null或items:[]，不编造样例。authorizationId仅由用户在客户端导入产生，模型不创建或猜测。保留完整长文件名、原0/负数/未知说明、原来源、图片alt和元信息。sizeBytes为真实字节数，未知省略或null，不补零。预览、下载、移除权限独立；移除只删本卡引用，原文件保留，可画布撤销恢复。Figma文件1918:347373默认656×410、图库1918:347930默认656×364，统一最小280×180；缩略图只用于浏览，原图预览和下载保持原始字节。导入进度显示实际完成文件数，失败可重试；已完成附件保存授权后可恢复，未完成导入不声称跨重启恢复。HTTP原文件下载不复用网页登录Cookie，不自动跟随重定向，单文件32MB；仅用户确认实际保存后显示成功，取消或失败如实显示。重新载入只请求原文件预览，不改写附件清单或生成新数据。
+文件使用 panel.type=files，图集使用 panel.type=gallery。首次同时提供完整 artifact:{version:1,type,title,asOf?（资料数据时点，不代替每项原文件date）,items:[{id,name,url或relativePath,description?,source?,date?,sizeBytes?,mimeType?,alt?,permissions?:{preview?,download?,remove?}}]}，采用 source 模式，宿主直接 prepared，不生成HTML或逐卡模型。每项只允许一个原来源：本人明确提供的无凭据HTTP/HTTPS网址或当前工作目录内相对路径；未提供时url:null或items:[]，不编造样例。authorizationId仅由用户在客户端导入产生，模型不创建或猜测。保留完整长文件名、原0/负数/未知说明、原来源、图片alt和元信息。sizeBytes为真实字节数，未知省略或null，不补零。预览、下载、移除权限独立；移除只删本卡引用，原文件保留，可画布撤销恢复。Figma文件1918:347373默认656×410、图库1918:347930默认656×364，统一最小280×180；缩略图只用于浏览，原图预览和下载保持原始字节。导入进度显示实际完成文件数，失败可重试；已完成附件保存授权后可恢复，未完成导入不声称跨重启恢复。HTTP原文件下载不复用网页登录Cookie，不自动跟随重定向，单文件32MB；仅用户确认实际保存后显示成功，取消或失败如实显示。重新载入只请求原文件预览，不改写附件清单或生成新数据。
