@@ -15,7 +15,8 @@ body :is(button,input,select,textarea){font-size:12px!important;line-height:18px
 body :is(input,select,textarea){background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border:1px solid var(--sherlock-control-border)!important;padding:2px 7px!important;box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
 body :is(input,textarea)::placeholder{color:var(--sherlock-control-muted,var(--sherlock-muted))!important;opacity:1}
 body :is(input:not([type="checkbox"]):not([type="radio"]),select){height:26px!important;min-height:26px!important}
-body :is(button,input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-primary)!important;outline-offset:1px}
+body :is(button,input,select,textarea):focus-visible{outline:1px solid var(--sherlock-control-primary)!important;outline-offset:-1px!important}
+body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),select,textarea):focus{border-color:var(--sherlock-control-primary)!important;outline:1px solid var(--sherlock-control-primary)!important;outline-offset:-1px!important}
 body :is(.controls,.fund-filters,.fund-industry-filters,.market-candle-controls,.price-volume-controls,.order-book-controls,.fund-flow-controls,.valuation-controls,.equity-controls,.risk-controls,.event-filters,.terminal-table-toolbar){gap:6px!important;flex-wrap:wrap!important}
 body :is(.controls,.fund-filters,.fund-industry-filters,.market-candle-controls,.price-volume-controls,.order-book-controls,.fund-flow-controls,.valuation-controls,.equity-controls,.risk-controls,.event-filters,.terminal-table-toolbar) button{background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border:1px solid var(--sherlock-control-border)!important;min-height:26px!important;padding:2px 7px!important}
 body button[aria-pressed="true"]{color:var(--sherlock-control-primary)!important;border-color:var(--sherlock-control-primary)!important}
@@ -23,7 +24,7 @@ body .series-controls button[aria-pressed="true"]{background:var(--sherlock-row-
 body .series-legend button{background:var(--sherlock-control-bg)!important;color:var(--sherlock-control-text)!important;border-color:var(--sherlock-control-border)!important}
 body button.fund-industry{background:var(--sherlock-row-alternate)!important;color:var(--sherlock-text)!important;border:0!important;border-radius:0!important;outline:0!important;min-height:30px!important;padding:4px 8px!important;grid-template-columns:minmax(72px,90px) minmax(0,1fr) 48px!important;gap:8px!important}
 body button.fund-industry:is(:hover,[aria-pressed="true"]){background:var(--sherlock-row-selected)!important;color:var(--sherlock-text)!important;border:0!important;outline:0!important}
-body button.fund-industry:focus-visible{outline:1px solid var(--sherlock-muted)!important;outline-offset:1px}
+body button.fund-industry:focus-visible{outline:1px solid var(--sherlock-muted)!important;outline-offset:-1px!important}
 body button.fund-industry :is(.fund-industry-label,.fund-industry-value){color:var(--sherlock-text)!important;font-size:12px!important;line-height:18px!important}
 body .fund-industry-readout:empty{display:none!important}
 body :is(table,.fund-table){width:100%!important;border-collapse:collapse!important;font:400 12px/18px var(--sherlock-font-sans)!important;color:var(--sherlock-text)!important;background:var(--sherlock-bg)!important}
