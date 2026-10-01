@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "窄价格组件日期避让与旧模板修正",
+        "featureName": "事件模板首次显示自动补高与原生验收记录",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "66d87686b5fcc25f1e3737bee56487d8d6df7842",
-        "tipCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
+        "baseCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
+        "tipCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
         "commits": [
           {
-            "commit": "4cb597d3eb63f31e739a1023c7965ce371829563",
+            "commit": "3c59d3bf55ac71966b75d163769ff5861b0abbcf",
             "parents": [
-              "66d87686b5fcc25f1e3737bee56487d8d6df7842"
+              "4cb597d3eb63f31e739a1023c7965ce371829563"
             ],
-            "subject": "修复：窄价格组件日期标签避让并升级旧模板展示"
+            "subject": "验收：记录标题悬停旧控件及收入展开原生结果"
+          },
+          {
+            "commit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+            "parents": [
+              "3c59d3bf55ac71966b75d163769ff5861b0abbcf"
+            ],
+            "subject": "修复：分红拆股首次显示按可信内容自动补高"
           }
         ],
         "files": [
@@ -29,19 +36,15 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-series.js"
+            "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-series.test.js"
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -79,9 +82,9 @@
               "test/terminal-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "28个直接相关及继承门禁文件506项通过，旧价格模板修正与窄日期避免重叠通过",
-            "verifiedCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
-            "completedAt": "2026-10-01T00:27:35.317109+00:00",
+            "summary": "28个直接相关及继承门禁文件508项通过，包含事件首次补高回归",
+            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+            "completedAt": "2026-10-01T01:01:40.713Z",
             "timeoutMs": 300000
           },
           {
@@ -94,8 +97,8 @@
             ],
             "outcome": "passed",
             "summary": "20项真实取数工具、离线权限及指定来源修复验收通过",
-            "verifiedCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
-            "completedAt": "2026-10-01T00:27:35.317109+00:00",
+            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+            "completedAt": "2026-10-01T01:00:57.062Z",
             "timeoutMs": 300000
           },
           {
@@ -106,8 +109,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
-            "completedAt": "2026-10-01T00:27:35.317109+00:00",
+            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+            "completedAt": "2026-10-01T01:01:03.793Z",
             "timeoutMs": 300000
           },
           {
@@ -118,8 +121,8 @@
             ],
             "outcome": "passed",
             "summary": "早期工作台规划政策检查通过",
-            "verifiedCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
-            "completedAt": "2026-10-01T00:27:35.317109+00:00",
+            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+            "completedAt": "2026-10-01T01:00:53.659Z",
             "timeoutMs": 300000
           },
           {
@@ -132,72 +135,26 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥检查通过，27项既有非相关检查跳过",
-            "verifiedCommit": "4cb597d3eb63f31e739a1023c7965ce371829563",
-            "completedAt": "2026-10-01T00:27:35.317109+00:00",
+            "verifiedCommit": "35f4bb247cc4319cda9c5dcf71becb93f6196c85",
+            "completedAt": "2026-10-01T01:00:58.980Z",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "旧价格图36组窄宽度、三模式及范围切换检查通过，0页面错误；最终原生包复验待完成"
+          "summary": "此前三模式与会话往返已记录，本次首次显示补高还须最终包复验"
         },
         "acceptanceCriteria": [
-          "窄价格图按测量保留起止日期并避让中间标签",
-          "可信旧模板不改写原数据、不改变控件记录路径",
-          "统一缩放下限与长标题预览继续有效"
+          "首次事件卡按可信自然内容补足本地高度",
+          "手动最小框与标题预览不受影响",
+          "原始来源记录与共享格位保持"
         ],
         "risks": [
-          "53/74实现，49/74原生接受；仍缺21类模板",
-          "整体生成成功率高于90%尚未验证",
-          "新模板与用户反馈修正待最终包原生验收",
-          "7项既存HTML完整文件失败未计为通过"
+          "53/74实现，51/74原生接受",
+          "事件初次显示修正待最终包验证",
+          "整体成功率>90%未证实"
         ],
-        "generatedAt": "2026-10-01T00:27:35.317109+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
-        "verificationCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
-            "completedAt": "2026-10-01T00:28:53.235Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
-            "completedAt": "2026-10-01T00:28:53.235Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
-            "completedAt": "2026-10-01T00:28:53.235Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T00:28:53.235Z"
+        "generatedAt": "2026-10-01T01:01:40.713Z"
       }
     }
   ],
