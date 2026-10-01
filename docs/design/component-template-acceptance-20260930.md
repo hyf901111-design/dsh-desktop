@@ -737,3 +737,9 @@ Figma 1917:353041/353042 当前默认稿为485×340，38px顶栏与302px正文�
 - 发现最小高度编辑表单的居中溢出：280×180、内容高 142px 时标题从视区上方 5px 开始，按钮下沿越过底部。改为安全居中并禁止内容项被挤压；空间不足时整个表单内部滚动。
 - 真实 Chrome 加载生产渲染器后，标题初始完整，滚动到表单底部后两个按钮均高 30px 且完整可见（scrollHeight 176px、scrollTop 34px）；证据 `iframe-minimum-browser-metrics.json` 与 `iframe-minimum-browser-buttons.png`。12 项直接聚焦及类型检查通过。
 - 修正后的最终包待复验，不提前计为接受。实现 65/74，原生接受 64/74。
+
+### 嵌入网页最小表单最终包与键盘问题（2026-10-01）
+
+集成包381756e6本地构建、深度签名与完整包检查通过，技能v1.26.0；真实主界面端口53550返回同一合成会话。在保存的网格统一最小宽高下，编辑表单初始标题完整，滚动到末端后保存及取消均完整且可点击；输入框四边聚焦线可见。空网址通过保存按钮返回空态，原说明与节点保留。证据iframe-native-minimum-form-top.png、iframe-native-minimum-form-buttons.png及iframe-minimum-native-package.log。
+
+实际鼠标聚焦后清空并按回车未保存，记录为未通过。添加独立的回车校验/保存处理，阻止中文组合输入提前提交；真实宿主键盘回归先失败，修正后13项直接相关聚焦及项目类型检查通过。保留iframe-keyboard-red.log、iframe-keyboard-tests.log和iframe-keyboard-typecheck.log。此键盘修正后最终包尚待复验；实现65/74、原生接受64/74，不提前计为完成。
