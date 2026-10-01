@@ -9,37 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "原记录口径与导图首层兼容及KPI自适应",
+        "featureName": "公共资料时点和指标字号口径修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "c8399fb75cae5c76779bf5276f03b2414f2a7115",
-        "tipCommit": "a1cec41621d66acdf34b2f07e593e66fa30adf5e",
+        "baseCommit": "a1cec41621d66acdf34b2f07e593e66fa30adf5e",
+        "tipCommit": "fd499722e7ccd54f71666a41b19fd518ae5f5eb8",
         "commits": [
           {
-            "commit": "1d9dba73a3cbf5d43d2bb7c3f820d0a911924b8d",
+            "commit": "fd499722e7ccd54f71666a41b19fd518ae5f5eb8",
             "parents": [
-              "c8399fb75cae5c76779bf5276f03b2414f2a7115"
+              "a1cec41621d66acdf34b2f07e593e66fa30adf5e"
             ],
-            "subject": "优化：原图访问失败使用清楚的中文提示"
-          },
-          {
-            "commit": "f04a508f29dde89611ff2563b2008ca0543ebfea",
-            "parents": [
-              "1d9dba73a3cbf5d43d2bb7c3f820d0a911924b8d"
-            ],
-            "subject": "优化：指标数值按卡片宽度缩放并保留完整单位"
-          },
-          {
-            "commit": "a1cec41621d66acdf34b2f07e593e66fa30adf5e",
-            "parents": [
-              "f04a508f29dde89611ff2563b2008ca0543ebfea"
-            ],
-            "subject": "修复：完整原记录口径与导图起始缩进兼容"
+            "subject": "修复：保留组件资料时点并纠正指标字体层级和原文口径"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/attachment-template-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/attachment-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/derived-template-contract.d.ts"
           },
           {
             "status": "M",
@@ -59,10 +57,6 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/install-brand-assets.mjs"
           },
           {
@@ -71,7 +65,7 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
+            "path": "scripts/lib/derived-preset-client.mjs"
           },
           {
             "status": "M",
@@ -83,15 +77,11 @@
           },
           {
             "status": "M",
-            "path": "test/calendar-template.test.js"
+            "path": "test/attachment-template.test.js"
           },
           {
             "status": "M",
             "path": "test/derived-template-contract.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
           },
           {
             "status": "M",
@@ -103,15 +93,15 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/attachment-template.test.js",
               "test/derived-template-contract.test.js",
-              "test/calendar-template.test.js",
               "test/kpi-template.test.js",
               "test/stored-template-refinements.test.js"
             ],
             "outcome": "passed",
-            "summary": "25项完整原记录与显示修正检查通过",
-            "verifiedCommit": "a1cec41621d66acdf34b2f07e593e66fa30adf5e",
-            "completedAt": "2026-10-01T22:18:01.695226+00:00",
+            "summary": "26项原资料时点与KPI字体层级检查通过",
+            "verifiedCommit": "fd499722e7ccd54f71666a41b19fd518ae5f5eb8",
+            "completedAt": "2026-10-01T22:52:44.682977+00:00",
             "timeoutMs": 300000
           },
           {
@@ -123,83 +113,27 @@
               "附件|图库刷新|派生预置|重复补丁恢复"
             ],
             "outcome": "passed",
-            "summary": "19项实际客户端模块附件派生与补丁检查通过",
-            "verifiedCommit": "a1cec41621d66acdf34b2f07e593e66fa30adf5e",
-            "completedAt": "2026-10-01T22:18:01.695226+00:00",
+            "summary": "19项真实模块附件派生与补丁聚焦检查通过",
+            "verifiedCommit": "fd499722e7ccd54f71666a41b19fd518ae5f5eb8",
+            "completedAt": "2026-10-01T22:52:44.682977+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "旧包普通输入实际暴露口径与导图初层问题；修复后10卡普通输入复验已预先声明等待新包"
+          "summary": "旧包同题十卡失败保留；真实浏览器测得同层字号规则生效，修复后原生同题队列已声明待新包"
         },
         "acceptanceCriteria": [
-          "完整原记录source原样提交",
-          "两空格导图起始不丢节点",
-          "KPI窄卡数值完整",
-          "原图失败中文提示"
+          "所有原资料时点完整保留",
+          "KPI窄卡数值单位不拆词",
+          "KPI附加口径不推断未给时期",
+          "十卡首次工具与原语义严格复验"
         ],
         "risks": [
-          "新包同题10卡与三主题原生复验待完成"
+          "新包三主题与十卡首次普通输入仍待复验",
+          "旧协作适配器测试锚点漂移记录保留，不列为通过"
         ],
-        "generatedAt": "2026-10-01T22:18:01.695226+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ea441de2458aa522d4a458667cdb8928411e14d5",
-        "verificationCommit": "ea441de2458aa522d4a458667cdb8928411e14d5",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "ea441de2458aa522d4a458667cdb8928411e14d5",
-            "completedAt": "2026-10-01T22:23:36.945Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "ea441de2458aa522d4a458667cdb8928411e14d5",
-            "completedAt": "2026-10-01T22:23:36.945Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ea441de2458aa522d4a458667cdb8928411e14d5",
-            "completedAt": "2026-10-01T22:23:36.945Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "ea441de2458aa522d4a458667cdb8928411e14d5",
-            "completedAt": "2026-10-01T22:23:36.945Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T22:23:36.945Z"
+        "generatedAt": "2026-10-01T22:52:44.682977+00:00"
       }
     },
     {
