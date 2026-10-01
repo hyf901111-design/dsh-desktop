@@ -1,4 +1,4 @@
-export const DERIVED_GUIDANCE='总结提炼使用type=summary，思维导图使用type=mind-map。首次同时提交完整artifact:{version:1,type,title,content,source:{title,text,nodeId?}}。content为完整结果，source为一个所选组件的冻结原标题和完整原文；仅当已有画布组件ID明确时提供nodeId，不猜ID。不扩展到整个工作台，不补充来源未提供的事实；摘要区分事实、推断和待验证。思维导图content仅用一个#根标题和完整项目列表；第一层项目可无缩进或两空格缩进，之后每层增加两空格，不能把普通正文静默丢掉。结果可编辑、原文独立保留。用户直接提供的材料也可作为source，明确来源为本人提供材料，不编造画布链接。不生成HTML，不启动逐卡模型。'
+export const DERIVED_GUIDANCE='总结提炼使用type=summary，思维导图使用type=mind-map。首次同时提交完整artifact:{version:1,type,title,asOf?（材料数据时点）,content,source:{title,text,nodeId?}}。content为完整结果，source为一个所选组件的冻结原标题和完整原文；仅当已有画布组件ID明确时提供nodeId，不猜ID。不扩展到整个工作台，不补充来源未提供的事实；摘要区分事实、推断和待验证。思维导图content仅用一个#根标题和完整项目列表；第一层项目可无缩进或两空格缩进，之后每层增加两空格，不能把普通正文静默丢掉。结果可编辑、原文独立保留。用户直接提供的材料也可作为source，明确来源为本人提供材料，不编造画布链接。不生成HTML，不启动逐卡模型。'
 export const DERIVED_TEMPLATES=Object.freeze([
  {id:'summary',type:'summary',title:'总结提炼',figma:'1918:343676'},
  {id:'mind-map',type:'mind-map',title:'思维导图',figma:'1917:357536'}
@@ -25,7 +25,8 @@ export function derivedOutline(content){
 export function parseDerivedSpec(s){
  const text=(v,max)=>typeof v==='string'&&v.trim()&&v.length<=max
  if(!s||typeof s!=='object'||Array.isArray(s)||s.version!==1||!['summary','mind-map'].includes(s.type)||!text(s.title,256)||!text(s.content,32000))return null
- if(Object.keys(s).some(k=>!['version','type','title','content','source'].includes(k)))return null
+ if(Object.keys(s).some(k=>!['version','type','title','content','source','asOf'].includes(k)))return null
+ if(s.asOf!==undefined&&!text(s.asOf,1024))return null
  const source=s.source
  if(!source||typeof source!=='object'||Array.isArray(source)||!text(source.title,256)||!text(source.text,32000)||Object.keys(source).some(k=>!['title','text','nodeId'].includes(k)))return null
  if(source.nodeId!==undefined&&(typeof source.nodeId!=='string'||!/^[-\w:]{1,128}$/.test(source.nodeId)))return null

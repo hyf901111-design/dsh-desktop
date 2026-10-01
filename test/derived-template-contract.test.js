@@ -33,3 +33,12 @@ it('根标题下两空格起始的完整导图等价保留全部原分支和来�
  const indented={...mindmap,content:mindmap.content.replace(/\n/g,'\n  ')};expect(parseResearchContainerSpec(indented)).toEqual(indented);expect(derivedOutline(indented.content)).toEqual(derivedOutline(mindmap.content));expect(validateWorkbench({requestId:'indented-original',title:indented.title,dataMode:'source',panels:[{title:indented.title,prompt:'完整原导图',type:'mind-map',size:'medium',artifact:indented}]}).panels[0].artifact).toEqual(indented);
  for(const content of ['# 根\n    - 跳过第一层','# 根\n  - 第一分支\n- 混用起始层级','# 根\n  - 分支\n      - 跳层'])expect(derivedOutline(content)).toBeNull();
 })
+it('派生结果独立保留材料时点及冻结原文，完整批量首轮不因公共元信息被拒绝',()=>{
+ for(const spec of [summary,mindmap]){
+  const dated={...spec,asOf:'2026-10-02'};
+  expect(parseResearchContainerSpec(dated)).toEqual(dated);
+  expect(JSON.parse(acceptArtifactOutput(JSON.stringify(dated)))).toEqual(dated);
+  expect(validateWorkbench({requestId:spec.type+'-asof',title:spec.title,dataMode:'source',panels:[{title:spec.title,prompt:'本人原材料时点2026-10-02',type:spec.type,size:'medium',artifact:dated}]}).panels[0].artifact).toEqual(dated);
+  expect(parseResearchContainerSpec({...dated,asOf:''})).toBeNull();expect(parseResearchContainerSpec({...dated,asOf:20261002})).toBeNull();expect(dated.source).toEqual(spec.source);
+ }
+})
