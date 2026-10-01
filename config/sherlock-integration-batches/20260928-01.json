@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "摘要正文三主题字体和颜色修正",
+        "featureName": "派生来源按钮的画布定位导航修正",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40",
-        "tipCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
+        "baseCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
+        "tipCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
         "commits": [
           {
-            "commit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
+            "commit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
             "parents": [
-              "8adac8b9f86a9f0f3db99c3b57a22e405c70cb40"
+              "db4a069b2b756c920d59c11c4a9bd3fa07e299eb"
             ],
-            "subject": "修正摘要正文三主题字体和颜色继承"
+            "subject": "修复派生来源按钮在画布中的定位导航"
           }
         ],
         "files": [
@@ -30,6 +30,10 @@
           {
             "status": "M",
             "path": "scripts/lib/derived-preset-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -45,9 +49,9 @@
               "派生预置|导图即prepared|derived presets|unique semantic|重复补丁恢复"
             ],
             "outcome": "passed",
-            "summary": "14项直接相关检查通过，含再次总结完整来源、prepared、窄卡自然高度和只读限制",
-            "verifiedCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
-            "completedAt": "2026-10-01T16:38:26.894852+00:00",
+            "summary": "16项相关检查通过，含来源点击直接定位、只读导航、删除来源保留原文及prepared",
+            "verifiedCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
+            "completedAt": "2026-10-01T16:47:51.006020+00:00",
             "timeoutMs": 300000
           },
           {
@@ -58,8 +62,8 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
-            "completedAt": "2026-10-01T16:38:26.894852+00:00",
+            "verifiedCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
+            "completedAt": "2026-10-01T16:47:51.006020+00:00",
             "timeoutMs": 300000
           },
           {
@@ -69,14 +73,14 @@
             ],
             "outcome": "passed",
             "summary": "完整前端补丁重复执行通过",
-            "verifiedCommit": "db4a069b2b756c920d59c11c4a9bd3fa07e299eb",
-            "completedAt": "2026-10-01T16:38:26.894852+00:00",
+            "verifiedCommit": "21e3c494614266f4bd6a54a347f6ac7ea52ba90f",
+            "completedAt": "2026-10-01T16:47:51.006020+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "集成e2537bb0真实客户端双卡首提26.217秒、冻结原文、再次总结、整篇设置编辑保存通过；实际浅色正文继承问题已修正，最终包待复验"
+          "summary": "e2537bb0实际日常双卡首提26.217秒、完整来源、再次总结与整篇编辑通过；实际来源返回定位问题已修复，字体和导航最终同包待验"
         },
         "acceptanceCriteria": [
           "Figma摘要与导图980×280及统一最小280×180，来源11px正文12px",
@@ -84,68 +88,11 @@
           "三主题、整理自然高度、编辑和一键派生、会话恢复"
         ],
         "risks": [
-          "字体颜色修正最终包待复验；实现68/74，原生接受65/74",
+          "字体颜色及来源导航修正最终包待复验；实现68/74，原生接受65/74",
           "原生直接双击未观测到编辑，设置菜单编辑已通过；不计双击通过",
           "YouTube原生播放仍需本人登录；总体目标继续"
         ],
-        "generatedAt": "2026-10-01T16:38:26.894852+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a60bd3ee7a8c870ee82951feb68ba4c3f9a63809",
-        "verificationCommit": "a60bd3ee7a8c870ee82951feb68ba4c3f9a63809",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a60bd3ee7a8c870ee82951feb68ba4c3f9a63809",
-            "completedAt": "2026-10-01T16:41:39.134Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a60bd3ee7a8c870ee82951feb68ba4c3f9a63809",
-            "completedAt": "2026-10-01T16:41:39.134Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a60bd3ee7a8c870ee82951feb68ba4c3f9a63809",
-            "completedAt": "2026-10-01T16:41:39.134Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "a60bd3ee7a8c870ee82951feb68ba4c3f9a63809",
-            "completedAt": "2026-10-01T16:41:39.134Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T16:41:39.134Z"
+        "generatedAt": "2026-10-01T16:47:51.006020+00:00"
       }
     },
     {
