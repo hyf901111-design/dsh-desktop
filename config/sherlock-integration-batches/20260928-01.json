@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "嵌入网页网址输入回车保存修复",
+        "featureName": "整理画布排除原生网页视口测量",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "4d108ad6caf962d4bf4e125b98c33db842b2b675",
-        "tipCommit": "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe",
+        "baseCommit": "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe",
+        "tipCommit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
         "commits": [
           {
-            "commit": "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe",
+            "commit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
             "parents": [
-              "4d108ad6caf962d4bf4e125b98c33db842b2b675"
+              "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe"
             ],
-            "subject": "修复网页组件网址输入回车保存并保护中文组合输入"
+            "subject": "修复整理画布误用原生网页截图高度导致卡片压矮"
           }
         ],
         "files": [
@@ -29,7 +29,7 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/iframe-client.mjs"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
@@ -45,12 +45,12 @@
               "test/research-grid-client.test.js",
               "test/research-canvas-clipboard.test.ts",
               "-t",
-              "嵌入网页|公开工具第一次提交空网页|copies native iframe|重复补丁恢复原始代码|组件设置向右展开|只读链接"
+              "嵌入网页|公开工具第一次提交空网页|copies native iframe|重复补丁恢复原始代码|组件设置向右展开|只读链接|链接组件使用隔离网页"
             ],
             "outcome": "passed",
-            "summary": "13项嵌入网页、键盘组合输入和相关画布聚焦通过",
-            "verifiedCommit": "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe",
-            "completedAt": "2026-10-01T13:38:32.381627+00:00",
+            "summary": "15项嵌入网页、延迟整理及隔离链接聚焦通过",
+            "verifiedCommit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
+            "completedAt": "2026-10-01T13:58:02.331145+00:00",
             "timeoutMs": 300000
           },
           {
@@ -61,14 +61,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe",
-            "completedAt": "2026-10-01T13:38:32.381627+00:00",
+            "verifiedCommit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
+            "completedAt": "2026-10-01T13:58:02.331145+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实集成包381756e6的最小表单完整滚动和聚焦边框通过，回车未保存被检出；生产宿主键盘修复回归通过，最终包待复验"
+          "summary": "实际集成包2a3fb09c回车校验和保存通过；真实整理发现压矮，生产宿主回归先红后绿；本次最终包待核验"
         },
         "acceptanceCriteria": [
           "Figma485×340空态、14px源加号、统一最小尺寸",
@@ -76,67 +76,10 @@
           "真实客户端网页加载失败重试与往返保留"
         ],
         "risks": [
-          "本次回车保存修正最终本地包尚待验证",
+          "本次原生网页整理修复最终包尚待验证",
           "实现65/74原生接受64/74，总目标仍在执行"
         ],
-        "generatedAt": "2026-10-01T13:38:32.381627+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f4cf74d41dc11d62a56530bdbca20c4f576cc26a",
-        "verificationCommit": "f4cf74d41dc11d62a56530bdbca20c4f576cc26a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "f4cf74d41dc11d62a56530bdbca20c4f576cc26a",
-            "completedAt": "2026-10-01T13:41:31.955Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "f4cf74d41dc11d62a56530bdbca20c4f576cc26a",
-            "completedAt": "2026-10-01T13:41:31.955Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f4cf74d41dc11d62a56530bdbca20c4f576cc26a",
-            "completedAt": "2026-10-01T13:41:31.955Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "f4cf74d41dc11d62a56530bdbca20c4f576cc26a",
-            "completedAt": "2026-10-01T13:41:31.955Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T13:41:31.955Z"
+        "generatedAt": "2026-10-01T13:58:02.331145+00:00"
       }
     },
     {
