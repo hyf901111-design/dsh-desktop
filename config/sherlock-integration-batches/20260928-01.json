@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记控件尺寸与深色对比度修复",
+        "featureName": "RSS订阅预置与宿主实际公开读取",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "4d37ce212fcfd63f66066d9d211baf2175f3834e",
-        "tipCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
+        "baseCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
+        "tipCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
         "commits": [
           {
-            "commit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
+            "commit": "53504ef92e3a9955bddd15b2c82623cdd05cfd7c",
             "parents": [
-              "4d37ce212fcfd63f66066d9d211baf2175f3834e"
+              "8ca702c425c516bca99c9c086801bdcfd631cd71"
             ],
-            "subject": "修复：统一笔记工具栏尺寸并提高深色图标对比度"
+            "subject": "验证：记录预置笔记首次生成与原生草稿恢复通过"
+          },
+          {
+            "commit": "3853c963e061a8930220127d34efb4c92b1e88ab",
+            "parents": [
+              "53504ef92e3a9955bddd15b2c82623cdd05cfd7c"
+            ],
+            "subject": "功能：预置RSS订阅模板并接通公开来源读取和失败保留"
           }
         ],
         "files": [
@@ -28,8 +35,120 @@
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/artifact-output.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.d.ts"
+          },
+          {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/rss-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/rss-assets.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/rss-template-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/rss-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-interaction-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/rss-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/research-rss.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/markdown-note.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/operations-template.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-rss.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/rss-status.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/rss-template.test.js"
           }
         ],
         "checks": [
@@ -37,13 +156,20 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/rss-template.test.js",
+              "test/research-rss.test.ts",
+              "test/rss-status.test.js",
+              "test/component-data-status.test.js",
+              "test/operations-template.test.js",
               "test/markdown-note.test.js",
-              "test/workbench-execution-policy.test.js"
+              "test/workbench-execution-policy.test.js",
+              "test/component-interaction-state.test.js",
+              "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "15项相关检查通过",
-            "verifiedCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
-            "completedAt": "2026-10-01T06:52:16.867007+00:00",
+            "summary": "186项相关检查通过",
+            "verifiedCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
+            "completedAt": "2026-10-01T07:57:16.978211+00:00",
             "timeoutMs": 300000
           },
           {
@@ -54,70 +180,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "8ca702c425c516bca99c9c086801bdcfd631cd71",
-            "completedAt": "2026-10-01T06:52:16.867007+00:00",
+            "verifiedCommit": "3853c963e061a8930220127d34efb4c92b1e88ab",
+            "completedAt": "2026-10-01T07:57:16.978211+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产双层沙盒980/480/280宽度与三模式9组；源图标对比度、32px工具栏及10k草稿重建通过"
+          "summary": "生产双层CSP三模式与三宽度9组；实际20条公开RSS快照、添加刷新失败保留、搜索页签恢复及移除通过"
         },
         "acceptanceCriteria": [
-          "旧笔记无需改写内容获得深色对比度修复",
-          "普通中文首轮prepared创建复验"
+          "普通中文首次直接prepared创建rss",
+          "原生实际添加公开RSS及来源、刷新、主题整理、会话恢复"
         ],
         "risks": [
-          "research-html-theme 4项旧失败在4d37基线同样失败，具体日志markdown-note-contrast-baseline-theme.log；新增补丁未增加失败",
-          "后继包原生创建及旧卡复验仍待完成",
-          "实现60/74接受59/74整体目标继续进行"
+          "原生新包创建和实际读取仍待复验",
+          "实现61/74，原生接受60/74，整体任务未完成"
         ],
-        "generatedAt": "2026-10-01T06:52:16.867007+00:00"
-      },
-      "merged": {
-        "mergeCommit": "11d292e0ff2a1da472be2f352ad3620fecf7e201",
-        "verificationCommit": "11d292e0ff2a1da472be2f352ad3620fecf7e201",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "11d292e0ff2a1da472be2f352ad3620fecf7e201",
-            "completedAt": "2026-10-01T06:54:42.104Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "11d292e0ff2a1da472be2f352ad3620fecf7e201",
-            "completedAt": "2026-10-01T06:54:42.104Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "11d292e0ff2a1da472be2f352ad3620fecf7e201",
-            "completedAt": "2026-10-01T06:54:42.104Z",
-            "timeoutMs": 300000
-          }
-        ],
-        "recordedAt": "2026-10-01T06:54:42.104Z"
+        "generatedAt": "2026-10-01T07:57:16.978211+00:00"
       }
     }
   ],
