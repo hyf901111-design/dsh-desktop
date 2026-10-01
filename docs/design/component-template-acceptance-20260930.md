@@ -871,3 +871,11 @@ c9a94b39受管集成至abe81da5，清洁本地构建、深度签名与完整包�
 普通中文首次两卡提交实际23.476秒，只有一次research_workbench_create、prepared、无逐卡模型/HTML；先前裁切和结束提示反例保留，不把首次生成成功代替样式接受。结合实际输入拒绝、真实失败/重试、三主题、整理及会话返回，音频计入严格原生接受。累计实现70/74、原生接受69/74；智能组件、链接、文件、图集独立类型与YouTube登录后的原生播放继续，整体成功率目标尚未宣布完成。
 
 证据audio-ended-seek-final-native-{paused,return}.png、audio-ended-seek-final-native-audit.json、audio-ended-seek-native-build.log和package.log。最新收起侧栏截图sidebar-avatar-final-abe81da5-native.png中头像、消息中心与上方工具图标同轴（中心x约44px）；此前头像修复7e26eb0b在最终包持续生效。应用保持打开，验收音源服务器继续运行；未公证、公开发布、升级版本、推送或运行全功能测试。
+
+## 智能组件与链接默认草稿设计补齐（本轮原生接受前）
+
+Figma智能组件Draft1917:353201、链接Draft1917:355462均为485×400、38高标题栏。补齐智能组件标题说明、196高需求输入、键盘提示与结果保留说明；链接补齐60高输入、180高居中状态区及支持提示。按钮按104×32、圆角4处理，新链接工具栏入口使用485×400；已有节点尺寸和统一最小280×180网格规则保持原值。小尺寸允许内容纵向滚动，不扩大由长标题决定的最小宽度。回车遵守当前客户端普通Enter创建、Shift Enter换行；中文组合输入确认不提交，链接仍走completeLinkDraft同节点入口，不启动模型。
+
+四项新增回归中，三项在修复前失败：缺少两类说明、智能组件共享只读仍可输入。网格最小尺寸由280×180对齐到实际网格步长，长短标题必须得到同样尺寸，测试未要求破坏网格舍入。修复后7项直接聚焦及项目typecheck通过，重复补丁幂等性通过。浏览器使用生产安装模块渲染器、实际@layer ework-workbench与三主题样式，默认按钮104×32、智能输入196、链接输入60；最小宽度无横向溢出，滚动后两类提交均可操作。证据smart-link-draft-preview-{default,narrow-dark,narrow-enterprise,narrow-light}.png，smart-link-draft-focused.log、smart-link-draft-typecheck.log。
+
+原生会话本人智能组件与链接验证，session-b6a6c15a-f00b-4940-aab7-f5b478564958，草稿ef8a9efb-c900-4be5-8eb2-7cbf2078473c为本人创建；此记录仅表示源码与浏览器聚焦通过，最终包的真实生成、链接载入、三主题和会话返回尚待接受，累计原生接受仍69/74。
