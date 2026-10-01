@@ -153,6 +153,51 @@
           "7项既存HTML完整文件失败未计为通过"
         ],
         "generatedAt": "2026-10-01T00:27:35.317109+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
+        "verificationCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
+            "completedAt": "2026-10-01T00:28:53.235Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-canvas-clipboard.test.ts",
+              "test/component-data-status.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
+            "verifiedCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
+            "completedAt": "2026-10-01T00:28:53.235Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ac0838f2388726825cbef4fbf37b652552b9da82",
+            "completedAt": "2026-10-01T00:28:53.235Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-10-01T00:28:53.235Z"
       }
     }
   ],
