@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复窄音频转写裁切和真实所选表格换行",
+        "featureName": "修正生产主题样式层及音频完整祖先边距",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "291eeac9d816eb746ac71579e4a048f3bbf81003",
-        "tipCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
+        "baseCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
+        "tipCommit": "503d05910308e1179cec306a3322ad33083cc737",
         "commits": [
           {
-            "commit": "94b655af8237b118b321c8dbef79be2945537aaa",
+            "commit": "503d05910308e1179cec306a3322ad33083cc737",
             "parents": [
-              "291eeac9d816eb746ac71579e4a048f3bbf81003"
+              "94b655af8237b118b321c8dbef79be2945537aaa"
             ],
-            "subject": "修复窄音频卡转写高度及所选表格实际宿主换行"
+            "subject": "修正主题样式层覆盖并完整计算音频祖先内边距"
           }
         ],
         "files": [
@@ -57,9 +57,9 @@
               "音频|native audio|unique semantic"
             ],
             "outcome": "passed",
-            "summary": "9项音频契约、真实事件、完整转写含宿主边距测量、复制聚焦通过",
-            "verifiedCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
-            "completedAt": "2026-10-01T18:36:22.845249+00:00",
+            "summary": "9项聚焦通过，嵌套边距822px回归先红后绿",
+            "verifiedCommit": "503d05910308e1179cec306a3322ad33083cc737",
+            "completedAt": "2026-10-01T18:55:03.504062+00:00",
             "timeoutMs": 300000
           },
           {
@@ -70,14 +70,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "94b655af8237b118b321c8dbef79be2945537aaa",
-            "completedAt": "2026-10-01T18:36:22.845249+00:00",
+            "verifiedCommit": "503d05910308e1179cec306a3322ad33083cc737",
+            "completedAt": "2026-10-01T18:55:03.504062+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "a713b744真实音频首提23.476秒一次prepared，实际播放、章节及会话状态保持通过；窄转写和两列表格发现问题，当前修正待新包接受"
+          "summary": "补齐实际生产主题层和宿主属性后，三主题280px两列自然换行无溢出、音频宿主边距0；698a1e5f真实反例已记录，修正新包待验"
         },
         "acceptanceCriteria": [
           "只保存明确原音源，未知信息不编造且无自动播放",
@@ -88,64 +88,7 @@
           "新包窄音频及所选表格实际目检待完成，原生接受保持67/74",
           "整体模板及成功率目标继续，YouTube真实播放仍需用户登录"
         ],
-        "generatedAt": "2026-10-01T18:36:22.845249+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c8c4da25175f5ada85e6a4f1fca51e09a3592dfc",
-        "verificationCommit": "c8c4da25175f5ada85e6a4f1fca51e09a3592dfc",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "c8c4da25175f5ada85e6a4f1fca51e09a3592dfc",
-            "completedAt": "2026-10-01T18:37:38.119Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "c8c4da25175f5ada85e6a4f1fca51e09a3592dfc",
-            "completedAt": "2026-10-01T18:37:38.119Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c8c4da25175f5ada85e6a4f1fca51e09a3592dfc",
-            "completedAt": "2026-10-01T18:37:38.119Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "c8c4da25175f5ada85e6a4f1fca51e09a3592dfc",
-            "completedAt": "2026-10-01T18:37:38.119Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T18:37:38.119Z"
+        "generatedAt": "2026-10-01T18:55:03.504062+00:00"
       }
     },
     {
