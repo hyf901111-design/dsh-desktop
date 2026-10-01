@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "整理画布排除原生网页视口测量",
+        "featureName": "Figma YouTube原生视频预置",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe",
-        "tipCommit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
+        "baseCommit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
+        "tipCommit": "44b172b8a3ff851d6d439afdcf00c0a586af1b39",
         "commits": [
           {
-            "commit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
+            "commit": "7202cdda6a9bb5eb5c9498b70fdd4d1681adc252",
             "parents": [
-              "14c8f119c3dee9a9c3767d0fbb90b0649d8219fe"
+              "3cda1a430e6c69cde457c4059aaf410e60eb2efe"
             ],
-            "subject": "修复整理画布误用原生网页截图高度导致卡片压矮"
+            "subject": "记录嵌入网页最终包整理与合成状态保留验收"
+          },
+          {
+            "commit": "44b172b8a3ff851d6d439afdcf00c0a586af1b39",
+            "parents": [
+              "7202cdda6a9bb5eb5c9498b70fdd4d1681adc252"
+            ],
+            "subject": "预置Figma YouTube组件并保留原视频来源与官方播放交互"
           }
         ],
         "files": [
@@ -29,11 +36,87 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/bento-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/youtube-template-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/youtube-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/iframe-client.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/youtube-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/panel-runtime.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-clipboard.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-clipboard.test.ts"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/youtube-template.test.js"
           }
         ],
         "checks": [
@@ -41,16 +124,17 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/youtube-template.test.js",
               "test/iframe-template.test.js",
               "test/research-grid-client.test.js",
               "test/research-canvas-clipboard.test.ts",
               "-t",
-              "嵌入网页|公开工具第一次提交空网页|copies native iframe|重复补丁恢复原始代码|组件设置向右展开|只读链接|链接组件使用隔离网页"
+              "YouTube|嵌入网页|公开工具第一次提交空网页|copies native iframe|重复补丁恢复原始代码|组件设置向右展开|只读链接|链接组件使用隔离网页"
             ],
             "outcome": "passed",
-            "summary": "15项嵌入网页、延迟整理及隔离链接聚焦通过",
-            "verifiedCommit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
-            "completedAt": "2026-10-01T13:58:02.331145+00:00",
+            "summary": "26项视频与网页来源、主题、整理和原生宿主聚焦通过",
+            "verifiedCommit": "44b172b8a3ff851d6d439afdcf00c0a586af1b39",
+            "completedAt": "2026-10-01T14:29:04.145876+00:00",
             "timeoutMs": 300000
           },
           {
@@ -61,82 +145,26 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "3cda1a430e6c69cde457c4059aaf410e60eb2efe",
-            "completedAt": "2026-10-01T13:58:02.331145+00:00",
+            "verifiedCommit": "44b172b8a3ff851d6d439afdcf00c0a586af1b39",
+            "completedAt": "2026-10-01T14:29:04.145876+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际集成包2a3fb09c回车校验和保存通过；真实整理发现压矮，生产宿主回归先红后绿；本次最终包待核验"
+          "summary": "生产渲染器真实Chrome的空态、最小表单聚焦滚动、官方示例主动播放字幕及暂停、只读和重建恢复通过；最终本地包待接受"
         },
         "acceptanceCriteria": [
-          "Figma485×340空态、14px源加号、统一最小尺寸",
-          "用户实际HTTP网址与说明保留，一次prepared",
-          "真实客户端网页加载失败重试与往返保留"
+          "Figma485×340网址输入空態与统一最小尺寸",
+          "原视频网址和已提供的时长字幕保留，首提prepared不启动子代理",
+          "三模式与整理保持可读播放器；真实用户主动播放和失败恢复入口"
         ],
         "risks": [
-          "本次原生网页整理修复最终包尚待验证",
-          "实现65/74原生接受64/74，总目标仍在执行"
+          "视频是否允许嵌入由YouTube决定，播放器和本地重试入口保留",
+          "最终本地包普通中文生成和真实播放待验",
+          "实现66/74原生接受65/74，总目标仍在执行"
         ],
-        "generatedAt": "2026-10-01T13:58:02.331145+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6c7e64f0ec55951e98c6c7c23ae750d25e802a70",
-        "verificationCommit": "6c7e64f0ec55951e98c6c7c23ae750d25e802a70",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "6c7e64f0ec55951e98c6c7c23ae750d25e802a70",
-            "completedAt": "2026-10-01T13:59:13.571Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "6c7e64f0ec55951e98c6c7c23ae750d25e802a70",
-            "completedAt": "2026-10-01T13:59:13.571Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6c7e64f0ec55951e98c6c7c23ae750d25e802a70",
-            "completedAt": "2026-10-01T13:59:13.571Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "6c7e64f0ec55951e98c6c7c23ae750d25e802a70",
-            "completedAt": "2026-10-01T13:59:13.571Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T13:59:13.571Z"
+        "generatedAt": "2026-10-01T14:29:04.145876+00:00"
       }
     },
     {
