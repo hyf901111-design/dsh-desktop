@@ -46,7 +46,7 @@ export function ResearchIframePreset({node,sessionId,visible}){
   react_jsx_runtime.jsx('strong',{children:editing?'添加或修改网址':'尚未添加网址'}),
   react_jsx_runtime.jsx('div',{className:'ew-iframe-hint',children:'请为嵌入网页组件添加网址。页面允许嵌入时，内容将在组件内显示。'}),
   editing?react_jsx_runtime.jsxs('form',{className:'ew-iframe-form',onSubmit:submit,onPointerDown:e=>e.stopPropagation(),children:[
-   react_jsx_runtime.jsx('input',{ref:inputRef,type:'url','aria-label':'网页网址',defaultValue:spec.url??'',placeholder:'https://',autoFocus:true,disabled:readOnly}),
+   react_jsx_runtime.jsx('input',{ref:inputRef,type:'url','aria-label':'网页网址',defaultValue:spec.url??'',placeholder:'https://',autoFocus:true,disabled:readOnly,onKeyDown:e=>{e.stopPropagation();if(e.key==='Enter'&&!e.nativeEvent?.isComposing&&e.keyCode!==229)submit(e)}}),
    error&&react_jsx_runtime.jsx('div',{className:'ew-iframe-error',role:'alert',children:error}),
    react_jsx_runtime.jsxs('div',{className:'ew-iframe-form-actions',children:[react_jsx_runtime.jsx('button',{type:'submit',disabled:readOnly,children:'保存网址'}),react_jsx_runtime.jsx('button',{type:'button',onClick:()=>{setEditing(false);setError('')},children:'取消'})]})
   ]}):react_jsx_runtime.jsxs('button',{className:'ew-iframe-add',type:'button','data-iframe-add':'',disabled:readOnly,onPointerDown:e=>e.stopPropagation(),onClick:open,children:[react_jsx_runtime.jsx('span',{className:'ew-iframe-add-icon','aria-hidden':true}),react_jsx_runtime.jsx('span',{children:'添加网址'})]})

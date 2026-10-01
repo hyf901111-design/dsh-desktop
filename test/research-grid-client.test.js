@@ -1811,6 +1811,21 @@ it('嵌入网页在实际宿主空状态添加网址，保存后仍是同一组�
  expect(trigger.__eworkWorkbenchSettings.map(a=>a.label)).toContain('修改网址')
  expect(trigger.__eworkWorkbenchSettings.map(a=>a.label)).not.toContain('编辑需求')
 })
+it('嵌入网页网址输入支持回车校验与保存，中文组合输入不提前提交',async()=>{
+ const f=await fixture(true),spec={version:1,type:'iframe',title:'键盘网页复验',url:null,description:'保留原说明'}
+ await act(async()=>f.workspace.setArtifacts([{...text('iframe-keyboard'),kind:'generated-container',containerPrompt:'网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ await f.event('click',f.host.querySelector('[data-iframe-add]'))
+ const input=f.host.querySelector('[aria-label="网页网址"]')
+ input.value='javascript:alert(1)';await f.event('keydown',input,{key:'Enter',keyCode:13,nativeEvent:{isComposing:false}})
+ expect(f.host.textContent).toContain('HTTP');expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ input.value='https://EXAMPLE.org/keyboard?q=0#original'
+ await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ const event=await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false})
+ expect(event.defaultPrevented).toBe(true)
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual({...spec,url:input.value})
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(1);expect(f.generation.generate).not.toHaveBeenCalled()
+})
 it('嵌入网页共享只读禁止网址修改但仍允许查看与浏览器打开',async()=>{
  let shared=false;const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'iframe',title:'只读网页',url:null}
  f.workspace.setArtifacts([{...text('iframe-readonly'),kind:'generated-container',containerPrompt:'网页',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]);shared=true;await f.render()
