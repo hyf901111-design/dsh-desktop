@@ -9,107 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "嵌入网页原生预置与网址会话恢复",
+        "featureName": "嵌入网页画布主题与加载失败提示修复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "9937b5c6848424dc3b1b9556814cb51ebffdd2c0",
-        "tipCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
+        "baseCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
+        "tipCommit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
         "commits": [
           {
-            "commit": "e5cda980e4c93a33f92f72ba435063e51a7b008e",
+            "commit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
             "parents": [
-              "9937b5c6848424dc3b1b9556814cb51ebffdd2c0"
+              "843278c8e4d52a65d0f1ca9318bf9a44fcecb807"
             ],
-            "subject": "记录活动时间线最终客户端验收与来源恢复"
-          },
-          {
-            "commit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
-            "parents": [
-              "e5cda980e4c93a33f92f72ba435063e51a7b008e"
-            ],
-            "subject": "预置嵌入网页空状态并保留网址与原生浏览会话"
+            "subject": "修复嵌入网页按钮与失败提示的画布主题颜色"
           }
         ],
         "files": [
-          {
-            "status": "C081",
-            "path": "build/figma-iframe-icons/add.svg",
-            "previousPath": "build/figma-workbench-icons/plus.svg"
-          },
           {
             "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-validator.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/iframe-template-contract.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/iframe-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/iframe-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/runtime-v1.md"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-canvas-clipboard.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/iframe-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-clipboard.test.ts"
           },
           {
             "status": "M",
@@ -128,9 +48,9 @@
               "嵌入网页|公开工具第一次提交空网页|copies native iframe|重复补丁恢复原始代码|组件设置向右展开|只读链接"
             ],
             "outcome": "passed",
-            "summary": "11项嵌入网页原字段、公开工具、生产宿主、只读、重载与复制聚焦通过",
-            "verifiedCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
-            "completedAt": "2026-10-01T12:42:45.986715+00:00",
+            "summary": "12项嵌入网页与画布主题聚焦通过",
+            "verifiedCommit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
+            "completedAt": "2026-10-01T13:03:51.696993+00:00",
             "timeoutMs": 300000
           },
           {
@@ -141,14 +61,14 @@
             ],
             "outcome": "passed",
             "summary": "项目类型检查通过",
-            "verifiedCommit": "843278c8e4d52a65d0f1ca9318bf9a44fcecb807",
-            "completedAt": "2026-10-01T12:42:45.986715+00:00",
+            "verifiedCommit": "6dbfc1b6960dbe5fb1eda71e1facf22e28106724",
+            "completedAt": "2026-10-01T13:03:51.696993+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "CUA真实Chrome生产渲染器485浅色、280深色/企业聚焦、非法拒绝、保存与重建、只读通过，控制台无错误；最终原生包待验"
+          "summary": "真实集成客户端首提19.782秒prepared无子代理，保存与非法拒绝、网页切回保留、刷新与失败重试通过；本次主题颜色最终包待复验"
         },
         "acceptanceCriteria": [
           "Figma485×340空态、14px源加号、统一最小尺寸",
@@ -156,67 +76,10 @@
           "真实客户端网页加载失败重试与往返保留"
         ],
         "risks": [
-          "最终本地包普通中文首次及真实网页加载尚待验证",
+          "本次画布模式颜色修复最终本地包尚待验证",
           "实现65/74原生接受64/74，总目标仍在执行"
         ],
-        "generatedAt": "2026-10-01T12:42:45.986715+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3d1f56dcce476b11cd6d913480e7d63aeee70082",
-        "verificationCommit": "3d1f56dcce476b11cd6d913480e7d63aeee70082",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "3d1f56dcce476b11cd6d913480e7d63aeee70082",
-            "completedAt": "2026-10-01T12:44:26.809Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "3d1f56dcce476b11cd6d913480e7d63aeee70082",
-            "completedAt": "2026-10-01T12:44:26.809Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3d1f56dcce476b11cd6d913480e7d63aeee70082",
-            "completedAt": "2026-10-01T12:44:26.809Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "3d1f56dcce476b11cd6d913480e7d63aeee70082",
-            "completedAt": "2026-10-01T12:44:26.809Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T12:44:26.809Z"
+        "generatedAt": "2026-10-01T13:03:51.696993+00:00"
       }
     },
     {
