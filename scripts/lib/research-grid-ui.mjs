@@ -68,6 +68,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const refresh=async()=>{
     if(busy||readOnly)return {error:'组件当前不可刷新'}
     setBusy(true);setError('')
+    let message='指标数据已更新'
     try{
       if(node.kind==='web-link'){
         const frame=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')
@@ -75,10 +76,10 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
         const nativeReload=frame?.querySelector('[data-research-native-web]')?.__eworkReloadWeb
         if(nativeReload)nativeReload();else if(reload)reload.click();else throw Error('网页尚未载入，请稍后刷新')
       }else if(/<body\b[^>]*data-sherlock-template="rss"/.test(node.containerSpec?.html??'')){await window.dshDesktop.researchRss.request({sessionId,nodeId:node.id,action:'refresh'})}
-      else if(binding){await window.dshDesktop.componentData.request(sessionId,{action:'refresh',nodeId:node.id});const rows=await window.dshDesktop.componentData.request(sessionId,{action:'list'});componentDataStatusStore.publish(sessionId,rows)}
+      else if(binding){const result=await window.dshDesktop.componentData.request(sessionId,{action:'refresh',nodeId:node.id});const rows=await window.dshDesktop.componentData.request(sessionId,{action:'list'});componentDataStatusStore.publish(sessionId,rows);if(result?.status==='error')throw Error(result.error||'刷新失败，保留上次数据');if(!['success','unchanged'].includes(result?.status))throw Error('刷新尚未完成，保留上次数据');if(result.status==='unchanged')message='已检查数据，指标值未变化'}
       else {openComponentData(sessionId,node);return {message:'未绑定数据源，已打开数据源设置'}}
       setNow(Date.now());window.dispatchEvent(new Event('sherlock:component-data-changed'))
-      return {message:'指标数据已更新'}
+      return {message}
     }catch(e){const error=e?.message||'刷新失败，保留上次数据';setError(error);return {error}}finally{setBusy(false)}
   }
   const button=(name,label,onClick,extra={})=>react_jsx_runtime.jsx('button',{type:'button','aria-label':label,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();onClick?.(e)},...extra,children:react_jsx_runtime.jsx(WorkbenchIcon,{name})})
