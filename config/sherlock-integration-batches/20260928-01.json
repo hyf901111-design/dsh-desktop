@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "附件本地预览渲染服务修复",
+        "featureName": "图库原文件真实重载与失败保留",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "fa09af3864975e46c1df8305ed6a545846f055e4",
-        "tipCommit": "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad",
+        "baseCommit": "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad",
+        "tipCommit": "c8399fb75cae5c76779bf5276f03b2414f2a7115",
         "commits": [
           {
-            "commit": "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad",
+            "commit": "c8399fb75cae5c76779bf5276f03b2414f2a7115",
             "parents": [
-              "fa09af3864975e46c1df8305ed6a545846f055e4"
+              "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad"
             ],
-            "subject": "修复：显式传递附件本地预览服务防止画布崩溃"
+            "subject": "修复：图库重载请求原图并保留失败前内容"
           }
         ],
         "files": [
@@ -33,6 +33,10 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
             "path": "test/research-grid-client.test.js"
           }
         ],
@@ -43,85 +47,28 @@
               "run",
               "test/research-grid-client.test.js",
               "-t",
-              "附件|网页原生|重复补丁恢复"
+              "附件|图库刷新|目录|刷新时间"
             ],
             "outcome": "passed",
-            "summary": "9项原文本读取、网址授权、弹窗几何与幂等检查通过",
-            "verifiedCommit": "9ac5a8971b4646c89889ff8c829dd6b3d45d3fad",
-            "completedAt": "2026-10-01T21:28:12.954Z",
+            "summary": "10项原文件重载、进度、失败保留、预览、导入与权限检查通过",
+            "verifiedCommit": "c8399fb75cae5c76779bf5276f03b2414f2a7115",
+            "completedAt": "2026-10-01T21:49:48.694669+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生导入长名101字节成功，随后本地预览崩溃已定位与回归修复，最终原生复测继续"
+          "summary": "真实客户端暴露缓存重用，前一包原文件预览导入下载与三主题已核验，重载修复等待新包复测"
         },
         "acceptanceCriteria": [
-          "本地原文件预览不崩溃",
-          "真实Office服务显式传递",
-          "保存与恢复来源保持"
+          "重载使用原网址",
+          "失败保留旧图并提示",
+          "来源及授权不被重写"
         ],
         "risks": [
-          "最终包原生复测待进行"
+          "新包原生失败恢复复测尚未完成"
         ],
-        "generatedAt": "2026-10-01T21:28:12.958Z"
-      },
-      "merged": {
-        "mergeCommit": "6b8668e22daa117f2d31eba687cec887f086796e",
-        "verificationCommit": "6b8668e22daa117f2d31eba687cec887f086796e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "6b8668e22daa117f2d31eba687cec887f086796e",
-            "completedAt": "2026-10-01T21:29:52.267Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "6b8668e22daa117f2d31eba687cec887f086796e",
-            "completedAt": "2026-10-01T21:29:52.267Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6b8668e22daa117f2d31eba687cec887f086796e",
-            "completedAt": "2026-10-01T21:29:52.267Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "6b8668e22daa117f2d31eba687cec887f086796e",
-            "completedAt": "2026-10-01T21:29:52.267Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-01T21:29:52.267Z"
+        "generatedAt": "2026-10-01T21:49:59.484969+00:00"
       }
     },
     {
