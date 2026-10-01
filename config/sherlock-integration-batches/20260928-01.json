@@ -12,7 +12,7 @@
         "featureName": "技术图表个人视图持久恢复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
         "baseCommit": "ddf75c266cf910c9c55f27b69fe98a443114a63c",
-        "tipCommit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
+        "tipCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
         "commits": [
           {
             "commit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
@@ -20,6 +20,13 @@
               "ddf75c266cf910c9c55f27b69fe98a443114a63c"
             ],
             "subject": "修复：持久保存技术图表个人视图并在会话返回时恢复"
+          },
+          {
+            "commit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
+            "parents": [
+              "b5cb92ee4b6bbaf9a957250306c175e733fa1fee"
+            ],
+            "subject": "修复：保持个人图表保存补丁与工具栏补丁重复执行稳定"
           }
         ],
         "files": [
@@ -53,12 +60,13 @@
               "test/component-data-status.test.js",
               "test/financial-charting.test.js",
               "test/component-interaction-state.test.js",
-              "test/workbench-component-presentation.test.js"
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "47项持久视图恢复及相关交互刷新呈现检查通过",
-            "verifiedCommit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
-            "completedAt": "2026-10-01T04:56:50.382693+00:00",
+            "summary": "176项相关视图、交互、呈现、客户端与重复补丁检查通过",
+            "verifiedCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
+            "completedAt": "2026-10-01T05:05:12.592269+00:00",
             "timeoutMs": 300000
           },
           {
@@ -69,8 +77,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "b5cb92ee4b6bbaf9a957250306c175e733fa1fee",
-            "completedAt": "2026-10-01T04:56:50.382693+00:00",
+            "verifiedCommit": "8ecefbd0a4363b75c84db5ab32482cd6ec740823",
+            "completedAt": "2026-10-01T05:05:12.592269+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -87,7 +95,7 @@
           "最终本地包会话与重启恢复仍待复验",
           "全74类目标未完成"
         ],
-        "generatedAt": "2026-10-01T04:56:50.382693+00:00"
+        "generatedAt": "2026-10-01T05:05:12.592269+00:00"
       }
     }
   ],
