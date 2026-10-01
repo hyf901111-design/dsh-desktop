@@ -535,3 +535,7 @@ Figma源节点1917:350483、1917:351460、1917:351969完整截图已目检，临
 实际滚动祖先几何回归修复前失败、修复后通过。280/640px宽度×浅色/深色/企业模式×公司、人员、方向、搜索框鼠标聚焦和重置按钮Tab聚焦共30组通过，四边在裁切视口内、字段四边同色、键盘轮廓可见，0页面错误。3项共享展示、8项尺寸桥及类型检查通过。额外运行完整HTML主题文件时，发现4项既有失败；恢复到本次改动前的已提交源码后仍为相同4项失败（运行时预览大小阈值、HappyDOM层样式提取2项、旧CSS层前缀假设），不计为本次通过项，也未修改无关测试。证据focus-red.log、focus-green.log、focus-baseline.log、focus-controls-checks.json、focus-controls-*及focus-*-gate.log，均位于/tmp/ework-template-acceptance-20260930/。
 
 股票持仓、公司披露及历史价格三卡已在最终包普通中文验证会话session-caee15b8-cb9c-4164-8ed6-3ed04daafce4一次提交完成，耗时124.363秒、首次成功、无取数工具或联网；559个来源字段独立审计一致。已通过首次深色显示、整理后浅色/企业模式、机构甲两种股类明细与原文链接复制。其余原生导出、披露与历史筛选、会话恢复待继续，因此接受仍55/74。
+
+### 控件聚焦最终本地包接受
+
+源码6f5aceed受管集成至bfce326d，本地构建与完整包检查通过，真实主界面端口61189。原内幕交易验证会话同一搜索框在深色、浅色及企业模式鼠标聚焦后均显示完整四边；浅色按Tab移至重置筛选按钮，键盘蓝色轮廓完整可见。没有改变输入值或触发重置。客户端保持打开。证据focus-native-dark.png、focus-native-light.png、focus-native-keyboard.png、focus-native-enterprise.png及focus-native-build.log、focus-native-package.log。聚焦问题计为已接受；三条来源表的剩余原生接受项继续待验。
