@@ -551,3 +551,13 @@ Figma源节点1917:350483、1917:351460、1917:351969完整截图已目检，临
 切换另一自身验证会话再返回，股东持仓“虚构机构甲”2/13条和普通股common选择、披露类型4和“迁移”1/15条及unavailable选择、历史五日范围与day-1选择全部恢复。离屏卡片在进入可见区时才恢复其预览状态，已实际滚到上方两卡核验，没有将首次离屏AX默认值当成丢失状态。559个来源字段输入审计、首次批量124.363秒成功及此前首次显示检查继续有效。
 
 证据records-native-export-audit.json、records-native-restored-dark.png、records-native-filing-missing.png、records-native-filing-source-summary.png、records-native-history-zero.png、records-native-history-null.png、records-native-history-horizontal.png、records-native-final-arranged-dark.png、records-native-final-history-light.png及records-native-final-history-enterprise.png，均位于/tmp/ework-template-acceptance-20260930/。三类补齐接受，实现及原生接受均58/74，剩余16类；尚不能宣称整体首次成功率已超过90%。
+
+### 技术图表预置模板实现（最终本地包待接受）
+
+Figma源1917:343725完整980×550截图已目检，临时副本已删除。独立charting来源契约接入普通中文路由、一次创建、技能v1.20.0和首次显示补高。只接受实际已提供的1–8组证券周期及各组完整OHLCV、单位、时区和复权口径；源设计120根示例蜡烛不作为数据。零与未知成交量、比较原价及其独立单位分开；240KB以上来源须分卡，不截断来源模型。
+
+宿主本地计算完整来源序列的SMA、以首个完整窗口均值预热的EMA、总体标准差BOLL和Wilder RSI；预热不足保留未提供，缩放不改变计算基础。支持周期、K线/OHLC/收盘线、线性/对数/百分比轴、指标参数与预置组合、范围前后移动、独立百分比比较。个人趋势线、水平线、斐波那契、自由绘图和文字标注按日期与原价锚定，切换指标/周期/主题和刷新语义恢复后保留；锁定、显示和撤销作用于个人标注。原来源数据有完整表格及有界滚动。
+
+10项来源与数值、缺失断线、参数、绘图和重排恢复检查通过。生产双层CSP沙盒980/480/320/280px×三模式×两种旧高度共24组自然尺寸检查与3组三模式绘图交互通过，0页面错误；控件不溢出，日期不重叠，图中文字保持实际字号。客户端初次完成高度检查先暴露白名单缺失，补齐接受及整理阅读宽度并重新生成实际客户端模块后通过。16个直接相关及继承门禁文件360项、20项来源权限、6项规划政策、8项尺寸桥与类型检查通过，未运行全功能测试。
+
+证据charting-source.png、charting-red.log、charting-height-green.log、charting-gate0-final.log、charting-gate1..4.log、charting-browser-checks.json、charting-natural-*、charting-interaction-*与charting-browser-final.log位于/tmp/ework-template-acceptance-20260930/。实现59/74，原生接受仍58/74；技术图表需最终本地包普通中文输入、字段审计、三模式、整理和实际绘图及恢复检查。剩余15类未实现；不能宣称整体成功率已达标。
