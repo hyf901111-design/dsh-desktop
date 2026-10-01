@@ -76,7 +76,7 @@ export const TERMINAL_GENERIC_TEMPLATES = Object.freeze({
   'dashboard': { figma: '1696:77430', height: 238 },
   'news': { figma: '1696:77556', height: 352 },
   'reports': { figma: '1696:77682', height: 352 },
-  'calendar': { figma: '1696:77848', height: 316 },
+  'calendar': { figma: '1918:345317', height: 424 },
   'gantt': { figma: '1696:77958', height: 352 }
 });
 

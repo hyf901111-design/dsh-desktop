@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import {calendarWindow} from './helpers/calendar-window.js';
 import { Window } from 'happy-dom';
 import { runInNewContext } from 'node:vm';
 import { renderInteractiveArtifact } from '../packages/dsh-research-task-runtime/interactive-artifact.js';
@@ -10,22 +11,20 @@ it('calendar layout preserves six weeks, a separate footer and working saved int
  const output=renderInteractiveArtifact({version:1,type:'calendar',title:'模拟事件日历',items:[
   {title:'行业例会',summary:'确认研究进度',date:'2026-07-03'},
   {title:'模型复核',summary:'检查假设与结果',date:'2026-08-31'}
- ]}),w=new Window(),doc=w.document;
- doc.write(output.html);
- runInNewContext(doc.querySelector('script').textContent,{document:doc,Date});
- const select=doc.querySelector('#month');select.value='2026-08';select.onchange();
- expect(doc.querySelector('#days').children).toHaveLength(36);
- expect(doc.querySelector('#days').querySelectorAll('button')).toHaveLength(31);
+ ]}),runtime=calendarWindow(output.html),w=runtime.window,doc=runtime.document;
+ const select=doc.querySelector('#month');select.value='2026-08';select.dispatchEvent(new w.Event('change'));
+ expect(doc.querySelector('#days').children).toHaveLength(42);
+ expect(doc.querySelector('#days').querySelectorAll('button')).toHaveLength(42);
  doc.querySelector('[aria-label="2026-08-31"]').click();
  expect(doc.querySelector('[aria-pressed="true"]').textContent).toBe('31');
- expect(doc.querySelector('#agenda-title').textContent).toBe('当日安排');
+ expect(doc.querySelector('#agenda-title').textContent).toBe('8 月 31 日 · 1 项安排');
  expect(doc.querySelectorAll('.event')).toHaveLength(1);
  doc.querySelector('#clear-day').click();
  expect(doc.querySelector('[aria-pressed="true"]')).toBeNull();
  doc.querySelector('#previous').click();
  expect(select.value).toBe('2026-07');
  expect(doc.querySelector('#events').textContent).toContain('行业例会');
- expect(doc.querySelector('footer').previousElementSibling.className).toBe('agenda');
+ expect(doc.querySelector('.agenda').previousElementSibling.className).toBe('month');
  expect(output.html).toContain(CALENDAR_PRESENTATION_CSS);
  expect(WORKBENCH_PRESENTATION_CSS).toContain(CALENDAR_PRESENTATION_CSS);
  w.close();
@@ -58,9 +57,9 @@ it('opens a dated calendar on its month with a dedicated compact control row', (
   window.document.write(output.html);
   expect(window.document.querySelector('#month').value).toBe('2026-02');
   expect(window.document.querySelector('.controls')).toBeNull();
-  expect(window.document.querySelector('#clear-day').textContent).toBe('清除选择');
-  expect(window.document.querySelector('style').textContent).toContain('grid-template-columns:minmax(0,1fr) 180px');
-  expect(window.document.querySelector('.agenda-head').textContent).toContain('本月安排');
+  expect(window.document.querySelector('#clear-day').textContent).toBe('查看本月');
+  expect(window.document.querySelector('style').textContent).toContain('flex-direction:column!important');
+  expect(window.document.querySelector('.agenda-head').textContent).toContain('2 月 6 日 · 1 项安排');
   window.close();
 });
 

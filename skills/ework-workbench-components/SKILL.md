@@ -15,6 +15,8 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 2. 确定 `contentProfileId`（金融图表/指标/明细、日常协作、Lumos 等）、目标 Light/Dark、`creationMode`（auto/manual）以及目标运行版本。读取 [Figma 来源与视觉规则](references/figma-21m.md) 中匹配的源节点；设计复核时重新核对可访问的当前原稿与目标主题，不以本 skill 的历史摘录冒充实时设计快照。客户端内的组件生成子任务没有 Figma 工具时，使用本版内置摘录作为设计基线，不因此中断生成，也不声称已经现场复核。缺数据或运行能力时明确列出缺项。
 3. 内容先行：组件标题、主结论或关键数值、单位与时点、必要的对比/图表/表格、异常或行动线索应形成清楚的阅读顺序。信息量由任务决定；没有数据就显示可解释的缺失状态，不填充装饰性图表。避免重复标题、无作用控件和跨业务字段混排。
 
+- 日程月历使用 panel.type=calendar 与 artifact.type=calendar，首次附完整 version:1/title/items（0–40条）。条目含 title、summary 或真实来源 url，确定 date 为 YYYY-MM-DD，未知日期保留原文；可选原 time/category，asOf/note/month/timeZone。宿主提供月历、今天、上月/下月、当天安排、完整来源及日期待定筛选，新建日程明确只保存到本画布，共享/只读禁止新建。自然日热力使用 chart.calendar，不能混用两种契约。
+
 - RSS/Atom 订阅使用 panel.type=rss 与 artifact.type=rss，首次同次提交 version:1/title/asOf/feeds。新建空订阅 feeds:[]；已有源保留唯一原 id、公开 http/https url、title、format、fetchedAt、error、完整 entries。用户点击添加或刷新时由宿主实际读取公开来源，失败保留旧条目与原抓取时间；publishedAt 与 updatedAt 原值缺失填 null，不能使用抓取时间补发布时间。每组件最多10源、每源100条、完整来源32KB；超容量明确报错，不截断或生成示例新闻。共享看板只读来源快照。
 
 - 可编辑 Markdown 笔记使用 `note`，首次调用同次附完整 artifact：version:1、type:note、title、asOf（材料来源及日期）、content（完整原文，可为空白）。宿主提供格式工具栏、预览、原始材料查看及本画布草稿保存；最多16000字符/32000 UTF-8字节，容量不足应分卡，不能截断。普通摘要阅读继续使用既有摘要模板，不改成编辑笔记。

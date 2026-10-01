@@ -629,3 +629,16 @@ d6c5fc9a受管集成至b35a0854，本地构建、深度签名和完整包检查�
 退出同一应用并从相同本地包重开，端口51012返回原验证会话；20条来源、实际读取时间、完整原发布时间和搜索条件再次恢复，企业模式内容可读。只读取该合成卡片保存记录，核对rss版本21m、单个来源20条及共享状态查询。证据rss-native-final-summary-focus.png、rss-native-final-restarted.png、rss-native-final-restarted-audit.json与rss-native-fix-build/package.log位于既有临时目录。前述33.699秒首次prepared、三主题及失败保留证据继续有效；原生280px最小拖拽仍不作已验证声明。
 
 RSS计入原生接受：实现61/74、接受61/74。剩余13类及全量普通中文成功率统计继续进行；整体目标尚未完成。
+
+
+## 日历预置模板与本画布日程（2026-10-01，原生待接受）
+
+Figma源1918:345317、默认1918:345318/345690，656×424、标题栏38、正文386；临时截图副本已移除。改为源设计的纵向月历与当天安排，周一开始、完整相邻月份日期、30px整格选中背景、3px橙色日程点、28px月份按钮和18px紧凑日程行。覆盖宿主通用列表额外留白与分隔线；三模式沿用浅色控件，深色独立对比度，统一最小280×180。
+
+来源契约0–40条/32KB，保留完整标题、原摘要、原时间、原来源及额外文字字段；无效或待定日期单独可查，不猜测日期。今天按明确IANA时区与真实设备日期计算。普通中文公开工具首次完整calendar artifact直接prepared，不启逐卡模型。个人新建日程只保存本画布，最多20条/24KB，容量满明确提示；共享/只读禁止新建与撤销。日期、月份、筛选及个人日程通过现有状态桥保存，来源记录不可改。
+
+实际注册工具、日期边界/闰日、个人权限/容量、完整iframe重建恢复及相关技能、registry、来源和展示门禁115项通过；calendar/日历两项规划与整理检查通过，类型检查通过。旧六项行情布局/模拟归一化失败在精确0df9提交基线仍相同，记录calendar-preexisting-baseline.log，未为本次改动调整无关市场模板。
+
+生产构建renderer与双层CSP/Trusted Types none，656/480/280px×三模式共九组通过：按钮高度30、导航28、日程行18、无横向溢出、零页面错误。实际完整来源展开、待定筛选、月份/今天、个人日程保存、完整组件重建和整页重开均通过，原来源JSON不变；只读和共享拒绝写入。证据calendar-source.png、calendar-source-red.log、calendar-runtime-green.log、calendar-final-gate.log、calendar-source-normalization.log、calendar-typecheck.log、calendar-browser-checks.json与calendar-*.png位于/tmp/ework-template-acceptance-20260930/。
+
+实现62/74、原生接受61/74。最终本地包的普通中文首次提交、原生三模式整理、窄卡、个人日程与会话/重启恢复仍待核验；未运行全功能测试，整体目标尚未完成。

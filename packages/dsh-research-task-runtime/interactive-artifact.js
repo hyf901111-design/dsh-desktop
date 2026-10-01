@@ -1,51 +1,27 @@
-import {CALENDAR_PRESENTATION_CSS} from './calendar-presentation.js';
+import {renderCalendarArtifact} from './calendar-artifact.js';
+import {CALENDAR_GUIDANCE} from './calendar-template-contract.js';
 // Deterministic, offline interactions. Data stays text; only vetted HTTP links leave the frame.
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text = (v, max = 2000) => typeof v === 'string' && v.trim() && v.length <= max;
 const url = v => { try { const u = new URL(v); return /^https?:$/.test(u.protocol) && !u.username && !u.password ? u.href : null; } catch { return null; } };
 export const INTERACTIVE_ARTIFACT_PROMPT = [
  '新闻、动态、政策或交易信息流用 news；研究报告库用 reports；事件日历用 calendar；数据监控快照用 dashboard。宿主按类型提供必要交互：列表搜索、分类筛选、详情展开、来源链接或日历月份切换；少量指标的 dashboard 直接展示数据，不套列表工具栏，不必自己编写 HTML/JS。不要把这些交互需求退化成静态表格。',
- 'news/reports/calendar 格式：{"version":1,"type":"news|reports|calendar","title":"标题","items":[{"title":"真实条目标题","summary":"有效摘要","date":"原始日期，日历确定日期用 YYYY-MM-DD，不确定日期保留原文","time":"可选原始时间","category":"分类","url":"真实来源 https 地址（没有则省略）"}]}。1–40 条，至少有摘要或来源；不得伪造链接或日期。',
+ 'news/reports 格式：{"version":1,"type":"news|reports","title":"标题","items":[{"title":"真实条目标题","summary":"有效摘要","date":"原始日期，日历确定日期用 YYYY-MM-DD，不确定日期保留原文","time":"可选原始时间","category":"分类","url":"真实来源 https 地址（没有则省略）"}]}。1–40 条，至少有摘要或来源；不得伪造链接或日期。',
+ CALENDAR_GUIDANCE,
  'dashboard 格式：{"version":1,"type":"dashboard","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"已核实数值及单位","detail":"定义、周期、缺失说明","url":"真实来源 https 地址（没有则省略）"}]}。默认 4–6 个与需求直接相关的指标，用户指定时遵从用户；仅展示实际获得的数据，没有持续更新服务时标注数据快照。行情面板优先最新价、涨跌幅、成交量或成交额等行情数据；不把数据来源网站、获取失败说明、研究方法放成指标卡，也不默认扩写财报、机构预测或商品价格。',
  '长文本对比只保留关键列，其余字段放可展开详情；来源使用短标签链接，禁止展示整段长网址挤占数据列。'
 ].join('\n');
 
-// 21H / 21M work calendar (1217:222167): month grid beside the agenda.
-// The host owns this layout; the model supplies dated entries and optional times.
-function renderCalendarArtifact(spec, months) {
- const currentMonth = new Date().toISOString().slice(0, 7);
- const defaultMonth = months.includes(currentMonth) ? currentMonth : months[0] ?? '';
- const entries = spec.items.map(i => ({ title: i.title, summary: i.summary ?? '', date: i.date ?? '', time: i.time ?? '', category: i.category ?? '' }));
- const data = JSON.stringify(entries).replace(/</g, '\\u003c');
- const html = `<!doctype html><html><head><meta charset="utf-8"><style>
- *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{display:grid;grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:minmax(0,1fr) 24px;padding:0 12px;background:var(--sherlock-bg);color:var(--sherlock-text);font:11px/16px var(--sherlock-font-sans)}
- button,select{font:inherit;color:var(--sherlock-control-text);background:var(--sherlock-control-bg);border:0;cursor:pointer}button:focus-visible,select:focus-visible{outline:1px solid var(--sherlock-control-primary);outline-offset:1px}
- .month{min-width:0;padding:5px 12px 0 0}.month-nav{height:25px;display:flex;gap:4px;align-items:center}.month-nav select{width:92px;max-width:100%;padding:3px 4px;background:transparent;font-size:11px}.month-nav button{width:20px;height:20px;background:transparent;color:var(--sherlock-control-muted);border-radius:4px}.weekdays,.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center}.weekdays{height:22px;align-items:center;color:var(--sherlock-muted);font-size:11px}.days{grid-auto-rows:31px;align-items:center}.days button{position:relative;justify-self:center;width:27px;height:27px;padding:0;border-radius:4px;background:transparent;font-size:11px}.days button[aria-pressed="true"]{background:var(--sherlock-row-selected)}.days button[data-active="true"]::after{content:"";position:absolute;bottom:3px;left:calc(50% - 1.5px);width:3px;height:3px;border-radius:50%;background:var(--sherlock-chart-1)}
- .agenda{min-width:0;overflow:hidden;border-left:.5px solid var(--sherlock-border);padding:5px 0 0 12px}.agenda-head{height:25px;display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:11px;font-weight:700}.agenda-head button{padding:2px 4px;background:transparent;color:var(--sherlock-control-muted);font-size:11px;font-weight:400}.events{height:calc(100% - 25px);overflow:auto;scrollbar-width:thin}.event{display:grid;grid-template-columns:34px minmax(0,1fr);gap:3px;padding:3px 0 4px}.event time{color:var(--sherlock-chart-1);font:11px/16px var(--sherlock-font-sans)}.event strong{display:block;font-size:11px;line-height:14px;font-weight:500;overflow-wrap:anywhere}.event small{display:block;color:var(--sherlock-muted);font-size:11px;line-height:12px;overflow-wrap:anywhere}.empty{font-size:11px;color:var(--sherlock-muted)}
- footer{grid-column:1/-1;min-width:0;display:flex;align-items:center;border-top:.5px solid var(--sherlock-border);color:var(--sherlock-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- @media(max-width:440px){html,body{overflow:auto}body{display:block;height:auto;min-height:100%;padding:0 8px}.month{padding-right:0}.days{grid-auto-rows:24px}.days button{width:22px;height:22px}.agenda{border-left:0;border-top:.5px solid var(--sherlock-border);padding:6px 0 0;overflow:visible}.events{height:auto;overflow:visible}footer{margin-top:8px}}
- ${CALENDAR_PRESENTATION_CSS}</style></head><body data-research-kind="calendar" aria-label="${escape(spec.title)}"><section class="month" aria-label="月历"><div class="month-nav"><button id="previous" aria-label="上个月">‹</button><select id="month" aria-label="选择月份"><option value="">全部日期</option>${months.map(m=>`<option${m===defaultMonth?' selected':''}>${m}</option>`).join('')}<option value="uncertain">日期待定</option></select><button id="next" aria-label="下个月">›</button></div><div class="weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div><div id="days" class="days" aria-label="按日期筛选"></div></section><section class="agenda" aria-label="事件安排"><div class="agenda-head"><span id="agenda-title">本月安排</span><button id="clear-day">清除选择</button></div><div id="events" class="events"></div></section><footer id="count" role="status"></footer><script>
- const entries=${data},months=${JSON.stringify(months)},month=document.getElementById('month'),days=document.getElementById('days'),events=document.getElementById('events'),heading=document.getElementById('agenda-title');let day='';
- function render(){const value=month.value;days.replaceChildren();if(/^\\d{4}-\\d{2}$/.test(value)){const[y,m]=value.split('-').map(Number),offset=(new Date(y,m-1,1).getDay()+6)%7,last=new Date(y,m,0).getDate();for(let i=0;i<offset;i++)days.appendChild(document.createElement('span'));for(let i=1;i<=last;i++){const date=value+'-'+String(i).padStart(2,'0'),button=document.createElement('button');button.textContent=i;button.setAttribute('aria-label',date);button.dataset.active=entries.some(item=>item.date.slice(0,10)===date);button.setAttribute('aria-pressed',String(day===date));button.onclick=()=>{day=day===date?'':date;render()};days.appendChild(button)}}
- const shown=entries.filter(item=>day?item.date.slice(0,10)===day:value==='uncertain'?!/^\\d{4}-\\d{2}/.test(item.date):!value||item.date.startsWith(value));heading.textContent=day?'当日安排':'本月安排';events.replaceChildren();for(const item of shown){const row=document.createElement('article'),time=document.createElement('time'),copy=document.createElement('div'),title=document.createElement('strong'),summary=document.createElement('small');row.className='event';time.textContent=item.time||item.date.slice(5,10).replace('-','.');title.textContent=item.title;summary.textContent=[item.category,item.summary].filter(Boolean).join(' · ');copy.append(title,summary);row.append(time,copy);events.appendChild(row)}if(!shown.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='当前日期没有事件';events.appendChild(empty)}document.getElementById('count').textContent=(value&&value!=='uncertain'?value.replace('-','年')+'月 · ':'')+shown.length+'项事件'+(day?' · '+day:'')}
- month.onchange=()=>{day='';render()};document.getElementById('previous').onclick=()=>{month.selectedIndex=Math.max(1,month.selectedIndex-1);day='';render()};document.getElementById('next').onclick=()=>{month.selectedIndex=Math.min(months.length,month.selectedIndex+1);day='';render()};document.getElementById('clear-day').onclick=()=>{day='';render()};render();
- </script></body></html>`;
- return { version: 1, type: 'html', title: spec.title, html };
-}
 export function renderInteractiveArtifact(spec) {
+ if(spec?.type==='calendar')return renderCalendarArtifact(spec);
  if (!['news','reports','calendar','dashboard'].includes(spec?.type)) return null;
  if (spec.version !== 1 || !text(spec.title,256) || !Array.isArray(spec.items) || !spec.items.length || spec.items.length > 40) return null;
  const dashboard = spec.type === 'dashboard';
- const calendar = spec.type === 'calendar';
  if (dashboard && !text(spec.asOf,256)) return null;
  for (const i of spec.items) {
   if (!i || !text(dashboard ? i.label : i.title,256) || (dashboard ? !text(i.value,256) : !text(i.summary) && !url(i.url))) return null;
   for (const k of ['summary','detail','date','time','category']) if (i[k] !== undefined && !text(i[k])) return null;
   if (i.url !== undefined && !url(i.url)) return null;
- }
- if (calendar) {
-  const months = [...new Set(spec.items.map(i=>i.date?.match(/^\d{4}-(?:0[1-9]|1[0-2])(?=-|$)/)?.[0]).filter(Boolean))].sort();
-  return renderCalendarArtifact(spec, months);
  }
  const categories = [...new Set(spec.items.map(i=>i.category).filter(Boolean))];
  const metricColumns = dashboard ? spec.items.length >= 5 ? 3 : spec.items.length === 4 ? 4 : Math.max(1,spec.items.length) : 1;

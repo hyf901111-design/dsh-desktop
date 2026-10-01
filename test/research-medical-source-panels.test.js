@@ -85,8 +85,8 @@ describe('21H medical source composition', () => {
 
   it('preserves the source calendar geometry after HTML rendering and canvas arrange', () => {
     const calendar = renderInteractiveArtifact({ version: 1, type: 'calendar', title: '研究日历（模拟）', items: [{ title: '会议', summary: '模拟研究', date: '2026-02-10' }] });
-    expect(researchMarketDimensions(node('calendar', calendar))).toEqual({ width: 536, height: 316 });
-    expect(researchMarketDimensions(node('legacy-calendar', { ...calendar, html: calendar.html.replace('data-research-kind="calendar" ', '') }))).toEqual({ width: 536, height: 316 });
+    expect(researchMarketDimensions(node('calendar', calendar))).toEqual({ width: 656, height: 424 });
+    expect(researchMarketDimensions(node('legacy-calendar', { ...calendar, html: calendar.html.replace('data-research-kind="calendar" ', '') }))).toEqual({ width: 656, height: 424 });
   });
 
   it('keeps long pipeline and event descriptions readable in their source cards', () => {
