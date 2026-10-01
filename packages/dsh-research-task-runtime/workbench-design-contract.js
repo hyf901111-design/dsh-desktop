@@ -4,12 +4,15 @@ import {CHART_TEMPLATES,requestedChartVariant} from './chart-template-contract.j
 import {OPERATIONS_TEMPLATES} from './operations-template-contract.js';
 import {inferFinancialSnapshotVariant} from './financial-snapshot.js';
 import {inferFinancialSeriesVariant} from './financial-series.js';
+import {inferFinancialActionVariant} from './financial-actions.js';
 import {inferFinancialRevenueVariant} from './financial-revenue.js';
 import {inferFinancialFundamentalVariant} from './financial-fundamentals.js';
 import { researchMarketContentDimensions, researchOptimalDimensions } from './bento-layout.js';
 export const WORKBENCH_DESIGN_VERSION = '21m-20260923-v1';
 
 const market = Object.freeze({
+  dividends: {id:'financial.dividends',figma:'1917:348283',sourceHeight:330,width:980,height:330,minWidth:480,minHeight:280,size:'large'},
+  'stock-splits': {id:'financial.stock-splits',figma:'1917:348906',sourceHeight:330,width:485,height:330,minWidth:320,minHeight:260,size:'medium'},
   'revenue-geography': {id:'financial.revenue-geography',figma:'1917:347589',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
   'revenue-business': {id:'financial.revenue-business',figma:'1917:347932',sourceHeight:410,width:980,height:410,minWidth:480,minHeight:320,size:'large'},
   'company-profile': {id:'financial.company-profile',figma:'1917:345616',sourceHeight:550,width:980,height:550,minWidth:480,minHeight:360,size:'large'},
@@ -78,6 +81,8 @@ const rank = { small: 0, medium: 1, large: 2 };
 
 export function marketVariant(panel = {}) {
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
+  const actionTitle=inferFinancialActionVariant(panel.title),declaredAction=requestedMarketVariant(panel.prompt);
+  if(actionTitle&&(!declaredAction||declaredAction===actionTitle))return actionTitle;
   const revenueTitle=inferFinancialRevenueVariant(panel.title),declaredRevenue=requestedMarketVariant(panel.prompt);
   if(revenueTitle&&(!declaredRevenue||declaredRevenue===revenueTitle))return revenueTitle;
   const fundamentalTitle=inferFinancialFundamentalVariant(panel.title),declaredFundamental=requestedMarketVariant(panel.prompt);
@@ -115,6 +120,7 @@ export function marketVariant(panel = {}) {
   if (!primaryCandle &&
       /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
+    const action=inferFinancialActionVariant(text);if(action)return action;
     const revenue=inferFinancialRevenueVariant(text);if(revenue)return revenue;
     const fundamental=inferFinancialFundamentalVariant(text);if(fundamental)return fundamental;
     const series=inferFinancialSeriesVariant(text);if(series)return series;

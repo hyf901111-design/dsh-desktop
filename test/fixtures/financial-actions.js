@@ -1,0 +1,10 @@
+export const dividends={version:1,type:'market',variant:'dividends',title:'分红记录（模拟）',asOf:'2026-10-01 · 本地虚构记录',period:'2026年来源分红事件（虚构）',events:Array.from({length:12},(_,i)=>({id:'div-'+i,symbol:'DEMO.CNY',name:'虚构分红公司',exDate:'2026-'+String(i+1).padStart(2,'0')+'-10',recordDate:'2026-'+String(i+1).padStart(2,'0')+'-11',paymentDate:i===11?null:'2026-'+String(i+1).padStart(2,'0')+'-20',declaredDate:'2026-'+String(i+1).padStart(2,'0')+'-01',amount:i===1?0:i===11?null:Number((0.25+i/100).toFixed(2)),adjustedAmount:i===11?null:Number((0.2+i/100).toFixed(2)),currency:'CNY',frequency:i===1?'特别分红':'季度',status:i===11?'planned':'paid',adjustmentBasis:'来源按拆股调整；金额为原币种每股值',...(i===11?{missing:'公告未披露金额与支付日'}:{}),link:'https://example.com/announcements/div-'+i}))}
+dividends.events.push({id:'other-div',symbol:'OTHER.USD',name:'第二家虚构公司',exDate:'2026-09-01',recordDate:null,paymentDate:null,declaredDate:'2026-08-01',amount:null,adjustedAmount:null,currency:'USD',frequency:'特别分红',status:'cancelled',adjustmentBasis:'来源未提供调整口径',missing:'取消公告未提供登记日、支付日和金额'})
+export const splits={version:1,type:'market',variant:'stock-splits',title:'拆股合股记录（模拟）',asOf:'2026-10-01 · 本地虚构记录',period:'2020–2026来源拆股事件（虚构）',events:[
+ {id:'forward',symbol:'DEMO.CNY',name:'虚构拆股公司',date:'2020-08-31',from:1,to:4,announcedDate:'2020-08-01',status:'executed',priceBasis:'来源价格不复权',link:'https://example.com/announcements/forward'},
+ {id:'reverse',symbol:'DEMO.CNY',name:'虚构拆股公司',date:'2024-06-01',from:5,to:1,announcedDate:'2024-05-01',status:'executed',priceBasis:'来源价格后复权'},
+ {id:'fraction',symbol:'DEMO.CNY',name:'虚构拆股公司',date:'2025-06-01',from:2,to:3,announcedDate:'2025-05-01',status:'executed',priceBasis:'来源未提供价格复权口径'},
+ {id:'unknown',symbol:'DEMO.CNY',name:'虚构拆股公司',date:'2026-12-01',from:1,to:null,announcedDate:null,status:'planned',priceBasis:'来源未提供价格复权口径',missing:'计划未提供后股数与公告日'},
+ {id:'cancelled',symbol:'OTHER.USD',name:'第二家虚构公司',date:'2026-09-01',from:1,to:2,announcedDate:'2026-08-01',status:'cancelled',priceBasis:'来源价格不复权'}
+]}
+export const actionFixtures=[dividends,splits]
