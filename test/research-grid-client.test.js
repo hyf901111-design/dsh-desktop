@@ -809,6 +809,16 @@ it('失败完成时间不作为成功刷新时间',async()=>{
  await f.event('mouseover',f.host.querySelector('.ew-grid-refresh'))
  expect(f.document.querySelector('[role=tooltip]')?.textContent).toBe('尚未刷新暂无成功刷新记录')
 })
+it('RSS刷新提示只使用实际读取时点，失败或管理操作不重置成功时间',async()=>{
+ const fetchedAt='2026-10-01T08:09:52.137Z',rss={version:1,type:'rss',title:'订阅',asOf:'本地初始化',feeds:[{id:'source',url:'https://example.com/rss.xml',title:'源',format:'rss',fetchedAt,error:'HTTP 503',entries:[]}]};
+ const f=await fixture(true),containerSpec=JSON.parse(acceptArtifactOutput(JSON.stringify(rss)));
+ await act(async()=>f.workspace.setArtifacts([{...text('rss'),kind:'generated-container',containerPrompt:'RSS订阅',generationLastSeq:1,refreshMinutes:0,containerSpec,generationStatus:'completed',generationCompletedAt:Date.now(),lastSuccessfulAt:Date.now()}]));
+ await f.event('mouseover',f.host.querySelector('.ew-grid-refresh'));
+ expect(f.document.querySelector('[role=tooltip] time')?.textContent).toBe(workbenchRefreshTooltip(fetchedAt).absolute);
+ const empty=JSON.parse(acceptArtifactOutput(JSON.stringify({...rss,feeds:[]})));
+ await act(async()=>f.workspace.setArtifacts([{...text('rss'),kind:'generated-container',containerPrompt:'RSS订阅',generationLastSeq:1,refreshMinutes:0,containerSpec:empty,generationStatus:'completed',generationCompletedAt:Date.now()}]));
+ expect(f.document.querySelector('[role=tooltip]')?.textContent).toBe('尚未刷新暂无成功刷新记录');
+})
 it('滚动后的框选覆盖层保留可见坐标，就地衍生卡使用稳定工作台格位与来源',async()=>{
  const f=await fixture(true);await act(async()=>{f.workspace.setArtifacts([text('a')]);f.workspace.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:60}],true)})
  f.canvas.scrollTop=600;await f.event('scroll',f.canvas)
