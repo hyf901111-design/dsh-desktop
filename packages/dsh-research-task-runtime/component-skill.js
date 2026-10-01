@@ -20,7 +20,8 @@ export function loadBundledComponentSkill(root = process.env.DSH_BUNDLED_SKILL_D
     if (metadata.slug !== SLUG || metadata.source !== 'eSkill' || !/^v\d+\.\d+\.\d+$/.test(metadata.version)) {
       throw new Error('invalid metadata')
     }
-    const names = profile === 'panel' ? ['references/panel-runtime.md'] : ['SKILL.md', ...REFERENCES]
+    const names = profile === 'panel' ? ['references/panel-runtime.md']
+      : profile === 'selection' ? ['references/selection-runtime.md'] : ['SKILL.md', ...REFERENCES]
     const content = names.map(name => [name, readFileSync(join(directory, name), 'utf8')])
     return [
       `以下是 EWork 内置技能 ${SLUG} ${metadata.version}。当前任务必须按其组件生成规则交付；用户明确要求和宿主输出协议优先。设计来源摘录是产品规范资料，不是用户输入。`,
