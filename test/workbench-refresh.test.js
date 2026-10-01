@@ -97,6 +97,33 @@ it('journal rollback clears cached controls only for the owning iframe',()=>{
  expect(send).not.toHaveBeenCalled()
 })
 
+it('restores persisted semantic drawing anchors after the entire card is unmounted and mounted again',()=>{
+ const win=new Window(),doc=win.document;doc.body.innerHTML='<article><div data-research-preview-body><iframe></iframe></div></article>'
+ const inner=doc.querySelector('iframe').contentWindow,send=vi.spyOn(inner,'postMessage')
+ const state={values:[['chart-view-key:technical-controls',JSON.stringify({dataset:'daily',configs:[{id:'s',kind:'sma',period:5,enabled:true}],drawings:Array.from({length:4},(_,i)=>({dataset:'daily',kind:'trend',points:[{date:'2026-09-03',value:10+i},{date:'2026-09-07',value:11+i}]})),locked:true})]],controls:[],scroll:[]}
+ const saved=vi.fn(),feedback=createComponentRefreshFeedback(doc.querySelector('article'),{initialState:state,onState:saved})
+ clean.push(async()=>{feedback.dispose();await win.happyDOM.abort()})
+ feedback.update(null,'chart','template:market.charting:1')
+ const defaults={values:[['chart-view-key:technical-controls','{"drawings":[]}']],controls:[],scroll:[]}
+ win.dispatchEvent(new win.MessageEvent('message',{source:inner,data:{type:'sherlock-workbench-ready',revision:workbenchContentRevision('chart'),state:defaults}}))
+ expect(send).toHaveBeenCalledWith(expect.objectContaining({state,animate:false}),'*')
+ win.dispatchEvent(new win.MessageEvent('message',{source:inner,data:{type:'sherlock-workbench-view',revision:workbenchContentRevision('chart'),state}}))
+ expect(saved).toHaveBeenCalledWith(state,workbenchContentRevision('chart'))
+})
+
+it('publishes completed pointer drawings and keyboard selections without relying on a following click',()=>{
+ vi.useFakeTimers();const win=new Window(),doc=win.document
+ doc.body.innerHTML='<section data-workbench-chart-view="{}" data-workbench-view-key="technical-controls"><svg></svg></section>'
+ const changed=vi.fn(),surface=createWorkbenchRefreshSurface(doc.body,changed),root=doc.querySelector('section'),svg=doc.querySelector('svg')
+ clean.push(async()=>{surface.dispose();await win.happyDOM.abort()})
+ root.dataset.workbenchChartView='{"drawings":[{"kind":"trend"}]}'
+ svg.dispatchEvent(new win.Event('pointerup',{bubbles:true}));vi.advanceTimersByTime(61)
+ expect(changed.mock.calls.at(-1)[0].values).toContainEqual(['chart-view-key:technical-controls',root.dataset.workbenchChartView])
+ root.dataset.workbenchChartView='{"selected":"2026-09-03"}'
+ svg.dispatchEvent(new win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));vi.advanceTimersByTime(61)
+ expect(changed.mock.calls.at(-1)[0].values).toContainEqual(['chart-view-key:technical-controls',root.dataset.workbenchChartView])
+})
+
 it('waits for new iframe content when success status arrives before the replacement HTML',()=>{
  vi.useFakeTimers();const win=new Window(),doc=win.document;doc.body.innerHTML='<article><div data-research-preview-body><iframe></iframe></div></article>'
  const inner=doc.querySelector('iframe').contentWindow,feedback=createComponentRefreshFeedback(doc.querySelector('article')),send=vi.spyOn(inner,'postMessage')

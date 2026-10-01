@@ -63,8 +63,9 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
     }
     applying = false; publish()
   }
-  for (const event of ['input','change','click','scroll']) root.addEventListener(event, schedule, true)
-  return { snapshot, apply, dispose() { disposed = true; clearTimeout(timer); clearTimeout(cleanupTimer); for (const event of ['input','change','click','scroll']) root.removeEventListener(event, schedule, true) } }
+  const events=['input','change','click','scroll','pointerup','keydown']
+  for (const event of events) root.addEventListener(event, schedule, true)
+  return { snapshot, apply, dispose() { disposed = true; clearTimeout(timer); clearTimeout(cleanupTimer); for (const event of events) root.removeEventListener(event, schedule, true) } }
 }
 
 export const workbenchRefreshCss = `

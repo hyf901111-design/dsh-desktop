@@ -53,16 +53,39 @@ export function componentDataStatusView(binding,completion=null){
  return {time,detail,phase,title:(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(binding?.dataAsOf?'\n数据时点：'+binding.dataAsOf:'')+'\n点击设置数据源与刷新频率'}
 }
 
-export function createComponentRefreshFeedback(card){
+// Personal technical annotations survive a card unmount. Persist only its
+// semantic chart key; ordinary form values and source data stay out of this cache.
+export function personalChartViewState(state){
+ if(!isWorkbenchViewState(state))return null
+ const row=state.values.find(row=>row[0]==='chart-view-key:technical-controls')
+ return row?{values:[row],controls:[],scroll:[]}:null
+}
+export function readPersonalChartView(node){
+ const html=node?.containerSpec?.html,saved=node?.config?.personalChartView
+ return typeof html==='string'&&workbenchTemplateIdentity(html).startsWith('template:market.charting:')&&saved?.revision===workbenchContentRevision(html)?personalChartViewState(saved.state):null
+}
+export function createPersonalChartViewSink({read,write,canWrite}){
+ return (nodeId,revision,state)=>{
+  if(!canWrite())return false
+  const node=read().find(n=>n.id===nodeId),html=node?.containerSpec?.html,next=personalChartViewState(state)
+  if(!next||typeof html!=='string'||revision!==workbenchContentRevision(html)||!workbenchTemplateIdentity(html).startsWith('template:market.charting:'))return false
+  const saved={revision,state:next}
+  if(JSON.stringify(node.config?.personalChartView)===JSON.stringify(saved))return true
+  return write(nodeId,{...node.config,personalChartView:saved})!==false
+ }
+}
+
+export function createComponentRefreshFeedback(card,{initialState=null,onState=()=>{}}={}){
  const body=card.querySelector('[data-research-preview-body]'),frame=body?.querySelector('iframe'),win=card.ownerDocument.defaultView
  if(!body)return {update(){},dispose(){}}
- let view=null,baseline=null,sequence=0,initialized=false,animate=false,disposed=false,timer=0,loadingTimer=0,revision=null,readyRevision=null,identity=null,awaitRevision=null,refreshOrigin=null,previousStatus=null
+ let view=isWorkbenchViewState(initialState)?initialState:null,baseline=null,sequence=0,initialized=false,animate=false,disposed=false,timer=0,loadingTimer=0,revision=null,readyRevision=null,identity=null,awaitRevision=null,refreshOrigin=null,previousStatus=null
  const surface=frame?null:createWorkbenchRefreshSurface(body,state=>{view=state})
- const retainCharts=(state,saved)=>({...state,values:[...state.values.filter(row=>!row[0].startsWith('chart-view:')),...(saved?.values||state.values).filter(row=>row[0].startsWith('chart-view:'))]})
+ const chartKey=key=>key.startsWith('chart-view:')||key.startsWith('chart-view-key:')
+ const retainCharts=(state,saved)=>({...state,values:[...state.values.filter(row=>!chartKey(row[0])),...(saved?.values||state.values).filter(row=>chartKey(row[0]))]})
  if(surface)view=surface.snapshot()
  const send=()=>{
   if(disposed||!view||frame&&animate&&revision===awaitRevision)return
-  const state={...view,values:[...(baseline||view.values).filter(row=>!row[0].startsWith('chart-view:')),...view.values.filter(row=>row[0].startsWith('chart-view:'))]}
+  const state={...view,values:[...(baseline||view.values).filter(row=>!chartKey(row[0])),...view.values.filter(row=>chartKey(row[0]))]}
   if(frame){if(readyRevision===revision)frame.contentWindow?.postMessage({type:'sherlock-workbench-restore',state,animate,revision},'*')}
   else surface.apply(state,animate)
  }
@@ -84,6 +107,7 @@ export function createComponentRefreshFeedback(card){
    if(saved||animate)send()
   }else{
    view=data.state
+   onState(view,revision)
    if(animate&&revision!==awaitRevision){baseline=data.state.values;animate=false;awaitRevision=null}
   }
  }
@@ -128,7 +152,7 @@ export function ComponentDataStatusBar({sessionId,node,workbench=false}){
   return()=>clearTimeout(timer)
  },[key,binding?.completionSequence,binding?.status])
  const content=node.containerSpec?.html||JSON.stringify(node.containerSpec||{}),identity=node.containerSpec?.type==='html'?workbenchTemplateIdentity(content):node.containerSpec?.type+':'+node.containerSpec?.variant
- react.useLayoutEffect(()=>{const card=ref.current?.closest('[data-research-node-id]');if(workbench&&card){feedback.current=createComponentRefreshFeedback(card);feedback.current.update(binding,content,identity)}return()=>{feedback.current?.dispose();feedback.current=null}},[sessionId,node.id,workbench,node.containerSpec?.type==='html'])
+ react.useLayoutEffect(()=>{const card=ref.current?.closest('[data-research-node-id]');if(workbench&&card){feedback.current=createComponentRefreshFeedback(card,{initialState:readPersonalChartView(node),onState:(state,revision)=>{if(typeof researchPersonalChartViewSinks!=='undefined')researchPersonalChartViewSinks.get(sessionId)?.(node.id,revision,state)}});feedback.current.update(binding,content,identity)}return()=>{feedback.current?.dispose();feedback.current=null}},[sessionId,node.id,workbench,node.containerSpec?.type==='html'])
  react.useLayoutEffect(()=>{feedback.current?.update(binding,content,identity)},[binding,content,identity])
  const view=componentDataStatusView(binding,notice?.key===key?notice.status:null),shared=sherlockShared(sessionId)
  return react_jsx_runtime.jsxs(workbench?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':view.detail+'，'+view.time+(workbench||shared?'':'，设置刷新频率'),...(!workbench?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:shared?'静态组件':view.detail})]}),react_jsx_runtime.jsx('time',{dateTime:binding?.lastSuccess?new Date(binding.lastSuccess).toISOString():undefined,children:view.time})]})
@@ -158,13 +182,21 @@ export const componentDataStatusCss=workbenchRefreshCss+`
 
 `
 
-export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,createComponentRefreshFeedback,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
+export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
 
 export function patchComponentDataStatus(source){
- if(source.includes('/* ODYSSEY_COMPONENT_DATA_STAMP */'))return source
  const replace=(a,b)=>{if(source.split(a).length!==2)throw Error('Component status anchor drifted: '+a.slice(0,80));source=source.replace(a,b)}
+ if(!source.includes('/* ODYSSEY_COMPONENT_DATA_STAMP */')){
  replace('function ResearchCanvasRichNodeFrame({ node,','function ResearchCanvasRichNodeFrame({ componentDataSessionId, node,')
  replace('"data-research-generated-container": node.kind === "generated-container" ? "" : void 0,','"data-research-generated-container": node.kind === "generated-container" ? "" : void 0,\ncomponentDataSessionId:sessionId,')
  replace('}), !expanded && geometry.resizable ?', `}), /* ODYSSEY_COMPONENT_DATA_STAMP */ node.kind==='generated-container'&&node.containerSpec?(0,react_jsx_runtime.jsx)(ComponentDataStatusBar,{sessionId:componentDataSessionId,node}):null, !expanded && geometry.resizable ?`)
+ }
+ const marker='/* ODYSSEY_PERSONAL_CHART_VIEW_V1 */'
+ // Keep patch markers beside their code. A trailing marker changes the final
+ // stylesheet boundary and makes the creation-tools patch append it twice.
+ if(source.includes(marker))return source.includes('\n'+marker)?source.replace('\n'+marker,'').replace('const researchPersonalChartViewSinks = new Map();',marker+' const researchPersonalChartViewSinks = new Map();'):source
+ replace('const researchSharedStateSinks = new Map();','const researchSharedStateSinks = new Map(); '+marker+' const researchPersonalChartViewSinks = new Map();')
+ replace('researchSharedStateSinks.set(sessionId,',`researchPersonalChartViewSinks.set(sessionId,createPersonalChartViewSink({read:()=>snapshot.artifacts,canWrite:()=>!sherlockShared(sessionId)&&collaborationCanWrite(),write:(nodeId,config)=>update({artifacts:snapshot.artifacts.map(n=>n.id===nodeId?{...n,config}:n)},true)}));\n  researchSharedStateSinks.set(sessionId,`)
+ replace('...(container && Object.hasOwn({small:1,medium:1,large:1}, value.containerSizePreset)',`...(container && readPersonalChartView(value) ? {config:{...(validResearchInteractionState(value.config?.interactionState)?{interactionState:value.config.interactionState}:{}),...(value.config?.sharedComponentState && JSON.stringify(value.config.sharedComponentState).length<66000?{sharedComponentState:value.config.sharedComponentState}:{}),personalChartView:value.config.personalChartView}} : {}),\n                ...(container && Object.hasOwn({small:1,medium:1,large:1}, value.containerSizePreset)`)
  return source
 }
