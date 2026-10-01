@@ -56,6 +56,9 @@ export function templateDataIssue(data){
 // Empty retrieval is a source problem, not malformed visual JSON. A bounded
 // repair must retain tools so it can correct the query's time direction.
 export function templateSourceDataIssue(data) {
+  if(data?.type==='market'&&data.variant==='institutional-ownership'&&data.companies?.length&&data.companies.every(c=>c.snapshots.every(p=>p.metrics.every(m=>['current','previous','change','changePercent'].every(k=>m[k]===null)))))
+    return '机构持仓汇总尚无来源统计数值。必须实际取得披露响应，不能从部分机构明细推导汇总或把全空统计标为取数完成。'
+
   if(data?.type==='market'&&['revenue-geography','revenue-business'].includes(data.variant)&&data.datasets?.length&&data.datasets.every(d=>d.segments.every(r=>r.values.every(v=>v===null))))
     return '收入分项尚无已披露数值。必须取得来源记录，不能用全空分项或总收入替代收入结构。'
 

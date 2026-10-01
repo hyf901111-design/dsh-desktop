@@ -4,6 +4,7 @@ import {applyTerminalPresentation} from './terminal-presentation.js'
 import {OPERATIONS_TEMPLATES,operationsTemplateSchema} from './operations-template-contract.js'
 
 const interactions = {
+ 'insider-trading':['公司与人员筛选','原交易类型和方向','交易日与披露日','日期排序','完整来源记录','披露链接'],'institutional-ownership':['已取得公司年度季度','本期比较期原值','原变化及单位','来源汇总与部分明细','机构与股类筛选','语义状态恢复'],
  dividends:['公司筛选','日期范围','状态筛选','日期排序','事件详情','原公告'],
  'stock-splits':['公司筛选','日期范围','拆股合股方向','来源状态','复权口径','原公告'],
  'revenue-geography':['公司与财年季度','固定分项颜色','图例切换','收入占比','来源总额核对','完整披露记录'],'revenue-business':['公司与财年季度','跨期固定颜色','图例分页','收入占比','来源总额核对','完整披露记录'],
