@@ -1795,6 +1795,17 @@ it('笔记完整长草稿随所属卡片保留，仅当前版本正文链接进�
  await request('https://example.com/new');expect(f.host.textContent).toContain('打开来源：新来源');
  const restored=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');expect(restored.getSnapshot().artifacts[0].config.sharedComponentState.state.content).toBe(state.content);
 })
+it('YouTube与嵌入网页最小表单优先使用内部滚动，不被画布截获',async()=>{
+ for(const type of ['youtube','iframe']){
+  const f=await fixture(true),id=type+'-scroll',spec={version:1,type,title:'最小表单',url:null}
+  await act(async()=>{f.workspace.setArtifacts([{...text(id),kind:'generated-container',containerPrompt:'网址',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]);f.workspace.updateSelection([id],'replace')})
+  if(type==='iframe')await f.event('click',f.host.querySelector('[data-iframe-add]'))
+  const preset=f.host.querySelector('[data-research-'+type+'-preset]')
+  Object.defineProperties(preset,{scrollHeight:{value:220},clientHeight:{value:142}});preset.style.overflowY='auto'
+  const e=await f.event('wheel',preset.querySelector('form'),{deltaX:0,deltaY:24})
+  expect(e.defaultPrevented,type+'内部滚动').toBe(false)
+ }
+})
 it('YouTube客户端等待现有网页授权桥后才挂载官方播放器，失败可重试',async()=>{
  let resolve,failed=false;const authorize=vi.fn(()=>failed?Promise.reject(Error('blocked')):new Promise(r=>resolve=r)),release=vi.fn(async()=>({ok:true}))
  const f=await fixture(true,{researchLinkFrame:{authorize,release}}),spec={version:1,type:'youtube',title:'原生授权视频',url:'https://youtu.be/M7lc1UVf-VE'}
@@ -1860,6 +1871,17 @@ it('YouTube整理按播放器实际宽度恢复16比9可读高度，并保留原
  await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
  await act(async()=>new Promise(resolve=>setTimeout(resolve,700)))
  expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(597)
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('YouTube整理保留展开说明和字幕的实际高度，不按固定摘要高度截断',async()=>{
+ const f=await fixture(true),spec={version:1,type:'youtube',title:'完整字幕复验',url:'https://youtu.be/M7lc1UVf-VE',subtitles:'第一行原字幕\n第二行原字幕'}
+ await act(async()=>f.workspace.setArtifacts([{...text('youtube-details'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ const loaded=f.host.querySelector('.ew-youtube-loaded');Object.defineProperty(loaded,'offsetHeight',{configurable:true,value:720})
+ f.host.querySelector('details').open=true
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await act(async()=>new Promise(resolve=>setTimeout(resolve,700)))
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(758)
+ expect(f.host.querySelector('pre').textContent).toBe(spec.subtitles)
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
 })
 it('YouTube补丁重复安装不重复原生类型，不放开生成HTML的iframe限制',async()=>{

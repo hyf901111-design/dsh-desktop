@@ -775,3 +775,11 @@ Figma1917:353092/353093默认稿485×340、38px顶栏/302px正文；标题14/16�
 保存本人用于核验的官方示例完整原网址后，原生播放器持续空白。源码确认安全导航需要既有researchLinkFrame.authorize登记，新的YouTube渲染器尚未接入。现改为先通过既有可信主界面桥登记本卡精确官方embed网址，再挂载具登记名称的播放器；不修改全局安全策略。登记失败或返回其他网址时不挂载，显示真实失败提示和重试入口；离开或换来源释放登记，异步过期回复不挂载。浏览器独立夹具无桌面桥时保留原路径。
 
 新增实际React宿主的等待登记、名称绑定、失败重试及异址拒绝回归通过；首轮夹具遗漏生成卡片必需的containerPrompt，修正夹具后重跑。27项直接相关聚焦和项目类型检查通过。证据youtube-native-before-authorization.png、youtube-native-authorization-red.log、youtube-native-authorization-diagnostic.log、youtube-native-authorization-final.log及youtube-native-authorization-typecheck.log。修正后的最终包待复验，实现66/74、原生接受65/74，未提前接受播放。
+
+### YouTube网页登记最终包与展开资料高度修正
+
+1b8f6b65受管集成至57fd70ad，清洁本地构建、深度签名与完整包检查通过；技能v1.27.0，端口58896。返回原会话，播放器已真实载入官方示例标题及海报；整理恢复可读16:9画面、重试/原视频和说明入口完整。点击实际播放后，YouTube返回“请登录，以便我们确认你不是聊天机器人”，原生播放尚未通过，需要本人登录；没有复制真实账户Cookie或尝试绕过。浏览器已观察到的实际播放证据保留，不代替原生播放接受。
+
+浅色、深色网址编辑、企业播放器已复核。实际拖至网格最小范围，输入框聚焦四边可见，伪装域名回车被拒绝，原已保存网址不变。Tab使内部表单滚动并完整显示确认/取消；语义点击取消返回原视频。滚轮工具调用未观察到滚动，不计为原生滚轮通过；实际React宿主的两种表单滚轮检查通过。切换到自己的网页验证会话后再返回，原视频、完整原网址及说明保持。折叠侧栏头像和消息图标同轴再次确认。
+
+发现展开已提供说明后固定摘要高度不足，原说明在视区底部被截住。整理改为同时测量自然内容列实际高度，包含展开说明/字幕、换行操作按钮及封面；不将外层视口高度反馈为内容高度。实际整理回归先失败655.55px，修正后按720px内容和38px顶栏保留至少758px。29项直接相关聚焦及项目类型检查通过。证据youtube-expanded-details-red.log、youtube-final-fit-tests.log、youtube-final-fit-typecheck.log、youtube-native-play-login-required.png、youtube-native-minimum-focus.png、youtube-native-minimum-keyboard-buttons.png及youtube-native-enterprise-arranged.png。此高度修正后最终包仍待复验，原生接受保持65/74，整体目标继续。
