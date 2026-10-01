@@ -1,3 +1,4 @@
+import {DERIVED_TEMPLATES,DERIVED_GUIDANCE} from './derived-template-contract.js'
 import {YOUTUBE_TEMPLATES,YOUTUBE_GUIDANCE} from './youtube-template-contract.js'
 import {IFRAME_TEMPLATES,IFRAME_GUIDANCE} from './iframe-template-contract.js'
 import {TIMELINE_TEMPLATES,TIMELINE_GUIDANCE} from './timeline-template-contract.js'
@@ -27,6 +28,7 @@ const generic=[
  ['reports','研报',['搜索','分类','展开','来源'],656,352],['gantt','甘特图',['筛选','日期','任务详情'],656,352]
 ]
 export const COMPONENT_TEMPLATES=Object.freeze([
+ ...DERIVED_TEMPLATES.map(t=>({...t,schema:DERIVED_GUIDANCE})),
  ...YOUTUBE_TEMPLATES.map(t=>({...t,schema:YOUTUBE_GUIDANCE})),
  ...IFRAME_TEMPLATES.map(t=>({...t,schema:IFRAME_GUIDANCE})),
  ...TIMELINE_TEMPLATES.map(t=>({...t,schema:TIMELINE_GUIDANCE})),

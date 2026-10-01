@@ -1,3 +1,4 @@
+import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchYoutubeClient} from './lib/youtube-client.mjs'
 import {patchIframeClient} from './lib/iframe-client.mjs'
 import { patchComponentDataRefresh } from './lib/component-data-refresh.mjs'
@@ -235,4 +236,4 @@ writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversati
 writeFileSync(conversationPath, patchComponentScheduledTasks(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchComponentDataRefresh(readFileSync(conversationPath, 'utf8')))
-writeFileSync(conversationPath, patchResearchGridWorkbench(patchYoutubeClient(patchIframeClient(readFileSync(conversationPath, 'utf8')))))
+writeFileSync(conversationPath, patchResearchGridWorkbench(patchDerivedPresetClient(patchYoutubeClient(patchIframeClient(readFileSync(conversationPath, 'utf8'))))))

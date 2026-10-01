@@ -1,3 +1,4 @@
+import {DERIVED_GUIDANCE} from './derived-template-contract.js';
 import {YOUTUBE_GUIDANCE} from './youtube-template-contract.js';
 import {IFRAME_GUIDANCE} from './iframe-template-contract.js';
 import {TIMELINE_GUIDANCE,timelineDataIssue} from './timeline-template-contract.js';
@@ -14,12 +15,14 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-export const WORKBENCH_PANEL_TYPES = Object.freeze(['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube']);
+export const WORKBENCH_PANEL_TYPES = Object.freeze(['markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube']);
+const preparedTypes = new Set(['chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
 const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
+    summary: DERIVED_GUIDANCE,
+    'mind-map': DERIVED_GUIDANCE,
     youtube: YOUTUBE_GUIDANCE,
     iframe: IFRAME_GUIDANCE,
     timeline: TIMELINE_GUIDANCE,
@@ -315,6 +318,7 @@ export function validateWorkbench(value) {
             throw Error(`面板「${p.title}」必须使用 market.candlestick 或 chart.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
         if (/OHLC\s*(?:图|走势)/iu.test(p.title) && chartVariant !== 'ohlc')
             throw Error(`面板「${p.title}」必须使用 chart.ohlc，绘制高低竖线与左开右收刻度；保留完整 OHLC/成交量数据，不能用蜡烛图替代。`);
+        if(['summary','mind-map'].includes(p.type)&&p.artifact===undefined)throw Error('派生组件必须同时提供完整artifact和一个来源快照。'+DERIVED_GUIDANCE);
         if(p.type==='youtube' && p.artifact===undefined)throw Error('YouTube必须同时提供 artifact 及视频原网址或显式 url:null。'+YOUTUBE_GUIDANCE);
         if(p.type==='iframe' && p.artifact===undefined)throw Error('嵌入网页必须同时提供 artifact 及用户网址或显式 url:null。'+IFRAME_GUIDANCE);
         if (!isSimulated && p.artifact !== undefined) {

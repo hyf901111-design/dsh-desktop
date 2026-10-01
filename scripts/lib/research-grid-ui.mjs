@@ -107,7 +107,10 @@ export function useWorkbenchSettings({triggerRef,sessionId,node,disabled,editing
   react.useLayoutEffect(()=>{
     const trigger=triggerRef.current;if(!trigger)return
     const shared=sherlockShared(sessionId),entry=(icon,label,run,blocked=false,writes=true)=>({icon,label,run,disabled:!!blocked,writes})
-    const actions=node.containerSpec?.type==='youtube'?[
+    const actions=['summary','mind-map'].includes(node.containerSpec?.type)&&node.containerSpec.source?[
+      entry('edit','编辑结果',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-derived-preset]')?.__eworkEditDerived?.()),
+      entry('summary','复制完整结果',()=>navigator.clipboard.writeText(node.containerSpec.content),false,false)
+    ]:node.containerSpec?.type==='youtube'?[
       entry('edit','修改视频网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-youtube-preset]')?.__eworkEditYoutube?.()),
       entry('refresh','重新载入视频',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
       entry('link','打开原视频',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
@@ -442,6 +445,13 @@ export function measureWorkbenchContents(root,nodes) {
     // content. Native snapshots are images of that viewport, so they must not
     // replace the readable template height after a manual resize.
     if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
+    const derived=body.querySelector('[data-research-derived-preset]')
+    if(derived){
+      // Branch backgrounds, source controls and open original text belong to
+      // the content box even when the last leaf is much shorter than its card.
+      measured.set(node.id,{width:preferred.width,height:38+Math.max(derived.offsetHeight,derived.scrollHeight)+(card.querySelector('.odyssey-data-stamp')?24:0)})
+      continue
+    }
     // Native line/bar SVGs fill the current frame. Measuring that SVG feeds
     // an arbitrary resized height back into Arrange instead of recovering the
     // template's readable plot. Only an expanded data viewport adds height.

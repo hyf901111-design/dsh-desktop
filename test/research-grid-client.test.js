@@ -1873,6 +1873,13 @@ it('YouTube整理按播放器实际宽度恢复16比9可读高度，并保留原
  expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(597)
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
 })
+it('派生预置整理测量包含完整分支盒与展开原文，不仅测量叶节点',async()=>{
+ const f=await fixture(true),spec={version:1,type:'mind-map',title:'导图高度复验',content:'# 来源\n- 事实\n  - 0\n- 局限\n  - 原因未提供',source:{title:'本人材料',text:'来源完整原文'}}
+ await act(async()=>f.workspace.setArtifacts([{...text('derived-fit'),kind:'generated-container',generationStatus:'completed',containerPrompt:'导图',refreshMinutes:0,containerSpec:spec}]))
+ const preset=f.host.querySelector('[data-research-derived-preset]');Object.defineProperties(preset,{offsetHeight:{configurable:true,value:600},scrollHeight:{configurable:true,value:600}})
+ await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ await vi.waitFor(async()=>{await act(async()=>{});expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(638)},{timeout:1500,interval:50})
+})
 it('YouTube整理保留展开说明和字幕的实际高度，不按固定摘要高度截断',async()=>{
  const f=await fixture(true),spec={version:1,type:'youtube',title:'完整字幕复验',url:'https://youtu.be/M7lc1UVf-VE',subtitles:'第一行原字幕\n第二行原字幕'}
  await act(async()=>f.workspace.setArtifacts([{...text('youtube-details'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
@@ -1975,4 +1982,54 @@ it('嵌入网页刷新只报告重载请求，往返会话隐藏原生网页而�
  expect(result).toEqual({message:'已请求重新载入网页'});expect(reload).toHaveBeenCalledOnce();expect(f.host.querySelector('.odyssey-data-stamp')).toBeNull()
  await f.render({sessionId:'other',measure:false});f.registry.release('grid-test');await f.render({measure:false})
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);expect(bridge.hideNative).toHaveBeenCalled();expect(bridge.releaseNative).not.toHaveBeenCalled();expect(bridge.releaseSession).not.toHaveBeenCalled()
+})
+it('派生预置完整呈现超过48个导图节点，编辑保留来源和同一节点',async()=>{
+ const f=await fixture(true),content='# 本人材料\n'+Array.from({length:60},(_,i)=>'- 分支'+i+'\n  - 原数值 '+(i===0?'0':-i)).join('\n')
+ const spec={version:1,type:'mind-map',title:'本人材料导图',content,source:{title:'原始材料',text:'原始冻结正文，不被结果编辑覆盖'}}
+ await act(async()=>f.workspace.setArtifacts([{...text('derived-own'),kind:'generated-container',generationStatus:'completed',containerPrompt:'仅根据原始材料创建',refreshMinutes:0,containerSpec:spec}]))
+ expect(f.host.querySelectorAll('[data-derived-branch]')).toHaveLength(60)
+ expect(f.host.textContent).toContain('分支59');expect(f.host.textContent).toContain('原数值 0');expect(f.host.textContent).toContain('原数值 -59')
+ const settings=f.host.querySelector('[data-research-container-more]').__eworkWorkbenchSettings
+ expect(settings[0].label).toBe('编辑结果');await act(async()=>settings[0].run())
+ const editor=f.host.querySelector('[aria-label="编辑派生结果"]');expect(editor.value).toBe(content)
+ editor.value='# 修订结果\n- 保留来源\n  - 完整原文';await f.event('keydown',editor,{key:'Enter',metaKey:true})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual({...spec,content:editor.value})
+ const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test');expect(restored.getSnapshot().artifacts[0].containerSpec.source).toEqual(spec.source)
+})
+it('派生预置摘要保留标题、最后证据、来源导航以及取消后的原结果',async()=>{
+ const f=await fixture(true),content='# 原结论标题\n\n'+('完整来源、日期与事实。\n'.repeat(60))+'\n最后证据END'
+ const spec={version:1,type:'summary',title:'总结复验',content,source:{title:'冻结材料',text:'本人提供的冻结正文',nodeId:'source-own'}}
+ await act(async()=>f.workspace.setArtifacts([{...text('source-own')},{...text('summary-own'),kind:'generated-container',generationStatus:'completed',containerPrompt:'总结所选组件',refreshMinutes:0,containerSpec:spec}]))
+ const preset=f.host.querySelector('[data-research-derived-preset]');expect(preset.textContent).toContain('原结论标题');expect(preset.textContent).toContain('最后证据END')
+ expect(preset.querySelector('[data-research-reference-node-id]').getAttribute('data-research-reference-node-id')).toBe('source-own')
+ await act(async()=>preset.__eworkEditDerived());const editor=f.host.querySelector('textarea');editor.value='取消修改';await f.event('keydown',editor,{key:'Escape'})
+ expect(f.workspace.getSnapshot().artifacts.find(n=>n.id==='summary-own').containerSpec).toEqual(spec)
+})
+it.each(['generated-summary','generated-mind-map'])('派生预置复用一键生成的 %s 冻结来源，整篇编辑不丢最后分支',async kind=>{
+ const f=await fixture(true),content=kind==='generated-summary'?'# 结论\n\n2026年收入为0，变化-120。原因未提供。':'# 收入记录\n- 事实\n  - 2026年收入0\n- 待验证\n  - 原因未提供'
+ const source={id:'source-own',type:'artifact',title:'本人提供的收入记录',text:'2025年120万元；2026年0万元；变化-120万元。原因未提供。'}
+ await act(async()=>f.workspace.setArtifacts([{...text('legacy-derived'),kind,excerpt:content,generationStatus:'completed',generationSources:[source],sourceNodeIds:[source.id]}]))
+ const host=f.host.querySelector('[data-research-derived-preset]');expect(host).not.toBeNull();expect(host.textContent).toContain('原因未提供')
+ await act(async()=>host.__eworkEditDerived());const input=host.querySelector('textarea');expect(input.value).toBe(content)
+ input.value=content+'\n'+(kind==='generated-summary'?'本人补充的复验标记':'- 本人补充的复验标记')
+ await f.event('keydown',input,{key:'Enter',metaKey:true})
+ const stored=f.workspace.getSnapshot().artifacts[0];expect(stored.excerpt).toContain('本人补充的复验标记');expect(stored.generationSources).toEqual([source]);expect(stored.sourceNodeIds).toEqual([source.id])
+})
+it('派生预置只读画布拒绝双击与旧编辑入口，但保留来源原文阅读',async()=>{
+ let shared=false
+ const f=await fixture(true,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'summary',title:'只读摘要',content:'0 与 -120，原因未提供。',source:{title:'本人材料',text:'0 与 -120，原因未提供。'}}
+ await act(async()=>f.workspace.setArtifacts([{...text('derived-readonly'),kind:'generated-container',containerPrompt:'摘要',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))
+ shared=true;await act(async()=>f.workspace.setCollaborationAccess(false))
+ const host=f.host.querySelector('[data-research-derived-preset]');await f.event('dblclick',host);await act(async()=>host.__eworkEditDerived())
+ expect(host.querySelector('textarea')).toBeNull();expect(host.querySelector('pre').textContent).toBe(spec.source.text)
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+})
+it('派生预置原生摘要可再次一键总结，冻结当前完整正文而不读取图表字段',async()=>{
+ const f=await fixture(true),spec={version:1,type:'summary',title:'收入摘要',content:'# 当前结果\n\n收入0、变化-120；原因未提供。最后证据END',source:{title:'本人材料',text:'旧来源原文'}}
+ await act(async()=>f.workspace.setArtifacts([{...text('summary-source'),title:spec.title,kind:'generated-container',generationStatus:'completed',containerPrompt:'总结',refreshMinutes:0,containerSpec:spec}]))
+ await f.event('click',f.host.querySelector('[data-workbench-more="summary-source"]'))
+ await f.event('click',[...f.document.querySelectorAll('.ew-grid-menu button')].find(n=>n.textContent==='总结提炼'))
+ expect(f.generation.generate).toHaveBeenCalledOnce()
+ const derived=f.workspace.getSnapshot().artifacts.find(n=>n.kind==='generated-summary')
+ expect(derived.generationSources).toEqual([{id:'summary-source',type:'artifact',title:'收入摘要',text:spec.content}])
 })
