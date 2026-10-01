@@ -849,3 +849,9 @@ Figma 总结 `1918:343676` / 完整规范 `1876:331976`，导图 `1917:357536` /
 整理后展开转写，窄画布（三主题、世界宽度292.884px）仍有末行少量裁切；所选创建的两列表格在实际包内仍单行截断。浏览器预览不能代替这两项客户端接受。音频现去除宿主与播放器重复内边距，并在内容测量中纳入实际宿主上下边距；两列表格换行规则改为实际画布卡片祖先范围。9项直接聚焦和项目typecheck通过，最终新包复验待完成。切出音频会话后再返回，实际进度6秒、1.5倍速、音量0.25保持，状态已暂停，无自动播放。
 
 证据audio-native-created.png、audio-native-arrange-transcript.png、audio-native-narrow-{light,dark,enterprise}.png、audio-native-narrow-state.json、audio-own-export.zip、selected-create-final-native-narrow.png，以及audio-padding-wrap-focused.log和typecheck.log，均位于/tmp/ework-template-acceptance-20260930/。最新头像截图sidebar-avatar-current-native.png再次确认收起侧栏与上方工具图标同轴。原生接受仍67/74，不提前接受修正后的表格和音频；未公开发布或运行全功能测试。
+
+### 生产主题层的实际根因修正（客户端复验待完成）
+
+94b655af受管集成至698a1e5f，本地构建、签名和包检查通过，端口57362。真实窄卡仍复现音频末行裁切与两列表格单行；保留反例audio-final-native-narrow-enterprise.png和selected-create-layer-red-native.png，不能当作最终接受。确认主题的ework-workbench层中important规则优先于层外important修正，且音频嵌套containerContent另有8px上下内边距，之前仅计算外层previewBody。增加实际嵌套边距回归，旧测量806px而完整应为822px，先失败后通过。
+
+将音频相关祖先清除内边距和所选两列表格换行放入同一生产主题层，以实际卡片选择器覆盖，音频测量累计播放器到预览体的全部祖先上下边距。预览补齐实际主题层和卡片容器属性后，三主题280px两列单元格全部white-space:normal、水平溢出0、最长行60.806px，音频宿主padding为0。9项直接聚焦和项目类型检查通过，证据audio-ancestor-padding-red.log、audio-layer-focused.log、audio-layer-typecheck.log及audio-layer-browser-audit.json。空音频卡真实添加表单拒绝带凭据网址，不存在音源保存后显示失败，重试未误报成功；这是本人第二张卡的故障演练，原第一张卡完整来源不变。最终新包目检继续，原生接受保持67/74。

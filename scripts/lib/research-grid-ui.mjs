@@ -455,7 +455,13 @@ export function measureWorkbenchContents(root,nodes) {
     if(!body||body.querySelector('iframe,[data-research-native-web]')||card.hasAttribute('open'))continue
     const audio=body.querySelector('[data-research-audio-preset]')
     if(audio){
-      measured.set(node.id,{width:preferred.width,height:Math.max(264,38+Math.max(audio.offsetHeight,audio.scrollHeight)+(parseFloat(root.ownerDocument.defaultView.getComputedStyle(body).paddingTop)||0)+(parseFloat(root.ownerDocument.defaultView.getComputedStyle(body).paddingBottom)||0)+(card.querySelector('.odyssey-data-stamp')?24:0))})
+      let inset=0
+      for(let parent=audio.parentElement;parent&&parent!==card;parent=parent.parentElement){
+        const style=root.ownerDocument.defaultView.getComputedStyle(parent)
+        inset+=(parseFloat(style.paddingTop)||0)+(parseFloat(style.paddingBottom)||0)
+        if(parent===body)break
+      }
+      measured.set(node.id,{width:preferred.width,height:Math.max(264,38+Math.max(audio.offsetHeight,audio.scrollHeight)+inset+(card.querySelector('.odyssey-data-stamp')?24:0))})
       continue
     }
     const derived=body.querySelector('[data-research-derived-preset]')
