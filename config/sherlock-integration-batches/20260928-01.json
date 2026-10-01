@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "股票持仓公司披露历史行情来源表与原生导出",
+        "featureName": "组件控件完整聚焦边框",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "2500f5674b357d0c05a7cfd912a1be9c04d19c4d",
-        "tipCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
+        "baseCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
+        "tipCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
         "commits": [
           {
-            "commit": "1327a9c56e0cb2200b702d78659b1b34b3cc4570",
+            "commit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
             "parents": [
-              "2500f5674b357d0c05a7cfd912a1be9c04d19c4d"
+              "40a41da3410e73ed07e8b9edee4846ef409f9867"
             ],
-            "subject": "验收：确认交易持仓模板原生交互与会话恢复"
-          },
-          {
-            "commit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
-            "parents": [
-              "1327a9c56e0cb2200b702d78659b1b34b3cc4570"
-            ],
-            "subject": "功能：预置持仓披露和历史行情来源表并接入原生导出"
+            "subject": "修复：完整显示组件控件鼠标和键盘聚焦边框"
           }
         ],
         "files": [
@@ -36,91 +29,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-profile.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/financial-records.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/template-data-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-component-skill.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-records.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/financial-records.js"
-          },
-          {
-            "status": "M",
-            "path": "test/operations-template.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workflow-template.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
           }
         ],
         "checks": [
@@ -128,79 +41,12 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/financial-profile.test.js",
-              "test/financial-snapshot.test.js",
-              "test/clock-template.test.js",
-              "test/component-template-registry.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/input-template.test.js",
-              "test/operations-template.test.js",
-              "test/workflow-template.test.js",
-              "test/component-data-status.test.js",
-              "test/workbench-refresh.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-interaction-state.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/component-refresh-policy.test.js",
-              "test/component-source-binding.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/research-market-artifact.test.js",
-              "test/bundled-plugin-profile.test.ts",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/research-optimal-arrange.test.js",
-              "test/financial-series.test.js",
-              "test/financial-series-intrinsic.test.js",
-              "test/financial-fundamentals.test.js",
-              "test/financial-revenue.test.js",
-              "test/financial-actions.test.js",
-              "test/terminal-component-presentation.test.js",
-              "test/financial-ownership.test.js",
-              "test/financial-records.test.js"
+              "test/workbench-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "30个直接相关及继承门禁文件546项通过",
-            "verifiedCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
-            "completedAt": "2026-10-01T02:25:13.837475+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "binding contract|retrieval enabled|rejecting invented|self-contained data|offline component offline|inherits the parent agent scoped|named connected source"
-            ],
-            "outcome": "passed",
-            "summary": "20项来源与离线权限通过",
-            "verifiedCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
-            "completedAt": "2026-10-01T02:25:13.837475+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
-            "completedAt": "2026-10-01T02:25:13.837475+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/workbench-execution-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "6项规划政策通过",
-            "verifiedCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
-            "completedAt": "2026-10-01T02:25:13.837475+00:00",
+            "summary": "3项共享展示检查通过",
+            "verifiedCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
+            "completedAt": "2026-10-01T02:48:59.592952+00:00",
             "timeoutMs": 300000
           },
           {
@@ -213,55 +59,8 @@
             ],
             "outcome": "passed",
             "summary": "8项尺寸桥通过，27项非相关跳过",
-            "verifiedCommit": "40a41da3410e73ed07e8b9edee4846ef409f9867",
-            "completedAt": "2026-10-01T02:25:13.837475+00:00",
-            "timeoutMs": 300000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "三模板生产双层CSP72组尺寸及9组三模式交互通过，CSV当前筛选及来源检查通过；最终包原生接受待验"
-        },
-        "acceptanceCriteria": [
-          "原始来源字段与单位完整，不推导数据或补零",
-          "整控件换行、固定表头首列、有界滚动及首次自然补高",
-          "来源记录ID校验及客户端保存CSV，过滤排序恢复"
-        ],
-        "risks": [
-          "58/74实现，55/74原生接受",
-          "新增三类原生包验收仍待完成",
-          "整体首次成功率超过90%未证实"
-        ],
-        "generatedAt": "2026-10-01T02:25:13.837475+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
-        "verificationCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
-            "completedAt": "2026-10-01T02:26:12.953Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
-            "completedAt": "2026-10-01T02:26:12.953Z",
+            "verifiedCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
+            "completedAt": "2026-10-01T02:49:01.041589+00:00",
             "timeoutMs": 300000
           },
           {
@@ -271,13 +70,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0855cc7c6f81a6b75f7d7cfeedd08bcdd787b94e",
-            "completedAt": "2026-10-01T02:26:12.953Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "6f5aceeddd7ef3461f6fd62e539440d49daa614b",
+            "completedAt": "2026-10-01T02:48:57.308350+00:00",
             "timeoutMs": 300000
           }
         ],
-        "recordedAt": "2026-10-01T02:26:12.953Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "生产双层CSP30组280/640px三模式鼠标字段及Tab按钮聚焦通过，0脚本错误；原生最终包待复验"
+        },
+        "acceptanceCriteria": [
+          "滚动视口边缘四边完整",
+          "键盘焦点可见",
+          "不改变控件尺寸和数据"
+        ],
+        "risks": [
+          "完整HTML主题文件的4项既有失败已在改动前源码复现",
+          "最终包原生聚焦复验仍待完成",
+          "三条来源表原生接受仍待补齐"
+        ],
+        "generatedAt": "2026-10-01T02:53:20.331588+00:00"
       }
     }
   ],
