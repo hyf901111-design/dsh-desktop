@@ -9,31 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "YouTube登录帐号选择与观看入口分离",
+        "featureName": "YouTube桌面播放器身份与浏览器登录边界",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "1e7cc0920e7432977877e207e9765d35dc661231",
-        "tipCommit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
+        "baseCommit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
+        "tipCommit": "96b263a5129a8fbe1caae5e975fafda4040c9541",
         "commits": [
           {
-            "commit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
+            "commit": "96b263a5129a8fbe1caae5e975fafda4040c9541",
             "parents": [
-              "1e7cc0920e7432977877e207e9765d35dc661231"
+              "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003"
             ],
-            "subject": "修复YouTube登录跳转并区分登录与观看入口"
+            "subject": "补齐YouTube桌面播放器身份并明确浏览器登录边界"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/youtube-template-contract.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/youtube-template-contract.js"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/youtube-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
@@ -46,10 +42,6 @@
           {
             "status": "M",
             "path": "test/security.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/youtube-template.test.js"
           }
         ],
         "checks": [
@@ -64,9 +56,9 @@
               "YouTube|Google|navigation security"
             ],
             "outcome": "passed",
-            "summary": "31项相关检查通过；已观察修改前两个目标行为失败",
-            "verifiedCommit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
-            "completedAt": "2026-10-02T03:30:58.461799+00:00",
+            "summary": "重新应用生产前端补丁后33项相关检查通过；身份范围回归已先观察失败",
+            "verifiedCommit": "96b263a5129a8fbe1caae5e975fafda4040c9541",
+            "completedAt": "2026-10-02T05:41:55.846308+00:00",
             "timeoutMs": 300000
           },
           {
@@ -76,84 +68,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "补齐共用登录URL声明后类型检查通过",
-            "verifiedCommit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
-            "completedAt": "2026-10-02T03:30:58.461799+00:00",
+            "summary": "项目类型检查通过",
+            "verifiedCommit": "96b263a5129a8fbe1caae5e975fafda4040c9541",
+            "completedAt": "2026-10-02T05:41:55.846308+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际宿主渲染与点击契约通过；系统Chrome实测官方AccountChooser显示选择账号及使用其他账号。最终集成包的原生按钮仍将在构建后复验。"
+          "summary": "实际原生DevTools观察原播放器请求仅带本机Referer；React宿主浏览器登录/观看入口及不改原视频已通过。修正后最终包身份头与播放仍待构建复验。"
         },
         "acceptanceCriteria": [
-          "登录入口打开Google帐号选择页面",
-          "观看入口保留用户原视频网址",
-          "登录后返回同一视频与起点",
-          "已授权播放器保持原页面"
+          "已授权官方embed文档请求使用实际客户端appID",
+          "其他帧和服务请求不获得该身份",
+          "保留原视频与90秒起点及原User-Agent",
+          "浏览器登录入口不承诺回传登录态"
         ],
         "risks": [
-          "浏览器登录不代表内嵌播放器获得同一登录状态；不宣称组件内实际播放已通过",
-          "最终客户端必须从受管集成源码构建验证"
+          "身份修正不等于浏览器Cookie同步，不宣称原生播放已通过",
+          "最终共享客户端必须从受管集成源码构建"
         ],
-        "generatedAt": "2026-10-02T03:30:58.461799+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2e555bff7539f5a256d016e0a084b00b286d61db",
-        "verificationCommit": "2e555bff7539f5a256d016e0a084b00b286d61db",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "2e555bff7539f5a256d016e0a084b00b286d61db",
-            "completedAt": "2026-10-02T03:32:35.924Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "2e555bff7539f5a256d016e0a084b00b286d61db",
-            "completedAt": "2026-10-02T03:32:35.924Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2e555bff7539f5a256d016e0a084b00b286d61db",
-            "completedAt": "2026-10-02T03:32:35.924Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "2e555bff7539f5a256d016e0a084b00b286d61db",
-            "completedAt": "2026-10-02T03:32:35.924Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T03:32:35.924Z"
+        "generatedAt": "2026-10-02T05:41:55.846308+00:00"
       }
     },
     {
