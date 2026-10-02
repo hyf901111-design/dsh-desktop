@@ -9,11 +9,15 @@ export function measureResearchWebLayout(win: Window = window) {
     const scrollport = (el: Element) => {
       for (let parent = el.parentElement; parent && parent !== doc.body && parent !== doc.documentElement; parent = parent.parentElement) {
         const style = scope.getComputedStyle(parent)
-        if (/^(auto|scroll)$/.test(style.overflowX || style.overflow)) return true
+        if (/^(auto|scroll)$/.test(style.overflowX || style.overflow) && parent.scrollWidth > parent.clientWidth + 2) return true
       }
       return false
     }
-    for (const el of doc.querySelectorAll('body,main,section,article,aside,div,form,table,iframe')) {
+    // Preview frames often follow hundreds of list rows. Inspect them first so
+    // offscreen rows cannot consume the bounded measurement budget.
+    const frames = Array.from(doc.querySelectorAll('iframe')).slice(0, 16)
+    const panes = doc.querySelectorAll('body,main,section,article,aside,div,form,table')
+    for (const el of [...frames, ...panes]) {
       if (remaining-- <= 0) break
       const rect = el.getBoundingClientRect(), style = scope.getComputedStyle(el)
       if (rect.width < 40 || rect.height < Math.min(80, height * .15) || rect.bottom <= 0 || rect.top >= height || rect.right <= 0 || rect.left >= width || style.visibility === 'hidden' || style.display === 'none' || scrollport(el)) continue
