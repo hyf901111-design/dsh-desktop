@@ -21,6 +21,7 @@ import { guardUnexpectedErrorDownloads } from './search/research-web-downloads'
 import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
 import { registerResearchNativeWeb } from './state/research-native-web'
+import { registerResearchYoutubeNative } from './state/research-youtube-native'
 import { registerCanvasUseWeb } from './state/canvas-use-web'
 import { copyResearchFile } from './state/research-owned-files'
 import {randomUUID} from 'node:crypto'
@@ -847,13 +848,14 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
   })
   guardUnexpectedErrorDownloads(session.defaultSession)
   const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry})
+  const nativeResearchYoutube = registerResearchYoutubeNative({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,appId:desktopChannel==='notarized'?'com.evanarts.sherlock':developmentBuild?'io.dsh.desktop.dev':'io.dsh.desktop'})
   registerCanvasUseWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,native:nativeResearchWeb.contents,authorize:(id,write)=>{if(!researchBoardsService)throw Error('画板服务尚未就绪');researchBoardsService.authorizeCanvasUse(id,write)}})
   registerResearchLinkFrameHandlers({
     ipcMain,
     getMainWindow: () => mainWindow,
     registry: researchLinkFrameRegistry,
     inspectNative: nativeResearchWeb.inspect,
-    releaseNative: nativeResearchWeb.release
+    releaseNative: (identity) => { nativeResearchWeb.release(identity);nativeResearchYoutube.release(identity) }
   })
   registerResearchWebReaderHandlers({
     ipcMain,

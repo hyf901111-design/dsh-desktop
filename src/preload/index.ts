@@ -41,6 +41,7 @@ import {
 import { createResearchVoiceBridge } from './research-voice'
 import { createResearchCanvasWheelBridge } from './research-canvas-wheel'
 import { createResearchLinkFrameBridge } from './research-link-frame'
+import { createResearchYoutubeBridge } from './research-youtube'
 import { createResearchContextBridge } from './research-context'
 import { createResearchWebReaderBridge } from './research-web-reader'
 import { createResearchCanvasExportBridge } from './research-canvas-export'
@@ -260,6 +261,7 @@ contextBridge.exposeInMainWorld(
     componentData: Object.freeze({subscribe:(callback:(value:unknown)=>void)=>{const listener=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on('component-data:status',listener);return()=>ipcRenderer.removeListener('component-data:status',listener)},request:(sessionId:string,args:unknown)=>ipcRenderer.invoke('component-data:request',sessionId,args),setVisible:(sessionId:string,active:boolean)=>ipcRenderer.invoke('component-data:visibility',sessionId,active)}),
     researchCanvasActions: createCanvasActionsBridge(ipcRenderer),
     researchRss: Object.freeze({request:(value:unknown)=>ipcRenderer.invoke('research:rss:request',value)}),
+    researchYoutube: createResearchYoutubeBridge((channel,value)=>ipcRenderer.invoke(channel,value)),
     researchContext: createResearchContextBridge(
       (channel, value) => ipcRenderer.invoke(channel, value)
     ),
