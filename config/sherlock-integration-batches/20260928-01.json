@@ -9,96 +9,55 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件生成实测报告与网页缩放验收范围文档",
+        "featureName": "链接组件登录跳转地址恢复与加密浏览状态",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
-        "tipCommit": "e3de4c56160906abd9e453d2f6110b2b081e2d70",
+        "baseCommit": "e3de4c56160906abd9e453d2f6110b2b081e2d70",
+        "tipCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
         "commits": [
           {
-            "commit": "e3de4c56160906abd9e453d2f6110b2b081e2d70",
+            "commit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
             "parents": [
-              "bc8c031ac62f6cd561b32f3622791ff4087623be"
+              "e3de4c56160906abd9e453d2f6110b2b081e2d70"
             ],
-            "subject": "文档：交付组件生成实测报告并记录网页缩放验收范围"
+            "subject": "修复链接组件重启后丢失登录跳转地址并加密保存浏览状态"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "scripts/verify-research-web-login.mjs"
+          },
+          {
             "status": "M",
-            "path": "docs/design/component-template-acceptance-20260930.md"
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-native-web.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/research-web-navigation.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-web-navigation.test.ts"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "bc8c031ac62f6cd561b32f3622791ff4087623be",
-              "HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "仅验收文档变更，diff格式检查通过",
-            "verifiedCommit": "e3de4c56160906abd9e453d2f6110b2b081e2d70",
-            "completedAt": "2026-10-02T18:49:11.558155+00:00",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "python3",
-              "/tmp/verify-ework-report-integrity-20261003.py"
-            ],
-            "outcome": "passed",
-            "summary": "报告统计、图像和输入SHA256及压缩包完整性通过；15图已实际加载",
-            "verifiedCommit": "e3de4c56160906abd9e453d2f6110b2b081e2d70",
-            "completedAt": "2026-10-02T18:49:11.558155+00:00",
-            "timeoutMs": 30000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "报告截图筛选在CUA通过；隔离Chromium1280桌面和390窄屏呈现无错误、横向溢出或坏图。当前邮件仍在登录页，收件箱最终适配未列通过。"
-        },
-        "acceptanceCriteria": [
-          "报告包含多类组件样式原图、实测耗时、逐卡原记录质量和首次严格成功率",
-          "保留历史失败及统计边界，不把历史类型覆盖代替首提生成率",
-          "明确邮箱收件箱最终适配待登录后复验"
-        ],
-        "risks": [
-          "本次仅文档交接，不更改已打开47ce70e8客户端；收件箱最终复验仍待登录",
-          "当前包没有重测全部74类型，固定10卡统计不保证任意输入的总体概率"
-        ],
-        "generatedAt": "2026-10-02T18:49:11.558155+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9d0b47f3b3128c0e844a2a9db3cf37852176e43a",
-        "verificationCommit": "9d0b47f3b3128c0e844a2a9db3cf37852176e43a",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "9d0b47f3b3128c0e844a2a9db3cf37852176e43a",
-            "completedAt": "2026-10-02T18:51:49.807Z",
-            "timeoutMs": 300000
-          },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
+              "test/research-native-web.test.ts",
+              "test/research-web-navigation.test.ts",
+              "test/research-link-frame.test.ts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "9d0b47f3b3128c0e844a2a9db3cf37852176e43a",
-            "completedAt": "2026-10-02T18:51:49.807Z",
-            "timeoutMs": 300000
+            "summary": "21项直接相关检查通过，覆盖安全存储、登录地址恢复及原生网页生命周期",
+            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
+            "completedAt": "2026-10-02T22:43:57.010286+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -107,25 +66,49 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9d0b47f3b3128c0e844a2a9db3cf37852176e43a",
-            "completedAt": "2026-10-02T18:51:49.807Z",
-            "timeoutMs": 300000
+            "summary": "类型检查通过",
+            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
+            "completedAt": "2026-10-02T22:43:57.010286+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
               "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
+              "scripts/verify-research-web-login.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "9d0b47f3b3128c0e844a2a9db3cf37852176e43a",
-            "completedAt": "2026-10-02T18:51:49.807Z",
-            "timeoutMs": 60000
+            "summary": "真实隔离Electron四次进程启动，登录Cookie与地址配对恢复、加密及登出不复活通过；旧源码的restore步骤失败",
+            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
+            "completedAt": "2026-10-02T22:43:57.010286+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-native-web.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "原生网页首屏、手动缩放、尺寸变化及离屏预览直接回归通过",
+            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
+            "completedAt": "2026-10-02T22:43:57.010286+00:00",
+            "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-10-02T18:51:49.807Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端已确认收件箱登录；旧保存链接与当前登录链接不同，修复后的实际包重启将在集成构建完成后验收。"
+        },
+        "acceptanceCriteria": [
+          "返回组件及客户端重启恢复当前邮件导航",
+          "敏感会话地址仅存系统加密的本地浏览状态",
+          "删除组件清理恢复地址，登出后的页面不恢复到旧已登录页面",
+          "不修改服务器Cookie有效期，不把外部浏览器Cookie复制进客户端"
+        ],
+        "risks": [
+          "Cookie或服务器会话真正过期仍由网站要求重新登录",
+          "当前收件箱保持登录已迁移，实际新包验收待本地构建后执行"
+        ],
+        "generatedAt": "2026-10-02T22:43:57.010286+00:00"
       }
     },
     {
