@@ -141,7 +141,9 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       entry.fitting=true;entry.fittedAt=now;const current=entry,generation=entry.generation,presentation=entry.presentation
       // Responsive pages retain their normal size. Fixed desktop pages fit
       // horizontally; navigation and resize reset the fit to this viewport.
-      void nativeWebResultBefore(entry.view.webContents.executeJavaScriptInIsolatedWorld(991,[{code:`new Promise(resolve=>requestAnimationFrame(()=>resolve((${measureResearchWebLayout.toString()})())))`}]),1200).then(size=>{
+      // Hidden pages can suspend animation frames. Reading layout directly also
+      // lets an unselected, resized component refit without showing its live view.
+      void nativeWebResultBefore(entry.view.webContents.executeJavaScriptInIsolatedWorld(991,[{code:`(${measureResearchWebLayout.toString()})()`}]),1200).then(size=>{
         if(entries.get(id)!==current||current.generation!==generation||current.presentation!==presentation||current.pageZoom!==1||!size)return
         const zoom=fittedBrowserZoom(1,current.fitZoom,Number(size.viewport),Number(size.content))
         current.pageFit=size
@@ -153,7 +155,14 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       void (async()=>{try {
         // Capturing an interactive page must not resurrect its compositor after
         // the renderer hides it to drag/resize the snapshot in the canvas.
-        const image=await nativeWebResultBefore(entry.view.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true}),1500)
+        // Chromium can retain the previous compositor extent while hidden.
+        // An explicit capture region follows the current surface dimensions.
+        const surface=current.view.getBounds()
+        const region={x:0,y:0,width:surface.width,height:surface.height}
+        // The first hidden capture submits a frame at the new viewport; do not
+        // publish that transitional frame as the completed preview.
+        if(!show)await nativeWebResultBefore(entry.view.webContents.capturePage(region,{stayHidden:true,stayAwake:true}),1500)
+        const image=await nativeWebResultBefore(entry.view.webContents.capturePage(region,{stayHidden:true,stayAwake:true}),1500)
         if(entries.get(id)===current&&current.generation===generation&&current.presentation===presentation&&current.fitZoom===fitZoom&&current.pageZoom===pageZoom&&current.ready&&image&&!image.isEmpty()){
           const data=image.toDataURL();if(data!==current.image){current.image=data;current.imageRevision++}
           current.snapshotCompleted=Math.max(current.snapshotCompleted,snapshotRequested)

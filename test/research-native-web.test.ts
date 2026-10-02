@@ -4,7 +4,7 @@ const mock=vi.hoisted(()=>({fetch:vi.fn(),permission:vi.fn(),download:vi.fn()}))
 vi.mock('electron',()=>({net:{fetch:mock.fetch},session:{fromPartition:()=>({setPermissionRequestHandler:mock.permission,setPermissionCheckHandler:mock.permission,on:mock.download})},WebContentsView:class {
   visible=false;bounds:any; webContents:any
   constructor(public settings:any){views.push(this);this.webContents={isDestroyed:()=>false,isLoadingMainFrame:()=>false,close:vi.fn(),setWindowOpenHandler:vi.fn(),on:vi.fn(),reload:vi.fn(),loadURL:vi.fn(async()=>{this.webContents.on.mock.calls.find(([n]:any[])=>n==='dom-ready')?.[1]()}),setZoomFactor:vi.fn(),enableDeviceEmulation:vi.fn(),capturePage:vi.fn(async()=>({isEmpty:()=>false,toDataURL:()=> 'data:image/png;base64,test'})),executeJavaScript:vi.fn(async()=>false),executeJavaScriptInIsolatedWorld:vi.fn(async()=>({viewport:400,content:400})),getURL:()=> 'https://www.google.com/',getTitle:()=> 'Google'}}
-  setVisible(v:boolean){this.visible=v} setBounds(v:any){this.bounds=v} setBorderRadius(){}
+  setVisible(v:boolean){this.visible=v} setBounds(v:any){this.bounds=v} getBounds(){return this.bounds} setBorderRadius(){}
 }}))
 import {nativeWebBounds,nativeWebViewport,nativeWebPageZoom,registerResearchNativeWeb,requiresNativeWeb} from '../src/main/state/research-native-web'
 import {registerResearchLinkFrameHandlers,ResearchLinkFrameRegistry} from '../src/main/state/research-link-frame'
@@ -29,7 +29,7 @@ it('isolates native content, enforces trusted IPC, hides overlays and releases v
  await expect(call('resolve',{sessionId:'s',nodeId:'bad',url:'javascript:alert(1)',preferNative:true})).rejects.toThrow()
  const layout={...identity,url:'https://www.google.com/',bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},active:true,scale:1,radius:9}
  await call('update',layout)
- expect(views[0].webContents.capturePage).toHaveBeenLastCalledWith(undefined,{stayHidden:true,stayAwake:true})
+ expect(views[0].webContents.capturePage).toHaveBeenLastCalledWith({x:0,y:0,width:400,height:300},{stayHidden:true,stayAwake:true})
  expect(mock.download).toHaveBeenCalledWith('will-download',expect.any(Function))
  expect(views[0].settings.webPreferences).toMatchObject({nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true})
  expect(views[0].visible).toBe(true)
@@ -122,6 +122,7 @@ it('离屏网页改变卡片尺寸后重新生成预览，不一直显示旧尺�
  const resized={...request,bounds:{x:100,y:100,width:600,height:900},layoutSize:{width:600,height:900}}
  await call(resized)
  expect(wc.capturePage.mock.calls.length).toBeGreaterThan(captured)
+ expect(wc.capturePage).toHaveBeenLastCalledWith({x:0,y:0,width:600,height:900},{stayHidden:true,stayAwake:true})
  await vi.waitFor(async()=>expect((await call(resized)).image).toBe('data:image/png;base64,resized'))
  expect(wc.loadURL).toHaveBeenCalledTimes(1);expect(wc.reload).not.toHaveBeenCalled()
 })
