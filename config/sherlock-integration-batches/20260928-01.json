@@ -9,85 +9,55 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补记YouTube客户端实播与整体本地验收",
+        "featureName": "链接组件桌面网页和嵌套正文尺寸适配",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
-        "tipCommit": "7e753cd4d59ae022063b1db2fe1ab5dd54a73949",
+        "baseCommit": "7e753cd4d59ae022063b1db2fe1ab5dd54a73949",
+        "tipCommit": "a16dce67f2512fa8c6ab223054a9556b9f625e85",
         "commits": [
           {
-            "commit": "7e753cd4d59ae022063b1db2fe1ab5dd54a73949",
+            "commit": "a16dce67f2512fa8c6ab223054a9556b9f625e85",
             "parents": [
-              "89b90005ae952deb25880059ca2c7d061ae9cf4a"
+              "7e753cd4d59ae022063b1db2fe1ab5dd54a73949"
             ],
-            "subject": "补记YouTube自动返回与客户端实际播放验收"
+            "subject": "修复链接组件内桌面网页与嵌套正文的宽度适配"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/design/component-template-acceptance-20260930.md"
-          }
-        ],
-        "checks": [
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "89b90005ae952deb25880059ca2c7d061ae9cf4a",
-              "HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "本提交仅追加验收文档，差异格式检查通过",
-            "verifiedCommit": "7e753cd4d59ae022063b1db2fe1ab5dd54a73949",
-            "completedAt": "2026-10-02T12:42:45.894732+00:00",
-            "timeoutMs": 60000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "实际运行c48a7640集成包，点击登录后accounts.youtube.com会话交接成功，自动返回同一组件；实际视频与字幕持续更新，暂停读出2:01，重载实播读出1:44，原M7lc1UVf-VE与90秒起点保留。当前提交只记录该证据，没有运行时代码变化。"
-        },
-        "acceptanceCriteria": [
-          "记录实际包提交与回传阶段",
-          "记录组件内实播、重载、原网址保留",
-          "整体74类本地交互接受和固定十卡样本边界明确"
-        ],
-        "risks": [
-          "当前运行包为c48a7640；文档后继提交不冒充包构建来源",
-          "本人接受受管集成批次后才能晋升main"
-        ],
-        "generatedAt": "2026-10-02T12:42:45.894732+00:00"
-      },
-      "merged": {
-        "mergeCommit": "09809b623625610a9d791d20b1801e98340759d7",
-        "verificationCommit": "09809b623625610a9d791d20b1801e98340759d7",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "09809b623625610a9d791d20b1801e98340759d7",
-            "completedAt": "2026-10-02T12:44:49.371Z",
-            "timeoutMs": 300000
+            "path": "scripts/verify-research-native-web.mjs"
           },
+          {
+            "status": "M",
+            "path": "src/main/state/research-native-web.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/research-web-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-link-frame.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-web-layout.test.ts"
+          }
+        ],
+        "checks": [
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
+              "test/research-web-layout.test.ts",
+              "test/research-native-web.test.ts",
+              "test/research-link-frame.test.ts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "09809b623625610a9d791d20b1801e98340759d7",
-            "completedAt": "2026-10-02T12:44:49.371Z",
-            "timeoutMs": 300000
+            "summary": "22项网页适配与状态保留聚焦验证通过",
+            "verifiedCommit": "a16dce67f2512fa8c6ab223054a9556b9f625e85",
+            "completedAt": "2026-10-02T13:21:56.291122+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -96,25 +66,37 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "09809b623625610a9d791d20b1801e98340759d7",
-            "completedAt": "2026-10-02T12:44:49.371Z",
-            "timeoutMs": 300000
+            "summary": "类型检查通过",
+            "verifiedCommit": "a16dce67f2512fa8c6ab223054a9556b9f625e85",
+            "completedAt": "2026-10-02T13:21:56.291122+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
               "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
+              "scripts/verify-research-native-web.mjs"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "09809b623625610a9d791d20b1801e98340759d7",
-            "completedAt": "2026-10-02T12:44:49.371Z",
-            "timeoutMs": 60000
+            "summary": "真实Chromium合成邮件固定栏位完整适配、响应式一列换行、缩放与截图时序验证通过",
+            "verifiedCommit": "a16dce67f2512fa8c6ab223054a9556b9f625e85",
+            "completedAt": "2026-10-02T13:21:56.291122+00:00",
+            "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-10-02T12:44:49.371Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离Electron真实网页验证：合成邮件内部1000px桌面栏位在400–720px组件内完整显示，正常响应式网页600px时一列且zoom=1；未访问用户邮件正文。共享客户端当前邮件现场待集成包复测。"
+        },
+        "acceptanceCriteria": [
+          "内部固定桌面栏位及同源正文不因根节点隐藏溢出而漏掉适配",
+          "响应式网页保留自身换行与正常文字缩放",
+          "尺寸变化不重新加载网页，手动缩放、会话及导航保留"
+        ],
+        "risks": [
+          "跨域嵌套正文受浏览器同源边界限制，无法读取其内部尺寸",
+          "共享客户端邮件现场需在构建后确认；未晋升main或对外发布"
+        ],
+        "generatedAt": "2026-10-02T13:21:56.291122+00:00"
       }
     },
     {
