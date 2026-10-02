@@ -4,7 +4,15 @@ import {parseResearchContainerSpec} from '../packages/dsh-research-task-runtime/
 import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import {youtubeSignInUrl} from '../packages/dsh-research-task-runtime/youtube-template-contract.js'
 const empty={version:1,type:'youtube',title:'视频复验',url:null,description:'本人尚未提供视频网址'}
+it('YouTube登录返回地址只取原视频ID与时点，不透传其他重定向或来源参数',()=>{
+ const login=new URL(youtubeSignInUrl('https://youtu.be/M7lc1UVf-VE?t=1m30s&continue=https%3A%2F%2Fevil.invalid%2F#original'));
+ expect(login.origin).toBe('https://accounts.google.com');expect(login.pathname).toBe('/AccountChooser');
+ const resume=new URL(login.searchParams.get('continue'));expect(resume.origin).toBe('https://www.youtube.com');
+ expect(resume.searchParams.get('next')).toBe('/watch?v=M7lc1UVf-VE&t=90s');expect(login.href).not.toContain('evil');
+ for(const url of [null,'https://youtube.com.evil.invalid/watch?v=M7lc1UVf-VE','https://user:secret@youtube.com/watch?v=M7lc1UVf-VE','https://www.youtube.com:8443/embed/M7lc1UVf-VE'])expect(youtubeSignInUrl(url)).toBeNull();
+})
 it('YouTube空态直接使用原生预置并保留来源，不生成视频或HTML',()=>{
  expect(parseResearchContainerSpec(empty)).toEqual(empty)
  const output=acceptArtifactOutput(JSON.stringify(empty));expect(output).toBeDefined()

@@ -40,15 +40,23 @@ function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = 
 }
 
 describe('main-window navigation security', () => {
-  it('hands YouTube sign-in to the browser without replacing the authorized player',()=>{
+  it('opens Google account selection for YouTube sign-in and returns to the original video after login',()=>{
     const {listeners,webContents}=secureWindowFixture(()=>false,frame=>frame?.name==='owned',()=> 'https://www.youtube.com/embed/M7lc1UVf-VE?start=90');
     const frame={name:'owned',url:'https://www.youtube.com/embed/M7lc1UVf-VE?start=90',executeJavaScript:vi.fn(async()=>{})},preventDefault=vi.fn();
     const url='https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin';
     listeners.get('will-frame-navigate')!({url,isMainFrame:false,frame:frame as any,preventDefault});
-    expect(preventDefault).toHaveBeenCalledOnce();expect(shellOpenExternal).toHaveBeenCalledWith('https://www.youtube.com/watch?v=M7lc1UVf-VE&t=90s');
+    const assertLogin=()=>{
+      const login=new URL(shellOpenExternal.mock.calls[0]![0]);
+      expect(login.origin).toBe('https://accounts.google.com');expect(login.pathname).toBe('/AccountChooser');
+      expect(login.searchParams.get('service')).toBe('youtube');
+      const resume=new URL(login.searchParams.get('continue')!);
+      expect(resume.origin).toBe('https://www.youtube.com');expect(resume.pathname).toBe('/signin');
+      expect(resume.searchParams.get('next')).toBe('/watch?v=M7lc1UVf-VE&t=90s');
+    };
+    expect(preventDefault).toHaveBeenCalledOnce();assertLogin();
     shellOpenExternal.mockClear();Object.assign(webContents.mainFrame,{framesInSubtree:[frame]});
     expect(webContents.setWindowOpenHandler.mock.calls[0]![0]({url,referrer:{url:frame.url}})).toEqual({action:'deny'});
-    expect(frame.executeJavaScript).not.toHaveBeenCalled();expect(shellOpenExternal).toHaveBeenCalledWith('https://www.youtube.com/watch?v=M7lc1UVf-VE&t=90s');
+    expect(frame.executeJavaScript).not.toHaveBeenCalled();assertLogin();
   });
   it('does not hand unrelated, lookalike or offline frames to YouTube browser sign-in',()=>{
     for(const original of [null,'https://www.youtube.com.evil.invalid/embed/M7lc1UVf-VE','https://example.org/embed/M7lc1UVf-VE']){
