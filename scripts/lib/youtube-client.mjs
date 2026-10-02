@@ -52,7 +52,7 @@ export function ResearchSystemYoutubeFrame({node,sessionId,src,reload,onError,on
    try{const state=await bridge.update({...identity,url:src,bounds:{x:r.left,y:r.top,width:r.width,height:r.height},active,reloadToken:reload});if(stopped)return
     if(state.image&&state.imageRevision!==revision&&imageRef.current){revision=state.imageRevision;lastImage=state.image;imageRef.current.src=lastImage;setReady(true)}
     if(state.error)onError(state.error)
-    if(state.loginStatus!==lastLogin){lastLogin=state.loginStatus;if(lastLogin==='returned')onNotice('已返回原组件，请点击播放验证。');else if(lastLogin==='cancelled')onNotice('登录窗口已关闭，未确认登录完成。')}
+    if(state.loginStatus!==lastLogin){lastLogin=state.loginStatus;if(lastLogin==='returned')onNotice('已返回原组件，请点击播放验证。');else if(lastLogin==='cancelled')onNotice('登录窗口已关闭，未确认登录完成。');else if(lastLogin==='failed')onNotice('登录跳转未完成，请重试。')}
    }catch{if(!stopped)onError('系统播放器暂时无法载入，请重试或在浏览器观看。')}finally{busy=false}
   }
   const observer=new ResizeObserver(schedule);observer.observe(el)

@@ -42,3 +42,13 @@ it('hides out-of-window and undersized player surfaces and rejects malformed rec
  expect(()=>youtubeNativeBounds({x:0,y:0,width:Infinity,height:200},1)).toThrow()
  expect(()=>youtubeNativeBounds({x:0,y:0,width:480,height:270},NaN)).toThrow()
 })
+it('reads login progress without moving the player and rejects revoked or untrusted status requests',async()=>{
+ const f=fixture();f.registry.authorize({...f.identity,url:f.url})
+ await f.call('update',{...f.identity,url:f.url,bounds:{x:100,y:100,width:480,height:270},active:true,reloadToken:0})
+ f.driver.place.mockClear();f.driver.mount.mockClear()
+ expect(await f.call('status',f.identity)).toEqual({loading:false,error:'',loginStatus:'idle',loginTrace:''})
+ expect(f.driver.place).not.toHaveBeenCalled();expect(f.driver.mount).not.toHaveBeenCalled()
+ await expect(f.call('status',f.identity,{...f.event,senderFrame:{processId:3,routingId:4}})).rejects.toThrow()
+ f.registry.release(f.identity)
+ await expect(f.call('status',f.identity)).rejects.toThrow('not authorized')
+})
