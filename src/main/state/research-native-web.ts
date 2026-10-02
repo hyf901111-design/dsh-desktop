@@ -124,7 +124,14 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       if (entry.presentation !== presentation) entry.view.setVisible(false)
       // Size the native surface before configuring its fixed CSS viewport.
       const surfaceKey=JSON.stringify(surface)
-      if(entry.bounds!==surfaceKey){entry.view.setBounds(surface);entry.bounds=surfaceKey}
+      if(entry.bounds!==surfaceKey){
+        entry.view.setBounds(surface)
+        // A hidden Chromium view can keep its old drawing surface after growing.
+        // Synchronize its size in this turn and immediately keep it hidden;
+        // subsequent capture must include the whole resized viewport.
+        if(!show){entry.view.setVisible(true);entry.view.setVisible(false)}
+        entry.bounds=surfaceKey
+      }
       if (entry.presentation !== presentation) {
         if(entry.layout!==layout){entry.fitZoom=1;entry.fittedAt=0;entry.view.webContents.setZoomFactor(entry.pageZoom);entry.capturedAt=0;entry.snapshotRequested++}
         entry.view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:viewport,viewPosition:{x:0,y:0},deviceScaleFactor:0,viewSize:viewport,scale:displayScale})
