@@ -9,23 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补齐后台网页组件放大时的绘制表面同步",
+        "featureName": "修复链接网页持续缩小与手动缩放失效",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
-        "tipCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
+        "baseCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
+        "tipCommit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
         "commits": [
           {
-            "commit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
+            "commit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
             "parents": [
-              "29cdbfdde1b4146132989e70322d63320d8922ab"
+              "545cfe8ec4a22b6074b390dc05c7694e9f5492c3"
             ],
-            "subject": "修复后台网页组件放大后仍裁切旧绘制表面的问题"
+            "subject": "修复链接网页持续缩小并保持手动缩放与调整尺寸时的文字大小"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/research-native-web-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/verify-research-native-web.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/verify-research-web-preview.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-research-web-zoom.mjs"
           },
           {
             "status": "M",
@@ -33,7 +45,19 @@
           },
           {
             "status": "M",
+            "path": "src/main/state/research-web-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-link-frame.ts"
+          },
+          {
+            "status": "M",
             "path": "test/research-native-web.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-web-layout.test.ts"
           }
         ],
         "checks": [
@@ -46,9 +70,9 @@
               "test/research-link-frame.test.ts"
             ],
             "outcome": "passed",
-            "summary": "23项网页适配、长列表正文及网页状态保留聚焦验证通过",
-            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
-            "completedAt": "2026-10-02T14:19:08.052022+00:00",
+            "summary": "24项聚焦检查通过，包含隐藏元素宽度与手动缩放尺寸保持",
+            "verifiedCommit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
+            "completedAt": "2026-10-02T18:05:30.368674+00:00",
             "timeoutMs": 120000
           },
           {
@@ -59,8 +83,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
-            "completedAt": "2026-10-02T14:19:08.052022+00:00",
+            "verifiedCommit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
+            "completedAt": "2026-10-02T18:05:30.368674+00:00",
             "timeoutMs": 120000
           },
           {
@@ -69,9 +93,9 @@
               "scripts/verify-research-native-web.mjs"
             ],
             "outcome": "passed",
-            "summary": "真实Chromium合成邮件固定栏位完整适配、响应式一列换行、缩放与截图时序验证通过",
-            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
-            "completedAt": "2026-10-02T14:19:08.052022+00:00",
+            "summary": "真实Chromium慢资源、响应式布局、可读最小缩放、手动缩放及预览时序通过",
+            "verifiedCommit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
+            "completedAt": "2026-10-02T18:05:30.368674+00:00",
             "timeoutMs": 120000
           },
           {
@@ -80,86 +104,38 @@
               "scripts/verify-research-web-preview.mjs"
             ],
             "outcome": "passed",
-            "summary": "真实Chromium缩小再放大至1500×900后的尺寸及右端内容像素验证通过；未留下可见原生覆盖层",
-            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
-            "completedAt": "2026-10-02T14:19:08.052022+00:00",
+            "summary": "长列表同源正文、后台缩小与放大预览尺寸和像素通过",
+            "verifiedCommit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
+            "completedAt": "2026-10-02T18:05:30.368674+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-web-zoom.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "动态宽度网页持续观察不再缩小，手动放大可见，组件调整尺寸保留文字大小及输入状态",
+            "verifiedCommit": "bc8c031ac62f6cd561b32f3622791ff4087623be",
+            "completedAt": "2026-10-02T18:05:30.368674+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离Chromium新增后台放大路径通过。旧共享包e994afed实机曾复现较小截图被拉伸裁切，本提交同步隐藏绘制表面尺寸，待新共享包实机复验。实际邮箱会话已过期，当前为登录页。"
+          "summary": "旧客户端已在真实已登录邮件页复现持续缩小，自动值降至0.1；隔离Chromium复现相同反馈循环，修复后持续观察及手动放大和改变组件尺寸通过。新共享客户端待集成构建后实机复验。"
         },
         "acceptanceCriteria": [
-          "内部固定桌面栏位及同源正文不因根节点隐藏溢出而漏掉适配",
-          "响应式网页保留自身换行与正常文字缩放",
-          "尺寸变化不重新加载网页，手动缩放、会话及导航保留",
-          "未选中的网页组件改变尺寸后使用对应区域的新预览，不拉伸旧画布",
-          "后台放大组件时重新分配完整绘制表面，预览包含新增的右侧和下侧区域"
+          "自动适配稳定后停止累计缩小，文字自动缩放保持75%以上",
+          "手动缩小与放大立即可见，直到主动重置才恢复自动模式",
+          "改变组件尺寸不重置手动文字大小，不重新加载页面或丢失输入状态",
+          "后台预览保持当前尺寸并在重新交互时与真实网页一致"
         ],
         "risks": [
-          "真实收件箱会话已过期，最终收件箱仍需本人恢复登录",
-          "当前共享包e994afed的后台放大问题已实机复现，本提交待受管集成后重新构建验证",
-          "同源嵌套正文适配遵守浏览器边界"
+          "实际邮件网页需要在新共享测试包中完成最终复验",
+          "第三方桌面布局过宽时优先保持文字可读，剩余内容使用原网页滚动区域"
         ],
-        "generatedAt": "2026-10-02T14:19:08.052022+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0fe8f7165d4803e100fcddcf1412b08bf1a58e84",
-        "verificationCommit": "0fe8f7165d4803e100fcddcf1412b08bf1a58e84",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "0fe8f7165d4803e100fcddcf1412b08bf1a58e84",
-            "completedAt": "2026-10-02T14:22:13.829Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "0fe8f7165d4803e100fcddcf1412b08bf1a58e84",
-            "completedAt": "2026-10-02T14:22:13.829Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0fe8f7165d4803e100fcddcf1412b08bf1a58e84",
-            "completedAt": "2026-10-02T14:22:13.829Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "0fe8f7165d4803e100fcddcf1412b08bf1a58e84",
-            "completedAt": "2026-10-02T14:22:13.829Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T14:22:13.829Z"
+        "generatedAt": "2026-10-02T18:05:30.368674+00:00"
       }
     },
     {
