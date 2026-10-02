@@ -43,7 +43,7 @@ describe('macOS package runtime verification', () => {
         mkdirSync(runtimeRoot, { recursive: true })
         mkdirSync(packagedSkillRoot, { recursive: true })
         // Include the real desktop-control resources checked in every macOS package.
-        for (const script of ['prepare-computer-driver.mjs', 'build-computer-stroke.mjs']) {
+        for (const script of ['prepare-computer-driver.mjs', 'build-computer-stroke.mjs', 'build-youtube-player.mjs']) {
           const prepared = spawnSync(process.execPath, [path.join(projectRoot, 'scripts', script)], {
             cwd: projectRoot,
             encoding: 'utf8'
@@ -97,7 +97,7 @@ describe('macOS package runtime verification', () => {
         expect(result.status, result.stderr).toBe(0)
         expect(result.stdout).toContain('apache-arrow: loadable')
         expect(result.stdout).toContain('signature: skipped (unsigned CI package)')
-        expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.5.0 (source parity)')
+        expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.33.0 (source parity)')
         expect(result.stdout).toContain('package: verified')
       } finally {
         rmSync(temporaryRoot, { recursive: true, force: true })
