@@ -19,7 +19,7 @@ type NavigationEvent = {
   frame?: { url: string; parent?: { processId: number; routingId: number } | null }
 }
 
-function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false, ownsResearchFrame?: (frame: any) => boolean) {
+function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false, ownsResearchFrame?: (frame: any) => boolean, researchFrameUrl?: (frame: any) => string | null) {
   const listeners = new Map<string, (event: NavigationEvent, url?: string) => void>()
   const permissionCheck = vi.fn()
   const permissionRequest = vi.fn()
@@ -35,11 +35,31 @@ function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = 
       setPermissionRequestHandler: permissionRequest
     }
   }
-  secureWindow({ webContents } as never, { allowsResearchFrameUrl, ownsResearchFrame })
+  secureWindow({ webContents } as never, { allowsResearchFrameUrl, ownsResearchFrame, researchFrameUrl })
   return { listeners, mainFrame, webContents }
 }
 
 describe('main-window navigation security', () => {
+  it('hands YouTube sign-in to the browser without replacing the authorized player',()=>{
+    const {listeners,webContents}=secureWindowFixture(()=>false,frame=>frame?.name==='owned',()=> 'https://www.youtube.com/embed/M7lc1UVf-VE?start=90');
+    const frame={name:'owned',url:'https://www.youtube.com/embed/M7lc1UVf-VE?start=90',executeJavaScript:vi.fn(async()=>{})},preventDefault=vi.fn();
+    const url='https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin';
+    listeners.get('will-frame-navigate')!({url,isMainFrame:false,frame:frame as any,preventDefault});
+    expect(preventDefault).toHaveBeenCalledOnce();expect(shellOpenExternal).toHaveBeenCalledWith('https://www.youtube.com/watch?v=M7lc1UVf-VE&t=90s');
+    shellOpenExternal.mockClear();Object.assign(webContents.mainFrame,{framesInSubtree:[frame]});
+    expect(webContents.setWindowOpenHandler.mock.calls[0]![0]({url,referrer:{url:frame.url}})).toEqual({action:'deny'});
+    expect(frame.executeJavaScript).not.toHaveBeenCalled();expect(shellOpenExternal).toHaveBeenCalledWith('https://www.youtube.com/watch?v=M7lc1UVf-VE&t=90s');
+  });
+  it('does not hand unrelated, lookalike or offline frames to YouTube browser sign-in',()=>{
+    for(const original of [null,'https://www.youtube.com.evil.invalid/embed/M7lc1UVf-VE','https://example.org/embed/M7lc1UVf-VE']){
+      const {listeners}=secureWindowFixture(()=>false,()=>true,()=>original);const preventDefault=vi.fn();
+      listeners.get('will-frame-navigate')!({url:'https://accounts.google.com/ServiceLogin',isMainFrame:false,frame:{url:'https://example.org/'},preventDefault});
+      expect(shellOpenExternal).not.toHaveBeenCalled();
+    }
+    const {listeners}=secureWindowFixture(()=>true,()=>true,()=> 'https://www.youtube.com/embed/M7lc1UVf-VE');
+    listeners.get('will-frame-navigate')!({url:'https://accounts.google.com/ServiceLogin',isMainFrame:false,frame:{url:'about:srcdoc'},preventDefault:vi.fn()});
+    expect(shellOpenExternal).not.toHaveBeenCalled();
+  });
   it('routes a research popup to its source frame instead of the external browser',()=>{
     const {webContents}=secureWindowFixture(()=>false,frame=>frame?.name==='owned');
     const executeJavaScript=vi.fn(async()=>{});

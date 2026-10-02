@@ -71,17 +71,17 @@ it('附件导入后的文本预览读取真实文件，预览不使画布消失'
  await act(async()=>f.workspace.setArtifacts([{...text('local-file-preview'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))
  const root=f.host.querySelector('[data-research-attachment-preset=files]');await f.event('click',Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='预览'));expect(root.querySelector('[data-research-text-preview]').textContent).toBe(content);expect(f.host.querySelector('[data-research-canvas]')).not.toBeNull();expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
 })
-it('智能组件默认草稿保留设计说明，组合回车不提交，普通回车仍走原生成入口',async()=>{
+it('智能组件草稿只保留输入与底部动作，组合回车不提交，普通回车仍走原生成入口',async()=>{
  const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft()})
- const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.textContent).toContain('描述要创建的内容');expect(card.textContent).toContain('结果将作为独立组件保留在当前工作台。')
+ const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.querySelector('.ew-draft-heading')).toBeNull();expect(card.querySelector('.ew-draft-note')).toBeNull()
  const input=card.querySelector('textarea');input.value='本人虚构记录：0万元，变化-120万元，原因未提供。生成预置两列表格。';await act(async()=>input.focus());await f.event('input',input);expect(input.isConnected).toBe(true);expect(card.querySelector('button[data-research-container-submit],button[data-research-link-submit]').disabled).toBe(false)
  await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.generation.generate).not.toHaveBeenCalled();expect(input.isConnected).toBe(true)
  await f.event('keydown',input,{key:'Enter',keyCode:13,shiftKey:true,isComposing:false});expect(f.generation.generate).not.toHaveBeenCalled()
  await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false});expect(f.generation.generate).toHaveBeenCalledTimes(1);expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({targetNodeId:draft.id,prompt:input.value}))
 })
-it('链接默认草稿完整显示说明，中文组合回车不完成且同节点接纳原链接',async()=>{
+it('链接草稿只保留可伸展输入与底部动作，中文组合回车不完成且同节点接纳原链接',async()=>{
  const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft(null,'link')})
- const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.textContent).toContain('添加网页链接');expect(card.textContent).toContain('支持网页与文章链接')
+ const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.querySelector('.ew-draft-heading')).toBeNull();expect(card.querySelector('.ew-link-draft-status')).toBeNull();expect(card.textContent).toContain('支持网页与文章链接')
  const input=card.querySelector('textarea');input.value='http://127.0.0.1:58169/?source=owned#keep';await act(async()=>input.focus());await f.event('input',input);expect(input.isConnected).toBe(true);expect(card.querySelector('button[data-research-container-submit],button[data-research-link-submit]').disabled).toBe(false)
  await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.workspace.getSnapshot().artifacts[0].containerPrompt).toBe('odyssey:link-draft');expect(input.isConnected).toBe(true)
  await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false});expect(f.workspace.getSnapshot().artifacts[0]).toMatchObject({id:draft.id,kind:'web-link',url:input.value});expect(f.generation.generate).not.toHaveBeenCalled()
