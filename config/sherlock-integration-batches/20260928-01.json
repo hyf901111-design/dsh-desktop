@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "十卡同题原生复验与视频待本人验证记录",
+        "featureName": "当前客户端刷新动效及失败保留补充验收",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "fd499722e7ccd54f71666a41b19fd518ae5f5eb8",
-        "tipCommit": "02556fc18c9e00a178fbbafaf834e0761be3d890",
+        "baseCommit": "02556fc18c9e00a178fbbafaf834e0761be3d890",
+        "tipCommit": "21b96c8ac587245130419bd74403357c9a056255",
         "commits": [
           {
-            "commit": "02556fc18c9e00a178fbbafaf834e0761be3d890",
+            "commit": "21b96c8ac587245130419bd74403357c9a056255",
             "parents": [
-              "fd499722e7ccd54f71666a41b19fd518ae5f5eb8"
+              "02556fc18c9e00a178fbbafaf834e0761be3d890"
             ],
-            "subject": "文档：记录十卡首次复验通过及视频登录验收阻塞"
+            "subject": "文档：补充当前客户端刷新动效与失败保留验收"
           }
         ],
         "files": [
@@ -34,87 +34,30 @@
               "git",
               "diff",
               "--check",
-              "fd499722e7ccd54f71666a41b19fd518ae5f5eb8",
-              "02556fc18c9e00a178fbbafaf834e0761be3d890"
+              "02556fc18c9e00a178fbbafaf834e0761be3d890",
+              "21b96c8ac587245130419bd74403357c9a056255"
             ],
             "outcome": "passed",
-            "summary": "仅验收文档追加，差异格式检查通过，运行时代码不变",
-            "verifiedCommit": "02556fc18c9e00a178fbbafaf834e0761be3d890",
-            "completedAt": "2026-10-02T00:51:52.101093+00:00",
+            "summary": "仅追加6行验收记录，运行时代码未改",
+            "verifiedCommit": "21b96c8ac587245130419bd74403357c9a056255",
+            "completedAt": "2026-10-02T01:21:21.599738+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "本地集成包3e2053cb普通输入固定10卡首次prepared10/10，完整原记录、三主题、整理与原交互通过；官方YouTube本人登录验证未完成，不计入已接受"
+          "summary": "本地包3e2053cb实际DataYes刷新连续捕捉更新文字、转圈、进度条；实际RSS无效地址失败保留20条及读取时间，清理后原有效条目SHA不变；官方视频验证仍待本人完成"
         },
         "acceptanceCriteria": [
-          "真实固定十卡首次及原数据证据完整",
-          "旧轮失败保留",
-          "不将封面加载列为实际播放通过"
+          "当前客户端实际更新提示可见",
+          "失败旧条目及时间保留",
+          "测试来源清理且原数据不变"
         ],
         "risks": [
-          "YouTube需本人登录验证后继续播放验收；整体目标未完成",
-          "本地窄表选中行全文通过，横向滚动未观察到变化"
+          "YouTube本人登录验证未完成，整体目标未完成",
+          "RSS失败不冒充DataYes引擎失败；短暂unchanged确认本轮未截取"
         ],
-        "generatedAt": "2026-10-02T00:51:52.101429+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f1fd42eb90e99ec3724a48113dd5081592a47d2d",
-        "verificationCommit": "f1fd42eb90e99ec3724a48113dd5081592a47d2d",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "f1fd42eb90e99ec3724a48113dd5081592a47d2d",
-            "completedAt": "2026-10-02T00:56:23.415Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "f1fd42eb90e99ec3724a48113dd5081592a47d2d",
-            "completedAt": "2026-10-02T00:56:23.415Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f1fd42eb90e99ec3724a48113dd5081592a47d2d",
-            "completedAt": "2026-10-02T00:56:23.415Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "f1fd42eb90e99ec3724a48113dd5081592a47d2d",
-            "completedAt": "2026-10-02T00:56:23.415Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T00:56:23.415Z"
+        "generatedAt": "2026-10-02T01:21:21.600013+00:00"
       }
     },
     {
