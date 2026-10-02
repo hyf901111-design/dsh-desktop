@@ -37,7 +37,7 @@ export function patchResearchNativeWeb(source) {
   if(!source.includes(anchor))throw Error('Missing web frame renderer')
   source=source.replace(anchor,`/* ODYSSEY_HYBRID_WEB */
   function ResearchNativeWebFrame({node,sessionId,visible=true,onInspection,inDialog=false}) {
-    const ref=(0,react.useRef)(null),imageRef=(0,react.useRef)(null),reloadRef=(0,react.useRef)(0),zoomRef=(0,react.useRef)(1);
+    const ref=(0,react.useRef)(null),imageRef=(0,react.useRef)(null),reloadRef=(0,react.useRef)(0),zoomRef=(0,react.useRef)(1),zoomModeRef=(0,react.useRef)('auto'),zoomResetRef=(0,react.useRef)(0);
     const [error,setError]=(0,react.useState)(''),[ready,setReady]=(0,react.useState)(false);
     // Scrolling or changing the window can temporarily mark a card offscreen.
     // Keep the Chromium document across session switches. Node removal releases
@@ -52,7 +52,7 @@ export function patchResearchNativeWeb(source) {
       const canvas=element?.closest('[data-research-canvas]');
       const moving=()=>canvas?.hasAttribute('data-grid-operation')||canvas?.hasAttribute('data-research-operation');
       const schedule=()=>{lastSent=0;if(!frame)frame=requestAnimationFrame(()=>{frame=null;tick()})};
-      const zoom=step=>{zoomRef.current=step===0?1:Math.max(.5,Math.min(2,Math.round((zoomRef.current+step)*10)/10));element?.setAttribute('data-web-page-zoom',String(zoomRef.current));schedule();return zoomRef.current};
+      const zoom=step=>{zoomRef.current=step===0?1:Math.max(.5,Math.min(2,Math.round((zoomRef.current+step)*10)/10));zoomModeRef.current=step===0?'auto':'manual';if(step===0)zoomResetRef.current++;element?.setAttribute('data-web-page-zoom',String(zoomRef.current));schedule();return zoomRef.current};
       if(element)element.__eworkAdjustWebZoom=zoom;
       const hide=()=>{motionEpoch++;last='';lastSent=0;bridge.hideNative(identity).catch(()=>{});};
       const motionObserver=new MutationObserver(()=>{if(moving())hide();else{held=false;schedule()}});
@@ -76,8 +76,9 @@ export function patchResearchNativeWeb(source) {
         const signature=rectKey+active;
         if(busy||r.width<1||r.height<1||signature===tick.signature&&Date.now()-lastSent<(loading||snapshotPending?250:active?1200:2500))return;
         tick.signature=signature;lastSent=Date.now();busy=true;const requestEpoch=motionEpoch;
-        try {const state=await bridge.updateNative({...identity,url:node.url,bounds,layoutSize,scale,radius:Math.round(2*scale),active,pageZoom:zoomRef.current,imageRevision,reloadToken:reloadRef.current});if(stopped||requestEpoch!==motionEpoch||held||space||moving())return;
+        try {const state=await bridge.updateNative({...identity,url:node.url,bounds,layoutSize,scale,radius:Math.round(2*scale),active,pageZoom:zoomRef.current,pageZoomMode:zoomModeRef.current,zoomResetToken:zoomResetRef.current,imageRevision,reloadToken:reloadRef.current});if(stopped||requestEpoch!==motionEpoch||held||space||moving())return;
           loading=state.loading===true;snapshotPending=state.snapshotPending===true;if(Number.isSafeInteger(state.imageRevision))imageRevision=state.imageRevision;
+          if(state.pageFit)el.setAttribute('data-web-fit-zoom',String(state.pageFit.zoom));
           if(state.image&&state.image!==lastImage&&imageRef.current){lastImage=state.image;imageRef.current.src=state.image;setReady(true)}setError(state.error||'');
           if(state.inspection){const signature=JSON.stringify(state.inspection);if(signature!==lastInspection){lastInspection=signature;onInspection?.(node.url,state.inspection)}}
         }catch{if(!stopped&&requestEpoch===motionEpoch&&!held&&!space&&!moving())setError('网页暂时无法加载')}finally{busy=false}

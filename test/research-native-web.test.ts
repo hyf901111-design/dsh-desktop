@@ -196,11 +196,15 @@ it('manual webpage zoom survives canvas scaling and resets independently',async(
  registry.authorize(identity)
  const request={...identity,active:true,bounds:{x:100,y:100,width:400,height:300},layoutSize:{width:400,height:300},scale:1,radius:3}
  await call(request);const wc=views[0].webContents
- await call({...request,pageZoom:1.1});expect(wc.setZoomFactor).toHaveBeenLastCalledWith(1.1)
+ await call({...request,pageZoom:1.1,pageZoomMode:'manual'});expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:364,height:273},scale:1.1}))
  wc.setZoomFactor.mockClear()
  await call({...request,pageZoom:1.1,scale:.8,bounds:{x:100,y:100,width:320,height:240}})
  expect(wc.setZoomFactor).not.toHaveBeenCalled()
- await call({...request,pageZoom:1});expect(wc.setZoomFactor).toHaveBeenLastCalledWith(1)
+ await call({...request,pageZoom:1.1,pageZoomMode:'manual',layoutSize:{width:600,height:450},bounds:{x:100,y:100,width:600,height:450}})
+ expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:545,height:409},scale:1.1}))
+ expect(wc.setZoomFactor).not.toHaveBeenCalled()
+ await call({...request,pageZoom:1,pageZoomMode:'auto',zoomResetToken:1});expect(wc.enableDeviceEmulation).toHaveBeenLastCalledWith(expect.objectContaining({viewSize:{width:400,height:300},scale:1}));expect(wc.setZoomFactor).not.toHaveBeenCalled()
+ await expect(call({...request,pageZoomMode:'unknown'})).rejects.toThrow('Invalid webpage zoom mode')
  expect(()=>nativeWebPageZoom({pageZoom:2.1})).toThrow();expect(()=>nativeWebPageZoom({pageZoom:NaN})).toThrow()
 })
 
