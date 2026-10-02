@@ -3,6 +3,7 @@ import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { inspectResearchWebContent, normalizeResearchLinkUrl, type ResearchLinkFrameRegistry } from './research-link-frame'
 import { guardResearchWebDownloads } from '../search/research-web-downloads'
 import { fittedBrowserZoom } from '../search/conversation-browser'
+import { measureResearchWebLayout } from './research-web-layout'
 
 export function requiresNativeWeb(headers: Pick<Headers, 'get'>): boolean {
   const xfo = headers.get('x-frame-options') ?? ''
@@ -31,7 +32,7 @@ function nativeWebResultBefore<T>(operation: Promise<T>, milliseconds: number): 
   return Promise.race([operation,timeout]).finally(()=>clearTimeout(timer))
 }
 export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry }) {
-  const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; pageZoom: number; fittedAt: number; fitting: boolean; wasShown: boolean; snapshotRequested: number; snapshotCompleted: number; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
+  const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; pageZoom: number; fittedAt: number; fitting: boolean; wasShown: boolean; snapshotRequested: number; snapshotCompleted: number; pageFit: ReturnType<typeof measureResearchWebLayout> | null; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
   const routes = new Map<string, Promise<boolean>>()
   const key = (v: any) => { if (!v || typeof v.sessionId !== 'string' || typeof v.nodeId !== 'string' || v.sessionId.length > 256 || v.nodeId.length > 256) throw Error('Invalid webpage identity'); return JSON.stringify([v.sessionId,v.nodeId]) }
   const release = (id: string) => { const e=entries.get(id); if(e){ entries.delete(id);const win=options.getMainWindow();if(win&&!win.isDestroyed())win.contentView.removeChildView(e.view);if(!e.view.webContents.isDestroyed())e.view.webContents.close() } }
@@ -78,7 +79,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})
-      entry={view,url:authorization.url,image:'',imageRevision:0,error:'',busy:false,typing:false,ready:false,touched:Date.now(),presentation:'',bounds:'',layout:'',surfaceScale:1,generation:0,reloadToken:Number(value.reloadToken)||0,capturedAt:0,inspectedAt:0,inspecting:false,fitZoom:1,pageZoom,fittedAt:0,fitting:false,wasShown:false,snapshotRequested:0,snapshotCompleted:0,inspection:null};entries.set(id,entry)
+      entry={view,url:authorization.url,image:'',imageRevision:0,error:'',busy:false,typing:false,ready:false,touched:Date.now(),presentation:'',bounds:'',layout:'',surfaceScale:1,generation:0,reloadToken:Number(value.reloadToken)||0,capturedAt:0,inspectedAt:0,inspecting:false,fitZoom:1,pageZoom,fittedAt:0,fitting:false,wasShown:false,snapshotRequested:0,snapshotCompleted:0,pageFit:null,inspection:null};entries.set(id,entry)
       const current=entry
       view.setVisible(false);win.contentView.addChildView(view)
       view.webContents.setWindowOpenHandler(({url})=>{if(normalizeResearchLinkUrl(url))void view.webContents.loadURL(url).catch(()=>{});return {action:'deny'}})
@@ -140,9 +141,10 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       entry.fitting=true;entry.fittedAt=now;const current=entry,generation=entry.generation,presentation=entry.presentation
       // Responsive pages retain their normal size. Fixed desktop pages fit
       // horizontally; navigation and resize reset the fit to this viewport.
-      void nativeWebResultBefore(entry.view.webContents.executeJavaScriptInIsolatedWorld(991,[{code:"new Promise(resolve=>requestAnimationFrame(()=>resolve({viewport:innerWidth,content:Math.max(document.documentElement.clientWidth,document.documentElement.scrollWidth,document.body?.scrollWidth||0)})))"}]),1200).then(size=>{
+      void nativeWebResultBefore(entry.view.webContents.executeJavaScriptInIsolatedWorld(991,[{code:`new Promise(resolve=>requestAnimationFrame(()=>resolve((${measureResearchWebLayout.toString()})())))`}]),1200).then(size=>{
         if(entries.get(id)!==current||current.generation!==generation||current.presentation!==presentation||current.pageZoom!==1||!size)return
         const zoom=fittedBrowserZoom(1,current.fitZoom,Number(size.viewport),Number(size.content))
+        current.pageFit=size
         if(Math.abs(zoom-current.fitZoom)>.002){current.view.webContents.setZoomFactor(zoom*current.pageZoom);current.fitZoom=zoom;current.capturedAt=0;current.snapshotRequested++}
       }).catch(()=>{}).finally(()=>{current.fitting=false})
     }
@@ -166,7 +168,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
         if(entries.get(id)===current&&current.generation===generation)current.inspection=inspection
       }).catch(()=>{}).finally(()=>{current.inspecting=false})
     }
-    return {image:value.imageRevision===entry.imageRevision?'':entry.image,imageRevision:entry.imageRevision,error:entry.error,loading:!entry.ready,snapshotPending:!entry.image||entry.snapshotCompleted<entry.snapshotRequested,inspection:entry.inspection}
+    return {image:value.imageRevision===entry.imageRevision?'':entry.image,imageRevision:entry.imageRevision,error:entry.error,loading:!entry.ready,snapshotPending:!entry.image||entry.snapshotCompleted<entry.snapshotRequested,pageFit:entry.pageFit?{...entry.pageFit,zoom:entry.fitZoom}:null,inspection:entry.inspection}
   })
   bind('research:native-web:hide',value=>{
     if(value?.sessionId!==undefined&&(typeof value.sessionId!=='string'||!value.sessionId||value.sessionId.length>256))throw Error('Invalid webpage identity')
