@@ -124,6 +124,7 @@ it('离屏网页改变卡片尺寸后重新生成预览，不一直显示旧尺�
  expect(wc.capturePage.mock.calls.length).toBeGreaterThan(captured)
  expect(wc.capturePage).toHaveBeenLastCalledWith({x:0,y:0,width:600,height:900},{stayHidden:true,stayAwake:true})
  await vi.waitFor(async()=>expect((await call(resized)).image).toBe('data:image/png;base64,resized'))
+ expect(views[0].visible).toBe(false)
  expect(wc.loadURL).toHaveBeenCalledTimes(1);expect(wc.reload).not.toHaveBeenCalled()
 })
 
