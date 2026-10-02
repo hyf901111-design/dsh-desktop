@@ -18,6 +18,7 @@
 @property(nonatomic,copy) NSString *image;
 @property(nonatomic,copy) NSString *error;
 @property(nonatomic,copy) NSString *loginStatus;
+@property(nonatomic,strong) NSMutableArray<NSString *> *loginTrace;
 @property(nonatomic) NSUInteger imageRevision;
 @property(nonatomic) BOOL loading;
 @property(nonatomic) BOOL snapshotBusy;
@@ -27,6 +28,7 @@
 - (void)returnToPlayer;
 - (void)capturePlayer;
 - (void)dispose;
+- (void)recordLogin:(NSURL *)url outcome:(NSString *)outcome;
 @end
 
 static BOOL trustedHTTPS(NSURL *url, NSArray<NSString *> *hosts) {
@@ -35,7 +37,27 @@ static BOOL trustedHTTPS(NSURL *url, NSArray<NSString *> *hosts) {
 static BOOL googleWebsiteLogin(NSURL *url) {
  return trustedHTTPS(url,@[@"accounts.google.com"]) && ![url.path hasPrefix:@"/o/"] && ![url.path hasPrefix:@"/oauth2/"];
 }
+static BOOL googleWebsiteSession(NSURL *url) {
+ if(googleWebsiteLogin(url))return YES;
+ // Google hands the ordinary YouTube website session to these cookie endpoints.
+ // Allow their exact hosts and endpoint names, never a wildcard Google origin.
+ BOOL cookieHost=trustedHTTPS(url,@[@"accounts.youtube.com",@"www.google.com"]);
+ return cookieHost&&[url.path hasPrefix:@"/accounts/"]&&[@[@"SetSID",@"CheckCookie",@"CheckConnection",@"RotateCookies"] containsObject:url.path.lastPathComponent];
+}
 @implementation EWorkYoutubePlayer
+- (void)recordLogin:(NSURL *)url outcome:(NSString *)outcome {
+ if(!self.loginTrace)self.loginTrace=[NSMutableArray new];
+ NSString *site=[@[@"accounts.google.com",@"accounts.youtube.com",@"www.google.com",@"www.youtube.com",@"youtube.com"] containsObject:url.host.lowercaseString]?url.host.lowercaseString:@"other";
+ NSString *step=@"website";
+ if([url.path containsString:@"/challenge/"])step=@"challenge";
+ else if([url.path containsString:@"identifier"])step=@"identifier";
+ else if([@[@"SetSID",@"CheckCookie",@"CheckConnection",@"RotateCookies"] containsObject:url.path.lastPathComponent])step=@"cookie-sync";
+ else if([url.path isEqualToString:@"/signin"])step=@"service-resume";
+ else if([@[@"/watch",@"/",@"/post_login"] containsObject:url.path])step=@"player-return";
+ NSString *item=[NSString stringWithFormat:@"%@:%@:%@",site,step,outcome];
+ if(![self.loginTrace.lastObject isEqualToString:item])[self.loginTrace addObject:item];
+ if(self.loginTrace.count>24)[self.loginTrace removeObjectAtIndex:0];
+}
 - (void)loadPlayer {
  self.error=@"";self.loading=YES;self.capturedAt=0;
  NSMutableURLRequest *request=[NSMutableURLRequest requestWithURL:[NSURL URLWithString:self.url]];
@@ -46,6 +68,7 @@ static BOOL googleWebsiteLogin(NSURL *url) {
  if(self.loginWindow){[self.loginWindow makeKeyAndOrderFront:nil];return;}
  if(!self.host.window)return;
  self.loginStatus=@"pending";
+ self.loginTrace=[NSMutableArray new];
  WKWebViewConfiguration *config=[WKWebViewConfiguration new];
  config.websiteDataStore=self.view.configuration.websiteDataStore;
  self.loginView=[[WKWebView alloc] initWithFrame:NSMakeRect(0,0,560,640) configuration:config];
@@ -72,7 +95,7 @@ static BOOL googleWebsiteLogin(NSURL *url) {
  NSURL *url=action.request.URL;
  if(webView==self.view&&googleWebsiteLogin(url)){handler(WKNavigationActionPolicyCancel);[self beginLogin];return;}
  if(!action.targetFrame.mainFrame&&action.targetFrame){handler(WKNavigationActionPolicyAllow);return;}
- if(webView==self.loginView&&trustedHTTPS(url,@[@"www.youtube.com",@"youtube.com"])&&[@[@"/watch",@"/",@"/post_login"] containsObject:url.path]){handler(WKNavigationActionPolicyCancel);[self returnToPlayer];return;}
+ if(webView==self.loginView&&trustedHTTPS(url,@[@"www.youtube.com",@"youtube.com"])&&[@[@"/watch",@"/",@"/post_login"] containsObject:url.path]){[self recordLogin:url outcome:@"returned"];handler(WKNavigationActionPolicyCancel);[self returnToPlayer];return;}
  if(webView==self.view){
   if([url.absoluteString isEqualToString:self.url]){handler(WKNavigationActionPolicyAllow);return;}
   handler(WKNavigationActionPolicyCancel);
@@ -80,13 +103,15 @@ static BOOL googleWebsiteLogin(NSURL *url) {
   return;
  }
  // Ordinary Google website sign-in only. OAuth remains in the system browser.
- BOOL allowed=googleWebsiteLogin(url)||trustedHTTPS(url,@[@"www.youtube.com",@"youtube.com"]);
+ BOOL allowed=googleWebsiteSession(url)||trustedHTTPS(url,@[@"www.youtube.com",@"youtube.com"]);
+ [self recordLogin:url outcome:allowed?@"allowed":@"blocked"];
  handler(allowed?WKNavigationActionPolicyAllow:WKNavigationActionPolicyCancel);
+ if(!allowed){self.loginStatus=@"failed";[self.loginWindow close];}
 }
 - (WKWebView *)webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)action windowFeatures:(WKWindowFeatures *)features {
  (void)configuration;(void)features;
  if(webView==self.view&&googleWebsiteLogin(action.request.URL))[self beginLogin];
- else if(webView==self.loginView&&googleWebsiteLogin(action.request.URL))[webView loadRequest:action.request];
+ else if(webView==self.loginView&&(googleWebsiteSession(action.request.URL)||trustedHTTPS(action.request.URL,@[@"www.youtube.com",@"youtube.com"]))) {[self recordLogin:action.request.URL outcome:@"popup-retained"];[webView loadRequest:action.request];}
  else if(trustedHTTPS(action.request.URL,@[@"www.youtube.com",@"youtube.com",@"support.google.com"]))[[NSWorkspace sharedWorkspace] openURL:action.request.URL];
  return nil;
 }
@@ -95,6 +120,7 @@ static BOOL googleWebsiteLogin(NSURL *url) {
  if(webView==self.view){self.loading=NO;self.error=@"";[self capturePlayer];return;}
  NSURL *url=webView.URL;
  if(trustedHTTPS(url,@[@"www.youtube.com",@"youtube.com"])&&[@[@"/watch",@"/",@"/post_login"] containsObject:url.path]){
+  [self recordLogin:url outcome:@"returned"];
   [self returnToPlayer];
  }
 }
@@ -106,6 +132,7 @@ static BOOL googleWebsiteLogin(NSURL *url) {
 - (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
  (void)navigation;
  if(webView==self.view&&error.code!=NSURLErrorCancelled){self.loading=NO;self.error=@"系统播放器暂时无法载入，请重试或在浏览器观看。";}
+ else if(webView==self.loginView&&error.code!=NSURLErrorCancelled){[self recordLogin:webView.URL outcome:@"load-failed"];self.loginStatus=@"failed";[self.loginWindow close];}
 }
 - (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
  [self webView:webView didFailProvisionalNavigation:navigation withError:error];
@@ -171,6 +198,7 @@ static napi_value state(napi_env env,napi_callback_info info){try{
  napi_value result,value;napi_create_object(env,&result);
  napi_get_boolean(env,player.loading,&value);napi_set_named_property(env,result,"loading",value);
  for(NSString *key in @[@"image",@"error",@"loginStatus"]){NSString *text=[player valueForKey:key];napi_create_string_utf8(env,text.UTF8String,NAPI_AUTO_LENGTH,&value);napi_set_named_property(env,result,key.UTF8String,value);}
+ NSString *trace=[player.loginTrace componentsJoinedByString:@" | "]?:@"";napi_create_string_utf8(env,trace.UTF8String,NAPI_AUTO_LENGTH,&value);napi_set_named_property(env,result,"loginTrace",value);
  napi_create_double(env,player.imageRevision,&value);napi_set_named_property(env,result,"imageRevision",value);return result;
  }catch(const std::exception& e){napi_throw_error(env,nullptr,e.what());return nullptr;}}
 static napi_value action(napi_env env,napi_callback_info info){try{

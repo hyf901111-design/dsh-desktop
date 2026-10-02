@@ -7,7 +7,7 @@ import type {ResearchLinkFrameRegistry} from './research-link-frame'
 export type YoutubeNativeDriver={
  mount(handle:Buffer,id:string,url:string,referer:string):void
  place(id:string,x:number,y:number,width:number,height:number,visible:boolean):void
- state(id:string):{loading:boolean;error:string;image:string;imageRevision:number;loginStatus:string}
+ state(id:string):{loading:boolean;error:string;image:string;imageRevision:number;loginStatus:string;loginTrace?:string}
  login(id:string):void;reload(id:string):void;release(id:string):void
 }
 function identity(value:any){
@@ -57,6 +57,7 @@ export function registerResearchYoutubeNative(options:{ipcMain:IpcMain;getMainWi
   return engine.state(id)
  })
  bind('research:youtube-native:login',value=>{const {id}=authorized(value);if(!entries.has(id)||!native())throw Error('YouTube player unavailable');driver!.login(id);return {opened:true}})
+ bind('research:youtube-native:status',value=>{const {id}=authorized(value);if(!entries.has(id)||!native())throw Error('YouTube player unavailable');const state=driver!.state(id);return {loading:state.loading,error:state.error,loginStatus:state.loginStatus,loginTrace:state.loginTrace??''}})
  bind('research:youtube-native:hide',value=>{const id=identity(value);if(entries.has(id))driver?.place(id,0,0,1,1,false);return {ok:true}})
  bind('research:youtube-native:release',value=>{release(value);return {ok:true}})
  return {release,clear}
