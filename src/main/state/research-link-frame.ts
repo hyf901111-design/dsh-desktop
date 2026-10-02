@@ -195,13 +195,20 @@ export class ResearchLinkFrameRegistry {
     return this.nodes.get(this.key(identity)) ?? null
   }
 
-  ownsFrame(frame: WebFrameMain | null | undefined): boolean {
+  authorizedFrameUrl(frame: WebFrameMain | null | undefined): string | null {
     let current = frame
     while (current?.parent) {
-      if (!current.parent.parent && [...this.nodes.values()].some(node => node.frameName === current!.name)) return true
+      if (!current.parent.parent) {
+        const owner = [...this.nodes.values()].find(node => node.frameName === current!.name)
+        if (owner) return owner.url
+      }
       current = current.parent
     }
-    return false
+    return null
+  }
+
+  ownsFrame(frame: WebFrameMain | null | undefined): boolean {
+    return this.authorizedFrameUrl(frame) !== null
   }
 
   async inspect(

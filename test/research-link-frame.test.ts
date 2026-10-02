@@ -9,11 +9,12 @@ import { createResearchLinkFrameBridge } from '../src/preload/research-link-fram
 describe('research link frame authorization', () => {
   it('owns the authorized direct frame and its descendants, not a spoofed name in another subtree',()=>{
     const registry=new ResearchLinkFrameRegistry();const auth=registry.authorize({sessionId:'s',nodeId:'n',url:'https://example.com'});
-    const main={parent:null},owned={name:auth.frameName,parent:main};
+    const main={parent:null},owned={name:auth.frameName,parent:main,url:'https://other.example/current'};
+    expect(registry.authorizedFrameUrl({name:'nested',parent:owned} as any)).toBe('https://example.com/');
     expect(registry.ownsFrame(owned as any)).toBe(true);
     expect(registry.ownsFrame({name:'nested',parent:owned} as any)).toBe(true);
     expect(registry.ownsFrame({name:auth.frameName,parent:{name:'other',parent:main}} as any)).toBe(false);
-    registry.clear();expect(registry.ownsFrame(owned as any)).toBe(false);
+    registry.clear();expect(registry.ownsFrame(owned as any)).toBe(false);expect(registry.authorizedFrameUrl(owned as any)).toBeNull();
   });
   it('canonicalizes only bounded credential-free HTTP URLs', () => {
     expect(normalizeResearchLinkUrl(' HTTPS://Example.com:443/report#part '))

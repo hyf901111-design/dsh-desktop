@@ -3,13 +3,15 @@ import { canGrantWindowPermission, isTrustedAppUrl } from './security-policy'
 
 export function secureWindow(
   window: BrowserWindow,
-  options: { allowsResearchFrameUrl?(url: string): boolean; ownsResearchFrame?(frame: WebFrameMain | null | undefined): boolean } = {}
+  options: { allowsResearchFrameUrl?(url: string): boolean; ownsResearchFrame?(frame: WebFrameMain | null | undefined): boolean; researchFrameUrl?(frame: WebFrameMain | null | undefined): string | null } = {}
 ): void {
   window.webContents.setWindowOpenHandler(({ url, referrer }) => {
     const sources = referrer?.url ? window.webContents.mainFrame.framesInSubtree?.filter(frame => (
       frame.url === referrer.url && options.ownsResearchFrame?.(frame)
     )) ?? [] : []
     if (sources.length) {
+      const browserVideo = sources.length === 1 ? youtubeSignInVideo(url, options.researchFrameUrl?.(sources[0])) : null
+      if (browserVideo) { void shell.openExternal(browserVideo); return { action: 'deny' } }
       if (sources.length === 1 && isExternalUrl(url) && !isTrustedAppUrl(url)) {
         void sources[0]!.executeJavaScript(`location.assign(${JSON.stringify(url)})`).catch(() => undefined)
       }
@@ -46,6 +48,8 @@ export function secureWindow(
       return
     }
     if (options.ownsResearchFrame?.(event.frame)) {
+      const browserVideo = youtubeSignInVideo(event.url, options.researchFrameUrl?.(event.frame))
+      if (browserVideo) { event.preventDefault(); void shell.openExternal(browserVideo); return }
       if (isExternalUrl(event.url) && !isTrustedAppUrl(event.url)) return
       event.preventDefault()
       return
@@ -89,6 +93,22 @@ export function secureWindow(
       )
     }
   )
+}
+
+// Google sign-in cannot run inside the sandboxed official player. Keep the
+// player mounted and hand off the same video/time to the system browser.
+function youtubeSignInVideo(target: string, authorized: string | null | undefined): string | null {
+  try {
+    const login = new URL(target), embed = new URL(authorized ?? '')
+    if (login.protocol !== 'https:' || login.hostname !== 'accounts.google.com' || login.username || login.password ||
+      embed.protocol !== 'https:' || !['www.youtube.com','youtube.com'].includes(embed.hostname) || embed.username || embed.password) return null
+    const id = /^\/embed\/([A-Za-z0-9_-]{11})$/.exec(embed.pathname)?.[1]
+    if (!id) return null
+    const video = new URL('https://www.youtube.com/watch'); video.searchParams.set('v', id)
+    const start = embed.searchParams.get('start')
+    if (start && /^\d+$/.test(start)) video.searchParams.set('t', start + 's')
+    return video.href
+  } catch { return null }
 }
 
 function sameFrame(
