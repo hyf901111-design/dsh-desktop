@@ -9,173 +9,55 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复YouTube登录验证后的会话交接",
+        "featureName": "补记YouTube客户端实播与整体本地验收",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "a3cb3b91debf185207b88ad8a356a9916ccd55e3",
-        "tipCommit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
+        "baseCommit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
+        "tipCommit": "7e753cd4d59ae022063b1db2fe1ab5dd54a73949",
         "commits": [
           {
-            "commit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
+            "commit": "7e753cd4d59ae022063b1db2fe1ab5dd54a73949",
             "parents": [
-              "a3cb3b91debf185207b88ad8a356a9916ccd55e3"
+              "89b90005ae952deb25880059ca2c7d061ae9cf4a"
             ],
-            "subject": "修复YouTube验证后的会话交接与空白登录窗口"
+            "subject": "补记YouTube自动返回与客户端实际播放验收"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/design/component-template-acceptance-20260930.md"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/youtube-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/macos/youtube-player.mm"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-youtube-native.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-youtube.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-youtube-native.test.ts"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "run",
-              "build:native:youtube"
+              "git",
+              "diff",
+              "--check",
+              "89b90005ae952deb25880059ca2c7d061ae9cf4a",
+              "HEAD"
             ],
             "outcome": "passed",
-            "summary": "系统WebKit播放器模块构建通过",
-            "verifiedCommit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
-            "completedAt": "2026-10-02T12:25:11.784936+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-youtube-native.test.ts",
-              "test/research-link-frame.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "12项身份、几何、生命周期和只读登录状态边界通过",
-            "verifiedCommit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
-            "completedAt": "2026-10-02T12:25:11.784936+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/security.test.ts",
-              "test/youtube-template.test.js",
-              "-t",
-              "YouTube|Google|navigation security"
-            ],
-            "outcome": "passed",
-            "summary": "34项YouTube与导航聚焦回归通过",
-            "verifiedCommit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
-            "completedAt": "2026-10-02T12:25:11.784936+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "项目类型检查通过",
-            "verifiedCommit": "89b90005ae952deb25880059ca2c7d061ae9cf4a",
-            "completedAt": "2026-10-02T12:25:11.784936+00:00",
-            "timeoutMs": 300000
+            "summary": "本提交仅追加验收文档，差异格式检查通过",
+            "verifiedCommit": "7e753cd4d59ae022063b1db2fe1ab5dd54a73949",
+            "completedAt": "2026-10-02T12:42:45.894732+00:00",
+            "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "独立Electron应用使用本提交原生模块，实际打开Google普通网站登录页并关闭，返回cancelled状态，导航记录仅含固定站点与阶段；证据youtube-bridge-diagnostic/cookie-navigation-ui.png及bridge-audit.json。共享客户端上一版已复现本人验证后的空白窗口，本次共享客户端会话交接、自动返回和认证后播放仍待构建验证。"
+          "summary": "实际运行c48a7640集成包，点击登录后accounts.youtube.com会话交接成功，自动返回同一组件；实际视频与字幕持续更新，暂停读出2:01，重载实播读出1:44，原M7lc1UVf-VE与90秒起点保留。当前提交只记录该证据，没有运行时代码变化。"
         },
         "acceptanceCriteria": [
-          "Google与YouTube普通网站会话交接可在同一WebKit存储完成",
-          "登录新窗口请求保留在客户端登录窗口",
-          "只读诊断不移动播放器也不返回账户和验证码",
-          "自动返回原组件后仍需验证实际播放"
+          "记录实际包提交与回传阶段",
+          "记录组件内实播、重载、原网址保留",
+          "整体74类本地交互接受和固定十卡样本边界明确"
         ],
         "risks": [
-          "Chrome已有登录会话不会转入系统WebKit，首次原生会话仍可能要求本人密码或通行密钥",
-          "独立桥接窗口检查不替代最终共享客户端的认证播放验收",
-          "最终包必须从干净受管集成源码构建，未授权发布或晋升main"
+          "当前运行包为c48a7640；文档后继提交不冒充包构建来源",
+          "本人接受受管集成批次后才能晋升main"
         ],
-        "generatedAt": "2026-10-02T12:25:11.784936+00:00"
-      },
-      "merged": {
-        "mergeCommit": "30928fc144a08a6281311b9bad92ebe33aa5d7b8",
-        "verificationCommit": "30928fc144a08a6281311b9bad92ebe33aa5d7b8",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "30928fc144a08a6281311b9bad92ebe33aa5d7b8",
-            "completedAt": "2026-10-02T12:27:33.841Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "30928fc144a08a6281311b9bad92ebe33aa5d7b8",
-            "completedAt": "2026-10-02T12:27:33.841Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "30928fc144a08a6281311b9bad92ebe33aa5d7b8",
-            "completedAt": "2026-10-02T12:27:33.841Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "30928fc144a08a6281311b9bad92ebe33aa5d7b8",
-            "completedAt": "2026-10-02T12:27:33.841Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T12:27:33.841Z"
+        "generatedAt": "2026-10-02T12:42:45.894732+00:00"
       }
     },
     {
