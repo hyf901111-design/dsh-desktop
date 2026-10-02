@@ -40,6 +40,33 @@ describe('generic canvas interaction surface',()=>{
   await use({op:'click',revision:s.revision,ref:s.elements[0].ref});s=await use({op:'observe'});expect(s.elements[0].checked).toBe(true);expect(s.revision).not.toBe(original)
   await use({op:'select',revision:s.revision,ref:s.elements[1].ref,value:'done'});expect((await use({op:'observe'})).elements[1].value).toBe('done');dom.window.close()
  })
+ it.each([false,true])('preserves refresh dispatch options on first installation (silent=%s)',async silent=>{
+  const options=silent?"{isCancelled:request.isCancelled,silent:request.source==='component-data-refresh'}":"{isCancelled:request.isCancelled}"
+  const fixture=`
+function createResearchWorkspaceSession(storage, sessionId) {}
+async function dispatch(request, workspace) {
+const result=await workspace.canvasAction(request.method,request.args,${options});
+return result;
+}
+const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);
+/* CANVAS_TASK_CHRONOLOGY */ /* CANVAS_TASK_COMPOSER */
+/* EXECUTION_HEADER_FIRST */ /* EXECUTION_REPORT_AFTER_DETAILS */ /* CANVAS_CONTINUOUS_EXECUTION */
+const toBottom = (el) => {};
+const settle = () => {
+				el.scrollTop = el.scrollHeight;};
+const floor = Math.max(0, el.scrollHeight - el.clientHeight);
+el.addEventListener("scroll", onScroll, { passive: true });
+el.removeEventListener("scroll", onScroll);
+`
+  const patched=patchCanvasUseClient(fixture)
+  const dispatch=patched.slice(patched.indexOf('async function dispatch('),patched.indexOf('\nconst dropLifecycle'))
+  const call=new Script(dispatch+';dispatch').runInNewContext({canvasUseOwners:new Map()})
+  const isCancelled=()=>false,request={method:'inspect',args:{node:'a'},source:'component-data-refresh',isCancelled}
+  const result=await call(request,{canvasAction:async(method,args,options)=>({method,args,options})})
+  expect(result.method).toBe('inspect');expect(result.args).toEqual(request.args)
+  expect(result.options.isCancelled).toBe(isCancelled)
+  expect(result.options.silent).toBe(silent?true:undefined)
+ })
  it('keeps injected client patch idempotent and syntactically valid',async()=>{
   const s=patchCanvasUseClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
   expect(patchCanvasUseClient(s)).toBe(s);expect(()=>new Script(s)).not.toThrow()
@@ -48,7 +75,7 @@ describe('generic canvas interaction surface',()=>{
   const {dom,w,use}=surface('<form><input required><button type="submit">保存</button><output></output></form>')
   const source=await readFile('packages/dsh-research-task-runtime/html-artifact.js','utf8')
   const start=source.indexOf('  const submitLocally ='),local=source.slice(start,source.indexOf("  document.addEventListener('DOMContentLoaded'",start))
-  w.eval(local)
+  w.eval('let workbenchSelected=null;\n'+local)
   const form=w.document.querySelector('form'),input=w.document.querySelector('input'),button=w.document.querySelector('button'),out=w.document.querySelector('output');let count=0
   form.onsubmit=e=>{e.preventDefault();expect(e.submitter).toBe(button);out.textContent=input.value;count++}
   button.click();expect(count).toBe(0)

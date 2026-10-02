@@ -338,8 +338,15 @@ export function patchCanvasUseClient(source) {
   if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return continuousFlow(connectConversation(inlineTasks(source.slice(0,a)+defs+source.slice(b+end.length+1))))}
   const once=(a,b)=>{if(!source.includes(a))throw Error('Canvas use anchor missing: '+a.slice(0,100));source=source.replace(a,b)}
   once('function createResearchWorkspaceSession(storage, sessionId) {',defs+'function createResearchWorkspaceSession(storage, sessionId) {')
-  once('const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});',`if(request.method==='use'){const use=canvasUseOwners.get(request.sessionId);if(!use)throw Error('画板暂未打开，等待返回后重新观察。');return use(request.args,{isCancelled:request.isCancelled});}
-          const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});`)
+  // Fresh installs already carry the refresh patch's silent option. Preserve
+  // the complete dispatch call instead of replacing it with the old options.
+  const dispatchCall=[
+    "const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled,silent:request.source==='component-data-refresh'});",
+    'const result=await workspace.canvasAction(request.method,request.args,{isCancelled:request.isCancelled});'
+  ].find(call=>source.includes(call))
+  if(!dispatchCall)throw Error('Canvas use dispatch anchor missing')
+  once(dispatchCall,`if(request.method==='use'){const use=canvasUseOwners.get(request.sessionId);if(!use)throw Error('画板暂未打开，等待返回后重新观察。');return use(request.args,{isCancelled:request.isCancelled});}
+          ${dispatchCall}`)
   once('const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);',`const dropLifecycle = (0, react.useMemo)(() => ({ active: true }), [workspace]);
       react.useEffect(()=>installCanvasUseClient(sessionId,workspace,rootRef.current,agentCursorMarkup),[sessionId,workspace]);`)
   return continuousFlow(connectConversation(inlineTasks(source)))
