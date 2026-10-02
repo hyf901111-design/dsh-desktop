@@ -24,7 +24,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let server,win;
  const registry=new ResearchLinkFrameRegistry(),handlers=new Map(),native=registerResearchNativeWeb({registry,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(n,f)=>handlers.set(n,f)}});
  const identity={sessionId:'fixture',nodeId:'native',url};registry.authorize(identity);
  const call=value=>handlers.get('research:native-web:update')({sender:win.webContents,senderFrame:win.webContents.mainFrame},value);
- let request={...identity,bounds:{x:50,y:50,width:400,height:500},layoutSize:{width:400,height:500},active:true,scale:1,radius:2,imageRevision:0};
+ let request={...identity,bounds:{x:50,y:50,width:800,height:500},layoutSize:{width:800,height:500},active:true,scale:1,radius:2,imageRevision:0};
  const started=performance.now();await call(request);const wc=native.contents(identity),view=win.contentView.children.find(v=>v.webContents===wc);
  while(performance.now()-started<2200){await call(request);if(view.getVisible())break;await delay(30)}
  const firstVisible=performance.now()-started;assert.ok(firstVisible<2200,'view appears before slow image finishes');assert.ok(wc.isLoadingMainFrame(),'slow image is still loading when page becomes interactive');
@@ -32,15 +32,18 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let server,win;
  assert.ok(size.content<=size.viewport+2,JSON.stringify(size));
  // The root cannot see the clipped desktop shell. Its right edge must still fit.
  for(let i=0;i<45;i++){await call(request);size=await wc.executeJavaScript('({viewport:innerWidth,content:document.querySelector(".shell").getBoundingClientRect().right})');if(size.content<=size.viewport+2)break;await delay(40)}
- assert.ok(size.content<=size.viewport+2,JSON.stringify(size));const firstZoom=wc.getZoomFactor();assert.ok(firstZoom<1,'internally clipped desktop page fitted to component width');
+ assert.ok(size.content<=size.viewport+2,JSON.stringify(size));const firstZoom=request.layoutSize.width/size.viewport;assert.ok(size.viewport>800,'internally clipped desktop page fitted to component width');
  const durations=[];for(const width of [600,480,720]){request={...request,bounds:{...request.bounds,width},layoutSize:{...request.layoutSize,width}};const start=performance.now();await call(request);durations.push(performance.now()-start);assert.equal(view.getBounds().width,width)}
  assert.ok(Math.max(...durations)<100,'geometry IPC finishes independently of capture and inspection');
- for(let i=0;i<30;i++){await call(request);size=await wc.executeJavaScript('({viewport:innerWidth,content:document.querySelector(".shell").getBoundingClientRect().right})');if(size.content<=size.viewport+2)break;await delay(50)}
- assert.ok(size.content<=size.viewport+2);const fittedZoom=wc.getZoomFactor();
- await call({...request,pageZoom:1.2});assert.ok(Math.abs(wc.getZoomFactor()-fittedZoom*1.2)<.005,'manual zoom changes actual Chromium zoom');
- await call({...request,pageZoom:1.2,scale:.8,bounds:{...request.bounds,width:request.bounds.width*.8,height:request.bounds.height*.8}});
- assert.ok(Math.abs(wc.getZoomFactor()-fittedZoom*1.2)<.005,'canvas scale preserves manual zoom');
- await call({...request,pageZoom:1});assert.ok(Math.abs(wc.getZoomFactor()-fittedZoom)<.005,'reset restores fitted page size');
+ await delay(150);await call(request);await delay(150);await call(request);
+ size=await wc.executeJavaScript('({viewport:innerWidth,content:document.querySelector(".shell").getBoundingClientRect().right})');
+ const fittedZoom=request.layoutSize.width/size.viewport;assert.ok(fittedZoom>=.749,'small component prioritizes readable text');
+ let manualRequest={...request,pageZoom:1.2,pageZoomMode:'manual'};await call(manualRequest);await delay(100);
+ const manualViewport=await wc.executeJavaScript('innerWidth');assert.ok(Math.abs(request.layoutSize.width/manualViewport-fittedZoom*1.2)<.005,'manual zoom changes actual displayed text scale');
+ await call({...manualRequest,scale:.8,bounds:{...request.bounds,width:request.bounds.width*.8,height:request.bounds.height*.8}});await delay(100);
+ assert.equal(await wc.executeJavaScript('innerWidth'),manualViewport,'canvas scale preserves manual zoom');
+ request={...request,pageZoom:1,pageZoomMode:'auto',zoomResetToken:1};await call(request);await delay(100);await call(request);
+ assert.equal(wc.getZoomFactor(),1,'browser zoom remains natural; viewport emulation owns component text scale');
  let firstSnapshot;for(let i=0;i<35;i++){firstSnapshot=await call(request);if(firstSnapshot.imageRevision>0&&!firstSnapshot.snapshotPending)break;await delay(80)}
  assert.ok(firstSnapshot.imageRevision>0,'live view has an initial fallback snapshot');
  const beforeInteraction=firstSnapshot.imageRevision;
@@ -51,11 +54,11 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let server,win;
  assert.ok(afterInteraction.imageRevision>beforeInteraction,'leaving interaction refreshes the fallback preview');
  const stableBounds=view.getBounds();await call({...request,active:false});await call(request);assert.deepEqual(view.getBounds(),stableBounds);
  await writeFile(${JSON.stringify(join(output,'native-web.png'))},(await win.webContents.capturePage()).toPNG());
- const desktopZoom=wc.getZoomFactor();await wc.loadURL(url+'responsive');request={...request,bounds:{...request.bounds,width:600},layoutSize:{...request.layoutSize,width:600}};
+ const desktopZoom=(await call(request)).pageFit?.zoom;await wc.loadURL(url+'responsive');request={...request,bounds:{...request.bounds,width:600},layoutSize:{...request.layoutSize,width:600}};
  for(let i=0;i<35;i++){await call(request);if(view.getVisible())break;await delay(40)}
  await delay(100);await call(request);assert.equal(wc.getZoomFactor(),1,'responsive site uses its own layout at normal zoom');
  const responsive=await wc.executeJavaScript('({viewport:innerWidth,columns:getComputedStyle(document.querySelector("main")).gridTemplateColumns.split(" ").length})');assert.equal(responsive.columns,1,'narrow responsive page reflows to one column');
- await writeFile(${JSON.stringify(join(output,'report.json'))},JSON.stringify({firstVisibleMs:firstVisible,slowAssetMs:3000,geometryUpdateMs:durations,firstFitZoom:firstZoom,finalFitZoom:desktopZoom,manualZoomVerified:true,activeCaptureSuppressed:true,leaveCaptureVerified:true,finalViewport:size,selectionPreservesBounds:true,clippedDesktopShellFits:true,responsive},null,2));
+ await writeFile(${JSON.stringify(join(output,'report.json'))},JSON.stringify({firstVisibleMs:firstVisible,slowAssetMs:3000,geometryUpdateMs:durations,firstFitZoom:firstZoom,finalFitZoom:desktopZoom,manualZoomVerified:true,activeCaptureSuppressed:true,leaveCaptureVerified:true,finalViewport:size,selectionPreservesBounds:true,clippedDesktopShellFits:true,readableMinimumVerified:true,responsive},null,2));
  console.log('native focused fixture passed');
 })().then(()=>{server.closeAllConnections();server.close();app.exit(0)}).catch(error=>{console.error(error);server?.closeAllConnections();server?.close();app.exit(1)});
 `},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron']})

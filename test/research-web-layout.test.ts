@@ -7,7 +7,7 @@ function page(html: string, width = 600) {
   win.document.body.innerHTML = html
   Object.defineProperties(win, { innerWidth: { value: width }, innerHeight: { value: 500 } })
   for (const el of [win.document.documentElement, win.document.body]) {
-    Object.defineProperties(el, { clientWidth: { value: width }, scrollWidth: { value: width } })
+    Object.defineProperties(el, { clientWidth: { value: width }, scrollWidth: { value: width, configurable: true } })
     el.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: width, bottom: 500, width, height: 500 }) as any
   }
   return win
@@ -68,4 +68,12 @@ it('measures mail previews after a long list, including panes that only scroll v
   for (const el of [doc.documentElement, doc.body]) Object.defineProperties(el, { clientWidth: { value: 300 }, scrollWidth: { value: 300 } })
   bounds(doc.querySelector('section'), 0, 600)
   expect(measureResearchWebLayout(win as any)).toMatchObject({ viewport: 600, content: 900 })
+})
+
+it('does not shrink a responsive page for a hidden popup extending the document scroll width', () => {
+  const win = page('<main></main><section style="visibility:hidden;min-width:3000px"></section>')
+  bounds(win.document.querySelector('main'), 0, 600)
+  bounds(win.document.querySelector('section'), 0, 3000)
+  Object.defineProperty(win.document.documentElement, 'scrollWidth', { value: 3000 })
+  expect(measureResearchWebLayout(win as any)).toMatchObject({ viewport: 600, content: 600 })
 })

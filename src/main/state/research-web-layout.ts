@@ -3,7 +3,9 @@ export function measureResearchWebLayout(win: Window = window) {
   let remaining = 400, constraints = 0
   const measure = (scope: Window, depth: number): number => {
     const doc = scope.document, width = scope.innerWidth, height = scope.innerHeight
-    let required = Math.max(width, doc.documentElement.clientWidth, doc.documentElement.scrollWidth, doc.body?.scrollWidth || 0)
+    // Root scrollWidth also includes hidden menus and offscreen desktop widgets.
+    // Only displayed panes below can request a wider viewport.
+    let required = Math.max(width, doc.documentElement.clientWidth)
     // A desktop shell can hide overflow on an ancestor, so the root's scrollWidth
     // alone misses its minimum width. Respect deliberate table/carousel scrollports.
     const scrollport = (el: Element) => {
