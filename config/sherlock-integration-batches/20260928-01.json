@@ -9,27 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补齐长邮件列表及纵向滚动正文的适配",
+        "featureName": "修复未选中网页组件的尺寸适配和预览画布",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "a16dce67f2512fa8c6ab223054a9556b9f625e85",
-        "tipCommit": "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa",
+        "baseCommit": "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa",
+        "tipCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
         "commits": [
           {
-            "commit": "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa",
+            "commit": "29cdbfdde1b4146132989e70322d63320d8922ab",
             "parents": [
-              "a16dce67f2512fa8c6ab223054a9556b9f625e85"
+              "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa"
             ],
-            "subject": "避免长列表和纵向滚动导致网页正文适配漏检"
+            "subject": "修复未选中网页组件缩放后预览沿用旧画布的问题"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "src/main/state/research-web-layout.ts"
+            "status": "A",
+            "path": "scripts/verify-research-web-preview.mjs"
           },
           {
             "status": "M",
-            "path": "test/research-web-layout.test.ts"
+            "path": "src/main/state/research-native-web.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-native-web.test.ts"
           }
         ],
         "checks": [
@@ -43,8 +47,8 @@
             ],
             "outcome": "passed",
             "summary": "23项网页适配、长列表正文及网页状态保留聚焦验证通过",
-            "verifiedCommit": "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa",
-            "completedAt": "2026-10-02T13:40:19.242610+00:00",
+            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
+            "completedAt": "2026-10-02T14:00:07.583265+00:00",
             "timeoutMs": 120000
           },
           {
@@ -55,8 +59,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa",
-            "completedAt": "2026-10-02T13:40:19.242610+00:00",
+            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
+            "completedAt": "2026-10-02T14:00:07.583265+00:00",
             "timeoutMs": 120000
           },
           {
@@ -66,83 +70,38 @@
             ],
             "outcome": "passed",
             "summary": "真实Chromium合成邮件固定栏位完整适配、响应式一列换行、缩放与截图时序验证通过",
-            "verifiedCommit": "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa",
-            "completedAt": "2026-10-02T13:40:19.242610+00:00",
+            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
+            "completedAt": "2026-10-02T14:00:07.583265+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-research-web-preview.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "真实Chromium的450条合成列表、同源正文、窄宽组件切换及隐藏预览像素重排检查通过",
+            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
+            "completedAt": "2026-10-02T14:00:07.583265+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离真实Chromium复测通过；长列表后正文优先检测与仅纵向滚动容器的同源预览另有聚焦回归。首轮共享客户端已启动，但邮件旧会话到期，正在等待本人在网页输入密码恢复现场。"
+          "summary": "隔离Chromium验证桌面栏位及同源正文适配、响应式网页换行、隐藏后缩小预览的实际像素重排；真实共享客户端已构建并打开，实际收件箱会话已过期，等待本人恢复登录。"
         },
         "acceptanceCriteria": [
           "内部固定桌面栏位及同源正文不因根节点隐藏溢出而漏掉适配",
           "响应式网页保留自身换行与正常文字缩放",
-          "尺寸变化不重新加载网页，手动缩放、会话及导航保留"
+          "尺寸变化不重新加载网页，手动缩放、会话及导航保留",
+          "未选中的网页组件改变尺寸后使用对应区域的新预览，不拉伸旧画布"
         ],
         "risks": [
-          "邮件网页旧会话到期，实际收件箱复测需在本人登录后继续",
-          "跨域嵌套正文受浏览器同源边界限制",
-          "当前共享包仅含首轮a16dce67；本提交待受管集成后构建"
+          "邮件网页旧会话到期，实际收件箱复测仍需本人在客户端登录",
+          "跨域嵌套正文仍遵守浏览器同源边界",
+          "当前共享包为aeb1105d，待本提交受管集成和重新构建"
         ],
-        "generatedAt": "2026-10-02T13:40:19.242610+00:00"
-      },
-      "merged": {
-        "mergeCommit": "57971ea74216738804c87e5585078acfcc000f9f",
-        "verificationCommit": "57971ea74216738804c87e5585078acfcc000f9f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "57971ea74216738804c87e5585078acfcc000f9f",
-            "completedAt": "2026-10-02T13:43:43.226Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "57971ea74216738804c87e5585078acfcc000f9f",
-            "completedAt": "2026-10-02T13:43:43.226Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "57971ea74216738804c87e5585078acfcc000f9f",
-            "completedAt": "2026-10-02T13:43:43.226Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "57971ea74216738804c87e5585078acfcc000f9f",
-            "completedAt": "2026-10-02T13:43:43.226Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T13:43:43.226Z"
+        "generatedAt": "2026-10-02T14:00:07.583265+00:00"
       }
     },
     {
