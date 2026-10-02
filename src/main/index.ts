@@ -21,6 +21,7 @@ import { guardUnexpectedErrorDownloads } from './search/research-web-downloads'
 import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
 import { registerResearchNativeWeb } from './state/research-native-web'
+import { ResearchWebNavigationStore } from './state/research-web-navigation'
 import { registerResearchYoutubeNative } from './state/research-youtube-native'
 import { registerCanvasUseWeb } from './state/canvas-use-web'
 import { copyResearchFile } from './state/research-owned-files'
@@ -715,6 +716,7 @@ function restartHarness(): Promise<void> {
 
 let scheduledRunner: TaskRunner | undefined
 
+let flushResearchNativeWeb:(()=>Promise<void>)|undefined
 function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): void {
   ipcMain.removeHandler('harness:restart')
   ipcMain.handle('harness:restart', async (event) => {
@@ -847,7 +849,8 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     onRejected: (error) => console.warn('[research-canvas] rejected wheel region update', error)
   })
   guardUnexpectedErrorDownloads(session.defaultSession)
-  const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry})
+  const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,navigation:new ResearchWebNavigationStore(join(app.getPath('userData'),'research-web-navigation.bin'),safeStorage)})
+  flushResearchNativeWeb=()=>nativeResearchWeb.flush()
   const nativeResearchYoutube = registerResearchYoutubeNative({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,appId:desktopChannel==='notarized'?'com.evanarts.sherlock':developmentBuild?'io.dsh.desktop.dev':'io.dsh.desktop'})
   registerCanvasUseWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,native:nativeResearchWeb.contents,authorize:(id,write)=>{if(!researchBoardsService)throw Error('画板服务尚未就绪');researchBoardsService.authorizeCanvasUse(id,write)}})
   registerResearchLinkFrameHandlers({
@@ -1547,7 +1550,7 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => componentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => flushResearchNativeWeb?.(), () => componentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )
