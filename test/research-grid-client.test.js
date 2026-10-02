@@ -1978,14 +1978,14 @@ it('YouTube实际宿主输入原视频后保留同一节点，官方播放器不
  expect(settings.map(a=>a.label)).toEqual(['修改视频网址','重新载入视频','打开原视频'])
  const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test');expect(restored.getSnapshot().artifacts).toHaveLength(1);expect(restored.getSnapshot().artifacts[0].containerSpec.url).toBe(input.value)
 })
-it('YouTube观看与登录分别打开原视频和Google帐号选择，登录后返回同一视频时点',async()=>{
+it('YouTube观看与浏览器登录分别打开原视频和Google帐号选择，保留同一视频时点',async()=>{
  const f=await fixture(true),url='https://www.youtube.com/watch?v=M7lc1UVf-VE&t=1m30s#original',spec={version:1,type:'youtube',title:'登录复验',url};
  const opened=[];f.win.open=(target)=>{opened.push(target);return null};
  await act(async()=>f.workspace.setArtifacts([{...text('youtube-login'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]));
  const buttons=Array.from(f.host.querySelectorAll('.ew-youtube-actions button'));
- expect(buttons.map(b=>b.textContent)).toEqual(['重试载入','在浏览器观看','登录 YouTube']);
+ expect(buttons.map(b=>b.textContent)).toEqual(['重试载入','在浏览器观看','在浏览器登录']);
  await f.event('click',buttons.find(b=>b.textContent==='在浏览器观看'));expect(opened.pop()).toBe(url);
- await f.event('click',buttons.find(b=>b.textContent==='登录 YouTube'));
+ await f.event('click',buttons.find(b=>b.textContent==='在浏览器登录'));
  const login=new URL(opened.pop());expect(login.origin).toBe('https://accounts.google.com');expect(login.pathname).toBe('/AccountChooser');
  const resume=new URL(login.searchParams.get('continue'));expect(resume.pathname).toBe('/signin');expect(resume.searchParams.get('next')).toBe('/watch?v=M7lc1UVf-VE&t=90s');
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);

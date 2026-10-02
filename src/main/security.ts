@@ -4,8 +4,28 @@ import { youtubeSignInUrl } from '../../packages/dsh-research-task-runtime/youtu
 
 export function secureWindow(
   window: BrowserWindow,
-  options: { allowsResearchFrameUrl?(url: string): boolean; ownsResearchFrame?(frame: WebFrameMain | null | undefined): boolean; researchFrameUrl?(frame: WebFrameMain | null | undefined): string | null } = {}
+  options: { allowsResearchFrameUrl?(url: string): boolean; ownsResearchFrame?(frame: WebFrameMain | null | undefined): boolean; researchFrameUrl?(frame: WebFrameMain | null | undefined): string | null; youtubeAppId?: string } = {}
 ): void {
+  // Desktop embeds identify the installed application, not the loopback shell.
+  // Scope this to the exact registered player document; never rewrite Google
+  // sign-in, YouTube API requests, unrelated frames or the browser identity.
+  if (options.youtubeAppId && /^[a-z][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)+$/.test(options.youtubeAppId)) {
+    const referer = `https://${options.youtubeAppId}/`
+    const requests = window.webContents.session.webRequest
+    requests.onBeforeSendHeaders({ urls: ['https://www.youtube.com/embed/*', 'https://youtube.com/embed/*'] }, (details, callback) => {
+      let authorized = false
+      try {
+        authorized = details.webContentsId === window.webContents.id && details.resourceType === 'subFrame' &&
+          details.frame?.parent === window.webContents.mainFrame && !/^about:srcdoc(?:[?#]|$)/i.test(details.frame?.url ?? '') &&
+          options.ownsResearchFrame?.(details.frame) === true && isYouTubeEmbedUrl(details.url) &&
+          options.researchFrameUrl?.(details.frame) === details.url
+      } catch { /* A destroyed or released frame cannot identify this request. */ }
+      if (!authorized) { callback({ requestHeaders: details.requestHeaders }); return }
+      const requestHeaders = Object.fromEntries(Object.entries(details.requestHeaders).filter(([name]) => name.toLowerCase() !== 'referer'))
+      callback({ requestHeaders: { ...requestHeaders, Referer: referer } })
+    })
+    window.webContents.on('destroyed', () => requests.onBeforeSendHeaders(null))
+  }
   window.webContents.setWindowOpenHandler(({ url, referrer }) => {
     const sources = referrer?.url ? window.webContents.mainFrame.framesInSubtree?.filter(frame => (
       frame.url === referrer.url && options.ownsResearchFrame?.(frame)
@@ -101,13 +121,18 @@ export function secureWindow(
 // post-login destination rather than replacing sign-in with video playback.
 function youtubeBrowserSignIn(target: string, authorized: string | null | undefined): string | null {
   try {
-    const login = new URL(target), embed = new URL(authorized ?? '')
-    if (login.origin !== 'https://accounts.google.com' || login.username || login.password ||
-      embed.protocol !== 'https:' || !['www.youtube.com','youtube.com'].includes(embed.hostname) || embed.port || embed.username || embed.password) return null
-    const id = /^\/embed\/([A-Za-z0-9_-]{11})$/.exec(embed.pathname)?.[1]
-    if (!id) return null
-    return youtubeSignInUrl(embed.href)
+    const login = new URL(target)
+    if (login.origin !== 'https://accounts.google.com' || login.username || login.password || !isYouTubeEmbedUrl(authorized)) return null
+    return youtubeSignInUrl(authorized)
   } catch { return null }
+}
+
+function isYouTubeEmbedUrl(value: string | null | undefined): boolean {
+  try {
+    const url = new URL(value ?? '')
+    return url.protocol === 'https:' && ['www.youtube.com', 'youtube.com'].includes(url.hostname) &&
+      !url.port && !url.username && !url.password && /^\/embed\/[A-Za-z0-9_-]{11}$/.test(url.pathname)
+  } catch { return false }
 }
 
 function sameFrame(
