@@ -9,22 +9,22 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复未选中网页组件的尺寸适配和预览画布",
+        "featureName": "补齐后台网页组件放大时的绘制表面同步",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa",
-        "tipCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
+        "baseCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
+        "tipCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
         "commits": [
           {
-            "commit": "29cdbfdde1b4146132989e70322d63320d8922ab",
+            "commit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
             "parents": [
-              "4d0ccb88e7f7dcf0dc99bb777d5c8a59c8b5f1aa"
+              "29cdbfdde1b4146132989e70322d63320d8922ab"
             ],
-            "subject": "修复未选中网页组件缩放后预览沿用旧画布的问题"
+            "subject": "修复后台网页组件放大后仍裁切旧绘制表面的问题"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/verify-research-web-preview.mjs"
           },
           {
@@ -47,8 +47,8 @@
             ],
             "outcome": "passed",
             "summary": "23项网页适配、长列表正文及网页状态保留聚焦验证通过",
-            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
-            "completedAt": "2026-10-02T14:00:07.583265+00:00",
+            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
+            "completedAt": "2026-10-02T14:19:08.052022+00:00",
             "timeoutMs": 120000
           },
           {
@@ -59,8 +59,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
-            "completedAt": "2026-10-02T14:00:07.583265+00:00",
+            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
+            "completedAt": "2026-10-02T14:19:08.052022+00:00",
             "timeoutMs": 120000
           },
           {
@@ -70,8 +70,8 @@
             ],
             "outcome": "passed",
             "summary": "真实Chromium合成邮件固定栏位完整适配、响应式一列换行、缩放与截图时序验证通过",
-            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
-            "completedAt": "2026-10-02T14:00:07.583265+00:00",
+            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
+            "completedAt": "2026-10-02T14:19:08.052022+00:00",
             "timeoutMs": 120000
           },
           {
@@ -80,85 +80,29 @@
               "scripts/verify-research-web-preview.mjs"
             ],
             "outcome": "passed",
-            "summary": "真实Chromium的450条合成列表、同源正文、窄宽组件切换及隐藏预览像素重排检查通过",
-            "verifiedCommit": "29cdbfdde1b4146132989e70322d63320d8922ab",
-            "completedAt": "2026-10-02T14:00:07.583265+00:00",
+            "summary": "真实Chromium缩小再放大至1500×900后的尺寸及右端内容像素验证通过；未留下可见原生覆盖层",
+            "verifiedCommit": "545cfe8ec4a22b6074b390dc05c7694e9f5492c3",
+            "completedAt": "2026-10-02T14:19:08.052022+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "隔离Chromium验证桌面栏位及同源正文适配、响应式网页换行、隐藏后缩小预览的实际像素重排；真实共享客户端已构建并打开，实际收件箱会话已过期，等待本人恢复登录。"
+          "summary": "隔离Chromium新增后台放大路径通过。旧共享包e994afed实机曾复现较小截图被拉伸裁切，本提交同步隐藏绘制表面尺寸，待新共享包实机复验。实际邮箱会话已过期，当前为登录页。"
         },
         "acceptanceCriteria": [
           "内部固定桌面栏位及同源正文不因根节点隐藏溢出而漏掉适配",
           "响应式网页保留自身换行与正常文字缩放",
           "尺寸变化不重新加载网页，手动缩放、会话及导航保留",
-          "未选中的网页组件改变尺寸后使用对应区域的新预览，不拉伸旧画布"
+          "未选中的网页组件改变尺寸后使用对应区域的新预览，不拉伸旧画布",
+          "后台放大组件时重新分配完整绘制表面，预览包含新增的右侧和下侧区域"
         ],
         "risks": [
-          "邮件网页旧会话到期，实际收件箱复测仍需本人在客户端登录",
-          "跨域嵌套正文仍遵守浏览器同源边界",
-          "当前共享包为aeb1105d，待本提交受管集成和重新构建"
+          "真实收件箱会话已过期，最终收件箱仍需本人恢复登录",
+          "当前共享包e994afed的后台放大问题已实机复现，本提交待受管集成后重新构建验证",
+          "同源嵌套正文适配遵守浏览器边界"
         ],
-        "generatedAt": "2026-10-02T14:00:07.583265+00:00"
-      },
-      "merged": {
-        "mergeCommit": "484f6e965ea9372494e1a60cd6033b73d72b88e7",
-        "verificationCommit": "484f6e965ea9372494e1a60cd6033b73d72b88e7",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "484f6e965ea9372494e1a60cd6033b73d72b88e7",
-            "completedAt": "2026-10-02T14:02:13.657Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "484f6e965ea9372494e1a60cd6033b73d72b88e7",
-            "completedAt": "2026-10-02T14:02:13.657Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "484f6e965ea9372494e1a60cd6033b73d72b88e7",
-            "completedAt": "2026-10-02T14:02:13.657Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "484f6e965ea9372494e1a60cd6033b73d72b88e7",
-            "completedAt": "2026-10-02T14:02:13.657Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T14:02:13.657Z"
+        "generatedAt": "2026-10-02T14:19:08.052022+00:00"
       }
     },
     {
