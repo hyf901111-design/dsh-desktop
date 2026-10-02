@@ -968,3 +968,9 @@ HTTP下载在用户选择原生保存目标后才获取原始字节，不复用�
 - 笔记原始材料100字和两个派生独立冻结原文逐字一致；时间线三个ID、同刻原次序、time=null和“发生时间未提供”保留。总结按已知/缺失/待验证展示，没有原因推断或投资建议；导图保留四分支与全部原数值和缺失说明。来源全文展开后再次Arrange，全部正文和资料时点在三主题下可读。10张卡的交互后原model/spec与交互前核对一致。
 - 证据位于 /tmp/ework-template-acceptance-20260930/：cohort-v133-summary.json、三组audit/export、cohort-v133-native-build.log、package.log、provenance.json和cohort-v133-*.png。实现74/74、严格原生接受73/74；本轮没有把组件覆盖率或封面加载替代最终播放验收。
 - 当前包实际点击官方示例播放器仍显示“请登录，以便我们确认你不是聊天机器人”。YouTube原网址及官方embed参数保留，没有绕过验证、代填凭据或用其他内容替代实际视频；youtube-current-blocker-v133.png为当前真实窗口，收起侧栏头像、铃铛与上方按钮仍同轴。应用留在此页，等待本人完成官方登录验证后继续实际播放；整个目标仍未标记完成。
+
+### 2026-10-02 当前包刷新反馈补充核验
+
+- 本地集成包仍为3e2053cb、端口63425，源码未改。本人既有DataYes验收卡实际手动刷新，连续原生采样捕捉到“正在更新数据…”、转圈及进度细线，旧值3842.19点、0.31%、6793.99亿元保持可读；引擎最终返回unchanged，刷新时间更新，intervalMinutes=0、enabled=false未变。短暂未变化确认没有在本轮截取到，不以最终时间变化冒充该瞬态提示证据。
+- 本人既有RSS验收卡添加保留域名https://refresh-acceptance.invalid/feed.xml，真实DNS读取失败；原生明确显示“读取失败 · 保留上次条目”。有效来源仍保留20条、原读取时间2026-10-01T08:36:02.832Z，失败来源没有读取时间。移除该测试来源并恢复原搜索/内容页后，有效条目SHA256和读取时间均未改变；该失败证明RSS原生路径，不冒充DataYes绑定引擎的失败测试。
+- 证据refresh-current-native-trace.json、refresh-current-native-active/complete.png、refresh-current-native-audit.json、rss-current-native-failure.png及rss-current-native-failure-audit.json位于既有/tmp证据目录。官方YouTube本人登录验证仍未完成；实现74/74、严格原生接受73/74、目标保持未完成。此项仅补充验收文档，不重建客户端、不运行全功能测试或对外发布。
