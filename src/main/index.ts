@@ -612,6 +612,7 @@ function createWindow(): BrowserWindow {
   })
   installPluginRecoveryNavigation(window)
   secureWindow(window, {
+    youtubeAppId: app.isPackaged ? desktopChannel === 'notarized' ? 'com.evanarts.sherlock' : developmentBuild ? 'io.dsh.desktop.dev' : 'io.dsh.desktop' : undefined,
     allowsResearchFrameUrl: (url) => researchLinkFrameRegistry.allows(url),
     ownsResearchFrame: (frame) => researchLinkFrameRegistry.ownsFrame(frame),
     researchFrameUrl: (frame) => researchLinkFrameRegistry.authorizedFrameUrl(frame)

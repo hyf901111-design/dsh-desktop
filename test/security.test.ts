@@ -19,27 +19,63 @@ type NavigationEvent = {
   frame?: { url: string; parent?: { processId: number; routingId: number } | null }
 }
 
-function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false, ownsResearchFrame?: (frame: any) => boolean, researchFrameUrl?: (frame: any) => string | null) {
+function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false, ownsResearchFrame?: (frame: any) => boolean, researchFrameUrl?: (frame: any) => string | null, youtubeAppId?: string) {
   const listeners = new Map<string, (event: NavigationEvent, url?: string) => void>()
   const permissionCheck = vi.fn()
   const permissionRequest = vi.fn()
   const mainFrame = { processId: 7, routingId: 41, url: 'http://127.0.0.1:4310/' }
   const webContents = {
+    id: 12,
     mainFrame,
     on: vi.fn((event: string, listener: (event: NavigationEvent, url?: string) => void) => {
       listeners.set(event, listener)
     }),
     setWindowOpenHandler: vi.fn(),
     session: {
+      webRequest: { onBeforeSendHeaders: vi.fn() },
       setPermissionCheckHandler: permissionCheck,
       setPermissionRequestHandler: permissionRequest
     }
   }
-  secureWindow({ webContents } as never, { allowsResearchFrameUrl, ownsResearchFrame, researchFrameUrl })
+  secureWindow({ webContents } as never, { allowsResearchFrameUrl, ownsResearchFrame, researchFrameUrl, youtubeAppId })
   return { listeners, mainFrame, webContents }
 }
 
 describe('main-window navigation security', () => {
+  it('identifies the authorized YouTube embed using the desktop app ID without changing other headers', () => {
+    const url = 'https://www.youtube.com/embed/M7lc1UVf-VE?start=90'
+    const { mainFrame, webContents } = secureWindowFixture(() => false, frame => frame?.name === 'owned', () => url, 'com.evanarts.sherlock')
+    const handler = webContents.session.webRequest.onBeforeSendHeaders.mock.calls[0]?.[1]
+    expect(handler).toBeTypeOf('function')
+    const original = { referer: 'http://127.0.0.1:4310/', 'User-Agent': 'original Electron identity', Accept: 'text/html' }
+    let sent: any
+    handler({ url, webContentsId: 12, resourceType: 'subFrame', frame: { name: 'owned', url: 'about:blank', parent: mainFrame }, requestHeaders: original }, (result: any) => { sent = result })
+    expect(sent.requestHeaders).toEqual({ Referer: 'https://com.evanarts.sherlock/', 'User-Agent': 'original Electron identity', Accept: 'text/html' })
+    expect(original.referer).toBe('http://127.0.0.1:4310/')
+  })
+
+  it('does not grant the YouTube identity to unowned frames, different videos, or other requests', () => {
+    const url = 'https://www.youtube.com/embed/M7lc1UVf-VE?start=90'
+    const { mainFrame, webContents } = secureWindowFixture(() => false, frame => frame?.name === 'owned', () => url, 'com.evanarts.sherlock')
+    const handler = webContents.session.webRequest.onBeforeSendHeaders.mock.calls[0]?.[1]
+    expect(handler).toBeTypeOf('function')
+    const base = { url, webContentsId: 12, resourceType: 'subFrame', frame: { name: 'owned', url: 'about:blank', parent: mainFrame } }
+    for (const changed of [
+      { webContentsId: 99 }, { resourceType: 'xhr' }, { frame: null },
+      { frame: { ...base.frame, name: 'unowned' } },
+      { frame: { ...base.frame, url: 'about:srcdoc' } },
+      { frame: { ...base.frame, parent: { parent: mainFrame } } },
+      { url: 'https://www.youtube.com/embed/aaaaaaaaaaa?start=90' },
+      { url: 'https://www.youtube.com.evil.invalid/embed/M7lc1UVf-VE?start=90' },
+      { url: 'https://accounts.google.com/AccountChooser' },
+      { url: 'https://www.youtube.com/youtubei/v1/player' }
+    ]) {
+      const requestHeaders = { Referer: 'https://original.example/', 'User-Agent': 'unaltered' }
+      let sent: any
+      handler({ ...base, ...changed, requestHeaders }, (result: any) => { sent = result })
+      expect(sent.requestHeaders).toEqual(requestHeaders)
+    }
+  })
   it('opens Google account selection for YouTube sign-in and returns to the original video after login',()=>{
     const {listeners,webContents}=secureWindowFixture(()=>false,frame=>frame?.name==='owned',()=> 'https://www.youtube.com/embed/M7lc1UVf-VE?start=90');
     const frame={name:'owned',url:'https://www.youtube.com/embed/M7lc1UVf-VE?start=90',executeJavaScript:vi.fn(async()=>{})},preventDefault=vi.fn();
