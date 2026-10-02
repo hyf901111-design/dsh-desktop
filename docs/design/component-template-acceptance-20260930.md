@@ -1013,3 +1013,13 @@ HTTP下载在用户选择原生保存目标后才获取原始字节，不复用�
 - 补齐Google普通网站到YouTube的会话交接：仅允许accounts.youtube.com和www.google.com上的/accounts/SetSID、CheckCookie、CheckConnection、RotateCookies端点；登录窗口的新窗口请求在原所属窗口继续Google/YouTube流程。其他顶层导航失败时关闭窗口并显示失败提示，避免保留空白窗口。仍拒绝OAuth路径，不复制浏览器会话。
 - 增加只读状态入口，沿用主帧/原组件身份授权，读取不会移动或新建播放器。导航记录仅含固定站点名、阶段和结果，最多24项，不包含查询参数、页面正文、密码或验证码。该入口已先观察失败，再通过12项身份/生命周期检查；原生模块及类型检查通过。更新模块的独立Electron登录窗口仍可打开和取消，阶段记录证据为youtube-bridge-diagnostic/cookie-navigation-ui.png。
 - 后续共享包的会话交接导航、自动返回和实际播放仍待复验；不将完成输入验证或编译通过当作问题修好。严格接受继续73/74。
+
+### 2026-10-02 YouTube 会话交接、自动返回与实际播放完成
+
+- 89b90005 受管集成至 c48a76404505f894561e985bd59b1a24b915133b；干净集成源码按本地手册构建并启动，完整包校验和深度签名通过。版本仍 1.0.6、组件技能 v1.33.0，真实完整主界面端口 60133。此前验证后的空白窗口反例保留，不替换旧失败记录。
+- 在原会话、原节点点击“登录 YouTube”，此前本人验证建立的同一 WebKit 会话继续网站登录，本轮没有再要求本人选择浏览器账户或重新输入凭据。所属登录窗口自动关闭并回到原组件。只读诊断实际记录 `accounts.google.com:website:allowed | accounts.youtube.com:cookie-sync:allowed | www.youtube.com:service-resume:allowed | www.youtube.com:player-return:returned`，loading=false、error为空、loginStatus=returned，确认缺失的 YouTube 会话交接路径已实际走通。
+- 继续点击组件内官方播放控件，客户端真实视频画面和字幕持续更新；随后暂停读出 2:01 / 22:24。重试载入后再次实际播放，暂停读出 1:44 / 22:23，未重新出现登录挑战。原网址编辑界面仍为 `https://www.youtube.com/watch?v=M7lc1UVf-VE&t=1m30s#original`，取消编辑后原视频继续保留；没有修改为替代视频或移除 90 秒起点。
+- 原生 WK 控件首次计算机点击返回 AXError.notImplemented，仅取得焦点；重新观察后第二次点击才触发官方播放。这是工具操作记录，不将封面、自动返回或第一次点击当作实际播放通过。本轮实际视频、字幕、暂停和重载均已观察成功，应用留在原卡片暂停状态供本人继续使用；不保留密码、验证码、登录页面查询参数或 Cookie 原文。
+- 证据：`youtube-cookie-native-audit.json`、`youtube-cookie-native-playing.png`、`youtube-cookie-native-paused.png`、`youtube-cookie-native-reloaded.png`、`youtube-cookie-native-original-url.png`、`youtube-cookie-native-build.log`、`youtube-cookie-package.log`，位于 `/tmp/ework-template-acceptance-20260930/`。
+- 最后一项 YouTube 组件内实播补齐后，累计实现与严格本地原生交互接受均为 74/74。固定 v1.33.0 十卡日常输入复验仍为首次严格通过 10/10，三组 27.685 / 38.811 / 27.868 秒，三主题、整理和原记录保留通过；该 100% 仅说明预声明的十卡样本，不推断任意输入总体概率，历史 v1.31 和 v1.32 失败仍保留。刷新提示沿用已捕获的真实 DataYes 更新/未变化及 RSS 失败保留旧内容证据。汇总为 `goal-local-acceptance-complete.json`。
+- 此为本地功能验收结果；受管集成批次仍待本人接受后才能晋升 main。本轮没有公开发布、Apple 公证、Cloudflare 上传、版本递增、远端推送或全功能测试。后续本节文档提交不会被写成当前包的构建提交；实际运行包始终按上述 c48a7640 标识。
