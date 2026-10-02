@@ -9,83 +9,64 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "当前模板覆盖、刷新完成提示与视频双路径验收记录",
+        "featureName": "YouTube登录帐号选择与观看入口分离",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "01a386e78e7756564d80b5b1a2ce666ccb02e8e9",
-        "tipCommit": "1e7cc0920e7432977877e207e9765d35dc661231",
+        "baseCommit": "1e7cc0920e7432977877e207e9765d35dc661231",
+        "tipCommit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
         "commits": [
           {
-            "commit": "1e7cc0920e7432977877e207e9765d35dc661231",
+            "commit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
             "parents": [
-              "01a386e78e7756564d80b5b1a2ce666ccb02e8e9"
+              "1e7cc0920e7432977877e207e9765d35dc661231"
             ],
-            "subject": "补录当前客户端模板覆盖与刷新及视频验收证据"
+            "subject": "修复YouTube登录跳转并区分登录与观看入口"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/design/component-template-acceptance-20260930.md"
-          }
-        ],
-        "checks": [
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "01a386e78e7756564d80b5b1a2ce666ccb02e8e9..1e7cc0920e7432977877e207e9765d35dc661231"
-            ],
-            "outcome": "passed",
-            "summary": "仅验收文档变更，差异格式与4份审计JSON及6张实机证据已检查",
-            "verifiedCommit": "1e7cc0920e7432977877e207e9765d35dc661231",
-            "completedAt": "2026-10-02T02:43:23.813468+00:00",
-            "timeoutMs": 60000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "当前2028b624客户端原日历/两种草稿通过；真实DataYes忙碌与数据无变化提示捕获；浏览器原视频实播已观察。此卡仅交接如实验收记录，不宣称YouTube组件内播放已接受。"
-        },
-        "acceptanceCriteria": [
-          "当前源74项覆盖逐项核对",
-          "新增实际客户端证据可追踪",
-          "完整目标及YouTube组件内未通过状态保留"
-        ],
-        "risks": [
-          "本提交仅文档，不替换已打开的2028b624客户端",
-          "YouTube组件内仍需官方本人验证；整体目标未完成"
-        ],
-        "generatedAt": "2026-10-02T02:43:43.714349+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5b427567c33716ea96a9f52ad789b219a6bc6a03",
-        "verificationCommit": "5b427567c33716ea96a9f52ad789b219a6bc6a03",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "5b427567c33716ea96a9f52ad789b219a6bc6a03",
-            "completedAt": "2026-10-02T02:46:41.844Z",
-            "timeoutMs": 300000
+            "path": "packages/dsh-research-task-runtime/youtube-template-contract.d.ts"
           },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/youtube-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/youtube-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/security.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/security.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/youtube-template.test.js"
+          }
+        ],
+        "checks": [
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/security.test.ts",
+              "test/youtube-template.test.js",
               "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
+              "-t",
+              "YouTube|Google|navigation security"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "5b427567c33716ea96a9f52ad789b219a6bc6a03",
-            "completedAt": "2026-10-02T02:46:41.844Z",
+            "summary": "31项相关检查通过；已观察修改前两个目标行为失败",
+            "verifiedCommit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
+            "completedAt": "2026-10-02T03:30:58.461799+00:00",
             "timeoutMs": 300000
           },
           {
@@ -95,25 +76,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5b427567c33716ea96a9f52ad789b219a6bc6a03",
-            "completedAt": "2026-10-02T02:46:41.844Z",
+            "summary": "补齐共用登录URL声明后类型检查通过",
+            "verifiedCommit": "1b0b2d7c10e9d748ca2d9fdd8753c759b169f003",
+            "completedAt": "2026-10-02T03:30:58.461799+00:00",
             "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "5b427567c33716ea96a9f52ad789b219a6bc6a03",
-            "completedAt": "2026-10-02T02:46:41.844Z",
-            "timeoutMs": 60000
           }
         ],
-        "recordedAt": "2026-10-02T02:46:41.844Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际宿主渲染与点击契约通过；系统Chrome实测官方AccountChooser显示选择账号及使用其他账号。最终集成包的原生按钮仍将在构建后复验。"
+        },
+        "acceptanceCriteria": [
+          "登录入口打开Google帐号选择页面",
+          "观看入口保留用户原视频网址",
+          "登录后返回同一视频与起点",
+          "已授权播放器保持原页面"
+        ],
+        "risks": [
+          "浏览器登录不代表内嵌播放器获得同一登录状态；不宣称组件内实际播放已通过",
+          "最终客户端必须从受管集成源码构建验证"
+        ],
+        "generatedAt": "2026-10-02T03:30:58.461799+00:00"
       }
     },
     {
