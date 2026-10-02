@@ -9,22 +9,22 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "链接组件登录跳转地址恢复与加密浏览状态",
+        "featureName": "链接组件登录地址与会话Cookie加密恢复",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "e3de4c56160906abd9e453d2f6110b2b081e2d70",
-        "tipCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
+        "baseCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
+        "tipCommit": "adbd481007800d32652f68d1df9dc198e917d7d0",
         "commits": [
           {
-            "commit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
+            "commit": "adbd481007800d32652f68d1df9dc198e917d7d0",
             "parents": [
-              "e3de4c56160906abd9e453d2f6110b2b081e2d70"
+              "dbf56d890bff661cbb9fbca02d598fed57866c08"
             ],
-            "subject": "修复链接组件重启后丢失登录跳转地址并加密保存浏览状态"
+            "subject": "修复研究网页会话Cookie重启丢失并同步加密保存与登出清理"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "scripts/verify-research-web-login.mjs"
           },
           {
@@ -37,11 +37,15 @@
           },
           {
             "status": "A",
-            "path": "src/main/state/research-web-navigation.ts"
+            "path": "src/main/state/research-web-session.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-native-web.test.ts"
           },
           {
             "status": "A",
-            "path": "test/research-web-navigation.test.ts"
+            "path": "test/research-web-session.test.ts"
           }
         ],
         "checks": [
@@ -51,12 +55,13 @@
               "run",
               "test/research-native-web.test.ts",
               "test/research-web-navigation.test.ts",
+              "test/research-web-session.test.ts",
               "test/research-link-frame.test.ts"
             ],
             "outcome": "passed",
-            "summary": "21项直接相关检查通过，覆盖安全存储、登录地址恢复及原生网页生命周期",
-            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
-            "completedAt": "2026-10-02T22:43:57.010286+00:00",
+            "summary": "25项相关检查通过，覆盖加密会话Cookie、原安全属性、登出删除、延迟读取和撤销授权",
+            "verifiedCommit": "adbd481007800d32652f68d1df9dc198e917d7d0",
+            "completedAt": "2026-10-02T23:01:47.913379+00:00",
             "timeoutMs": 120000
           },
           {
@@ -67,8 +72,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
-            "completedAt": "2026-10-02T22:43:57.010286+00:00",
+            "verifiedCommit": "adbd481007800d32652f68d1df9dc198e917d7d0",
+            "completedAt": "2026-10-02T23:01:47.913379+00:00",
             "timeoutMs": 120000
           },
           {
@@ -77,26 +82,15 @@
               "scripts/verify-research-web-login.mjs"
             ],
             "outcome": "passed",
-            "summary": "真实隔离Electron四次进程启动，登录Cookie与地址配对恢复、加密及登出不复活通过；旧源码的restore步骤失败",
-            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
-            "completedAt": "2026-10-02T22:43:57.010286+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-research-native-web.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "原生网页首屏、手动缩放、尺寸变化及离屏预览直接回归通过",
-            "verifiedCommit": "dbf56d890bff661cbb9fbca02d598fed57866c08",
-            "completedAt": "2026-10-02T22:43:57.010286+00:00",
+            "summary": "真实Electron四次独立启动验证session Cookie不改变过期规则的恢复、登录导航与登出；旧代码会话Cookie版本重启失败",
+            "verifiedCommit": "adbd481007800d32652f68d1df9dc198e917d7d0",
+            "completedAt": "2026-10-02T23:01:47.913379+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端已确认收件箱登录；旧保存链接与当前登录链接不同，修复后的实际包重启将在集成构建完成后验收。"
+          "summary": "真实客户端重启发现Cookie not matched；仅持久Cookie的地址修复不足，新增session Cookie加密保存；新包真实登录验收待重新登录后执行。"
         },
         "acceptanceCriteria": [
           "返回组件及客户端重启恢复当前邮件导航",
@@ -105,67 +99,10 @@
           "不修改服务器Cookie有效期，不把外部浏览器Cookie复制进客户端"
         ],
         "risks": [
-          "Cookie或服务器会话真正过期仍由网站要求重新登录",
-          "当前收件箱保持登录已迁移，实际新包验收待本地构建后执行"
+          "第一次真实重启已丢失旧版仅存在内存的认证Cookie，不能从空密码页还原；新包需要一次登录后完成真实重启验收",
+          "服务器自行过期的会话仍需要网站重新登录"
         ],
-        "generatedAt": "2026-10-02T22:43:57.010286+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a8f11f3962ad99124c7bfc6b33456283862183d2",
-        "verificationCommit": "a8f11f3962ad99124c7bfc6b33456283862183d2",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a8f11f3962ad99124c7bfc6b33456283862183d2",
-            "completedAt": "2026-10-02T22:45:30.832Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "a8f11f3962ad99124c7bfc6b33456283862183d2",
-            "completedAt": "2026-10-02T22:45:30.832Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a8f11f3962ad99124c7bfc6b33456283862183d2",
-            "completedAt": "2026-10-02T22:45:30.832Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "a8f11f3962ad99124c7bfc6b33456283862183d2",
-            "completedAt": "2026-10-02T22:45:30.832Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T22:45:30.832Z"
+        "generatedAt": "2026-10-02T23:01:47.913379+00:00"
       }
     },
     {
