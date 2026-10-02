@@ -9,188 +9,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "日历与YouTube登录修复及创建卡片精简",
+        "featureName": "当前模板覆盖、刷新完成提示与视频双路径验收记录",
         "branch": "codex/feat/openbb-grid-workbench-20260928",
-        "baseCommit": "21b96c8ac587245130419bd74403357c9a056255",
-        "tipCommit": "01a386e78e7756564d80b5b1a2ce666ccb02e8e9",
+        "baseCommit": "01a386e78e7756564d80b5b1a2ce666ccb02e8e9",
+        "tipCommit": "1e7cc0920e7432977877e207e9765d35dc661231",
         "commits": [
           {
-            "commit": "264c3a414156382071a6eabfdf19311266b4d95e",
+            "commit": "1e7cc0920e7432977877e207e9765d35dc661231",
             "parents": [
-              "21b96c8ac587245130419bd74403357c9a056255"
+              "01a386e78e7756564d80b5b1a2ce666ccb02e8e9"
             ],
-            "subject": "修复旧日历日期格重叠并统一月份布局"
-          },
-          {
-            "commit": "095f58237d1753331bfcea01fc480a706bf9d215",
-            "parents": [
-              "264c3a414156382071a6eabfdf19311266b4d95e"
-            ],
-            "subject": "精简链接和智能组件创建卡片并伸展输入区域"
-          },
-          {
-            "commit": "01a386e78e7756564d80b5b1a2ce666ccb02e8e9",
-            "parents": [
-              "095f58237d1753331bfcea01fc480a706bf9d215"
-            ],
-            "subject": "修复YouTube登录跳转并在浏览器打开同一视频"
+            "subject": "补录当前客户端模板覆盖与刷新及视频验收证据"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/calendar-presentation.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-draft-templates.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/youtube-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/security.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-link-frame.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-link-frame.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/security.test.ts"
+            "path": "docs/design/component-template-acceptance-20260930.md"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/security.test.ts",
-              "test/research-link-frame.test.ts",
-              "test/calendar-template.test.js",
-              "test/research-interactive-artifact.test.js",
-              "test/youtube-template.test.js"
+              "git",
+              "diff",
+              "--check",
+              "01a386e78e7756564d80b5b1a2ce666ccb02e8e9..1e7cc0920e7432977877e207e9765d35dc661231"
             ],
             "outcome": "passed",
-            "summary": "40 项直接相关契约检查通过",
-            "verifiedCommit": "01a386e78e7756564d80b5b1a2ce666ccb02e8e9",
-            "completedAt": "2026-10-02T02:03:52.449Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "草稿只保留|链接草稿按统一|共享只读禁用智能|YouTube"
-            ],
-            "outcome": "passed",
-            "summary": "12 项相关客户端交互检查通过，未运行全功能测试",
-            "verifiedCommit": "01a386e78e7756564d80b5b1a2ce666ccb02e8e9",
-            "completedAt": "2026-10-02T02:03:52.449Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "Node TypeScript 检查通过",
-            "verifiedCommit": "01a386e78e7756564d80b5b1a2ce666ccb02e8e9",
-            "completedAt": "2026-10-02T02:03:52.449Z",
-            "timeoutMs": 300000
+            "summary": "仅验收文档变更，差异格式与4份审计JSON及6张实机证据已检查",
+            "verifiedCommit": "1e7cc0920e7432977877e207e9765d35dc661231",
+            "completedAt": "2026-10-02T02:43:23.813468+00:00",
+            "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产预览复现旧日历28px按钮挤入24px行；修正32px日期格、6px行距，8月六周及日期筛选通过；智能与链接最小尺寸和三种主题输入、错误提示通过。集成包客户端复验待构建后执行。"
+          "summary": "当前2028b624客户端原日历/两种草稿通过；真实DataYes忙碌与数据无变化提示捕获；浏览器原视频实播已观察。此卡仅交接如实验收记录，不宣称YouTube组件内播放已接受。"
         },
         "acceptanceCriteria": [
-          "旧日历日期无重叠",
-          "YouTube登录保留播放器并打开原视频浏览器页",
-          "链接与智能草稿去除冗余说明且输入框随窗体伸展"
+          "当前源74项覆盖逐项核对",
+          "新增实际客户端证据可追踪",
+          "完整目标及YouTube组件内未通过状态保留"
         ],
         "risks": [
-          "浏览器与组件账户状态独立，登录验证由本人完成",
-          "本地客户端尚待新包复验"
+          "本提交仅文档，不替换已打开的2028b624客户端",
+          "YouTube组件内仍需官方本人验证；整体目标未完成"
         ],
-        "generatedAt": "2026-10-02T02:03:52.449Z"
-      },
-      "merged": {
-        "mergeCommit": "68a6b0c4b8db23d2bb1888ec1950a39c110c5ce1",
-        "verificationCommit": "68a6b0c4b8db23d2bb1888ec1950a39c110c5ce1",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "68a6b0c4b8db23d2bb1888ec1950a39c110c5ce1",
-            "completedAt": "2026-10-02T02:06:24.496Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/research-canvas-clipboard.test.ts",
-              "test/component-data-status.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-grid-client.test.js test/research-grid-workbench.test.js test/research-canvas-clipboard.test.ts test/component-data-status.test.js",
-            "verifiedCommit": "68a6b0c4b8db23d2bb1888ec1950a39c110c5ce1",
-            "completedAt": "2026-10-02T02:06:24.496Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "68a6b0c4b8db23d2bb1888ec1950a39c110c5ce1",
-            "completedAt": "2026-10-02T02:06:24.496Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs",
-              "."
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /tmp/ework-template-acceptance-20260930/sidebar-avatar-geometry.mjs .",
-            "verifiedCommit": "68a6b0c4b8db23d2bb1888ec1950a39c110c5ce1",
-            "completedAt": "2026-10-02T02:06:24.496Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-10-02T02:06:24.496Z"
+        "generatedAt": "2026-10-02T02:43:43.714349+00:00"
       }
     },
     {
