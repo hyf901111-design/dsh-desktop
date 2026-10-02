@@ -4,6 +4,7 @@ import { inspectResearchWebContent, normalizeResearchLinkUrl, type ResearchLinkF
 import { guardResearchWebDownloads } from '../search/research-web-downloads'
 import { measureResearchWebLayout } from './research-web-layout'
 import { ResearchWebNavigationStore } from './research-web-navigation'
+import type { ResearchWebSessionPersistence } from './research-web-session'
 
 export function requiresNativeWeb(headers: Pick<Headers, 'get'>): boolean {
   const xfo = headers.get('x-frame-options') ?? ''
@@ -31,7 +32,7 @@ function nativeWebResultBefore<T>(operation: Promise<T>, milliseconds: number): 
   const timeout=new Promise<undefined>(resolve=>{timer=setTimeout(()=>resolve(undefined),milliseconds)})
   return Promise.race([operation,timeout]).finally(()=>clearTimeout(timer))
 }
-export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry; navigation?:ResearchWebNavigationStore }) {
+export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry; navigation?:ResearchWebNavigationStore; browserSession?:ResearchWebSessionPersistence }) {
   const navigation=options.navigation??new ResearchWebNavigationStore()
   const browserSessions=new Set<ReturnType<typeof session.fromPartition>>()
   const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; fitWidth: number; fitKey: string; pageZoom: number; zoomMode: 'auto'|'manual'; zoomResetToken: number; fitting: boolean; wasShown: boolean; snapshotRequested: number; snapshotCompleted: number; pageFit: ReturnType<typeof measureResearchWebLayout> | null; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
@@ -68,6 +69,9 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   bind('research:native-web:update',async value=>{
     const id=key(value),authorization=options.registry.resolve({sessionId:value.sessionId,nodeId:value.nodeId})
     if(!authorization || authorization.url!==normalizeResearchLinkUrl(value.url))throw Error('Webpage not authorized')
+    options.browserSession?.track(authorization.url)
+    await options.browserSession?.ready
+    if(options.registry.resolve({sessionId:value.sessionId,nodeId:value.nodeId})?.url!==authorization.url)throw Error('Webpage not authorized')
     // Renderer rectangles are CSS pixels. Electron child views use window DIP,
     // just like the conversation browser; Retina density is handled by Electron.
     const win=window(),hostZoom=win.webContents.getZoomFactor()
@@ -90,7 +94,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       const remember=()=>{
         if(entries.get(id)!==current||view.webContents.isDestroyed())return
         const url=normalizeResearchLinkUrl(view.webContents.getURL())
-        if(url)navigation.remember(id,current.url,url)
+        if(url){navigation.remember(id,current.url,url);options.browserSession?.track(url)}
         // Chromium batches writes. Commit server-issued login cookies promptly.
         void isolated.cookies?.flushStore().catch(()=>{})
       }
@@ -220,5 +224,5 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
   const forget=(value:any)=>{const id=key(value);navigation.forget(id);release(id)}
   bind('research:native-web:release',value=>{forget(value);return true})
   return { inspect, release:forget, contents:(value:any)=>entries.get(key(value))?.view.webContents,
-    flush:async()=>{await navigation.flush();await Promise.all([...browserSessions].map(s=>s.cookies?.flushStore()))} }
+    flush:async()=>{await options.browserSession?.flush();await navigation.flush();await Promise.all([...browserSessions].map(s=>s.cookies?.flushStore()))} }
 }
