@@ -1,4 +1,4 @@
-import {parseYoutubeSpec,youtubeVideo} from '../../packages/dsh-research-task-runtime/youtube-template-contract.js'
+import {parseYoutubeSpec,youtubeVideo,youtubeSignInUrl} from '../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 const css=`
 .ew-youtube-preset{--youtube-control:#e9ebef;position:relative;width:100%;height:100%;min-width:0;min-height:0;color:var(--grid-text,#252a33);font-size:12px;line-height:16px;overflow:auto;scrollbar-color:var(--grid-muted,#666) transparent;scrollbar-width:thin;}
 body[data-ds-dark-theme] .ew-youtube-preset{--youtube-control:#25242a;}
@@ -65,8 +65,8 @@ export function ResearchYoutubePreset({node,sessionId}){
   children.push(react_jsx_runtime.jsxs('div',{className:'ew-youtube-loaded',children:[
    frame?.src===src&&frame.reload===reload?react_jsx_runtime.jsx('iframe',{'data-youtube-player':'',name:frame.name,title:spec.title+'（YouTube 官方播放器）',src,sandbox:'allow-scripts allow-same-origin allow-presentation',allow:'encrypted-media; picture-in-picture; fullscreen',allowFullScreen:true,referrerPolicy:'strict-origin-when-cross-origin',loading:'lazy',onError:()=>setError('视频未能载入，请重试或打开原视频。')},String(reload)+spec.url):react_jsx_runtime.jsx('div',{className:'ew-youtube-loading',role:'status',children:error?'视频尚未载入':'正在安全载入视频…'}),
    error&&react_jsx_runtime.jsx('p',{role:'alert',className:'ew-youtube-error',children:error}),
-   react_jsx_runtime.jsxs('div',{className:'ew-youtube-actions',onPointerDown:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('button',{type:'button',onClick:()=>{setReload(n=>n+1);setError('')},children:'重试载入'}),react_jsx_runtime.jsx('button',{type:'button',onClick:()=>window.open(spec.url,'_blank','noopener,noreferrer'),children:'在浏览器观看 / 登录'}),spec.durationSeconds!==undefined&&react_jsx_runtime.jsx('span',{children:'已提供时长：'+spec.durationSeconds+' 秒'})]}),
-   react_jsx_runtime.jsx('p',{className:'ew-youtube-login-hint',children:'如需登录或验证，请在浏览器观看。'}),
+   react_jsx_runtime.jsxs('div',{className:'ew-youtube-actions',onPointerDown:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('button',{type:'button',onClick:()=>{setReload(n=>n+1);setError('')},children:'重试载入'}),react_jsx_runtime.jsx('button',{type:'button',onClick:()=>window.open(spec.url,'_blank','noopener,noreferrer'),children:'在浏览器观看'}),react_jsx_runtime.jsx('button',{type:'button',onClick:()=>window.open(youtubeSignInUrl(spec.url),'_blank','noopener,noreferrer'),children:'登录 YouTube'}),spec.durationSeconds!==undefined&&react_jsx_runtime.jsx('span',{children:'已提供时长：'+spec.durationSeconds+' 秒'})]}),
+   react_jsx_runtime.jsx('p',{className:'ew-youtube-login-hint',children:'需要登录或验证时，选择「登录 YouTube」。'}),
    (spec.description||spec.subtitles||spec.thumbnailUrl)&&react_jsx_runtime.jsxs('details',{children:[react_jsx_runtime.jsx('summary',{children:'已提供说明与字幕'}),react_jsx_runtime.jsxs('div',{children:[spec.description&&react_jsx_runtime.jsx('p',{children:spec.description}),spec.subtitles&&react_jsx_runtime.jsx('pre',{children:spec.subtitles}),spec.thumbnailUrl&&react_jsx_runtime.jsx('img',{src:spec.thumbnailUrl,alt:'已提供的视频封面',loading:'lazy',referrerPolicy:'no-referrer'})]})]})
   ]}))
  }
@@ -75,7 +75,7 @@ export function ResearchYoutubePreset({node,sessionId}){
 }
 export function patchYoutubeClient(source){
  const start='/* ODYSSEY_YOUTUBE_PRESET_V1 */',end='/* ODYSSEY_YOUTUBE_PRESET_END */'
- const definitions=`${start}\nconst researchYoutubeSinks=new Map(),RESEARCH_YOUTUBE_CSS=${JSON.stringify(css)};\nconst youtubeVideo=${youtubeVideo.toString()};\nconst researchYoutubeSpec=${parseYoutubeSpec.toString()};\n${ResearchYoutubePreset.toString()}\n${end}`
+ const definitions=`${start}\nconst researchYoutubeSinks=new Map(),RESEARCH_YOUTUBE_CSS=${JSON.stringify(css)};\nconst youtubeVideo=${youtubeVideo.toString()};\nconst youtubeSignInUrl=${youtubeSignInUrl.toString()};\nconst researchYoutubeSpec=${parseYoutubeSpec.toString()};\n${ResearchYoutubePreset.toString()}\n${end}`
  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)throw Error('YouTube definitions boundary missing');source=source.slice(0,a)+definitions+source.slice(b+end.length)}
  else{const anchor='function createResearchWorkspaceSession(storage, sessionId) {';if(source.split(anchor).length!==2)throw Error('YouTube definitions host missing');source=source.replace(anchor,definitions+'\n'+anchor)}
  const once=(a,b)=>{if(source.includes(b))return;if(source.split(a).length!==2)throw Error('YouTube anchor missing or ambiguous: '+a.slice(0,90));source=source.replace(a,b)}

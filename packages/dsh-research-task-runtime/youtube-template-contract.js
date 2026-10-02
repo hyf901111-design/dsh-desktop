@@ -17,6 +17,17 @@ export function youtubeVideo(value){
   return {id,startSeconds:Number.isSafeInteger(start)&&start>0&&start<=864000?start:0}
  }catch{return null}
 }
+export function youtubeSignInUrl(value){
+ const video=youtubeVideo(value);if(!video)return null
+ const Url=globalThis.URL??globalThis.window?.URL,watch=new Url('https://www.youtube.com/watch')
+ watch.searchParams.set('v',video.id)
+ if(video.startSeconds)watch.searchParams.set('t',video.startSeconds+'s')
+ const resume=new Url('https://www.youtube.com/signin')
+ resume.searchParams.set('action_handle_signin','true');resume.searchParams.set('next',watch.pathname+watch.search)
+ const login=new Url('https://accounts.google.com/AccountChooser')
+ login.searchParams.set('service','youtube');login.searchParams.set('continue',resume.href)
+ return login.href
+}
 export function parseYoutubeSpec(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||value.version!==1||value.type!=='youtube'||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
  if(!['version','type','title','url'].every(k=>Object.hasOwn(value,k))||Object.keys(value).some(k=>!['version','type','title','url','description','durationSeconds','thumbnailUrl','subtitles'].includes(k)))return null

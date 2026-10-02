@@ -1,5 +1,6 @@
 import { shell, type BrowserWindow, type WebFrameMain } from 'electron'
 import { canGrantWindowPermission, isTrustedAppUrl } from './security-policy'
+import { youtubeSignInUrl } from '../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 
 export function secureWindow(
   window: BrowserWindow,
@@ -10,8 +11,8 @@ export function secureWindow(
       frame.url === referrer.url && options.ownsResearchFrame?.(frame)
     )) ?? [] : []
     if (sources.length) {
-      const browserVideo = sources.length === 1 ? youtubeSignInVideo(url, options.researchFrameUrl?.(sources[0])) : null
-      if (browserVideo) { void shell.openExternal(browserVideo); return { action: 'deny' } }
+      const browserSignIn = sources.length === 1 ? youtubeBrowserSignIn(url, options.researchFrameUrl?.(sources[0])) : null
+      if (browserSignIn) { void shell.openExternal(browserSignIn); return { action: 'deny' } }
       if (sources.length === 1 && isExternalUrl(url) && !isTrustedAppUrl(url)) {
         void sources[0]!.executeJavaScript(`location.assign(${JSON.stringify(url)})`).catch(() => undefined)
       }
@@ -48,8 +49,8 @@ export function secureWindow(
       return
     }
     if (options.ownsResearchFrame?.(event.frame)) {
-      const browserVideo = youtubeSignInVideo(event.url, options.researchFrameUrl?.(event.frame))
-      if (browserVideo) { event.preventDefault(); void shell.openExternal(browserVideo); return }
+      const browserSignIn = youtubeBrowserSignIn(event.url, options.researchFrameUrl?.(event.frame))
+      if (browserSignIn) { event.preventDefault(); void shell.openExternal(browserSignIn); return }
       if (isExternalUrl(event.url) && !isTrustedAppUrl(event.url)) return
       event.preventDefault()
       return
@@ -96,18 +97,16 @@ export function secureWindow(
 }
 
 // Google sign-in cannot run inside the sandboxed official player. Keep the
-// player mounted and hand off the same video/time to the system browser.
-function youtubeSignInVideo(target: string, authorized: string | null | undefined): string | null {
+// player mounted and open account selection, with the original video as the
+// post-login destination rather than replacing sign-in with video playback.
+function youtubeBrowserSignIn(target: string, authorized: string | null | undefined): string | null {
   try {
     const login = new URL(target), embed = new URL(authorized ?? '')
-    if (login.protocol !== 'https:' || login.hostname !== 'accounts.google.com' || login.username || login.password ||
-      embed.protocol !== 'https:' || !['www.youtube.com','youtube.com'].includes(embed.hostname) || embed.username || embed.password) return null
+    if (login.origin !== 'https://accounts.google.com' || login.username || login.password ||
+      embed.protocol !== 'https:' || !['www.youtube.com','youtube.com'].includes(embed.hostname) || embed.port || embed.username || embed.password) return null
     const id = /^\/embed\/([A-Za-z0-9_-]{11})$/.exec(embed.pathname)?.[1]
     if (!id) return null
-    const video = new URL('https://www.youtube.com/watch'); video.searchParams.set('v', id)
-    const start = embed.searchParams.get('start')
-    if (start && /^\d+$/.test(start)) video.searchParams.set('t', start + 's')
-    return video.href
+    return youtubeSignInUrl(embed.href)
   } catch { return null }
 }
 
