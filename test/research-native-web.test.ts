@@ -225,3 +225,16 @@ it('maps webpage CSS bounds through host window zoom so live surface matches the
  await call({...request,bounds:{...request.bounds,x:1400}})
  expect(views[0].visible).toBe(false)
 })
+
+it('浏览会话恢复期间组件已移除时，不再加载被撤销授权的网页',async()=>{
+ const registry=new ResearchLinkFrameRegistry(),mainFrame={processId:1,routingId:2}
+ const win:any={isDestroyed:()=>false,webContents:{mainFrame,on:vi.fn(),getZoomFactor:()=>1},contentView:{addChildView:vi.fn(),removeChildView:vi.fn()},once:vi.fn(),on:vi.fn(),getContentSize:()=>[1000,800]}
+ let ready:()=>void
+ const browserSession:any={track:vi.fn(),ready:new Promise<void>(r=>{ready=r})}
+ registerResearchNativeWeb({registry,browserSession,getMainWindow:()=>win,ipcMain:{removeHandler:()=>{},handle:(n:string,f:Function)=>handlers.set(n,f)} as any})
+ const identity={sessionId:'pending-restore',nodeId:'mail',url:'https://mail.example.test/'},event={sender:win.webContents,senderFrame:mainFrame}
+ registry.authorize(identity)
+ const pending=handlers.get('research:native-web:update')!(event,{...identity,bounds:{x:20,y:20,width:400,height:300},layoutSize:{width:400,height:300},scale:1,active:true})
+ registry.release({sessionId:identity.sessionId,nodeId:identity.nodeId});ready!()
+ await expect(pending).rejects.toThrow('not authorized');expect(views).toHaveLength(0)
+})
