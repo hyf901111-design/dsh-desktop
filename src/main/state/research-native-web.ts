@@ -3,6 +3,7 @@ import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { inspectResearchWebContent, normalizeResearchLinkUrl, type ResearchLinkFrameRegistry } from './research-link-frame'
 import { guardResearchWebDownloads } from '../search/research-web-downloads'
 import { measureResearchWebLayout } from './research-web-layout'
+import { ResearchWebNavigationStore } from './research-web-navigation'
 
 export function requiresNativeWeb(headers: Pick<Headers, 'get'>): boolean {
   const xfo = headers.get('x-frame-options') ?? ''
@@ -30,7 +31,9 @@ function nativeWebResultBefore<T>(operation: Promise<T>, milliseconds: number): 
   const timeout=new Promise<undefined>(resolve=>{timer=setTimeout(()=>resolve(undefined),milliseconds)})
   return Promise.race([operation,timeout]).finally(()=>clearTimeout(timer))
 }
-export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry }) {
+export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry; navigation?:ResearchWebNavigationStore }) {
+  const navigation=options.navigation??new ResearchWebNavigationStore()
+  const browserSessions=new Set<ReturnType<typeof session.fromPartition>>()
   const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; fitWidth: number; fitKey: string; pageZoom: number; zoomMode: 'auto'|'manual'; zoomResetToken: number; fitting: boolean; wasShown: boolean; snapshotRequested: number; snapshotCompleted: number; pageFit: ReturnType<typeof measureResearchWebLayout> | null; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
   const routes = new Map<string, Promise<boolean>>()
   const key = (v: any) => { if (!v || typeof v.sessionId !== 'string' || typeof v.nodeId !== 'string' || v.sessionId.length > 256 || v.nodeId.length > 256) throw Error('Invalid webpage identity'); return JSON.stringify([v.sessionId,v.nodeId]) }
@@ -77,12 +80,22 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     if(!entry){
       if(entries.size>=12){const oldest=[...entries].sort((a,b)=>a[1].touched-b[1].touched)[0];if(oldest)release(oldest[0])}
       const isolated=session.fromPartition('persist:research-web-pages')
+      browserSessions.add(isolated)
       guardResearchWebDownloads(isolated)
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})
       entry={view,url:authorization.url,image:'',imageRevision:0,error:'',busy:false,typing:false,ready:false,touched:Date.now(),presentation:'',bounds:'',layout:'',surfaceScale:1,generation:0,reloadToken:Number(value.reloadToken)||0,capturedAt:0,inspectedAt:0,inspecting:false,fitZoom:1,fitWidth:0,fitKey:'',pageZoom,zoomMode,zoomResetToken,fitting:false,wasShown:false,snapshotRequested:0,snapshotCompleted:0,pageFit:null,inspection:null};entries.set(id,entry)
       const current=entry
+      const remember=()=>{
+        if(entries.get(id)!==current||view.webContents.isDestroyed())return
+        const url=normalizeResearchLinkUrl(view.webContents.getURL())
+        if(url)navigation.remember(id,current.url,url)
+        // Chromium batches writes. Commit server-issued login cookies promptly.
+        void isolated.cookies?.flushStore().catch(()=>{})
+      }
+      view.webContents.on('did-navigate',remember)
+      view.webContents.on('did-navigate-in-page',(_event,_url,isMainFrame)=>{if(isMainFrame)remember()})
       view.setVisible(false);win.contentView.addChildView(view)
       view.webContents.setWindowOpenHandler(({url})=>{if(normalizeResearchLinkUrl(url))void view.webContents.loadURL(url).catch(()=>{});return {action:'deny'}})
       view.webContents.on('will-navigate',(event,url)=>{if(!normalizeResearchLinkUrl(url))event.preventDefault()})
@@ -95,7 +108,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       view.webContents.on('before-input-event',(event,input)=>{
         if(input.type==='keyDown'&&input.code==='Space'&&!current.typing){event.preventDefault();view.setVisible(false);win.webContents.focus();win.webContents.sendInputEvent({type:'keyDown',keyCode:'Space'})}
       })
-      void view.webContents.loadURL(authorization.url).catch(error=>{current.error=String(error.message)})
+      void view.webContents.loadURL(navigation.restore(id,authorization.url)).catch(error=>{current.error=String(error.message)})
     }
     entry.touched=Date.now()
     if(entry.zoomMode!==zoomMode||zoomResetToken>entry.zoomResetToken){entry.zoomMode=zoomMode;entry.zoomResetToken=Math.max(entry.zoomResetToken,zoomResetToken);entry.fitKey=''}
@@ -204,6 +217,8 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
     for(const [id,e] of entries){const [sessionId,nodeId]=JSON.parse(id);if(value?.sessionId!==undefined&&value.sessionId!==sessionId||value?.nodeId!==undefined&&value.nodeId!==nodeId)continue;e.view.setVisible(false)}
     return true
   })
-  bind('research:native-web:release',value=>{release(key(value));return true})
-  return { inspect, release:(value:any)=>release(key(value)), contents:(value:any)=>entries.get(key(value))?.view.webContents }
+  const forget=(value:any)=>{const id=key(value);navigation.forget(id);release(id)}
+  bind('research:native-web:release',value=>{forget(value);return true})
+  return { inspect, release:forget, contents:(value:any)=>entries.get(key(value))?.view.webContents,
+    flush:async()=>{await navigation.flush();await Promise.all([...browserSessions].map(s=>s.cookies?.flushStore()))} }
 }
