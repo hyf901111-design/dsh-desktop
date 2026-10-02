@@ -1991,6 +1991,17 @@ it('YouTube观看与浏览器登录分别打开原视频和Google帐号选择，
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);
  expect(f.host.querySelector('iframe[data-youtube-player]').src).toContain('start=90');
 })
+it('YouTube系统播放器在同一组件打开登录窗口，不把浏览器登录或返回导航当成已登录',async()=>{
+ const authorize=vi.fn(async value=>({url:value.url,frameName:'sherlock-research-link-'+'b'.repeat(32)})),login=vi.fn(async()=>({opened:true})),hide=vi.fn(async()=>({ok:true})),update=vi.fn(async()=>({loading:false,error:'',image:'',imageRevision:0,loginStatus:'returned'}));
+ const f=await fixture(true,{researchLinkFrame:{authorize,release:vi.fn()},researchYoutube:{available:async()=>({available:true}),login,hide,update}}),spec={version:1,type:'youtube',title:'本人原视频',url:'https://youtu.be/M7lc1UVf-VE?t=90s'};
+ await act(async()=>f.workspace.setArtifacts([{...text('youtube-system'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]));
+ await act(async()=>{});expect(f.host.querySelector('iframe[data-youtube-player]')).toBeNull();expect(f.host.querySelector('[data-youtube-system-player]')).not.toBeNull();
+ const surface=f.host.querySelector('[data-youtube-system-player]'),card=surface.closest('[data-research-node-id]');surface.getBoundingClientRect=()=>({left:100,top:100,right:580,bottom:370,width:480,height:270});card.setAttribute('data-selected','true');f.document.elementFromPoint=()=>surface;
+ await vi.waitFor(async()=>{await act(async()=>{});expect(update).toHaveBeenCalledWith(expect.objectContaining({nodeId:'youtube-system',url:'https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=0&controls=1&playsinline=1&start=90',active:true,bounds:{x:100,y:100,width:480,height:270}}))},{timeout:1000,interval:50});
+ const button=Array.from(f.host.querySelectorAll('.ew-youtube-actions button')).find(b=>b.textContent==='登录 YouTube');expect(button).toBeDefined();await f.event('click',button);expect(login).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:'youtube-system'});
+ expect(f.host.textContent).toContain('同一系统会话');expect(f.host.textContent).not.toContain('已登录');expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);
+ await act(async()=>f.workspace.setArtifacts([]));expect(hide).toHaveBeenCalledWith({sessionId:'grid-test',nodeId:'youtube-system'});
+})
 it('YouTube共享只读可播放但不进入编辑，刷新不冒充数据更新',async()=>{
  let shared=false;const f=await fixture(false,{researchBoards:{isSharedSession:()=>shared}}),spec={version:1,type:'youtube',title:'只读原视频',url:'https://youtu.be/M7lc1UVf-VE',subtitles:'已取得的完整字幕'}
  f.workspace.setArtifacts([{...text('youtube-readonly'),kind:'generated-container',containerPrompt:'视频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]);shared=true;await f.render()

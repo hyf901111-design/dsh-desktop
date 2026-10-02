@@ -123,6 +123,7 @@ try {
     const runtimeNode = path.join(runtimeRoot, 'node_modules', 'node', 'bin', 'node')
     execFileSync(runtimeNode, ['-e', "const h=require(process.argv[1]); if(typeof h.draw!=='function'||typeof h.cancel!=='function')process.exit(1)", path.join(resourcesPath, 'native', 'computer-stroke.node')], { stdio: 'inherit' })
     execFileSync(runtimeNode, ['-e', "const h=require(process.argv[1]); if(typeof h.start!=='function'||typeof h.stop!=='function'||typeof h.state!=='function')process.exit(1)", path.join(resourcesPath, 'native', 'computer-capture.node')], { stdio: 'inherit' })
+    execFileSync(runtimeNode, ['-e', "const h=require(process.argv[1]); if(!['mount','place','state','login','reload','release'].every(k=>typeof h[k]==='function'))process.exit(1)", path.join(resourcesPath, 'native', 'youtube-player.node')], { stdio: 'inherit' })
     const computerDriver = path.join(resourcesPath, 'native', 'cua-driver')
     if (!existsSync(computerDriver)) throw new Error('Computer use driver is missing')
     const driverVersion = execFileSync(computerDriver, ['--version'], { encoding: 'utf8' }).trim()

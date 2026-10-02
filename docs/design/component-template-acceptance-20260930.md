@@ -996,3 +996,13 @@ HTTP下载在用户选择原生保存目标后才获取原始字节，不复用�
 - 刷新保持3842.19点、0.31%、6793.99亿元、2026-09-30收盘原数据时点；真实引擎status=unchanged，lastAttempt至lastSuccess为1834ms，intervalMinutes=0、enabled=false保持。点击整理后卡片按内容收高，字段、单位、来源链接和刷新栏均可读。连续原生采样、图片及筛选后的持久状态记录为refresh-latest-native-trace.json、refresh-latest-native-completion-trace.json、refresh-latest-native-active/result.png、refresh-latest-native-audit.json。
 - 首轮采样未匹配到完成文字，补录使用实际“已检查/未变化/无变化”文案成功；没有用刷新时间变化替代完成提示。失败保留旧数据沿用前轮真实RSS失败证据，未混同为绑定引擎本轮失败。
 - 本轮属于具体进展：当前源覆盖重新核验、浏览器原视频实际播放及当前包刷新完成提示取得新证据。目标继续active；YouTube组件内官方本人验证是现存外部条件，不将浏览器播放改算为原生组件内播放通过。所有证据位于/tmp/ework-template-acceptance-20260930/。
+
+### 2026-10-02 YouTube 同一系统会话登录路径
+
+- 用户已授权自行选择浏览器列表中的既有账号。该点击和浏览器原视频播放已由代理完成，后续不得再将“请用户重复点击相同浏览器登录入口”作为验收前提。旧入口为网站登录，既不含客户端OAuth回调，也不能把Chrome登录会话传给Electron播放器；已有浏览器播放证据不计为组件内通过。
+- 当前集成包740dcb2e、功能源码96b263a的官方embed请求已实测带`https://com.evanarts.sherlock/`身份Referer，仍有登录挑战。隔离AppKit/WKWebView使用未修改的系统UA、相同原视频M7lc1UVf-VE及90秒起点：标准本地HTML与隐私增强HTML在点击播放后返回150；官方直接请求加应用Referer仍要求登录。封面与onReady未算实播。
+- 直接系统WebView能进入Google普通网站登录表单并选择原既有账号，未再出现401；但新系统会话要求首次密码或通行密钥验证。代理未读取、输入或导出密码、Cookie、令牌。通行密钥尝试返回Google错误，没有把这一步宣称为登录成功。隔离证据在`/tmp/ework-template-acceptance-20260930/wk-player-diagnostic/`，不是共享客户端验收。
+- 新源码将macOS官方播放器接入WKWebView。登录窗口与播放器使用同一个WebKit数据存储；仅Google普通网站登录在该窗口执行，OAuth路径拒绝。返回YouTube的watch/home导航时关闭登录窗口、重新载入原组件，避免登录结束在外部浏览器直接播放。返回导航只显示“已返回原组件，请点击播放验证”，不写已登录或已播放状态。
+- 原生桥仅由宿主主帧访问，要求登记的官方播放器URL；撤销来源时释放视图。移动、弹窗、越出画布或小于200×200时隐藏原生视图；保留原视频、起点、说明与字幕。桥接返回只含播放器快照、加载状态及窗口返回状态，登录页图像与账号凭据不经过IPC。非macOS或原生模块不可用时保留原官方iframe路径。
+- 独立Electron诊断应用已用同一新增Node-API模块实际验证：官方播放器可见并响应点击；640×360缩至480×270后保持原视频；隐藏/恢复不重新创建播放文档；卡片按钮及播放器内登录按钮均打开所属客户端登录窗口；关闭后状态为cancelled，原视频和90秒起点不变。首次从应用外的Documents目录加载模块导致诊断启动等待，按正式包资源布局放入应用内后恢复。证据youtube-bridge-diagnostic/bridge-visible.png和bridge-audit.json，仅算原生桥接边界接受。
+- 原生构建、类型检查、11项身份/生命周期边界检查和34项YouTube/导航聚焦回归通过。新共享包中的选中/移动交互、登录完成后真实返回及认证后实际播放仍需逐项验证。严格接受保持73/74，整体目标未完成。
