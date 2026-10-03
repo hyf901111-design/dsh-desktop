@@ -9,58 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "优化表格列宽与组合图表测高并增加窄画布整理提示",
+        "featureName": "整板整理与表格滚动修复，统一工具栏交互图标",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "d8e527556c0cecf119bbfb683a1eb34c5f6fb426",
-        "tipCommit": "612b3b45e000acf60018b168a116431b9eeb2b28",
+        "baseCommit": "612b3b45e000acf60018b168a116431b9eeb2b28",
+        "tipCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
         "commits": [
           {
-            "commit": "2f6d8881583e556170fbf92156adebb27704e347",
+            "commit": "4219d97088ecce657394b6f703919f730f0c74ee",
             "parents": [
-              "d8e527556c0cecf119bbfb683a1eb34c5f6fb426"
+              "612b3b45e000acf60018b168a116431b9eeb2b28"
             ],
-            "subject": "画布宽度不足时点击整理后在工具栏上方提示"
-          },
-          {
-            "commit": "612b3b45e000acf60018b168a116431b9eeb2b28",
-            "parents": [
-              "2f6d8881583e556170fbf92156adebb27704e347"
-            ],
-            "subject": "表格默认单行并支持拖动列宽，修复组合图表整理空白"
+            "subject": "整理覆盖整板并补齐表格横向滚动，统一工具栏图标与提示样式"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "packages/dsh-research-task-runtime/workbench-scrollbars.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-natural-charts.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/workbench-table-columns.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
@@ -68,35 +37,15 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/research-grid-workbench.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-storage.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/research-grid-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-html-theme.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-component-presentation.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-natural-charts.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-table-columns.test.js"
           }
         ],
         "checks": [
@@ -114,12 +63,12 @@
               "test/research-canvas-storage.test.ts",
               "test/workbench-component-presentation.test.js",
               "-t",
-              "三排|双排|单排|标准整理|固定排数|整理|网格事务可撤销|改变窗口宽度后撤销|共享只读禁用智能|表格所有表头|all headers|restores widths|merged headers|flex letterboxing|non-chart|loads table column|table widths|工作台覆盖|自定义表格|Arrange preserves|intrinsic|workbench.*content|viewport padding"
+              "三排|双排|单排|标准整理|固定排数|整理|网格事务可撤销|改变窗口宽度后撤销|共享只读禁用智能|表格所有表头|all headers|restores widths|merged headers|flex letterboxing|non-chart|loads table column|table widths|工作台覆盖|自定义表格|Arrange preserves|intrinsic|workbench.*content|viewport padding|选中超宽表格|宿主原生滚动条"
             ],
             "outcome": "passed",
-            "summary": "95项表格列宽、单行显示、图表测高及整理相关聚焦检查通过",
-            "verifiedCommit": "612b3b45e000acf60018b168a116431b9eeb2b28",
-            "completedAt": "2026-10-03T11:51:35.768363+00:00",
+            "summary": "98项整板整理、表格列宽与滚动、图表测高和工具栏聚焦检查通过",
+            "verifiedCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
+            "completedAt": "2026-10-03T12:21:17.149635+00:00",
             "timeoutMs": 120000
           },
           {
@@ -130,58 +79,30 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "612b3b45e000acf60018b168a116431b9eeb2b28",
-            "completedAt": "2026-10-03T11:51:35.768363+00:00",
+            "verifiedCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
+            "completedAt": "2026-10-03T12:21:17.149635+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；集成后在实际贵金属工作台核对表格和BTC图表。"
+          "summary": "功能worktree禁止构建共享客户端；集成后核对实际贵金属工作台和工具栏。"
         },
         "acceptanceCriteria": [
           "表头和所有内容默认单行，超宽横向滚动；手动调窄后该列允许换行",
           "支持拖动列宽、重开保留及恢复默认，不改源数据及排序",
           "组合SVG按自身宽高比测量，整理后无大片空白",
-          "三排双排宽度不足时只在点击后于工具栏上方提示且布局不变"
+          "三排双排宽度不足时只在点击后于工具栏上方提示且布局不变",
+          "整理覆盖未滑动到的组件并收齐内容自然高度，整次操作一步撤销",
+          "选中超宽表格，在表格下方显示可拖动的横向滚动条",
+          "标准整理恢复原图标，其余图标统一20px和1.8笔画；默认透明，箭头悬停及展开才灰底",
+          "工具栏提示使用正常文字颜色"
         ],
         "risks": [
           "旧主题测试4项在改动前基线同样失败；已记录基线，未扩大本次范围",
           "合并批次留待用户在精确客户端验收后晋升main"
         ],
-        "generatedAt": "2026-10-03T11:51:35.768363+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
-        "verificationCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
-            "completedAt": "2026-10-03T11:52:02.632Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
-            "completedAt": "2026-10-03T11:52:02.632Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T11:52:02.632Z"
+        "generatedAt": "2026-10-03T12:21:17.149635+00:00"
       }
     }
   ],
