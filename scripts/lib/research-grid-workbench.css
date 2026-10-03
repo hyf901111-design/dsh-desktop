@@ -146,3 +146,22 @@ body [data-ework-grid] [data-workbench-fixed-generation-size] [data-research-gen
 body[data-ds-dark-theme] [data-workbench-notice] { border-color:#ffffff22; background:#292a2d; color:#f0f0f2; box-shadow:0 6px 20px #00000055; }
 body[data-ds-dark-theme] [data-workbench-notice] [data-canvas-action-undo] { color:#8ab8ff; }
 body[data-ds-dark-theme] [data-workbench-notice] button:is(:hover,:focus-visible) { background:#ffffff14; }
+/* Split Arrange action and upward menu follow the floating tool picker. */
+body [data-ework-toolbar]:has(.ew-arrange-tool):has(.ew-workbench-mode-slot){width:336px!important}
+body [data-ework-toolbar]>.ew-arrange-tool{display:flex;align-items:center;flex:0 0 52px;width:52px;height:34px;border-radius:8px;overflow:visible}
+body [data-ework-toolbar]>.ew-arrange-tool>button{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:34px;height:34px;flex:none;padding:0;border:0;border-radius:8px 0 0 8px;background:transparent;color:#242424;cursor:pointer}
+body[data-ds-dark-theme] [data-ework-toolbar]>.ew-arrange-tool>button{color:#f1f1f3}
+body [data-ework-toolbar]>.ew-arrange-tool>[data-workbench-arrange-toggle]{width:18px;border-radius:0 8px 8px 0}
+body [data-ework-toolbar]>.ew-arrange-tool>button:hover{background:#8882}
+body [data-ework-toolbar]>.ew-arrange-tool>button:focus-visible{outline:2px solid #139dff;outline-offset:-2px}
+body [data-ework-toolbar]>.ew-arrange-tool>button:disabled{opacity:.4;cursor:default}
+body [data-ework-toolbar]>.ew-arrange-tool:has([aria-expanded=true]){background:#139dff}
+body [data-ework-toolbar]>.ew-arrange-tool:has([aria-expanded=true])>button{color:#fff}
+body [data-ework-toolbar]>.ew-arrange-tool>button[data-tool-tooltip]:is(:hover,:focus-visible)::after{content:attr(data-tool-tooltip);position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);padding:6px 9px;border-radius:6px;background:#202124;color:white;font:12px/18px Inter,"Noto Sans SC",system-ui;white-space:nowrap;pointer-events:none}
+body [data-ework-toolbar]>.ew-arrange-tool:has([aria-expanded=true])>button::after{display:none}
+.ew-arrange-layout-icon{display:block;flex:none;width:16px;height:16px}
+body .ew-arrange-menu,body[data-ds-dark-theme] .ew-arrange-menu{width:176px;padding:7px;border:1px solid #ffffff14;border-radius:12px;background:#202124;color:#fff;box-shadow:0 5px 18px #0005;font:12px/18px Inter,"Noto Sans SC",system-ui}
+body .ew-arrange-menu button{gap:8px;min-height:31px;padding:6px;border-radius:6px;white-space:nowrap}
+body .ew-arrange-menu button:is(:hover,:focus-visible){background:#ffffff18;outline:0}
+body .ew-arrange-menu .ew-arrange-check{flex:none;opacity:0}
+body .ew-arrange-menu [aria-checked=true] .ew-arrange-check{opacity:1}

@@ -102,14 +102,14 @@ export function patchResearchGridWorkbench(source){
   change('function normalizeResearchCanvasNodeGeometry(node) {','function normalizeResearchCanvasNodeGeometry(node) {\nif(researchGridNodeIds.has(node?.id))return {width:Math.max(1,node.width),height:Math.max(1,node.height),sizeMode:"manual",resizable:true};')
   change('const onWheel = (event) => {','const onWheel = (event) => {\nif(root.hasAttribute("data-ework-grid")){handleWorkbenchWheel(root,workspace,event);return;}')
   change('function researchCanvasMeasureForArrange(root,nodes) {','function researchCanvasMeasureForArrange(root,nodes) {\nif(root?.hasAttribute("data-ework-grid"))return measureWorkbenchContents(root,nodes);')
-  change('function researchCanvasArrangeWithMotion(root, workspace, measured) {','function researchCanvasArrangeWithMotion(root, workspace, measured) {\nif(root?.hasAttribute("data-ework-grid"))return arrangeWorkbenchContents(root,workspace,measured);')
-  change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map()) {
+  change('function researchCanvasArrangeWithMotion(root, workspace, measured) {','function researchCanvasArrangeWithMotion(root, workspace, measured, arrangeMode="standard") {\nif(root?.hasAttribute("data-ework-grid"))return arrangeWorkbenchContents(root,workspace,measured,arrangeMode);')
+  change('organizeCanvas(measured = new Map()) {',`organizeCanvas(measured = new Map(), arrangeMode="standard") {
     if(workbenchGrid.enabled()){
       workbenchGrid.clearContentOverrides();
       if(!collaborationCanWrite())return false;
       const grid=createResearchGrid(),nodes=[...snapshot.files,...snapshot.artifacts,...workbenchGrid.planningNodes()].map(n=>({...n,preferred:n.kind==='planning-card'?n:measured.get(n.id)||researchOptimalDimensions({...n,width:0,height:0}),gridCompact:researchMarketDimensions(n,true)?.height<=180}));
       if(!nodes.length)return false;
-      return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.visible(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0),!measured.__workbenchDeferred);
+      return this.applyWorkbenchCells(grid.arrange(nodes,workbenchGrid.visible(),Math.max(240,Math.min(snapshot.canvasSize.width||800,snapshot.canvasSize.availableWidth||Infinity)),snapshot.canvasSize.height||0,arrangeMode),!measured.__workbenchDeferred);
     }`)
   change('const onPointerDown = (event) => {','const onPointerDown = (event) => {\nif(root.hasAttribute("data-ework-grid")){if(canvasToolRef.current==="select"&&handleWorkbenchMultiSelect(root,workspace,event))return;const card=event.target?.closest?.("[data-research-node-id]");if(card){const id=card.getAttribute("data-research-node-id");if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id))workspace.updateSelection([id],"replace");return;}if(spacePressedRef.current)return;}')
   change('const onContentSelect = (event) => {','const onContentSelect = (event) => {\nif(root.hasAttribute("data-ework-grid")){const frame=event.target,id=frame?.matches?.("iframe[data-research-html-artifact]")&&frame.closest("[data-research-node-id]")?.getAttribute("data-research-node-id");if(!id||!workspace.getSnapshot().artifacts.some(n=>n.id===id))return;const modified=event.detail?.shiftKey||event.detail?.metaKey;if(modified){root.ownerDocument.defaultView.getSelection()?.removeAllRanges();workspace.updateSelection([id],"toggle");}else if(!workspace.getSnapshot().selection.selectedNodeIds.includes(id))workspace.updateSelection([id],"replace");return;}')
@@ -181,6 +181,11 @@ export function patchResearchGridWorkbench(source){
   `
   change('const emptyViewport = canvasNodes.length > 0',hook+'\nconst emptyViewport = canvasNodes.length > 0')
   change('(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\tclassName: "rScV5Q_globalToolbar",','(0, react_jsx_runtime.jsxs)(WorkbenchToolbar, {rootRef,sessionId,workspace,availableWidth:snapshot.canvasSize.availableWidth,\n\t\t\t\t\tclassName: "rScV5Q_globalToolbar",')
+  {
+    const marker="'data-research-global-arrange':''",at=source.indexOf(marker),start=source.lastIndexOf("(0,react_jsx_runtime.jsx)('button'",at),suffix="className:'odyssey-tool-icon'})})",finish=source.indexOf(suffix,at)
+    if(at<0||start<0||finish<0)throw Error('Workbench arrange button anchor missing')
+    change(source.slice(start,finish+suffix.length),"(0,react_jsx_runtime.jsx)(WorkbenchArrangeTool,{rootRef,workspace,nodes:canvasNodes,sessionId,disabled:sharedReadOnly||canvasNodes.length===0,onArrange:message=>setClipboardFeedback({state:'success',kind:'arrange',message})})")
+  }
   change("const button = root.querySelector('[data-research-global-'+attribute+']')","const button = root.ownerDocument.querySelector('[data-ework-toolbar-owner=\"'+CSS.escape(sessionId)+'\"] [data-research-global-'+attribute+']')")
   change('const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement);','const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement) || document.activeElement?.closest?.("[data-ework-toolbar-owner]")?.getAttribute("data-ework-toolbar-owner")===sessionId;')
   change('const historyShortcut = event.metaKey && !event.altKey && (event.code === "KeyZ" || event.code === "KeyY");','const historyShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && !event.isComposing && !event.defaultPrevented && (event.code === "KeyZ" || event.code === "KeyY");')
