@@ -155,7 +155,9 @@ body [data-ework-toolbar]:has(.ew-arrange-tool):has(.ew-workbench-mode-slot){wid
 body [data-ework-toolbar]>.ew-arrange-tool{display:flex;align-items:center;flex:0 0 52px;width:52px;height:34px;border-radius:8px;overflow:visible;background:transparent!important}
 body [data-ework-toolbar]>.ew-arrange-tool>button{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:34px;height:34px;flex:none;padding:0;border:0;border-radius:8px 0 0 8px;background:transparent!important;color:#242424;cursor:pointer}
 body[data-ds-dark-theme] [data-ework-toolbar]>.ew-arrange-tool>button{color:#f1f1f3}
+body [data-ework-toolbar]>.ew-arrange-tool>[data-research-global-arrange]>.ew-arrange-layout-icon{display:block;width:20px!important;height:20px!important;flex:none}
 body [data-ework-toolbar]>.ew-arrange-tool>[data-workbench-arrange-toggle]{width:18px;border-radius:5px!important}
+body [data-ework-toolbar]>.ew-arrange-tool>[data-workbench-arrange-toggle]>svg{display:block;width:10px!important;height:10px!important;flex:none}
 body [data-ework-toolbar]>.ew-arrange-tool>[data-workbench-arrange-toggle]:is(:hover,:active){background:#8882!important}
 body [data-ework-toolbar]>.ew-arrange-tool>button:focus-visible{outline:2px solid #139dff;outline-offset:-2px}
 body [data-ework-toolbar]>.ew-arrange-tool>button:disabled{opacity:.4;cursor:default}
