@@ -75,6 +75,38 @@
           "第三轮针对剩余格式和嵌套业务色失败继续客户端复验"
         ],
         "generatedAt": "2026-10-03T07:34:24.202382+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
+        "verificationCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
+            "completedAt": "2026-10-03T07:57:00.552Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
+            "completedAt": "2026-10-03T07:57:00.552Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T07:57:00.552Z"
       }
     }
   ],
