@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件生成与阅读修复及四种组件整理布局",
+        "featureName": "修复组件整理固定列数及短列补位",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "678717f25da960b9a0836c4806e5deb5d157f036",
-        "tipCommit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
+        "baseCommit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
+        "tipCommit": "d8e527556c0cecf119bbfb683a1eb34c5f6fb426",
         "commits": [
           {
-            "commit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
+            "commit": "d8e527556c0cecf119bbfb683a1eb34c5f6fb426",
             "parents": [
-              "678717f25da960b9a0836c4806e5deb5d157f036"
+              "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e"
             ],
-            "subject": "增加组件整理展开菜单及标准单双三排布局"
+            "subject": "修复整理排数降级和组件间空位并调整单排图标"
           }
         ],
         "files": [
@@ -29,7 +29,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+            "path": "scripts/lib/research-grid-state.mjs"
           },
           {
             "status": "M",
@@ -37,19 +37,15 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "A",
             "path": "test/research-arrange-modes.test.js"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-workbench.test.js"
           }
         ],
         "checks": [
@@ -59,15 +55,14 @@
               "run",
               "test/research-arrange-modes.test.js",
               "test/research-grid-workbench.test.js",
-              "test/research-custom-arrange-content.test.js",
               "test/research-grid-client.test.js",
               "-t",
               "三排|双排|单排|标准整理|固定排数|整理|网格事务可撤销|改变窗口宽度后撤销|共享只读禁用智能"
             ],
             "outcome": "passed",
-            "summary": "72项直接相关布局、测高、菜单、撤销与权限聚焦检查通过",
-            "verifiedCommit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
-            "completedAt": "2026-10-03T10:42:46.257427+00:00",
+            "summary": "77项直接相关布局、测高、菜单、撤销及侧栏/重开聚焦检查通过",
+            "verifiedCommit": "d8e527556c0cecf119bbfb683a1eb34c5f6fb426",
+            "completedAt": "2026-10-03T11:09:05.987178+00:00",
             "timeoutMs": 120000
           },
           {
@@ -78,59 +73,26 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
-            "completedAt": "2026-10-03T10:42:46.257427+00:00",
+            "verifiedCommit": "d8e527556c0cecf119bbfb683a1eb34c5f6fb426",
+            "completedAt": "2026-10-03T11:09:05.987178+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端；集成候选构建后核对真实菜单和四种布局。"
+          "summary": "功能worktree不构建共享客户端；集成构建后核对真实窄画布三列、短列补位和新图标。"
         },
         "acceptanceCriteria": [
-          "整理按钮右侧展开四项菜单，标记当前选项并支持键盘和外部关闭",
-          "标准整理保留当前空间顺序及列布局并就近补位",
-          "三排双排单排按当前阅读顺序排列；窄画布保留统一阅读最小值并适配",
-          "重新测量内容后保留所选模式，整次整理可单步撤销；保留上一轮生成与可读性修复"
+          "三排双排单排始终保持明确列数，侧栏挤窄及重开不降级",
+          "后续组件按最短列连续补位，测高与重复整理不留行间空位",
+          "标准整理保留当前位置并就近补位，整次整理支持一步撤销",
+          "单排整理图标为上下两个矩形"
         ],
         "risks": [
-          "三排在窄画布受统一最小阅读宽度约束，会适配为更少列",
-          "原HTML仍需在自身正文内适配窄列；不缩小字号",
-          "保留原有未验收集成候选修复，等待用户验收后晋升main"
+          "窄三列内容保持字号，通过组件内换行或滚动呈现",
+          "保留本批次其他功能修复，待用户验收后晋升main"
         ],
-        "generatedAt": "2026-10-03T10:42:46.257427+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
-        "verificationCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
-            "completedAt": "2026-10-03T10:43:07.448Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
-            "completedAt": "2026-10-03T10:43:07.448Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T10:43:07.448Z"
+        "generatedAt": "2026-10-03T11:09:05.987178+00:00"
       }
     }
   ],
