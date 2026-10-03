@@ -11,21 +11,25 @@
         "schemaVersion": 1,
         "featureName": "综合工作台多代理网页生成与可读性修复",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "49b813a95abfed77f369ebf0900d821b7d773710",
-        "tipCommit": "803edf7d11b38a1659458788db2fbe75139c44bc",
+        "baseCommit": "803edf7d11b38a1659458788db2fbe75139c44bc",
+        "tipCommit": "09cdfb32f53c9c469058ad9e1df902988273d0cd",
         "commits": [
           {
-            "commit": "803edf7d11b38a1659458788db2fbe75139c44bc",
+            "commit": "09cdfb32f53c9c469058ad9e1df902988273d0cd",
             "parents": [
-              "49b813a95abfed77f369ebf0900d821b7d773710"
+              "803edf7d11b38a1659458788db2fbe75139c44bc"
             ],
-            "subject": "修复综合工作台长文本表格相邻列重叠"
+            "subject": "修复未加载网页组件整理时阅读区域被压缩"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/research-custom-arrange-content.test.js"
           }
         ],
         "checks": [
@@ -33,14 +37,14 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/workbench-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/financial-series-intrinsic.test.js"
+              "test/research-custom-arrange-content.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/workbench-component-presentation.test.js"
             ],
             "outcome": "passed",
-            "summary": "17项工作台呈现、设计约束及金融表格检查通过",
-            "verifiedCommit": "803edf7d11b38a1659458788db2fbe75139c44bc",
-            "completedAt": "2026-10-03T09:00:46.862Z",
+            "summary": "50项未加载网页尺寸保留、工作台网格和呈现聚焦检查通过",
+            "verifiedCommit": "09cdfb32f53c9c469058ad9e1df902988273d0cd",
+            "completedAt": "2026-10-03T09:21:50.847092Z",
             "timeoutMs": 120000
           },
           {
@@ -51,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "803edf7d11b38a1659458788db2fbe75139c44bc",
-            "completedAt": "2026-10-03T09:00:46.863Z",
+            "verifiedCommit": "09cdfb32f53c9c469058ad9e1df902988273d0cd",
+            "completedAt": "2026-10-03T09:21:50.847092Z",
             "timeoutMs": 120000
           }
         ],
@@ -70,41 +74,10 @@
           "HTML快照不声明自动更新",
           "样本成功率不代表全部任务",
           "长MCP正文不重复嵌入JS字符串，语法失败反馈安全行列；集成后复验审批账本",
-          "research-html-theme非工作台已有4项失败在758c1381基线复现，未因本次CSS改动新增；集成客户端复验长文本换行"
+          "research-html-theme非工作台已有4项失败在758c1381基线复现，未因本次CSS改动新增；集成客户端复验长文本换行",
+          "research-market-arrange-content四项既有失败在803edf7基线复现；本次只改变无有效测量的自定义HTML尺寸后备"
         ],
         "generatedAt": "2026-10-03T08:45:34.381Z"
-      },
-      "merged": {
-        "mergeCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
-        "verificationCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
-            "completedAt": "2026-10-03T09:01:24.488Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
-            "completedAt": "2026-10-03T09:01:24.488Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T09:01:24.488Z"
       }
     }
   ],
