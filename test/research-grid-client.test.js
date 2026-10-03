@@ -14,6 +14,18 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {researchOptimalDimensions} from '../packages/dsh-research-task-runtime/bento-layout.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
+it('表格所有表头正文默认单行，用户列宽与换行选择在看板重开后保留且数据不变',async()=>{
+ const f=await fixture(true),spec={version:1,type:'table',title:'原数据表',columns:['名称','日期','说明'],rows:[['迈瑞医疗','2026-02-03','原始0及-120万元']]}
+ await act(async()=>f.workspace.setArtifacts([{...text('table-columns-own'),kind:'generated-container',containerPrompt:'原数据表',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-workbench-column-resize="1"]')).not.toBeNull())
+ let table=f.host.querySelector('[data-research-container-table]');expect([...table.querySelectorAll('th,td')].every(c=>c.dataset.columnWrap==='false')).toBe(true)
+ await f.event('keydown',table.querySelector('[data-workbench-column-resize="1"]'),{key:'ArrowRight'})
+ expect(table.rows[1].cells[1].dataset.columnWrap).toBe('true');const width=table.style.width
+ await f.render({sessionId:'grid-other'});await f.render()
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-research-container-table]').style.width).toBe(width))
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ table=f.host.querySelector('[data-research-container-table]');expect(table.rows[1].cells[1].dataset.columnWrap).toBe('true');expect(table.rows[1].cells[0].dataset.columnWrap).toBe('false')
+})
 it('附件列表完整保留长名称、零字节和说明，下载与移除权限独立',async()=>{
  const save=vi.fn(async()=>({status:'saved'})),f=await fixture(true,{researchCanvasExport:{save}}),spec={version:1,type:'files',title:'本人原文件',items:[{id:'csv',name:'本人虚构收入记录-这是一个超过窄卡宽度的完整文件名.csv',url:'http://127.0.0.1:58207/own.csv#original',sizeBytes:0,description:'0万元，变化-120万元，缺失原因未提供',permissions:{download:true,remove:false}}]}
  await act(async()=>f.workspace.setArtifacts([{...text('files-own'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))

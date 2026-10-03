@@ -1,6 +1,7 @@
 import {financialRecordsActionPayload,financialRecordsCsv} from '../../packages/dsh-research-task-runtime/financial-records.js'
 import {codeTemplatePayload} from '../../packages/dsh-research-task-runtime/input-template-contract.js'
 import {installWorkbenchChartMotion} from '../../packages/dsh-research-task-runtime/workbench-chart-motion.js'
+import {installWorkbenchTableColumns,createWorkbenchTableColumnState} from '../../packages/dsh-research-task-runtime/workbench-table-columns.js'
 import {WORKBENCH_ENGLISH,workbenchText,useWorkbenchLocale,localizedWorkbenchFunctions} from './workbench-localization.mjs'
 import * as workbenchStyle from './workbench-style-client.mjs'
 import {workbenchModeCss} from '../../packages/dsh-research-task-runtime/workbench-style.js'
@@ -50,7 +51,7 @@ export function patchResearchGridWorkbench(source){
   change('ComponentDataStatusBar,{sessionId:componentDataSessionId,node}','ComponentDataStatusBar,{sessionId:componentDataSessionId,node,workbench:true}')
   change("'data-research-generation-stage': presentation.stage,", "'data-workbench-fixed-generation-size':'', 'data-research-generation-stage': presentation.stage,")
   const anchor='function createResearchWorkspaceSession(storage, sessionId) {'
-  change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);')
+  change(anchor,anchor+'\nconst workbenchGrid=createWorkbenchGridState(storage,sessionId);const workbenchStyleState=createWorkbenchStyleState(storage,sessionId);const workbenchTableColumns=createWorkbenchTableColumnState(storage,sessionId);')
   change('frame?.contentWindow?.postMessage({ type: \"sherlock-theme\", colorScheme: readResearchComponentTheme(frame.ownerDocument) }, \"*\");','sendWorkbenchFramePresentation(frame);')
   // Explicitly drawn frames retain their size across generation and hydration.
   // This is distinct from automatic voice/selection cards' readable task size.
@@ -66,6 +67,8 @@ export function patchResearchGridWorkbench(source){
   change('const viewport=researchCanvasViewportForAreaChange(current,next);','const viewport=root.hasAttribute("data-ework-grid")?current.viewport:researchCanvasViewportForAreaChange(current,next);')
   change('snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));','snapshot = researchWorkspaceSnapshot(workbenchGrid.reconcile(workbenchGrid.enabled()?next:researchWorkbenchGrowthViewport(snapshot,next)));')
   const methods=`
+    getWorkbenchTableColumns:(id,index,labels)=>workbenchTableColumns.get(id,index,labels),
+    setWorkbenchTableColumns:(id,index,labels,state)=>workbenchTableColumns.set(id,index,labels,state),
     getWorkbenchStyle:()=>workbenchStyleState.get(),
     setWorkbenchStyle(mode){if(workbenchStyleState.set(mode)){update({},false);return true}return false},
     getWorkbenchCells:()=>workbenchGrid.get(),
@@ -202,7 +205,7 @@ export function patchResearchGridWorkbench(source){
   change("workspace.createContainerDraft({x:((current.canvasSize.availableWidth||current.canvasSize.width||rootRef.current?.getBoundingClientRect().width||800)/2-vp.x)/vp.scale,y:((current.canvasSize.height||rootRef.current?.getBoundingClientRect().height||600)/2-vp.y)/vp.scale,width:485,height:400,sizeMode:'manual'},'link');", "const node=workspace.createContainerDraft({x:((current.canvasSize.availableWidth||current.canvasSize.width||rootRef.current?.getBoundingClientRect().width||800)/2-vp.x)/vp.scale,y:((current.canvasSize.height||rootRef.current?.getBoundingClientRect().height||600)/2-vp.y)/vp.scale,width:485,height:400,sizeMode:'manual'},'link');revealWorkbenchNode(rootRef.current,workspace,node?.id);")
   change('...(draftKind === "link" ? {title:"添加链接"} : {}),','...(draftKind === "link" ? {title:"添加链接"} : draftKind === "voice" ? {title:"语音组件"} : {}),')
   source=patchWorkbenchSelectedCreate(source,change)
-  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[financialRecordsActionPayload,financialRecordsCsv,codeTemplatePayload,workbenchText,useWorkbenchLocale,createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,installWorkbenchChartMotion,isWorkbenchScrollbarMessage,installWorkbenchScrollbars,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui),...Object.values(workbenchStyle)].map(fn=>fn.toString()).join('\n')
+  const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[financialRecordsActionPayload,financialRecordsCsv,codeTemplatePayload,workbenchText,useWorkbenchLocale,createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,installWorkbenchChartMotion,installWorkbenchTableColumns,createWorkbenchTableColumnState,isWorkbenchScrollbarMessage,installWorkbenchScrollbars,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui),...Object.values(workbenchStyle)].map(fn=>fn.toString()).join('\n')
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   for(const {before,after} of localizedWorkbenchFunctions(source))change(before,after)
   return source+'\n'+meta+JSON.stringify(changes).replaceAll('*/','*\\/')+' */'

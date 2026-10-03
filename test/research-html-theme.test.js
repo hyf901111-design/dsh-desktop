@@ -38,6 +38,20 @@ function runtime(html, { standalone = false, systemDark = false, configure } = {
   return { window, context, parent, media, frame, messages, parentMessages, send, parsed, childHtml: () => childHtml }
 }
 
+it('loads table column resizing and natural SVG layout inside the actual workbench sandbox', async () => {
+  const html = '<main style="height:100%;display:flex;flex-direction:column"><table><thead><tr><th>名称</th><th>日期</th></tr></thead><tbody><tr><td>迈瑞医疗</td><td>2026-02-03</td></tr></tbody></table><section class="chart-wrap" style="display:flex;flex-direction:column;flex:1 1 0"><svg viewBox="0 0 520 180" aria-label="7日价格走势图" style="flex:1 1 0"><path d="M0 0L5 5"/></svg></section></main>'
+  const outer = runtime(buildResearchHtmlPreview(html, '原始数据', 'light', { workbench: true }))
+  const inner = runtime(outer.childHtml()); inner.parsed()
+  try {
+    const doc = inner.window.document
+    expect(doc.querySelectorAll('[data-workbench-column-resize]')).toHaveLength(2)
+    expect(doc.querySelector('td').dataset.columnWrap).toBe('false')
+    expect(doc.querySelector('svg').style.aspectRatio).toBe('520 / 180')
+    expect(doc.querySelector('main').style.height).toBe('auto')
+    expect(doc.querySelector('svg path').getAttribute('d')).toBe('M0 0L5 5')
+  } finally { await outer.window.happyDOM.close(); await inner.window.happyDOM.close() }
+})
+
 const themeMessage = (colorScheme) => ({ type: 'sherlock-theme', colorScheme })
 
 describe('offline HTML component theme runtime', () => {
