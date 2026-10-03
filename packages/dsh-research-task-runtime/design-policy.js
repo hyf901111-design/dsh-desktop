@@ -4,7 +4,7 @@ import { parse as parseScript } from '@babel/parser'
 
 export const DESIGN_POLICY_ERROR = 'COMPONENT_DESIGN_POLICY_REQUIRED'
 export const PANEL_COLOR_INSTRUCTION = '宿主实际颜色变量：正文 --sherlock-text，辅助 --sherlock-muted，背景 --sherlock-bg / --sherlock-surface / --sherlock-surface-muted，边框 --sherlock-border，链接 --sherlock-link。控件用 --sherlock-control-bg / -border / -text / -muted / -primary / -on-primary（均写完整名称）。状态用 --sherlock-status-success-bg/fg、-warning-bg/fg、-danger-bg/fg、-info-bg/fg；仅用于非控件业务标记。直接 var(--sherlock-角色) 引用，不添加 #hex、rgb 或固定颜色备用值，不发明 text-primary、text-secondary、status-*-text 等变量。'
-export const DESIGN_POLICY_REPAIR = '组件设计规范验收未通过。保留原始数据、来源、交互、共享状态和用户框选尺寸，只修复视觉实现，不得降级为静态说明。使用语义 button/input/select 等控件和宿主 --sherlock-control-* 黑白灰变量；主按钮使用 .research-primary 或 data-sherlock-variant="primary"，搭配 control-primary/control-on-primary。业务图表用 chart-*，状态用 status-*-bg/fg，不能把业务色用于控件。删除宿主 --sherlock-* 变量重定义及自造字体，继承宿主 DIN Pro / Noto Sans SC 字体或使用 --sherlock-font-sans。直接返回原 v1 schema 的完整 JSON。' + PANEL_COLOR_INSTRUCTION
+export const DESIGN_POLICY_REPAIR = '组件设计规范验收未通过。保留原始数据、来源、交互、共享状态和用户框选尺寸，只修复视觉实现，不得降级为静态说明。使用语义 button/input/select 等控件和宿主 --sherlock-control-* 黑白灰变量；主按钮使用 .research-primary 或 data-sherlock-variant="primary"，搭配 control-primary/control-on-primary。业务图表用 chart-*，状态用 status-*-bg/fg，不能把业务色用于控件及其子元素。若业务状态徽章位于按钮或 summary 内，把徽章移到控件旁的独立非控件元素；保留文字与语义颜色，按钮仅承载展开等操作，不删除徽章或交互。删除宿主 --sherlock-* 变量重定义及自造字体，继承宿主 DIN Pro / Noto Sans SC 字体或使用 --sherlock-font-sans。直接返回原 v1 schema 的完整 JSON。' + PANEL_COLOR_INSTRUCTION
 
 // Correct mechanical host-style mistakes without changing data, layout, or script.
 // Other design failures still go through the existing model repair path.
