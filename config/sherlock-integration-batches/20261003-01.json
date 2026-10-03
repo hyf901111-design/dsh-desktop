@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "整理菜单蓝色悬停与间距，箭头规则圆角背景",
+        "featureName": "整理菜单按内容收紧宽度",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
-        "tipCommit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
+        "baseCommit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
+        "tipCommit": "b97cb4fc4956c25ef8f4f9a56ece124181ce031b",
         "commits": [
           {
-            "commit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
+            "commit": "b97cb4fc4956c25ef8f4f9a56ece124181ce031b",
             "parents": [
-              "4219d97088ecce657394b6f703919f730f0c74ee"
+              "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa"
             ],
-            "subject": "整理菜单使用蓝色悬停和上下间距，修正展开箭头圆角背景"
+            "subject": "整理菜单按内容收紧宽度，去除右侧多余空白"
           }
         ],
         "files": [
@@ -39,56 +39,23 @@
             ],
             "outcome": "passed",
             "summary": "4项整理菜单、键盘选项和宽度提示聚焦检查通过",
-            "verifiedCommit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
-            "completedAt": "2026-10-03T12:36:29.170674+00:00",
+            "verifiedCommit": "b97cb4fc4956c25ef8f4f9a56ece124181ce031b",
+            "completedAt": "2026-10-03T12:43:45.300661+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；集成后核对菜单蓝色悬停与透明已选状态。"
+          "summary": "功能worktree禁止构建共享客户端；集成后核对紧凑菜单及前轮菜单样式。"
         },
         "acceptanceCriteria": [
-          "箭头默认透明，悬停或展开时显示四角一致的灰色圆角矩形",
-          "菜单选项间有4px上下间隔，悬停和键盘焦点使用蓝色",
-          "已选项背景透明，仅勾选标记指示选择"
+          "菜单宽度按勾选、图标和文字自然计算，去除右侧多余空白",
+          "保留蓝色悬停和上下间距，已选项仅用勾选标记"
         ],
         "risks": [
           "集成客户端留待用户验收后晋升main"
         ],
-        "generatedAt": "2026-10-03T12:36:29.170674+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7cb80c26d2a833baa38e0864f5182751d4907da1",
-        "verificationCommit": "7cb80c26d2a833baa38e0864f5182751d4907da1",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "7cb80c26d2a833baa38e0864f5182751d4907da1",
-            "completedAt": "2026-10-03T12:41:28.930Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7cb80c26d2a833baa38e0864f5182751d4907da1",
-            "completedAt": "2026-10-03T12:41:28.930Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T12:41:28.930Z"
+        "generatedAt": "2026-10-03T12:43:45.300661+00:00"
       }
     }
   ],
