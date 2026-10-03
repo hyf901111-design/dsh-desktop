@@ -16,7 +16,7 @@ import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
 import { designPolicyIssue, normalizeGeneratedHostStyles, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue, DESIGN_POLICY_ERROR, DESIGN_POLICY_REPAIR } from './design-policy.js'
-import { SHARED_COMPONENT_INSTRUCTION } from './shared-component-contract.js'
+import { SHARED_COMPONENT_INSTRUCTION, SHARED_PANEL_INSTRUCTION } from './shared-component-contract.js'
 import { startComponentAgent } from './component-agent-scope.js'
 import { createSharedMainAgentAdapter } from './shared-main-agent.js'
 import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES, callCanvas } from './canvas-tools.js'
@@ -264,7 +264,7 @@ function containerAllowsWebSearch(prompt) {
   if (/(?:调用|使用).{0,16}(?:web_search|financial_query|网页搜索|金融数据)/iu.test(value)) return true
   // A requested MCP fetch remains online even when the result is an offline
   // card and the user explicitly forbids invented/sample observations.
-  if (/(?:使用|通过|调用|接入)[^。；;\n]{0,40}(?:通联|DataYes|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实数据)/iu.test(value)) return true
+  if (/(?:使用|通过|调用|接入|用)[^。；;\n]{0,40}(?:通联|DataYes|萝卜投研|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实(?:数据|资料)|查(?:最近|公告|研报))/iu.test(value)) return true
   if (/离线(?:页面|模式|运行)?/u.test(value)) return false
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
   // Rejecting invented observations is a retrieval requirement, not permission
@@ -360,7 +360,7 @@ const HTML_ARTIFACT_INSTRUCTION = 'html 必须是可直接展示的完整、自�
 const NATIVE_FORMAT_INSTRUCTION = '存在可复用的宿主预置模板时必须优先使用相应结构化 schema（market、interactive、chart、table、kpi 等），由宿主统一生成样式和交互，不能为换皮另写相同内容的 HTML。其标签、列数、行数等限制不是内容限制。复杂布局或超出原生格式容量时，改用 html 承载完整所需内容，不得为适配原生 schema 截取用户要求的内容或用文字说明替代交付物。真正超过资源上限时明确说明无法完成，不得伪装成已成功的其他交付物。'
 const COMPONENT_STYLE_INSTRUCTION = [
   '组件与图表统一遵循 EWork 工作台 Figma 组件规范。客户端统一提供 48px 可拖动标题区，JSON 的 title 填写准确标题，HTML 从说明或主要内容开始，不重复放页面标题或外层边框。内容区以源稿常用的12px内边距为基线并随窄框适配，保持单层圆角细框和清楚层次，不套用固定看板布局或多层卡片。',
-  '字体由宿主提供：中文 Noto Sans SC，数字和英文 DIN Pro。继承宿主字体或使用 var(--sherlock-font-sans)，数字使用 tabular-nums；不得声明自己的 @font-face、外部字体或 Arial 等替代字体。按源稿内容 profile 使用字号/行高：业务头13px/20px，表格10px/16px，辅助文字9px/14px，KPI数值23px/26px、指标块圆角5px；其他正文继承宿主。不同来源 profile 保留其有依据的差异，不把单一字号强套全部场景；主次层级由字号、字重、间距表达，不随意换字体或缩小内容。',
+  '字体由宿主提供：中文 Noto Sans SC，数字和英文 DIN Pro。继承宿主字体或使用 var(--sherlock-font-sans)，数字使用 tabular-nums；不得声明自己的 @font-face、外部字体或 Arial 等替代字体。没有明确源稿 profile 的自定义业务页面，正文默认13px/20px，辅助说明和元数据至少11px/17px，标题14px/22px；证据详情、审批说明、任务描述不是紧凑表格，不得使用8–10px。明确指定源稿 profile 时才保留其有依据的紧凑字号：业务头13px/20px，表格10px/16px，辅助文字9px/14px，KPI数值23px/26px、指标块圆角5px；不要将这些紧凑字号设置为 body 或整页正文。主次层级由字号、字重、间距表达；组件变窄时换行或滚动，不随尺寸缩小文字。',
   '使用标准语义 button、input、select、textarea、table、th、td，交互元素有可读名称，键盘可访问。控件统一黑白灰：按钮高28px、圆角7px，输入框高28px、圆角6px。主按钮用 .research-primary 或 [data-sherlock-variant="primary"]（type="submit" 默认为主按钮），次按钮用 .research-secondary。复合页面包含指标和图表时可以使用 HTML，但指标区必须复用 .research-metrics > .research-metric 及其标签、数值、详情角色，图表继续使用宿主 chart 变量，不能使用固定配色或独立 .kpi 视觉样式。指标用 .research-metric 或 .kpi-card，指标数值/标签分别用 .research-metric-value / .research-metric-label，数字单元格用 .research-numeric 或 [data-sherlock-numeric]，不复制宿主标题栏的操作按钮。',
   '已提供来源明确的 HTML 样式 profile：仅在用户要求对应 fund72 基金研究源稿的持仓、指标或行业模块时，body 直接放一个 main，设置 data-sherlock-profile="fund72-holdings"、"fund72-kpi" 或 "fund72-industry"；宿主负责源稿布局、字号、颜色和几何，不再给 body/main 或以下语义节点重写样式，不自行写表头/奇偶条纹 CSS。不要把 fund72 的9px表格套到 Lumos 任务表或其他来源。profile 无须新增 JSON 字段。三个profile中的辅助数字片段也包 span[data-sherlock-numeric]，仅包数字及小数点/百分号，例如KPI详情7.4%、行业提示8.2%、基准16.4%、底部口径100%；宿主提供DIN500，其余辅助中文仍Noto Sans SC400。原生select保持中性原生控件，不为混排字重重造控件。原稿右上角周期/单位用 head 内 <meta name="sherlock-header-note" content="2026中报">（content 保留原稿实际注记）；宿主标题栏显示，不在正文另起一行，也不重复页面题名。',
   'fund72-holdings（源1217:247167，Dark1217:255020）：main 内依次为 div.research-filters、标准五列表格 table>thead/tbody、p.research-footer。filters 内依次放带可读名称的 select.research-filter-pool、select.research-filter-period、input.research-filter-search；搜索图标由宿主提供。表头25px、9px/17px；数据行34px、9px/18px、左右6px，奇数条纹、偶数正文底。按源保留数字左对齐；首列证券名及字母S使用Noto Sans SC700，仅数字片段包 span[data-sherlock-numeric]（例如 华芯科技 S<span data-sherlock-numeric>001</span>），其余数字/比例单元格也用该数字语义，DIN500，同正文色。较上期用 span[data-sherlock-holdings-change="positive"] 或 "negative"；宿主分别提供 --sherlock-holdings-change-positive 和 --sherlock-holdings-change-negative，负变化保持正文色，不能挪用市场涨跌红绿。末尾说明完整保留；长名称允许换行，不能省略。',
@@ -489,11 +489,16 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     `唯一交付格式：${schemas[type]}`,
     '若本轮没有任何可核验的数值或记录，不能输出空 chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。将需求中的主要品种或字段逐项列出，最多六项；每项 detail 简短，数据来源与查询时点放在 asOf，避免大段说明文字。其余情况严格只用上方指定 schema 的字段，来源与数据时点写进已有内容字段，不添加自造字段。',
     htmlRule,
+    ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION,
+      '自定义业务正文13px/20px，辅助文字至少11px/17px，标题14px/22px；不把紧凑表格字号设置为整页正文。字体继承宿主或 var(--sherlock-font-sans)，数字 tabular-nums。使用语义控件和可读名称，颜色使用完整 --sherlock-control-* / --sherlock-status-* 变量；主按钮搭配 control-primary/control-on-primary。'
+    ] : []),
     ...(['news', 'reports'].includes(type) ? ['每条资料原文明确提供的来源机构、作者、评级、目标价及其他业务字段，连同原摘要保留在 summary；不要只复制短摘要而丢弃这些信息。未提供的机构、作者、评级或目标价必须省略，不自行推断。日期用 date，原分类用 category，未提供链接时省略 url。'] : []),
     '保留需求中的全部字段和条目，遵守上方对应 schema 的容量和字段约束；dashboard 支持1–40项。只在明确允许“示例/虚构/情景模拟”时构造并标注样例数据；其余数值、日期和来源必须有依据，缺失就注明缺失。新闻/政策仅在用户允许联网且需要补充资料时检索真实来源，不能编造法规或链接；核实的网址可作为每条的 url 字段加入，查不到则省略。用户提供完整记录时直接使用，不为补充可选字段继续检索。资料足够后立即交付。',
     type === 'market'
       ? '组件名称由 JSON title 提供，不在内容中重复。金融组件的字体、尺寸和深浅主题由宿主 Figma 模板执行；指标值按源节点使用 DIN Pro 21/26px。'
-      : '组件名称由 JSON title 提供，不在内容中重复。中文 Noto Sans SC，数字英文 DIN Pro；正文 12/18px、指标值 23/26px、内边距 12px，支持深浅主题。',
+      : type === 'html'
+        ? '组件名称由 JSON title 提供，不在内容中重复。自定义业务正文13px/20px，辅助说明至少11px/17px，窄框重排而不缩字。'
+        : '组件名称由 JSON title 提供，不在内容中重复。中文 Noto Sans SC，数字英文 DIN Pro；正文 12/18px、指标值 23/26px、内边距 12px，支持深浅主题。',
     `面板需求：\n${prompt}`
   ].join('\n')
 }
@@ -1324,6 +1329,8 @@ export class ResearchTaskRuntime {
         if (task.cancelRequested || terminalState(task.state)) return
       }
       const structured = task.kind === 'container' || task.kind === 'create'
+      const plannedFormat = task.kind === 'container' ? workbenchPanelFormat(task.prompt) : null
+      const bindablePanel = Boolean(plannedFormat && plannedFormat !== 'html')
       let output, binding, bindingRepairEvidence = '', recoveryText = '', recoveryEvidence = '', generationError, sharedStateError, designPolicyError
       // At most one repair generation, within the same task/concurrency slot.
       // Completed malformed output and truncated output follow the same acceptance gate.
@@ -1352,14 +1359,20 @@ export class ResearchTaskRuntime {
           // A named connected source is part of the requested result. Static
           // quotes from a different website cannot satisfy it, even if the
           // model writes the unavailable-source disclaimer into metadata.
-          if(!mapped&&task.kind==='container'&&workbenchPanelFormat(task.prompt)&&
-            /(?:数据源\s*[:：]\s*|使用\s*|通过\s*|调用\s*|接入\s*)(?:已连接的\s*)?(?:通联|DataYes)/iu.test(task.prompt)){
-            bindingRepairEvidence=componentBindingEvidence(sourceRecords)
-            throw new ResearchTaskError(bindingRepairEvidence?'INVALID_OUTPUT':'GENERATION_FAILED',
-              '该组件指定通联 DataYes 来源，必须实际取得业务响应并提交可刷新映射；不能用其他网站的静态行情或接口目录代替。')
+          if(!mapped&&plannedFormat&&
+            /(?:数据源\s*[:：]\s*|使用\s*|通过\s*|调用\s*|接入\s*|用\s*)(?:当前\s*)?(?:已连接的\s*)?(?:通联|DataYes)/iu.test(task.prompt)){
+            const observedBusiness = componentBindingEvidence(sourceRecords)
+            // Custom pages are snapshots, not registered native mapping
+            // templates. They still require an actual business response.
+            if(plannedFormat==='html'&&!observedBusiness)throw new ResearchTaskError('GENERATION_FAILED','该组件指定通联 DataYes 来源，必须实际取得业务响应；不能用其他网站的静态行情或接口目录代替。')
+            if(bindablePanel){
+              bindingRepairEvidence=observedBusiness
+              throw new ResearchTaskError(bindingRepairEvidence?'INVALID_OUTPUT':'GENERATION_FAILED',
+                '该组件指定通联 DataYes 来源，必须实际取得业务响应并提交可刷新映射；不能用其他网站的静态行情或接口目录代替。')
+            }
           }
           output = finalText(mapped?[{type:'text',text:deliveredText}]:result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
-          if (!mapped && attempt === 0 && task.kind === 'container' && workbenchPanelFormat(task.prompt) && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || readTemplateModel(JSON.parse(output)))) {
+          if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', '已取得插件数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。')
           }
@@ -1373,9 +1386,9 @@ export class ResearchTaskRuntime {
           output = undefined; generationError = error
           // Progress prose and malformed JSON can fail before the missing-binding
           // check above. Keep verified responses in that same bounded repair.
-          if (error.code === 'INVALID_OUTPUT' && sourceRecords.length && (
+          if (error.code === 'INVALID_OUTPUT' && plannedFormat !== 'html' && sourceRecords.length && (
             /"type"\s*:\s*"data-bound"/u.test(deliveredText) ||
-            task.kind === 'container' && workbenchPanelFormat(task.prompt) && typeof this.adapter.bindData === 'function'
+            bindablePanel && typeof this.adapter.bindData === 'function'
           )) bindingRepairEvidence = componentBindingEvidence(sourceRecords)
           if (error.code === 'SHARED_STATE_REQUIRED') sharedStateError = error
           if (error.code === DESIGN_POLICY_ERROR) designPolicyError = error
