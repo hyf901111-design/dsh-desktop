@@ -14,6 +14,9 @@ export function createWorkbenchGridState(storage,sessionId) {
   function visibleCells(){
     const m=grid.metrics(width||1000),limits=c=>{
       const node=nodesById.get(c.id),min=grid.minimum(node,m),value=contentHeights.get(c.id)
+      // Explicit layout choices keep their saved columns at every viewport.
+      // Normal resize and standard Arrange still use the readable frame floor.
+      if([1,2,3].includes(c.arrangeColumns))min.w=Math.min(min.w,c.w)
       // A narrow viewport can expand a saved half-column to the template's
       // readable minimum. The sandbox measured that displayed width; comparing
       // it with the smaller saved span discards the first content height.

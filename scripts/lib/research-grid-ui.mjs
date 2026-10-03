@@ -558,7 +558,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
 }
 export function WorkbenchArrangeIcon({mode}) {
   const count={three:3,two:2,one:1}[mode]
-  const rects=count?Array.from({length:count},(_,i)=>({x:2+i*12/count,y:2,width:12/count-1,height:12})):[{x:2,y:2,width:5,height:5},{x:9,y:2,width:5,height:9},{x:2,y:9,width:5,height:5}]
+  const rects=mode==='one'?[{x:2,y:2,width:12,height:5},{x:2,y:9,width:12,height:5}]:count?Array.from({length:count},(_,i)=>({x:2+i*12/count,y:2,width:12/count-1,height:12})):[{x:2,y:2,width:5,height:5},{x:9,y:2,width:5,height:9},{x:2,y:9,width:5,height:5}]
   return react_jsx_runtime.jsx('svg',{'aria-hidden':true,className:'ew-arrange-layout-icon',width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.3,children:rects.map((r,i)=>react_jsx_runtime.jsx('rect',{...r,rx:1},i))})
 }
 export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled,onArrange}) {
@@ -581,10 +581,8 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
     if(disabled||!rootRef.current)return
     if(!arrangeWorkbenchContents(rootRef.current,workspace,measureWorkbenchContents(rootRef.current,nodes),next))return
     setMode(next);setOpen(false)
-    const title=options.find(o=>o[0]===next)[1],requested={three:3,two:2,one:1}[next],cells=workspace.getWorkbenchCells()
-    const shown=cells.filter(c=>c.y===Math.min(...cells.map(c=>c.y))).length
-    const adapted=requested&&Math.min(requested,nodes.length)>shown?' · '+workbenchText('窄画布已适配'):''
-    onArrange(workbenchText(title)+' · '+workbenchText('已整理 '+nodes.length+' 个组件')+adapted)
+    const title=options.find(o=>o[0]===next)[1]
+    onArrange(workbenchText(title)+' · '+workbenchText('已整理 '+nodes.length+' 个组件'))
   }
   const keyDown=e=>{
     const buttons=[...menuRef.current.querySelectorAll('[role=menuitemradio]')],index=buttons.indexOf(e.currentTarget.ownerDocument.activeElement)

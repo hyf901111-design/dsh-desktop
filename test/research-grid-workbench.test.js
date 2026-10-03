@@ -3,6 +3,21 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('明确三排整理在窄视口及重开后不被阅读宽度下限改回两列，标准整理恢复默认下限',()=>{
+ const g=createResearchGrid(),saved=new Map(),storage={getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)}
+ let state=createWorkbenchGridState(storage,'exact-three');state.enable(640)
+ let snap=state.reconcile({files:[],artifacts:['a','b','c','d'].map(id=>({id,kind:'pasted-text',width:400,height:260})),viewport:{y:0}})
+ const nodes=snap.artifacts.map(n=>({...n,preferred:{height:260}})),next=g.arrange(nodes,state.get(),640,700,'three')
+ state.set(next);snap=state.reconcile(snap)
+ expect(state.visible().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+ expect(snap.artifacts.slice(0,3).every(n=>n.width<280)).toBe(true)
+ state.save();state=createWorkbenchGridState(storage,'exact-three');state.enable(640);snap=state.reconcile(snap)
+ expect(state.visible().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+ state.enable(880);snap=state.reconcile(snap)
+ expect(state.visible().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+ state.set(g.arrange(snap.artifacts.map(n=>({...n,preferred:{height:260}})),state.get(),640,700,'standard'));snap=state.reconcile(snap)
+ expect(snap.artifacts.every(n=>n.width>=280)).toBe(true)
+})
 it('快照随画布变窄保留完整内容占位，不改共享逻辑布局，手动缩高仍有效',()=>{
  const state=createWorkbenchGridState(null,'responsive-snapshots'),g=createResearchGrid(),html='<body data-sherlock-market="share-statistics"></body>'
  state.enable(1000)
