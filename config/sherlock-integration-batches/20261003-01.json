@@ -9,27 +9,47 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "综合工作台多代理网页生成与可读性修复",
+        "featureName": "组件生成与阅读修复及四种组件整理布局",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "09cdfb32f53c9c469058ad9e1df902988273d0cd",
-        "tipCommit": "678717f25da960b9a0836c4806e5deb5d157f036",
+        "baseCommit": "678717f25da960b9a0836c4806e5deb5d157f036",
+        "tipCommit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
         "commits": [
           {
-            "commit": "678717f25da960b9a0836c4806e5deb5d157f036",
+            "commit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
             "parents": [
-              "09cdfb32f53c9c469058ad9e1df902988273d0cd"
+              "678717f25da960b9a0836c4806e5deb5d157f036"
             ],
-            "subject": "修复自定义行情表格价格金额被跨行拆分"
+            "subject": "增加组件整理展开菜单及标准单双三排布局"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
           },
           {
             "status": "M",
-            "path": "test/workbench-component-presentation.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/research-arrange-modes.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -37,15 +57,17 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/workbench-component-presentation.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/financial-series-intrinsic.test.js",
-              "test/research-custom-arrange-content.test.js"
+              "test/research-arrange-modes.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-custom-arrange-content.test.js",
+              "test/research-grid-client.test.js",
+              "-t",
+              "三排|双排|单排|标准整理|固定排数|整理|网格事务可撤销|改变窗口宽度后撤销|共享只读禁用智能"
             ],
             "outcome": "passed",
-            "summary": "23项表格数字完整、长文本换行与尺寸后备聚焦检查通过",
-            "verifiedCommit": "678717f25da960b9a0836c4806e5deb5d157f036",
-            "completedAt": "2026-10-03T09:38:42.526845Z",
+            "summary": "72项直接相关布局、测高、菜单、撤销与权限聚焦检查通过",
+            "verifiedCommit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
+            "completedAt": "2026-10-03T10:42:46.257427+00:00",
             "timeoutMs": 120000
           },
           {
@@ -56,61 +78,27 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "678717f25da960b9a0836c4806e5deb5d157f036",
-            "completedAt": "2026-10-03T09:38:42.526845Z",
+            "verifiedCommit": "9db40ad8b9632922b8e219e1ca36ec6aa7b0d08e",
+            "completedAt": "2026-10-03T10:42:46.257427+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端，集成后进行真实模型多类型客户端复验。"
+          "summary": "功能worktree不构建共享客户端；集成候选构建后核对真实菜单和四种布局。"
         },
         "acceptanceCriteria": [
-          "三组综合工作台各4个组件并行生成并记录真实成功率",
-          "自定义网页采用共享状态且保留真实MCP资料",
-          "按钮选中标签清楚，正文保持可读字号",
-          "复验筛选详情、主题切换和整理画布"
+          "整理按钮右侧展开四项菜单，标记当前选项并支持键盘和外部关闭",
+          "标准整理保留当前空间顺序及列布局并就近补位",
+          "三排双排单排按当前阅读顺序排列；窄画布保留统一阅读最小值并适配",
+          "重新测量内容后保留所选模式，整次整理可单步撤销；保留上一轮生成与可读性修复"
         ],
         "risks": [
-          "HTML快照不声明自动更新",
-          "样本成功率不代表全部任务",
-          "长MCP正文不重复嵌入JS字符串，语法失败反馈安全行列；集成后复验审批账本",
-          "research-html-theme非工作台已有4项失败在758c1381基线复现，未因本次CSS改动新增；集成客户端复验长文本换行",
-          "research-market-arrange-content四项既有失败在803edf7基线复现；本次只改变无有效测量的自定义HTML尺寸后备"
+          "三排在窄画布受统一最小阅读宽度约束，会适配为更少列",
+          "原HTML仍需在自身正文内适配窄列；不缩小字号",
+          "保留原有未验收集成候选修复，等待用户验收后晋升main"
         ],
-        "generatedAt": "2026-10-03T08:45:34.381Z"
-      },
-      "merged": {
-        "mergeCommit": "11b83c3a7642157a4516d5a3c7fa9680fd6f00da",
-        "verificationCommit": "11b83c3a7642157a4516d5a3c7fa9680fd6f00da",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "11b83c3a7642157a4516d5a3c7fa9680fd6f00da",
-            "completedAt": "2026-10-03T09:39:11.499Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "11b83c3a7642157a4516d5a3c7fa9680fd6f00da",
-            "completedAt": "2026-10-03T09:39:11.499Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T09:39:11.499Z"
+        "generatedAt": "2026-10-03T10:42:46.257427+00:00"
       }
     }
   ],
