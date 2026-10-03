@@ -80,6 +80,38 @@
           "长MCP正文不重复嵌入JS字符串，语法失败反馈安全行列；集成后复验审批账本"
         ],
         "generatedAt": "2026-10-03T08:45:34.381Z"
+      },
+      "merged": {
+        "mergeCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
+        "verificationCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
+            "completedAt": "2026-10-03T08:52:30.962Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
+            "completedAt": "2026-10-03T08:52:30.962Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T08:52:30.962Z"
       }
     }
   ],
