@@ -1,5 +1,6 @@
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
 import {operationsTemplateSchema,requestedOperationsType} from './operations-template-contract.js'
+import { KPI_GUIDANCE } from './kpi-template-contract.js'
 import { templateSourceDataIssue } from './template-data-contract.js'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
@@ -458,7 +459,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     alerts: operationsTemplateSchema('alerts'),
     progress: operationsTemplateSchema('progress'),
     tasks: operationsTemplateSchema('tasks'),
-    kpi: '{"version":1,"type":"kpi","title":"标题","items":[{"label":"指标","value":"数值","change":"可选变化"}]}',
+    kpi: '{"version":1,"type":"kpi","title":"标题","asOf":"原数据来源及时点","items":[{"label":"指标","value":"原数值及单位"}]}\n' + KPI_GUIDANCE,
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}',
     chart: chartTemplateSchema(requestedChartVariant(prompt)),
     dashboard: '{"version":1,"type":"dashboard","title":"标题","asOf":"时点/示例口径","items":[{"label":"指标","value":"数值及单位","detail":"口径说明"}]}',

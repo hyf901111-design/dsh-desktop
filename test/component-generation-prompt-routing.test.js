@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { buildResearchTaskExecutionPrompt, buildResearchTaskPrompt } from '../packages/dsh-research-task-runtime/index.js'
 import { acceptArtifactOutput } from '../packages/dsh-research-task-runtime/artifact-output.js'
+import { KPI_GUIDANCE } from '../packages/dsh-research-task-runtime/kpi-template-contract.js'
 
 const container = prompt => ({ parentSessionId: 'routing-parent', canvasNodeId: 'routing-card', kind: 'container', prompt })
 
 describe('single-component generation contracts', () => {
+  it('keeps KPI data dates and missing reasons separate from original change values', () => {
+    const prompt = buildResearchTaskPrompt(container('创建 KPI 指标卡，时点2026-10-03，收入120万元，退款-15.5万元，新增客户0人，无同比数据。'))
+    expect(prompt.includes(KPI_GUIDANCE)).toBe(true)
+    expect(prompt.includes('"asOf":"原数据来源及时点"')).toBe(true)
+    expect(Buffer.byteLength(prompt)).toBeLessThan(15_000)
+  })
   it.each([
     ['table', '只基于以下固定验收记录创建表格，不联网。记录：甲，0；乙，-15.5。'],
     ['kpi', '生成 KPI 指标卡，收入120万元，退款-15.5万元，不联网。'],
