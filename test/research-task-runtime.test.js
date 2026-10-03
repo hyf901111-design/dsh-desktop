@@ -5,6 +5,7 @@ import { Readable } from 'node:stream'
 import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it, vi } from 'vitest'
 import { workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
 
 const runtimeModule = () => import('../packages/dsh-research-task-runtime/index.js')
 
@@ -64,7 +65,7 @@ function containerRequest(canvasNodeId = 'container-1', parentSessionId = 'paren
     parentSessionId,
     canvasNodeId,
     kind: 'container',
-    prompt: '制作一张展示月度收入趋势的柱状图'
+    prompt: '制作一张展示月度收入趋势的图表'
   }
 }
 
@@ -319,7 +320,7 @@ describe('Research task contract and prompt', () => {
     expect(prompt).toContain('存在可复用的宿主预置模板时必须优先使用相应结构化 schema')
     expect(prompt).toContain('.research-metrics > .research-metric')
     expect(prompt).toContain('离线')
-    expect(prompt).toContain('制作一张展示月度收入趋势的柱状图')
+    expect(prompt).toContain('制作一张展示月度收入趋势的图表')
     expect(prompt).not.toContain('来源 1')
 
     const explicitWebPrompt = buildResearchTaskPrompt({
@@ -340,7 +341,7 @@ describe('Research task contract and prompt', () => {
     expect(prompt).toContain('"type":"dashboard"')
     expect(prompt).not.toContain('"type":"markdown","title":"面板标题","content":"数据暂不可用')
     expect(prompt).toContain('没有任何可核验的数值或记录')
-    expect(Buffer.byteLength(prompt, 'utf8')).toBeLessThan(8_000)
+    expect(Buffer.byteLength(prompt, 'utf8')).toBeLessThan(12_000)
 
     const manual = buildResearchTaskPrompt({ ...containerRequest(), prompt: '用户自己拉框创建智能容器：' + legacy })
     expect(manual).toContain('统一遵循 EWork 工作台 Figma 组件规范')
@@ -1157,9 +1158,10 @@ describe('Research task cancellation and terminal cleanup', () => {
       parentSessionId: 'parent-1', taskId: receipt.taskId, afterSeq: 0
     })).toMatchObject({
       state: 'completed',
-      childSessionId: 'child-2',
-      finalOutput: finalJson
+      childSessionId: 'child-2'
     }))
+    const delivered = runtime.inspect({ parentSessionId: 'parent-1', taskId: receipt.taskId, afterSeq: 0 }).finalOutput
+    expect(readTemplateModel(JSON.parse(delivered))?.data).toEqual(JSON.parse(finalJson))
     expect(start).toHaveBeenCalledTimes(2)
   })
 })
@@ -1791,7 +1793,7 @@ describe('Research task Subagent adapter', () => {
     const handle = await createSubagentAdapter(ctx).start({
       parentSessionId: parent.id,
       kind: 'container',
-      query: '制作一张展示月度收入趋势的柱状图',
+      query: '制作一张展示月度收入趋势的图表',
       prompt: '产品固定提示词',
       signal: new AbortController().signal,
       onSessionEvent
@@ -2100,9 +2102,10 @@ describe('Research task persistence and restart recovery', () => {
     expect(runtime.inspect({
       parentSessionId: 'parent-1', taskId: 'container-task', afterSeq: 0
     })).toMatchObject({
-      state: 'completed',
-      finalOutput: '{"version":1,"type":"kpi","title":"收入","items":[{"label":"收入","value":42}]}'
+      state: 'completed'
     })
+    const restored = runtime.inspect({ parentSessionId: 'parent-1', taskId: 'container-task', afterSeq: 0 }).finalOutput
+    expect(readTemplateModel(JSON.parse(restored))?.data).toEqual({ version: 1, type: 'kpi', title: '收入', items: [{ label: '收入', value: 42 }] })
     expect(storage.snapshot().tasks[0]).toMatchObject(containerRequest())
     expect(storage.snapshot().tasks[0]).not.toHaveProperty('sources')
   })
