@@ -99,6 +99,38 @@
           "保留原有未验收集成候选修复，等待用户验收后晋升main"
         ],
         "generatedAt": "2026-10-03T10:42:46.257427+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
+        "verificationCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
+            "completedAt": "2026-10-03T10:43:07.448Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7998f9142bbd4d728124ad1fff11fa1a596745da",
+            "completedAt": "2026-10-03T10:43:07.448Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T10:43:07.448Z"
       }
     }
   ],
