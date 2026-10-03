@@ -89,6 +89,38 @@
           "旧版基线12个全部失败；新的客户端模型生成还需复验"
         ],
         "generatedAt": "2026-10-03T07:07:04.587242+00:00"
+      },
+      "merged": {
+        "mergeCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
+        "verificationCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
+            "completedAt": "2026-10-03T07:07:22.447Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
+            "completedAt": "2026-10-03T07:07:22.447Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T07:07:22.447Z"
       }
     }
   ],
