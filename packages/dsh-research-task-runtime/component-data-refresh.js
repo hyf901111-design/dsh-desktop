@@ -92,6 +92,13 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   if(value===undefined){if(mapping.$optional===true)return null;throw Error('接口缺少字段：'+mapping.$path)}
   return scalarMapping(value,mapping)
  }
+ // Models also use a bare default for fields that the verified API does not
+ // provide. Treat this as explicit display text, never as a numeric fallback
+ // or an expression that could conceal a malformed field mapping.
+ if(Object.hasOwn(mapping,'$default')){
+  if(Object.keys(mapping).length!==1||typeof mapping.$default!=='string'||!mapping.$default.trim())throw Error('独立缺失说明只能使用非空文字；数值必须引用真实字段路径')
+  return mapping.$default
+ }
  return Object.fromEntries(Object.entries(mapping).map(([k,v])=>{if(k.startsWith('$'))throw Error('不支持的字段映射：'+k);return [k,next(v)]}))
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
@@ -118,7 +125,7 @@ export function materializeComponentMapping(mapping,responses,now=new Date()){
  // Never flatten table rows or arrays of scalar field values.
  if(Array.isArray(data?.items))data.items=data.items.flatMap(item=>Array.isArray(item)&&item.every(record)?item:[item])
  const display=value=>typeof value==='number'&&Number.isFinite(value)?String(value):value
- if(['kpi','dashboard'].includes(data?.type)||data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)){
+ if(['kpi','dashboard'].includes(data?.type)||data?.type==='market'&&['metrics','fund-kpi','key-metrics'].includes(data.variant)){
   if(Array.isArray(data.items))data.items=data.items.map(item=>({...item,value:display(item.value)}))
  }
  if(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant)){

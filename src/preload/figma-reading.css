@@ -98,6 +98,16 @@ body .odyssey-table-block table { min-width:100%; }
 body .odyssey-table-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--odyssey-muted); font:400 12px/20px var(--odyssey-font-ui); margin-top:8px; }
 body .odyssey-table-actions button { border:0; background:none; padding:2px 4px; border-radius:5px; color:inherit; font:inherit; cursor:pointer; }
 body .odyssey-table-actions button:hover { background:var(--odyssey-menu-row); color:var(--odyssey-text); }
+/* Keep message actions legible when the research pane shares a narrow row
+   with run metadata. Icon buttons and SVGs must not absorb flex compression. */
+body .p-xYUq_actions :is(.p-xYUq_action,._8_XoUG_action),
+body .p-xYUq_actions button[aria-label="添加到画布"] {
+  box-sizing:border-box; flex:0 0 28px; width:28px; min-width:28px; height:28px; padding:6px;
+}
+body .p-xYUq_actions :is(.p-xYUq_action,._8_XoUG_action)>svg {
+  display:block; flex:none; width:16px; min-width:16px; height:16px;
+}
+body .sRp_root .p-xYUq_actions { flex-wrap:wrap; }
 /* Figma 752:27866 / 753:27866: the main wide-table helper occupies one 24px line. */
 body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) { color:#2b2b2b; font:400 12px/24px var(--odyssey-font-ui); }
 body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) { color:#e5e5e5; }
