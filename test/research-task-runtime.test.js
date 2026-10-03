@@ -536,6 +536,24 @@ describe('Research task contract and prompt', () => {
     } finally {await runtime.dispose()}
   })
 
+  it.each([true,false])('accepts an interactive HTML snapshot only after retrieving the named business source (retrieved=%s)', async retrieved => {
+    const {ResearchTaskRuntime}=await runtimeModule()
+    const calls=[],bindData=vi.fn(async()=>{})
+    const page={version:1,type:'html',title:'证据对照',html:'<p id="value">原始证据</p><button id="choose">查看证据</button><script>const shared=window.sherlockShared.register({initialState:{selected:null},reduce:(s,a)=>({...s,selected:a.id}),render:(s,ctx)=>{document.getElementById("value").textContent=s.selected||"原始证据";}});document.getElementById("choose").onclick=()=>shared.dispatch({type:"select",id:"a"});</script>'}
+    const runtime=new ResearchTaskRuntime({adapter:{bindData,start:async request=>{
+      calls.push(request)
+      return {childSessionId:'html-source-'+calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(page)}],sourceRecords:retrieved?[{tool:'ework__t_abc123',args:{ticker:'688256'},response:{items:[{title:'真实公告',date:'2026-09-30'}]}}]:[]})}
+    },dispose:async()=>{}},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+    try{
+      await runtime.start({...containerRequest('html-source'),prompt:'工作台：研究\n本面板：证据对照\n数据源：通联 DataYes。用当前已连接的 MCP 工具取真实资料。禁止模拟数据。\n优先使用 html 类型。'})
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).state).toBe(retrieved?'completed':'failed'))
+      expect(bindData).not.toHaveBeenCalled()
+      expect(calls).toHaveLength(retrieved?1:2)
+      if(retrieved)expect(runtime.inspect({parentSessionId:'parent-1',taskId:'task-1'}).finalOutput).toBe(JSON.stringify(page))
+      else expect(calls[1].synthesisOnly).toBe(false)
+    }finally{await runtime.dispose()}
+  })
+
   it.each([true,false])('requires the named connected source instead of accepting a static website quote (repair=%s)', async repair => {
     const {ResearchTaskRuntime}=await runtimeModule()
     const calls=[],bindData=vi.fn(async()=>{})
@@ -1205,6 +1223,33 @@ describe('Research task Subagent adapter', () => {
       return runtime.createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt, signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress })
     } }
   }
+
+  it('preserves MCP retrieval for a planned custom page that forbids simulated data', async () => {
+    const query = '工作台：真实研究\n本面板：投资论点证据对照\n用当前已连接的通联 DataYes/萝卜投研 MCP 工具取真实资料：用公告检索工具查 688256 最近公告。禁止模拟数据、禁止向外部写入。\n仅生成本面板，优先使用 html 类型。'
+    const fixture = containerAdapterFixture()
+    fixture.ctx.tools = { schemas: () => [
+      { name: 'ework__source_lookup', description: '通联 DataYes 公告检索' },
+      { name: 'read' }, { name: 'web_search' }, { name: 'web_fetch' }
+    ] }
+    const handle = await fixture.start(query)
+    const request = fixture.ctx.subagents.start.mock.calls[0][1]
+    expect(request.toolFilter.allow).toContain('ework__source_lookup')
+    expect(request.prompt[0].text).toContain('window.sherlockShared.register')
+    expect(request.prompt[0].text).toContain('initialState')
+    expect(request.prompt[0].text).toContain('reduce')
+    expect(request.prompt[0].text).toContain('render')
+    expect(request.prompt[0].text).toContain('13px/20px')
+    await handle.dispose()
+  })
+
+  it('plans custom HTML as an interactive page rather than native template data', () => {
+    const prompt = workbenchPanelPrompt({ title: '工作管理' }, { title: '分诊看板', type: 'html', prompt: '负责人筛选与本地关注' })
+    expect(prompt).not.toContain('仅提交数据，不自造视觉样式')
+    expect(prompt).toContain('window.sherlockShared.register')
+    expect(prompt).toContain('自包含 HTML')
+    const native = workbenchPanelPrompt({ title: '工作管理' }, { title: '任务', type: 'tasks', prompt: '任务清单' })
+    expect(native).toContain('仅提交数据，不自造视觉样式')
+  })
 
   it.each([
     '工作台：ETF研究\n本面板：最新ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。',
