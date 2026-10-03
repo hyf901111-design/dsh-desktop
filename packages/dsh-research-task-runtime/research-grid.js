@@ -288,7 +288,26 @@ export function createResearchGrid() {
     })
     const result=new Map(closeSmallGaps(fillColumnTails(fillVacancies(closeColumnGaps(planned),nodes,width),nodes,width),width).map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
   }
-  function arrange(nodes,items,width,visibleHeight=0) {
+  function arrange(nodes,items,width,visibleHeight=0,mode='standard') {
+    const requested={three:3,two:2,one:1}[mode]
+    if(requested){
+      const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
+      // Explicit layouts use the common frame minimum. Wide template content
+      // remains scrollable inside a deliberately chosen narrower column.
+      const lanes=Math.max(1,Math.min(requested,ordered.length,Math.floor(columns/m.minColumns)))
+      const edges=Array.from({length:lanes+1},(_,i)=>Math.round(i*columns/lanes)),result=new Map()
+      let top=0
+      for(let start=0;start<ordered.length;start+=lanes){
+        let bottom=top
+        for(let lane=0;lane<lanes&&start+lane<ordered.length;lane++){
+          const c=ordered[start+lane],node=byId.get(c.id),preferred=node.preferred||node
+          const h=clamp(Math.max(minimum(node,m).h,Math.ceil(((preferred.height||260)+m.gap)/m.rowStep)),3,300)
+          result.set(c.id,{...c,x:edges[lane],w:edges[lane+1]-edges[lane],y:top,h});bottom=Math.max(bottom,top+h)
+        }
+        top=bottom
+      }
+      return items.map(c=>result.get(c.id)||bounded(c))
+    }
     let next=items.map(bounded)
     // Filling a vacancy may introduce a new repeated column edge. Settle that
     // edge in the same transaction, including content measurement refits.

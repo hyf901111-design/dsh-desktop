@@ -504,12 +504,12 @@ export function measureWorkbenchContents(root,nodes) {
   }
   return measured
 }
-export function arrangeWorkbenchContents(root,workspace,measured) {
+export function arrangeWorkbenchContents(root,workspace,measured,mode='standard') {
   root.focus({preventScroll:true})
   root.__eworkContentFit?.finish()
   const before=workspace.getSnapshot(),oldNodes=[...before.files,...before.artifacts],oldCache=new Map(root.__eworkContentMeasurements),view=root.ownerDocument.defaultView
   measured.__workbenchDeferred=true
-  if(!workspace.organizeCanvas(measured))return false
+  if(!workspace.organizeCanvas(measured,mode))return false
   const grid=createResearchGrid(),width=before.canvasSize.availableWidth||before.canvasSize.width||800,m=grid.metrics(width)
   const arranged=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
   const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html').map(n=>{
@@ -543,7 +543,7 @@ export function arrangeWorkbenchContents(root,workspace,measured) {
     const packed=grid.arrange(currentNodes.map(n=>{
       const c=measuredCells.get(n.id)
       return {...n,preferred:{height:c.h*m.step-m.gap-1e-7}}
-    }),next,width)
+    }),next,width,0,mode)
     for(const c of packed){
       const target=expected.get(c.id),previous=cells.find(old=>old.id===c.id)
       if(target&&previous&&c.w!==previous.w){target.width=Math.round(target.width+(c.w-previous.w)*m.step);complete=false}
@@ -555,6 +555,48 @@ export function arrangeWorkbenchContents(root,workspace,measured) {
   root.addEventListener('pointerdown',finish,true);view.addEventListener('keydown',finish,true)
   deadline=view.setTimeout(finish,1800);nativeTimer=view.setTimeout(()=>{nativeReady=true;refit(true)},380)
   refit();return true
+}
+export function WorkbenchArrangeIcon({mode}) {
+  const count={three:3,two:2,one:1}[mode]
+  const rects=count?Array.from({length:count},(_,i)=>({x:2+i*12/count,y:2,width:12/count-1,height:12})):[{x:2,y:2,width:5,height:5},{x:9,y:2,width:5,height:9},{x:2,y:9,width:5,height:5}]
+  return react_jsx_runtime.jsx('svg',{'aria-hidden':true,className:'ew-arrange-layout-icon',width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.3,children:rects.map((r,i)=>react_jsx_runtime.jsx('rect',{...r,rx:1},i))})
+}
+export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled,onArrange}) {
+  useWorkbenchLocale()
+  const [mode,setMode]=react.useState('standard'),[open,setOpen]=react.useState(false)
+  const groupRef=react.useRef(null),toggleRef=react.useRef(null),menuRef=react.useRef(null)
+  const options=[['standard','标准整理'],['three','三排整理'],['two','双排整理'],['one','单排整理']],label=options.find(o=>o[0]===mode)[1]
+  react.useEffect(()=>{setMode('standard');setOpen(false)},[sessionId])
+  react.useEffect(()=>{if(disabled)setOpen(false)},[disabled])
+  react.useLayoutEffect(()=>{
+    if(!open)return
+    const doc=rootRef.current.ownerDocument,view=doc.defaultView,menu=menuRef.current
+    const place=()=>{const r=groupRef.current.getBoundingClientRect(),size=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(r.left,view.innerWidth-size.width-8))+'px';menu.style.top=Math.max(8,r.top-size.height-8)+'px'}
+    const outside=e=>{if(!groupRef.current?.contains(e.target)&&!menu.contains(e.target))setOpen(false)}
+    place();menu.querySelector('[aria-checked="true"]')?.focus({preventScroll:true})
+    doc.addEventListener('pointerdown',outside,true);view.addEventListener('resize',place);doc.addEventListener('scroll',place,true)
+    return()=>{doc.removeEventListener('pointerdown',outside,true);view.removeEventListener('resize',place);doc.removeEventListener('scroll',place,true)}
+  },[open,rootRef])
+  const run=next=>{
+    if(disabled||!rootRef.current)return
+    if(!arrangeWorkbenchContents(rootRef.current,workspace,measureWorkbenchContents(rootRef.current,nodes),next))return
+    setMode(next);setOpen(false)
+    const title=options.find(o=>o[0]===next)[1],requested={three:3,two:2,one:1}[next],cells=workspace.getWorkbenchCells()
+    const shown=cells.filter(c=>c.y===Math.min(...cells.map(c=>c.y))).length
+    const adapted=requested&&Math.min(requested,nodes.length)>shown?' · '+workbenchText('窄画布已适配'):''
+    onArrange(workbenchText(title)+' · '+workbenchText('已整理 '+nodes.length+' 个组件')+adapted)
+  }
+  const keyDown=e=>{
+    const buttons=[...menuRef.current.querySelectorAll('[role=menuitemradio]')],index=buttons.indexOf(e.currentTarget.ownerDocument.activeElement)
+    if(e.key==='Escape'||e.key==='Tab'){if(e.key==='Escape')e.preventDefault();e.stopPropagation();setOpen(false);toggleRef.current.focus({preventScroll:true});return}
+    const next=e.key==='Home'?0:e.key==='End'?buttons.length-1:e.key==='ArrowDown'?(index+1)%buttons.length:e.key==='ArrowUp'?(index+buttons.length-1)%buttons.length:null
+    if(next!==null){e.preventDefault();e.stopPropagation();buttons[next].focus({preventScroll:true})}
+  }
+  return react_jsx_runtime.jsxs('div',{ref:groupRef,className:'ew-arrange-tool','data-arrange-mode':mode,children:[
+    react_jsx_runtime.jsx('button',{type:'button','data-research-global-arrange':'','aria-label':workbenchText('一键整理画布'),'data-tool-tooltip':workbenchText(label),disabled,onClick:()=>run(mode),children:react_jsx_runtime.jsx(WorkbenchArrangeIcon,{mode})}),
+    react_jsx_runtime.jsx('button',{ref:toggleRef,type:'button','data-workbench-arrange-toggle':'','aria-label':workbenchText('展开整理选项'),'aria-haspopup':'menu','aria-expanded':open,disabled,onClick:()=>setOpen(!open),onKeyDown:e=>{if(!disabled&&['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();e.stopPropagation();setOpen(true)}},children:react_jsx_runtime.jsx('svg',{'aria-hidden':true,width:10,height:10,viewBox:'0 0 10 10',fill:'none',stroke:'currentColor',strokeWidth:1.3,children:react_jsx_runtime.jsx('path',{d:'m2 4 3 3 3-3'})})}),
+    !open?null:react_dom.createPortal(react_jsx_runtime.jsx('div',{ref:menuRef,role:'menu','aria-label':workbenchText('整理组件'),className:'ew-grid-menu ew-arrange-menu','data-workbench-arrange-menu':'','data-ework-toolbar-owner':sessionId,onKeyDown:keyDown,children:options.map(([value,title])=>react_jsx_runtime.jsxs('button',{type:'button',role:'menuitemradio','aria-checked':mode===value,'data-arrange-mode':value,onClick:()=>run(value),children:[react_jsx_runtime.jsx('svg',{'aria-hidden':true,className:'ew-arrange-check',width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,children:react_jsx_runtime.jsx('path',{d:'m3 8 3 3 7-7'})}),react_jsx_runtime.jsx(WorkbenchArrangeIcon,{mode:value}),react_jsx_runtime.jsx('span',{children:workbenchText(title)})]},value))}),rootRef.current.ownerDocument.body)
+  ]})
 }
 export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,selectTool,readOnly}) {
   react.useLayoutEffect(()=>{

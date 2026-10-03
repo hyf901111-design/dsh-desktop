@@ -389,7 +389,7 @@ it('整理提示固定在可见画布底部工具栏上方，滚动保持位置'
 it('底部选择工具右侧的一键整理调用右键相同布局并补齐空隙',async()=>{
  const f=await fixture(true),toolbar=f.document.querySelector('[data-ework-toolbar]')
  const select=toolbar.querySelector('[data-research-global-select]'),arrange=toolbar.querySelector('[data-research-global-arrange]')
- expect(arrange).not.toBeNull();expect(select.nextElementSibling).toBe(arrange)
+ expect(arrange).not.toBeNull();expect(select.nextElementSibling.querySelector('[data-research-global-arrange]')).toBe(arrange)
  expect(arrange.getAttribute('aria-label')).toBe('一键整理画布');expect(arrange.disabled).toBe(true)
  await act(async()=>{f.workspace.setArtifacts([text('a',160,120),text('b',900,1000),text('c',250,2000)])})
  const before=f.workspace.getWorkbenchCells();expect(arrange.disabled).toBe(false)
@@ -408,6 +408,61 @@ it('链接和语音草稿在末尾追加，保留不等大的已有组件',async
  expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===voice.id).title).toBe('语音组件')
  f.workspace.updateSelection([link.id],'replace')
  expect(f.workspace.getWorkbenchCells().find(n=>n.id===link.id).y).toBe(bottom)
+})
+it('整理展开菜单选择排数、标记当前选项，主按钮重复当前布局并可撤销',async()=>{
+ const f=await fixture(true)
+ await act(async()=>f.workspace.setArtifacts([text('a',160,120),text('b',850,120),text('c',160,1000),text('d',850,1000)]))
+ const button=f.document.querySelector('[data-research-global-arrange]'),toggle=f.document.querySelector('[data-workbench-arrange-toggle]')
+ expect(toggle).not.toBeNull();expect(toggle.getAttribute('aria-expanded')).toBe('false')
+ await f.event('click',toggle)
+ let menu=f.document.querySelector('[data-workbench-arrange-menu]')
+ expect(f.canvas.contains(menu)).toBe(false)
+ expect([...menu.querySelectorAll('[role=menuitemradio]')].map(b=>b.textContent)).toEqual(['标准整理','三排整理','双排整理','单排整理'])
+ expect(menu.querySelector('[data-arrange-mode=standard]').getAttribute('aria-checked')).toBe('true')
+ const before=f.workspace.getWorkbenchCells()
+ await f.event('click',menu.querySelector('[data-arrange-mode=three]'))
+ const three=f.workspace.getWorkbenchCells()
+ expect(three.filter(c=>c.y===0).length).toBe(3)
+ expect(f.document.querySelector('[data-workbench-arrange-menu]')).toBeNull()
+ await f.event('keydown',f.canvas,{metaKey:true,key:'z',code:'KeyZ'})
+ expect(f.workspace.getWorkbenchCells()).toEqual(before)
+ await f.event('click',button);expect(f.workspace.getWorkbenchCells()).toEqual(three)
+ await f.event('click',toggle);menu=f.document.querySelector('[data-workbench-arrange-menu]')
+ expect(menu.querySelector('[data-arrange-mode=three]').getAttribute('aria-checked')).toBe('true')
+ await f.event('click',menu.querySelector('[data-arrange-mode=one]'))
+ expect(f.workspace.getWorkbenchCells().every(c=>c.w===40&&c.x===0)).toBe(true)
+})
+it('整理菜单支持键盘选择、Esc和点击外部关闭，空画布禁止展开',async()=>{
+ let shared=false
+ const f=await fixture(true,{researchBoards:{isSharedSession:()=>shared}}),toggle=f.document.querySelector('[data-workbench-arrange-toggle]')
+ expect(toggle).not.toBeNull();expect(toggle.disabled).toBe(true)
+ await act(async()=>f.workspace.setArtifacts([text('a'),text('b',750)]))
+ await f.event('keydown',toggle,{key:'ArrowUp'})
+ let menu=f.document.querySelector('[data-workbench-arrange-menu]')
+ expect(menu).not.toBeNull()
+ await f.event('keydown',menu,{key:'End'})
+ expect(f.document.activeElement.getAttribute('data-arrange-mode')).toBe('one')
+ await f.event('keydown',menu,{key:'Escape'})
+ expect(f.document.querySelector('[data-workbench-arrange-menu]')).toBeNull();expect(f.document.activeElement).toBe(toggle)
+ await f.event('click',toggle);await f.event('pointerdown',f.document.body)
+ expect(f.document.querySelector('[data-workbench-arrange-menu]')).toBeNull()
+ shared=true;await f.render();expect(toggle.disabled).toBe(true)
+ expect(f.document.querySelector('[data-research-global-arrange]').disabled).toBe(true)
+})
+it('三排整理等待网页重新测高后仍保留三列，整笔只撤销一步',async()=>{
+ const f=await fixture(true),w=f.workspace,n=id=>({...text(id),kind:'generated-container',containerPrompt:'文章',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:id,html:'<p>'+id+'</p>'}})
+ await act(async()=>w.setArtifacts(['a','b','c','d'].map(n)))
+ const before=w.getWorkbenchCells()
+ await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'))
+ await f.event('click',f.document.querySelector('[data-workbench-arrange-menu] [data-arrange-mode=three]'))
+ for(const node of w.getSnapshot().artifacts){
+   const frame=f.host.querySelector('[data-research-node-id="'+node.id+'"] iframe')
+   await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:Math.round(node.width),height:650}})))
+ }
+ await act(async()=>new Promise(r=>setTimeout(r,450)))
+ expect(w.getWorkbenchCells().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+ expect(w.getSnapshot().artifacts.every(n=>n.height>=708)).toBe(true)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
 })
 it('未完成智能容器和链接草稿拖到空位后保留落点，生成期间及重新打开不向上吸附',async()=>{
  const f=await fixture(true),w=f.workspace,step=24.65
@@ -1294,13 +1349,14 @@ it('完整指标自然高度取代保守预留，重复整理不留下过高空�
 it('整理使用当前HTML的内容测量收紧尺寸，拒绝其他窗口的测量',async()=>{
  const f=await fixture(true),n={...text('html'),kind:'generated-container',containerPrompt:'图表',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:'图表',html:'<svg height="200"></svg>'}}
  await act(async()=>f.workspace.setArtifacts([n]))
+ const previousHeight=f.workspace.getSnapshot().artifacts[0].height
  const frame=f.host.querySelector('iframe[data-research-html-artifact]'),source=frame.contentWindow
  const size={type:'sherlock-workbench-content-size',width:481,height:230}
  await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:{},data:size})))
  await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
  await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
  const fallbackHeight=f.workspace.getSnapshot().artifacts[0].height
- expect(fallbackHeight).toBeLessThan(280)
+ expect(fallbackHeight).toBe(previousHeight)
  await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source,data:size})))
  await f.event('contextmenu',f.canvas,{clientX:600,clientY:500,button:2})
  await f.event('click',[...f.document.querySelectorAll('button')].find(b=>b.textContent==='整理画布'))
