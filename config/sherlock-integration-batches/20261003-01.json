@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261003-01",
+  "branch": "codex/integration/20261003-01",
+  "baseMainCommit": "be820f4b0b9a2358cb6084f941ddca2067843d54",
+  "expectedMainCommit": "be820f4b0b9a2358cb6084f941ddca2067843d54",
+  "createdAt": "2026-10-03T03:54:53.370Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件生成映射兼容性及消息操作图标修复",
+        "branch": "codex/feat/generation-mapping-actions-20261003",
+        "baseCommit": "be820f4b0b9a2358cb6084f941ddca2067843d54",
+        "tipCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
+        "commits": [
+          {
+            "commit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
+            "parents": [
+              "be820f4b0b9a2358cb6084f941ddca2067843d54"
+            ],
+            "subject": "修复组件字段映射兼容性和对话操作图标缩小"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-refresh.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "57项直接相关测试通过",
+            "verifiedCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
+            "completedAt": "2026-10-03T03:54:39.964237+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
+            "completedAt": "2026-10-03T03:54:39.964237+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能worktree按项目约定不构建共享客户端；真实客户端复验将在集成批次中完成。原始失败映射已独立回放通过。"
+        },
+        "acceptanceCriteria": [
+          "龙虎榜真实数据与缺失说明能正常生成并刷新",
+          "核心指标保留真实数值、日期和缺失状态",
+          "窄研究对话面板的图标保持16px、按钮保持28px"
+        ],
+        "risks": [
+          "数据源未返回的字段继续标记缺失；不补造数值",
+          "本次消除两个已复现的失败原因，不推断全量生成失败率"
+        ],
+        "generatedAt": "2026-10-03T03:54:39.964237+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/component-data-refresh.test.js",
+        "test/component-source-binding.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
