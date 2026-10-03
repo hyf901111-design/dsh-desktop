@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { load } from 'cheerio'
-import { designPolicyIssue, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue } from '../packages/dsh-research-task-runtime/design-policy.js'
+import { designPolicyIssue, normalizeGeneratedHostStyles, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue } from '../packages/dsh-research-task-runtime/design-policy.js'
 
 const fundTitle = '基金筛选表（合成数据 · 组件规范回归）'
 const fundHtml = readFileSync(new URL('./fixtures/research-kimi-fund-title.html', import.meta.url), 'utf8')
@@ -56,6 +56,24 @@ describe('explicit generated source profile contract', () => {
 })
 
 describe('generated HTML design policy', () => {
+ it('repairs known host role aliases and fixed fallbacks while preserving content and shared script', () => {
+  const script='<script>const shared=window.sherlockShared.register({initialState:{selected:0},reduce:(s,a)=>({...s,selected:a.id}),render:s=>{}});</script>'
+  const html='<style>body{color:var(--sherlock-text-primary,#1a1a1a)}a{color:var(--sherlock-text-link,#0969da)}button{background:var(--sherlock-control-bg,#fff);color:var(--sherlock-control-text,#333)}</style><p>真实证据 0 / 3</p><a href="https://example.org/source">原文</a><button>筛选</button>'+script
+  const repaired=normalizeGeneratedHostStyles(html)
+  expect(designPolicyIssue(repaired)).toBeNull()
+  expect(repaired).toContain('var(--sherlock-text)')
+  expect(repaired).toContain('var(--sherlock-link)')
+  expect(repaired).toContain('<p>真实证据 0 / 3</p>')
+  expect(repaired).toContain(script)
+  expect(repaired).not.toMatch(/#[\da-f]{3,8}/i)
+  const font=normalizeGeneratedHostStyles('<style>body{font:13px/20px var(--sherlock-font-sans,Arial);background:var(--sherlock-surface-secondary,rgba(127,127,127,.06))}button{color:var(--sherlock-control-fg-muted,var(--sherlock-text-secondary))}</style><button>原内容</button>')
+  expect(font).toContain('font:13px/20px var(--sherlock-font-sans)')
+  expect(font).toContain('var(--sherlock-surface-muted)')
+  expect(designPolicyIssue(font)).toBeNull()
+  for(const value of ['red','var(--custom-brand,#333)','var(--sherlock-chart-1,#333)']){
+   expect(designPolicyIssue(normalizeGeneratedHostStyles(`<style>button{color:${value}}</style><button>筛选</button>`))).toContain('控件')
+  }
+ })
  it.each([
   '<style>:root{--sherlock-text:purple}</style><p>内容</p>',
   '<p style="--sherlock-control-primary:blue">内容</p>',

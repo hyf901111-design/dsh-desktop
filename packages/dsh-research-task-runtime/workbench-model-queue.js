@@ -1,11 +1,22 @@
 import { isComponentAgent } from './component-agent-scope.js'
 import { workbenchCreationRequest } from './workbench-execution-policy.js'
 
+const queueWaits = new WeakMap()
+export function workbenchModelQueueWaitMs(ctx, sessionId) {
+  const wait = queueWaits.get(ctx)?.get(sessionId)
+  return wait ? wait.total + (wait.depth ? Date.now() - wait.startedAt : 0) : 0
+}
+export function forgetWorkbenchModelQueueWait(ctx, sessionId) {
+  queueWaits.get(ctx)?.delete(sessionId)
+}
+
 // Limit only live model streams: data tools remain free to run concurrently.
 // Share capacity between workbenches using the same provider, including the
 // parent acknowledgement that overlaps its first component workers.
 export function registerWorkbenchModelQueue(ctx) {
   const providers = new Map()
+  const waits = new Map()
+  queueWaits.set(ctx, waits)
   let disposed = false
   const aborted = () => new DOMException('Workbench model request cancelled', 'AbortError')
   function pump(state) {
@@ -56,7 +67,12 @@ export function registerWorkbenchModelQueue(ctx) {
     let state = providers.get(options.provider)
     if (!state) { state = { active: 0, queue: [], readyAt: 0, epoch: 0, failures: 0, timer: undefined }; providers.set(options.provider, state) }
     return (async function* () {
-      const epoch = await acquire(state, options.signal)
+      let wait = waits.get(options.sessionId)
+      if (!wait) { wait = { total: 0, depth: 0, startedAt: 0 }; waits.set(options.sessionId, wait) }
+      if (!wait.depth++) wait.startedAt = Date.now()
+      let epoch
+      try { epoch = await acquire(state, options.signal) }
+      finally { if (!--wait.depth) wait.total += Date.now() - wait.startedAt }
       let succeeded = false
       try {
         if (disposed || options.signal?.aborted) throw aborted()
@@ -86,5 +102,6 @@ export function registerWorkbenchModelQueue(ctx) {
       for (const entry of state.queue.splice(0)) { entry.cleanup(); entry.reject(aborted()) }
     }
     providers.clear()
+    queueWaits.delete(ctx)
   }
 }

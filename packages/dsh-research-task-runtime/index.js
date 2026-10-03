@@ -6,7 +6,7 @@ import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
-import { registerWorkbenchModelQueue } from './workbench-model-queue.js'
+import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
 import { componentSourceCollector, componentBindingEvidence, COMPONENT_BOUND_DATA_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
@@ -15,7 +15,7 @@ import { registerScheduledTitle } from './scheduled-title.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
-import { designPolicyIssue, normalizeGeneratedHostStyles, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue, DESIGN_POLICY_ERROR, DESIGN_POLICY_REPAIR } from './design-policy.js'
+import { designPolicyIssue, normalizeGeneratedHostStyles, duplicateTitleRepairSnapshot, duplicateTitleRepairIssue, DESIGN_POLICY_ERROR, DESIGN_POLICY_REPAIR, PANEL_COLOR_INSTRUCTION } from './design-policy.js'
 import { SHARED_COMPONENT_INSTRUCTION, SHARED_PANEL_INSTRUCTION } from './shared-component-contract.js'
 import { startComponentAgent } from './component-agent-scope.js'
 import { createSharedMainAgentAdapter } from './shared-main-agent.js'
@@ -489,7 +489,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     `唯一交付格式：${schemas[type]}`,
     '若本轮没有任何可核验的数值或记录，不能输出空 chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。将需求中的主要品种或字段逐项列出，最多六项；每项 detail 简短，数据来源与查询时点放在 asOf，避免大段说明文字。其余情况严格只用上方指定 schema 的字段，来源与数据时点写进已有内容字段，不添加自造字段。',
     htmlRule,
-    ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION,
+    ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
       '自定义业务正文13px/20px，辅助文字至少11px/17px，标题14px/22px；不把紧凑表格字号设置为整页正文。字体继承宿主或 var(--sherlock-font-sans)，数字 tabular-nums。使用语义控件和可读名称，颜色使用完整 --sherlock-control-* / --sherlock-status-* 变量；主按钮搭配 control-primary/control-on-primary。'
     ] : []),
     ...(['news', 'reports'].includes(type) ? ['每条资料原文明确提供的来源机构、作者、评级、目标价及其他业务字段，连同原摘要保留在 summary；不要只复制短摘要而丢弃这些信息。未提供的机构、作者、评级或目标价必须省略，不自行推断。日期用 date，原分类用 category，未提供链接时省略 url。'] : []),
@@ -1830,7 +1830,18 @@ export function createSubagentAdapter(ctx) {
       // Leave time within the child's 180-second budget for the template JSON.
       // Financial tools can otherwise occupy almost the whole first attempt,
       // causing a second 90-second synthesis run and visible panel timeouts.
-      const researchTimer = !synthesisOnly && kind === 'container' ? setTimeout(() => { researchLimitDue = true }, 90000) : undefined
+      const started = Date.now()
+      const initialQueueWait = workbenchModelQueueWaitMs(ctx, child.id)
+      // Provider slots can be shared by many component workers. Waiting is
+      // not generation or retrieval time; cap the excluded wait at ten minutes.
+      const executionElapsed = () => Date.now() - started - Math.min(600000, Math.max(0, workbenchModelQueueWaitMs(ctx, child.id) - initialQueueWait))
+      let researchTimer
+      const limitResearch = () => {
+        const remaining = 90000 - executionElapsed()
+        if (remaining > 0) researchTimer = setTimeout(limitResearch, remaining)
+        else researchLimitDue = true
+      }
+      if (!synthesisOnly && kind === 'container') researchTimer = setTimeout(limitResearch, 90000)
       const seen = new Set()
       const deliver = (event) => {
         const seq = event?.seq
@@ -1884,9 +1895,11 @@ export function createSubagentAdapter(ctx) {
       const boundedResult = kind === 'container' || synthesisOnly ? Promise.race([
         run.result,
         new Promise(resolve => {
-          const started = Date.now(), budget = synthesisOnly ? 90000 : 180000
+          const budget = synthesisOnly ? 90000 : 180000
           const finish = () => {
-            const remaining = budget + 120000 - (Date.now() - started)
+            const elapsed = executionElapsed()
+            if (elapsed < budget) { completionTimer = setTimeout(finish, budget - elapsed); return }
+            const remaining = budget + 120000 - elapsed
             // Public output, not private reasoning or tool churn, earns bounded time to finish.
             if (lastOutputAt && Date.now() - lastOutputAt < 15000 && remaining > 0) {
               completionTimer = setTimeout(finish, Math.min(15000, remaining))
@@ -1914,6 +1927,7 @@ export function createSubagentAdapter(ctx) {
           releaseWorkbench?.()
           releaseCanvas?.()
           await run.dispose()
+          forgetWorkbenchModelQueueWait(ctx, child.id)
         }
       }
     },
