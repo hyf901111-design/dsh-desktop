@@ -12,6 +12,12 @@ describe('single-component generation contracts', () => {
     expect(prompt.includes('"asOf":"原数据来源及时点"')).toBe(true)
     expect(Buffer.byteLength(prompt)).toBeLessThan(15_000)
   })
+  it.each(['新闻', '研报'])('preserves provided institution and author metadata in a %s list', type => {
+    const prompt = buildResearchTaskPrompt(container(`生成${type}列表，仅使用提供资料。资料：甲研究组，作者甲，2026-10-03，报告甲，摘要：原文。`))
+    expect(prompt.includes('来源机构、作者')).toBe(true)
+    expect(prompt.includes('保留在 summary')).toBe(true)
+    expect(prompt.includes('未提供的机构、作者、评级或目标价必须省略')).toBe(true)
+  })
   it.each([
     ['table', '只基于以下固定验收记录创建表格，不联网。记录：甲，0；乙，-15.5。'],
     ['kpi', '生成 KPI 指标卡，收入120万元，退款-15.5万元，不联网。'],
