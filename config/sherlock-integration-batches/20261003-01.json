@@ -9,35 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "组件生成映射兼容性及消息操作图标修复",
+        "featureName": "单组件生成速度与交付成功率优化",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "be820f4b0b9a2358cb6084f941ddca2067843d54",
-        "tipCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
+        "baseCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
+        "tipCommit": "26357365798f4f2541e9abe6a3870178272a3723",
         "commits": [
           {
-            "commit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
+            "commit": "26357365798f4f2541e9abe6a3870178272a3723",
             "parents": [
-              "be820f4b0b9a2358cb6084f941ddca2067843d54"
+              "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920"
             ],
-            "subject": "修复组件字段映射兼容性和对话操作图标缩小"
+            "subject": "优化单组件生成规范路由并修正图表容量说明"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-generation-prompt-routing.test.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-reading.css"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-refresh.test.js"
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -45,13 +41,17 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/component-generation-prompt-routing.test.js",
+              "test/research-task-runtime.test.js",
+              "test/component-generation-real-shapes.test.js",
               "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
+              "test/component-source-binding.test.js",
+              "test/workbench-model-queue.test.js"
             ],
             "outcome": "passed",
-            "summary": "57项直接相关测试通过",
-            "verifiedCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
-            "completedAt": "2026-10-03T03:54:39.964237+00:00",
+            "summary": "276项生成路由、数据映射、恢复和并发聚焦检查通过",
+            "verifiedCommit": "26357365798f4f2541e9abe6a3870178272a3723",
+            "completedAt": "2026-10-03T04:40:08.222110+00:00",
             "timeoutMs": 120000
           },
           {
@@ -62,57 +62,27 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
-            "completedAt": "2026-10-03T03:54:39.964237+00:00",
+            "verifiedCommit": "26357365798f4f2541e9abe6a3870178272a3723",
+            "completedAt": "2026-10-03T04:40:08.222110+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree按项目约定不构建共享客户端；真实客户端复验将在集成批次中完成。原始失败映射已独立回放通过。"
+          "summary": "功能worktree不构建共享客户端，集成后进行真实模型多类型客户端复验。"
         },
         "acceptanceCriteria": [
-          "龙虎榜真实数据与缺失说明能正常生成并刷新",
-          "核心指标保留真实数值、日期和缺失状态",
-          "窄研究对话面板的图标保持16px、按钮保持28px"
+          "明确类型的单组件不携带无关整套规范",
+          "24份选中资料的长需求可保留各份证据后启动",
+          "120标签图表按真实容量生成并保留零值负值",
+          "多类型实际生成与交互回归通过"
         ],
         "risks": [
-          "数据源未返回的字段继续标记缺失；不补造数值",
-          "本次消除两个已复现的失败原因，不推断全量生成失败率"
+          "不把宿主准备组件混入模型成功率",
+          "复合或自定义网页保留完整生成路径",
+          "耗时受模型和数据源影响，需报告真实样本范围"
         ],
-        "generatedAt": "2026-10-03T03:54:39.964237+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
-        "verificationCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
-            "completedAt": "2026-10-03T03:55:40.494Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
-            "completedAt": "2026-10-03T03:55:40.494Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T03:55:40.494Z"
+        "generatedAt": "2026-10-03T04:40:08.222110+00:00"
       }
     }
   ],
