@@ -83,9 +83,13 @@ export function installWorkbenchScrollbars(container, viewport, selected, scroll
       }
       part.owner=owner;part.track.hidden=false
       axes[axis]={client:owner[size],total:owner[total],position:owner[at]}
-      const span=Math.max(0,(horizontal?bounds.right-bounds.left:bounds.bottom-bounds.top)-12),length=Math.min(span,Math.max(28,span*owner[size]/owner[total])),travel=span-length,offset=travel*owner[at]/Math.max(1,owner[total]-owner[size])
+      // A table's horizontal control belongs immediately below its rows, even
+      // when the containing card is much taller than the table.
+      const tablePort=horizontal&&!remote.has(axis)&&owner.matches?.('.fund-native-table-wrap,.odyssey-native-table-grid')?owner.getBoundingClientRect():null
+      const trackBounds=tablePort?{left:Math.max(bounds.left,tablePort.left),right:Math.min(bounds.right,tablePort.right),top:bounds.top,bottom:Math.min(bounds.bottom,tablePort.bottom)}:bounds
+      const span=Math.max(0,(horizontal?trackBounds.right-trackBounds.left:trackBounds.bottom-trackBounds.top)-12),length=Math.min(span,Math.max(28,span*owner[size]/owner[total])),travel=span-length,offset=travel*owner[at]/Math.max(1,owner[total]-owner[size])
       part.length=length;part.travel=travel
-      Object.assign(part.track.style,horizontal?{left:bounds.left-base.left+6+'px',top:bounds.bottom-base.top-10+'px',width:span+'px',height:'10px'}:{left:bounds.right-base.left-10+'px',top:bounds.top-base.top+6+'px',width:'10px',height:span+'px'})
+      Object.assign(part.track.style,horizontal?{left:trackBounds.left-base.left+6+'px',top:trackBounds.bottom-base.top-10+'px',width:span+'px',height:'10px'}:{left:bounds.right-base.left-10+'px',top:bounds.top-base.top+6+'px',width:'10px',height:span+'px'})
       Object.assign(part.thumb.style,horizontal?{left:offset+'px',top:'3px',width:length+'px',height:'5px'}:{top:offset+'px',left:'3px',height:length+'px',width:'5px'})
       part.track.setAttribute('aria-valuemin','0');part.track.setAttribute('aria-valuemax',String(owner[total]-owner[size]));part.track.setAttribute('aria-valuenow',String(Math.round(owner[at])))
     }
