@@ -73,6 +73,38 @@
           "research-html-theme非工作台已有4项失败在758c1381基线复现，未因本次CSS改动新增；集成客户端复验长文本换行"
         ],
         "generatedAt": "2026-10-03T08:45:34.381Z"
+      },
+      "merged": {
+        "mergeCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
+        "verificationCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
+            "completedAt": "2026-10-03T09:01:24.488Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8e699214b5cd81ab340f2ebdc2303fc2a7950a5c",
+            "completedAt": "2026-10-03T09:01:24.488Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T09:01:24.488Z"
       }
     }
   ],
