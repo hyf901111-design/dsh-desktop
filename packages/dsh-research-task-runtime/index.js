@@ -413,6 +413,9 @@ function requestedSinglePanelType(prompt) {
 
 function workbenchPanelFormat(prompt) {
   if (!/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(prompt)) {
+    // Explicit custom-page delivery wins over business words such as approval
+    // and progress, or native template names mentioned as data references.
+    if (/(?:自包含\s*HTML|type\s*=\s*html|HTML\s*自定义)/iu.test(prompt.split('\n')[0])) return 'html'
     // Editing a card replaces its user-facing requirement, which may no longer
     // contain the planner header. An explicit registered preset still carries
     // the same compact data contract and tool scope.
@@ -1092,15 +1095,14 @@ export class ResearchTaskRuntime {
     let request = validateResearchTaskStart(raw)
     await this.authorizeParent?.(request.parentSessionId)
     // Older workbench cards saved the panel content prompt, while their first
-    // task carried the full format and visual contract. A retry must reuse that
-    // original request so it receives the same bounded workbench prompt and
-    // empty-output recovery as a newly planned panel.
+    // task carried the full format and visual contract. Restore only a complete
+    // unchanged saved requirement; matching its first line would discard edits.
     if (request.kind === 'container' && !workbenchPanelFormat(request.prompt)) {
       const firstLine = request.prompt.split('\n')[0].trim()
       if (firstLine.length >= 16) {
         const original = [...this.tasks.values()].find(task => task.kind === 'container' &&
           task.parentSessionId === request.parentSessionId && task.canvasNodeId === request.canvasNodeId &&
-          workbenchPanelFormat(task.prompt) && task.prompt.includes(firstLine))
+          workbenchPanelFormat(task.prompt) && task.prompt.includes(request.prompt.trim()))
         if (original) request = Object.freeze({ ...request, prompt: original.prompt })
       }
     }
