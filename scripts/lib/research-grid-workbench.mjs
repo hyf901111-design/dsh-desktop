@@ -184,13 +184,14 @@ export function patchResearchGridWorkbench(source){
   {
     const marker="'data-research-global-arrange':''",at=source.indexOf(marker),start=source.lastIndexOf("(0,react_jsx_runtime.jsx)('button'",at),suffix="className:'odyssey-tool-icon'})})",finish=source.indexOf(suffix,at)
     if(at<0||start<0||finish<0)throw Error('Workbench arrange button anchor missing')
-    change(source.slice(start,finish+suffix.length),"(0,react_jsx_runtime.jsx)(WorkbenchArrangeTool,{rootRef,workspace,nodes:canvasNodes,sessionId,disabled:sharedReadOnly||canvasNodes.length===0,onArrange:message=>setClipboardFeedback({state:'success',kind:'arrange',message})})")
+    change(source.slice(start,finish+suffix.length),"(0,react_jsx_runtime.jsx)(WorkbenchArrangeTool,{rootRef,workspace,nodes:canvasNodes,sessionId,disabled:sharedReadOnly||canvasNodes.length===0,onArrange:(message,state='success')=>setClipboardFeedback({state,kind:'arrange',message})})")
   }
   change("const button = root.querySelector('[data-research-global-'+attribute+']')","const button = root.ownerDocument.querySelector('[data-ework-toolbar-owner=\"'+CSS.escape(sessionId)+'\"] [data-research-global-'+attribute+']')")
   change('const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement);','const canvasOwnsFocus = () => document.activeElement === root || root.contains(document.activeElement) || document.activeElement?.closest?.("[data-ework-toolbar-owner]")?.getAttribute("data-ework-toolbar-owner")===sessionId;')
   change('const historyShortcut = event.metaKey && !event.altKey && (event.code === "KeyZ" || event.code === "KeyY");','const historyShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && !event.isComposing && !event.defaultPrevented && (event.code === "KeyZ" || event.code === "KeyY");')
   change('historyShortcut && canvasOwnsFocus() && !isInteractiveTarget(event.target)','historyShortcut && canvasOwnsFocus() && !(root.hasAttribute("data-ework-grid") ? event.target?.closest?.("input,textarea,select,[contenteditable]:not([contenteditable=false]),[role=textbox]") : isInteractiveTarget(event.target))')
   change('clipboardFeedback === null ? null : (0, react_jsx_runtime.jsx)("div", {','clipboardFeedback === null ? null : (0, react_jsx_runtime.jsx)(WorkbenchToolbar, {rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth,bottomOffset:86,')
+  change("children: clipboardFeedback.kind==='arrange'?","children: clipboardFeedback.kind==='arrange'&&clipboardFeedback.state==='success'?")
   change('function ResearchCanvasActionReceipt({workspace}) {','function ResearchCanvasActionReceipt({workspace,rootRef,sessionId,availableWidth}) {')
   change("return react_jsx_runtime.jsxs('div',{'data-canvas-action-receipt':'',","return react_jsx_runtime.jsxs(WorkbenchToolbar,{rootRef,sessionId,availableWidth,bottomOffset:86,'data-workbench-notice':'','data-canvas-action-receipt':'',")
   change('(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace})','(0,react_jsx_runtime.jsx)(ResearchCanvasActionReceipt,{workspace,rootRef,sessionId,availableWidth:snapshot.canvasSize.availableWidth})')

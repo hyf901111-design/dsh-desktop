@@ -579,6 +579,16 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
   },[open,rootRef])
   const run=next=>{
     if(disabled||!rootRef.current)return
+    const requested={three:3,two:2,one:1}[next],lanes=Math.min(requested||1,nodes.length)
+    if(requested>1&&lanes>1){
+      const size=workspace.getSnapshot().canvasSize,width=Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity))
+      if(Math.floor(40/lanes)<createResearchGrid().metrics(width).minColumns){
+        setOpen(false)
+        onArrange(workbenchText(next==='three'?'画布宽度不足，无法进行三排整理，请扩大画布后重试':'画布宽度不足，无法进行双排整理，请扩大画布后重试'),'error')
+        toggleRef.current?.focus({preventScroll:true})
+        return
+      }
+    }
     if(!arrangeWorkbenchContents(rootRef.current,workspace,measureWorkbenchContents(rootRef.current,nodes),next))return
     setMode(next);setOpen(false)
     const title=options.find(o=>o[0]===next)[1]

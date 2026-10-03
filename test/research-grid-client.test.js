@@ -451,7 +451,7 @@ it('整理菜单支持键盘选择、Esc和点击外部关闭，空画布禁止�
 })
 it('三排整理等待网页重新测高后仍保留三列，整笔只撤销一步',async()=>{
  const f=await fixture(true),w=f.workspace,n=id=>({...text(id),kind:'generated-container',containerPrompt:'文章',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:id,html:'<p>'+id+'</p>'}})
- await act(async()=>{w.setCanvasSize({width:640,height:700,availableWidth:640});w.setWorkbenchWidth(640);w.setArtifacts(['a','b','c','d'].map(n))})
+ await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000);w.setArtifacts(['a','b','c','d'].map(n))})
  const before=w.getWorkbenchCells()
  await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'))
  await f.event('click',f.document.querySelector('[data-workbench-arrange-menu] [data-arrange-mode=three]'))
@@ -479,6 +479,23 @@ it('固定排数经过侧栏挤窄和重开仍保持选择，整理不会改变�
  await act(async()=>w.persist())
  const reopened=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');reopened.setCanvasSize({width:640,height:700,availableWidth:640});reopened.setWorkbenchWidth(640)
  expect(reopened.getWorkbenchVisibleCells().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+})
+
+it.each([{mode:'three',width:880,label:'三排整理'},{mode:'two',width:550,label:'双排整理'}])('$label宽度不足只在点击后于工具栏上方提示，保留当前布局',async({mode,width,label})=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setCanvasSize({width,height:700,availableWidth:width});w.setWorkbenchWidth(width);w.setArtifacts(['a','b','c','d'].map(id=>text(id)))})
+ const before=w.getWorkbenchCells(),toggle=f.document.querySelector('[data-workbench-arrange-toggle]')
+ expect(f.document.querySelector('[data-research-arrange-feedback]')).toBeNull()
+ await f.event('click',toggle)
+ expect(f.document.querySelector('[data-research-arrange-feedback]')).toBeNull()
+ await f.event('click',f.document.querySelector('[data-arrange-mode='+mode+'][role=menuitemradio]'))
+ const notice=f.document.querySelector('[data-research-arrange-feedback]')
+ expect(notice).not.toBeNull();expect(notice.textContent).toContain('画布宽度不足');expect(notice.textContent).toContain(label)
+ expect(f.canvas.contains(notice)).toBe(false)
+ expect(parseFloat(notice.style.bottom)-parseFloat(f.document.querySelector('[data-ework-toolbar]').style.bottom)).toBe(66);expect(notice.getAttribute('role')).toBe('alert');expect(notice.querySelector('img')).toBeNull()
+ expect(w.getWorkbenchCells()).toEqual(before)
+ expect(f.document.querySelector('.ew-arrange-tool').getAttribute('data-arrange-mode')).toBe('standard')
+ expect(f.document.querySelector('[data-workbench-arrange-menu]')).toBeNull()
 })
 it('未完成智能容器和链接草稿拖到空位后保留落点，生成期间及重新打开不向上吸附',async()=>{
  const f=await fixture(true),w=f.workspace,step=24.65
