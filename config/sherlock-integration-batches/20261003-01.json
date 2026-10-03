@@ -11,33 +11,33 @@
         "schemaVersion": 1,
         "featureName": "综合工作台多代理网页生成与可读性修复",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "2347d8c1daf78e4b9ba9724ab5bbde1dfe778fbc",
-        "tipCommit": "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b",
+        "baseCommit": "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b",
+        "tipCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
         "commits": [
           {
-            "commit": "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b",
+            "commit": "055922933c01bc468e55d5813d31f96505f07d0a",
             "parents": [
-              "2347d8c1daf78e4b9ba9724ab5bbde1dfe778fbc"
+              "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b"
             ],
-            "subject": "修复综合工作台网页组件共享协议与真实数据生成路由"
+            "subject": "修复多工作台模型排队超时与网页主题样式自动恢复"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/design-policy.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/shared-component-contract.js"
+            "path": "packages/dsh-research-task-runtime/workbench-model-queue.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+            "path": "test/research-design-policy.test.js"
           },
           {
             "status": "M",
@@ -49,15 +49,16 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/research-design-policy.test.js",
               "test/research-task-runtime.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/workbench-style.test.js",
-              "test/component-generation-prompt-routing.test.js"
+              "test/research-interactive-artifact.test.js",
+              "test/component-generation-prompt-routing.test.js",
+              "test/workbench-model-queue.test.js"
             ],
             "outcome": "passed",
-            "summary": "219项共享协议、联网工具路由、快照和模板映射边界及展示聚焦检查通过",
-            "verifiedCommit": "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b",
-            "completedAt": "2026-10-03T07:07:04.587242+00:00",
+            "summary": "305项生成、共享、主题角色修复和模型排队预算聚焦检查通过",
+            "verifiedCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
+            "completedAt": "2026-10-03T07:34:24.202382+00:00",
             "timeoutMs": 120000
           },
           {
@@ -68,8 +69,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b",
-            "completedAt": "2026-10-03T07:07:04.587242+00:00",
+            "verifiedCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
+            "completedAt": "2026-10-03T07:34:24.202382+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -84,43 +85,11 @@
           "复验筛选详情、主题切换和整理画布"
         ],
         "risks": [
-          "源数据只有快照的自定义HTML不声明自动更新",
-          "样本量12，不代表全局成功率",
-          "旧版基线12个全部失败；新的客户端模型生成还需复验"
+          "HTML快照不声明自动数据更新",
+          "12个样本不能代表全局成功率",
+          "第一次修复后1/12成功，继续修复主题角色与排队计时后需要客户端重试复验"
         ],
-        "generatedAt": "2026-10-03T07:07:04.587242+00:00"
-      },
-      "merged": {
-        "mergeCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
-        "verificationCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
-            "completedAt": "2026-10-03T07:07:22.447Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "aa4fc737cdc73429c7faabd0b3dae2d1efff27cb",
-            "completedAt": "2026-10-03T07:07:22.447Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T07:07:22.447Z"
+        "generatedAt": "2026-10-03T07:34:24.202382+00:00"
       }
     }
   ],
