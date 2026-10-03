@@ -165,7 +165,9 @@ body [data-ework-toolbar]>.ew-arrange-tool:has([aria-expanded=true])>button::aft
 .ew-arrange-layout-icon{display:block;flex:none;width:20px;height:20px}
 .ew-arrange-menu .ew-arrange-layout-icon{width:16px;height:16px}
 body .ew-arrange-menu,body[data-ds-dark-theme] .ew-arrange-menu{display:flex;flex-direction:column;gap:4px;width:max-content;padding:8px;border:1px solid #ffffff14;border-radius:12px;background:#202124;color:#fff;box-shadow:0 5px 18px #0005;font:12px/18px Inter,"Noto Sans SC",system-ui}
-body .ew-arrange-menu button{gap:8px;min-height:31px;padding:6px;border-radius:6px;white-space:nowrap;background:transparent!important}
-body .ew-arrange-menu button:is(:hover,:focus-visible){background:#139dff!important;color:#fff!important;outline:0}
+/* Arrange uses its checkmark alone for selection, overriding the shell's
+   shared radio-menu selected background without changing other menus. */
+body [data-workbench-arrange-menu].ew-arrange-menu>button[role=menuitemradio][data-arrange-mode]{gap:8px;min-height:31px;padding:6px;border-radius:6px;white-space:nowrap;background:transparent!important}
+body [data-workbench-arrange-menu].ew-arrange-menu>button[role=menuitemradio][data-arrange-mode]:is(:hover,:focus-visible){background:#139dff!important;color:#fff!important;outline:0}
 body .ew-arrange-menu .ew-arrange-check{flex:none;opacity:0}
 body .ew-arrange-menu [aria-checked=true] .ew-arrange-check{opacity:1}
