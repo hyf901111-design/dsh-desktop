@@ -11,29 +11,21 @@
         "schemaVersion": 1,
         "featureName": "综合工作台多代理网页生成与可读性修复",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "2d00b3d6d9dba7b9927684640e50bc378de580ae",
-        "tipCommit": "49b813a95abfed77f369ebf0900d821b7d773710",
+        "baseCommit": "49b813a95abfed77f369ebf0900d821b7d773710",
+        "tipCommit": "803edf7d11b38a1659458788db2fbe75139c44bc",
         "commits": [
           {
-            "commit": "49b813a95abfed77f369ebf0900d821b7d773710",
+            "commit": "803edf7d11b38a1659458788db2fbe75139c44bc",
             "parents": [
-              "2d00b3d6d9dba7b9927684640e50bc378de580ae"
+              "49b813a95abfed77f369ebf0900d821b7d773710"
             ],
-            "subject": "补强长来源正文脚本转义指引与语法修复定位"
+            "subject": "修复综合工作台长文本表格相邻列重叠"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/shared-component-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
-          },
-          {
-            "status": "M",
-            "path": "test/shared-component-validation.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
           }
         ],
         "checks": [
@@ -41,14 +33,14 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/shared-component-validation.test.js",
-              "test/research-task-runtime.test.js",
-              "test/component-generation-prompt-routing.test.js"
+              "test/workbench-component-presentation.test.js",
+              "test/workbench-design-contract.test.js",
+              "test/financial-series-intrinsic.test.js"
             ],
             "outcome": "passed",
-            "summary": "224项脚本语法、共享接入、生成路由及运行时聚焦检查通过",
-            "verifiedCommit": "49b813a95abfed77f369ebf0900d821b7d773710",
-            "completedAt": "2026-10-03T08:45:34.380Z",
+            "summary": "17项工作台呈现、设计约束及金融表格检查通过",
+            "verifiedCommit": "803edf7d11b38a1659458788db2fbe75139c44bc",
+            "completedAt": "2026-10-03T09:00:46.862Z",
             "timeoutMs": 120000
           },
           {
@@ -59,8 +51,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "49b813a95abfed77f369ebf0900d821b7d773710",
-            "completedAt": "2026-10-03T08:45:34.381Z",
+            "verifiedCommit": "803edf7d11b38a1659458788db2fbe75139c44bc",
+            "completedAt": "2026-10-03T09:00:46.863Z",
             "timeoutMs": 120000
           }
         ],
@@ -77,41 +69,10 @@
         "risks": [
           "HTML快照不声明自动更新",
           "样本成功率不代表全部任务",
-          "长MCP正文不重复嵌入JS字符串，语法失败反馈安全行列；集成后复验审批账本"
+          "长MCP正文不重复嵌入JS字符串，语法失败反馈安全行列；集成后复验审批账本",
+          "research-html-theme非工作台已有4项失败在758c1381基线复现，未因本次CSS改动新增；集成客户端复验长文本换行"
         ],
         "generatedAt": "2026-10-03T08:45:34.381Z"
-      },
-      "merged": {
-        "mergeCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
-        "verificationCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
-            "completedAt": "2026-10-03T08:52:30.962Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1ae4debed80d6652236ce038fd1a5e9dde671d40",
-            "completedAt": "2026-10-03T08:52:30.962Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T08:52:30.962Z"
       }
     }
   ],
