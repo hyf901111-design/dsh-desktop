@@ -80,6 +80,38 @@
           "最新修复明确HTML优先级并保留编辑需求；需要客户端重新生成及布局复验"
         ],
         "generatedAt": "2026-10-03T08:16:48.720Z"
+      },
+      "merged": {
+        "mergeCommit": "fdc7ceb50dc6569e1d36bb936c3643d330964467",
+        "verificationCommit": "fdc7ceb50dc6569e1d36bb936c3643d330964467",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "fdc7ceb50dc6569e1d36bb936c3643d330964467",
+            "completedAt": "2026-10-03T08:17:20.638Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fdc7ceb50dc6569e1d36bb936c3643d330964467",
+            "completedAt": "2026-10-03T08:17:20.638Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T08:17:20.638Z"
       }
     }
   ],
