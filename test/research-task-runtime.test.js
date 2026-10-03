@@ -6,6 +6,7 @@ import { strToU8, zipSync } from 'fflate'
 import { describe, expect, it, vi } from 'vitest'
 import { workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
+import { registerWorkbenchModelQueue } from '../packages/dsh-research-task-runtime/workbench-model-queue.js'
 
 const runtimeModule = () => import('../packages/dsh-research-task-runtime/index.js')
 
@@ -1385,6 +1386,33 @@ describe('Research task Subagent adapter', () => {
     const handle = await fixture.start('创建实时协作天气面板，同步当前状态，并查询北京今日天气。')
     expect(fixture.ctx.web.search).toHaveBeenCalled()
     await handle.dispose()
+  })
+
+  it('keeps provider queue waiting outside the component generation and retrieval deadlines', async () => {
+    const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers()
+    const parent={id:'parent-1',session:{header:{},events:[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'创建研究工作台'}]}}]}}
+    const child={id:'child-1',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}}},result=Promise.withResolvers()
+    const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
+    const on=ctx.on;let stream
+    ctx.on=(name,fn)=>name==='llm/stream'?(stream=fn,()=>{}):on(name,fn)
+    ctx.agents.get=id=>id===child.id?child:parent
+    const disposeQueue=registerWorkbenchModelQueue(ctx)
+    const open=id=>stream({sessionId:id,provider:'kimi'},async function*(){yield {type:'finish',reason:{kind:'stop'}}})[Symbol.asyncIterator]()
+    let handle;const a=open(parent.id),b=open(parent.id)
+    try{
+      await a.next();await b.next()
+      handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query:'离线研究',prompt:'生成组件',signal:new AbortController().signal,onSessionEvent:()=>{}})
+      const queued=open(child.id),waiting=queued.next();let done=false;handle.result.then(()=>{done=true})
+      await vi.advanceTimersByTimeAsync(200000)
+      expect(done).toBe(false)
+      ctx.emit(child,{type:'step/end',seq:1});expect(child.ctx.tools.restrict).not.toHaveBeenCalled()
+      await a.return();await waiting;await queued.return()
+      await vi.advanceTimersByTimeAsync(90001)
+      ctx.emit(child,{type:'step/end',seq:2});expect(child.ctx.tools.restrict).toHaveBeenCalledOnce()
+      expect(done).toBe(false)
+      result.resolve({stopReason:'completed',output:[{type:'text',text:'完成'}]})
+      expect((await handle.result).stopReason).toBe('completed')
+    }finally{await a.return();await b.return();await handle?.dispose();disposeQueue();vi.useRealTimers()}
   })
 
   it('bounds a stuck research child and carries only its search evidence into recovery', async () => {

@@ -3,7 +3,8 @@ import postcss from 'postcss'
 import { parse as parseScript } from '@babel/parser'
 
 export const DESIGN_POLICY_ERROR = 'COMPONENT_DESIGN_POLICY_REQUIRED'
-export const DESIGN_POLICY_REPAIR = '组件设计规范验收未通过。保留原始数据、来源、交互、共享状态和用户框选尺寸，只修复视觉实现，不得降级为静态说明。使用语义 button/input/select 等控件和宿主 --sherlock-control-* 黑白灰变量；主按钮使用 .research-primary 或 data-sherlock-variant="primary"，搭配 control-primary/control-on-primary。业务图表用 chart-*，状态用 status-*-bg/fg，不能把业务色用于控件。删除宿主 --sherlock-* 变量重定义及自造字体，继承宿主 DIN Pro / Noto Sans SC 字体或使用 --sherlock-font-sans。直接返回原 v1 schema 的完整 JSON。'
+export const PANEL_COLOR_INSTRUCTION = '宿主实际颜色变量：正文 --sherlock-text，辅助 --sherlock-muted，背景 --sherlock-bg / --sherlock-surface / --sherlock-surface-muted，边框 --sherlock-border，链接 --sherlock-link。控件用 --sherlock-control-bg / -border / -text / -muted / -primary / -on-primary（均写完整名称）。状态用 --sherlock-status-success-bg/fg、-warning-bg/fg、-danger-bg/fg、-info-bg/fg；仅用于非控件业务标记。直接 var(--sherlock-角色) 引用，不添加 #hex、rgb 或固定颜色备用值，不发明 text-primary、text-secondary、status-*-text 等变量。'
+export const DESIGN_POLICY_REPAIR = '组件设计规范验收未通过。保留原始数据、来源、交互、共享状态和用户框选尺寸，只修复视觉实现，不得降级为静态说明。使用语义 button/input/select 等控件和宿主 --sherlock-control-* 黑白灰变量；主按钮使用 .research-primary 或 data-sherlock-variant="primary"，搭配 control-primary/control-on-primary。业务图表用 chart-*，状态用 status-*-bg/fg，不能把业务色用于控件。删除宿主 --sherlock-* 变量重定义及自造字体，继承宿主 DIN Pro / Noto Sans SC 字体或使用 --sherlock-font-sans。直接返回原 v1 schema 的完整 JSON。' + PANEL_COLOR_INSTRUCTION
 
 // Correct mechanical host-style mistakes without changing data, layout, or script.
 // Other design failures still go through the existing model repair path.
@@ -17,11 +18,33 @@ export function normalizeGeneratedHostStyles(html) {
    else if (decl.prop.toLowerCase() === 'font-family' && declarationIssue(decl.prop, decl.value, false)) {
     decl.value = 'var(--sherlock-font-sans)'; changed = true
    }
+   else if (decl.prop.toLowerCase() === 'font' && declarationIssue(decl.prop, decl.value, false)) {
+    const prefix = normalized(decl.value).match(/^((?:(?:normal|italic|oblique|small-caps|bold|bolder|lighter|[1-9]00)\s+)*[\d.]+(?:px|em|rem|pt|%)\s*(?:\/\s*[\d.]+(?:px|em|rem|pt|%)?)?)\s+/i)?.[1]
+    decl.value = prefix ? `${prefix} var(--sherlock-font-sans)` : 'inherit'; changed = true
+   }
+   else if (COLOR_PROPERTIES.test(decl.prop.toLowerCase())) {
+    const value = decl.value.replace(HOST_ROLE_ALIAS_PATTERN, token => HOST_ROLE_ALIASES[token])
+      .replace(/--sherlock-status-(success|warning|danger|info)-(?:text|border)(?![\w-])/g, '--sherlock-status-$1-fg')
+      .replace(/--sherlock-status-error(?:-(bg|fg))?(?![\w-])/g, (_match, role) => '--sherlock-status-danger-'+(role??'fg'))
+      .replace(/--sherlock-status-(success|warning|danger|info)(?![\w-])/g, '--sherlock-status-$1-fg')
+      .replace(/var\(\s*(--sherlock-[\w-]+)\s*,\s*(?:#[\da-f]{3,8}|rgba?\([^)]*\)|white|black|gray|grey)\s*\)/gi, (match, token) => KNOWN_HOST_COLOR.test(token) ? `var(${token})` : match)
+    if (value !== decl.value) { decl.value = value; changed = true }
+   }
   })
   return open + tree.toString() + close
  })
  return changed ? result : html
 }
+
+const HOST_ROLE_ALIASES = {
+ '--sherlock-text-primary':'--sherlock-text', '--sherlock-text-secondary':'--sherlock-muted', '--sherlock-text-tertiary':'--sherlock-muted',
+ '--sherlock-text-link':'--sherlock-link', '--sherlock-border-subtle':'--sherlock-border', '--sherlock-border-primary':'--sherlock-border', '--sherlock-border-secondary':'--sherlock-border',
+ '--sherlock-bg-surface':'--sherlock-surface', '--sherlock-bg-primary':'--sherlock-bg', '--sherlock-bg-secondary':'--sherlock-surface-muted', '--sherlock-surface-primary':'--sherlock-surface', '--sherlock-surface-secondary':'--sherlock-surface-muted',
+ '--sherlock-control-bg-subtle':'--sherlock-control-bg', '--sherlock-control-bg-hover':'--sherlock-control-bg', '--sherlock-control-fg':'--sherlock-control-text', '--sherlock-control-fg-muted':'--sherlock-control-muted', '--sherlock-control-focus':'--sherlock-control-primary', '--sherlock-control-on-focus':'--sherlock-control-on-primary',
+ '--sherlock-status-neutral-bg':'--sherlock-surface-muted', '--sherlock-status-neutral-fg':'--sherlock-muted'
+}
+const HOST_ROLE_ALIAS_PATTERN = new RegExp('(?:'+Object.keys(HOST_ROLE_ALIASES).join('|')+')(?![\\w-])', 'g')
+const KNOWN_HOST_COLOR = /^--sherlock-(?:text|muted|bg|surface(?:-muted)?|border|link|row-(?:alternate|selected)|control-(?:bg|border|text|muted|primary|on-primary)|chart-[1-6]|status-(?:success|warning|danger|info)-(?:bg|fg)|market-(?:positive|negative))$/
 
 const CONTROLS = 'button,input,select,textarea,option,optgroup,summary,a,[role="button"],[role="tab"],[role="checkbox"],[role="radio"],[role="switch"],[role="slider"],[role="combobox"],[role="menuitem"],.research-primary,.research-secondary,[data-sherlock-variant]'
 const COLOR_PROPERTIES = /^(?:color|background(?:-color|-image)?|(?:border|outline)(?:-(?:top|right|bottom|left))?(?:-color)?|accent-color|caret-color|fill|stroke|(?:box|text)-shadow|text-decoration-color)$/
