@@ -17,6 +17,20 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
+    {
+      version: '1.1.1',
+      date: '2026-10-03',
+      items: [
+        '优化多智能体并行生成工作台，修复字段映射兼容、模型排队超时、网页类型识别和共享协议校验问题。',
+        '增强网页生成格式及自动修复，保留原始机构、作者、数据时点和指标含义；重试时保留用户已编辑的需求。',
+        '新增标准、三排、双排和单排整理；标准整理就近补位，固定排数整理减少组件间空位。',
+        '整理覆盖整个看板，包括尚未滚动到的组件，保留网页内容并按实际内容调整尺寸；宽度不足时在工具栏上方提示。',
+        '表格表头和内容默认单行显示，宽表支持横向浏览；支持拖动列宽、重置列宽，并保留个人列宽设置。',
+        '选中宽表组件后，在表格下方显示可拖动的横向滚动条，修复名称、日期、金额拆行及相邻列重叠。',
+        '修复折线图与组合图表整理后出现大块空白或阅读区域被压缩的问题，并完善后续生成的布局约束。',
+        '统一对话点赞、点踩等操作图标和画布整理图标尺寸；缩小展开箭头，精简整理菜单留白，采用蓝色悬停和透明选中样式。'
+      ]
+    },
     {"version": "1.1.0", "date": "2026-10-03", "items": ["新增网格研究画布，支持对齐、拖动缩放、框选创建与针对组件提问，优化窄窗口布局和一键整理。", "扩展至74类预置业务组件与图表，覆盖金融行情、财务研究、运营、文件图库、日历、音频及视频。", "优化模板优先的批量创建与刷新，减少逐卡重复生成；保留完整数据、来源、时点、单位及缺失原因。", "完善图表图例、键盘读数、完整数据与个人交互状态恢复，统一浅色、深色和企业主题及首次加载动效。", "统一组件最小尺寸，长标题右侧渐隐并支持悬停滚动预览，修复控件文字溢出和输入框聚焦描边。", "修复日历日期网格与事件布局；精简链接和智能组件创建界面，输入区域随组件尺寸调整。", "修复YouTube登录回传，登录后返回原组件并保留视频网址和播放起点。", "稳定链接网页自适应与手动缩放，修复持续缩小、放大失效及调节组件尺寸后的缩放跳变。", "加密保存本人网页登录会话与当前页面，客户端重启后恢复；登出和删除组件时同步清理。", "修复折叠侧栏头像对齐，完善插件与工具配置、MCP取数超时处理和桌面输入稳定性。"]},
     {"version": "1.0.6", "date": "2026-09-22", "items": ["工作区会话完成后发送 macOS 通知，支持直接预览回答摘要并点击唤回客户端", "补齐定时任务、画布工具提示和自动刷新菜单的英文翻译", "会话列表仅在悬停或操作时显示更多按钮与遮罩，默认完整利用标题空间", "修复定时任务过期刷新覆盖新状态和关闭后继续轮询的问题", "优化界面翻译扫描与协作画布预览刷新，减少无效后台工作"]},
     {"version": "1.0.5", "date": "2026-09-21", "items": ["修复组件定时任务关闭右侧栏后露出原面板的问题，重新展开时保留任务设置", "定时任务页签纳入已打开页签菜单，切换与选中状态保持一致", "对话页签新增图标，页签宽度贴合内容，拥挤时优先显示当前页签并缩略其他文字", "保持页签图标尺寸，仅选中的可关闭页签显示关闭按钮", "优化协作成员弹层背景与阴影，减少头像下方的残影色块"]},
@@ -268,6 +282,20 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.1.1',
+      date: '2026-10-03',
+      items: [
+        'Improved parallel workbench generation with fixes for field mappings, model queue timeouts, webpage type detection and shared-state validation.',
+        'Strengthened webpage output and automatic repair, retaining original institutions, authors, timestamps and metric meanings, and preserving edited requirements during retries.',
+        'Added Standard, Three-column, Two-column and Single-column Arrange modes, with nearby gap filling and more compact fixed-column layouts.',
+        'Arrange now covers the entire board, including components outside the viewport, preserving webpage content and sizing to actual content, with a toolbar notice when width is insufficient.',
+        'Table headers and cells use single-line defaults with horizontal browsing for wide tables, draggable column widths, reset controls and saved personal widths.',
+        'Selected wide tables show a draggable horizontal scrollbar beneath the table, fixing broken names, dates and amounts and overlapping columns.',
+        'Fixed large blank areas and compressed reading regions after arranging line charts and composite charts, and improved layout rules for future generation.',
+        'Unified chat action and canvas Arrange icon sizes, reduced the dropdown arrow, tightened menu spacing and added blue hover with transparent selected options.'
+      ]
+    },
     {"version": "1.1.0", "date": "2026-10-03", "items": ["Added a grid research canvas with alignment, drag and resize, selection-based creation, component questions, compact layouts and improved Arrange.", "Expanded to 74 built-in business components and charts for market data, financial research, operations, files and galleries, calendars, audio and video.", "Improved template-first batch creation and refresh with less repeated generation, preserving complete data, sources, timestamps, units and missing-data reasons.", "Improved chart legends, keyboard readouts, full data and personal interaction restoration, with consistent light, dark and enterprise themes and initial animations.", "Unified component minimum sizes, added fading titles with hover scrolling, and fixed text overflow and input focus outlines.", "Fixed calendar date and event layouts; simplified link and smart-component creation with input areas that resize with the component.", "Fixed YouTube login return to the original component while retaining the video URL and playback starting point.", "Stabilized embedded-page fitting and manual zoom, fixing continuous shrinking, ineffective zoom-in and zoom jumps after component resizing.", "Encrypted personal webpage sessions and navigation for restoration after client restart, with cleanup on logout or component removal.", "Fixed collapsed-sidebar avatar alignment and improved plugin and tool configuration, MCP data timeout handling and desktop input reliability."]},
     {"version": "1.0.6", "date": "2026-09-22", "items": ["Receive macOS notifications when workspace tasks finish, with answer previews and click to return to the app", "Complete English translations for scheduled tasks, canvas tooltips and auto-refresh menus", "Show session action buttons and overlays only on hover or interaction, preserving title space at rest", "Fix stale scheduled-task refreshes overwriting newer state and polling resuming after closing", "Reduce unnecessary background work in interface translation and collaborative canvas previews"]},
     {"version": "1.0.5", "date": "2026-09-21", "items": ["Fix component task sidebar closing and preserve task settings when reopened", "Include scheduled task tabs in the open-tabs menu with consistent selection", "Add a conversation tab icon and compact widths, prioritizing the active tab when space is limited", "Keep tab icons at their intended size and show close controls only on active closable tabs", "Refine collaboration member popover backgrounds and shadows to reduce visual artifacts beneath avatars"]},
