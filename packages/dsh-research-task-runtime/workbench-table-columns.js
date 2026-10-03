@@ -101,7 +101,7 @@ export const WORKBENCH_TABLE_COLUMNS_CSS = `
 body table[data-workbench-table-columns]{min-width:max-content!important;max-width:none!important;table-layout:auto!important}
 body table[data-workbench-table-columns] :is(th,td){white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;max-width:none!important}
 body table[data-workbench-table-columns] :is(th,td)[data-column-wrap="true"]{white-space:normal!important;overflow-wrap:anywhere!important}
-body table[data-workbench-table-columns] th{padding-right:16px!important}
+body table[data-workbench-table-columns] th{position:sticky!important;top:0;padding-right:16px!important}
 body table[data-workbench-table-columns] th button{white-space:inherit!important;overflow-wrap:inherit!important}
 body [data-workbench-column-resize]{position:absolute;inset:0 -4px 0 auto;width:9px;cursor:col-resize;touch-action:none;user-select:none;z-index:3;background:transparent!important}
 body [data-workbench-column-resize]:is(:hover,:focus-visible){background:var(--sherlock-border,#aaa)!important;outline:none}

@@ -505,6 +505,15 @@ export function measureWorkbenchContents(root,nodes) {
   }
   return measured
 }
+export function useWorkbenchArrangePreview(node) {
+  const [active,setActive]=react.useState(false)
+  react.useLayoutEffect(()=>{
+    const receive=event=>{if(event.detail?.ids?.includes(node.id))setActive(event.detail.active===true)}
+    window.addEventListener('ework:arrange-preview',receive)
+    return()=>window.removeEventListener('ework:arrange-preview',receive)
+  },[node.id])
+  return active&&node.containerSpec?.type!=='web'
+}
 export function arrangeWorkbenchContents(root,workspace,measured,mode='standard') {
   root.focus({preventScroll:true})
   root.__eworkContentFit?.finish()
@@ -513,7 +522,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   if(!workspace.organizeCanvas(measured,mode))return false
   const grid=createResearchGrid(),width=before.canvasSize.availableWidth||before.canvasSize.width||800,m=grid.metrics(width)
   const arranged=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
-  const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html').map(n=>{
+  const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html'&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
     const old=oldNodes.find(o=>o.id===n.id),cache=oldCache.get(n.id),frame=root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] iframe[data-research-html-artifact]')
     const inset=cache?Math.max(0,old.width-cache.width):Math.max(0,n.width-(frame?.clientWidth||n.width))
     return [n.id,{html:n.containerSpec.html,width:Math.round(n.width-inset)}]
@@ -524,12 +533,13 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     if(done)return;done=true;view.clearTimeout(settle);view.clearTimeout(deadline);view.clearTimeout(nativeTimer)
     root.removeEventListener('pointerdown',finish,true);view.removeEventListener('keydown',finish,true)
     if(root.__eworkContentFit===task)delete root.__eworkContentFit
+    view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:false}}))
     if(unchanged())workspace.persist()
   }
   const refit=(native=false)=>{
     if(done)return
     if(!unchanged()){finish();return}
-    const natural=native?measureWorkbenchContents(root,[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]):new Map()
+    const natural=native||nativeReady?measureWorkbenchContents(root,[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]):new Map()
     let complete=true
     const currentNodes=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
     const next=cells.map(c=>{
@@ -537,7 +547,9 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
       const matched=target&&cache?.html===target.html&&Math.abs(cache.width-target.width)<=2
       if(target&&!matched)complete=false
       const node=currentNodes.find(n=>n.id===c.id)
-      const height=matched?workbenchMeasuredDimensions(node,cache,target.width).height:!target?natural.get(c.id)?.height:null
+      const nativeCard=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"] [data-sherlock-market-native]')
+      if(target&&nativeCard){expected.delete(c.id);complete=false}
+      const height=matched?workbenchMeasuredDimensions(node,cache,target.width).height:!target||nativeCard?natural.get(c.id)?.height:null
       return height?{...c,h:Math.max(grid.minimum(currentNodes.find(n=>n.id===c.id),m).h,Math.min(300,Math.ceil((height+m.gap)/m.step)))}:c
     })
     const measuredCells=new Map(next.map(c=>[c.id,c]))
@@ -553,14 +565,16 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     if(complete&&nativeReady){view.clearTimeout(settle);settle=view.setTimeout(finish,240)}
   }
   const task={refit,finish};root.__eworkContentFit=task
+  view.dispatchEvent(new view.CustomEvent('ework:arrange-preview',{detail:{ids:arranged.map(n=>n.id),active:true}}))
   root.addEventListener('pointerdown',finish,true);view.addEventListener('keydown',finish,true)
-  deadline=view.setTimeout(finish,1800);nativeTimer=view.setTimeout(()=>{nativeReady=true;refit(true)},380)
+  deadline=view.setTimeout(finish,6000);nativeTimer=view.setTimeout(()=>{nativeReady=true;refit(true)},380)
   refit();return true
 }
 export function WorkbenchArrangeIcon({mode}) {
   const count={three:3,two:2,one:1}[mode]
-  const rects=mode==='one'?[{x:2,y:2,width:12,height:5},{x:2,y:9,width:12,height:5}]:count?Array.from({length:count},(_,i)=>({x:2+i*12/count,y:2,width:12/count-1,height:12})):[{x:2,y:2,width:5,height:5},{x:9,y:2,width:5,height:9},{x:2,y:9,width:5,height:5}]
-  return react_jsx_runtime.jsx('svg',{'aria-hidden':true,className:'ew-arrange-layout-icon',width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.3,children:rects.map((r,i)=>react_jsx_runtime.jsx('rect',{...r,rx:1},i))})
+  const laneWidth=count?(17-(count-1)*2)/count:17
+  const rects=mode==='one'?[{x:3.5,y:3.5,width:17,height:7},{x:3.5,y:13.5,width:17,height:7}]:count?Array.from({length:count},(_,i)=>({x:3.5+i*(laneWidth+2),y:3.5,width:laneWidth,height:17})):[{x:3.5,y:3.5,width:17,height:17}]
+  return react_jsx_runtime.jsxs('svg',{'aria-hidden':true,className:'ew-arrange-layout-icon',width:20,height:20,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round',children:[...rects.map((r,i)=>react_jsx_runtime.jsx('rect',{...r,rx:mode==='standard'?2:1},i)),mode==='standard'?react_jsx_runtime.jsx('path',{d:'M12 3.5v17M12 12h8.5'}):null]})
 }
 export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled,onArrange}) {
   useWorkbenchLocale()
@@ -621,7 +635,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
       const cards=[...root.querySelectorAll('[data-research-node-id]')]
       for(const [card,bar] of scrollbars)if(!cards.includes(card)){bar.destroy();scrollbars.delete(card)}
       for(const card of cards){
-        if(!scrollbars.has(card))scrollbars.set(card,installWorkbenchScrollbars(card,()=>card.querySelector('[data-research-preview-body]')||card.querySelector('.rScV5Q_containerDraft')||card,()=>card.getAttribute('data-selected')==='true'||card.hasAttribute('open'),()=>[card.querySelector('[data-research-preview-body]'),...card.querySelectorAll('.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_containerDraft,textarea,.odyssey-generation-records')],()=>card.querySelector('iframe[data-research-html-artifact]')))
+        if(!scrollbars.has(card))scrollbars.set(card,installWorkbenchScrollbars(card,()=>card.querySelector('[data-research-preview-body]')||card.querySelector('.rScV5Q_containerDraft')||card,()=>card.getAttribute('data-selected')==='true'||card.hasAttribute('open'),()=>[card.querySelector('[data-research-preview-body]'),...card.querySelectorAll('.rScV5Q_containerTableScroll,.fund-native-table-wrap,.odyssey-native-table-grid,.rScV5Q_containerMarkdown,.rScV5Q_textPreview,.rScV5Q_containerDraft,textarea,.odyssey-generation-records')],()=>card.querySelector('iframe[data-research-html-artifact]')))
         scrollbars.get(card).refresh()
       }
     }
