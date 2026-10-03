@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "综合工作台多代理网页生成与可读性修复",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b",
-        "tipCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
+        "baseCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
+        "tipCommit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
         "commits": [
           {
-            "commit": "055922933c01bc468e55d5813d31f96505f07d0a",
+            "commit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
             "parents": [
-              "f2aa98ebaa0a6b23dffe868c3c4f07594d0b6d0b"
+              "055922933c01bc468e55d5813d31f96505f07d0a"
             ],
-            "subject": "修复多工作台模型排队超时与网页主题样式自动恢复"
+            "subject": "补强自定义网页交付格式与嵌套业务标记修复约束"
           }
         ],
         "files": [
@@ -30,18 +30,6 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-model-queue.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-design-policy.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -49,16 +37,13 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-design-policy.test.js",
-              "test/research-task-runtime.test.js",
-              "test/research-interactive-artifact.test.js",
               "test/component-generation-prompt-routing.test.js",
-              "test/workbench-model-queue.test.js"
+              "test/research-design-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "305项生成、共享、主题角色修复和模型排队预算聚焦检查通过",
-            "verifiedCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
-            "completedAt": "2026-10-03T07:34:24.202382+00:00",
+            "summary": "105项生成提示路由和样式约束聚焦检查通过",
+            "verifiedCommit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
+            "completedAt": "2026-10-03T07:56:02.049270+00:00",
             "timeoutMs": 120000
           },
           {
@@ -69,8 +54,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
-            "completedAt": "2026-10-03T07:34:24.202382+00:00",
+            "verifiedCommit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
+            "completedAt": "2026-10-03T07:56:02.049872+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -85,43 +70,11 @@
           "复验筛选详情、主题切换和整理画布"
         ],
         "risks": [
-          "HTML快照不声明自动数据更新",
-          "12个样本不能代表全局成功率",
-          "第一次修复后1/12成功，继续修复主题角色与排队计时后需要客户端重试复验"
+          "HTML快照不声明自动更新",
+          "样本成功率不代表全部任务",
+          "第三轮针对剩余格式和嵌套业务色失败继续客户端复验"
         ],
         "generatedAt": "2026-10-03T07:34:24.202382+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
-        "verificationCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
-            "completedAt": "2026-10-03T07:34:38.770Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
-            "completedAt": "2026-10-03T07:34:38.770Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T07:34:38.770Z"
       }
     }
   ],
