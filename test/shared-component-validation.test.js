@@ -28,6 +28,13 @@ describe('generated shared-state acceptance', () => {
    expect(sharedComponentIssue('<p>研究报告</p><script type="application/ld+json">{}</script>')).toBeUndefined()
    expect(sharedComponentIssue(page('const ='))).toContain('语法')
  })
+ it('identifies an unterminated source string without exposing its contents', () => {
+   const issue = sharedComponentIssue(page('const body="private-marker\nsource text";'))
+   expect(issue).toContain('第1行第12列')
+   expect(issue).toContain('字符串未闭合')
+   expect(issue).toContain('初始 HTML')
+   expect(issue).not.toContain('private-marker')
+ })
  it('allows scripted static display and local hover without demanding shared business state', () => {
    const chart='<canvas id="chart"></canvas><script>const canvas=document.querySelector("canvas");canvas.addEventListener("mousemove",e=>canvas.title=String(e.offsetX));canvas.addEventListener("mouseleave",()=>canvas.title="");window.addEventListener("resize",()=>canvas.width=300);</script>'
    const orderBook='<div id="book"></div><script>const initial={price:"1478.60"};const handle=window.sherlockShared.register({initialState:initial,reduce:s=>s,render:s=>document.getElementById("book").textContent=s.price});document.getElementById("book").textContent=initial.price;</script>'

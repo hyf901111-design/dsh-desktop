@@ -1,7 +1,7 @@
 import { parse as parseHtml } from 'parse5'
 import { parse as parseScript } from '@babel/parser'
 
-export const SHARED_STATE_REPAIR = '共享状态验收未通过。保留用户要求的交互和界面，把业务状态集中到 window.sherlockShared.register 的 initialState 中，提供 reduce 和 render；事件通过返回句柄 dispatch 提交操作，持续推进使用 tick/tickMs（至少100ms）。不能只加入接口名称或空注册，不得用各端独立 setInterval 推进，不得降级成静态说明、同屏双人或声称平台没有同步通道。'
+export const SHARED_STATE_REPAIR = '共享状态验收未通过。若具体问题是脚本语法，先按行列修复语法，再检查共享接入；单/双引号字符串不得直接跨行。长来源正文保留在初始 HTML 文本节点，以 textContent 读取，脚本只保存筛选与展开状态，不重复内嵌长正文字符串。保留用户要求的交互和界面，把业务状态集中到 window.sherlockShared.register 的 initialState 中，提供 reduce 和 render；事件通过返回句柄 dispatch 提交操作，持续推进使用 tick/tickMs（至少100ms）。不能只加入接口名称或空注册，不得用各端独立 setInterval 推进，不得降级成静态说明、同屏双人或声称平台没有同步通道。'
 
 const key = node => node?.type === 'Identifier' ? node.name : node?.type === 'StringLiteral' ? node.value : undefined
 const member = node => node?.type === 'MemberExpression' || node?.type === 'OptionalMemberExpression'
@@ -46,7 +46,15 @@ export function sharedComponentIssue(html, { required = false } = {}) {
   try {
     for (const source of scripts) programs.push(parseScript(source, { sourceType: 'unambiguous' }))
     for (const source of inlineHandlers) programs.push(parseScript(`function handler(event){${source}\n}`))
-  } catch { return '组件脚本语法无效，无法验证共享状态接入。' }
+  } catch (error) {
+    const location = Number.isInteger(error?.loc?.line) && Number.isInteger(error?.loc?.column)
+      ? `脚本第${error.loc.line}行第${error.loc.column + 1}列。` : ''
+    const stringHint = error?.reasonCode === 'UnterminatedString'
+      ? '字符串未闭合；单/双引号字符串不能直接跨行，长来源正文保留在初始 HTML 文本节点并用 textContent 读取。' : ''
+    // Parser messages may echo source data. Return only bounded coordinates and
+    // a known repair hint, never the raw exception or generated source line.
+    return `组件脚本语法无效，无法验证共享状态接入。${location}${stringHint}`
+  }
   const registrations = [], calls = [], bindings = new Map()
   let hasBusinessInteraction = hasInteractiveControl || inlineHandlers.length > 0
   for (const program of programs) walk(program, node => {
