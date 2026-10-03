@@ -11,25 +11,29 @@
         "schemaVersion": 1,
         "featureName": "综合工作台多代理网页生成与可读性修复",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "055922933c01bc468e55d5813d31f96505f07d0a",
-        "tipCommit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
+        "baseCommit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
+        "tipCommit": "2d00b3d6d9dba7b9927684640e50bc378de580ae",
         "commits": [
           {
-            "commit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
+            "commit": "2d00b3d6d9dba7b9927684640e50bc378de580ae",
             "parents": [
-              "055922933c01bc468e55d5813d31f96505f07d0a"
+              "27b72715afda7cad0d9f9b34798dbf00b71d3652"
             ],
-            "subject": "补强自定义网页交付格式与嵌套业务标记修复约束"
+            "subject": "修复自定义网页类型误判与重试覆盖已编辑需求"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/design-policy.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "test/component-generation-prompt-routing.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -38,12 +42,13 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/component-generation-prompt-routing.test.js",
+              "test/research-task-runtime.test.js",
               "test/research-design-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "105项生成提示路由和样式约束聚焦检查通过",
-            "verifiedCommit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
-            "completedAt": "2026-10-03T07:56:02.049270+00:00",
+            "summary": "299项生成路由、重试需求保留、超时及样式聚焦检查通过",
+            "verifiedCommit": "2d00b3d6d9dba7b9927684640e50bc378de580ae",
+            "completedAt": "2026-10-03T08:16:48.719Z",
             "timeoutMs": 120000
           },
           {
@@ -54,8 +59,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "27b72715afda7cad0d9f9b34798dbf00b71d3652",
-            "completedAt": "2026-10-03T07:56:02.049872+00:00",
+            "verifiedCommit": "2d00b3d6d9dba7b9927684640e50bc378de580ae",
+            "completedAt": "2026-10-03T08:16:48.720Z",
             "timeoutMs": 120000
           }
         ],
@@ -72,41 +77,9 @@
         "risks": [
           "HTML快照不声明自动更新",
           "样本成功率不代表全部任务",
-          "第三轮针对剩余格式和嵌套业务色失败继续客户端复验"
+          "最新修复明确HTML优先级并保留编辑需求；需要客户端重新生成及布局复验"
         ],
-        "generatedAt": "2026-10-03T07:34:24.202382+00:00"
-      },
-      "merged": {
-        "mergeCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
-        "verificationCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
-            "completedAt": "2026-10-03T07:57:00.552Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6293073141e353c6ff0cf63055db77cc1e49abe9",
-            "completedAt": "2026-10-03T07:57:00.552Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T07:57:00.552Z"
+        "generatedAt": "2026-10-03T08:16:48.720Z"
       }
     }
   ],
