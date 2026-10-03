@@ -9,43 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "整板整理与表格滚动修复，统一工具栏交互图标",
+        "featureName": "整理菜单蓝色悬停与间距，箭头规则圆角背景",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "612b3b45e000acf60018b168a116431b9eeb2b28",
-        "tipCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
+        "baseCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
+        "tipCommit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
         "commits": [
           {
-            "commit": "4219d97088ecce657394b6f703919f730f0c74ee",
+            "commit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
             "parents": [
-              "612b3b45e000acf60018b168a116431b9eeb2b28"
+              "4219d97088ecce657394b6f703919f730f0c74ee"
             ],
-            "subject": "整理覆盖整板并补齐表格横向滚动，统一工具栏图标与提示样式"
+            "subject": "整理菜单使用蓝色悬停和上下间距，修正展开箭头圆角背景"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-scrollbars.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-table-columns.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -53,88 +33,30 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-arrange-modes.test.js",
-              "test/research-grid-workbench.test.js",
               "test/research-grid-client.test.js",
-              "test/workbench-table-columns.test.js",
-              "test/workbench-natural-charts.test.js",
-              "test/research-html-theme.test.js",
-              "test/research-custom-arrange-content.test.js",
-              "test/research-canvas-storage.test.ts",
-              "test/workbench-component-presentation.test.js",
               "-t",
-              "三排|双排|单排|标准整理|固定排数|整理|网格事务可撤销|改变窗口宽度后撤销|共享只读禁用智能|表格所有表头|all headers|restores widths|merged headers|flex letterboxing|non-chart|loads table column|table widths|工作台覆盖|自定义表格|Arrange preserves|intrinsic|workbench.*content|viewport padding|选中超宽表格|宿主原生滚动条"
+              "整理展开菜单|整理菜单支持|宽度不足只在点击"
             ],
             "outcome": "passed",
-            "summary": "98项整板整理、表格列宽与滚动、图表测高和工具栏聚焦检查通过",
-            "verifiedCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
-            "completedAt": "2026-10-03T12:21:17.149635+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "4219d97088ecce657394b6f703919f730f0c74ee",
-            "completedAt": "2026-10-03T12:21:17.149635+00:00",
+            "summary": "4项整理菜单、键盘选项和宽度提示聚焦检查通过",
+            "verifiedCommit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
+            "completedAt": "2026-10-03T12:36:29.170674+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；集成后核对实际贵金属工作台和工具栏。"
+          "summary": "功能worktree禁止构建共享客户端；集成后核对菜单蓝色悬停与透明已选状态。"
         },
         "acceptanceCriteria": [
-          "表头和所有内容默认单行，超宽横向滚动；手动调窄后该列允许换行",
-          "支持拖动列宽、重开保留及恢复默认，不改源数据及排序",
-          "组合SVG按自身宽高比测量，整理后无大片空白",
-          "三排双排宽度不足时只在点击后于工具栏上方提示且布局不变",
-          "整理覆盖未滑动到的组件并收齐内容自然高度，整次操作一步撤销",
-          "选中超宽表格，在表格下方显示可拖动的横向滚动条",
-          "标准整理恢复原图标，其余图标统一20px和1.8笔画；默认透明，箭头悬停及展开才灰底",
-          "工具栏提示使用正常文字颜色"
+          "箭头默认透明，悬停或展开时显示四角一致的灰色圆角矩形",
+          "菜单选项间有4px上下间隔，悬停和键盘焦点使用蓝色",
+          "已选项背景透明，仅勾选标记指示选择"
         ],
         "risks": [
-          "旧主题测试4项在改动前基线同样失败；已记录基线，未扩大本次范围",
-          "合并批次留待用户在精确客户端验收后晋升main"
+          "集成客户端留待用户验收后晋升main"
         ],
-        "generatedAt": "2026-10-03T12:21:17.149635+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c2e6e8caf9e95caa6599206eea70f317cfcac57e",
-        "verificationCommit": "c2e6e8caf9e95caa6599206eea70f317cfcac57e",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "c2e6e8caf9e95caa6599206eea70f317cfcac57e",
-            "completedAt": "2026-10-03T12:22:41.363Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c2e6e8caf9e95caa6599206eea70f317cfcac57e",
-            "completedAt": "2026-10-03T12:22:41.363Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T12:22:41.363Z"
+        "generatedAt": "2026-10-03T12:36:29.170674+00:00"
       }
     }
   ],
