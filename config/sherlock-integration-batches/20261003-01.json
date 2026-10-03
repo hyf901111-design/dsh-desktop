@@ -81,6 +81,38 @@
           "本次消除两个已复现的失败原因，不推断全量生成失败率"
         ],
         "generatedAt": "2026-10-03T03:54:39.964237+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
+        "verificationCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
+            "completedAt": "2026-10-03T03:55:40.494Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b0c9fd45ce063ed0425b40a099be0f434099d141",
+            "completedAt": "2026-10-03T03:55:40.494Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T03:55:40.494Z"
       }
     }
   ],
