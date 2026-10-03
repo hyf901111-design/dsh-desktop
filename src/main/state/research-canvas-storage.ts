@@ -17,6 +17,7 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.viewport.v1:',
   'ework.research.grid.v1:',
   'ework.research.presentation.v1:',
+  'ework.research.table-columns.v1:',
   'sherlock.research.canvas.preview-revocations.v1:',
   'sherlock.research.session-engaged.v1:'
 ] as const
@@ -36,6 +37,17 @@ function validResearchCanvasStorageKey(value: unknown): value is string {
 function validResearchCanvasStorageValue(value: unknown): value is string {
   return typeof value === 'string' &&
     value.length <= RESEARCH_CANVAS_STORAGE_MAX_VALUE_LENGTH
+}
+
+function validTableColumnPreference(value: string): boolean {
+  try {
+    if (value.length > 512) return false
+    const state = JSON.parse(value)
+    return state === null || Boolean(state && !Array.isArray(state) && Object.keys(state).length === 2 &&
+      Array.isArray(state.widths) && state.widths.length > 0 && state.widths.length <= 40 &&
+      state.widths.every((width: unknown) => Number.isInteger(width) && Number(width) >= 48 && Number(width) <= 1600) &&
+      Array.isArray(state.manual) && state.manual.length === state.widths.length && state.manual.every((manual: unknown) => typeof manual === 'boolean'))
+  } catch { return false }
 }
 
 export function researchCanvasStoragePath(userDataPath: string, key: string): string {
@@ -62,6 +74,7 @@ export class ResearchCanvasStorage {
       return false
     }
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
+    if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
     if (key.startsWith('ework.research.presentation.v1:')) {
       try {
         const preference = JSON.parse(value)
@@ -101,7 +114,8 @@ export class ResearchCanvasStorage {
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
       const record = parsed as { key?: unknown; value?: unknown }
       if (record.key !== key || !validResearchCanvasStorageValue(record.value) ||
-          (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256)) return null
+          (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
+          (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value))) return null
       return record.value
     } catch {
       return null

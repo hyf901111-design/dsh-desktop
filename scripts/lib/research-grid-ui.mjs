@@ -335,6 +335,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before){update(lastPointer);autoFrame=view.requestAnimationFrame(autoScroll)}}
   }
   const down=e=>{
+    if(e.target?.closest?.('[data-workbench-column-resize]'))return
     if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
     if(toolRef.current==='select'&&handleWorkbenchMultiSelect(root,workspace,e))return
     if(e.button!==0||e.target?.closest?.('[data-research-global-toolbar],[role=menu],[role=dialog],.ew-grid-menu'))return
@@ -579,6 +580,16 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
   },[open,rootRef])
   const run=next=>{
     if(disabled||!rootRef.current)return
+    const requested={three:3,two:2,one:1}[next],lanes=Math.min(requested||1,nodes.length)
+    if(requested>1&&lanes>1){
+      const size=workspace.getSnapshot().canvasSize,width=Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity))
+      if(Math.floor(40/lanes)<createResearchGrid().metrics(width).minColumns){
+        setOpen(false)
+        onArrange(workbenchText(next==='three'?'画布宽度不足，无法进行三排整理，请扩大画布后重试':'画布宽度不足，无法进行双排整理，请扩大画布后重试'),'error')
+        toggleRef.current?.focus({preventScroll:true})
+        return
+      }
+    }
     if(!arrangeWorkbenchContents(rootRef.current,workspace,measureWorkbenchContents(rootRef.current,nodes),next))return
     setMode(next);setOpen(false)
     const title=options.find(o=>o[0]===next)[1]
@@ -601,6 +612,10 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const root=rootRef.current;if(!root)return
     root.setAttribute('data-ework-grid','')
     const stopChartMotion=installWorkbenchChartMotion(root)
+    const stopTableColumns=installWorkbenchTableColumns(root,{
+      load:(owner,index,labels)=>workspace.getWorkbenchTableColumns(owner.getAttribute('data-research-node-id'),index,labels),
+      save:(owner,index,labels,state)=>workspace.setWorkbenchTableColumns(owner.getAttribute('data-research-node-id'),index,labels,state)
+    })
     const scrollbars=new Map()
     root.__eworkScrollbars=()=>{
       const cards=[...root.querySelectorAll('[data-research-node-id]')]
@@ -650,7 +665,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     window.addEventListener('resize',measure)
     const scroll=()=>{const s=workspace.getSnapshot();if(Math.abs(s.viewport.y+root.scrollTop)>.5)workspace.setViewport({x:0,y:-root.scrollTop,scale:1})}
     root.addEventListener('scroll',scroll,{passive:true})
-    return()=>{stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
+    return()=>{stopTableColumns();stopChartMotion();root.__eworkContentFit?.finish();observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('message',contentSize);if(root.__eworkContentMeasurements===contentMeasurements)delete root.__eworkContentMeasurements;for(const bar of scrollbars.values())bar.destroy();delete root.__eworkScrollbars;root.removeEventListener('scroll',scroll);root.removeAttribute('data-ework-grid')}
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return

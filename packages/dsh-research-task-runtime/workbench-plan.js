@@ -375,7 +375,7 @@ export function workbenchPanelPrompt(input, p) {
     const template = workbenchDesignTemplate(p);
     const origin = ['chart','reports','news','gantt'].includes(p.type) ? 'Figma 组件族参考' : 'Figma 节点';
     const presentation = p.type === 'html'
-        ? '交付自包含 HTML 与实际业务交互；使用宿主颜色、字体变量和 window.sherlockShared.register 共享状态接口，事件通过返回句柄 dispatch，不实现独立同步定时器。正文13px/20px，辅助说明至少11px/17px，随尺寸换行重排而不缩字。'
+        ? '交付自包含 HTML 与实际业务交互；使用宿主颜色、字体变量和 window.sherlockShared.register 共享状态接口，事件通过返回句柄 dispatch，不实现独立同步定时器。正文13px/20px，辅助说明至少11px/17px，随尺寸重排而不缩字。表格的表头和所有内容默认单行，超宽横向滚动，用户手动调整列宽后才允许该列换行；用标准 table/thead/tbody，宿主提供拖动列宽。组合图表用自然内容高度，SVG 使用 viewBox 和自身宽高比例，不用 height:100%、100vh 或 flex:1 拉伸图表或其竖向容器，不用空白撑高页面。'
         : '组件样式、深浅主题、字体和几何由宿主模板负责；仅提交数据，不自造视觉样式。';
     return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线单标的用 candles，多标的用 datasets，成交量缺失填 null，均不得用通用 chart 或自写 HTML 替代。` : ''}${p.type === 'chart' ? `必须输出 ${'chart.'+(p.artifact?.variant??requestedChartVariant(p.title+' '+p.prompt)??'line')} 的结构化数据。按对应图表契约填写；坐标图的labels与series.values等长，层级/分布/目标图用各自字段。` : ''}${presentation}用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。`;
 }

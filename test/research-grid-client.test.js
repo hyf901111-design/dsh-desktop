@@ -14,6 +14,18 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {researchOptimalDimensions} from '../packages/dsh-research-task-runtime/bento-layout.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
+it('表格所有表头正文默认单行，用户列宽与换行选择在看板重开后保留且数据不变',async()=>{
+ const f=await fixture(true),spec={version:1,type:'table',title:'原数据表',columns:['名称','日期','说明'],rows:[['迈瑞医疗','2026-02-03','原始0及-120万元']]}
+ await act(async()=>f.workspace.setArtifacts([{...text('table-columns-own'),kind:'generated-container',containerPrompt:'原数据表',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}]))
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-workbench-column-resize="1"]')).not.toBeNull())
+ let table=f.host.querySelector('[data-research-container-table]');expect([...table.querySelectorAll('th,td')].every(c=>c.dataset.columnWrap==='false')).toBe(true)
+ await f.event('keydown',table.querySelector('[data-workbench-column-resize="1"]'),{key:'ArrowRight'})
+ expect(table.rows[1].cells[1].dataset.columnWrap).toBe('true');const width=table.style.width
+ await f.render({sessionId:'grid-other'});await f.render()
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-research-container-table]').style.width).toBe(width))
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ table=f.host.querySelector('[data-research-container-table]');expect(table.rows[1].cells[1].dataset.columnWrap).toBe('true');expect(table.rows[1].cells[0].dataset.columnWrap).toBe('false')
+})
 it('附件列表完整保留长名称、零字节和说明，下载与移除权限独立',async()=>{
  const save=vi.fn(async()=>({status:'saved'})),f=await fixture(true,{researchCanvasExport:{save}}),spec={version:1,type:'files',title:'本人原文件',items:[{id:'csv',name:'本人虚构收入记录-这是一个超过窄卡宽度的完整文件名.csv',url:'http://127.0.0.1:58207/own.csv#original',sizeBytes:0,description:'0万元，变化-120万元，缺失原因未提供',permissions:{download:true,remove:false}}]}
  await act(async()=>f.workspace.setArtifacts([{...text('files-own'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))
@@ -451,7 +463,7 @@ it('整理菜单支持键盘选择、Esc和点击外部关闭，空画布禁止�
 })
 it('三排整理等待网页重新测高后仍保留三列，整笔只撤销一步',async()=>{
  const f=await fixture(true),w=f.workspace,n=id=>({...text(id),kind:'generated-container',containerPrompt:'文章',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:id,html:'<p>'+id+'</p>'}})
- await act(async()=>{w.setCanvasSize({width:640,height:700,availableWidth:640});w.setWorkbenchWidth(640);w.setArtifacts(['a','b','c','d'].map(n))})
+ await act(async()=>{w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000);w.setArtifacts(['a','b','c','d'].map(n))})
  const before=w.getWorkbenchCells()
  await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'))
  await f.event('click',f.document.querySelector('[data-workbench-arrange-menu] [data-arrange-mode=three]'))
@@ -479,6 +491,23 @@ it('固定排数经过侧栏挤窄和重开仍保持选择，整理不会改变�
  await act(async()=>w.persist())
  const reopened=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');reopened.setCanvasSize({width:640,height:700,availableWidth:640});reopened.setWorkbenchWidth(640)
  expect(reopened.getWorkbenchVisibleCells().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+})
+
+it.each([{mode:'three',width:880,label:'三排整理'},{mode:'two',width:550,label:'双排整理'}])('$label宽度不足只在点击后于工具栏上方提示，保留当前布局',async({mode,width,label})=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>{w.setCanvasSize({width,height:700,availableWidth:width});w.setWorkbenchWidth(width);w.setArtifacts(['a','b','c','d'].map(id=>text(id)))})
+ const before=w.getWorkbenchCells(),toggle=f.document.querySelector('[data-workbench-arrange-toggle]')
+ expect(f.document.querySelector('[data-research-arrange-feedback]')).toBeNull()
+ await f.event('click',toggle)
+ expect(f.document.querySelector('[data-research-arrange-feedback]')).toBeNull()
+ await f.event('click',f.document.querySelector('[data-arrange-mode='+mode+'][role=menuitemradio]'))
+ const notice=f.document.querySelector('[data-research-arrange-feedback]')
+ expect(notice).not.toBeNull();expect(notice.textContent).toContain('画布宽度不足');expect(notice.textContent).toContain(label)
+ expect(f.canvas.contains(notice)).toBe(false)
+ expect(parseFloat(notice.style.bottom)-parseFloat(f.document.querySelector('[data-ework-toolbar]').style.bottom)).toBe(66);expect(notice.getAttribute('role')).toBe('alert');expect(notice.querySelector('img')).toBeNull()
+ expect(w.getWorkbenchCells()).toEqual(before)
+ expect(f.document.querySelector('.ew-arrange-tool').getAttribute('data-arrange-mode')).toBe('standard')
+ expect(f.document.querySelector('[data-workbench-arrange-menu]')).toBeNull()
 })
 it('未完成智能容器和链接草稿拖到空位后保留落点，生成期间及重新打开不向上吸附',async()=>{
  const f=await fixture(true),w=f.workspace,step=24.65

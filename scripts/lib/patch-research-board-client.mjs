@@ -23,11 +23,13 @@ import { MARKET_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtim
 import { applyTerminalPresentation, TERMINAL_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/terminal-presentation.js'
 import { applyWorkbenchPresentation, WORKBENCH_PRESENTATION_CSS } from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 import { installWorkbenchScrollbars, isWorkbenchScrollbarMessage } from '../../packages/dsh-research-task-runtime/workbench-scrollbars.js'
+import { installWorkbenchTableColumns } from '../../packages/dsh-research-task-runtime/workbench-table-columns.js'
+import { installWorkbenchNaturalCharts } from '../../packages/dsh-research-task-runtime/workbench-natural-charts.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
   .replace(/^export /gm, '')
-  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, '$1const WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+validWorkbenchLocaleMessage.toString()+'\n'+installWorkbenchLocaleMessages.toString()+'\n'+validWorkbenchStyleMessage.toString()+'\n'+installWorkbenchStyleMessages.toString()+'\nconst researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n'+isWorkbenchScrollbarMessage.toString()+'\n'+installWorkbenchScrollbars.toString()+'\n')
+  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, prefix => prefix+'const WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+validWorkbenchLocaleMessage.toString()+'\n'+installWorkbenchLocaleMessages.toString()+'\n'+validWorkbenchStyleMessage.toString()+'\n'+installWorkbenchStyleMessages.toString()+'\nconst researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n'+isWorkbenchScrollbarMessage.toString()+'\n'+installWorkbenchScrollbars.toString()+'\n'+installWorkbenchTableColumns.toString()+'\n'+installWorkbenchNaturalCharts.toString()+'\n')
   .replace(/\bparseResearchHtmlArtifact\(/g, 'parseResearchContainerSpec(')
   .replace(/\bWORKBENCH_ENGLISH\b/g, 'RESEARCH_WORKBENCH_ENGLISH')
 const START = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_BEGIN */',
@@ -740,7 +742,7 @@ export function patchLegacyDashboardPreview(source) {
   return source
 }
 
-function componentTypographyPatch(source) {
+export function componentTypographyPatch(source) {
   const start = source.indexOf('// RESEARCH_COMPONENT_THEME_START')
   const end = source.indexOf('// RESEARCH_COMPONENT_THEME_END', start)
   if (start < 0 || end < 0) throw Error('Component theme block missing')

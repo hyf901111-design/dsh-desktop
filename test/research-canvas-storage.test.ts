@@ -24,6 +24,17 @@ afterEach(() => {
 })
 
 describe('desktop Research canvas storage', () => {
+  it('persists user table widths across client ports and rejects invalid column preferences', () => {
+    const userData = temporaryUserData(), key = 'ework.research.table-columns.v1:board:node:0:schema'
+    const state = JSON.stringify({ widths: [180, 120, 90], manual: [true, false, false] })
+    const storage = new ResearchCanvasStorage(userData)
+    expect(storage.setItem(key, state)).toBe(true)
+    expect(new ResearchCanvasStorage(userData).getItem(key)).toBe(state)
+    for (const value of ['{"widths":[20],"manual":[true]}', '{"widths":[120],"manual":[]}', '"wrong"', '{"widths":[120.5],"manual":[true]}']) expect(storage.setItem(key, value)).toBe(false)
+    expect(storage.getItem(key)).toBe(state)
+    expect(storage.setItem(key, 'null')).toBe(true)
+    expect(new ResearchCanvasStorage(userData).getItem(key)).toBe('null')
+  })
   it('survives a new reader such as a Harness restart on a different port', () => {
     const userData = temporaryUserData()
     const key = 'sherlock.research.canvas.files.v1:session-1'
