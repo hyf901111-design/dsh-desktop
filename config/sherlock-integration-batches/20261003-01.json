@@ -93,6 +93,38 @@
           "保留本批次其他功能修复，待用户验收后晋升main"
         ],
         "generatedAt": "2026-10-03T11:09:05.987178+00:00"
+      },
+      "merged": {
+        "mergeCommit": "82d0293d689ade3cc320d122854d9537a922a7a5",
+        "verificationCommit": "82d0293d689ade3cc320d122854d9537a922a7a5",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "82d0293d689ade3cc320d122854d9537a922a7a5",
+            "completedAt": "2026-10-03T11:09:31.083Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "82d0293d689ade3cc320d122854d9537a922a7a5",
+            "completedAt": "2026-10-03T11:09:31.083Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T11:09:31.083Z"
       }
     }
   ],
