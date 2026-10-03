@@ -61,6 +61,38 @@
           "集成客户端留待用户验收后晋升main"
         ],
         "generatedAt": "2026-10-03T13:24:01.544446+00:00"
+      },
+      "merged": {
+        "mergeCommit": "87cc1be467159c2c79bf6660e3778affba7483bf",
+        "verificationCommit": "87cc1be467159c2c79bf6660e3778affba7483bf",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "87cc1be467159c2c79bf6660e3778affba7483bf",
+            "completedAt": "2026-10-03T13:26:22.463Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "87cc1be467159c2c79bf6660e3778affba7483bf",
+            "completedAt": "2026-10-03T13:26:22.463Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T13:26:22.463Z"
       }
     }
   ],
