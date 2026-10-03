@@ -150,6 +150,38 @@
           "合并批次留待用户在精确客户端验收后晋升main"
         ],
         "generatedAt": "2026-10-03T11:51:35.768363+00:00"
+      },
+      "merged": {
+        "mergeCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
+        "verificationCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
+            "completedAt": "2026-10-03T11:52:02.632Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "a1425d24a7ad9f3f813e98e0af5b20edda2ee1f5",
+            "completedAt": "2026-10-03T11:52:02.632Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T11:52:02.632Z"
       }
     }
   ],
