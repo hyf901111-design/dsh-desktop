@@ -53,4 +53,42 @@
 
 ## 构建与公开验收
 
-正式构建、客户端关于页、公开元数据、Range和双通道差分的实际结果在发布完成后补录。
+### 本地构建与客户端
+
+- 正式构建源码：`b608ef064ef1879545a949a29d704121ef365acb`；干净规范 main 通过 `git:formal:verify`。
+- 按锁文件全新安装依赖和补丁重复执行通过；画布交互直接检查22项通过。
+- 发布聚焦检查覆盖13个文件、107项。首次发现打包运行夹具未构建新增 YouTube 原生模块，修复夹具并同步内置组件技能版本后，相关2项重跑通过；其余12个文件通过。未运行全功能测试。
+- 类型检查、生产构建、打包运行验证通过；内置 `efund-ppt-maker 1.1.1` 与 `ework-workbench-components 1.33.0` 和源码一致。
+- 标准 App 和 DMG 的 Developer ID 签名通过；标准 ZIP、兼容 ZIP 的压缩完整性和 DMG 的 `hdiutil verify` CRC 通过。
+- 兼容桥内外版本均为1.1.0：外层 `io.dsh.desktop` 满足旧证书要求，内嵌 `com.evanarts.sherlock`，ShipIt可执行，Squirrel、Mantle、ReactiveObjC齐全。
+- 真实签名客户端主界面、本人原账户和工作区可见；原生关于窗口与设置关于页均显示1.1.0，完整中文更新日志和旧版本历史可见。客户端保持打开。
+- 本次按既有用户要求跳过 Apple 公证、stapling 和 Gatekeeper 公证验收，签名有效不等于已公证。
+
+### 公开资源与更新入口
+
+- 发布脚本按不可变版本资源、稳定下载别名、双通道元数据顺序完成上传；上传期间两个公开 feed 仍为1.0.6，完成后均为1.1.0。临时上传 Worker 已删除。
+- 两条 feed 的版本、资源大小、SHA-512 和中英文各10项更新说明与准备元数据完全一致，均使用 no-cache。
+- 两份公开 blockmap 与本地文件摘要一致；版本 ZIP、DMG、旧稳定下载别名、品牌稳定下载地址共15次首段/中段/末段单段 Range 请求均为206，Content-Range、文件总大小及样本字节一致。
+- 版本资源缓存为 immutable，稳定下载地址为 no-store；品牌下载地址 HEAD、文件大小和 `EWork-Odyssey-mac-arm64.dmg` 下载文件名通过。
+- 品牌稳定地址按25段单段 Range 完整下载415,663,978字节，公开DMG的 SHA-512 与本地签名DMG完全一致，`hdiutil verify` CRC通过。
+- 真实1.1.0客户端手动检查更新显示“已是最新版本”，截图 `manual-update-check.png`。这是版本及更新检查验收，未执行旧客户端全量安装升级测试。
+
+### 差分更新与滚动保留
+
+使用真实 electron-updater 差分下载器和公开1.0.6/1.1.0 blockmap，仅允许单段 Range/206。两条通道合成的完整 ZIP 均与本地签名产物 SHA-512 相同，未执行全量回退或旧客户端安装重启升级测试。
+
+| 通道 | 请求数 | 实际下载字节 | 复用字节 | 完整包字节 | SHA-512 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 标准 | 776 | 139,681,023 | 361,257,375 | 500,938,398 | 一致 |
+| 兼容 | 751 | 189,148,070 | 362,460,415 | 551,608,485 | 一致 |
+
+全部公开验证通过后，按预演精确删除 `releases/v1.0.2/` 的5个对象，逐项公开确认404；1.0.6两份差分基线 blockmap仍为206，两个feed仍为1.1.0。保留版本：1.0.3、1.0.4、1.0.5、1.0.6、1.1.0。
+
+### 源码同步
+
+目标仓库：`https://github.com/awake-ai-lab/sherlock-desktop.git`。本地main包含用户接受的集成提交、干净安装修复、打包验收夹具修复和1.1.0版本日志。发布记录及库存按中文提交单独保存，使用 `git push --atomic origin main:hyf main:main` 同步指定分支，并以 `git ls-remote --heads origin main hyf`核对最终SHA；不推送版本标签。
+
+公开稳定下载：`https://updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg`。本次平台为macOS Apple Silicon，未构建Intel和Windows。
+
+
+本地证据目录：`/tmp/ework-release-1.1.0-20261003`。客户端截图：`about-1.1.0.png`。
