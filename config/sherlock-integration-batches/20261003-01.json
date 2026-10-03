@@ -83,6 +83,38 @@
           "耗时受模型和数据源影响，需报告真实样本范围"
         ],
         "generatedAt": "2026-10-03T04:40:08.222110+00:00"
+      },
+      "merged": {
+        "mergeCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
+        "verificationCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
+            "completedAt": "2026-10-03T04:40:29.593Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
+            "completedAt": "2026-10-03T04:40:29.593Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T04:40:29.593Z"
       }
     }
   ],
