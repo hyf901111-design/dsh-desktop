@@ -207,6 +207,22 @@ function sequentialTaskIds() {
   return () => `task-${++next}`
 }
 
+it.each([false, true])('preserves edited workbench requirements while restoring only an unchanged legacy retry (edited=%s)', async edited => {
+  const { ResearchTaskRuntime } = await runtimeModule()
+  const saved = '业务专用交互组件，依据授权公开资料创建。\n原始资料：三条真实审查记录。'
+  const original = `工作台：审批复验\n本面板：证据清单\n${saved}\n仅生成本面板，优先使用 html 类型。`
+  const requirement = edited ? saved + '\n新增布局约束：三张正常文档流卡片，禁止表格。' : saved
+  const launches = deferredTaskAdapter()
+  const storage = memoryTaskStorage({ version: 1, tasks: [{ ...containerRequest('edit-preserve'), prompt: original, taskId: 'original', state: 'failed', createdAt: 1, completedAt: 2, lastSeq: 0, error: '旧生成失败' }] })
+  const runtime = new ResearchTaskRuntime({ adapter: launches.adapter, storage, createId: sequentialTaskIds() })
+  try {
+    await runtime.restore()
+    const task = await runtime.start({ ...containerRequest('edit-preserve'), prompt: requirement })
+    await launches.waitForStarts(1)
+    expect(storage.snapshot().tasks.find(item => item.taskId === task.taskId).prompt).toBe(edited ? requirement : original)
+  } finally { await runtime.dispose() }
+})
+
 it('reserves a five-panel source workbench with one durable write and separate task identities', async () => {
   const { ResearchTaskRuntime } = await runtimeModule()
   const adapter = deferredTaskAdapter(), storage = memoryTaskStorage()

@@ -50,6 +50,20 @@ describe('single-component generation contracts', () => {
     expect(prompt).toContain('HTML/CSS/JavaScript')
   })
 
+  it.each([
+    '业务专用交互组件（自包含HTML，不使用通用模板）。构建「审批证据账本」：按 PR 切换全部 review 记录，COMMENTED 不计批准。',
+    '创建自包含 HTML 页面「项目进度管理」，按负责人筛选任务并展开来源。',
+    '生成 type=html 的行情页面，使用 market.key-metrics 的数据做自定义交互。'
+  ])('keeps an explicit HTML request ahead of inferred native templates: %s', async requirement => {
+    const prompt = await buildResearchTaskExecutionPrompt(container(requirement))
+    expect(prompt).toContain('唯一交付格式：{"version": 1, "type": "html"')
+    expect(prompt).toContain('window.sherlockShared.register')
+    expect(prompt).toContain(requirement)
+    expect(prompt).not.toContain('唯一交付格式：公共字段 version:1,type,title,asOf')
+    expect(prompt).not.toContain('mapping 的模板结构：')
+    expect(Buffer.byteLength(prompt)).toBeLessThan(20_000)
+  })
+
   it('uses the real chart capacity without directing valid long charts to HTML', () => {
     const requirement = '工作台：固定验收\n本面板：120天趋势\n优先使用 chart 类型\n使用 chart.line，保留全部120天。'
     const prompt = buildResearchTaskPrompt(container(requirement))
