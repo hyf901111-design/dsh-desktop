@@ -30,7 +30,8 @@ body button.fund-industry:focus-visible{outline:1px solid var(--sherlock-muted)!
 body button.fund-industry :is(.fund-industry-label,.fund-industry-value){color:var(--sherlock-text)!important;font-size:12px!important;line-height:18px!important}
 body .fund-industry-readout:empty{display:none!important}
 body :is(table,.fund-table){width:100%!important;border-collapse:collapse!important;font:400 12px/18px var(--sherlock-font-sans)!important;color:var(--sherlock-text)!important;background:var(--sherlock-bg)!important}
-body :is(th,td){height:26px!important;box-sizing:border-box!important;padding:4px 8px!important;border:0!important;white-space:normal!important;overflow-wrap:anywhere!important;font-size:12px!important;line-height:18px!important}
+body:not([data-sherlock-market]) table{table-layout:auto!important}
+body :is(th,td){height:26px!important;box-sizing:border-box!important;padding:4px 8px!important;border:0!important;white-space:normal!important;overflow-wrap:normal!important;word-break:normal!important;font-size:12px!important;line-height:18px!important}
 /* These source tables contain full amounts, names and disclosure times.
    Wrapping belongs to their cells so values never paint over adjacent columns. */
 body .financial-profile :is(th,td){white-space:normal!important;overflow-wrap:anywhere!important}
