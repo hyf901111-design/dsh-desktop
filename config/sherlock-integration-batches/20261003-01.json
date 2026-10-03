@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "单组件生成速度与交付成功率优化",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920",
-        "tipCommit": "26357365798f4f2541e9abe6a3870178272a3723",
+        "baseCommit": "26357365798f4f2541e9abe6a3870178272a3723",
+        "tipCommit": "2347d8c1daf78e4b9ba9724ab5bbde1dfe778fbc",
         "commits": [
           {
-            "commit": "26357365798f4f2541e9abe6a3870178272a3723",
+            "commit": "fb00fe1ae607221affb65a6eee864e88123f7bb6",
             "parents": [
-              "6db02b51e18bf5ed4cb08a7d3c8ec5d883aff920"
+              "26357365798f4f2541e9abe6a3870178272a3723"
             ],
-            "subject": "优化单组件生成规范路由并修正图表容量说明"
+            "subject": "修正指标生成的数据时点与变化字段语义并更新回归约束"
+          },
+          {
+            "commit": "2347d8c1daf78e4b9ba9724ab5bbde1dfe778fbc",
+            "parents": [
+              "fb00fe1ae607221affb65a6eee864e88123f7bb6"
+            ],
+            "subject": "保留资讯研报生成中的原机构与作者信息"
           }
         ],
         "files": [
@@ -28,12 +35,12 @@
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/component-generation-prompt-routing.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/operations-template.test.js"
           }
         ],
         "checks": [
@@ -46,12 +53,16 @@
               "test/component-generation-real-shapes.test.js",
               "test/component-data-refresh.test.js",
               "test/component-source-binding.test.js",
-              "test/workbench-model-queue.test.js"
+              "test/workbench-model-queue.test.js",
+              "test/calendar-template.test.js",
+              "test/kpi-template.test.js",
+              "test/research-interactive-artifact.test.js",
+              "test/operations-template.test.js"
             ],
             "outcome": "passed",
-            "summary": "276项生成路由、数据映射、恢复和并发聚焦检查通过",
-            "verifiedCommit": "26357365798f4f2541e9abe6a3870178272a3723",
-            "completedAt": "2026-10-03T04:40:08.222110+00:00",
+            "summary": "310项生成路由、字段语义、数据映射、恢复及多类型交互聚焦检查通过",
+            "verifiedCommit": "2347d8c1daf78e4b9ba9724ab5bbde1dfe778fbc",
+            "completedAt": "2026-10-03T05:02:03.165075+00:00",
             "timeoutMs": 120000
           },
           {
@@ -62,8 +73,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "26357365798f4f2541e9abe6a3870178272a3723",
-            "completedAt": "2026-10-03T04:40:08.222110+00:00",
+            "verifiedCommit": "2347d8c1daf78e4b9ba9724ab5bbde1dfe778fbc",
+            "completedAt": "2026-10-03T05:02:03.165075+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -75,46 +86,15 @@
           "明确类型的单组件不携带无关整套规范",
           "24份选中资料的长需求可保留各份证据后启动",
           "120标签图表按真实容量生成并保留零值负值",
-          "多类型实际生成与交互回归通过"
+          "多类型实际生成与交互回归通过",
+          "指标时点不冒充变化值，研报保留原研究机构"
         ],
         "risks": [
           "不把宿主准备组件混入模型成功率",
           "复合或自定义网页保留完整生成路径",
           "耗时受模型和数据源影响，需报告真实样本范围"
         ],
-        "generatedAt": "2026-10-03T04:40:08.222110+00:00"
-      },
-      "merged": {
-        "mergeCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
-        "verificationCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
-            "completedAt": "2026-10-03T04:40:29.593Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "bccd42bf8f830c99c14c57c0781c3d00091864f8",
-            "completedAt": "2026-10-03T04:40:29.593Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T04:40:29.593Z"
+        "generatedAt": "2026-10-03T05:02:03.165075+00:00"
       }
     }
   ],
