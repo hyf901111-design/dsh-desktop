@@ -1,5 +1,6 @@
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
 import {operationsTemplateSchema,requestedOperationsType} from './operations-template-contract.js'
+import { KPI_GUIDANCE } from './kpi-template-contract.js'
 import { templateSourceDataIssue } from './template-data-contract.js'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
@@ -458,7 +459,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     alerts: operationsTemplateSchema('alerts'),
     progress: operationsTemplateSchema('progress'),
     tasks: operationsTemplateSchema('tasks'),
-    kpi: '{"version":1,"type":"kpi","title":"标题","items":[{"label":"指标","value":"数值","change":"可选变化"}]}',
+    kpi: '{"version":1,"type":"kpi","title":"标题","asOf":"原数据来源及时点","items":[{"label":"指标","value":"原数值及单位"}]}\n' + KPI_GUIDANCE,
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}',
     chart: chartTemplateSchema(requestedChartVariant(prompt)),
     dashboard: '{"version":1,"type":"dashboard","title":"标题","asOf":"时点/示例口径","items":[{"label":"指标","value":"数值及单位","detail":"口径说明"}]}',
@@ -488,6 +489,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     `唯一交付格式：${schemas[type]}`,
     '若本轮没有任何可核验的数值或记录，不能输出空 chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。将需求中的主要品种或字段逐项列出，最多六项；每项 detail 简短，数据来源与查询时点放在 asOf，避免大段说明文字。其余情况严格只用上方指定 schema 的字段，来源与数据时点写进已有内容字段，不添加自造字段。',
     htmlRule,
+    ...(['news', 'reports'].includes(type) ? ['每条资料原文明确提供的来源机构、作者、评级、目标价及其他业务字段，连同原摘要保留在 summary；不要只复制短摘要而丢弃这些信息。未提供的机构、作者、评级或目标价必须省略，不自行推断。日期用 date，原分类用 category，未提供链接时省略 url。'] : []),
     '保留需求中的全部字段和条目，遵守上方对应 schema 的容量和字段约束；dashboard 支持1–40项。只在明确允许“示例/虚构/情景模拟”时构造并标注样例数据；其余数值、日期和来源必须有依据，缺失就注明缺失。新闻/政策仅在用户允许联网且需要补充资料时检索真实来源，不能编造法规或链接；核实的网址可作为每条的 url 字段加入，查不到则省略。用户提供完整记录时直接使用，不为补充可选字段继续检索。资料足够后立即交付。',
     type === 'market'
       ? '组件名称由 JSON title 提供，不在内容中重复。金融组件的字体、尺寸和深浅主题由宿主 Figma 模板执行；指标值按源节点使用 DIN Pro 21/26px。'
