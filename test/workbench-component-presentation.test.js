@@ -39,3 +39,13 @@ it('工作台展示层同时覆盖自定义 HTML 样式且不改动业务脚本'
   expect(WORKBENCH_PRESENTATION_CSS).toContain('grid-template-columns:repeat(3,minmax(0,1fr))')
   expect(WORKBENCH_PRESENTATION_CSS).toContain('overflow:auto!important')
 })
+
+it('自定义表格按内容分配列宽，长正文换行而价格金额不从数字中间断开',()=>{
+  expect(WORKBENCH_PRESENTATION_CSS).toContain('body:not([data-sherlock-market]) table{table-layout:auto!important}')
+  const cells=WORKBENCH_PRESENTATION_CSS.match(/body :is\(th,td\)\{([^}]+)\}/)[1]
+  expect(cells).toContain('white-space:normal!important')
+  expect(cells).toContain('overflow-wrap:normal!important')
+  expect(cells).toContain('word-break:normal!important')
+  const html='<body><table style="table-layout:fixed"><tr><td>1103.00</td><td>公开资料中的完整长观点</td></tr></table></body>'
+  expect(applyWorkbenchPresentation(html)).toBe(html)
+})
