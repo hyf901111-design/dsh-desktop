@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "整理菜单按内容收紧宽度",
+        "featureName": "整理菜单透明选中和蓝色悬停覆盖全局菜单样式",
         "branch": "codex/feat/generation-mapping-actions-20261003",
-        "baseCommit": "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa",
-        "tipCommit": "b97cb4fc4956c25ef8f4f9a56ece124181ce031b",
+        "baseCommit": "b97cb4fc4956c25ef8f4f9a56ece124181ce031b",
+        "tipCommit": "f2a66dc1a201dc6c6d0dce3584e4f9dfd42e1595",
         "commits": [
           {
-            "commit": "b97cb4fc4956c25ef8f4f9a56ece124181ce031b",
+            "commit": "f2a66dc1a201dc6c6d0dce3584e4f9dfd42e1595",
             "parents": [
-              "b9cb33cdd1a41b7bcb38f76540d49547d2d214fa"
+              "b97cb4fc4956c25ef8f4f9a56ece124181ce031b"
             ],
-            "subject": "整理菜单按内容收紧宽度，去除右侧多余空白"
+            "subject": "修复整理菜单被全局已选样式覆盖，确保选中透明及蓝色悬停"
           }
         ],
         "files": [
@@ -39,55 +39,24 @@
             ],
             "outcome": "passed",
             "summary": "4项整理菜单、键盘选项和宽度提示聚焦检查通过",
-            "verifiedCommit": "b97cb4fc4956c25ef8f4f9a56ece124181ce031b",
-            "completedAt": "2026-10-03T12:43:45.300661+00:00",
+            "verifiedCommit": "f2a66dc1a201dc6c6d0dce3584e4f9dfd42e1595",
+            "completedAt": "2026-10-03T12:57:03.123293+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；集成后核对紧凑菜单及前轮菜单样式。"
+          "summary": "真实客户端发现全局radio-menu已选灰背景优先级覆盖局部样式；已限定整理菜单提升选择器优先级，待重新打包检查。"
         },
         "acceptanceCriteria": [
-          "菜单宽度按勾选、图标和文字自然计算，去除右侧多余空白",
-          "保留蓝色悬停和上下间距，已选项仅用勾选标记"
+          "菜单按内容收紧宽度，保持勾选、图标、文字对齐",
+          "全局菜单样式不再覆盖整理菜单，已选项透明，悬停或键盘焦点蓝色",
+          "箭头灰色背景四角一致，默认透明"
         ],
         "risks": [
           "集成客户端留待用户验收后晋升main"
         ],
-        "generatedAt": "2026-10-03T12:43:45.300661+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c40ffec7b2b03792eef238e467c29af361872988",
-        "verificationCommit": "c40ffec7b2b03792eef238e467c29af361872988",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
-            "verifiedCommit": "c40ffec7b2b03792eef238e467c29af361872988",
-            "completedAt": "2026-10-03T12:45:18.749Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c40ffec7b2b03792eef238e467c29af361872988",
-            "completedAt": "2026-10-03T12:45:18.749Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-03T12:45:18.749Z"
+        "generatedAt": "2026-10-03T12:57:03.123293+00:00"
       }
     }
   ],
