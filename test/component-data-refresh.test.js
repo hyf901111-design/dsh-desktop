@@ -12,6 +12,28 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('keeps standalone missing-text placeholders alongside sourced table values',()=>{
+  const mapping={version:1,type:'market',variant:'table',title:'龙虎榜',asOf:'2026-04-30',columns:['日期','成交额','席位'],rows:{$from:'q',$each:'data.data',$map:[{$path:'tradeDate'},{$path:'turnoverValue',$as:'number'},{$default:'本次未取得'}]}}
+  const result=materializeComponentMapping(mapping,{q:{data:{data:[{tradeDate:'2026-04-30',turnoverValue:28465682100}]}}})
+  expect(result.rows).toEqual([['2026-04-30','28465682100','本次未取得']])
+  expect(acceptArtifactOutput(JSON.stringify(result))).toBeTruthy()
+  for(const value of [0,false,{},[]])expect(()=>evaluateMapping({$default:value},{})).toThrow(/文字/)
+  expect(()=>evaluateMapping({$default:'本次未取得',$as:'number'},{})).toThrow(/文字/)
+  expect(()=>evaluateMapping({$default:'本次未取得',price:123},{})).toThrow(/文字/)
+ })
+ it('formats sourced key metrics without dropping periods, zero, negative or missing values',()=>{
+  const mapping={version:1,type:'market',variant:'key-metrics',symbol:'688256',title:'核心指标',asOf:'2026-09-30',items:[
+   {label:'市盈率(TTM)',period:'2026-09-30',value:{$from:'q',$path:'pe',$digits:2}},
+   {label:'涨跌额（元）',period:'2026-09-30',value:{$from:'q',$path:'change',$as:'number'}},
+   {label:'净流入（元）',period:'2026-09-30',value:{$from:'q',$path:'flow',$as:'number'}},
+   {label:'目标价',period:'2026-09-30',value:{$from:'q',$path:'target',$optional:true},missing:'来源未提供'}]}
+  const result=materializeComponentMapping(mapping,{q:{pe:190.434,change:-36.99,flow:0}})
+  expect(result.items.map(i=>i.value)).toEqual(['190.43','-36.99','0',null])
+  expect(result.items.map(i=>i.period)).toEqual(Array(4).fill('2026-09-30'))
+  expect(acceptArtifactOutput(JSON.stringify(result))).toBeTruthy()
+  const invalid=structuredClone(result);delete invalid.items[0].period
+  expect(acceptArtifactOutput(JSON.stringify(invalid))).toBeUndefined()
+ })
  it('accepts numeric bracket indexes without allowing expressions or property traversal',()=>{
   expect(evaluateMapping({$path:'data.stocks[0].price'},{data:{stocks:[{price:4.5}]}})).toBe(4.5)
   for(const field of ['data.stocks[-1].price','data.stocks[0+1].price','data.stocks["0"].price','data.stocks[0].constructor'])expect(()=>evaluateMapping({$path:field},{data:{stocks:[{price:4.5}]}})).toThrow(/路径/)
