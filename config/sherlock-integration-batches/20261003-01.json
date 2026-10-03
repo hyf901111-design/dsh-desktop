@@ -90,6 +90,38 @@
           "第一次修复后1/12成功，继续修复主题角色与排队计时后需要客户端重试复验"
         ],
         "generatedAt": "2026-10-03T07:34:24.202382+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
+        "verificationCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
+            "completedAt": "2026-10-03T07:34:38.770Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4d6ab5d52a0a1545339f50c7540ae819ef7660ff",
+            "completedAt": "2026-10-03T07:34:38.770Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T07:34:38.770Z"
       }
     }
   ],
