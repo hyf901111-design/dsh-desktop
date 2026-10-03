@@ -78,6 +78,38 @@
           "research-market-arrange-content四项既有失败在803edf7基线复现；本次只改变无有效测量的自定义HTML尺寸后备"
         ],
         "generatedAt": "2026-10-03T08:45:34.381Z"
+      },
+      "merged": {
+        "mergeCommit": "7b3372f7c9fce7cfbe8111f0a234fc1987984a0a",
+        "verificationCommit": "7b3372f7c9fce7cfbe8111f0a234fc1987984a0a",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/component-data-refresh.test.js test/component-source-binding.test.js",
+            "verifiedCommit": "7b3372f7c9fce7cfbe8111f0a234fc1987984a0a",
+            "completedAt": "2026-10-03T09:22:33.703Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7b3372f7c9fce7cfbe8111f0a234fc1987984a0a",
+            "completedAt": "2026-10-03T09:22:33.703Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-03T09:22:33.703Z"
       }
     }
   ],
