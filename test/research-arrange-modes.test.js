@@ -15,12 +15,12 @@ it('三排整理按当前阅读顺序形成三列，不按创建顺序重排',()
  expect(next.map(c=>c.id)).toEqual(items.map(c=>c.id))
 })
 
-it('双排保持各自内容高度，后一行从前一行下方开始',()=>{
+it('双排保持各自内容高度，后续组件补入较短列而不留下行间空位',()=>{
  const g=createResearchGrid(),items=[cell('a',0,0),cell('b',20,0),cell('c',0,20)],n=nodes(['a','b','c'])
  n[1].preferred.height=600
  const next=g.arrange(n,items,1000,700,'two'),[a,b,c]=next
  expect(a).toMatchObject({x:0,w:20,y:0});expect(b).toMatchObject({x:20,w:20,y:0})
- expect(b.h).toBeGreaterThan(a.h);expect(c.y).toBe(b.h)
+ expect(b.h).toBeGreaterThan(a.h);expect(c.y).toBe(a.h)
  expect(next.every((c,i)=>next.every((p,j)=>i===j||!g.overlap(c,p)))).toBe(true)
  expect(g.arrange(n,next,1000,700,'two')).toEqual(next)
 })
@@ -40,18 +40,31 @@ it('标准整理保留当前不等宽列和列内顺序，补齐空位',()=>{
  expect(next).toEqual(g.arrange(n,items,1200,700))
 })
 
-it('窄画布三排自动适配而不突破统一最小阅读宽度',()=>{
+it('三排在宽窄画布都保留三列，不自动改成双排或单排',()=>{
  const g=createResearchGrid(),items=['a','b','c'].map((id,i)=>cell(id,0,i*20)),n=nodes(['a','b','c'])
- const next=g.arrange(n,items,640,700,'three'),shown=g.project(n,next,640)
- expect(next.slice(0,2).map(c=>[c.x,c.w,c.y])).toEqual([[0,20,0],[20,20,0]])
- expect(shown.every(n=>n.width>=280)).toBe(true)
- expect(g.arrange(n,items,320,700,'three').every(c=>c.w===40)).toBe(true)
+ for(const width of [1200,880,640,320]){
+  const next=g.arrange(n,items,width,700,'three')
+  expect(next.map(c=>[c.x,c.w,c.y])).toEqual([[0,13,0],[13,14,0],[27,13,0]])
+  expect(g.arrange(n,next,width,700,'three')).toEqual(next)
+ }
 })
 
 it('固定排数内容重新测量后仍保留三列并重新计算行高',()=>{
  const g=createResearchGrid(),n=nodes(['a','b','c','d']),items=n.map((n,i)=>cell(n.id,0,i*20))
  const first=g.arrange(n,items,1200,700,'three');n[1].preferred.height=900
  const next=g.arrange(n,first,1200,700,'three')
- expect(next.slice(0,3).map(c=>c.x)).toEqual([0,13,27]);expect(next[3].y).toBe(next[1].h)
+ expect(next.slice(0,3).map(c=>c.x)).toEqual([0,13,27]);expect(next[3].y).toBe(next[0].h)
  expect(next.every((c,i)=>next.every((p,j)=>i===j||!g.overlap(c,p)))).toBe(true)
+})
+
+it.each(['three','two','one'])('%s整理不等高组件每列连续补位，重复整理稳定',mode=>{
+ const g=createResearchGrid(),n=nodes(['a','b','c','d','e','f','g','h']),items=n.map((n,i)=>cell(n.id,0,i*40))
+ n.forEach((n,i)=>n.preferred.height=[850,200,450,650,200,300,350,240][i])
+ const next=g.arrange(n,items,880,700,mode)
+ for(const x of new Set(next.map(c=>c.x))){
+  let bottom=0
+  for(const c of next.filter(c=>c.x===x).sort((a,b)=>a.y-b.y)){expect(c.y).toBe(bottom);bottom=c.y+c.h}
+ }
+ expect(next.every((c,i)=>next.every((p,j)=>i===j||!g.overlap(c,p)))).toBe(true)
+ expect(g.arrange(n,next,880,700,mode)).toEqual(next)
 })

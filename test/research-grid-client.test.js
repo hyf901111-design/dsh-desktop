@@ -451,18 +451,34 @@ it('整理菜单支持键盘选择、Esc和点击外部关闭，空画布禁止�
 })
 it('三排整理等待网页重新测高后仍保留三列，整笔只撤销一步',async()=>{
  const f=await fixture(true),w=f.workspace,n=id=>({...text(id),kind:'generated-container',containerPrompt:'文章',refreshMinutes:0,generationLastSeq:1,generationStatus:'completed',containerSpec:{version:1,type:'html',title:id,html:'<p>'+id+'</p>'}})
- await act(async()=>w.setArtifacts(['a','b','c','d'].map(n)))
+ await act(async()=>{w.setCanvasSize({width:640,height:700,availableWidth:640});w.setWorkbenchWidth(640);w.setArtifacts(['a','b','c','d'].map(n))})
  const before=w.getWorkbenchCells()
  await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'))
  await f.event('click',f.document.querySelector('[data-workbench-arrange-menu] [data-arrange-mode=three]'))
  for(const node of w.getSnapshot().artifacts){
    const frame=f.host.querySelector('[data-research-node-id="'+node.id+'"] iframe')
-   await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:Math.round(node.width),height:650}})))
+   await act(async()=>f.win.dispatchEvent(new f.win.MessageEvent('message',{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:Math.round(node.width),height:node.id==='b'?950:300}})))
  }
  await act(async()=>new Promise(r=>setTimeout(r,450)))
  expect(w.getWorkbenchCells().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
- expect(w.getSnapshot().artifacts.every(n=>n.height>=708)).toBe(true)
+ const cells=w.getWorkbenchCells(),at=id=>cells.find(c=>c.id===id)
+ expect(w.getWorkbenchVisibleCells().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+ expect(w.getSnapshot().artifacts.find(n=>n.id==='b').height).toBeGreaterThanOrEqual(1008)
+ expect(at('d').y).toBe(Math.min(at('a').h,at('c').h));expect(at('d').y).toBeLessThan(at('b').h)
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+})
+
+it('固定排数经过侧栏挤窄和重开仍保持选择，整理不会改变组件正文',async()=>{
+ const f=await fixture(true),w=f.workspace
+ await act(async()=>w.setArtifacts(['a','b','c','d','e'].map(id=>text(id))))
+ const original=w.getSnapshot().artifacts.map(n=>[n.id,n.excerpt]),toggle=f.document.querySelector('[data-workbench-arrange-toggle]')
+ await f.event('click',toggle);await f.event('click',f.document.querySelector('[data-arrange-mode=three][role=menuitemradio]'))
+ await act(async()=>{w.setCanvasSize({width:640,height:700,availableWidth:640});w.setWorkbenchWidth(640)})
+ expect(w.getWorkbenchVisibleCells().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
+ expect(w.getSnapshot().artifacts.map(n=>[n.id,n.excerpt])).toEqual(original)
+ await act(async()=>w.persist())
+ const reopened=f.bundle.createResearchWorkspaceSession(f.win.localStorage,'grid-test');reopened.setCanvasSize({width:640,height:700,availableWidth:640});reopened.setWorkbenchWidth(640)
+ expect(reopened.getWorkbenchVisibleCells().filter(c=>c.y===0).map(c=>c.x)).toEqual([0,13,27])
 })
 it('未完成智能容器和链接草稿拖到空位后保留落点，生成期间及重新打开不向上吸附',async()=>{
  const f=await fixture(true),w=f.workspace,step=24.65
