@@ -441,6 +441,13 @@ export function measureWorkbenchContents(root,nodes) {
     // Header and provenance occupy 34 + 24px outside the sandbox. The sandbox
     // reports natural content bounds, never its current frame height.
     if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,workbenchMeasuredDimensions(node,value));continue}
+    // Offscreen custom documents may be paused and have no current intrinsic
+    // report. Keep their confirmed reading space until they load; falling back
+    // to a generic 260px box would hide most of a timeline or evidence table.
+    // Native market templates retain their own template sizing policy.
+    if(node.containerSpec?.type==='html'&&!/<body\b[^>]*data-sherlock-market=/.test(node.containerSpec.html||'')){
+      measured.set(node.id,{width:preferred.width,height:Math.max(preferred.height,node.height||0)});continue
+    }
     const card=root?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]'),body=card?.querySelector('[data-research-preview-body]')
     if(node.containerSpec?.type==='youtube'&&node.containerSpec.url){
       // The official video has a stable aspect ratio, independent of the
