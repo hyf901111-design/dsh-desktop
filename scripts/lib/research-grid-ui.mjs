@@ -440,6 +440,8 @@ export function measureWorkbenchContents(root,nodes) {
   for(const node of nodes){
     const value=cache?.get(node.id)
     const preferred=researchOptimalDimensions({...node,width:0,height:0})
+    // Fixed presets keep their approved reading area even when offscreen or paused.
+    if(node.containerSpec?.type==='financial-widget'){measured.set(node.id,preferred);continue}
     // Header and provenance occupy 34 + 24px outside the sandbox. The sandbox
     // reports natural content bounds, never its current frame height.
     if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,workbenchMeasuredDimensions(node,value));continue}
