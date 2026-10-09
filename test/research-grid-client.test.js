@@ -446,6 +446,41 @@ it('整理展开菜单选择排数、标记当前选项，主按钮重复当前�
  await f.event('click',menu.querySelector('[data-arrange-mode=one]'))
  expect(f.workspace.getWorkbenchCells().every(c=>c.w===40&&c.x===0)).toBe(true)
 })
+it.each(['standard','three','two','one'])('%s整理一次接纳视野外首次加载的内容尺寸并完成全画布补位',async mode=>{
+ const f=await fixture(true),w=f.workspace
+ const html=id=>({...text(id),kind:'generated-container',containerPrompt:'布局回归',generationStatus:'completed',refreshMinutes:0,containerSpec:{version:1,type:'html',title:id,html:'<!doctype html><html><body><p>'+id+'：保留完整内容</p></body></html>'}})
+ await act(async()=>{
+  w.setArtifacts(['top','middle','last'].map(html))
+  w.applyWorkbenchCells([{id:'top',x:0,y:0,w:40,h:100},{id:'middle',x:0,y:100,w:40,h:100},{id:'last',x:0,y:200,w:40,h:100}],true)
+ })
+ expect(f.canvas.querySelector('[data-research-node-id="last"] [data-research-deferred-html]')).not.toBeNull()
+ const before=w.getWorkbenchCells()
+ if(mode==='standard')await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
+ else{
+  await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'))
+  await f.event('click',f.document.querySelector('[data-arrange-mode="'+mode+'"]'))
+ }
+ await vi.waitFor(()=>expect(f.canvas.querySelectorAll('iframe[data-research-html-artifact]')).toHaveLength(3))
+ for(const id of ['top','middle','last']){
+  const frame=f.canvas.querySelector('[data-research-node-id="'+id+'"] iframe'),node=w.getSnapshot().artifacts.find(n=>n.id===id)
+  // A newly mounted sandbox has its own inner width, excluding card padding.
+  Object.defineProperty(frame,'clientWidth',{configurable:true,value:Math.round(node.width-20)})
+  Object.defineProperty(frame,'clientHeight',{configurable:true,value:node.height-58})
+  await f.event('message',f.win,{source:frame.contentWindow,data:{type:'sherlock-workbench-content-size',width:frame.clientWidth,height:120}})
+ }
+ await vi.waitFor(()=>expect(w.getWorkbenchCells().every(c=>c.h<12)).toBe(true))
+ const settled=w.getWorkbenchCells()
+ expect(settled).toHaveLength(3)
+ for(const x of new Set(settled.map(c=>c.x))){
+  let bottom=0
+  for(const c of settled.filter(c=>c.x===x).sort((a,b)=>a.y-b.y)){expect(c.y).toBe(bottom);bottom=c.y+c.h}
+ }
+ await vi.waitFor(()=>expect(f.canvas.__eworkContentFit).toBeUndefined())
+ f.canvas.scrollTop=500;await f.event('scroll',f.canvas)
+ expect(w.getWorkbenchCells()).toEqual(settled)
+ await f.event('keydown',f.canvas,{metaKey:true,key:'z',code:'KeyZ'})
+ expect(w.getWorkbenchCells()).toEqual(before)
+})
 it('整理菜单支持键盘选择、Esc和点击外部关闭，空画布禁止展开',async()=>{
  let shared=false
  const f=await fixture(true,{researchBoards:{isSharedSession:()=>shared}}),toggle=f.document.querySelector('[data-workbench-arrange-toggle]')

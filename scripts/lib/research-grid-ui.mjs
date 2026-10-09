@@ -544,9 +544,14 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     const currentNodes=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
     const next=cells.map(c=>{
       const target=expected.get(c.id),cache=root.__eworkContentMeasurements?.get(c.id)
-      const matched=target&&cache?.html===target.html&&Math.abs(cache.width-target.width)<=2
-      if(target&&!matched)complete=false
       const node=currentNodes.find(n=>n.id===c.id)
+      const card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]'),frame=card?.querySelector('iframe[data-research-html-artifact]')
+      const cardWidth=card?.getBoundingClientRect().width,rendered=!cardWidth||node&&Math.abs(cardWidth-node.width)<=2
+      // First-load offscreen frames have no cached inset. Once mounted, use
+      // their actual inner width; do not mistake card padding for stale data.
+      if(target&&rendered&&frame?.clientWidth>0)target.width=Math.round(frame.clientWidth)
+      const matched=target&&rendered&&cache?.html===target.html&&Math.abs(cache.width-target.width)<=2
+      if(target&&!matched)complete=false
       const nativeCard=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"] [data-sherlock-market-native]')
       if(target&&nativeCard){expected.delete(c.id);complete=false}
       const height=matched?workbenchMeasuredDimensions(node,cache,target.width).height:!target||nativeCard?natural.get(c.id)?.height:null
@@ -571,10 +576,8 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   refit();return true
 }
 export function WorkbenchArrangeIcon({mode}) {
-  const count={three:3,two:2,one:1}[mode]
-  const laneWidth=count?(17-(count-1)*2)/count:17
-  const rects=mode==='one'?[{x:3.5,y:3.5,width:17,height:7},{x:3.5,y:13.5,width:17,height:7}]:count?Array.from({length:count},(_,i)=>({x:3.5+i*(laneWidth+2),y:3.5,width:laneWidth,height:17})):[{x:3.5,y:3.5,width:17,height:17}]
-  return react_jsx_runtime.jsxs('svg',{'aria-hidden':true,className:'ew-arrange-layout-icon',width:20,height:20,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round',children:[...rects.map((r,i)=>react_jsx_runtime.jsx('rect',{...r,rx:mode==='standard'?2:1},i)),mode==='standard'?react_jsx_runtime.jsx('path',{d:'M12 3.5v17M12 12h8.5'}):null]})
+  const divider={standard:'M12 3.5v17M12 12h8.5',three:'M9.167 3.5v17M14.833 3.5v17',two:'M12 3.5v17',one:'M3.5 12h17'}[mode]
+  return react_jsx_runtime.jsxs('svg',{'aria-hidden':true,className:'ew-arrange-layout-icon',width:20,height:20,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round',children:[react_jsx_runtime.jsx('rect',{x:3.5,y:3.5,width:17,height:17,rx:2}),react_jsx_runtime.jsx('path',{d:divider})]})
 }
 export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled,onArrange}) {
   useWorkbenchLocale()
