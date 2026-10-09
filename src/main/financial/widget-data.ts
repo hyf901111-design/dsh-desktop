@@ -73,13 +73,15 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
   const payload=(v:any):any=>{v=unpack(v);for(let i=0;i<6;i++){if(v?.code!==undefined&&![0,1,200].includes(v.code)||v?.retCode!==undefined&&v.retCode!==1)throw Error('通联未取得有效数据，请检查市场权限或稍后重试');if(v?.data===undefined)return v;v=unpack(v.data)}return v}
   const stamp=()=>new Date().toLocaleString('sv-SE',{timeZone:'Asia/Shanghai'}).replace(/[- :]/g,'')
   if(q.action==='search'){
-   const data=await api('stock_search',{data_type:'1',query:q.query.trim(),topK:20}),symbols:SymbolRef[]=[],seen=new Set<string>()
-   for(const r of findRows(data)){
-    const code=String(r.entity_id??r.ticker??''),name=String(r.name??r.secShortName??''),exchange=({XSHG:'SH',XSHE:'SZ',XBEI:'BJ',XHKG:'HK'} as Row)[r.exchangeCD]
+   const keyword=q.query.trim(),exact=/^\d{5,6}$/.test(keyword),exchanges:Row={XSHG:'SH',XSHE:'SZ',XBEI:'BJ',XHKG:'HK'}
+   const data=exact?await api(keyword.length===5?'getMktHKEqud':'market_snapshot',keyword.length===5?{ticker:keyword,beginDate:new Date(Date.now()-31*86400000).toISOString().slice(0,10).replaceAll('-',''),field:'ticker,secShortName,exchangeCD',pagenum:1,pagesize:3}:{ticker:keyword,type:'stock'}):await api('stock_search',{data_type:'1',query:keyword,topK:20}),symbols:SymbolRef[]=[],seen=new Set<string>()
+   const rows=exact&&keyword.length===6?[payload(data)]:findRows(data)
+   for(const r of rows){
+    const code=String(r.entity_id??r.ticker??''),name=String(r.name??r.secShortName??''),exchange=exchanges[r.exchangeCD]
     // stock_search returns documented five-/six-digit trading codes. Do not
     // guess a market for unfamiliar codes. US results remain unsupported.
     const market=exchange??(/^\d{5}$/.test(code)?'HK':/^92\d{4}$/.test(code)?'BJ':/^[569]\d{5}$/.test(code)?'SH':/^[023]\d{5}$/.test(code)?'SZ':/^[48]\d{5}$/.test(code)?'BJ':null)
-    if(!market||!code||!name)continue;const id=market+':'+code;if(!seen.has(id)){seen.add(id);symbols.push({code,market,name})}
+    if(!market||!code||!name||exact&&(code!==keyword||!exchange)||!exact&&/^\d+$/.test(keyword)&&!code.startsWith(keyword))continue;const id=market+':'+code;if(!seen.has(id)){seen.add(id);symbols.push({code,market,name})}
    }
    payload(data);result={symbols: symbols.slice(0,20),source:'通联 DataYes'}
   }else if(q.action==='news'){
