@@ -34,3 +34,11 @@ export function financialIndicators(bars){
  const fast=ema(values,12),slow=ema(values,26),dif=fast.map((x,i)=>x-slow[i]),dea=ema(dif,9)
  return {ma5:sma(values,5),ma10:sma(values,10),ma20:sma(values,20),ma30:sma(values,30),volume5:sma(bars.map(b=>b.volume),5),volume10:sma(bars.map(b=>b.volume),10),macd:dif.map((x,i)=>({dif:x,dea:dea[i],histogram:2*(x-dea[i])}))}
 }
+
+// Period boundaries use UTC trading dates; the header and chart share these bars.
+export function financialPeriodBars(bars,period,nativePeriod=false){
+ const grouped=[]
+ for(const b of bars){let key=b.date;if(!nativePeriod&&period==='1w'){const d=new Date(b.date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));key=d.toISOString().slice(0,10)}else if(!nativePeriod&&period==='1mo')key=b.date.slice(0,7);else if(!nativePeriod&&period==='1y')key=b.date.slice(0,4)
+ const previous=grouped.at(-1);if(previous?.key===key){previous.high=Math.max(previous.high,b.high);previous.low=Math.min(previous.low,b.low);previous.close=b.close;previous.volume=previous.volume===null||b.volume===null?null:previous.volume+b.volume;previous.date=b.date}else grouped.push({...b,key})}
+ return grouped
+}

@@ -59,3 +59,5 @@ body [data-ework-grid] [data-research-node-id] [data-financial-widget=quote] .ew
 @layer ework-workbench{
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-quote-controls>button[aria-pressed=true]{background-color:var(--grid-control)!important;color:var(--grid-text)!important}
 }
+
+@layer ework-workbench{body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-news-list a{color:var(--grid-text)!important}body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-news-list a:hover{color:#249bfa!important}}

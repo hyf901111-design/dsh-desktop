@@ -10,7 +10,7 @@ export function normalizeFinancialBars(rows:Row[]){
  return rows.flatMap(r=>{const d=date(first(r,['tradeDate','date','trade_date'])),open=num(first(r,['openPrice','openIndex','open'])),high=num(first(r,['highestPrice','highestIndex','highPrice','high'])),low=num(first(r,['lowestPrice','lowestIndex','lowPrice','low'])),close=num(first(r,['closePrice','closeIndex','close']))
  if(!d||!Number.isFinite(Date.parse(d))||new Date(d).toISOString().slice(0,10)!==d||seen.has(d)||[open,high,low,close].some(v=>v===null||v<=0)||low!>Math.min(open!,close!)||high!<Math.max(open!,close!))return []
  seen.add(d);const v=num(first(r,['turnoverVol','volume']));return [{date:d,open:open!,high:high!,low:low!,close:close!,volume:v!==null&&v>=0?v:null}]
- }).sort((a,b)=>a.date.localeCompare(b.date)).slice(-600)
+ }).sort((a,b)=>a.date.localeCompare(b.date)).slice(-4000)
 }
 function unpack(value:any):any{
  if(typeof value==='string'){try{return JSON.parse(value.replace(/^```(?:json)?\s*|\s*```$/g,''))}catch{const at=value.indexOf('\n{\"provenance\"');if(at>=0){try{return JSON.parse(value.slice(at+1))}catch{}}return value}}
@@ -91,14 +91,23 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
   }else{
    const jobs:PromiseSettledResult<any>[]=[],loadSymbol=async(s:SymbolRef)=>{
     if(s.market==='US')throw Error('通联暂未提供该美股行情接口')
-    const index=q.asset==='index',start=new Date(Date.now()-366*86400000).toISOString().slice(0,10).replaceAll('-',''),end=stamp().slice(0,8)
+    const index=q.asset==='index',end=stamp().slice(0,8)
     if(q.action==='history'){
      if(q.period==='1m')throw Error('当前图表接口暂不提供分钟行情')
      let value:any,unit='原始单位',nativePeriod=false
      if(['SH','SZ','BJ'].includes(s.market)){
       value=await api('market_HK',{ticker:s.code,time:({ '1d':'DAY','1w':'WEEK','1mo':'MONTH','1y':'YEAR'} as Row)[q.period],adjType:({none:0,forward:-1,backward:1} as Row)[q.adjustment],dateString:stamp(),flag:1,num:160});nativePeriod=true
      }else{
-      const name=({none:'getMktHKEqud',forward:'getMktHKEqudAdjf',backward:'getMktHKequdAdjfAf'} as Row)[q.adjustment];value=await api(name,{ticker:s.code,beginDate:start,endDate:end,pagenum:1,pagesize:600});unit='股'
+      const name=({none:'getMktHKEqud',forward:'getMktHKEqudAdjf',backward:'getMktHKequdAdjfAf'} as Row)[q.adjustment],begin=new Date(Date.now()-366*86400000)
+      if(q.period==='1w'){begin.setUTCFullYear(begin.getUTCFullYear()-1);begin.setUTCDate(begin.getUTCDate()-((begin.getUTCDay()+6)%7))}
+      if(q.period==='1mo'||q.period==='1y'){begin.setUTCFullYear(Number(end.slice(0,4))-(q.period==='1mo'?8:9),0,1)}
+      const beginDate=begin.toISOString().slice(0,10).replaceAll('-',''),all:Row[]=[],seenPages=new Set<string>()
+      for(let page=1;page<=40;page++){
+       const response=await api(name,{ticker:s.code,beginDate,endDate:end,pagenum:page,pagesize:100,field:'ticker,exchangeCD,tradeDate,openPrice,highestPrice,lowestPrice,closePrice,preClosePrice,turnoverVol'});payload(response)
+       const rows=findRows(response),fingerprint=JSON.stringify(rows.map(r=>[r.ticker,r.tradeDate]));if(rows.length&&seenPages.has(fingerprint))throw Error('此市场接口不支持完整周期查询，请选择日K');seenPages.add(fingerprint);all.push(...rows)
+       if(rows.length<100)break;if(page===40)throw Error('此周期数据过多，请选择较短周期')
+      }
+      value=all;unit='股'
      }
      payload(value);const bars=normalizeFinancialBars(findRows(value).filter(r=>r.ticker===undefined||String(r.ticker)===s.code));if(!bars.length)throw Error('此周期暂无可用K线');return {symbol:s,bars,source:'通联 DataYes',basis:({none:'不复权',forward:'前复权',backward:'后复权'} as Row)[q.adjustment],volumeUnit:unit,nativePeriod}
     }
