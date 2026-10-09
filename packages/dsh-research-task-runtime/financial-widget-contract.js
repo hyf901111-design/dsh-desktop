@@ -28,6 +28,12 @@ export function changeWatchlist(spec,action){
  else if(action.op==='move'&&Number.isInteger(action.from)&&Number.isInteger(action.to)&&action.from>=0&&action.to>=0&&action.from<symbols.length&&action.to<symbols.length)symbols.splice(action.to,0,symbols.splice(action.from,1)[0])
  return financialWidgetSpec({...spec,symbols})??spec
 }
+// Twelve 32px rows reproduce the 514px design. A short list does not reserve
+// twelve empty rows; the header, controls, column header and source strip stay.
+export function financialWidgetDimensions(spec){
+ if(spec?.widget==='watchlist')return {width:320,height:130+32*Math.min(12,Math.max(2,spec.symbols?.length||0))}
+ return ({quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340}})[spec?.widget]
+}
 export function financialIndicators(bars){
  const values=bars.map(b=>b.close),sma=(values,n)=>values.map((v,i)=>i<n-1||values.slice(i-n+1,i+1).some(x=>!Number.isFinite(x))?null:values.slice(i-n+1,i+1).reduce((a,b)=>a+b,0)/n)
  const ema=(v,n)=>{let previous;return v.map(x=>{previous=previous===undefined?x:x*2/(n+1)+previous*(1-2/(n+1));return previous})}

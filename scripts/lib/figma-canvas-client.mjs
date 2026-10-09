@@ -13,7 +13,7 @@ import { MARKET_REGULAR_FONT_CSS } from '../../packages/dsh-research-task-runtim
 import { readFileSync } from 'node:fs'
 import { patchFigmaDerivedMenu, derivedMenuCss } from './figma-derived-menu-client.mjs'
 const iconData = Object.fromEntries(['branch','chevron','summary','plus','check','more','expand','global-link-light','global-container-light','global-voice-light','global-link-dark','global-container-dark','global-voice-dark'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL('../../build/figma-canvas-icons/'+name+'.svg',import.meta.url)).toString('base64')]));
-const bentoSource = readFileSync(new URL('../../packages/dsh-research-task-runtime/bento-layout.js', import.meta.url), 'utf8').replace(/^export /gm, '').replace(/^\/\/[^\n]*\n/,'')
+const bentoSource = readFileSync(new URL('../../packages/dsh-research-task-runtime/bento-layout.js', import.meta.url), 'utf8').replace(/^import .* from ['"][^'"]+['"];?\r?\n/gm, '').replace(/^export /gm, '').replace(/^\/\/[^\n]*\n/,'')
 function exact(source, anchor, replacement) {
   const start = source.indexOf(anchor)
   if (start < 0 || source.indexOf(anchor, start + anchor.length) >= 0) throw Error('Figma canvas anchor missing or ambiguous: ' + anchor.slice(0, 90))

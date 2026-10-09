@@ -1,3 +1,4 @@
+import {financialWidgetDimensions} from './financial-widget-contract.js'
 // Shared by the task planner and the desktop canvas. Figma 46, 2026-09-10.
 export const RESEARCH_BENTO_SIZES = Object.freeze({
   small: { width: 320, height: 220, columns: 1, rows: 1 },
@@ -137,7 +138,7 @@ export function researchMarketDimensions(node, includeManual = false, availableW
 // A completed card owns its readable frame. Presets describe a starting slot,
 // not a reason to leave blank space or clip longer content after generation.
 export function researchOptimalDimensions(node = {}, measured = null) {
-  if(node.containerSpec?.type==='financial-widget')return ({watchlist:{width:320,height:514},quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340}})[node.containerSpec.widget];
+  if(node.containerSpec?.type==='financial-widget')return financialWidgetDimensions(node.containerSpec);
   if(node.containerSpec?.type==='files')return {width:656,height:410};
   if(node.containerSpec?.type==='gallery')return {width:656,height:364};
   if(node.containerSpec?.type==='audio')return {width:656,height:264};

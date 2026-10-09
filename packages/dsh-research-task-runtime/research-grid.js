@@ -4,6 +4,10 @@ export function createResearchGrid() {
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n))
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
   const minimum=(node,m,arranging=false)=>{
+    if(node?.containerSpec?.type==='financial-widget'){
+      const kind=node.containerSpec.widget,width=arranging?({watchlist:320,quote:716,indices:980,news:620})[kind]:kind==='quote'?400:320,height=kind==='quote'?600:kind==='watchlist'?194:kind==='indices'?200:220
+      return {w:Math.min(columns,Math.ceil((width+m.gap)/m.step)),h:Math.ceil((height+m.gap)/m.rowStep)}
+    }
     // Manual resizing uses one base frame for every component. Readable
     // template widths guide Arrange only; titles never constrain the frame.
     if(!arranging)return {w:m.minColumns,h:m.minRows}
@@ -290,6 +294,23 @@ export function createResearchGrid() {
   }
   function arrange(nodes,items,width,visibleHeight=0,mode='standard') {
     const requested={three:3,two:2,one:1}[mode]
+    // Presets are deliberately unequal: a narrow watchlist beside a wide price
+    // chart, with a spanning index strip. Standard Arrange restores that ratio
+    // instead of filling the canvas by stretching both into equal columns.
+    if(!requested&&nodes.length&&nodes.every(n=>n.containerSpec?.type==='financial-widget')){
+      const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),settled=[]
+      for(const old of items.map(bounded).sort(order)){
+        const node=byId.get(old.id);if(!node)continue
+        const p=node.preferred||node,min=minimum(node,m,true),w=Math.min(columns,Math.max(min.w,Math.ceil(((p.width||320)+m.gap)/m.step))),h=Math.max(min.h,Math.ceil(((p.height||200)+m.gap)/m.rowStep))
+        let best
+        for(let x=0;x+w<=columns;x++){
+          const y=Math.max(0,...settled.filter(c=>c.x<x+w&&c.x+c.w>x).map(c=>c.y+c.h))
+          if(!best||y<best.y||y===best.y&&x<best.x)best={id:old.id,x,y,w,h}
+        }
+        settled.push(bounded(best))
+      }
+      const result=new Map(settled.map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
+    }
     if(requested){
       const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
       // A chosen column count is explicit, including narrow viewports. Keep
