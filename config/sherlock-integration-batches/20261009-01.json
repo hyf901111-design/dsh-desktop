@@ -11,49 +11,21 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
-        "tipCommit": "3972a4876a212628504d7aab345a975aadf68659",
+        "baseCommit": "3972a4876a212628504d7aab345a975aadf68659",
+        "tipCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
         "commits": [
           {
-            "commit": "3972a4876a212628504d7aab345a975aadf68659",
+            "commit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
             "parents": [
-              "27076e769b6411527d079664a03d2e675c9e9e00"
+              "3972a4876a212628504d7aab345a975aadf68659"
             ],
-            "subject": "修复组件库浮层遮挡和窄画布拥挤问题"
+            "subject": "修复原生弹性布局吞掉底栏预留空间"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/financial-widget-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/financial-widget.css"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-widget-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-widget-layout.test.js"
           }
         ],
         "checks": [
@@ -69,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "46项固定组件、异常状态、菜单定位、侧栏最小尺寸和交互检查通过",
-            "verifiedCommit": "3972a4876a212628504d7aab345a975aadf68659",
-            "completedAt": "2026-10-09T23:43:26.606474+00:00",
+            "verifiedCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
+            "completedAt": "2026-10-09T23:52:07.564838+00:00",
             "timeoutMs": 180000
           },
           {
@@ -81,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "3972a4876a212628504d7aab345a975aadf68659",
-            "completedAt": "2026-10-09T23:43:26.606474+00:00",
+            "verifiedCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
+            "completedAt": "2026-10-09T23:52:07.564838+00:00",
             "timeoutMs": 180000
           },
           {
@@ -92,18 +64,18 @@
               "run",
               "test/research-grid-client.test.js",
               "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读|底部工具栏通过|缓存宽度与窗口|整理提示固定|点击添加链接后定位|画板菜单挂到"
+              "底部工具栏通过|缓存宽度与窗口|整理提示固定|点击添加链接后定位|画板菜单挂到"
             ],
             "outcome": "passed",
-            "summary": "13项直接相关补丁与底栏定位回归检查通过",
-            "verifiedCommit": "3972a4876a212628504d7aab345a975aadf68659",
-            "completedAt": "2026-10-09T23:43:26.606474+00:00",
+            "summary": "5项直接底栏定位回归检查通过；既有8项补丁恢复检查在上一提交通过",
+            "verifiedCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
+            "completedAt": "2026-10-09T23:52:07.564838+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实2f290原生包重现错误块挤掉自选行、工具栏覆盖行情、侧栏挤窄控件和搜索边界问题。本次真实React看板夹具1440×1000及760×780复核底栏独立间距、完整3行自选、四项菜单、联想与输入无交叠、三排不足保护及双排配置，控制台无异常。夹具为明确标注的测试数据，新原生包复核待执行。"
+          "summary": "118fc890原生包确认画布flex:1 1 0%吞掉80px高度预留。加入原生弹性容器的实际React夹具，修复前底栏覆盖，flex:none后1440×1000及760×780底栏与画布保持14px间距，菜单和联想范围、异常3行、固定列保护仍通过且控制台无异常；新原生包复核待执行。测试数据与真实通联明确区分。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -123,67 +95,7 @@
           "完整已安装客户端与账户切换路径待本地集成验收",
           "当前通联返回数据不可用，原生复核不能据此宣称真实行情链路通过"
         ],
-        "generatedAt": "2026-10-09T23:43:26.606474+00:00"
-      },
-      "merged": {
-        "mergeCommit": "23c0340be878777c833db1c3f0b7558326258f86",
-        "verificationCommit": "23c0340be878777c833db1c3f0b7558326258f86",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "23c0340be878777c833db1c3f0b7558326258f86",
-            "completedAt": "2026-10-09T23:44:18.156Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "23c0340be878777c833db1c3f0b7558326258f86",
-            "completedAt": "2026-10-09T23:44:18.156Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "23c0340be878777c833db1c3f0b7558326258f86",
-            "completedAt": "2026-10-09T23:44:18.156Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "23c0340be878777c833db1c3f0b7558326258f86",
-            "completedAt": "2026-10-09T23:44:18.156Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-09T23:44:18.156Z"
+        "generatedAt": "2026-10-09T23:52:07.564838+00:00"
       }
     }
   ],
