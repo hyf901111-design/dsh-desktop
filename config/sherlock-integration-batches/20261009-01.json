@@ -170,6 +170,66 @@
           "完整已安装客户端与账户切换路径待本地集成验收"
         ],
         "generatedAt": "2026-10-09T15:16:16.083862+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
+        "verificationCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci",
+            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
+            "completedAt": "2026-10-09T15:17:49.014Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/financial-widget-contract.test.js",
+              "test/financial-widget-data.test.ts",
+              "test/financial-widget-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
+            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
+            "completedAt": "2026-10-09T15:17:49.014Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
+            "completedAt": "2026-10-09T15:17:49.014Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "-t",
+              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
+            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
+            "completedAt": "2026-10-09T15:17:49.014Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-09T15:17:49.014Z"
       }
     }
   ],
