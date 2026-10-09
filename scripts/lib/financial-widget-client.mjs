@@ -32,11 +32,11 @@ export function FinancialWidget({node,sessionId,visible}){
  const {jsx,jsxs}=react_jsx_runtime,spec=node.containerSpec,root=react.useRef(null),[search,setSearch]=react.useState(false),[context,setContext]=react.useState(null),drag=react.useRef(null),[target,setTarget]=react.useState(null),[moving,setMoving]=react.useState(null),[data,setData]=react.useState(null),[status,setStatus]=react.useState(''),[busy,setBusy]=react.useState(false),refresh=react.useRef(null),[query,setQuery]=react.useState(spec.query),[hovered,setHovered]=react.useState(null),sequence=react.useRef(0),dataKey=react.useRef(null)
  const readOnly=sherlockShared(sessionId)&&sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit!==true
  const save=next=>!readOnly&&financialWidgetSinks.get(sessionId)?.(node.id,spec,next)
- const signature=JSON.stringify([spec.widget,spec.symbols,spec.period,spec.adjustment,spec.query]),format=v=>Number.isFinite(v)?v.toLocaleString('en-US',{maximumFractionDigits:3,minimumFractionDigits:2}):'—',percent=v=>Number.isFinite(v)?(v>0?'+':'')+v.toFixed(2)+'%':'—'
+ const signature=JSON.stringify([spec.widget,spec.widget==='watchlist'?[...spec.symbols].sort((a,b)=>(a.market+':'+a.code).localeCompare(b.market+':'+b.code)):spec.symbols,spec.period,spec.adjustment,spec.query]),format=v=>Number.isFinite(v)?v.toLocaleString('en-US',{maximumFractionDigits:3,minimumFractionDigits:2}):'—',percent=v=>Number.isFinite(v)?(v>0?'+':'')+v.toFixed(2)+'%':'—'
  react.useEffect(()=>{setQuery(spec.query)},[spec.query])
  react.useEffect(()=>{setSearch(false);setContext(null)},[signature,sessionId,node.id])
  react.useEffect(()=>{
-  const own=++sequence.current;let dead=false,attempt=0;setContext(null);setBusy(false);setStatus('');const key=JSON.stringify([sessionId,node.id,signature]);if(dataKey.current!==key){dataKey.current=key;setData(null)}
+  const own=++sequence.current;let dead=false,attempt=0;setContext(null);setBusy(false);setStatus('');const key=JSON.stringify([sessionId,node.id,spec.widget==='watchlist'?'watchlist':signature]);if(dataKey.current!==key||spec.widget==='watchlist'&&!spec.symbols.length){dataKey.current=key;setData(null)}
   if(visible===false)return
   const load=async(force=false)=>{if(dead)return {error:'组件已关闭'};const request=++attempt;setBusy(true);setStatus('正在获取数据…');try{
    const bridge=window.dshDesktop?.financialWidget;if(!bridge)throw Error('数据服务暂不可用')
