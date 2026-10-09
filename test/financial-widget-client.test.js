@@ -58,3 +58,10 @@ it('连续原生拖拽事件无需等待React渲染即可接受放下并排序',
 it('固定组件打开整框右键菜单不会落入普通正文导出并使画布崩溃',async()=>{
  const f=await fixture();await f.act(async()=>f.workspace.createFinancialWidget('watchlist'));await f.event('contextmenu',f.host.querySelector('[data-research-node-id]'),{clientX:100,clientY:100});expect(f.host.querySelector('[data-research-canvas]')).not.toBeNull();expect(f.document.querySelector('[role=menu]')).not.toBeNull()
 })
+it('自选行的原生右键仅显示股票菜单，不叠加整框菜单',async()=>{
+ const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s,other]}}])});const stamp=f.document.createElement('div');stamp.setAttribute('data-research-generation-process','');f.host.querySelector('[data-research-node-id]').append(stamp);await f.event('contextmenu',f.host.querySelector('[data-stock-code="600519"]'),{clientX:20,clientY:80});const menus=[...f.document.querySelectorAll('[role=menu]')];expect(menus).toHaveLength(1);expect(menus[0].textContent).toBe('从自选中移除')
+})
+it('鼠标指针拖拽跨股票行排序，不依赖浏览器文件拖放',async()=>{
+ const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s,other]}}])});const first=f.host.querySelector('[data-stock-code="600519"] .ew-watch-name'),second=f.host.querySelector('[data-stock-code="000001"]');f.document.elementFromPoint=()=>second
+ await f.event('pointerdown',first,{button:0,pointerId:1,clientX:30,clientY:100});await f.event('pointermove',first,{pointerId:1,clientX:30,clientY:140});await f.event('pointerup',first,{pointerId:1,clientX:30,clientY:140});expect(f.workspace.getSnapshot().artifacts[0].containerSpec.symbols).toEqual([other,s])
+})
