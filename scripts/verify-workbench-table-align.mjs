@@ -4,6 +4,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {patchResearchGridWorkbench} from './lib/research-grid-workbench.mjs'
 import {installWorkbenchTableColumns,WORKBENCH_TABLE_COLUMNS_CSS} from '../packages/dsh-research-task-runtime/workbench-table-columns.js'
+import {ResearchMarketNativeTable,researchMarketNativeTableCss} from './lib/research-market-native-table.mjs'
 
 const output=fileURLToPath(new URL('../output/workbench-table-align/',import.meta.url))
 await mkdir(output,{recursive:true})
@@ -51,6 +52,29 @@ try{
   await page.screenshot({path:output+theme+'-'+width+'.png'})
   assert.deepEqual(errors,[]);cases.push({theme,width,result:'PASS',columns:alignment})
   await page.close()
+ }
+ // The user's two market tables use this native renderer rather than the generic table.
+ for(const theme of ['light','dark'])for(const width of [320,656]){
+  const page=await browser.newPage({viewport:{width:900,height:440}})
+  await page.setContent('<style>body{margin:20px}'+researchMarketNativeTableCss+WORKBENCH_TABLE_COLUMNS_CSS+'</style><div data-research-artifact-card style="width:'+width+'px;height:340px"><div id="native"></div></div>')
+  await page.addScriptTag({content:dependencies.outputFiles[0].text})
+  await page.evaluate(theme=>{window.react=testDeps.react;window.react_jsx_runtime=testDeps.jsx;if(theme==='dark')document.body.setAttribute('data-ds-dark-theme','')},theme)
+  await page.addScriptTag({content:'window.NativeTable=('+ResearchMarketNativeTable.toString()+');window.installColumns=('+installWorkbenchTableColumns.toString()+')'})
+  await page.evaluate(()=>{
+   testDeps.dom.flushSync(()=>testDeps.createRoot(document.querySelector('#native')).render(react.createElement(NativeTable,{data:{variant:'table',columns:['代码','名称','开盘（元）','涨跌幅（%）'],rows:[[{text:'000538.SZ'},{text:'云南白药'},{text:'49.87'},{text:'-0.89'}],[{text:'600276.SH'},{text:'恒瑞医药'},{text:'44.86'},{text:'0'}]]}})))
+   installColumns(document.body)
+  })
+  const columns=await page.evaluate(()=>{
+   const table=document.querySelector('table')
+   const edge=cell=>{const range=document.createRange();range.selectNodeContents(cell.querySelector('button')||cell);return range.getBoundingClientRect()}
+   return [...table.rows[0].cells].map((header,i)=>{const body=table.rows[1].cells[i],type=header.dataset.columnAlign;return {type,header:getComputedStyle(header).textAlign,body:getComputedStyle(body).textAlign,delta:Math.abs(edge(header)[type]-edge(body)[type])}})
+  })
+  assert.deepEqual(columns.map(c=>c.type),['left','left','right','right'])
+  for(const column of columns){assert.equal(column.header,column.body);assert.ok(column.delta<1.1,JSON.stringify(column))}
+  await page.getByRole('button',{name:'按开盘（元）排序',exact:true}).click()
+  assert.equal(await page.locator('th[aria-sort="ascending"]').count(),1)
+  await page.screenshot({path:output+'native-'+theme+'-'+width+'.png'})
+  cases.push({renderer:'market-native',theme,width,result:'PASS',columns});await page.close()
  }
  // Exercise the serialized installer used by sandboxed HTML with an open-ended source table.
  const page=await browser.newPage()
