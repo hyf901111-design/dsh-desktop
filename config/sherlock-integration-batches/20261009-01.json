@@ -11,18 +11,22 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
-        "tipCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
+        "baseCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
+        "tipCommit": "3972a4876a212628504d7aab345a975aadf68659",
         "commits": [
           {
-            "commit": "27076e769b6411527d079664a03d2e675c9e9e00",
+            "commit": "3972a4876a212628504d7aab345a975aadf68659",
             "parents": [
-              "50886cad971c59d28ff85f1035df22ce5024e068"
+              "27076e769b6411527d079664a03d2e675c9e9e00"
             ],
-            "subject": "修复：组件主题与输入框样式并保留拖拽后的报价"
+            "subject": "修复组件库浮层遮挡和窄画布拥挤问题"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
           {
             "status": "M",
             "path": "scripts/lib/financial-widget-client.mjs"
@@ -33,7 +37,23 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
             "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-widget-layout.test.js"
           }
         ],
         "checks": [
@@ -42,14 +62,15 @@
               "npx",
               "vitest",
               "run",
+              "test/financial-widget-layout.test.js",
               "test/financial-widget-contract.test.js",
               "test/financial-widget-data.test.ts",
               "test/financial-widget-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "39项组件检查通过，包含排序保留已有报价且不重复请求，唯一搜索、联想、拖拽和图表坐标",
-            "verifiedCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
-            "completedAt": "2026-10-09T15:36:25.816308+00:00",
+            "summary": "46项固定组件、异常状态、菜单定位、侧栏最小尺寸和交互检查通过",
+            "verifiedCommit": "3972a4876a212628504d7aab345a975aadf68659",
+            "completedAt": "2026-10-09T23:43:26.606474+00:00",
             "timeoutMs": 180000
           },
           {
@@ -59,9 +80,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript类型检查通过",
-            "verifiedCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
-            "completedAt": "2026-10-09T15:36:25.816308+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "3972a4876a212628504d7aab345a975aadf68659",
+            "completedAt": "2026-10-09T23:43:26.606474+00:00",
             "timeoutMs": 180000
           },
           {
@@ -71,18 +92,18 @@
               "run",
               "test/research-grid-client.test.js",
               "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
+              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读|底部工具栏通过|缓存宽度与窗口|整理提示固定|点击添加链接后定位|画板菜单挂到"
             ],
             "outcome": "passed",
-            "summary": "8项直接影响的补丁恢复与既有看板回归检查通过",
-            "verifiedCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
-            "completedAt": "2026-10-09T15:36:25.816308+00:00",
+            "summary": "13项直接相关补丁与底栏定位回归检查通过",
+            "verifiedCommit": "3972a4876a212628504d7aab345a975aadf68659",
+            "completedAt": "2026-10-09T23:43:26.606474+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "前一集成客户端1755ee48原生复核了真实3股、周K、标准整理、四项菜单、唯一标题搜索、重复联想、右键和拖拽。发现浅色主题覆盖、双重输入框边框及拖拽清空报价，本次修复；实际React看板夹具复核客户端深色搭配看板浅色，组件正确变白，菜单264×216、33px行、32px表格行，无控制台错误。新原生包复核待执行，夹具为测试数据。"
+          "summary": "真实2f290原生包重现错误块挤掉自选行、工具栏覆盖行情、侧栏挤窄控件和搜索边界问题。本次真实React看板夹具1440×1000及760×780复核底栏独立间距、完整3行自选、四项菜单、联想与输入无交叠、三排不足保护及双排配置，控制台无异常。夹具为明确标注的测试数据，新原生包复核待执行。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -90,75 +111,19 @@
           "自选股组件内添加联想、右键删除、拖拽排序，配置持久保存，协作只读受限",
           "个股标题内选股，周期和复权、MA/VOL/MACD共用真实OHLC口径",
           "来源日期与未知/错误/未登录状态明确，无运行时示例价格",
-          "用户在本地集成客户端验收后再合并main，不发布推送、不混入三块暂存实验"
+          "用户在本地集成客户端验收后再合并main，不发布推送、不混入三块暂存实验",
+          "底栏不遮挡滚动内容，浮层限制在画布安全范围并避开自身输入",
+          "窄画布拒绝不足的固定排数，侧栏切换仍保留固定组件最小宽高",
+          "异常提示不重复、不挤掉行，刷新失败保留之前有效数据并明确标记"
         ],
         "risks": [
           "美股与分钟接口尚未验证，明确显示不支持",
           "通联A股K线成交量单位未声明，保留原始单位",
           "新闻单页限制3条以避免供应商截断JSON；完整原文经安全链接打开",
-          "完整已安装客户端与账户切换路径待本地集成验收"
+          "完整已安装客户端与账户切换路径待本地集成验收",
+          "当前通联返回数据不可用，原生复核不能据此宣称真实行情链路通过"
         ],
-        "generatedAt": "2026-10-09T15:36:25.816308+00:00"
-      },
-      "merged": {
-        "mergeCommit": "62f78c4e93d537787e354bc1fc42a8404c742792",
-        "verificationCommit": "62f78c4e93d537787e354bc1fc42a8404c742792",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "62f78c4e93d537787e354bc1fc42a8404c742792",
-            "completedAt": "2026-10-09T15:37:12.951Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "62f78c4e93d537787e354bc1fc42a8404c742792",
-            "completedAt": "2026-10-09T15:37:12.951Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "62f78c4e93d537787e354bc1fc42a8404c742792",
-            "completedAt": "2026-10-09T15:37:12.951Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "62f78c4e93d537787e354bc1fc42a8404c742792",
-            "completedAt": "2026-10-09T15:37:12.951Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-09T15:37:12.951Z"
+        "generatedAt": "2026-10-09T23:43:26.606474+00:00"
       }
     }
   ],
