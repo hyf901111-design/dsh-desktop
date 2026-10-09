@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "d5ed8baf613c3990ed03cb72e7b82645926d9344",
-        "tipCommit": "8ae0c0eb183d92169e99e511483e4dad26b57cb3",
+        "baseCommit": "8ae0c0eb183d92169e99e511483e4dad26b57cb3",
+        "tipCommit": "d1bf50f0b79b044b9e9a44cabc29885e101652f1",
         "commits": [
           {
-            "commit": "8ae0c0eb183d92169e99e511483e4dad26b57cb3",
+            "commit": "d1bf50f0b79b044b9e9a44cabc29885e101652f1",
             "parents": [
-              "d5ed8baf613c3990ed03cb72e7b82645926d9344"
+              "8ae0c0eb183d92169e99e511483e4dad26b57cb3"
             ],
-            "subject": "修复：保留离屏行情并保证整理后的组件阅读高度"
+            "subject": "修复：同步记录股票拖拽并适配固定组件右键导出"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "scripts/lib/financial-widget-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
@@ -47,9 +43,9 @@
               "test/financial-widget-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "27项契约、通联数据与实际客户端模块检查通过，含离屏保留、完整整理高度和紧凑新闻时间",
-            "verifiedCommit": "8ae0c0eb183d92169e99e511483e4dad26b57cb3",
-            "completedAt": "2026-10-09T12:58:05.388573+00:00",
+            "summary": "29项金融组件检查通过，包括连续拖拽事件、整框右键菜单、离屏保留与整理高度",
+            "verifiedCommit": "d1bf50f0b79b044b9e9a44cabc29885e101652f1",
+            "completedAt": "2026-10-09T13:17:12.684211+00:00",
             "timeoutMs": 180000
           },
           {
@@ -60,8 +56,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript类型检查通过",
-            "verifiedCommit": "8ae0c0eb183d92169e99e511483e4dad26b57cb3",
-            "completedAt": "2026-10-09T12:58:05.388573+00:00",
+            "verifiedCommit": "d1bf50f0b79b044b9e9a44cabc29885e101652f1",
+            "completedAt": "2026-10-09T13:17:12.684211+00:00",
             "timeoutMs": 180000
           },
           {
@@ -75,14 +71,14 @@
             ],
             "outcome": "passed",
             "summary": "8项直接影响的补丁恢复与既有看板回归检查通过",
-            "verifiedCommit": "8ae0c0eb183d92169e99e511483e4dad26b57cb3",
-            "completedAt": "2026-10-09T12:58:05.388573+00:00",
+            "verifiedCommit": "d1bf50f0b79b044b9e9a44cabc29885e101652f1",
+            "completedAt": "2026-10-09T13:17:12.684211+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际React客户端模块和原生CSS的深浅主题及组件内交互已验证。初轮原生集成客户端已验证四项菜单、直接放置、登录通联搜索及真实股票K线/指数/新闻；原生初验发现离屏报价清空、整理压缩与新闻时间问题，本后继提交以3项失败回归修复后27项通过，重建原生包复验仍待进行。"
+          "summary": "原生集成客户端已实查四项菜单、直接放置、通联搜索和CN行情/K线、六指数与新闻、重启后配置恢复和完整整理高度。原生检查又发现快速拖拽时序与整框右键导出缺少新类型支持，本后继提交以2项失败回归复现并修复，29项通过。重建本提交并复验原生交互仍待执行；浏览器测试数据与真实数据证据分开。"
         },
         "acceptanceCriteria": [
           "底栏四项图标列表直接创建并选中自选股、个股行情、市场指数、新闻列表",
@@ -97,67 +93,7 @@
           "新闻单页限制3条以避免供应商截断JSON；完整原文经安全链接打开",
           "完整已安装客户端与账户切换路径待本地集成验收"
         ],
-        "generatedAt": "2026-10-09T12:58:05.388573+00:00"
-      },
-      "merged": {
-        "mergeCommit": "491b8fb71da1a18f84993e176e845c416bd9c00d",
-        "verificationCommit": "491b8fb71da1a18f84993e176e845c416bd9c00d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "491b8fb71da1a18f84993e176e845c416bd9c00d",
-            "completedAt": "2026-10-09T12:58:33.150Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "491b8fb71da1a18f84993e176e845c416bd9c00d",
-            "completedAt": "2026-10-09T12:58:33.150Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "491b8fb71da1a18f84993e176e845c416bd9c00d",
-            "completedAt": "2026-10-09T12:58:33.150Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "491b8fb71da1a18f84993e176e845c416bd9c00d",
-            "completedAt": "2026-10-09T12:58:33.150Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-09T12:58:33.150Z"
+        "generatedAt": "2026-10-09T13:17:12.684211+00:00"
       }
     }
   ],
