@@ -1,0 +1,575 @@
+[
+  {
+    "name": "ai_search",
+    "description": "萝卜投研「资料检索」: 在通联(Datayes)语料库做中文金融语义检索，比通用网页搜索更准、更权威，返回句子级可溯源证据。 🧭 何时用: 搜研报、会议纪要、公告、市场点评、公众号或者资讯数据。 🧭 何时别用: 要一个具体数值——宏观/行业指标走 macro_industry_data，公司财务/个股行情/基金走 search_api→call_api。 🔴 每条素材都带 url——正文引用只写 [N]，url 放消息末尾的定义块 `[N]: <url>`；用 cite_link 拿现成的 inline / definition 两个字段并加 highlight 锚点(资讯类除外)。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 2,
+          "description": "检索问题(中文自然语言), 例如「新能源车 2026 渗透率」。"
+        },
+        "query_scope": {
+          "description": "可选语料范围, 取值之一: research/announcement/news/meetingSummary/indicator/researchTable; 传入其它值将被忽略(不报错)。",
+          "type": "string"
+        },
+        "top": {
+          "description": "返回【报告篇数】1-50, 默认 15; 同一篇报告只占一个名额(不是片段数)。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "rewrite_question": {
+          "description": "是否允许后端改写问题, 默认 false(保留原始问题)。",
+          "type": "boolean"
+        },
+        "start_time": {
+          "description": "时间窗起点 YYYY-MM-DD(可选)。",
+          "type": "string"
+        },
+        "end_time": {
+          "description": "时间窗终点 YYYY-MM-DD(可选)。",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "reportdata_search",
+    "description": "萝卜投研「研报数据」: 通联研报库的结构化检索与研报衍生数据。三种用法，按参数形状自动区分： **① 找研报**(给 ticker/industry/org_name/analyst/keyword 等筛选条件) ／ **② 读研报**(report_ids 在场 → depth=digest 要点 / fulltext 全文 / tables 图表) ／ **③ 取衍生数据**(dataset 在场 → 一致预期、评级统计、目标价调整、盈利预测、行业预测与预测数据、分析师、新财富榜单、金股五环)。 🧭 何时用: 按条件筛研报(某机构/某分析师/某行业/某时间段/某评级)、读某几篇研报的内容、取研报衍生的结构化数据。 🔴 何时别用: **自然语言提问用 ai_search**——本接口没有相关性排序，它是「全文过滤 + 按发布时间倒序」， 整句问题塞 keyword 只会按词面命中正文里的样板段(如「风险提示」)而跑题；keyword 只收 2–6 字的实体或概念词。 🔴 两条路互补不互替: 实测同一问题两者召回的研报交集仅 1.3%，要查全就两个都调。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "keyword": {
+          "description": "2–6 字的实体或概念词（如「固态电池」「以旧换新」）。🔴 禁止整句自然语言——本接口无相关性排序，长句必跑题；要语义检索请改用 ai_search。dataset=gold_rank 时本字段复用为榜单名，dataset=new_fortune 时复用为评选领域（如「宏观经济」「策略研究」）。",
+          "type": "string"
+        },
+        "ticker": {
+          "description": "股票代码：A股 6 位 / 港股 5 位 / 美股代码，多值英文逗号。",
+          "type": "string"
+        },
+        "industry": {
+          "description": "申万一级行业（31 选 1，如「汽车」「电子」）。🔴 没有二级/三级参数——上游那两个是死参数（真值/假值/不传返回逐字相同），已刻意不暴露。",
+          "type": "string"
+        },
+        "org_name": {
+          "description": "研报机构简称（如「中信证券」「高盛集团(Goldman Sachs)」），多值逗号。",
+          "type": "string"
+        },
+        "analyst": {
+          "description": "分析师姓名。⚠️ 同名不同机构会被上游静默合并，建议同时给 org_name。",
+          "type": "string"
+        },
+        "report_type": {
+          "description": "研报类型：MACRO宏观/INVESTMENT策略/INDUSTRY行业/COMPANY公司/BOND债券/FUND基金/FUTURES期货/FINANCIAL金工/OTHER其他。",
+          "type": "string"
+        },
+        "report_sub_type": {
+          "description": "子类型，如「业绩点评」「事件点评」「行业深度」「调研纪要」。",
+          "type": "string"
+        },
+        "org_type": {
+          "description": "研报来源：1内资 / 2外资 / 3独立智库，多值逗号。不传则三类都要。",
+          "type": "string"
+        },
+        "region": {
+          "description": "研究的国家地区（如「中国」「中国香港」「美国」，多值逗号）。🔴 它是**硬过滤**不是软过滤：内资研报的 region 字段为空，一旦传了内资会被 100% 滤掉（实测 orgName=广发证券 601 篇 → 加 region 后 0 篇）。所以只在「只要外资」时才该给。不给且 org_type 恰好只有 2 时，服务端自动限定为「中国,中国香港」（不限定的话外资研报里 84% 是欧美本土标的）。给了会先对上游枚举校验拼写。",
+          "type": "string"
+        },
+        "min_page_count": {
+          "description": "最少页数。过滤「水报告」最有效的一个杠杆：实测 industry=电子 无过滤 3,563 篇 → ≥10 页 1,733 篇 → ≥30 页仅 148 篇（都是深度报告）。",
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "theme": {
+          "description": "关联主题（概念板块）。⚠️ 它筛的是「板块成分股的研报」，精度低于 keyword，谨慎使用。",
+          "type": "string"
+        },
+        "start": {
+          "description": "起始日期 yyyyMMdd。dataset=industry_forecast_data 时它被当作 publishDate 单日。",
+          "type": "string"
+        },
+        "end": {
+          "description": "截止日期 yyyyMMdd。dataset=new_fortune 时只取年份（榜单按年度发布）。",
+          "type": "string"
+        },
+        "page": {
+          "description": "翻页 1–3。结果按发布时间倒序，第 2/3 页只是更早的报告，不是「更不相关的」。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "page_size": {
+          "description": "每页条数 1–20，默认 10。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "report_ids": {
+          "description": "要读的研报 id（来自「找研报」结果的 id 字段），一次最多 10 篇。给了它就走「读研报」。",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "depth": {
+          "description": "digest 研报AI要点(默认，最省，实测约 6.5k 点/篇) / fulltext 正文全文(内资 1M、外资 4M 点每篇) / tables 研报图表(含可下载 xlsx)。",
+          "type": "string"
+        },
+        "org_types": {
+          "description": "{研报id: orgType} 映射，来自「找研报」结果。给了可少打一次请求；不给则服务端先打内资口再按缺口反推，结果一样。",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "dataset": {
+          "description": "研报衍生数据表，取值之一：consensus / rating_stat / target_price / profit_adjust / forecast / industry_forecast / industry_forecast_data / analyst / new_fortune / gold_stock / gold_rank / gold_forecast / gold_quotes / gold_org_return。给了它就走「取衍生数据」。金股是五环链路：gold_stock 谁推荐了什么 → gold_rank 榜单排名 → gold_forecast 盈利预测 → gold_quotes 实际行情 → gold_org_return 机构组合收益。",
+          "type": "string"
+        },
+        "limit": {
+          "description": "衍生数据返回条数上限——**会真的下发到上游**（按字节计费的表走 pageSize，按行计费的表走 pagesize）。按行计费的表行数就是账单（0.5~1M 点/行），只要看头部若干条就一定要传它：实测 gold_stock 取 9 月全月是 416 行 ≈ 208M 点，传 limit=20 只要 10M 点。",
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "industry_id": {
+          "description": "申万行业 ID（infoInduID），dataset=industry_forecast_data 用。与 start 二选一必给——上游规定两者不能同时为空，且只给日期时一天就有约 348 行。",
+          "type": "string"
+        },
+        "freq": {
+          "description": "金股频度 M月/Q季/W周/Y年/N不定期，dataset=gold_quotes 用（可选，ticker 与时间窗才是必给的）。",
+          "type": "string"
+        },
+        "period_type": {
+          "description": "机构金股组合收益的统计周期，dataset=gold_org_return 用，默认 1Y。",
+          "type": "string"
+        },
+        "rank_by": {
+          "description": "🏆 **全市场排行**：按这个字段翻全量、在服务端本地排序取前 N 名。问「XX 排名前十的公司」用它，一次调用出榜。可排字段：consensus 支持 conProfitChgpct1m（归母净利一致预期近一月变化率，「盈利预测调整排名」的干净口径）/ conProfitChgpct1q / conProfitChgpct1y / conProfit / conEps / conPe；profit_adjust 支持 profitAdjustPer / incomeAdjustPer。🔴 别自己传 sortField 让上游排——实测 conSecData 传了直接 HTTP 500，profit_adjust 传了返回 code=1 却不含该字段，你无法验证它有没有真排序。",
+          "type": "string"
+        },
+        "top": {
+          "description": "`rank_by` 取前几名，默认 10，最多 100。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "max_pages": {
+          "description": "`rank_by` 最多翻几页。不给则按点数预算自动算；超预算会**报错并给出实测数字**而不是少扫几页——少扫出来的榜看起来完全正常但前十全错。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "fore_date": {
+          "description": "一致预期的快照日期（yyyyMMdd），dataset=consensus 用。不给则取上游默认的最新快照。",
+          "type": "string"
+        },
+        "fore_year": {
+          "description": "一致预期的预测年度（如 2026），dataset=consensus 用。🔴 做 rank_by 排行时**必填**——不给的话同一只票会按每个预测年度各出一行（实测 22,244 行 vs 限定后 5,561 行），排出来的榜含重复标的且完全看不出异常。",
+          "type": "string"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "meeting_search",
+    "description": "萝卜投研「会议纪要」: 券商闭门会 / 上市公司业绩会 / 专家访谈 / 策略会的结构化检索与全文。 三种用法，按参数形状自动区分： **① 结构化找**(给 ticker/industry/org_name/meeting_type/时间窗等条件) ／ **② 语义找**(给 question 整句自然语言 → 语料范围已由服务端钉死为会议纪要) ／ **③ 读纪要**(meeting_ids 在场 → 取全文)。 🔴 **keyword 只收一个 ≤8 字的短词**: 本接口不是短语匹配，多词会静默退化成按字 OR—— 实测「固态电池」460 场、打乱成「电池固态」4,206 场、纯胡诌的六字词 9,535 场，全程无异常。 整句提问一律放 question。 🔴 **两条路互补不互替**: 实测语义与结构化召回的纪要交集仅 3.4~5.6%(时间窗对齐后仍是 5.6%)， 要查全就 question 与结构化条件一起给，本工具会两路都跑并标注来源。 ⚠️ 纪要是**语音转写**，专有名词常被拼碎(实测 Triton→「崔疼」、寒武纪→「汉武纪」)， 搜英文技术词时务必同时给 ticker 或改走 question。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "keyword": {
+          "description": "一个 ≤8 字的短词（如「固态电池」「算力」）。🔴 禁止多词与整句——本接口不是短语匹配，多词静默退化成按字 OR，total 会变成一个假的热度信号。整句请放 question。",
+          "type": "string"
+        },
+        "ticker": {
+          "description": "股票代码。本域 A股 / 港股 / 美股都支持（与公告不同，公告只认 A 股 6 位）。",
+          "type": "string"
+        },
+        "industry": {
+          "description": "行业，取值之一：宏观 / 策略 / 固收 / 金工 / 农林牧渔 / 基础化工 / 钢铁 / 有色金属 / 建筑材料 / 建筑装饰 / 电力设备 / 机械设备 / 国防军工 / 汽车 / 电子 / 家用电器 / 食品饮料 / 纺织服饰 / 轻工制造 / 医药生物 / 公用事业 / 交通运输 / 房地产 / 银行 / 非银金融 / 商贸零售 / 社会服务 / 计算机 / 传媒 / 通信 / 综合 / 煤炭 / 石油石化 / 环保 / 美容护理 / 海外 / 新三板 / 北交所 / 中小市值 / 其他。多值英文逗号。🔴 枚举外的值上游返回的是空信封（与「真没纪要」逐字节相同），所以服务端会先校验再下发；注意契约文档里的「宏观策略」「固定收益」实测都不存在。",
+          "type": "string"
+        },
+        "org_name": {
+          "description": "主办机构**简称**（如「中信证券」不是「中信证券股份有限公司」）。服务端会先对上游枚举（219 家，精确匹配）校验拼写——写错不会报错，只会返回空信封。",
+          "type": "string"
+        },
+        "analyst": {
+          "description": "分析师姓名。⚠️ 服务端校验不了（上游的分析师枚举接口实测是死的），写错只会返回空信封。",
+          "type": "string"
+        },
+        "theme": {
+          "description": "关联主题。⚠️ 同样校验不了。",
+          "type": "string"
+        },
+        "meeting_type": {
+          "description": "会议类型：公司分析 / 专家对谈 / 行业分析 / 策略会 / 业绩交流。多值逗号。",
+          "type": "string"
+        },
+        "market": {
+          "description": "市场：A股 / 港股 / 美股。多值逗号。",
+          "type": "string"
+        },
+        "start": {
+          "description": "起始日期 yyyyMMdd。上游要的是 14 位 yyyyMMddHHmmss，服务端自动补时分秒；格式写错会被上游静默变成空信封，所以这里只收 8 位。",
+          "type": "string"
+        },
+        "end": {
+          "description": "截止日期 yyyyMMdd。",
+          "type": "string"
+        },
+        "min_minutes": {
+          "description": "最短会议时长（**分钟**）。上游参数的单位是毫秒，服务端负责换算——直接传毫秒或传错单位会被上游静默无视。",
+          "type": "number"
+        },
+        "max_minutes": {
+          "description": "最长会议时长（分钟）。",
+          "type": "number"
+        },
+        "highlight": {
+          "description": "是否返回命中词高亮片段，默认 false。开启多约 36% 字节，而高亮只是标题/正文加 <em> 的重复，对判断相关性没有增量。",
+          "type": "boolean"
+        },
+        "page": {
+          "description": "翻页，从 1 开始。结果按发布时间严格倒序，第 2 页只是更早的会，不是「更不相关的」。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "page_size": {
+          "description": "每页条数 1–100，默认 20。🔴 超过 100 上游不是钳位而是直接报错返回空信封，服务端会夹住。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "question": {
+          "description": "整句自然语言提问。走语义检索，**语料范围已由服务端钉死为会议纪要**，你不需要也不能指定。与结构化条件同时给 → 两路都跑（交集仅 3.4~5.6%，互补不互替）。计费 0.5M 点/次（按次固定）。",
+          "type": "string"
+        },
+        "top": {
+          "description": "语义路返回几场会，1–50，默认 15。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "meeting_ids": {
+          "description": "要读全文的纪要 id（来自「找」的结果）。🔴 一次最多 3 篇，**4M 点/篇**，且官方限额约 80 次/天（只写在契约散文里，网关限流配置没有、响应里也没有余额信号），服务端自己做了日配额。只需要要点的话用搜索结果里的 headlines，别读全文。",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "announcement_search",
+    "description": "萝卜投研「A股公告」: 沪深上市公司公告的结构化检索与溯源链接。 三种用法，按参数形状自动区分： **① 结构化找**(给 ticker/industry/category/时间窗等条件) ／ **② 语义找**(给 question 整句自然语言 → 语料范围已由服务端钉死为公告) ／ **③ 取溯源链接**(announcement_ids 在场)。 🔴 **本接口没有分页，所以没有 page 参数**: pageNo/page/offset 等九个参数实测全部被忽略， 第 1、2、3 页返回的 id 逐个相同，而响应信封却写着 pageCount:93。要更多请调大 page_size, **绝不要写按页累加的循环**——那只会把同一批结果重复拿 N 遍，每轮都照常按字节计费。 ⚠️ **带 keyword 时行数死钉 100**(给 1000 也只返回 100), 结合「没有分页」= 第 100 条之后彻底取不到; 不带 keyword 时给多少返多少(实测一次取回全部 926 条)。 ✅ **keyword 在本域是真短语匹配**: 实测「固态电池」8,415 条、打乱成「电池固态」117 条、 纯胡诌词 **0 条**，所以这里的 total 可以当真实命中量用—— **研报域和纪要域不行**(那两个按字 OR，胡诌词能命中 55 篇 / 9,535 场)，别把那边的经验搬过来。 🔴 **两条路互补不互替**: 实测语义与结构化召回的公告特征化后交集是 **0.0%**(Jaccard 5.6%), 且语义路按类目查的准确率只有 18.6%(结构化 81.8%)。要查全就 question 与结构化条件一起给。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "keyword": {
+          "description": "公告标题或正文里的词。✅ 本域是**真短语匹配**（实测胡诌词返回 0 条），total 可以当真实命中量用。搜的是标题+正文，不只是标题。🔴 但一旦给了 keyword，行数就被上游死钉 100 且没有分页——第 100 条之后取不到，要覆盖全量请改用 ticker/industry/category 收窄。",
+          "type": "string"
+        },
+        "ticker": {
+          "description": "A 股股票代码 6 位（如 000001）。🔴 本域只认 A 股；港美股请走研报或会议纪要工具。",
+          "type": "string"
+        },
+        "industry": {
+          "description": "申万一级行业，取值之一：建筑材料 / 建筑装饰 / 电力设备 / 国防军工 / 汽车 / 机械设备 / 轻工制造 / 农林牧渔 / 煤炭 / 基础化工 / 钢铁 / 有色金属 / 石油石化 / 银行 / 非银金融 / 房地产 / 电子 / 计算机 / 传媒 / 通信 / 公用事业 / 交通运输 / 环保 / 家用电器 / 食品饮料 / 纺织服饰 / 医药生物 / 商贸零售 / 社会服务 / 美容护理。多值用英文逗号拼一个字符串（数组会被上游当空信封）。🔴 枚举外的值返回的是 code=1 + total=0，与「这个行业真没公告」完全一样，所以服务端会先校验。",
+          "type": "string"
+        },
+        "category": {
+          "description": "公告分类，格式必须是「子类型-一级类型」（如「业绩预告-财务披露」「会计制度变更-日常经营」）。多值英文逗号。🔴 只给子类型或把两段写反，实测都是 total=0，与「真没有」分不出来。⚠️ 官方分类枚举**本身有错值**——它给的「会计制度变革」实测 0 条，而真值「会计制度变更」有 2,724 条却不在枚举里，所以服务端只校验格式、不做白名单，只在返回 0 条时给形近建议。",
+          "type": "string"
+        },
+        "important_only": {
+          "description": "只要重要公告，默认 false。实测同一只票 926 → 390 条。",
+          "type": "boolean"
+        },
+        "start": {
+          "description": "起始日期 yyyyMMdd。🔴 只收这一种格式——写成 2026-01-01 或别的写法会被上游**静默丢掉整个条件**并返回全历史（实测同一只票正确格式 67 条 vs 错误格式 926 条，两者都是 code=1）。⚠️ 这个日期轴是**入库时间** scannedTimestamp，不是公告发布日，而且返回里根本没有 publishDate 字段可以自己对。",
+          "type": "string"
+        },
+        "end": {
+          "description": "截止日期 yyyyMMdd。同样只收这一种格式。",
+          "type": "string"
+        },
+        "page_size": {
+          "description": "要多少条。🔴 **这是本工具唯一能拿到更多结果的杠杆——本接口没有分页。** 带 keyword 时最多 100（上游死钉，给更大也只返回 100）；不带 keyword 时最多 1000，要多少给多少。计费 2 点/字节，实测 926 条 ≈ 1.10M 点 / 7.6 秒，取全量前先看 total。默认 20。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "question": {
+          "description": "整句自然语言提问。走语义检索，**语料范围已由服务端钉死为公告**，你不需要也不能指定（实测不钉死时默认返回里只有 7.2% 是公告，有一题 0/40）。与结构化条件同时给 → 两路都跑（特征化后交集 0.0%，互补不互替）。计费 0.5M 点/次（按次固定）。🔴 时间窗对这一路**不生效**（上游在公告语料下把 startTime/endTime 当死参数，实测传与不传逐字节相同），要按时间卡请以结构化那批为准。",
+          "type": "string"
+        },
+        "top": {
+          "description": "语义路返回几篇，1–50，默认 15。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "announcement_ids": {
+          "description": "要取溯源链接的公告 id（来自「找」的结果）。🔴 一次最多 5 条，**1M 点/条**（按次计费，与返回大小无关）。🔴 **这一步拿不到正文**——上游详情的 articleBody 恒为 null，1M 点买到的只是 metadata 加一个可点的原文链接。要判断内容请用搜索结果里的 title/paragraphs，别为了看正文来这里。",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "search_api",
+    "description": "搜索 Datayes 平台中与查询词最匹配的金融数据 API，返回候选接口列表。⚠️ 搜的是【数据接口】，不是数据本身。🧭 何时用: 要公司财务、个股行情、基金/ETF、股东、分红等结构化数值，但不确定用哪个接口——这是取数三步的第一步。🧭 何时别用: 要 CPI/GDP/产量这类宏观行业指标时间序列 → 用 macro_industry_data（指标库是专门的一条路，不必绕接口）；要研报/纪要/公告等文字素材 → 用 ai_search。导航接口，不消耗额度。调用业务接口前请先用 get_api_info 取参数定义。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "description": "自然语言数据需求关键词，如「研报搜索」「股票行情快照」「ETF 资金流向」「宏观指标」「营业收入」。"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "get_catalog",
+    "description": "获取 Datayes 平台全部 API 的分类目录树。仅当 search_api 找不到合适接口、需要分层浏览时使用。导航接口，不消耗额度。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "get_api_info",
+    "description": "获取指定 Datayes API 的完整定义：httpMethod、httpUrl、curlExample、parametersInput（参数名/类型/是否必填/位置 Query|Body|Path/默认值）。调用任何业务 API 之前必须先调用本工具，禁止凭记忆猜测参数。导航接口，不消耗额度。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nameEn": {
+          "type": "string",
+          "minLength": 1,
+          "description": "API 英文标识符 nameEn，如 market_snapshot、research_search、fdmtNew、Indicsdetail。"
+        }
+      },
+      "required": [
+        "nameEn"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "call_api",
+    "description": "调用 Datayes 业务 API 并返回数据。必须在 get_api_info 之后执行，用其返回的 http_method 与 url 构造请求。参数按 location 分类：Query 类放入 url_params，Body 类放入 body，Path 类先替换进 url。成功 = HTTP 200 且 response.code==1。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nameEn": {
+          "type": "string",
+          "minLength": 1,
+          "description": "API 英文标识符（用于追踪），来自 get_api_info。"
+        },
+        "http_method": {
+          "type": "string",
+          "description": "请求方法 GET 或 POST，来自 get_api_info 的 httpMethod 字段（大小写不敏感）。"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "description": "完整请求 URL，来自 get_api_info 的 httpUrl；若有 Path 参数请先替换占位符。"
+        },
+        "url_params": {
+          "description": "Query 类参数（location=Query），键值对。",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "body": {
+          "description": "请求体（仅 POST），Body 类参数（location=Body）。",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "nameEn",
+        "http_method",
+        "url"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "macro_industry_data",
+    "description": "指标库检索与取数。覆盖通联指标库的【中国宏观 / 国际宏观 / 行业经济 / 特色数据】四类：宏观(GDP/CPI/M2)、行业(产量/价格/景气)，以及特色数据里的【公司特色指标】(商超销售、电商，如「贵州茅台:线下商超销售额」)。两种用法，按参数形状自动区分：**keywords=[...] 找**（分组返回候选，不取数、不发溯源编号）／ **ids=[...] 取**（按指标 id 取时间序列并发溯源编号，可一次多个，编号连着发）。🔴 必须先找后取，没有一步到位——实测 22 个常见关键词，排序第 1 条严格意义上只有约 1/3 是想要的那条（搜「CPI」前 20 条全是省级年度与南非，全国口径 0 条）。🔴 找的时候一次传 2–4 个变体，别一个一个试：单看一组判不出排序有没有跑偏（实测「GDP当季同比」15 条 route 全部正常、名字全带 GDP，毫无破绽），只有并排才看得出「一组落在贡献率、两组落在总量」。实测一个一个试要 8 次调用 4 分钟，批量只要 3 次调用 1 分半。变体怎么造：原词 ／ 按库里的冒号分层补口径（GDP:当季同比） ／ 换口径说法（现价·不变价·指数·存量·累计）。🧭 何时用: 要 CPI/M2/GDP/产量/价格指数这类【时间序列指标】，含特色数据里的公司特色指标（商超销售、电商等）。🧭 何时别用: 公司财务/个股行情/K线 → search_api→call_api；研报/纪要/公告等文字素材 → ai_search。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "keywords": {
+          "description": "【找】一次传 2–4 个关键词变体，分组返回便于横向对比。指标关键词——先短后精。① 用核心词（M2 / PMI / 生猪 / 工业增加值；公司特色数据用「品名+数据类型」如「茅台 商超」），不要加地区词：「中国CPI」只命中港澳与境外——全国级指标名不带国名前缀，只有省级才有「天津:」这类前缀。② 口径要按库里的【冒号分层】接上去：指标名是 `GDP:不变价:当季同比`、`CPI:当月同比` 这种形态，冒号是名字的一部分。连写会精确撞进别的分支——实测「GDP当季同比」20 条全是「贡献率/拉动」（另一批指标恰好以它开头），「GDP:当季同比」才是真 GDP；「GDP不变价当季同比」0 命中，加冒号后第 1 条精确命中。空格无效，只有冒号有效。拿不准先用短词搜一轮看库里真实的名字格式，再照抄格式补口径。③ 统计口径词（当月同比/累计同比/存量/环比）是指标名的一部分，不是修饰词——实测「CPI」全国口径 0 条，「CPI当月同比」20 条全是全国口径。④ 年份用 begin_date / end_date，不要写进关键词；frequency 只筛频率 D/W/M/Q/A，表达不了同比/环比/累计。",
+          "minItems": 1,
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ids": {
+          "description": "【取】指标 id 列表（来自 keywords 检索结果的 id 字段）。一次可传多个，溯源编号在同一次调用里连着发。",
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "top": {
+          "description": "找：每组返回候选条数，默认 15。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        },
+        "frequency": {
+          "description": "找：频率偏好 D/W/M/Q/A；不填或非法值则从关键词推断。",
+          "type": "string"
+        },
+        "size": {
+          "description": "找：每次检索拉取的候选数，默认 20。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "begin_date": {
+          "description": "取：起始日期 yyyymmdd（可选）。",
+          "type": "string"
+        },
+        "end_date": {
+          "description": "取：结束日期 yyyymmdd（可选）。",
+          "type": "string"
+        },
+        "limit": {
+          "description": "取：每个指标返回最近多少期，默认 12、上限 600。⚠️ 同时给 begin_date+end_date 时返回区间全量并忽略 limit——拉长历史请用时间窗，别调大 limit。",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  },
+  {
+    "name": "cite_link",
+    "description": "构造并校验萝卜投研溯源链接。链接一律用本工具生成，不要手写百分号编码。\n🔴 返回的每条有**两个零件**：`inline`（贴正文句末，形如 [3]）与 `definition`（贴消息**最末尾**的定义块，形如 [3]: https://…）。\n   两个必须成对贴上，只贴 inline 那条引用会以光秃秃的 [3] 显示、点不动；定义块前面还要空一行。\n\n🔴 **首选批量形态：把本轮所有引用凑齐，一次调用报完**（每条引用单独调一次会付一次完整往返，20 条就是 20 次停顿）：\n  items=[{n:\"3\", unit:\"E2\"}, {n:\"5\", anchor:\"18.8062\"}, {n:\"7\"}]\n  · n     = 来源编号，取自【已登记来源 SOURCES】表第一列（服务端发的，禁止自行编号）\n  · unit  = 素材类首选：证据块里的句柄（如 E2），服务端自己取那句逐字原文当锚点，你不必抄\n  · anchor= 自定义锚点。接口数字必须走这个，填**接口返回的原始字段值**（150225314000，不是 1502.25亿元）\n  · 两个都不给 = 生成不带 highlight 的链接（news/指标本来就该这样）\n  url 与素材原文服务端按编号自查，**不要回传**。返回与入参等长、同序的数组。\n\n单条兜底形态（编号查不到时，如客户端重连换了进程）：kind + url/request_id/indic_id + api_text + anchor。\n🔴 兜底形态**同样走服务端校验**，不是免检通道：走哪条校验路由 **url 本身**决定（不是你自报的 kind），\n   request_id / indic_id / 审计页 url / 指标页 url 一律回查本服务的调用与取数记录，查不到（编造的，\n   或服务端重启过）就 ok:false——那时请重新调一次 call_api / macro_industry_data 拿新编号，不要手写链接。\n   素材 url 若本服务留存过原文，锚点必须对得上其中一段；没留存过才按你给的 api_text 校验并标 verified:\"caller-supplied\"。\n   非萝卜投研域名的 url 一律拒发。\n🔴 ok=false 时不要发这条链接——按返回的 error 换锚点重试，或改用不带 highlight 的 url。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "description": "批量形态。一次把本轮所有引用报完，优先用这个。",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "n": {
+                "type": "string",
+                "minLength": 1,
+                "description": "来源编号（SOURCES 表第一列）。"
+              },
+              "unit": {
+                "description": "素材类句柄，如 E2；服务端据此取该句逐字原文当锚点。",
+                "type": "string"
+              },
+              "anchor": {
+                "description": "自定义锚点；接口数字填返回体里的原始字段值。",
+                "type": "string"
+              },
+              "url": {
+                "description": "兜底：仅当该编号查不到时才需要（素材 url）。",
+                "type": "string"
+              },
+              "api_text": {
+                "description": "兜底：仅当该编号查不到时才需要（素材原文，用于校验 anchor）。",
+                "type": "string"
+              },
+              "request_id": {
+                "description": "兜底：仅当该编号查不到时才需要（接口 provenance.request_id）。",
+                "type": "string"
+              },
+              "indic_id": {
+                "description": "兜底：仅当该编号查不到时才需要（指标 id）。",
+                "type": "string"
+              }
+            },
+            "required": [
+              "n"
+            ]
+          }
+        },
+        "kind": {
+          "description": "单条兜底形态的来源类型。",
+          "type": "string",
+          "enum": [
+            "material",
+            "api_record",
+            "indicator"
+          ]
+        },
+        "anchor": {
+          "description": "单条：要高亮的原文片段。",
+          "type": "string"
+        },
+        "api_text": {
+          "description": "单条：接口返回的原文全文，用于校验 anchor 是其逐字子串。",
+          "type": "string"
+        },
+        "url": {
+          "description": "单条 material：素材自带的 url。",
+          "type": "string"
+        },
+        "request_id": {
+          "description": "单条 api_record：call_api 返回的 provenance.request_id，禁止编造。",
+          "type": "string"
+        },
+        "indic_id": {
+          "description": "单条 indicator：指标 id。",
+          "type": "string"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+  }
+]

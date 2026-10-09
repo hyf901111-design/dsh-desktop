@@ -431,14 +431,14 @@ export class IntegrationView {
         const allowed = tools.filter(tool => tool.allowed).length;
         const dependencies = summary?.dependencies;
         const summaryRow = (label: string, value: string, action?: string, actionLabel?: string, extra = '') => `<div class="ig-summary-row"><div><span>${label}</span><strong>${esc(value)}</strong>${extra}</div>${action ? button(action, actionLabel || '') : ''}</div>`;
-        const summaryContent = summaryRow('使用范围', scope, 'edit-connection', '修改范围')
-            + summaryRow('允许调用', `${allowed} 个已授权工具 · 共 ${tools.length} 个工具`, 'manage-tools', this.toolsExpanded ? '收起工具' : '管理工具')
-            + summaryRow('认证方式', summary?.authLabel || '查看连接配置', 'edit-connection', '管理凭据')
+        const summaryContent = summaryRow('使用范围', scope, row.configurable===false?undefined:'edit-connection', '修改范围')
+            + summaryRow('允许调用', `${allowed} 个已授权工具 · 共 ${tools.length} 个工具`, 'manage-tools', this.toolsExpanded ? '收起工具' : row.toolsReadonly?'查看工具':'管理工具')
+            + summaryRow('认证方式', summary?.authLabel || '查看连接配置', row.configurable===false?undefined:'edit-connection', '管理凭据')
             + summaryRow('关联任务', dependencies ? dependencies.length ? `${dependencies.length} 个任务依赖这条连接` : '暂无关联任务' : '移除连接前会检查关联任务', dependencies?.length ? 'show-dependencies' : undefined, this.dependenciesExpanded ? '收起任务' : '查看任务', this.dependenciesExpanded && dependencies?.length ? `<ul>${dependencies.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : '');
         const selected = this.toolsExpanded ? this.toolSelections(row) : undefined;
         const allSelected=!!tools.length && tools.every(tool=>selected?.has(tool.id));
-        const toolForm = this.toolsExpanded ? `<section class="ig-tools" aria-label="工具权限"><header class="ig-tools-head"><h2>允许使用的工具</h2><div class="ig-tools-head-actions"><span>${tools.length} 个工具</span>${tools.length ? `<button type="button" class="ig-tool-select-all" data-action="toggle-all-tools" aria-pressed="${allSelected}">${allSelected ? '取消全选' : '全选'}</button>` : ''}</div></header><p class="ig-tools-intro">已配置的工具及后续新增工具默认允许调用；取消勾选可停用指定工具。</p>${tools.length ? tools.map(tool => `<label class="ig-tool-row"><input type="checkbox" name="toolGrant" value="${esc(tool.id)}" ${selected?.has(tool.id) ? 'checked' : ''}><div><strong>${esc(tool.name)}</strong><span>${esc(tool.description)}</span></div></label>`).join('') : '<p class="ig-note">暂未发现工具。请先完善配置并测试连接。</p>'}<footer class="ig-tool-actions">${button('cancel-tool-grants', '取消')}${button('grant-tools', '保存工具权限', true, !tools.length)}</footer></section>` : '';
-        return `<div class="ig-detail-grid"><div class="ig-detail-main">${this.toolsExpanded ? toolForm : `<section class="ig-detail-summary">${summaryContent}</section>`}</div><aside class="ig-detail-aside" aria-label="连接状态"><section class="ig-help"><h2>${esc(row.status)}</h2><p>${esc(summary?.healthDetail || row.detail || '点击重新测试，检查这条连接的实际可用状态。')}</p></section>${button('probe', '重新测试')}${['google-calendar', 'notion'].includes(row.connectionType || '') ? button('authorize', '授权连接', true) : ''}<hr><p class="ig-note">断开连接会影响依赖它的定时任务；已有内容仍会保留。</p>${button('disconnect', '断开连接')}${row.removable ? button('request-uninstall', '移除连接') : ''}</aside></div>`;
+        const toolForm = this.toolsExpanded ? `<section class="ig-tools" aria-label="工具权限"><header class="ig-tools-head"><h2>允许使用的工具</h2><div class="ig-tools-head-actions"><span>${tools.length} 个工具</span>${tools.length && !row.toolsReadonly ? `<button type="button" class="ig-tool-select-all" data-action="toggle-all-tools" aria-pressed="${allSelected}">${allSelected ? '取消全选' : '全选'}</button>` : ''}</div></header><p class="ig-tools-intro">${row.toolsReadonly?'内置通联工具默认全部启用，登录 EWork 后即可使用。':'已配置的工具及后续新增工具默认允许调用；取消勾选可停用指定工具。'}</p>${tools.length ? tools.map(tool => `<label class="ig-tool-row"><input type="checkbox" name="toolGrant" value="${esc(tool.id)}" ${selected?.has(tool.id) ? 'checked' : ''} ${row.toolsReadonly?'disabled':''}><div><strong>${esc(tool.name)}</strong><span>${esc(tool.description)}</span></div></label>`).join('') : '<p class="ig-note">暂未发现工具。请先完善配置并测试连接。</p>'}<footer class="ig-tool-actions">${button('cancel-tool-grants', row.toolsReadonly?'收起':'取消')}${row.toolsReadonly?'':button('grant-tools', '保存工具权限', true, !tools.length)}</footer></section>` : '';
+        return `<div class="ig-detail-grid"><div class="ig-detail-main">${this.toolsExpanded ? toolForm : `<section class="ig-detail-summary">${summaryContent}</section>`}</div><aside class="ig-detail-aside" aria-label="连接状态"><section class="ig-help"><h2>${esc(row.status)}</h2><p>${esc(summary?.healthDetail || row.detail || '点击重新测试，检查这条连接的实际可用状态。')}</p></section>${button('probe', '重新测试')}${['google-calendar', 'notion'].includes(row.connectionType || '') ? button('authorize', '授权连接', true) : ''}${row.toggleable===false?'<p class="ig-note">随 EWork 提供，默认保持启用；使用前请登录 EWork。</p>':`<hr><p class="ig-note">断开连接会影响依赖它的定时任务；已有内容仍会保留。</p>${button('disconnect', '断开连接')}`} ${row.removable ? button('request-uninstall', '移除连接') : ''}</aside></div>`;
     }
     private renderFeedback() {
         if (!this.root) return;
@@ -693,7 +693,7 @@ export class IntegrationView {
                 if(this.root)this.root.scrollTop=0;
                 break;
             case 'toggle-all-tools':
-                if(row?.kind==='connection' && this.toolsExpanded && row.tools?.length){
+                if(row?.kind==='connection' && !row.toolsReadonly && this.toolsExpanded && row.tools?.length){
                     const selected=this.toolSelections(row);
                     const selectAll=row.tools.some(tool=>!selected.has(tool.id));
                     for(const tool of row.tools)if(selectAll)selected.add(tool.id);else selected.delete(tool.id);
@@ -708,7 +708,7 @@ export class IntegrationView {
                 this.dependenciesExpanded = !this.dependenciesExpanded; this.render();
                 break;
             case 'grant-tools':
-                if (row) {
+                if (row && !row.toolsReadonly) {
                     const toolIds = [...this.toolSelections(row)];
                     await this.run({ type: 'grant-tools', id: row.id, toolIds, meta: this.meta(row.id) },()=>{this.clearToolGrantDraft();this.render();});
                 }
@@ -807,7 +807,7 @@ export class IntegrationView {
         const row=this.snapshot.rows.find(item=>item.id===id);if(!row)return;
         const locked=this.busy || this.pendingActions.size>0;
         const item=(action:string,label:string,destructive=false)=>`<button type="button" role="menuitem" data-menu-action="${action}" ${destructive?'class="ig-danger"':''} ${locked&&action!=='detail'?'disabled':''}>${label}</button>`;
-        this.openMenu(anchor,id,`${row.name}的更多操作`,`${item('detail','查看详情')}${row.toggleable===false?'':item('toggle',row.enabled?'停用':'启用')}${row.kind==='connection'?item('probe','测试连接')+item('disconnect','断开连接'):''}${row.marketEntryId&&row.kind!=='connection'?item('check-update','检查更新'):''}${row.kind==='plugin'&&row.canRollback?item('rollback','回退上一版本'):''}${row.removable?'<div class="ig-menu-separator" role="separator"></div>'+item('uninstall',row.kind==='connection'?'移除连接':row.kind==='skill'?'删除技能':'卸载',true):''}`);
+        this.openMenu(anchor,id,`${row.name}的更多操作`,`${item('detail','查看详情')}${row.toggleable===false?'':item('toggle',row.enabled?'停用':'启用')}${row.kind==='connection'?item('probe','测试连接')+(row.toggleable===false?'':item('disconnect','断开连接')):''}${row.marketEntryId&&row.kind!=='connection'?item('check-update','检查更新'):''}${row.kind==='plugin'&&row.canRollback?item('rollback','回退上一版本'):''}${row.removable?'<div class="ig-menu-separator" role="separator"></div>'+item('uninstall',row.kind==='connection'?'移除连接':row.kind==='skill'?'删除技能':'卸载',true):''}`);
     }
     private openMenu(anchor:HTMLButtonElement,id:string,label:string,markup:string) {
         if(this.menuId===id){this.closeMenu();return;}

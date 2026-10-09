@@ -1323,6 +1323,7 @@ async function bootstrap(): Promise<void> {
       root: join(app.getPath('userData'), 'integrations'), encryption: safeStorage,
       getOwnerId: integrationOwner, bundledCatalogRoot: desktopResourcePath('integration-catalog'),
       bundledSkillDirectory: bundledSkillDirectory(),
+      bundledDatayes:{request:(body,signal)=>accountService!.datayesMcpRequest(body,signal),authenticated:()=>accountService!.authenticated},
       clientVersion: app.getVersion(),
       legacySkillRoots: legacySkillRoots({ userDataRoot: app.getPath('userData'), bundledSkillDirectory: bundledSkillDirectory() }),
       legacyConnectionSources: legacyConnectionSources({userDataRoot:app.getPath('userData')}),

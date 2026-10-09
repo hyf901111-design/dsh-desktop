@@ -10,6 +10,7 @@ import {
   type CollaborationEndpoint
 } from './collaboration-client'
 import { ResearchBoardsError } from '../shared/research-boards'
+import {IntegrationError} from '../shared/integrations'
 export class AccountService {
   private readonly origin: string
   private token?: string
@@ -49,6 +50,13 @@ export class AccountService {
     return () => {
       this.listeners.delete(listener)
     }
+  }
+  async datayesMcpRequest(body:string,signal:AbortSignal):Promise<Response> {
+    if(!this.authenticated)throw new IntegrationError('AUTH_REQUIRED','请先登录 EWork 后使用内置通联 MCP')
+    const generation=this.generation
+    const response=await (this.collaborationOptions.fetch??fetch)(`${this.origin}/v1/datayes/mcp`,{method:'POST',redirect:'error',headers:{'content-type':'application/json',accept:'application/json, text/event-stream',authorization:`Bearer ${this.token}`},body,signal:AbortSignal.any([this.sessionAbort.signal,signal,AbortSignal.timeout(58000)])})
+    if(generation!==this.generation){await response.body?.cancel();throw new IntegrationError('ACCESS_DENIED','账户已变化，已取消通联请求')}
+    return response
   }
   private changed() {
     this.sessionGeneration++

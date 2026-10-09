@@ -583,7 +583,7 @@ export function mountAccountUi(
             row.className = 'sherlock-account-usage-row'
             const label = document.createElement('span')
             label.className = 'sherlock-account-usage-name'
-            label.textContent = entry.capability === 'fund-research' ? '基金研究' : entry.capability
+            label.textContent = entry.capability === 'fund-research' ? '基金研究' : entry.capability === 'datayes-mcp' ? '通联数据' : entry.capability
             row.append(label)
             for (const [caption, count] of [['请求次数', entry.requests], ['成功次数', entry.succeeded]] as const) {
               const stat = document.createElement('div'), value = document.createElement('strong'), title = document.createElement('small')

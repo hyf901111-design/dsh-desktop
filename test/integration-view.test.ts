@@ -28,6 +28,23 @@ async function fixture(handler?: (command: IntegrationCommand) => Promise<Integr
     const fill=(name:string,value:string)=>{const el=doc.querySelector<HTMLInputElement>(`[name="${name}"]`);expect(el,name).not.toBeNull();el!.value=value;el!.dispatchEvent(new w.Event('input',{bubbles:true}) as unknown as Event);};
     return { w, doc, calls, view, click, settle, fill };
 }
+it('keeps built-in MCP enabled and exposes testing and tool viewing without mutation controls',async()=>{
+ const f=await fixture(async command=>{
+  if(command.type==='snapshot')return {type:'snapshot',snapshot:{revision:1,rows:[{id:'builtin:datayes-mcp:1234567890abcdef',kind:'connection',tab:'mcp',name:'通联 DataYes MCP（内置）',description:'金融数据',enabled:true,status:'尚未验证调用',source:'EWork 内置',revision:1,toggleable:false,configurable:false,removable:false,toolsReadonly:true,tools:[{id:'catalog',name:'get_catalog',description:'数据导航',allowed:true}]}]}}
+  throw new Error('Unexpected mutation')
+ })
+ f.click('[data-tab=mcp]')
+ expect(f.doc.querySelector<HTMLButtonElement>('[role=switch]')?.disabled).toBe(true)
+ f.click('[data-more]')
+ expect(f.doc.querySelector('[data-menu-action=disconnect], [data-menu-action=toggle], [data-menu-action=uninstall]')).toBeNull()
+ f.click('[data-menu-action=detail]');await f.settle()
+ expect(f.doc.querySelector('[data-action=probe]')).not.toBeNull()
+ expect(f.doc.querySelector('[data-action=disconnect], [data-action=edit-connection], [data-action=request-uninstall]')).toBeNull()
+ f.click('[data-action=manage-tools]')
+ expect(f.doc.querySelector<HTMLInputElement>('[name=toolGrant]')?.disabled).toBe(true)
+ expect(f.doc.querySelector('[data-action=grant-tools], [data-action=toggle-all-tools]')).toBeNull()
+ f.view.dispose()
+})
 it('renders compact text rows and all four market entries with retained workspace controls', async () => {
     const f = await fixture();
     expect(f.doc.querySelector('[data-action=back]')).not.toBeNull();

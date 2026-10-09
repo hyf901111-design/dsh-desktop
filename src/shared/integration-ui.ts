@@ -26,6 +26,7 @@ export type IntegrationRow = {
     removable?: boolean;
     toggleable?: boolean;
     toggleDisabledReason?: string;
+    toolsReadonly?: boolean;
     connectionType?: ConnectionDraft['type'];
     connectionSummary?: { workspaceLabel: string; authLabel: string; dependencies: string[]; healthDetail?: string };
 };

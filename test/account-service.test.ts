@@ -25,6 +25,17 @@ async function setup() {
   services.push(service)
   return { service, dir, endpoint: await service.start() }
 }
+it('uses the encrypted EWork session for built-in MCP without exposing or accepting a DataYes key',async()=>{
+ const {service}=await setup()
+ await expect(service.datayesMcpRequest('{}',AbortSignal.timeout(5000))).rejects.toMatchObject({code:'AUTH_REQUIRED'})
+ const remote=vi.fn().mockResolvedValueOnce(Response.json({user:{id:'owner-a'},token:'d'.repeat(64)})).mockResolvedValueOnce(Response.json({jsonrpc:'2.0',id:1,result:{tools:[]}}))
+ vi.stubGlobal('fetch',remote)
+ await service.invoke('login',{})
+ const body=JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})
+ expect((await service.datayesMcpRequest(body,AbortSignal.timeout(5000))).status).toBe(200)
+ expect(remote.mock.calls[1]?.[0]).toBe('https://updates.evanarts.com/v1/datayes/mcp')
+ expect(remote.mock.calls[1]?.[1]).toMatchObject({method:'POST',redirect:'error',headers:{authorization:'Bearer '+'d'.repeat(64)},body})
+})
 it('binds cached integration identity to the encrypted session and clears it on logout',async()=>{
   const {service,dir}=await setup()
   vi.stubGlobal('fetch',vi.fn(async()=>Response.json({user:{id:'owner-a'},token:'a'.repeat(64)})))

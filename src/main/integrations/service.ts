@@ -23,6 +23,7 @@ import { manifestDigest, compareVersions } from './manifest';
 import { LegacySkillMigration, type LegacySkillRoot } from './legacy-skills';
 import { previewLegacyConnections, type LegacyConnectionSource } from './legacy-connections';
 import { loadBundledSkills, readBundledSkill, isBundledSkillId, type BundledSkill } from './bundled-skills';
+import {bundledDatayesConnection,bundledDatayesId,isBundledDatayesId,DATAYES_TOOLS,type BundledDatayesOptions} from './bundled-datayes';
 export interface IntegrationServiceOptions {
     root: string;
     encryption: PlatformEncryption;
@@ -36,6 +37,7 @@ export interface IntegrationServiceOptions {
     providers?: Record<string, ProviderAdapter>;
     legacySkillRoots?: LegacySkillRoot[];
     legacyConnectionSources?: LegacyConnectionSource[];
+    bundledDatayes?: BundledDatayesOptions;
 }
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const text = (value: unknown, max = 4000) => { if (typeof value !== 'string' || value.length > max || value.includes('\0'))
@@ -64,16 +66,32 @@ export class IntegrationService {
     private runtimeSeenAt = 0;
     private migrations = new Map<string, Promise<void>>();
     private compatibility = new Map<string, string>();
+    private disposed = false;
     private constructor(readonly store: IntegrationStore, private options: IntegrationServiceOptions) {
         this.vault = new CredentialVault(join(options.root, 'vault'), options.encryption);
         this.operations = new OperationManager(store);
-        this.mcp = new McpSupervisor(this.vault);
+        this.mcp = new McpSupervisor(this.vault, options.bundledDatayes?.request);
         this.api = new HttpApiAdapter(this.vault);
         this.catalog = new IntegrationCatalog({ bundledRoot: options.bundledCatalogRoot ?? join(options.root, 'catalog'), clientVersion: options.clientVersion ?? '1.0.6', cacheRoot: join(options.root, 'catalog-cache'), readCredential: ref => this.vault.read(ref) });
         this.installer = new DeclarativeInstaller(join(options.root, 'packages'));
         this.providers = options.providers ?? {};
     }
-    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); return service; }
+    static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); await service.syncBundledDatayes(); return service; }
+    private async syncBundledDatayes(resetAuthentication = false) {
+        const options=this.options.bundledDatayes,owner=this.options.getOwnerId();if(this.disposed||!options||!owner)return;
+        const authenticated=options.authenticated(),key=bundledDatayesId(owner),expected=bundledDatayesConnection(owner,authenticated);
+        const currentIsValid=(current?:Connection)=>current?.enabled&&current.configDigest===expected.configDigest
+            &&(authenticated?!['unconfigured','revoked'].includes(current.authState):current.authState==='unconfigured')
+            &&current.toolGrants.length===DATAYES_TOOLS.length&&current.deniedToolIds?.length===0;
+        if(!resetAuthentication&&currentIsValid(this.store.snapshot().connections[key]))return;
+        await this.store.change(state=>{
+            if(this.disposed||this.options.getOwnerId()!==owner||options.authenticated()!==authenticated)return;
+            const prior=state.connections[key];
+            if(!resetAuthentication&&currentIsValid(prior))return;
+            const connection={...expected,revision:prior?(prior.revision+1):1,createdAt:prior?.createdAt??expected.createdAt};
+            state.connections[key]=connection;this.replaceTools(state,connection,DATAYES_TOOLS);
+        });
+    }
     private async migrateDefaultToolGrants() {
         const state = this.store.snapshot();
         if (!Object.values(state.connections).some(connection => connection.deniedToolIds === undefined)) return;
@@ -186,6 +204,11 @@ export class IntegrationService {
         const command = raw as IntegrationCommand;
         if (!command || typeof command !== 'object')
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
+        const connectionId='id' in command?command.id:command.type==='save-connection'?command.draft?.id:undefined;
+        if(isBundledDatayesId(connectionId)&&['set-enabled','uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
+            this.owner();throw new IntegrationError('ACCESS_DENIED','内置通联 MCP 保持启用，随客户端更新，不能关闭、删除或修改配置');
+        }
+        await this.syncBundledDatayes();
         if ((command.type === 'set-enabled' || command.type === 'uninstall') && isBundledSkillId(command.id)) {
             this.owner();
             throw new IntegrationError('ACCESS_DENIED', '内置技能保持启用，随客户端更新，不能关闭或删除');
@@ -623,7 +646,7 @@ export class IntegrationService {
                 if (before !== hash(Object.values(state.tools).filter(tool => tool.connectionId === c.id)))
                     c.revision++;
             } });
-            return { type: 'probe', status: verified ? 'verified' : 'config-valid', message: verified ? (previous.kind === 'mcp' ? '连接成功，已发现的工具默认允许使用；可在连接详情中停用' : '只读请求已验证成功') : '配置有效；没有无需参数的只读探测接口，尚未验证调用' };
+            return { type: 'probe', status: verified ? 'verified' : 'config-valid', message: verified ? (isBundledDatayesId(previous.id) ? '内置通联连接成功，全部工具已可使用' : previous.kind === 'mcp' ? '连接成功，已发现的工具默认允许使用；可在连接详情中停用' : '只读请求已验证成功') : '配置有效；没有无需参数的只读探测接口，尚未验证调用' };
         }
         catch (error) {
             await this.store.change(state => { const c = state.connections[connectionId]; if (c?.revision === previous.revision && c.configDigest === previous.configDigest) {
@@ -644,10 +667,11 @@ export class IntegrationService {
             for (const c of Object.values(state.connections))
                 if (c.ownerAccountId === owner) {
                     const tools = Object.values(state.tools).filter(tool => tool.connectionId === c.id);
-                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: rowStatus(c), source: c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: true, removable: true, connectionType: this.draft(c).type,
+                    const bundled=isBundledDatayesId(c.id)&&!!this.options.bundledDatayes;
+                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'金融数据、研报、公告、会议纪要及宏观行业检索':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&!this.options.bundledDatayes?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:false,toggleDisabledReason:'内置通联 MCP，保持启用',toolsReadonly:true}:{}), connectionType: this.draft(c).type,
                         connectionSummary: {
                             workspaceLabel: c.workspaceGrant.mode === 'all-owned' ? '当前账号的所有工作区' : c.workspaceGrant.workspaceIds.length ? `已选择 ${c.workspaceGrant.workspaceIds.length} 个工作区` : '未选择工作区',
-                            authLabel: c.providerId === 'google-calendar' ? `OAuth 2.0 · ${c.authState === 'connected' ? '已授权' : c.authState === 'expired' ? '授权已过期' : '待授权'}` : c.config.auth.type === 'none' ? '无需认证' : c.config.auth.credentialRef ? `${c.config.auth.type === 'bearer' ? 'Token' : 'API Key'} · 已配置` : '尚未配置凭据',
+                            authLabel: bundled?'EWork 账号授权 · 云端密钥已配置':c.providerId === 'google-calendar' ? `OAuth 2.0 · ${c.authState === 'connected' ? '已授权' : c.authState === 'expired' ? '授权已过期' : '待授权'}` : c.config.auth.type === 'none' ? '无需认证' : c.config.auth.credentialRef ? `${c.config.auth.type === 'bearer' ? 'Token' : 'API Key'} · 已配置` : '尚未配置凭据',
                             dependencies: Object.entries(state.taskBindings).filter(([, bindings]) => bindings.some(binding => binding.entityId === c.id || binding.toolIds.some(id => tools.some(tool => tool.id === id)))).map(([task]) => `定时任务 ${task}`),
                             healthDetail: c.lastError || (c.lastCheckedAt ? `上次检查：${new Date(c.lastCheckedAt).toLocaleString('zh-CN')}` : '尚未测试连接'),
                         }, toolCount: tools.length, tools: tools.map(tool => ({ id: tool.id, name: tool.name, description: tool.description, allowed: c.toolGrants.includes(tool.id) })) });
@@ -769,13 +793,13 @@ export class IntegrationService {
     private async expireConnection(previous: Connection) { await this.store.change(state => { const c = state.connections[previous.id]; if (c?.revision === previous.revision) {
         c.authState = 'expired';
         c.health = 'unreachable';
-        c.lastError = '授权已失效，请重新授权';
+        c.lastError = isBundledDatayesId(c.id) ? 'EWork 登录已失效，请重新登录后测试连接' : '授权已失效，请重新授权';
         c.revision++;
     } }); }
     private async recordCall(call: ToolCall, connectionId: string, status: 'succeeded' | 'failed' | 'unknown', errorCode?: import('../../shared/integrations').IntegrationErrorCode) { await this.store.change(state => { state.calls.push({ id: call.callId, toolId: call.toolId, connectionId, sessionId: call.context.sessionId, taskId: call.context.taskId, time: Date.now(), status, errorCode }); state.calls = state.calls.slice(-1000); }); }
     private abortCalls(connectionId: string) { for (const controller of this.calls.get(connectionId) ?? [])
         controller.abort(); }
     rotateIdentity() { this.runtimeEpoch = randomUUID(); this.operations.abortAll(); for (const key of this.calls.keys())
-        this.abortCalls(key); void this.mcp.disposeAll(); }
-    async dispose() { this.rotateIdentity(); await this.operations.dispose(); await this.mcp.disposeAll(); }
+        this.abortCalls(key); void this.mcp.disposeAll(); void this.syncBundledDatayes(true).catch(()=>{}); }
+    async dispose() { this.disposed=true; this.rotateIdentity(); await this.operations.dispose(); await this.mcp.disposeAll(); }
 }
