@@ -38,3 +38,16 @@ it('拖拽按证券身份处理并发新增，不移动错行',async()=>{
 it('港股周K顶部OHLC与图表使用同一聚合结果',async()=>{
  const input=[{date:'2026-10-05',open:10,high:20,low:9,close:12,volume:100},{date:'2026-10-06',open:12,high:15,low:11,close:13,volume:200},{date:'2026-10-09',open:16,high:18,low:15,close:17,volume:300}],bridge=service();bridge.request.mockImplementation(async q=>q.action==='history'?{bars:input,nativePeriod:false,source:'测试通联'}:{quotes:[],source:'测试通联'});const f=await fixture({financialWidget:bridge});await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[{code:'00700',market:'HK',name:'腾讯控股'}],period:'1w'}}])});await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull());expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('开 10.00  高 20.00  低 9.00  收 17.00')
 })
+it('离屏暂停请求时保留已取得的报价，返回视野后继续更新',async()=>{
+ const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}]);['quote','indices','news'].forEach(k=>f.workspace.createFinancialWidget(k))});await vi.waitFor(()=>expect(f.host.querySelector('.ew-watch-price').textContent).toBe('100.00'))
+ await f.act(async()=>f.workspace.setViewport({x:0,y:-1400,scale:1}));expect(f.workspace.getSnapshot().viewport.y).toBeLessThan(-1000);expect(f.host.querySelector('.ew-watch-price').textContent).toBe('100.00')
+ await f.act(async()=>f.workspace.setViewport({x:0,y:0,scale:1}));await vi.waitFor(()=>expect(f.host.querySelector('.ew-watch-price').textContent).toBe('100.00'))
+})
+it('整理固定组件使用完整阅读高度，不按搜索框或当前SVG裁切高度压缩',async()=>{
+ const {measureWorkbenchContents}=await import('../scripts/lib/research-grid-ui.mjs'),{researchOptimalDimensions}=await import('../packages/dsh-research-task-runtime/bento-layout.js'),{runInNewContext}=await import('node:vm');const f=await fixture();await f.act(async()=>['watchlist','quote','indices','news'].forEach(k=>f.workspace.createFinancialWidget(k)))
+ const nodes=f.workspace.getSnapshot().artifacts;for(const n of nodes){const card=f.host.querySelector('[data-research-node-id="'+n.id+'"]');card.getBoundingClientRect=()=>({top:0,height:180,width:700});for(const el of card.querySelectorAll('input,svg,p,select'))el.getBoundingClientRect=()=>({top:42,bottom:66,width:200,height:24})}
+ const measured=runInNewContext('('+measureWorkbenchContents.toString()+')',{researchOptimalDimensions,CSS:f.win.CSS})(f.canvas,nodes);expect(nodes.map(n=>measured.get(n.id)?.height)).toEqual([514,600,200,340])
+})
+it('新闻时间使用紧凑时分，完整发布日期保留在可访问属性中',async()=>{
+ const bridge=service();bridge.request.mockImplementation(async()=>({news:[{id:'n',title:'本人新闻',source:'原始来源',time:'2026-10-09T18:34:20.515+0800'}],source:'测试通联'}));const f=await fixture({financialWidget:bridge});await f.act(async()=>f.workspace.createFinancialWidget('news'));await vi.waitFor(()=>expect(f.host.querySelector('time')).not.toBeNull());const time=f.host.querySelector('time');expect(time.textContent).toMatch(/^\d{2}:\d{2}$/);expect(time.title).toBe('2026-10-09T18:34:20.515+0800')
+})
