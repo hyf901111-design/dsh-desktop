@@ -124,6 +124,6 @@ body[data-ds-dark-theme] [data-ework-grid], [data-ework-grid][data-workbench-sty
  body .ew-news-list small{display:block;margin-top:5px;color:var(--fw-muted);font-size:11px;line-height:16px}
  body .ew-news-list details{margin-top:6px;font-size:11px}
  body .ew-news-list details p{overflow-wrap:anywhere;white-space:pre-wrap}
- @container financial-chrome (max-width:280px){body .ew-financial-header-selector{width:24px;max-width:24px}body .ew-financial-header-selector>button{padding:0!important;justify-content:center!important}body .ew-financial-header-selector>button>:nth-child(n+2){display:none}body .ew-financial-header-selector:has(input){position:absolute;left:36px;right:12px;width:auto;max-width:none;z-index:2}}
+ @container financial-chrome (max-width:280px){body .ew-financial-header-selector{width:24px;max-width:24px}body .ew-financial-header-selector>button{padding:0!important;justify-content:center!important}body .ew-financial-header-selector>button>:nth-child(n+2){display:none!important}body .ew-financial-header-selector:has(input){position:absolute;left:36px;right:12px;width:auto;max-width:none;z-index:2}}
  @container(max-width:520px){body .ew-quote-price-line>.ew-quote-change{min-width:0}body .ew-quote-price-line>small:not(.ew-quote-market){display:none}body .ew-quote-market{font-size:10px}body .ew-chart-legend{grid-template-columns:80px repeat(4,minmax(0,1fr));font-size:10px}body .ew-quote-controls>button[data-indicator=VOL]{margin-left:0}}
 }
