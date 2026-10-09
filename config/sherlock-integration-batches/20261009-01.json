@@ -12,7 +12,7 @@
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
         "baseCommit": "b34492e20d7178f8c28134bf4ae807c746d015cd",
-        "tipCommit": "ab3af9612f667adbc09f709cc4fe5355e5bc2599",
+        "tipCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
         "commits": [
           {
             "commit": "ab3af9612f667adbc09f709cc4fe5355e5bc2599",
@@ -20,6 +20,13 @@
               "b34492e20d7178f8c28134bf4ae807c746d015cd"
             ],
             "subject": "优化：按正式设计稿精修组件库交互和整理尺寸"
+          },
+          {
+            "commit": "50886cad971c59d28ff85f1035df22ce5024e068",
+            "parents": [
+              "ab3af9612f667adbc09f709cc4fe5355e5bc2599"
+            ],
+            "subject": "修复：干净安装时正确序列化组件尺寸函数"
           }
         ],
         "files": [
@@ -50,6 +57,10 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-canvas-client.mjs"
           },
           {
             "status": "M",
@@ -84,8 +95,8 @@
             ],
             "outcome": "passed",
             "summary": "38项金融组件检查通过：唯一标题搜索、portal联想、离屏搜索保留、拖拽、行情坐标和内容尺寸",
-            "verifiedCommit": "ab3af9612f667adbc09f709cc4fe5355e5bc2599",
-            "completedAt": "2026-10-09T15:12:00.283039+00:00",
+            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
+            "completedAt": "2026-10-09T15:16:16.083862+00:00",
             "timeoutMs": 180000
           },
           {
@@ -96,8 +107,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript类型检查通过",
-            "verifiedCommit": "ab3af9612f667adbc09f709cc4fe5355e5bc2599",
-            "completedAt": "2026-10-09T15:12:00.283039+00:00",
+            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
+            "completedAt": "2026-10-09T15:16:16.083862+00:00",
             "timeoutMs": 180000
           },
           {
@@ -111,8 +122,8 @@
             ],
             "outcome": "passed",
             "summary": "8项直接影响的补丁恢复与既有看板回归检查通过",
-            "verifiedCommit": "ab3af9612f667adbc09f709cc4fe5355e5bc2599",
-            "completedAt": "2026-10-09T15:12:00.283039+00:00",
+            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
+            "completedAt": "2026-10-09T15:16:16.083862+00:00",
             "timeoutMs": 180000
           },
           {
@@ -124,9 +135,20 @@
             ],
             "outcome": "passed",
             "summary": "43项本次直接影响的整理布局检查通过",
-            "verifiedCommit": "ab3af9612f667adbc09f709cc4fe5355e5bc2599",
-            "completedAt": "2026-10-09T15:12:00.283039+00:00",
+            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
+            "completedAt": "2026-10-09T15:16:16.083862+00:00",
             "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "ci"
+            ],
+            "outcome": "passed",
+            "summary": "干净安装并生成客户端脚本成功；随后81项布局和组件检查、8项补丁恢复检查、类型检查通过",
+            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
+            "completedAt": "2026-10-09T15:16:16.083862+00:00",
+            "timeoutMs": 600000
           }
         ],
         "uiVerification": {
@@ -147,7 +169,7 @@
           "新闻单页限制3条以避免供应商截断JSON；完整原文经安全链接打开",
           "完整已安装客户端与账户切换路径待本地集成验收"
         ],
-        "generatedAt": "2026-10-09T15:12:00.283039+00:00"
+        "generatedAt": "2026-10-09T15:16:16.083862+00:00"
       }
     }
   ],
