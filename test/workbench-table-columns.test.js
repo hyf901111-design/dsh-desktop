@@ -11,6 +11,23 @@ function fixture() {
   return { win, doc, table, original }
 }
 
+it('aligns headers and contents by column type, including numeric text, identifiers, dates, and missing values', async () => {
+  const f=fixture()
+  f.doc.head.innerHTML='<style>th{padding:4px 16px;text-align:left}td{padding:4px 8px}th button{text-align:center;padding:0 6px}'+WORKBENCH_TABLE_COLUMNS_CSS+'</style>'
+  f.table.innerHTML='<thead><tr><th>代码</th><th>日期</th><th><button>最新价（元）</button></th><th data-numeric="true">涨跌幅（%）</th><th data-column-type="boolean">启用</th><th>名称</th></tr></thead><tbody><tr><td>000538</td><td>2026-09-25</td><td>49.87</td><td>-0.89%</td><td>是</td><td>云南白药</td></tr><tr><td>600276</td><td>2026-09-26</td><td>—</td><td>0</td><td>否</td><td>恒瑞医药</td></tr></tbody>'
+  const stop=installWorkbenchTableColumns(f.doc.body)
+  try {
+    expect([...f.table.rows[0].cells].map(cell=>cell.dataset.columnAlign)).toEqual(['left','left','right','right','center','left'])
+    for(const row of [...f.table.rows].slice(1))expect([...row.cells].map(cell=>cell.dataset.columnAlign)).toEqual(['left','left','right','right','center','left'])
+    const th=f.table.rows[0].cells[2],td=f.table.rows[1].cells[2],style=element=>f.win.getComputedStyle(element)
+    expect(style(th).textAlign).toBe('right');expect(style(td).textAlign).toBe('right')
+    expect(style(th).paddingRight).toBe(style(td).paddingRight)
+    expect(style(th.querySelector('button')).paddingRight).toBe('0px')
+    f.table.tBodies[0].innerHTML='<tr><td>300760</td><td>2026-09-27</td><td>1,234.50</td><td>+1.20%</td><td>是</td><td>迈瑞医疗</td></tr>'
+    await vi.waitFor(()=>expect(f.table.rows[1].cells[2].dataset.columnAlign).toBe('right'))
+  } finally {stop();await f.win.happyDOM.close()}
+})
+
 it('all headers and source cells default to one line; dragging one column allows only that column to wrap', async () => {
   const f = fixture(), saved = vi.fn(), sort = vi.fn(), stop = installWorkbenchTableColumns(f.doc.body, { save: saved })
   f.table.querySelector('button').addEventListener('click', sort)
