@@ -5,7 +5,7 @@ export function createResearchGrid() {
   const metrics=width=>{const available=Math.max(240,width),spacing=Math.min(gap,Math.max(0,(available-2*inset-columns*4)/(columns-1))),step=(available-2*inset+spacing)/columns;return {width:available,step,rowStep:step,cell:step-spacing,minColumns:Math.min(columns,Math.ceil((280+spacing)/step)),minRows:Math.ceil((160+spacing)/step),minDraftColumns:Math.min(columns,Math.ceil((320+spacing)/step)),minDraftRows:Math.ceil((220+spacing)/step),inset,gap:spacing,columns}}
   const minimum=(node,m,arranging=false)=>{
     if(node?.containerSpec?.type==='financial-widget'){
-      const kind=node.containerSpec.widget,width=arranging?({watchlist:320,quote:716,indices:980,news:620})[kind]:kind==='quote'?400:320,height=kind==='quote'?600:kind==='watchlist'?194:kind==='indices'?200:220
+      const kind=node.containerSpec.widget,width=arranging?({watchlist:320,quote:716,indices:980,news:620})[kind]:kind==='quote'?400:320,height=kind==='quote'?600:kind==='watchlist'?130+32*Math.min(12,Math.max(2,node.containerSpec.symbols?.length||0)):kind==='indices'?200:220
       return {w:Math.min(columns,Math.ceil((width+m.gap)/m.step)),h:Math.ceil((height+m.gap)/m.rowStep)}
     }
     // Manual resizing uses one base frame for every component. Readable

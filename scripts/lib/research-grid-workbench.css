@@ -1,5 +1,9 @@
 /* The scroll viewport starts below the shared workspace header. */
 body [data-research-canvas][data-ework-grid]{margin-top:var(--odyssey-workspace-header-height,44px)!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:#74778055 transparent}
+/* A real viewport clearance keeps the toolbar out of every scrolling card. */
+body [data-research-canvas][data-ework-grid][data-workbench-toolbar-space]{height:calc(100% - var(--odyssey-workspace-header-height,44px) - 80px)!important;scroll-padding-bottom:12px}
+body [data-ework-toolbar][data-toolbar-overflow=true]{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+body [data-ework-toolbar][data-toolbar-overflow=true]::-webkit-scrollbar{display:none}
 body[data-ds-dark-theme] [data-ework-grid]{--grid-card:#151518;--grid-text:#e7e8ec;--grid-muted:#a0a5b1;--grid-menu:#1c1b20;background:#09090b!important}
 body [data-ework-grid] [data-research-dot-grid],body [data-ework-grid] [data-research-selection-actions],body [data-ework-grid] [data-research-snap-guides],body [data-ework-grid] [data-research-empty-viewport]{display:none!important}
 body [data-ework-grid] [data-research-content-layer]{position:relative!important;inset:0!important;transform:none!important;min-height:100%;pointer-events:none;transform-origin:0 0}

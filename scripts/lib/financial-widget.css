@@ -1,17 +1,17 @@
 /* Figma 24C / 24E. These controls share the native layer so presentation rules
    for generated HTML cannot turn them into a second, unrelated control family. */
-body [data-ework-toolbar]:has([data-financial-library]):has(.ew-workbench-mode-slot){width:375px!important;max-width:calc(100vw - 16px)}
+body [data-ework-toolbar]:has([data-financial-library]):has(.ew-workbench-mode-slot){width:375px!important;max-width:var(--ework-toolbar-available-width,calc(100vw - 16px))!important}
 :is([data-ework-grid],[data-financial-theme]){--fw-card:#fff;--fw-text:#252a33;--fw-muted:#667085;--fw-border:#ced2da;--fw-row:#f3f4f7;--fw-alternate:#fff;--fw-heading:#e8e9ee;--fw-control:#e9ebef;--fw-menu:#f8f8fa;--fw-grid:#e8e9ee;--fw-volume-up:#80cfbf;--fw-volume-down:#ffa3ab}
 body[data-ds-dark-theme] [data-ework-grid], [data-ework-grid][data-workbench-style=dark], [data-financial-theme=dark]{--fw-card:#151518;--fw-text:#fff;--fw-muted:#9da5b2;--fw-border:#41414c;--fw-row:#202024;--fw-alternate:#28282f;--fw-heading:#35363f;--fw-control:#28282f;--fw-menu:#1c1b20;--fw-grid:#303036;--fw-volume-up:#00836f;--fw-volume-down:#a32838}
 body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-workbench-style=enterprise], [data-financial-theme=light], [data-financial-theme=enterprise]{--fw-card:#fff;--fw-text:#252a33;--fw-muted:#667085;--fw-border:#ced2da;--fw-row:#f3f4f7;--fw-alternate:#fff;--fw-heading:#e8e9ee;--fw-control:#e9ebef;--fw-menu:#f8f8fa;--fw-grid:#e8e9ee;--fw-volume-up:#80cfbf;--fw-volume-down:#ffa3ab}
 .ew-financial-icon{display:inline-block;width:16px;height:16px;flex:none;background:currentColor;mask-position:center;mask-repeat:no-repeat;mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;-webkit-mask-size:contain;color:var(--fw-muted,#9da5b2)}
 .ew-financial-icon:is([data-financial-icon=search],[data-financial-icon=chevron]){width:12px;height:12px}
 @layer ework-workbench{
- body .ew-financial-library{box-sizing:border-box!important;width:264px!important;height:216px!important;padding:6px!important;border:1px solid var(--fw-border)!important;border-radius:4px!important;background:var(--fw-menu)!important;color:var(--fw-text)!important;font:400 12px/16px Inter,'Noto Sans SC',system-ui!important;box-shadow:0 8px 12px #00000024!important;overflow:hidden!important}
+ body .ew-financial-library{box-sizing:border-box!important;width:var(--fw-popover-width,264px)!important;height:216px!important;max-height:var(--fw-popover-max-height,216px)!important;padding:6px!important;border:1px solid var(--fw-border)!important;border-radius:4px!important;background:var(--fw-menu)!important;color:var(--fw-text)!important;font:400 12px/16px Inter,'Noto Sans SC',system-ui!important;box-shadow:0 8px 12px #00000024!important;overflow-y:auto!important;overflow-x:hidden!important}
  body .ew-financial-library-heading{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 9px;margin-bottom:0}
  body .ew-financial-library-heading strong{font:700 12px/16px 'Noto Sans SC',Inter,system-ui!important}
  body .ew-financial-library-heading>button{display:grid;place-items:center;width:20px!important;min-height:24px!important;height:24px!important;padding:0!important;flex:none}
- body .ew-financial-library>[role=menuitem]{display:flex!important;height:33px!important;min-height:33px!important;width:250px!important;gap:8px!important;padding:0 12px!important;border-radius:3px!important;font:400 12px/16px 'Noto Sans SC',Inter,system-ui!important;color:var(--fw-text)!important}
+ body .ew-financial-library>[role=menuitem]{display:flex!important;height:33px!important;min-height:33px!important;width:100%!important;gap:8px!important;padding:0 12px!important;border-radius:3px!important;font:400 12px/16px 'Noto Sans SC',Inter,system-ui!important;color:var(--fw-text)!important}
  body .ew-financial-library>[role=menuitem]>span:nth-child(2){flex:1;min-width:0;white-space:nowrap}
  body .ew-financial-library>[role=menuitem]:is(:hover,:focus-visible){background:var(--fw-control)!important;outline:none!important}
  body .ew-financial-library p{margin:8px 9px 0!important;padding-top:9px!important;border-top:1px solid var(--fw-border)!important;font:400 11px/16px 'Noto Sans SC',Inter,system-ui!important;color:var(--fw-muted)!important;white-space:nowrap}
@@ -59,6 +59,7 @@ body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-
  body .ew-watch-percent[data-direction=flat]{background:var(--fw-control);color:var(--fw-text)!important}
  body .ew-financial-footer{height:24px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--fw-muted)!important;font:400 11px/16px 'Noto Sans SC',Inter,system-ui!important;white-space:nowrap;overflow:hidden}
  body .ew-financial-footer>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+ body .ew-financial-footer>button{flex:none;white-space:nowrap}
  body .ew-financial-symbol-search{position:relative;width:100%;min-width:0;color:var(--fw-text);font:400 12px/16px Inter,'Noto Sans SC',system-ui}
  body .ew-financial-search-line{box-sizing:border-box;height:24px;display:flex;gap:6px;align-items:center;border:1px solid #249bfa;border-radius:4px;background:var(--fw-card);padding:0 6px 0 8px}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-search-line input[type=search][role=combobox],body [data-ework-grid] .ew-financial-header-selector .ew-financial-search-line input[type=search][role=combobox]{flex:1;width:100%!important;height:22px!important;min-height:22px!important;padding:0!important;border:0!important;background:transparent!important;outline:0!important;color:var(--fw-text)!important;box-shadow:none!important}
@@ -83,17 +84,21 @@ body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-
  body .ew-financial-suggestions>small{display:block;margin-top:4px;line-height:20px}
  body .ew-financial-suggestions>small.ew-search-help{font-size:11px;line-height:22px}
  body .ew-financial-suggestions [data-financial-icon=check]{color:#249bfa;width:14px;height:14px}
- body .ew-financial-row-menu{position:absolute;z-index:60;width:144px;padding:4px;border:1px solid var(--fw-border);border-radius:4px;background:var(--fw-menu);box-shadow:0 8px 12px #00000024}
+ body .ew-financial-row-menu{position:fixed;z-index:3006;box-sizing:border-box;width:152px;padding:4px;border:1px solid var(--fw-border);border-radius:4px;background:var(--fw-menu);color:var(--fw-text);box-shadow:0 8px 12px #00000024;overflow:auto}
+ body .ew-financial-row-menu button{border:0;background:transparent;color:inherit;font:400 12px/16px 'Noto Sans SC',Inter,system-ui;cursor:pointer;border-radius:3px}
+ body .ew-financial-row-menu button:is(:hover,:focus-visible){background:var(--fw-control);outline:1px solid #249bfa;outline-offset:-1px}
  body .ew-financial-row-menu button{width:100%;height:30px!important;text-align:left;padding:5px 8px!important}
  body .ew-financial-status{flex:none;display:flex;align-items:center;gap:6px;max-height:48px;overflow:auto;padding:4px 6px;color:var(--fw-muted);font-size:11px;line-height:16px}
  body .ew-financial-status>span{flex:1}
  body .ew-financial-status>button{flex:none}
- body .ew-financial-empty{flex:1;display:flex;align-items:center;justify-content:center;padding:12px;min-height:50px;text-align:center;color:var(--fw-muted);font-size:12px}
+ body .ew-financial-empty{flex:1;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;padding:16px;min-height:50px;text-align:center;color:var(--fw-muted);font-size:12px;box-sizing:border-box}
+ body .ew-financial-empty p{margin:0;max-width:320px;line-height:20px;overflow-wrap:anywhere}
+ body .ew-financial-empty button{flex:none;min-width:56px;border:1px solid var(--fw-border)!important}
  body .ew-financial-quote{overflow-x:auto;overflow-y:hidden}
  body .ew-financial-quote>:is(.ew-quote-price-line,.ew-quote-ohlc,.ew-quote-controls,.ew-price-chart){min-width:368px}
  body .ew-grid-header:has(.ew-financial-header-selector){container-type:inline-size;container-name:financial-chrome}
  body .ew-quote-price-line{display:flex;align-items:center;gap:8px;height:34px;flex:none;padding:2px 6px}
- body .ew-quote-price-line>strong{min-width:118px;font:600 24px/28px Inter,system-ui!important;font-variant-numeric:tabular-nums}
+ body .ew-quote-price-line>strong{min-width:118px;flex:none;font:600 24px/28px Inter,system-ui!important;font-variant-numeric:tabular-nums}
  body .ew-quote-price-line>.ew-quote-change{min-width:132px;font-size:12px;white-space:nowrap}
  body .ew-quote-price-line>small{color:var(--fw-muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
  body .ew-quote-price-line>.ew-quote-market{margin-left:auto;flex:none;text-align:right;font-size:11px}
@@ -101,10 +106,10 @@ body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-
  body :is(.ew-quote-price-line,.ew-indices-grid) [data-direction=down]{color:#ff3b50!important}
  body .ew-quote-ohlc{display:flex;justify-content:space-between;gap:8px;padding:0 6px;height:24px;flex:none;font-size:11px;color:var(--fw-text);white-space:nowrap;overflow:hidden}
  body .ew-quote-ohlc>:last-child{color:var(--fw-muted)}
- body .ew-quote-controls{display:flex;align-items:center;gap:4px;min-height:32px;flex:none;flex-wrap:wrap;padding:0 6px;font-size:12px}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-quote-controls>button{height:24px!important;min-height:24px!important;min-width:40px!important;padding:3px 7px!important;background:transparent!important;border:0!important;color:var(--fw-muted)!important}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-quote-controls>button[aria-pressed=true]{background:var(--fw-control)!important;color:var(--fw-text)!important}
- body .ew-quote-controls>button[data-indicator=VOL]{margin-left:12px}
+ body .ew-quote-controls{display:flex;align-items:center;gap:12px;min-height:32px;flex:none;padding:0 6px;font-size:12px}
+ body .ew-quote-periods,body .ew-quote-indicators{display:flex;align-items:center;gap:4px;flex:none}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-quote-controls button{height:24px!important;min-height:24px!important;min-width:40px!important;padding:3px 7px!important;background:transparent!important;border:0!important;color:var(--fw-muted)!important}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-quote-controls button[aria-pressed=true]{background:var(--fw-control)!important;color:var(--fw-text)!important}
  body .ew-quote-controls>select{margin-left:auto;max-width:80px}
  body .ew-price-chart{position:relative;flex:1;min-height:240px;margin:0 6px;min-width:0;overflow:hidden;touch-action:none}
  body .ew-price-chart svg{display:block;outline:none}
@@ -119,6 +124,7 @@ body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-
  body .ew-news-search>.ew-financial-icon{position:absolute;top:15px;left:18px;width:14px;height:14px;pointer-events:none}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-news-search input[type=search][aria-label]{height:34px!important;min-height:34px!important;width:100%;border:1px solid var(--fw-border)!important;border-radius:4px!important;padding:7px 10px 7px 34px!important;background:transparent!important;font:400 12px/16px Inter,'Noto Sans SC',system-ui!important;color:var(--fw-text)!important}
  body .ew-news-list{flex:1;min-height:0;overflow-y:auto;padding:0 6px;scrollbar-width:thin}
+ body .ew-news-list:has(>.ew-financial-empty){display:flex}
  body .ew-news-list article{display:flex;align-items:flex-start;gap:16px;min-height:60px;box-sizing:border-box;padding:12px 0;border-bottom:1px solid var(--fw-border)}
  body .ew-news-list time{width:48px;flex:none;font:400 12px/16px Inter,system-ui;color:var(--fw-muted);white-space:nowrap}
  body .ew-news-list article>div{min-width:0;flex:1}
@@ -127,6 +133,6 @@ body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-
  body .ew-news-list small{display:block;margin-top:5px;color:var(--fw-muted);font-size:11px;line-height:16px}
  body .ew-news-list details{margin-top:6px;font-size:11px}
  body .ew-news-list details p{overflow-wrap:anywhere;white-space:pre-wrap}
- @container financial-chrome (max-width:280px){body .ew-financial-header-selector{width:24px;max-width:24px}body .ew-financial-header-selector>button{padding:0!important;justify-content:center!important}body .ew-financial-header-selector>button>:nth-child(n+2){display:none!important}body .ew-financial-header-selector:has(input){position:absolute;left:36px;right:12px;width:auto;max-width:none;z-index:2}}
- @container(max-width:520px){body .ew-quote-price-line>.ew-quote-change{min-width:0}body .ew-quote-price-line>small:not(.ew-quote-market){display:none}body .ew-quote-market{font-size:10px}body .ew-chart-legend{grid-template-columns:80px repeat(4,minmax(0,1fr));font-size:10px}body .ew-quote-controls>button[data-indicator=VOL]{margin-left:0}}
+ @container financial-chrome (max-width:280px){body .ew-financial-header-selector{width:24px;max-width:24px}body .ew-financial-header-selector>button{padding:0!important;justify-content:center!important}body .ew-financial-header-selector>button>:nth-child(n+2){display:none!important}body .ew-grid-header:has(.ew-financial-header-selector)>[data-workbench-ask]{display:none!important}body .ew-grid-header:has(.ew-financial-header-selector input)>:is(.ew-grid-title,.ew-grid-refresh){display:none!important}body .ew-financial-header-selector:has(input){position:static;width:auto;max-width:none;flex:1;margin-right:0}}
+ @container(max-width:520px){body .ew-quote-price-line>.ew-quote-change{min-width:0;flex:none}body .ew-quote-price-line>small{display:none}body .ew-chart-legend{grid-template-columns:80px repeat(4,minmax(0,1fr));font-size:10px}body .ew-quote-controls{display:grid;grid-template-columns:1fr auto;gap:4px 12px;min-height:64px;padding-top:4px;padding-bottom:4px;box-sizing:border-box}body .ew-quote-periods{grid-column:1/-1}body .ew-quote-controls>select{grid-column:2;grid-row:2}}
 }

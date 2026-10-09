@@ -413,12 +413,13 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
   const [bounds,setBounds]=react.useState(null)
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
-    const measure=()=>{const r=root.getBoundingClientRect(),next={left:r.left+Math.min(r.width,availableWidth||r.width)/2,bottom:Math.max(bottomOffset,window.innerHeight-r.bottom+bottomOffset)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom?previous:next)}
+    if(bottomOffset===20)root.setAttribute('data-workbench-toolbar-space','')
+    const measure=()=>{const r=root.getBoundingClientRect(),width=Math.min(r.width,availableWidth||r.width),clearance=bottomOffset===20?80*(r.height/(root.clientHeight||r.height||1)):0,next={left:r.left+width/2,bottom:Math.max(bottomOffset,window.innerHeight-r.bottom-clearance+bottomOffset),width:Math.max(120,width-24)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom&&previous.width===next.width?previous:next)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root);if(root.parentElement)observer.observe(root.parentElement)
     window.addEventListener('resize',measure)
-    return()=>{observer.disconnect();window.removeEventListener('resize',measure)}
+    return()=>{observer.disconnect();window.removeEventListener('resize',measure);if(bottomOffset===20)root.removeAttribute('data-workbench-toolbar-space')}
   },[rootRef,availableWidth,bottomOffset])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(children),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(children),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
@@ -603,7 +604,8 @@ export function WorkbenchArrangeTool({rootRef,workspace,nodes,sessionId,disabled
     const requested={three:3,two:2,one:1}[next],lanes=Math.min(requested||1,nodes.length)
     if(requested>1&&lanes>1){
       const size=workspace.getSnapshot().canvasSize,width=Math.max(240,Math.min(size.width||800,size.availableWidth||Infinity))
-      if(Math.floor(40/lanes)<createResearchGrid().metrics(width).minColumns){
+      const grid=createResearchGrid(),metrics=grid.metrics(width),minimum=Math.max(metrics.minColumns,...nodes.map(node=>grid.minimum(node,metrics).w))
+      if(Math.floor(40/lanes)<minimum){
         setOpen(false)
         onArrange(workbenchText(next==='three'?'画布宽度不足，无法进行三排整理，请扩大画布后重试':'画布宽度不足，无法进行双排整理，请扩大画布后重试'),'error')
         toggleRef.current?.focus({preventScroll:true})
