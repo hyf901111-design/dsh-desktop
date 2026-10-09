@@ -336,7 +336,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before){update(lastPointer);autoFrame=view.requestAnimationFrame(autoScroll)}}
   }
   const down=e=>{
-    if(e.target?.closest?.('[data-workbench-column-resize]'))return
+    if(e.target?.closest?.('[data-workbench-column-resize],[data-financial-widget]'))return
     if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
     if(toolRef.current==='select'&&handleWorkbenchMultiSelect(root,workspace,e))return
     if(e.button!==0||e.target?.closest?.('[data-research-global-toolbar],[role=menu],[role=dialog],.ew-grid-menu'))return
