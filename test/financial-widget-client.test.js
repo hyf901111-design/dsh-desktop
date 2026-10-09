@@ -51,3 +51,10 @@ it('整理固定组件使用完整阅读高度，不按搜索框或当前SVG裁�
 it('新闻时间使用紧凑时分，完整发布日期保留在可访问属性中',async()=>{
  const bridge=service();bridge.request.mockImplementation(async()=>({news:[{id:'n',title:'本人新闻',source:'原始来源',time:'2026-10-09T18:34:20.515+0800'}],source:'测试通联'}));const f=await fixture({financialWidget:bridge});await f.act(async()=>f.workspace.createFinancialWidget('news'));await vi.waitFor(()=>expect(f.host.querySelector('time')).not.toBeNull());const time=f.host.querySelector('time');expect(time.textContent).toMatch(/^\d{2}:\d{2}$/);expect(time.title).toBe('2026-10-09T18:34:20.515+0800')
 })
+it('连续原生拖拽事件无需等待React渲染即可接受放下并排序',async()=>{
+ const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s,other]}}])});const first=f.host.querySelector('[data-stock-code="600519"] .ew-watch-name'),second=f.host.querySelector('[data-stock-code="000001"]');let over
+ await f.act(async()=>{const start=new f.win.Event('dragstart',{bubbles:true,cancelable:true});Object.defineProperty(start,'dataTransfer',{value:{setData(){}}});first.dispatchEvent(start);over=new f.win.Event('dragover',{bubbles:true,cancelable:true});second.dispatchEvent(over);second.dispatchEvent(new f.win.Event('drop',{bubbles:true,cancelable:true}))});expect(over.defaultPrevented).toBe(true);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.symbols).toEqual([other,s])
+})
+it('固定组件打开整框右键菜单不会落入普通正文导出并使画布崩溃',async()=>{
+ const f=await fixture();await f.act(async()=>f.workspace.createFinancialWidget('watchlist'));await f.event('contextmenu',f.host.querySelector('[data-research-node-id]'),{clientX:100,clientY:100});expect(f.host.querySelector('[data-research-canvas]')).not.toBeNull();expect(f.document.querySelector('[role=menu]')).not.toBeNull()
+})
