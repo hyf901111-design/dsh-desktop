@@ -1,3 +1,4 @@
+import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchAudioClient} from './lib/audio-client.mjs'
@@ -238,4 +239,4 @@ writeFileSync(conversationPath, patchConversationBrowser(readFileSync(conversati
 writeFileSync(conversationPath, patchComponentScheduledTasks(readFileSync(conversationPath, 'utf8')))
 
 writeFileSync(conversationPath, patchComponentDataRefresh(readFileSync(conversationPath, 'utf8')))
-writeFileSync(conversationPath, patchResearchGridWorkbench(patchAttachmentClient(patchAudioClient(patchDerivedPresetClient(patchYoutubeClient(patchIframeClient(readFileSync(conversationPath, 'utf8'))))))))
+writeFileSync(conversationPath, patchResearchGridWorkbench(patchFinancialWidgetClient(patchAttachmentClient(patchAudioClient(patchDerivedPresetClient(patchYoutubeClient(patchIframeClient(readFileSync(conversationPath, 'utf8')))))))))

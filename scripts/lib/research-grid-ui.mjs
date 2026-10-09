@@ -70,7 +70,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     setBusy(true);setError('')
     let message='指标数据已更新'
     try{
-      if(node.containerSpec?.type==='audio'){
+      if(node.containerSpec?.type==='financial-widget'){const preset=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-financial-widget]');if(!preset?.__eworkRefreshFinancial)throw Error('组件暂未就绪');const result=await preset.__eworkRefreshFinancial();if(result?.error)throw Error(result.error);message=result?.message||'已刷新通联数据'}else if(node.containerSpec?.type==='audio'){
         const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-audio-preset]')
         if(!player?.__eworkReloadAudio)throw Error('请先添加音频网址');
         player.__eworkReloadAudio();message='已请求重新加载音源'
@@ -101,6 +101,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件'}),
+      node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='quote'&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly}),
       button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
       button('close','移除组件',()=>onRemove(node),{disabled:readOnly})
@@ -224,8 +225,8 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     row('summary','总结提炼',()=>onDerived('summary')),
     row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
     separator('generate'),
-    row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
-    settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
+    target.node.containerSpec?.type==='financial-widget'?row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly):row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
+    target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))
   ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...['svg','png','jpg'].map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),document.body)
@@ -417,7 +418,7 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();window.removeEventListener('resize',measure)}
   },[rootRef,availableWidth,bottomOffset])
-  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?[...react.Children.toArray(children),react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]:children}),document.body)
+  return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,style:{...props.style,position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(children),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
 }
 export function workbenchAvailableWidth(root,bounds,panelBounds) {
   return Math.max(240,Math.min(root.clientWidth||bounds.width,researchCanvasUnobscuredWidth(bounds,panelBounds)))
