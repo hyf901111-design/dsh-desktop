@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "decision": "docs/superpowers/parked/2026-10-09-ework-1.1.1-experiments.md",
+  "branches": [
+    {
+      "branch": "codex/feat/harness-backports-20261004",
+      "tip": "9e3890fb84ce6139947aa458b6ef5885d8fcd9fc"
+    },
+    {
+      "branch": "codex/feat/windows-client-current-20261004",
+      "tip": "bdb8fbefd744110207185f99c2e6211bd125da50"
+    },
+    {
+      "branch": "codex/feat/harness-fusion-20261005",
+      "tip": "10e16d1eed2b1efab19b8dd1760184894b634b57"
+    }
+  ]
+}

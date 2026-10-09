@@ -35,6 +35,28 @@ function verify(repository: string) {
   })
 }
 
+function parkExperiment(repository: string, branch: string, tip: string) {
+  mkdirSync(path.join(repository, 'config'), { recursive: true })
+  writeFileSync(path.join(repository, 'config', 'sherlock-parked-experiments.json'), JSON.stringify({
+    schemaVersion: 1,
+    branches: [{ branch, tip }]
+  }))
+  runGit(repository, 'add', 'config/sherlock-parked-experiments.json')
+  runGit(repository, 'commit', '-m', '明确暂存实验并排除发布')
+}
+
+function createExperiment(repository: string) {
+  const branch = 'codex/feat/parked-experiment'
+  runGit(repository, 'switch', '-c', branch)
+  writeFileSync(path.join(repository, 'experiment.txt'), 'not for release\n')
+  runGit(repository, 'add', 'experiment.txt')
+  runGit(repository, 'commit', '-m', '暂存实验')
+  const tip = runGit(repository, 'rev-parse', 'HEAD')
+  runGit(repository, 'switch', 'main')
+  parkExperiment(repository, branch, tip)
+  return branch
+}
+
 afterEach(() => {
   for (const directory of scratchDirectories.splice(0)) {
     rmSync(directory, { recursive: true, force: true })
@@ -114,6 +136,48 @@ describe('formal Git source gate', () => {
     const result = verify(repository)
 
     expect(result.status, result.stderr).toBe(0)
+  })
+
+  it('allows an explicitly parked experiment at its recorded tip without merging it', () => {
+    const repository = createRepository()
+    createExperiment(repository)
+    const result = verify(repository)
+    expect(result.status, result.stderr).toBe(0)
+  })
+
+  it('rejects a parked experiment whose branch advanced after the decision', () => {
+    const repository = createRepository()
+    const branch = createExperiment(repository)
+    runGit(repository, 'switch', branch)
+    writeFileSync(path.join(repository, 'experiment.txt'), 'changed experiment\n')
+    runGit(repository, 'add', 'experiment.txt')
+    runGit(repository, 'commit', '-m', '实验后继提交')
+    runGit(repository, 'switch', 'main')
+    const result = verify(repository)
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('暂存实验分支已变化')
+  })
+
+  it('rejects main if an explicitly excluded experiment has been merged', () => {
+    const repository = createRepository()
+    const branch = createExperiment(repository)
+    runGit(repository, 'merge', '--no-edit', branch)
+    const result = verify(repository)
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('main 已包含明确排除的实验提交')
+  })
+
+  it('still rejects uncommitted changes in a parked experiment worktree', () => {
+    const repository = createRepository()
+    const branch = createExperiment(repository)
+    const parent = mkdtempSync(path.join(os.tmpdir(), 'sherlock-parked-worktree-'))
+    scratchDirectories.push(parent)
+    const worktree = path.join(parent, 'worktree')
+    runGit(repository, 'worktree', 'add', worktree, branch)
+    writeFileSync(path.join(worktree, 'experiment.txt'), 'uncommitted experiment\n')
+    const result = verify(repository)
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('另一个 worktree 存在尚未提交的改动')
   })
 
   it('ignores an integration branch whose exact batch was explicitly cancelled and archived', () => {

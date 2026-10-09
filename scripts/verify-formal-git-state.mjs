@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   listRegisteredWorktrees,
+  isAncestor,
   readRepositoryStatus,
   resolveRepositoryContext,
   runGit
@@ -61,6 +62,30 @@ function readVersion(repository) {
   return packageJson.version
 }
 
+function explicitlyParkedExperimentBranches(repository) {
+  const manifestPath = path.join(repository, 'config', 'sherlock-parked-experiments.json')
+  if (!existsSync(manifestPath)) return new Set()
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest.branches)) {
+    throw new Error('实验暂存清单格式无效。')
+  }
+  const parked = new Set()
+  for (const entry of manifest.branches) {
+    if (!entry?.branch?.startsWith('codex/feat/') || !/^[a-f0-9]{40}$/.test(entry.tip ?? '')) {
+      throw new Error('实验暂存清单缺少有效分支或提交。')
+    }
+    const tip = runGit(repository, ['rev-parse', `refs/heads/${entry.branch}`], { allowFailure: true }).stdout.trim()
+    if (tip !== entry.tip) {
+      throw new Error(`暂存实验分支已变化，须重新确认取舍：${entry.branch}`)
+    }
+    if (isAncestor(repository, entry.tip, 'main')) {
+      throw new Error(`main 已包含明确排除的实验提交：${entry.branch}`)
+    }
+    parked.add(entry.branch)
+  }
+  return parked
+}
+
 function verifyMajorTag(repository, version, head) {
   const [major, minor, patchVersion] = version.split('.').map(Number)
   if (major < 1 || minor !== 0 || patchVersion !== 0) return []
@@ -113,10 +138,12 @@ export function verifyFormalGitState(repository) {
   }
 
   const cancelledIntegrationBranches = explicitlyCancelledIntegrationBranches(context.worktreeRoot)
+  const parkedExperimentBranches = explicitlyParkedExperimentBranches(context.worktreeRoot)
   const unmergedBranches = localBranches(context.worktreeRoot)
     .filter((candidate) =>
       candidate !== 'main' &&
       !candidate.startsWith('archive/') &&
+      !parkedExperimentBranches.has(candidate) &&
       !cancelledIntegrationBranches.has(candidate)
     )
     .map((candidate) => ({
