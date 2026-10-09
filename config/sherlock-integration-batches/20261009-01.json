@@ -11,57 +11,18 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "b34492e20d7178f8c28134bf4ae807c746d015cd",
-        "tipCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
+        "baseCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
+        "tipCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
         "commits": [
           {
-            "commit": "ab3af9612f667adbc09f709cc4fe5355e5bc2599",
+            "commit": "27076e769b6411527d079664a03d2e675c9e9e00",
             "parents": [
-              "b34492e20d7178f8c28134bf4ae807c746d015cd"
+              "50886cad971c59d28ff85f1035df22ce5024e068"
             ],
-            "subject": "优化：按正式设计稿精修组件库交互和整理尺寸"
-          },
-          {
-            "commit": "50886cad971c59d28ff85f1035df22ce5024e068",
-            "parents": [
-              "ab3af9612f667adbc09f709cc4fe5355e5bc2599"
-            ],
-            "subject": "修复：干净安装时正确序列化组件尺寸函数"
+            "subject": "修复：组件主题与输入框样式并保留拖拽后的报价"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "build/figma-component-library/check.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-component-library/chevron.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/figma-component-library/search.svg"
-          },
-          {
-            "status": "M",
-            "path": "docs/superpowers/plans/2026-10-09-component-library.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/bento-layout.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/research-grid.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/financial-widget-client.mjs"
@@ -72,15 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/main/financial/widget-data.ts"
-          },
-          {
-            "status": "M",
             "path": "test/financial-widget-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-widget-data.test.ts"
           }
         ],
         "checks": [
@@ -94,9 +47,9 @@
               "test/financial-widget-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "38项金融组件检查通过：唯一标题搜索、portal联想、离屏搜索保留、拖拽、行情坐标和内容尺寸",
-            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
-            "completedAt": "2026-10-09T15:16:16.083862+00:00",
+            "summary": "39项组件检查通过，包含排序保留已有报价且不重复请求，唯一搜索、联想、拖拽和图表坐标",
+            "verifiedCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
+            "completedAt": "2026-10-09T15:36:25.816308+00:00",
             "timeoutMs": 180000
           },
           {
@@ -107,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript类型检查通过",
-            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
-            "completedAt": "2026-10-09T15:16:16.083862+00:00",
+            "verifiedCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
+            "completedAt": "2026-10-09T15:36:25.816308+00:00",
             "timeoutMs": 180000
           },
           {
@@ -122,38 +75,14 @@
             ],
             "outcome": "passed",
             "summary": "8项直接影响的补丁恢复与既有看板回归检查通过",
-            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
-            "completedAt": "2026-10-09T15:16:16.083862+00:00",
+            "verifiedCommit": "27076e769b6411527d079664a03d2e675c9e9e00",
+            "completedAt": "2026-10-09T15:36:25.816308+00:00",
             "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-workbench.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "43项本次直接影响的整理布局检查通过",
-            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
-            "completedAt": "2026-10-09T15:16:16.083862+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "干净安装并生成客户端脚本成功；随后81项布局和组件检查、8项补丁恢复检查、类型检查通过",
-            "verifiedCommit": "50886cad971c59d28ff85f1035df22ce5024e068",
-            "completedAt": "2026-10-09T15:16:16.083862+00:00",
-            "timeoutMs": 600000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际React看板浏览器测试数据夹具完成浅深主题、四项264×216菜单、唯一搜索位置、重复添加反馈、周期和指标、滚轮缩放及三排窄宽度检查；无控制台错误。菜单33px列表项、表格32px行、涨跌白字色块和24px主价格实测。原生集成客户端重建后复验待执行，夹具不作为真实行情证明。"
+          "summary": "前一集成客户端1755ee48原生复核了真实3股、周K、标准整理、四项菜单、唯一标题搜索、重复联想、右键和拖拽。发现浅色主题覆盖、双重输入框边框及拖拽清空报价，本次修复；实际React看板夹具复核客户端深色搭配看板浅色，组件正确变白，菜单264×216、33px行、32px表格行，无控制台错误。新原生包复核待执行，夹具为测试数据。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -169,67 +98,7 @@
           "新闻单页限制3条以避免供应商截断JSON；完整原文经安全链接打开",
           "完整已安装客户端与账户切换路径待本地集成验收"
         ],
-        "generatedAt": "2026-10-09T15:16:16.083862+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
-        "verificationCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
-            "completedAt": "2026-10-09T15:17:49.014Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
-            "completedAt": "2026-10-09T15:17:49.014Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
-            "completedAt": "2026-10-09T15:17:49.014Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "3021f1bae84c80d9c2d641d6c4522d7648126f18",
-            "completedAt": "2026-10-09T15:17:49.014Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-09T15:17:49.014Z"
+        "generatedAt": "2026-10-09T15:36:25.816308+00:00"
       }
     }
   ],
