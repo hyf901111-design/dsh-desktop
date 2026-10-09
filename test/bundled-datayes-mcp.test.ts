@@ -67,8 +67,20 @@ it('云端鉴权后只代理固定通联服务，以Secret替换用户认证且�
  expect(response.status).toBe(200);expect(response.headers.has('mcp-session-id')).toBe(false)
  expect(await response.json()).toMatchObject({id:7,result:{tools:[{name:'get_catalog'}]}})
  expect(f.calls.every(c=>c.url==='https://gw.datayes.com/rwtracker/datayes-mcp')).toBe(true)
+ expect(f.env.fetch.mock.calls.every(([,options])=>options.redirect==='manual')).toBe(true)
  expect(f.calls.every(c=>new Headers(c.headers).get('authorization')==='Bearer server-only-datayes-key')).toBe(true)
  expect(f.calls.some(c=>new Headers(c.headers).has('cf-connecting-ip'))).toBe(false)
+})
+it('上游重定向立即失败，密钥不跟随到新地址，错误只包含受控诊断',async()=>{
+ const f=envFixture()
+ f.env.fetch=vi.fn(async()=>new Response(null,{status:302,headers:{location:'https://untrusted.invalid/collect'}}))
+ const response=await handleRequest(request(),f.env)
+ expect(response.status).toBe(503)
+ expect(response.headers.get('x-ework-datayes-stage')).toBe('initialize')
+ expect(response.headers.get('x-ework-datayes-status')).toBe('302')
+ expect(response.headers.get('x-ework-datayes-error')).toBe('http')
+ expect(await response.text()).toBe(JSON.stringify({error:{code:'DATAYES_SERVICE_UNAVAILABLE'}}))
+ expect(f.env.fetch).toHaveBeenCalledTimes(1)
 })
 it('云端拒绝未登录用户、未知工具与超额请求，不向通联发请求',async()=>{
  const f=envFixture()
@@ -88,6 +100,14 @@ it('MCP SDK经账号传输完成发现与工具调用，上游使用独立会话
  expect(JSON.stringify(result)).toContain('真实导航结果')
  expect(f.calls.filter(c=>c.body.method==='initialize')).toHaveLength(2)
  expect(f.calls.filter(c=>c.body.method==='tools/call')[0].headers['mcp-session-id']).toBe('private-upstream-session')
+})
+it('内置服务不可用时立即结束发现，不以重复请求掩盖服务错误',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'datayes-failure-'))
+ const remote=vi.fn(async()=>new Response(null,{status:503}))
+ const transport=new McpSupervisor(new CredentialVault(root,encryption),remote)
+ cleanup.push(async()=>{await transport.disposeAll();await rm(root,{recursive:true,force:true})})
+ await expect(transport.connect(bundledDatayesConnection('account-one',true),AbortSignal.timeout(1000))).rejects.toMatchObject({code:'RUNTIME_UNAVAILABLE'})
+ expect(remote).toHaveBeenCalledTimes(1)
 })
 it('支持SSE工具结果并隐藏上游回显的Key；服务错误不回传敏感响应',async()=>{
  const f=envFixture(),original=f.env.fetch

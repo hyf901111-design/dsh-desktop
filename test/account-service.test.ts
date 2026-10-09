@@ -36,6 +36,16 @@ it('uses the encrypted EWork session for built-in MCP without exposing or accept
  expect(remote.mock.calls[1]?.[0]).toBe('https://updates.evanarts.com/v1/datayes/mcp')
  expect(remote.mock.calls[1]?.[1]).toMatchObject({method:'POST',redirect:'error',headers:{authorization:'Bearer '+'d'.repeat(64)},body})
 })
+it('reports unavailable cloud MCP immediately without exposing response bodies or untrusted diagnostics',async()=>{
+ const {service}=await setup()
+ const warning=vi.spyOn(console,'warn').mockImplementation(()=>{})
+ try {
+  const remote=vi.fn().mockResolvedValueOnce(Response.json({user:{id:'owner-a'},token:'d'.repeat(64)})).mockResolvedValueOnce(new Response('private-upstream-body',{status:503,headers:{'x-ework-datayes-stage':'untrusted-secret','x-ework-datayes-status':'private'}}))
+  vi.stubGlobal('fetch',remote);await service.invoke('login',{})
+  await expect(service.datayesMcpRequest('{}',AbortSignal.timeout(5000))).rejects.toMatchObject({code:'RUNTIME_UNAVAILABLE',message:'通联数据服务暂时不可用，请稍后重新测试'})
+  expect(JSON.stringify(warning.mock.calls)).not.toMatch(/private|untrusted-secret/)
+ } finally { warning.mockRestore() }
+})
 it('binds cached integration identity to the encrypted session and clears it on logout',async()=>{
   const {service,dir}=await setup()
   vi.stubGlobal('fetch',vi.fn(async()=>Response.json({user:{id:'owner-a'},token:'a'.repeat(64)})))

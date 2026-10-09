@@ -56,6 +56,14 @@ export class AccountService {
     const generation=this.generation
     const response=await (this.collaborationOptions.fetch??fetch)(`${this.origin}/v1/datayes/mcp`,{method:'POST',redirect:'error',headers:{'content-type':'application/json',accept:'application/json, text/event-stream',authorization:`Bearer ${this.token}`},body,signal:AbortSignal.any([this.sessionAbort.signal,signal,AbortSignal.timeout(58000)])})
     if(generation!==this.generation){await response.body?.cancel();throw new IntegrationError('ACCESS_DENIED','账户已变化，已取消通联请求')}
+    if(response.status===429||response.status>=500){
+      const upstream=response.headers.get('x-ework-datayes-status')
+      const stage=response.headers.get('x-ework-datayes-stage')
+      const diagnostic=/^(usage|initialize|initialized|tools\/list|tools\/call)$/.test(stage??'')?stage:undefined
+      console.warn('[datayes] service unavailable',{status:response.status,stage:diagnostic,upstreamStatus:/^\d{3}$/.test(upstream??'')?Number(upstream):undefined})
+      await response.body?.cancel()
+      throw new IntegrationError('RUNTIME_UNAVAILABLE',response.status===429?'通联请求较多，请稍后重试':'通联数据服务暂时不可用，请稍后重新测试')
+    }
     return response
   }
   private changed() {

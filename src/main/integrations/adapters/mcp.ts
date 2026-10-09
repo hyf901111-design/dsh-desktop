@@ -260,7 +260,7 @@ export class McpSupervisor {
         const mapped = entry.fatal ?? mappedError(error, signal)
         await this.closeTransport(entry, false)
         if (signal.aborted) throw cancelled()
-        if (mapped.code !== 'RUNTIME_UNAVAILABLE' || attempt === 9) throw mapped
+        if (mapped.code !== 'RUNTIME_UNAVAILABLE' || isBundledDatayesId(entry.id) || attempt === 9) throw mapped
         // Retry only connection/discovery, never tool execution. One supervisor owns the budget.
         const delay = Math.min(30_000, 500 * 2 ** attempt)
         await wait(Math.round(delay * (0.9 + Math.random() * 0.1)), signal)
