@@ -121,6 +121,9 @@ body:has(.VOzbGW_overlay:not([hidden])) .pI_x6G_frame,
 body:has(.VOzbGW_overlay:not([hidden])) .pI_x6G_frame :not(.VOzbGW_overlay,.VOzbGW_overlay *){visibility:hidden!important}
 .VOzbGW_overlay{visibility:visible}
 [data-settings-background-portal]{visibility:hidden!important;pointer-events:none!important}
+/* Research toolbars and their menus are portaled outside the background frame. */
+body:has(.VOzbGW_overlay:not([hidden])) [data-ework-toolbar-owner],
+body:has(.VOzbGW_overlay:not([hidden])) [data-ework-toolbar-owner] *{visibility:hidden!important;pointer-events:none!important}
 
 /* Later account state 178:1957 has a subtle dark return-button fill. */
 body[data-ds-dark-theme] .VOzbGW_overlay .sherlock-settings-back{background:rgba(255,255,255,.04)}
