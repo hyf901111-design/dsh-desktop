@@ -18,6 +18,17 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '1.1.2',
+      date: '2026-10-09',
+      items: [
+        '统一标准、三排、双排和单排整理图标，采用无间隙的连体样式。',
+        '修复整理仅覆盖当前视野的问题，一次点击即可整理整个画布，包括尚未滚动到的组件。',
+        '按列类型统一表格表头与内容的对齐和留白，改善文本、日期、价格、涨跌幅等列的阅读体验。',
+        '内置通联金融数据 MCP，默认开启并由系统维护；登录 EWork 后即可使用，无需单独填写通联密钥。',
+        '修复侧栏通知铃铛在按钮内未居中的问题，展开和收起侧栏时保持位置一致。'
+      ]
+    },
+    {
       version: '1.1.1',
       date: '2026-10-03',
       items: [
@@ -282,6 +293,17 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.1.2',
+      date: '2026-10-09',
+      items: [
+        'Unified Standard, Three-column, Two-column and Single-column Arrange icons with connected shapes and no gaps.',
+        'Fixed Arrange affecting only the visible area; one click now arranges the entire canvas, including components outside the viewport.',
+        'Aligned table headers and cells consistently by column type, improving spacing for text, dates, prices and percentage changes.',
+        'Added a built-in, always-enabled DataYes financial-data MCP connection managed by the system; sign in to EWork to use it without entering a separate DataYes API key.',
+        'Centered the sidebar notification bell within its button in both expanded and collapsed sidebar states.'
+      ]
+    },
     {
       version: '1.1.1',
       date: '2026-10-03',
