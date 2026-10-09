@@ -115,12 +115,12 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
     }
     if(index||s.market==='HK'){
      const value=await api(index?'getMktIdxd':'getMktHKEqud',{ticker:s.code,beginDate:new Date(Date.now()-60*86400000).toISOString().slice(0,10).replaceAll('-',''),endDate:end,pagenum:1,pagesize:60});payload(value);const rows=findRows(value).filter(r=>r.ticker===undefined||String(r.ticker)===s.code).sort((a,b)=>String(a.tradeDate).localeCompare(String(b.tradeDate))),r=rows.at(-1);if(!r)throw Error('暂无此证券行情')
-     const price=num(index?r.closeIndex:r.closePrice),previous=num(index?r.preCloseIndex:r.preClosePrice);if(price===null||price<=0)throw Error('暂无可用价格');return {...s,price,changePercent:previous!==null&&previous>0?(price/previous-1)*100:null,asOf:date(r.tradeDate),quality:'收盘行情',series:normalizeFinancialBars(rows).map(b=>b.close),source:'通联 DataYes'}
+     const price=num(index?r.closeIndex:r.closePrice),previous=num(index?r.preCloseIndex:r.preClosePrice);if(price===null||price<=0)throw Error('暂无可用价格');return {...s,price,priceChange:previous!==null?price!-previous:null,changePercent:previous!==null&&previous>0?(price/previous-1)*100:null,asOf:date(r.tradeDate),quality:'收盘行情',series:normalizeFinancialBars(rows).map(b=>b.close),source:'通联 DataYes'}
     }
     const value=await api('market_snapshot',{ticker:s.code,type:'stock'}),r=payload(value)
     if(String(r.ticker)!==s.code||r.exchangeCD&&({SH:'XSHG',SZ:'XSHE',BJ:'XBEI'} as Row)[s.market]!==r.exchangeCD||num(r.lastPrice)===null||num(r.lastPrice)!<=0)throw Error('暂无该证券可用行情')
     const price=num(r.lastPrice),previous=num(r.prevClosePrice),change=num(r.changePct)
-    return {...s,price,changePercent:change!==null?change*100:previous!==null&&previous>0?(price!/previous-1)*100:null,asOf:date(r.date),quality:String(r.status??'行情时效未确认'),source:'通联 DataYes'}
+    return {...s,price,priceChange:previous!==null?price!-previous:null,changePercent:change!==null?change*100:previous!==null&&previous>0?(price!/previous-1)*100:null,asOf:date(r.date),quality:String(r.status??'行情时效未确认'),source:'通联 DataYes'}
    }
    // Bounded provider concurrency avoids one MCP request per row at once.
    for(let i=0;i<q.symbols.length;i+=4){jobs.push(...await Promise.allSettled(q.symbols.slice(i,i+4).map(loadSymbol)));check()}
