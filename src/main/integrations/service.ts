@@ -204,7 +204,7 @@ export class IntegrationService {
         const command = raw as IntegrationCommand;
         if (!command || typeof command !== 'object')
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
-        const connectionId='id' in command?command.id:command.type==='save-connection'?command.draft?.id:undefined;
+        const connectionId=command.type==='save-connection'?command.draft?.id:'id' in command?command.id:undefined;
         if(isBundledDatayesId(connectionId)&&['set-enabled','uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
             this.owner();throw new IntegrationError('ACCESS_DENIED','内置通联 MCP 保持启用，随客户端更新，不能关闭、删除或修改配置');
         }

@@ -26,7 +26,7 @@ it('新用户自动获得默认开启的10个通联工具，内置连接不能�
  expect(c?.toolGrants).toHaveLength(10)
  expect(snapshot.tools.filter(tool=>tool.connectionId===row.id).map(tool=>tool.rawName)).toContain('call_api')
  const meta={requestId:'locked-attempt',expectedRevision:row.revision}
- for(const command of [{type:'set-enabled',kind:'connection',id:row.id,enabled:false,meta},{type:'uninstall',kind:'connection',id:row.id,meta},{type:'disconnect',id:row.id,meta},{type:'save-connection',draft:{id:row.id},meta}])
+ for(const command of [{type:'set-enabled',kind:'connection',id:row.id,enabled:false,meta},{type:'uninstall',kind:'connection',id:row.id,meta},{type:'disconnect',id:row.id,meta},{type:'save-connection',draft:{id:row.id},meta},{type:'save-connection',id:'misleading-extra-id',draft:{id:row.id},meta}])
   await expect(f.service.request(command)).rejects.toMatchObject({code:'ACCESS_DENIED'})
  expect((await f.row()).enabled).toBe(true)
 })
