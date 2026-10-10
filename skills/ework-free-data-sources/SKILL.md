@@ -14,7 +14,7 @@ description: 为 EWork 工作台与组件优先选择可用的免费数据源，
 3. 使用返回的 `records`、`units`、`source`、`sourceUrl`、`dataTime`、`receivedAt`、`limitations`。空列表是空结果，不填假记录；`null` 是缺失，不能变为0。保留真实0和负数。
 4. 单位、日期、口径要写入宿主已有字段，不为显示来源添加不支持的模板字段。图表只允许有限数值时，剔除缺失值及其对应标签，在 note 说明缺失期，不填0或传入不支持的 null。新闻保留标题、链接及真实时间，摘要缺失就省略，不把标题扩写成事实。
 5. 来源名称、许可和时间口径以工具实际返回的 `source`、`sourceId`、`documentation`、`limitations` 为准，即使父任务写错也须更正。`met-weather` 是挪威气象局 MET Norway Locationforecast，CC BY 4.0 可商业使用，与 Open-Meteo 无关；不能混用名称或许可。来源未提供的“初步/最终”发布状态不自行推断。
-6. 原生 `table` 需要原文链接时，将实际 URL 写在 `rows` 的单元格中，使用 `[原文](实际https URL)` 或直接 URL；不要只写入不受原生表格支持的 `rowLinks`。模型生成完成后须核对客户端真实链接可见，不能用字段存在代替可点击验证。
+6. 原生 `table` 需要原文链接时，将实际 URL 写在 `rows` 的单元格中，使用 `[原文](实际https URL)` 或直接 URL；不要只写入不受原生表格支持的 `rowLinks`。论文使用工具返回的 `records.url`，保留 URL 中的百分号编码，不按 DOI 文本重拼链接；未编码的括号会截断 Markdown 链接。DOI 显示文本保持原样。模型生成完成后须核对客户端真实链接可见，不能用字段存在代替可点击验证。
 
 ## 时效与刷新
 

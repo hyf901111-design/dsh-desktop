@@ -7,6 +7,9 @@ const UA = 'EWorkOdyssey/1.1 (https://github.com/awake-ai-lab/sherlock-desktop)'
 const MAX_BYTES = 3_000_000;
 const num = value => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
 const clean = value => typeof value === 'string' ? value.replace(/<[^>]*>/g, '').trim().slice(0, 1200) : '';
+// DOI suffixes may contain parentheses. Encode path segments so links survive
+// the native table's Markdown syntax without changing the DOI's identity.
+const doiLink = value => typeof value === 'string' && value ? `https://doi.org/${value.split('/').map(part => encodeURIComponent(part).replace(/[()]/g, char => `%${char.charCodeAt(0).toString(16)}`)).join('/')}` : null;
 export class PublicDataError extends Error {
   constructor(code, message, retryAfterSeconds) { super(message); this.name = 'PublicDataError'; this.code = code; if (retryAfterSeconds) this.retryAfterSeconds = retryAfterSeconds; }
 }
@@ -87,7 +90,7 @@ export function prepareRequest(sourceId, p = {}) {
     normalize = data => { const records = data.features.map(f => ({ id: f.id, time: new Date(f.properties.time).toISOString(), magnitude: num(f.properties.mag), place: clean(f.properties.place), longitude: num(f.geometry?.coordinates?.[0]), latitude: num(f.geometry?.coordinates?.[1]), depth: num(f.geometry?.coordinates?.[2]), url: f.properties.url })); return { records, units: { magnitude: '源震级类型见USGS事件', depth: 'km', latitude: 'degree', longitude: 'degree' }, dataTime: latest(records), coverage: { start: start.toISOString(), end: end.toISOString() } }; };
   } else if (sourceId === 'crossref') {
     endpoint = url('https://api.crossref.org/works', { query: text(p, 'query'), rows: limit, select: 'DOI,title,author,published,publisher,URL,type' });
-    normalize = data => ({ records: data.message.items.map(r => { const parts = r.published?.['date-parts']?.[0]; return { doi: r.DOI, title: clean(r.title?.[0]), authors: (r.author ?? []).map(a => clean([a.given, a.family].filter(Boolean).join(' '))).slice(0, 20), publisher: clean(r.publisher), url: r.URL, type: r.type, time: parts?.map((v, i) => String(v).padStart(i ? 2 : 4, '0')).join('-') ?? null }; }), units: {}, dataTime: null, timeMeaning: 'records.time为来源出版日期，可能只到年/月；无统一数据时点' });
+    normalize = data => ({ records: data.message.items.map(r => { const parts = r.published?.['date-parts']?.[0]; return { doi: r.DOI, title: clean(r.title?.[0]), authors: (r.author ?? []).map(a => clean([a.given, a.family].filter(Boolean).join(' '))).slice(0, 20), publisher: clean(r.publisher), url: doiLink(r.DOI), type: r.type, time: parts?.map((v, i) => String(v).padStart(i ? 2 : 4, '0')).join('-') ?? null }; }), units: {}, dataTime: null, timeMeaning: 'records.time为来源出版日期，可能只到年/月；无统一数据时点' });
   } else if (sourceId === 'github-repo') {
     const repo = token(p, 'repo', /^[A-Za-z0-9_.-]{1,80}\/[A-Za-z0-9_.-]{1,100}$/); endpoint = `https://api.github.com/repos/${repo}`;
     normalize = d => { if (typeof d.full_name !== 'string') throw Error('invalid repository'); return ({ records: [{ name: d.full_name, description: clean(d.description), stars: num(d.stargazers_count), forks: num(d.forks_count), openIssues: num(d.open_issues_count), language: d.language, url: d.html_url, time: d.updated_at, pushedAt: d.pushed_at, license: d.license?.spdx_id ?? null }], units: { stars: 'stars', forks: 'forks', openIssues: 'issues (包含PR)' }, dataTime: d.updated_at ?? null, timeMeaning: '仓库更新时间，不是计数的实测时间；计数为本次快照' }); };
