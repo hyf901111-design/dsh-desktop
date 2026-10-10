@@ -11,21 +11,52 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "3972a4876a212628504d7aab345a975aadf68659",
-        "tipCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
+        "baseCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
+        "tipCommit": "5d7443d4cf2fda98e8903f2cd9534dcd58dd1dd7",
         "commits": [
           {
-            "commit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
+            "commit": "fbef155315f8c2d0e4f2fa81988f97ae71a766c8",
             "parents": [
-              "3972a4876a212628504d7aab345a975aadf68659"
+              "725dedc5107650bcc5031fb1d80448e541ea3ffb"
             ],
-            "subject": "修复原生弹性布局吞掉底栏预留空间"
+            "subject": "统一组件库菜单与悬停反馈，精简联想搜索并改善自选股留白"
+          },
+          {
+            "commit": "5d7443d4cf2fda98e8903f2cd9534dcd58dd1dd7",
+            "parents": [
+              "fbef155315f8c2d0e4f2fa81988f97ae71a766c8"
+            ],
+            "subject": "组件库复用通用最小尺寸并提供紧凑自适应布局"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/research-grid.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-layout.test.js"
           }
         ],
         "checks": [
@@ -40,9 +71,9 @@
               "test/financial-widget-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "46项固定组件、异常状态、菜单定位、侧栏最小尺寸和交互检查通过",
-            "verifiedCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
-            "completedAt": "2026-10-09T23:52:07.564838+00:00",
+            "summary": "49项固定组件、最小尺寸、精简搜索、菜单反馈、数据和交互检查通过",
+            "verifiedCommit": "5d7443d4cf2fda98e8903f2cd9534dcd58dd1dd7",
+            "completedAt": "2026-10-10T00:41:25.301001+00:00",
             "timeoutMs": 180000
           },
           {
@@ -53,8 +84,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
-            "completedAt": "2026-10-09T23:52:07.564838+00:00",
+            "verifiedCommit": "5d7443d4cf2fda98e8903f2cd9534dcd58dd1dd7",
+            "completedAt": "2026-10-10T00:41:25.301001+00:00",
             "timeoutMs": 180000
           },
           {
@@ -64,18 +95,18 @@
               "run",
               "test/research-grid-client.test.js",
               "-t",
-              "底部工具栏通过|缓存宽度与窗口|整理提示固定|点击添加链接后定位|画板菜单挂到"
+              "底部工具栏通过|缓存宽度与窗口|整理提示固定|点击添加链接后定位|画板菜单挂到|最小可操作高度|最小表单|统一基础最小尺寸"
             ],
             "outcome": "passed",
-            "summary": "5项直接底栏定位回归检查通过；既有8项补丁恢复检查在上一提交通过",
-            "verifiedCommit": "725dedc5107650bcc5031fb1d80448e541ea3ffb",
-            "completedAt": "2026-10-09T23:52:07.564838+00:00",
+            "summary": "8项直接涉及底栏、浮层与通用最小尺寸回归通过",
+            "verifiedCommit": "5d7443d4cf2fda98e8903f2cd9534dcd58dd1dd7",
+            "completedAt": "2026-10-10T00:41:25.301001+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "118fc890原生包确认画布flex:1 1 0%吞掉80px高度预留。加入原生弹性容器的实际React夹具，修复前底栏覆盖，flex:none后1440×1000及760×780底栏与画布保持14px间距，菜单和联想范围、异常3行、固定列保护仍通过且控制台无异常；新原生包复核待执行。测试数据与真实通联明确区分。"
+          "summary": "实际React客户端1440×1000及760×780菜单与搜索检查通过；关闭按钮24px方形且图标与背景中心差为0，悬停行和加号可见反馈；自选行上下各4px。四项缩到共同网格最小尺寸，列表滚动与行情主图无溢出，配置不变，放大恢复副图；浅/深色复核。内置账号网关实际返回茅台报价、160根日K和3条新闻，原生当前四项组件已恢复数据。新本地包核验待执行。Browser插件不在当前技能清单，使用已有Playwright运行时。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -85,77 +116,18 @@
           "来源日期与未知/错误/未登录状态明确，无运行时示例价格",
           "用户在本地集成客户端验收后再合并main，不发布推送、不混入三块暂存实验",
           "底栏不遮挡滚动内容，浮层限制在画布安全范围并避开自身输入",
-          "窄画布拒绝不足的固定排数，侧栏切换仍保留固定组件最小宽高",
-          "异常提示不重复、不挤掉行，刷新失败保留之前有效数据并明确标记"
+          "异常提示不重复、不挤掉行，刷新失败保留之前有效数据并明确标记",
+          "组件库删除底部说明，统一整理菜单外观，关闭图标居中，加号有鼠标悬停反馈",
+          "联想空输入仅显示输入框，结果只呈现候选，保留方向键和Enter/Escape交互",
+          "四项固定组件复用通用组件最小宽高，紧凑状态精简信息，放大与整理恢复完整布局且配置不丢失"
         ],
         "risks": [
           "美股与分钟接口尚未验证，明确显示不支持",
           "通联A股K线成交量单位未声明，保留原始单位",
           "新闻单页限制3条以避免供应商截断JSON；完整原文经安全链接打开",
-          "完整已安装客户端与账户切换路径待本地集成验收",
-          "当前通联返回数据不可用，原生复核不能据此宣称真实行情链路通过"
+          "完整已安装客户端与账户切换路径待本地集成验收"
         ],
-        "generatedAt": "2026-10-09T23:52:07.564838+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b8c5ee0f047e12fe4a2f92b6a389690063144a91",
-        "verificationCommit": "b8c5ee0f047e12fe4a2f92b6a389690063144a91",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "b8c5ee0f047e12fe4a2f92b6a389690063144a91",
-            "completedAt": "2026-10-09T23:52:57.680Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "b8c5ee0f047e12fe4a2f92b6a389690063144a91",
-            "completedAt": "2026-10-09T23:52:57.680Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b8c5ee0f047e12fe4a2f92b6a389690063144a91",
-            "completedAt": "2026-10-09T23:52:57.680Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "b8c5ee0f047e12fe4a2f92b6a389690063144a91",
-            "completedAt": "2026-10-09T23:52:57.680Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-09T23:52:57.680Z"
+        "generatedAt": "2026-10-10T00:41:25.301001+00:00"
       }
     }
   ],
