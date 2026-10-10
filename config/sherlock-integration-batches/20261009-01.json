@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "077a4cd39bf006ff04c3e47bb8cf3d577bd5849c",
-        "tipCommit": "9a31059849cfd7192370f65c19475008c4f39457",
+        "baseCommit": "9a31059849cfd7192370f65c19475008c4f39457",
+        "tipCommit": "9826342d3b932c6cf6b0eeaafc0847a3d4a168be",
         "commits": [
           {
-            "commit": "9a31059849cfd7192370f65c19475008c4f39457",
+            "commit": "9826342d3b932c6cf6b0eeaafc0847a3d4a168be",
             "parents": [
-              "077a4cd39bf006ff04c3e47bb8cf3d577bd5849c"
+              "9a31059849cfd7192370f65c19475008c4f39457"
             ],
-            "subject": "组件库适配易方达模式并统一数据源错误提示"
+            "subject": "修正窄组件重试按钮布局并接入默认内置MCP连接"
           }
         ],
         "files": [
@@ -32,16 +32,20 @@
             "path": "scripts/lib/financial-widget.css"
           },
           {
+            "status": "A",
+            "path": "src/main/financial/bundled-mcp.ts"
+          },
+          {
             "status": "M",
             "path": "src/main/financial/widget-data.ts"
           },
           {
             "status": "M",
-            "path": "test/financial-widget-client.test.js"
+            "path": "src/main/index.ts"
           },
           {
-            "status": "M",
-            "path": "test/financial-widget-data.test.ts"
+            "status": "A",
+            "path": "test/financial-widget-mcp.test.ts"
           }
         ],
         "checks": [
@@ -50,20 +54,19 @@
               "npx",
               "vitest",
               "run",
-              "test/financial-widget-layout.test.js",
+              "test/financial-widget-mcp.test.ts",
               "test/financial-widget-data.test.ts",
               "test/financial-widget-client.test.js",
-              "test/financial-widget-refresh.test.js",
+              "test/financial-widget-layout.test.js",
               "test/financial-widget-contract.test.js",
-              "test/research-arrange-modes.test.js",
-              "test/research-optimal-arrange.test.js",
-              "test/research-custom-arrange-content.test.js",
-              "test/workbench-style.test.js"
+              "test/financial-widget-refresh.test.js",
+              "test/bundled-datayes-mcp.test.ts",
+              "test/account-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "91项金融组件、主题、布局、刷新和数据源通用错误聚焦验证通过",
-            "verifiedCommit": "9a31059849cfd7192370f65c19475008c4f39457",
-            "completedAt": "2026-10-10T02:24:22.188511+00:00",
+            "summary": "90项默认MCP、账户隔离、重试和组件回归检查通过",
+            "verifiedCommit": "9826342d3b932c6cf6b0eeaafc0847a3d4a168be",
+            "completedAt": "2026-10-10T02:53:06.731266+00:00",
             "timeoutMs": 180000
           },
           {
@@ -74,29 +77,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "9a31059849cfd7192370f65c19475008c4f39457",
-            "completedAt": "2026-10-10T02:24:22.188511+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "底部工具栏通过|缓存宽度与窗口|整理提示固定|点击添加链接后定位|画板菜单挂到|最小可操作高度|最小表单|统一基础最小尺寸"
-            ],
-            "outcome": "passed",
-            "summary": "8项底栏、浮层和通用最小尺寸回归通过",
-            "verifiedCommit": "9a31059849cfd7192370f65c19475008c4f39457",
-            "completedAt": "2026-10-10T02:24:22.188511+00:00",
+            "verifiedCommit": "9826342d3b932c6cf6b0eeaafc0847a3d4a168be",
+            "completedAt": "2026-10-10T02:53:06.731266+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实React浏览器以明确标注的测试数据验证易方达青色表头、品牌均线及指数卡片、涨跌语义颜色、菜单悬停和联想搜索主题同步；三主题切换保留配置和输入；通用最小尺寸与窄窗口浮层安全边距通过；刷新失败保留原数据且提示不含供应商计费判断。原生客户端将在集成构建后核验。"
+          "summary": "真实React浏览器验证760px窄窗口和通用最小尺寸，三主题空状态始终垂直排列；空状态和列表底部重试有1px描边且不溢出；悬停反馈、点击重新请求、加载状态和成功恢复通过，无页面错误。内置MCP原生连接测试成功；集成构建后再验证真实数据请求。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -116,7 +104,9 @@
           "刷新背景无边框、outline和阴影，选择框仍沿用客户端规范",
           "底栏不再扣除80px画布高度，预留安全空间放在可滚动内容末尾",
           "四项组件与组件库菜单、搜索和图表复用易方达统一主题，主题切换不重置组件交互状态",
-          "获取失败不推断服务商和计费原因，保留重试和缺失数据标记"
+          "获取失败不推断服务商和计费原因，保留重试和缺失数据标记",
+          "窄宽度与最小尺寸下错误提示在上、描边重试按钮在下，列表底部重试不挤占文案，三主题交互反馈一致",
+          "四项固定组件使用当前账号默认内置MCP连接ID与统一连接管理，不选取或回退个人同名MCP；退出与账户切换取消旧响应"
         ],
         "risks": [
           "美股与分钟接口尚未验证，明确显示不支持",
@@ -125,67 +115,7 @@
           "新闻响应受供应商截断和实际数据量限制，长响应回退3条，不伪造更多条目",
           "额外检查发现旧Bento模板夹具6项既有失败；原2c5提交隔离目录复跑同样6项失败，涉及旧尺寸预期及Figma派生菜单锚点，与本次修改无关"
         ],
-        "generatedAt": "2026-10-10T02:24:22.188511+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f616dc36868191f867ffc934909be7ed232043e3",
-        "verificationCommit": "f616dc36868191f867ffc934909be7ed232043e3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "f616dc36868191f867ffc934909be7ed232043e3",
-            "completedAt": "2026-10-10T02:25:05.674Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "f616dc36868191f867ffc934909be7ed232043e3",
-            "completedAt": "2026-10-10T02:25:05.674Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f616dc36868191f867ffc934909be7ed232043e3",
-            "completedAt": "2026-10-10T02:25:05.674Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "f616dc36868191f867ffc934909be7ed232043e3",
-            "completedAt": "2026-10-10T02:25:05.674Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-10T02:25:05.674Z"
+        "generatedAt": "2026-10-10T02:53:06.731266+00:00"
       }
     }
   ],
