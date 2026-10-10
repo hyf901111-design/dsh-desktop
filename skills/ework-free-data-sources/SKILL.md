@@ -28,3 +28,5 @@ description: 为 EWork 工作台与组件优先选择可用的免费数据源，
 目录区分“官方开放”“免费密钥”“条件使用”“网页接口”。需密钥的 FRED/EIA/BEA/OpenAQ 等只列接入指引，不写入共享凭据；有授权后才使用用户的连接。Open-Meteo 免费服务限非商业，Nominatim 公共服务禁止生成平台作为通用地址接口，不作为自动取数候选。腾讯/新浪网页数据是尽力而为，接口可用不代表商业再分发授权；不得用它们承诺交易级实时服务。按原来源署名并遵守其许可。
 
 命令行核查可用 `node scripts/query.mjs catalog` 或 `node scripts/query.mjs query <source-id> '<JSON参数>'`。新增来源须更新目录、参数白名单、实际响应归一化、许可与时效，并验证真实请求；不通过用户输入任意 URL 扩展取数。
+
+直接提交到工作台的 `panel.artifact` 是快照，不会启动取数子任务；需要持续更新时，父任务须取得实际 nodeId 后调用 `research_component_data action=bind`，`recipe.requests` 用 `toolId:"public_data_query"`，保留成功 query 的参数字符串，保存频率并核实刷新成功。详见 [生成与刷新规则](references/generation.md)。

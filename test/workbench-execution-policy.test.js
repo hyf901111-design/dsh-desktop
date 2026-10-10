@@ -8,6 +8,20 @@ import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../p
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 afterEach(() => vi.unstubAllGlobals())
 describe('workbench execution policy', () => {
+  it('keeps binding work open for accepted inline snapshots when the human requested minute updates', () => {
+    let prompt
+    registerWorkbenchExecutionPolicy({ systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
+    const current = session('创建金融工作台，每1分钟自动刷新')
+    current.events.push({type:'tool/call',data:{name:'research_workbench_create',callId:'inline',arguments:JSON.stringify({panels:[{artifact:{type:'market'}}]})}},
+      {type:'tool/result',data:{message:{source:{callId:'inline'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify({planId:'p',status:'prepared'})}]}]}}})
+    expect(prompt.text({agent:{session:current}})).toContain('research_component_data action=bind')
+    expect(prompt.text({agent:{session:current}})).not.toContain('然后结束本轮')
+    current.events[0].data.content[0].text='创建金融工作台'
+    expect(prompt.text({agent:{session:current}})).toContain('然后结束本轮')
+    current.events[0].data.content[0].text='创建金融工作台，每1分钟自动刷新'
+    current.events[1].data.arguments=JSON.stringify({panels:[{prompt:'等待子任务取数'}]})
+    expect(prompt.text({agent:{session:current}})).toContain('然后结束本轮')
+  })
   it('ends parent research after the matching accepted plan while allowing a new human request', () => {
     const current = session('使用通联创建工作台')
     let prompt
