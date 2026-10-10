@@ -49,7 +49,13 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
    check();const id=++sequence,response=await options.request(JSON.stringify({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args}}),signal);check()
    if(!response.ok){await response.body?.cancel();throw Error(response.status===401||response.status===403?'请登录 EWork 后刷新行情':'通联数据暂时不可用，请重试')}
    const text=await response.text();check();if(text.length>8*1024*1024)throw Error('数据过多，请缩小范围')
-   const reply=JSON.parse(text);if(reply.id!==id||reply.error||reply.result?.isError)throw Error('通联未提供所需数据或接口权限，请稍后重试')
+   const reply=JSON.parse(text)
+   if(reply.id!==id||reply.error)throw Error('通联未提供所需数据或接口权限，请稍后重试')
+   if(reply.result?.isError){
+    const diagnostic=(reply.result.content??[]).filter((c:any)=>c.type==='text').map((c:any)=>String(c.text??'')).join('\n')
+    if(/HTTP 402\b|订单额度已用完/.test(diagnostic))throw Error('通联数据额度已用完，请联系管理员补充额度')
+    throw Error('通联未提供所需数据或接口权限，请稍后重试')
+   }
    return unpack(reply.result)
   }
   // Names are DataYes catalogue identifiers, never URLs supplied by the renderer.

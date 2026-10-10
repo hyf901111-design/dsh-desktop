@@ -133,3 +133,10 @@ it('实际标准整理按钮及延迟内容校准保持两列，重复整理没�
  await f.event('click',f.document.querySelector('[data-research-global-arrange]'));await f.act(async()=>new Promise(r=>setTimeout(r,800)));const next=w.getWorkbenchCells(),byType=Object.fromEntries(w.getSnapshot().artifacts.map(n=>[n.containerSpec.widget,next.find(c=>c.id===n.id)]));expect(byType.indices).toMatchObject({x:0,w:40});expect(byType.quote).toMatchObject({x:20,w:20});expect(byType.watchlist).toMatchObject({x:0,w:20});expect(byType.news).toMatchObject({x:0,w:20,y:byType.watchlist.y+byType.watchlist.h});
  await f.event('click',f.document.querySelector('[data-research-global-arrange]'));await f.act(async()=>new Promise(r=>setTimeout(r,800)));expect(w.getWorkbenchCells()).toEqual(next);
 })
+
+it('悬浮工具栏按完整画布定位，近底部组件有可滚动的工具栏安全空间',async()=>{
+ const f=await fixture(),w=f.workspace;await f.act(async()=>{const n=w.createFinancialWidget('news');w.applyWorkbenchCells([{id:n.id,x:0,y:20,w:20,h:7}],true)});await f.event('resize',f.win);const toolbar=f.document.querySelector('[data-ework-toolbar]');expect(parseFloat(toolbar.style.bottom)).toBe(f.win.innerHeight-700+20);const n=w.getSnapshot().artifacts[0],contentBottom=n.y+n.height/2;expect(contentBottom).toBeLessThan(700);expect(contentBottom+80).toBeGreaterThan(700);expect(parseFloat(f.canvas.querySelector('[data-research-content-layer]').style.height)).toBeGreaterThanOrEqual(contentBottom+80);
+})
+it('内置通联额度用完时自选页脚明确显示额度原因，不伪装成权限错误',async()=>{
+ const bridge=service();bridge.request.mockResolvedValue({quotes:[],errors:[{code:s.code,error:'通联数据额度已用完，请联系管理员补充额度'}],source:'通联 DataYes'});const f=await fixture({financialWidget:bridge});await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])});await vi.waitFor(()=>expect(f.host.querySelector('.ew-financial-footer').textContent).toContain('通联数据额度已用完'));expect(f.host.querySelector('.ew-watch-price').textContent).toBe('—');
+})

@@ -48,3 +48,7 @@ it('新闻优先获取十条并按发布时间排序，截断时退回可解析�
  const service=createFinancialWidgetData({request,identity:()=> 'own'});const r=await service.query({action:'news',query:''});expect(r.news.map((n:any)=>n.id)).toEqual(['new','old']);expect(calls.at(-1).arguments.body.pageSize).toBe(10);
  truncated=true;calls.length=0;const fallback=await service.query({action:'news',query:'产业',refresh:true});expect(calls.map(c=>c.arguments.body.pageSize)).toEqual([10,3]);expect(fallback.news).toHaveLength(2);
 })
+
+it('通联工具返回402时明确告知额度用完，权限错误仍使用权限提示',async()=>{
+ let quota=true;const request=async(body:string)=>{const b=JSON.parse(body);return Response.json({id:b.id,result:b.params.name==='get_api_info'?{structuredContent:info('POST',undefined,['onlyChannel','publishTimeStart','publishTimeEnd','pageSize'])}:{isError:true,content:[{type:'text',text:quota?'数据查询失败: HTTP 402: 订单额度已用完':'数据查询失败: HTTP 403: 无权限'}]}})};await expect(createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'news',query:''})).rejects.toThrow('通联数据额度已用完');quota=false;await expect(createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'news',query:''})).rejects.toThrow('接口权限');
+})

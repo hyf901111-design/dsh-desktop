@@ -414,7 +414,7 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     if(bottomOffset===20)root.setAttribute('data-workbench-toolbar-space','')
-    const measure=()=>{const r=root.getBoundingClientRect(),width=Math.min(r.width,availableWidth||r.width),clearance=bottomOffset===20?80*(r.height/(root.clientHeight||r.height||1)):0,next={left:r.left+width/2,bottom:Math.max(bottomOffset,window.innerHeight-r.bottom-clearance+bottomOffset),width:Math.max(120,width-24)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom&&previous.width===next.width?previous:next)}
+    const measure=()=>{const r=root.getBoundingClientRect(),width=Math.min(r.width,availableWidth||r.width),next={left:r.left+width/2,bottom:Math.max(bottomOffset,window.innerHeight-r.bottom+bottomOffset),width:Math.max(120,width-24)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom&&previous.width===next.width?previous:next)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root);if(root.parentElement)observer.observe(root.parentElement)
     window.addEventListener('resize',measure)
     return()=>{observer.disconnect();window.removeEventListener('resize',measure);if(bottomOffset===20)root.removeAttribute('data-workbench-toolbar-space')}
@@ -691,7 +691,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
-    const nodes=[...snapshot.files,...snapshot.artifacts,...workspace.getWorkbenchPlanningNodes()],width=snapshot.canvasSize.availableWidth||root.clientWidth,m=createResearchGrid().metrics(width),visibleHeight=root.clientHeight||snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height||700,contentBottom=Math.max(0,...nodes.map(n=>n.y+n.height/2)),bottom=contentBottom<=visibleHeight?visibleHeight:Math.ceil(contentBottom+15*m.rowStep)
+    const nodes=[...snapshot.files,...snapshot.artifacts,...workspace.getWorkbenchPlanningNodes()],width=snapshot.canvasSize.availableWidth||root.clientWidth,m=createResearchGrid().metrics(width),visibleHeight=root.clientHeight||snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height||700,contentBottom=Math.max(0,...nodes.map(n=>n.y+n.height/2)),bottom=contentBottom<=visibleHeight?Math.max(visibleHeight,Math.ceil(contentBottom+(root.hasAttribute('data-workbench-toolbar-space')?80:0))):Math.ceil(contentBottom+15*m.rowStep)
     for(const [id,value] of root.__eworkContentMeasurements||[])if(!nodes.some(n=>n.id===id&&n.containerSpec?.html===value.html))root.__eworkContentMeasurements.delete(id)
     const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-gap',m.gap+'px');layer.style.setProperty('--grid-step',m.step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
     const viewport=snapshot.viewport;if(!root.hasAttribute('data-grid-operation')){const scrollTop=Math.max(0,Math.min(bottom-visibleHeight,-viewport.y));if(Math.abs(root.scrollTop-scrollTop)>.5)root.scrollTop=scrollTop;if(Math.abs(viewport.y+scrollTop)>.5)workspace.setViewport({x:0,y:-scrollTop,scale:1})}
