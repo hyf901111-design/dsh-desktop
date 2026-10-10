@@ -11,41 +11,25 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "dbbdd68d959aaf2a575a8a91f1373b080477db99",
-        "tipCommit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
+        "baseCommit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
+        "tipCommit": "1daf42d3368f5c5a9108ec3158bcfe54e7c8e9ff",
         "commits": [
           {
-            "commit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
+            "commit": "1daf42d3368f5c5a9108ec3158bcfe54e7c8e9ff",
             "parents": [
-              "dbbdd68d959aaf2a575a8a91f1373b080477db99"
+              "012ea3abca30b85b202aded9ac3e4963c5f558e8"
             ],
-            "subject": "接入公开行情与财经资讯让固定组件直接加载真实数据"
+            "subject": "修复新闻组件内关键词回车搜索无法提交"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/superpowers/plans/2026-10-09-component-library.md"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/financial-widget-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/main/financial/public-widget-data.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
           },
           {
             "status": "M",
             "path": "test/financial-widget-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-widget-public.test.ts"
           }
         ],
         "checks": [
@@ -54,15 +38,12 @@
               "npx",
               "vitest",
               "run",
-              "test/financial-widget-public.test.ts",
-              "test/financial-widget-client.test.js",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts"
+              "test/financial-widget-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "65项直接相关检查通过，含真实来源解析、账户隔离、美国代码转换、复权与分时图表和既有组件交互",
-            "verifiedCommit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
-            "completedAt": "2026-10-10T09:22:12.806527+00:00",
+            "summary": "37项组件交互检查通过，新增聚焦输入框回车直接搜索和输入法确认保护回归",
+            "verifiedCommit": "1daf42d3368f5c5a9108ec3158bcfe54e7c8e9ff",
+            "completedAt": "2026-10-10T09:40:20.909009+00:00",
             "timeoutMs": 180000
           },
           {
@@ -73,14 +54,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
-            "completedAt": "2026-10-10T09:22:12.806527+00:00",
+            "verifiedCommit": "1daf42d3368f5c5a9108ec3158bcfe54e7c8e9ff",
+            "completedAt": "2026-10-10T09:40:20.909009+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实序列化React组件DOM的36项聚焦检查通过，新增分时实际价格折线与时间读数回归；正式本地包的公开数据和新增组件可见验收将在集成构建后执行。接口实测12组查询成功，并补验美国搜索到不复权K线完整路径。"
+          "summary": "序列化React组件DOM验证Enter直接保存关键词并发出查询。前一集成包3f2c6bc的真实客户端已经显示四项实际数据，并验证菜单新增指数/新闻自动取数、自选新增美股苹果报价336.64、手动刷新成功；新闻键盘修复待后继本地包验证。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -107,74 +88,15 @@
           "固定组件使用公开行情和资讯，不依赖失效的MCP查询额度；不改用户个人MCP配置",
           "看板新增指数和新闻即显示实际数据；自选和个股在组件内选择后显示实际报价和图表",
           "上游实际来源、交易日期及成交量单位明确，缺失数据不填零，所选复权缺失不静默替代",
-          "证券联想返回的美股交易所后缀正确转换；分时显示真实分钟折线和成交量而非伪造K线"
+          "证券联想返回的美股交易所后缀正确转换；分时显示真实分钟折线和成交量而非伪造K线",
+          "新闻输入框直接处理Enter提交关键词，并阻止输入法确认触发搜索，不依赖宿主隐式提交"
         ],
         "risks": [
-          "公开接口的时效和可用性受来源影响，未声明专业实时行情保证，失败保留已有有效数据",
+          "公开接口的时效和可用性受来源影响，失败保留已有有效数据",
           "美股公开分时暂不支持；所选复权口径不存在时明确显示不支持",
-          "本地集成客户端实际数据及新增组件路径待本次构建验证"
+          "新闻键盘提交修复待后继本地集成包可见验收"
         ],
-        "generatedAt": "2026-10-10T09:22:12.806527+00:00"
-      },
-      "merged": {
-        "mergeCommit": "22ce5d6f588ca1224b98b7c5e74d9e743426d059",
-        "verificationCommit": "22ce5d6f588ca1224b98b7c5e74d9e743426d059",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "22ce5d6f588ca1224b98b7c5e74d9e743426d059",
-            "completedAt": "2026-10-10T09:23:05.946Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "22ce5d6f588ca1224b98b7c5e74d9e743426d059",
-            "completedAt": "2026-10-10T09:23:05.946Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "22ce5d6f588ca1224b98b7c5e74d9e743426d059",
-            "completedAt": "2026-10-10T09:23:05.946Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "22ce5d6f588ca1224b98b7c5e74d9e743426d059",
-            "completedAt": "2026-10-10T09:23:05.946Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-10T09:23:05.946Z"
+        "generatedAt": "2026-10-10T09:40:20.909009+00:00"
       }
     }
   ],
