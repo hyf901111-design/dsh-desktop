@@ -11,21 +11,29 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "5d7443d4cf2fda98e8903f2cd9534dcd58dd1dd7",
-        "tipCommit": "0aa8349b5d34a72ef47287ad851be8271a7c67b9",
+        "baseCommit": "0aa8349b5d34a72ef47287ad851be8271a7c67b9",
+        "tipCommit": "2c5d31e782158a2d0f62be05591c790e70eeac92",
         "commits": [
           {
-            "commit": "0aa8349b5d34a72ef47287ad851be8271a7c67b9",
+            "commit": "2c5d31e782158a2d0f62be05591c790e70eeac92",
             "parents": [
-              "5d7443d4cf2fda98e8903f2cd9534dcd58dd1dd7"
+              "0aa8349b5d34a72ef47287ad851be8271a7c67b9"
             ],
-            "subject": "最小行情组件保留证券身份和搜索入口"
+            "subject": "组件数据刷新增加涨跌高亮及更新反馈"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-widget-refresh.test.js"
           }
         ],
         "checks": [
@@ -37,12 +45,13 @@
               "test/financial-widget-layout.test.js",
               "test/financial-widget-contract.test.js",
               "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-refresh.test.js"
             ],
             "outcome": "passed",
-            "summary": "49项固定组件、最小尺寸、精简搜索、菜单反馈、数据和交互检查通过",
-            "verifiedCommit": "0aa8349b5d34a72ef47287ad851be8271a7c67b9",
-            "completedAt": "2026-10-10T00:45:13.931569+00:00",
+            "summary": "53项组件、布局、数据和交互聚焦检查通过，覆盖手动/自动更新、涨跌/不变提示、部分失败、过期响应和消退",
+            "verifiedCommit": "2c5d31e782158a2d0f62be05591c790e70eeac92",
+            "completedAt": "2026-10-10T01:11:58.589946+00:00",
             "timeoutMs": 180000
           },
           {
@@ -53,8 +62,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "0aa8349b5d34a72ef47287ad851be8271a7c67b9",
-            "completedAt": "2026-10-10T00:45:13.931569+00:00",
+            "verifiedCommit": "2c5d31e782158a2d0f62be05591c790e70eeac92",
+            "completedAt": "2026-10-10T01:11:58.589946+00:00",
             "timeoutMs": 180000
           },
           {
@@ -68,14 +77,14 @@
             ],
             "outcome": "passed",
             "summary": "8项直接涉及底栏、浮层与通用最小尺寸回归通过",
-            "verifiedCommit": "0aa8349b5d34a72ef47287ad851be8271a7c67b9",
-            "completedAt": "2026-10-10T00:45:13.931569+00:00",
+            "verifiedCommit": "2c5d31e782158a2d0f62be05591c790e70eeac92",
+            "completedAt": "2026-10-10T01:11:58.589946+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际React客户端1440×1000及760×780菜单与搜索检查通过；关闭按钮24px方形且图标与背景中心差为0，悬停行和加号可见反馈；自选行上下各4px。四项缩到共同网格最小尺寸，列表滚动与行情主图无溢出，配置不变，放大恢复副图；浅/深色复核。内置账号网关实际返回茅台报价、160根日K和3条新闻，原生当前四项组件已恢复数据。新本地包核验待执行。Browser插件不在当前技能清单，使用已有Playwright运行时。 最小行情标题仍显示证券名称/代码与搜索入口，保留更多和关闭操作；完整交互重新验证。"
+          "summary": "实际React客户端浅/深色刷新高亮与通用最小尺寸检查通过；涨绿跌红、不变蓝，1.2秒消退。高亮覆盖取得新数据的报价、主图、指数和新闻；布局和节点保持，覆盖层不拦截鼠标，减弱动态偏好下使用静态短暂提示。失败不高亮；测试数据仅用于浏览器渲染验收。此前真实客户端最小尺寸、内联搜索及内置通联数据验证通过；本次新包真实刷新核验待执行。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -88,7 +97,8 @@
           "异常提示不重复、不挤掉行，刷新失败保留之前有效数据并明确标记",
           "组件库删除底部说明，统一整理菜单外观，关闭图标居中，加号有鼠标悬停反馈",
           "联想空输入仅显示输入框，结果只呈现候选，保留方向键和Enter/Escape交互",
-          "四项固定组件复用通用组件最小宽高，紧凑状态精简信息，放大与整理恢复完整布局且配置不丢失"
+          "四项固定组件复用通用组件最小宽高，紧凑状态精简信息，放大与整理恢复完整布局且配置不丢失",
+          "每次有效手动和自动刷新在实际更新数据区域短暂高亮；上升绿色、下降红色、不变蓝色；失败/过期响应不显示成功提示，布局与交互状态保持"
         ],
         "risks": [
           "美股与分钟接口尚未验证，明确显示不支持",
@@ -96,67 +106,7 @@
           "新闻单页限制3条以避免供应商截断JSON；完整原文经安全链接打开",
           "完整已安装客户端与账户切换路径待本地集成验收"
         ],
-        "generatedAt": "2026-10-10T00:45:13.931569+00:00"
-      },
-      "merged": {
-        "mergeCommit": "838216867ca2ee7cb9e46d67f4e799d5fc5c4b13",
-        "verificationCommit": "838216867ca2ee7cb9e46d67f4e799d5fc5c4b13",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "838216867ca2ee7cb9e46d67f4e799d5fc5c4b13",
-            "completedAt": "2026-10-10T00:47:59.157Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "838216867ca2ee7cb9e46d67f4e799d5fc5c4b13",
-            "completedAt": "2026-10-10T00:47:59.157Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "838216867ca2ee7cb9e46d67f4e799d5fc5c4b13",
-            "completedAt": "2026-10-10T00:47:59.157Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "838216867ca2ee7cb9e46d67f4e799d5fc5c4b13",
-            "completedAt": "2026-10-10T00:47:59.157Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-10T00:47:59.157Z"
+        "generatedAt": "2026-10-10T01:11:58.589946+00:00"
       }
     }
   ],
