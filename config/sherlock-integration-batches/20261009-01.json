@@ -100,6 +100,66 @@
           "额外检查发现旧Bento模板夹具6项既有失败；原2c5提交隔离目录复跑同样6项失败，涉及旧尺寸预期及Figma派生菜单锚点，与本次修改无关"
         ],
         "generatedAt": "2026-10-10T03:23:11.764037+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
+        "verificationCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci",
+            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
+            "completedAt": "2026-10-10T03:24:33.139Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/financial-widget-contract.test.js",
+              "test/financial-widget-data.test.ts",
+              "test/financial-widget-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
+            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
+            "completedAt": "2026-10-10T03:24:33.139Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
+            "completedAt": "2026-10-10T03:24:33.139Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "-t",
+              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
+            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
+            "completedAt": "2026-10-10T03:24:33.139Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-10T03:24:33.139Z"
       }
     }
   ],
