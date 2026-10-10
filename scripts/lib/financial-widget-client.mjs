@@ -5,7 +5,7 @@ import {workbenchStylePalette} from '../../packages/dsh-research-task-runtime/wo
 // Resolve the enterprise presentation from the same palette as generated cards.
 // Portals are outside the board and therefore need these variables on their own scope.
 export function financialEnterpriseCss(){
- const p=workbenchStylePalette('enterprise'),tokens={card:p.surface,text:p.text,muted:p.muted,border:p.border,row:p['row-alternate'],alternate:p.surface,heading:p['table-heading'],'heading-text':p['table-heading-text'],control:p['control-bg'],menu:p.surface,grid:p['chart-grid'],accent:p.link,positive:p['market-positive'],negative:p['market-negative'],'volume-up':p['market-positive'],'volume-down':p['market-negative'],sparkline:p['chart-1'],'ma-1':p['chart-1'],'ma-2':p['chart-2'],'ma-3':p['chart-3'],'ma-4':p['chart-4'],'kpi-1':p['chart-1'],'kpi-2':p['chart-5'],'kpi-3':p['chart-4']}
+ const p=workbenchStylePalette('enterprise'),tokens={card:p.surface,text:p.text,muted:p.muted,border:p.border,row:p['row-alternate'],alternate:p.surface,heading:p['table-heading'],'heading-text':p['table-heading-text'],control:p['control-bg'],menu:p.surface,grid:p['chart-grid'],accent:p.link,positive:p['market-negative'],negative:p['market-positive'],'volume-up':p['market-negative'],'volume-down':p['market-positive'],sparkline:p['chart-1'],'ma-1':p['chart-1'],'ma-2':p['chart-2'],'ma-3':p['chart-3'],'ma-4':p['chart-4'],'kpi-1':p['chart-1'],'kpi-2':p['chart-5'],'kpi-3':p['chart-4']}
  return 'body [data-ework-grid][data-workbench-style=enterprise],[data-financial-theme=enterprise]{'+Object.entries(tokens).map(([k,v])=>'--fw-'+k+':'+v).join(';')+'}'
 }
 export function financialObserveTheme(element,listener){
