@@ -1,5 +1,4 @@
-import {createFinancialWidgetData} from './financial/widget-data'
-import {createBundledFinancialMcp} from './financial/bundled-mcp'
+import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import { createComponentDataService } from './component-data/service'
 import { legacyConnectionSources } from './integrations/legacy-connections'
 import { legacySkillRoots } from './integrations/legacy-skills'
@@ -1401,8 +1400,7 @@ async function bootstrap(): Promise<void> {
   }
   try { if (integrationService) componentDataService = await createComponentDataService({file:join(app.getPath('userData'),'component-data-bindings.json'),integrations:integrationService,canvas:canvasActions,rpc:taskRpc,owner:integrationOwner,isShared:id=>researchBoardsService?.isSharedSession(id)===true,onStatusChange:(sessionId,rows)=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('component-data:status',{sessionId,rows})}}) } catch(error) { console.error('[component-data] 配置读取失败，原文件已保留',error) }
   const financialIdentity=()=>accountService?.authenticated?accountService.accountId??null:null
-  const financialMcp=integrationService?createBundledFinancialMcp({identity:financialIdentity,connection:id=>integrationService!.store.snapshot().connections[id],mcp:integrationService.mcp}):async()=>{throw Error('默认数据源暂不可用，请稍后重试')}
-  const financialWidgetData=createFinancialWidgetData({callTool:financialMcp,identity:financialIdentity})
+  const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
   ipcMain.handle('component-data:request',async(event,sessionId:string,args:any)=>{
     assertTrustedMainWindowEvent(event,mainWindow)
