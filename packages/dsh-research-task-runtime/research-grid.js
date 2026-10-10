@@ -290,23 +290,9 @@ export function createResearchGrid() {
   }
   function arrange(nodes,items,width,visibleHeight=0,mode='standard') {
     const requested={three:3,two:2,one:1}[mode]
-    // Presets are deliberately unequal: a narrow watchlist beside a wide price
-    // chart, with a spanning index strip. Standard Arrange restores that ratio
-    // instead of filling the canvas by stretching both into equal columns.
-    if(!requested&&nodes.length&&nodes.every(n=>n.containerSpec?.type==='financial-widget')){
-      const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),settled=[]
-      for(const old of items.map(bounded).sort(order)){
-        const node=byId.get(old.id);if(!node)continue
-        const p=node.preferred||node,min=minimum(node,m,true),w=Math.min(columns,Math.max(min.w,Math.ceil(((p.width||320)+m.gap)/m.step))),h=Math.max(min.h,Math.ceil(((p.height||200)+m.gap)/m.rowStep))
-        let best
-        for(let x=0;x+w<=columns;x++){
-          const y=Math.max(0,...settled.filter(c=>c.x<x+w&&c.x+c.w>x).map(c=>c.y+c.h))
-          if(!best||y<best.y||y===best.y&&x<best.x)best={id:old.id,x,y,w,h}
-        }
-        settled.push(bounded(best))
-      }
-      const result=new Map(settled.map(c=>[c.id,c]));return items.map(c=>result.get(c.id)||bounded(c))
-    }
+    // Initial preset dimensions guide creation. Standard Arrange follows the
+    // current grid edges, including unequal columns and spanning components;
+    // subsequent content measurements provide heights without changing lanes.
     if(requested){
       const m=metrics(width),byId=new Map(nodes.map(n=>[n.id,n])),ordered=items.map(bounded).filter(c=>byId.has(c.id)).sort(order)
       // A chosen column count is explicit, including narrow viewports. Keep

@@ -17,7 +17,7 @@ it.each([info('GET','https://evil.example/read'),info('GET',undefined,['ticker',
  const p=provider(definition,{}),service=createFinancialWidgetData({...p,identity:()=> 'own'});const r=await service.query({action:'quotes',symbols:[symbol]});expect(r.quotes).toHaveLength(0);expect(r.errors).toHaveLength(1);expect(p.calls).toHaveLength(1)
 })
 it('只读新闻 POST 使用已声明字段，拒绝危险原文链接',async()=>{
- const p=provider(info('POST',undefined,['onlyChannel','publishTimeStart','publishTimeEnd','pageSize']),{code:1,data:{feeds:[{mongoId:'n',title:'新闻',channel:'原始来源',redirect:{url:'javascript:alert(1)'}}]}}),service=createFinancialWidgetData({...p,identity:()=> 'own'});const r=await service.query({action:'news',query:'科技'});expect(r.news[0]).toMatchObject({title:'新闻',source:'原始来源',url:null});expect(p.calls[1].arguments.body).toMatchObject({onlyChannel:false,pageSize:3});expect(p.calls[1].arguments.url_params).toBeUndefined()
+ const p=provider(info('POST',undefined,['onlyChannel','publishTimeStart','publishTimeEnd','pageSize']),{code:1,data:{feeds:[{mongoId:'n',title:'新闻',channel:'原始来源',redirect:{url:'javascript:alert(1)'}}]}}),service=createFinancialWidgetData({...p,identity:()=> 'own'});const r=await service.query({action:'news',query:'科技'});expect(r.news[0]).toMatchObject({title:'新闻',source:'原始来源',url:null});expect(p.calls[1].arguments.body).toMatchObject({onlyChannel:false,pageSize:10});expect(p.calls[1].arguments.url_params).toBeUndefined()
 })
 it('业务错误不伪造成空搜索或零价格；并行行共享接口定义',async()=>{
  const p=provider(info(),{code:-1,message:'no permission'}),service=createFinancialWidgetData({...p,identity:()=> 'own'});const r=await service.query({action:'quotes',symbols:[symbol,{...symbol,code:'000001',market:'SZ'}]});expect(r.quotes).toEqual([]);expect(r.errors).toHaveLength(2);expect(p.calls.filter(x=>x.name==='get_api_info')).toHaveLength(1)
@@ -40,4 +40,11 @@ it('完整股票代码精确查询证券身份，避免语义搜索返回无关�
 it('港股完整代码精确查询，部分代码联想过滤掉无关证券',async()=>{
  const p=provider(info('GET',undefined,['ticker','beginDate','field','pagenum','pagesize']),{retCode:1,data:[{ticker:'00700',secShortName:'腾讯控股',exchangeCD:'XHKG'}]}),service=createFinancialWidgetData({...p,identity:()=> 'own'});expect((await service.query({action:'search',query:'00700'})).symbols).toEqual([{code:'00700',name:'腾讯控股',market:'HK'}]);expect(p.calls[0].arguments.nameEn).toBe('getMktHKEqud')
  const partial=provider(info('GET',undefined,['data_type','query','topK']),{code:200,data:{hits:[{name:'贵州茅台',entity_id:'600519'},{name:'五粮液',entity_id:'000858'}]}});expect((await createFinancialWidgetData({...partial,identity:()=> 'own'}).query({action:'search',query:'0008'})).symbols).toEqual([{code:'000858',name:'五粮液',market:'SZ'}])
+})
+
+it('新闻优先获取十条并按发布时间排序，截断时退回可解析的小页',async()=>{
+ const calls:any[]=[],definition=info('POST',undefined,['input','onlyChannel','publishTimeStart','publishTimeEnd','pageNow','pageSize']);let truncated=false;
+ const request=async(body:string)=>{const b=JSON.parse(body);calls.push(b.params);const value=b.params.name==='get_api_info'?definition:truncated&&b.params.arguments.body.pageSize===10?'…结果已截断，下方 JSON 不完整':{code:1,data:{feeds:[{mongoId:'old',title:'昨日市场复盘',createTime:'2026-10-09T18:00:00+0800'},{mongoId:'new',title:'今日基金观察',createTime:'2026-10-10T09:00:00+0800'}]}};return Response.json({id:b.id,result:{structuredContent:value}})};
+ const service=createFinancialWidgetData({request,identity:()=> 'own'});const r=await service.query({action:'news',query:''});expect(r.news.map((n:any)=>n.id)).toEqual(['new','old']);expect(calls.at(-1).arguments.body.pageSize).toBe(10);
+ truncated=true;calls.length=0;const fallback=await service.query({action:'news',query:'产业',refresh:true});expect(calls.map(c=>c.arguments.body.pageSize)).toEqual([10,3]);expect(fallback.news).toHaveLength(2);
 })
