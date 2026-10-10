@@ -1,3 +1,4 @@
+import { build } from 'esbuild';
 import { describe, it, expect, vi } from 'vitest';
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -12,6 +13,11 @@ const response = (body, options = {}) => new Response(JSON.stringify(body), opti
 const quote = { price: '100.1', volume: '0', time: '2026-10-09T10:00:00Z', bid: '100', ask: '101' };
 const request = prompt => ({ parentSessionId: 'p', canvasNodeId: 'n', kind: 'container', prompt });
 describe('builtin free data sources', () => {
+  it('keeps tool/agent dependencies out of the production desktop artifact bundle', async () => {
+    const bundle = await build({ entryPoints: ['packages/dsh-research-task-runtime/artifact-output.js'], bundle: true, platform: 'node', format: 'esm', write: false, metafile: true });
+    expect(Object.keys(bundle.metafile.inputs).filter(file => /@deepseek-ai\/dsh-(tools|llm)\//.test(file))).toEqual([]);
+    expect(bundle.outputFiles[0].text).not.toContain('createRequire(import.meta.url)("../package.json")');
+  });
   it('is discovered by native filesystem and integration allowlist and protected as bundled', async () => {
     const provider = new FileSystemSkillProvider({ get: () => undefined, logger: { warn: vi.fn() } }, { signal: new AbortController().signal, invalidate: vi.fn() }, { includeDefaultRoots: false, bundledSkillDir: root, watch: false });
     try { const listed = await provider.list({}), candidate = (Array.isArray(listed) ? listed : listed.candidates).find(c => c.name === 'ework-free-data-sources'); expect(candidate.source).toBe('bundled'); expect((await provider.get(candidate, {})).content).toContain('public_data_query'); } finally { await provider.dispose(); }
