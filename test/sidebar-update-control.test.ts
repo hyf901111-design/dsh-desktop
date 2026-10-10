@@ -41,14 +41,15 @@ describe('Figma sidebar update states', () => {
     expect(document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')?.hidden).toBe(true)
     expect(document.querySelector('#settings')).not.toBeNull()
   })
-  it('presents the available notice with functional details and one download call', () => {
+  it('presents one update action without a details button', () => {
     const {document,control,callbacks}=fixture()
     const details=vi.fn();document.addEventListener('ework-open-about',details)
     control.render(available)
     expect(panel(document).hidden).toBe(false)
     expect(panel(document).textContent).toContain('发现新版本 0.9.6')
-    panel(document).querySelector<HTMLButtonElement>('.ework-notice-actions button')!.click()
-    expect(details).toHaveBeenCalledOnce()
+    expect(panel(document).querySelectorAll('.ework-notice-actions button')).toHaveLength(1)
+    expect(panel(document).textContent).not.toContain('详情')
+    expect(details).not.toHaveBeenCalled()
     const download=panel(document).querySelector<HTMLButtonElement>('[data-update-download]')!
     download.click();download.click()
     expect(callbacks.download).toHaveBeenCalledOnce()
@@ -137,4 +138,57 @@ it('starts a download from the footer immediately and shows progress before IPC 
   control.render({...available,phase:'checking'})
   expect(button.querySelector('[role=progressbar]')).not.toBeNull()
   finish();await Promise.resolve()
+})
+
+
+it.each(['available','error'] as const)('keeps an About check and its %s result out of the sidebar bubble', async phase => {
+  const {document,control}=fixture();control.render(available)
+  const result:UpdateStatus={...available,phase,errorStage:phase==='error'?'check':undefined,message:phase==='error'?'HTTP 503':undefined}
+  let finish!: (status:UpdateStatus)=>void
+  const checking=control.checkFromAbout(()=>new Promise<UpdateStatus>(resolve=>{finish=resolve}))
+  expect(panel(document).hidden).toBe(true)
+  control.render({...available,phase:'checking'})
+  control.render(result)
+  expect(panel(document).hidden).toBe(true)
+  expect(JSON.parse(document.documentElement.dataset.eworkUpdateStatus!)).toMatchObject({phase})
+  finish(result);await expect(checking).resolves.toEqual(result)
+  control.render(result)
+  document.querySelector('[data-dsh-sidebar-footer]')!.replaceChildren()
+  control.mount()
+  expect(panel(document).hidden).toBe(true)
+  control.render({...available,phase:'checking',manual:false})
+  control.render({...available,manual:false})
+  expect(panel(document).hidden).toBe(false)
+})
+
+it('releases About suppression after a rejected check and permits explicit footer download', async () => {
+  const {document,control,callbacks}=fixture();control.render(available)
+  await expect(control.checkFromAbout(async()=>{throw Error('IPC unavailable')})).rejects.toThrow('IPC unavailable')
+  expect(panel(document).hidden).toBe(true)
+  document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.click()
+  expect(callbacks.download).toHaveBeenCalledOnce()
+  expect(panel(document).hidden).toBe(false)
+  expect(panel(document).dataset.phase).toBe('downloading')
+})
+
+it('keeps actual download and installation progress visible when About joins a check', async () => {
+  const {document,control}=fixture();control.render({...available,phase:'downloading',percent:30})
+  await control.checkFromAbout(async()=>{
+    expect(panel(document).hidden).toBe(false)
+    control.render({...available,phase:'installing',installStage:'saving'})
+    expect(panel(document).hidden).toBe(false)
+    return {...available,phase:'installing',installStage:'saving'}
+  })
+  expect(panel(document).hidden).toBe(false)
+})
+
+it('uses the About IPC result even if its broadcast arrives after the reply',async()=>{
+ const {document,control}=fixture();control.render({...available,phase:'checking'})
+ const result={...available,phase:'error' as const,errorStage:'check' as const,message:'HTTP 503'}
+ await control.checkFromAbout(async()=>result)
+ control.render(result)
+ expect(panel(document).hidden).toBe(true)
+ control.render({...available,phase:'checking'})
+ control.render(available)
+ expect(panel(document).hidden).toBe(false)
 })

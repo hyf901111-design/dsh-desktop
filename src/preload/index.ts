@@ -293,7 +293,7 @@ contextBridge.exposeInMainWorld(
   'sherlockAbout',
   createSherlockAboutBridge(
     () => ipcRenderer.invoke('updates:status') as Promise<UpdateStatus>,
-    () => ipcRenderer.invoke('updates:check') as Promise<UpdateStatus>,
+    () => sidebarUpdateControl.checkFromAbout(() => ipcRenderer.invoke('updates:check') as Promise<UpdateStatus>),
     locale,
     {
       downloadUpdate: () => ipcRenderer.invoke('updates:download') as Promise<UpdateStatus>,
