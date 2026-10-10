@@ -1,0 +1,62 @@
+import { describe, it, expect, vi } from 'vitest';
+import path from 'node:path';
+import { readFileSync } from 'node:fs';
+import { FileSystemSkillProvider } from '@deepseek-ai/dsh-skill-filesystem';
+import { catalog, prepareRequest, createQueryClient } from '../skills/ework-free-data-sources/scripts/query.mjs';
+import { createPublicDataTool, freeDataInstruction } from '../packages/dsh-research-task-runtime/public-data-tool.js';
+import { buildResearchTaskPrompt, publicEventFromSessionEvent } from '../packages/dsh-research-task-runtime/index.js';
+import { preferredComponentSourceTools, registerComponentSourceGuidance } from '../packages/dsh-research-task-runtime/component-source-tools.js';
+import { loadBundledSkills, BUNDLED_FREE_DATA_SKILL_ID, isBundledSkillId } from '../src/main/integrations/bundled-skills';
+const root = path.resolve(import.meta.dirname, '../skills');
+const response = (body, options = {}) => new Response(JSON.stringify(body), options);
+const quote = { price: '100.1', volume: '0', time: '2026-10-09T10:00:00Z', bid: '100', ask: '101' };
+const request = prompt => ({ parentSessionId: 'p', canvasNodeId: 'n', kind: 'container', prompt });
+describe('builtin free data sources', () => {
+  it('is discovered by native filesystem and integration allowlist and protected as bundled', async () => {
+    const provider = new FileSystemSkillProvider({ get: () => undefined, logger: { warn: vi.fn() } }, { signal: new AbortController().signal, invalidate: vi.fn() }, { includeDefaultRoots: false, bundledSkillDir: root, watch: false });
+    try { const listed = await provider.list({}), candidate = (Array.isArray(listed) ? listed : listed.candidates).find(c => c.name === 'ework-free-data-sources'); expect(candidate.source).toBe('bundled'); expect((await provider.get(candidate, {})).content).toContain('public_data_query'); } finally { await provider.dispose(); }
+    const entries = await loadBundledSkills(root); const item = entries.find(e => e.skill.id === BUNDLED_FREE_DATA_SKILL_ID); expect(item.skill).toMatchObject({ enabled: true, provider: 'bundled', source: 'EWork 内置 · v1.0.0' }); expect(isBundledSkillId(item.skill.id)).toBe(true);
+  });
+  it('only exposes adapters for eligible sources and never uses restricted/keyed providers', () => {
+    expect(catalog().sources).toHaveLength(27); expect(catalog().sources.filter(s => s.queryable)).toHaveLength(15);
+    for (const s of catalog().sources) { expect(s.documentation).toMatch(/^https:\/\//); if (s.defaultEligible) expect(() => prepareRequest(s.id, s.example)).not.toThrow(); }
+    for (const id of ['fred','eia','open-meteo','nominatim-public','sec-edgar']) expect(() => prepareRequest(id)).toThrow(/条件/);
+    expect(catalog('fx').sources.map(s => s.id)).toEqual(['ecb-fx']);
+  });
+  it.each([{ url: 'https://127.0.0.1/' }, { product: '../secret' }, { product: 'BTC-USD', api_key: 'secret' }, []])('rejects arbitrary URL, credentials and malformed args before networking: %o', async parameters => {
+    const fetcher = vi.fn(), client = createQueryClient({ fetcher }); await expect(client.query({ source: 'coinbase-ticker', parameters })).rejects.toThrow(); expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('preserves null, zero, negatives, annual units and true data time', () => {
+    const normalize = prepareRequest('world-bank', { country: 'CHN', indicator: 'NY.GDP.MKTP.KD.ZG', start: 2020, end: 2025 }).normalize;
+    const data = normalize([{ lastupdated: '2026-10-08' }, [{ date: '2025', value: null }, { date: '2024', value: -1 }, { date: '2023', value: 0 }]]);
+    expect(data.records.map(r => r.value)).toEqual([0, -1, null]); expect(data.dataTime).toBe('2024'); expect(data.releasedAt).toBe('2026-10-08'); expect(data.units.value).toBe('% per year');
+  });
+  it('parses quoted ECB csv and keeps daily reference currency direction', () => {
+    const result = prepareRequest('ecb-fx', { currency: 'CNY' }).normalize('TIME_PERIOD,OBS_VALUE,CURRENCY,CURRENCY_DENOM,NOTE\n2026-10-09,7.7,CNY,EUR,"quoted, text"\n'); expect(result.records[0]).toMatchObject({ value: 7.7, base: 'EUR', currency: 'CNY' }); expect(result.units.value).toBe('CNY per EUR');
+  });
+  it('distinguishes weather publication and forecast times, and missing article publication', () => {
+    const weather = prepareRequest('met-weather', { lat: 0, lon: 0 }).normalize({ properties: { meta: { updated_at: '2026-10-09T00:00:00Z', units: { air_temperature: 'celsius' } }, timeseries: [{ time: '2026-10-10T00:00:00Z', data: { instant: { details: { air_temperature: 0 } } } }] } }); expect(weather.dataTime).not.toBe(weather.records[0].time); expect(weather.records[0].air_temperature).toBe(0);
+    const news = prepareRequest('gdelt-news', { query: 'climate' }).normalize({ articles: [{ title: 'title', seendate: '20261010T120000Z' }] }); expect(news.records[0]).toHaveProperty('firstSeenAt'); expect(news.dataTime).toBeNull(); expect(news.records[0]).not.toHaveProperty('time');
+  });
+  it('caches overlapping component calls, bounds TTL and keeps receivedAt distinct from dataTime', async () => {
+    const fetcher = vi.fn(async () => response(quote)); const client = createQueryClient({ fetcher, now: () => Date.parse('2026-10-10T00:00:00Z') }); const args = { source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } }; const [a, b] = await Promise.all([client.query(args), client.query(args)]); expect(fetcher).toHaveBeenCalledTimes(1); expect(b.cacheHit).toBe(true); expect(a.receivedAt).not.toBe(a.dataTime); expect(a.records[0].volume).toBe(0); expect(a.delivery).toContain('no automatic');
+    b.records[0].price = 0; expect((await client.query(args)).records[0].price).toBe(100.1);
+  });
+  it('honors rate-limit backoff and never tries another provider or retries immediately', async () => {
+    const fetcher = vi.fn(async () => response({}, { status: 429, headers: { 'retry-after': '120' } })); const client = createQueryClient({ fetcher }); const args = { source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } }; await expect(client.query(args)).rejects.toMatchObject({ code: 'RATE_LIMITED', retryAfterSeconds: 120 }); await expect(client.query(args)).rejects.toMatchObject({ code: 'RATE_LIMITED' }); expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it('rejects malformed response and cancels a request on timeout', async () => {
+    await expect(createQueryClient({ fetcher: async () => response({ error: 'no data' }) }).query({ source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } })).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    const fetcher = async (_url, { signal }) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true })); await expect(createQueryClient({ fetcher, timeoutMs: 10 }).query({ source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } })).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+  it('keeps model tools read-only and validates JSON and operation', async () => {
+    const api = { catalog, queryClient: { query: vi.fn(async () => ({ records: [] })) } }, tool = createPublicDataTool({ moduleLoader: async () => api }); const args = { operation: 'query', source: 'met-weather', parameters_json: '{"lat":31,"lon":121}' }; await tool.execute(args, {}); expect(api.queryClient.query).toHaveBeenCalledWith({ source: 'met-weather', parameters: { lat: 31, lon: 121 } }, undefined); await expect(tool.execute({ ...args, parameters_json: 'bad' }, {})).rejects.toThrow('JSON'); expect(tool.name).toBe('public_data_query');
+  });
+  it('prefers free sources by default but keeps explicitly selected plugin sources and offline evidence', () => {
+    const schemas = [{ name: 'public_data_query' }, { name: 'ework__call', description: 'DataYes 数据' }]; expect(preferredComponentSourceTools(schemas, '股票最新行情')).toEqual([]); expect(preferredComponentSourceTools(schemas, '使用通联查询股票最新行情')).toHaveLength(1);
+    expect(buildResearchTaskPrompt(request('请联网生成最新天气预报组件'))).toContain('先使用当前可见的 public_data_query');
+    const offline = buildResearchTaskPrompt(request('不要联网，只用给定记录制作表格')); expect(offline).not.toContain('【EWork 内置免费数据源】');
+    let registration; registerComponentSourceGuidance({ systemPrompt: { context: v => { registration = v; } }, tools: { schemas: () => schemas } }); expect(registration.name).toBe('sherlock:component-sources'); expect(freeDataInstruction()).toContain('不能称实时');
+    expect(publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'public_data_query', arguments: { source: 'met-weather' } } })).toMatchObject({ tool: '读取免费数据源', detail: 'met-weather' });
+  });
+});

@@ -22,6 +22,7 @@ import { createSharedMainAgentAdapter } from './shared-main-agent.js'
 import { registerCanvasTools, bindCanvasChild, CANVAS_TOOL_NAMES, callCanvas } from './canvas-tools.js'
 import { registerCanvasUseTool } from './canvas-use-tools.js'
 import { registerCanvasUseTasks } from './canvas-use-tasks.js'
+import { freeDataInstruction, registerPublicDataTool } from './public-data-tool.js'
 import { loadBundledComponentSkill } from './component-skill.js'
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
@@ -110,6 +111,7 @@ const TOOL_LABELS = new Map([
   ['web_search', '搜索资料'],
   ['web_fetch', '读取网页'],
   ['financial_query', '查询金融数据'],
+  ['public_data_query', '读取免费数据源'],
   ['bash', '运行命令'],
   ['subagent', '委派子智能体任务'],
   ['research_workbench_create', '规划工作台组件']
@@ -257,11 +259,11 @@ function containerPromptHasExplicitWebUrl(prompt) {
 function containerAllowsWebSearch(prompt) {
   const value = String(prompt ?? '')
   if (/(?:不需要|无需|不用|不要|不必|禁止)(?:再|去|进行|额外|任何)?(?:联网|上网|搜索|检索|查找|查询|获取外部数据)|不联网|\b(?:do not|don't|no need to|without)\s+(?:search|searching|browse|browsing|internet|network)\b/iu.test(value)) return false
-  if (/(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用).{0,12}(?:web_search|financial_query|网页搜索|金融数据)/iu.test(value)) return false
+  if (/(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用).{0,12}(?:web_search|financial_query|public_data_query|网页搜索|金融数据|免费数据)/iu.test(value)) return false
   if (/(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用|通过|接入).{0,12}(?:通联|DataYes|MCP)/iu.test(value)) return false
   // An explicit retrieval request is authoritative even when it says that old
   // results or example data must NOT be used. Those words are not an offline request.
-  if (/(?:调用|使用).{0,16}(?:web_search|financial_query|网页搜索|金融数据)/iu.test(value)) return true
+  if (/(?:调用|使用).{0,16}(?:web_search|financial_query|public_data_query|网页搜索|金融数据|免费数据)/iu.test(value)) return true
   // A requested MCP fetch remains online even when the result is an offline
   // card and the user explicitly forbids invented/sample observations.
   if (/(?:使用|通过|调用|接入|用)[^。；;\n]{0,40}(?:通联|DataYes|萝卜投研|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实(?:数据|资料)|查(?:最近|公告|研报))/iu.test(value)) return true
@@ -490,6 +492,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
   return [
     '为 EWork Odyssey 工作台生成一个独立面板。直接输出一个完整 JSON 对象，禁止前言、推理、代码围栏或其他组件。',
     componentSkillInstruction('panel'),
+    ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
     `唯一交付格式：${schemas[type]}`,
     '若本轮没有任何可核验的数值或记录，不能输出空 chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。将需求中的主要品种或字段逐项列出，最多六项；每项 detail 简短，数据来源与查询时点放在 asOf，避免大段说明文字。其余情况严格只用上方指定 schema 的字段，来源与数据时点写进已有内容字段，不添加自造字段。',
     htmlRule,
@@ -557,6 +560,7 @@ export function buildResearchTaskPrompt(request) {
     return [
       '请按用户的画布容器需求创建可直接呈现的交付物，以 JSON 对象返回。',
       componentSkillInstruction(),
+      ...(containerAllowsWebSearch(validated.prompt) ? [freeDataInstruction()] : []),
       '只生成用户要求的一种成品；不要附加未要求的摘要、指标卡、背景介绍、方法论、示例数据或重复结论。用户指定条数、章节、长度、格式时严格遵守。简单表格、指标、列表直接填写所需内容，不为它们生成 HTML 包装或额外解释；用户明确要求 HTML、交互、详细报告时保留该要求。',
       '组件以用户要看的主体内容为中心，只做一两项直接相关的补充；不要添加内容目录、阅读切换、重复标题、导航链接条或无实际作用的搜索筛选。来源和指标解释放在相关内容的详情中。行情监控面板优先行情核心数值和必要趋势，缺失值在对应指标内简短注明，不扩写为公司全景研究或数据缺口报告。',
       '按用户字面需求直接制作最小完整成品；不要扩展为额外研究报告或多页系统。普通布局自行合理决定，不反复规划、不解释词义。优先复用已有证据，只检索缺少的关键事实，信息足够后立即生成。',
@@ -581,7 +585,7 @@ export function buildResearchTaskPrompt(request) {
       allowsWeb
         ? '只有用户明确提供的 http 或 https 网址才能用于 web；不得把用户没有提供的网址替换成自行猜测的网站。'
         : '用户未提供明确网址时，不得生成 web，也不得自行猜测或推荐外部网站；这不限制使用 html 创建自包含页面。',
-      '当需求涉及实时、监控或最新数据时，金融数据优先使用当前会话可见且获授权的专业数据工具；若无适用工具，再使用 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
+      '当需求涉及实时、监控或最新数据时，用户指定来源优先；未指定来源时先使用当前可见的 public_data_query 获取适用的免费数据；未覆盖时再使用获授权的专业工具或 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
       '不要输出代码围栏、解释、前言或 JSON 之外的文字；HTML/CSS/JavaScript 只能放在 html 字段内。',
       '图表容量遵守上方对应变体的 schema；表格最多 12 列和 100 行；KPI 最多 12 项。',
       '表格表头及所有单元格默认单行显示，列宽由完整内容决定，超宽时横向滚动；只有用户手动调整列宽后才允许该列换行。HTML 表格使用标准 table/thead/tbody，宿主提供拖动列宽。组合图表遵循自然内容高度，SVG 按 viewBox 宽高比显示，不用 height:100%、100vh 或 flex:1 拉伸图表及竖向容器，避免测高和整理产生空白。',
@@ -811,6 +815,9 @@ export function publicEventFromSessionEvent(event) {
     }
     if (event.data?.name === 'web_fetch') {
       try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText(args?.url) } catch {}
+    }
+    if (event.data?.name === 'public_data_query') {
+      try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText(args?.source ?? args?.category) } catch {}
     }
     if (event.data?.name === 'financial_query') {
       try { const args = typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments; detail = publicProgressText([args?.intent, args?.query, Array.isArray(args?.symbols) ? args.symbols.join('、') : '', args?.start, args?.end].filter(Boolean).join(' · ')) } catch {}
@@ -1727,9 +1734,9 @@ export function createSubagentAdapter(ctx) {
       const preferredSources = (kind === 'container' || kind === 'board') && permitsTools ? preferredComponentSourceTools(scopedSchemas, query) : []
       const preferredSourceNames = preferredSources.map(tool => tool.name)
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
-      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !financialSubject && containerNeedsWebData(query ?? '')
+      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(query ?? '')
       if (signal.aborted) throw signal.reason
-      const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__'))
+      const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__')) && (!scopedSchemas.some(tool => tool.name === 'public_data_query') || /通联|datayes|\bmcp\b|插件/iu.test(query ?? ''))
       const pluginRequired = boundTemplate && /通联|datayes|\bmcp\b|插件/iu.test(query ?? '')
       let effectivePrompt = boundTemplate ? workbenchPanelPrompt(query, true) : prompt
       if (pluginRequired) effectivePrompt += '\n本面板已指定使用配置的插件：使用当前可见 ework__ 工具发现接口并取数，交付可自动刷新映射。通用 financial_query 不属于该插件绑定通道；不要把该工具的结果标为指定插件数据。插件不可用时如实保留错误和已有内容。'
@@ -1738,9 +1745,10 @@ export function createSubagentAdapter(ctx) {
       // Generic chart advice can contradict market.candlestick and market.table.
       if (kind === 'create' || kind === 'container' && !workbenchPanelFormat(query ?? '')) effectivePrompt += '\n趋势图优先使用宿主 chart 格式的 labels/series，直接交付已有真实数据，不编写冗长的 SVG 坐标或重复的 HTML 图表代码。历史记录很多时可选取有明确日期的代表数据点，并注明采样和覆盖范围；无法取得的区间保留缺失说明，不要为凑齐数据持续查询。'
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
+      if (permitsTools && scopedSchemas?.some(tool => tool.name === 'public_data_query')) effectivePrompt += '\n' + freeDataInstruction()
       if (permitsTools) effectivePrompt += preferredSources.length
         ? `\n${componentSourceInstruction(preferredSources, query)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。`
-        : '\n股票、指数、ETF、基金的行情、净值、历史日线或对比研究，优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。'
+        : '\n用户指定来源优先；未指定来源时先用当前可见 public_data_query 读取适用免费源。股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -1756,7 +1764,7 @@ export function createSubagentAdapter(ctx) {
           effectivePrompt += `\n\n${evidence}\n以上仅是候选来源，不代表已经取得所需数据。先检查是否包含用户所需的实际数值、正文和数据时点；只有网站介绍、页面标题或网址时，先用 web_fetch 读取相关来源，仍缺字段再调用 web_search 更换检索词。已有的有效数据直接复用，不重复查询；完成必要取数前不要仅依据摘要不足返回错误。`
         } catch (error) {
           if (signal.aborted) throw error
-          effectivePrompt += '\n主机预检未取得可用资料。金融数据优先调用 financial_query；其他资料先用 web_search 按用户的具体标的和字段检索，再用 web_fetch 读取命中的来源正文，不要搜索词语释义；查不到时如实说明，不得编造数据。'
+          effectivePrompt += '\n主机预检未取得可用资料。未指定来源时先用当前可见 public_data_query 查询适用免费源；无覆盖的金融数据再用 financial_query；其他资料先用 web_search 按用户的具体标的和字段检索，再用 web_fetch 读取命中的来源正文，不要搜索词语释义；查不到时如实说明，不得编造数据。'
         } finally {
           clearTimeout(timer)
           lookup.abort()
@@ -1770,7 +1778,7 @@ export function createSubagentAdapter(ctx) {
       const parentToolNames = Array.isArray(scopedSchemas)
         ? [...new Set(scopedSchemas.map(tool => tool?.name).filter(name => typeof name === 'string'))]
         : null
-      const defaultResearchTools = ['financial_query', 'web_search', 'web_fetch']
+      const defaultResearchTools = [...(scopedSchemas?.some(tool => tool.name === 'public_data_query') ? ['public_data_query'] : []), 'financial_query', 'web_search', 'web_fetch']
       const networkTools = new Set([...defaultResearchTools, ...preferredSourceNames])
       const fallbackTools = kind === 'board'
         ? [...defaultResearchTools, 'research_workbench_create', 'research_canvas_use', 'research_canvas_task', ...CANVAS_TOOL_NAMES]
@@ -1793,8 +1801,8 @@ export function createSubagentAdapter(ctx) {
         // Context snapshots belong to the parent execution session. This
         // one-shot data child has no snapshot lease, so advertising those
         // tools only encourages invalid-ID retries after retrieval is done.
-        (!boundTemplate || name.startsWith('ework__') || ['financial_query','web_search','web_fetch'].includes(name)) &&
-        (!pluginRequired || name !== 'financial_query') &&
+        (!boundTemplate || name.startsWith('ework__') || ['public_data_query','financial_query','web_search','web_fetch'].includes(name)) &&
+        (!pluginRequired || !['financial_query','public_data_query'].includes(name)) &&
         (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
         // Keep the generic financial adapter as a last-resort fallback when
         // the specialist's search, catalog, or business API is unavailable.
@@ -2290,6 +2298,7 @@ export async function apply(ctx) {
   const disposeCanvasUseTasks=await registerCanvasUseTasks(ctx,{filePath:join(dshHome(),'sherlock-canvas-tasks.json'),isTrustedRequest,readJsonBody})
   const disposeWorkbench = await registerWorkbench(ctx, runtime, { filePath: join(dshHome(), 'sherlock-workbenches.json'), isTrustedRequest, readJsonBody })
   ctx.effect(() => {
+    const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx)
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
@@ -2301,7 +2310,7 @@ export async function apply(ctx) {
     try {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
     } catch (error) {
-      disposeSourceGuidance?.()
+      disposePublicData(); disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
       disposeModelQueue()
       disposeCompletionNotifications()
@@ -2311,7 +2320,7 @@ export async function apply(ctx) {
       throw error
     }
     return async () => {
-      disposeSourceGuidance?.()
+      disposePublicData(); disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
       disposeModelQueue()
       disposeCompletionNotifications()

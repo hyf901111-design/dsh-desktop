@@ -30,7 +30,7 @@ it('prefers visible DataYes tools for a financial component without naming unava
     { name: 'financial_query', description: '查询股票行情' },
     { name: 'ework__t_other', description: '读取日历事项' }
   ]
-  const selected = preferredComponentSourceTools(schemas, '白酒行业工作台：股票日 K 线与成交量')
+  const selected = preferredComponentSourceTools(schemas, '使用通联的白酒行业工作台：股票日 K 线与成交量')
   expect(selected.map(tool => tool.name)).toEqual(['ework__t_search', 'ework__t_call'])
   const instruction = componentSourceInstruction(selected)
   expect(instruction).toContain('ework__t_search')

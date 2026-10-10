@@ -6,10 +6,11 @@ import { IntegrationError, type SkillInstall } from '../../shared/integrations';
 import { assertManagedPackagePath } from './package-resources';
 import { readSkillResource } from './skill-import';
 
-const slugs = ['efund-ppt-maker', 'ework-workbench-components'] as const;
+const slugs = ['efund-ppt-maker', 'ework-workbench-components', 'ework-free-data-sources'] as const;
 export const BUNDLED_PPT_SKILL_ID = 'builtin:efund-ppt-maker';
 export const BUNDLED_COMPONENT_SKILL_ID = 'builtin:ework-workbench-components';
-export const isBundledSkillId = (id: string): boolean => id === BUNDLED_PPT_SKILL_ID || id === BUNDLED_COMPONENT_SKILL_ID;
+export const BUNDLED_FREE_DATA_SKILL_ID = 'builtin:ework-free-data-sources';
+export const isBundledSkillId = (id: string): boolean => id === BUNDLED_PPT_SKILL_ID || id === BUNDLED_COMPONENT_SKILL_ID || id === BUNDLED_FREE_DATA_SKILL_ID;
 export interface BundledSkill {
     readonly skill: SkillInstall;
     readonly bundleRoot: string;
