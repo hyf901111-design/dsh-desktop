@@ -18,6 +18,21 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '1.1.3',
+      date: '2026-10-10',
+      items: [
+        '新增常用组件库，自选股、个股行情、市场指数和新闻列表可直接添加到看板。',
+        '自选股支持组件内搜索添加、右键移除和拖拽排序，突出股票名称并精简代码显示。',
+        '个股行情支持组件内搜索选股、切换周期和复权方式，提供 MA、VOL 和 MACD，简化搜索联想。',
+        '接入公开行情与财经资讯源，行情每 60 秒自动获取，显示来源、交易时刻、市场时区和休市状态。',
+        '统一浅色、深色和易方达模式，复用组件最小尺寸；紧凑布局保留市场指数折线图。',
+        '统一涨红跌绿，刷新后的数据区域短暂高亮，移除闪动背景描边。',
+        '标准整理按当前列布局就近补空，优化整理后的组件尺寸、底栏安全边距和浮层遮挡。',
+        '提高新闻列表阅读密度，支持关键词搜索；统一组件菜单、图标和悬停反馈，修复窄组件重试按钮溢出。',
+        '精简研究欢迎页；在关于页主动检查更新时不再弹出侧栏更新气泡，移除更新气泡中的详情按钮。'
+      ]
+    },
+    {
       version: '1.1.2',
       date: '2026-10-09',
       items: [
@@ -293,6 +308,21 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.1.3',
+      date: '2026-10-10',
+      items: [
+        'Added a component library with Watchlist, Stock Chart, Market Indices and News List, ready to add directly to a board.',
+        'Search and add stocks within the watchlist, right-click to remove and drag to reorder, with clearer stock names and compact codes.',
+        'Search for stocks within the chart, switch periods and price adjustments, and use MA, VOL and MACD with simpler search suggestions.',
+        'Connected public market-data and financial-news sources, fetching quotes every 60 seconds with source, trading time, market time zone and closed-market status.',
+        'Unified light, dark and E Fund themes and shared minimum component sizes; compact layouts retain market-index sparklines.',
+        'Standardized red for gains and green for losses, with brief background highlights for refreshed data and no highlight borders.',
+        'Standard Arrange fills nearby gaps while retaining the current column layout, with improved component sizing, toolbar spacing and popover placement.',
+        'Improved news reading density and keyword search, unified menus, icons and hover feedback, and fixed retry-button overflow in narrow components.',
+        'Simplified the research welcome page; manually checking for updates in About no longer opens the sidebar update bubble, and the bubble no longer has a Details button.'
+      ]
+    },
     {
       version: '1.1.2',
       date: '2026-10-09',
