@@ -40,6 +40,12 @@ describe('builtin free data sources', () => {
   it('parses quoted ECB csv and keeps daily reference currency direction', () => {
     const result = prepareRequest('ecb-fx', { currency: 'CNY' }).normalize('TIME_PERIOD,OBS_VALUE,CURRENCY,CURRENCY_DENOM,NOTE\n2026-10-09,7.7,CNY,EUR,"quoted, text"\n'); expect(result.records[0]).toMatchObject({ value: 7.7, base: 'EUR', currency: 'CNY' }); expect(result.units.value).toBe('CNY per EUR');
   });
+  it('distinguishes Chinese index points from security currency in quotes and history', () => {
+    const quote = symbol => { const fields = Array(40).fill(''); fields[1] = symbol; fields[3] = '4317.25'; fields[30] = '20261009161400'; return `v_${symbol}="${fields.join('~')}";`; };
+    const data = prepareRequest('tencent-quotes', { symbols: ['sh000300','sh600519'] }).normalize(quote('sh000300') + quote('sh600519'));
+    expect(data.records[0]).toMatchObject({ priceUnit: 'points', currency: null }); expect(data.records[1]).toMatchObject({ priceUnit: 'CNY', currency: 'CNY' });
+    const history = prepareRequest('tencent-history', { symbol: 'sz399001' }).normalize({ data: { sz399001: { day: [['2026-10-09','1','2','3','1','100']] } } }); expect(history.units.price).toBe('points');
+  });
   it('distinguishes weather publication and forecast times, and missing article publication', () => {
     const weather = prepareRequest('met-weather', { lat: 0, lon: 0 }).normalize({ properties: { meta: { updated_at: '2026-10-09T00:00:00Z', units: { air_temperature: 'celsius' } }, timeseries: [{ time: '2026-10-10T00:00:00Z', data: { instant: { details: { air_temperature: 0 } } } }] } }, Date.parse('2026-10-09T23:00:00Z')); expect(weather.dataTime).not.toBe(weather.records[0].time); expect(weather.records[0].air_temperature).toBe(0);
     const news = prepareRequest('gdelt-news', { query: 'climate' }).normalize({ articles: [{ title: 'title', seendate: '20261010T120000Z' }] }); expect(news.records[0]).toHaveProperty('firstSeenAt'); expect(news.dataTime).toBeNull(); expect(news.records[0]).not.toHaveProperty('time');
