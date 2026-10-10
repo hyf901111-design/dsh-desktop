@@ -58,6 +58,15 @@ describe('builtin free data sources', () => {
   it('honors rate-limit backoff and never tries another provider or retries immediately', async () => {
     const fetcher = vi.fn(async () => response({}, { status: 429, headers: { 'retry-after': '120' } })); const client = createQueryClient({ fetcher }); const args = { source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } }; await expect(client.query(args)).rejects.toMatchObject({ code: 'RATE_LIMITED', retryAfterSeconds: 120 }); await expect(client.query(args)).rejects.toMatchObject({ code: 'RATE_LIMITED' }); expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('keeps different requested record counts separate even when the provider endpoint is identical', async () => {
+    let at = Date.parse('2026-10-11T00:00:00Z');
+    const fetcher = vi.fn(async () => response([[1,1,3,2,2,10],[2,1,3,2,2,20],[3,1,3,2,2,30]]));
+    const client = createQueryClient({ fetcher, now: () => at });
+    const query = limit => client.query({ source: 'coinbase-candles', parameters: { product: 'BTC-USD', granularity: 86400, limit } });
+    expect((await query(2)).records).toHaveLength(2); at += 2000;
+    expect((await query(3)).records).toHaveLength(3);
+    expect((await query(2)).records).toHaveLength(2); expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it('rejects malformed response and cancels a request on timeout', async () => {
     await expect(createQueryClient({ fetcher: async () => response({ error: 'no data' }) }).query({ source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } })).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
     const fetcher = async (_url, { signal }) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true })); await expect(createQueryClient({ fetcher, timeoutMs: 10 }).query({ source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } })).rejects.toMatchObject({ code: 'TIMEOUT' });

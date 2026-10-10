@@ -126,7 +126,7 @@ export function createQueryClient({ fetcher = globalThis.fetch, now = Date.now, 
   async function request(args, signal) {
     const { source, endpoint, normalize, headers } = prepareRequest(args.source, args.parameters ?? {});
     const providerId = new URL(endpoint).hostname;
-    const key = endpoint, queued = queues.get(providerId) ?? Promise.resolve(); let release;
+    const key = `${source.id}:${endpoint}:${JSON.stringify(Object.entries(args.parameters ?? {}).sort(([a], [b]) => a.localeCompare(b)))}`, queued = queues.get(providerId) ?? Promise.resolve(); let release;
     const done = new Promise(r => { release = r; }); queues.set(providerId, queued.catch(() => {}).then(() => done));
     try {
       await waitForTurn(queued.catch(() => {}), signal); signal?.throwIfAborted();
