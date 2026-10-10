@@ -11,25 +11,41 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "bb97b0001b64e0c191918fe54fcae0f43ff3ea03",
-        "tipCommit": "dbbdd68d959aaf2a575a8a91f1373b080477db99",
+        "baseCommit": "dbbdd68d959aaf2a575a8a91f1373b080477db99",
+        "tipCommit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
         "commits": [
           {
-            "commit": "dbbdd68d959aaf2a575a8a91f1373b080477db99",
+            "commit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
             "parents": [
-              "bb97b0001b64e0c191918fe54fcae0f43ff3ea03"
+              "dbbdd68d959aaf2a575a8a91f1373b080477db99"
             ],
-            "subject": "修复关于页替换侧栏后旧更新气泡未及时收起"
+            "subject": "接入公开行情与财经资讯让固定组件直接加载真实数据"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/sidebar-update-control.ts"
+            "path": "docs/superpowers/plans/2026-10-09-component-library.md"
           },
           {
             "status": "M",
-            "path": "test/sidebar-update-control.test.ts"
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/financial/public-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-widget-public.test.ts"
           }
         ],
         "checks": [
@@ -38,16 +54,15 @@
               "npx",
               "vitest",
               "run",
-              "test/sidebar-update-control.test.ts",
-              "test/settings-about.test.ts",
-              "test/figma-update-client.test.ts",
-              "test/update-ui.test.ts",
-              "test/update-check-error-routing.test.ts"
+              "test/financial-widget-public.test.ts",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-contract.test.js",
+              "test/financial-widget-data.test.ts"
             ],
             "outcome": "passed",
-            "summary": "35项更新检查通过，包括关于页卸载侧栏前已有气泡的回归场景",
-            "verifiedCommit": "dbbdd68d959aaf2a575a8a91f1373b080477db99",
-            "completedAt": "2026-10-10T03:23:11.764037+00:00",
+            "summary": "65项直接相关检查通过，含真实来源解析、账户隔离、美国代码转换、复权与分时图表和既有组件交互",
+            "verifiedCommit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
+            "completedAt": "2026-10-10T09:22:12.806527+00:00",
             "timeoutMs": 180000
           },
           {
@@ -58,14 +73,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "dbbdd68d959aaf2a575a8a91f1373b080477db99",
-            "completedAt": "2026-10-10T03:23:11.764037+00:00",
+            "verifiedCommit": "012ea3abca30b85b202aded9ac3e4963c5f558e8",
+            "completedAt": "2026-10-10T09:22:12.806527+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "关于页替换侧栏的真实DOM复现：已有气泡在检查开始时立即隐藏，IPC返回和侧栏重新挂载后仍隐藏；下载进度保持可见。前一集成包真实客户端已验证窄组件重试边距、持久搜索输入及关于页检查路径。"
+          "summary": "真实序列化React组件DOM的36项聚焦检查通过，新增分时实际价格折线与时间读数回归；正式本地包的公开数据和新增组件可见验收将在集成构建后执行。接口实测12组查询成功，并补验美国搜索到不复权K线完整路径。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -81,85 +96,25 @@
           "四项固定组件复用通用组件最小宽高，紧凑状态精简信息，放大与整理恢复完整布局且配置不丢失",
           "每次有效手动和自动刷新在实际更新数据区域短暂高亮；上升绿色、下降红色、不变蓝色；失败/过期响应不显示成功提示，布局与交互状态保持",
           "标准整理按当前网格列和跨列关系就近补空，延迟高度校准不改变列数或列宽，单列和不等宽布局保持",
-          "新闻直接呈现标题摘要来源和日期时间，长摘要组件内展开；优先10条并在MCP响应截断时回退小页",
           "刷新背景无边框、outline和阴影，选择框仍沿用客户端规范",
           "底栏不再扣除80px画布高度，预留安全空间放在可滚动内容末尾",
           "四项组件与组件库菜单、搜索和图表复用易方达统一主题，主题切换不重置组件交互状态",
           "获取失败不推断服务商和计费原因，保留重试和缺失数据标记",
           "窄宽度与最小尺寸下错误提示在上、描边重试按钮在下，列表底部重试不挤占文案，三主题交互反馈一致",
-          "四项固定组件使用当前账号默认内置MCP连接ID与统一连接管理，不选取或回退个人同名MCP；退出与账户切换取消旧响应",
           "个股标题内始终为搜索输入，不显示下拉箭头，不替换控件，取消与外部点击恢复当前标的",
           "页脚重试按钮有上下2px安全边距，紧凑与普通尺寸均不裁切描边",
-          "关于页主动检查更新与检查结果不弹侧栏更新气泡，后续独立检查及下载安装进度仍可显示；气泡移除详情按钮"
+          "关于页主动检查更新与检查结果不弹侧栏更新气泡，后续独立检查及下载安装进度仍可显示；气泡移除详情按钮",
+          "固定组件使用公开行情和资讯，不依赖失效的MCP查询额度；不改用户个人MCP配置",
+          "看板新增指数和新闻即显示实际数据；自选和个股在组件内选择后显示实际报价和图表",
+          "上游实际来源、交易日期及成交量单位明确，缺失数据不填零，所选复权缺失不静默替代",
+          "证券联想返回的美股交易所后缀正确转换；分时显示真实分钟折线和成交量而非伪造K线"
         ],
         "risks": [
-          "美股与分钟接口尚未验证，明确显示不支持",
-          "通联A股K线成交量单位未声明，保留原始单位",
-          "完整已安装客户端与账户切换路径待本地集成验收",
-          "新闻响应受供应商截断和实际数据量限制，长响应回退3条，不伪造更多条目",
-          "额外检查发现旧Bento模板夹具6项既有失败；原2c5提交隔离目录复跑同样6项失败，涉及旧尺寸预期及Figma派生菜单锚点，与本次修改无关"
+          "公开接口的时效和可用性受来源影响，未声明专业实时行情保证，失败保留已有有效数据",
+          "美股公开分时暂不支持；所选复权口径不存在时明确显示不支持",
+          "本地集成客户端实际数据及新增组件路径待本次构建验证"
         ],
-        "generatedAt": "2026-10-10T03:23:11.764037+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
-        "verificationCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
-            "completedAt": "2026-10-10T03:24:33.139Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
-            "completedAt": "2026-10-10T03:24:33.139Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
-            "completedAt": "2026-10-10T03:24:33.139Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "2bad380ee4717ab88e373c67b51770be5a273d5c",
-            "completedAt": "2026-10-10T03:24:33.139Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-10T03:24:33.139Z"
+        "generatedAt": "2026-10-10T09:22:12.806527+00:00"
       }
     }
   ],
