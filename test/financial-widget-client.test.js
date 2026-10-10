@@ -5,6 +5,14 @@ const s={code:'600519',name:'贵州茅台',market:'SH'},other={code:'000001',nam
 const bars=Array.from({length:80},(_,i)=>({date:new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:i%2?0:1000}))
 const service=()=>({request:vi.fn(async q=>q.action==='search'?{symbols:[s,other]}:q.action==='history'?{bars,volumeUnit:'股',source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'}:q.action==='news'?{news:[{id:'n',title:'本人原始新闻',source:'本人新闻来源',url:'https://example.org/news',time:'2026-10-09 10:00'}],source:'测试通联'}:{quotes:q.symbols.map(x=>({...x,price:100,changePercent:x.market==='SH'?0:-2,asOf:'2026-10-08'})),source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'})})
 async function fixture(desktop={}){const f=await financialClientFixture({financialWidget:service(),...desktop});close.push(f.dispose);return f}
+it('分时绘制实际价格折线和分钟时间，不显示伪造的开高低收',async()=>{
+ const bridge=service(),points=[{date:'2026-10-09T09:30:00+08:00',open:100,high:100,low:100,close:100,volume:20},{date:'2026-10-09T09:31:00+08:00',open:102,high:102,low:102,close:102,volume:30}]
+ bridge.request.mockImplementation(async q=>q.action==='history'?{bars:points,nativePeriod:true,source:'腾讯财经',volumeUnit:'手'}:{quotes:[{...s,price:102,changePercent:2}],source:'腾讯财经'})
+ const f=await fixture({financialWidget:bridge});await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s],period:'1m'}}])})
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull())
+ expect(f.host.querySelector('[data-chart-series=intraday]')).not.toBeNull();expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('09:31');expect(f.host.querySelector('.ew-quote-ohlc').textContent).not.toContain('开 ')
+ expect(f.host.querySelector('[data-financial-chart]').textContent).toContain('09:30');expect(f.host.querySelector('[data-financial-chart] svg').getAttribute('aria-label')).toContain('分时')
+})
 it('四项列表直接放置、选中和恢复，保留原节点，无配置面板及模型任务',async()=>{
  const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));const items=[...f.document.querySelectorAll('[data-financial-place]')];expect(items.map(x=>x.dataset.financialPlace)).toEqual(['watchlist','quote','indices','news']);await f.event('click',items[0]);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('[role=dialog][open]')).toBeNull()
  await f.act(async()=>['quote','indices','news'].forEach(k=>f.workspace.createFinancialWidget(k)));expect(f.workspace.getSnapshot().artifacts).toHaveLength(4);expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([f.workspace.getSnapshot().artifacts[3].id]);expect(f.host.querySelectorAll('[data-financial-widget]')).toHaveLength(4);expect(f.generation.generate).not.toHaveBeenCalled()
