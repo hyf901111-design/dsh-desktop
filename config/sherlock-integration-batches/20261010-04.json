@@ -9,46 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "内置免费数据源支持分钟自动更新",
+        "featureName": "免费数据分钟工作台与内联快照刷新绑定",
         "branch": "codex/feat/free-data-skill-20261010",
-        "baseCommit": "db51a136271cb3cfe6dd6f35c251732d4655c5ef",
-        "tipCommit": "eca12da90d267ee5cd9306debb18722036969812",
+        "baseCommit": "eca12da90d267ee5cd9306debb18722036969812",
+        "tipCommit": "e4c1a8330e19be645a62bc0bdb6da9a06019f974",
         "commits": [
           {
-            "commit": "bbd96925d43feb003bbb4d3832bec6a859d35160",
+            "commit": "e4c1a8330e19be645a62bc0bdb6da9a06019f974",
             "parents": [
-              "db51a136271cb3cfe6dd6f35c251732d4655c5ef"
+              "eca12da90d267ee5cd9306debb18722036969812"
             ],
-            "subject": "功能：内置免费数据源接入组件分钟刷新与暂停恢复"
-          },
-          {
-            "commit": "eca12da90d267ee5cd9306debb18722036969812",
-            "parents": [
-              "bbd96925d43feb003bbb4d3832bec6a859d35160"
-            ],
-            "subject": "测试：更新免费源刷新协议与内置技能版本验收断言"
+            "subject": "修复：内联工作台快照继续绑定免费数据分钟刷新"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/public-data-client.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/public-data-client.js"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/public-data-tool.js"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
             "status": "M",
@@ -64,22 +49,6 @@
           },
           {
             "status": "M",
-            "path": "src/main/component-data/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-source-binding.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/free-data-sources.test.js"
           },
           {
@@ -88,7 +57,7 @@
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/workbench-execution-policy.test.js"
           }
         ],
         "checks": [
@@ -97,16 +66,15 @@
               "node",
               "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
               "run",
-              "test/component-source-binding.test.js",
-              "test/component-data-service.test.ts",
-              "test/component-data-refresh.test.js",
+              "test/workbench-execution-policy.test.js",
               "test/free-data-sources.test.js",
-              "test/component-agent-scope.test.js"
+              "test/component-source-binding.test.js",
+              "test/integration-bundled-skill.test.js"
             ],
             "outcome": "passed",
-            "summary": "免费数据分钟刷新、绑定与现有权限路径聚焦验证通过",
-            "verifiedCommit": "eca12da90d267ee5cd9306debb18722036969812",
-            "completedAt": "2026-10-10T23:36:24.018092+00:00",
+            "summary": "66项来源、映射与内联快照流程聚焦检查通过",
+            "verifiedCommit": "e4c1a8330e19be645a62bc0bdb6da9a06019f974",
+            "completedAt": "2026-10-10T23:56:44.205370+00:00",
             "timeoutMs": 120000
           },
           {
@@ -118,25 +86,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "免费数据分钟刷新、绑定与现有权限路径聚焦验证通过",
-            "verifiedCommit": "eca12da90d267ee5cd9306debb18722036969812",
-            "completedAt": "2026-10-10T23:36:29.776084+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
-              "run",
-              "test/integration-bundled-skill.test.js",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "free data|immutable bundled|scope|offline|permission|connected|grants|source preference"
-            ],
-            "outcome": "passed",
-            "summary": "免费数据分钟刷新、绑定与现有权限路径聚焦验证通过",
-            "verifiedCommit": "eca12da90d267ee5cd9306debb18722036969812",
-            "completedAt": "2026-10-10T23:36:31.728783+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "e4c1a8330e19be645a62bc0bdb6da9a06019f974",
+            "completedAt": "2026-10-10T23:56:44.205370+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -154,47 +106,7 @@
           "股票休市报价不变，Crypto用实际交易所报价",
           "只有看板可见时自动刷新"
         ],
-        "generatedAt": "2026-10-10T23:36:31.728830+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ad810721352aaf9dd46b3fe1473f37fed346a438",
-        "verificationCommit": "ad810721352aaf9dd46b3fe1473f37fed346a438",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
-              "run",
-              "test/free-data-sources.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/component-agent-scope.test.js",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs run test/free-data-sources.test.js test/integration-bundled-skill.test.js test/research-component-source-tools.test.js test/component-agent-scope.test.js test/research-task-runtime.test.js -t free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference",
-            "verifiedCommit": "ad810721352aaf9dd46b3fe1473f37fed346a438",
-            "completedAt": "2026-10-10T23:37:12.577Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "ad810721352aaf9dd46b3fe1473f37fed346a438",
-            "completedAt": "2026-10-10T23:37:12.577Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-10T23:37:12.577Z"
+        "generatedAt": "2026-10-10T23:56:44.205370+00:00"
       }
     }
   ],
