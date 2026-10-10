@@ -129,7 +129,7 @@ try {
     const driverVersion = execFileSync(computerDriver, ['--version'], { encoding: 'utf8' }).trim()
     if (driverVersion !== 'cua-driver 0.28.2') throw new Error(`Unexpected computer driver: ${driverVersion}`)
     if (!existsSync(path.join(resourcesPath, 'native', 'cua-driver-MIT.txt'))) throw new Error('Computer driver license is missing')
-    const bundledSkills = ['efund-ppt-maker', 'ework-workbench-components'].map((slug) =>
+    const bundledSkills = ['efund-ppt-maker', 'ework-workbench-components', 'ework-free-data-sources'].map((slug) =>
       verifyBundledSkillParity({
         sourceSkillDirectory: path.resolve('skills', slug),
         packagedSkillDirectory: path.join(resourcesPath, 'sherlock-skills', slug)

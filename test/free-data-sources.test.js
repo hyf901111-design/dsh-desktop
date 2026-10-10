@@ -41,8 +41,15 @@ describe('builtin free data sources', () => {
     const result = prepareRequest('ecb-fx', { currency: 'CNY' }).normalize('TIME_PERIOD,OBS_VALUE,CURRENCY,CURRENCY_DENOM,NOTE\n2026-10-09,7.7,CNY,EUR,"quoted, text"\n'); expect(result.records[0]).toMatchObject({ value: 7.7, base: 'EUR', currency: 'CNY' }); expect(result.units.value).toBe('CNY per EUR');
   });
   it('distinguishes weather publication and forecast times, and missing article publication', () => {
-    const weather = prepareRequest('met-weather', { lat: 0, lon: 0 }).normalize({ properties: { meta: { updated_at: '2026-10-09T00:00:00Z', units: { air_temperature: 'celsius' } }, timeseries: [{ time: '2026-10-10T00:00:00Z', data: { instant: { details: { air_temperature: 0 } } } }] } }); expect(weather.dataTime).not.toBe(weather.records[0].time); expect(weather.records[0].air_temperature).toBe(0);
+    const weather = prepareRequest('met-weather', { lat: 0, lon: 0 }).normalize({ properties: { meta: { updated_at: '2026-10-09T00:00:00Z', units: { air_temperature: 'celsius' } }, timeseries: [{ time: '2026-10-10T00:00:00Z', data: { instant: { details: { air_temperature: 0 } } } }] } }, Date.parse('2026-10-09T23:00:00Z')); expect(weather.dataTime).not.toBe(weather.records[0].time); expect(weather.records[0].air_temperature).toBe(0);
     const news = prepareRequest('gdelt-news', { query: 'climate' }).normalize({ articles: [{ title: 'title', seendate: '20261010T120000Z' }] }); expect(news.records[0]).toHaveProperty('firstSeenAt'); expect(news.dataTime).toBeNull(); expect(news.records[0]).not.toHaveProperty('time');
+  });
+  it('filters elapsed weather times before applying the requested count using the client clock', async () => {
+    const at = Date.parse('2026-10-10T15:30:00Z');
+    const timeseries = Array.from({ length: 36 }, (_, i) => ({ time: new Date(Date.parse('2026-10-10T07:00:00Z') + i * 3600000).toISOString(), data: { instant: { details: { air_temperature: i } } } }));
+    const client = createQueryClient({ now: () => at, fetcher: async () => response({ properties: { meta: { updated_at: '2026-10-10T13:17:19Z', units: { air_temperature: 'celsius' } }, timeseries } }) });
+    const result = await client.query({ source: 'met-weather', parameters: { lat: 31.23, lon: 121.47, limit: 24 } });
+    expect(result.records).toHaveLength(24); expect(result.records[0].time).toBe('2026-10-10T16:00:00.000Z'); expect(result.records.every(r => Date.parse(r.time) >= at)).toBe(true); expect(result.dataTime).toBe('2026-10-10T13:17:19Z');
   });
   it('caches overlapping component calls, bounds TTL and keeps receivedAt distinct from dataTime', async () => {
     const fetcher = vi.fn(async () => response(quote)); const client = createQueryClient({ fetcher, now: () => Date.parse('2026-10-10T00:00:00Z') }); const args = { source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } }; const [a, b] = await Promise.all([client.query(args), client.query(args)]); expect(fetcher).toHaveBeenCalledTimes(1); expect(b.cacheHit).toBe(true); expect(a.receivedAt).not.toBe(a.dataTime); expect(a.records[0].volume).toBe(0); expect(a.delivery).toContain('no automatic');
