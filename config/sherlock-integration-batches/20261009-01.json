@@ -11,41 +11,25 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "1daf42d3368f5c5a9108ec3158bcfe54e7c8e9ff",
-        "tipCommit": "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd",
+        "baseCommit": "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd",
+        "tipCommit": "b07c7b306691e30424c3bf6514932f1e8deb59cb",
         "commits": [
           {
-            "commit": "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd",
+            "commit": "b07c7b306691e30424c3bf6514932f1e8deb59cb",
             "parents": [
-              "1daf42d3368f5c5a9108ec3158bcfe54e7c8e9ff"
+              "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd"
             ],
-            "subject": "为金融组件加入新浪备用报价与行情时刻状态"
+            "subject": "修正沪深组件同一时区行情时刻的显示"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "docs/superpowers/plans/2026-10-09-component-library.md"
-          },
           {
             "status": "M",
             "path": "scripts/lib/financial-widget-client.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/financial-widget.css"
-          },
-          {
-            "status": "M",
-            "path": "src/main/financial/public-widget-data.ts"
-          },
-          {
-            "status": "M",
             "path": "test/financial-widget-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-widget-public.test.ts"
           }
         ],
         "checks": [
@@ -54,32 +38,18 @@
               "npx",
               "vitest",
               "run",
-              "test/financial-widget-public.test.ts",
-              "test/financial-widget-client.test.js",
-              "test/financial-widget-contract.test.js"
+              "test/financial-widget-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "57项直接相关检查通过，包含真实时刻、跨市场时区、主备切换、部分批次失败、报价缺失和序列化组件页脚",
-            "verifiedCommit": "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd",
-            "completedAt": "2026-10-10T11:44:40.835951+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd",
-            "completedAt": "2026-10-10T11:44:40.835951+00:00",
+            "summary": "40项组件客户端检查通过，新增沪深同一时区直接显示实际行情时刻的回归断言",
+            "verifiedCommit": "b07c7b306691e30424c3bf6514932f1e8deb59cb",
+            "completedAt": "2026-10-10T11:53:53.390993+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "序列化React DOM显示来源、行情时刻、最近获取信息；真实网络探测验证腾讯沪深港美完整时刻，以及注入主源503后从实际新浪HTTPS接口取得茅台和五粮液报价。新的本地集成包仍需可见验收。"
+          "summary": "前继集成包已在真实客户端显示四项实际数据、休市及完整行情时刻提示，并从19:52自动刷新至19:53；修正现场发现的沪深同一时区标签后，客户端40项检查通过，新包可见验收待完成。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -110,7 +80,8 @@
           "新闻输入框直接处理Enter提交关键词，并阻止输入法确认触发搜索，不依赖宿主隐式提交",
           "腾讯沪深报价失败或缺失时自动从新浪补齐；有效主源报价不被覆盖；实际来源明确，刷新继续每60秒执行",
           "上游行情完整时刻、各市场时区和最近获取时间独立呈现；窄组件状态与悬停信息可读",
-          "周末、盘前及午间休市按市场时区标注；盘中缺少新鲜上游时刻不能标成实时"
+          "周末、盘前及午间休市按市场时区标注；盘中缺少新鲜上游时刻不能标成实时",
+          "沪深等同一时区的多个报价在页脚直接显示最早实际时刻，跨时区仍在提示中分别显示"
         ],
         "risks": [
           "免费公开源时效及可用性受来源影响；交易时段的实际延迟尚需开市验收",
@@ -118,66 +89,6 @@
           "新的行情页脚待后继本地集成包可见验收；工作日节假日或停牌不依靠时钟猜测"
         ],
         "generatedAt": "2026-10-10T09:40:20.909009+00:00"
-      },
-      "merged": {
-        "mergeCommit": "97524ea189eb71cd0fa870fa3de916660859782a",
-        "verificationCommit": "97524ea189eb71cd0fa870fa3de916660859782a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "97524ea189eb71cd0fa870fa3de916660859782a",
-            "completedAt": "2026-10-10T11:45:15.526Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "97524ea189eb71cd0fa870fa3de916660859782a",
-            "completedAt": "2026-10-10T11:45:15.526Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "97524ea189eb71cd0fa870fa3de916660859782a",
-            "completedAt": "2026-10-10T11:45:15.526Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "97524ea189eb71cd0fa870fa3de916660859782a",
-            "completedAt": "2026-10-10T11:45:15.526Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-10T11:45:15.526Z"
       }
     }
   ],
