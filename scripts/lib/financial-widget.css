@@ -73,6 +73,10 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body .ew-watch-percent[data-direction=flat]{background:var(--fw-control);color:var(--fw-text)!important}
  body .ew-financial-footer{height:24px;box-sizing:border-box;padding:2px 0;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--fw-muted)!important;font:400 11px/16px 'Noto Sans SC',Inter,system-ui!important;white-space:nowrap;overflow:hidden}
  body .ew-financial-footer>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+ body .ew-financial-footer>.ew-financial-provenance{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
+ body .ew-financial-market-state{flex:none}
+ body .ew-financial-source-time{min-width:0;overflow:hidden;text-overflow:ellipsis}
+ body .ew-financial-footer>span:last-child{flex:none}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-footer>button.ew-financial-retry{height:20px!important;min-height:20px!important;flex:none;white-space:nowrap}
  body .ew-financial-symbol-search{position:relative;width:100%;min-width:0;color:var(--fw-text);font:400 12px/16px Inter,'Noto Sans SC',system-ui}
  body .ew-financial-search-line{box-sizing:border-box;height:24px;display:flex;gap:6px;align-items:center;border:1px solid var(--fw-border);border-radius:4px;background:var(--fw-card);padding:0 6px 0 8px}

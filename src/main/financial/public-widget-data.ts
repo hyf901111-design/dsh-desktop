@@ -3,7 +3,7 @@ import {normalizeFinancialBars} from './widget-data'
 
 type Row=Record<string,any>
 type SymbolRef={code:string;market:string;name:string}
-const origins=['https://qt.gtimg.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com']
+const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com']
 const number=(value:unknown):number|null=>typeof value==='number'&&Number.isFinite(value)?value:typeof value==='string'&&value.trim()&&Number.isFinite(Number(value))?Number(value):null
 const unavailable=()=>Error('公开数据源暂不可用，请稍后重试')
 const tradingDate=(value:string)=>{
@@ -20,6 +20,17 @@ const validQuery=(q:any)=>{
  if(q.action==='history'&&(q.symbols.length!==1||!['1m','1d','1w','1mo','1y'].includes(q.period)||!['none','forward','backward'].includes(q.adjustment)))throw Error('图表参数无效')
 }
 const safeLink=(value:unknown)=>{try{const u=new URL(String(value));return u.protocol==='https:'&&!u.username&&!u.password?u.href:null}catch{return null}}
+function quoteTimestamp(value:string,market:string):string|null{
+ const m=value.match(/^(\d{4})[-/]?(\d{2})[-/]?(\d{2})\s?(\d{2}):?(\d{2}):?(\d{2})$/)
+ if(!m||!tradingDate(m.slice(1,4).join('-'))||Number(m[4])>23||Number(m[5])>59||Number(m[6])>59)return null
+ const [year,month,day,hour,minute,second]=m.slice(1).map(Number)
+ let offset=480
+ if(market==='US'){
+  const zone=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'shortOffset'}).formatToParts(new Date(Date.UTC(year!,month!-1,day!,12))).find(p=>p.type==='timeZoneName')?.value.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/)
+  if(!zone)return null;offset=(Number(zone[2])*60+Number(zone[3]??0))*(zone[1]==='-'?-1:1)
+ }
+ return new Date(Date.UTC(year!,month!-1,day!,hour!,minute!-offset,second!)).toISOString()
+}
 
 // Read-only public sources use fixed origins in the main process. They need no
 // provider credentials, never execute returned scripts, and carry their own
@@ -51,18 +62,34 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
    }
    const json=async(url:URL|string)=>{try{return JSON.parse(await get(url))}catch(error){check();if(error instanceof Error&&/暂不可用|数据过多/.test(error.message))throw error;throw Error('公开数据格式暂不可用，请稍后重试')}}
    const rawQuotes=async(symbols:SymbolRef[])=>{
-    const rows=new Map<string,string[]>()
+    const rows=new Map<string,string[]>();let failure:unknown
     for(let i=0;i<symbols.length;i+=50){
      const url=new URL('https://qt.gtimg.cn/');url.searchParams.set('q',symbols.slice(i,i+50).map(symbolId).join(','))
-     const text=await get(url,true)
-     for(const match of text.matchAll(/(?:^|\n)\s*v_([A-Za-z0-9.^-]+)="([^"\r\n]*)"\s*;?/g))rows.set(match[1]!,match[2]!.split('~'))
+     try{const text=await get(url,true);for(const match of text.matchAll(/(?:^|\n)\s*v_([A-Za-z0-9.^-]+)="([^"\r\n]*)"\s*;?/g))rows.set(match[1]!,match[2]!.split('~'))}catch(error){check();failure=error}
     }
+    if(!rows.size&&failure)throw failure
     return rows
    }
    const parseQuote=(s:SymbolRef,fields:string[]|undefined)=>{
     if(!fields||!(s.market==='US'?(fields[2]===quoteCode(s.code)||fields[2]?.startsWith(quoteCode(s.code)+'.')):fields[2]===s.code))throw Error('暂无该证券可用行情')
     const price=number(fields[3]),asOf=tradingDate(fields[30]??'');if(price===null||price<=0||!asOf)throw Error('暂无该证券有效行情')
-    return {...s,price,priceChange:number(fields[31]),changePercent:number(fields[32]),asOf,quality:'公开报价 · 时效未确认',source:'腾讯财经'}
+    return {...s,price,priceChange:number(fields[31]),changePercent:number(fields[32]),asOf,quotedAt:quoteTimestamp(fields[30]??'',s.market),quality:'公开报价 · 时效未确认',source:'腾讯财经'}
+   }
+   const sinaQuotes=async(symbols:SymbolRef[])=>{
+    const rows=new Map<string,string[]>()
+    for(let i=0;i<symbols.length;i+=50){
+     // This endpoint treats an encoded comma as part of one ticker name.
+     // Codes were validated above, so only safe fixed identifiers enter this URL.
+     const url=new URL('https://hq.sinajs.cn/?list='+symbols.slice(i,i+50).map(symbolId).join(','))
+     for(const match of (await get(url,true)).matchAll(/(?:^|\n)\s*var\s+hq_str_([a-z]+\d+)="([^"\r\n]*)"\s*;?/g))rows.set(match[1]!,match[2]!.split(','))
+    }
+    return rows
+   }
+   const parseSinaQuote=(s:SymbolRef,fields:string[]|undefined)=>{
+    const price=number(fields?.[3]),previous=number(fields?.[2]),asOf=tradingDate(fields?.[30]??''),quotedAt=quoteTimestamp((fields?.[30]??'')+' '+(fields?.[31]??''),s.market)
+    if(price===null||price<=0||!asOf||!quotedAt)throw Error('暂无该证券有效行情')
+    const priceChange=previous!==null&&previous>0?price-previous:null
+    return {...s,price,priceChange,changePercent:priceChange!==null?priceChange/previous!*100:null,asOf,quotedAt,source:'新浪财经',quality:'公开报价 · 时效未确认'}
    }
    const history=async(s:SymbolRef,period:string,adjustment:string)=>{
     let id=symbolId(s)
@@ -95,12 +122,16 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
    }
    let result:Row
    if(q.action==='quotes'){
-    const quotes:Row[]=[],errors:Row[]=[];let rows=new Map<string,string[]>()
-    try{if(q.symbols.length)rows=await rawQuotes(q.symbols)}catch(error){check();return {quotes:[],errors:q.symbols.map((s:SymbolRef)=>({...s,error:(error as Error).message})),source:'腾讯财经',receivedAt:new Date().toISOString()}}
-    for(let i=0;i<q.symbols.length;i+=4){await Promise.all(q.symbols.slice(i,i+4).map(async(s:SymbolRef)=>{
-     try{const quote:Row=parseQuote(s,rows.get(symbolId(s)));if(q.asset==='index'){try{quote.series=(await history(s,'1d','none')).bars.slice(-60).map((b:Row)=>b.close)}catch{check();quote.series=[]}}quotes.push(quote)}catch(error){check();errors.push({...s,error:(error as Error).message})}
-    }))}
-    result={quotes,errors,source:'腾讯财经'}
+    const values=new Map<string,Row>(),missing=new Map<string,Row>();let rows=new Map<string,string[]>(),primaryError:Error|undefined
+    try{if(q.symbols.length)rows=await rawQuotes(q.symbols)}catch(error){check();primaryError=error as Error}
+    for(const s of q.symbols){try{values.set(symbolId(s),parseQuote(s,rows.get(symbolId(s))))}catch(error){missing.set(symbolId(s),{...s,error:(primaryError??error as Error).message})}}
+    // Only absent/invalid mainland quotes use the backup. Never overwrite a
+    // valid primary quote, or interpret this schema as a HK/US quote.
+    const fallback=q.symbols.filter((s:SymbolRef)=>['SH','SZ'].includes(s.market)&&missing.has(symbolId(s)))
+    if(fallback.length){try{const backup=await sinaQuotes(fallback);for(const s of fallback){try{values.set(symbolId(s),parseSinaQuote(s,backup.get(symbolId(s))));missing.delete(symbolId(s))}catch{check()}}}catch{check()}}
+    const quotes:Row[]=q.symbols.flatMap((s:SymbolRef)=>values.has(symbolId(s))?[values.get(symbolId(s))!]:[])
+    if(q.asset==='index')for(let i=0;i<quotes.length;i+=4)await Promise.all(quotes.slice(i,i+4).map(async quote=>{try{quote.series=(await history(quote as SymbolRef,'1d','none')).bars.slice(-60).map((b:Row)=>b.close)}catch{check();quote.series=[]}}))
+    result={quotes,errors:[...missing.values()],source:[...new Set(quotes.map(p=>p.source))].join(' / ')||'腾讯财经'}
    }else if(q.action==='history'){
     try{result=await history(q.symbols[0],q.period,q.adjustment)}catch(error){check();result={bars:[],error:(error as Error).message,source:'腾讯财经'}}
    }else if(q.action==='search'){

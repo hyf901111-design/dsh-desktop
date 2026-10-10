@@ -29,6 +29,58 @@ it('公开行情解析真实价格、百分比和上游日期，刷新与账户�
  await f.service.query({...q,refresh:true});expect(f.fetch).toHaveBeenCalledTimes(2)
  f.setOwner('two');await f.service.query(q);expect(f.fetch).toHaveBeenCalledTimes(3)
 })
+it('报价保留完整上游时刻和市场时区，美股随夏令时换算',async()=>{
+ const f=fixture()
+ expect((await f.service.query({action:'quotes',symbols:[stock]})).quotes[0].quotedAt).toBe('2026-10-09T07:00:00.000Z')
+ const us={code:'AAPL',market:'US',name:'苹果'}
+ f.fetch.mockResolvedValue(new Response(quote('usAAPL','AAPL.OQ','苹果','2026-10-09 16:00:01')))
+ expect((await f.service.query({action:'quotes',symbols:[us]})).quotes[0].quotedAt).toBe('2026-10-09T20:00:01.000Z')
+ f.fetch.mockResolvedValue(new Response(quote('usAAPL','AAPL.OQ','苹果','2026-01-09 16:00:01')))
+ expect((await f.service.query({action:'quotes',symbols:[us],refresh:true})).quotes[0].quotedAt).toBe('2026-01-09T21:00:01.000Z')
+})
+function sinaQuote(id='sh600519',price='1263.000'){
+ const fields=Array(33).fill('');Object.assign(fields,{0:'贵州茅台',1:'1255.42',2:'1255.79',3:price,30:'2026-10-09',31:'15:34:59'})
+ return `var hq_str_${id}="${fields.join(',')}";`
+}
+it('新浪批量查询保留原始逗号，避免HTTP200但返回空报价',async()=>{
+ const f=fixture(),other={market:'SZ',code:'000858',name:'五粮液'}
+ f.fetch.mockImplementation(async input=>{
+  const u=new URL(input)
+  return new Response(u.hostname!=='hq.sinajs.cn'||u.href.includes('%2C')?'':sinaQuote()+'\n'+sinaQuote('sz000858','70.56'))
+ })
+ const result=await f.service.query({action:'quotes',symbols:[stock,other]})
+ expect(result.quotes).toHaveLength(2);expect(result.errors).toEqual([])
+})
+it('腾讯失败时新浪备用报价提供价格、涨跌和实际来源，刷新重新尝试主源',async()=>{
+ const f=fixture(),q={action:'quotes',symbols:[stock]}
+ f.fetch.mockImplementation(async input=>new URL(input).hostname==='hq.sinajs.cn'?new Response(sinaQuote()):new Response('unavailable',{status:503}))
+ const result=await f.service.query(q)
+ expect(result).toMatchObject({source:'新浪财经',errors:[],quotes:[{price:1263,priceChange:expect.closeTo(7.21),changePercent:expect.closeTo(.57414,4),asOf:'2026-10-09',quotedAt:'2026-10-09T07:34:59.000Z',source:'新浪财经'}]})
+ expect(new URL(f.fetch.mock.calls[1]![0]).searchParams.get('list')).toBe('sh600519')
+ f.fetch.mockResolvedValue(new Response(quote()))
+ expect((await f.service.query({...q,refresh:true})).source).toBe('腾讯财经')
+})
+it('备用源仅补缺失的A股报价，混合来源不覆盖主源有效值或冒充港美股',async()=>{
+ const f=fixture(),other={...stock,code:'000001',market:'SZ',name:'平安银行'},us={code:'AAPL',market:'US',name:'苹果'}
+ f.fetch.mockImplementation(async input=>new URL(input).hostname==='hq.sinajs.cn'?new Response(sinaQuote('sz000001','13.1')):new Response(quote()))
+ const result=await f.service.query({action:'quotes',symbols:[stock,other,us]})
+ expect(result.source).toBe('腾讯财经 / 新浪财经');expect(result.quotes).toHaveLength(2);expect(result.quotes[0]).toMatchObject({price:1263,source:'腾讯财经'});expect(result.quotes[1]).toMatchObject({code:'000001',price:13.1,source:'新浪财经'});expect(result.errors).toHaveLength(1)
+ expect(new URL(f.fetch.mock.calls[1]![0]).searchParams.get('list')).toBe('sz000001')
+})
+it('后续批量请求失败时保留之前有效的主源报价',async()=>{
+ const f=fixture(),symbols=[stock,...Array.from({length:50},(_,i)=>({market:'US',code:'A'+i,name:'测试美股'}))]
+ f.fetch.mockImplementation(async input=>{const u=new URL(input);if(u.hostname==='hq.sinajs.cn')return new Response(sinaQuote());if(u.searchParams.get('q')?.includes('sh600519'))return new Response(quote());throw Error('Second batch unavailable')})
+ const r=await f.service.query({action:'quotes',symbols})
+ expect(r.quotes[0]).toMatchObject({code:'600519',price:1263,source:'腾讯财经'})
+ expect(f.fetch.mock.calls.some(([u])=>new URL(u).hostname==='hq.sinajs.cn')).toBe(false)
+})
+it('备用源空报价与畸形时间不生成假行情，两源失败可重新重试',async()=>{
+ const f=fixture()
+ f.fetch.mockImplementation(async input=>new URL(input).hostname==='hq.sinajs.cn'?new Response(sinaQuote().replace('2026-10-09','2026-02-30')):new Response(''))
+ const result=await f.service.query({action:'quotes',symbols:[stock]});expect(result.quotes).toEqual([]);expect(result.errors).toHaveLength(1)
+ f.fetch.mockImplementation(async input=>new URL(input).hostname==='hq.sinajs.cn'?new Response(sinaQuote()):new Response(''))
+ expect((await f.service.query({action:'quotes',symbols:[stock]})).quotes[0].price).toBe(1263)
+})
 it('指数既有当前报价又有实际收盘走势；部分行情缺失不会变成零',async()=>{
  const f=fixture(),index={code:'000300',market:'SH',name:'沪深300'}
  f.fetch.mockImplementation(async(input)=>new URL(input).hostname==='qt.gtimg.cn'?new Response(quote('sh000300','000300','沪深300')):Response.json({code:0,data:{sh000300:{day:history.data.sh600519.day}}}))
