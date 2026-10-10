@@ -140,6 +140,12 @@ body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-
  body .ew-news-list details{margin-top:6px;font-size:11px}
  body .ew-news-list details p{overflow-wrap:anywhere;white-space:pre-wrap}
  @container financial-chrome (max-width:280px){body .ew-financial-header-selector{width:24px;max-width:24px}body .ew-financial-header-selector>button{padding:0!important;justify-content:center!important}body .ew-financial-header-selector>button>:nth-child(n+2){display:none!important}body .ew-grid-header:has(.ew-financial-header-selector)>[data-workbench-ask]{display:none!important}body .ew-grid-header:has(.ew-financial-header-selector input)>:is(.ew-grid-title,.ew-grid-refresh){display:none!important}body .ew-financial-header-selector:has(input){position:static;width:auto;max-width:none;flex:1;margin-right:0}}
+ @container financial-chrome (max-width:340px){
+  body .ew-grid-header:has(.ew-financial-header-selector)>:is(.ew-grid-title,.ew-grid-refresh,[data-workbench-ask]){display:none!important}
+  body .ew-financial-header-selector{width:auto;max-width:none;flex:1;margin-right:4px}
+  body .ew-financial-header-selector>button{justify-content:flex-start!important;padding:0 6px!important}
+  body .ew-financial-header-selector>button>span:nth-child(2){display:block!important}
+ }
  @container(max-width:520px){body .ew-quote-price-line>.ew-quote-change{min-width:0;flex:none}body .ew-quote-price-line>small{display:none}body .ew-chart-legend{grid-template-columns:80px repeat(4,minmax(0,1fr));font-size:10px}body .ew-quote-controls{display:grid;grid-template-columns:1fr auto;gap:4px 12px;min-height:64px;padding-top:4px;padding-bottom:4px;box-sizing:border-box}body .ew-quote-periods{grid-column:1/-1}body .ew-quote-controls>select{grid-column:2;grid-row:2}}
  @container financial-widget (max-width:340px){
   body .ew-watch-columns,body .ew-watch-row{grid-template-columns:minmax(80px,1fr) 70px 64px}
