@@ -40,6 +40,15 @@ describe('builtin free data sources', () => {
   it('parses quoted ECB csv and keeps daily reference currency direction', () => {
     const result = prepareRequest('ecb-fx', { currency: 'CNY' }).normalize('TIME_PERIOD,OBS_VALUE,CURRENCY,CURRENCY_DENOM,NOTE\n2026-10-09,7.7,CNY,EUR,"quoted, text"\n'); expect(result.records[0]).toMatchObject({ value: 7.7, base: 'EUR', currency: 'CNY' }); expect(result.units.value).toBe('CNY per EUR');
   });
+  it('preserves DOI identities and complete native table links with parentheses', () => {
+    const doi = '10.1016/s2212-0963(15)00040-6';
+    const record = prepareRequest('crossref', { query: 'climate risk', limit: 8 }).normalize({ message: { items: [{ DOI: doi, title: ['Editorial Board'], published: { 'date-parts': [[2015]] } }] } }).records[0];
+    expect(record.doi).toBe(doi); expect(record.url).toBe('https://doi.org/10.1016/s2212-0963%2815%2900040-6');
+    const cell = `[${record.doi}](${record.url})`;
+    expect(cell.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/)?.[2]).toBe(record.url);
+    expect(decodeURIComponent(new URL(record.url).pathname.slice(1))).toBe(doi);
+    expect(record.authors).toEqual([]); expect(record.time).toBe('2015');
+  });
   it('distinguishes Chinese index points from security currency in quotes and history', () => {
     const quote = symbol => { const fields = Array(40).fill(''); fields[1] = symbol; fields[3] = '4317.25'; fields[30] = '20261009161400'; return `v_${symbol}="${fields.join('~')}";`; };
     const data = prepareRequest('tencent-quotes', { symbols: ['sh000300','sh600519'] }).normalize(quote('sh000300') + quote('sh600519'));
