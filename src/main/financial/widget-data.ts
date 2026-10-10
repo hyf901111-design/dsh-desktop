@@ -86,10 +86,14 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
    payload(data);result={symbols: symbols.slice(0,20),source:'通联 DataYes'}
   }else if(q.action==='news'){
    const end=stamp(),start=new Date(Date.now()-7*86400000).toLocaleString('sv-SE',{timeZone:'Asia/Shanghai'}).replace(/[- :]/g,'')
-   const value=await api('intelligent_feed',{input:q.query?.trim()??'',onlyChannel:false,publishTimeStart:start,publishTimeEnd:end,pageNow:1,pageSize:3})
+   const parameters={input:q.query?.trim()??'',onlyChannel:false,publishTimeStart:start,publishTimeEnd:end,pageNow:1}
+   // The provider caps MCP response text. Fetch a useful reading list first;
+   // retry a small page only when that cap prevents parsing the response.
+   let value:any
+   try{value=await api('intelligent_feed',{...parameters,pageSize:10})}catch(error){if(!(error instanceof Error)||!error.message.includes('数据过多'))throw error;value=await api('intelligent_feed',{...parameters,pageSize:3})}
    payload(value);const rows=findRows(value)
    result={news:rows.flatMap(r=>{if(typeof r.title!=='string'||!r.title)return [];let link:string|null=null;try{const u=new URL(r.redirect?.url);if(['https:','http:'].includes(u.protocol)&&!u.username&&!u.password)link=u.href}catch{}
-    return [{id:String(r.mongoId??randomUUID()),title:r.title.slice(0,1000),source:String(r.channel??'通联精选资讯'),time:String(r.createTime??r.updateTime??''),url:link,summary:String(r.description??'').slice(0,4000)}]}).slice(0,50),source:'通联 DataYes'}
+    return [{id:String(r.mongoId??randomUUID()),title:r.title.slice(0,1000),source:String(r.channel??'通联精选资讯'),time:String(r.createTime??r.updateTime??''),url:link,summary:String(r.description??'').slice(0,4000)}]}).sort((a,b)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0)).slice(0,10),source:'通联 DataYes'}
   }else{
    const jobs:PromiseSettledResult<any>[]=[],loadSymbol=async(s:SymbolRef)=>{
     if(s.market==='US')throw Error('通联暂未提供该美股行情接口')
