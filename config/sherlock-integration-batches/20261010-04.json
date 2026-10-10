@@ -12,7 +12,7 @@
         "featureName": "内置免费数据源支持分钟自动更新",
         "branch": "codex/feat/free-data-skill-20261010",
         "baseCommit": "db51a136271cb3cfe6dd6f35c251732d4655c5ef",
-        "tipCommit": "bbd96925d43feb003bbb4d3832bec6a859d35160",
+        "tipCommit": "eca12da90d267ee5cd9306debb18722036969812",
         "commits": [
           {
             "commit": "bbd96925d43feb003bbb4d3832bec6a859d35160",
@@ -20,6 +20,13 @@
               "db51a136271cb3cfe6dd6f35c251732d4655c5ef"
             ],
             "subject": "功能：内置免费数据源接入组件分钟刷新与暂停恢复"
+          },
+          {
+            "commit": "eca12da90d267ee5cd9306debb18722036969812",
+            "parents": [
+              "bbd96925d43feb003bbb4d3832bec6a859d35160"
+            ],
+            "subject": "测试：更新免费源刷新协议与内置技能版本验收断言"
           }
         ],
         "files": [
@@ -74,6 +81,14 @@
           {
             "status": "M",
             "path": "test/free-data-sources.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -89,9 +104,9 @@
               "test/component-agent-scope.test.js"
             ],
             "outcome": "passed",
-            "summary": "86项免费取数、自动刷新、映射与作用域检查及类型检查通过",
-            "verifiedCommit": "bbd96925d43feb003bbb4d3832bec6a859d35160",
-            "completedAt": "2026-10-10T23:35:09.150655+00:00",
+            "summary": "免费数据分钟刷新、绑定与现有权限路径聚焦验证通过",
+            "verifiedCommit": "eca12da90d267ee5cd9306debb18722036969812",
+            "completedAt": "2026-10-10T23:36:24.018092+00:00",
             "timeoutMs": 120000
           },
           {
@@ -103,9 +118,25 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "86项免费取数、自动刷新、映射与作用域检查及类型检查通过",
-            "verifiedCommit": "bbd96925d43feb003bbb4d3832bec6a859d35160",
-            "completedAt": "2026-10-10T23:35:15.166874+00:00",
+            "summary": "免费数据分钟刷新、绑定与现有权限路径聚焦验证通过",
+            "verifiedCommit": "eca12da90d267ee5cd9306debb18722036969812",
+            "completedAt": "2026-10-10T23:36:29.776084+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
+              "run",
+              "test/integration-bundled-skill.test.js",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "free data|immutable bundled|scope|offline|permission|connected|grants|source preference"
+            ],
+            "outcome": "passed",
+            "summary": "免费数据分钟刷新、绑定与现有权限路径聚焦验证通过",
+            "verifiedCommit": "eca12da90d267ee5cd9306debb18722036969812",
+            "completedAt": "2026-10-10T23:36:31.728783+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -123,7 +154,7 @@
           "股票休市报价不变，Crypto用实际交易所报价",
           "只有看板可见时自动刷新"
         ],
-        "generatedAt": "2026-10-10T23:35:15.166919+00:00"
+        "generatedAt": "2026-10-10T23:36:31.728830+00:00"
       }
     }
   ],
