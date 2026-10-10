@@ -13,6 +13,15 @@ it('分时绘制实际价格折线和分钟时间，不显示伪造的开高低�
  expect(f.host.querySelector('[data-chart-series=intraday]')).not.toBeNull();expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('09:31');expect(f.host.querySelector('.ew-quote-ohlc').textContent).not.toContain('开 ')
  expect(f.host.querySelector('[data-financial-chart]').textContent).toContain('09:30');expect(f.host.querySelector('[data-financial-chart] svg').getAttribute('aria-label')).toContain('分时')
 })
+it('新闻输入框Enter直接提交关键词，不依赖宿主的隐式表单提交；输入法确认不触发搜索',async()=>{
+ const bridge=service(),f=await fixture({financialWidget:bridge});await f.act(async()=>f.workspace.createFinancialWidget('news'))
+ const input=f.host.querySelector('input[aria-label="搜索相关新闻"]');await f.input(input,' 茅台 ')
+ expect(f.host.contains(input)).toBe(true);expect(input.value).toBe(' 茅台 ')
+ await f.event('focusin',input)
+ await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.workspace.getSnapshot().artifacts[0].containerSpec.query).toBe('')
+ const entered=await f.event('keydown',f.host.querySelector('input[aria-label="搜索相关新闻"]'),{key:'Enter',keyCode:13,isComposing:false});expect(entered.defaultPrevented).toBe(true);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.query).toBe('茅台')
+ await vi.waitFor(()=>expect(bridge.request).toHaveBeenCalledWith(expect.objectContaining({action:'news',query:'茅台'})))
+})
 it('四项列表直接放置、选中和恢复，保留原节点，无配置面板及模型任务',async()=>{
  const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));const items=[...f.document.querySelectorAll('[data-financial-place]')];expect(items.map(x=>x.dataset.financialPlace)).toEqual(['watchlist','quote','indices','news']);await f.event('click',items[0]);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('[role=dialog][open]')).toBeNull()
  await f.act(async()=>['quote','indices','news'].forEach(k=>f.workspace.createFinancialWidget(k)));expect(f.workspace.getSnapshot().artifacts).toHaveLength(4);expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([f.workspace.getSnapshot().artifacts[3].id]);expect(f.host.querySelectorAll('[data-financial-widget]')).toHaveLength(4);expect(f.generation.generate).not.toHaveBeenCalled()
