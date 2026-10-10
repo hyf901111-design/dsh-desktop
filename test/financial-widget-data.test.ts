@@ -49,6 +49,11 @@ it('新闻优先获取十条并按发布时间排序，截断时退回可解析�
  truncated=true;calls.length=0;const fallback=await service.query({action:'news',query:'产业',refresh:true});expect(calls.map(c=>c.arguments.body.pageSize)).toEqual([10,3]);expect(fallback.news).toHaveLength(2);
 })
 
-it('通联工具返回402时明确告知额度用完，权限错误仍使用权限提示',async()=>{
- let quota=true;const request=async(body:string)=>{const b=JSON.parse(body);return Response.json({id:b.id,result:b.params.name==='get_api_info'?{structuredContent:info('POST',undefined,['onlyChannel','publishTimeStart','publishTimeEnd','pageSize'])}:{isError:true,content:[{type:'text',text:quota?'数据查询失败: HTTP 402: 订单额度已用完':'数据查询失败: HTTP 403: 无权限'}]}})};await expect(createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'news',query:''})).rejects.toThrow('通联数据额度已用完');quota=false;await expect(createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'news',query:''})).rejects.toThrow('接口权限');
+it.each(['数据查询失败: HTTP 402: 订单额度已用完','Other MCP: HTTP 402 insufficient credits'])('数据源计费错误使用统一提示，不推断服务商或账户原因：%s',async diagnostic=>{
+ const request=async(body:string)=>{const b=JSON.parse(body);return Response.json({id:b.id,result:{isError:true,content:[{type:'text',text:diagnostic}]}})};
+ await expect(createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'news',query:''})).rejects.toThrow('数据源暂不可用，请检查连接配置或稍后重试');
+})
+it('数据源权限错误保留可操作的通用提示',async()=>{
+ const request=async(body:string)=>{const b=JSON.parse(body);return Response.json({id:b.id,result:{isError:true,content:[{type:'text',text:'HTTP 403: 无权限'}]}})};
+ await expect(createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'news',query:''})).rejects.toThrow('数据源未提供所需数据或接口权限，请稍后重试');
 })

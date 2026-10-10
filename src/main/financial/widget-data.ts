@@ -36,7 +36,7 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
  let sequence=0,owner:string|null=null
  const definitions=new Map<string,Row>(),pendingDefinitions=new Map<string,Promise<Row>>(),cache=new Map<string,{at:number;value:any}>()
  async function query(raw:any):Promise<any>{
-  const account=options.identity();if(!account)throw Error('请先登录 EWork，使用通联数据')
+  const account=options.identity();if(!account)throw Error('请先登录 EWork')
   if(owner!==account){owner=account;definitions.clear();pendingDefinitions.clear();cache.clear()}
   const q=raw as Row
   if(!q||!['search','quotes','history','news'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh'].includes(k))||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
@@ -47,14 +47,14 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
   const {refresh,...cachedQuery}=q,key=JSON.stringify(cachedQuery),prior=cache.get(key);if(!refresh&&prior&&Date.now()-prior.at<(q.action==='search'?300000:60000)){check();return structuredClone(prior.value)}
   const rpc=async(name:string,args:Row)=>{
    check();const id=++sequence,response=await options.request(JSON.stringify({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args}}),signal);check()
-   if(!response.ok){await response.body?.cancel();throw Error(response.status===401||response.status===403?'请登录 EWork 后刷新行情':'通联数据暂时不可用，请重试')}
+   if(!response.ok){await response.body?.cancel();throw Error(response.status===401||response.status===403?'请登录 EWork 后刷新行情':'数据源暂不可用，请检查连接配置或稍后重试')}
    const text=await response.text();check();if(text.length>8*1024*1024)throw Error('数据过多，请缩小范围')
    const reply=JSON.parse(text)
-   if(reply.id!==id||reply.error)throw Error('通联未提供所需数据或接口权限，请稍后重试')
+   if(reply.id!==id||reply.error)throw Error('数据源未提供所需数据或接口权限，请稍后重试')
    if(reply.result?.isError){
     const diagnostic=(reply.result.content??[]).filter((c:any)=>c.type==='text').map((c:any)=>String(c.text??'')).join('\n')
-    if(/HTTP 402\b|订单额度已用完/.test(diagnostic))throw Error('通联数据额度已用完，请联系管理员补充额度')
-    throw Error('通联未提供所需数据或接口权限，请稍后重试')
+    if(/HTTP\s*402\b|额度|quota|credits?|payment required/i.test(diagnostic))throw Error('数据源暂不可用，请检查连接配置或稍后重试')
+    throw Error('数据源未提供所需数据或接口权限，请稍后重试')
    }
    return unpack(reply.result)
   }
@@ -63,9 +63,9 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
   // on DataYes-owned origins with understood parameters can be executed.
   const api=async(nameEn:string,values:Row)=>{
    let def=definitions.get(nameEn)
-   if(!def){let pending=pendingDefinitions.get(nameEn);if(!pending){pending=(async()=>{const found=definition(await rpc('get_api_info',{nameEn}));if(!found)throw Error('通联暂未提供此市场接口');check();definitions.set(nameEn,found);return found})();pendingDefinitions.set(nameEn,pending)}try{def=await pending}finally{if(pendingDefinitions.get(nameEn)===pending)pendingDefinitions.delete(nameEn)}}
+   if(!def){let pending=pendingDefinitions.get(nameEn);if(!pending){pending=(async()=>{const found=definition(await rpc('get_api_info',{nameEn}));if(!found)throw Error('数据源暂未提供此市场接口');check();definitions.set(nameEn,found);return found})();pendingDefinitions.set(nameEn,pending)}try{def=await pending}finally{if(pendingDefinitions.get(nameEn)===pending)pendingDefinitions.delete(nameEn)}}
    check();const u=new URL(def.httpUrl)
-   if(u.protocol!=='https:'||u.username||u.password||!['datayes.com','wmcloud.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h))||!(['GET'].includes(String(def.httpMethod).toUpperCase())||nameEn==='intelligent_feed'&&def.httpMethod==='POST'))throw Error('金融组件仅支持已核验的通联只读数据接口')
+   if(u.protocol!=='https:'||u.username||u.password||!['datayes.com','wmcloud.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h))||!(['GET'].includes(String(def.httpMethod).toUpperCase())||nameEn==='intelligent_feed'&&def.httpMethod==='POST'))throw Error('此数据接口暂不支持固定组件')
    const params=def.parametersInput;if(!Array.isArray(params))throw Error('接口参数定义不可用')
    const url_params:Record<string,string>={},body:Row={}
    for(const p of params){const name=p.name??p.parameterName,location=String(p.location??'Query').toLowerCase();if(typeof name!=='string'||!['query','body'].includes(location))throw Error('此接口暂不支持固定组件')
@@ -73,10 +73,10 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
     if(value!==undefined&&value!==null)location==='body'?body[name]=value:url_params[name]=String(value)
     else if(p.required===true||p.isRequired===true)throw Error('此市场接口需要额外参数，暂不支持固定组件')
    }
-   const response=await rpc('call_api',{nameEn,http_method:def.httpMethod,url:u.href,...(def.httpMethod==='GET'?{url_params}:{body})});if(typeof response==='string')throw Error(response.includes('截断')?'通联返回数据过多，请缩小搜索范围':'通联未返回可解析的数据');return response
+   const response=await rpc('call_api',{nameEn,http_method:def.httpMethod,url:u.href,...(def.httpMethod==='GET'?{url_params}:{body})});if(typeof response==='string')throw Error(response.includes('截断')?'返回数据过多，请缩小搜索范围':'数据源未返回可解析的数据');return response
   }
   let result:any
-  const payload=(v:any):any=>{v=unpack(v);for(let i=0;i<6;i++){if(v?.code!==undefined&&![0,1,200].includes(v.code)||v?.retCode!==undefined&&v.retCode!==1)throw Error('通联未取得有效数据，请检查市场权限或稍后重试');if(v?.data===undefined)return v;v=unpack(v.data)}return v}
+  const payload=(v:any):any=>{v=unpack(v);for(let i=0;i<6;i++){if(v?.code!==undefined&&![0,1,200].includes(v.code)||v?.retCode!==undefined&&v.retCode!==1)throw Error('未取得有效数据，请检查数据源权限或稍后重试');if(v?.data===undefined)return v;v=unpack(v.data)}return v}
   const stamp=()=>new Date().toLocaleString('sv-SE',{timeZone:'Asia/Shanghai'}).replace(/[- :]/g,'')
   if(q.action==='search'){
    const keyword=q.query.trim(),exact=/^\d{5,6}$/.test(keyword),exchanges:Row={XSHG:'SH',XSHE:'SZ',XBEI:'BJ',XHKG:'HK'}
@@ -102,7 +102,7 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
     return [{id:String(r.mongoId??randomUUID()),title:r.title.slice(0,1000),source:String(r.channel??'通联精选资讯'),time:String(r.createTime??r.updateTime??''),url:link,summary:String(r.description??'').slice(0,4000)}]}).sort((a,b)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0)).slice(0,10),source:'通联 DataYes'}
   }else{
    const jobs:PromiseSettledResult<any>[]=[],loadSymbol=async(s:SymbolRef)=>{
-    if(s.market==='US')throw Error('通联暂未提供该美股行情接口')
+    if(s.market==='US')throw Error('数据源暂未提供该美股行情接口')
     const index=q.asset==='index',end=stamp().slice(0,8)
     if(q.action==='history'){
      if(q.period==='1m')throw Error('当前图表接口暂不提供分钟行情')
