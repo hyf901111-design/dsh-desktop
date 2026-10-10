@@ -97,6 +97,66 @@
           "新闻键盘提交修复待后继本地集成包可见验收"
         ],
         "generatedAt": "2026-10-10T09:40:20.909009+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4b1167c508c2fa4e23efcc61d2860fbf6dfde4bc",
+        "verificationCommit": "4b1167c508c2fa4e23efcc61d2860fbf6dfde4bc",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "ci"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm ci",
+            "verifiedCommit": "4b1167c508c2fa4e23efcc61d2860fbf6dfde4bc",
+            "completedAt": "2026-10-10T09:42:12.782Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/financial-widget-contract.test.js",
+              "test/financial-widget-data.test.ts",
+              "test/financial-widget-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
+            "verifiedCommit": "4b1167c508c2fa4e23efcc61d2860fbf6dfde4bc",
+            "completedAt": "2026-10-10T09:42:12.782Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4b1167c508c2fa4e23efcc61d2860fbf6dfde4bc",
+            "completedAt": "2026-10-10T09:42:12.782Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "-t",
+              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
+            "verifiedCommit": "4b1167c508c2fa4e23efcc61d2860fbf6dfde4bc",
+            "completedAt": "2026-10-10T09:42:12.782Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-10T09:42:12.782Z"
       }
     }
   ],
