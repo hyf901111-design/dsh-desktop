@@ -46,6 +46,14 @@ body [data-ework-grid][data-workbench-style=light], body [data-ework-grid][data-
  body .ew-watch-columns>:nth-child(n+2){text-align:right}
  body .ew-watch-columns>:last-child{padding-right:12px}
  body .ew-watch-rows{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+ body :is(.ew-indices-grid>div,.ew-quote-price-line,.ew-quote-ohlc,.ew-news-list>article){position:relative}
+ body .ew-financial-data-pulse{display:block!important;position:absolute;inset:0;margin:0!important;padding:0!important;border:0!important;border-radius:3px;pointer-events:none;z-index:2;background:#139dff38;box-shadow:inset 0 0 0 1px #139dff70;animation:ew-financial-data-refresh 1.2s ease-out forwards}
+ body .ew-financial-data-pulse[data-refresh-direction=up]{background:#08998148;box-shadow:inset 0 0 0 1px #08998188}
+ body .ew-financial-data-pulse[data-refresh-direction=down]{background:#ff3b5040;box-shadow:inset 0 0 0 1px #ff3b5088}
+ body .ew-price-chart>.ew-financial-data-pulse{background:#139dff12;box-shadow:inset 0 0 0 1px #139dff90}
+ @keyframes ew-financial-data-refresh{0%{opacity:0}12%{opacity:1}45%{opacity:.7}100%{opacity:0}}
+ @media(prefers-reduced-motion:reduce){body .ew-financial-data-pulse{animation:none;opacity:.65}}
+
  body .ew-watch-row{height:36px;box-sizing:border-box;position:relative;background:var(--fw-row)!important;outline-offset:-1px}
  body .ew-watch-row:nth-child(even){background:var(--fw-alternate)!important}
  body .ew-watch-row:focus-visible{outline:1px solid #249bfa}
