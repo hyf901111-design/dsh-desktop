@@ -105,9 +105,11 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body .ew-financial-status{flex:none;display:flex;align-items:center;gap:6px;max-height:48px;overflow:auto;padding:4px 6px;color:var(--fw-muted);font-size:11px;line-height:16px}
  body .ew-financial-status>span{flex:1}
  body .ew-financial-status>button{flex:none}
- body .ew-financial-empty{flex:1;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;padding:16px;min-height:50px;text-align:center;color:var(--fw-muted);font-size:12px;box-sizing:border-box}
- body .ew-financial-empty p{margin:0;max-width:320px;line-height:20px;overflow-wrap:anywhere}
- body .ew-financial-empty button{flex:none;min-width:56px;border:1px solid var(--fw-border)!important}
+ body .ew-financial-empty{flex:1;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;padding:16px;min-height:0;min-width:0;text-align:center;color:var(--fw-muted);font-size:12px;box-sizing:border-box}
+ body .ew-financial-empty p{margin:0;max-width:min(320px,100%);line-height:20px;overflow-wrap:anywhere}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget button.ew-financial-retry{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:none!important;min-width:48px!important;white-space:nowrap!important;border:1px solid var(--fw-border)!important;background:var(--fw-card)!important;padding:2px 10px!important;color:var(--fw-text)!important;transition:background-color .12s,border-color .12s}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget button.ew-financial-retry:is(:hover,:focus-visible){border-color:var(--fw-accent)!important;background:var(--fw-control)!important}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget button.ew-financial-retry:active{background:var(--fw-heading)!important}
  body .ew-financial-quote{overflow:hidden}
  body .ew-financial-quote>:is(.ew-quote-price-line,.ew-quote-ohlc,.ew-quote-controls,.ew-price-chart){min-width:0}
  body .ew-grid-header:has(.ew-financial-header-selector){container-type:inline-size;container-name:financial-chrome}
@@ -201,9 +203,9 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
   body .ew-chart-legend{display:none}
   body .ew-financial-footer{height:20px;font-size:10px!important}
   body [data-ework-grid] [data-research-node-id] .ew-financial-footer>button{height:20px!important;min-height:20px!important;padding:1px 4px!important}
-  body .ew-financial-empty{flex-direction:row;min-height:0;padding:4px;gap:4px;font-size:11px}
+  body .ew-financial-empty{padding:4px 8px;gap:6px;font-size:11px}
   body .ew-financial-empty p{line-height:14px}
-  body .ew-financial-empty button{min-width:40px}
+  body [data-ework-grid] [data-research-node-id] .ew-financial-widget button.ew-financial-retry{height:20px!important;min-height:20px!important;padding:1px 8px!important}
   body .ew-news-search{height:32px;padding-top:2px}
   body .ew-news-search>.ew-financial-icon{top:8px;left:16px}
   body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-news-search input[type=search][aria-label]{height:24px!important;min-height:24px!important;padding:3px 8px 3px 28px!important}

@@ -32,7 +32,8 @@ function definition(value:any):Row|null{
  if(v&&typeof v==='object')for(const x of Object.values(v)){if(x&&typeof x==='object'){const found=definition(x);if(found)return found}}
  return null
 }
-export function createFinancialWidgetData(options:{request:(body:string,signal:AbortSignal)=>Promise<Response>;identity:()=>string|null}){
+type FinancialTransport={callTool:(name:string,args:Row,signal:AbortSignal)=>Promise<unknown>}|{request:(body:string,signal:AbortSignal)=>Promise<Response>}
+export function createFinancialWidgetData(options:FinancialTransport&{identity:()=>string|null}){
  let sequence=0,owner:string|null=null
  const definitions=new Map<string,Row>(),pendingDefinitions=new Map<string,Promise<Row>>(),cache=new Map<string,{at:number;value:any}>()
  async function query(raw:any):Promise<any>{
@@ -46,17 +47,22 @@ export function createFinancialWidgetData(options:{request:(body:string,signal:A
   const signal=AbortSignal.timeout(55000),check=()=>{signal.throwIfAborted();if(options.identity()!==account)throw Error('账户已变化，取消旧行情请求')}
   const {refresh,...cachedQuery}=q,key=JSON.stringify(cachedQuery),prior=cache.get(key);if(!refresh&&prior&&Date.now()-prior.at<(q.action==='search'?300000:60000)){check();return structuredClone(prior.value)}
   const rpc=async(name:string,args:Row)=>{
-   check();const id=++sequence,response=await options.request(JSON.stringify({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args}}),signal);check()
-   if(!response.ok){await response.body?.cancel();throw Error(response.status===401||response.status===403?'请登录 EWork 后刷新行情':'数据源暂不可用，请检查连接配置或稍后重试')}
-   const text=await response.text();check();if(text.length>8*1024*1024)throw Error('数据过多，请缩小范围')
-   const reply=JSON.parse(text)
-   if(reply.id!==id||reply.error)throw Error('数据源未提供所需数据或接口权限，请稍后重试')
-   if(reply.result?.isError){
-    const diagnostic=(reply.result.content??[]).filter((c:any)=>c.type==='text').map((c:any)=>String(c.text??'')).join('\n')
+   check();let result:any
+   if('callTool' in options){result=await options.callTool(name,args,signal);check()}
+   else{
+    const id=++sequence,response=await options.request(JSON.stringify({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args}}),signal);check()
+    if(!response.ok){await response.body?.cancel();throw Error(response.status===401||response.status===403?'请登录 EWork 后刷新行情':'数据源暂不可用，请检查连接配置或稍后重试')}
+    const text=await response.text();check();if(text.length>8*1024*1024)throw Error('数据过多，请缩小范围')
+    const reply=JSON.parse(text)
+    if(reply.id!==id||reply.error)throw Error('数据源未提供所需数据或接口权限，请稍后重试')
+    result=reply.result
+   }
+   if(result?.isError){
+    const diagnostic=(result.content??[]).filter((c:any)=>c.type==='text').map((c:any)=>String(c.text??'')).join('\n')
     if(/HTTP\s*402\b|额度|quota|credits?|payment required/i.test(diagnostic))throw Error('数据源暂不可用，请检查连接配置或稍后重试')
     throw Error('数据源未提供所需数据或接口权限，请稍后重试')
    }
-   return unpack(reply.result)
+   return unpack(result)
   }
   // Names are DataYes catalogue identifiers, never URLs supplied by the renderer.
   // Live definitions are required before every first use, and only GET definitions
