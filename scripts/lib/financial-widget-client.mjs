@@ -78,10 +78,10 @@ export function financialQuoteInfo(quotes,now=new Date(),fallbackSource=''){
   // During scheduled hours, only a recent upstream timestamp counts as updating.
   let state=!known?'时效待确认':weekend?'休市':minute<start?'盘前':minute>=end?'休市':lunch!==null&&minute>=lunch&&minute<780?'午间休市':time&&time.year===current.year&&time.month===current.month&&time.day===current.day&&now.getTime()-stamp>=-60000&&now.getTime()-stamp<=180000?'更新中':'时效待确认'
   const day=time?time.month+'/'+time.day:q.asOf?.slice(5).replace('-','/')||'',clock=time?time.hour+':'+time.minute:'',full=time?`${time.year}-${time.month}-${time.day} ${clock}:${time.second}`:(q.asOf||'日期未提供')+' · 时刻未提供'
-  return {market:q.market,state,day,clock,stamp,source:q.source||fallbackSource,title:`${q.name||q.code} ${q.code||''} · ${q.source||fallbackSource} · 行情 ${full} (${zone}) · ${state}`}
+  return {zone,state,day,clock,stamp,source:q.source||fallbackSource,title:`${q.name||q.code} ${q.code||''} · ${q.source||fallbackSource} · 行情 ${full} (${zone}) · ${state}`}
  })
- const sources=[...new Set(rows.map(r=>r.source).filter(Boolean))].join(' / ')||fallbackSource,states=[...new Set(rows.map(r=>r.state))],markets=new Set(rows.map(r=>r.market)),oldest=rows.filter(r=>Number.isFinite(r.stamp)).sort((a,b)=>a.stamp-b.stamp)[0]||rows[0],state=states.length===1?states[0]:states.length?'分市场':''
- const time=markets.size>1?'各市场时刻':oldest?.clock?oldest.day+' '+oldest.clock:oldest?.day?oldest.day+' · 时刻未确认':'时刻未确认'
+ const sources=[...new Set(rows.map(r=>r.source).filter(Boolean))].join(' / ')||fallbackSource,states=[...new Set(rows.map(r=>r.state))],zones=new Set(rows.map(r=>r.zone)),oldest=rows.filter(r=>Number.isFinite(r.stamp)).sort((a,b)=>a.stamp-b.stamp)[0]||rows[0],state=states.length===1?states[0]:states.length?'分市场':''
+ const time=zones.size>1?'各市场时刻':oldest?.clock?oldest.day+' '+oldest.clock:oldest?.day?oldest.day+' · 时刻未确认':'时刻未确认'
  return {state,text:sources?`${sources} · 行情 ${time}`:'未取得数据',title:rows.map(r=>r.title).join('\n')}
 }
 export function FinancialNewsItem({news,pulse}){

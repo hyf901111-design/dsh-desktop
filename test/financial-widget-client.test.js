@@ -10,6 +10,8 @@ it('行情标注区分上游时刻、休市和获取时间，按各市场时区�
  const q={...s,source:'新浪财经',quotedAt:'2026-10-09T07:34:59Z',asOf:'2026-10-09'}
  const info=financialClient.financialQuoteInfo([q],new Date('2026-10-10T03:00:00Z'))
  expect(info.state).toBe('休市');expect(info.text).toContain('新浪财经 · 行情 10/09 15:34');expect(info.title).toContain('15:34:59');expect(info.title).toContain('Asia/Shanghai')
+ const mainland=financialClient.financialQuoteInfo([q,{...other,source:'新浪财经',quotedAt:'2026-10-09T07:36:00Z'}],new Date('2026-10-10T03:00:00Z'))
+ expect(mainland.text).toContain('行情 10/09 15:34');expect(mainland.text).not.toContain('各市场')
  const us={market:'US',code:'AAPL',name:'苹果',source:'腾讯财经',quotedAt:'2026-10-09T20:00:01Z'}
  expect(financialClient.financialQuoteInfo([us],new Date('2026-10-09T20:10:00Z')).text).toContain('10/09 16:00')
  expect(financialClient.financialQuoteInfo([us],new Date('2026-10-12T01:30:00Z')).state).toBe('休市')
