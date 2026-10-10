@@ -1,4 +1,4 @@
-import { freeDataInstruction } from './public-data-tool.js'
+import { freeDataInstruction } from './free-data-skill.js'
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { workbenchCreationRequest } from './workbench-execution-policy.js'
 
