@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "固定金融组件库",
         "branch": "codex/feat/component-library-20261009",
-        "baseCommit": "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd",
-        "tipCommit": "b07c7b306691e30424c3bf6514932f1e8deb59cb",
+        "baseCommit": "b07c7b306691e30424c3bf6514932f1e8deb59cb",
+        "tipCommit": "82bfd5b5928c50a5d7d46b6ac57e92096cb6563e",
         "commits": [
           {
-            "commit": "b07c7b306691e30424c3bf6514932f1e8deb59cb",
+            "commit": "82bfd5b5928c50a5d7d46b6ac57e92096cb6563e",
             "parents": [
-              "cd3fd1d8ed87778dd3387b966f95f2770f7eeefd"
+              "b07c7b306691e30424c3bf6514932f1e8deb59cb"
             ],
-            "subject": "修正沪深组件同一时区行情时刻的显示"
+            "subject": "修复指数最小高度趋势显示并统一涨红跌绿配色"
           }
         ],
         "files": [
@@ -29,7 +29,7 @@
           },
           {
             "status": "M",
-            "path": "test/financial-widget-client.test.js"
+            "path": "scripts/lib/financial-widget.css"
           }
         ],
         "checks": [
@@ -41,15 +41,15 @@
               "test/financial-widget-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "40项组件客户端检查通过，新增沪深同一时区直接显示实际行情时刻的回归断言",
-            "verifiedCommit": "b07c7b306691e30424c3bf6514932f1e8deb59cb",
-            "completedAt": "2026-10-10T11:53:53.390993+00:00",
+            "summary": "40项组件客户端检查通过；指数紧凑布局与金融配色调整已写入补丁",
+            "verifiedCommit": "82bfd5b5928c50a5d7d46b6ac57e92096cb6563e",
+            "completedAt": "2026-10-10T12:41:05.036376+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "前继集成包已在真实客户端显示四项实际数据、休市及完整行情时刻提示，并从19:52自动刷新至19:53；修正现场发现的沪深同一时区标签后，客户端40项检查通过，新包可见验收待完成。"
+          "summary": "在前继真实客户端复现最小高度隐藏折线、窄窗口末列裁切和上涨显示绿色的问题；本次紧凑布局与配色已通过40项检查，新集成包可见核验待完成。"
         },
         "acceptanceCriteria": [
           "四项组件与主Page正式设计保持图标、字号、内边距、表格和图表层次一致，整理保留内容高度和不同宽度",
@@ -63,7 +63,7 @@
           "组件库删除底部说明，统一整理菜单外观，关闭图标居中，加号有鼠标悬停反馈",
           "联想空输入仅显示输入框，结果只呈现候选，保留方向键和Enter/Escape交互",
           "四项固定组件复用通用组件最小宽高，紧凑状态精简信息，放大与整理恢复完整布局且配置不丢失",
-          "每次有效手动和自动刷新在实际更新数据区域短暂高亮；上升绿色、下降红色、不变蓝色；失败/过期响应不显示成功提示，布局与交互状态保持",
+          "每次有效手动和自动刷新在实际更新数据区域短暂高亮；上升红色、下降绿色、不变蓝色；失败/过期响应不显示成功提示，布局与交互状态保持",
           "标准整理按当前网格列和跨列关系就近补空，延迟高度校准不改变列数或列宽，单列和不等宽布局保持",
           "刷新背景无边框、outline和阴影，选择框仍沿用客户端规范",
           "底栏不再扣除80px画布高度，预留安全空间放在可滚动内容末尾",
@@ -81,74 +81,16 @@
           "腾讯沪深报价失败或缺失时自动从新浪补齐；有效主源报价不被覆盖；实际来源明确，刷新继续每60秒执行",
           "上游行情完整时刻、各市场时区和最近获取时间独立呈现；窄组件状态与悬停信息可读",
           "周末、盘前及午间休市按市场时区标注；盘中缺少新鲜上游时刻不能标成实时",
-          "沪深等同一时区的多个报价在页脚直接显示最早实际时刻，跨时区仍在提示中分别显示"
+          "沪深等同一时区的多个报价在页脚直接显示最早实际时刻，跨时区仍在提示中分别显示",
+          "市场指数在通用最小高度仍显示走势；宽布局压缩数字区并保留折线，窄布局提供同行微型折线，不提高最小尺寸",
+          "固定金融组件的数字、涨跌幅色块、K线和成交量及刷新反馈采用涨红跌绿，三种主题方向一致"
         ],
         "risks": [
           "免费公开源时效及可用性受来源影响；交易时段的实际延迟尚需开市验收",
           "新浪备用仅覆盖沪深报价；K线分时及指数历史趋势继续来自腾讯；港美股主源未改变",
-          "新的行情页脚待后继本地集成包可见验收；工作日节假日或停牌不依靠时钟猜测"
+          "新紧凑指数和涨跌配色待本地集成包可见核验；工作日节假日或停牌不依靠时钟猜测"
         ],
-        "generatedAt": "2026-10-10T09:40:20.909009+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d03726460e5bbdff9359866fb25c8b3c6a698584",
-        "verificationCommit": "d03726460e5bbdff9359866fb25c8b3c6a698584",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "ci"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm ci",
-            "verifiedCommit": "d03726460e5bbdff9359866fb25c8b3c6a698584",
-            "completedAt": "2026-10-10T11:54:50.445Z",
-            "timeoutMs": 600000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/financial-widget-contract.test.js",
-              "test/financial-widget-data.test.ts",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/financial-widget-contract.test.js test/financial-widget-data.test.ts test/financial-widget-client.test.js",
-            "verifiedCommit": "d03726460e5bbdff9359866fb25c8b3c6a698584",
-            "completedAt": "2026-10-10T11:54:50.445Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d03726460e5bbdff9359866fb25c8b3c6a698584",
-            "completedAt": "2026-10-10T11:54:50.445Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/research-grid-client.test.js",
-              "-t",
-              "重复补丁恢复|已有补丁客户端|表格所有表头|共享只读"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/research-grid-client.test.js -t 重复补丁恢复|已有补丁客户端|表格所有表头|共享只读",
-            "verifiedCommit": "d03726460e5bbdff9359866fb25c8b3c6a698584",
-            "completedAt": "2026-10-10T11:54:50.445Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-10T11:54:50.445Z"
+        "generatedAt": "2026-10-10T12:41:05.036376+00:00"
       }
     }
   ],
