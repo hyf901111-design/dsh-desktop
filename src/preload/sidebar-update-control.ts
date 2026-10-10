@@ -51,6 +51,12 @@ export class SidebarUpdateControl {
 
   async checkFromAbout(check: () => Promise<UpdateStatus>): Promise<UpdateStatus> {
     this.aboutChecks++
+    // Settings replaces the sidebar footer; hide the existing body-level
+    // notice before render attempts to find that temporarily absent footer.
+    if (this.status && isCheckNotice(this.status) && this.panel) {
+      this.panel.hidden = true
+      this.button?.setAttribute('aria-expanded', 'false')
+    }
     if (this.status) this.render(this.status)
     try {
       const result = await check()

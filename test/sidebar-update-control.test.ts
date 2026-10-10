@@ -192,3 +192,16 @@ it('uses the About IPC result even if its broadcast arrives after the reply',asy
  control.render(available)
  expect(panel(document).hidden).toBe(false)
 })
+
+it('closes an existing discovery bubble when About replaces the sidebar footer',async()=>{
+ const {document,control}=fixture();control.render(available)
+ expect(panel(document).hidden).toBe(false)
+ document.querySelector('[data-dsh-sidebar-root]')!.remove()
+ let finish!: (status:UpdateStatus)=>void
+ const checking=control.checkFromAbout(()=>new Promise<UpdateStatus>(resolve=>{finish=resolve}))
+ expect(panel(document).hidden).toBe(true)
+ finish(available);await checking
+ document.body.insertAdjacentHTML('beforeend','<aside data-dsh-sidebar-root><footer data-dsh-sidebar-footer></footer></aside>')
+ control.mount()
+ expect(panel(document).hidden).toBe(true)
+})
