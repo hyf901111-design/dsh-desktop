@@ -1,0 +1,559 @@
+{
+  "version": 1,
+  "reviewedOn": "2026-10-10",
+  "sources": [
+    {
+      "id": "world-bank",
+      "name": "世界银行 Indicators",
+      "category": "macro",
+      "documentation": "https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation",
+      "coverage": "全球国家宏观年度指标",
+      "parameters": {
+        "country": "ISO三字国家代码，或WLD",
+        "indicator": "指标代码，如NY.GDP.MKTP.CD/SP.POP.TOTL/FP.CPI.TOTL.ZG",
+        "start": "起始年，1900–当前年",
+        "end": "结束年，最长30年"
+      },
+      "example": {
+        "country": "CHN",
+        "indicator": "NY.GDP.MKTP.CD",
+        "start": 2020,
+        "end": 2025
+      },
+      "cacheSeconds": 86400,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "年度数据可能缺失或修订；不是实时指标",
+      "rights": "世界银行数据通常CC BY 4.0，按具体数据集例外核实：https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "ecb-fx",
+      "name": "欧洲央行日参考汇率",
+      "category": "fx",
+      "documentation": "https://data.ecb.europa.eu/help/api/data-examples",
+      "coverage": "相对1 EUR的日参考汇率",
+      "parameters": {
+        "currency": "三字货币代码，如USD/CNY/JPY",
+        "limit": "1–100条"
+      },
+      "example": {
+        "currency": "USD",
+        "limit": 10
+      },
+      "cacheSeconds": 3600,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "工作日发布的参考汇率，不是可交易的实时外汇报价",
+      "rights": "ECB统计数据使用及署名：https://www.ecb.europa.eu/services/disclaimer/html/index.en.html",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "kraken-ticker",
+      "name": "Kraken 公开报价",
+      "category": "crypto",
+      "documentation": "https://docs.kraken.com/api-reference/market-data/get-ticker-information",
+      "coverage": "交易所指定交易对快照",
+      "parameters": {
+        "pair": "XBTUSD/ETHUSD等交易对"
+      },
+      "example": {
+        "pair": "XBTUSD"
+      },
+      "cacheSeconds": 60,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "交易所快照不是全市场价格；ticker无报价时点，不能以获取时间代替。K线末项可能尚未收盘。",
+      "rights": "按Kraken及地区使用条款核实，公开API不等于不限再分发授权",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "kraken-candles",
+      "name": "Kraken 公开K线",
+      "category": "crypto",
+      "documentation": "https://docs.kraken.com/api-reference/market-data/get-ohlc-data",
+      "coverage": "指定交易对OHLC与基础资产成交量",
+      "parameters": {
+        "pair": "XBTUSD/ETHUSD",
+        "interval": "1/5/15/30/60/240/1440/10080/21600分钟",
+        "limit": "1–100，默认30"
+      },
+      "example": {
+        "pair": "XBTUSD",
+        "interval": 1440,
+        "limit": 30
+      },
+      "cacheSeconds": 60,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "交易所快照不是全市场价格；ticker无报价时点，不能以获取时间代替。K线末项可能尚未收盘。",
+      "rights": "按Kraken及地区使用条款核实，公开API不等于不限再分发授权",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "coinbase-ticker",
+      "name": "Coinbase Exchange 报价",
+      "category": "crypto",
+      "documentation": "https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-ticker",
+      "coverage": "指定交易对的交易所快照",
+      "parameters": {
+        "product": "交易对，如BTC-USD/ETH-USD"
+      },
+      "example": {
+        "product": "BTC-USD"
+      },
+      "cacheSeconds": 60,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "仅该交易所报价；网络/地区可用性和交易所条款适用",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "coinbase-candles",
+      "name": "Coinbase Exchange K线",
+      "category": "crypto",
+      "documentation": "https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-candles",
+      "coverage": "交易对OHLC与基础资产成交量",
+      "parameters": {
+        "product": "如BTC-USD",
+        "granularity": "60/300/900/3600/21600/86400秒",
+        "limit": "1–100，默认30"
+      },
+      "example": {
+        "product": "BTC-USD",
+        "granularity": 86400,
+        "limit": 30
+      },
+      "cacheSeconds": 60,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "接口不保证无成交时间段完整；成交量单位为基础资产，不是USD",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "met-weather",
+      "name": "MET Norway 天气预报",
+      "category": "weather",
+      "documentation": "https://docs.api.met.no/doc/TermsOfService.html",
+      "coverage": "全球坐标点预报",
+      "parameters": {
+        "lat": "-90至90",
+        "lon": "-180至180",
+        "limit": "1–100，默认24"
+      },
+      "example": {
+        "lat": 31.23,
+        "lon": 121.47,
+        "limit": 24
+      },
+      "cacheSeconds": 600,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "为模式预报，非实测；标明发布时间和有效时间。识别应用User-Agent，遵守缓存",
+      "rights": "CC BY 4.0，署名MET Norway：https://docs.api.met.no/doc/License.html",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "usgs-earthquakes",
+      "name": "USGS 地震目录",
+      "category": "geography",
+      "documentation": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "coverage": "全球最近24小时地震",
+      "parameters": {
+        "minMagnitude": "-2至10，默认2.5",
+        "limit": "1–100，默认20"
+      },
+      "example": {
+        "minMagnitude": 4,
+        "limit": 20
+      },
+      "cacheSeconds": 60,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "初步事件会修订；深度km，震级非能量。统计只覆盖本次查询返回项",
+      "rights": "美国政府公开数据；第三方例外遵守USGS说明",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "crossref",
+      "name": "Crossref 论文元数据",
+      "category": "research",
+      "documentation": "https://www.crossref.org/documentation/retrieve-metadata/rest-api/access-and-authentication/",
+      "coverage": "DOI论文/出版物元数据",
+      "parameters": {
+        "query": "最多200字符",
+        "limit": "1–100，默认10"
+      },
+      "example": {
+        "query": "climate risk",
+        "limit": 10
+      },
+      "cacheSeconds": 3600,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "无密钥公共池5请求/秒且并发1；本客户端串行。元数据不是全文，缺失作者/摘要不补造",
+      "rights": "元数据及摘要许可不同；不下载全文，不声称摘要开放许可",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "github-repo",
+      "name": "GitHub 公开仓库",
+      "category": "software",
+      "documentation": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "coverage": "公开仓库元数据和计数",
+      "parameters": {
+        "repo": "owner/repository"
+      },
+      "example": {
+        "repo": "microsoft/vscode"
+      },
+      "cacheSeconds": 300,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "匿名60次/小时；星标不是用户数，fork不是活跃开发者",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "npm-downloads",
+      "name": "npm 下载统计",
+      "category": "software",
+      "documentation": "https://github.com/npm/registry/blob/main/docs/download-counts.md",
+      "coverage": "公开软件包下载次数",
+      "parameters": {
+        "package": "包名，可带@scope",
+        "period": "last-day/last-week/last-month"
+      },
+      "example": {
+        "package": "react",
+        "period": "last-week"
+      },
+      "cacheSeconds": 3600,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "下载次数不是独立用户；统计覆盖区间见start/end",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "gdelt-news",
+      "name": "GDELT 新闻发现",
+      "category": "news",
+      "documentation": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
+      "coverage": "全球新闻标题与原文链接",
+      "parameters": {
+        "query": "2–200字符检索",
+        "limit": "1–100，默认10"
+      },
+      "example": {
+        "query": "climate",
+        "limit": 10
+      },
+      "cacheSeconds": 900,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "seendate是索引发现时间，不等于报道发布时间；不复制全文，新闻版权归原媒体",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "tencent-quotes",
+      "name": "腾讯财经公开报价",
+      "category": "market",
+      "documentation": "https://gu.qq.com/",
+      "coverage": "A股/港股/部分美股及指数",
+      "parameters": {
+        "symbols": "1–12个代码数组，sh600519/sz000858/hk00700/usAAPL"
+      },
+      "example": {
+        "symbols": [
+          "sh600519",
+          "sz000858",
+          "sh000300"
+        ]
+      },
+      "cacheSeconds": 60,
+      "access": "public-web-best-effort",
+      "authentication": "none",
+      "limitations": "无稳定官方API文档；尽力而为，可能延迟/停用/地区受限，不能承诺交易级实时",
+      "rights": "公开网页可访问不等于商业再分发授权；按腾讯及交易所条款核实",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "tencent-history",
+      "name": "腾讯财经公开日K",
+      "category": "market",
+      "documentation": "https://gu.qq.com/",
+      "coverage": "A股及港股未复权日OHLC",
+      "parameters": {
+        "symbol": "sh600519/sz000858/hk00700",
+        "limit": "1–100，默认30"
+      },
+      "example": {
+        "symbol": "sh600519",
+        "limit": 30
+      },
+      "cacheSeconds": 300,
+      "access": "public-web-best-effort",
+      "authentication": "none",
+      "limitations": "无稳定官方API文档；未复权，不提供分钟线，成交量原始单位未核实时不得写万手",
+      "rights": "公开网页可访问不等于商业再分发授权",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "sina-news",
+      "name": "新浪财经滚动资讯",
+      "category": "news",
+      "documentation": "https://finance.sina.com.cn/roll/",
+      "coverage": "财经新闻标题、来源与链接",
+      "parameters": {
+        "limit": "1–100，默认20"
+      },
+      "example": {
+        "limit": 20
+      },
+      "cacheSeconds": 60,
+      "access": "public-web-best-effort",
+      "authentication": "none",
+      "limitations": "无稳定官方API文档，尽力而为；保留原文链接，不复制全文",
+      "rights": "标题与正文权利按原媒体及新浪条款",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "eurostat",
+      "name": "Eurostat",
+      "category": "macro",
+      "documentation": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction",
+      "coverage": "欧盟统计，JSON-stat/SDMX",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 86400,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "官方免费接口；数据集更新不等于每项统计更新，保留维度和单位",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "sec-edgar",
+      "name": "SEC EDGAR",
+      "category": "disclosures",
+      "documentation": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "coverage": "美国上市公司申报与XBRL facts",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 3600,
+      "access": "official-open",
+      "authentication": "contact-user-agent",
+      "limitations": "配置真实可联系的User-Agent并遵守fair access，通常不超过10请求/秒；不虚构联系邮箱",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "nasa-power",
+      "name": "NASA POWER",
+      "category": "energy",
+      "documentation": "https://power.larc.nasa.gov/docs/services/api/",
+      "coverage": "太阳辐射、气象、能源历史分析",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 86400,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "官方免密钥；历史/再分析不是实时观测，按参数区分单位并保留缺失哨兵",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "nws",
+      "name": "NOAA NWS",
+      "category": "weather",
+      "documentation": "https://www.weather.gov/documentation/services-web-api",
+      "coverage": "美国预报、观测、警报",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 600,
+      "access": "official-open",
+      "authentication": "none",
+      "limitations": "免费，需识别应用User-Agent；美国范围，坐标转grid可能变更",
+      "rights": "官方说明免费可用于任何目的，第三方资料例外",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "fred",
+      "name": "FRED",
+      "category": "macro",
+      "documentation": "https://fred.stlouisfed.org/docs/api/api_key.html",
+      "coverage": "宏观、利率、物价、经济历史",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 3600,
+      "access": "free-key",
+      "authentication": "user-key",
+      "limitations": "API需免费注册个人密钥，所有用户用自己的密钥；数据序列可能有第三方许可",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "eia",
+      "name": "美国EIA",
+      "category": "energy",
+      "documentation": "https://www.eia.gov/opendata/documentation.php",
+      "coverage": "能源产量、库存、价格、电力",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 3600,
+      "access": "free-key",
+      "authentication": "user-key",
+      "limitations": "API v2需免费密钥；频率按路由定义，字符串数值显式转换",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "bea",
+      "name": "美国BEA",
+      "category": "macro",
+      "documentation": "https://www.bea.gov/resources/for-developers",
+      "coverage": "GDP、产业、国际收支",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 86400,
+      "access": "free-key",
+      "authentication": "user-key",
+      "limitations": "注册API key；按数据集定义和发布期查询",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "bls",
+      "name": "美国BLS",
+      "category": "macro",
+      "documentation": "https://www.bls.gov/developers/api_signature_v2.htm",
+      "coverage": "就业、物价、工资",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 86400,
+      "access": "conditional",
+      "authentication": "optional-registration",
+      "limitations": "v1匿名有限额度，v2注册额度；频率/年度/序列限制需按当前文档",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "census",
+      "name": "美国Census",
+      "category": "demographics",
+      "documentation": "https://api.census.gov/data.html",
+      "coverage": "人口、区域、经济普查",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 86400,
+      "access": "conditional",
+      "authentication": "optional-key",
+      "limitations": "公开数据集目录；免费key及匿名额度以当前条款为准，不能向查询提交个人数据",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "openaq",
+      "name": "OpenAQ v3",
+      "category": "environment",
+      "documentation": "https://docs.openaq.org/using-the-api/api-key",
+      "coverage": "全球空气质量监测",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 600,
+      "access": "free-key",
+      "authentication": "user-key",
+      "limitations": "v3需API key；传感器单位/时区/采样不同；按各数据贡献者许可",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "open-meteo",
+      "name": "Open-Meteo",
+      "category": "weather",
+      "documentation": "https://open-meteo.com/en/terms",
+      "coverage": "气象预报、历史气象",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 600,
+      "access": "conditional",
+      "authentication": "none",
+      "limitations": "免费托管API仅非商业；商业场景用付费服务或选择MET Norway，不能把开源许可等同免费服务条款",
+      "rights": "按官方条款署名；第三方资料另核许可",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    },
+    {
+      "id": "nominatim-public",
+      "name": "Nominatim 公共服务（不自动使用）",
+      "category": "geography",
+      "documentation": "https://operations.osmfoundation.org/policies/nominatim/",
+      "coverage": "地址/地点地理编码",
+      "parameters": {},
+      "example": {},
+      "cacheSeconds": 86400,
+      "access": "restricted",
+      "authentication": "none",
+      "limitations": "明确禁止no-code/low-code/vibe-coding平台作为通用地理编码服务；本产品不自动查询。需自托管或适合的授权服务；也禁止自动补全和批量周期查询",
+      "rights": "ODbL并署名OpenStreetMap，服务条款额外适用",
+      "queryable": false,
+      "defaultEligible": false,
+      "reviewedOn": "2026-10-10"
+    }
+  ]
+}

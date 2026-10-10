@@ -1,3 +1,4 @@
+import { freeDataInstruction } from './public-data-tool.js'
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { workbenchCreationRequest } from './workbench-execution-policy.js'
 
@@ -15,7 +16,11 @@ export function registerComponentSourceGuidance(ctx) {
       const planning = workbenchCreationRequest(agent.session)
       const request = planning?.text ?? canvasHumanRequest(agent.session)?.text
       if (!request || /全部?使用模拟数据|全部.{0,5}模拟|(?:只|仅)(?:用|使用)模拟数据/u.test(request)) return ''
-      return componentSourceInstruction(preferredComponentSourceTools(ctx.tools.schemas(agent), request), request, new Date(), { planning: Boolean(planning) })
+      const schemas = ctx.tools.schemas(agent)
+      const guidance = componentSourceInstruction(preferredComponentSourceTools(schemas, request), request, new Date(), { planning: Boolean(planning) })
+      if (guidance) return guidance
+      if (/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(request)) return ''
+      return schemas?.some(tool => tool.name === 'public_data_query') ? freeDataInstruction() : ''
     }
   })
 }
@@ -33,6 +38,7 @@ export function chinaMarketWindow(now, calendarDays = 10) {
 // the parent session. Never discover credentials or invent a tool name here.
 export function preferredComponentSourceTools(schemas, request) {
   if (!financialTopic.test(request ?? '') || !Array.isArray(schemas)) return []
+  if (schemas.some(tool => tool.name === 'public_data_query') && !/通联|datayes|萝卜投研|mcp|插件/iu.test(request ?? '')) return []
   return schemas.filter(tool => typeof tool?.name === 'string' && tool.name.startsWith('ework__') &&
     typeof tool.description === 'string' && datayesSource.test(tool.description))
     .map(tool => ({ name: tool.name, description: tool.description.replace(/\s+/gu, ' ').slice(0, 120) }))

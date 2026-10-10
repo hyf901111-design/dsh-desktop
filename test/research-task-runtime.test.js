@@ -1241,6 +1241,29 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
+  it('uses free data in an online child without forcing a plugin refresh binding', async () => {
+    const fixture = containerAdapterFixture();
+    fixture.ctx.tools = { schemas: () => [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }] };
+    const handle = await fixture.start('工作台：宏观观察\n本面板：GDP\n联网取真实数据，优先使用 chart 类型。');
+    const child = fixture.ctx.subagents.start.mock.calls[0][1];
+    expect(child.toolFilter.allow).toContain('public_data_query');
+    expect(fixture.ctx.web.search).not.toHaveBeenCalled();
+    expect(child.prompt[0].text).toContain('先用当前可见 public_data_query');
+    expect(child.prompt[0].text).not.toContain('最终必须交付一个 data-bound');
+    await handle.dispose();
+  });
+  it('does not grant the free data tool to offline or explicitly plugin-bound children', async () => {
+    const schemas = [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }, { name: 'read' }];
+    for (const query of ['不要联网，只用已有资料制作图表', '工作台：投资\n本面板：行情\n使用通联MCP取最新股票行情，优先使用 market 类型。']) {
+      const fixture = containerAdapterFixture(); fixture.ctx.tools = { schemas: () => schemas };
+      const handle = await fixture.start(query); const child = fixture.ctx.subagents.start.mock.calls[0][1];
+      expect(child.toolFilter.allow).not.toContain('public_data_query');
+      if (query.startsWith('不要')) expect(child.toolFilter.allow).toEqual(['read']);
+      else expect(child.toolFilter.allow).toContain('ework__call');
+      await handle.dispose();
+    }
+  });
+
   it('preserves MCP retrieval for a planned custom page that forbids simulated data', async () => {
     const query = '工作台：真实研究\n本面板：投资论点证据对照\n用当前已连接的通联 DataYes/萝卜投研 MCP 工具取真实资料：用公告检索工具查 688256 最近公告。禁止模拟数据、禁止向外部写入。\n仅生成本面板，优先使用 html 类型。'
     const fixture = containerAdapterFixture()
