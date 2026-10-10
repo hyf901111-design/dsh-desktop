@@ -1391,7 +1391,7 @@ export class ResearchTaskRuntime {
           output = finalText(mapped?[{type:'text',text:deliveredText}]:result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
-            if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', '已取得插件数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。')
+            if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', '已取得数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。')
           }
           const variantIssue = workbenchMarketVariantIssue(output, task.prompt)
           if (variantIssue) throw new ResearchTaskError('INVALID_OUTPUT', variantIssue)
@@ -1737,7 +1737,7 @@ export function createSubagentAdapter(ctx) {
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
       const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(query ?? '')
       if (signal.aborted) throw signal.reason
-      const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__')) && (!scopedSchemas.some(tool => tool.name === 'public_data_query') || /通联|datayes|\bmcp\b|插件/iu.test(query ?? ''))
+      const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__') || tool.name === 'public_data_query')
       const pluginRequired = boundTemplate && /通联|datayes|\bmcp\b|插件/iu.test(query ?? '')
       let effectivePrompt = boundTemplate ? workbenchPanelPrompt(query, true) : prompt
       if (pluginRequired) effectivePrompt += '\n本面板已指定使用配置的插件：使用当前可见 ework__ 工具发现接口并取数，交付可自动刷新映射。通用 financial_query 不属于该插件绑定通道；不要把该工具的结果标为指定插件数据。插件不可用时如实保留错误和已有内容。'
@@ -1748,8 +1748,8 @@ export function createSubagentAdapter(ctx) {
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
       if (permitsTools && scopedSchemas?.some(tool => tool.name === 'public_data_query')) effectivePrompt += '\n' + freeDataInstruction()
       if (permitsTools) effectivePrompt += preferredSources.length
-        ? `\n${componentSourceInstruction(preferredSources, query)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。`
-        : '\n用户指定来源优先；未指定来源时先用当前可见 public_data_query 读取适用免费源。股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。生成的是带数据时点的快照，不代表持续实时更新。'
+        ? `\n${componentSourceInstruction(preferredSources, query)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
+        : '\n用户指定来源优先；未指定来源时先用当前可见 public_data_query 读取适用免费源。股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -1810,7 +1810,7 @@ export function createSubagentAdapter(ctx) {
         !(kind === 'container' && containerExcludedTools.has(name)) &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
-      const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')),scopedSchemas??[])
+      const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')||name==='public_data_query'),scopedSchemas??[])
       const run = await startComponentAgent(ctx, {
         label: '画布生成任务',
         ...(agentOptions ? { agentOptions } : {}),
