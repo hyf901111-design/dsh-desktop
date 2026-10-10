@@ -1,10 +1,33 @@
 import {afterEach,it,expect,vi} from 'vitest'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
+import * as financialClient from '../scripts/lib/financial-widget-client.mjs'
 const close=[];afterEach(async()=>{for(const fn of close.splice(0))await fn()})
 const s={code:'600519',name:'贵州茅台',market:'SH'},other={code:'000001',name:'平安银行',market:'SZ'}
 const bars=Array.from({length:80},(_,i)=>({date:new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:i%2?0:1000}))
 const service=()=>({request:vi.fn(async q=>q.action==='search'?{symbols:[s,other]}:q.action==='history'?{bars,volumeUnit:'股',source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'}:q.action==='news'?{news:[{id:'n',title:'本人原始新闻',source:'本人新闻来源',url:'https://example.org/news',time:'2026-10-09 10:00'}],source:'测试通联'}:{quotes:q.symbols.map(x=>({...x,price:100,changePercent:x.market==='SH'?0:-2,asOf:'2026-10-08'})),source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'})})
 async function fixture(desktop={}){const f=await financialClientFixture({financialWidget:service(),...desktop});close.push(f.dispose);return f}
+it('行情标注区分上游时刻、休市和获取时间，按各市场时区显示',()=>{
+ const q={...s,source:'新浪财经',quotedAt:'2026-10-09T07:34:59Z',asOf:'2026-10-09'}
+ const info=financialClient.financialQuoteInfo([q],new Date('2026-10-10T03:00:00Z'))
+ expect(info.state).toBe('休市');expect(info.text).toContain('新浪财经 · 行情 10/09 15:34');expect(info.title).toContain('15:34:59');expect(info.title).toContain('Asia/Shanghai')
+ const us={market:'US',code:'AAPL',name:'苹果',source:'腾讯财经',quotedAt:'2026-10-09T20:00:01Z'}
+ expect(financialClient.financialQuoteInfo([us],new Date('2026-10-09T20:10:00Z')).text).toContain('10/09 16:00')
+ expect(financialClient.financialQuoteInfo([us],new Date('2026-10-12T01:30:00Z')).state).toBe('休市')
+ expect(financialClient.financialQuoteInfo([q,us],new Date('2026-10-10T03:00:00Z')).text).toContain('各市场')
+})
+it('盘中旧报价和缺失时刻不会冒充实时，报价时间不以获取时间替代',()=>{
+ const now=new Date('2026-10-09T02:00:00Z'),q={...s,quotedAt:'2026-10-09T01:59:00Z',source:'腾讯财经'}
+ expect(financialClient.financialQuoteInfo([q],now).state).toBe('更新中')
+ expect(financialClient.financialQuoteInfo([{...q,quotedAt:'2026-10-08T07:00:00Z'}],now).state).toBe('时效待确认')
+ const missing=financialClient.financialQuoteInfo([{...q,quotedAt:null,asOf:'2026-10-08'}],now)
+ expect(missing.state).toBe('时效待确认');expect(missing.text).not.toContain('10:00');expect(missing.title).toContain('时刻未提供')
+})
+it('组件页脚呈现实际报价来源和时刻，同时保留最近获取时间',async()=>{
+ const bridge=service();bridge.request.mockResolvedValue({quotes:[{...s,price:1263,changePercent:.57,source:'新浪财经',quotedAt:'2026-10-09T07:34:59Z',asOf:'2026-10-09'}],source:'新浪财经',receivedAt:'2026-10-10T03:00:00Z'})
+ const f=await fixture({financialWidget:bridge});await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])})
+ await vi.waitFor(()=>expect(f.host.querySelector('.ew-financial-footer').textContent).toContain('行情 10/09 15:34'))
+ expect(f.host.querySelector('.ew-financial-provenance').title).toContain('每60秒刷新');expect(f.host.querySelector('.ew-financial-footer').textContent).toContain('获取')
+})
 it('分时绘制实际价格折线和分钟时间，不显示伪造的开高低收',async()=>{
  const bridge=service(),points=[{date:'2026-10-09T09:30:00+08:00',open:100,high:100,low:100,close:100,volume:20},{date:'2026-10-09T09:31:00+08:00',open:102,high:102,low:102,close:102,volume:30}]
  bridge.request.mockImplementation(async q=>q.action==='history'?{bars:points,nativePeriod:true,source:'腾讯财经',volumeUnit:'手'}:{quotes:[{...s,price:102,changePercent:2}],source:'腾讯财经'})
