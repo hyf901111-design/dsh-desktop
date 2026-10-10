@@ -77,7 +77,7 @@ export function prepareRequest(sourceId, p = {}) {
     };
   } else if (sourceId === 'met-weather') {
     endpoint = url('https://api.met.no/weatherapi/locationforecast/2.0/compact', { lat: coordinate(p, 'lat', -90, 90), lon: coordinate(p, 'lon', -180, 180) });
-    normalize = data => ({ records: data.properties.timeseries.slice(0, limit).map(r => ({ time: r.time, ...r.data.instant.details, condition: r.data.next_1_hours?.summary?.symbol_code ?? null })), units: data.properties.meta.units, dataTime: data.properties.meta.updated_at, timeMeaning: 'dataTime为预报发布时间；records.time为预报有效时间' });
+    normalize = (data, receivedMs = Date.now()) => ({ records: data.properties.timeseries.filter(r => Date.parse(r.time) >= receivedMs).slice(0, limit).map(r => ({ time: r.time, ...r.data.instant.details, condition: r.data.next_1_hours?.summary?.symbol_code ?? null })), units: data.properties.meta.units, dataTime: data.properties.meta.updated_at, timeMeaning: 'dataTime为预报发布时间；records.time为预报有效时间，仅保留获取时点之后的实际预报时点，间隔以来源为准，不等于小时数' });
   } else if (sourceId === 'usgs-earthquakes') {
     const magnitude = p.minMagnitude ?? 2.5; if (typeof magnitude !== 'number' || !Number.isFinite(magnitude) || magnitude < -2 || magnitude > 10) fail('minMagnitude无效');
     const end = new Date(), start = new Date(end.getTime() - 86400000);
@@ -154,7 +154,7 @@ export function createQueryClient({ fetcher = globalThis.fetch, now = Date.now, 
         for await (const chunk of response.body) { bytes += chunk.length; if (bytes > MAX_BYTES) { controller.abort(); throw new PublicDataError('RESPONSE_TOO_LARGE', '来源响应过大，请缩小查询范围'); } chunks.push(chunk); }
         const body = Buffer.concat(chunks), content = source.id === 'tencent-quotes' ? new TextDecoder('gb18030').decode(body) : body.toString('utf8');
         let normalized;
-        try { normalized = normalize(source.id === 'ecb-fx' || source.id === 'tencent-quotes' ? content : JSON.parse(content)); }
+        try { normalized = normalize(source.id === 'ecb-fx' || source.id === 'tencent-quotes' ? content : JSON.parse(content), now()); }
         catch { throw new PublicDataError('INVALID_RESPONSE', '来源返回了无法核验的数据，请换用适用来源或稍后重试'); }
         if (!Array.isArray(normalized.records) || normalized.records.length > 100) throw new PublicDataError('INVALID_RESPONSE', '来源记录不符合数量约束');
         const expires = Date.parse(response.headers.get('expires') ?? ''), age = Number(response.headers.get('cache-control')?.match(/max-age=(\d+)/)?.[1] ?? 0);
