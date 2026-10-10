@@ -116,8 +116,8 @@ it('组件库使用真实DOMRect定位，菜单不会出现NaN坐标',async()=>{
  const f=await fixture(),trigger=f.document.querySelector('[data-financial-library]'),rect={left:450,top:640,bottom:676,width:36,height:36};trigger.getBoundingClientRect=()=>Object.create(rect)
  await f.event('click',trigger);const menu=f.document.querySelector('.ew-financial-library');expect(Number.isFinite(parseFloat(menu.style.top))).toBe(true);expect(Number.isFinite(parseFloat(menu.style.left))).toBe(true)
 })
-it('固定组件的三排宽度不足时保留布局，侧栏挤窄后保留可读宽高',async()=>{
+it('固定组件排数和侧栏收窄遵守通用尺寸，仍可缩小并恢复阅读尺寸',async()=>{
  const f=await fixture(),w=f.workspace;await f.act(async()=>{const n=w.createFinancialWidget('watchlist');w.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s,other,{code:'000002',name:'万科A',market:'SZ'}]}}]);w.createFinancialWidget('quote');w.createFinancialWidget('indices');w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000);w.organizeCanvas()});const before=w.getWorkbenchCells()
- await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'));await f.event('click',f.document.querySelector('[data-arrange-mode=three][role=menuitemradio]'));expect(w.getWorkbenchCells()).toEqual(before);expect(f.document.querySelector('[data-research-arrange-feedback]').textContent).toContain('画布宽度不足')
- await f.act(async()=>{w.organizeCanvas(new Map(),'two');w.setCanvasSize({width:640,height:700,availableWidth:640});w.setWorkbenchWidth(640)});const nodes=w.getSnapshot().artifacts;expect(nodes.find(n=>n.containerSpec.widget==='watchlist').height).toBeGreaterThanOrEqual(226);expect(nodes.find(n=>n.containerSpec.widget==='quote').width).toBeGreaterThanOrEqual(400)
+ await f.event('click',f.document.querySelector('[data-workbench-arrange-toggle]'));await f.event('click',f.document.querySelector('[data-arrange-mode=three][role=menuitemradio]'));expect(w.getWorkbenchCells()).not.toEqual(before);expect(w.getWorkbenchCells().every(c=>c.arrangeColumns===3)).toBe(true)
+ await f.act(async()=>{w.organizeCanvas(new Map(),'two');w.setCanvasSize({width:640,height:700,availableWidth:640});w.setWorkbenchWidth(640)});const nodes=w.getSnapshot().artifacts;expect(nodes.find(n=>n.containerSpec.widget==='quote').width).toBeLessThan(400);expect(nodes.find(n=>n.containerSpec.widget==='quote').height).toBeGreaterThanOrEqual(160)
 })

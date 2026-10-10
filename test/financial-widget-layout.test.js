@@ -1,5 +1,12 @@
 import {it,expect} from 'vitest'
 import {financialPopoverPosition} from '../scripts/lib/financial-widget-client.mjs'
+import {createResearchGrid} from '../packages/dsh-research-task-runtime/research-grid.js'
+import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
+
+it('四个固定组件复用通用组件最小尺寸，没有独立宽高限制',()=>{
+ const grid=createResearchGrid(),m=grid.metrics(1280),base=grid.minimum({kind:'generated-container',containerSpec:{type:'text'}},m);
+ for(const widget of ['watchlist','quote','indices','news'])expect(grid.minimum({kind:'generated-container',containerSpec:financialWidgetDefaults(widget)},m)).toEqual(base);
+})
 
 it('底部联想向上展开，避开输入框和看板外的聊天面板',()=>{
  const anchor={left:630,right:780,top:560,bottom:584},bounds={left:300,right:800,top:60,bottom:600}
