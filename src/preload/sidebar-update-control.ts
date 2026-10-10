@@ -7,6 +7,9 @@ const PANEL_ID = 'sherlock-sidebar-update-panel'
 const FOOTER_SELECTOR = '[data-dsh-sidebar-footer]'
 const SETTINGS_SLOT_SELECTOR = '[data-dsh-sidebar-root] [data-slot="sidebar.settings"]'
 
+const phaseKey = (status: UpdateStatus) => `${status.availableVersion ?? status.currentVersion}:${status.phase}:${status.phase === 'error' ? updateErrorStage(status) : ''}`
+const isCheckNotice = (status: UpdateStatus) => ['checking', 'available', 'up-to-date'].includes(status.phase) || status.phase === 'error' && updateErrorStage(status) === 'check'
+
 function progressRing(doc: Document, percent: number, label: string): SVGSVGElement {
   const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg')
   const value = Math.max(0, Math.min(100, Number.isFinite(percent) ? percent : 0))
@@ -42,8 +45,26 @@ export class SidebarUpdateControl {
   private pending = false
   private downloadRequested = false
   private observed = false
+  private aboutChecks = 0
 
   constructor(private readonly document: Document, private readonly locale: UpdateLocale, private readonly callbacks: SidebarUpdateCallbacks) {}
+
+  async checkFromAbout(check: () => Promise<UpdateStatus>): Promise<UpdateStatus> {
+    this.aboutChecks++
+    if (this.status) this.render(this.status)
+    try {
+      const result = await check()
+      if (isCheckNotice(result)) this.dismissed = phaseKey(result)
+      this.render(result)
+      return result
+    } finally {
+      this.aboutChecks--
+      if (this.status) {
+        if (isCheckNotice(this.status)) this.dismissed = phaseKey(this.status)
+        this.render(this.status)
+      }
+    }
+  }
 
   mount(): boolean {
     const footer = this.document.querySelector<HTMLElement>(FOOTER_SELECTOR)
@@ -101,11 +122,13 @@ export class SidebarUpdateControl {
 
   render(status: UpdateStatus): void {
     if (this.downloadRequested && ['available', 'checking'].includes(status.phase)) status = { ...status, phase: 'downloading', percent: 0 }
+    // A later, independent check may announce its result again.
+    if (!this.aboutChecks && status.phase === 'checking' && this.status?.phase !== 'checking') this.dismissed = ''
     this.status = status
     if (!this.mount() || !this.button || !this.panel) return
     const doc = this.document, panel = this.panel, button = this.button
     const action = updateAction(status), zh = this.locale === 'zh'
-    const phaseKey = `${status.availableVersion ?? status.currentVersion}:${status.phase}:${status.phase === 'error' ? updateErrorStage(status) : ''}`
+    const key = phaseKey(status)
     const active = ['downloading', 'downloaded', 'installing'].includes(status.phase)
     button.dataset.action = action.kind
     button.replaceChildren(status.phase === 'downloading'
@@ -119,7 +142,7 @@ export class SidebarUpdateControl {
     panel.dataset.phase = status.phase
     panel.dataset.installStage = status.installStage ?? ''
     panel.dataset.collapsed = String(collapsed)
-    panel.hidden = action.kind === 'hidden' || this.dismissed === phaseKey
+    panel.hidden = action.kind === 'hidden' || this.dismissed === key || this.aboutChecks > 0 && isCheckNotice(status)
     button.setAttribute('aria-expanded', String(!panel.hidden))
     if (action.kind === 'hidden') { this.broadcast(status); return }
     const header = doc.createElement('header')
@@ -135,7 +158,7 @@ export class SidebarUpdateControl {
       : status.phase === 'error' ? errorCopy.title
       : (zh ? `发现新版本 ${status.availableVersion}` : `Version ${status.availableVersion} is available`)
     if (!checking) {
-      const close = this.action('', () => { this.dismissed = phaseKey; this.render(status) })
+      const close = this.action('', () => { this.dismissed = key; this.render(status) })
       close.className = 'ework-notice-close'
       close.setAttribute('aria-label', zh ? '关闭更新提醒' : 'Dismiss update notice')
       close.append(noticeIcon(doc, 'close'))
@@ -165,9 +188,8 @@ export class SidebarUpdateControl {
       const actions = doc.createElement('div')
       actions.className = 'ework-notice-actions'
       if (completed) {
-        actions.append(this.action(zh ? '知道了' : 'Got it', () => { this.dismissed = phaseKey; this.render(status) }))
+        actions.append(this.action(zh ? '知道了' : 'Got it', () => { this.dismissed = key; this.render(status) }))
       } else if (status.phase === 'available') {
-        actions.append(this.action(zh ? '详情' : 'Details', () => doc.dispatchEvent(new doc.defaultView!.Event('ework-open-about'))))
         const download = this.action(zh ? '更新' : 'Update', () => this.startDownload())
         download.dataset.updateDownload = ''
         download.className = 'ework-notice-primary'
