@@ -11,37 +11,37 @@
         "schemaVersion": 1,
         "featureName": "内置分类免费数据源与组件生成优先取数",
         "branch": "codex/feat/free-data-skill-20261010",
-        "baseCommit": "af9d238ff7e681bef1f65630a9114fe607a52ce5",
-        "tipCommit": "d411f893444c846cd9dff3be1ec743729ce4123a",
+        "baseCommit": "d411f893444c846cd9dff3be1ec743729ce4123a",
+        "tipCommit": "65e62334eb5f860a4ecd12e691551326e1e44521",
         "commits": [
           {
-            "commit": "d411f893444c846cd9dff3be1ec743729ce4123a",
+            "commit": "65e62334eb5f860a4ecd12e691551326e1e44521",
             "parents": [
-              "af9d238ff7e681bef1f65630a9114fe607a52ce5"
+              "d411f893444c846cd9dff3be1ec743729ce4123a"
             ],
-            "subject": "修复：隔离免费取数工具依赖避免桌面主进程打包启动异常"
+            "subject": "修复：按真实来源标注组件并保留表格原文链接与缺失期"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
+            "path": "skills/ework-free-data-sources/SKILL.md"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "skills/ework-free-data-sources/_meta.json"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/public-data-tool.js"
+            "path": "skills/ework-free-data-sources/references/generation.md"
           },
           {
             "status": "M",
             "path": "test/free-data-sources.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
           }
         ],
         "checks": [
@@ -59,9 +59,9 @@
               "free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference"
             ],
             "outcome": "passed",
-            "summary": "57项聚焦检查和类型检查通过，包含桌面真实产物依赖回归",
-            "verifiedCommit": "d411f893444c846cd9dff3be1ec743729ce4123a",
-            "completedAt": "2026-10-10T15:26:04.814333+00:00",
+            "summary": "57项聚焦检查、类型及技能格式检查通过；修正现场生成暴露的来源和链接标注规则",
+            "verifiedCommit": "65e62334eb5f860a4ecd12e691551326e1e44521",
+            "completedAt": "2026-10-10T15:54:23.229563+00:00",
             "timeoutMs": 120000
           },
           {
@@ -73,9 +73,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "57项聚焦检查和类型检查通过，包含桌面真实产物依赖回归",
-            "verifiedCommit": "d411f893444c846cd9dff3be1ec743729ce4123a",
-            "completedAt": "2026-10-10T15:26:04.814333+00:00",
+            "summary": "57项聚焦检查、类型及技能格式检查通过；修正现场生成暴露的来源和链接标注规则",
+            "verifiedCommit": "65e62334eb5f860a4ecd12e691551326e1e44521",
+            "completedAt": "2026-10-10T15:54:23.229563+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -94,47 +94,7 @@
           "腾讯新浪为未文档化网页接口，时效和商业再分发权利不承诺",
           "此工具生成快照，不自动建立刷新绑定"
         ],
-        "generatedAt": "2026-10-10T15:26:04.814333+00:00"
-      },
-      "merged": {
-        "mergeCommit": "accf8144ebdb6e7df30a0a38bf3d95131ee86d67",
-        "verificationCommit": "accf8144ebdb6e7df30a0a38bf3d95131ee86d67",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
-              "run",
-              "test/free-data-sources.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/component-agent-scope.test.js",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs run test/free-data-sources.test.js test/integration-bundled-skill.test.js test/research-component-source-tools.test.js test/component-agent-scope.test.js test/research-task-runtime.test.js -t free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference",
-            "verifiedCommit": "accf8144ebdb6e7df30a0a38bf3d95131ee86d67",
-            "completedAt": "2026-10-10T15:26:28.082Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "accf8144ebdb6e7df30a0a38bf3d95131ee86d67",
-            "completedAt": "2026-10-10T15:26:28.082Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-10T15:26:28.082Z"
+        "generatedAt": "2026-10-10T15:54:23.229563+00:00"
       }
     }
   ],
