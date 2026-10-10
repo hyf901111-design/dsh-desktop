@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { FileSystemSkillProvider } from '@deepseek-ai/dsh-skill-filesystem';
 import { catalog, prepareRequest, createQueryClient } from '../skills/ework-free-data-sources/scripts/query.mjs';
 import { createPublicDataTool, freeDataInstruction } from '../packages/dsh-research-task-runtime/public-data-tool.js';
+import { createPublicDataClient } from '../packages/dsh-research-task-runtime/public-data-client.js';
 import { buildResearchTaskPrompt, publicEventFromSessionEvent } from '../packages/dsh-research-task-runtime/index.js';
 import { preferredComponentSourceTools, registerComponentSourceGuidance } from '../packages/dsh-research-task-runtime/component-source-tools.js';
 import { loadBundledSkills, BUNDLED_FREE_DATA_SKILL_ID, isBundledSkillId } from '../src/main/integrations/bundled-skills';
@@ -13,6 +14,14 @@ const response = (body, options = {}) => new Response(JSON.stringify(body), opti
 const quote = { price: '100.1', volume: '0', time: '2026-10-09T10:00:00Z', bid: '100', ask: '101' };
 const request = prompt => ({ parentSessionId: 'p', canvasNodeId: 'n', kind: 'container', prompt });
 describe('builtin free data sources', () => {
+  it('validates desktop refresh against fixed eligible adapters before any network call', async () => {
+    const query = vi.fn(async () => ({records:[]})), client = createPublicDataClient({moduleLoader:async()=>({prepareRequest,queryClient:{query}})});
+    for (const args of [{operation:'catalog'}, {operation:'query',source:'nominatim-public',parameters_json:'{}'}, {operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD","url":"https://localhost"}'}, {operation:'query',source:'kraken-ticker',parameters_json:'[]'}]) await expect(client.query(args)).rejects.toThrow();
+    expect(query).not.toHaveBeenCalled();
+    const args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'};
+    await expect(client.validate(args)).resolves.toMatchObject({sourceId:'kraken-ticker'});expect(query).not.toHaveBeenCalled();
+    const signal=new AbortController().signal;await client.query(args,signal);expect(query).toHaveBeenCalledWith({source:'kraken-ticker',parameters:{pair:'XBTUSD'}},signal);
+  });
   it('keeps tool/agent dependencies out of the production desktop artifact bundle', async () => {
     const bundle = await build({ entryPoints: ['packages/dsh-research-task-runtime/artifact-output.js'], bundle: true, platform: 'node', format: 'esm', write: false, metafile: true });
     expect(Object.keys(bundle.metafile.inputs).filter(file => /@deepseek-ai\/dsh-(tools|llm)\//.test(file))).toEqual([]);
@@ -21,7 +30,7 @@ describe('builtin free data sources', () => {
   it('is discovered by native filesystem and integration allowlist and protected as bundled', async () => {
     const provider = new FileSystemSkillProvider({ get: () => undefined, logger: { warn: vi.fn() } }, { signal: new AbortController().signal, invalidate: vi.fn() }, { includeDefaultRoots: false, bundledSkillDir: root, watch: false });
     try { const listed = await provider.list({}), candidate = (Array.isArray(listed) ? listed : listed.candidates).find(c => c.name === 'ework-free-data-sources'); expect(candidate.source).toBe('bundled'); expect((await provider.get(candidate, {})).content).toContain('public_data_query'); } finally { await provider.dispose(); }
-    const entries = await loadBundledSkills(root); const item = entries.find(e => e.skill.id === BUNDLED_FREE_DATA_SKILL_ID); expect(item.skill).toMatchObject({ enabled: true, provider: 'bundled', source: 'EWork 内置 · v1.0.1' }); expect(isBundledSkillId(item.skill.id)).toBe(true);
+    const entries = await loadBundledSkills(root); const item = entries.find(e => e.skill.id === BUNDLED_FREE_DATA_SKILL_ID); expect(item.skill).toMatchObject({ enabled: true, provider: 'bundled', source: 'EWork 内置 · v1.0.2' }); expect(isBundledSkillId(item.skill.id)).toBe(true);
   });
   it('only exposes adapters for eligible sources and never uses restricted/keyed providers', () => {
     expect(catalog().sources).toHaveLength(27); expect(catalog().sources.filter(s => s.queryable)).toHaveLength(15);

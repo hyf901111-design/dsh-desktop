@@ -1241,7 +1241,7 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
-  it('uses free data in an online child without forcing a plugin refresh binding', async () => {
+  it('uses free data in an online child with native refresh mapping and no plugin requirement', async () => {
     const fixture = containerAdapterFixture();
     fixture.ctx.tools = { schemas: () => [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }] };
     const handle = await fixture.start('工作台：宏观观察\n本面板：GDP\n联网取真实数据，优先使用 chart 类型。');
@@ -1249,7 +1249,8 @@ describe('Research task Subagent adapter', () => {
     expect(child.toolFilter.allow).toContain('public_data_query');
     expect(fixture.ctx.web.search).not.toHaveBeenCalled();
     expect(child.prompt[0].text).toContain('先用当前可见 public_data_query');
-    expect(child.prompt[0].text).not.toContain('最终必须交付一个 data-bound');
+    expect(child.prompt[0].text).toContain('最终必须交付一个 data-bound');
+    expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件');
     await handle.dispose();
   });
   it('does not grant the free data tool to offline or explicitly plugin-bound children', async () => {

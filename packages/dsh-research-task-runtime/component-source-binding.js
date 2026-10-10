@@ -4,7 +4,7 @@ import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
 
-// Only observed successful plugin responses can back a refresh recipe. These
+// Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
 export function componentSourceCollector(allowed,schemas=[]) {
   const discovery=new Set(schemas.filter(schema=>{
@@ -24,7 +24,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
       calls.delete(message.source.callId)
       const result=message.content?.find(b=>b.type==='tool-result')
       if(!result||result.isError)return
-      const purpose=discovery.has(call.tool)?'discovery':undefined
+      const purpose=discovery.has(call.tool)||call.tool==='public_data_query'&&call.args?.operation!=='query'?'discovery':undefined
       let response
       try { response=decodeDataResponse(result) }
       catch { if(!purpose)return;response=null }
@@ -45,8 +45,9 @@ export function componentSourceCollector(allowed,schemas=[]) {
 }
 
 export const COMPONENT_BOUND_DATA_PROMPT = `
-自动绑定数据交付协议：通过已配置插件取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并保存刷新设置；未指定时默认一分钟，用户或宿主明确要求仅手动时 intervalMinutes=0。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：
-{"version":1,"type":"data-bound","requests":[{"key":"q","tool":"实际成功调用的 ework__ 工具名","args":{"原参数":"原值"}}],"mapping":{"version":1,"type":"market","variant":"本面板模板","title":"标题","asOf":{"$from":"q","$path":"真实日期路径","$suffix":" · 通联 DataYes"},"items":{"$from":"q","$each":"真实数组路径","$map":{"label":{"$path":"名称字段"},"value":{"$path":"数值字段","$as":"string"}}}}}
+自动绑定数据交付协议：通过已配置插件或 public_data_query 取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并保存刷新设置；未指定时默认一分钟，用户或宿主明确要求仅手动时 intervalMinutes=0。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：
+{"version":1,"type":"data-bound","requests":[{"key":"q","tool":"实际成功调用的 ework__ 工具名或 public_data_query","args":{"原参数":"原值"}}],"mapping":{"version":1,"type":"market","variant":"本面板模板","title":"标题","asOf":{"$from":"q","$path":"真实日期路径","$suffix":" · 通联 DataYes"},"items":{"$from":"q","$each":"真实数组路径","$map":{"label":{"$path":"名称字段"},"value":{"$path":"数值字段","$as":"string"}}}}}
+public_data_query 请求必须保留 operation:"query"、source 和 parameters_json 原字符串；catalog 只是目录不能绑定。内置返回 records 为数组、source 为来源、dataTime 为数据时点（可为 null）、receivedAt 仅为获取时间；未知报价时点写“报价时点未提供”，不可用获取时间冒充交易时间。
 mapping 内的整体结构必须符合上文当前模板 schema；例子里的 items 仅演示指标映射，K线须用 candles，表格须用 columns/rows。$from 指 requests.key，$path 是点分路径或数组下标，$each/$map 映射原始数组，数组可加 $sortBy:"实际日期字段"、$order:"asc|desc" 排序，$take:5 取前5条、$take:-20 取最后20条；$single:true 要求恰好一条并返回单值，用于最新行情或数据日期，避免写死随分页变化的数组下标。$as 为 string/number；放在 $each 同层时逐项转换标量列表，放在 $map 字段内时转换该字段；$single:true 后转换单值。表格的 $map 必须是单元格数组，例如 [{"$path":"name"},{"$path":"weight","$as":"number"}]。$scale 换算单位，$digits:2 在换算后控制小数位（0–8）；百分比与亿元通常保留2位，价格按精度保留2–3位，避免显示浮点长尾。$prefix/$suffix 加文字，$optional:true 将来源缺失值保留为 null；文本字段可用 $default:"来源未提供摘要" 为缺失、null 或空字符串提供明确的缺失说明，不能用假数值填补。列表中存在 url 时将其映射到条目 url，保留来源链接。无脚本。请求 args 必须原样复制本轮成功业务调用，包括日期值和所有参数类型；无需创建日期表达式。宿主会为最新数据自动推导滚动窗口，固定历史需求保持原日期。不要把日期写成表达式字符串。通联 ai_search 的 SOURCES/EVIDENCE 文本由宿主按实际来源规范化为 {sources:[{id,category,source,date,title,url,summary,excerpts}]}；summary 是第一条证据原句，excerpts 为全部原句，可直接绑定 news.items。除此之外只引用实际 JSON 结构，不猜字段。
 批量多证券列表先使用 $filter:{"ticker":"实际证券代码"} 按行字段等值筛选，再排序和截取；$filter 只支持 1–16 个标量条件，多个条件同时成立，不支持表达式。近20日曲线的 labels 和每条 series.values 必须使用相同的日期排序及 $take:-20，保证日期和值对齐。单对象接口响应使用 {"$from":"q","$map":{"label":{"$path":"data.data.name"},"weight":{"$path":"data.data.marketValue","$scale":1e-8}}}，路径相对该请求响应根对象，无需 $each；$single:true 可省略。
 最新单值的完整例子：{"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number","$scale":100,"$digits":2,"$suffix":"%"}。数据日期使用同一结构，$map 改为 {"$path":"真实日期字段"}，删除 $as:number、$scale、$digits。$path 读取字段，$each 选择列表，$map 在行内读取；只能用上述运算符，禁止发明 $path2、$field 或把整条记录格式化成文字。
@@ -145,14 +146,14 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(candidate.mapping))throw Error('自动更新配置需要已成功调用的接口及当前模板字段映射。')
   const requests=[],responses={}
   for(const request of candidate.requests) {
-    if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||Object.hasOwn(responses,request.key)||!/^ework__t_[a-f\d]+$/i.test(request.tool??''))throw Error('自动更新的数据引用无效。')
+    if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||Object.hasOwn(responses,request.key)||!(request.tool==='public_data_query'||/^ework__t_[a-f\d]+$/i.test(request.tool??'')))throw Error('自动更新的数据引用无效。')
     const requestArgs=normalizeRequestDates(request.args)
     const args=evaluateMapping(requestArgs,{},now)
     const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args))
     if(source?.purpose==='discovery'){const error=Error('接口目录和参数定义不是业务数据；必须继续调用已确认的业务接口取得真实数值，再生成映射。');error.code='SOURCE_DATA_REQUIRED';throw error}
-    if(!source)throw Error('自动更新只能绑定本轮已成功取数且参数一致的插件接口，请保留原请求及真实字段。')
+    if(!source)throw Error('自动更新只能绑定本轮已成功取数且参数一致的数据接口，请保留原请求及真实字段。')
     responses[request.key]=source.response
-    requests.push({key:request.key,toolId:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(requestArgs,now):requestArgs})
+    requests.push({key:request.key,toolId:request.tool==='public_data_query'?request.tool:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(requestArgs,now):requestArgs})
   }
   const mapping=singleSourceMapping(candidate.mapping,responses)
   const data=materializeComponentMapping(mapping,responses,now)

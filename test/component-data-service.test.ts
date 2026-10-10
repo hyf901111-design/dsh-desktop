@@ -6,6 +6,32 @@ import {componentRefreshBindings,createComponentDataService} from '../src/main/c
 import {validateIntegrationBindings} from '../src/shared/scheduled-tasks'
 const {acceptArtifactOutput}=await import(new URL('../packages/dsh-research-task-runtime/artifact-output.js',import.meta.url).href)
 
+it('refreshes a builtin source every minute without MCP grants, pauses outside the board and retains data on failure',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'public-data-refresh-'))
+ const args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'}
+ let value=100,at=Date.now()
+ const validate=vi.fn(async()=>({sourceId:'kraken-ticker',sourceName:'Kraken'})),query=vi.fn(async()=>({records:[{price:value}]}))
+ const data={version:1,type:'kpi',title:'BTC',asOf:'Kraken · 报价时点未提供',items:[{label:'BTC/USD',value:'100'}]}
+ let spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))!)
+ const canvasExecute=vi.fn(async(call:any)=>{if(call.method==='apply'){spec=call.args.changes[0].fields.containerSpec;return {}}return {revision:'r',writable:true,nodes:[{id:'n',content:{containerSpec:spec},capabilities:{fields:{containerSpec:true}}}]}})
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,publicData:{validate,query},integrations:{} as any,
+  rpc:async(method)=>({items:method==='session.list'?[{sessionId:'s',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}),canvas:{bind:()=>{},execute:canvasExecute} as any})
+ ;(service.engine as any).options.now=()=>at
+ try{
+  await service.request('s',{action:'bind-generated',nodeId:'n',initialSpec:spec,recipe:{intervalMinutes:1,requests:[{key:'q',toolId:'public_data_query',args}],mapping:{...data,items:[{label:'BTC/USD',value:{$from:'q',$path:'records.0.price',$as:'string'}}]}}})
+  at+=60000;service.engine.setVisible('s',true);value=101;await service.engine.tick()
+  expect(query).toHaveBeenCalledOnce();expect(query.mock.calls[0]).toEqual([args,expect.any(AbortSignal)])
+  expect(service.engine.list('s')[0]).toMatchObject({intervalMinutes:1,status:'success',successSequence:1,lastSuccess:at})
+  const first=spec
+  at+=60000;service.engine.setVisible('s',false);await service.engine.tick();expect(query).toHaveBeenCalledOnce()
+  service.engine.setVisible('s',true);await service.engine.tick();expect(query).toHaveBeenCalledTimes(2)
+  expect(service.engine.list('s')[0]!.status).toBe('unchanged')
+  query.mockRejectedValueOnce(Error('来源暂不可用'));at+=60000;service.engine.setVisible('s',true);await service.engine.tick()
+  expect(service.engine.list('s')[0]!.status).toBe('error');expect(spec).toEqual(first)
+  expect(componentRefreshBindings(service.engine.list('s')[0]!.requests)).toEqual([])
+ }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
+})
+
 it('reads unbound personal-board settings after its workspace is removed without allowing data execution',async()=>{
  const directory=await mkdtemp(join(tmpdir(),'component-data-orphan-'))
  const rpc=vi.fn(async(method:string)=>({items:method==='session.list'?[{sessionId:'board',cwd:'/removed-board'}]:[]}))

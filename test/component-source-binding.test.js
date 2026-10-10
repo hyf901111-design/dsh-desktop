@@ -8,6 +8,23 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it('binds only an observed successful builtin query, never a catalog or changed parameters',()=>{
+ const args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'}
+ const response={sourceId:'kraken-ticker',source:'Kraken',receivedAt:'2026-10-11T00:00:00Z',records:[{price:100}],dataTime:null}
+ const candidate={version:1,type:'data-bound',requests:[{key:'q',tool:'public_data_query',args}],mapping:{version:1,type:'kpi',title:'BTC',asOf:'Kraken · 报价时点未提供',items:[{label:'BTC/USD',value:{$from:'q',$path:'records.0.price',$as:'string'}}]}}
+ const collector=componentSourceCollector(['public_data_query'])
+ const result=(id,value)=>({type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(value)}]}]}}})
+ collector.accept({type:'tool/call',data:{callId:'catalog',name:'public_data_query',arguments:{operation:'catalog'}}})
+ collector.accept(result('catalog',{sources:[]}))
+ collector.accept({type:'tool/call',data:{callId:'q',name:'public_data_query',arguments:args}})
+ collector.accept(result('q',response))
+ expect(collector.records[0].purpose).toBe('discovery')
+ const mapped=resolveBoundComponent(JSON.stringify(candidate),collector.records,now)
+ expect(mapped.recipe).toMatchObject({intervalMinutes:1,requests:[{toolId:'public_data_query',args}]})
+ expect(mapped.data.items[0].value).toBe('100')
+ candidate.requests[0].args={...args,parameters_json:'{"pair":"ETHUSD"}'}
+ expect(()=>resolveBoundComponent(JSON.stringify(candidate),collector.records,now)).toThrow(/本轮已成功/)
+})
 it('anchors unqualified paths to the single verified response and persists that scope for refresh',()=>{
  const input=structuredClone(draft)
  input.mapping.items=[{label:'最新价',value:{$path:'data.rows.0.price',$as:'string'},detail:{$path:'data.date'}}]

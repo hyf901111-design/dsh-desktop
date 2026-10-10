@@ -7,10 +7,12 @@ import type {IntegrationService} from '../integrations/service'
 import type {ScheduledTask} from '../../shared/scheduled-tasks'
 import type {CanvasActionBridge} from '../state/canvas-action-bridge'
 import {normalizeMcpQueryArguments} from '../integrations/query-arguments'
+import {createPublicDataClient,PUBLIC_DATA_CONNECTION,PUBLIC_DATA_SCHEMA} from '../../../packages/dsh-research-task-runtime/public-data-client.js'
 
 export function componentRefreshBindings(requests:Array<{connectionId:string;connectionRevision:number;toolId:string;schemaDigest:string}>):NonNullable<ScheduledTask['integrationBindings']>{
  const groups=new Map<string,NonNullable<ScheduledTask['integrationBindings']>[number]>()
  for(const request of requests){
+  if(request.connectionId===PUBLIC_DATA_CONNECTION)continue
   let binding=groups.get(request.connectionId)
   if(!binding){binding={kind:'connection',entityId:request.connectionId,bindingRevision:request.connectionRevision,toolIds:[],schemaDigests:{},allowWrite:true};groups.set(request.connectionId,binding)}
   if(binding.bindingRevision!==request.connectionRevision||binding.schemaDigests[request.toolId]&&binding.schemaDigests[request.toolId]!==request.schemaDigest)throw Error('数据接口版本不一致，请重新绑定')
@@ -20,8 +22,9 @@ export function componentRefreshBindings(requests:Array<{connectionId:string;con
  return [...groups.values()]
 }
 
-export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean;onStatusChange?:(sessionId:string,rows:unknown[])=>void}){
+export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean;skillDirectory?:string;publicData?:{validate:(args:any)=>Promise<{sourceId:string;sourceName:string}>;query:(args:any,signal:AbortSignal)=>Promise<any>};onStatusChange?:(sessionId:string,rows:unknown[])=>void}){
  const ajv=new Ajv({strict:false,allErrors:false,validateFormats:false})
+ const publicData=options.publicData??createPublicDataClient({root:options.skillDirectory})
  async function sessionIdentity(sessionId:string){
   if(options.isShared(sessionId))throw Error('当前数据刷新仅支持个人工作台')
   const sessions=await options.rpc('session.list',{})
@@ -48,6 +51,10 @@ export async function createComponentDataService(options:{file:string;integratio
   apply:async(target:any,revision:string,spec:any,signal:AbortSignal)=>canvas(target,'apply',{requestId:randomUUID(),revision,changes:[{op:'update',id:target.nodeId,fields:{containerSpec:spec}}]},signal),
   validateRequest:async(request:any,target:any)=>{
    const {workspace}=await identity(target.sessionId)
+   if(request.toolId==='public_data_query'){
+    const source=await publicData.validate(evaluateMapping(request.args,{}))
+    return {...request,connectionId:PUBLIC_DATA_CONNECTION,connectionRevision:1,schemaDigest:PUBLIC_DATA_SCHEMA,sourceName:source.sourceName}
+   }
    const state=options.integrations.store.snapshot(),tool=state.tools[request.toolId],connection=tool&&state.connections[tool.connectionId]
    if(!tool||!connection||!tool.enabled||!connection.enabled||connection.ownerAccountId!==options.owner()||connection.authState!=='connected'||!connection.toolGrants.includes(tool.id)||connection.workspaceGrant.mode==='selected'&&!connection.workspaceGrant.workspaceIds.includes(workspace.workspaceId))throw Error('所选数据工具未连接或当前工作区不可用')
    const evaluated=evaluateMapping(request.args,{})
@@ -55,6 +62,10 @@ export async function createComponentDataService(options:{file:string;integratio
    return {key:request.key,toolId:tool.id,args:request.args,connectionId:connection.id,connectionRevision:connection.revision,schemaDigest:tool.schemaDigest,sourceName:connection.name+' / '+tool.name}
   },
   execute:async(binding:any,request:any,args:any,signal:AbortSignal)=>{
+   if(request.toolId==='public_data_query'){
+    if(request.connectionId!==PUBLIC_DATA_CONNECTION||request.connectionRevision!==1||request.schemaDigest!==PUBLIC_DATA_SCHEMA)throw Error('内置数据源版本已变化，请重新绑定')
+    return publicData.query(args,signal)
+   }
    const live=options.integrations.runtimeSnapshot(),tool=live.tools.find(t=>t.id===request.toolId),connection=live.connections.find(c=>c.id===request.connectionId)
    if(!tool||!connection||connection.revision!==request.connectionRevision||tool.schemaDigest!==request.schemaDigest)throw Error('数据接口配置已变化，请重新绑定')
    if(options.integrations.store.snapshot().connections[request.connectionId]?.config.type==='mcp')args=normalizeMcpQueryArguments(tool.inputSchema,args)
