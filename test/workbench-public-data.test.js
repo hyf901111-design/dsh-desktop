@@ -3,6 +3,7 @@ import { validateWorkbench } from '../packages/dsh-research-task-runtime/workben
 import { ResearchTaskRuntime } from '../packages/dsh-research-task-runtime/index.js'
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
+import { preserveWorkbenchRefreshPreference } from '../packages/dsh-research-task-runtime/component-refresh-policy.js'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -49,6 +50,18 @@ describe('宿主免费源工作台直通', () => {
     ]) expect(() => validateWorkbench({ requestId: 'bad', title: '行情', panels: [{ ...p, publicData }] })).toThrow()
     expect(() => validateWorkbench({ requestId: 'minute-candle', title: '行情', panels: [spec('candlestick', 'kraken-candles', { pair: 'XBTUSD', interval: 1 })] })).toThrow()
     expect(() => validateWorkbench({ requestId: 'bad', title: '行情', dataMode: 'simulated', panels: [p] })).toThrow()
+  })
+
+  it('accepts the observed redundant refresh field, rejects conflicts and keeps direct manual intent authoritative', () => {
+    const p = spec('crypto-metrics', 'kraken-ticker', { pair: 'XBTUSD' })
+    const normalize = panel => validateWorkbench({ requestId: 'refresh-alias', title: '行情', panels: [panel] }).panels[0]
+    expect(normalize({ ...p, intervalMinutes: 1 })).toEqual(normalize(p))
+    const { intervalMinutes, ...publicData } = p.publicData
+    expect(normalize({ ...p, publicData, intervalMinutes: 2 }).publicData.intervalMinutes).toBe(2)
+    expect(() => normalize({ ...p, intervalMinutes: 2 })).toThrow('冲突')
+    expect(() => normalize({ ...p, publicData, intervalMinutes: -1 })).toThrow()
+    const manual = preserveWorkbenchRefreshPreference({ panels: [{ ...p, intervalMinutes: 1 }] }, '全部只手动刷新')
+    expect(normalize(manual.panels[0]).publicData.intervalMinutes).toBe(0)
   })
 
   it('renders three panels and stores all minute recipes without any model call', async () => {
@@ -157,6 +170,7 @@ describe('宿主免费源工作台直通', () => {
     const args = { requestId: 'direct', title: '免费行情', panels: [spec('quotes-table', 'tencent-quotes', { symbols: ['sh600519'] })] }
     const exec = { agent: { session: { id: 'p', events: [{ type: 'user/message', data: { id: 'u', source: { kind: 'user' }, content: [{ type: 'text', text: '创建免费行情工作台，每分钟刷新' }] } }] } }, signal: new AbortController().signal }
     try {
+      expect(tool.parameters.properties.panels.items.properties.intervalMinutes?.type).toBe('number')
       await expect(tool.execute(args, exec)).rejects.toThrow('未授权')
       allowed = true
       exec.agent.session.events[0].data.content[0].text = '禁止联网创建行情工作台'

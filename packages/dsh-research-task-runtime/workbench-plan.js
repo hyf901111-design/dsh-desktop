@@ -304,9 +304,12 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
+        if (p.intervalMinutes !== undefined && p.publicData === undefined) throw Error('面板刷新频率仅支持免费源publicData配置。');
         if (p.publicData !== undefined) {
             if (isSimulated || p.artifact !== undefined) throw Error('免费源直通面板不能混用模拟数据或静态artifact。');
-            const publicData = validatePublicDataPanel(p.publicData, p.type);
+            if (p.intervalMinutes !== undefined && p.publicData?.intervalMinutes !== undefined && p.intervalMinutes !== p.publicData.intervalMinutes)
+                throw Error('面板与免费源刷新频率冲突，请只填写一个一致的值。');
+            const publicData = validatePublicDataPanel(p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes }, p.type);
             const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
             const prefix = variant ? `variant: ${variant}；` : '';
             p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
