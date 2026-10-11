@@ -13,13 +13,21 @@ async function setup(desktop={}){
  })
  const spec=id=>f.workspace.getSnapshot().artifacts.find(n=>n.id===id)?.containerSpec
  const output=()=>f.host.querySelector('[data-financial-port=output]'),inlet=()=>f.host.querySelector('[data-financial-port=input]')
+ const port=(id,side)=>f.host.querySelector(`[data-financial-port-node="${id}"][data-financial-port="${side}"]`)
+ const dragPort=async(from,to=null,cancel=false)=>{
+  expect(from).not.toBeNull();f.document.elementFromPoint=()=>to||f.host.querySelector('[data-ework-grid]')
+  await f.event('pointerdown',from,{button:0,pointerId:20,clientX:300,clientY:240})
+  await f.event('pointermove',f.document.body,{pointerId:20,clientX:550,clientY:580})
+  if(cancel)await f.event('keydown',f.document.body,{key:'Escape'})
+  await f.event('pointerup',f.document.body,{pointerId:20,clientX:550,clientY:580})
+ }
  const connect=async(target=inlet())=>{
   expect(output()).not.toBeNull();expect(target).not.toBeNull();f.document.elementFromPoint=()=>target
   await f.event('pointerdown',output(),{button:0,pointerId:10,clientX:300,clientY:240})
   await f.event('pointermove',f.document.body,{pointerId:10,clientX:550,clientY:580})
   await f.event('pointerup',f.document.body,{pointerId:10,clientX:550,clientY:580})
  }
- return {...f,watch,quote,spec,output,inlet,connect}
+ return {...f,watch,quote,spec,output,inlet,connect,port,dragPort}
 }
 it('底部节点连接后选中自选行原子切换行情，重开看板仍保存联动与选中项',async()=>{
  const f=await setup();await f.connect()
@@ -156,4 +164,116 @@ it('组件靠近画布左右边缘时，反向连接曲线仍留在画布内',as
  await f.event('scroll',f.host.querySelector('[data-ework-grid]'));await f.connect()
  const points=f.host.querySelector('[data-financial-link] .ew-financial-connection-line').getAttribute('d').match(/-?\d+(?:\.\d+)?/g).map(Number)
  expect(points.filter((_,i)=>i%2===0).every(x=>x>=0&&x<=1000)).toBe(true)
+})
+it('已连接的输入拖到空白处断开，取消拖拽与错误方向保持连接',async()=>{
+ const f=await setup();await f.connect()
+ await f.dragPort(f.inlet(),null,true)
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBe(f.watch.id)
+ await f.dragPort(f.output(),f.port(f.quote.id,'output'))
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBe(f.watch.id)
+ await f.dragPort(f.inlet())
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBeUndefined()
+ expect(f.spec(f.quote.id).symbols).toEqual([first])
+ await f.event('click',f.host.querySelector('[data-stock-code="000858"]'))
+ expect(f.spec(f.quote.id).symbols).toEqual([first])
+})
+async function setupNews(){
+ const calls=[]
+ const f=await setup({financialWidget:{request:async q=>{
+  calls.push(q)
+  if(q.action==='news')return {news:[{id:q.query||'general',title:(q.query||'综合')+'相关新闻',source:'测试新闻源',time:'2026-10-10T12:00:00Z'}],source:'测试新闻源',receivedAt:'2026-10-10T12:00:00Z'}
+  if(q.action==='history')return {bars:[{date:'2026-10-09',open:10,high:12,low:9,close:11,volume:100}]}
+  return {quotes:q.symbols.map(s=>({...s,price:s.code==='600519'?1263:70.56,changePercent:.57})),source:'测试源'}
+ }}})
+ let news;await f.act(async()=>{news=f.workspace.createFinancialWidget('news')})
+ return {...f,news,calls}
+}
+it('新闻左侧节点接收自选股票，串联行情到新闻时选择与数据都跟随，重开保留关系',async()=>{
+ const f=await setupNews()
+ expect(f.port(f.news.id,'input').closest('footer')).not.toBeNull()
+ expect(f.port(f.quote.id,'output').closest('footer')).not.toBeNull()
+ await f.dragPort(f.output(),f.port(f.news.id,'input'))
+ await vi.waitFor(()=>expect(f.host.querySelector(`[data-research-node-id="${f.news.id}"] .ew-news-title`).textContent).toBe('贵州茅台相关新闻'))
+ expect(f.spec(f.news.id)).toMatchObject({linkedSourceId:f.watch.id,symbols:[first]})
+ await f.connect();await f.dragPort(f.port(f.quote.id,'output'),f.port(f.news.id,'input'))
+ await f.event('click',f.host.querySelector('[data-stock-code="000858"]'))
+ expect(f.spec(f.quote.id).symbols).toEqual([second])
+ expect(f.spec(f.news.id)).toMatchObject({linkedSourceId:f.quote.id,symbols:[second]})
+ await vi.waitFor(()=>expect(f.host.querySelector(`[data-research-node-id="${f.news.id}"] .ew-news-title`).textContent).toBe('五粮液相关新闻'))
+ expect(f.calls.filter(q=>q.action==='news').at(-1).query).toBe('五粮液')
+ const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test').getSnapshot().artifacts
+ expect(restored.find(n=>n.id===f.news.id).containerSpec).toMatchObject({linkedSourceId:f.quote.id,symbols:[second]})
+ await f.act(async()=>f.workspace.updateSelection([f.quote.id],'replace'))
+ expect([...f.host.querySelectorAll('[data-financial-link]')].map(n=>n.dataset.financialLink).sort()).toEqual([f.quote.id,f.news.id].sort())
+ await f.act(async()=>f.workspace.updateSelection([],'replace'))
+ expect(f.host.querySelector('[data-financial-link]')).toBeNull()
+})
+it('输入改接原子移走原连接，输出拖到空白处断开直连分支并允许撤销',async()=>{
+ const f=await setupNews();await f.connect();await f.dragPort(f.output(),f.port(f.news.id,'input'))
+ await f.dragPort(f.port(f.quote.id,'input'),f.port(f.news.id,'input'))
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBeUndefined()
+ expect(f.spec(f.news.id).linkedSourceId).toBe(f.watch.id)
+ await f.act(async()=>f.workspace.undo())
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBe(f.watch.id)
+ await f.dragPort(f.output())
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBeUndefined()
+ expect(f.spec(f.news.id).linkedSourceId).toBeUndefined()
+ await f.act(async()=>f.workspace.undo())
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBe(f.watch.id)
+ expect(f.spec(f.news.id).linkedSourceId).toBe(f.watch.id)
+})
+it('链路清空来源时不请求综合新闻，手动搜索解除新闻自身联动',async()=>{
+ const f=await setupNews();await f.connect();await f.dragPort(f.port(f.quote.id,'output'),f.port(f.news.id,'input'))
+ const search=()=>f.host.querySelector(`[data-research-node-id="${f.news.id}"] input[type=search]`)
+ expect(search().value).toBe('贵州茅台')
+ await f.input(search(),'新能源');await f.event('focusin',search());await f.event('keydown',search(),{key:'Enter',keyCode:13,isComposing:false})
+ expect(f.spec(f.news.id).linkedSourceId).toBeUndefined()
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBe(f.watch.id)
+ await vi.waitFor(()=>expect(f.calls.filter(q=>q.action==='news').at(-1).query).toBe('新能源'))
+ await f.dragPort(f.port(f.quote.id,'output'),f.port(f.news.id,'input'))
+ f.calls.length=0
+ await f.event('keydown',f.host.querySelector('[data-stock-code="600519"]'),{key:'Delete'})
+ await f.event('keydown',f.host.querySelector('[data-stock-code="000858"]'),{key:'Delete'})
+ expect(f.spec(f.news.id).symbols).toEqual([])
+ expect(f.calls.filter(q=>q.action==='news').every(q=>q.query)).toBe(true)
+ await vi.waitFor(()=>expect(f.host.querySelector(`[data-research-node-id="${f.news.id}"] .ew-news-title`)).toBeNull())
+})
+it('行情双侧节点分别测量，串联曲线从右侧输出到新闻左侧输入',async()=>{
+ const f=await setupNews(),rect=(left,top,width,height)=>({left,top,right:left+width,bottom:top+height,width,height})
+ f.host.querySelector(`[data-research-node-id="${f.quote.id}"]`).getBoundingClientRect=()=>rect(10,100,400,330)
+ f.host.querySelector(`[data-research-node-id="${f.news.id}"]`).getBoundingClientRect=()=>rect(450,100,300,330)
+ f.port(f.quote.id,'input').getBoundingClientRect=()=>rect(20,406,20,20)
+ f.port(f.quote.id,'output').getBoundingClientRect=()=>rect(380,406,20,20)
+ f.port(f.news.id,'input').getBoundingClientRect=()=>rect(460,406,20,20)
+ await f.event('scroll',f.host.querySelector('[data-ework-grid]'))
+ await f.dragPort(f.port(f.quote.id,'output'),f.port(f.news.id,'input'))
+ const path=f.host.querySelector(`[data-financial-link="${f.news.id}"] .ew-financial-connection-line`).getAttribute('d')
+ expect(path).toMatch(/^M 390 416 C/);expect(path).toMatch(/470 416$/)
+})
+it('拒绝右侧到右侧、行情到行情与自连接，原有串联保留',async()=>{
+ const f=await setupNews();await f.connect();await f.dragPort(f.port(f.quote.id,'output'),f.port(f.news.id,'input'))
+ await f.dragPort(f.output(),f.port(f.quote.id,'output'))
+ await f.dragPort(f.port(f.quote.id,'output'),f.output())
+ await f.dragPort(f.port(f.quote.id,'output'),f.inlet())
+ let another;await f.act(async()=>{another=f.workspace.createFinancialWidget('quote')})
+ await f.dragPort(f.port(f.quote.id,'output'),f.port(another.id,'input'))
+ expect(f.spec(another.id).linkedWatchlistId).toBeUndefined()
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBe(f.watch.id)
+ expect(f.spec(f.news.id).linkedSourceId).toBe(f.quote.id)
+ await f.dragPort(f.output())
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBeUndefined()
+ expect(f.spec(f.news.id).linkedSourceId).toBe(f.quote.id)
+ expect(f.spec(f.news.id).symbols).toEqual([first])
+})
+it('快速切换个股时新闻旧请求晚返回不会覆盖新股票内容',async()=>{
+ const f=await setupNews(),pending=[],api=f.win.dshDesktop.financialWidget,request=api.request
+ api.request=q=>q.action==='news'?new Promise(resolve=>pending.push({query:q.query,resolve})):request(q)
+ await f.dragPort(f.output(),f.port(f.news.id,'input'))
+ await vi.waitFor(()=>expect(pending).toHaveLength(1))
+ await f.event('click',f.host.querySelector('[data-stock-code="000858"]'))
+ await vi.waitFor(()=>expect(pending).toHaveLength(2))
+ await f.act(async()=>pending[1].resolve({news:[{id:'new',title:'五粮液新新闻'}],source:'测试源'}))
+ await f.act(async()=>pending[0].resolve({news:[{id:'old',title:'茅台旧新闻'}],source:'测试源'}))
+ const card=f.host.querySelector(`[data-research-node-id="${f.news.id}"]`)
+ expect(card.textContent).toContain('五粮液新新闻');expect(card.textContent).not.toContain('茅台旧新闻')
 })

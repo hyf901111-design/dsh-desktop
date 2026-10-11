@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {financialWidgetSpec,changeWatchlist,financialIndicators,financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
+import {financialWidgetSpec,changeWatchlist,financialIndicators,financialWidgetDefaults,synchronizeFinancialLinks} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 const hk={code:'09988',name:'阿里巴巴-W',market:'HK'},us={code:'BABA',name:'阿里巴巴',market:'US'}
 describe('固定金融组件持久化契约',()=>{
  it('仅四种组件；重复代码按市场区分，拒绝未知字段与非有限配置',()=>{
@@ -31,5 +31,25 @@ describe('固定金融组件持久化契约',()=>{
   const v=financialIndicators(bars);expect(v.ma5.slice(0,4)).toEqual([null,null,null,null]);expect(v.ma5[4]).toBe(3)
   expect(v.macd).toHaveLength(40);expect(v.macd[0].histogram).toBe(0)
   expect(financialIndicators([])).toMatchObject({ma5:[],macd:[]})
+ })
+ it('新闻保存来源节点，串联同步与节点顺序无关，空来源清除旧股票',()=>{
+  const node=(id,widget,extra={})=>({id,containerSpec:{...financialWidgetDefaults(widget),...extra}})
+  const nodes=[node('news','news',{linkedSourceId:'quote',query:'原搜索'}),node('quote','quote',{linkedWatchlistId:'watch'}),node('watch','watchlist',{symbols:[hk,us],selectedSymbol:'US:BABA'})]
+  expect(financialWidgetSpec(nodes[0].containerSpec)).not.toBeNull()
+  expect(financialWidgetSpec({...nodes[1].containerSpec,linkedSourceId:'watch'})).toBeNull()
+  expect(financialWidgetSpec({...nodes[0].containerSpec,linkedSourceId:'\n'})).toBeNull()
+  const synced=synchronizeFinancialLinks(nodes)
+  expect(synced[0].containerSpec).toMatchObject({linkedSourceId:'quote',symbols:[us],query:'原搜索'})
+  expect(synced[1].containerSpec.symbols).toEqual([us])
+  const emptied=synchronizeFinancialLinks(synced.map(n=>n.id==='watch'?node('watch','watchlist'):n))
+  expect(emptied[0].containerSpec.symbols).toEqual([])
+  expect(emptied[1].containerSpec.symbols).toEqual([])
+  const removed=synchronizeFinancialLinks(synced.filter(n=>n.id!=='quote'))
+  expect(removed[0].containerSpec.linkedSourceId).toBeUndefined()
+  expect(removed[0].containerSpec.symbols).toEqual([us])
+ })
+ it('无效来源类型和自连接不会形成新闻链路',()=>{
+  const nodes=['a','b'].map(id=>({id,containerSpec:{...financialWidgetDefaults('news'),linkedSourceId:id==='a'?'b':'a'}}))
+  expect(synchronizeFinancialLinks(nodes).every(n=>!n.containerSpec.linkedSourceId)).toBe(true)
  })
 })
