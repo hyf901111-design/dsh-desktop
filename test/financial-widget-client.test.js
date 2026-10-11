@@ -169,6 +169,23 @@ it('短自选整理收紧高度，长列表仍能滚动；标准整理保留行�
 it('行情图方向键同步当前OHLC和指标读数，离开后恢复末期',async()=>{
  const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])});await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull());const svg=f.host.querySelector('[data-financial-chart] svg');await f.event('keydown',svg,{key:'Home'});expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('开 100.00');await f.event('keydown',svg,{key:'End'});expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('开 179.00')
 })
+it('未选中行情组件时滚轮滚动看板，选中后才缩放图表，取消选择立即恢复页面滚动',async()=>{
+ const history=Array.from({length:240},(_,i)=>({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:1000})),bridge=service()
+ bridge.request.mockImplementation(async q=>q.action==='history'?{bars:history,nativePeriod:true,source:'测试行情'}:{quotes:q.symbols.map(x=>({...x,price:341,changePercent:1})),source:'测试行情'})
+ const f=await fixture({financialWidget:bridge});let quote
+ await f.act(async()=>{quote=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...quote,containerSpec:{...quote.containerSpec,symbols:[s]}}]);f.workspace.applyWorkbenchCells([{id:quote.id,x:0,y:0,w:40,h:60}],true);f.workspace.updateSelection([],'replace')})
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull())
+ const chart=f.host.querySelector('[data-financial-chart]'),candles=()=>chart.querySelectorAll('rect[clip-path]').length
+ Object.defineProperty(f.canvas,'scrollHeight',{value:2000});f.canvas.scrollTop=40
+ const initial=candles();await f.event('wheel',chart,{deltaX:0,deltaY:120,deltaMode:0,clientX:315})
+ expect(candles()).toBe(initial);expect(f.canvas.scrollTop).toBe(160)
+ await f.act(async()=>f.workspace.updateSelection([quote.id],'replace'))
+ await f.event('wheel',chart,{deltaX:0,deltaY:-120,deltaMode:0,clientX:315})
+ expect(candles()).toBeLessThan(initial);expect(f.canvas.scrollTop).toBe(160)
+ const zoomed=candles();await f.act(async()=>f.workspace.updateSelection([],'replace'))
+ await f.event('wheel',chart,{deltaX:0,deltaY:120,deltaMode:0,clientX:315})
+ expect(candles()).toBe(zoomed);expect(f.canvas.scrollTop).toBe(280)
+})
 it('蜡烛图滚轮以鼠标为中心缩放，横向滚动与拖拽浏览历史，双击恢复',async()=>{
  const history=Array.from({length:240},(_,i)=>({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:1000})),bridge=service()
  bridge.request.mockImplementation(async q=>q.action==='history'?{bars:history,nativePeriod:true,source:'测试行情'}:{quotes:q.symbols.map(x=>({...x,price:341,changePercent:1})),source:'测试行情'})

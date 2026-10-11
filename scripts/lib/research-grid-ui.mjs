@@ -262,11 +262,11 @@ export function WorkbenchResizeControls({nodes,width,bottom=Infinity}) {
 }
 export function handleWorkbenchWheel(root,workspace,event) {
   if(event.target?.closest?.('[role=menu],[role=dialog][open],.ew-grid-menu,[data-research-create-popover],[data-research-global-toolbar]'))return
-  if(!event.__sherlockCanvasPan&&event.target?.closest?.('[data-financial-chart]'))return
-  const indices=event.target?.closest?.('.ew-indices-grid')
-  if(!event.__sherlockCanvasPan&&indices&&indices.scrollHeight>indices.clientHeight+1)return
   const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive]')
   const selected=card&&workspace.getSnapshot().selection.selectedNodeIds.includes(card.getAttribute('data-research-node-id'))
+  if(!event.__sherlockCanvasPan&&selected&&event.target?.closest?.('[data-financial-chart]'))return
+  const indices=event.target?.closest?.('.ew-indices-grid')
+  if(!event.__sherlockCanvasPan&&indices&&indices.scrollHeight>indices.clientHeight+1)return
   if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey&&researchPreviewCanConsumeWheel(event.target,preview,event.deltaX||0,event.deltaY||0))return
   event.preventDefault();event.stopPropagation()
   const unit=event.deltaMode===1?16:event.deltaMode===2?root.clientHeight:1

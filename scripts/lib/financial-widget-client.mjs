@@ -216,6 +216,7 @@ export function FinancialPriceChart({bars,period,nativePeriod=false,indicators,v
  const focusBar=index=>{const value=Math.min(n-1,Math.max(0,index));setHover(value);onFocusBar?.(series[value])},reset=()=>{setView({count:period==='1m'?500:96,end:0});setHover(null);onFocusBar?.(null);pan.current=null;setPanning(false)}
  const maximum=Math.max(24,Math.floor(size.width/(period==='1m'?1:4)))
  wheelHandler.current=e=>{
+  if(root.current.closest('[data-research-node-id]')?.getAttribute('data-selected')!=='true')return
   e.preventDefault();e.stopPropagation();const r=root.current.getBoundingClientRect(),factor=e.deltaMode===1?16:e.deltaMode===2?r.height||size.height:1,dx=(e.deltaX||0)*factor,dy=(e.deltaY||0)*factor,horizontal=!e.ctrlKey&&(e.shiftKey||Math.abs(dx)>Math.abs(dy)),fraction=Math.min(1,Math.max(0,((Number.isFinite(e.clientX)?e.clientX:r.left+right/2)-r.left-left)/(right-left)))
   setHover(null);onFocusBar?.(null)
   setView(v=>{const current=Math.max(1,Math.min(v.count,grouped.length,maximum)),oldEnd=Math.min(v.end,Math.max(0,grouped.length-current))
