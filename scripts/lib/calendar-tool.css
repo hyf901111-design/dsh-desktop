@@ -89,7 +89,7 @@
  .ew-calendar-footer>span{overflow:hidden;text-overflow:ellipsis}
  .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-month{display:none}
  .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-layout{grid-template-columns:1fr;grid-template-rows:1fr}
- .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-agenda{border-left:0;padding-left:0}
+ .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-agenda{border:0;padding:0}
  .ew-calendar-week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:none;gap:3px;padding:2px 0 8px;border-bottom:1px solid var(--fw-grid);margin-bottom:6px}
  body .ew-calendar-week-strip button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0!important;min-height:56px!important}
  .ew-calendar-week-strip small{font-size:10px;color:var(--fw-muted)}
