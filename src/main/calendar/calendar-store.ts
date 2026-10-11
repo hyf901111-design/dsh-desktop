@@ -31,7 +31,13 @@ export class CalendarStore {
  save(target:CalendarTarget,value:unknown,id?:string){validateCalendarTarget(target);const input=validateCalendarEvent(value)
   return this.mutate(s=>{const old=id?s.events.find(e=>e.id===id&&e.sessionId===target.sessionId&&e.nodeId===target.nodeId):undefined;if(id&&!old)throw Error('事项不存在');if(!old&&(s.events.length>=2000||s.events.filter(e=>e.nodeId===target.nodeId&&e.sessionId===target.sessionId).length>=500))throw Error('日历事项已达上限')
    const at=this.now(),event:CalendarEvent={...input,...target,id:old?.id??randomUUID(),createdAt:old?.createdAt??at,updatedAt:at,completedDates:old&&old.date===input.date&&old.repeat===input.repeat?old.completedDates:[],nextReminder:null};event.nextReminder=nextCalendarReminder(event,at)
-   if(input.reminderMinutes!==null&&!event.nextReminder)throw Error('提醒时间已过去，请更改时间或关闭提醒')
+   if(input.reminderMinutes!==null&&!event.nextReminder){
+    const sameSchedule=old&&['date','time','timezone','repeat','reminderMinutes'].every(key=>old[key as keyof CalendarEvent]===input[key as keyof typeof input])
+    if(!sameSchedule)throw Error('提醒时间已过去，请更改时间或关闭提醒')
+    // Editing the text of an existing past event must neither cancel a pending
+    // catch-up reminder nor recreate a reminder already delivered/completed.
+    event.nextReminder=old!.nextReminder
+   }
    s.events=old?s.events.map(e=>e.id===event.id?event:e):[...s.events,event];return event
   })
  }

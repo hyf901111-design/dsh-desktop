@@ -41,6 +41,18 @@ it('persists immediately and delivers one durable receipt across restart and con
  expect(restored.list(target).notices[0]?.dismissedAt).toBe(at)
 })
 
+it('allows notes to be edited after a reminder without dropping an overdue delivery or sending it twice',async()=>{
+ const file=await setup();let at=Date.parse('2026-10-12T01:00Z')
+ const store=new CalendarStore(file,()=>at);await store.load();const event=await store.save(target,input())
+ at=Date.parse('2026-10-12T02:00Z')
+ await store.save(target,input({notes:'补充信息'}),event.id)
+ const notices:any[]=[];await store.tick(()=>true,n=>notices.push(n));expect(notices).toHaveLength(1)
+ await store.save(target,input({notes:'会后记录'}),event.id)
+ await store.tick(()=>true,n=>notices.push(n));expect(notices).toHaveLength(1)
+ expect(store.list(target).events[0]?.notes).toBe('会后记录')
+ await expect(store.save(target,input({time:'09:00'}),event.id)).rejects.toThrow('提醒时间已过去')
+})
+
 it('completes a single repeating occurrence, catches up only the latest reminder, and cancels deleted events',async()=>{
  const file=await setup();let at=Date.parse('2026-10-12T01:00Z')
  const store=new CalendarStore(file,()=>at);await store.load();const e=await store.save(target,input({repeat:'daily'}))
