@@ -9,23 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "免费分钟工作台面板取数凭证规则",
+        "featureName": "免费数据绑定小数精度说明",
         "branch": "codex/feat/free-data-skill-20261010",
-        "baseCommit": "460a32ddf45167fbe131effc6d21ff672ba446ae",
-        "tipCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
+        "baseCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
+        "tipCommit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
         "commits": [
           {
-            "commit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
+            "commit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
             "parents": [
-              "460a32ddf45167fbe131effc6d21ff672ba446ae"
+              "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4"
             ],
-            "subject": "修复：免费源面板绑定必须取得本轮真实取数凭证"
+            "subject": "完善：数据绑定工具明确小数位映射规则"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
           }
         ],
         "checks": [
@@ -35,27 +35,12 @@
               "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
               "run",
               "test/component-source-binding.test.js",
-              "test/free-data-sources.test.js",
-              "test/component-agent-scope.test.js"
+              "test/free-data-sources.test.js"
             ],
             "outcome": "passed",
-            "summary": "本轮真实取数、来源选择和权限聚焦检查通过",
-            "verifiedCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
-            "completedAt": "2026-10-11T00:05:50.440736+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
-            "completedAt": "2026-10-11T00:05:50.440736+00:00",
+            "summary": "来源绑定与免费工具聚焦检查通过",
+            "verifiedCommit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
+            "completedAt": "2026-10-11T00:08:10.485471+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -73,47 +58,7 @@
           "股票休市报价不变，Crypto用实际交易所报价",
           "只有看板可见时自动刷新"
         ],
-        "generatedAt": "2026-10-11T00:05:50.440736+00:00"
-      },
-      "merged": {
-        "mergeCommit": "13a97c1f1b27b38ab360fb0f2d983f12b3f9af18",
-        "verificationCommit": "13a97c1f1b27b38ab360fb0f2d983f12b3f9af18",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
-              "run",
-              "test/free-data-sources.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/component-agent-scope.test.js",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs run test/free-data-sources.test.js test/integration-bundled-skill.test.js test/research-component-source-tools.test.js test/component-agent-scope.test.js test/research-task-runtime.test.js -t free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference",
-            "verifiedCommit": "13a97c1f1b27b38ab360fb0f2d983f12b3f9af18",
-            "completedAt": "2026-10-11T00:05:58.176Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "13a97c1f1b27b38ab360fb0f2d983f12b3f9af18",
-            "completedAt": "2026-10-11T00:05:58.176Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-11T00:05:58.176Z"
+        "generatedAt": "2026-10-11T00:08:10.485471+00:00"
       }
     }
   ],
