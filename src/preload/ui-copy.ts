@@ -1,7 +1,9 @@
 /** Desktop-owned copy shared by preload surfaces and legacy plugin controls.
  * Keys are exact UI strings. User documents, input values and saved titles are never translated.
  */
+import {financialUiCopy} from './financial-ui-copy'
 export const englishUiCopy: Record<string, string> = {
+  ...financialUiCopy,
   "收起": "Collapse",
   "更多": "More",
   "组件": "Component",

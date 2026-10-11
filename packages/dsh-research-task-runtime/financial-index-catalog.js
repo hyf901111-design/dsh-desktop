@@ -10,14 +10,14 @@ export function financialIndexCatalog(){
   ['A股','BJ','899050','北证50','BSE 50'],
   ['港股','INDEX','^HSI','恒生指数','Hang Seng HSI'],['港股','INDEX','^HSCE','恒生国企指数','Hang Seng China Enterprises HSCEI'],
   ['港股','INDEX','HSTECH.HK','恒生科技指数','Hang Seng TECH HSTECH'],
-  ['美股','INDEX','^DJI','道琼斯工业指数','Dow Jones DJI'],['美股','INDEX','^GSPC','标普500','S&P 500 SPX'],
+  ['美股','INDEX','^DJI','道琼斯工业指数','Dow Jones Industrial Average DJI'],['美股','INDEX','^GSPC','标普500','S&P 500 SPX'],
   ['美股','INDEX','^IXIC','纳斯达克综合指数','NASDAQ Composite'],['美股','INDEX','^NDX','纳斯达克100','NASDAQ 100'],
   ['美股','INDEX','^RUT','罗素2000','Russell 2000'],['美股','INDEX','^VIX','波动率指数','CBOE VIX'],
-  ['亚太','INDEX','^N225','日经225','Nikkei Japan'],['亚太','INDEX','^KS11','韩国综合指数','KOSPI Korea'],
-  ['亚太','INDEX','^TWII','台湾加权指数','Taiwan Weighted'],['亚太','INDEX','^STI','新加坡海峡时报指数','Straits Times Singapore'],
-  ['亚太','INDEX','^AXJO','澳大利亚标普200','S&P ASX 200 Australia'],['亚太','INDEX','^BSESN','印度孟买30','SENSEX India'],
+  ['亚太','INDEX','^N225','日经225','Nikkei 225 Japan'],['亚太','INDEX','^KS11','韩国综合指数','KOSPI Korea'],
+  ['亚太','INDEX','^TWII','台湾加权指数','TAIEX Taiwan Weighted'],['亚太','INDEX','^STI','新加坡海峡时报指数','Straits Times Singapore'],
+  ['亚太','INDEX','^AXJO','澳大利亚标普200','S&P/ASX 200 Australia'],['亚太','INDEX','^BSESN','印度孟买30','SENSEX India'],
   ['欧洲','INDEX','^FTSE','英国富时100','FTSE 100 UK'],['欧洲','INDEX','^GDAXI','德国DAX','Germany'],
   ['欧洲','INDEX','^FCHI','法国CAC40','France'],['欧洲','INDEX','^STOXX50E','欧洲斯托克50','EURO STOXX 50'],
-  ['其他','INDEX','^GSPTSE','加拿大TSX综合指数','Canada S&P TSX'],['其他','INDEX','^BVSP','巴西圣保罗指数','Brazil BOVESPA']
+  ['其他','INDEX','^GSPTSE','加拿大TSX综合指数','Canada S&P/TSX Composite'],['其他','INDEX','^BVSP','巴西圣保罗指数','Brazil BOVESPA']
  ].map(([group,market,code,name,keywords])=>({group,symbol:{market,code,name},keywords}))
 }

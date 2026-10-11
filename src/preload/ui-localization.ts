@@ -2,15 +2,42 @@ import { englishUiCopy } from './ui-copy'
 
 // Preload UI and portaled plugin controls share the application's selected locale,
 // rather than navigator.language. Never replace elements or translate user content.
-const surfaces = '.st-root,.st-detail,.st-dialog,.st-menu,.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description]'
-const preserved = '.rScV5Q_voiceAccessible,script,style,textarea,input,[contenteditable],[data-ui-preserve],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText,.srb-member-identity strong,.srb-member-avatar,.srb-board-name,.sherlock-account-profile strong,.sherlock-account-menu-identity strong,.sherlock-account-label,[data-research-artifact-content]:not(:has(.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_previewPlaceholder))'
+const surfaces = '.st-root,.st-detail,.st-dialog,.st-menu,.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description],.ew-financial-widget,.ew-grid-menu,.ew-financial-suggestions,[data-ui-system-title]'
+const financialContent = '.ew-watch-name,.ew-news-title,.ew-news-summary,.ew-news-source,.ew-financial-suggestions [role="option"]'
+const preserved = '.rScV5Q_voiceAccessible,script,style,textarea,input,[contenteditable],[data-ui-preserve],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText,.srb-member-identity strong,.srb-member-avatar,.srb-board-name,.sherlock-account-profile strong,.sherlock-account-menu-identity strong,.sherlock-account-label,[data-research-artifact-content]:not(:has(.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_previewPlaceholder,.ew-financial-widget)),'+financialContent
 export function translateUiCopy(value: string): string {
  const key=value.trim(), translated=englishUiCopy[key]
  if(translated)return value.replace(key,translated)
+ if(key.includes(' / ')&&/(?:腾讯财经|新浪财经|东方财富)/.test(key))return value.replace(key,key.split(' / ').map(translateUiCopy).join(' / '))
+ if(key.includes('\n'))return value.replace(key,key.split('\n').map(translateUiCopy).join('\n'))
+ if(key.includes(' · ')&&/(?:行情|资讯|公告|来源：|时刻|每60秒刷新)/.test(key))return value.replace(key,key.split(' · ').map(translateUiCopy).join(' · '))
+ if(/^(?:成交量 |VOL(?:\([^)]*\))?\s|MA(?:5|10)\s)/.test(key)){
+  const result=key.replace(/^成交量 /,'Volume ').replace(/([\d,.]+)\s*(亿|万)?(手|股|张|枚|原始单位)/g,(_m,n:string,scale:string,unit:string)=>{
+   const amount=Number(n.replaceAll(',',''))*(scale==='亿'?1e8:scale==='万'?1e4:1),factor=amount>=1e9?1e9:amount>=1e6?1e6:amount>=1e3?1e3:1
+   return (amount/factor).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+({1e9:'B',1e6:'M',1e3:'K',1:''} as Record<number,string>)[factor]+' '+({手:'lots',股:'shares',张:'contracts',枚:'coins',原始单位:'units'} as Record<string,string>)[unit]
+  })
+  if(result!==key)return value.replace(key,result)
+ }
  if(key.endsWith(' · 专属对话')) return value.replace(key,key.slice(0,-' · 专属对话'.length)+' · Dedicated conversation')
  if(key.includes(' · ') && /^(下次运行|每天|工作日|每周[日一二三四五六]|\d{4}-\d{2}-\d{2}|北京时间|香港时间|东京时间|纽约时间|伦敦时间|UTC|[A-Za-z_]+\/)/.test(key))
   return value.replace(key,key.split(' · ').map(translateUiCopy).join(' · '))
  const patterns: Array<[RegExp,(...args:string[])=>string]> = [
+  [/^我的自选 · (\d+)$/,(_m,n)=>`My watchlist · ${n}`],
+  [/^已选 (\d+)$/,(_m,n)=>`Selected ${n}`],
+  [/^(\d+) 项$/,(_m,n)=>`${n} ${n==='1'?'item':'items'}`],
+  [/^(\d+) 个标的未取得行情$/,(_m,n)=>`Quotes unavailable for ${n} ${n==='1'?'symbol':'symbols'}`],
+  [/^获取 (\d{1,2}:\d{2})$/,(_m,t)=>`Fetched ${t}`],
+  [/^最近获取：(.*)$/,(_m,t)=>`Last fetched: ${t}`],
+  [/^上次刷新：(.*)$/,(_m,t)=>`Last refreshed: ${translateUiCopy(t)}`],
+  [/^(\d{4})年(\d{1,2})月(\d{1,2})日\s*(.*)$/,(_m,y,month,d,t)=>`${y}-${month.padStart(2,'0')}-${d.padStart(2,'0')}${t?' '+t:''}`],
+  [/^(行情|资讯|公告) (.*)$/,(_m,label,t)=>`${({行情:'Quotes',资讯:'News',公告:'Announcements'} as Record<string,string>)[label]} ${translateUiCopy(t)}`],
+  [/^(图表来源|走势来源)：(.*)$/,(_m,label,t)=>`${label==='图表来源'?'Chart source':'Trend source'}: ${translateUiCopy(t)}`],
+  [/^开 ([\d,.—-]+)\s+高 ([\d,.—-]+)\s+低 ([\d,.—-]+)\s+收 ([\d,.—-]+)$/,(_m,o,h,l,c)=>`O ${o}  H ${h}  L ${l}  C ${c}`],
+  [/^时间 (\S+)\s+现价 (\S+)$/,(_m,t,p)=>`Time ${t}  Last ${p}`],
+  [/^(.+)；右键移除，拖动排序$/,(_m,name)=>`${name}; right-click to remove, drag to reorder`],
+  [/^(上移|下移)(.+)$/,(_m,d,name)=>`Move ${englishUiCopy[name]??name} ${d==='上移'?'up':'down'}`],
+  [/^已整理 (\d+) 个组件$/,(_m,n)=>`Arranged ${n} ${n==='1'?'component':'components'}`],
+  [/^(\d+) (秒|分钟|小时|天)前$/,(_m,n,u)=>`${n} ${{秒:'second',分钟:'minute',小时:'hour',天:'day'}[u]}${n==='1'?'':'s'} ago`],
   [/^展开其余 (\d+) 个看板$/,(_m,n)=>`Show ${n} more ${n==='1'?'board':'boards'}`],
   [/^每 (\d+) 分钟$/,(_m,n)=>`Every ${n} ${n==='1'?'minute':'minutes'}`],
   [/^(每天|工作日) (\d{1,2}:\d{2})$/,(_m,f,t)=>`${f==='每天'?'Daily':'Weekdays'} ${t}`],
@@ -86,6 +113,7 @@ export function mountUiLocalization(doc:Document=document):()=>void {
    let saved=attrState.get(el);if(!saved){saved=new Map();attrState.set(el,saved)}
    for(const name of ['placeholder','aria-label','title','data-tool-tooltip']){
     const current=el.getAttribute(name);if(current===null)continue
+    if(name==='title'&&el.closest(financialContent))continue
     const old=saved.get(name),source=old&&current===old.rendered?old.source:current
     const rendered=english?translateUiCopy(source):source
     if(current!==rendered)el.setAttribute(name,rendered)
@@ -117,7 +145,7 @@ export function mountUiLocalization(doc:Document=document):()=>void {
   }
   if(roots.size)schedule()
  })
- observer.observe(doc.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-odyssey-locale','placeholder','aria-label','title','data-tool-tooltip']})
+ observer.observe(doc.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['data-odyssey-locale','placeholder','aria-label','title','data-tool-tooltip','data-ui-system-title','data-ui-preserve']})
  update()
  return()=>{disposed=true;win.cancelAnimationFrame(frame);observer.disconnect()}
 }

@@ -70,6 +70,7 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body .ew-watch-meta{display:flex;align-items:center;gap:12px;height:40px;flex:none;padding:0 6px}
  body .ew-watch-meta>span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  body .ew-watch-meta select{width:74px!important;flex:none;font:400 12px/16px 'Noto Sans SC',Inter,system-ui!important}
+ html[data-odyssey-locale=en] body .ew-watch-meta select{width:96px!important}
  body .ew-watch-meta>button{display:grid;place-items:center;width:24px!important;height:24px!important;padding:0!important;flex:none}
  body .ew-watch-table{display:flex;flex-direction:column;flex:1;min-height:0;overflow-x:auto;overscroll-behavior:contain;scrollbar-width:thin}
  body .ew-watch-table>:is(.ew-watch-columns,.ew-watch-rows){min-width:0}
@@ -140,6 +141,7 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body .ew-financial-search-line input::-webkit-search-cancel-button{display:none}
  body .ew-financial-header-selector{width:172px;max-width:42%;margin-right:auto;flex:none;color:var(--fw-text)}
  body [data-ework-grid] .ew-grid-header:has(.ew-financial-header-selector) .ew-grid-title{flex:0 0 auto;max-width:72px}
+ html[data-odyssey-locale=en] body [data-ework-grid] .ew-grid-header:has(.ew-financial-header-selector) .ew-grid-title{max-width:112px}
  body .ew-financial-suggestions{position:fixed;z-index:3005;box-sizing:border-box;padding:4px;background:var(--fw-menu)!important;color:var(--fw-text)!important;border:1px solid var(--fw-border);border-radius:8px;box-shadow:0 5px 18px #0005;max-height:220px;overflow-y:auto;overscroll-behavior:contain;font:400 12px/16px Inter,'Noto Sans SC',system-ui}
  body .ew-financial-suggestions p{margin:0;padding:8px;font:400 11px/16px 'Noto Sans SC',Inter,system-ui;color:var(--fw-muted)}
  body .ew-financial-suggestions>button{display:flex!important;width:100%!important;align-items:center!important;gap:8px!important;height:36px!important;min-height:36px!important;padding:0 8px!important;text-align:left!important;border:0!important;border-radius:4px!important;background:transparent!important;color:var(--fw-text)!important;cursor:pointer;font:400 12px/16px 'Noto Sans SC',Inter,system-ui!important}
@@ -184,6 +186,10 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-quote-controls button{height:24px!important;min-height:24px!important;min-width:40px!important;padding:3px 7px!important;background:transparent!important;border:0!important;color:var(--fw-muted)!important}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-quote-controls button[aria-pressed=true]{background:var(--fw-control)!important;color:var(--fw-text)!important}
  body .ew-quote-controls>select{margin-left:auto;max-width:80px}
+ html[data-odyssey-locale=en] body .ew-quote-controls>select{max-width:132px}
+ html[data-odyssey-locale=en] body .ew-quote-controls{flex-wrap:wrap;row-gap:4px}
+ html[data-odyssey-locale=en] body .ew-quote-periods{min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none}
+ html[data-odyssey-locale=en] body .ew-quote-periods>button{flex:none;white-space:nowrap}
  body .ew-price-chart{position:relative;flex:1;min-height:0;margin:0 6px;min-width:0;overflow:hidden;touch-action:none;cursor:grab;user-select:none;overscroll-behavior:contain}
  body .ew-price-chart[data-chart-panning=true]{cursor:grabbing}
  body .ew-price-chart[data-chart-compact=true] .ew-chart-legend{display:none}
