@@ -18,6 +18,18 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '1.1.5',
+      date: '2026-10-11',
+      items: [
+        "优化自选股右键菜单的图标、留白和点击区域，支持点击菜单外、按 Esc 或滚动画布关闭菜单。",
+        "新增自选股选中状态与拖拽连接节点，选中股票后可联动个股行情或对应相关新闻。",
+        "支持自选股、个股行情与新闻列表串联，行情组件切换股票时同步更新已连接的新闻组件。",
+        "连接线采用实线曲线，仅在选中相关组件时显示；节点支持悬停、连接反馈和组件亮框动效。",
+        "支持拖拽已连接节点断开或更换连接，限制右侧输出到左侧输入，避免无效连接破坏原有关系。",
+        "保存股票选择及组件连接，手动搜索可解除上游联动；移除来源、快速切换股票和撤销操作时保持数据与连接一致。"
+      ]
+    },
+    {
       version: '1.1.4',
       date: '2026-10-11',
       items: [
@@ -321,6 +333,18 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.1.5',
+      date: '2026-10-11',
+      items: [
+        "Refined the watchlist context menu with clearer icons, spacing and hit areas; click outside, press Esc or scroll the canvas to dismiss it.",
+        "Added watchlist selection and draggable connection ports, allowing a selected stock to update linked stock charts or related news.",
+        "Chain Watchlist, Stock Chart and News List components, keeping connected news in sync when the chart stock changes.",
+        "Connections use solid curved lines shown when a related component is selected, with port hover feedback and animated component frames.",
+        "Drag connected ports to disconnect or rewire; only compatible right-side outputs can connect to left-side inputs, preserving existing links after invalid drops.",
+        "Persist stock selections and links, detach incoming links during manual search, and keep data consistent when sources are removed, stocks change quickly or actions are undone."
+      ]
+    },
     {
       version: '1.1.4',
       date: '2026-10-11',
