@@ -60,7 +60,7 @@
  .ew-calendar-event>div{flex:1;min-width:0}
  body .ew-calendar-event button[data-calendar-complete]{display:flex;align-items:center;justify-content:center;padding:0!important;border:1px solid var(--fw-border)!important;width:16px!important;min-width:16px!important;height:16px!important;min-height:16px!important;flex:none;margin:2px 0 0;border-radius:4px!important;color:var(--fw-accent)!important}
  body .ew-calendar-event button[data-calendar-complete][aria-checked=true]{border-color:var(--fw-accent)!important;background:color-mix(in srgb,var(--fw-accent) 12%,transparent)!important}
- body .ew-calendar-event-title{display:block!important;text-align:left;width:100%;font-weight:500!important;padding:0!important;min-height:20px!important;height:auto!important;line-height:20px!important;overflow-wrap:anywhere}
+ body [data-ework-grid] [data-research-node-id] .ew-calendar-tool .ew-calendar-event-title{display:block!important;text-align:left!important;text-indent:0!important;width:100%;font-weight:500!important;margin:0!important;padding:0!important;min-height:20px!important;height:auto!important;line-height:20px!important;overflow-wrap:anywhere}
  body .ew-calendar-event-title:hover{color:var(--fw-accent)!important;background:transparent!important}
  .ew-calendar-event[data-completed] .ew-calendar-event-title{text-decoration:line-through;opacity:.5}
  .ew-calendar-event[data-completed] :is(.ew-calendar-event-meta,p){opacity:.5}
