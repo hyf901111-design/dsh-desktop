@@ -28,6 +28,7 @@ import {RSS_WORKBENCH_GUIDANCE} from './rss-template-contract.js';
 import {SIMULATED_WORKBENCH_PRESETS} from './simulated-workbench-presets.js';
 import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 import {marketVariant} from './workbench-design-contract.js';
+import { PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 const templateIds = panels => panels.map(panel => panel.type === 'market'
@@ -88,6 +89,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         if (capture) {
             exec.signal?.throwIfAborted();
             const plan = validateWorkbench(args);
+            if (plan.panels.some(p => p.publicData)) throw Error('共享画板暂不支持内置免费源直通刷新，请使用普通面板取数流程。');
             if (plan.dataMode === 'simulated') throw Error('共享画板的模拟数据快路径尚未启用，请使用现有面板生成流程。');
             return capture(plan);
         }
@@ -98,6 +100,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 throw Error('研究会话不可用');
             exec.signal?.throwIfAborted();
             await assertPrivateResearchSession(parentSessionId);
+            const direct = input.panels.filter(p => p.publicData);
+            if (direct.length && (!ctx.tools.schemas?.(exec.agent)?.some(t => t.name === 'public_data_query') ||
+                /禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(canvasHumanRequest(exec.agent?.session)?.text ?? '')))
+                throw Error('当前任务未授权内置免费来源取数；请使用已有资料或正常面板流程。');
+            if (direct.length && typeof runtime.startPublicDataBatch !== 'function') throw Error('免费源组件直通服务不可用。');
             const old = plans.find(p => p.parentSessionId === parentSessionId && p.requestId === input.requestId);
             if (old) {
                 if (JSON.stringify(validateWorkbench(old.input ?? old)) !== JSON.stringify(input))
@@ -144,8 +151,13 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 }
             } else {
                 const prepared = plan.panels.filter(p => p.artifact);
-                const pending = plan.panels.filter(p => !p.artifact);
+                const pending = plan.panels.filter(p => !p.artifact && !p.publicData);
+                const direct = plan.panels.filter(p => p.publicData);
                 try {
+                    if (direct.length) {
+                        const receipts = await runtime.startPublicDataBatch({ parentSessionId, panels: direct.map(p => ({ canvasNodeId: p.nodeId, title: p.title, type: p.type, prompt: workbenchPanelPrompt(input, p), publicDataPrompt: p.prompt, publicData: p.publicData })) });
+                        direct.forEach((p, i) => { p.taskId = receipts[i].taskId; });
+                    }
                     if (prepared.length) {
                         const receipts = await runtime.startPreparedBatch({parentSessionId, panels:prepared.map(p => ({canvasNodeId:p.nodeId,prompt:workbenchPanelPrompt(input,p),artifact:p.artifact}))});
                         prepared.forEach((p,i) => {p.taskId=receipts[i].taskId;p.prepared=true;});
@@ -182,7 +194,15 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题与内容边界；主对话已有的数据必须完整带入实际记录、日期、单位与来源，子任务看不到主对话工具返回。以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
                         type: { type: 'string', enum: types, required: true, description: '散点图用 market 且 prompt 声明 variant: scatter；普通柱状图用 chart 并声明 chart.bar；指标卡 metrics 只显示数值，不会渲染散点或柱状图。' }, size: { type: 'string', enum: ['small', 'medium', 'large'], required: true, description: '通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
                         samplesFromPanel: { type: 'string', description: '仅直方图：引用本工作台一个箱线图面板的完整标题，其artifact.groups必须含原始samples。直方图artifact省略samples/bins，unit与来源一致；宿主自动合并并保留重复观测。' },
-                        artifact: { type: 'object', additionalProperties: true, description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。真实来源/时点就近标注。' }
+                        artifact: { type: 'object', additionalProperties: true, description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。真实来源/时点就近标注。' },
+                        publicData: { type: 'object', additionalProperties: false, description: '常用免费源直通：模型只声明标的，宿主并行取数、按已核验字段渲染原生模板并保存自动刷新；无需先query、查询模板、抄写数据或逐卡子任务。与artifact/模拟模式互斥。', properties: {
+                            profile: { type: 'string', required: true, enum: Object.keys(PUBLIC_DATA_PROFILES), description: 'quotes-table/quotes-metrics用tencent-quotes；crypto-metrics用kraken-ticker（最多2个pair）；price-volume用kraken-candles或tencent-history；candlestick仅tencent-history日线；news用sina-news且panel.type=news，其余panel.type=market。' },
+                            intervalMinutes: { type: 'number', description: '默认1分钟；0仅手动；遵从用户指定的频率。' },
+                            requests: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+                                source: { type: 'string', required: true, enum: ['tencent-quotes','tencent-history','kraken-ticker','kraken-candles','sina-news'] },
+                                parameters_json: { type: 'string', required: true, description: '原来源参数JSON字符串。报价symbols:[sh600519,sz000858]；Kraken pair:XBTUSD（或ETHUSD），分钟图interval:1,limit:60；腾讯历史symbol:sh600519,limit:20（日线）；新浪limit:12。证券交易所必须确认，不猜代码后缀。' }
+                            } } }
+                        } }
                     } } }
         },
         output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, templateIds: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },

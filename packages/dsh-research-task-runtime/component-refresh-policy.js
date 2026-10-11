@@ -24,6 +24,7 @@ export function preserveWorkbenchRefreshPreference(args, humanText) {
   if (args.panels.length > 1 && /第一|第二|第[一二三四五六七八九十\d]+(?:张|个)|其中|这张|这一个/u.test(request)
       && !/(?:全部|所有|每张|每个|整个工作台|所有组件).{0,16}(?:仅|只|不要|不用|关闭|禁用)/u.test(request)) return args;
   return { ...args, panels: args.panels.map(panel => ({ ...panel,
+    ...(panel.publicData ? { publicData: { ...panel.publicData, intervalMinutes: 0 } } : {}),
     prompt: `${panel.prompt}\n${manualDirective}`
   })) };
 }

@@ -8,7 +8,7 @@ it('shows early progress for explicit workbench and component creation, not prod
     kind: 'workbench', types: ['K线', '热力图', '新闻列表']
   })
   expect(classifyResearchCreationRequest('给我生成一张蜡烛图组件')).toMatchObject({ kind: 'component', types: ['蜡烛图'] })
-  for (const question of ['为什么组件生成失败？', '如何创建工作台？', '请优化组件生成逻辑', '不要创建工作台', '补齐持仓组件自动刷新，不创建新的工作台', '只更新这张卡，不重新生成工作台', '帮我解释这个组件']) {
+  for (const question of ['为什么组件生成失败？', '如何创建工作台？', '请优化组件生成逻辑', '不要创建工作台', '补齐持仓组件自动刷新，不创建新的工作台', '只更新这张卡，不重新生成工作台', '帮我解释这个组件', '只修正现有资讯组件绑定，读取原绑定做最小修改，不新建卡片', '仅配置现有组件，每分钟更新，不用新建工作台']) {
     expect(classifyResearchCreationRequest(question)).toBeNull()
   }
 })
@@ -42,6 +42,7 @@ it('keeps the submit, canvas and workbench handoff patch stable on reinstall', (
   expect(patched.includes('onPointerMove: event => {')).toBe(true)
   expect(patched).toContain('ResearchGenerationProcess, { node, sessionId, phaseOverride: phase')
   expect(patched).toContain('ODYSSEY_CREATION_CARD_ACTIONS')
+  expect(patched).toContain('关闭生成提示')
   expect(patched).toContain('ODYSSEY_WORKBENCH_MOUNT_ACK')
   expect(patched).toContain('odysseyCreationDeal(sessionId, plan, dealOrigin)')
   expect(patched).toContain('card.animate(workbenchDealMotion(origin, rect, card.offsetWidth || rect.width)')
