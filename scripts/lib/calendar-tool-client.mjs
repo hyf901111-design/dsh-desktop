@@ -53,13 +53,73 @@ export function CalendarToolIcon({name,size=16}){
  return jsx('svg',{className:'ew-calendar-icon',width:size,height:size,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.6,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,children:jsx('path',{d:paths[name]||paths.calendar})})
 }
 export function CalendarToolMonthPicker({month,onChange}){
- const {jsx,jsxs}=react_jsx_runtime,t=calendarToolText
- const label=new Intl.DateTimeFormat(t('zh-CN','en-US'),{year:'numeric',month:'short',timeZone:'UTC'}).format(new Date(month+'-01T12:00Z'))
- return jsxs('label',{className:'ew-calendar-month-picker',children:[jsx('span',{children:label}),jsx(CalendarToolIcon,{name:'calendar'}),jsx('input',{type:'month','aria-label':t('选择月份','Select month'),lang:t('zh-CN','en'),value:month,min:'1900-01',max:'2199-12',onClick:e=>{try{e.currentTarget.showPicker?.()}catch{}},onInput:e=>onChange(e.target.value)})]})
+ return react_jsx_runtime.jsx(CalendarToolPicker,{kind:'month',value:month,onChange})
 }
-export function CalendarToolDatePicker({date,onChange,compact=false}){
- const {jsx,jsxs}=react_jsx_runtime,t=calendarToolText,label=compact?date.slice(5).replace('-','/'):new Intl.DateTimeFormat(t('zh-CN','en-US'),{month:'short',day:'numeric',weekday:'short',timeZone:'UTC'}).format(new Date(date+'T12:00Z'))
- return jsxs('label',{className:'ew-calendar-date-picker','data-compact':compact||undefined,children:[jsx('span',{children:label}),jsx(CalendarToolIcon,{name:'calendar',size:compact?12:16}),jsx('input',{type:'date','aria-label':compact?t('快速事项日期','Quick event date'):t('选择日期','Select date'),lang:t('zh-CN','en'),value:date,min:'1900-01-01',max:'2199-12-31',onClick:e=>{try{e.currentTarget.showPicker?.()}catch{}},onInput:e=>{if(calendarDate(e.target.value)&&e.target.value>='1900-01-01'&&e.target.value<='2199-12-31')onChange(e.target.value)}})]})
+export function CalendarToolDatePicker({date,onChange,compact=false,field=false,disabled=false}){
+ return react_jsx_runtime.jsx(CalendarToolPicker,{value:date,onChange,compact,field,disabled})
+}
+export function calendarToolPickerDate(month,day){
+ const max=new Date(month+'-01T12:00Z');max.setUTCMonth(max.getUTCMonth()+1);max.setUTCDate(0)
+ return month+'-'+String(Math.min(Number(day),max.getUTCDate())).padStart(2,'0')
+}
+export function CalendarToolPicker({value,onChange,kind='date',compact=false,field=false,disabled=false}){
+ useWorkbenchLocale()
+ const {jsx,jsxs}=react_jsx_runtime,t=calendarToolText,trigger=react.useRef(null),panel=react.useRef(null)
+ const [open,setOpen]=react.useState(false),[level,setLevel]=react.useState(kind==='month'?'months':'days'),[month,setMonth]=react.useState(value.slice(0,7)),[cursor,setCursor]=react.useState(value),[position,setPosition]=react.useState(null)
+ const year=Number(month.slice(0,4)),block=1900+Math.floor((year-1900)/12)*12,today=calendarToday(Intl.DateTimeFormat().resolvedOptions().timeZone),locale=t('zh-CN','en-US')
+ const formatMonth=m=>new Intl.DateTimeFormat(locale,{year:'numeric',month:'short',timeZone:'UTC'}).format(new Date(m+'-01T12:00Z'))
+ const label=kind==='month'?formatMonth(value):field?value.replaceAll('-','/'):compact?value.slice(5).replace('-','/'):new Intl.DateTimeFormat(locale,{month:'short',day:'numeric',weekday:'short',timeZone:'UTC'}).format(new Date(value+'T12:00Z'))
+ const aria=kind==='month'?t('选择月份','Select month'):field?t('日期','Date'):compact?t('快速事项日期','Quick event date'):t('选择日期','Select date')
+ const close=(restore=true)=>{setOpen(false);if(restore)trigger.current?.focus({preventScroll:true})}
+ const toggle=()=>{if(open){close();return}setMonth(value.slice(0,7));setCursor(value);setLevel(kind==='month'?'months':'days');setOpen(true)}
+ const choose=v=>{if((kind==='month'?calendarMonth(v)&&v>='1900-01'&&v<='2199-12':calendarDate(v)&&v>='1900-01-01'&&v<='2199-12-31')){onChange(v);close()}}
+ const chooseMonth=m=>{if(kind==='month')choose(m);else{setMonth(m);setCursor(calendarToolPickerDate(m,value.slice(8)));setLevel('days')}}
+ const chooseYear=y=>{const m=y+month.slice(4);setMonth(m);setCursor(m);setLevel('months')}
+ const step=delta=>{if(level==='years'){const y=Math.max(1900,Math.min(2199,block+delta*12));setMonth(y+month.slice(4));setCursor(String(y))}else{const m=calendarShift(month,delta*(level==='months'?12:1));if(m<'1900-01'||m>'2199-12')return;setMonth(m);setCursor(level==='months'?m:calendarToolPickerDate(m,cursor.slice(8)||value.slice(8)))}}
+ const cellKey=(e,v)=>{
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();if(level==='years')chooseYear(Number(v));else if(level==='months')chooseMonth(v);else choose(v);return}
+  let next
+  if(level==='days'){
+   const offset={ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7}[e.key]
+   if(offset!==undefined)next=calendarToolDay(v,offset)
+   else if(e.key==='PageUp'||e.key==='PageDown')next=calendarToolPickerDate(calendarShift(v.slice(0,7),(e.key==='PageUp'?-1:1)*(e.shiftKey?12:1)),v.slice(8))
+   else if(e.key==='Home'||e.key==='End'){next=calendarToolWeek(v);if(e.key==='End')next=calendarToolDay(next,6)}
+   if(next&&(next<'1900-01-01'||next>'2199-12-31'))next=null
+  }else if(level==='months'){
+   const offset={ArrowLeft:-1,ArrowRight:1,ArrowUp:-3,ArrowDown:3,PageUp:-12,PageDown:12}[e.key]
+   next=offset!==undefined?calendarShift(v,offset):e.key==='Home'?year+'-01':e.key==='End'?year+'-12':null
+   if(next&&(next<'1900-01'||next>'2199-12'))next=null
+  }else{
+   const offset={ArrowLeft:-1,ArrowRight:1,ArrowUp:-3,ArrowDown:3,PageUp:-12,PageDown:12}[e.key]
+   const y=offset!==undefined?Number(v)+offset:e.key==='Home'?block:e.key==='End'?Math.min(2199,block+11):null
+   if(y!==null&&y>=1900&&y<=2199)next=String(y)
+  }
+  if(!next)return;e.preventDefault();e.stopPropagation();setCursor(next);setMonth(level==='years'?next+month.slice(4):next.slice(0,7))
+ }
+ react.useLayoutEffect(()=>{
+  if(!open)return
+  const place=e=>{if(panel.current?.contains(e?.target))return;const el=trigger.current,r=el?.getBoundingClientRect();if(!r)return;const bounds=financialCanvasBounds(el),height=level==='days'?308:248,after=bounds.bottom-r.bottom,before=r.top-bounds.top,next={...financialPopoverPosition(r,{width:252,height},bounds,after>=height+16||after>=before),theme:el.closest('[data-ework-grid]')?.dataset.workbenchStyle||el.closest('[data-financial-theme]')?.dataset.financialTheme||(document.body.hasAttribute('data-ds-dark-theme')?'dark':'light')};setPosition(old=>old&&Object.keys(next).every(k=>old[k]===next[k])?old:next)}
+  place();window.addEventListener('resize',place);document.addEventListener('scroll',place,true);const observer=new ResizeObserver(place);observer.observe(trigger.current);const stop=financialObserveTheme(trigger.current,place)
+  return()=>{stop();observer.disconnect();window.removeEventListener('resize',place);document.removeEventListener('scroll',place,true)}
+ },[open,level])
+ react.useEffect(()=>{if(open&&position)panel.current?.querySelector('[tabindex="0"]')?.focus({preventScroll:true})},[open,level,cursor,position])
+ react.useEffect(()=>{
+  if(!open)return
+  const outside=e=>{if(!panel.current?.contains(e.target)&&!trigger.current?.contains(e.target))close(false)},key=e=>{
+   if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close()}
+   if(e.key==='Tab'){const controls=[...panel.current?.querySelectorAll('button:not(:disabled):not([tabindex="-1"])')||[]],first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}
+  }
+  document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',key,true)
+  return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',key,true)}
+ },[open])
+ const cell=(v,label,attrs,action)=>jsx('button',{type:'button','aria-pressed':value==v,...attrs,tabIndex:cursor===v?0:-1,onClick:action,onKeyDown:e=>cellKey(e,v),children:label},v)
+ const previousDisabled=level==='days'?month==='1900-01':level==='months'?year===1900:block===1900,nextDisabled=level==='days'?month==='2199-12':level==='months'?year===2199:block+11>=2199
+ const popup=open&&react_dom.createPortal(jsxs('div',{ref:panel,className:'ew-calendar-picker',role:'dialog','aria-label':aria,'data-calendar-picker-popup':'','data-ui-preserve':true,'data-financial-theme':position?.theme,style:{left:position?.left,top:position?.top,width:position?.width,maxHeight:position?.maxHeight,visibility:position?'visible':'hidden'},onPointerDown:e=>e.stopPropagation(),children:[
+  jsxs('header',{children:[jsx('button',{type:'button','aria-label':t('上一页','Previous page'),disabled:previousDisabled,onClick:()=>step(-1),children:jsx(CalendarToolIcon,{name:'previous'})}),jsxs('button',{type:'button','data-calendar-picker-level':'','aria-label':level==='days'?t('选择月份','Choose month'):level==='months'?t('选择年份','Choose year'):t('年份范围','Year range'),disabled:level==='years',onClick:()=>{setLevel(level==='days'?'months':'years');setCursor(level==='days'?month:String(year))},children:[jsx('strong',{children:level==='days'?formatMonth(month):level==='months'?year+(t('年','')):block+' – '+Math.min(2199,block+11)}),level!=='years'&&jsx(CalendarToolIcon,{name:'next',size:12})]}),jsx('button',{type:'button','aria-label':t('下一页','Next page'),disabled:nextDisabled,onClick:()=>step(1),children:jsx(CalendarToolIcon,{name:'next'})})]}),
+  level==='days'?jsxs(react.Fragment,{children:[jsx('div',{className:'ew-calendar-picker-weekdays',children:t('一 二 三 四 五 六 日','M T W T F S S').split(' ').map((day,i)=>jsx('span',{children:day},i))}),jsx('div',{className:'ew-calendar-picker-days',children:calendarCells(month).map(c=>cell(c.date,c.day,{'data-calendar-picker-day':c.date,'aria-label':c.date,'data-outside':c.outside||undefined,'data-today':c.date===today||undefined,disabled:c.date<'1900-01-01'||c.date>'2199-12-31'},()=>choose(c.date)))})]}):jsx('div',{className:'ew-calendar-picker-choices',children:level==='months'?Array.from({length:12},(_,i)=>{const m=year+'-'+String(i+1).padStart(2,'0'),label=t((i+1)+'月',new Intl.DateTimeFormat('en-US',{month:'short',timeZone:'UTC'}).format(new Date(m+'-01T12:00Z')));return cell(m,label,{'data-calendar-picker-month':m,'aria-pressed':value.slice(0,7)===m},()=>chooseMonth(m))}):Array.from({length:12},(_,i)=>{const y=block+i;return cell(String(y),y,{'data-calendar-picker-year':y,'aria-pressed':Number(value.slice(0,4))===y},()=>chooseYear(y))})}),
+  jsxs('footer',{children:[jsx('button',{type:'button',onClick:()=>choose(kind==='month'?today.slice(0,7):today),children:kind==='month'?t('本月','This month'):t('今天','Today')}),jsx('button',{type:'button',onClick:()=>close(),children:t('关闭','Close')})]})
+ ]}),document.body)
+ return jsxs('span',{className:kind==='month'?'ew-calendar-month-picker':'ew-calendar-date-picker','data-compact':compact||undefined,'data-field':field||undefined,children:[jsxs('button',{ref:trigger,type:'button','data-calendar-picker-trigger':kind,'data-calendar-value':value,'aria-label':aria,'aria-haspopup':'dialog','aria-expanded':open,disabled,onClick:toggle,children:[jsx('span',{children:label}),jsx(CalendarToolIcon,{name:'calendar',size:compact?12:16})]}),popup]})
 }
 export function CalendarToolEditor({node,sessionId,event,date,anchor,onClose,onSaved}){
  useWorkbenchLocale()
@@ -67,14 +127,14 @@ export function CalendarToolEditor({node,sessionId,event,date,anchor,onClose,onS
  const [draft,setDraft]=react.useState(()=>event?{title:event.title,date:event.date,time:event.time,timezone:event.timezone,notes:event.notes,repeat:event.repeat,reminderMinutes:event.reminderMinutes}:{title:'',date,time:null,timezone:zone,notes:'',repeat:'none',reminderMinutes:null}),[busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[position,setPosition]=react.useState(null),[deleting,setDeleting]=react.useState(false)
  const change=(k,v)=>setDraft(d=>({...d,[k]:v})),close=()=>{if(!busy)onClose()}
  react.useLayoutEffect(()=>{const place=()=>{const r=anchor.current?.getBoundingClientRect();if(!r)return;setPosition({...calendarToolEditorPosition(r,financialCanvasBounds(anchor.current)),theme:anchor.current.closest('[data-ework-grid]')?.dataset.workbenchStyle||(document.body.hasAttribute('data-ds-dark-theme')?'dark':'light')})};place();window.addEventListener('resize',place);document.addEventListener('scroll',place,true);const observer=new ResizeObserver(place);if(anchor.current)observer.observe(anchor.current);const stop=financialObserveTheme(anchor.current,place);return()=>{stop();observer.disconnect();window.removeEventListener('resize',place);document.removeEventListener('scroll',place,true)}},[])
- react.useEffect(()=>{first.current?.focus();const outside=e=>{if(!busy&&!root.current?.contains(e.target)&&!anchor.current?.contains(e.target))onClose()},escape=e=>{if(e.key==='Escape'&&!busy){e.preventDefault();e.stopPropagation();onClose()}if(e.key==='Tab'){const controls=[...root.current?.querySelectorAll('input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled)')||[]],first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape,true);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape,true)}},[busy])
+ react.useEffect(()=>{first.current?.focus();const outside=e=>{if(!busy&&!root.current?.contains(e.target)&&!anchor.current?.contains(e.target))onClose()},escape=e=>{if(document.querySelector('[data-calendar-picker-popup]'))return;if(e.key==='Escape'&&!busy){e.preventDefault();e.stopPropagation();onClose()}if(e.key==='Tab'){const controls=[...root.current?.querySelectorAll('input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled)')||[]],first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape,true);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape,true)}},[busy])
  const save=async e=>{e.preventDefault();if(busy)return;setBusy(true);setError('');try{await calendarToolRequest(sessionId,node.id,'save',{input:draft,id:event?.id});onSaved(draft.date);onClose()}catch(e){setError(calendarToolError(e))}finally{setBusy(false)}}
  const remove=async()=>{setBusy(true);try{await calendarToolRequest(sessionId,node.id,'delete',{id:event.id});onSaved(date);onClose()}catch(e){setError(calendarToolError(e))}finally{setBusy(false)}}
  const field=(label,child)=>jsxs('label',{children:[jsx('span',{children:label}),child]})
  return react_dom.createPortal(jsxs('form',{ref:root,className:'ew-calendar-editor',role:'dialog','aria-label':event?t('编辑事项','Edit event'):t('新建事项','New event'),'data-ui-preserve':true,'data-financial-theme':position?.theme,style:{left:position?.left,top:position?.top,width:position?.width,maxHeight:position?.maxHeight,visibility:position?'visible':'hidden'},onPointerDown:e=>e.stopPropagation(),onSubmit:save,children:[
   jsxs('header',{children:[jsx('strong',{children:event?t('编辑事项','Edit event'):t('新建事项','New event')}),jsx('button',{type:'button','aria-label':t('关闭','Close'),disabled:busy,onClick:close,children:jsx(CalendarToolIcon,{name:'close'})})]}),
   field(t('事项','Event'),jsx('input',{ref:first,name:'title',maxLength:200,required:true,placeholder:t('记录事项','Event title'),value:draft.title,onInput:e=>change('title',e.target.value)})),
-  jsxs('div',{className:'ew-calendar-fields',children:[field(t('日期','Date'),jsx('input',{name:'date',type:'date',min:'1900-01-01',max:'2199-12-31',required:true,value:draft.date,onInput:e=>change('date',e.target.value)})),field(t('时间','Time'),jsx('input',{name:'time',type:'time',disabled:draft.time===null,value:draft.time??'09:00',onInput:e=>change('time',e.target.value)}))]}),
+  jsxs('div',{className:'ew-calendar-fields',children:[field(t('日期','Date'),jsx(CalendarToolDatePicker,{date:draft.date,onChange:v=>change('date',v),field:true,disabled:busy})),field(t('时间','Time'),jsx('input',{name:'time',type:'time',disabled:draft.time===null,value:draft.time??'09:00',onInput:e=>change('time',e.target.value)}))]}),
   jsxs('label',{className:'ew-calendar-check',children:[jsx('input',{type:'checkbox',checked:draft.time===null,onChange:e=>change('time',e.target.checked?null:'09:00')}),jsx('span',{children:t('全天','All day')})]}),
   jsxs('div',{className:'ew-calendar-fields',children:[field(t('重复','Repeat'),jsx('select',{name:'repeat',value:draft.repeat,onChange:e=>change('repeat',e.target.value),children:[['none',t('不重复','Never')],['daily',t('每天','Daily')],['weekly',t('每周','Weekly')],['monthly',t('每月','Monthly')]].map(([v,label])=>jsx('option',{value:v,children:label},v))})),field(t('提醒','Reminder'),jsx('select',{name:'reminder',value:draft.reminderMinutes===null?'off':[0,5,15,30,60,1440].includes(draft.reminderMinutes)?String(draft.reminderMinutes):'custom',onChange:e=>change('reminderMinutes',e.target.value==='off'?null:e.target.value==='custom'?10:Number(e.target.value)),children:[['off',t('不提醒','Off')],['0',t('准时','At event time')],['5',t('提前 5 分钟','5 minutes before')],['15',t('提前 15 分钟','15 minutes before')],['30',t('提前 30 分钟','30 minutes before')],['60',t('提前 1 小时','1 hour before')],['1440',t('提前 1 天','1 day before')],['custom',t('自定义','Custom')]].map(([v,label])=>jsx('option',{value:v,children:label},v))}))]}),
   draft.reminderMinutes!==null&&![0,5,15,30,60,1440].includes(draft.reminderMinutes)&&field(t('提前分钟数','Minutes before'),jsx('input',{name:'minutes',type:'number',min:0,max:43200,value:draft.reminderMinutes,onInput:e=>change('reminderMinutes',Number(e.target.value))})),
@@ -130,7 +190,7 @@ export function CalendarSessionReminders({rootRef,workspace,sessionId}){
 }
 
 export function patchCalendarToolClient(source){
- const start='/* EWORK_CALENDAR_TOOL_V1 */',end='/* EWORK_CALENDAR_TOOL_END */',definitions=start+'\nlet calendarToolPendingOpen=null,calendarToolNavigation=null;\n'+[calendarDate,calendarMonth,calendarShift,calendarCells,calendarToday,calendarToolSpec,calendarToolText,calendarToolOccurs,calendarToolDay,calendarToolWeek,calendarToolAgenda,calendarToolRequest,calendarToolNavigate,calendarToolError,calendarToolEditorPosition,CalendarToolIcon,CalendarToolMonthPicker,CalendarToolDatePicker,CalendarToolEditor,CalendarTool,CalendarSessionReminders].map(f=>f.toString()).join('\n')+'\n'+end
+ const start='/* EWORK_CALENDAR_TOOL_V1 */',end='/* EWORK_CALENDAR_TOOL_END */',definitions=start+'\nlet calendarToolPendingOpen=null,calendarToolNavigation=null;\n'+[calendarDate,calendarMonth,calendarShift,calendarCells,calendarToday,calendarToolSpec,calendarToolText,calendarToolOccurs,calendarToolDay,calendarToolWeek,calendarToolAgenda,calendarToolRequest,calendarToolNavigate,calendarToolError,calendarToolEditorPosition,CalendarToolIcon,CalendarToolMonthPicker,CalendarToolDatePicker,calendarToolPickerDate,CalendarToolPicker,CalendarToolEditor,CalendarTool,CalendarSessionReminders].map(f=>f.toString()).join('\n')+'\n'+end
  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)throw Error('Calendar boundary missing');source=source.slice(0,a)+definitions+source.slice(b+end.length)}else source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',definitions+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
  const once=(a,b)=>{if(source.includes(b))return;if(source.split(a).length!==2)throw Error('Calendar anchor missing: '+a.slice(0,90));source=source.replace(a,b)}
  once("if(['iframe','youtube'].includes(node.containerSpec?.type))return null;", "if(['iframe','youtube','calendar-tool'].includes(node.containerSpec?.type))return null;")
