@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 import { Window } from 'happy-dom';
-import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
 
 describe('research canvas pointer resize', () => {
   it('changes only the dragged card, even when it grows into the next workbench row', async () => {
-    const source = patchFigmaFinalCanvas(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'));
+    const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8');
+    expect(source).toContain('applyPointerGeometry');
     const window = new Window();
     let descriptor;
     runInNewContext(source, { document:window.document, window:{__ModuleLoader__:{load:value=>{descriptor=value;}}},

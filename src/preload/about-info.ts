@@ -18,6 +18,21 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '1.2.0',
+      date: '2026-10-12',
+      items: [
+        '新增日历工具组件，支持月历、周视图和事项列表，可记录全天或定时事项、备注、重复周期与完成状态，事项保存在本机。',
+        '日历支持按设定时间发送系统通知并在所属会话中提示，点击提醒可定位事项；运行时在后台检查提醒，启动或恢复时补发最近未完成的提醒。',
+        '完善日历小尺寸布局、快速添加和按需搜索，统一日期选择器、编辑弹窗、图标、对齐间距与深浅色及易方达主题。',
+        '新增公告列表，可连接自选股或个股行情显示对应主体的公告；新闻搜索移入组件顶栏，新闻和公告原文支持在浏览器打开。',
+        '市场指数支持自定义显示的国内外主流指数，完善指数筛选与英文搜索。',
+        '组件连接支持从左侧输入节点反向拖拽到右侧输出节点，统一节点、悬停外圈与底部信息的对齐，并优化选中描边。',
+        '修复拖动调整组件尺寸后回弹及窗口缩窄时并排组件错位，优化自适应宽度并修复行情图交互导致看板空白的问题。',
+        '个股行情支持滚轮缩放和横向拖动；组件库组件仅在选中时响应内部滚动，到达边界后继续滚动画布，避免影响页面浏览。',
+        '恢复 Shift 多选组件，优化组件库图标、菜单关闭与悬停反馈，为看板区增加过多会话的展开收起，并补齐新增菜单和组件的英文界面。'
+      ]
+    },
+    {
       version: '1.1.5',
       date: '2026-10-11',
       items: [
@@ -333,6 +348,21 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.2.0',
+      date: '2026-10-12',
+      items: [
+        'Added a Calendar component with month, week and agenda views, locally saved all-day or timed events, notes, recurrence and completion tracking.',
+        'Calendar reminders send system notifications and appear in the owning session, with navigation to the event; reminders are checked in the background while the app runs, with recent missed reminders delivered on launch or resume.',
+        'Refined compact calendar layouts, quick entry and on-demand search, with consistent date pickers, event dialogs, icons, spacing and light, dark and E Fund themes.',
+        'Added an Announcements List that connects to Watchlist or Stock Chart to show company filings; moved news search into the component header and enabled news and announcement links to open in a browser.',
+        'Choose which major domestic and international market indices to display, with improved filtering and English search.',
+        'Start a connection by dragging a left-side input to a right-side output, with aligned ports, hover rings and footer information, and clearer selection borders.',
+        'Fixed component sizes reverting after resize and adjacent components shifting when the window narrows, improved adaptive widths, and fixed a chart interaction error that could leave the board blank.',
+        'Stock charts support wheel zoom and horizontal dragging; library components scroll internally only when selected and pass scrolling to the canvas at their boundaries.',
+        'Restored Shift multi-selection, refined the library icon and menu dismissal and hover states, added expand and collapse for long board lists, and completed English text for new menus and components.'
+      ]
+    },
     {
       version: '1.1.5',
       date: '2026-10-11',
