@@ -1,5 +1,6 @@
 /** Product labels only; security names, article text and saved user titles remain source content. */
 export const financialUiCopy: Record<string,string> = {
+ '日历':'Calendar','新建事项':'New event','日历已更新':'Calendar updated',
  '组件库':'Component library','关闭组件库':'Close component library',
  '自选股':'Watchlist','个股行情':'Stock quote','市场指数':'Market indices','新闻列表':'News','公告列表':'Announcements',
  '配置指数':'Configure indices','关闭指数配置':'Close index settings','搜索指数名称或代码':'Search index name or code',

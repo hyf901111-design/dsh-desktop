@@ -70,7 +70,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     setBusy(true);setError('')
     let message='指标数据已更新'
     try{
-      if(node.containerSpec?.type==='financial-widget'){const preset=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-financial-widget]');if(!preset?.__eworkRefreshFinancial)throw Error('组件暂未就绪');const result=await preset.__eworkRefreshFinancial();if(result?.error)throw Error(result.error);message=result?.message||'已刷新通联数据'}else if(node.containerSpec?.type==='audio'){
+      if(node.containerSpec?.type==='calendar-tool'){await document.querySelector('[data-research-node-id=\"'+CSS.escape(node.id)+'\"] [data-calendar-tool]')?.__eworkRefreshCalendar?.();message='日历已更新'}else if(node.containerSpec?.type==='financial-widget'){const preset=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-financial-widget]');if(!preset?.__eworkRefreshFinancial)throw Error('组件暂未就绪');const result=await preset.__eworkRefreshFinancial();if(result?.error)throw Error(result.error);message=result?.message||'已刷新通联数据'}else if(node.containerSpec?.type==='audio'){
         const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-audio-preset]')
         if(!player?.__eworkReloadAudio)throw Error('请先添加音频网址');
         player.__eworkReloadAudio();message='已请求重新加载音源'
@@ -100,7 +100,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
-      react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:node.containerSpec?.type==='financial-widget'&&!node.displayName&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title}),
+      react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),
       node.containerSpec?.type==='financial-widget'&&['quote','announcements'].includes(node.containerSpec.widget)&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly}),
       node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='news'&&react_jsx_runtime.jsx(FinancialNewsSearch,{node,sessionId,readOnly}),
       button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
@@ -227,7 +227,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
     separator('generate'),
     target.node.containerSpec?.type==='financial-widget'&&target.node.containerSpec.widget==='indices'&&row('settings','配置指数',()=>onConfigureIndices?.(target.node.id)),
-    target.node.containerSpec?.type==='financial-widget'?row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly):row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
+    target.node.containerSpec?.type==='calendar-tool'?row('calendar','新建事项',()=>card()?.querySelector('[data-calendar-add]')?.click(),readOnly):target.node.containerSpec?.type==='financial-widget'?row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly):row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
     target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))
@@ -254,7 +254,7 @@ export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readO
   const planningNodes=workspace.getWorkbenchPlanningNodes(),selectedPlanning=planningNodes.filter(n=>snapshot.selection.selectedNodeIds.includes(n.id)&&rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"][data-research-creation-planning]:not([data-research-creation-planning=dealing])'))
   const resizable=readOnly?[]:[...hosts.filter(n=>!n.expanded&&!n.blocked&&snapshot.selection.selectedNodeIds.includes(n.node.id)).map(n=>n.node),...selectedPlanning]
   const visibleHeight=rootRef.current?.clientHeight||snapshot.canvasSize.visibleHeight||0,contentBottom=Math.max(0,...[...snapshot.files,...snapshot.artifacts,...planningNodes].map(n=>n.y+n.height/2)),resizeBottom=visibleHeight>0&&contentBottom<=visibleHeight?visibleHeight:Infinity
-  return react_jsx_runtime.jsxs(react.Fragment,{children:[...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected,onConfigureIndices:setIndicesId}),indicesNode&&react_jsx_runtime.jsx(FinancialIndicesSettings,{node:indicesNode,sessionId,rootRef,readOnly,onClose:closeIndices},'indices-settings:'+indicesId)]})
+  return react_jsx_runtime.jsxs(react.Fragment,{children:[react_jsx_runtime.jsx(CalendarSessionReminders,{rootRef,workspace,sessionId}),...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected,onConfigureIndices:setIndicesId}),indicesNode&&react_jsx_runtime.jsx(FinancialIndicesSettings,{node:indicesNode,sessionId,rootRef,readOnly,onClose:closeIndices},'indices-settings:'+indicesId)]})
 }
 export function WorkbenchResizeControls({nodes,width,bottom=Infinity}) {
   const gap=createResearchGrid().metrics(width).gap
@@ -265,6 +265,7 @@ export function handleWorkbenchWheel(root,workspace,event) {
   const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive]')
   const selected=card&&workspace.getSnapshot().selection.selectedNodeIds.includes(card.getAttribute('data-research-node-id'))
   if(!event.__sherlockCanvasPan&&selected&&event.target?.closest?.('[data-financial-chart]'))return
+  const calendar=event.target?.closest?.('.ew-calendar-scroll,.ew-calendar-editor,.ew-calendar-month');if(calendar&&calendar.scrollHeight>calendar.clientHeight+1)return
   const indices=event.target?.closest?.('.ew-indices-grid')
   if(!event.__sherlockCanvasPan&&indices&&indices.scrollHeight>indices.clientHeight+1)return
   if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey&&researchPreviewCanConsumeWheel(event.target,preview,event.deltaX||0,event.deltaY||0))return
@@ -350,7 +351,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(e.target?.closest?.('[data-workbench-column-resize]'))return
     // Select the containing card before embedded controls intercept pointer events.
     if(toolRef.current==='select'&&handleWorkbenchMultiSelect(root,workspace,e))return
-    if(e.target?.closest?.('[data-financial-widget]'))return
+    if(e.target?.closest?.('[data-financial-widget],[data-calendar-tool]'))return
     if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
     if(e.button!==0||e.target?.closest?.('[data-research-global-toolbar],[role=menu],[role=dialog],.ew-grid-menu'))return
     const handle=e.target?.closest?.('[data-workbench-drag-handle]'),resize=e.target?.closest?.('[data-workbench-resize]'),card=e.target?.closest?.('[data-research-node-id]')||(resize&&root.querySelector('[data-research-node-id="'+CSS.escape(resize.getAttribute('data-workbench-resize'))+'"]'))
@@ -458,7 +459,7 @@ export function measureWorkbenchContents(root,nodes) {
     const value=cache?.get(node.id)
     const preferred=researchOptimalDimensions({...node,width:0,height:0})
     // Fixed presets keep their approved reading area even when offscreen or paused.
-    if(node.containerSpec?.type==='financial-widget'){measured.set(node.id,preferred);continue}
+    if(['financial-widget','calendar-tool'].includes(node.containerSpec?.type)){measured.set(node.id,preferred);continue}
     // Header and provenance occupy 34 + 24px outside the sandbox. The sandbox
     // reports natural content bounds, never its current frame height.
     if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,workbenchMeasuredDimensions(node,value));continue}

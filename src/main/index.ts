@@ -1,4 +1,5 @@
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
+import {installCalendarService} from './calendar/calendar-service'
 import {openFinancialArticle} from './financial/article-link'
 import { createComponentDataService } from './component-data/service'
 import { legacyConnectionSources } from './integrations/legacy-connections'
@@ -1404,6 +1405,7 @@ async function bootstrap(): Promise<void> {
   const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
   registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openFinancialArticle(url,shell.openExternal))
+  await installCalendarService({getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>readStoredResearchCanvas(researchCanvasStorage,target.sessionId).artifacts.some((n:any)=>n.id===target.nodeId&&n.containerSpec?.type==='calendar-tool')})
   ipcMain.handle('component-data:request',async(event,sessionId:string,args:any)=>{
     assertTrustedMainWindowEvent(event,mainWindow)
     if(!componentDataService)throw Error('数据刷新服务不可用')
