@@ -12,6 +12,14 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('keeps real news links refreshable when a provider omits the publisher or summary',()=>{
+  const mapping={version:1,type:'news',title:'资讯',items:{$from:'n',$each:'records',$map:{title:{$path:'title'},date:{$path:'time'},category:{$path:'publisher'},summary:{$path:'summary',$optional:true},url:{$path:'url'}}}}
+  const response={records:[{title:'真实资讯',time:'2026-10-11T00:00:00Z',publisher:'',summary:'',url:'https://example.org/story'}]}
+  const data=materializeComponentMapping(mapping,{n:response})
+  expect(data.items[0].category).toBeUndefined()
+  expect(data.items[0].summary).toBe('来源未提供摘要')
+  expect(acceptArtifactOutput(JSON.stringify(data))).not.toBeNull()
+ })
  it('keeps standalone missing-text placeholders alongside sourced table values',()=>{
   const mapping={version:1,type:'market',variant:'table',title:'龙虎榜',asOf:'2026-04-30',columns:['日期','成交额','席位'],rows:{$from:'q',$each:'data.data',$map:[{$path:'tradeDate'},{$path:'turnoverValue',$as:'number'},{$default:'本次未取得'}]}}
   const result=materializeComponentMapping(mapping,{q:{data:{data:[{tradeDate:'2026-04-30',turnoverValue:28465682100}]}}})

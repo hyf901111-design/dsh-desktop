@@ -132,7 +132,14 @@ export function materializeComponentMapping(mapping,responses,now=new Date()){
   if(Array.isArray(data.rows))data.rows=data.rows.map(row=>Array.isArray(row)?row.map(display):row)
  }
  if(['news','reports','calendar'].includes(data?.type)&&Array.isArray(data.items)){
-  data.items=data.items.map(item=>({...item,...(item.summary==null?{summary:'来源未提供摘要'}:{})}))
+  data.items=data.items.map(item=>{
+   const result={...item}
+   if(item.summary==null||typeof item.summary==='string'&&!item.summary.trim())result.summary='来源未提供摘要'
+   // Publisher/category is optional source metadata. Empty metadata must not
+   // discard a valid article or prevent the entire feed from refreshing.
+   if(result.category==null||typeof result.category==='string'&&!result.category.trim())delete result.category
+   return result
+  })
  }
  return data
 }
