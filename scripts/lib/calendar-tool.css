@@ -145,7 +145,10 @@
   .ew-calendar-event{padding:3px 0}
   .ew-calendar-date-group{padding:2px 0}
  }
- @container calendar-tool (max-width:480px) and (max-height:220px){
+ @container calendar-tool (max-height:220px){
+  .ew-calendar-month{display:none}
+  .ew-calendar-layout{grid-template-columns:1fr;grid-template-rows:1fr;gap:0}
+  .ew-calendar-agenda{border:0;padding:0}
   .ew-calendar-compact-date{display:flex;flex:1;align-items:center;min-height:28px}
   .ew-calendar-compact-date .ew-calendar-date-picker>span{font-size:12px}
   .ew-calendar-toolbar>span,.ew-calendar-toolbar>.ew-calendar-month-picker,body .ew-calendar-toolbar>button:is([data-calendar-nav],[data-calendar-today],[data-calendar-history]){display:none!important}
