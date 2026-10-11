@@ -102,7 +102,7 @@ describe('macOS package runtime verification', () => {
         expect(result.stdout).toContain('apache-arrow: loadable')
         expect(result.stdout).toContain('signature: skipped (unsigned CI package)')
         expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.34.0 (source parity)')
-        expect(result.stdout).toContain('bundled skill: ework-free-data-sources v1.0.1 (source parity)')
+        expect(result.stdout).toContain('bundled skill: ework-free-data-sources v1.0.4 (source parity)')
         expect(result.stdout).toContain('package: verified')
       } finally {
         rmSync(temporaryRoot, { recursive: true, force: true })
