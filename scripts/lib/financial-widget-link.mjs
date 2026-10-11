@@ -1,6 +1,6 @@
 export function FinancialConnectionPort({node,side,readOnly}){
- const connected=side==='input'&&Boolean(financialLinkSourceId(node.containerSpec)),news=node.containerSpec.widget==='news'
- return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port','data-financial-port':side,'data-financial-port-node':node.id,'data-connected':connected||undefined,disabled:readOnly,'aria-label':side==='output'?'输出选中个股':news?'接收个股相关新闻':'接收自选个股',title:side==='output'?'拖到左侧节点连接 · 拖到空白处断开':connected?'拖到空白处断开 · 拖到左侧节点改接':news?'接收自选股或行情中的个股':'接收自选股选中项',children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
+ const connected=side==='input'&&Boolean(financialLinkSourceId(node.containerSpec)),feed=['news','announcements'].includes(node.containerSpec.widget)
+ return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port','data-financial-port':side,'data-financial-port-node':node.id,'data-connected':connected||undefined,disabled:readOnly,'aria-label':side==='output'?'输出选中个股':node.containerSpec.widget==='announcements'?'接收个股相关公告':feed?'接收个股相关新闻':'接收自选个股',title:side==='output'?'拖到左侧节点连接 · 拖到空白处断开':connected?'拖到空白处断开 · 拖到左侧节点改接':feed?'接收自选股或行情中的个股':'接收自选股选中项',children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
 }
 
 // Both sides are measured separately: a quote is a receiver and a broadcaster.
@@ -46,7 +46,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
  },[draft,snapshot.artifacts])
  react.useEffect(()=>{
   const previous=previousLinks.current,next=new Map(),ids=[]
-  for(const node of snapshot.artifacts.filter(n=>['quote','news'].includes(n.containerSpec?.widget))){
+  for(const node of snapshot.artifacts.filter(n=>['quote','news','announcements'].includes(n.containerSpec?.widget))){
    const spec=node.containerSpec,sourceId=financialLinkSourceId(spec),signature=JSON.stringify([sourceId,spec.symbols.map(s=>[s.market,s.code])]);next.set(node.id,signature)
    if(previous.sessionId===sessionId&&sourceId&&previous.links.has(node.id)&&previous.links.get(node.id)!==signature)ids.push(node.id)
   }

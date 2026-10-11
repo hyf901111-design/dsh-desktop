@@ -102,7 +102,9 @@ body [data-ework-grid] .odyssey-data-stamp{border:0!important;background:var(--g
    paint above renderer overlays, but cannot cover this external edge. */
 @layer ework-workbench{
  body [data-ework-grid] [data-research-node-id]{border:0!important;outline:0!important;box-shadow:none!important;border-radius:4px!important}
- body [data-ework-grid] [data-research-node-id][data-selected=true]{outline:1px solid #249bfa!important;outline-offset:0!important}
+ /* Grid columns can end between pixels. A 2px solid edge retains an opaque
+    blue core at fractional boundaries and matches the ports/resize handles. */
+ body [data-ework-grid] [data-research-node-id][data-selected=true]{outline:2px solid #249bfa!important;outline-offset:0!important}
  body [data-ework-grid]:is([data-grid-operation=move],[data-grid-operation=resize]) [data-research-node-id][data-grid-active]{outline:0!important}
  body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]::after{display:none!important}
 }

@@ -19,9 +19,9 @@ it('标准整理延续当前不等宽列和单列，不用预置宽度重新分�
  const single=grid.arrange(nodes,nodes.map((n,i)=>({id:n.id,x:0,y:i*40,w:40,h:12})),1280,800);expect(single.every(c=>c.x===0&&c.w===40)).toBe(true);
 })
 
-it('四个固定组件复用通用组件最小尺寸，没有独立宽高限制',()=>{
+it('五个固定组件复用通用组件最小尺寸，没有独立宽高限制',()=>{
  const grid=createResearchGrid(),m=grid.metrics(1280),base=grid.minimum({kind:'generated-container',containerSpec:{type:'text'}},m);
- for(const widget of ['watchlist','quote','indices','news'])expect(grid.minimum({kind:'generated-container',containerSpec:financialWidgetDefaults(widget)},m)).toEqual(base);
+ for(const widget of ['watchlist','quote','indices','news','announcements'])expect(grid.minimum({kind:'generated-container',containerSpec:financialWidgetDefaults(widget)},m)).toEqual(base);
 })
 
 it('底部联想向上展开，避开输入框和看板外的聊天面板',()=>{

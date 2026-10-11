@@ -1,7 +1,7 @@
 // Shared with the trusted, serialized React canvas. No data-provider secrets or
 // synthetic prices are stored in this spec. Data is fetched for this configuration.
 export function financialWidgetDefaults(widget){
- const titles={watchlist:'自选股',quote:'个股行情',indices:'市场指数',news:'新闻列表'}
+ const titles={watchlist:'自选股',quote:'个股行情',indices:'市场指数',news:'新闻列表',announcements:'公告列表'}
  if(!titles[widget])return null
  return {version:1,type:'financial-widget',widget,title:titles[widget],symbols:widget==='indices'?[
   {code:'000300',market:'SH',name:'沪深300'},{code:'000001',market:'SH',name:'上证指数'},
@@ -10,8 +10,8 @@ export function financialWidgetDefaults(widget){
 }
 export function financialWidgetSpec(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId'].includes(k)))return null
- if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
- if(!Array.isArray(value.symbols)||value.symbols.length>(value.widget==='quote'?1:value.widget==='indices'?12:200))return null
+ if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news','announcements'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
+ if(!Array.isArray(value.symbols)||value.symbols.length>(['quote','announcements'].includes(value.widget)?1:value.widget==='indices'?12:200))return null
  const ids=new Set()
  for(const s of value.symbols){
   if(!s||typeof s!=='object'||Object.keys(s).some(k=>!['code','market','name'].includes(k))||!['SH','SZ','BJ','HK','US'].includes(s.market)||typeof s.code!=='string'||!/^[A-Z0-9.^-]{1,20}$/.test(s.code)||typeof s.name!=='string'||!s.name.trim()||s.name.length>100||/[\u0000-\u001f]/.test(s.name))return null
@@ -20,7 +20,7 @@ export function financialWidgetSpec(value){
  if(!['1m','1d','1w','1mo','1y'].includes(value.period)||!['none','forward','backward'].includes(value.adjustment)||!Array.isArray(value.indicators)||new Set(value.indicators).size!==value.indicators.length||value.indicators.some(i=>!['MA','VOL','MACD'].includes(i))||!['all','SH','SZ','BJ','HK','US'].includes(value.market)||typeof value.query!=='string'||value.query.length>100||/[\u0000-\u001f]/.test(value.query))return null
  if(value.selectedSymbol!==undefined&&(value.widget!=='watchlist'||typeof value.selectedSymbol!=='string'||!ids.has(value.selectedSymbol)))return null
  if(value.linkedWatchlistId!==undefined&&(value.widget!=='quote'||typeof value.linkedWatchlistId!=='string'||!value.linkedWatchlistId.trim()||value.linkedWatchlistId.length>200||/[\u0000-\u001f]/.test(value.linkedWatchlistId)))return null
- if(value.linkedSourceId!==undefined&&(value.widget!=='news'||typeof value.linkedSourceId!=='string'||!value.linkedSourceId.trim()||value.linkedSourceId.length>200||/[\u0000-\u001f]/.test(value.linkedSourceId)))return null
+ if(value.linkedSourceId!==undefined&&(!['news','announcements'].includes(value.widget)||typeof value.linkedSourceId!=='string'||!value.linkedSourceId.trim()||value.linkedSourceId.length>200||/[\u0000-\u001f]/.test(value.linkedSourceId)))return null
  return Object.freeze({...value,symbols:Object.freeze(value.symbols.map(s=>Object.freeze({...s}))),indicators:Object.freeze([...value.indicators])})
 }
 export function changeWatchlist(spec,action){
@@ -36,23 +36,23 @@ export function financialSelectedSymbol(spec){
  return spec.symbols.find(s=>s.market+':'+s.code===spec.selectedSymbol)??spec.symbols[0]??null
 }
 export function financialLinkSourceId(spec){
- return spec?.widget==='quote'?spec.linkedWatchlistId:spec?.widget==='news'?spec.linkedSourceId:undefined
+ return spec?.widget==='quote'?spec.linkedWatchlistId:['news','announcements'].includes(spec?.widget)?spec.linkedSourceId:undefined
 }
 export function financialCanLink(source,target){
- return source?.type==='financial-widget'&&target?.type==='financial-widget'&&(source.widget==='watchlist'&&['quote','news'].includes(target.widget)||source.widget==='quote'&&target.widget==='news')
+ return source?.type==='financial-widget'&&target?.type==='financial-widget'&&(source.widget==='watchlist'&&['quote','news','announcements'].includes(target.widget)||source.widget==='quote'&&['news','announcements'].includes(target.widget))
 }
 export function financialNewsQuery(spec){
  return spec.linkedSourceId?(spec.symbols[0]?.name||spec.symbols[0]?.code||''):spec.query
 }
-// Synchronize in type order, not canvas order: watchlist -> quote -> news.
+// Synchronize in type order, not canvas order: watchlist -> quote -> feeds.
 // Deletion detaches dependents; an empty upstream clears stale stock content.
 export function synchronizeFinancialLinks(artifacts){
  const nodes=new Map(artifacts.map(n=>[n.id,n]))
- for(const widget of ['quote','news'])for(const node of artifacts){
+ for(const widget of ['quote','news','announcements'])for(const node of artifacts){
   const spec=node.containerSpec,sourceId=financialLinkSourceId(spec);if(spec?.widget!==widget||!sourceId)continue
   const source=nodes.get(sourceId)?.containerSpec,next={...spec}
   if(sourceId===node.id||!financialCanLink(source,spec)){
-   if(widget==='news'){next.query=financialNewsQuery(spec);delete next.linkedSourceId}else delete next.linkedWatchlistId
+   if(widget==='news'){next.query=financialNewsQuery(spec);delete next.linkedSourceId}else if(widget==='announcements')delete next.linkedSourceId;else delete next.linkedWatchlistId
   }else{const symbol=source.widget==='watchlist'?financialSelectedSymbol(source):source.symbols[0];next.symbols=symbol?[symbol]:[]}
   if(JSON.stringify(spec)!==JSON.stringify(next))nodes.set(node.id,{...node,containerSpec:financialWidgetSpec(next)})
  }
@@ -62,7 +62,7 @@ export function synchronizeFinancialLinks(artifacts){
 // twelve empty rows; the header, controls, column header and source strip stay.
 export function financialWidgetDimensions(spec){
  if(spec?.widget==='watchlist')return {width:320,height:130+36*Math.min(12,Math.max(2,spec.symbols?.length||0))}
- return ({quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340}})[spec?.widget]
+ return ({quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340},announcements:{width:620,height:340}})[spec?.widget]
 }
 export function financialIndicators(bars){
  const values=bars.map(b=>b.close),sma=(values,n)=>values.map((v,i)=>i<n-1||values.slice(i-n+1,i+1).some(x=>!Number.isFinite(x))?null:values.slice(i-n+1,i+1).reduce((a,b)=>a+b,0)/n)

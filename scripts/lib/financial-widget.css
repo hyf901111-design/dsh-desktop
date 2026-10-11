@@ -185,6 +185,10 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body .ew-news-list .ew-news-summary[aria-expanded=true],body [data-ework-grid] [data-research-node-id] .ew-news-list button.ew-news-summary[aria-expanded=true]{display:block;-webkit-line-clamp:unset}
  body .ew-news-list .ew-news-summary:hover{color:var(--fw-text)!important}
  body .ew-news-list .ew-news-source{display:block;margin-top:4px;color:var(--fw-muted);font:400 10px/15px 'Noto Sans SC',Inter,system-ui;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}
+ body .ew-announcement-list{padding-top:2px}
+ body .ew-announcement-list article{padding:10px 0;min-height:54px}
+ body .ew-announcement-list .ew-announcement-year{font-size:10px;color:var(--fw-muted);opacity:.8}
+ body .ew-announcement-list .ew-news-source{margin-top:3px}
  @container financial-chrome (max-width:340px){
   body .ew-grid-header:has(.ew-financial-header-selector)>:is(.ew-grid-title,.ew-grid-refresh,[data-workbench-ask]){display:none!important}
   body .ew-financial-header-selector{width:auto;max-width:none;flex:1;margin-right:4px}

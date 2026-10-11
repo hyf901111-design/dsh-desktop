@@ -3,7 +3,7 @@ import {normalizeFinancialBars} from './widget-data'
 
 type Row=Record<string,any>
 type SymbolRef={code:string;market:string;name:string}
-const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com']
+const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com']
 const number=(value:unknown):number|null=>typeof value==='number'&&Number.isFinite(value)?value:typeof value==='string'&&value.trim()&&Number.isFinite(Number(value))?Number(value):null
 const unavailable=()=>Error('公开数据源暂不可用，请稍后重试')
 const tradingDate=(value:string)=>{
@@ -15,8 +15,9 @@ const quoteCode=(code:string)=>code.replace(/\.(?:OQ|N)$/,'')
 const symbolId=(s:SymbolRef)=>s.market.toLowerCase()+(s.market==='US'?quoteCode(s.code):s.code)
 const validSymbol=(s:any)=>s&&['SH','SZ','BJ','HK','US'].includes(s.market)&&typeof s.code==='string'&&(s.market==='US'?/^[A-Z][A-Z0-9.^-]{0,19}$/.test(s.code):new RegExp('^\\d{'+(s.market==='HK'?5:6)+'}$').test(s.code))
 const validQuery=(q:any)=>{
- if(!q||!['search','quotes','history','news'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh'].includes(k))||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
- if(['quotes','history'].includes(q.action)&&(!Array.isArray(q.symbols)||q.symbols.length>200||q.symbols.some((s:any)=>!validSymbol(s))))throw Error('证券参数无效')
+ if(!q||!['search','quotes','history','news','announcements'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh'].includes(k))||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
+ if(['quotes','history','announcements'].includes(q.action)&&(!Array.isArray(q.symbols)||q.symbols.length>200||q.symbols.some((s:any)=>!validSymbol(s))))throw Error('证券参数无效')
+ if(q.action==='announcements'&&q.symbols.length!==1)throw Error('公告证券参数无效')
  if(q.action==='history'&&(q.symbols.length!==1||!['1m','1d','1w','1mo','1y'].includes(q.period)||!['none','forward','backward'].includes(q.adjustment)))throw Error('图表参数无效')
 }
 const safeLink=(value:unknown)=>{try{const u=new URL(String(value));return u.protocol==='https:'&&!u.username&&!u.password?u.href:null}catch{return null}}
@@ -52,7 +53,7 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
    const get=async(url:URL|string,gbk=false)=>{
     check();signal.throwIfAborted()
     let response:Response
-    try{response=await fetcher(url,{method:'GET',redirect:'error',headers:{accept:'application/json, text/plain, */*','user-agent':'EWork Odyssey','referer':new URL(url).hostname.includes('gtimg')?'https://gu.qq.com/':'https://finance.sina.com.cn/'},signal})}catch{check();throw unavailable()}
+    try{response=await fetcher(url,{method:'GET',redirect:'error',headers:{accept:'application/json, text/plain, */*','user-agent':'EWork Odyssey','referer':new URL(url).hostname.includes('gtimg')?'https://gu.qq.com/':new URL(url).hostname.includes('eastmoney.com')?'https://data.eastmoney.com/':'https://finance.sina.com.cn/'},signal})}catch{check();throw unavailable()}
     check();if(!response.ok){await response.body?.cancel();throw unavailable()}
     const reader=response.body?.getReader();if(!reader)throw unavailable()
     const chunks:Uint8Array[]=[];let size=0
@@ -148,6 +149,21 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
      }
      result={symbols:symbols.slice(0,20),source:'腾讯财经'}
     }
+   }else if(q.action==='announcements'){
+    const symbol:SymbolRef=q.symbols[0],code=symbol.market==='US'?quoteCode(symbol.code):symbol.code,kind=symbol.market==='HK'?'H':symbol.market==='US'?'U':'A',tag=({SH:'SHA',SZ:'SZA',BJ:'BJA',HK:'H',US:'U'} as Row)[symbol.market]
+    const url=new URL('https://np-anotice-stock.eastmoney.com/api/security/ann')
+    for(const [key,value] of Object.entries({page_size:'30',page_index:'1',ann_type:kind,stock_list:code,sr:'-1'}))url.searchParams.set(key,value)
+    const value=await json(url)
+    if(value.success!==1||!Array.isArray(value.data?.list))throw unavailable()
+    const seen=new Set<string>()
+    result={source:'东方财富',announcements:value.data.list.flatMap((r:Row)=>{
+     // A stock code is not an identity on its own: SH000001 is an index,
+     // SZ000001 is a company. Match the upstream exchange tag as well.
+     if(!Array.isArray(r.codes)||!r.codes.some((s:Row)=>s.stock_code===code&&String(s.ann_type).split(',').includes(tag)))return []
+     const id=String(r.art_code??''),title=plain(r.title_ch||r.title||r.title_en),day=tradingDate(String(r.notice_date??''))
+     if(!/^AN\d{14,24}$/.test(id)||!title||!day||seen.has(id))return [];seen.add(id)
+     return [{id,title:title.slice(0,1000),date:day,category:Array.isArray(r.columns)?r.columns.map((c:Row)=>plain(c.column_name)).filter(Boolean).join(' · ').slice(0,120):'',url:'https://data.eastmoney.com/notices/detail/'+code+'/'+id+'.html'}]
+    }).sort((a:Row,b:Row)=>b.date.localeCompare(a.date)).slice(0,30)}
    }else if(q.query?.trim()){
     const url=new URL('https://search-api-web.eastmoney.com/search/jsonp');url.searchParams.set('cb','ework');url.searchParams.set('param',JSON.stringify({uid:'',keyword:q.query.trim(),type:['cmsArticle'],client:'web',clientType:'web',clientVersion:'curr',param:{cmsArticle:{searchScope:'default',sort:'latest',pageIndex:1,pageSize:20,preTag:'',postTag:''}}}))
     const text=(await get(url)).trim(),match=text.match(/^ework\(([\s\S]*)\);?$/);let value:Row

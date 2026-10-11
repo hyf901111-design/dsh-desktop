@@ -47,15 +47,15 @@ it('新闻输入框Enter直接提交关键词，不依赖宿主的隐式表单�
  const entered=await f.event('keydown',f.host.querySelector('input[aria-label="搜索相关新闻"]'),{key:'Enter',keyCode:13,isComposing:false});expect(entered.defaultPrevented).toBe(true);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.query).toBe('茅台')
  await vi.waitFor(()=>expect(bridge.request).toHaveBeenCalledWith(expect.objectContaining({action:'news',query:'茅台'})))
 })
-it('四项列表直接放置、选中和恢复，保留原节点，无配置面板及模型任务',async()=>{
- const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));const items=[...f.document.querySelectorAll('[data-financial-place]')];expect(items.map(x=>x.dataset.financialPlace)).toEqual(['watchlist','quote','indices','news']);await f.event('click',items[0]);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('[role=dialog][open]')).toBeNull()
+it('五项列表直接放置、选中和恢复，保留原节点，无配置面板及模型任务',async()=>{
+ const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));const items=[...f.document.querySelectorAll('[data-financial-place]')];expect(items.map(x=>x.dataset.financialPlace)).toEqual(['watchlist','quote','indices','news','announcements']);await f.event('click',items[0]);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('[role=dialog][open]')).toBeNull()
  await f.act(async()=>['quote','indices','news'].forEach(k=>f.workspace.createFinancialWidget(k)));expect(f.workspace.getSnapshot().artifacts).toHaveLength(4);expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([f.workspace.getSnapshot().artifacts[3].id]);expect(f.host.querySelectorAll('[data-financial-widget]')).toHaveLength(4);expect(f.generation.generate).not.toHaveBeenCalled()
  const reopened=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test');expect(reopened.getSnapshot().artifacts.map(n=>n.containerSpec.widget)).toEqual(['watchlist','quote','indices','news'])
 })
-it('组件库只有四项菜单，关闭与加号独立对齐，点击加号直接放置',async()=>{
+it('组件库五项菜单，关闭与加号独立对齐，点击加号直接放置',async()=>{
  const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));
  const menu=f.document.querySelector('.ew-financial-library');expect(menu.querySelector('p')).toBeNull();expect(f.document.activeElement).toBe(menu);
- await f.event('keydown',menu,{key:'ArrowUp'});expect(f.document.activeElement.dataset.financialPlace).toBe('news');await f.event('keydown',menu,{key:'Home'});expect(f.document.activeElement.dataset.financialPlace).toBe('watchlist');
+ await f.event('keydown',menu,{key:'ArrowUp'});expect(f.document.activeElement.dataset.financialPlace).toBe('announcements');await f.event('keydown',menu,{key:'Home'});expect(f.document.activeElement.dataset.financialPlace).toBe('watchlist');
  expect(menu.querySelector('[aria-label="关闭组件库"] .ew-financial-icon').dataset.financialIcon).toBe('close');
  const action=menu.querySelector('[data-financial-place=watchlist] .ew-financial-place-action');expect(action.querySelector('[data-financial-icon=plus]')).not.toBeNull();
  await f.event('click',action);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('.ew-financial-library')).toBeNull();

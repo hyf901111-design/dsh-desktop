@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest'
 import {financialWidgetSpec,changeWatchlist,financialIndicators,financialWidgetDefaults,synchronizeFinancialLinks} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 const hk={code:'09988',name:'阿里巴巴-W',market:'HK'},us={code:'BABA',name:'阿里巴巴',market:'US'}
 describe('固定金融组件持久化契约',()=>{
- it('仅四种组件；重复代码按市场区分，拒绝未知字段与非有限配置',()=>{
+ it('五种固定组件；重复代码按市场区分，拒绝未知字段与非有限配置',()=>{
   expect(financialWidgetDefaults('watchlist').symbols).toEqual([])
   expect(financialWidgetSpec({...financialWidgetDefaults('watchlist'),symbols:[hk,us]})).not.toBeNull()
   expect(financialWidgetSpec({...financialWidgetDefaults('watchlist'),symbols:[hk,hk]})).toBeNull()
