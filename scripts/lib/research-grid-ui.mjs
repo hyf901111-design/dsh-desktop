@@ -288,6 +288,7 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
   const show=(c,element=preview)=>{if(!c)return;const m=grid.metrics(width()),n=grid.project([{id:c.id}], [c], width())[0];Object.assign(element.style,{left:n.x-n.width/2+'px',top:n.y-n.height/2+'px',width:n.width+'px',height:n.height+'px'});element.style.setProperty('--grid-gap',m.gap+'px');element.hidden=false}
   const update=e=>{
     if(!op)return
+    op.lastClient={x:e.clientX,y:e.clientY}
     const p=point(e),m=grid.metrics(width());let target
     if(op.kind==='draw')target=grid.draw(op.start,p,m)
     else{const c=op.cell,dx=(p.x-op.start.x)/m.step,dy=(p.y-op.start.y)/m.rowStep,min=grid.minimum(op.geometry.find(n=>n.id===c.id),m);target=op.kind==='resize'?grid.bounded({...c,w:op.axis==='y'?c.w:Math.max(min.w,c.w+Math.round(dx)),h:op.axis==='x'?c.h:Math.max(min.h,c.h+Math.round(dy))}):grid.bounded({...c,x:c.x+Math.round(dx),y:c.y+Math.round(dy)})}
@@ -312,7 +313,10 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(!op||event?.pointerId!==undefined&&event.pointerId!==op.pointerId)return
     if(frame)view.cancelAnimationFrame(frame);frame=0
     if(autoFrame)view.cancelAnimationFrame(autoFrame);autoFrame=0;lastPointer=null
-    if(commit&&event){update(event);if(frame)view.cancelAnimationFrame(frame);frame=0}
+    // A resize can shrink the scroll range, or change the available viewport.
+    // Neither moves the pointer. Commit its last preview rather than converting
+    // the same release coordinates again in that changed coordinate system.
+    if(commit&&event&&(event.clientX!==op.lastClient?.x||event.clientY!==op.lastClient?.y)){update(event);if(frame)view.cancelAnimationFrame(frame);frame=0}
     if(commit&&!op.target)commit=false
     if(commit&&op.kind!=='draw'&&op.resolved.every(c=>{const before=op.canonicalBefore.find(n=>n.id===c.id);return ['x','y','w','h'].every(k=>c[k]===before[k])}))commit=false
     const committed=op.resolved

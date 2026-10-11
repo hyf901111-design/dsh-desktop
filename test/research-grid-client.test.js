@@ -885,7 +885,7 @@ it('恢复录音胶囊不改变工具栏链接按钮的尺寸、图标或隐藏�
  const f=await fixture(true),toolbar=f.document.querySelector('[data-ework-toolbar]')
  for(const name of ['select','arrange','container','link','voice']){
   const button=toolbar.querySelector('[data-research-global-'+name+']'),style=f.win.getComputedStyle(button)
-  expect(style.width,name).toBe('36px');expect(style.height,name).toBe('34px')
+  expect(style.width,name).toBe(name==='arrange'?'34px':'36px');expect(style.height,name).toBe('34px')
   const icon=button.querySelector('svg,img,.odyssey-global-icon')
   expect(f.win.getComputedStyle(icon).width,name).toBe('20px')
   for(const label of button.querySelectorAll('span:not(.odyssey-global-icon)'))expect(f.win.getComputedStyle(label).display,name).toBe('none')
@@ -1664,7 +1664,8 @@ it('空画布及一屏内内容不因留白溢出；长画布底部只保留15�
  await act(async()=>{f.workspace.setArtifacts([text('edge')]);f.workspace.applyWorkbenchCells([{id:'edge',x:0,y:0,w:20,h:28}],true);f.workspace.updateSelection(['edge'],'replace')})
  const handle=f.document.querySelector('[data-workbench-resize="edge"][data-workbench-resize-axis="y"]')
  expect(parseFloat(handle.style.top)+parseFloat(handle.style.height)).toBeLessThanOrEqual(700)
- expect(parseFloat(layer.style.height)).toBe(700)
+ const edge=w=>w.y+w.height/2
+ expect(parseFloat(layer.style.height)).toBe(Math.max(700,Math.ceil(edge(f.workspace.getSnapshot().artifacts[0])+80)))
 })
 
 
@@ -1998,6 +1999,35 @@ it('调宽预览压缩同排组件，松手使用预览并一次撤销恢复双�
  await f.event('pointerup',f.canvas,{pointerId:87,clientX:490+step*6,clientY:200})
  expect(f.workspace.getWorkbenchCells()).toEqual(preview)
  await act(async()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
+})
+
+it('调高后的画布滚动夹紧不在原地松手时重新计算尺寸',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await act(async()=>{w.setArtifacts([text('a')]);w.applyWorkbenchCells([{id:'a',x:0,y:20,w:20,h:20}],true);w.updateSelection(['a'],'replace')})
+ f.canvas.scrollTop=300
+ const before=w.getWorkbenchCells()
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="y"]'),{button:0,pointerId:101,clientX:250,clientY:500})
+ await f.event('pointermove',f.canvas,{pointerId:101,clientX:250,clientY:500-step*4})
+ const preview=w.getWorkbenchCells()
+ expect(preview[0].h).toBe(16)
+ // Chromium can clamp scrollTop when the just-resized content becomes shorter.
+ // Releasing at the same screen coordinate must commit the visible preview.
+ f.canvas.scrollTop=180
+ await f.event('pointerup',f.canvas,{pointerId:101,clientX:250,clientY:500-step*4})
+ expect(w.getWorkbenchCells()).toEqual(preview)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+})
+
+it('调宽后的可用宽度变化不在原地松手时覆盖预览',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await act(async()=>{w.setArtifacts([text('a')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:10}],true);w.updateSelection(['a'],'replace')})
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]'),{button:0,pointerId:102,clientX:490,clientY:200})
+ await f.event('pointermove',f.canvas,{pointerId:102,clientX:490+step*4,clientY:200})
+ const preview=w.getWorkbenchCells()
+ expect(preview[0].w).toBe(24)
+ await act(async()=>{w.setCanvasSize({width:700,height:700,availableWidth:700});w.setWorkbenchWidth(700)})
+ await f.event('pointerup',f.canvas,{pointerId:102,clientX:490+step*4,clientY:200})
+ expect(w.getWorkbenchCells()).toEqual(preview)
 })
 
 it('宿主原生滚动条一直不占位，选中仅改变覆盖层颜色并保留滚动能力',async()=>{
