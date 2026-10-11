@@ -77,6 +77,46 @@
           "只有看板可见时自动刷新"
         ],
         "generatedAt": "2026-10-11T00:02:52.379623+00:00"
+      },
+      "merged": {
+        "mergeCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
+        "verificationCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
+              "run",
+              "test/free-data-sources.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/component-agent-scope.test.js",
+              "test/research-task-runtime.test.js",
+              "-t",
+              "free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs run test/free-data-sources.test.js test/integration-bundled-skill.test.js test/research-component-source-tools.test.js test/component-agent-scope.test.js test/research-task-runtime.test.js -t free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference",
+            "verifiedCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
+            "completedAt": "2026-10-11T00:02:59.522Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
+            "completedAt": "2026-10-11T00:02:59.522Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-11T00:02:59.522Z"
       }
     }
   ],
