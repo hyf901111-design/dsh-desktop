@@ -2001,6 +2001,40 @@ it('调宽预览压缩同排组件，松手使用预览并一次撤销恢复双�
  await act(async()=>f.workspace.undo());expect(f.workspace.getWorkbenchCells()).toEqual(before)
 })
 
+it.each(['x','y'])('调%s时先丢失指针捕获仍继续到窗口松手，保持预览且只生成一次撤销',async axis=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await act(async()=>{w.setArtifacts([text('a')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:20}],true);w.updateSelection(['a'],'replace')})
+ const before=w.getWorkbenchCells(),point=delta=>({pointerId:105,clientX:490+(axis==='x'?step*delta:0),clientY:500+(axis==='y'?step*delta:0)})
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="'+axis+'"]'),{button:0,buttons:1,...point(0)})
+ await f.event('pointermove',f.canvas,{buttons:1,...point(2)})
+ const preview=w.getWorkbenchCells()
+ // Electron can release capture before delivering the final move / mouse-up.
+ // Losing capture does not mean that the user cancelled the gesture.
+ await f.event('lostpointercapture',f.canvas,{buttons:0,...point(4)})
+ expect(w.getWorkbenchCells()).toEqual(preview)
+ expect(f.canvas.getAttribute('data-grid-operation')).toBe('resize')
+ await f.event('pointermove',f.win,{buttons:0,...point(4)})
+ await f.event('pointerup',f.document.body,{buttons:0,...point(4)})
+ expect(w.getWorkbenchCells()[0][axis==='x'?'w':'h']).toBe(24)
+ expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+})
+
+it('缩放捕获丢失后仍允许真正的指针取消和窗口失焦恢复原尺寸',async()=>{
+ const f=await fixture(true),w=f.workspace,step=(1000-14)/40
+ await act(async()=>{w.setArtifacts([text('a')]);w.applyWorkbenchCells([{id:'a',x:0,y:0,w:20,h:20}],true);w.updateSelection(['a'],'replace')})
+ const before=w.getWorkbenchCells()
+ for(const kind of ['pointercancel','blur']){
+  await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]'),{button:0,pointerId:106,clientX:490,clientY:200})
+  await f.event('pointermove',f.canvas,{pointerId:106,clientX:490+step*3,clientY:200})
+  await f.event('lostpointercapture',f.canvas,{pointerId:106,buttons:1})
+  expect(f.canvas.getAttribute('data-grid-operation')).toBe('resize')
+  await f.event(kind,f.win,kind==='blur'?{}:{pointerId:106})
+  expect(w.getWorkbenchCells()).toEqual(before)
+  expect(f.canvas.hasAttribute('data-grid-operation')).toBe(false)
+ }
+})
+
 it('调高后的画布滚动夹紧不在原地松手时重新计算尺寸',async()=>{
  const f=await fixture(true),w=f.workspace,step=(1000-14)/40
  await act(async()=>{w.setArtifacts([text('a')]);w.applyWorkbenchCells([{id:'a',x:0,y:20,w:20,h:20}],true);w.updateSelection(['a'],'replace')})

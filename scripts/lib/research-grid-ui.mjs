@@ -361,16 +361,19 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     update(e);autoFrame=view.requestAnimationFrame(autoScroll)
   }
   const move=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();lastPointer=e;update(e);if(!autoFrame)autoFrame=view.requestAnimationFrame(autoScroll)}
-  const up=e=>{if(!op)return;e.preventDefault();e.stopImmediatePropagation();finish(true,e)}
-  const cancel=e=>{if(op){e?.stopImmediatePropagation?.();finish(false,e)}}
+  const up=e=>{if(!op||e.pointerId!==op.pointerId)return;e.preventDefault();e.stopImmediatePropagation();finish(true,e)}
+  const cancel=e=>{if(op&&(e?.pointerId===undefined||e.pointerId===op.pointerId)){e?.stopImmediatePropagation?.();finish(false,e)}}
   const key=e=>{if(e.key==='Shift'&&!e.target?.closest?.('input,textarea,[contenteditable=true]'))root.setAttribute('data-grid-multiselect','');if(op&&e.key==='Escape'){e.preventDefault();finish(false)}}
   const keyUp=e=>{if(e.key==='Shift')root.removeAttribute('data-grid-multiselect')}
   const click=e=>{if(toolRef.current==='select'&&(e.shiftKey||e.metaKey)&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,[contenteditable=true]')){e.preventDefault();e.stopImmediatePropagation()}}
   // Window blur is shared by embedded-content lifecycles; cancel our gesture
   // without preventing their own held-key/pointer cleanup.
   const blur=e=>{root.removeAttribute('data-grid-multiselect');if(op)finish(false,e)}
-  root.addEventListener('pointerdown',down,true);root.addEventListener('click',click,true);root.addEventListener('pointermove',move,true);root.addEventListener('pointerup',up,true);root.addEventListener('pointercancel',cancel,true);root.addEventListener('lostpointercapture',cancel,true);view.addEventListener('blur',blur);view.addEventListener('keydown',key,true);view.addEventListener('keyup',keyUp,true)
-  return()=>{finish(false);preview.remove();root.removeAttribute('data-grid-multiselect');root.removeEventListener('pointerdown',down,true);root.removeEventListener('click',click,true);root.removeEventListener('pointermove',move,true);root.removeEventListener('pointerup',up,true);root.removeEventListener('pointercancel',cancel,true);root.removeEventListener('lostpointercapture',cancel,true);view.removeEventListener('blur',blur);view.removeEventListener('keydown',key,true);view.removeEventListener('keyup',keyUp,true)}
+  // Electron can lose capture before delivering the last move and pointer-up.
+  // Follow the active pointer across the window until release; capture loss
+  // alone is not cancellation. Escape, pointercancel and window blur still undo.
+  root.addEventListener('pointerdown',down,true);root.addEventListener('click',click,true);view.addEventListener('pointermove',move,true);view.addEventListener('pointerup',up,true);view.addEventListener('pointercancel',cancel,true);view.addEventListener('blur',blur);view.addEventListener('keydown',key,true);view.addEventListener('keyup',keyUp,true)
+  return()=>{finish(false);preview.remove();root.removeAttribute('data-grid-multiselect');root.removeEventListener('pointerdown',down,true);root.removeEventListener('click',click,true);view.removeEventListener('pointermove',move,true);view.removeEventListener('pointerup',up,true);view.removeEventListener('pointercancel',cancel,true);view.removeEventListener('blur',blur);view.removeEventListener('keydown',key,true);view.removeEventListener('keyup',keyUp,true)}
 }
 export function WorkbenchContextMenu({canvasRoot,point,onClose,className,style,children,...props}) {
   const ref=react.useRef(null)
