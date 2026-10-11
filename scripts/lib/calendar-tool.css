@@ -12,6 +12,7 @@
  body .ew-calendar-icon{display:block!important;flex:none!important;vertical-align:middle;max-width:none!important;max-height:none!important}
  .ew-calendar-toolbar{display:flex;align-items:center;gap:4px;flex:none;min-height:40px;min-width:0;padding-bottom:4px}
  .ew-calendar-toolbar>span{flex:1}
+ .ew-calendar-compact-date{display:none;min-width:0}
  body .ew-calendar-toolbar>button{display:flex!important;align-items:center;justify-content:center;gap:4px;white-space:nowrap;height:28px!important;min-width:28px!important;padding:4px 6px!important}
  body .ew-calendar-month-picker{position:relative;display:flex;align-items:center;justify-content:space-between;gap:6px;width:120px;height:28px;flex:none;padding:0 7px;border-radius:6px;cursor:pointer}
  .ew-calendar-month-picker>span{white-space:nowrap;font-size:12px;font-weight:600;pointer-events:none}
@@ -143,6 +144,22 @@
   .ew-calendar-empty-add{display:none!important}
   .ew-calendar-event{padding:3px 0}
   .ew-calendar-date-group{padding:2px 0}
+ }
+ @container calendar-tool (max-width:480px) and (max-height:220px){
+  .ew-calendar-compact-date{display:flex;flex:1;align-items:center;min-height:28px}
+  .ew-calendar-compact-date .ew-calendar-date-picker>span{font-size:12px}
+  .ew-calendar-toolbar>span,.ew-calendar-toolbar>.ew-calendar-month-picker,body .ew-calendar-toolbar>button:is([data-calendar-nav],[data-calendar-today],[data-calendar-history]){display:none!important}
+  .ew-calendar-tool[data-calendar-view=auto] .ew-calendar-agenda-heading{display:none}
+  .ew-calendar-tool[data-calendar-view=search] .ew-calendar-search{display:flex}
+  .ew-calendar-tool[data-calendar-view=search] .ew-calendar-agenda-heading{display:none}
+  .ew-calendar-quick>.ew-calendar-date-picker{display:none!important}
+  body .ew-calendar-quick{min-height:28px;padding:0 3px 0 7px;margin:4px 0 0}
+  .ew-calendar-event{padding:5px 0;gap:6px}
+  .ew-calendar-event>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 6px;align-items:center}
+  body .ew-calendar-event-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px!important;min-height:20px!important;line-height:20px!important}
+  .ew-calendar-event-meta{display:flex;margin:0;gap:0;white-space:nowrap;font-size:10px}
+  .ew-calendar-event-meta>span:not(:first-child),.ew-calendar-event p,.ew-calendar-footer,.ew-calendar-range-hint{display:none}
+  body .ew-calendar-event button[data-calendar-complete]{margin-top:2px}
  }
  @container calendar-tool (max-width:350px){
   .ew-calendar-toolbar{gap:2px;flex-wrap:wrap}
