@@ -1,9 +1,14 @@
 import {afterEach,it,expect,vi} from 'vitest'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 import {mountUiLocalization,translateUiCopy} from '../src/preload/ui-localization'
+import {financialIndexCatalog} from '../packages/dsh-research-task-runtime/financial-index-catalog.js'
 
 let current,disposeLocale
 afterEach(async()=>{disposeLocale?.();disposeLocale=undefined;await current?.dispose();current=undefined})
+
+it('finds every built-in index by its displayed English name',()=>{
+ for(const row of financialIndexCatalog())expect((row.symbol.name+' '+row.symbol.code+' '+row.keywords).toLowerCase()).toContain(translateUiCopy(row.symbol.name).toLowerCase())
+})
 
 it('translates financial controls, timestamps, chart units and connection help',()=>{
  for(const [source,english] of [
@@ -43,6 +48,11 @@ it('localizes actual built-in widgets and new menus live without changing source
  expect(card(news.id).querySelector('.ew-news-title').textContent).toBe('重试')
  expect(card(news.id).querySelector('.ew-news-summary').textContent).toBe('市场指数')
  expect(card(news.id).querySelector('.ew-news-source').textContent).toBe('研究')
+ await f.act(async()=>{
+  f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>n.id===quote.id?{...n,containerSpec:{...n.containerSpec,linkedWatchlistId:watch.id}}:n))
+  f.workspace.updateSelection([quote.id],'replace')
+ })
+ await f.act(async()=>{await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-link] title').textContent).toBe('Right-click to disconnect'))})
  await f.event('click',card(indices.id).querySelector('[data-workbench-more]'))
  await f.act(async()=>{await vi.waitFor(()=>expect(f.document.querySelector('[role=menu]').textContent).toContain('Configure indices'))})
  const configure=[...f.document.querySelectorAll('[role=menuitem]')].find(el=>el.textContent==='Configure indices')

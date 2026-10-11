@@ -17,7 +17,7 @@ export function financialIndexCatalog(){
   ['亚太','INDEX','^TWII','台湾加权指数','TAIEX Taiwan Weighted'],['亚太','INDEX','^STI','新加坡海峡时报指数','Straits Times Singapore'],
   ['亚太','INDEX','^AXJO','澳大利亚标普200','S&P/ASX 200 Australia'],['亚太','INDEX','^BSESN','印度孟买30','SENSEX India'],
   ['欧洲','INDEX','^FTSE','英国富时100','FTSE 100 UK'],['欧洲','INDEX','^GDAXI','德国DAX','Germany'],
-  ['欧洲','INDEX','^FCHI','法国CAC40','France'],['欧洲','INDEX','^STOXX50E','欧洲斯托克50','EURO STOXX 50'],
+  ['欧洲','INDEX','^FCHI','法国CAC40','CAC 40 France'],['欧洲','INDEX','^STOXX50E','欧洲斯托克50','EURO STOXX 50'],
   ['其他','INDEX','^GSPTSE','加拿大TSX综合指数','Canada S&P/TSX Composite'],['其他','INDEX','^BVSP','巴西圣保罗指数','Brazil BOVESPA']
  ].map(([group,market,code,name,keywords])=>({group,symbol:{market,code,name},keywords}))
 }
