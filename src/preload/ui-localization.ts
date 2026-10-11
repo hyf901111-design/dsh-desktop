@@ -11,6 +11,7 @@ export function translateUiCopy(value: string): string {
  if(key.includes(' · ') && /^(下次运行|每天|工作日|每周[日一二三四五六]|\d{4}-\d{2}-\d{2}|北京时间|香港时间|东京时间|纽约时间|伦敦时间|UTC|[A-Za-z_]+\/)/.test(key))
   return value.replace(key,key.split(' · ').map(translateUiCopy).join(' · '))
  const patterns: Array<[RegExp,(...args:string[])=>string]> = [
+  [/^展开其余 (\d+) 个看板$/,(_m,n)=>`Show ${n} more ${n==='1'?'board':'boards'}`],
   [/^每 (\d+) 分钟$/,(_m,n)=>`Every ${n} ${n==='1'?'minute':'minutes'}`],
   [/^(每天|工作日) (\d{1,2}:\d{2})$/,(_m,f,t)=>`${f==='每天'?'Daily':'Weekdays'} ${t}`],
   [/^每周([日一二三四五六]) (\d{1,2}:\d{2})$/,(_m,d,t)=>`Every ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']['日一二三四五六'.indexOf(d)]} ${t}`],

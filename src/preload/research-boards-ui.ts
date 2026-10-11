@@ -1846,10 +1846,12 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
 }
 function ResearchBoardList({ page, skin, visible, entries, preferences, query, selectedSession, save }: any) {
   const [drag, setDrag] = React.useState<any>(null)
+  const [expandedGroups, setExpandedGroups] = React.useState<string[]>([])
   const currentDrag = React.useRef<any>(null), committed = React.useRef(false)
   skin.useNativeDragAcceptance(drag !== null)
   const updateDrag = (next: any) => { currentDrag.current = next; setDrag(next) }
   React.useEffect(() => { updateDrag(null) }, [preferences.groupBy, preferences.sort, query])
+  React.useEffect(() => { setExpandedGroups((keys: string[]) => keys.filter(key => !preferences.collapsedGroups.includes(key))) }, [preferences.collapsedGroups])
   const B = skin.header, grouped = preferences.groupBy === 'type'
   const commit = (over: { key: string; half: 'before' | 'after' } | null) => {
     const active = currentDrag.current
@@ -1888,6 +1890,21 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
       onDragEnd: () => { commit(currentDrag.current?.over ?? null); updateDrag(null); committed.current = false }
     })
   }
+  const renderRows = (rows: any[], group: string) => {
+    const limit = skin.collapsedSessionLimit ?? 5, expanded = !!query || expandedGroups.includes(group)
+    let shown = expanded ? rows : rows.slice(0, limit)
+    // Keep the open board discoverable without rewriting the user's manual order.
+    const current = rows.find(row => (row.value.localSessionId ?? row.value.sessionId) === page.current())
+    if (!expanded && current && !shown.includes(current)) shown = [...shown.slice(0, limit - 1), current]
+    return [
+      ...shown.map(renderRow),
+      !query && rows.length > limit && h('button', {
+        key: 'overflow:' + group, type: 'button', className: B.sessionOverflowButton,
+        'data-srb-board-overflow': group, 'aria-expanded': expanded,
+        onClick: () => setExpandedGroups((keys: string[]) => keys.includes(group) ? keys.filter(key => key !== group) : [...keys, group])
+      }, expanded ? '收起' : `展开其余 ${rows.length - shown.length} 个看板`)
+    ]
+  }
   const groups = grouped ? ['private', 'shared'].map(group => ({ group, rows: visible.filter((e: any) => e.group === group) })).filter(g => g.rows.length) : []
   const firstMarker = !grouped && drag?.over?.key === visible[0]?.key && drag?.over?.half === 'before'
   return h('div', { className: B.listArea }, h('div', { className: B.treeBody },
@@ -1896,7 +1913,7 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
       ...(grouped ? groups.map(({ group, rows }) => h(ResearchBoardGroup, { key: group, skin, group,
         expanded: !!query || !preferences.collapsedGroups.includes(group),
         onToggle: () => { if (!query) save({ ...preferences, collapsedGroups: preferences.collapsedGroups.includes(group) ? preferences.collapsedGroups.filter((g: string) => g !== group) : [...preferences.collapsedGroups, group] }) }
-      }, ...rows.map(renderRow))) : visible.map(renderRow))),
+      }, ...renderRows(rows, group))) : renderRows(visible, 'all'))),
     firstMarker && h('span', { className: B.listTopDropIndicator, 'aria-hidden': true })))
 }
 function ResearchBoardGroup({ skin, group, expanded, onToggle, children }: any) {

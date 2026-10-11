@@ -918,13 +918,16 @@ function patchWorkspaceSidebarSkin(source) {
   if (!source.includes('"data-srb-section-header"')) source = replace(source,
     'className: WorkspaceBrowser_module_css_default.sectionHeader,',
     'className: WorkspaceBrowser_module_css_default.sectionHeader, "data-srb-section-header":"",')
+  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */')) return source
   if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')) return source
+    .replace('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */', '/* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */')
+    .replace('rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};', 'rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};')
   if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */')) return source
-    .replace('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */', '/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')
-    .replace('header: WorkspaceBrowser_module_css_default};', 'header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};')
+    .replace('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */', '/* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */')
+    .replace('header: WorkspaceBrowser_module_css_default};', 'header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};')
   return replace(source, '\t\texports.apply = apply;', `
-        /* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */
-        window.__sherlockWorkspaceSidebarSkin = {rows: Rows_module_css_default, header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};
+        /* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */
+        window.__sherlockWorkspaceSidebarSkin = {rows: Rows_module_css_default, header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};
         window.dispatchEvent(new window.Event("sherlock-sidebar-skin"));
         \t\texports.apply = apply;`)
 }

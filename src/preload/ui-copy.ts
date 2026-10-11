@@ -2,6 +2,7 @@
  * Keys are exact UI strings. User documents, input values and saved titles are never translated.
  */
 export const englishUiCopy: Record<string, string> = {
+  "收起": "Collapse",
   "更多": "More",
   "组件": "Component",
   "语音创建 按住/双击fn": "Create with voice · Hold/double-press Fn",
