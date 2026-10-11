@@ -40,7 +40,12 @@ export class CalendarStore {
    s.events=old?s.events.map(e=>e.id===event.id?event:e):[...s.events,event];return event
   })
  }
- complete(target:CalendarTarget,id:string,date:string,completed:boolean){return this.mutate(s=>{const e=s.events.find(e=>e.id===id&&e.sessionId===target.sessionId&&e.nodeId===target.nodeId);if(!e||!calendarOccurs(e,date)||typeof completed!=='boolean')throw Error('事项不存在');e.completedDates=e.completedDates.filter(d=>d!==date);if(completed)e.completedDates.push(date);e.completedDates=e.completedDates.slice(-2048);e.updatedAt=this.now();e.nextReminder=nextCalendarReminder(e,this.now());return e})}
+ complete(target:CalendarTarget,id:string,date:string,completed:boolean){return this.mutate(s=>{
+  const e=s.events.find(e=>e.id===id&&e.sessionId===target.sessionId&&e.nodeId===target.nodeId);if(!e||!calendarOccurs(e,date)||typeof completed!=='boolean')throw Error('事项不存在')
+  const pending=e.nextReminder,now=this.now();e.completedDates=e.completedDates.filter(d=>d!==date);if(completed)e.completedDates.push(date);e.completedDates=e.completedDates.slice(-2048);e.updatedAt=now;e.nextReminder=nextCalendarReminder(e,now)
+  if(pending&&pending.at<=now&&!e.completedDates.includes(pending.date))e.nextReminder=pending
+  return e
+ })}
  remove(target:CalendarTarget,id:string){return this.mutate(s=>{const e=s.events.find(e=>e.id===id&&e.sessionId===target.sessionId&&e.nodeId===target.nodeId);if(!e)throw Error('事项不存在');s.events=s.events.filter(e=>e!==e);return {ok:true}})}
  dismiss(sessionId:string,id:string){return this.mutate(s=>{const n=s.notices.find(n=>n.id===id&&n.sessionId===sessionId);if(!n)throw Error('提醒不存在');n.dismissedAt=this.now();return {ok:true}})}
  async tick(exists:(target:CalendarTarget)=>boolean,deliver:(notice:CalendarNotice)=>void){
