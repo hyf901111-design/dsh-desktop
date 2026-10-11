@@ -16,6 +16,16 @@ describe('固定金融组件持久化契约',()=>{
   expect(changeWatchlist(s,{op:'remove',market:'HK',code:'09988'}).symbols).toEqual([us])
   expect(changeWatchlist(s,{op:'move',from:-1,to:1})).toEqual(s)
  })
+ it('选中项属于本自选列表，连接字段仅用于行情组件，旧配置继续合法',()=>{
+  const watch={...financialWidgetDefaults('watchlist'),symbols:[hk,us]}
+  const selected=changeWatchlist(watch,{op:'select',market:'US',code:'BABA'})
+  expect(financialWidgetSpec(JSON.parse(JSON.stringify(selected))).selectedSymbol).toBe('US:BABA')
+  expect(changeWatchlist(watch,{op:'select',market:'SH',code:'600519'})).toEqual(watch)
+  expect(financialWidgetSpec({...watch,selectedSymbol:'SH:600519'})).toBeNull()
+  expect(financialWidgetSpec({...watch,linkedWatchlistId:'watch-1'})).toBeNull()
+  expect(financialWidgetSpec({...financialWidgetDefaults('quote'),linkedWatchlistId:'watch-1'})).not.toBeNull()
+  expect(financialWidgetSpec({...financialWidgetDefaults('quote'),linkedWatchlistId:'\n'})).toBeNull()
+ })
  it('MA使用完整窗口、零成交量合法，MACD可复核且不填缺失蜡烛',()=>{
   const bars=Array.from({length:40},(_,i)=>({date:'2026-01-'+String(i+1).padStart(2,'0'),open:i+1,high:i+2,low:i+.5,close:i+1,volume:0}))
   const v=financialIndicators(bars);expect(v.ma5.slice(0,4)).toEqual([null,null,null,null]);expect(v.ma5[4]).toBe(3)

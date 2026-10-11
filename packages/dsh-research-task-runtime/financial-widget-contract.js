@@ -9,7 +9,7 @@ export function financialWidgetDefaults(widget){
   {code:'000688',market:'SH',name:'科创50'},{code:'000016',market:'SH',name:'上证50'}]:[],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:''}
 }
 export function financialWidgetSpec(value){
- if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query'].includes(k)))return null
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId'].includes(k)))return null
  if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
  if(!Array.isArray(value.symbols)||value.symbols.length>(value.widget==='quote'?1:value.widget==='indices'?12:200))return null
  const ids=new Set()
@@ -18,15 +18,33 @@ export function financialWidgetSpec(value){
   const id=s.market+':'+s.code;if(ids.has(id))return null;ids.add(id)
  }
  if(!['1m','1d','1w','1mo','1y'].includes(value.period)||!['none','forward','backward'].includes(value.adjustment)||!Array.isArray(value.indicators)||new Set(value.indicators).size!==value.indicators.length||value.indicators.some(i=>!['MA','VOL','MACD'].includes(i))||!['all','SH','SZ','BJ','HK','US'].includes(value.market)||typeof value.query!=='string'||value.query.length>100||/[\u0000-\u001f]/.test(value.query))return null
+ if(value.selectedSymbol!==undefined&&(value.widget!=='watchlist'||typeof value.selectedSymbol!=='string'||!ids.has(value.selectedSymbol)))return null
+ if(value.linkedWatchlistId!==undefined&&(value.widget!=='quote'||typeof value.linkedWatchlistId!=='string'||!value.linkedWatchlistId.trim()||value.linkedWatchlistId.length>200||/[\u0000-\u001f]/.test(value.linkedWatchlistId)))return null
  return Object.freeze({...value,symbols:Object.freeze(value.symbols.map(s=>Object.freeze({...s}))),indicators:Object.freeze([...value.indicators])})
 }
 export function changeWatchlist(spec,action){
  if(spec.widget!=='watchlist')return spec
- const symbols=[...spec.symbols]
+ const symbols=[...spec.symbols],next={...spec}
  if(action.op==='add'&&!symbols.some(s=>s.code===action.symbol?.code&&s.market===action.symbol?.market))symbols.unshift(action.symbol)
- else if(action.op==='remove'){const i=symbols.findIndex(s=>s.code===action.code&&s.market===action.market);if(i>=0)symbols.splice(i,1)}
- else if(action.op==='move'&&Number.isInteger(action.from)&&Number.isInteger(action.to)&&action.from>=0&&action.to>=0&&action.from<symbols.length&&action.to<symbols.length)symbols.splice(action.to,0,symbols.splice(action.from,1)[0])
- return financialWidgetSpec({...spec,symbols})??spec
+ else if(action.op==='remove'){const i=symbols.findIndex(s=>s.code===action.code&&s.market===action.market);if(i>=0){symbols.splice(i,1);if(next.selectedSymbol===action.market+':'+action.code){const replacement=symbols[Math.min(i,symbols.length-1)];if(replacement)next.selectedSymbol=replacement.market+':'+replacement.code;else delete next.selectedSymbol}}}
+ else if(action.op==='move'&&Number.isInteger(action.from)&&Number.isInteger(action.to)&&action.from>=0&&action.to>=0&&action.from<symbols.length&&action.to<symbols.length){if(!next.selectedSymbol&&symbols[0])next.selectedSymbol=symbols[0].market+':'+symbols[0].code;symbols.splice(action.to,0,symbols.splice(action.from,1)[0])}
+ else if(action.op==='select'&&symbols.some(s=>s.code===action.code&&s.market===action.market))next.selectedSymbol=action.market+':'+action.code
+ return financialWidgetSpec({...next,symbols})??spec
+}
+export function financialSelectedSymbol(spec){
+ return spec.symbols.find(s=>s.market+':'+s.code===spec.selectedSymbol)??spec.symbols[0]??null
+}
+// Keep source selection and all dependent quotes in the same canvas transaction.
+// A deleted source detaches its quotes; an empty source clears stale quote data.
+export function synchronizeFinancialLinks(artifacts){
+ const sources=new Map(artifacts.filter(n=>n.containerSpec?.type==='financial-widget'&&n.containerSpec.widget==='watchlist').map(n=>[n.id,n.containerSpec]))
+ return artifacts.map(node=>{
+  const spec=node.containerSpec;if(spec?.widget!=='quote'||!spec.linkedWatchlistId)return node
+  const source=sources.get(spec.linkedWatchlistId),next={...spec}
+  if(!source)delete next.linkedWatchlistId
+  else{const symbol=financialSelectedSymbol(source);next.symbols=symbol?[symbol]:[]}
+  return JSON.stringify(spec)===JSON.stringify(next)?node:{...node,containerSpec:financialWidgetSpec(next)}
+ })
 }
 // Rows leave 4px above and below the name/code pair. A short list does not reserve
 // twelve empty rows; the header, controls, column header and source strip stay.

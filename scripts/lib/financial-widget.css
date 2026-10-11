@@ -57,6 +57,8 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
 
  body .ew-watch-row{height:36px;box-sizing:border-box;position:relative;background:var(--fw-row)!important;outline-offset:-1px}
  body .ew-watch-row:nth-child(even){background:var(--fw-alternate)!important}
+ body .ew-watch-row[aria-selected=true]{background:color-mix(in srgb,var(--fw-accent) 14%,var(--fw-card))!important;box-shadow:inset 2px 0 var(--fw-accent)}
+ body .ew-watch-row:not([aria-selected=true]):hover{background:color-mix(in srgb,var(--fw-accent) 6%,var(--fw-row))!important}
  body .ew-watch-row:focus-visible{outline:1px solid var(--fw-accent)}
  body .ew-watch-row[data-insertion=true]{box-shadow:inset 0 2px var(--fw-accent)}
  body .ew-watch-name{display:flex;gap:8px;align-items:center;min-width:0;padding:0 6px;cursor:grab;position:relative;touch-action:none}
@@ -77,6 +79,15 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body .ew-financial-market-state{flex:none}
  body .ew-financial-source-time{min-width:0;overflow:hidden;text-overflow:ellipsis}
  body .ew-financial-footer>span:last-child{flex:none}
+ body .ew-financial-footer>span:not(.ew-financial-provenance){flex:none}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port{display:grid!important;place-items:center!important;box-sizing:border-box!important;position:relative;z-index:3;width:20px!important;min-width:20px!important;height:20px!important;min-height:20px!important;flex:0 0 20px!important;padding:0!important;margin:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:var(--fw-muted)!important;cursor:crosshair!important;touch-action:none}
+ body .ew-financial-port>span{display:block;width:9px;height:9px;border:1.5px solid currentColor;box-sizing:border-box;border-radius:50%;background:var(--fw-card);pointer-events:none}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port:is(:hover,:focus-visible),body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port[data-connected=true]{color:var(--fw-accent)!important}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port:is(:hover,:focus-visible){background:color-mix(in srgb,var(--fw-accent) 12%,transparent)!important;outline:1px solid var(--fw-accent)!important;outline-offset:-1px}
+ body .ew-financial-port[data-connected=true]>span{background:var(--fw-accent)}
+ body [data-ework-grid][data-financial-connecting] .ew-financial-port[data-financial-port=input]>span{color:var(--fw-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--fw-accent) 15%,transparent)}
+ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
+ body .ew-financial-port:disabled{opacity:.5;cursor:default!important}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-footer>button.ew-financial-retry{height:20px!important;min-height:20px!important;flex:none;white-space:nowrap}
  body .ew-financial-symbol-search{position:relative;width:100%;min-width:0;color:var(--fw-text);font:400 12px/16px Inter,'Noto Sans SC',system-ui}
  body .ew-financial-search-line{box-sizing:border-box;height:24px;display:flex;gap:6px;align-items:center;border:1px solid var(--fw-border);border-radius:4px;background:var(--fw-card);padding:0 6px 0 8px}
@@ -238,3 +249,9 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
   body .ew-financial-watchlist .ew-financial-footer{height:24px;font-size:11px!important}
  }
 }
+/* Keep the overlay out of canvas flex layout and shared card button rules. */
+body [data-ework-grid]>.ew-financial-connections{position:absolute;left:0;top:0;pointer-events:none;z-index:4;overflow:hidden;color:var(--fw-accent)}
+body .ew-financial-connection-line{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
+body .ew-financial-connection-draft{stroke-dasharray:4 4}
+body .ew-financial-connection-hit{fill:none;stroke:transparent;stroke-width:10;pointer-events:stroke;cursor:pointer}
+body .ew-financial-connection-hit:focus-visible{outline:none;stroke:color-mix(in srgb,currentColor 30%,transparent)}
