@@ -2016,6 +2016,12 @@ it('调高后的画布滚动夹紧不在原地松手时重新计算尺寸',async
  await f.event('pointerup',f.canvas,{pointerId:101,clientX:250,clientY:500-step*4})
  expect(w.getWorkbenchCells()).toEqual(preview)
  await act(async()=>w.undo());expect(w.getWorkbenchCells()).toEqual(before)
+ f.canvas.scrollTop=300
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="y"]'),{button:0,pointerId:103,clientX:250,clientY:500})
+ await f.event('pointermove',f.canvas,{pointerId:103,clientX:250,clientY:500-step*4})
+ f.canvas.scrollTop=180
+ await f.event('pointerup',f.canvas,{pointerId:103,clientX:250,clientY:500-step*3})
+ expect(w.getWorkbenchCells()[0].h).toBe(17)
 })
 
 it('调宽后的可用宽度变化不在原地松手时覆盖预览',async()=>{
@@ -2028,6 +2034,12 @@ it('调宽后的可用宽度变化不在原地松手时覆盖预览',async()=>{
  await act(async()=>{w.setCanvasSize({width:700,height:700,availableWidth:700});w.setWorkbenchWidth(700)})
  await f.event('pointerup',f.canvas,{pointerId:102,clientX:490+step*4,clientY:200})
  expect(w.getWorkbenchCells()).toEqual(preview)
+ await act(async()=>{w.undo();w.setCanvasSize({width:1000,height:700,availableWidth:1000});w.setWorkbenchWidth(1000)})
+ await f.event('pointerdown',f.canvas.querySelector('[data-workbench-resize="a"][data-workbench-resize-axis="x"]'),{button:0,pointerId:104,clientX:490,clientY:200})
+ await f.event('pointermove',f.canvas,{pointerId:104,clientX:490+step*4,clientY:200})
+ await act(async()=>{w.setCanvasSize({width:700,height:700,availableWidth:700});w.setWorkbenchWidth(700)})
+ await f.event('pointerup',f.canvas,{pointerId:104,clientX:490+step*5,clientY:200})
+ expect(w.getWorkbenchCells()[0].w).toBe(25)
 })
 
 it('宿主原生滚动条一直不占位，选中仅改变覆盖层颜色并保留滚动能力',async()=>{
