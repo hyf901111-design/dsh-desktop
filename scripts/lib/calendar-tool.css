@@ -73,9 +73,9 @@
  body [data-ework-grid] [data-research-node-id] .ew-calendar-tool .ew-calendar-quick>input{width:100%;height:26px!important;min-height:0!important;border:0!important;appearance:none!important;outline:0!important;background:transparent!important;padding:2px 0!important;font-size:11px!important}
  body [data-ework-grid] [data-research-node-id] .ew-calendar-tool[data-calendar-tool] :is(.ew-calendar-search input,.ew-calendar-quick>input):not([readonly]):enabled:is(:focus,:focus-visible){border:0!important;outline:0!important;box-shadow:none!important}
  body .ew-calendar-quick>button{display:flex;align-items:center;justify-content:center;width:26px!important;height:26px!important;min-height:26px!important;flex:none;padding:0!important;color:var(--fw-accent)!important}
- .ew-calendar-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:112px;height:100%;box-sizing:border-box;padding:12px 0;color:var(--fw-muted);font-size:11px;text-align:center}
+ .ew-calendar-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:112px;height:100%;box-sizing:border-box;padding:8px 0;color:var(--fw-muted);font-size:11px;text-align:center}
  .ew-calendar-empty strong{font-size:12px;font-weight:400}
- .ew-calendar-empty-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:var(--fw-control)}
+ .ew-calendar-empty-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:10px;background:var(--fw-control)}
  body .ew-calendar-empty-add{border:1px solid var(--fw-border)!important;font-size:11px!important;padding:3px 12px!important;color:var(--fw-text)!important}
  body .ew-calendar-history-item{display:block;width:100%;text-align:left;padding:10px 4px!important;border-bottom:1px solid var(--fw-grid)!important}
  .ew-calendar-history-item strong{display:block;overflow-wrap:anywhere;font-size:12px;font-weight:500}
