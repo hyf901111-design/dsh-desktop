@@ -9,23 +9,83 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "免费数据绑定小数精度说明",
+        "featureName": "免费源组件并行直通生成与失败重试优化",
         "branch": "codex/feat/free-data-skill-20261010",
-        "baseCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
-        "tipCommit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
+        "baseCommit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
+        "tipCommit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
         "commits": [
           {
-            "commit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
+            "commit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
             "parents": [
-              "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4"
+              "880cd44066eeeeb32d75765a821c9f325e9f3820"
             ],
-            "subject": "完善：数据绑定工具明确小数位映射规则"
+            "subject": "优化：免费源组件宿主并行生成并自动绑定分钟刷新"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-11-free-data-generation-fast-path.md"
+          },
+          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+            "path": "packages/dsh-research-task-runtime/component-refresh-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-free-data-sources/references/generation.md"
+          },
+          {
+            "status": "M",
+            "path": "test/free-data-sources.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-public-data.test.js"
           }
         ],
         "checks": [
@@ -34,53 +94,20 @@
               "node",
               "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
               "run",
-              "test/component-source-binding.test.js",
-              "test/free-data-sources.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "来源绑定与免费工具聚焦检查通过",
-            "verifiedCommit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
-            "completedAt": "2026-10-11T00:08:10.485471+00:00",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；客户端生成与分钟循环验收在集成版执行"
-        },
-        "acceptanceCriteria": [
-          "原生组件免费来源成功取数后保存可刷新映射",
-          "当前看板每分钟取数，离开暂停，失败保留旧数据",
-          "在客户端创建3类金融工作台并观察实际刷新"
-        ],
-        "risks": [
-          "腾讯与新浪为尽力而为的网页接口",
-          "股票休市报价不变，Crypto用实际交易所报价",
-          "只有看板可见时自动刷新"
-        ],
-        "generatedAt": "2026-10-11T00:08:10.485471+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8104267a0d149aa6de07f9509b4331016c9396cc",
-        "verificationCommit": "8104267a0d149aa6de07f9509b4331016c9396cc",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
-              "run",
-              "test/free-data-sources.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/component-agent-scope.test.js",
+              "test/workbench-public-data.test.js",
               "test/research-task-runtime.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-refresh-policy.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/research-creation-progress.test.js",
+              "test/free-data-sources.test.js",
               "-t",
-              "free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference"
+              "^(?!.*uses the short panel contract when retrying a legacy auto-layout workbench card)"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs run test/free-data-sources.test.js test/integration-bundled-skill.test.js test/research-component-source-tools.test.js test/component-agent-scope.test.js test/research-task-runtime.test.js -t free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference",
-            "verifiedCommit": "8104267a0d149aa6de07f9509b4331016c9396cc",
-            "completedAt": "2026-10-11T00:08:18.294Z",
+            "summary": "259项聚焦检查通过，跳过1项同样在原基线失败的旧HTML提示长度断言",
+            "verifiedCommit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
+            "completedAt": "2026-10-11T00:48:34.469437+00:00",
             "timeoutMs": 120000
           },
           {
@@ -92,13 +119,27 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "8104267a0d149aa6de07f9509b4331016c9396cc",
-            "completedAt": "2026-10-11T00:08:18.294Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
+            "completedAt": "2026-10-11T00:48:34.469437+00:00",
             "timeoutMs": 120000
           }
         ],
-        "recordedAt": "2026-10-11T00:08:18.294Z"
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能worktree禁止构建共享客户端；集成版本进行实际客户端生成和分钟刷新验收"
+        },
+        "acceptanceCriteria": [
+          "客户端3类工作台首次生成真实内容与每分钟刷新绑定",
+          "保留显式模型与推理设置，常用免费模板不逐卡启动模型",
+          "数据失败/取消独立处理，修改需求不复用旧来源"
+        ],
+        "risks": [
+          "免费接口为尽力而为",
+          "公共来源依赖网络和源站响应",
+          "旧工作台前端夹具26项失败已用原基线对照记录，未当作通过"
+        ],
+        "generatedAt": "2026-10-11T00:48:34.469437+00:00"
       }
     }
   ],
