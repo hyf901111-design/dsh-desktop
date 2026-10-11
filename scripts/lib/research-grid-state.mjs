@@ -24,8 +24,26 @@ export function createWorkbenchGridState(storage,sessionId) {
       return min
     }
     if(!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return cells
+    // Preserve existing column intent when a narrow left column reaches the
+    // shared minimum. Borrow the neighbouring column's spare span before
+    // falling back to wrapping; every card on those edges moves together.
+    let horizontal=cells
+    const handled=new Set()
+    for(const row of [...new Set(cells.map(c=>c.y))].sort((a,b)=>a-b)){
+      const peers=cells.filter(c=>c.y===row).sort((a,b)=>a.x-b.x)
+      if(peers.length<2||peers[0].x!==0||peers.at(-1).x+peers.at(-1).w!==40||peers.some((c,i)=>i&&c.x!==peers[i-1].x+peers[i-1].w))continue
+      const edges=[0,...peers.map(c=>c.x+c.w)],minima=peers.map((p,i)=>Math.max(...cells.filter(c=>c.x===edges[i]&&c.x+c.w===edges[i+1]).map(c=>limits(c).w))),spans=peers.map((c,i)=>Math.max(c.w,minima[i]))
+      const signature=edges.join(':');if(handled.has(signature))continue;handled.add(signature)
+      let deficit=spans.reduce((a,b)=>a+b,0)-40
+      if(minima.reduce((a,b)=>a+b,0)>40)continue
+      for(let i=spans.length-1;i>=0&&deficit>0;i--){const take=Math.min(deficit,spans[i]-minima[i]);spans[i]-=take;deficit-=take}
+      if(deficit>0)continue
+      if(spans.every((w,i)=>w===peers[i].w))continue
+      const fitted=[0];spans.forEach(span=>fitted.push(fitted.at(-1)+span))
+      horizontal=horizontal.map(c=>{const original=cells.find(value=>value.id===c.id),a=edges.indexOf(original.x),b=edges.indexOf(original.x+original.w);return a>=0&&b>a?{...c,x:fitted[a],w:fitted[b]-fitted[a]}:c})
+    }
     const placed=[]
-    for(const cell of [...cells].sort((a,b)=>a.y-b.y||a.x-b.x)){
+    for(const cell of [...horizontal].sort((a,b)=>a.y-b.y||a.x-b.x)){
       const min=limits(cell),w=Math.max(cell.w,min.w),next={...cell,w,x:Math.min(cell.x,40-w),h:Math.max(cell.h,min.h)}
       let collisions=placed.filter(c=>grid.overlap(next,c))
       while(collisions.length){next.y=Math.max(...collisions.map(c=>c.y+c.h));collisions=placed.filter(c=>grid.overlap(next,c))}

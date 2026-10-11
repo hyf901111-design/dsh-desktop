@@ -3,6 +3,22 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('窗口小幅变窄先扩到统一最小宽度并借用右列余宽，保持并排与纵向列对齐且恢复宽度不改文档',()=>{
+ const state=createWorkbenchGridState(null,'responsive-neighbours'),g=createResearchGrid();state.enable(1000)
+ let snap=state.reconcile({files:[],artifacts:['index','watch','quote','news','announcements'].map(id=>({id,kind:'generated-container',containerSpec:{type:'financial-widget'},width:400,height:300})),viewport:{y:0}})
+ state.set([item('index',0,0,40,8),item('watch',0,8,12,12),item('quote',12,8,28,25),item('news',0,20,12,18),item('announcements',12,33,28,16)]);snap=state.reconcile(snap)
+ const canonical=state.document(snap),at=id=>state.visible().find(c=>c.id===id)
+ for(const width of [950,880,700]){state.enable(width);snap=state.reconcile(snap);expect(at('watch').y).toBe(at('quote').y);expect(at('quote').x).toBe(at('watch').w);expect(at('news').w).toBe(at('watch').w);expect(at('announcements').x).toBe(at('quote').x);expect(snap.artifacts.every(n=>n.width>=280)).toBe(true);expect(state.visible().every((a,i,all)=>all.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true);expect(state.document(snap)).toEqual(canonical)}
+ state.enable(540);snap=state.reconcile(snap);expect(at('quote').y).toBeGreaterThan(at('watch').y)
+ state.enable(1000);snap=state.reconcile(snap);expect(state.visible()).toEqual(state.get());expect(state.document(snap)).toEqual(canonical)
+})
+it('不同排使用不同列宽时各自借宽，不被上方无需调整的两等列提前终止',()=>{
+ const state=createWorkbenchGridState(null,'multiple-responsive-lanes');state.enable(1000)
+ let snap=state.reconcile({files:[],artifacts:['a','b','watch','quote','c','d'].map(id=>({id,kind:'generated-container',containerSpec:{type:'financial-widget'},width:400,height:300})),viewport:{y:0}})
+ state.set([item('a',0,0,20,12),item('b',20,0,20,12),item('watch',0,12,12,12),item('quote',12,12,28,12),item('c',0,24,16,12),item('d',16,24,24,12)]);snap=state.reconcile(snap)
+ const canonical=state.document(snap)
+ for(const width of [880,700]){state.enable(width);snap=state.reconcile(snap);const at=id=>state.visible().find(c=>c.id===id);for(const [a,b] of [['a','b'],['watch','quote'],['c','d']]){expect(at(a).y).toBe(at(b).y);expect(at(b).x).toBe(at(a).w)}expect(state.document(snap)).toEqual(canonical)}
+})
 it('明确三排整理在窄视口及重开后不被阅读宽度下限改回两列，标准整理恢复默认下限',()=>{
  const g=createResearchGrid(),saved=new Map(),storage={getItem:key=>saved.get(key),setItem:(key,value)=>saved.set(key,value)}
  let state=createWorkbenchGridState(storage,'exact-three');state.enable(640)
