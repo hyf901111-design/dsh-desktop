@@ -103,3 +103,14 @@ it('does not drop an overdue repeating reminder when another occurrence is compl
  const notices:any[]=[];await store.tick(()=>true,n=>notices.push(n))
  expect(notices).toHaveLength(1);expect(notices[0].date).toBe('2026-10-12')
 })
+
+it('catches up the latest incomplete reminder after an older overdue occurrence is completed',async()=>{
+ const file=await setup();let at=Date.parse('2026-10-12T01:00Z')
+ const store=new CalendarStore(file,()=>at);await store.load()
+ const event=await store.save(target,input({repeat:'daily'}))
+ at=Date.parse('2026-10-15T02:00Z')
+ await store.complete(target,event.id,'2026-10-12',true)
+ const notices:any[]=[];await store.tick(()=>true,n=>notices.push(n))
+ expect(notices).toHaveLength(1);expect(notices[0].date).toBe('2026-10-15')
+ await store.tick(()=>true,n=>notices.push(n));expect(notices).toHaveLength(1)
+})

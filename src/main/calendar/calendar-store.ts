@@ -43,7 +43,10 @@ export class CalendarStore {
  complete(target:CalendarTarget,id:string,date:string,completed:boolean){return this.mutate(s=>{
   const e=s.events.find(e=>e.id===id&&e.sessionId===target.sessionId&&e.nodeId===target.nodeId);if(!e||!calendarOccurs(e,date)||typeof completed!=='boolean')throw Error('事项不存在')
   const pending=e.nextReminder,now=this.now();e.completedDates=e.completedDates.filter(d=>d!==date);if(completed)e.completedDates.push(date);e.completedDates=e.completedDates.slice(-2048);e.updatedAt=now;e.nextReminder=nextCalendarReminder(e,now)
-  if(pending&&pending.at<=now&&!e.completedDates.includes(pending.date))e.nextReminder=pending
+  if(pending&&pending.at<=now){
+   const overdue=latestCalendarReminder({...e,nextReminder:pending},now)
+   if(overdue&&!e.completedDates.includes(overdue.date))e.nextReminder=overdue
+  }
   return e
  })}
  remove(target:CalendarTarget,id:string){return this.mutate(s=>{const e=s.events.find(e=>e.id===id&&e.sessionId===target.sessionId&&e.nodeId===target.nodeId);if(!e)throw Error('事项不存在');s.events=s.events.filter(e=>e!==e);return {ok:true}})}
