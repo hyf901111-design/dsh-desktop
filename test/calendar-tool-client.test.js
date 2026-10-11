@@ -41,10 +41,11 @@ it('shows durable session reminders and keeps their user text intact',async()=>{
  expect(f.document.querySelector('.ew-calendar-session-reminder')).toBeNull()
 })
 
-it('keeps the event editor within the canvas and gives it the available height',()=>{
+it('centers the event editor within the canvas and keeps narrow dialogs visible',()=>{
  const bounds={left:307,right:986,top:59,bottom:889}
  const p=calendarToolEditorPosition({left:330,top:122,bottom:500},bounds)
- expect(p).toMatchObject({left:330,top:156,width:360,maxHeight:520})
+ expect(p).toMatchObject({left:466.5,top:214,width:360,maxHeight:520})
+ expect(calendarToolEditorPosition({left:900,top:780},bounds)).toEqual(p)
  const narrow=calendarToolEditorPosition({left:700,top:780}, {left:88,right:388,top:59,bottom:400})
  expect(narrow.left+narrow.width).toBeLessThanOrEqual(380)
  expect(narrow.top+narrow.maxHeight).toBeLessThanOrEqual(392)
@@ -89,6 +90,7 @@ it('quick-adds to the selected date and supports week, upcoming, history and sav
  await f.event('click',f.host.querySelector('[data-calendar-search]'))
  expect(f.host.querySelector('input[type=search]')).toBeTruthy()
  expect(f.host.querySelector('[data-calendar-view-select]').value).toBe('upcoming')
+ expect(f.host.querySelector('.ew-calendar-event-title')?.textContent).toBe('快速记录')
  await f.input(f.host.querySelector('input[type=search]'),'不存在的事项')
  expect(f.host.querySelector('.ew-calendar-tool').dataset.calendarView).toBe('search')
  await f.event('click',f.host.querySelector('[data-calendar-search]'))
