@@ -65,6 +65,21 @@ it('completes a single repeating occurrence, catches up only the latest reminder
  expect(notices).toHaveLength(1)
 })
 
+it.each(['daily','weekly','monthly'])('keeps overdue %s reminders when only text changes and does not redeliver',async repeat=>{
+ const file=await setup();let at=Date.parse('2026-10-12T01:00Z')
+ const store=new CalendarStore(file,()=>at);await store.load()
+ const event=await store.save(target,input({repeat}))
+ at=Date.parse('2026-10-12T02:00Z')
+ const edited=await store.save(target,input({repeat,notes:'补充信息'}),event.id)
+ expect(edited.nextReminder).toEqual(event.nextReminder)
+ const notices:any[]=[];await store.tick(()=>true,n=>notices.push(n))
+ expect(notices).toHaveLength(1);expect(notices[0].date).toBe('2026-10-12')
+ const pending=store.list(target).events[0]?.nextReminder
+ await store.save(target,input({repeat,title:'会后记录'}),event.id)
+ expect(store.list(target).events[0]?.nextReminder).toEqual(pending)
+ await store.tick(()=>true,n=>notices.push(n));expect(notices).toHaveLength(1)
+})
+
 it('pauses detached components and preserves data on a failed atomic save',async()=>{
  const file=await setup();let at=Date.parse('2026-10-12T01:00Z')
  const store=new CalendarStore(file,()=>at);await store.load();await store.save(target,input())
