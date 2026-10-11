@@ -72,7 +72,7 @@
  .ew-calendar-quick:focus-within{border-color:var(--fw-accent)}
  body [data-ework-grid] [data-research-node-id] .ew-calendar-tool .ew-calendar-quick>input{width:100%;height:26px!important;min-height:0!important;border:0!important;appearance:none!important;outline:0!important;background:transparent!important;padding:2px 0!important;font-size:11px!important}
  body [data-ework-grid] [data-research-node-id] .ew-calendar-tool[data-calendar-tool] :is(.ew-calendar-search input,.ew-calendar-quick>input):not([readonly]):enabled:is(:focus,:focus-visible){border:0!important;outline:0!important;box-shadow:none!important}
- body .ew-calendar-quick button{display:flex;align-items:center;justify-content:center;width:26px!important;height:26px!important;min-height:26px!important;flex:none;padding:0!important;color:var(--fw-accent)!important}
+ body .ew-calendar-quick>button{display:flex;align-items:center;justify-content:center;width:26px!important;height:26px!important;min-height:26px!important;flex:none;padding:0!important;color:var(--fw-accent)!important}
  .ew-calendar-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:112px;height:100%;box-sizing:border-box;padding:12px 0;color:var(--fw-muted);font-size:11px;text-align:center}
  .ew-calendar-empty strong{font-size:12px;font-weight:400}
  .ew-calendar-empty-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:var(--fw-control)}
@@ -181,7 +181,7 @@
  body .ew-calendar-picker [data-calendar-picker-level]:disabled{opacity:1}
  .ew-calendar-picker-weekdays,.ew-calendar-picker-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
  .ew-calendar-picker-weekdays{height:18px;align-items:center;text-align:center;font-size:10px;color:var(--fw-muted);margin-bottom:-4px;flex:none}
- body .ew-calendar-picker-days>button{width:28px;height:28px!important;min-height:28px!important;padding:0!important;border-radius:50%!important;justify-self:center;flex:none}
+ body .ew-calendar-picker-days>button{width:min(28px,100%);height:28px!important;min-height:28px!important;padding:0!important;border-radius:50%!important;justify-self:center;flex:none}
  .ew-calendar-picker-days [data-outside]{opacity:.4}
  body .ew-calendar-picker-days [data-today]{box-shadow:inset 0 0 0 1px var(--fw-accent)!important;color:var(--fw-accent)!important}
  body .ew-calendar-picker-days>button[aria-pressed=true]{background:var(--fw-accent)!important;color:#fff!important;opacity:1;box-shadow:none!important}

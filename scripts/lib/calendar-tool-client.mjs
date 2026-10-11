@@ -83,7 +83,7 @@ export function CalendarToolPicker({value,onChange,kind='date',compact=false,fie
    const offset={ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7}[e.key]
    if(offset!==undefined)next=calendarToolDay(v,offset)
    else if(e.key==='PageUp'||e.key==='PageDown')next=calendarToolPickerDate(calendarShift(v.slice(0,7),(e.key==='PageUp'?-1:1)*(e.shiftKey?12:1)),v.slice(8))
-   else if(e.key==='Home'||e.key==='End'){next=calendarToolWeek(v);if(e.key==='End')next=calendarToolDay(next,6)}
+   else if(e.key==='Home'||e.key==='End'){const d=new Date(v+'T12:00Z');d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7+(e.key==='End'?6:0));next=d.toISOString().slice(0,10);next=next<'1900-01-01'?'1900-01-01':next>'2199-12-31'?'2199-12-31':next}
    if(next&&(next<'1900-01-01'||next>'2199-12-31'))next=null
   }else if(level==='months'){
    const offset={ArrowLeft:-1,ArrowRight:1,ArrowUp:-3,ArrowDown:3,PageUp:-12,PageDown:12}[e.key]
@@ -99,8 +99,8 @@ export function CalendarToolPicker({value,onChange,kind='date',compact=false,fie
  react.useLayoutEffect(()=>{
   if(!open)return
   const place=e=>{if(panel.current?.contains(e?.target))return;const el=trigger.current,r=el?.getBoundingClientRect();if(!r)return;const bounds=financialCanvasBounds(el),height=level==='days'?308:248,after=bounds.bottom-r.bottom,before=r.top-bounds.top,next={...financialPopoverPosition(r,{width:252,height},bounds,after>=height+16||after>=before),theme:el.closest('[data-ework-grid]')?.dataset.workbenchStyle||el.closest('[data-financial-theme]')?.dataset.financialTheme||(document.body.hasAttribute('data-ds-dark-theme')?'dark':'light')};setPosition(old=>old&&Object.keys(next).every(k=>old[k]===next[k])?old:next)}
-  place();window.addEventListener('resize',place);document.addEventListener('scroll',place,true);const observer=new ResizeObserver(place);observer.observe(trigger.current);const stop=financialObserveTheme(trigger.current,place)
-  return()=>{stop();observer.disconnect();window.removeEventListener('resize',place);document.removeEventListener('scroll',place,true)}
+  place();window.addEventListener('resize',place);document.addEventListener('scroll',place,true);const observer=new ResizeObserver(place);observer.observe(trigger.current);const stop=financialObserveTheme(trigger.current,place),portalTheme=trigger.current.closest('[data-financial-theme]'),themeObserver=new MutationObserver(place);if(portalTheme)themeObserver.observe(portalTheme,{attributes:true,attributeFilter:['data-financial-theme']})
+  return()=>{stop();observer.disconnect();themeObserver.disconnect();window.removeEventListener('resize',place);document.removeEventListener('scroll',place,true)}
  },[open,level])
  react.useEffect(()=>{if(open&&position)panel.current?.querySelector('[tabindex="0"]')?.focus({preventScroll:true})},[open,level,cursor,position])
  react.useEffect(()=>{
