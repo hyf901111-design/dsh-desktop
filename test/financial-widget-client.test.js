@@ -134,6 +134,25 @@ it('行情图方向键同步当前OHLC和指标读数，离开后恢复末期',a
  const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])});await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull());const svg=f.host.querySelector('[data-financial-chart] svg');await f.event('keydown',svg,{key:'Home'});expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('开 100.00');await f.event('keydown',svg,{key:'End'});expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('开 179.00')
 })
 
+it.each(['pointerup','pointercancel'])('行情图连续移动后立即%s，延后更新仍保留最终历史位置和完整看板',async finish=>{
+ const history=Array.from({length:200},(_,i)=>({date:new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:1000})),bridge=service()
+ bridge.request.mockImplementation(async q=>q.action==='history'?{bars:history,nativePeriod:true,source:'测试行情'}:{quotes:q.symbols.map(x=>({...x,price:301,changePercent:1})),source:'测试行情'})
+ const f=await fixture({financialWidget:bridge})
+ await f.act(async()=>{f.workspace.createFinancialWidget('watchlist');const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(item=>item.id===n.id?{...item,containerSpec:{...item.containerSpec,symbols:[s]}}:item))})
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull())
+ const chart=f.host.querySelector('[data-financial-chart]'),dispatch=(type,x)=>{const event=new f.win.Event(type,{bubbles:true,cancelable:true});Object.defineProperties(event,{button:{value:0},pointerId:{value:41},clientX:{value:x},clientY:{value:120}});chart.dispatchEvent(event)}
+ expect(chart.textContent).toContain('301.00')
+ await f.act(async()=>dispatch('pointerdown',100))
+ // React can replay queued moves after the gesture's pointer state was cleared.
+ await f.act(async()=>{dispatch('pointermove',163);dispatch('pointermove',226);dispatch(finish,226)})
+ expect(f.host.querySelector('[data-financial-chart]').textContent).toContain('282.00')
+ expect(f.host.querySelector('[data-financial-widget=watchlist]')).not.toBeNull()
+ expect(f.host.querySelector('[data-research-canvas]')).not.toBeNull()
+ expect(f.document.querySelector('[aria-label="画布全局功能"]')).not.toBeNull()
+ await f.event('dblclick',chart)
+ expect(f.host.querySelector('[data-financial-chart]').textContent).toContain('301.00')
+})
+
 it('离屏组件返回视野时不关闭刚打开的自选搜索',async()=>{
  const f=await fixture();await f.act(async()=>f.workspace.createFinancialWidget('watchlist'));await f.act(async()=>f.workspace.setViewport({x:0,y:-1400,scale:1}));await f.event('click',f.host.querySelector('[aria-label=添加自选股]'));await f.act(async()=>f.workspace.setViewport({x:0,y:0,scale:1}));expect(f.host.querySelector('input[role=combobox]')).not.toBeNull()
 })
