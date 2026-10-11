@@ -35,7 +35,12 @@ export function createWorkbenchGridState(storage,sessionId) {
       const edges=[0,...peers.map(c=>c.x+c.w)],minima=peers.map((p,i)=>Math.max(...cells.filter(c=>c.x===edges[i]&&c.x+c.w===edges[i+1]).map(c=>limits(c).w))),spans=peers.map((c,i)=>Math.max(c.w,minima[i]))
       const signature=edges.join(':');if(handled.has(signature))continue;handled.add(signature)
       let deficit=spans.reduce((a,b)=>a+b,0)-40
-      if(minima.reduce((a,b)=>a+b,0)>40)continue
+      if(minima.reduce((a,b)=>a+b,0)>40){
+        // Below the combined minimum, stack this column family at full width
+        // instead of leaving the former right column floating halfway across.
+        horizontal=horizontal.map(c=>{const original=cells.find(value=>value.id===c.id),a=edges.indexOf(original.x),b=edges.indexOf(original.x+original.w);return a>=0&&b>a?{...c,x:0,w:40}:c})
+        continue
+      }
       for(let i=spans.length-1;i>=0&&deficit>0;i--){const take=Math.min(deficit,spans[i]-minima[i]);spans[i]-=take;deficit-=take}
       if(deficit>0)continue
       if(spans.every((w,i)=>w===peers[i].w))continue

@@ -9,7 +9,7 @@ it('窗口小幅变窄先扩到统一最小宽度并借用右列余宽，保持�
  state.set([item('index',0,0,40,8),item('watch',0,8,12,12),item('quote',12,8,28,25),item('news',0,20,12,18),item('announcements',12,33,28,16)]);snap=state.reconcile(snap)
  const canonical=state.document(snap),at=id=>state.visible().find(c=>c.id===id)
  for(const width of [950,880,700]){state.enable(width);snap=state.reconcile(snap);expect(at('watch').y).toBe(at('quote').y);expect(at('quote').x).toBe(at('watch').w);expect(at('news').w).toBe(at('watch').w);expect(at('announcements').x).toBe(at('quote').x);expect(snap.artifacts.every(n=>n.width>=280)).toBe(true);expect(state.visible().every((a,i,all)=>all.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true);expect(state.document(snap)).toEqual(canonical)}
- state.enable(540);snap=state.reconcile(snap);expect(at('quote').y).toBeGreaterThan(at('watch').y)
+ state.enable(540);snap=state.reconcile(snap);expect(at('quote').y).toBeGreaterThan(at('watch').y);for(const id of ['watch','quote','news','announcements'])expect(at(id)).toMatchObject({x:0,w:40});expect(state.document(snap)).toEqual(canonical)
  state.enable(1000);snap=state.reconcile(snap);expect(state.visible()).toEqual(state.get());expect(state.document(snap)).toEqual(canonical)
 })
 it('不同排使用不同列宽时各自借宽，不被上方无需调整的两等列提前终止',()=>{
