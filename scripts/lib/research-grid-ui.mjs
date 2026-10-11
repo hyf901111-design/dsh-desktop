@@ -102,6 +102,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
       react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件'}),
       node.containerSpec?.type==='financial-widget'&&['quote','announcements'].includes(node.containerSpec.widget)&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly}),
+      node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='news'&&react_jsx_runtime.jsx(FinancialNewsSearch,{node,sessionId,readOnly}),
       button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
       button('close','移除组件',()=>onRemove(node),{disabled:readOnly})

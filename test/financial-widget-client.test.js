@@ -41,11 +41,23 @@ it('分时绘制实际价格折线和分钟时间，不显示伪造的开高低�
 it('新闻输入框Enter直接提交关键词，不依赖宿主的隐式表单提交；输入法确认不触发搜索',async()=>{
  const bridge=service(),f=await fixture({financialWidget:bridge});await f.act(async()=>f.workspace.createFinancialWidget('news'))
  const input=f.host.querySelector('input[aria-label="搜索相关新闻"]');await f.input(input,' 茅台 ')
+ expect(input.closest('.ew-grid-header')).not.toBeNull();expect(f.host.querySelector('[data-financial-widget=news] input')).toBeNull()
  expect(f.host.contains(input)).toBe(true);expect(input.value).toBe(' 茅台 ')
  await f.event('focusin',input)
  await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.workspace.getSnapshot().artifacts[0].containerSpec.query).toBe('')
  const entered=await f.event('keydown',f.host.querySelector('input[aria-label="搜索相关新闻"]'),{key:'Enter',keyCode:13,isComposing:false});expect(entered.defaultPrevented).toBe(true);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.query).toBe('茅台')
  await vi.waitFor(()=>expect(bridge.request).toHaveBeenCalledWith(expect.objectContaining({action:'news',query:'茅台'})))
+})
+it('新闻和公告标题通过桌面桥打开原文，保留普通浏览器链接回退',async()=>{
+ const openExternal=vi.fn(async()=>({ok:true})),bridge=service()
+ bridge.openExternal=openExternal
+ bridge.request.mockImplementation(async q=>q.action==='announcements'?{announcements:[{id:'a',title:'公司公告',date:'2026-10-10',url:'https://example.org/announcement.pdf'}]}:{news:[{id:'n',title:'市场新闻',url:'https://example.org/news'}]})
+ const f=await fixture({financialWidget:bridge});await f.act(async()=>{f.workspace.createFinancialWidget('news');const n=f.workspace.createFinancialWidget('announcements');f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(x=>x.id===n.id?{...x,containerSpec:{...x.containerSpec,symbols:[s]}}:x))})
+ await vi.waitFor(()=>expect(f.host.querySelectorAll('a.ew-news-title')).toHaveLength(2))
+ for(const link of f.host.querySelectorAll('a.ew-news-title')){const clicked=await f.event('click',link);expect(clicked.defaultPrevented).toBe(true);expect(openExternal).toHaveBeenCalledWith(link.href)}
+ expect(openExternal).toHaveBeenCalledTimes(2)
+ delete bridge.openExternal
+ const fallback=f.host.querySelector('a.ew-news-title');expect((await f.event('click',fallback)).defaultPrevented).toBe(false);expect(fallback.target).toBe('_blank');expect(fallback.rel).toContain('noopener')
 })
 it('五项列表直接放置、选中和恢复，保留原节点，无配置面板及模型任务',async()=>{
  const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));const items=[...f.document.querySelectorAll('[data-financial-place]')];expect(items.map(x=>x.dataset.financialPlace)).toEqual(['watchlist','quote','indices','news','announcements']);await f.event('click',items[0]);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('[role=dialog][open]')).toBeNull()

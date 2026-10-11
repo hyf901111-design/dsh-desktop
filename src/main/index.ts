@@ -1,4 +1,5 @@
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
+import {openFinancialArticle} from './financial/article-link'
 import { createComponentDataService } from './component-data/service'
 import { legacyConnectionSources } from './integrations/legacy-connections'
 import { legacySkillRoots } from './integrations/legacy-skills'
@@ -1402,6 +1403,7 @@ async function bootstrap(): Promise<void> {
   const financialIdentity=()=>accountService?.authenticated?accountService.accountId??null:null
   const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
+  registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openFinancialArticle(url,shell.openExternal))
   ipcMain.handle('component-data:request',async(event,sessionId:string,args:any)=>{
     assertTrustedMainWindowEvent(event,mainWindow)
     if(!componentDataService)throw Error('数据刷新服务不可用')

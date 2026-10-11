@@ -83,10 +83,10 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port{display:grid!important;place-items:center!important;box-sizing:border-box!important;position:relative;z-index:3;width:20px!important;min-width:20px!important;height:20px!important;min-height:20px!important;flex:0 0 20px!important;padding:0!important;margin:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:var(--fw-muted)!important;cursor:crosshair!important;touch-action:none}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port{font-size:0!important;line-height:0!important;align-self:center!important}
  body .ew-financial-footer>.ew-financial-provenance,body .ew-financial-footer>.ew-financial-source-time,body .ew-financial-footer>span:not(.ew-financial-provenance){line-height:20px!important}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port>span{display:block!important;width:9px!important;height:9px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;align-self:center;justify-self:center}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port>span{display:block!important;position:absolute!important;left:50%!important;top:50%!important;translate:-50% -50%!important;width:10px!important;height:10px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;align-self:center;justify-self:center}
  body .ew-financial-port>span{border:1.5px solid currentColor;box-sizing:border-box;border-radius:50%;background:var(--fw-card);pointer-events:none;transition:background 120ms,box-shadow 160ms,transform 160ms}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port:is(:hover,:focus-visible){outline:none!important;background:transparent!important}
- body .ew-financial-port::after{content:'';position:absolute;inset:2px;border:1px solid var(--fw-accent);border-radius:50%;opacity:0;transform:scale(.75);pointer-events:none;transition:opacity 160ms,transform 160ms}
+ body .ew-financial-port::after{content:'';position:absolute;left:50%;top:50%;translate:-50% -50%;box-sizing:border-box;width:16px;height:16px;border:1px solid var(--fw-accent);border-radius:50%;opacity:0;transform:scale(.75);pointer-events:none;transition:opacity 160ms,transform 160ms}
  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port:is(:hover,:focus-visible),body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-port[data-connected=true]{color:var(--fw-accent)!important}
  body .ew-financial-port:is(:hover,:focus-visible,[aria-pressed=true],[data-drop-target])::after{opacity:.8;transform:scale(1.1)}
  body .ew-financial-port[data-drop-target]::after{animation:ew-financial-port-ring 900ms ease-in-out infinite;box-shadow:0 0 8px color-mix(in srgb,var(--fw-accent) 50%,transparent)}
@@ -100,7 +100,7 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body .ew-financial-symbol-search{position:relative;width:100%;min-width:0;color:var(--fw-text);font:400 12px/16px Inter,'Noto Sans SC',system-ui}
  body .ew-financial-search-line{box-sizing:border-box;height:24px;display:flex;gap:6px;align-items:center;border:1px solid var(--fw-border);border-radius:4px;background:var(--fw-card);padding:0 6px 0 8px}
  body .ew-financial-search-line:focus-within{border-color:var(--fw-accent)}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-search-line input[type=search][role=combobox],body [data-ework-grid] .ew-financial-header-selector .ew-financial-search-line input[type=search][role=combobox]{flex:1;width:100%!important;height:22px!important;min-height:22px!important;padding:0!important;border:0!important;background:transparent!important;outline:0!important;color:var(--fw-text)!important;box-shadow:none!important}
+ body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-financial-search-line input[type=search][role=combobox],body [data-ework-grid] .ew-financial-header-selector .ew-financial-search-line input[type=search]{flex:1;width:100%!important;height:22px!important;min-height:22px!important;padding:0!important;border:0!important;background:transparent!important;outline:0!important;color:var(--fw-text)!important;box-shadow:none!important}
  body [data-ework-grid] .ew-financial-search-line>button{display:grid!important;place-items:center!important;width:16px!important;height:22px!important;min-height:22px!important;padding:0!important;flex:0 0 16px!important;border:0!important;background:transparent!important}
  /* The generated-content focus rule is more specific than its base input rule.
     Keep the sole blue outline on the shared field wrapper in both locations. */
@@ -170,9 +170,6 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body [data-workbench-style=enterprise] .ew-indices-grid>div small[data-direction]{align-self:flex-start;width:max-content;padding:0 4px;border-radius:3px;background:var(--fw-positive-fill)}
  body [data-workbench-style=enterprise] .ew-indices-grid>div small[data-direction=down]{background:var(--fw-negative-fill)}
  body [data-workbench-style=enterprise] .ew-indices-grid svg{--fw-sparkline:#fff}
- body .ew-news-search{height:36px;flex:none;padding:0 6px 6px;position:relative;display:flex;align-items:flex-start}
- body .ew-news-search>.ew-financial-icon{position:absolute;top:8px;left:16px;width:14px;height:14px;pointer-events:none}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-news-search input[type=search][aria-label]{height:28px!important;min-height:28px!important;width:100%;border:1px solid var(--fw-border)!important;border-radius:4px!important;padding:5px 10px 5px 30px!important;background:transparent!important;font:400 12px/16px Inter,'Noto Sans SC',system-ui!important;color:var(--fw-text)!important}
  body .ew-news-list{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 6px;scrollbar-width:thin}
  body .ew-news-list:has(>.ew-financial-empty){display:flex}
  body .ew-news-list article{display:flex;align-items:flex-start;gap:12px;box-sizing:border-box;padding:10px 0;border-bottom:1px solid var(--fw-grid)}
@@ -234,9 +231,6 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
   body .ew-financial-empty{padding:4px 8px;gap:6px;font-size:11px}
   body .ew-financial-empty p{line-height:14px}
   body [data-ework-grid] [data-research-node-id] .ew-financial-widget button.ew-financial-retry{height:20px!important;min-height:20px!important;padding:1px 8px!important}
-  body .ew-news-search{height:32px;padding-top:2px}
-  body .ew-news-search>.ew-financial-icon{top:8px;left:16px}
-  body [data-ework-grid] [data-research-node-id] .ew-financial-widget .ew-news-search input[type=search][aria-label]{height:24px!important;min-height:24px!important;padding:3px 8px 3px 28px!important}
   body .ew-news-list article{min-height:34px;padding:6px 0;gap:8px}
   body .ew-news-list time{width:34px;font-size:10px}
   body .ew-news-list .ew-news-source,body .ew-news-list .ew-news-summary,body .ew-news-list .ew-news-date{display:none!important}
