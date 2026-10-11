@@ -8,6 +8,17 @@ import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../p
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 afterEach(() => vi.unstubAllGlobals())
 describe('workbench execution policy', () => {
+  it('uses the short host data-source path only for authorized supported finance plans', () => {
+    let prompt
+    const ctx = { tools: { schemas: () => [{ name: 'public_data_query' }] }, systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} }
+    registerWorkbenchExecutionPolicy(ctx)
+    const text = request => prompt.text({ agent: { session: session(request) } })
+    expect(text('使用免费源创建A股行情工作台，每分钟刷新')).toContain('publicData')
+    expect(text('使用免费源创建A股行情工作台，每分钟刷新').length).toBeLessThan(2500)
+    for (const request of ['禁止联网创建行情工作台', '使用通联MCP创建股票工作台', '创建股票财报与宏观工作台']) expect(text(request)).not.toContain('免费源直通')
+    ctx.tools.schemas = () => []
+    expect(text('创建免费股票行情工作台')).not.toContain('免费源直通')
+  })
   it('keeps binding work open for accepted inline snapshots when the human requested minute updates', () => {
     let prompt
     registerWorkbenchExecutionPolicy({ systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })

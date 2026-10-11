@@ -4,7 +4,7 @@
 export function classifyResearchCreationRequest(raw) {
   if (typeof raw !== 'string') return null
   const text = raw.trim().replace(/\s+/g, ' ')
-  if (!text || text.length > 4000 || /(?:不要|无需|不需要|别|禁止|不)(?:再|重新)?(?:创建|生成|搭建|制作|添加)/.test(text)) return null
+  if (!text || text.length > 4000 || /(?:不要|不用|无需|不需要|别|禁止|不)(?:再|重新)?(?:创建|新建|生成|搭建|制作|添加)/.test(text)) return null
   if (/(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|搭建|制作|构建)/.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计)(?:.{0,20})(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/.test(text)) return null
   if (!/(?:创建|生成|搭建|制作|构建|添加|做(?:一个|些|个)?|要(?:一个|些|个)?)/.test(text)) return null
@@ -167,6 +167,7 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
     onPointerUp: event => { if (drag.current?.id !== event.pointerId) return; event.stopPropagation(); drag.current = null; event.currentTarget.releasePointerCapture?.(event.pointerId); },
     onPointerCancel: event => { if (drag.current?.id === event.pointerId) drag.current = null; },
     children: [
+      ['failed','stopped'].includes(intent.state) ? react_jsx_runtime.jsx('button', {type:'button', className:'odyssey-planning-dismiss', 'aria-label':'关闭生成提示', onClick:onDismiss, children:react_jsx_runtime.jsx('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,children:react_jsx_runtime.jsx('path',{d:'M6 6l12 12M18 6L6 18'})})}) : null,
       react_jsx_runtime.jsx(ResearchGenerationProcess, { node, sessionId, phaseOverride: phase, detailOverride: detail,
         onCancel: planning && intent.sawRunning ? () => odysseyCreationStop(sessionId) : undefined,
         onRetry: ['failed', 'stopped'].includes(intent.state) ? () => odysseyCreationRetry(sessionId) : undefined })
@@ -176,6 +177,8 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
 const css = `
 .odyssey-creation-planning-card{--generation-bg:#fafafa;--generation-border:rgba(0,0,0,.12);--generation-phase:#575757;--generation-title:#262626;position:absolute;top:0;left:0;z-index:42;box-sizing:border-box;width:320px;height:220px;container-type:size;border-radius:8px;background:var(--generation-bg);pointer-events:auto;overflow:hidden;touch-action:none;cursor:grab}
 .odyssey-creation-planning-card:active{cursor:grabbing}
+.odyssey-planning-dismiss{position:absolute;right:10px;top:10px;z-index:2;width:24px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:4px;color:var(--generation-phase);background:transparent;cursor:pointer}
+.odyssey-planning-dismiss:hover,.odyssey-planning-dismiss:focus-visible{background:var(--sherlock-hover,rgba(128,128,128,.16))}
 .odyssey-creation-planning-card[data-planning-grid][data-grid-active]{left:var(--grid-float-left)!important;top:var(--grid-float-top)!important}
 .odyssey-creation-planning-card[data-research-creation-planning=dealing]{pointer-events:none;animation:odyssey-planning-deal .42s cubic-bezier(.22,1,.36,1) both}
 .odyssey-creation-planning-card[data-planning-grid][data-research-creation-planning=dealing]{animation-name:odyssey-planning-grid-deal}

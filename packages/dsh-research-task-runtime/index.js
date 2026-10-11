@@ -24,6 +24,8 @@ import { registerCanvasUseTool } from './canvas-use-tools.js'
 import { registerCanvasUseTasks } from './canvas-use-tasks.js'
 import { freeDataInstruction } from './free-data-skill.js'
 import { registerPublicDataTool } from './public-data-tool.js'
+import { createPublicDataClient } from './public-data-client.js'
+import { preparePublicDataPanel, validatePublicDataPanel } from './workbench-public-data.js'
 import { loadBundledComponentSkill } from './component-skill.js'
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
@@ -853,6 +855,7 @@ function taskDocument(task) {
     ...(task.detail === undefined ? {} : { detail: task.detail }),
     ...(task.sources === undefined ? {} : { sources: task.sources }),
     ...(task.prompt === undefined ? {} : { prompt: task.prompt }),
+    ...(task.publicData ? { publicData: task.publicData, title: task.title, type: task.type, publicDataPrompt: task.publicDataPrompt } : {}),
     state: task.state,
     ...(task.childSessionId === undefined ? {} : { childSessionId: task.childSessionId }),
     ...(task.finalOutput === undefined ? {} : { finalOutput: task.finalOutput }),
@@ -973,6 +976,12 @@ function restoredTask(raw, now) {
     controller: undefined,
     runPromise: undefined
   }
+  if (stored.publicData) {
+    task.publicData = validatePublicDataPanel(stored.publicData, stored.type)
+    task.title = requiredString(stored.title, 80, '免费源组件标题无效')
+    task.type = stored.type
+    task.publicDataPrompt = typeof stored.publicDataPrompt === 'string' ? stored.publicDataPrompt : stored.prompt
+  }
   if (request.kind === 'create' && Array.isArray(stored.resolvedSources)) {
     const resolved = validateResearchTaskStart({ ...request, sources: stored.resolvedSources }).sources
     if (resolved.every((source, index) => source.type === 'artifact' && source.id === request.sources[index]?.id) && resolved.length === request.sources.length) task.resolvedSources = resolved
@@ -1007,7 +1016,7 @@ function restoredTask(raw, now) {
 }
 
 export class ResearchTaskRuntime {
-  constructor({ adapter, storage, now = Date.now, createId = randomUUID, authorizeParent, retryDelayMs = 2000 }) {
+  constructor({ adapter, storage, now = Date.now, createId = randomUUID, authorizeParent, retryDelayMs = 2000, publicDataClient }) {
     if (typeof adapter?.start !== 'function') {
       throw new TypeError('ResearchTaskRuntime requires an adapter.')
     }
@@ -1015,6 +1024,9 @@ export class ResearchTaskRuntime {
       throw new TypeError('ResearchTaskRuntime requires storage.')
     }
     this.retryDelayMs = retryDelayMs
+    this.publicDataClient = publicDataClient ?? createPublicDataClient()
+    this.publicDataPending = []
+    this.publicDataActive = 0
     this.authorizeParent = authorizeParent
     this.adapter = adapter
     this.storage = storage
@@ -1104,6 +1116,15 @@ export class ResearchTaskRuntime {
     if (this.disposed) throw new ResearchTaskError('RUNTIME_DISPOSED', '任务服务已停止')
     let request = validateResearchTaskStart(raw)
     await this.authorizeParent?.(request.parentSessionId)
+    if (request.kind === 'container') {
+      const original = [...this.tasks.values()].reverse().find(task => task.publicData && terminalState(task.state) &&
+        task.parentSessionId === request.parentSessionId && task.canvasNodeId === request.canvasNodeId &&
+        [task.prompt, task.publicDataPrompt].includes(request.prompt))
+      if (original) return (await this.startPublicDataBatch({ parentSessionId: request.parentSessionId, panels: [{
+        canvasNodeId: request.canvasNodeId, prompt: original.prompt, publicDataPrompt: original.publicDataPrompt,
+        title: original.title, type: original.type, publicData: original.publicData
+      }] }))[0]
+    }
     // Older workbench cards saved the panel content prompt, while their first
     // task carried the full format and visual contract. Restore only a complete
     // unchanged saved requirement; matching its first line would discard edits.
@@ -1205,6 +1226,61 @@ export class ResearchTaskRuntime {
       throw error
     }
     return tasks.map(task => publicTask(task, 0))
+  }
+
+  // Validated bundled schemas bypass per-card model sessions entirely. Each
+  // source task remains durable, independently cancellable and accountable.
+  async startPublicDataBatch({ parentSessionId, panels }) {
+    if (this.disposed) throw new ResearchTaskError('RUNTIME_DISPOSED', '任务服务已停止')
+    if (!Array.isArray(panels) || !panels.length || panels.length > 10) throw new ResearchTaskError('INVALID_REQUEST', '面板数量无效')
+    const parent = requiredString(parentSessionId, MAX_ID_LENGTH, '研究会话标识无效')
+    await this.authorizeParent?.(parent)
+    const requests = panels.map(panel => ({
+      ...validateResearchTaskStart({ parentSessionId: parent, canvasNodeId: panel.canvasNodeId, kind: 'container', prompt: panel.prompt }),
+      publicData: validatePublicDataPanel(panel.publicData, panel.type), title: requiredString(panel.title, 80, '免费源组件标题无效'), type: panel.type,
+      publicDataPrompt: panel.publicDataPrompt ?? panel.prompt
+    }))
+    if (new Set(requests.map(r => r.canvasNodeId)).size !== requests.length) throw new ResearchTaskError('INVALID_REQUEST', '组件标识重复')
+    const tasks = requests.map(request => {
+      const taskId = requiredString(this.createId(), MAX_ID_LENGTH, '任务标识无效')
+      if (this.tasks.has(taskId)) throw new ResearchTaskError('TASK_EXISTS', '任务标识重复')
+      const task = { taskId, ...request, state: 'queued', createdAt: this.now(), lastSeq: 0, events: [], cancelRequested: false, controller: new AbortController() }
+      this.appendEvent(task, { type: 'queued' }); return task
+    })
+    if (new Set(tasks.map(t => t.taskId)).size !== tasks.length) throw new ResearchTaskError('TASK_EXISTS', '任务标识重复')
+    for (const task of tasks) this.tasks.set(task.taskId, task)
+    try { await this.persist() } catch (error) { for (const task of tasks) this.tasks.delete(task.taskId); throw error }
+    this.publicDataPending.push(...tasks)
+    this.pumpPublicData()
+    return tasks.map(task => publicTask(task, 0))
+  }
+
+  pumpPublicData() {
+    while (!this.disposed && this.publicDataActive < 4 && this.publicDataPending.length) {
+      const task = this.publicDataPending.shift()
+      if (task.cancelRequested || terminalState(task.state)) continue
+      this.publicDataActive++
+      task.runPromise = this.runPublicData(task).finally(() => { this.publicDataActive--; this.pumpPublicData() })
+    }
+  }
+
+  async runPublicData(task) {
+    try {
+      task.state = 'running'; task.startedAt = this.now()
+      this.appendEvent(task, { type: 'started' })
+      this.appendEvent(task, { type: 'tool-started', tool: '读取免费数据', detail: task.publicData.requests.map(r => r.source).join('、') })
+      await this.persist()
+      const result = await preparePublicDataPanel(task, this.publicDataClient, task.controller.signal, new Date(this.now()))
+      if (task.cancelRequested || terminalState(task.state)) return
+      if (typeof this.adapter.bindData !== 'function') throw Error('宿主自动刷新绑定不可用')
+      await this.adapter.bindData(task, result.recipe, result.output, task.controller.signal)
+      if (task.cancelRequested || terminalState(task.state)) return
+      this.appendEvent(task, { type: 'tool-finished', failed: false })
+      await this.finish(task, 'completed', { finalOutput: result.output })
+    } catch (error) {
+      if (task.cancelRequested || terminalState(task.state)) return
+      await this.finish(task, 'failed', { error: publicProgressText(error.message) || '免费来源暂不可用，请重试。' })
+    }
   }
 
   inspect({ parentSessionId, taskId, afterSeq = 0 }) {
@@ -1710,8 +1786,8 @@ export function createSubagentAdapter(ctx) {
 
   return {
     async bindData(task,recipe,output,signal) {
-      if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL)return
-      await callCanvas(task.parentSessionId,'data',{action:'bind-generated',nodeId:task.canvasNodeId,recipe,initialSpec:JSON.parse(output)},signal)
+      if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL){if(task.publicData)throw Error('宿主自动刷新绑定不可用');return}
+      return callCanvas(task.parentSessionId,'data',{action:'bind-generated',nodeId:task.canvasNodeId,recipe,initialSpec:JSON.parse(output)},signal)
     },
     async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress, synthesisOnly = false, onWorkbenchPlan }) {
       const parent = await resolveParent(parentSessionId)

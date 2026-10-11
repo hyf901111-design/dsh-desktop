@@ -15,6 +15,7 @@ import {FINANCIAL_PROFILE_VARIANTS,FINANCIAL_PROFILE_FIELDS,financialProfileData
 import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
+import { validatePublicDataPanel, PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
 export const WORKBENCH_PANEL_TYPES = Object.freeze(['files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
@@ -303,6 +304,13 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
+        if (p.publicData !== undefined) {
+            if (isSimulated || p.artifact !== undefined) throw Error('免费源直通面板不能混用模拟数据或静态artifact。');
+            const publicData = validatePublicDataPanel(p.publicData, p.type);
+            const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
+            const prefix = variant ? `variant: ${variant}；` : '';
+            p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
+        }
         // Correct a metadata-only planner mismatch before launching a child.
         // Existing supplied data remains subject to its original schema.
         if (!p.artifact && p.type === 'market' && /柱状图|条形图/iu.test(p.title) && !/行业|配置|资金流/u.test(p.title))
@@ -347,7 +355,7 @@ export function validateWorkbench(value) {
             throw Error(`面板「${p.title}」需要完整 artifact ${p.type==='clock'?'时区配置；live设备时钟同样需要明确城市和IANA时区':'中的实际需求记录；不能生成无关清单或进度样例'}。${operationsTemplateSchema(p.type)}`);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
-        const panel = { title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}) };
+        const panel = { title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}), ...(selected.publicData ? { publicData: selected.publicData } : {}) };
         workbenchDesignTemplate(panel);
         return panel;
     });
