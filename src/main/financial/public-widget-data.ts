@@ -1,9 +1,11 @@
 import {networkFetch} from '../integrations/adapters/network-policy'
 import {normalizeFinancialBars} from './widget-data'
+import {financialIndexCatalog} from '../../../packages/dsh-research-task-runtime/financial-index-catalog.js'
+import {parsePublicIndexChart} from './index-data'
 
 type Row=Record<string,any>
 type SymbolRef={code:string;market:string;name:string}
-const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com']
+const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com','https://query1.finance.yahoo.com']
 const number=(value:unknown):number|null=>typeof value==='number'&&Number.isFinite(value)?value:typeof value==='string'&&value.trim()&&Number.isFinite(Number(value))?Number(value):null
 const unavailable=()=>Error('公开数据源暂不可用，请稍后重试')
 const tradingDate=(value:string)=>{
@@ -13,10 +15,11 @@ const tradingDate=(value:string)=>{
 const plain=(value:unknown)=>String(value??'').replace(/<[^>]*>/g,'').replace(/&(?:amp|lt|gt|quot|apos|nbsp);/g,s=>({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&apos;':"'",'&nbsp;':' '}[s]!)).trim()
 const quoteCode=(code:string)=>code.replace(/\.(?:OQ|N)$/,'')
 const symbolId=(s:SymbolRef)=>s.market.toLowerCase()+(s.market==='US'?quoteCode(s.code):s.code)
-const validSymbol=(s:any)=>s&&['SH','SZ','BJ','HK','US'].includes(s.market)&&typeof s.code==='string'&&(s.market==='US'?/^[A-Z][A-Z0-9.^-]{0,19}$/.test(s.code):new RegExp('^\\d{'+(s.market==='HK'?5:6)+'}$').test(s.code))
+const validSymbol=(s:any)=>s&&typeof s.code==='string'&&(s.market==='INDEX'?financialIndexCatalog().some(e=>e.symbol.market==='INDEX'&&e.symbol.code===s.code):['SH','SZ','BJ','HK','US'].includes(s.market)&&(s.market==='US'?/^[A-Z][A-Z0-9.^-]{0,19}$/.test(s.code):new RegExp('^\\d{'+(s.market==='HK'?5:6)+'}$').test(s.code)))
 const validQuery=(q:any)=>{
  if(!q||!['search','quotes','history','news','announcements'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh'].includes(k))||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
  if(['quotes','history','announcements'].includes(q.action)&&(!Array.isArray(q.symbols)||q.symbols.length>200||q.symbols.some((s:any)=>!validSymbol(s))))throw Error('证券参数无效')
+ if(q.symbols?.some((s:any)=>s.market==='INDEX')&&(q.action!=='quotes'||q.asset!=='index'))throw Error('指数请求参数无效')
  if(q.action==='announcements'&&q.symbols.length!==1)throw Error('公告证券参数无效')
  if(q.action==='history'&&(q.symbols.length!==1||!['1m','1d','1w','1mo','1y'].includes(q.period)||!['none','forward','backward'].includes(q.adjustment)))throw Error('图表参数无效')
 }
@@ -124,14 +127,21 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
    let result:Row
    if(q.action==='quotes'){
     const values=new Map<string,Row>(),missing=new Map<string,Row>();let rows=new Map<string,string[]>(),primaryError:Error|undefined
-    try{if(q.symbols.length)rows=await rawQuotes(q.symbols)}catch(error){check();primaryError=error as Error}
-    for(const s of q.symbols){try{values.set(symbolId(s),parseQuote(s,rows.get(symbolId(s))))}catch(error){missing.set(symbolId(s),{...s,error:(primaryError??error as Error).message})}}
+    const domestic=q.symbols.filter((s:SymbolRef)=>s.market!=='INDEX'),global=q.symbols.filter((s:SymbolRef)=>s.market==='INDEX')
+    try{if(domestic.length)rows=await rawQuotes(domestic)}catch(error){check();primaryError=error as Error}
+    for(const s of domestic){try{values.set(symbolId(s),parseQuote(s,rows.get(symbolId(s))))}catch(error){missing.set(symbolId(s),{...s,error:(primaryError??error as Error).message})}}
+    for(let i=0;i<global.length;i+=4)await Promise.all(global.slice(i,i+4).map(async(s:SymbolRef)=>{try{
+     const url=new URL('https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(s.code));url.searchParams.set('interval','1d');url.searchParams.set('range','3mo')
+     const quote=parsePublicIndexChart(s,await json(url))
+     if(quote.series.length<2&&s.code==='HSTECH.HK')try{quote.series=(await history({code:'HSTECH',market:'HK',name:s.name},'1d','none')).bars.slice(-60).map((b:Row)=>b.close);quote.seriesSource='腾讯财经'}catch{check()}
+     values.set(symbolId(s),quote)
+    }catch(error){check();missing.set(symbolId(s),{...s,error:(error as Error).message})}}))
     // Only absent/invalid mainland quotes use the backup. Never overwrite a
     // valid primary quote, or interpret this schema as a HK/US quote.
     const fallback=q.symbols.filter((s:SymbolRef)=>['SH','SZ'].includes(s.market)&&missing.has(symbolId(s)))
     if(fallback.length){try{const backup=await sinaQuotes(fallback);for(const s of fallback){try{values.set(symbolId(s),parseSinaQuote(s,backup.get(symbolId(s))));missing.delete(symbolId(s))}catch{check()}}}catch{check()}}
     const quotes:Row[]=q.symbols.flatMap((s:SymbolRef)=>values.has(symbolId(s))?[values.get(symbolId(s))!]:[])
-    if(q.asset==='index')for(let i=0;i<quotes.length;i+=4)await Promise.all(quotes.slice(i,i+4).map(async quote=>{try{quote.series=(await history(quote as SymbolRef,'1d','none')).bars.slice(-60).map((b:Row)=>b.close)}catch{check();quote.series=[]}}))
+    if(q.asset==='index'){const native=quotes.filter(p=>p.market!=='INDEX');for(let i=0;i<native.length;i+=4)await Promise.all(native.slice(i,i+4).map(async quote=>{try{quote.series=(await history(quote as SymbolRef,'1d','none')).bars.slice(-60).map((b:Row)=>b.close)}catch{check();quote.series=[]}}))}
     result={quotes,errors:[...missing.values()],source:[...new Set(quotes.map(p=>p.source))].join(' / ')||'腾讯财经'}
    }else if(q.action==='history'){
     try{result=await history(q.symbols[0],q.period,q.adjustment)}catch(error){check();result={bars:[],error:(error as Error).message,source:'腾讯财经'}}

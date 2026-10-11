@@ -45,3 +45,9 @@ it('自选菜单内部点击只移除当前标的且菜单随即关闭',async()=
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec.symbols).toHaveLength(0)
  expect(f.document.querySelector('.ew-financial-row-menu')).toBeNull()
 })
+it('组件库菜单点击拦截冒泡的组件正文或搜索框仍自动关闭',async()=>{
+ const f=await menu();await f.event('keydown',f.document.body,{key:'Escape'})
+ await f.event('click',f.document.querySelector('[data-financial-library]'));expect(f.document.querySelector('.ew-financial-library')).not.toBeNull()
+ await f.event('pointerdown',f.host.querySelector('.ew-watch-name'),{button:0,pointerId:1})
+ expect(f.document.querySelector('.ew-financial-library')).toBeNull()
+})

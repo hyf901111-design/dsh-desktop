@@ -1,5 +1,6 @@
 // Shared with the trusted, serialized React canvas. No data-provider secrets or
 // synthetic prices are stored in this spec. Data is fetched for this configuration.
+import {financialIndexCatalog} from './financial-index-catalog.js'
 export function financialWidgetDefaults(widget){
  const titles={watchlist:'自选股',quote:'个股行情',indices:'市场指数',news:'新闻列表',announcements:'公告列表'}
  if(!titles[widget])return null
@@ -11,10 +12,11 @@ export function financialWidgetDefaults(widget){
 export function financialWidgetSpec(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId'].includes(k)))return null
  if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news','announcements'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
- if(!Array.isArray(value.symbols)||value.symbols.length>(['quote','announcements'].includes(value.widget)?1:value.widget==='indices'?12:200))return null
+ if(!Array.isArray(value.symbols)||value.symbols.length>(['quote','announcements'].includes(value.widget)?1:value.widget==='indices'?64:200))return null
  const ids=new Set()
  for(const s of value.symbols){
-  if(!s||typeof s!=='object'||Object.keys(s).some(k=>!['code','market','name'].includes(k))||!['SH','SZ','BJ','HK','US'].includes(s.market)||typeof s.code!=='string'||!/^[A-Z0-9.^-]{1,20}$/.test(s.code)||typeof s.name!=='string'||!s.name.trim()||s.name.length>100||/[\u0000-\u001f]/.test(s.name))return null
+  if(!s||typeof s!=='object'||Object.keys(s).some(k=>!['code','market','name'].includes(k))||!['SH','SZ','BJ','HK','US','INDEX'].includes(s.market)||typeof s.code!=='string'||!/^[A-Z0-9.^-]{1,20}$/.test(s.code)||typeof s.name!=='string'||!s.name.trim()||s.name.length>100||/[\u0000-\u001f]/.test(s.name))return null
+  if(s.market==='INDEX'&&(value.widget!=='indices'||!financialIndexCatalog().some(e=>e.symbol.code===s.code)))return null
   const id=s.market+':'+s.code;if(ids.has(id))return null;ids.add(id)
  }
  if(!['1m','1d','1w','1mo','1y'].includes(value.period)||!['none','forward','backward'].includes(value.adjustment)||!Array.isArray(value.indicators)||new Set(value.indicators).size!==value.indicators.length||value.indicators.some(i=>!['MA','VOL','MACD'].includes(i))||!['all','SH','SZ','BJ','HK','US'].includes(value.market)||typeof value.query!=='string'||value.query.length>100||/[\u0000-\u001f]/.test(value.query))return null
@@ -62,6 +64,7 @@ export function synchronizeFinancialLinks(artifacts){
 // twelve empty rows; the header, controls, column header and source strip stay.
 export function financialWidgetDimensions(spec){
  if(spec?.widget==='watchlist')return {width:320,height:130+36*Math.min(12,Math.max(2,spec.symbols?.length||0))}
+ if(spec?.widget==='indices')return {width:980,height:Math.min(600,200+124*Math.max(0,Math.ceil((spec.symbols?.length||6)/6)-1))}
  return ({quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340},announcements:{width:620,height:340}})[spec?.widget]
 }
 export function financialIndicators(bars){

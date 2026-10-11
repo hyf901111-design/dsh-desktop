@@ -183,7 +183,7 @@ export async function exportWorkbenchContent(card,node,format) {
   const result=await save(request);if(result?.status==='error')throw Error(result.message||'保存失败，请重试')
   return result
 }
-export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLegacy,onEditSelected}) {
+export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLegacy,onEditSelected,onConfigureIndices}) {
   const [detail,setDetail]=react.useState(null),[exporting,setExporting]=react.useState(false),[exportError,setExportError]=react.useState(''),ref=react.useRef(null),subRef=react.useRef(null),mindRef=react.useRef(null),settingsRef=react.useRef(null),exportRef=react.useRef(null),leaveTimer=react.useRef(null)
   const trigger=kind=>kind==='mind'?mindRef:kind==='export'?exportRef:settingsRef
   const cancelLeave=()=>{clearTimeout(leaveTimer.current);leaveTimer.current=null}
@@ -226,6 +226,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     row('summary','总结提炼',()=>onDerived('summary')),
     row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
     separator('generate'),
+    target.node.containerSpec?.type==='financial-widget'&&target.node.containerSpec.widget==='indices'&&row('settings','配置指数',()=>onConfigureIndices?.(target.node.id)),
     target.node.containerSpec?.type==='financial-widget'?row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly):row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
     target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
@@ -240,8 +241,9 @@ export function handleWorkbenchMultiSelect(root,workspace,event) {
   workspace.updateSelection([card.getAttribute('data-research-node-id')],'toggle');return true
 }
 export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readOnly,onAsk,onDerived,onLegacy,onEditSelected}) {
-  const [hosts,setHosts]=react.useState([]),[menu,setMenu]=react.useState(null)
+  const [hosts,setHosts]=react.useState([]),[menu,setMenu]=react.useState(null),[indicesId,setIndicesId]=react.useState(null)
   const close=react.useCallback(()=>setMenu(null),[])
+  const closeIndices=react.useCallback(()=>setIndicesId(null),[]),indicesNode=snapshot.artifacts.find(n=>n.id===indicesId&&n.containerSpec?.widget==='indices')
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     const reconcile=()=>{const nodes=[...snapshot.files,...snapshot.artifacts],next=[]
@@ -252,7 +254,7 @@ export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readO
   const planningNodes=workspace.getWorkbenchPlanningNodes(),selectedPlanning=planningNodes.filter(n=>snapshot.selection.selectedNodeIds.includes(n.id)&&rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"][data-research-creation-planning]:not([data-research-creation-planning=dealing])'))
   const resizable=readOnly?[]:[...hosts.filter(n=>!n.expanded&&!n.blocked&&snapshot.selection.selectedNodeIds.includes(n.node.id)).map(n=>n.node),...selectedPlanning]
   const visibleHeight=rootRef.current?.clientHeight||snapshot.canvasSize.visibleHeight||0,contentBottom=Math.max(0,...[...snapshot.files,...snapshot.artifacts,...planningNodes].map(n=>n.y+n.height/2)),resizeBottom=visibleHeight>0&&contentBottom<=visibleHeight?visibleHeight:Infinity
-  return react_jsx_runtime.jsxs(react.Fragment,{children:[...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected})]})
+  return react_jsx_runtime.jsxs(react.Fragment,{children:[...hosts.map(({node,host})=>react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchChrome,{node,sessionId,readOnly,selected:snapshot.selection.selectedNodeIds.includes(node.id),onAsk,onMore:(n,e)=>{if(!workspace.getSnapshot().selection.selectedNodeIds.includes(n.id))workspace.updateSelection([n.id],'replace');setMenu({node:n,sessionId,event:{clientX:e.clientX,clientY:e.clientY},left:e.currentTarget.getBoundingClientRect().right-206,top:e.currentTarget.getBoundingClientRect().bottom+5})},onRemove:n=>{const card=rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"]');if(card?.open)card.querySelector('[data-research-container-expand]')?.click();else workspace.removeNodes([n.id])}}),host,node.id)),rootRef.current&&react_dom.createPortal(react_jsx_runtime.jsx(WorkbenchResizeControls,{nodes:resizable,width:snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000,bottom:resizeBottom}),rootRef.current),menu&&react_jsx_runtime.jsx(WorkbenchMenu,{target:menu,workspace,readOnly,onClose:close,onDerived,onLegacy,onEditSelected,onConfigureIndices:setIndicesId}),indicesNode&&react_jsx_runtime.jsx(FinancialIndicesSettings,{node:indicesNode,sessionId,rootRef,readOnly,onClose:closeIndices},indicesId)]})
 }
 export function WorkbenchResizeControls({nodes,width,bottom=Infinity}) {
   const gap=createResearchGrid().metrics(width).gap
@@ -260,6 +262,7 @@ export function WorkbenchResizeControls({nodes,width,bottom=Infinity}) {
 }
 export function handleWorkbenchWheel(root,workspace,event) {
   if(event.target?.closest?.('[role=menu],[role=dialog][open],.ew-grid-menu,[data-research-create-popover],[data-research-global-toolbar]'))return
+  if(!event.__sherlockCanvasPan&&event.target?.closest?.('[data-financial-chart]'))return
   const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive]')
   const selected=card&&workspace.getSnapshot().selection.selectedNodeIds.includes(card.getAttribute('data-research-node-id'))
   if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey&&researchPreviewCanConsumeWheel(event.target,preview,event.deltaX||0,event.deltaY||0))return
@@ -342,9 +345,11 @@ export function installWorkbenchPointer(root,workspace,toolRef,selectTool,readOn
     if(delta){const before=root.scrollTop;root.scrollTop=Math.max(0,Math.min(Math.max(0,root.scrollHeight-root.clientHeight),before+delta));if(root.scrollTop!==before){update(lastPointer);autoFrame=view.requestAnimationFrame(autoScroll)}}
   }
   const down=e=>{
-    if(e.target?.closest?.('[data-workbench-column-resize],[data-financial-widget]'))return
-    if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
+    if(e.target?.closest?.('[data-workbench-column-resize]'))return
+    // Select the containing card before embedded controls intercept pointer events.
     if(toolRef.current==='select'&&handleWorkbenchMultiSelect(root,workspace,e))return
+    if(e.target?.closest?.('[data-financial-widget]'))return
+    if(e.button===0&&e.target?.closest?.('[data-research-node-id]')&&!e.target?.closest?.('input,textarea,button,a,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=dialog],[role=menu]'))root.focus({preventScroll:true})
     if(e.button!==0||e.target?.closest?.('[data-research-global-toolbar],[role=menu],[role=dialog],.ew-grid-menu'))return
     const handle=e.target?.closest?.('[data-workbench-drag-handle]'),resize=e.target?.closest?.('[data-workbench-resize]'),card=e.target?.closest?.('[data-research-node-id]')||(resize&&root.querySelector('[data-research-node-id="'+CSS.escape(resize.getAttribute('data-workbench-resize'))+'"]'))
     const draw=toolRef.current==='component'&&!resize

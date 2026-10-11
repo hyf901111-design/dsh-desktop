@@ -2,6 +2,12 @@ import {describe,it,expect} from 'vitest'
 import {financialWidgetSpec,changeWatchlist,financialIndicators,financialWidgetDefaults,synchronizeFinancialLinks} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 const hk={code:'09988',name:'阿里巴巴-W',market:'HK'},us={code:'BABA',name:'阿里巴巴',market:'US'}
 describe('固定金融组件持久化契约',()=>{
+ it('全球指数仅用于市场指数组件，序列化恢复保留选择，拒绝任意海外代码',()=>{
+  const nikkei={code:'^N225',market:'INDEX',name:'日经225'},s={...financialWidgetDefaults('indices'),symbols:[nikkei]}
+  expect(financialWidgetSpec(JSON.parse(JSON.stringify(s)))?.symbols).toEqual([nikkei])
+  expect(financialWidgetSpec({...financialWidgetDefaults('watchlist'),symbols:[nikkei]})).toBeNull()
+  expect(financialWidgetSpec({...s,symbols:[{...nikkei,code:'^UNKNOWN'}]})).toBeNull()
+ })
  it('五种固定组件；重复代码按市场区分，拒绝未知字段与非有限配置',()=>{
   expect(financialWidgetDefaults('watchlist').symbols).toEqual([])
   expect(financialWidgetSpec({...financialWidgetDefaults('watchlist'),symbols:[hk,us]})).not.toBeNull()

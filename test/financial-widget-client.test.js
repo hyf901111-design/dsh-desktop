@@ -6,6 +6,23 @@ const s={code:'600519',name:'贵州茅台',market:'SH'},other={code:'000001',nam
 const bars=Array.from({length:80},(_,i)=>({date:new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:i%2?0:1000}))
 const service=()=>({request:vi.fn(async q=>q.action==='search'?{symbols:[s,other]}:q.action==='history'?{bars,volumeUnit:'股',source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'}:q.action==='news'?{news:[{id:'n',title:'本人原始新闻',source:'本人新闻来源',url:'https://example.org/news',time:'2026-10-09 10:00'}],source:'测试通联'}:{quotes:q.symbols.map(x=>({...x,price:100,changePercent:x.market==='SH'?0:-2,asOf:'2026-10-08'})),source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'})})
 async function fixture(desktop={}){const f=await financialClientFixture({financialWidget:service(),...desktop});close.push(f.dispose);return f}
+it('Shift 点击组件正文、图表和标题可追加或取消多选，不触发内部选股；搜索仍可编辑',async()=>{
+ const f=await fixture();let watch,quote
+ await f.act(async()=>{watch=f.workspace.createFinancialWidget('watchlist');quote=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>({...n,containerSpec:{...n.containerSpec,symbols:n.id===watch.id?[s,other]:[s]}})));f.workspace.updateSelection([quote.id],'replace')})
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull())
+ const row=f.host.querySelector('[data-stock-code="000001"] .ew-watch-name'),chart=f.host.querySelector('[data-financial-chart]')
+ // Native embedded controls can stop bubbling before the legacy canvas listener.
+ row.addEventListener('pointerdown',e=>e.stopPropagation());chart.addEventListener('pointerdown',e=>e.stopPropagation())
+ await f.event('pointerdown',row,{button:0,pointerId:1,shiftKey:true});await f.event('pointerup',row,{button:0,pointerId:1,shiftKey:true});await f.event('click',row,{button:0,shiftKey:true})
+ expect(new Set(f.workspace.getSnapshot().selection.selectedNodeIds)).toEqual(new Set([watch.id,quote.id]));expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===watch.id).containerSpec.selectedSymbol).toBeUndefined()
+ await f.event('pointerdown',chart,{button:0,shiftKey:true});await f.event('click',chart,{button:0,shiftKey:true})
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([watch.id])
+ const title=f.host.querySelector('[data-research-node-id="'+quote.id+'"] .ew-grid-title')
+ await f.event('pointerdown',title,{button:0,shiftKey:true});await f.event('click',title,{button:0,shiftKey:true})
+ expect(f.workspace.getSnapshot().selection.selectedNodeIds).toHaveLength(2)
+ const input=f.host.querySelector('input[role=combobox]');expect((await f.event('pointerdown',input,{button:0,shiftKey:true})).defaultPrevented).toBe(false);expect(f.workspace.getSnapshot().selection.selectedNodeIds).toHaveLength(2)
+ await f.event('pointerdown',row,{button:0});await f.event('click',row,{button:0});expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===watch.id).containerSpec.selectedSymbol).toBe('SZ:000001')
+})
 it('行情标注区分上游时刻、休市和获取时间，按各市场时区显示',()=>{
  const q={...s,source:'新浪财经',quotedAt:'2026-10-09T07:34:59Z',asOf:'2026-10-09'}
  const info=financialClient.financialQuoteInfo([q],new Date('2026-10-10T03:00:00Z'))
@@ -23,6 +40,13 @@ it('盘中旧报价和缺失时刻不会冒充实时，报价时间不以获取�
  expect(financialClient.financialQuoteInfo([{...q,quotedAt:'2026-10-08T07:00:00Z'}],now).state).toBe('时效待确认')
  const missing=financialClient.financialQuoteInfo([{...q,quotedAt:null,asOf:'2026-10-08'}],now)
  expect(missing.state).toBe('时效待确认');expect(missing.text).not.toContain('10:00');expect(missing.title).toContain('时刻未提供')
+})
+it('海外指数页脚使用交易所时区和上游交易状态，不套用A股交易时段',()=>{
+ const q={market:'INDEX',code:'^N225',name:'日经225',source:'Yahoo Finance',quotedAt:'2026-10-09T06:00:00Z',timeZone:'Asia/Tokyo',marketState:'closed'}
+ const info=financialClient.financialQuoteInfo([q],new Date('2026-10-09T06:05:00Z'))
+ expect(info.state).toBe('休市');expect(info.text).toContain('10/09 15:00');expect(info.title).toContain('Asia/Tokyo')
+ expect(financialClient.financialQuoteInfo([{...q,marketState:'open'}],new Date('2026-10-09T06:01:00Z')).state).toBe('更新中')
+ expect(financialClient.financialQuoteInfo([{...q,marketState:'open'}],new Date('2026-10-09T06:10:00Z')).state).toBe('时效待确认')
 })
 it('组件页脚呈现实际报价来源和时刻，同时保留最近获取时间',async()=>{
  const bridge=service();bridge.request.mockResolvedValue({quotes:[{...s,price:1263,changePercent:.57,source:'新浪财经',quotedAt:'2026-10-09T07:34:59Z',asOf:'2026-10-09'}],source:'新浪财经',receivedAt:'2026-10-10T03:00:00Z'})
@@ -144,6 +168,19 @@ it('短自选整理收紧高度，长列表仍能滚动；标准整理保留行�
 })
 it('行情图方向键同步当前OHLC和指标读数，离开后恢复末期',async()=>{
  const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])});await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull());const svg=f.host.querySelector('[data-financial-chart] svg');await f.event('keydown',svg,{key:'Home'});expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('开 100.00');await f.event('keydown',svg,{key:'End'});expect(f.host.querySelector('.ew-quote-ohlc').textContent).toContain('开 179.00')
+})
+it('蜡烛图滚轮以鼠标为中心缩放，横向滚动与拖拽浏览历史，双击恢复',async()=>{
+ const history=Array.from({length:240},(_,i)=>({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:1000})),bridge=service()
+ bridge.request.mockImplementation(async q=>q.action==='history'?{bars:history,nativePeriod:true,source:'测试行情'}:{quotes:q.symbols.map(x=>({...x,price:341,changePercent:1})),source:'测试行情'})
+ const f=await fixture({financialWidget:bridge});await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])})
+ await vi.waitFor(()=>expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull())
+ const chart=f.host.querySelector('[data-financial-chart]'),candles=()=>chart.querySelectorAll('rect[clip-path]').length,last=()=>Number([...chart.querySelectorAll('text')].find(t=>t.getAttribute('fill')==='#fff').textContent)
+ chart.getBoundingClientRect=()=>({left:0,top:0,right:684,bottom:452,width:684,height:452})
+ const initial=candles(),latest=last();const wheel=await f.event('wheel',chart,{deltaX:0,deltaY:-120,deltaMode:0,clientX:315});expect(wheel.defaultPrevented).toBe(true)
+ expect(candles()).toBeLessThan(initial);expect(last()).toBeLessThan(latest)
+ const zoomed=candles(),zoomedLast=last();await f.event('wheel',chart,{deltaX:-100,deltaY:0,deltaMode:0,clientX:315});expect(candles()).toBe(zoomed);expect(last()).toBeLessThan(zoomedLast)
+ await f.event('pointerdown',chart,{button:0,pointerId:5,clientX:100});await f.event('pointermove',chart,{pointerId:5,clientX:150});expect(chart.dataset.chartPanning).toBe('true');await f.event('pointerup',chart,{pointerId:5,clientX:150});expect(chart.dataset.chartPanning).toBeUndefined()
+ await f.event('dblclick',chart);expect(candles()).toBe(initial);expect(last()).toBe(latest)
 })
 
 it.each(['pointerup','pointercancel'])('行情图连续移动后立即%s，延后更新仍保留最终历史位置和完整看板',async finish=>{

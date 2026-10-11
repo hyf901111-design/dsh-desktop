@@ -2,6 +2,26 @@ import {expect,it,vi} from 'vitest'
 import {createPublicFinancialWidgetData} from '../src/main/financial/public-widget-data'
 
 const stock={code:'600519',market:'SH',name:'贵州茅台'}
+it('全球指数使用交易所时区、前一交易日涨跌及真实走势，和国内指数按配置顺序返回',async()=>{
+ const f=fixture(),nativeFetch=f.fetch.getMockImplementation()!,nikkei={code:'^N225',market:'INDEX',name:'日经225'},day=Date.parse('2026-10-09T06:00:00Z')/1000
+ f.fetch.mockImplementation(async url=>new URL(url).hostname==='query1.finance.yahoo.com'?Response.json({chart:{result:[{meta:{symbol:'^N225',regularMarketPrice:110,regularMarketTime:day,exchangeTimezoneName:'Asia/Tokyo',chartPreviousClose:50,currentTradingPeriod:{regular:{start:day-21600,end:day}}},timestamp:[day-86400,day],indicators:{quote:[{close:[100,110]}]}}],error:null}}):nativeFetch(url))
+ const result=await f.service.query({action:'quotes',asset:'index',symbols:[nikkei,stock]})
+ expect(result.quotes.map((q:any)=>q.code)).toEqual(['^N225','600519'])
+ expect(result.quotes[0]).toMatchObject({price:110,priceChange:10,changePercent:10,asOf:'2026-10-09',quotedAt:'2026-10-09T06:00:00.000Z',timeZone:'Asia/Tokyo',series:[100,110],source:'Yahoo Finance'})
+})
+it('海外源返回错误证券或无效报价时保留国内行情，不生成零值；刷新可以恢复',async()=>{
+ const f=fixture(),nativeFetch=f.fetch.getMockImplementation()!,nikkei={code:'^N225',market:'INDEX',name:'日经225'},day=Date.parse('2026-10-09T06:00:00Z')/1000;let valid=false
+ f.fetch.mockImplementation(async url=>new URL(url).hostname==='query1.finance.yahoo.com'?Response.json({chart:{result:[{meta:{symbol:valid?'^N225':'^DJI',regularMarketPrice:110,regularMarketTime:day,exchangeTimezoneName:'Asia/Tokyo'},timestamp:[day-86400,day],indicators:{quote:[{close:[100,110]}]}}]}}):nativeFetch(url))
+ const q={action:'quotes',asset:'index',symbols:[stock,nikkei]},result=await f.service.query(q)
+ expect(result.quotes.map((q:any)=>q.code)).toEqual(['600519']);expect(result.errors).toMatchObject([{code:'^N225'}])
+ valid=true;expect((await f.service.query({...q,refresh:true})).quotes).toHaveLength(2)
+})
+it('海外指数只允许内置目录的指数报价，拒绝作为普通股票和任意外部地址请求',async()=>{
+ const f=fixture(),nikkei={code:'^N225',market:'INDEX',name:'日经225'}
+ await expect(f.service.query({action:'quotes',symbols:[nikkei]})).rejects.toThrow('指数请求参数无效')
+ await expect(f.service.query({action:'quotes',asset:'index',symbols:[{...nikkei,code:'https://other.test'}]})).rejects.toThrow('证券参数无效')
+ expect(f.fetch).not.toHaveBeenCalled()
+})
 function quote(id='sh600519',code='600519',name='贵州茅台',time='20261009150000'){
  const fields=Array(90).fill('');Object.assign(fields,{1:name,2:code,3:'1263.00',4:'1255.79',5:'1255.42',30:time,31:'7.21',32:'0.57',33:'1282',34:'1255.42'})
  return `v_${id}="${fields.join('~')}";`
