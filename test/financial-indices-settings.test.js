@@ -12,6 +12,7 @@ async function setup(){
 }
 it('更多菜单配置国内外指数，应用后按所选顺序展示并持久恢复',async()=>{
  const panel=await setup();expect(panel).not.toBeNull()
+ expect(Number.isFinite(parseFloat(panel.style.top))).toBe(true);expect(Number.isFinite(parseFloat(panel.style.height))).toBe(true)
  const input=panel.querySelector('input[type=search]');await f.input(input,'日经')
  const nikkei=panel.querySelector('[role=menuitemcheckbox]');expect(nikkei.textContent).toContain('日经225');await f.event('click',nikkei)
  await f.input(input,'');await f.event('click',find(panel,'已选 7'))

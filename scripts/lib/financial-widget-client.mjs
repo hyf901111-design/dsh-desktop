@@ -53,7 +53,7 @@ export function FinancialIndicesSettings({node,sessionId,rootRef,readOnly,onClos
  const trigger=()=>rootRef.current?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-workbench-more]')
  const close=()=>{onClose();trigger()?.focus({preventScroll:true})}
  react.useLayoutEffect(()=>{
-  const place=()=>{const r=trigger()?.getBoundingClientRect();if(!r)return;const bounds=financialCanvasBounds(rootRef.current),next=financialPopoverPosition({...r,left:r.right-320},{width:320,height:432},bounds);setPosition({...next,theme:rootRef.current?.dataset.workbenchStyle||(document.body.hasAttribute('data-ds-dark-theme')?'dark':'light')})}
+  const place=()=>{const r=trigger()?.getBoundingClientRect();if(!r)return;const bounds=financialCanvasBounds(rootRef.current),next=financialPopoverPosition({left:r.right-320,top:r.top,bottom:r.bottom},{width:320,height:432},bounds,bounds.bottom-r.bottom>=r.top-bounds.top);setPosition({...next,theme:rootRef.current?.dataset.workbenchStyle||(document.body.hasAttribute('data-ds-dark-theme')?'dark':'light')})}
   place();input.current?.focus({preventScroll:true});window.addEventListener('resize',place);document.addEventListener('scroll',place,true);const observer=new ResizeObserver(place);if(rootRef.current)observer.observe(rootRef.current);const stopTheme=financialObserveTheme(rootRef.current,place)
   return()=>{observer.disconnect();stopTheme();window.removeEventListener('resize',place);document.removeEventListener('scroll',place,true)}
  },[node.id])

@@ -30,7 +30,7 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body .ew-financial-index-search:focus-within{border-color:var(--fw-accent)}
  body .ew-financial-index-search input{flex:1;min-width:0;width:100%;height:28px;padding:0;border:0;outline:0;background:transparent;color:var(--fw-text);font:inherit}
  body .ew-financial-index-groups{display:flex;gap:2px;flex:none;overflow-x:auto;scrollbar-width:none}
- body .ew-financial-index-groups>button{flex:none!important;padding:0 8px!important;justify-content:center!important;white-space:nowrap;border-radius:5px!important;color:var(--fw-muted)!important}
+ body .ew-financial-index-groups>button{width:auto!important;flex:none!important;padding:0 8px!important;justify-content:center!important;white-space:nowrap;border-radius:5px!important;color:var(--fw-muted)!important}
  body .ew-financial-index-groups>button[aria-selected=true]{background:var(--fw-control)!important;color:var(--fw-text)!important}
  body .ew-financial-index-options{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
  body .ew-financial-index-option{display:flex;gap:4px;align-items:center;min-width:0;border-radius:5px}
@@ -46,7 +46,7 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body .ew-financial-index-order>button:disabled{opacity:.25!important}
  body .ew-financial-index-options>p{margin:20px 8px;text-align:center;color:var(--fw-muted)}
  body .ew-financial-index-actions{display:flex;align-items:center;gap:8px;flex:none;padding-top:8px;border-top:1px solid var(--fw-border)}
- body .ew-financial-index-actions>button{padding:0 10px!important;border:1px solid var(--fw-border)!important;border-radius:5px!important;justify-content:center!important}
+ body .ew-financial-index-actions>button{width:auto!important;flex:none!important;padding:0 10px!important;border:1px solid var(--fw-border)!important;border-radius:5px!important;justify-content:center!important}
  body .ew-financial-index-actions>span{flex:1;text-align:right;color:var(--fw-muted);font-size:11px}
  body .ew-financial-index-actions>button.ew-financial-index-apply{background:var(--fw-accent)!important;color:#fff!important;border-color:transparent!important}
  body .ew-financial-index-actions>button.ew-financial-index-apply:hover:not(:disabled){filter:brightness(1.1)}
