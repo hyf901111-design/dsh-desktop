@@ -261,13 +261,10 @@ export function WorkbenchResizeControls({nodes,width,bottom=Infinity}) {
   return react_jsx_runtime.jsx('div',{className:'ew-grid-resize-layer',children:nodes.flatMap(node=>['x','y'].map(axis=>react_jsx_runtime.jsx('button',{type:'button',className:'ew-grid-resize ew-grid-resize-'+axis,'aria-label':axis==='x'?'调整组件宽度':'调整组件高度',title:axis==='x'?'拖动调整宽度':'拖动调整高度','data-workbench-resize':node.id,'data-workbench-resize-axis':axis,style:axis==='x'?{left:node.x+node.width/2,top:node.y-18,width:gap}:{left:node.x-18,top:Math.min(node.y+node.height/2,bottom-gap),height:gap},children:react_jsx_runtime.jsx('span',{'aria-hidden':true,style:axis==='x'?{width:Math.min(5,gap)}:{height:Math.min(5,gap)}})},node.id+'-'+axis)))})
 }
 export function handleWorkbenchWheel(root,workspace,event) {
-  if(event.target?.closest?.('[role=menu],[role=dialog][open],.ew-grid-menu,[data-research-create-popover],[data-research-global-toolbar]'))return
-  const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive]')
+  if(event.target?.closest?.('[role=menu],[role=dialog][open],.ew-calendar-editor,.ew-grid-menu,[data-research-create-popover],[data-research-global-toolbar]'))return
+  const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive],[data-calendar-tool]')
   const selected=card&&workspace.getSnapshot().selection.selectedNodeIds.includes(card.getAttribute('data-research-node-id'))
   if(!event.__sherlockCanvasPan&&selected&&event.target?.closest?.('[data-financial-chart]'))return
-  const calendar=event.target?.closest?.('.ew-calendar-scroll,.ew-calendar-editor,.ew-calendar-month');if(calendar&&calendar.scrollHeight>calendar.clientHeight+1)return
-  const indices=event.target?.closest?.('.ew-indices-grid')
-  if(!event.__sherlockCanvasPan&&indices&&indices.scrollHeight>indices.clientHeight+1)return
   if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey&&researchPreviewCanConsumeWheel(event.target,preview,event.deltaX||0,event.deltaY||0))return
   event.preventDefault();event.stopPropagation()
   const unit=event.deltaMode===1?16:event.deltaMode===2?root.clientHeight:1
