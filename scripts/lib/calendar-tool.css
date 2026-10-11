@@ -3,76 +3,156 @@
  body [data-ework-grid] [data-research-node-id]:has([data-calendar-tool]) [data-research-preview-body]{height:calc(100% - 34px)!important}
  body [data-ework-grid] [data-research-node-id]:has([data-calendar-tool]) :is(.rScV5Q_containerContent,.rScV5Q_generatedContainer){height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;gap:0!important}
  body [data-ework-grid] [data-research-node-id]:has([data-calendar-tool]) .ew-grid-header{background:var(--fw-card);color:var(--fw-text)}
- body .ew-calendar-tool{box-sizing:border-box;display:flex!important;flex-direction:column!important;min-width:0;min-height:0;height:100%;padding:0 10px 8px!important;background:var(--fw-card);color:var(--fw-text);font:400 12px/18px Inter,'Noto Sans SC',system-ui;container-type:size;container-name:calendar-tool;overflow:hidden}
+ body .ew-calendar-tool{box-sizing:border-box;display:flex!important;flex-direction:column!important;min-width:0;min-height:0;height:100%;padding:0 12px 6px!important;background:var(--fw-card);color:var(--fw-text);font:400 12px/18px Inter,'Noto Sans SC',system-ui;container-type:size;container-name:calendar-tool;overflow:hidden}
  body .ew-calendar-tool :is(button,input,select){box-sizing:border-box!important;font:inherit!important;color:inherit!important;min-width:0!important;box-shadow:none!important}
- body .ew-calendar-tool button{border:0!important;background:transparent!important;cursor:pointer;padding:3px 6px!important;border-radius:5px!important;min-height:26px!important}
+ body .ew-calendar-tool button{border:0!important;background:transparent!important;cursor:pointer;padding:4px 6px!important;border-radius:6px!important;min-height:28px!important}
  body .ew-calendar-tool button:hover{background:var(--fw-control)!important}
- body .ew-calendar-tool :is(button,input):focus-visible{outline:1px solid var(--fw-accent)!important;outline-offset:-1px}
- body .ew-calendar-tool button:disabled{opacity:.45;cursor:default}
- .ew-calendar-toolbar{display:flex;align-items:center;gap:3px;flex:none;height:34px;min-width:0}
+ body .ew-calendar-tool :is(button,input,select):focus-visible{outline:1px solid var(--fw-accent)!important;outline-offset:-1px}
+ body .ew-calendar-tool button:disabled{opacity:.4;cursor:default}
+ body .ew-calendar-icon{display:block!important;flex:none!important;vertical-align:middle;max-width:none!important;max-height:none!important}
+ .ew-calendar-toolbar{display:flex;align-items:center;gap:4px;flex:none;min-height:40px;min-width:0;padding-bottom:4px}
  .ew-calendar-toolbar>span{flex:1}
- body .ew-calendar-toolbar>button{white-space:nowrap;height:26px!important;min-width:24px!important;padding:2px 5px!important}
- body .ew-calendar-toolbar>button:first-child,body .ew-calendar-toolbar>button:nth-child(3){font-size:20px!important}
- body .ew-calendar-month-picker{position:relative;display:flex;align-items:center;justify-content:space-between;gap:4px;width:112px;height:26px;flex:none;padding:0 5px;border-radius:5px;background:var(--fw-control);cursor:pointer}
- .ew-calendar-month-picker>span{white-space:nowrap;font-size:11px;pointer-events:none}
- .ew-calendar-month-picker .ew-financial-icon{width:14px;height:14px;flex:none;pointer-events:none}
+ body .ew-calendar-toolbar>button{display:flex!important;align-items:center;justify-content:center;gap:4px;white-space:nowrap;height:28px!important;min-width:28px!important;padding:4px 6px!important}
+ body .ew-calendar-month-picker{position:relative;display:flex;align-items:center;justify-content:space-between;gap:6px;width:120px;height:28px;flex:none;padding:0 7px;border-radius:6px;cursor:pointer}
+ .ew-calendar-month-picker>span{white-space:nowrap;font-size:12px;font-weight:600;pointer-events:none}
+ .ew-calendar-month-picker .ew-calendar-icon{opacity:.6;pointer-events:none}
  body .ew-calendar-month-picker>input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0;color-scheme:light dark}
+ .ew-calendar-month-picker:hover{background:var(--fw-control)}
  .ew-calendar-month-picker:focus-within{outline:1px solid var(--fw-accent);outline-offset:-1px}
- body .ew-calendar-toolbar>button[data-calendar-add]{font-size:20px!important;color:var(--fw-accent)!important}
- .ew-calendar-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;flex:1;min-height:0;min-width:0}
- .ew-calendar-month{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
- .ew-calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);height:26px;flex:none;color:var(--fw-muted);font-size:11px;text-align:center;align-items:center}
- .ew-calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(26px,1fr);gap:2px;flex:1;min-height:156px}
- body .ew-calendar-days>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:1px!important;min-height:0!important;line-height:18px!important;border-radius:6px!important;position:relative}
+ body .ew-calendar-toolbar>select{height:28px!important;width:86px!important;flex:none;border:1px solid var(--fw-border)!important;border-radius:6px!important;background:var(--fw-card)!important;padding:2px 4px!important;font-size:11px!important}
+ body .ew-calendar-toolbar>button[data-calendar-add]{color:var(--fw-accent)!important;background:color-mix(in srgb,var(--fw-accent) 10%,transparent)!important}
+ .ew-calendar-add-label{font-size:11px;line-height:16px}
+ .ew-calendar-layout{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr);gap:16px;flex:1;min-height:0;min-width:0}
+ .ew-calendar-month{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:2px}
+ .ew-calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);height:28px;flex:none;color:var(--fw-muted);font-size:11px;text-align:center;align-items:center}
+ .ew-calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:44px;gap:2px 0;flex:none;min-height:0}
+ body .ew-calendar-days>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0!important;min-height:44px!important;height:44px!important;line-height:18px!important;border-radius:6px!important;position:relative}
+ body .ew-calendar-days>button>span{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;flex:none;font-size:12px}
  .ew-calendar-days>button[data-outside]{opacity:.35}
- .ew-calendar-days>button[data-today]>span{color:var(--fw-accent);font-weight:700}
- body [data-ework-grid] [data-research-node-id] .ew-calendar-days>button[aria-pressed=true]{background:var(--fw-accent)!important;color:#fff!important}
- body [data-ework-grid] [data-research-node-id] .ew-calendar-days>button[aria-pressed=true]>:is(span,i){color:#fff!important}
- .ew-calendar-days i{height:10px;font:700 10px/10px system-ui;color:var(--fw-accent);letter-spacing:1px}
- .ew-calendar-agenda{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid var(--fw-grid);padding-left:12px}
- .ew-calendar-agenda-heading{display:flex;align-items:center;gap:8px;flex:none;min-width:0;height:32px}
- .ew-calendar-agenda-heading strong{white-space:nowrap;font-size:12px;flex:none}
- body .ew-calendar-agenda-heading input{width:100%;min-width:0;height:25px;border:1px solid var(--fw-border);border-radius:5px;background:transparent;padding:3px 6px;font-size:11px!important;color:var(--fw-text)}
+ body .ew-calendar-days>button[data-today]>span{color:var(--fw-accent);font-weight:600;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fw-accent) 60%,transparent)}
+ body [data-ework-grid] [data-research-node-id] .ew-calendar-days>button[aria-pressed=true]{background:transparent!important}
+ body [data-ework-grid] [data-research-node-id] .ew-calendar-days>button[aria-pressed=true]>span{background:var(--fw-accent)!important;color:#fff!important;box-shadow:none}
+ body [data-ework-grid] [data-research-node-id] .ew-calendar-days>button[aria-pressed=true]>i{color:var(--fw-accent)!important}
+ .ew-calendar-days i{height:8px;font:700 10px/8px system-ui;color:var(--fw-accent);letter-spacing:1px;font-style:normal}
+ .ew-calendar-month-summary{display:flex;align-items:center;gap:5px;flex:none;min-height:32px;margin-top:8px;border-top:1px solid var(--fw-grid);font-size:10px;color:var(--fw-muted)}
+ .ew-calendar-month-summary strong{font-size:10px;font-weight:500;color:var(--fw-text)}
+ body .ew-calendar-month-summary button{display:flex;align-items:center;gap:2px;margin-left:auto;padding:2px 0!important;font-size:10px!important;color:var(--fw-accent)!important}
+ .ew-calendar-next{display:flex;flex-direction:column;gap:2px;flex:none;padding:8px 0}
+ .ew-calendar-next>small{font-size:10px;color:var(--fw-muted);margin-bottom:2px}
+ body .ew-calendar-next>button{display:flex;align-items:center;gap:10px;text-align:left;min-height:26px!important;padding:3px 4px!important;font-size:11px!important}
+ .ew-calendar-next time{font-size:10px;color:var(--fw-muted);flex:none}
+ .ew-calendar-next span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+ .ew-calendar-agenda{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid var(--fw-grid);padding-left:14px}
+ .ew-calendar-agenda-heading{display:flex;align-items:center;gap:8px;flex:none;min-width:0;min-height:28px}
+ .ew-calendar-agenda-heading strong{font-size:13px;font-weight:600;min-width:0;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+ body .ew-calendar-date-picker{position:relative;display:flex;align-items:center;gap:6px;min-width:0;cursor:pointer;flex:1;min-height:26px}
+ .ew-calendar-date-picker>span{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ew-calendar-date-picker .ew-calendar-icon{opacity:.5;pointer-events:none}
+ body .ew-calendar-date-picker>input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
+ .ew-calendar-date-picker:focus-within{outline:1px solid var(--fw-accent);outline-offset:-1px;border-radius:4px}
+ body .ew-calendar-date-picker[data-compact]{flex:none;min-height:22px;gap:3px;padding-right:6px;border-right:1px solid var(--fw-grid)}
+ .ew-calendar-date-picker[data-compact]>span{font-size:10px;font-weight:400;color:var(--fw-muted)}
+ .ew-calendar-count{font-size:10px;color:var(--fw-muted);flex:none}
+ .ew-calendar-search{display:flex;align-items:center;gap:6px;border:1px solid var(--fw-border);border-radius:6px;height:28px;padding:0 7px;flex:none;margin:4px 0 8px;color:var(--fw-muted)}
+ .ew-calendar-search:focus-within{border-color:var(--fw-accent)}
+ body .ew-calendar-search input{width:100%;height:26px;min-width:0;border:0!important;background:transparent!important;padding:2px 0!important;font-size:11px!important;color:var(--fw-text);outline:0!important}
+ .ew-calendar-range-hint{font-size:10px;color:var(--fw-muted);margin:2px 0 4px;line-height:16px}
  .ew-calendar-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
- .ew-calendar-event{display:flex;gap:8px;padding:9px 0;border-top:1px solid var(--fw-grid);min-width:0}
- .ew-calendar-event:first-child{border-top:0}
+ .ew-calendar-event{display:flex;gap:8px;padding:10px 0;border-bottom:1px solid var(--fw-grid);min-width:0}
  .ew-calendar-event>div{flex:1;min-width:0}
- body .ew-calendar-event button[data-calendar-complete]{padding:0!important;border:1px solid var(--fw-border)!important;width:16px!important;min-width:16px!important;height:16px!important;min-height:16px!important;flex:none;margin-top:4px;border-radius:4px!important;color:var(--fw-accent)!important;line-height:14px!important}
+ body .ew-calendar-event button[data-calendar-complete]{display:flex;align-items:center;justify-content:center;padding:0!important;border:1px solid var(--fw-border)!important;width:16px!important;min-width:16px!important;height:16px!important;min-height:16px!important;flex:none;margin-top:3px;border-radius:5px!important;color:var(--fw-accent)!important}
  body .ew-calendar-event button[data-calendar-complete][aria-checked=true]{border-color:var(--fw-accent)!important;background:color-mix(in srgb,var(--fw-accent) 12%,transparent)!important}
- body .ew-calendar-event-title{display:block;text-align:left;width:100%;font-weight:600!important;padding:0!important;min-height:22px!important;overflow-wrap:anywhere}
+ body .ew-calendar-event-title{display:block!important;text-align:left;width:100%;font-weight:500!important;padding:0!important;min-height:20px!important;height:auto!important;line-height:20px!important;overflow-wrap:anywhere}
+ body .ew-calendar-event-title:hover{color:var(--fw-accent)!important;background:transparent!important}
  .ew-calendar-event[data-completed] .ew-calendar-event-title{text-decoration:line-through;opacity:.5}
- .ew-calendar-event small,.ew-calendar-history-item small{display:block;color:var(--fw-muted);font-size:10px;line-height:16px}
- .ew-calendar-event p{margin:4px 0!important;color:var(--fw-muted);font:400 11px/17px Inter,'Noto Sans SC',system-ui!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
- .ew-calendar-next-reminder{margin-top:3px}
- .ew-calendar-empty{font:400 12px/18px Inter,'Noto Sans SC',system-ui!important;color:var(--fw-muted);padding:18px 0;margin:0!important}
- body .ew-calendar-history-item{display:block;width:100%;text-align:left;padding:8px!important;border-bottom:1px solid var(--fw-grid)!important}
- .ew-calendar-history-item strong{display:block;overflow-wrap:anywhere;font-size:12px}
+ .ew-calendar-event-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:10px;line-height:16px;color:var(--fw-muted);margin-top:2px}
+ .ew-calendar-reminder-badge{display:inline-flex;align-items:center;gap:3px}
+ .ew-calendar-event p{margin:4px 0 0!important;color:var(--fw-muted);font:400 11px/17px Inter,'Noto Sans SC',system-ui!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+ .ew-calendar-date-group{font-size:11px;color:var(--fw-muted);padding:10px 0 2px}
+ .ew-calendar-date-group:first-child{padding-top:2px}
+ body .ew-calendar-quick{display:flex;align-items:center;gap:4px;flex:none;margin:8px 0 4px;padding:2px 4px 2px 8px;border:1px solid var(--fw-border);border-radius:6px;min-height:30px}
+ .ew-calendar-quick:focus-within{border-color:var(--fw-accent)}
+ body .ew-calendar-quick>input{width:100%;height:26px;border:0!important;outline:0!important;background:transparent!important;padding:2px 0!important;font-size:11px!important}
+ body .ew-calendar-quick button{display:flex;align-items:center;justify-content:center;width:26px!important;height:26px!important;min-height:26px!important;flex:none;padding:0!important;color:var(--fw-accent)!important}
+ .ew-calendar-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:112px;height:100%;box-sizing:border-box;padding:12px 0;color:var(--fw-muted);font-size:11px;text-align:center}
+ .ew-calendar-empty strong{font-size:12px;font-weight:400}
+ .ew-calendar-empty-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;background:var(--fw-control)}
+ body .ew-calendar-empty-add{border:1px solid var(--fw-border)!important;font-size:11px!important;padding:3px 12px!important;color:var(--fw-text)!important}
+ body .ew-calendar-history-item{display:block;width:100%;text-align:left;padding:10px 4px!important;border-bottom:1px solid var(--fw-grid)!important}
+ .ew-calendar-history-item strong{display:block;overflow-wrap:anywhere;font-size:12px;font-weight:500}
+ .ew-calendar-history-item small{display:block;color:var(--fw-muted);font-size:10px;line-height:16px}
  .ew-calendar-error{display:flex;align-items:center;gap:8px;flex:none;max-height:54px;font-size:11px;color:var(--fw-muted);overflow:auto}
  .ew-calendar-error>span{flex:1;min-width:0}
- .ew-calendar-footer{display:flex;align-items:center;flex:none;height:20px;min-height:20px;color:var(--fw-muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  body .ew-calendar-error>button{border:1px solid var(--fw-border)!important;white-space:nowrap;flex:none}
- .ew-calendar-tool[data-calendar-view=month] .ew-calendar-agenda{display:none}.ew-calendar-tool[data-calendar-view=month] .ew-calendar-layout{grid-template-columns:1fr;grid-template-rows:1fr}
- .ew-calendar-tool[data-calendar-view=list] .ew-calendar-month,.ew-calendar-tool[data-calendar-view=history] .ew-calendar-month{display:none}
- .ew-calendar-tool:is([data-calendar-view=list],[data-calendar-view=history]) .ew-calendar-layout{grid-template-columns:1fr}
- .ew-calendar-tool:is([data-calendar-view=list],[data-calendar-view=history]) .ew-calendar-agenda{border-left:0;padding-left:0}
- @container calendar-tool (max-width:460px){
-  .ew-calendar-layout{grid-template-columns:1fr;grid-template-rows:minmax(140px,.9fr) minmax(80px,1fr);gap:8px}
-  .ew-calendar-agenda{border-left:0;border-top:1px solid var(--fw-grid);padding-left:0}
-  .ew-calendar-tool:is([data-calendar-view=list],[data-calendar-view=history]) .ew-calendar-layout{grid-template-rows:1fr}
+ .ew-calendar-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none;height:20px;min-height:20px;color:var(--fw-muted);font-size:10px;white-space:nowrap;overflow:hidden}
+ .ew-calendar-footer>span{overflow:hidden;text-overflow:ellipsis}
+ .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-month{display:none}
+ .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-layout{grid-template-columns:1fr;grid-template-rows:1fr}
+ .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-agenda{border-left:0;padding-left:0}
+ .ew-calendar-week-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:none;gap:3px;padding:2px 0 8px;border-bottom:1px solid var(--fw-grid);margin-bottom:6px}
+ body .ew-calendar-week-strip button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0!important;min-height:50px!important}
+ .ew-calendar-week-strip small{font-size:10px;color:var(--fw-muted)}
+ .ew-calendar-week-strip span{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%}
+ .ew-calendar-week-strip i{height:4px;font-size:10px;line-height:4px;font-style:normal;color:var(--fw-accent)}
+ .ew-calendar-week-strip [aria-pressed=true]>span{background:var(--fw-accent);color:#fff}
+ .ew-calendar-week-strip [data-today]>small{color:var(--fw-accent)}
+ @container calendar-tool (max-width:480px){
+  .ew-calendar-layout{grid-template-columns:1fr;grid-template-rows:minmax(180px,.95fr) minmax(120px,1fr);gap:8px}
+  .ew-calendar-month{padding-right:0}
+  .ew-calendar-days{grid-auto-rows:32px;gap:0}
+  body .ew-calendar-days>button{height:32px!important;min-height:32px!important}
+  body .ew-calendar-days>button>span{width:25px;height:25px}
+  .ew-calendar-days i{position:absolute;bottom:0;height:5px;line-height:5px}
+  .ew-calendar-next,.ew-calendar-month-summary{display:none}
+  .ew-calendar-agenda{border-left:0;border-top:1px solid var(--fw-grid);padding:6px 0 0}
+  .ew-calendar-add-label{display:none}
+  body .ew-calendar-month-picker{width:110px;padding:0 3px}
+  .ew-calendar-month-picker .ew-calendar-icon{display:none!important}
+  body .ew-calendar-toolbar>select{width:76px!important}
+  .ew-calendar-tool:is([data-calendar-view=week],[data-calendar-view=upcoming],[data-calendar-view=history],[data-calendar-view=search]) .ew-calendar-layout{grid-template-rows:1fr}
  }
- @container calendar-tool (max-height:270px){
+ @container calendar-tool (max-height:300px){
+  .ew-calendar-layout{grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr);grid-template-rows:1fr;gap:12px}
+  .ew-calendar-agenda{border-left:1px solid var(--fw-grid);border-top:0;padding:0 0 0 10px}
+  .ew-calendar-days{grid-auto-rows:28px;gap:0}
+  body .ew-calendar-days>button{height:28px!important;min-height:28px!important}
+  body .ew-calendar-days>button>span{width:24px;height:24px}
+  .ew-calendar-days i{position:absolute;bottom:0;height:4px;line-height:4px;font-size:8px}
+  .ew-calendar-next,.ew-calendar-month-summary,.ew-calendar-range-hint{display:none}
+  .ew-calendar-weekdays{height:22px}
+  .ew-calendar-event{padding:6px 0}
+  .ew-calendar-event p{display:none}
+  .ew-calendar-empty{min-height:56px;gap:6px;padding:6px 0}
+  .ew-calendar-empty-icon{display:none}
+  .ew-calendar-toolbar{min-height:34px;padding-bottom:2px}
+  .ew-calendar-quick{margin:4px 0 2px}
+  .ew-calendar-search{margin:2px 0 4px;height:26px}
+  .ew-calendar-week-strip{padding:0 0 4px;margin:0}
+  body .ew-calendar-week-strip button{min-height:40px!important;padding:2px 0!important}
+ }
+ @container calendar-tool (max-width:480px) and (max-height:300px){
   .ew-calendar-month{display:none}
   .ew-calendar-layout{grid-template-columns:1fr;grid-template-rows:1fr;gap:0}
-  .ew-calendar-agenda{border:0;padding-left:0}
-  .ew-calendar-tool[data-calendar-view=month] .ew-calendar-month{display:flex}
-  .ew-calendar-tool[data-calendar-view=month] .ew-calendar-agenda{display:none}
+  .ew-calendar-agenda{border:0;padding:0}
  }
- @container calendar-tool (max-height:200px){
-  .ew-calendar-event{padding:4px 0}
-  body [data-ework-grid] [data-research-node-id] .ew-calendar-event-title{height:22px!important;min-height:22px!important}
-  .ew-calendar-event p,.ew-calendar-next-reminder{display:none}
+ @container calendar-tool (max-height:180px){
+  .ew-calendar-agenda-heading{min-height:22px}
+  .ew-calendar-search,.ew-calendar-footer,.ew-calendar-week-strip,.ew-calendar-event-meta,.ew-calendar-count{display:none}
+  .ew-calendar-empty{min-height:28px;padding:2px 0}
+  .ew-calendar-empty-add{display:none!important}
+  .ew-calendar-event{padding:3px 0}
+  .ew-calendar-date-group{padding:2px 0}
  }
- @container calendar-tool (max-width:310px){body .ew-calendar-month-picker{width:96px}body .ew-calendar-toolbar>button{padding:2px 3px!important}.ew-calendar-toolbar{gap:0}body .ew-calendar-toolbar>button[data-calendar-today]{font-size:0!important}body .ew-calendar-toolbar>button[data-calendar-today]::after{content:'◎';font-size:14px}}
+ @container calendar-tool (max-width:350px){
+  .ew-calendar-toolbar{gap:2px;flex-wrap:wrap}
+  body .ew-calendar-toolbar>button{padding:3px 4px!important;min-width:26px!important}
+  body .ew-calendar-month-picker{width:86px}
+  body .ew-calendar-toolbar>button[data-calendar-history]{display:none!important}
+  .ew-calendar-month-picker>span{font-size:11px}
+  .ew-calendar-toolbar>span{display:none}
+  body .ew-calendar-toolbar>select{width:68px!important}
+  body .ew-calendar-toolbar>button[data-calendar-today]{font-size:11px!important}
+ }
  body .ew-calendar-editor{position:fixed;z-index:2147483100;box-sizing:border-box!important;display:flex!important;flex-direction:column;gap:10px;min-width:0!important;overflow:auto!important;overscroll-behavior:contain;scrollbar-width:thin;padding:12px!important;border:1px solid var(--fw-border)!important;border-radius:10px!important;background:var(--fw-menu)!important;color:var(--fw-text)!important;box-shadow:0 6px 24px #0004;font:400 12px/18px Inter,'Noto Sans SC',system-ui!important}
  .ew-calendar-editor header{display:flex;align-items:center;justify-content:space-between;min-height:24px;flex:none}
  .ew-calendar-editor label{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -87,7 +167,7 @@
  .ew-calendar-editor footer{display:flex;align-items:center;gap:8px;flex:none}
  .ew-calendar-editor footer>span{flex:1}
  body .ew-calendar-editor button{min-height:28px!important;height:28px!important;padding:3px 10px!important;border:1px solid var(--fw-border)!important;background:transparent!important;cursor:pointer;white-space:nowrap}
- body .ew-calendar-editor header button{border:0!important;padding:0!important;width:24px!important;font-size:20px!important}
+ body .ew-calendar-editor header button{display:flex;align-items:center;justify-content:center;border:0!important;padding:0!important;width:28px!important}
  body .ew-calendar-editor .ew-calendar-primary{background:var(--fw-accent)!important;border-color:var(--fw-accent)!important;color:#fff!important}
  body .ew-calendar-editor .ew-calendar-danger{color:var(--fw-positive)!important}
  body .ew-calendar-editor button:hover{filter:brightness(.9)}
@@ -98,6 +178,6 @@
  .ew-calendar-session-reminder strong{flex:1;color:var(--fw-accent);font-size:11px}
  body .ew-calendar-session-reminder button{color:inherit;font:inherit;cursor:pointer;padding:0;border:0;background:transparent;text-align:left}
  .ew-calendar-session-reminder small{color:var(--fw-muted);font-size:10px}
- .ew-calendar-session-reminder>div button{width:20px;text-align:center;font-size:18px}
+ .ew-calendar-session-reminder>div button{display:flex;align-items:center;justify-content:center;width:24px;height:24px}
  body .ew-calendar-session-reminder .ew-calendar-notice-title{font-weight:600;overflow-wrap:anywhere}
 }
