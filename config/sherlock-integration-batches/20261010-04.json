@@ -9,27 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "免费分钟工作台兼容资讯媒体缺失",
+        "featureName": "免费分钟工作台面板取数凭证规则",
         "branch": "codex/feat/free-data-skill-20261010",
-        "baseCommit": "e4c1a8330e19be645a62bc0bdb6da9a06019f974",
-        "tipCommit": "460a32ddf45167fbe131effc6d21ff672ba446ae",
+        "baseCommit": "460a32ddf45167fbe131effc6d21ff672ba446ae",
+        "tipCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
         "commits": [
           {
-            "commit": "460a32ddf45167fbe131effc6d21ff672ba446ae",
+            "commit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
             "parents": [
-              "e4c1a8330e19be645a62bc0bdb6da9a06019f974"
+              "460a32ddf45167fbe131effc6d21ff672ba446ae"
             ],
-            "subject": "修复：资讯可选媒体字段缺失不阻断整批刷新"
+            "subject": "修复：免费源面板绑定必须取得本轮真实取数凭证"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-refresh.test.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           }
         ],
         "checks": [
@@ -38,13 +34,14 @@
               "node",
               "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
               "run",
-              "test/component-data-refresh.test.js",
-              "test/component-source-binding.test.js"
+              "test/component-source-binding.test.js",
+              "test/free-data-sources.test.js",
+              "test/component-agent-scope.test.js"
             ],
             "outcome": "passed",
-            "summary": "59项映射与刷新聚焦检查通过，含空媒体真实场景",
-            "verifiedCommit": "460a32ddf45167fbe131effc6d21ff672ba446ae",
-            "completedAt": "2026-10-11T00:02:52.379623+00:00",
+            "summary": "本轮真实取数、来源选择和权限聚焦检查通过",
+            "verifiedCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
+            "completedAt": "2026-10-11T00:05:50.440736+00:00",
             "timeoutMs": 120000
           },
           {
@@ -57,8 +54,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "460a32ddf45167fbe131effc6d21ff672ba446ae",
-            "completedAt": "2026-10-11T00:02:52.379623+00:00",
+            "verifiedCommit": "86fd350cfabfdfa49bfbd66bd55d9fa55981a6d4",
+            "completedAt": "2026-10-11T00:05:50.440736+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -76,47 +73,7 @@
           "股票休市报价不变，Crypto用实际交易所报价",
           "只有看板可见时自动刷新"
         ],
-        "generatedAt": "2026-10-11T00:02:52.379623+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
-        "verificationCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs",
-              "run",
-              "test/free-data-sources.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/component-agent-scope.test.js",
-              "test/research-task-runtime.test.js",
-              "-t",
-              "free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/vitest/vitest.mjs run test/free-data-sources.test.js test/integration-bundled-skill.test.js test/research-component-source-tools.test.js test/component-agent-scope.test.js test/research-task-runtime.test.js -t free data|builtin free|immutable bundled|visible DataYes|current China|Shenwan|fund holdings|scope|offline|permission|connected|grants|source preference",
-            "verifiedCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
-            "completedAt": "2026-10-11T00:02:59.522Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node /Users/heyafeng/Documents/ChatGPT/sherlock-desktop/node_modules/typescript/bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "1c598ddc9849e20bd762094d0525fbc576bebaa4",
-            "completedAt": "2026-10-11T00:02:59.522Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-11T00:02:59.522Z"
+        "generatedAt": "2026-10-11T00:05:50.440736+00:00"
       }
     }
   ],
