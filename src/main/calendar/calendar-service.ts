@@ -8,6 +8,7 @@ export async function installCalendarService(options:{getWindow:()=>BrowserWindo
  const send=(value:unknown)=>{const w=options.getWindow();if(w&&!w.isDestroyed())w.webContents.send('research:calendar:event',value)}
  const store=new CalendarStore(join(app.getPath('userData'),'calendar-events.json'),Date.now,()=>send({kind:'changed'}))
  let loadError=false
+ const notifications=new Set<Notification>()
  let pendingOpen:{kind:'open';sessionId:string;nodeId:string;date:string}|null=null
  try{await store.load()}catch(e){loadError=true;console.error('[calendar] original data preserved',e)}
  registerTrustedMainWindowHandler(ipcMain,'research:calendar:request',options.getWindow,async(_event,v:any)=>{
@@ -31,11 +32,15 @@ export async function installCalendarService(options:{getWindow:()=>BrowserWindo
   send({kind:'reminder',sessionId:n.sessionId,nodeId:n.nodeId,date:n.date})
   if(!Notification.isSupported())return
   const notification=new Notification({title:options.english()?'Calendar reminder':'日历提醒',body:`${n.title}\n${n.date} ${n.time??(options.english()?'All day':'全天')}`})
-  notification.on('click',()=>{pendingOpen={kind:'open',sessionId:n.sessionId,nodeId:n.nodeId,date:n.date};void options.ensureWindow().then(()=>{const w=options.getWindow();if(!w||w.isDestroyed())return;if(w.isMinimized())w.restore();w.show();w.focus();if(pendingOpen)send(pendingOpen)}).catch(e=>console.warn('[calendar] unable to open reminder',e))})
+  // Keep the JS notification alive while macOS retains it in Notification Center.
+  notifications.add(notification)
+  notification.on('close',()=>notifications.delete(notification))
+  notification.on('failed',()=>notifications.delete(notification))
+  notification.on('click',()=>{notifications.delete(notification);pendingOpen={kind:'open',sessionId:n.sessionId,nodeId:n.nodeId,date:n.date};void options.ensureWindow().then(()=>{const w=options.getWindow();if(!w||w.isDestroyed())return;if(w.isMinimized())w.restore();w.show();w.focus();if(pendingOpen)send(pendingOpen)}).catch(e=>console.warn('[calendar] unable to open reminder',e))})
   notification.show()
  }
  const tick=()=>{if(!loadError)void store.tick(t=>!options.isShared(t.sessionId)&&options.exists(t),notify).catch(e=>console.warn('[calendar] reminder check failed',e))}
  const timer=setInterval(tick,5000);timer.unref();powerMonitor.on('resume',tick);tick()
- app.once('before-quit',()=>{clearInterval(timer);powerMonitor.removeListener('resume',tick)})
+ app.once('before-quit',()=>{clearInterval(timer);powerMonitor.removeListener('resume',tick);notifications.clear()})
  return store
 }

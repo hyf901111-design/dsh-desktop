@@ -1,5 +1,6 @@
 import {afterEach,it,expect} from 'vitest'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
+import {calendarToolEditorPosition} from '../scripts/lib/calendar-tool-client.mjs'
 let f
 afterEach(async()=>{await f?.dispose();f=undefined})
 it('creates the calendar from the library, saves inline events, completes and edits them, and localizes live',async()=>{
@@ -10,6 +11,8 @@ it('creates the calendar from the library, saves inline events, completes and ed
  await f.event('click',item)
  const node=f.workspace.getSnapshot().artifacts.find(n=>n.containerSpec.type==='calendar-tool');expect(node).toBeTruthy()
  expect(node.containerSpec.type).toBe('calendar-tool')
+ expect(f.host.querySelector('.odyssey-data-stamp')).toBeNull()
+ expect(f.host.querySelector('.ew-calendar-footer').textContent).toContain('本机保存')
  await f.event('click',f.host.querySelector('[data-calendar-add]'))
  let editor=f.document.querySelector('.ew-calendar-editor');expect(editor).toBeTruthy()
  await f.input(editor.querySelector('[name=title]'),'研究会议')
@@ -35,4 +38,15 @@ it('shows durable session reminders and keeps their user text intact',async()=>{
  expect(f.document.querySelector('.ew-calendar-session-reminder').textContent).toContain('研究会议')
  await f.event('click',f.document.querySelector('[data-calendar-dismiss]'))
  expect(f.document.querySelector('.ew-calendar-session-reminder')).toBeNull()
+})
+
+it('keeps the event editor within the canvas and gives it the available height',()=>{
+ const bounds={left:307,right:986,top:59,bottom:889}
+ const p=calendarToolEditorPosition({left:330,top:122,bottom:500},bounds)
+ expect(p).toMatchObject({left:330,top:156,width:360,maxHeight:520})
+ const narrow=calendarToolEditorPosition({left:700,top:780}, {left:88,right:388,top:59,bottom:400})
+ expect(narrow.left+narrow.width).toBeLessThanOrEqual(380)
+ expect(narrow.top+narrow.maxHeight).toBeLessThanOrEqual(392)
+ expect(narrow.left).toBeGreaterThanOrEqual(96)
+ expect(narrow.top).toBeGreaterThanOrEqual(67)
 })
