@@ -18,6 +18,19 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '1.1.4',
+      date: '2026-10-11',
+      items: [
+        '新增免费数据来源目录与内置取数技能，覆盖金融行情、宏观、汇率、加密资产、资讯、天气、地震、科研和软件生态，生成组件时优先选择适用来源。',
+        '常用金融组件支持并行取数、自动校验和刷新绑定，减少逐卡重复生成，缩短工作台等待时间并提高生成成功率。',
+        '支持行情、资讯和加密资产组件每分钟自动获取数据，离开看板时暂停、返回时恢复，重启后保留刷新配置和筛选状态。',
+        '分钟量价图按真实周期显示近15分钟、近30分钟等区间，支持方向键查看价量，窄组件中的区间控件可换行。',
+        '完善数据来源、时点、币种、单位和小数精度显示，区分数据时间与获取时间，保留缺失值、真实零值及休市记录。',
+        '修复不同查询条件混用缓存、资讯缺少媒体字段导致整批刷新失败，以及论文原文链接被截断的问题。',
+        '优化生成失败、取消和重试反馈，修复刷新频率参数兼容问题；重试保留用户修改后的需求，失败组件不阻断其他组件。'
+      ]
+    },
+    {
       version: '1.1.3',
       date: '2026-10-10',
       items: [
@@ -308,6 +321,19 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.1.4',
+      date: '2026-10-11',
+      items: [
+        'Added a free-data source catalog and built-in retrieval skill covering market data, macroeconomics, exchange rates, crypto assets, news, weather, earthquakes, research and software ecosystems, prioritizing suitable sources when generating components.',
+        'Common financial components now fetch data in parallel, validate results and bind refresh automatically, reducing repeated per-component generation and improving workbench speed and reliability.',
+        'Market data, news and crypto components can fetch updates every minute, pause when leaving a board and resume on return, with refresh settings and filters retained after restart.',
+        'Minute price-volume charts now use ranges such as the last 15 or 30 minutes based on the actual data interval, with keyboard inspection and wrapping range controls in narrow components.',
+        'Improved source, timestamp, currency, unit and decimal precision handling, distinguishing data time from retrieval time and preserving missing values, real zeros and closed-market records.',
+        'Fixed cache collisions between query parameters, news refresh failures caused by missing publisher fields, and truncated links to original research papers.',
+        'Improved failure, cancellation and retry feedback and fixed refresh-interval parameter compatibility; retries preserve edited requirements and a failed component does not block others.'
+      ]
+    },
     {
       version: '1.1.3',
       date: '2026-10-10',
