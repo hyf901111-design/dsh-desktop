@@ -12,7 +12,7 @@
         "featureName": "免费源组件并行直通生成与失败重试优化",
         "branch": "codex/feat/free-data-skill-20261010",
         "baseCommit": "880cd44066eeeeb32d75765a821c9f325e9f3820",
-        "tipCommit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
+        "tipCommit": "eb47be48549908e98a6e4e8f1ca7c90271eee03a",
         "commits": [
           {
             "commit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
@@ -20,6 +20,13 @@
               "880cd44066eeeeb32d75765a821c9f325e9f3820"
             ],
             "subject": "优化：免费源组件宿主并行生成并自动绑定分钟刷新"
+          },
+          {
+            "commit": "eb47be48549908e98a6e4e8f1ca7c90271eee03a",
+            "parents": [
+              "9f4faca57d912bcdf484107de350b7ec1d43237c"
+            ],
+            "subject": "测试：同步免费源技能新版本的打包验收断言"
           }
         ],
         "files": [
@@ -77,6 +84,10 @@
           },
           {
             "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/research-creation-progress.test.js"
           },
           {
@@ -101,13 +112,14 @@
               "test/workbench-execution-policy.test.js",
               "test/research-creation-progress.test.js",
               "test/free-data-sources.test.js",
+              "test/integration-bundled-skill.test.js",
               "-t",
               "^(?!.*uses the short panel contract when retrying a legacy auto-layout workbench card)"
             ],
             "outcome": "passed",
-            "summary": "259项聚焦检查通过，跳过1项同样在原基线失败的旧HTML提示长度断言",
-            "verifiedCommit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
-            "completedAt": "2026-10-11T00:48:34.469437+00:00",
+            "summary": "273项聚焦检查通过，1项原基线失败的旧HTML提示长度断言已记录并跳过",
+            "verifiedCommit": "eb47be48549908e98a6e4e8f1ca7c90271eee03a",
+            "completedAt": "2026-10-11T00:49:56.571069+00:00",
             "timeoutMs": 120000
           },
           {
@@ -120,8 +132,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "9f4faca57d912bcdf484107de350b7ec1d43237c",
-            "completedAt": "2026-10-11T00:48:34.469437+00:00",
+            "verifiedCommit": "eb47be48549908e98a6e4e8f1ca7c90271eee03a",
+            "completedAt": "2026-10-11T00:49:56.571069+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -139,7 +151,7 @@
           "公共来源依赖网络和源站响应",
           "旧工作台前端夹具26项失败已用原基线对照记录，未当作通过"
         ],
-        "generatedAt": "2026-10-11T00:48:34.469437+00:00"
+        "generatedAt": "2026-10-11T00:49:56.571069+00:00"
       }
     }
   ],
