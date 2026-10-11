@@ -189,7 +189,7 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
  body .ew-price-chart[data-chart-compact=true] .ew-chart-legend{display:none}
  body .ew-price-chart svg{display:block;outline:none}
  body .ew-chart-legend{position:absolute;top:4px;left:0;right:0;display:grid;grid-template-columns:112px repeat(4,minmax(0,1fr));gap:4px;font:400 11px/16px Inter,system-ui;overflow:hidden;white-space:nowrap;color:var(--fw-muted);pointer-events:none}
- body .ew-indices-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-rows:minmax(112px,auto);gap:12px 16px;overflow:auto;padding:8px 0 0;align-content:start;scrollbar-width:thin}
+ body .ew-indices-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-rows:minmax(112px,auto);gap:12px 16px;overflow:auto;overscroll-behavior:contain;padding:8px 0 0;align-content:start;scrollbar-width:thin}
  body .ew-indices-grid>div{display:flex;flex-direction:column;gap:4px;min-width:0}
  body .ew-indices-grid>div>span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  body .ew-indices-grid svg{width:100%;height:60px;flex:none;margin-top:4px}

@@ -33,3 +33,10 @@ it('取消和点击外部不写入草稿，恢复默认仍须应用',async()=>{
  await f.event('click',panel.querySelector('[role=menuitemcheckbox]'));await f.event('click',find(panel,'恢复默认'));await f.event('click',find(panel,'应用'))
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec.symbols).toEqual(initial)
 })
+it('多行指数滚到末尾后仍将滚轮交给列表，不带动整个看板',async()=>{
+ const panel=await setup();await f.event('click',panel.querySelector('[aria-label="关闭指数配置"]'))
+ const grid=f.host.querySelector('.ew-indices-grid');Object.defineProperties(grid,{clientHeight:{value:111},scrollHeight:{value:208}});grid.scrollTop=97
+ Object.defineProperty(f.canvas,'scrollHeight',{value:1500});f.canvas.scrollTop=40
+ const wheel=await f.event('wheel',grid.firstElementChild,{deltaX:0,deltaY:120,deltaMode:0})
+ expect(wheel.defaultPrevented).toBe(false);expect(f.canvas.scrollTop).toBe(40)
+})
