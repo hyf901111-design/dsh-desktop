@@ -25,6 +25,25 @@ async function fixture() {
 }
 async function open(f) { await f.event('click', f.document.querySelector('[data-financial-library]')); await vi.waitFor(() => expect(f.document.querySelector('.ew-financial-library')).not.toBeNull()); }
 async function save(f) { await f.event('click', f.host.querySelector('[data-workbench-more]')); const button = f.document.querySelector('[data-workbench-save-library]'); expect(button).not.toBeNull(); await f.event('click', button); expect(f.request).toHaveBeenCalledWith({ action: 'save', sessionId: 'financial-test', nodeId: f.workspace.getSnapshot().artifacts[0].id }); }
+it('保存成功显示提示并触发本会话图标微动效，连续保存可重播且提示自动消失',async()=>{
+    const f=await fixture();await save(f);
+    const trigger=f.document.querySelector('[data-financial-library]');
+    expect(f.document.querySelector('[data-library-save-notice]').textContent).toBe('已添加至组件库');
+    expect(f.document.querySelector('[data-library-save-notice]').getAttribute('role')).toBe('status');
+    const first=trigger.dataset.librarySaved;expect(first).toBeTruthy();
+    await save(f);expect(trigger.dataset.librarySaved).not.toBe(first);
+    await f.act(async()=>f.win.dispatchEvent(new f.win.CustomEvent('ework-component-library-saved',{detail:{sessionId:'other-board'}})));
+    expect(trigger.dataset.librarySaved).toBe('2');
+    await f.act(()=>new Promise(resolve=>setTimeout(resolve,2600)));
+    expect(f.document.querySelector('[data-library-save-notice]')).toBeNull();expect(trigger.hasAttribute('data-library-saved')).toBe(false);
+});
+it('保存失败保留错误说明，不显示成功提示或触发图标动效',async()=>{
+    const f=await fixture();f.request.mockRejectedValueOnce(Error('磁盘不可用'));
+    await f.event('click',f.host.querySelector('[data-workbench-more]'));await f.event('click',f.document.querySelector('[data-workbench-save-library]'));
+    expect(f.document.querySelector('[data-library-save-notice]')).toBeNull();
+    expect(f.document.querySelector('[data-financial-library]').hasAttribute('data-library-saved')).toBe(false);
+    expect(f.document.querySelector('[role=alert]').textContent).toContain('磁盘不可用');
+});
 it('生成组件从更多菜单保存，独立分类统一图标，跨看板创建副本不触发模型生成', async () => {
     const f = await fixture();
     await save(f);

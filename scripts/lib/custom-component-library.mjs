@@ -7,6 +7,20 @@ export async function customLibraryRequest(args) {
     return request(args);
 }
 export function customLibraryError(e) { return workbenchText(String(e?.message ?? '保存失败，请重试').replace(/^Error invoking remote method ['"][^'"]+['"]:\s*/, '').replace(/^Error:\s*/, '')); }
+export function useCustomLibraryFeedback(sessionId){
+    const [notice,setNotice]=react.useState(null),sequence=react.useRef(0);
+    react.useEffect(()=>{
+        let timer;setNotice(null);
+        const saved=e=>{
+            if(e.detail?.sessionId!==sessionId)return;
+            clearTimeout(timer);setNotice({sequence:++sequence.current});
+            timer=setTimeout(()=>setNotice(null),2400);
+        };
+        window.addEventListener('ework-component-library-saved',saved);
+        return()=>{clearTimeout(timer);window.removeEventListener('ework-component-library-saved',saved)};
+    },[sessionId]);
+    return notice;
+}
 export function CustomLibrarySection({ items, rootRef, readOnly, onChanged, onPlace, popupRef, theme }) {
     useWorkbenchLocale();
     const { jsx, jsxs } = react_jsx_runtime, [context, setContext] = react.useState(null), [editing, setEditing] = react.useState(null), [name, setName] = react.useState(''), [busy, setBusy] = react.useState(false), [error, setError] = react.useState(''), input = react.useRef(null), fallbackPopup = react.useRef(null), popup = popupRef || fallbackPopup, host = react.useRef(null);

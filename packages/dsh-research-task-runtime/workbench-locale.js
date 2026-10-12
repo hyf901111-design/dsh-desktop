@@ -80,6 +80,7 @@ export const WORKBENCH_ENGLISH={
 "Esc 关闭":"Esc to close",
 "已选择 ":"Selected ",
 "添加到画布":"Add to canvas",
+"已添加至组件库":"Added to component library",
 "添加至组件库":"Add to component library","保存中…":"Saving…","自定义":"Custom","自定义组件操作":"Custom component actions","组件名称":"Component name","保存名称":"Save name","取消重命名":"Cancel rename","删除":"Delete","组件库服务暂不可用":"The component library is unavailable","组件库读取失败，原文件已保留":"Could not read the component library. The original file was preserved.","组件库条目不存在":"This custom component no longer exists","组件名称需为 1–120 个字符":"Use 1–120 characters for the component name","请先完成组件生成，再添加至组件库":"Finish generating the component before saving it to the library","自定义组件最多保存 100 项":"You can save up to 100 custom components","组件库容量已满，请删除部分条目":"The component library is full. Remove some items and retry.","带数据源的自定义组件暂不支持协作看板":"Custom components with data sources are not yet supported on shared boards","数据源配置暂不可用":"The data source configuration is unavailable",
 "加入画布":"Add to canvas",
 "来源消息不可用":"Source message unavailable",
