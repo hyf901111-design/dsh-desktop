@@ -4,8 +4,11 @@ import {JSDOM} from 'jsdom';
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js';
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js';
 import {refineStoredTemplateHtml} from '../packages/dsh-research-task-runtime/stored-template-refinements.js';
+import {readFileSync} from 'node:fs';
+import {patchLegacyDashboardPreview} from '../scripts/lib/patch-research-board-client.mjs';
 import {researchInteractionVersion,compactHostDashboardHtml} from '../packages/dsh-research-task-runtime/html-artifact.js';
 import {advancedChartSamples as samples} from './fixtures/advanced-chart-samples.js';
+import vm from 'node:vm';
 function routes(html){
  const window=new Window({settings:{disableJavaScriptEvaluation:true}});window.document.write(html);
  return [...window.document.querySelectorAll('button,input,select,summary,svg,tr')].map(el=>{
@@ -23,6 +26,15 @@ function embeddedRoutes(html){
  dom.window.close();return targets;
 }
 describe('saved host template display refinements',()=>{
+ it('also upgrades legacy market charts from the serialized client factory',()=>{
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'price-volume',title:'保存图表',asOf:'原数据',labels:['01','02'],prices:[1,2],volumes:[3,4],priceUnit:'元',volumeUnit:'股'})));
+  const old=spec.html.replaceAll(' data-series-viewport="v2"','');
+  const shipped=patchLegacyDashboardPreview(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+  const start=shipped.indexOf('const MARKET_PRESENTATION_CSS = '),end=shipped.indexOf('const TERMINAL_PRESENTATION_CSS = ',start);
+  const serialized=vm.runInNewContext(shipped.slice(start,end)+'\nrefineStoredTemplateHtml');
+  expect(()=>serialized(old)).not.toThrow();
+  expect(serialized(old)).toContain('data-series-viewport="v2"');
+ });
  it.each(['waterfall','candlestick','ohlc'])('upgrades stored %s rendering while retaining data and journal targets',variant=>{
   const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(samples[variant])));
   const old=spec.html.replaceAll('var(--sherlock-price-up,#df4f57)','var(--sherlock-market-positive,#ee4c61)').replaceAll('var(--sherlock-price-down,#00a83e)','var(--sherlock-market-negative,#00b050)');

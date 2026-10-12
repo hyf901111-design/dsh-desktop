@@ -3,7 +3,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 const finite=value=>typeof value==='number'&&Number.isFinite(value)
 const json=value=>JSON.stringify(value).replace(/</g,'\\u003c')
 
-function equityDrawdownRuntime(labels,equity,benchmark,unit,viewport,observe) {
+export function equityDrawdownRuntime(labels,equity,benchmark,unit,viewport,observe) {
  const root=document.querySelector('.market-equity-drawdown'),svg=root?.querySelector('svg'),readout=root?.querySelector('.drawdown-readout'),ranges=[...(root?.querySelectorAll('[data-drawdown-range]')??[])],views=[...(root?.querySelectorAll('[data-drawdown-view]')??[])]
  if(!root||!svg||!readout)return
  const ns='http://www.w3.org/2000/svg',add=(name,attributes)=>{const el=document.createElementNS(ns,name);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));svg.appendChild(el);return el}

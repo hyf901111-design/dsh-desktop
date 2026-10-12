@@ -3,7 +3,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 const finite=value=>typeof value==='number'&&Number.isFinite(value)
 const json=value=>JSON.stringify(value).replace(/</g,'\\u003c')
 
-function valuationBandRuntime(labels,values,bands,unit,viewport,observe) {
+export function valuationBandRuntime(labels,values,bands,unit,viewport,observe) {
  const root=document.querySelector('.market-valuation-band'),svg=root?.querySelector('svg'),readout=root?.querySelector('.valuation-readout'),buttons=[...(root?.querySelectorAll('[data-valuation-range]')??[])]
  if(!root||!svg||!readout)return
  const ns='http://www.w3.org/2000/svg',add=(name,attributes)=>{const el=document.createElementNS(ns,name);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));svg.appendChild(el);return el}

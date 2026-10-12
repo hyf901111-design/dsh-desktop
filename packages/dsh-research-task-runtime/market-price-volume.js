@@ -3,7 +3,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 const finite=value=>typeof value==='number'&&Number.isFinite(value)
 const json=value=>JSON.stringify(value).replace(/</g,'\\u003c')
 
-function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit,viewport,observe) {
+export function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit,viewport,observe) {
  const svg=document.querySelector('.price-volume svg'),readout=document.querySelector('.price-volume-readout'),buttons=[...document.querySelectorAll('[data-price-volume-range]')]
  if(!svg||!readout)return
  const ns='http://www.w3.org/2000/svg',add=(name,attributes,parent=svg)=>{const el=document.createElementNS(ns,name);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));parent.appendChild(el);return el}
