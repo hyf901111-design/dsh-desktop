@@ -14,6 +14,7 @@ export function installWorkbenchNaturalCharts(root) {
       if (box.length !== 4 || !box.every(Number.isFinite) || box[2] < 240 || box[3] < 80 || box[2] / box[3] < 1.2 || (!wrap && !/图|chart|trend|price/i.test(label))) continue
       if (!svg.querySelector('path,polyline,circle,line,rect')) continue
       seen.add(svg); changed = true; svg.setAttribute('data-workbench-natural-chart', '')
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
       for (const [name, value] of Object.entries({ flex: '0 0 auto', width: '100%', height: 'auto', 'min-height': '0', 'aspect-ratio': box[2] + ' / ' + box[3] })) svg.style.setProperty(name, value, 'important')
       for (let el = svg.parentElement; el && el !== doc.body; el = el.parentElement) {
         const style = win.getComputedStyle(el)

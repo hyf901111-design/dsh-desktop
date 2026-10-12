@@ -1,3 +1,4 @@
+import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import {requestedChartVariant,chartTemplateSchema} from './chart-template-contract.js'
 import {operationsTemplateSchema,requestedOperationsType} from './operations-template-contract.js'
 import { KPI_GUIDANCE } from './kpi-template-contract.js'
@@ -494,7 +495,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     : '使用宿主原生渲染和交互；不要写 HTML/CSS。指标详情放 detail，列表日期/链接只填写有依据的信息。'
   return [
     '为 EWork Odyssey 工作台生成一个独立面板。直接输出一个完整 JSON 对象，禁止前言、推理、代码围栏或其他组件。',
-    componentSkillInstruction('panel'),
+    componentSkillInstruction('panel',type),
     ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
     `唯一交付格式：${schemas[type]}`,
     '若本轮没有任何可核验的数值或记录，不能输出空 chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。将需求中的主要品种或字段逐项列出，最多六项；每项 detail 简短，数据来源与查询时点放在 asOf，避免大段说明文字。其余情况严格只用上方指定 schema 的字段，来源与数据时点写进已有内容字段，不添加自造字段。',
@@ -513,9 +514,9 @@ function workbenchPanelPrompt(prompt, boundData = false) {
   ].join('\n')
 }
 
-function componentSkillInstruction(profile = 'full') {
+function componentSkillInstruction(profile = 'full',templateType) {
   try {
-    return loadBundledComponentSkill(undefined, { profile })
+    return loadBundledComponentSkill(undefined, { profile, templateType })
   } catch (error) {
     console.warn('[research-task] bundled component skill unavailable', error)
     throw new ResearchTaskError('COMPONENT_SKILL_UNAVAILABLE', '内置组件生成技能不可用，请重启或重新安装客户端。')
@@ -565,6 +566,7 @@ export function buildResearchTaskPrompt(request) {
       componentSkillInstruction(),
       ...(containerAllowsWebSearch(validated.prompt) ? [freeDataInstruction()] : []),
       '只生成用户要求的一种成品；不要附加未要求的摘要、指标卡、背景介绍、方法论、示例数据或重复结论。用户指定条数、章节、长度、格式时严格遵守。简单表格、指标、列表直接填写所需内容，不为它们生成 HTML 包装或额外解释；用户明确要求 HTML、交互、详细报告时保留该要求。',
+      ...(/行情|股价|股票|证券|K\s*线|蜡烛图|candlestick|stock quote/iu.test(validated.prompt) && containerAllowsWebSearch(validated.prompt) ? [FINANCIAL_WIDGET_GUIDANCE] : []),
       '组件以用户要看的主体内容为中心，只做一两项直接相关的补充；不要添加内容目录、阅读切换、重复标题、导航链接条或无实际作用的搜索筛选。来源和指标解释放在相关内容的详情中。行情监控面板优先行情核心数值和必要趋势，缺失值在对应指标内简短注明，不扩写为公司全景研究或数据缺口报告。',
       '按用户字面需求直接制作最小完整成品；不要扩展为额外研究报告或多页系统。普通布局自行合理决定，不反复规划、不解释词义。优先复用已有证据，只检索缺少的关键事实，信息足够后立即生成。',
       '只允许输出以下 schema 之一，字段必须完全一致，不得增加任何字段：',
@@ -591,7 +593,7 @@ export function buildResearchTaskPrompt(request) {
       '当需求涉及实时、监控或最新数据时，用户指定来源优先；未指定来源时先使用当前可见的 public_data_query 获取适用的免费数据；未覆盖时再使用获授权的专业工具或 financial_query，其他资料使用只读网页搜索或网页读取工具取得当前信息，并在交付物中标明数据时点；用户明确的呈现要求始终优先，活动网页或交互网页应使用 html，仅在用户未指定形式时优先考虑原生 kpi、chart 或 table；不得用网站首页代替监控内容。',
       '不要输出代码围栏、解释、前言或 JSON 之外的文字；HTML/CSS/JavaScript 只能放在 html 字段内。',
       '图表容量遵守上方对应变体的 schema；表格最多 12 列和 100 行；KPI 最多 12 项。',
-      '表格表头及所有单元格默认单行显示，列宽由完整内容决定，超宽时横向滚动；只有用户手动调整列宽后才允许该列换行。HTML 表格使用标准 table/thead/tbody，宿主提供拖动列宽。组合图表遵循自然内容高度，SVG 按 viewBox 宽高比显示，不用 height:100%、100vh 或 flex:1 拉伸图表及竖向容器，避免测高和整理产生空白。',
+      '表格表头及所有单元格默认单行显示，列宽由完整内容决定，超宽时横向滚动；只有用户手动调整列宽后才允许该列换行。HTML 表格使用标准 table/thead/tbody，宿主提供拖动列宽。组合图表遵循自然内容高度，标准数据图表必须复用宿主market/chart模板，不能另写同类SVG或canvas。只有模板确实无法表达的自定义图形才使用HTML：监听实际绘图区ResizeObserver，按新宽高重算几何，字号保持CSS像素大小；禁止preserveAspectRatio="none"和scaleX/scaleY压缩含文字的图表。静态SVG保持自身宽高比，不用height:100%、100vh或flex:1撑高图表及竖向容器。',
       '',
       `用户需求：${validated.prompt}`,
       ...(/(?:自包含\s*HTML|type\s*=\s*html|HTML\s*自定义)/iu.test(validated.prompt) ? [

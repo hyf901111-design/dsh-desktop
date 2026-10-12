@@ -1,6 +1,7 @@
 // Shared with the trusted, serialized React canvas. No data-provider secrets or
 // synthetic prices are stored in this spec. Data is fetched for this configuration.
 import {financialIndexCatalog} from './financial-index-catalog.js'
+export const FINANCIAL_WIDGET_GUIDANCE='真实证券行情和K线优先复用组件库的内置个股行情（financial-widget.quote），保留分时/日K/周K/月K/年K、MA/VOL/MACD、拖拽浏览、选中后滚轮缩放和每60秒自动刷新。工作台panel.type="financial-widget"，首次附artifact:{version:1,type:"financial-widget",widget:"quote",title:"标的行情",symbols:[{code:"已确认的证券代码",market:"SH|SZ|BJ|HK|US",name:"原证券名"}]}；其余配置由宿主补默认值。也可指定period:"1m|1d|1w|1mo|1y"、adjustment:"none|forward|backward"及indicators:["MA","VOL","MACD"]。只配置来源标的，不填价格、OHLC数组或HTML，不启动逐卡模型。仅用户或实际来源确认代码/市场后填symbols；尚未确认时先查当前数据工具，不猜股票代码，不用贵州茅台等样例代替。模拟记录、指定历史快照、组合对比或当前内置组件未覆盖的加密资产等继续使用对应market/chart专业模板及实际来源数据；禁止把不支持的资产伪装成支持的证券。标准图表一律交结构化数据，由宿主动态绘图，不手写SVG、canvas布局或拉伸图中的文字。';
 export function financialWidgetDefaults(widget){
  const titles={watchlist:'自选股',quote:'个股行情',indices:'市场指数',news:'新闻列表',announcements:'公告列表'}
  if(!titles[widget])return null

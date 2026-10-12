@@ -16,9 +16,10 @@ import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-ou
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 import { validatePublicDataPanel, PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
+import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-export const WORKBENCH_PANEL_TYPES = Object.freeze(['files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
+export const WORKBENCH_PANEL_TYPES = Object.freeze(['financial-widget','files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 const preparedTypes = new Set(['files','gallery','audio', 'chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
@@ -304,6 +305,13 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
+        if(p.type==='financial-widget'){
+            if(isSimulated)throw Error('内置金融组件读取真实行情，不能用于模拟数据；请使用market/chart模拟模板。');
+            if(!p.artifact||p.artifact.type!=='financial-widget')throw Error('内置金融组件必须同时提供artifact标的配置。'+FINANCIAL_WIDGET_GUIDANCE);
+            const spec=financialWidgetSpec({...financialWidgetDefaults(p.artifact.widget),...p.artifact});
+            if(!spec)throw Error('内置金融组件的标的配置无效。'+FINANCIAL_WIDGET_GUIDANCE);
+            p={...p,artifact:spec};
+        }
         if (p.intervalMinutes !== undefined && p.publicData === undefined) throw Error('面板刷新频率仅支持免费源publicData配置。');
         if (p.publicData !== undefined) {
             if (isSimulated || p.artifact !== undefined) throw Error('免费源直通面板不能混用模拟数据或静态artifact。');
@@ -334,7 +342,7 @@ export function validateWorkbench(value) {
         const requestsCandlestick = /K\s*线|蜡烛图|candlestick/iu.test(p.title) ||
             (p.type === 'chart' && /(?:绘制|显示|生成|展示|画).{0,12}(?:K\s*线|蜡烛图|candlestick)/iu.test(p.prompt));
         const chartVariant = p.type === 'chart' ? p.artifact?.variant ?? requestedChartVariant(`${p.title} ${p.prompt}`) : null;
-        if (requestsCandlestick && !(p.type === 'market' && marketVariant(p) === 'candlestick') && chartVariant !== 'candlestick')
+        if (requestsCandlestick && !(p.type==='financial-widget'&&p.artifact.widget==='quote') && !(p.type === 'market' && marketVariant(p) === 'candlestick') && chartVariant !== 'candlestick')
             throw Error(`面板「${p.title}」必须使用 market.candlestick 或 chart.candlestick 和完整 OHLC/成交量数据，不能降级为折线图。`);
         if (/OHLC\s*(?:图|走势)/iu.test(p.title) && chartVariant !== 'ohlc')
             throw Error(`面板「${p.title}」必须使用 chart.ohlc，绘制高低竖线与左开右收刻度；保留完整 OHLC/成交量数据，不能用蜡烛图替代。`);
@@ -343,7 +351,7 @@ export function validateWorkbench(value) {
         if(p.type==='audio' && p.artifact===undefined)throw Error('音频必须提供 artifact 及音频原网址或显式 url:null。'+AUDIO_GUIDANCE);
         if(p.type==='youtube' && p.artifact===undefined)throw Error('YouTube必须同时提供 artifact 及视频原网址或显式 url:null。'+YOUTUBE_GUIDANCE);
         if(p.type==='iframe' && p.artifact===undefined)throw Error('嵌入网页必须同时提供 artifact 及用户网址或显式 url:null。'+IFRAME_GUIDANCE);
-        if (!isSimulated && p.artifact !== undefined) {
+        if (!isSimulated && p.artifact !== undefined && p.type!=='financial-widget') {
             if (!templateFor(p.artifact) || p.artifact.type !== p.type || !acceptArtifactOutput(JSON.stringify(p.artifact))) throw Error(`面板「${p.title}」的真实数据格式无效。${simulatedArtifactProblem(p.artifact)} 请复用已取得的数据，只修正字段格式，不重新取数或编写 HTML。`);
             const issue = workbenchMarketRecencyIssue(JSON.stringify(p.artifact), p.prompt);
             if (issue) throw Error(issue);
@@ -383,10 +391,11 @@ export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 
 }
 
 export function workbenchPanelPrompt(input, p) {
+    if(p.type==='financial-widget')return `工作台：${input.title}\n本面板：${p.title}\n使用内置个股行情等组件库金融组件，直接挂载已验证的标的配置，由客户端读取行情并每60秒刷新。${FINANCIAL_WIDGET_GUIDANCE}`;
     const template = workbenchDesignTemplate(p);
     const origin = ['chart','reports','news','gantt'].includes(p.type) ? 'Figma 组件族参考' : 'Figma 节点';
     const presentation = p.type === 'html'
-        ? '交付自包含 HTML 与实际业务交互；使用宿主颜色、字体变量和 window.sherlockShared.register 共享状态接口，事件通过返回句柄 dispatch，不实现独立同步定时器。正文13px/20px，辅助说明至少11px/17px，随尺寸重排而不缩字。表格的表头和所有内容默认单行，超宽横向滚动，用户手动调整列宽后才允许该列换行；用标准 table/thead/tbody，宿主提供拖动列宽。组合图表用自然内容高度，SVG 使用 viewBox 和自身宽高比例，不用 height:100%、100vh 或 flex:1 拉伸图表或其竖向容器，不用空白撑高页面。'
+        ? '交付自包含 HTML 与实际业务交互；使用宿主颜色、字体变量和 window.sherlockShared.register 共享状态接口，事件通过返回句柄 dispatch，不实现独立同步定时器。正文13px/20px，辅助说明至少11px/17px，随尺寸重排而不缩字。表格的表头和所有内容默认单行，超宽横向滚动，用户手动调整列宽后才允许该列换行；用标准 table/thead/tbody，宿主提供拖动列宽。组合图表用自然内容高度，标准数据图表必须使用宿主market/chart模板。必要的自定义图形监听ResizeObserver按容器宽高重绘，文字保持CSS像素字号；禁止preserveAspectRatio="none"或scaleX/scaleY拉伸文字。静态SVG保留自身宽高比，图表及竖向容器不用height:100%、100vh或flex:1撑出空白。'
         : '组件样式、深浅主题、字体和几何由宿主模板负责；仅提交数据，不自造视觉样式。';
     return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线单标的用 candles，多标的用 datasets，成交量缺失填 null，均不得用通用 chart 或自写 HTML 替代。` : ''}${p.type === 'chart' ? `必须输出 ${'chart.'+(p.artifact?.variant??requestedChartVariant(p.title+' '+p.prompt)??'line')} 的结构化数据。按对应图表契约填写；坐标图的labels与series.values等长，层级/分布/目标图用各自字段。` : ''}${presentation}用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。`;
 }

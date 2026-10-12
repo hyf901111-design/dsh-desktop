@@ -2,6 +2,13 @@ import { Window } from 'happy-dom'
 import { expect, it } from 'vitest'
 import { installWorkbenchNaturalCharts } from '../packages/dsh-research-task-runtime/workbench-natural-charts.js'
 
+it('does not allow nonuniform stretching of text inside custom generated chart SVGs',async()=>{
+ const win=new Window(),doc=win.document
+ doc.body.innerHTML='<section class="chart-wrap"><svg viewBox="0 0 520 180" preserveAspectRatio="none"><path d="M40 50L90 80"/><text>价格 83000</text></svg></section>'
+ const stop=installWorkbenchNaturalCharts(doc.documentElement)
+ try{expect(doc.querySelector('svg').getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');expect(doc.querySelector('text').textContent).toBe('价格 83000')}finally{stop();await win.happyDOM.close()}
+})
+
 it('removes flex letterboxing from a composite metric/line card while preserving SVG data and its aspect ratio', async () => {
   const win = new Window(), doc = win.document
   doc.body.innerHTML = '<main style="height:100%;display:flex;flex-direction:column"><div>最新价 $83,148</div><section class="chart-wrap" style="display:flex;flex-direction:column;flex:1 1 0;min-height:180px"><h3>7日价格走势</h3><svg viewBox="0 0 520 180" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Bitcoin近7日价格走势图" style="flex:1 1 0;min-height:0"><path d="M40 50L90 80L140 60"/><text>09-29</text></svg></section><p>来源：CoinGecko</p></main>'

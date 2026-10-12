@@ -5,6 +5,11 @@ import {advancedChartView} from './advanced-chart-view.js';
 import {CODE_VIEWPORT_CSS,INPUT_VIEW_RUNTIME} from './input-artifact.js';
 import {REVENUE_EXPANSION_CSS} from './financial-revenue.js';
 import {FINANCIAL_PERFORMANCE_RUNTIME} from './financial-series.js';
+import {renderPriceVolume} from './market-price-volume.js';
+import {renderValuationBand} from './market-valuation-band.js';
+import {renderEquityDrawdown} from './market-equity-drawdown.js';
+import {trendRuntime} from './market-trend-runtime.js';
+import {marketSeriesViewport,observeMarketSeries} from './market-series-viewport.js';
 
 export {FINANCIAL_PERFORMANCE_RUNTIME};
 
@@ -20,6 +25,23 @@ export function refineStoredTemplateHtml(html){
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
+ const seriesVariant=model.data.variant;
+ if(['price-volume','trend','valuation-band','equity-drawdown'].includes(seriesVariant)&&model.templateId==='market.'+seriesVariant&&model.data.type==='market'&&html.includes('data-sherlock-market="'+seriesVariant+'"')&&html.includes('data-sherlock-design=')&&!html.includes('data-series-viewport="v2"')){
+  const runtimeName={'price-volume':'priceVolumeRuntime',trend:'trendRuntime','valuation-band':'valuationBandRuntime','equity-drawdown':'equityDrawdownRuntime'}[seriesVariant];
+  const oldScript=new RegExp('<script>\\(function '+runtimeName+'\\([^]*?<\\/script>');
+  if(!oldScript.test(html))return html;
+  let script;
+  if(seriesVariant==='trend'){
+   const {labels,series}=model.data;
+   if(!Array.isArray(labels)||labels.length<2||labels.length>366||labels.some(x=>typeof x!=='string'||!x.trim())||!Array.isArray(series)||!series.length||series.length>12||series.some(x=>typeof x?.name!=='string'||!Array.isArray(x.values)||x.values.length!==labels.length||x.values.some(v=>!Number.isFinite(v))))return html;
+   const all=series.flatMap(x=>x.values),min=Math.min(...all),max=Math.max(...all),range=max-min||Math.max(1,Math.abs(max)*.02),json=x=>JSON.stringify(x).replace(/</g,'\\u003c');
+   script=`(${trendRuntime.toString()})(${json(labels)},${json(series)},${min-range*.08},${max+range*.08},${marketSeriesViewport.toString()},${observeMarketSeries.toString()});`;
+  }else{
+   script=({'price-volume':renderPriceVolume,'valuation-band':renderValuationBand,'equity-drawdown':renderEquityDrawdown}[seriesVariant])(model.data)?.script;
+  }
+  if(!script)return html;
+  return html.replace(oldScript,()=>`<script>${script}</script>`).replace(/<svg\b([^>]*)>/,(match,attrs)=>'<svg'+attrs.replace(/\s*preserveAspectRatio="[^"]*"/,'')+' preserveAspectRatio="xMidYMid meet" data-series-viewport="v2">');
+ }
  if(model.templateId==='kpi'&&model.data.type==='kpi'&&html.includes('EWORK_KPI_SOURCE_V1')&&!html.includes('data-kpi-value-fit="v3"'))return html+`<style data-kpi-value-fit="v3">${KPI_VALUE_FIT_CSS}</style>`;
  if(model.templateId==='market.price-performance'&&model.data.type==='market'&&model.data.variant==='price-performance'&&html.includes('class="financial-profile financial-series"')&&!html.includes('data-series-date-labels="v2"')){
   const script=/<script>\(function performanceRuntime\(s\)\s*\{[\s\S]*?<\/script>/;

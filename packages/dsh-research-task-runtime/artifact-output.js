@@ -18,6 +18,7 @@ import {renderOperationsArtifact} from './operations-artifact.js';
 import { renderGanttArtifact } from './gantt-artifact.js';
 import { researchHtmlText } from './html-artifact.js';
 import { chinaMarketWindow } from './component-source-tools.js';
+import { financialWidgetDefaults } from './financial-widget-contract.js';
 
 // Linear scan, string/escape aware: prose around a complete JSON object is harmless.
 // Never eval model output, concatenate fragments, or guess missing values.
@@ -56,6 +57,10 @@ export function acceptArtifactOutput(text) {
 // Accept the two common table shapes without asking a model to retranscribe
 // values. Only explicit unique column keys may determine the cell order.
 function normalizeTemplateAliases(value) {
+ if(value?.type==='financial-widget'){
+  const defaults=financialWidgetDefaults(value.widget);
+  return defaults?{...defaults,...value}:value;
+ }
  // Native tables cannot carry provenance. Route a fully valid sourced table
  // to the trusted interactive template instead of retrying or losing its notes.
  if(value?.type==='table'&&typeof value.asOf==='string'&&value.asOf.trim()&&
