@@ -590,3 +590,79 @@ it('preserves interaction event identities while remapping board nodes for shari
     expect(canvas.artifacts[0].id).not.toBe(captured.snapshot.canvas.artifacts[0]!.id)
   } finally {await rm(root,{recursive:true,force:true})}
 })
+
+it.each(['share', 'personal-copy'] as const)(
+  'preserves the financial connection graph and stock selection after %s remaps node identities',
+  async (direction) => {
+    const { ResearchBoardSnapshots } = await import('../src/main/state/research-board-snapshot')
+    const financialModule = '../packages/dsh-research-task-runtime/financial-widget-contract.js'
+    const { financialWidgetDefaults, synchronizeFinancialLinks } = await import(financialModule)
+    const { createDocument, encodeDocument, decodeDocument, projectDocument, applyCanvasDiff } = await import('../packages/dsh-research-collaboration/document.js')
+    const { mkdtemp, rm } = await import('node:fs/promises')
+    const { join } = await import('node:path')
+    const { tmpdir } = await import('node:os')
+    const root = await mkdtemp(join(tmpdir(), 'financial-board-copy-'))
+    const first = {market:'SH',code:'600519',name:'贵州茅台'}
+    const second = {market:'SZ',code:'000858',name:'五粮液'}
+    const node = (id: string, widget: string, config: Record<string, unknown>) => ({
+      id, kind:'generated-container', title:id,
+      containerSpec:{...financialWidgetDefaults(widget),...config}
+    })
+    // Dependents deliberately precede their sources, as they may in a shared document.
+    let canvas: any = {files:[],artifacts:[
+      node('news','news',{symbols:[second],linkedSourceId:'quote'}),
+      node('announcements','announcements',{symbols:[second],linkedSourceId:'watch'}),
+      node('quote','quote',{symbols:[second],linkedWatchlistId:'watch'}),
+      node('watch','watchlist',{symbols:[first,second],selectedSymbol:'SZ:000858'}),
+      node('independent','quote',{symbols:[first]})
+    ]}
+    const original = structuredClone(canvas)
+    const options: ConstructorParameters<typeof ResearchBoardSnapshots>[0] = {
+      root,readCanvas:()=>canvas,writeCanvas:(_id,value)=>{canvas=value},
+      history:async()=>({history:[],revision:'r'}),resolveSource:async()=>null,
+      runtime:async()=>({revision:'empty'}),authorize(){},
+      download:async()=>{throw Error('UNEXPECTED_DOWNLOAD')}
+    }
+    const store = new ResearchBoardSnapshots(options)
+    const signal = new AbortController().signal
+    try {
+      if (direction === 'share') {
+        const preview = await store.preview({sessionId:'local',accountId:'a',signal})
+        // A reopened reviewed snapshot must retain the same links.
+        const capture = await new ResearchBoardSnapshots(options).capture({
+          sessionId:'local',accountId:'a',operationId:'share',captureId:preview.captureId,signal
+        })
+        expect(canvas).toEqual(original)
+        canvas = capture.snapshot.canvas
+      } else {
+        const copy = await store.prepareCopy({accountId:'a',boardId:'shared',signal,
+          snapshot:{board:{sharingEpoch:1,title:'test'},snapshot:{canvas,history:[]},messages:[]} as any})
+        canvas = {files:[],artifacts:[]}
+        await store.finalizeCopy({accountId:'a',copyId:copy.copyId,localSessionId:'personal',signal})
+      }
+      const doc = createDocument(canvas)
+      const peer = decodeDocument(encodeDocument(doc))
+      try {
+        const shared: any = projectDocument(peer)
+        const byTitle = (title: string) => shared.artifacts.find((n: any)=>n.title===title)!
+        const watch = byTitle('watch'), quote = byTitle('quote')
+        for (const n of shared.artifacts) expect(n.id).not.toBe(n.title)
+        expect(quote.containerSpec.linkedWatchlistId).toBe(watch.id)
+        expect(byTitle('news').containerSpec.linkedSourceId).toBe(quote.id)
+        expect(byTitle('announcements').containerSpec.linkedSourceId).toBe(watch.id)
+        expect(watch.containerSpec.selectedSymbol).toBe('SZ:000858')
+        expect(byTitle('independent').containerSpec.linkedWatchlistId).toBeUndefined()
+        const after = {...shared,artifacts:synchronizeFinancialLinks(shared.artifacts.map((n: any)=>
+          n.id===watch.id?{...n,containerSpec:{...n.containerSpec,selectedSymbol:'SH:600519'}}:n))}
+        applyCanvasDiff(peer,shared,after)
+        const restored = decodeDocument(encodeDocument(peer))
+        try {
+          const restoredCanvas: any = projectDocument(restored)
+          for (const n of restoredCanvas.artifacts.filter((n: any)=>['quote','news','announcements'].includes(n.title))) {
+            expect(n.containerSpec.symbols).toEqual([first])
+          }
+        } finally {restored.destroy()}
+      } finally {doc.destroy();peer.destroy()}
+    } finally {await rm(root,{recursive:true,force:true})}
+  }
+)

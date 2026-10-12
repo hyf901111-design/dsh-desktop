@@ -232,7 +232,9 @@ export class ResearchBoardSnapshots {
                 'messageId',
                 'parentId',
                 'groupId',
-                'sourceNodeIds'
+                'sourceNodeIds',
+                'linkedWatchlistId',
+                'linkedSourceId'
               ].includes(k)
             ? remap(v)
             : v
@@ -422,7 +424,9 @@ export class ResearchBoardSnapshots {
                   'messageId',
                   'sourceNodeIds',
                   'parentId',
-                  'groupId'
+                  'groupId',
+                  'linkedWatchlistId',
+                  'linkedSourceId'
                 ].includes(k)
               ? map(v)
               : v
