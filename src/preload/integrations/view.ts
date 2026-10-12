@@ -84,6 +84,9 @@ export class IntegrationView {
         this.root.addEventListener('click', this.onClick);
         this.root.addEventListener('input', this.onInput);
         this.root.addEventListener('change', this.onInput);
+        this.root.addEventListener('dragover',this.onSkillDragOver,true);
+        this.root.addEventListener('dragleave',this.onSkillDragLeave,true);
+        this.root.addEventListener('drop',this.onSkillDrop,true);
         this.root.addEventListener('scroll', this.onMenuLayoutChanged, {passive:true});
         this.document.defaultView?.addEventListener('resize',this.onMenuLayoutChanged);
         this.document.defaultView?.addEventListener('sherlock:workspace-panel-state',this.onMenuLayoutChanged);
@@ -151,7 +154,7 @@ export class IntegrationView {
         throw new Error('客户端返回了不匹配的结果，请重试。'); return reply as Extract<IntegrationReply, {
         type: T;
     }>; }
-    private showError(error: unknown) { this.message='';let message = error instanceof Error ? error.message : String(error); if (this.draft.secret)
+    private showError(error: unknown) { this.message='';let message = (error instanceof Error ? error.message : String(error)).replace(/^Error invoking remote method ['"][^'"]+['"]:\s*/,'').replace(/^(?:IntegrationError|Error):\s*/,''); if (this.draft.secret)
         message = message.split(this.draft.secret).join('••••••'); this.error = message; this.renderFeedback(); }
     private navigate(route: IntegrationRoute) { this.clearSkillDetail(); this.closeMenu(); this.closeDialog(); this.history.push(route); this.clearToolGrantDraft();this.dependenciesExpanded=false;this.epoch++; this.loading = false; this.error = ''; this.message = ''; this.query = ''; this.render(); if(this.root)this.root.scrollTop=0; if (route.page === 'market')
         void this.loadMarket(); }
@@ -781,9 +784,22 @@ export class IntegrationView {
         try {await this.bridge.revealSource(item.sourcePath);if(epoch===this.epoch && seq===this.legacyPreviewSeq && feedback?.isConnected)feedback.textContent='已在 Finder 中显示来源，原文件未修改。';}
         catch {if(epoch===this.epoch && seq===this.legacyPreviewSeq && feedback?.isConnected)feedback.textContent='暂时无法定位来源；请确认目录仍存在，也可复制上方路径在 Finder 中打开。';}
     }
+    private acceptsSkillDrop(event:DragEvent){return this.host.current()?.surface==='integrations'&&(this.route.page==='skill-import'||this.route.page==='list'&&this.route.tab==='skills')&&Array.from(event.dataTransfer?.types??[]).includes('Files');}
+    private onSkillDragOver=(event:DragEvent)=>{if(!this.acceptsSkillDrop(event))return;event.preventDefault();event.stopPropagation();if(event.dataTransfer)event.dataTransfer.dropEffect=this.pendingActions.has('skill')||this.busy?'none':'copy';this.root?.setAttribute('data-skill-drag','true');};
+    private onSkillDragLeave=(event:DragEvent)=>{if(!this.root?.contains(event.relatedTarget as Node))this.root?.removeAttribute('data-skill-drag');};
+    private onSkillDrop=(event:DragEvent)=>{
+        if(!this.acceptsSkillDrop(event))return;event.preventDefault();event.stopPropagation();this.root?.removeAttribute('data-skill-drag');
+        if(this.pendingActions.has('skill')||this.busy)return;
+        const files=Array.from(event.dataTransfer?.files??[]),items=Array.from(event.dataTransfer?.items??[]).filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter((file):file is File=>Boolean(file)),selected=files.length?files:items;
+        if(selected.length!==1){this.showError('请拖入一个包含 SKILL.md 的完整技能文件夹，或该文件夹中的 SKILL.md。');return;}
+        let path='';try{path=this.bridge.getPathForFile?.(selected[0]!)||'';}catch{}
+        if(!path){this.showError('未取得本地文件路径，请使用“选择文件”导入完整技能文件夹。');return;}
+        if(this.route.page!=='skill-import')this.navigate({page:'skill-import'});
+        void this.withPending('skill',()=>this.loadSkillPreview(path));
+    };
     private chooseSkill() { return this.withPending('skill',()=>this.loadSkillPreview()); }
-    private async loadSkillPreview() { const epoch = this.epoch; this.error = ''; this.message='正在选择并检查技能…';this.renderFeedback();try {
-        const reply = await this.request({ type: 'preview-skill' }, 'preview');
+    private async loadSkillPreview(path?:string) { const epoch = this.epoch; this.error = ''; this.message=path?'正在检查完整技能包…':'正在选择并检查技能…';this.renderFeedback();try {
+        const reply = await this.request({ type: 'preview-skill',...(path?{path}:{}) }, 'preview');
         if (epoch !== this.epoch)
             return;
         this.message='';if(reply.preview) this.preview = reply.preview;

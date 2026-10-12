@@ -5,12 +5,6 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { parseDocument } from 'yaml'
 import type { SkillImportDiagnostic } from '../../shared/integration-ui'
 
-export const SKILL_IMPORT_LIMITS = Object.freeze({
-  maxFileBytes: 2 * 1024 * 1024,
-  maxPackageBytes: 50 * 1024 * 1024,
-  maxFiles: 1000
-})
-
 export type SkillImportErrorCode = 'UNSAFE_PATH' | 'INVALID_SKILL' | 'FILE_TOO_LARGE'
   | 'PACKAGE_TOO_LARGE' | 'TOO_MANY_FILES' | 'SOURCE_CHANGED' | 'SOURCE_CONFLICT'
   | 'PREVIEW_EXPIRED' | 'PREVIEW_STALE' | 'STORAGE_INVALID' | 'ROLLBACK_CONFLICT'
@@ -88,7 +82,7 @@ interface Snapshot {
   description: string
   body: string
   dependencies: string[]
-  files: Array<SkillImportFile & { content: Buffer }>
+  files: SkillImportFile[]
   totalBytes: number
 }
 
@@ -100,9 +94,6 @@ export function skillImportDiagnostic(error: unknown): SkillImportDiagnostic {
   const code = error instanceof SkillImportError ? error.code : (error as NodeJS.ErrnoException)?.code
   const details = error instanceof SkillImportError ? error.details : {}
   const guidance: Partial<Record<SkillImportErrorCode, string>> = {
-    FILE_TOO_LARGE: '请选择发布者提供的完整可导入包；不要删除必需的模板、字体或其他资源来绕过限制。当前可继续按原方式使用该技能；同名内置技能仍由客户端管理。',
-    PACKAGE_TOO_LARGE: '包体超过当前管理限制。请保留原技能，选择发布者提供的完整可导入包；不要删减运行必需资源。',
-    TOO_MANY_FILES: '文件数超过当前管理限制，可能包含已安装依赖。请保留原目录，选择发布者提供的完整可导入包；客户端不会自动删减依赖。',
     UNSAFE_PATH: details.resourcePath?.split('/').includes('node_modules')
       ? '此资源属于已安装依赖，其中的链接不能复制接入。请保留现有依赖与原技能，选择发布者提供的完整可导入包；客户端不会删除依赖或跟随链接。'
       : '请选择实际目录中的完整技能包。包内不能含符号链接、硬链接或越界路径；请由发布者提供使用普通文件的完整副本，不要删除必需资源。',
@@ -162,12 +153,11 @@ export async function readSkillResource(installPath: string, resourcePath: strin
   return readSafeFile(root, path)
 }
 
-async function readSafeFile(root: string, path: string): Promise<Buffer> {
+async function streamSafeFile(root: string, path: string, consume?: (chunk: Buffer) => Promise<void> | void): Promise<{ bytes: number; digest: string }> {
   const before = await lstat(path)
   if (!before.isFile() || before.isSymbolicLink() || before.nlink > 1) {
     fail('UNSAFE_PATH', '技能包只允许普通文件，不能包含链接或特殊文件。')
   }
-  if (before.size > SKILL_IMPORT_LIMITS.maxFileBytes) fail('FILE_TOO_LARGE', '技能单个文件不能超过 2 MiB。')
   const canonical = await realpath(path)
   const rel = relative(root, canonical)
   if (rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel)) fail('UNSAFE_PATH', '技能文件已移出所选目录。')
@@ -177,24 +167,34 @@ async function readSafeFile(root: string, path: string): Promise<Buffer> {
     if (!opened.isFile() || opened.ino !== before.ino || opened.dev !== before.dev || opened.nlink > 1) {
       fail('UNSAFE_PATH', '技能文件在读取时被替换。')
     }
-    // A bounded read also protects against a file growing after lstat.
-    const buffer = Buffer.alloc(Math.min(opened.size + 1, SKILL_IMPORT_LIMITS.maxFileBytes + 1))
+    // Read and hash one chunk at a time. The observed file size detects a
+    // concurrent writer, rather than imposing a policy limit on the resource.
+    const buffer = Buffer.alloc(64 * 1024), digest = createHash('sha256')
     let offset = 0
-    while (offset < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset)
+    while (offset <= opened.size) {
+      const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, opened.size + 1 - offset), offset)
       if (!bytesRead) break
       offset += bytesRead
+      if (offset > opened.size) fail('SOURCE_CHANGED', '技能文件在读取过程中发生变化，请重新预览。')
+      const chunk=buffer.subarray(0,bytesRead)
+      digest.update(chunk)
+      await consume?.(chunk)
     }
-    if (offset > SKILL_IMPORT_LIMITS.maxFileBytes) fail('FILE_TOO_LARGE', '技能单个文件不能超过 2 MiB。')
     const after = await handle.stat()
     const current = await lstat(path)
     if (after.size !== before.size || offset !== after.size || after.mtimeMs !== before.mtimeMs
       || current.ino !== before.ino || current.dev !== before.dev || current.isSymbolicLink()
       || await realpath(path) !== canonical) fail('SOURCE_CHANGED', '技能文件在读取过程中发生变化，请重新预览。')
-    return buffer.subarray(0, offset)
+    return {bytes:offset,digest:digest.digest('hex')}
   } finally {
     await handle.close()
   }
+}
+
+async function readSafeFile(root: string, path: string): Promise<Buffer> {
+  const chunks: Buffer[]=[]
+  const file=await streamSafeFile(root,path,chunk=>{chunks.push(Buffer.from(chunk))})
+  return Buffer.concat(chunks,file.bytes)
 }
 
 function parseSkill(content: Buffer): Pick<Snapshot, 'name' | 'description' | 'body' | 'dependencies'> {
@@ -242,9 +242,9 @@ async function snapshot(sourcePath: string): Promise<Snapshot> {
   const files: Snapshot['files'] = []
   const paths = new Set<string>()
   let totalBytes = 0
-  let directories = 0
-  async function walk(directory: string, prefix = '', depth = 0): Promise<void> {
-    if (depth > 32 || ++directories > 2000) fail('UNSAFE_PATH', '技能包目录层级或目录数量过多。')
+  const directories=[{directory:root,prefix:''}]
+  while(directories.length){
+    const {directory,prefix}=directories.pop()!
     for (const entryName of (await readdir(directory)).sort()) {
       const relativePath = prefix ? `${prefix}/${entryName}` : entryName
       safeRelativePath(relativePath)
@@ -254,28 +254,28 @@ async function snapshot(sourcePath: string): Promise<Snapshot> {
       if (info.isDirectory()) {
         const canonical = await canonicalDirectory(path)
         if (canonical !== path) fail('UNSAFE_PATH', '技能目录在预览时被替换。')
-        await walk(path, relativePath, depth + 1)
+        directories.push({directory:path,prefix:relativePath})
       } else {
-        if (files.length >= SKILL_IMPORT_LIMITS.maxFiles) fail('TOO_MANY_FILES', '技能包最多包含 1000 个文件。', { resourcePath: relativePath, actual: files.length + 1, limit: SKILL_IMPORT_LIMITS.maxFiles, unit: 'files' })
-        if (info.size > SKILL_IMPORT_LIMITS.maxFileBytes) fail('FILE_TOO_LARGE', '技能单个文件不能超过 2 MiB。', { resourcePath: relativePath, actual: info.size, limit: SKILL_IMPORT_LIMITS.maxFileBytes, unit: 'bytes' })
-        if (totalBytes + info.size > SKILL_IMPORT_LIMITS.maxPackageBytes) fail('PACKAGE_TOO_LARGE', '技能包总大小不能超过 50 MiB。', { resourcePath: relativePath, actual: totalBytes + info.size, limit: SKILL_IMPORT_LIMITS.maxPackageBytes, unit: 'bytes' })
         const normalizedPath = relativePath.normalize('NFC').toLowerCase()
         if (paths.has(normalizedPath)) fail('UNSAFE_PATH', '技能包包含在其他文件系统上冲突的文件名。', { resourcePath: relativePath })
         paths.add(normalizedPath)
-        let content: Buffer
-        try { content = await readSafeFile(root, path) }
+        let file: {bytes:number;digest:string}
+        try { file = await streamSafeFile(root, path) }
         catch (error) { if (error instanceof SkillImportError) throw new SkillImportError(error.code, error.message, { ...error.details, resourcePath: relativePath }); throw error }
-        totalBytes += content.length
-        files.push({ path: relativePath, bytes: content.length, digest: hash(content), content })
+        totalBytes += file.bytes
+        files.push({path:relativePath,...file})
       }
     }
   }
-  await walk(root)
   files.sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0)
   const main = files.find(file => file.path === 'SKILL.md')
   if (!main) fail('INVALID_SKILL', '所选目录中没有 SKILL.md。')
   const digest = hash(JSON.stringify(files.map(({ path, bytes, digest }) => ({ path, bytes, digest }))))
-  try { return { root, sourceId: `local:${hash(root)}`, digest, totalBytes, files, ...parseSkill(main.content) } }
+  try {
+    const content=await readSafeFile(root,join(root,'SKILL.md'))
+    if(hash(content)!==main.digest)fail('SOURCE_CHANGED','技能正文在预览时发生变化，请重新检查。')
+    return {root,sourceId:`local:${hash(root)}`,digest,totalBytes,files,...parseSkill(content)}
+  }
   catch (error) { if (error instanceof SkillImportError) throw new SkillImportError(error.code, error.message, { ...error.details, resourcePath: 'SKILL.md' }); throw error }
 }
 
@@ -323,7 +323,7 @@ export class SkillImportManager {
     const preview: SkillImportPreview = {
       previewId: randomUUID(), sourceId: source.sourceId, sourceDigest: source.digest,
       name: source.name, description: source.description, dependencies: source.dependencies,
-      bodyPreview: source.body.slice(0, 12000), files: source.files.map(({ content: _, ...file }) => file),
+      bodyPreview: source.body.slice(0, 12000), files: source.files,
       totalBytes: source.totalBytes, expiresAt: this.now() + this.previewTtlMs,
       conflicts: current.filter(item => item.sourceId === source.sourceId || item.name === source.name)
         .map(item => ({ id: item.id, name: item.name, sourceId: item.sourceId, sameSource: item.sourceId === source.sourceId, version: item.version, digest: item.digest }))
@@ -371,11 +371,21 @@ export class SkillImportManager {
       const next: CurrentSkill = { schemaVersion: 1, id, sourceId: source.sourceId, name: source.name, description: source.description,
         dependencies: source.dependencies, digest: source.digest, version, versionDirectory, installedAt: this.now(), ...(this.ownerAccountId ? { ownerAccountId: this.ownerAccountId } : {}) }
       try {
-        for (const file of source.files) {
+        const copyFile=async(file:SkillImportFile)=>{
           const target = join(staging, ...safeRelativePath(file.path))
           await mkdir(dirname(target), { recursive: true, mode: 0o700 })
           const handle = await open(target, 'wx', 0o600)
-          try { await handle.writeFile(file.content); await handle.sync() } finally { await handle.close() }
+          try {
+            const copied=await streamSafeFile(source.root,join(source.root,...safeRelativePath(file.path)),chunk=>handle.writeFile(chunk))
+            if(copied.bytes!==file.bytes||copied.digest!==file.digest)fail('SOURCE_CHANGED','技能资源在安装时发生变化，请重新预览。',{resourcePath:file.path})
+            await handle.sync()
+          } finally { await handle.close() }
+        }
+        // Bound concurrency rather than package capacity. Wait for every active
+        // write before cleaning staging if one resource fails.
+        for(let index=0;index<source.files.length;index+=8){
+          const results=await Promise.allSettled(source.files.slice(index,index+8).map(copyFile))
+          for(const result of results)if(result.status==='rejected')throw result.reason
         }
         await rename(staging, installPath)
         promoted = true

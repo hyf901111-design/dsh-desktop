@@ -255,6 +255,7 @@ export type IntegrationReply = SkillDetail | {
 };
 export interface IntegrationBridge {
     request(command: IntegrationCommand): Promise<IntegrationReply>;
+    getPathForFile?(file: File): string;
     revealSource?(path: string): Promise<void>;
     useSkill?(input: { id: string; revision: number; invocationName: string; name: string; signal?: AbortSignal }): Promise<void>;
 }

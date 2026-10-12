@@ -91,4 +91,6 @@ body[data-workspace-surface] .pI_x6G_handle[data-side=sidebar]{z-index:902;point
 @container integrations (min-width:680px) and (max-width:880px){.ig-skill-detail-grid{grid-template-columns:minmax(0,1fr) 220px;gap:24px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{display:flex}}
 @container integrations (min-width:480px) and (max-width:679px){.ig-skill-detail-grid{grid-template-columns:minmax(0,1fr) 180px;gap:20px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{display:flex;gap:12px}.ig-skill-detail-grid .ig-help{padding:14px;gap:6px}.ig-skill-document{padding-right:12px}}
 @container integrations (max-width:479px){.ig-skill-detail-grid{grid-template-rows:auto minmax(0,1fr);gap:20px}.ig-root .ig-skill-detail-grid>.ig-detail-aside{grid-row:1;display:flex;max-height:min(240px,42vh);gap:12px}.ig-skill-detail-grid .ig-help{padding:14px;gap:6px}.ig-skill-document{padding-right:12px}}
+.ig-root[data-skill-drag=true] .ig-skill-select{border-color:var(--ig-text);background:var(--ig-field);outline:1px dashed var(--ig-muted);outline-offset:-7px}
+.ig-skill-preview .ig-advanced ul{max-height:240px;overflow:auto;padding-right:12px;scrollbar-width:thin}
 ` + connectionFormStyles;

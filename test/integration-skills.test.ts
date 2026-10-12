@@ -2,7 +2,7 @@ import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile 
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it } from 'vitest'
-import { SkillImportManager, readSkillResource, listManagedSkillSourceIds, SKILL_IMPORT_LIMITS } from '../src/main/integrations/skill-import'
+import { SkillImportManager, readSkillResource, listManagedSkillSourceIds } from '../src/main/integrations/skill-import'
 
 const roots: string[] = []
 async function fixture() {
@@ -180,23 +180,33 @@ describe('safe managed skill imports', () => {
     }
   })
 
-  it('enforces individual file limits before reading their contents', async () => {
+  it('imports resources above the old single-file limit intact', async () => {
     const { source, manager } = await fixture()
-    await writeFile(join(source, 'large.bin'), Buffer.alloc(SKILL_IMPORT_LIMITS.maxFileBytes + 1))
-    await expect(manager.previewSkillImport(source)).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' })
+    const bytes=Buffer.alloc(3*1024*1024,71)
+    await writeFile(join(source, 'large.bin'), bytes)
+    const preview=await manager.previewSkillImport(source),installed=await manager.commitSkillImport(preview.previewId,'copy')
+    expect(await readSkillResource(installed.installPath,'large.bin')).toEqual(bytes)
   })
 
-  it('enforces total package limits', async () => {
+  it('imports packages above the old total-size limit without excluding resources', async () => {
     const { source, manager } = await fixture()
-    const bytes = Buffer.alloc(SKILL_IMPORT_LIMITS.maxFileBytes)
+    const bytes = Buffer.alloc(2*1024*1024,73)
     await Promise.all(Array.from({ length: 26 }, (_, index) => writeFile(join(source, `resource-${index}.bin`), bytes)))
-    await expect(manager.previewSkillImport(source)).rejects.toMatchObject({ code: 'PACKAGE_TOO_LARGE' })
+    const preview=await manager.previewSkillImport(source)
+    expect(preview.files).toHaveLength(27);expect(preview.totalBytes).toBeGreaterThan(50*1024*1024)
+    const installed=await manager.commitSkillImport(preview.previewId,'copy')
+    expect(await readSkillResource(installed.installPath,'resource-25.bin')).toEqual(bytes)
   })
 
-  it('enforces the maximum file count', async () => {
+  it('imports more than 1000 files and preserves deep resource directories', async () => {
     const { source, manager } = await fixture()
-    await Promise.all(Array.from({ length: SKILL_IMPORT_LIMITS.maxFiles }, (_, index) => writeFile(join(source, `resource-${index}.txt`), '')))
-    await expect(manager.previewSkillImport(source)).rejects.toMatchObject({ code: 'TOO_MANY_FILES' })
+    await Promise.all(Array.from({ length: 1005 }, (_, index) => writeFile(join(source, `resource-${index}.txt`), String(index))))
+    const deep=Array(35).fill('references').join('/')
+    await mkdir(join(source,deep),{recursive:true});await writeFile(join(source,deep,'deep.md'),'完整深层资料')
+    const preview=await manager.previewSkillImport(source),installed=await manager.commitSkillImport(preview.previewId,'copy')
+    expect(preview.files).toHaveLength(1007)
+    expect(await readSkillResource(installed.installPath,'resource-1004.txt')).toEqual(Buffer.from('1004'))
+    expect(await readSkillResource(installed.installPath,deep+'/deep.md')).toEqual(Buffer.from('完整深层资料'))
   })
 
   it('rejects malformed front matter rather than accepting executable YAML tags', async () => {

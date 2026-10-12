@@ -72,12 +72,13 @@ describe('installed skill detail from actual managed resources', () => {
     await expect(f.detail()).rejects.toMatchObject({ code: 'ACCESS_DENIED' })
   })
 
-  it('does not follow a replaced SKILL.md symlink or return oversized content', async () => {
+  it('does not follow a replaced SKILL.md symlink and can read large managed content', async () => {
     const f = await fixture(), path = join(f.skill.resourceRoot, 'SKILL.md'), outside = join(f.root, 'outside.md')
     await writeFile(outside, 'must-not-read'); await rm(path); await symlink(outside, path)
     await expect(f.detail()).rejects.toMatchObject({ code: 'INVALID_CONFIG' })
-    await rm(path); await writeFile(path, 'x'.repeat(resources.SKILL_IMPORT_LIMITS.maxFileBytes + 1))
-    await expect(f.detail()).rejects.toMatchObject({ code: 'INVALID_CONFIG' })
+    const content='x'.repeat(3*1024*1024)
+    await rm(path); await writeFile(path,content)
+    expect((await f.detail()).content).toBe(content)
     await rm(path); await expect(f.detail()).rejects.toMatchObject({ code: 'INVALID_CONFIG' })
   })
 
