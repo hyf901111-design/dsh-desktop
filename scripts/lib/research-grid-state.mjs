@@ -10,7 +10,7 @@ export function createWorkbenchGridState(storage,sessionId) {
   const durableCells=()=>cells.filter(c=>!planning.has(c.id))
   try{const saved=JSON.parse(storage?.getItem(key)||'null');if([1,2].includes(saved?.version)&&Array.isArray(saved.cells)&&saved.cells.every(n=>typeof n.id==='string'&&['x','y','w','h'].every(k=>Number.isFinite(n[k])))){cells=saved.cells.map(grid.bounded);cells.forEach(c=>researchGridNodeIds.add(c.id));initialized=true;legacyRows=saved.version===1}}catch{}
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
-  const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
+  const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&(!n.workbenchId||n.preserveGenerationSize)&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
   function visibleCells(){
     const m=grid.metrics(width||1000),limits=c=>{
       const node=nodesById.get(c.id),min=grid.minimum(node,m),value=contentHeights.get(c.id)
@@ -61,6 +61,10 @@ export function createWorkbenchGridState(storage,sessionId) {
     const nodes=[...snapshot.files,...snapshot.artifacts,...planning.values()],ids=new Set(nodes.map(n=>n.id))
     const priorNodes=nodesById
     nodesById=new Map(nodes.map(n=>[n.id,n]))
+    // Automatic workbench panels participate in packing while they generate.
+    // Old pending panels were pinned below a temporary planning card, keeping
+    // its empty rows even after that card disappeared. Release only those pins.
+    const releasedWorkbenchPins=cells.some(c=>c.freePosition&&nodesById.get(c.id)?.workbenchId&&!nodesById.get(c.id)?.preserveGenerationSize&&nodesById.get(c.id)?.creationMode!=='selection')
     cells=freeCells(cells)
     // Convert the old fixed 35px rows once, using the first actual viewport.
     // Keep card content and horizontal spans; round vertical bounds to squares.
@@ -81,7 +85,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     if(!forced){
       cells=cells.map(c=>{const n=nodes.find(n=>n.id===c.id);if(planning.has(c.id)||!previous.has(c.id)||previous.get(c.id)===geometry(n))return c;geometryChanged=true;return grid.bounded({id:n.id,x:(n.x-n.width/2-m.inset)/m.step,y:(n.y-n.height/2-m.inset)/m.rowStep,w:(n.width+m.gap)/m.step,h:(n.height+m.gap)/m.rowStep})})
     }
-    if(!forced&&(removed||geometryChanged))cells=grid.compact(cells)
+    if(releasedWorkbenchPins||!forced&&(removed||geometryChanged))cells=grid.compact(cells)
     // A newly submitted workbench is one layout transaction. Appending each
     // panel independently stacks the entire group in a narrow left column.
     // Allocate its default frames once; later generation events reuse them.

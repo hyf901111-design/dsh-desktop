@@ -3,6 +3,31 @@ import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import { createResearchGrid } from '../packages/dsh-research-task-runtime/research-grid.js'
 
 const item = (id,x,y,w=20,h=6) => ({id,x,y,w,h})
+it('撤下工作台规划占位后，生成中的整组组件立即上移填补顶部空白',()=>{
+ const state=createWorkbenchGridState(null,'planning-gap'),g=createResearchGrid();state.enable(1104)
+ let snap=state.reconcile({files:[],artifacts:[],viewport:{x:0,y:0,scale:1}})
+ state.reservePlanning({id:'intent',startedAt:1000},snap,{x:380,y:320})
+ const panels=Array.from({length:8},(_,i)=>({id:'panel-'+i,kind:'generated-container',workbenchId:'batch',workbenchIndex:i,x:330,y:170,width:656,height:320,sizeMode:'auto',generationStatus:i<2?'completed':'queued',...(i<2?{containerSpec:{type:'table'}}:{})}))
+ snap=state.reconcile({...snap,artifacts:panels})
+ snap=state.reconcile(snap) // React/layout publishes again before the planning card unmounts.
+ expect(Math.min(...state.get().filter(c=>c.id!=='intent').map(c=>c.y))).toBeGreaterThan(0)
+ state.releasePlanning('intent');snap=state.reconcile(snap)
+ expect(state.get().find(c=>c.id==='panel-0')).toMatchObject({x:0,y:0,w:20})
+ expect(state.get().find(c=>c.id==='panel-1')).toMatchObject({x:20,y:0,w:20})
+ expect(state.get().find(c=>c.id==='panel-2')).toMatchObject({x:0,y:13,w:20})
+ expect(state.get().find(c=>c.id==='panel-3')).toMatchObject({x:20,y:13,w:20})
+ expect(state.get().every((a,i,all)=>all.every((b,j)=>i===j||!g.overlap(a,b)))).toBe(true)
+ expect(Math.min(...snap.artifacts.map(n=>n.y-n.height/2))).toBe(12)
+})
+it('重开仍在生成的旧工作台时修复规划占位遗留的空白，同时保留手动单卡位置',()=>{
+ const saved={version:2,cells:[item('a',0,21,20,23),{...item('b',20,21,20,17),freePosition:true}]}
+ const state=createWorkbenchGridState({getItem:()=>JSON.stringify(saved)},'saved-planning-gap');state.enable(1104)
+ state.reconcile({files:[],artifacts:[{id:'a',kind:'generated-container',workbenchId:'batch',workbenchIndex:0,sizeMode:'manual',generationStatus:'completed',containerSpec:{type:'table'}},{id:'b',kind:'generated-container',workbenchId:'batch',workbenchIndex:1,sizeMode:'manual',generationStatus:'running'}],viewport:{y:0}})
+ expect(state.get().map(c=>c.y)).toEqual([0,0])
+ const manual=createWorkbenchGridState({getItem:()=>JSON.stringify({version:2,cells:[{...item('manual',0,21,20,17),freePosition:true}]})},'manual-gap');manual.enable(1104)
+ manual.reconcile({files:[],artifacts:[{id:'manual',kind:'generated-container',preserveGenerationSize:true,creationMode:'selection',generationStatus:'running'}],viewport:{y:0}})
+ expect(manual.get()[0].y).toBe(21)
+})
 it('窗口小幅变窄先扩到统一最小宽度并借用右列余宽，保持并排与纵向列对齐且恢复宽度不改文档',()=>{
  const state=createWorkbenchGridState(null,'responsive-neighbours'),g=createResearchGrid();state.enable(1000)
  let snap=state.reconcile({files:[],artifacts:['index','watch','quote','news','announcements'].map(id=>({id,kind:'generated-container',containerSpec:{type:'financial-widget'},width:400,height:300})),viewport:{y:0}})
