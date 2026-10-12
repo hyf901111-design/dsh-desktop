@@ -115,7 +115,7 @@ it('内置组件无保存菜单，未完成组件不可保存；保存失败保�
     await f.event('click', f.host.querySelector('[data-financial-widget=quote]').closest('[data-research-node-id]').querySelector('[data-workbench-more]'));
     expect(f.document.querySelector('[data-workbench-save-library]')).toBeNull();
 });
-it('复用刷新配置重新绑定新节点，绑定失败不遗留半成品', async () => {
+it('复用刷新配置重新绑定新节点，数据源暂不可用仍保留组件内容且关闭菜单', async () => {
     const f = await fixture();
     await save(f);
     const recipe = { templateId: 'table', templateVersion: '1', intervalMinutes: 1, enabled: false, requests: [{ key: 'q', toolId: 'public_data_query', args: {} }], mapping: {} };
@@ -131,8 +131,26 @@ it('复用刷新配置重新绑定新节点，绑定失败不遗留半成品', a
     request.mockRejectedValueOnce(Error('所选数据工具未连接或当前工作区不可用'));
     await open(f);
     await f.event('click', f.document.querySelector('[data-custom-component]'));
-    expect(f.workspace.getSnapshot().artifacts).toHaveLength(2);
-    expect(f.document.querySelector('[role=alert]').textContent).toContain('未连接');
+    expect(f.workspace.getSnapshot().artifacts).toHaveLength(3);
+    expect(f.workspace.getSnapshot().artifacts[2].containerSpec).toEqual(f.template.containerSpec);
+    expect(f.document.querySelector('.ew-financial-library')).toBeNull();
+    expect(f.document.querySelector('[role=alert]')).toBeNull();
+});
+it('自定义条目的更多按钮在加号左侧，菜单与右键相同且点击不会添加组件',async()=>{
+    const f=await fixture();await save(f);await open(f);
+    const more=f.document.querySelector('[data-custom-library-more]'),add=f.document.querySelector('[data-custom-library-add]');
+    expect(more).not.toBeNull();expect(add).not.toBeNull();expect(more.nextElementSibling).toBe(add);
+    await f.event('click',more);expect(f.document.querySelector('[data-custom-library-menu]').textContent).toBe('重命名删除');
+    expect(f.workspace.getSnapshot().artifacts).toHaveLength(1);
+    await f.event('click',f.document.querySelector('[data-custom-rename]'));expect(f.document.querySelector('[aria-label="组件名称"]')).not.toBeNull();
+});
+it('点击添加后立即关闭菜单，本地读取完成前不会卡住菜单',async()=>{
+    const f=await fixture();await save(f);await open(f);let release;
+    const previous=f.request.getMockImplementation();f.request.mockImplementation(a=>a.action==='read'?new Promise(resolve=>release=resolve):previous(a));
+    await f.event('click',f.document.querySelector('[data-custom-component]'));
+    expect(f.document.querySelector('.ew-financial-library')).toBeNull();
+    await f.act(async()=>release({node:f.template}));
+    await vi.waitFor(()=>expect(f.workspace.getSnapshot().artifacts).toHaveLength(2));
 });
 it('英文模式翻译自定义分类及右键操作，保存的名称保留原文', async () => {
     const f = await fixture();
