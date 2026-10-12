@@ -24,3 +24,43 @@
 - 发布成功后同步 GitHub `awake-ai-lab/sherlock-desktop` 的 `hyf` 与 `main`，不推送版本标签。
 
 发布证据目录：`/tmp/ework-release-1.2.0-20261012`。
+
+## 本地与客户端验证
+
+- 25 个聚焦测试文件、216 项检查通过，类型检查和生产构建通过；未运行全功能测试。
+- 从干净的本地 `main` 提交 `e18532371bee831928df53ed1a83eeddf961478d` 构建，暂存实验保持排除。
+- 标准应用、兼容桥外层及内嵌应用均为 1.2.0，深度签名和指定要求检查通过。外层为 `io.dsh.desktop`，标准与内嵌应用为 `com.evanarts.sherlock`；桥内含可执行 ShipIt 与 Squirrel/Mantle/ReactiveObjC。
+- 两个 ZIP 完整性、DMG 的 Developer ID 签名和 CRC 校验通过，主进程、preload 与组件客户端和源码构建逐字节一致，内置技能及运行环境校验通过。
+- 按用户要求关闭公证：`mac.notarize=false`，兼容桥使用 `--allow-unnotarized-app`；未执行公证、stapling 或 Gatekeeper 验收。标准应用保留正常签名时间戳。
+- 网络恢复后核对官方 Electron 43.4.0 arm64 发布校验值，现有运行时主程序及框架逐字节一致，签名与上传正常完成。
+- 真实设置关于页显示 1.2.0 和九条中文日志，历史日志保留；应用内及公开说明的九条中英文更新日志一致。
+- 原账户与 GLM-5.3-Flash / Max 保留，日历看板四个事项恢复，月份选择器与新建事项弹窗检查通过，未新增或修改原事项。
+- 发布后真实客户端手动检查更新显示“已是最新版本”，已返回日历看板并保持客户端打开。
+- 迁移、品牌隔离与兼容桥迁移逻辑未改动，相关聚焦检查通过；本轮未重跑真实 DSH 共存和目录迁移启动，未执行旧客户端全量下载、安装替换和重启升级测试。
+
+## 公开资源验证
+
+- 两个公开更新源均为 1.2.0，版本名为 EWork Odyssey 1.2.0；公开中英文日志与本地准备文件完全一致。
+- 两份公开 blockmap 与本地逐字节一致；两个 ZIP、版本 DMG 及两个稳定下载地址的大小、缓存策略和 15 组首段、中段、尾段 Range/206 校验通过。
+- 稳定下载地址为 https://updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg，文件名正确，缓存为 no-store；版本资源采用 immutable 缓存，更新源要求重新验证。
+- 上传顺序为不可变资源、稳定下载入口、两个更新源；临时上传 Worker 已删除。
+- 本轮不执行完整网络下载或旧客户端安装升级，公开包验证采用分段响应和双通道差分重建。
+
+## 双通道差分验证
+
+从公开 1.1.5/1.2.0 blockmap 计算差分，通过真实 electron-updater 下载器及单段 Range/206 重建 ZIP，未触发全量回退。重建结果 SHA-512 与本地发布包一致。
+
+| 通道 | 完整包字节 | 下载字节 | 复用字节 | Range 请求 | SHA-512 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 标准签名 | 501308907 | 138890205 | 362418702 | 804 | 一致 |
+| 旧版兼容 | 552026332 | 188332285 | 363694047 | 791 | 一致 |
+
+- 标准 ZIP SHA-512：`8WyC/1qd3/0BL41lTH9HDKmaEd+V554H7GVRrlewY29M5Y3gg5kGn8khRA10agLOvyNKXWgFCiuwEqme6ysNMw==`。
+- 兼容 ZIP SHA-512：`oV2l1HB6eVHtaee4RzWc5jpKmUojNonUEFEEOO5OPa45/24uQHW8VBqdfiZd1sQobp/C2bLl7MYux7iCgkVjGQ==`。
+
+## 版本清理与源码同步
+
+- 全部公开与差分验证通过后，只删除 1.1.1 的五个不可变资源，源路径检查均返回 404；保留 1.1.2、1.1.3、1.1.4、1.1.5 和 1.2.0。
+- 清理后两个更新源继续显示 1.2.0，1.1.5 两份 blockmap 仍可访问。
+- 本地 hyf 快进至 main，再使用 `git push --atomic origin main:hyf main:main` 同步既有 Fork；最终远端引用核验记录保存在证据目录的 `github-sync.json`，不推送版本标签。
+- 收尾提交只包含本记录与 R2 版本清单，实际产品构建源码仍为 `e18532371bee831928df53ed1a83eeddf961478d`。
