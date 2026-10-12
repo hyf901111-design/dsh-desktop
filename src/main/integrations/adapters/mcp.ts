@@ -15,7 +15,7 @@ import {isBundledDatayesId,DATAYES_GATEWAY} from '../bundled-datayes'
 const MAX_BYTES = 8 * 1024 * 1024
 const REQUEST_TIMEOUT = 30_000
 const TOOL_CALL_TIMEOUT = 55_000
-const DATAYES_QUOTA_NOTICE = '内置通联服务的数据额度已用完（HTTP 402），同一接口暂停 60 秒后可重试。该额度由 EWork 内置服务管理。生成工作台时请保留已取得的数据，其余内容使用可用来源并标注来源与缺失项；不要重复调用同一失败接口，也不要将公开数据标为通联数据。'
+const DATAYES_QUOTA_NOTICE = '当前通联接口返回额度不足（HTTP 402），仅此接口暂停 60 秒后可重试。这不代表其他数据包或整个账号的额度已用完；旧综合服务与官网 MCP 积分服务使用不同取数路径。请继续使用其他已确认可用的通联接口，保留已取得的数据；必要时使用其他来源并明确标注，不要重复调用同一失败接口。'
 const executeFile = promisify(execFile)
 const SAFE_ENV = ['PATH', 'HOME', 'TMPDIR', 'TEMP', 'TMP', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'HOMEDRIVE', 'HOMEPATH', 'LANG', 'LC_ALL', 'LC_CTYPE', 'LOGNAME', 'SHELL', 'TERM', 'USER', 'USERNAME', 'PROCESSOR_ARCHITECTURE', 'SYSTEMDRIVE', 'PROGRAMFILES']
 const FORBIDDEN_ENV = /^(?:NODE_OPTIONS|NODE_PATH|ELECTRON_RUN_AS_NODE|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_.*|EWORK_.*BRIDGE.*|SHERLOCK_.*BRIDGE.*)$/iu

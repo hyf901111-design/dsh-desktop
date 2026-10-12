@@ -130,7 +130,7 @@ it('拒绝批量、分页与超大参数请求，防止绕过固定工具边界'
  expect(f.calls).toHaveLength(0)
 })
 
-it('内置通联真实返回额度错误后向用户解释服务额度并暂停同一接口，其他接口和到期重试仍可用',async()=>{
+it('内置通联额度错误仅解释当前接口，不误判整个账号，其他接口和到期重试仍可用',async()=>{
  const businessCalls:Array<{name:string;nameEn?:string}>=[]
  let exhausted=true
  const transport=new McpSupervisor({read:async()=>{throw Error('UNEXPECTED_VAULT_READ')}},async(body)=>{
@@ -152,7 +152,8 @@ it('内置通联真实返回额度错误后向用户解释服务额度并暂停�
   await transport.connect(connection,signal)
   const first=await transport.invoke(connection.id,'call_api',{nameEn:'market_snapshot',ticker:'600519'},signal)
   expect(first).toMatchObject({isError:true,errorCode:'RUNTIME_UNAVAILABLE'})
-  expect(first.content[0]?.text).toContain('内置通联服务的数据额度')
+  expect(first.content[0]?.text).toContain('当前通联接口返回额度不足')
+  expect(first.content[0]?.text).toContain('不代表其他数据包或整个账号')
   expect(first.content[0]?.text).not.toContain('ai.datayes.com/pricing')
   const repeated=await transport.invoke(connection.id,'call_api',{nameEn:'market_snapshot',ticker:'000858'},signal)
   expect(repeated).toMatchObject({isError:true,errorCode:'RUNTIME_UNAVAILABLE'})

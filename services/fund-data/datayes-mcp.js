@@ -1,5 +1,6 @@
 import { authenticate, authError } from '../accounts/auth.js'
 import catalog from '../../config/datayes-tools.json' with { type: 'json' }
+import { officialDatayesRoute, officialDatayesResult } from './datayes-official.js'
 
 export const DATAYES_PATH = '/v1/datayes/mcp'
 const UPSTREAM = 'https://gw.datayes.com/rwtracker/datayes-mcp'
@@ -90,9 +91,9 @@ async function readRpc(response, id, signal) {
   }
 }
 
-async function upstreamRpc(env, method, params, id, session, signal) {
+async function upstreamRpc(env, method, params, id, session, signal, endpoint = UPSTREAM) {
   let response
-  try { response = await (env.fetch ?? fetch)(UPSTREAM, {
+  try { response = await (env.fetch ?? fetch)(endpoint, {
     method: 'POST', redirect: 'manual', signal,
     headers: { authorization: `Bearer ${env.DATAYES_MCP_API_KEY.trim()}`,
       'content-type': 'application/json', accept: 'application/json, text/event-stream',
@@ -147,13 +148,20 @@ export async function handleDatayesMcp(request, env) {
       await env.ACCOUNTS_DB.prepare('INSERT INTO usage_events(id,user_id,capability,started_at) VALUES(?,?,?,?)').bind(usageId, user.id, 'datayes-mcp', Math.floor(Date.now()/1000)).run()
     }
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(55000)])
+    const route = officialDatayesRoute(rpc)
+    if (route?.result) {
+      status = 200
+      return json({ jsonrpc: '2.0', id: rpc.id, result: route.result })
+    }
+    const endpoint = route?.endpoint ?? UPSTREAM
     stage = 'initialize'
-    const initialization = await upstreamRpc(env, 'initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'EWork', version: '1.1.1' } }, 1, undefined, signal)
+    const initialization = await upstreamRpc(env, 'initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'EWork', version: '1.1.1' } }, 1, undefined, signal, endpoint)
     if (initialization.reply.error) throw new Error('Initialization failed')
     stage = 'initialized'
-    await upstreamRpc(env, 'notifications/initialized', {}, undefined, initialization.session, signal)
+    await upstreamRpc(env, 'notifications/initialized', {}, undefined, initialization.session, signal, endpoint)
     stage = rpc.method
-    const { reply } = await upstreamRpc(env, rpc.method, rpc.method === 'tools/call' ? { name: rpc.params.name, arguments: rpc.params.arguments } : {}, 2, initialization.session, signal)
+    const { reply } = await upstreamRpc(env, rpc.method, route?.params ?? (rpc.method === 'tools/call' ? { name: rpc.params.name, arguments: rpc.params.arguments } : {}), 2, initialization.session, signal, endpoint)
+    if (reply.result && route) reply.result = officialDatayesResult(reply.result, route)
     if (rpc.method === 'tools/list' && reply.result) {
       if (!Array.isArray(reply.result.tools)) throw new Error('Invalid tool list')
       reply.result = { tools: reply.result.tools.filter(tool => TOOL_NAMES.has(tool.name)) }
