@@ -863,7 +863,7 @@ export class IntegrationView {
         this.message='';this.renderFeedback();this.dialogId = row.id;
         const overlay = this.document.createElement('div');
         overlay.className = 'ig-overlay';
-        overlay.innerHTML = `<section role="dialog" aria-modal="true" aria-labelledby="ig-confirm-title" class="ig-dialog"><h2 id="ig-confirm-title">${disconnect ? '断开' : row.kind==='skill'?'删除':'卸载'}“${esc(row.name)}”？</h2><p>${disconnect ? '断开后将撤销此连接，新的调用无法继续使用。' : row.kind==='skill'?'此技能将从 EWork 中删除，之后不会再用于新任务。原始文件、已有对话和插件的其他能力都会保留。':'此项目及其托管能力将被移除，已有对话和引用内容会保留。'}</p>${reply.descriptions.length ? `<ul>${reply.descriptions.map(description => `<li>${esc(description)}</li>`).join('')}</ul>` : '<p>当前没有记录到依赖此项目的任务。</p>'}${row.kind === 'plugin' ? '<p>应用账号连接仍在「应用」中单独管理。</p>' : ''}<footer>${button('cancel-dialog', '取消')}${button(disconnect ? 'confirm-disconnect' : 'confirm-uninstall', disconnect ? '确认断开' : row.kind==='skill'?'确认删除':'确认卸载', true)}</footer></section>`;
+        overlay.innerHTML = `<section role="dialog" aria-modal="true" aria-labelledby="ig-confirm-title" class="ig-dialog ig-confirm-dialog"><h2 id="ig-confirm-title">${disconnect ? '断开' : row.kind==='skill'?'删除':'卸载'}“${esc(row.name)}”？</h2><div class="ig-dialog-body" role="region" aria-label="关联任务与影响" tabindex="0"><p>${disconnect ? '断开后将撤销此连接，新的调用无法继续使用。' : row.kind==='skill'?'此技能将从 EWork 中删除，之后不会再用于新任务。原始文件、已有对话和插件的其他能力都会保留。':'此项目及其托管能力将被移除，已有对话和引用内容会保留。'}</p>${reply.descriptions.length ? `<ul>${reply.descriptions.map(description => `<li>${esc(description)}</li>`).join('')}</ul>` : '<p>当前没有记录到依赖此项目的任务。</p>'}${row.kind === 'plugin' ? '<p>应用账号连接仍在「应用」中单独管理。</p>' : ''}</div><footer>${button('cancel-dialog', '取消')}${button(disconnect ? 'confirm-disconnect' : 'confirm-uninstall', disconnect ? '确认断开' : row.kind==='skill'?'确认删除':'确认卸载', true)}</footer></section>`;
         this.root.append(overlay);
         overlay.querySelector<HTMLButtonElement>('[data-action=cancel-dialog]')?.focus();
     }
@@ -881,7 +881,7 @@ export class IntegrationView {
             if(epoch!==this.epoch || !this.root)return;
             this.message='';this.renderFeedback();this.dialogId=row.id;
             const overlay=this.document.createElement('div');overlay.className='ig-overlay';
-            overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="ig-confirm-title" class="ig-dialog"><h2 id="ig-confirm-title">回退“${esc(row.name)}”的上一版本？</h2><p>恢复上一版本的插件和技能文件。应用账号连接会保留；依赖此插件的任务需要重新核对工具版本与授权。</p>${reply.descriptions.length?`<ul>${reply.descriptions.map(description=>`<li>${esc(description)}</li>`).join('')}</ul>`:''}<footer>${button('cancel-dialog','取消')}${button('confirm-rollback','确认回退',true)}</footer></section>`;
+            overlay.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="ig-confirm-title" class="ig-dialog ig-confirm-dialog"><h2 id="ig-confirm-title">回退“${esc(row.name)}”的上一版本？</h2><div class="ig-dialog-body" role="region" aria-label="关联任务与影响" tabindex="0"><p>恢复上一版本的插件和技能文件。应用账号连接会保留；依赖此插件的任务需要重新核对工具版本与授权。</p>${reply.descriptions.length?`<ul>${reply.descriptions.map(description=>`<li>${esc(description)}</li>`).join('')}</ul>`:''}</div><footer>${button('cancel-dialog','取消')}${button('confirm-rollback','确认回退',true)}</footer></section>`;
             this.root.append(overlay);overlay.querySelector<HTMLButtonElement>('[data-action=cancel-dialog]')?.focus();
         } catch(error) {if(epoch===this.epoch)this.showError(error);}
     }
