@@ -15,7 +15,7 @@ import {FINANCIAL_PROFILE_VARIANTS,FINANCIAL_PROFILE_FIELDS,financialProfileData
 import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
-import { validatePublicDataPanel, PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
+import { validatePublicDataPanel, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
@@ -321,6 +321,8 @@ export function validateWorkbench(value) {
             const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
             const prefix = variant ? `variant: ${variant}；` : '';
             p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
+            const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
+            if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
         }
         // Correct a metadata-only planner mismatch before launching a child.
         // Existing supplied data remains subject to its original schema.

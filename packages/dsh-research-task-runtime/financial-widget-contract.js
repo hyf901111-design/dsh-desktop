@@ -11,7 +11,7 @@ export function financialWidgetDefaults(widget){
   {code:'000688',market:'SH',name:'科创50'},{code:'000016',market:'SH',name:'上证50'}]:[],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:''}
 }
 export function financialWidgetSpec(value){
- if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId'].includes(k)))return null
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId','visibleBars'].includes(k)))return null
  if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news','announcements'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
  if(!Array.isArray(value.symbols)||value.symbols.length>(['quote','announcements'].includes(value.widget)?1:value.widget==='indices'?64:200))return null
  const ids=new Set()
@@ -22,6 +22,7 @@ export function financialWidgetSpec(value){
  }
  if(!['1m','1d','1w','1mo','1y'].includes(value.period)||!['none','forward','backward'].includes(value.adjustment)||!Array.isArray(value.indicators)||new Set(value.indicators).size!==value.indicators.length||value.indicators.some(i=>!['MA','VOL','MACD'].includes(i))||!['all','SH','SZ','BJ','HK','US'].includes(value.market)||typeof value.query!=='string'||value.query.length>100||/[\u0000-\u001f]/.test(value.query))return null
  if(value.selectedSymbol!==undefined&&(value.widget!=='watchlist'||typeof value.selectedSymbol!=='string'||!ids.has(value.selectedSymbol)))return null
+ if(value.visibleBars!==undefined&&(value.widget!=='quote'||!Number.isInteger(value.visibleBars)||value.visibleBars<1||value.visibleBars>320))return null
  if(value.linkedWatchlistId!==undefined&&(value.widget!=='quote'||typeof value.linkedWatchlistId!=='string'||!value.linkedWatchlistId.trim()||value.linkedWatchlistId.length>200||/[\u0000-\u001f]/.test(value.linkedWatchlistId)))return null
  if(value.linkedSourceId!==undefined&&(!['news','announcements'].includes(value.widget)||typeof value.linkedSourceId!=='string'||!value.linkedSourceId.trim()||value.linkedSourceId.length>200||/[\u0000-\u001f]/.test(value.linkedSourceId)))return null
  return Object.freeze({...value,symbols:Object.freeze(value.symbols.map(s=>Object.freeze({...s}))),indicators:Object.freeze([...value.indicators])})
@@ -78,7 +79,7 @@ export function financialIndicators(bars){
 // Period boundaries use UTC trading dates; the header and chart share these bars.
 export function financialPeriodBars(bars,period,nativePeriod=false){
  const grouped=[]
- for(const b of bars){let key=b.date;if(!nativePeriod&&period==='1w'){const d=new Date(b.date+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));key=d.toISOString().slice(0,10)}else if(!nativePeriod&&period==='1mo')key=b.date.slice(0,7);else if(!nativePeriod&&period==='1y')key=b.date.slice(0,4)
+ for(const b of bars){let key=b.date;if(!nativePeriod&&period==='1w'){const d=new Date(b.date.slice(0,10)+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));key=d.toISOString().slice(0,10)}else if(!nativePeriod&&period==='1mo')key=b.date.slice(0,7);else if(!nativePeriod&&period==='1y')key=b.date.slice(0,4)
  const previous=grouped.at(-1);if(previous?.key===key){previous.high=Math.max(previous.high,b.high);previous.low=Math.min(previous.low,b.low);previous.close=b.close;previous.volume=previous.volume===null||b.volume===null?null:previous.volume+b.volume;previous.date=b.date}else grouped.push({...b,key})}
  return grouped
 }

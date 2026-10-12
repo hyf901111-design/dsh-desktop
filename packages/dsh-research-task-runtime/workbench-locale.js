@@ -1,4 +1,5 @@
 export const WORKBENCH_ENGLISH={
+ '日K':'Daily','周K':'Weekly','月K':'Monthly','年K':'Yearly','显示交易日数量':'Visible bars','K线标的':'Chart instrument','数据来源':'Data source','条':'records','日期':'Date','开盘':'Open','最高':'High','最低':'Low','收盘':'Close','成交量':'Volume','开 ':'O ','高 ':'H ','低 ':'L ','收 ':'C ',
 '标准整理':'Standard arrange','三排整理':'Three columns','双排整理':'Two columns','单排整理':'One column','展开整理选项':'Choose arrangement','一键整理画布':'Arrange canvas','窄画布已适配':'Adapted to narrow canvas',
 '画布宽度不足，无法进行三排整理，请扩大画布后重试':'The canvas is too narrow for three columns. Widen it and try again.',
 '画布宽度不足，无法进行双排整理，请扩大画布后重试':'The canvas is too narrow for two columns. Widen it and try again.',
@@ -169,5 +170,5 @@ export const WORKBENCH_ENGLISH={
 export function workbenchText(value,locale=typeof document==='undefined'?'zh':document.documentElement.dataset.odysseyLocale) {
  if(locale!=='en'||typeof value!=='string')return value
  if(Object.hasOwn(WORKBENCH_ENGLISH,value))return WORKBENCH_ENGLISH[value]
- return value.replace(/^按(.+)排序$/, 'Sort by $1').replace(/^(\d+ \/ \d+) 行$/, '$1 rows').replace(/^(\d+ \/ \d+) 条$/, '$1 items').replace(/^已整理 (\d+) 个组件$/, 'Arranged $1 components').replace(/^已更新 (\d+) 个组件$/, 'Updated $1 components').replace(/^已复制 (\d+) 个组件$/, 'Copied $1 components').replace(/^已粘贴 (\d+) 个组件$/, 'Pasted $1 components').replace(/^已移除 (\d+) 个组件$/, 'Removed $1 components').replace(/^已写入 (\d+) 个数据字段，正在校验内容$/, 'Wrote $1 data fields; validating content').replace(/^基于所选 (\d+) 个组件$/, 'Based on $1 selected components').replace(/^打开来源：/, 'Open source: ').replace(/（离线交互网页）$/, ' (offline interactive page)')
+ return value.replace(/^近 (\d+) 根$/, 'Last $1 bars').replace(/^按(.+)排序$/, 'Sort by $1').replace(/^(\d+ \/ \d+) 行$/, '$1 rows').replace(/^(\d+ \/ \d+) 条$/, '$1 items').replace(/^已整理 (\d+) 个组件$/, 'Arranged $1 components').replace(/^已更新 (\d+) 个组件$/, 'Updated $1 components').replace(/^已复制 (\d+) 个组件$/, 'Copied $1 components').replace(/^已粘贴 (\d+) 个组件$/, 'Pasted $1 components').replace(/^已移除 (\d+) 个组件$/, 'Removed $1 components').replace(/^已写入 (\d+) 个数据字段，正在校验内容$/, 'Wrote $1 data fields; validating content').replace(/^基于所选 (\d+) 个组件$/, 'Based on $1 selected components').replace(/^打开来源：/, 'Open source: ').replace(/（离线交互网页）$/, ' (offline interactive page)')
 }

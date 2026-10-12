@@ -102,7 +102,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             exec.signal?.throwIfAborted();
             await assertPrivateResearchSession(parentSessionId);
             const direct = input.panels.filter(p => p.publicData);
-            if (direct.length && (!ctx.tools.schemas?.(exec.agent)?.some(t => t.name === 'public_data_query') ||
+            const usesPublicSource=direct.length||args.panels?.some(p=>p?.publicData);
+            if (usesPublicSource && (!ctx.tools.schemas?.(exec.agent)?.some(t => t.name === 'public_data_query') ||
                 /禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(canvasHumanRequest(exec.agent?.session)?.text ?? '')))
                 throw Error('当前任务未授权内置免费来源取数；请使用已有资料或正常面板流程。');
             if (direct.length && typeof runtime.startPublicDataBatch !== 'function') throw Error('免费源组件直通服务不可用。');

@@ -172,9 +172,12 @@ describe('宿主免费源工作台直通', () => {
     try {
       expect(tool.parameters.properties.panels.items.properties.intervalMinutes?.type).toBe('number')
       await expect(tool.execute(args, exec)).rejects.toThrow('未授权')
+      const candleArgs={...args,requestId:'live-candle-permission',panels:[spec('candlestick','tencent-history',{symbol:'sh510300',limit:30})]}
+      await expect(tool.execute(candleArgs,exec)).rejects.toThrow('未授权')
       allowed = true
       exec.agent.session.events[0].data.content[0].text = '禁止联网创建行情工作台'
       await expect(tool.execute(args, exec)).rejects.toThrow('未授权')
+      await expect(tool.execute(candleArgs,exec)).rejects.toThrow('未授权')
       exec.agent.session.events[0].data.content[0].text = '创建免费行情工作台，每分钟刷新'
       const receipt = await tool.execute(args, exec)
       expect(receipt.status).toBe('accepted')

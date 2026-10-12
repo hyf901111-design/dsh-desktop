@@ -1,4 +1,5 @@
 import { resolveBoundComponent } from './component-source-binding.js'
+import {financialWidgetDefaults,financialWidgetSpec} from './financial-widget-contract.js'
 
 // These recipes describe the bundled adapter's schema, never model-authored
 // paths, executable code, arbitrary URLs or connector credentials.
@@ -26,6 +27,20 @@ export function validatePublicDataPanel(value, type) {
   })
   if (new Set(requests.map(r => JSON.stringify(r))).size !== requests.length) throw Error('免费源组件请求重复')
   return { profile: value.profile, requests, intervalMinutes }
+}
+
+// Live single-security K lines use the actual library renderer. Keep explicit
+// manual snapshots and index/unknown identifiers on their original data path.
+export function publicDataQuoteSpec(title,value,prompt=''){
+ if(value?.profile!=='candlestick'||value.intervalMinutes!==1||value.requests?.length!==1||value.requests[0].source!=='tencent-history')return null
+ if(/快照|snapshot|回测|复盘|固定(?:历史|日期|区间)|(?:19|20)\d{2}[-/年]\d{1,2}[-/月]\d{1,2}/iu.test(title+' '+prompt))return null
+ let p;try{p=JSON.parse(value.requests[0].parameters_json)}catch{return null}
+ if(!p||typeof p!=='object'||Array.isArray(p)||Object.keys(p).some(k=>!['symbol','limit'].includes(k)))return null
+ const match=typeof p.symbol==='string'&&p.symbol.match(/^(sh|sz|hk)(\d{5,6})$/)
+ if(!match||match[2].length!==(match[1]==='hk'?5:6)||/^(sh000\d{3}|sz399\d{3})$/.test(p.symbol))return null
+ const visibleBars=p.limit??20;if(!Number.isInteger(visibleBars)||visibleBars<1||visibleBars>100)return null
+ const name=title.replace(/(?:日|周|月|年)?K\s*(?:线|走势).*$/iu,'').trim()||match[2]
+ return financialWidgetSpec({...financialWidgetDefaults('quote'),title,symbols:[{code:match[2],market:match[1].toUpperCase(),name}],visibleBars})
 }
 
 const path = (key, field, extra = {}) => ({ $from: key, $path: field, ...extra })

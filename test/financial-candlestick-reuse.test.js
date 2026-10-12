@@ -1,0 +1,50 @@
+import {afterEach,it,expect} from 'vitest'
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
+import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
+import {financialPeriodBars} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
+const close=[];afterEach(async()=>{for(const fn of close.splice(0))await fn()})
+const candles=Array.from({length:60},(_,i)=>({date:new Date(Date.UTC(2026,7,1+i)).toISOString().slice(0,10),open:4+i/100,high:4.12+i/100,low:3.9+i/100,close:4.05+i/100,volume:i===2?null:i*1000}))
+const spec=()=>JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'candlestick',title:'沪深300ETF日K走势',asOf:'2026-09-29 · 腾讯财经',candles,note:'价格单位 CNY；量单位 来源原始单位，未核实。',sources:[{label:'腾讯财经公开日K',url:'https://gu.qq.com/'}]})))
+it('renders existing source-bound candle HTML with the same interactive chart as library quotes and keeps its original records',async()=>{
+ const f=await financialClientFixture();close.push(f.dispose)
+ let node;const original=spec()
+ await f.act(async()=>{node=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...node,title:original.title,containerSpec:original}])})
+ const chart=f.host.querySelector('[data-financial-chart]');expect(chart).not.toBeNull()
+ expect(f.host.querySelector('[data-financial-candle-snapshot]')).not.toBeNull()
+ expect(chart.textContent).toContain('MACD(12,26,9)');expect(chart.textContent).toContain('VOL(5,10)')
+ expect(f.host.querySelector('iframe')).toBeNull()
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(original)
+ const details=f.host.querySelector('[data-candle-original-data]');expect(details.querySelectorAll('tbody tr')).toHaveLength(60)
+ expect(details.textContent).toContain('2026-08-03');expect(details.textContent).toContain('—')
+ await f.event('click',f.host.querySelector('[data-candle-period="1w"]'))
+ expect(f.host.querySelector('[data-candle-period="1w"]').getAttribute('aria-pressed')).toBe('true')
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(original)
+ await f.event('click',f.host.querySelector('[data-candle-period="1d"]'))
+ await f.act(async()=>f.workspace.updateSelection([],'replace'))
+ const before=chart.querySelector('svg').innerHTML
+ await f.event('wheel',chart,{deltaY:-240,deltaMode:0,clientX:250});expect(chart.querySelector('svg').innerHTML).toBe(before)
+ await f.act(async()=>f.workspace.updateSelection([node.id],'replace'))
+ const e=await f.event('wheel',chart,{deltaY:-240,deltaMode:0,clientX:250});expect(e.defaultPrevented).toBe(true)
+ expect(chart.querySelector('svg').innerHTML).not.toBe(before)
+ await f.act(async()=>f.win.document.documentElement.dataset.odysseyLocale='en')
+ expect(f.host.querySelector('[data-candle-period="1d"]').textContent).toBe('Daily')
+ expect(details.textContent).toContain('Volume')
+ const refreshed=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'candlestick',title:original.title,asOf:'2026-09-29 · 腾讯财经',candles:candles.map((b,i)=>i===59?{...b,high:7,close:6}:b)})))
+ await f.event('click',f.host.querySelector('[data-candle-period="1w"]'))
+ await f.act(async()=>f.workspace.setArtifacts([{...f.workspace.getSnapshot().artifacts[0],containerSpec:refreshed}]))
+ expect(f.host.querySelector('[data-candle-period="1w"]').getAttribute('aria-pressed')).toBe('true')
+ expect(f.host.querySelector('.ew-quote-price-line strong').textContent).toBe('6.00')
+ expect(f.host.querySelectorAll('[data-candle-original-data] tbody tr')).toHaveLength(60)
+})
+it('groups source timestamps into weekly candles without appending a second time suffix',()=>{
+ const bars=[{date:'2026-10-05T09:30:00+08:00',open:4,high:5,low:3,close:4.5,volume:null},{date:'2026-10-06T09:30:00+08:00',open:4.5,high:6,low:4,close:5.5,volume:10}]
+ expect(financialPeriodBars(bars,'1w')).toMatchObject([{open:4,high:6,low:3,close:5.5,volume:null}])
+})
+it('keeps original intraday timestamps in data while drawing compact time-axis labels',async()=>{
+ const f=await financialClientFixture();close.push(f.dispose)
+ const bars=candles.map((b,i)=>({...b,date:new Date(Date.UTC(2026,9,12,2,i)).toISOString()})),original=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'candlestick',title:'原始分钟K线',asOf:'Kraken UTC',candles:bars})))
+ await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:original}])})
+ const labels=[...f.host.querySelectorAll('[data-financial-chart] svg text')].map(n=>n.textContent)
+ expect(labels).toContain('02:00');expect(labels.some(s=>s.includes('T02:'))).toBe(false)
+ expect(f.host.querySelector('[data-candle-original-data]').textContent).toContain('2026-10-12T02:00:00.000Z')
+})
