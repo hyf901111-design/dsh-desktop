@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { Window } from 'happy-dom';
 import { researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
 import { patchFigmaFinalCanvas } from '../scripts/lib/figma-canvas-client.mjs';
+import { restoreResearchGridWorkbench } from '../scripts/lib/research-grid-workbench.mjs';
 
 const makeNodes = sizes => sizes.map((size, index) => ({ id:String(index), containerSizePreset:size, content:'内容'+index, sourceNodeIds:['reference'], x:500+index,y:500+index }));
 const figma = makeNodes(['large','small','small','medium','small']);
@@ -12,7 +13,7 @@ const screenBounds = result => result.nodes.map(n=>({left:result.viewport.x+n.x*
 
 async function patchedWorkspace() {
   const installed=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
-  const source=patchFigmaFinalCanvas(installed);
+  const source=patchFigmaFinalCanvas(restoreResearchGridWorkbench(installed));
   // Simulate an installed old final-marker wrapper, not only fresh source.
   const old=source.replace('researchBentoLayout(nodes, researchCanvasVisibleArea({canvasSize}), measured, {fitColumns:true})','researchBentoLayout(nodes, canvasSize, measured)');
   const upgraded=patchFigmaFinalCanvas(old);

@@ -2,6 +2,8 @@ import {afterEach,it,expect} from 'vitest'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 import {financialPeriodBars} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
+import {layoutWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import {vi} from 'vitest'
 const close=[];afterEach(async()=>{for(const fn of close.splice(0))await fn()})
 const candles=Array.from({length:60},(_,i)=>({date:new Date(Date.UTC(2026,7,1+i)).toISOString().slice(0,10),open:4+i/100,high:4.12+i/100,low:3.9+i/100,close:4.05+i/100,volume:i===2?null:i*1000}))
 const spec=()=>JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'candlestick',title:'沪深300ETF日K走势',asOf:'2026-09-29 · 腾讯财经',candles,note:'价格单位 CNY；量单位 来源原始单位，未核实。',sources:[{label:'腾讯财经公开日K',url:'https://gu.qq.com/'}]})))
@@ -15,6 +17,7 @@ it('renders existing source-bound candle HTML with the same interactive chart as
  expect(f.host.querySelector('iframe')).toBeNull()
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(original)
  const details=f.host.querySelector('[data-candle-original-data]');expect(details.querySelectorAll('tbody tr')).toHaveLength(60)
+ const range=f.host.querySelector('select[aria-label="显示交易日数量"]');expect(range.selectedOptions[0].textContent).toBe('近 60 根')
  expect(details.textContent).toContain('2026-08-03');expect(details.textContent).toContain('—')
  await f.event('click',f.host.querySelector('[data-candle-period="1w"]'))
  expect(f.host.querySelector('[data-candle-period="1w"]').getAttribute('aria-pressed')).toBe('true')
@@ -35,6 +38,34 @@ it('renders existing source-bound candle HTML with the same interactive chart as
  expect(f.host.querySelector('[data-candle-period="1w"]').getAttribute('aria-pressed')).toBe('true')
  expect(f.host.querySelector('.ew-quote-price-line strong').textContent).toBe('6.00')
  expect(f.host.querySelectorAll('[data-candle-original-data] tbody tr')).toHaveLength(60)
+})
+it('allocates enough default canvas height for a professional source candle and its subcharts',()=>{
+ const panels=layoutWorkbench([{type:'market',title:'历史K线',prompt:'variant: candlestick；原始数据快照',size:'large'},{type:'market',title:'另一张K线',prompt:'variant: candlestick；原始数据快照',size:'large'}])
+ expect(panels[0].height).toBeGreaterThanOrEqual(720);expect(panels[0].width).toBeGreaterThanOrEqual(716)
+ expect(panels[1].x).toBeGreaterThan(panels[0].width)
+})
+it('also reuses the professional candle renderer for the generic chart.candlestick contract',async()=>{
+ const f=await financialClientFixture();close.push(f.dispose)
+ const original=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'chart',variant:'candlestick',title:'证券历史K线',unit:'CNY',volumeUnit:'份',asOf:'2026-09-29',candles:candles.map(b=>({...b,volume:b.volume??0}))})))
+ await f.act(async()=>{const n=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...n,containerSpec:original}])})
+ expect(f.host.querySelector('[data-financial-chart]')).not.toBeNull()
+ expect(f.host.querySelectorAll('[data-candle-original-data] tbody tr')).toHaveLength(60)
+ expect(f.host.querySelector('[data-financial-chart]').textContent).toContain('份')
+})
+it('arranges source candles at their reading height despite stale iframe and stretched-SVG measurements, and stays stable on a second arrange',async()=>{
+ const f=await financialClientFixture();close.push(f.dispose);let node;const original=spec()
+ await f.act(async()=>{node=f.workspace.createFinancialWidget('quote');f.workspace.setArtifacts([{...node,title:original.title,height:6875,width:449,containerSpec:original}])})
+ f.canvas.__eworkContentMeasurements.set(node.id,{html:original.html,width:449,height:6875})
+ f.host.querySelector('[data-financial-chart] svg').getBoundingClientRect=()=>({top:0,bottom:8000,left:0,right:400,width:400,height:8000})
+ const arrange=f.document.querySelector('button[aria-label="一键整理画布"]');expect(arrange).not.toBeNull()
+ await f.event('click',arrange)
+ await vi.waitFor(()=>expect(f.workspace.getSnapshot().artifacts[0].height).toBeLessThan(1000))
+ await f.act(async()=>await new Promise(r=>setTimeout(r,250)))
+ const first=f.workspace.getSnapshot().artifacts[0];expect(first.height).toBeGreaterThan(500)
+ await f.event('click',arrange)
+ await f.act(async()=>await new Promise(r=>setTimeout(r,250)))
+ expect(f.workspace.getSnapshot().artifacts[0].height).toBeCloseTo(first.height,2)
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(original)
 })
 it('groups source timestamps into weekly candles without appending a second time suffix',()=>{
  const bars=[{date:'2026-10-05T09:30:00+08:00',open:4,high:5,low:3,close:4.5,volume:null},{date:'2026-10-06T09:30:00+08:00',open:4.5,high:6,low:4,close:5.5,volume:10}]

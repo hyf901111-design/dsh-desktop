@@ -29,7 +29,7 @@ describe('research workbench Figma design contract', () => {
       panel('关键指标', 'market', 'variant: metrics；同一时点的价格与涨跌', { variant: 'metrics', asOf: '2026-02-05', items: [{ label: '现价', value: '10.8 元' }, { label: '涨跌', value: '+1.89%' }] })
     ] });
     const [candle, metrics] = layoutWorkbench(input.panels);
-    expect(candle).toMatchObject({ width: 656, height: 352 });
+    expect(candle).toMatchObject({ width: 716, height: 760 });
     expect(metrics).toMatchObject({ width: 656, height: 233 });
     for (const p of [candle, metrics]) {
       const rendered = renderMarketArtifact(p.artifact);
@@ -136,9 +136,10 @@ describe('research workbench Figma design contract', () => {
     }));
     const result = researchBentoLayout(nodes, { width: 1200, height: 800 });
     expect(result.width).toBe(1324);
-    expect(result.height).toBe(716);
-    expect(result.viewport.scale).toBeCloseTo(1136 / 1324);
-    expect(result.nodes[1]).toMatchObject({ x: 668, y: 0, width: 656 });
-    expect(result.nodes[2]).toMatchObject({ x: 0, y: 364, width: 656 });
+    expect(result.nodes.find(n => n.id === 'm1')).toMatchObject({ width: 716, height: 760 });
+    expect(result.nodes.every(n => n.x + n.width <= result.width && n.y + n.height <= result.height)).toBe(true);
+    for (const a of result.nodes) for (const b of result.nodes) if (a !== b) {
+      expect(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y).toBe(true);
+    }
   });
 });

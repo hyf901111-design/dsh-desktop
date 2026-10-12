@@ -1,5 +1,6 @@
 // Functions are serialized into the existing page factory. React and the trusted
 // content renderers are supplied by that factory, never by an iframe.
+import {researchCandleTemplate} from '../../packages/dsh-research-task-runtime/bento-layout.js'
 export function workbenchRefreshTooltip(lastSuccess,now=Date.now()) {
   const at=new Date(lastSuccess).getTime()
   if(!lastSuccess||!Number.isFinite(at))return {relative:'尚未刷新',absolute:'暂无成功刷新记录'}
@@ -443,6 +444,7 @@ export function workbenchAvailableWidth(root,bounds,panelBounds) {
 }
 export function workbenchMeasuredDimensions(node,value,width=value?.width||node.width) {
   const preferred=researchOptimalDimensions({...node,width:0,height:0})
+  if(researchCandleTemplate(node))return preferred
   const metrics=/<body\b[^>]*data-sherlock-market="metrics"/.test(node.containerSpec?.html||'')
     ?researchMarketDimensions(node,true,width):null
   // The explicit metrics measurement covers complete max-content tracks and
@@ -459,7 +461,7 @@ export function measureWorkbenchContents(root,nodes) {
     const value=cache?.get(node.id)
     const preferred=researchOptimalDimensions({...node,width:0,height:0})
     // Fixed presets keep their approved reading area even when offscreen or paused.
-    if(['financial-widget','calendar-tool'].includes(node.containerSpec?.type)){measured.set(node.id,preferred);continue}
+    if(['financial-widget','calendar-tool'].includes(node.containerSpec?.type)||researchCandleTemplate(node)){measured.set(node.id,preferred);continue}
     // Header and provenance occupy 34 + 24px outside the sandbox. The sandbox
     // reports natural content bounds, never its current frame height.
     if(value&&node.containerSpec?.type==='html'&&value.html===node.containerSpec.html){measured.set(node.id,workbenchMeasuredDimensions(node,value));continue}
@@ -543,7 +545,7 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   if(!workspace.organizeCanvas(measured,mode))return false
   const grid=createResearchGrid(),width=before.canvasSize.availableWidth||before.canvasSize.width||800,m=grid.metrics(width)
   const arranged=[...workspace.getSnapshot().files,...workspace.getSnapshot().artifacts]
-  const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html'&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
+  const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html'&&!researchCandleTemplate(n)&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
     const old=oldNodes.find(o=>o.id===n.id),cache=oldCache.get(n.id),frame=root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] iframe[data-research-html-artifact]')
     const inset=cache?Math.max(0,old.width-cache.width):Math.max(0,n.width-(frame?.clientWidth||n.width))
     return [n.id,{html:n.containerSpec.html,width:Math.round(n.width-inset)}]

@@ -11,7 +11,7 @@ import {patchCanvasCreationTools} from '../scripts/lib/canvas-creation-tools.mjs
 import {patchAttachmentClient} from '../scripts/lib/attachment-client.mjs'
 import {workbenchRefreshTooltip,measureWorkbenchContents} from '../scripts/lib/research-grid-ui.mjs'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
-import {researchOptimalDimensions} from '../packages/dsh-research-task-runtime/bento-layout.js'
+import {researchOptimalDimensions,researchCandleTemplate} from '../packages/dsh-research-task-runtime/bento-layout.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
 it('表格所有表头正文默认单行，用户列宽与换行选择在看板重开后保留且数据不变',async()=>{
@@ -146,7 +146,7 @@ it('音频整理保留展开的完整转写高度，不把默认播放器高度�
  const f=await fixture(true),spec={version:1,type:'audio',title:'长转写',url:'http://127.0.0.1:58183/tone.wav',transcript:'本人完整转写\n'.repeat(60)},node={...text('audio-fit'),kind:'generated-container',containerPrompt:'音频',generationStatus:'completed',generationLastSeq:1,refreshMinutes:0,containerSpec:spec}
  await act(async()=>f.workspace.setArtifacts([node]));const preset=f.host.querySelector('[data-research-audio-preset]');preset.querySelector('details').open=true
  Object.defineProperties(preset,{offsetHeight:{configurable:true,value:720},scrollHeight:{configurable:true,value:720}});f.host.querySelector('[data-research-preview-body]').style.setProperty('padding','12px','important');preset.closest('.rScV5Q_containerContent').style.setProperty('padding','8px','important')
- expect(runInNewContext('('+measureWorkbenchContents.toString()+')(root,nodes)',{root:f.host,nodes:[node],CSS:f.win.CSS,researchOptimalDimensions}).get(node.id).height).toBe(822)
+ expect(runInNewContext('('+measureWorkbenchContents.toString().replace(/__vite_ssr_import_\d+__\.researchCandleTemplate/g,'researchCandleTemplate')+')(root,nodes)',{root:f.host,nodes:[node],CSS:f.win.CSS,researchOptimalDimensions,researchCandleTemplate}).get(node.id).height).toBe(822)
  await f.event('click',f.document.querySelector('[data-research-global-arrange]'))
  await vi.waitFor(async()=>{await act(async()=>{});expect(f.workspace.getSnapshot().artifacts[0].height).toBeGreaterThanOrEqual(822)},{timeout:1500,interval:50})
  expect(preset.querySelector('.ew-audio-transcript').textContent).toBe(spec.transcript);expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)

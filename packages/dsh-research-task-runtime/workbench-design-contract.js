@@ -44,7 +44,7 @@ const market = Object.freeze({
   'key-metrics': {id:'financial.key-metrics',figma:'1917:341348',sourceHeight:330,width:485,height:380,minWidth:320,minHeight:260,size:'large'},
   'management-team': {id:'financial.management-team',figma:'1917:345704',sourceHeight:330,width:980,height:380,minWidth:480,minHeight:288,size:'large'},
   metrics: { id: 'financial.metrics', figma: '1696:73546', sourceHeight:212, width: 656, height: 334, size: 'medium' },
-  candlestick: { id: 'financial.candlestick', figma: '1696:73786', width: 656, height: 352, size: 'large' },
+  candlestick: { id: 'financial.candlestick', figma: '1696:73786', width: 716, height: 760, size: 'large' },
   trend: { id: 'financial.trend', figma: '1696:73878', width: 656, height: 300, size: 'large' },
   'price-volume': { id: 'financial.price-volume', figma: '1696:74110', width: 656, height: 310, size: 'large' },
   'order-book': { id: 'financial.order-book', figma: '1696:74260', width: 656, height: 250, size: 'large' },

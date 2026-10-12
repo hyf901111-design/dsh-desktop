@@ -35,7 +35,7 @@ export function researchMarketContentDimensions(variant, data = {}) {
   if(series)return {width:series[0],height:series[1]};
   const snapshots={'share-statistics':[485,330],'market-overview':[980,380],'currency-snapshot':[980,430],'watchlist':[980,460]}[variant];
   if(snapshots)return {width:snapshots[0],height:snapshots[1]};
-  const base = {'ticker-information':[980,296],'key-metrics':[485,380],'management-team':[980,380],'metrics': [656, 334], 'candlestick': [656, 352], 'trend': [656, 300], 'price-volume': [656, 310], 'order-book': [656, 250], 'fund-flow': [656, 352], 'valuation-band': [656, 310], 'equity-drawdown': [656, 310], 'allocation-donut': [656, 300], 'waterfall': [656, 280], 'funnel': [656, 256], 'risk-matrix': [656, 310], 'scatter': [656, 376], 'table': [656, 352], 'pipeline': [656, 270], 'events': [656, 264], 'heatmap': [656, 320], 'breadth': [656, 200], 'fund-kpi': [656, 212], 'fund-holdings': [656, 352], 'fund-industry': [656, 352]}[variant];
+  const base = {'ticker-information':[980,296],'key-metrics':[485,380],'management-team':[980,380],'metrics': [656, 334], 'candlestick': [716, 760], 'trend': [656, 300], 'price-volume': [656, 310], 'order-book': [656, 250], 'fund-flow': [656, 352], 'valuation-band': [656, 310], 'equity-drawdown': [656, 310], 'allocation-donut': [656, 300], 'waterfall': [656, 280], 'funnel': [656, 256], 'risk-matrix': [656, 310], 'scatter': [656, 376], 'table': [656, 352], 'pipeline': [656, 270], 'events': [656, 264], 'heatmap': [656, 320], 'breadth': [656, 200], 'fund-kpi': [656, 212], 'fund-holdings': [656, 352], 'fund-industry': [656, 352]}[variant];
   if (!base) return null;
   const count = (array, explicit) => Number.isInteger(explicit) ? explicit : Array.isArray(array) ? array.length : 0;
   const rows = count(data.items ?? data.rows, data.itemCount || data.rowCount);
@@ -122,7 +122,7 @@ export function researchMarketDimensions(node, includeManual = false, availableW
       footerLines:Number(html.match(/data-metrics-footer-lines="(\d+)"/)?.[1] ?? 0)
     });
   }
-  if(kind==='candlestick')return {width:562,height:264};
+  if(kind==='candlestick')return {width:716,height:760};
   if(kind==='heatmap')return {width:434,height:258};
   if(kind==='breadth') {
     const count=(html.match(/class="market-metric"/g)||[]).length;
@@ -137,7 +137,14 @@ export function researchMarketDimensions(node, includeManual = false, availableW
 }
 // A completed card owns its readable frame. Presets describe a starting slot,
 // not a reason to leave blank space or clip longer content after generation.
+export function researchCandleTemplate(node={}){
+ const spec=node.containerSpec;if(spec?.type!=='html'||typeof spec.html!=='string')return false;
+ const encoded=spec.html.match(/<script id="sherlock-template-data" type="application\/json">([^]*?)<\/script>/)?.[1];
+ if(!encoded||encoded.length>2000000)return false;
+ try{const model=JSON.parse(encoded),data=model.data;return ['market.candlestick','chart.candlestick'].includes(model.templateId)&&model.templateId===data?.type+'.candlestick'&&data?.version===1&&data.variant==='candlestick'&&(Array.isArray(data.candles)||Array.isArray(data.datasets));}catch{return false;}
+}
 export function researchOptimalDimensions(node = {}, measured = null) {
+  if(researchCandleTemplate(node))return {width:716,height:760};
   if(node.containerSpec?.type==='financial-widget')return financialWidgetDimensions(node.containerSpec);
   if(node.containerSpec?.type==='files')return {width:656,height:410};
   if(node.containerSpec?.type==='gallery')return {width:656,height:364};

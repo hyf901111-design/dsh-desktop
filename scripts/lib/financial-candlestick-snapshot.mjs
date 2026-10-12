@@ -1,11 +1,11 @@
 // Only the host's retained, validated candle model is admitted. The original
 // HTML/model remains the persisted data-binding and export snapshot.
 export function financialCandlestickSnapshot(spec){
- if(spec?.type!=='html'||typeof spec.html!=='string'||!spec.html.includes('data-sherlock-market="candlestick"'))return null
+ if(spec?.type!=='html'||typeof spec.html!=='string'||!spec.html.includes('data-sherlock-market="candlestick"')&&!spec.html.includes('data-chart-template="candlestick"'))return null
  const encoded=spec.html.match(/<script id="sherlock-template-data" type="application\/json">([^]*?)<\/script>/)?.[1]
  if(!encoded||encoded.length>2000000)return null
  let model;try{model=JSON.parse(encoded)}catch{return null}
- const d=model.data;if(model.templateId!=='market.candlestick'||typeof model.version!=='string'||!model.version||d?.version!==1||d.type!=='market'||d.variant!=='candlestick')return null
+ const d=model.data;if(!['market.candlestick','chart.candlestick'].includes(model.templateId)||typeof model.version!=='string'||!model.version||d?.version!==1||!['market','chart'].includes(d.type)||model.templateId!==d.type+'.candlestick'||d.variant!=='candlestick')return null
  const groups=d.datasets??[{name:d.title,candles:d.candles}]
  if(!Array.isArray(groups)||!groups.length||groups.length>6)return null
  const datasets=[]
@@ -18,7 +18,7 @@ export function financialCandlestickSnapshot(spec){
   }
   datasets.push({name:typeof g.name==='string'?g.name:d.title,bars})
  }
- return {title:d.title,asOf:d.asOf,note:d.note||'',sources:Array.isArray(d.sources)?d.sources:[],datasets}
+ return {title:d.title,asOf:d.asOf,note:d.note||'',volumeUnit:d.volumeUnit,sources:Array.isArray(d.sources)?d.sources:[],datasets}
 }
 
 export function FinancialCandlestickSnapshot({model}){
@@ -28,15 +28,16 @@ export function FinancialCandlestickSnapshot({model}){
  const active=Math.min(dataset,model.datasets.length-1),bars=model.datasets[active].bars,grouped=financialPeriodBars(bars,period),last=grouped.at(-1),current=focused??last,previous=grouped.at(-2)?.close,change=previous===undefined?null:last.close-previous,percentage=change===null||!previous?null:change/previous*100
  const fmt=v=>Number.isFinite(v)?v.toLocaleString('en-US',{maximumFractionDigits:6,minimumFractionDigits:2}):'—',toggle=v=>setIndicators(old=>old.includes(v)?old.filter(x=>x!==v):[...old,v])
  react.useEffect(()=>setFocused(null),[model,active,period])
- const basis=/不复权|前复权|后复权/.exec(model.note+' '+model.asOf)?.[0]||'来源口径',sourceVolumeUnit=/量单位\s*[:：]?\s*([^；;。]+)/.exec(model.note)?.[1]||/成交量单位\s*[:：]?\s*([^；;。]+)/.exec(model.note)?.[1]||'原始单位',volumeUnit=/原始|未核实|未确认|未知/.test(sourceVolumeUnit)?'原始单位':sourceVolumeUnit
+ const basis=/不复权|前复权|后复权/.exec(model.note+' '+model.asOf)?.[0]||'来源口径',sourceVolumeUnit=model.volumeUnit||/量单位\s*[:：]?\s*([^；;。]+)/.exec(model.note)?.[1]||/成交量单位\s*[:：]?\s*([^；;。]+)/.exec(model.note)?.[1]||'原始单位',volumeUnit=/原始|未核实|未确认|未知/.test(sourceVolumeUnit)?'原始单位':sourceVolumeUnit
+ const visible=Math.min(range,grouped.length),ranges=[...new Set([...([20,60,96,120,320].filter(v=>v<grouped.length)),grouped.length,visible])].sort((a,b)=>a-b)
  return jsxs('section',{'data-financial-candle-snapshot':'','data-research-preview-interactive':'',className:'ew-financial-widget ew-financial-quote ew-candle-snapshot',children:[
   jsxs('div',{className:'ew-quote-price-line',children:[jsx('strong',{'data-direction':change>0?'up':change<0?'down':undefined,children:fmt(last.close)}),jsx('span',{className:'ew-quote-change','data-direction':change>0?'up':change<0?'down':undefined,children:change===null?'—':(change>0?'+':'')+fmt(change)+' '+(percentage>0?'+':'')+percentage.toFixed(2)+'%'}),jsx('small',{title:model.asOf,children:model.asOf})]}),
   jsxs('div',{className:'ew-quote-ohlc',children:[jsx('span',{title:current.date,children:current.date.slice(0,10)+'  '+text('开 ')+fmt(current.open)+' '+text('高 ')+fmt(current.high)+' '+text('低 ')+fmt(current.low)+' '+text('收 ')+fmt(current.close)}),jsx('span',{title:volumeUnit,children:text('成交量')+' '+fmt(current.volume)})]}),
-  jsxs('div',{className:'ew-quote-controls',children:[jsx('div',{className:'ew-quote-periods',children:[['1d','日K'],['1w','周K'],['1mo','月K'],['1y','年K']].map(([v,label])=>jsx('button',{type:'button','data-candle-period':v,'aria-pressed':period===v,onClick:()=>setPeriod(v),children:text(label)},v))}),jsx('div',{className:'ew-quote-indicators',children:['VOL','MACD','MA'].map(v=>jsx('button',{type:'button','aria-pressed':indicators.includes(v),onClick:()=>toggle(v),children:v},v))}),jsx('select',{'aria-label':text('显示交易日数量'),value:range,onChange:e=>setRange(Number(e.target.value)),children:[20,60,96,120,320].map(v=>jsx('option',{value:v,children:text('近 '+v+' 根')},v))})]}),
+  jsxs('div',{className:'ew-quote-controls',children:[jsx('div',{className:'ew-quote-periods',children:[['1d','日K'],['1w','周K'],['1mo','月K'],['1y','年K']].map(([v,label])=>jsx('button',{type:'button','data-candle-period':v,'aria-pressed':period===v,onClick:()=>setPeriod(v),children:text(label)},v))}),jsx('div',{className:'ew-quote-indicators',children:['VOL','MACD','MA'].map(v=>jsx('button',{type:'button','aria-pressed':indicators.includes(v),onClick:()=>toggle(v),children:v},v))}),jsx('select',{'aria-label':text('显示交易日数量'),value:visible,onChange:e=>setRange(Number(e.target.value)),children:ranges.map(v=>jsx('option',{value:v,children:text('近 '+v+' 根')},v))})]}),
   model.datasets.length>1&&jsx('select',{'aria-label':text('K线标的'),value:active,onChange:e=>setDataset(Number(e.target.value)),children:model.datasets.map((d,i)=>jsx('option',{value:i,children:d.name},i))}),
-  jsx(FinancialPriceChart,{key:active,bars,period,indicators,volumeUnit,initialCount:range,onFocusBar:setFocused}),
-  jsxs('details',{'data-candle-original-data':'',className:'ew-candle-original-data',children:[jsxs('summary',{children:[jsx('span',{children:text('完整行情数据')+' · '+bars.length+' '+text('条')}),jsx('span',{children:basis})]}),jsx('div',{className:'ew-candle-data-scroll',children:jsxs('table',{children:[jsx('thead',{children:jsx('tr',{children:['日期','开盘','最高','最低','收盘','成交量'].map(label=>jsx('th',{children:text(label)},label))})}),jsx('tbody',{children:bars.map(b=>jsx('tr',{children:[b.date,b.open,b.high,b.low,b.close,b.volume??'—'].map((v,i)=>jsx('td',{children:String(v)},i))},b.date))})]})})]}),
-  jsxs('div',{className:'ew-candle-source',title:[model.asOf,model.note].filter(Boolean).join('\n'),children:[jsx('span',{children:model.asOf}),...model.sources.filter(s=>typeof s.url==='string'&&/^https?:\/\//.test(s.url)).map((s,i)=>jsx('a',{href:s.url,target:'_blank',rel:'noopener noreferrer',onClick:e=>financialOpenArticle(e,s.url),children:s.label||text('数据来源')},i))]}),model.note&&jsx('div',{className:'ew-candle-note',children:model.note})
+  jsx(FinancialPriceChart,{bars,period,indicators,volumeUnit,initialCount:range,onFocusBar:setFocused},active),
+  jsxs('details',{'data-candle-original-data':'',className:'ew-candle-original-data',children:[jsxs('summary',{children:[jsx('span',{children:text('完整行情数据')+' · '+bars.length+' '+text('条')}),jsx('span',{children:basis})]}),model.note&&jsx('div',{className:'ew-candle-note',children:model.note}),jsx('div',{className:'ew-candle-data-scroll',children:jsxs('table',{children:[jsx('thead',{children:jsx('tr',{children:['日期','开盘','最高','最低','收盘','成交量'].map(label=>jsx('th',{children:text(label)},label))})}),jsx('tbody',{children:bars.map(b=>jsx('tr',{children:[b.date,b.open,b.high,b.low,b.close,b.volume??'—'].map((v,i)=>jsx('td',{children:String(v)},i))},b.date))})]})})]}),
+  jsxs('div',{className:'ew-candle-source',title:[model.asOf,model.note].filter(Boolean).join('\n'),children:[jsx('span',{children:model.asOf}),...model.sources.filter(s=>typeof s.url==='string'&&/^https?:\/\//.test(s.url)).map((s,i)=>jsx('a',{href:s.url,target:'_blank',rel:'noopener noreferrer',onClick:e=>financialOpenArticle(e,s.url),children:s.label||text('数据来源')},i))]})
  ]})
 }
 
