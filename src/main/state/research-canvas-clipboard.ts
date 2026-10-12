@@ -143,6 +143,9 @@ function sanitizeNode(value: unknown): ClipboardNode {
   if (input.kind === 'file' && opaque(input.assetId)) output.assetId = input.assetId
   return output
 }
+// Reusable personal templates pass through the same bounded content contract as
+// component copies. Neither path grants filesystem or preview capabilities.
+export {sanitizeNode as sanitizeResearchClipboardNode}
 
 // Parse only the bounded array-of-strings subset Finder puts on the pasteboard.
 function plistPaths(bytes: Buffer): string[] {

@@ -184,6 +184,7 @@ async function loadClientBundle(
     HTMLTextAreaElement: options?.window?.HTMLTextAreaElement,
     Text: options?.window?.Text,
     ResizeObserver: options?.window?.ResizeObserver,
+    MutationObserver: options?.window?.MutationObserver,
     requestAnimationFrame: options?.window?.requestAnimationFrame?.bind(options.window),
     cancelAnimationFrame: options?.window?.cancelAnimationFrame?.bind(options.window),
     setTimeout,

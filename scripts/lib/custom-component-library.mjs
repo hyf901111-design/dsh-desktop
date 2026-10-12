@@ -1,0 +1,51 @@
+// These functions share the existing trusted React canvas factory, never the
+// generated component iframe. Templates are validated and persisted in main.
+export async function customLibraryRequest(args) {
+    const request = window.dshDesktop?.componentLibrary?.request;
+    if (!request)
+        throw Error('组件库服务暂不可用');
+    return request(args);
+}
+export function customLibraryError(e) { return workbenchText(String(e?.message ?? '保存失败，请重试').replace(/^Error invoking remote method ['"][^'"]+['"]:\s*/, '').replace(/^Error:\s*/, '')); }
+export function CustomLibrarySection({ items, rootRef, readOnly, onChanged, onPlace }) {
+    useWorkbenchLocale();
+    const { jsx, jsxs } = react_jsx_runtime, [context, setContext] = react.useState(null), [editing, setEditing] = react.useState(null), [name, setName] = react.useState(''), [busy, setBusy] = react.useState(false), [error, setError] = react.useState(''), input = react.useRef(null), popup = react.useRef(null), host = react.useRef(null);
+    const cancel = () => { setContext(null); setEditing(null); setError(''); };
+    react.useEffect(() => { if (editing) {
+        input.current?.focus();
+        input.current?.select();
+    } }, [editing]);
+    react.useEffect(() => { if (context) popup.current?.querySelector('button')?.focus({preventScroll:true}); }, [context]);
+    react.useEffect(() => { if (!context && !editing)
+        return; const outside = e => { if (context && !popup.current?.contains(e.target) || editing && !input.current?.closest('form')?.contains(e.target))
+        cancel(); }, key = e => { if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const id = context?.id || editing;
+        cancel();
+        host.current?.querySelector('[data-custom-component="' + CSS.escape(id) + '"]')?.focus();
+    } }; document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', key, true); return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key, true); }; }, [context, editing]);
+    const menu = (item, e) => { e.preventDefault(); e.stopPropagation(); if (readOnly || busy)
+        return; setEditing(null); setError(''); const r = e.currentTarget.getBoundingClientRect(), bounds = financialCanvasBounds(rootRef.current), x = Number.isFinite(e.clientX) ? e.clientX : r.left, y = Number.isFinite(e.clientY) ? e.clientY : r.bottom; setContext({ ...item, ...financialPopoverPosition({ left: x, top: y, bottom: y }, { width: 156, height: 76 }, bounds) }); };
+    const mutate = async (args) => { if (busy)
+        return; setBusy(true); setError(''); try {
+        await customLibraryRequest(args);
+        await onChanged();
+        cancel();
+    }
+    catch (e) {
+        setError(customLibraryError(e));
+    }
+    finally {
+        setBusy(false);
+    } };
+    return jsxs('div', { ref: host, 'data-custom-library': '', className: 'ew-custom-library', children: [jsx('div', { className: 'ew-custom-library-label', children: workbenchText('自定义') }), ...items.map(item => editing === item.id ? jsxs('form', { className: 'ew-custom-library-rename', onSubmit: e => { e.preventDefault(); if (name.trim())
+                    mutate({ action: 'rename', id: item.id, name: name.trim() }); }, children: [jsx('input', { ref: input, 'data-custom-rename-input': '', 'aria-label': workbenchText('组件名称'), value: name, maxLength: 120, disabled: busy, onInput: e => setName(e.target.value), onKeyDown: e => { if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!e.nativeEvent?.isComposing && !e.isComposing && !busy && name.trim())
+                                mutate({ action: 'rename', id: item.id, name: name.trim() });
+                        } } }), jsx('button', { type: 'submit', 'aria-label': workbenchText('保存名称'), disabled: busy || !name.trim(), children: jsx(FinancialLibraryIcon, { name: 'check' }) }), jsx('button', { type: 'button', 'aria-label': workbenchText('取消重命名'), disabled: busy, onClick: cancel, children: jsx(FinancialLibraryIcon, { name: 'close' }) })] }, item.id) : jsxs('button', { type: 'button', role: 'menuitem', 'data-custom-component': item.id, 'data-ui-preserve': true, title: item.name, disabled: readOnly || busy, onContextMenu: e => menu(item, e), onKeyDown: e => { if (e.key === 'ContextMenu' || e.key === 'F10' && e.shiftKey)
+                    menu(item, e); }, onClick: () => onPlace(item), children: [jsx(FinancialLibraryIcon, { name: 'custom' }), jsx('span', { children: item.name }), jsx('span', { className: 'ew-financial-place-action', children: jsx(FinancialLibraryIcon, { name: 'plus' }) })] }, item.id)), context && jsxs('div', { ref: popup, role: 'menu', 'aria-label': workbenchText('自定义组件操作'), 'data-custom-library-menu': '', className: 'ew-grid-menu ew-custom-library-menu', style: { left: context.left, top: context.top, width: context.width }, onPointerDown: e => e.stopPropagation(), children: [jsxs('button', { type: 'button', role: 'menuitem', 'data-custom-rename': '', disabled: busy, onClick: () => { setName(context.name); setEditing(context.id); setContext(null); }, children: [jsx(FinancialLibraryIcon, { name: 'rename' }), jsx('span', { children: workbenchText('重命名') })] }), jsxs('button', { type: 'button', role: 'menuitem', 'data-custom-remove': '', disabled: busy, onClick: () => mutate({ action: 'remove', id: context.id }), children: [jsx(FinancialLibraryIcon, { name: 'remove' }), jsx('span', { children: workbenchText('删除') })] })] }), error && jsx('p', { role: 'alert', className: 'ew-custom-library-error', children: error })] });
+}
+export function canSaveCustomComponent(node) { return Boolean(node && ['generated-container', 'generated-summary', 'generated-mind-map'].includes(node.kind) && !['financial-widget', 'calendar-tool'].includes(node.containerSpec?.type)); }

@@ -19,7 +19,7 @@ const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherl
 const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/20px 20px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
 // Preserve Figma path geometry while giving all workbench glyphs one frame and
 // stroke family. Supplementary glyphs use the same pipeline as reference assets.
-const workbenchIconNames=['refresh','ask','more','close','expand','duplicate','rename','edit','settings','branch','summary','plus','download','link','voice','schedule','data','remove','zoom-in','zoom-out','zoom-reset']
+const workbenchIconNames=['refresh','ask','more','close','expand','duplicate','rename','edit','settings','branch','summary','plus','download','link','voice','schedule','data','remove','zoom-in','zoom-out','zoom-reset','library-add']
 const workbenchIcons=workbenchIconNames.map(name=>{
   const asset=readFileSync(new URL('../../build/figma-workbench-icons/'+name+'.svg',import.meta.url),'utf8')
   const [,rawWidth,rawHeight]=asset.match(/width="([\d.]+)" height="([\d.]+)"/),width=Number(rawWidth),height=Number(rawHeight)
@@ -208,6 +208,8 @@ export function patchResearchGridWorkbench(source){
   source=patchWorkbenchSelectedCreate(source,change)
   const definitions='const workbenchRefreshCss='+JSON.stringify(workbenchRefreshCss)+';\n'+[financialRecordsActionPayload,financialRecordsCsv,codeTemplatePayload,workbenchText,useWorkbenchLocale,createResearchGrid,createWorkbenchGridState,serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg,installWorkbenchRefresh,installWorkbenchChartMotion,installWorkbenchTableColumns,createWorkbenchTableColumnState,isWorkbenchScrollbarMessage,installWorkbenchScrollbars,workbenchSelectedCreateCells,WorkbenchSelectedCreateContext,WorkbenchSelectedCreateDraft,...Object.values(ui),...Object.values(workbenchStyle)].map(fn=>fn.toString()).join('\n')
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
+  change('d: "M3 3.5h10v9H3z"','d: "M9.5 2.25h-6a1.25 1.25 0 0 0-1.25 1.25v9a1.25 1.25 0 0 0 1.25 1.25H7M13.75 6.5v-3a1.25 1.25 0 0 0-1.25-1.25h-3"')
+  change('d: "M8 5.5v5M5.5 8h5"','d: "M11.25 8v6.5M8 11.25h6.5"')
   for(const {before,after} of localizedWorkbenchFunctions(source))change(before,after)
   return source+'\n'+meta+JSON.stringify(changes).replaceAll('*/','*\\/')+' */'
 }

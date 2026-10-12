@@ -107,6 +107,8 @@ body .p-xYUq_actions button[aria-label="添加到画布"] {
 body .p-xYUq_actions :is(.p-xYUq_action,._8_XoUG_action)>svg {
   display:block; flex:none; width:16px; min-width:16px; height:16px;
 }
+body .p-xYUq_actions button[aria-label="Add to canvas"] { box-sizing:border-box;flex:0 0 28px;width:28px;min-width:28px;height:28px;padding:6px; }
+body .p-xYUq_actions button:is([aria-label="添加到画布"],[aria-label="Add to canvas"])>svg { stroke-linecap:round;stroke-linejoin:round; }
 body .sRp_root .p-xYUq_actions { flex-wrap:wrap; }
 /* Figma 752:27866 / 753:27866: the main wide-table helper occupies one 24px line. */
 body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=conversation]:not(:has([data-odyssey-trajectory])) > .wSkVaW_scrollBody .odyssey-table-actions:not([data-odyssey-subagent-panel] *, .sRp_messages *) { color:#2b2b2b; font:400 12px/24px var(--odyssey-font-ui); }

@@ -184,7 +184,7 @@ export async function exportWorkbenchContent(card,node,format) {
   return result
 }
 export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLegacy,onEditSelected,onConfigureIndices}) {
-  const [detail,setDetail]=react.useState(null),[exporting,setExporting]=react.useState(false),[exportError,setExportError]=react.useState(''),ref=react.useRef(null),subRef=react.useRef(null),mindRef=react.useRef(null),settingsRef=react.useRef(null),exportRef=react.useRef(null),leaveTimer=react.useRef(null)
+  const [detail,setDetail]=react.useState(null),[exporting,setExporting]=react.useState(false),[exportError,setExportError]=react.useState(''),[saving,setSaving]=react.useState(false),[saveError,setSaveError]=react.useState(''),ref=react.useRef(null),subRef=react.useRef(null),mindRef=react.useRef(null),settingsRef=react.useRef(null),exportRef=react.useRef(null),leaveTimer=react.useRef(null)
   const trigger=kind=>kind==='mind'?mindRef:kind==='export'?exportRef:settingsRef
   const cancelLeave=()=>{clearTimeout(leaveTimer.current);leaveTimer.current=null}
   const leave=()=>{cancelLeave();leaveTimer.current=setTimeout(()=>setDetail(null),200)}
@@ -201,6 +201,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   react.useEffect(()=>{const outside=e=>{if(!ref.current?.contains(e.target)&&!subRef.current?.contains(e.target)&&!e.target?.closest?.('[data-workbench-more]'))onClose()};const key=e=>{if(e.key==='Escape'){e.stopPropagation();onClose()}};document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',key,true);const scroll=e=>{const scroller=e?.target;if(scroller===window||scroller===document||scroller===document.documentElement||scroller===document.body||scroller===card()?.closest('[data-research-canvas]'))onClose()};window.addEventListener('resize',scroll);document.addEventListener('scroll',scroll,true);return()=>{cancelLeave();document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',key,true);window.removeEventListener('resize',scroll);document.removeEventListener('scroll',scroll,true)}},[onClose])
   const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
   const choose=action=>{onClose();action?.()}
+  const saveLibrary=async()=>{if(saving||readOnly)return;setSaving(true);setSaveError('');try{await customLibraryRequest({action:'save',sessionId:target.sessionId,nodeId:target.node.id});window.dispatchEvent(new CustomEvent('ework-component-library-changed'));onClose()}catch(e){setSaveError(customLibraryError(e))}finally{setSaving(false)}}
   const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{await exportWorkbenchContent(card(),target.node,format);onClose()}catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
   const row=(icon,label,action,disabled=readOnly,attributes={})=>jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
   const separator=key=>jsx('div',{className:'ew-grid-divider',role:'separator'},key)
@@ -215,6 +216,8 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     separator('view'),
     row('duplicate','复制组件',()=>{workspace.copySelectedNodes().then(()=>workspace.pasteClipboardNodes(null)).catch(error=>console.error(error))}),
     row('rename','重命名',()=>onLegacy(target.node,target.event,'rename')),
+    canSaveCustomComponent(target.node)&&jsxs('button',{type:'button',role:'menuitem','data-workbench-save-library':target.node.id,disabled:readOnly||saving||target.node.generationStatus!=='completed',onMouseEnter:leave,onClick:saveLibrary,children:[jsx(WorkbenchIcon,{name:'library-add'}),jsx('span',{children:saving?workbenchText('保存中…'):workbenchText('添加至组件库')})]}),
+    saveError&&jsx('span',{role:'alert','data-library-save-error':'',children:saveError}),
     target.node.creationMode==='selection'&&row('rename','编辑需求',()=>onEditSelected?.(target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-workbench-edit-selected-create':target.node.id}),
     target.node.creationMode==='selection'&&row('branch','查看基准',()=>{
       const root=card()?.closest('[data-research-canvas]'),current=workspace.getSnapshot(),live=new Set([...current.files,...current.artifacts].map(n=>n.id)),ids=(target.node.sourceNodeIds||[]).filter(id=>live.has(id))
