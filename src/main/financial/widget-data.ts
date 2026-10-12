@@ -120,10 +120,12 @@ export function createFinancialWidgetData(options:FinancialTransport&{identity:(
       if(q.period==='1w'){begin.setUTCFullYear(begin.getUTCFullYear()-1);begin.setUTCDate(begin.getUTCDate()-((begin.getUTCDay()+6)%7))}
       if(q.period==='1mo'||q.period==='1y'){begin.setUTCFullYear(Number(end.slice(0,4))-(q.period==='1mo'?8:9),0,1)}
       const beginDate=begin.toISOString().slice(0,10).replaceAll('-',''),all:Row[]=[],seenPages=new Set<string>()
-      for(let page=1;page<=40;page++){
-       const response=await api(name,{ticker:s.code,beginDate,endDate:end,pagenum:page,pagesize:100,field:'ticker,exchangeCD,tradeDate,openPrice,highestPrice,lowestPrice,closePrice,preClosePrice,turnoverVol'});payload(response)
+      // The official MCP returns at most 50 rows even if a larger page is requested.
+      // Match that page size so a full page cannot be mistaken for the final page.
+      for(let page=1;page<=80;page++){
+       const response=await api(name,{ticker:s.code,beginDate,endDate:end,pagenum:page,pagesize:50,field:'ticker,exchangeCD,tradeDate,openPrice,highestPrice,lowestPrice,closePrice,preClosePrice,turnoverVol'});payload(response)
        const rows=findRows(response),fingerprint=JSON.stringify(rows.map(r=>[r.ticker,r.tradeDate]));if(rows.length&&seenPages.has(fingerprint))throw Error('此市场接口不支持完整周期查询，请选择日K');seenPages.add(fingerprint);all.push(...rows)
-       if(rows.length<100)break;if(page===40)throw Error('此周期数据过多，请选择较短周期')
+       if(rows.length<50)break;if(page===80)throw Error('此周期数据过多，请选择较短周期')
       }
       value=all;unit='股'
      }

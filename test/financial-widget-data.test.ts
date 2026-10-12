@@ -32,7 +32,7 @@ it('MCP 截断的 JSON 明确报错，不能显示成暂无新闻',async()=>{
  const p=provider(info('POST',undefined,['onlyChannel','publishTimeStart','publishTimeEnd','pageSize']),{});p.request.mockImplementation(async(body:string)=>{const b=JSON.parse(body);return Response.json({id:b.id,result:{content:[{type:'text',text:b.params.name==='get_api_info'?info('POST',undefined,['onlyChannel','publishTimeStart','publishTimeEnd','pageSize']):'…结果已截断，下方 JSON 不完整'}]}})});const service=createFinancialWidgetData({...p,identity:()=> 'own'});await expect(service.query({action:'news',query:''})).rejects.toThrow('数据过多')
 })
 it('港股年K从完整自然年边界查询并分页保留全部历史',async()=>{
- const requests:any[]=[],rows=Array.from({length:230},(_,i)=>({ticker:'00700',tradeDate:new Date(Date.UTC(2024,0,1+i)).toISOString().slice(0,10),openPrice:10,highestPrice:11,lowestPrice:9,closePrice:10,turnoverVol:1}));const request=async(body:string)=>{const b=JSON.parse(body);const q=b.params.arguments;requests.push(b.params);const value=b.params.name==='get_api_info'?info('GET',undefined,['ticker','beginDate','endDate','pagenum','pagesize','field']):{retCode:1,data:rows.slice((Number(q.url_params.pagenum)-1)*100,Number(q.url_params.pagenum)*100)};return Response.json({id:b.id,result:{structuredContent:value}})};const service=createFinancialWidgetData({request,identity:()=> 'own'});const r=await service.query({action:'history',symbols:[{code:'00700',market:'HK',name:'腾讯控股'}],period:'1y',adjustment:'none'});const calls=requests.filter(c=>c.name==='call_api');expect(calls[0].arguments.url_params.beginDate).toMatch(/^\d{4}0101$/);expect(calls.map(c=>c.arguments.url_params.pagenum)).toEqual(['1','2','3']);expect(r.bars).toHaveLength(230)
+ const requests:any[]=[],rows=Array.from({length:230},(_,i)=>({ticker:'00700',tradeDate:new Date(Date.UTC(2024,0,1+i)).toISOString().slice(0,10),openPrice:10,highestPrice:11,lowestPrice:9,closePrice:10,turnoverVol:1}));const request=async(body:string)=>{const b=JSON.parse(body);const q=b.params.arguments;requests.push(b.params);const value=b.params.name==='get_api_info'?info('GET',undefined,['ticker','beginDate','endDate','pagenum','pagesize','field']):{retCode:1,data:rows.slice((Number(q.url_params.pagenum)-1)*Number(q.url_params.pagesize),Number(q.url_params.pagenum)*Number(q.url_params.pagesize))};return Response.json({id:b.id,result:{structuredContent:value}})};const service=createFinancialWidgetData({request,identity:()=> 'own'});const r=await service.query({action:'history',symbols:[{code:'00700',market:'HK',name:'腾讯控股'}],period:'1y',adjustment:'none'});const calls=requests.filter(c=>c.name==='call_api');expect(calls[0].arguments.url_params.beginDate).toMatch(/^\d{4}0101$/);expect(calls.map(c=>c.arguments.url_params.pagenum)).toEqual(['1','2','3','4','5']);expect(r.bars).toHaveLength(230)
 })
 it('完整股票代码精确查询证券身份，避免语义搜索返回无关股票',async()=>{
  const p=provider(info('GET',undefined,['ticker','type']),{code:1,data:{ticker:'000858',name:'五粮液',exchangeCD:'XSHE'}}),service=createFinancialWidgetData({...p,identity:()=> 'own'});const r=await service.query({action:'search',query:'000858'});expect(r.symbols).toEqual([{code:'000858',name:'五粮液',market:'SZ'}]);expect(p.calls[0].arguments.nameEn).toBe('market_snapshot');expect(p.calls[1].arguments.url_params).toEqual({ticker:'000858',type:'stock'})
@@ -56,4 +56,15 @@ it.each(['数据查询失败: HTTP 402: 订单额度已用完','Other MCP: HTTP 
 it('数据源权限错误保留可操作的通用提示',async()=>{
  const request=async(body:string)=>{const b=JSON.parse(body);return Response.json({id:b.id,result:{isError:true,content:[{type:'text',text:'HTTP 403: 无权限'}]}})};
  await expect(createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'news',query:''})).rejects.toThrow('数据源未提供所需数据或接口权限，请稍后重试');
+})
+
+it('官网MCP单页最多50行时继续翻页，不能把第一页当完整港股历史',async()=>{
+ const rows=Array.from({length:120},(_,i)=>({ticker:'00700',tradeDate:new Date(Date.UTC(2024,0,1+i)).toISOString().slice(0,10),openPrice:10,highestPrice:11,lowestPrice:9,closePrice:10,turnoverVol:1}));const pages:number[]=[]
+ const request=async(body:string)=>{const b=JSON.parse(body),q=b.params.arguments;let value:any
+  if(b.params.name==='get_api_info')value=info('GET',undefined,['ticker','beginDate','endDate','pagenum','pagesize','field'])
+  else{const size=Math.min(50,Number(q.url_params.pagesize)),page=Number(q.url_params.pagenum);pages.push(page);value={retCode:1,data:rows.slice((page-1)*size,page*size)}}
+  return Response.json({id:b.id,result:{structuredContent:value}})
+ }
+ const result=await createFinancialWidgetData({request,identity:()=> 'own'}).query({action:'history',symbols:[{code:'00700',market:'HK',name:'腾讯控股'}],period:'1w',adjustment:'none'})
+ expect(result.bars).toHaveLength(120);expect(result.bars.at(-1).date).toBe(rows.at(-1)!.tradeDate);expect(pages).toEqual([1,2,3])
 })
