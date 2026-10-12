@@ -8,7 +8,7 @@ import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
-import { componentSourceCollector, componentBindingEvidence, COMPONENT_BOUND_DATA_PROMPT, resolveBoundComponent } from './component-source-binding.js'
+import { componentSourceCollector, componentSnapshotEvidence, componentBindingEvidence, COMPONENT_BOUND_DATA_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
@@ -1443,7 +1443,7 @@ export class ResearchTaskRuntime {
           // A valid-looking static card can contain values copied from an API
           // example. Discovery-only evidence requires retrieval even when the
           // previous response was empty or a provider retry already ran.
-          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.length&&sourceRecords.every(record=>record.purpose==='discovery'))throw new ResearchTaskError('GENERATION_FAILED','当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。')
+          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords))throw new ResearchTaskError('GENERATION_FAILED','当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。')
           let mapped
           try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{intervalMinutes:requestedComponentRefreshInterval(task.prompt),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(task.prompt)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(task.prompt)}) }
           catch(error){throw new ResearchTaskError(error.code==='SOURCE_DATA_REQUIRED'?'GENERATION_FAILED':'INVALID_OUTPUT',error.message)}
@@ -1888,7 +1888,7 @@ export function createSubagentAdapter(ctx) {
         !(kind === 'container' && containerExcludedTools.has(name)) &&
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
-      const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')||name==='public_data_query'),scopedSchemas??[])
+      const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')||['public_data_query','web_fetch','financial_query'].includes(name)),scopedSchemas??[])
       const run = await startComponentAgent(ctx, {
         label: '画布生成任务',
         ...(agentOptions ? { agentOptions } : {}),

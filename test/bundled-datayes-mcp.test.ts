@@ -129,3 +129,38 @@ it('拒绝批量、分页与超大参数请求，防止绕过固定工具边界'
  expect((await handleRequest(request('tools/call',{name:'get_catalog',arguments:{value:'x'.repeat(256*1024)}}),f.env)).status).toBe(400)
  expect(f.calls).toHaveLength(0)
 })
+
+it('内置通联真实返回额度错误后向用户解释服务额度并暂停同一接口，其他接口和到期重试仍可用',async()=>{
+ const businessCalls:Array<{name:string;nameEn?:string}>=[]
+ let exhausted=true
+ const transport=new McpSupervisor({read:async()=>{throw Error('UNEXPECTED_VAULT_READ')}},async(body)=>{
+  const rpc=JSON.parse(body)
+  if(rpc.method==='notifications/initialized')return new Response(null,{status:202})
+  const result=rpc.method==='initialize'?{protocolVersion:'2025-03-26',capabilities:{tools:{}},serverInfo:{name:'test',version:'1'}}
+   :rpc.method==='tools/list'?{tools:['call_api','get_api_info'].map(name=>({name,inputSchema:{type:'object'}}))}
+   :(()=>{
+    const {name,arguments:args}=rpc.params;businessCalls.push({name,nameEn:args.nameEn})
+    return name==='call_api'&&args.nameEn==='market_snapshot'&&exhausted
+     ?{isError:true,content:[{type:'text',text:'请求失败 HTTP 402: {"code":402,"message":"订单额度已用完"}'}]}
+     :{content:[{type:'text',text:'{"code":1,"data":[{"price":123}]}'}]}
+   })()
+  return Response.json({jsonrpc:'2.0',id:rpc.id,result})
+ })
+ const now=Date.now(),clock=vi.spyOn(Date,'now').mockReturnValue(now)
+ const connection=bundledDatayesConnection('account-one',true),signal=AbortSignal.timeout(5000)
+ try {
+  await transport.connect(connection,signal)
+  const first=await transport.invoke(connection.id,'call_api',{nameEn:'market_snapshot',ticker:'600519'},signal)
+  expect(first).toMatchObject({isError:true,errorCode:'RUNTIME_UNAVAILABLE'})
+  expect(first.content[0]?.text).toContain('内置通联服务的数据额度')
+  expect(first.content[0]?.text).not.toContain('ai.datayes.com/pricing')
+  const repeated=await transport.invoke(connection.id,'call_api',{nameEn:'market_snapshot',ticker:'000858'},signal)
+  expect(repeated).toMatchObject({isError:true,errorCode:'RUNTIME_UNAVAILABLE'})
+  expect(businessCalls).toEqual([{name:'call_api',nameEn:'market_snapshot'}])
+  expect((await transport.invoke(connection.id,'get_api_info',{nameEn:'market_snapshot'},signal)).isError).not.toBe(true)
+  expect((await transport.invoke(connection.id,'call_api',{nameEn:'another-api'},signal)).isError).not.toBe(true)
+  exhausted=false;clock.mockReturnValue(now+61000)
+  expect((await transport.invoke(connection.id,'call_api',{nameEn:'market_snapshot'},signal)).isError).not.toBe(true)
+  expect(businessCalls.filter(c=>c.name==='call_api'&&c.nameEn==='market_snapshot')).toHaveLength(2)
+ } finally {clock.mockRestore();await transport.disposeAll()}
+})

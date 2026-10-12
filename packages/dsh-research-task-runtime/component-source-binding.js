@@ -23,11 +23,19 @@ export function componentSourceCollector(allowed,schemas=[]) {
       if(!call)return
       calls.delete(message.source.callId)
       const result=message.content?.find(b=>b.type==='tool-result')
-      if(!result||result.isError)return
-      const purpose=discovery.has(call.tool)||call.tool==='public_data_query'&&call.args?.operation!=='query'?'discovery':undefined
+      if(!result||result.isError||result.error)return
+      const snapshotTool=['web_fetch','financial_query'].includes(call.tool)
+      const purpose=discovery.has(call.tool)||call.tool==='public_data_query'&&call.args?.operation!=='query'||call.tool==='financial_query'&&['resolve','search','catalog'].includes(call.args?.intent)?'discovery':snapshotTool?'snapshot':undefined
       let response
       try { response=decodeDataResponse(result) }
       catch { if(!purpose)return;response=null }
+      if(call.tool==='web_fetch') {
+        const text=(result.content??[]).filter(b=>b?.type==='text'&&typeof b.text==='string').map(b=>b.text).join('\n')
+        if(!text.trim()||!snapshotUrl(call.args?.url))return
+        // A public document is snapshot evidence, not an automatically
+        // executable refresh recipe. Retain its observed URL, not its body.
+        response=null
+      }
       // Plain-text API definitions still establish discovery, never data.
       {
         const previous=records.findIndex(r=>r.tool===call.tool&&isDeepStrictEqual(r.args,call.args))
@@ -42,6 +50,20 @@ export function componentSourceCollector(allowed,schemas=[]) {
       }
     }
   }
+}
+
+function snapshotUrl(value) {
+  try {const url=new URL(value);if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return null;url.hash='';return url.href} catch {return null}
+}
+export function componentSnapshotEvidence(text,records) {
+  if(records.some(r=>r.tool==='financial_query'&&r.purpose==='snapshot'&&r.response&&typeof r.response==='object'&&Object.keys(r.response).length))return true
+  const urls=new Set(records.filter(r=>r.tool==='web_fetch'&&r.purpose==='snapshot').map(r=>snapshotUrl(r.args?.url)).filter(Boolean))
+  if(!urls.size)return false
+  const referenced=value=>{
+    if(!value||typeof value!=='object')return false
+    return Object.entries(value).some(([key,v])=>['url','link','sourceUrl'].includes(key)&&typeof v==='string'&&urls.has(snapshotUrl(v))||v&&typeof v==='object'&&(Array.isArray(v)?v.some(referenced):referenced(v)))
+  }
+  return extractArtifactObjects(text).some(referenced)
 }
 
 export const COMPONENT_BOUND_DATA_PROMPT = `
@@ -65,7 +87,7 @@ export function componentBindingEvidence(records) {
   return typeof value==='string'?value.slice(0,3000):value
  }
  let used=0
- return records.filter(record=>record.purpose!=='discovery').slice(-8).flatMap(record=>{
+ return records.filter(record=>!['discovery','snapshot'].includes(record.purpose)).slice(-8).flatMap(record=>{
   const text=JSON.stringify({tool:record.tool,args:record.args,responseSample:sample(record.response)})
   if(used+Buffer.byteLength(text)>100000)return []
   used+=Buffer.byteLength(text);return [text]

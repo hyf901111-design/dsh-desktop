@@ -299,3 +299,24 @@ it('retains discovery provenance even when a successful API definition is plain 
  collector.accept({type:'tool/result',data:{message:{source:{callId:'definition'},content:[{type:'tool-result',content:[{type:'text',text:'接口文档、参数和样例，不是业务数据'}]}]}}})
  expect(collector.records).toEqual([{tool,args,response:null,purpose:'discovery'}])
 })
+
+it.each([{matched:true,failed:false},{matched:false,failed:false},{matched:true,failed:true}])('accepts a public snapshot after failed MCP retrieval only when its source was actually fetched (%j)',async ({matched,failed})=>{
+ const url='https://example.com/market/600519'
+ const collector=componentSourceCollector([tool,'web_fetch'],[{name:tool,description:'获取 API 完整定义。'}])
+ const reply=(id,text,isError=false)=>({type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',isError,content:[{type:'text',text}]}]}}})
+ collector.accept({type:'tool/call',data:{callId:'definition',name:tool,arguments:JSON.stringify(args)}})
+ collector.accept(reply('definition','调用: GET https://gw.datayes.com/api\n【入参】\n接口定义及样例'))
+ collector.accept({type:'tool/call',data:{callId:'page',name:'web_fetch',arguments:JSON.stringify({url})}})
+ collector.accept(reply('page',failed?'HTTP 403，未取得网页':'贵州茅台 600519 最近收盘价 1282 元，交易日期 2026-10-09。',failed))
+ const snapshot={version:1,type:'market',variant:'metrics',title:'公开行情快照',asOf:'2026-10-09 · 公开来源',items:[{label:'收盘价',value:'1282 元'}],sources:[{label:'已获取行情页',url:matched?url:'https://unobserved.example/quote'}]}
+ const start=vi.fn(async()=>({childSessionId:'public-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(snapshot)}],sourceRecords:collector.records})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：个股研究\n本面板：公开行情快照\n优先使用 market 类型；variant: metrics。通联接口已返回402，改用 web_fetch 核验公开来源；仅静态快照，明确未绑定自动刷新。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe(matched&&!failed?'completed':'failed'))
+  expect(start.mock.calls).toHaveLength(matched&&!failed?1:2)
+  expect(bindData).not.toHaveBeenCalled()
+  if(matched&&!failed)expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toContain('1282')
+ }finally{await runtime.dispose()}
+})

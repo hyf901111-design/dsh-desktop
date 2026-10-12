@@ -15,6 +15,7 @@ import {isBundledDatayesId,DATAYES_GATEWAY} from '../bundled-datayes'
 const MAX_BYTES = 8 * 1024 * 1024
 const REQUEST_TIMEOUT = 30_000
 const TOOL_CALL_TIMEOUT = 55_000
+const DATAYES_QUOTA_NOTICE = '内置通联服务的数据额度已用完（HTTP 402），同一接口暂停 60 秒后可重试。该额度由 EWork 内置服务管理。生成工作台时请保留已取得的数据，其余内容使用可用来源并标注来源与缺失项；不要重复调用同一失败接口，也不要将公开数据标为通联数据。'
 const executeFile = promisify(execFile)
 const SAFE_ENV = ['PATH', 'HOME', 'TMPDIR', 'TEMP', 'TMP', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'HOMEDRIVE', 'HOMEPATH', 'LANG', 'LC_ALL', 'LC_CTYPE', 'LOGNAME', 'SHELL', 'TERM', 'USER', 'USERNAME', 'PROCESSOR_ARCHITECTURE', 'SYSTEMDRIVE', 'PROGRAMFILES']
 const FORBIDDEN_ENV = /^(?:NODE_OPTIONS|NODE_PATH|ELECTRON_RUN_AS_NODE|LD_PRELOAD|LD_LIBRARY_PATH|DYLD_.*|EWORK_.*BRIDGE.*|SHERLOCK_.*BRIDGE.*)$/iu
@@ -113,6 +114,7 @@ async function terminateDescendants(pid: number): Promise<void> {
 
 export class McpSupervisor {
   private readonly entries = new Map<string, Entry>()
+  private readonly datayesQuotaUntil = new Map<string, number>()
   constructor(private readonly vault: { read(ref: string): Promise<string> },private readonly datayesRequest?:(body:string,signal:AbortSignal)=>Promise<Response>) {}
 
   async connect(connection: Connection, signal: AbortSignal): Promise<McpConnectionResult> {
@@ -169,6 +171,15 @@ export class McpSupervisor {
     if (!entry?.settled || entry.closed || entry.closing || !entry.client) return failure('RUNTIME_UNAVAILABLE', 'MCP 尚未连接，请先测试连接')
     if (!entry.tools.some(tool => tool.name === rawToolName)) return failure('NOT_FOUND', '该工具不在 MCP 已发现的工具列表中')
     if (signal.aborted) return failure('CANCELLED', 'MCP 操作已取消')
+    // Business quota errors are independent of successful MCP discovery. Share
+    // this short cooldown across parent/subtask calls to the same built-in API.
+    // Other APIs and personal connections remain independently usable.
+    const quotaKey = isBundledDatayesId(connectionId)
+      ? JSON.stringify([connectionId, rawToolName, typeof args.nameEn === 'string' ? args.nameEn : rawToolName === 'call_api' ? args.url : null])
+      : undefined
+    for (const [key, until] of this.datayesQuotaUntil) if (until <= Date.now()) this.datayesQuotaUntil.delete(key)
+    const quotaBlocked = () => quotaKey && (this.datayesQuotaUntil.get(quotaKey) ?? 0) > Date.now()
+    if (quotaBlocked()) return failure('RUNTIME_UNAVAILABLE', DATAYES_QUOTA_NOTICE)
     const combined = AbortSignal.any([signal, entry.controller.signal])
     let acquired = false
     try {
@@ -177,6 +188,7 @@ export class McpSupervisor {
       acquired = true
       aborted(combined)
       if (entry.closed || entry.closing || !entry.client) throw new IntegrationError('RUNTIME_UNAVAILABLE', 'MCP 连接已断开')
+      if (quotaBlocked()) return failure('RUNTIME_UNAVAILABLE', DATAYES_QUOTA_NOTICE)
       const result = await entry.client.callTool({ name: rawToolName, arguments: args }, undefined, { signal: combined, timeout: TOOL_CALL_TIMEOUT, maxTotalTimeout: TOOL_CALL_TIMEOUT })
       if (Buffer.byteLength(JSON.stringify(result), 'utf8') > MAX_BYTES) throw new IntegrationError('RESPONSE_TOO_LARGE', 'MCP 响应超过 8 MiB')
       const rawContent = Array.isArray(result.content) ? result.content : []
@@ -189,6 +201,10 @@ export class McpSupervisor {
       })
       if (!content.length && result.structuredContent) content.push({ type: 'text', text: this.redact(JSON.stringify(result.structuredContent), entry) })
       if (!content.length) content.push({ type: 'text', text: '工具调用完成（无文本结果）' })
+      if (quotaKey && result.isError && content.some(item => /HTTP\s*402\b|["\\]code["\\\s]*:\s*402\b|订单额度已用完|quota\s+(?:exhausted|exceeded)/iu.test(item.text))) {
+        this.datayesQuotaUntil.set(quotaKey, Date.now() + 60_000)
+        return failure('RUNTIME_UNAVAILABLE', DATAYES_QUOTA_NOTICE)
+      }
       return { content, ...(result.isError ? { isError: true } : {}) }
     } catch (error) {
       const failureError = entry.fatal ?? mappedError(error, combined, true)
