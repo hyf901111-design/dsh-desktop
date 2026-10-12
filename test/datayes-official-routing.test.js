@@ -63,3 +63,9 @@ it('股票估值搜索优先返回官网积分接口，发现结果与业务数�
  expect(reply.result.content[0].text).toContain('接口发现')
  expect(f.calls).toHaveLength(0)
 })
+it('新准则财报名称中的括号不遮蔽利润表接口，避免误报没有归母净利润数据',async()=>{
+ const f=fixture(),reply=await (await handleRequest(req('search_api',{query:'合并利润表'}),f.env)).json()
+ expect(reply.result.content[0].text).toContain('getFdmtISLT2018')
+ expect(reply.result.content[0].text).toContain('合并利润表')
+ expect(f.calls).toHaveLength(0)
+})
