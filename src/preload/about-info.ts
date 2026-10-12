@@ -18,6 +18,19 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '1.2.2',
+      date: '2026-10-12',
+      items: [
+        '修复删除MCP或卸载插件时依赖提示过长的问题，内容可滚动，取消与确认按钮始终可见。',
+        '看板转换为协作看板或创建个人副本时，保留自选股、行情、新闻和公告之间的节点连接与联动。',
+        '修复生成工作台时顶部出现大块空白，撤销占位组件后自动吸顶并清除遗留空行。',
+        '修复鼠标停在未选中的生成组件上时画布停止滚动，网页、表格和资讯组件的滚轮继续传递给画布。',
+        '内置通联MCP的已匹配接口改用官网积分服务，修复新密钥取数仍走旧额度接口的问题，并准确提示具体接口的额度状态。',
+        '完善通联财报接口搜索，修复括号名称导致的遗漏，并按接口分页限制完整读取港股历史行情。',
+        '加强生成组件的数据映射校验，准确指出缺失字段并使用完整模板自动修复；刷新失败时保留上一次有效数据。'
+      ]
+    },
+    {
       version: '1.2.1',
       date: '2026-10-12',
       items: [
@@ -360,6 +373,19 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.2.2',
+      date: '2026-10-12',
+      items: [
+        'Long dependency notices when deleting MCP connections or uninstalling plugins now scroll, keeping Cancel and Confirm visible.',
+        'Converting a board to a collaborative board or making a personal copy preserves links between Watchlist, Stock Chart, News and Announcements.',
+        'Fixed large gaps above generated workbenches. Removing placeholder components aligns the remaining layout to the top and clears empty rows.',
+        'Wheel scrolling over unselected generated web, table and news components now continues scrolling the canvas.',
+        'Matched built-in DataYes MCP APIs now use the official points-based services, fixing new keys being sent to the legacy quota endpoint and clarifying API-specific quota errors.',
+        'Improved DataYes financial-report search when API names contain parentheses, and paginated Hong Kong market history within provider limits to retain all records.',
+        'Generated components now report missing data fields precisely and repair mappings with the full template contract; failed refreshes retain the last valid data.'
+      ]
+    },
     {
       version: '1.2.1',
       date: '2026-10-12',
