@@ -54,6 +54,13 @@ it.each(Object.keys(specs))('redraws %s at actual pixel dimensions without squee
     view.resize([292, 180])
     expect(svg.getAttribute('viewBox')).toBe('0 0 292 180')
     expect(svg.querySelector('polyline').getAttribute('points')).toBe(points)
+    if(variant==='price-volume'){
+      view.resize([292,120])
+      const axis=[...svg.querySelectorAll('text:not([data-series-date])')].map(text=>Number(text.getAttribute('y')))
+      expect(axis.length).toBeGreaterThanOrEqual(2)
+      expect(axis.slice(1).every((y,i)=>y-axis[i]>=14)).toBe(true)
+      expect([...view.doc.querySelectorAll('tbody tr')].map(row=>row.textContent)).toEqual(rows)
+    }
   } finally { view.close() }
 })
 

@@ -18,7 +18,8 @@ export function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit,vi
   const maxVolume=Math.max(1,...volumes.slice(start,start+length).map(value=>value??0)),barWidth=Math.max(1,Math.min(12,(right-left)/length*.7))
   svg.setAttribute('data-workbench-chart-view',JSON.stringify({min,max,start:labels[start],end:labels[start+length-1]}))
   svg.replaceChildren()
-  for(let step=0;step<=4;step++){const value=max-(max-min)*step/4,yy=y(value);add('line',{x1:left,y1:yy,x2:right,y2:yy,class:'price-volume-grid'});const label=add('text',{x:left-7,y:yy+3,'text-anchor':'end'});label.textContent=value.toFixed(Math.abs(max-min)<5?2:0)}
+  const ticks=Math.min(5,Math.max(2,Math.floor((priceBottom-top)/24)+1))
+  for(let step=0;step<ticks;step++){const value=max-(max-min)*step/(ticks-1),yy=y(value);add('line',{x1:left,y1:yy,x2:right,y2:yy,class:'price-volume-grid'});const label=add('text',{x:left-7,y:yy+3,'text-anchor':'end'});label.textContent=value.toFixed(Math.abs(max-min)<5?2:0)}
   const line=add('polyline',{class:'price-volume-line',points:subset.map((value,i)=>`${x(i)},${y(value)}`).join(' ')})
   line.setAttribute('aria-hidden','true')
   volumes.slice(start,start+length).forEach((volume,i)=>{if(volume===null)return;const h=volume/maxVolume*volumeHeight;add('rect',{class:'price-volume-bar',x:x(i)-barWidth/2,y:bottom-h,width:barWidth,height:Math.max(1,h)})})
