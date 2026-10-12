@@ -18,6 +18,18 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      version: '1.2.1',
+      date: '2026-10-12',
+      items: [
+        '新增自定义组件库，可将生成的组件保存到独立分类并再次添加到画布，支持右键或更多菜单重命名和删除。',
+        '完善组件库添加成功提示与图标微动效，添加到画布后自动关闭菜单，收窄滚动条并修复多余空白及右键菜单遮挡，统一添加到画布图标。',
+        '行情需求优先复用内置专业行情组件，免费来源的单一证券日K直接使用行情组件；已有K线模板复用同一图表，支持均线、成交量、MACD及周期切换。',
+        '优化金融图表随组件尺寸变化的布局、刻度密度和时间标签，避免文字被拉伸，保留原始数据、缺失值、来源与口径说明。',
+        '修复整理组件时K线高度异常放大，恢复已有异常尺寸，连续整理及数据刷新后保持图表高度稳定。',
+        '取消技能包文件数量和容量的固定限制，支持拖入技能文件夹或SKILL.md导入，完整保留技能资源与依赖。'
+      ]
+    },
+    {
       version: '1.2.0',
       date: '2026-10-12',
       items: [
@@ -348,6 +360,18 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      version: '1.2.1',
+      date: '2026-10-12',
+      items: [
+        'Added a Custom category in the component library: save generated components, reuse them on the canvas, and rename or delete them through the context or more menu.',
+        'Added save confirmation and a subtle library icon animation; placing a component closes the menu. Refined the scrollbar, removed excess blank space and menu clipping, and unified the Add to Canvas icon.',
+        'Market requests prioritize the built-in professional Stock Chart. Single-security daily candles from free sources use it directly, while existing candle templates reuse the same chart with moving averages, volume, MACD and period controls.',
+        'Financial charts adapt their layout, tick density and time labels to component size without stretching text, while retaining original data, missing values, sources and calculation notes.',
+        'Fixed K-line components growing excessively tall during Arrange. Existing oversized frames recover, and heights stay stable across repeated arrangement and data refresh.',
+        'Removed fixed skill-package file-count and size limits. Import a skill folder or SKILL.md by dragging it into the app, retaining all skill resources and dependencies.'
+      ]
+    },
     {
       version: '1.2.0',
       date: '2026-10-12',
