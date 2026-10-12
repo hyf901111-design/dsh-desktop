@@ -64,8 +64,8 @@ it.each(Object.keys(specs))('redraws %s at actual pixel dimensions without squee
   } finally { view.close() }
 })
 
-it('upgrades an already saved host price-volume chart while retaining its model, table and interaction routes', () => {
-  const current = artifact('price-volume'), old = current.html.replace(/ data-series-viewport="v2"/g, '').replace(/<script>[^]*?<\/script>/, '<script>(function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit){document.querySelector("svg").setAttribute("viewBox","0 0 506 164")})([],[],[],"USD","BTC");</script>')
+it.each([false,true])('upgrades an already saved host price-volume chart (previous viewport marker: %s) while retaining its model, table and interaction routes', marked => {
+  const current = artifact('price-volume'), old = (marked?current.html:current.html.replace(/ data-series-viewport="v2"/g, '')).replace(/<script>[^]*?<\/script>/, '<script>(function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit){document.querySelector("svg").setAttribute("viewBox","0 0 506 164")})([],[],[],"USD","BTC");</script>')
   const upgraded = compactHostDashboardHtml(old)
   expect(upgraded).not.toBe(old)
   expect(readTemplateModel({ ...current, html: upgraded })).toEqual(readTemplateModel({ ...current, html: old }))
