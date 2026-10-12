@@ -56,6 +56,13 @@ it('右键重命名和删除仅影响库条目；点击外部和Escape关闭', a
     let item = f.document.querySelector('[data-custom-component]');
     await f.event('contextmenu', item, { clientX: 220, clientY: 190 });
     expect(f.document.querySelector('[data-custom-library-menu]')).not.toBeNull();
+    // The frosted menu establishes a containing block for fixed descendants.
+    // A nested context menu both clips and expands its scrollable overflow.
+    const library=f.document.querySelector('.ew-financial-library');library.style.backdropFilter='blur(24px)';
+    expect(library.contains(f.document.querySelector('[data-custom-library-menu]'))).toBe(false);
+    expect(f.document.querySelector('[data-custom-library-menu]').dataset.financialTheme).toBe('light');
+    await f.event('pointerdown',f.document.querySelector('[data-custom-rename]'));
+    expect(f.document.querySelector('.ew-financial-library')).toBe(library);
     await f.event('pointerdown', f.document.body);
     expect(f.document.querySelector('.ew-financial-library')).toBeNull();
     await open(f);
