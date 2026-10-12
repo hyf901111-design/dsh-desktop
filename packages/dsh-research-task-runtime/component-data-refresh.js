@@ -1,4 +1,4 @@
-import { normalizeIndexedTableRows } from './template-data-contract.js'
+import { normalizeIndexedTableRows, templateDataIssue } from './template-data-contract.js'
 import {randomUUID,createHash} from 'node:crypto'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
@@ -286,6 +286,9 @@ export class ComponentDataRefresh {
    const data=materializeComponentMapping(b.mapping,Object.fromEntries(results),new Date(startedAt))
    data.title=model.data.title
    if(templateFor(data)?.id!==b.templateId)throw Error('新数据与当前组件类型不匹配')
+   if(data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)){
+    const issue=templateDataIssue(data);if(issue)throw Error(issue+'；已保留上次内容')
+   }
    const output=acceptArtifactOutput(JSON.stringify(data));if(!output)throw Error('接口数据不符合模板，已保留上次内容')
    const spec=JSON.parse(output),accepted=readTemplateModel(spec)
    if(!accepted||accepted.templateId!==b.templateId||accepted.version!==b.templateVersion)throw Error('接口数据不符合当前模板，已保留上次内容')

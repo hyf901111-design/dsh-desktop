@@ -7,6 +7,7 @@ import {FINANCIAL_PROFILE_VARIANTS,financialProfileDataIssue} from './financial-
 // limits here so a compact prompt cannot promise a shape the renderer rejects.
 export const TEMPLATE_LIMITS=Object.freeze({trendSeries:12,trendPoints:366,scatterItems:20,allocationItems:12,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
 export const TEMPLATE_RULES=Object.freeze({
+ metrics:'1–12 项，每项必须同时有 label 和 value，均为非空文字；数值与单位放 value，detail 为可选非空文字。证券名称可作为 value 或写入标题，不能只提交 label；缺失指标写“—”并解释，不编造数值',
  trend:`1–${TEMPLATE_LIMITS.trendSeries} 条同单位同纵轴序列，2–${TEMPLATE_LIMITS.trendPoints} 个时点；每条 values 必须与 labels 等长且全为有限数值，允许负数`,
  scatter:`1–${TEMPLATE_LIMITS.scatterItems} 个样本；x/y 为有限数值，允许负数；可选 size 必须大于0`,
  'fund-kpi':`1–${TEMPLATE_LIMITS.fundMetrics} 项，value 使用数值与单位字符串；缺失值用“—”并解释，不编造数值`,
@@ -35,8 +36,30 @@ export function templateDataIssue(data){
  const finite=v=>typeof v==='number'&&Number.isFinite(v)
  const array=(key,max,min=1)=>!Array.isArray(data[key])||data[key].length<min||data[key].length>max?`${key} 必须包含 ${min}–${max} 项`:null
  if(data?.type!=='market')return null
- if(FINANCIAL_PROFILE_VARIANTS.includes(data.variant))return financialProfileDataIssue(data)
+ const text=value=>typeof value==='string'&&value.trim().length>0&&value.length<=2000
  const rule=TEMPLATE_RULES[data.variant],fail=issue=>issue?`${data.variant}.${issue}。${rule??''}`:null
+ if(data.version!==1)return fail('version 必须为1')
+ for(const key of ['title','asOf'])if(!text(data[key]))return fail(`${key} 必须为1–2000字的非空文字，不能使用数组或对象`)
+ if(data.note!==undefined&&!text(data.note))return fail('note 必须为非空文字；没有说明时省略此字段')
+ if(data.sources!==undefined){
+  if(!Array.isArray(data.sources)||data.sources.length>30)return fail('sources 必须为不超过30项的数组')
+  for(const [i,source]of data.sources.entries()){
+   if(!text(source?.label))return fail(`sources[${i}].label 必须为非空文字`)
+   if(source.url!==undefined&&source.url!==''){
+    let valid=false
+    try{const url=new URL(source.url);valid=text(source.url)&&['https:','http:'].includes(url.protocol)&&!url.username&&!url.password}catch{}
+    if(!valid)return fail(`sources[${i}].url 必须为已核验的 http/https 链接；没有链接时省略`)
+   }
+  }
+ }
+ if(FINANCIAL_PROFILE_VARIANTS.includes(data.variant))return financialProfileDataIssue(data)
+ if(['metrics','fund-kpi'].includes(data.variant)){
+  const issue=array('items',TEMPLATE_LIMITS.fundMetrics);if(issue)return fail(issue)
+  for(const [i,item]of data.items.entries()){
+   for(const key of ['label','value'])if(!text(item?.[key]))return fail(`items[${i}].${key} 必须为非空文字；每项必须同时有 label 和 value`)
+   if(item.detail!==undefined&&!text(item.detail))return fail(`items[${i}].detail 必须为非空文字；来源未提供时省略或写明确缺失说明`)
+  }
+ }
  if(data.variant==='trend'){
   const issue=array('labels',TEMPLATE_LIMITS.trendPoints,2)||array('series',TEMPLATE_LIMITS.trendSeries);if(issue)return fail(issue)
   for(const [i,s]of data.series.entries())if(!Array.isArray(s?.values)||s.values.length!==data.labels.length||!s.values.every(finite))return fail(`series[${i}].values 必须是与 labels 等长的有限数值数组`)
@@ -45,7 +68,6 @@ export function templateDataIssue(data){
   const issue=array('items',TEMPLATE_LIMITS.scatterItems);if(issue)return fail(issue)
   for(const [i,item]of data.items.entries())if(!finite(item?.x)||!finite(item?.y)||item.size!==undefined&&(!finite(item.size)||item.size<=0))return fail(`items[${i}] 的 x/y 或 size 类型无效`)
  }
- if(data.variant==='fund-kpi'){const issue=array('items',TEMPLATE_LIMITS.fundMetrics);if(issue)return fail(issue)}
  if(data.variant==='fund-industry'){
   const issue=array('items',TEMPLATE_LIMITS.fundIndustries);if(issue)return fail(issue)
   for(const [i,item]of data.items.entries())if(!finite(item?.weight)||item.weight<0||item.weight>100||item.benchmark!=null&&(!finite(item.benchmark)||item.benchmark<0||item.benchmark>100))return fail(`items[${i}] 的权重必须是0–100百分数`)

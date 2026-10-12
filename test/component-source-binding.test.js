@@ -8,6 +8,42 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+// Real failed LOF quote: the model put the security name in a label-only item.
+const oilArgs={operation:'query',source:'tencent-quotes',parameters_json:'{"symbols":["sh501018"]}'}
+const oilRecords=[{tool:'public_data_query',args:oilArgs,response:{source:'腾讯财经公开报价',dataTime:'2026-10-12 16:14:05',records:[{name:'南方原油LOF',price:2.059,changePercent:.78}]}}]
+const oilDraft={version:1,type:'data-bound',requests:[{key:'q',tool:'public_data_query',args:oilArgs}],mapping:{version:1,type:'market',variant:'metrics',title:'油价风向标（南方原油LOF）',asOf:{$from:'q',$path:'dataTime',$suffix:' · 腾讯财经公开报价'},items:[{label:{$from:'q',$path:'records',$single:true,$map:{$path:'name'}}},{label:'最新价',value:{$from:'q',$path:'records',$single:true,$map:{$path:'price'},$as:'number',$digits:3,$suffix:' 元'}},{label:'涨跌幅',value:{$from:'q',$path:'records',$single:true,$map:{$path:'changePercent'},$as:'number',$digits:2,$suffix:'%'}}]}}
+it('identifies the actual missing metric value before rendering instead of blaming source paths or units',()=>{
+ expect(()=>resolveBoundComponent(JSON.stringify(oilDraft),oilRecords,now)).toThrow(/metrics\.items\[0\]\.value/)
+ const corrected=structuredClone(oilDraft);corrected.mapping.items[0]={label:'证券',value:oilDraft.mapping.items[0].label}
+ expect(resolveBoundComponent(JSON.stringify(corrected),oilRecords,now).data.items).toEqual([{label:'证券',value:'南方原油LOF'},{label:'最新价',value:'2.059 元'},{label:'涨跌幅',value:'0.78%'}])
+})
+it('repairs a label-only metric using the exact field diagnostic and full template contract without fetching again',async()=>{
+ const corrected=structuredClone(oilDraft);corrected.mapping.items[0]={label:'证券',value:oilDraft.mapping.items[0].label}
+ const start=vi.fn(async()=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(start.mock.calls.length===1?oilDraft:corrected)}],sourceRecords:start.mock.calls.length===1?oilRecords:[]}),dispose:async()=>{}}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'油价风向标（南方原油LOF）\n优先使用 market 类型；variant: metrics。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  const repair=start.mock.calls[1][0]
+  expect(repair.synthesisOnly).toBe(true)
+  expect(repair.prompt).toContain('metrics.items[0].value')
+  expect(repair.prompt).toContain('mapping 的模板结构：')
+  expect(repair.prompt).toContain('每项必须同时有 label 和 value')
+  expect(repair.prompt).toContain('"price":2.059')
+  expect(bindData).toHaveBeenCalledOnce()
+  expect(readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data.items[0]).toEqual({label:'证券',value:'南方原油LOF'})
+ }finally{await runtime.dispose()}
+})
+it.each([
+ ['items[0].label',s=>{s.items[0].label=''}],
+ ['items[0].value',s=>{s.items[0].value=null}],
+ ['items[0].detail',s=>{s.items[0].detail={unexpected:true}}],
+ ['asOf',s=>{s.asOf=['2026-10-12']}]
+])('reports %s precisely for a bound metric so the bounded repair can correct the right field',(field,mutate)=>{
+ const candidate=structuredClone(oilDraft);candidate.mapping.items[0]={label:'证券',value:'南方原油LOF'};mutate(candidate.mapping)
+ expect(()=>resolveBoundComponent(JSON.stringify(candidate),oilRecords,now)).toThrow('metrics.'+field)
+})
 it('binds only an observed successful builtin query, never a catalog or changed parameters',()=>{
  const args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'}
  const response={sourceId:'kraken-ticker',source:'Kraken',receivedAt:'2026-10-11T00:00:00Z',records:[{price:100}],dataTime:null}

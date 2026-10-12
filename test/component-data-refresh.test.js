@@ -12,6 +12,14 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('keeps the existing quote and pinpoints a malformed metric value on refresh',async()=>{
+  const f=setup();await f.service.load();const b=await f.service.bind(f.input),before=structuredClone(f.spec())
+  f.execute.mockResolvedValue({items:[{name:'指数',price:null}],date:'2026-09-26'})
+  await f.service.refresh(b.id)
+  expect(f.service.list()[0]).toMatchObject({status:'error',error:expect.stringContaining('metrics.items[0].value')})
+  expect(f.service.list()[0].error).toContain('已保留上次内容')
+  expect(f.spec()).toEqual(before);expect(f.apply).not.toHaveBeenCalled()
+ })
  it('keeps real news links refreshable when a provider omits the publisher or summary',()=>{
   const mapping={version:1,type:'news',title:'资讯',items:{$from:'n',$each:'records',$map:{title:{$path:'title'},date:{$path:'time'},category:{$path:'publisher'},summary:{$path:'summary',$optional:true},url:{$path:'url'}}}}
   const response={records:[{title:'真实资讯',time:'2026-10-11T00:00:00Z',publisher:'',summary:'',url:'https://example.org/story'}]}
