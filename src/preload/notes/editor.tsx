@@ -60,7 +60,7 @@ function BlockMenu(props: any) {
     {open ? <div className="en-block-menu" role="menu"><div className="en-block-types">{[['正文', 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} onClick={() => change(String(type), level ? { level } : {})}>{label}</button>)}</div>
       {([['无序列表', 'bulletListItem'], ['有序列表', 'numberedListItem'], ['待办列表', 'checkListItem'], ['代码块', 'codeBlock'], ['引用', 'quote'], ['分隔线', 'divider']] as const).map(([label, type]) => <button role="menuitem" key={type} onClick={() => change(type)}>{label}</button>)}
       <hr /><div className="en-block-types">{[['左对齐', 'left'], ['居中', 'center'], ['右对齐', 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => change(block.type, { textAlignment })}>{label}</button>)}</div>
-      <button onClick={() => { editor.nestBlock(); setOpen(false) }}>增加缩进</button><button onClick={() => { editor.unnestBlock(); setOpen(false) }}>减少缩进</button><hr />
+      <button onClick={() => { editor.setTextCursorPosition(block, 'start'); editor.nestBlock(); setOpen(false) }}>增加缩进</button><button onClick={() => { editor.setTextCursorPosition(block, 'start'); editor.unnestBlock(); setOpen(false) }}>减少缩进</button><hr />
       <button onClick={duplicate}>复制段落</button><button onClick={() => { editor.insertBlocks([{ type: 'paragraph' }], block, 'after'); setOpen(false) }}>在下方添加</button><button className="en-danger" onClick={() => { editor.removeBlocks([block]); setOpen(false) }}>删除段落</button>
     </div> : null}</div>
 }
