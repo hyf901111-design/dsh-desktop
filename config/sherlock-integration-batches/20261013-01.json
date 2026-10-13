@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261013-01",
+  "branch": "codex/integration/20261013-01",
+  "baseMainCommit": "f64b864d2354aaae902c0acc471deaf0fa19e02a",
+  "expectedMainCommit": "f64b864d2354aaae902c0acc471deaf0fa19e02a",
+  "createdAt": "2026-10-13T14:22:33.172Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "右侧栏与研究组件PPTX画面直接编辑",
+        "branch": "codex/feat/ppt-content-edit-20261013",
+        "baseCommit": "cdecfc8a9f9c6d91676555eebdca4501d11adb24",
+        "tipCommit": "db57bc665659e379baa47b7a6a3a0257c6e725e4",
+        "commits": [
+          {
+            "commit": "480df8fcbf2baa8fc9912f877d3679518ea6fbc2",
+            "parents": [
+              "a6393992f908043c6ca3651b1c557128bbde7402"
+            ],
+            "subject": "功能：为侧栏和研究模式增加PPTX内容编辑与安全保存"
+          },
+          {
+            "commit": "c92adb86d71fc2f309fa92cb971dd51ba4fe7f9b",
+            "parents": [
+              "480df8fcbf2baa8fc9912f877d3679518ea6fbc2"
+            ],
+            "subject": "整理PPTX编辑测试样本文件结尾"
+          },
+          {
+            "commit": "184373c7b7bc00b075d31bc652240d9e15e40ab9",
+            "parents": [
+              "c92adb86d71fc2f309fa92cb971dd51ba4fe7f9b",
+              "1a978ae445288a287daa797bde9de6395d536dc4"
+            ],
+            "subject": "同步当前产品主干以继续PPT画面编辑"
+          },
+          {
+            "commit": "79848028dfc70f2f207b925e58ea11f8df582d8d",
+            "parents": [
+              "184373c7b7bc00b075d31bc652240d9e15e40ab9"
+            ],
+            "subject": "明确PPT画面直接编辑设计与实施步骤"
+          },
+          {
+            "commit": "2460a6e1adf2432a7da6238a9e4ba57e3b8d1d1b",
+            "parents": [
+              "79848028dfc70f2f207b925e58ea11f8df582d8d"
+            ],
+            "subject": "实现PPT对象变换格式与图表数据写回及草稿渲染"
+          },
+          {
+            "commit": "ef5030f4149109c7a31bc866f738ed0cc391ea3f",
+            "parents": [
+              "2460a6e1adf2432a7da6238a9e4ba57e3b8d1d1b"
+            ],
+            "subject": "改为幻灯片画面直接编辑并支持对象手柄格式与图表数据"
+          },
+          {
+            "commit": "21a3e003ef61b5fe73386defdf1b53a2db031025",
+            "parents": [
+              "ef5030f4149109c7a31bc866f738ed0cc391ea3f"
+            ],
+            "subject": "修复PPT保存输入连续变换与图表公式保留边界"
+          },
+          {
+            "commit": "dade78ec019726b955bfca71d3d7023524935025",
+            "parents": [
+              "21a3e003ef61b5fe73386defdf1b53a2db031025"
+            ],
+            "subject": "补齐无工作簿图表写回并保留原颜色变换"
+          },
+          {
+            "commit": "b2997cf3cbbc6e4a0bee29518e517453760ea9e4",
+            "parents": [
+              "dade78ec019726b955bfca71d3d7023524935025"
+            ],
+            "subject": "隔离PPT文件切换时的异步草稿预览与保存来源"
+          },
+          {
+            "commit": "a839bc9327ece9b0dda874309821090d04723b04",
+            "parents": [
+              "b2997cf3cbbc6e4a0bee29518e517453760ea9e4",
+              "be40b0269627c1f64168b89301b1256224a3623f"
+            ],
+            "subject": "同步最新产品主干完成PPT直接编辑交接"
+          },
+          {
+            "commit": "3170e6b3e68447296f956809576af7243ab14ac0",
+            "parents": [
+              "a839bc9327ece9b0dda874309821090d04723b04"
+            ],
+            "subject": "完善PPT边框写回顺序并记录直接编辑验收与交接"
+          },
+          {
+            "commit": "db57bc665659e379baa47b7a6a3a0257c6e725e4",
+            "parents": [
+              "3170e6b3e68447296f956809576af7243ab14ac0",
+              "cdecfc8a9f9c6d91676555eebdca4501d11adb24"
+            ],
+            "subject": "同步客户端主干为PPT集成构建准备"
+          }
+        ],
+        "boundaryParents": [
+          "1a978ae445288a287daa797bde9de6395d536dc4",
+          "a6393992f908043c6ca3651b1c557128bbde7402",
+          "be40b0269627c1f64168b89301b1256224a3623f"
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/pptx-content-editing.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-13-pptx-direct-edit.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-13-pptx-direct-edit-design.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-office-preview.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-direct-editor.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-direct-editor.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-editor-ui.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/preview-pptx-editor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/archive.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/charts.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/content.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/scene.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/pptx/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-file-preview.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/pptx.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-content.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-direct-editor.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-editor-ui.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-scene.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-office-preview-adapter.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/pptx-content.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-scene.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/research-file-preview.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "8个直接相关测试文件119项通过",
+            "verifiedCommit": "db57bc665659e379baa47b7a6a3a0257c6e725e4",
+            "completedAt": "2026-10-13T14:17:15.253Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript检查通过",
+            "verifiedCommit": "db57bc665659e379baa47b7a6a3a0257c6e725e4",
+            "completedAt": "2026-10-13T14:17:15.254Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "cdecfc8a9f9c6d91676555eebdca4501d11adb24..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "完整功能差异格式检查通过",
+            "verifiedCommit": "db57bc665659e379baa47b7a6a3a0257c6e725e4",
+            "completedAt": "2026-10-13T14:17:15.254Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际Office包和文件服务独立验证：默认文字及表格画面编辑、图形移动缩放旋转、图表数据与内嵌工作簿同步、420px侧栏300%缩放和深浅色；非等比分组90度子对象保存无跳位。用户尚未在共享客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "打开右侧栏或研究PPT组件即可直接点击文字及表格输入",
+          "对象手柄可移动缩放旋转，格式栏可修改文字与图形属性",
+          "图表数据修改实时重绘并保存缓存及内嵌工作簿",
+          "保存时输入和新增撤销记录保留，切文件隔离对话框与异步请求",
+          "版本冲突和节点授权撤销不会覆盖原文件",
+          "未修改的媒体母版部件公式引用标题与颜色变换保留",
+          "用户接受精确集成tip之后才推进main"
+        ],
+        "risks": [
+          "已与笔记会话协调，在其源码干净后按集成工具构建本地测试客户端；用户尚未在共享客户端验收",
+          "只编辑现有对象及系列；不新增删除幻灯片或对象、不替换图片、不编辑SmartArt与动画",
+          "每系列超过1000点及不可识别的图表数据保留预览，显示编辑限制"
+        ],
+        "generatedAt": "2026-10-13T14:17:15.254Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/pptx-content.test.ts",
+        "test/pptx-service.test.ts",
+        "test/pptx-scene.test.ts",
+        "test/pptx-direct-editor.test.ts",
+        "test/pptx-editor-ui.test.ts",
+        "test/sherlock-office-preview-adapter.test.ts",
+        "test/pptx-resize-settle.test.js",
+        "test/research-file-preview.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
