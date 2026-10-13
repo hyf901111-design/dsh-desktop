@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { open, realpath, rename, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { editPptxContent, readPptxContent, type PptxContent, type PptxEdit } from './content'
+import { editPptxContent, type PptxEdit } from './content'
+import { readPptxScene, editPptxScene, type PptxScene, type PptxNodeChange } from './scene'
 import { registerTrustedMainWindowHandler, type TrustedWindow } from '../ipc-trust'
 
 export type PptxEditIdentity = { authorizationId: string; sessionId: string; nodeId: string }
@@ -12,7 +13,7 @@ type Options = {
  resolveEditIdentity?(value: PptxEditIdentity): Promise<EditSource | null>
  refreshPreview?(value: PptxEditIdentity): Promise<string | null>
 }
-export type PptxDocument = PptxContent & { id: string; name: string; version: string; editToken?: string; previewUrl?: string }
+export type PptxDocument = PptxScene & { id: string; name: string; version: string; editToken?: string; previewUrl?: string }
 type Result = { ok: true; document: PptxDocument } | { ok: false; code: string; error: string }
 const hash = (value: Uint8Array | string) => createHash('sha256').update(value).digest('hex')
 const contains = (root: string, target: string) => { const relative = path.relative(root,target); return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative) }
@@ -47,7 +48,7 @@ export class PptxEditorService {
   const file=await open(target,'r')
   try{const info=await file.stat();if(!info.isFile()||info.size>64*1024*1024)throw Error('PPTX 文件过大或不可读取。');const bytes=await file.readFile();if(bytes.length>64*1024*1024)throw Error('PPTX 文件过大。');return bytes}finally{await file.close()}
  }
- private document(target:string,bytes:Uint8Array,editToken?:string):PptxDocument{return{...readPptxContent(bytes),id:hash(target),name:path.basename(target),version:hash(bytes),...(editToken?{editToken}:{})}}
+ private document(target:string,bytes:Uint8Array,editToken?:string):PptxDocument{return{...readPptxScene(bytes),id:hash(target),name:path.basename(target),version:hash(bytes),...(editToken?{editToken}:{})}}
  private async result(document:PptxDocument,identity?:PptxEditIdentity):Promise<Result>{
   if(identity && this.options.refreshPreview){const url=await this.options.refreshPreview(identity);if(url)document.previewUrl=url}
   return {ok:true,document}
@@ -67,9 +68,19 @@ export class PptxEditorService {
    return this.result(document,resolved.identity)
   }catch(error){return{ok:false,code:'unavailable',error:error instanceof Error?error.message:'无法打开 PPTX 内容。'}}
  }
+ async preview(value:unknown):Promise<{ok:true;bytes:Uint8Array}|{ok:false;code:string;error:string}>{
+  try{
+   const {target}=await this.resolve(value),input=value as {version?:unknown;edits?:unknown;objects?:unknown}
+   if(typeof input.version!=='string'||!/^[a-f0-9]{64}$/.test(input.version)||!Array.isArray(input.edits))throw Error('PPTX 草稿请求无效。')
+   const current=await this.read(target);if(hash(current)!==input.version)return conflict()
+   const bytes=editPptxScene(editPptxContent(current,input.edits as PptxEdit[]),(input.objects??[]) as PptxNodeChange[])
+   await this.resolve(value)
+   return{ok:true,bytes}
+  }catch(error){return{ok:false,code:'preview-failed',error:error instanceof Error?error.message:'无法渲染 PPTX 草稿。'}}
+ }
  async save(value:unknown):Promise<Result>{
   try{
-   const resolved=await this.resolve(value),target=resolved.target,input=value as {version?:unknown;edits?:unknown}
+   const resolved=await this.resolve(value),target=resolved.target,input=value as {version?:unknown;edits?:unknown;objects?:unknown}
    if(typeof input.version!=='string'||!/^[a-f0-9]{64}$/.test(input.version)||!Array.isArray(input.edits))throw Error('PPTX 保存请求无效。')
    const previous=this.queues.get(target)??Promise.resolve()
    const operation=previous.catch(()=>{}).then(async():Promise<Result>=>{
@@ -77,7 +88,7 @@ export class PptxEditorService {
     if((await this.resolve(value)).target!==target)throw Error('PPTX 文件路径已变化，请重新打开。')
     const current=await this.read(target)
     if(hash(current)!==input.version)return conflict()
-    const result=Buffer.from(editPptxContent(current,input.edits as PptxEdit[])),document=this.document(target,result,resolved.editToken)
+    const text=editPptxContent(current,input.edits as PptxEdit[]), result=Buffer.from(editPptxScene(text,(input.objects??[]) as PptxNodeChange[])),document=this.document(target,result,resolved.editToken)
     if(result.equals(current))return this.result(document,resolved.identity)
     const before=await stat(target),temporary=path.join(path.dirname(target),`.${path.basename(target)}.${randomUUID()}.tmp`)
     try{
@@ -95,5 +106,5 @@ export class PptxEditorService {
  }
 }
 export function registerPptxEditorHandlers(options:{ipcMain:{removeHandler(channel:string):void;handle(channel:string,handler:(event:any,value:unknown)=>unknown):unknown};getMainWindow():TrustedWindow|undefined;service:PptxEditorService}){
- for(const action of ['open','save'] as const){const channel=`pptx:editor:${action}`;options.ipcMain.removeHandler(channel);registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,value:unknown)=>options.service[action](value))}
+ for(const action of ['open','save','preview'] as const){const channel=`pptx:editor:${action}`;options.ipcMain.removeHandler(channel);registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,value:unknown)=>options.service[action](value))}
 }

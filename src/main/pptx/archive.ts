@@ -9,8 +9,8 @@ export class PptxArchive {
  private readonly entries: Entry[] = []
  private readonly directory: number
  private readonly end: number
- constructor(bytes: Uint8Array) {
-  if (!validOfficePackage(bytes, 'pptx')) throw Error('此 PPTX 文件损坏或超出可编辑大小。')
+ constructor(bytes: Uint8Array, private readonly family: 'pptx'|'xlsx' = 'pptx') {
+  if (!validOfficePackage(bytes, this.family)) throw Error('此 PPTX 文件损坏或超出可编辑大小。')
   this.bytes = Buffer.from(bytes)
   let end = this.bytes.length - 22
   while (end >= 0 && (this.bytes.readUInt32LE(end) !== 0x06054b50 || end + 22 + this.bytes.readUInt16LE(end + 20) !== this.bytes.length)) end--
@@ -61,7 +61,7 @@ export class PptxArchive {
   const central = Buffer.concat(this.entries.map(e => headers.get(e.name)!)), end = Buffer.from(this.bytes.subarray(this.end))
   end.writeUInt32LE(central.length, 12); end.writeUInt32LE(offset, 16)
   const result = Buffer.concat([...locals, central, end])
-  if (!validOfficePackage(result, 'pptx')) throw Error('编辑后的 PPTX 校验失败，原文件未修改。')
+  if (!validOfficePackage(result, this.family)) throw Error('编辑后的 PPTX 校验失败，原文件未修改。')
   return result
  }
 }

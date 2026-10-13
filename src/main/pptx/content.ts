@@ -7,21 +7,21 @@ const A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
 const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 const REL = 'http://schemas.openxmlformats.org/package/2006/relationships'
 export type PptxEdit = { id: string; text: string }
-export type PptxField = PptxEdit & { label: string }
+export type PptxField = PptxEdit & { label: string; nodeId?: string; paragraphIndex?: number; row?: number; column?: number }
 export type PptxContent = { slides: Array<{ index: number; fields: PptxField[] }> }
 
-function xml(bytes: Buffer): Document {
+export function xml(bytes: Buffer): Document {
  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
  if (/<!DOCTYPE|<!ENTITY/i.test(text)) throw Error('不支持含实体声明的 PPTX。')
  return new DOMParser({ onError: (level, message) => { if (level === 'warning' && message.startsWith('Unicode replacement character detected')) return; throw Error('PPTX 内容 XML 无效。') } }).parseFromString(text, 'application/xml')
 }
-function elements(element: Element | Document, ns: string, name: string): Element[] {
+export function elements(element: Element | Document, ns: string, name: string): Element[] {
  return Array.from(element.getElementsByTagNameNS(ns, name))
 }
-function children(element: Element): Element[] {
+export function children(element: Element): Element[] {
  return Array.from(element.childNodes).filter((n): n is Element => n.nodeType === 1)
 }
-function ancestor(element: Element, name: string): Element | undefined {
+export function ancestor(element: Element, name: string): Element | undefined {
  let current = element.parentNode
  while (current?.nodeType === 1) {
   const parent = current as Element
@@ -33,7 +33,7 @@ function ancestor(element: Element, name: string): Element | undefined {
 function paragraphText(paragraph: Element): string {
  return children(paragraph).map(child => child.namespaceURI !== A ? '' : child.localName === 'br' ? '\n' : ['r','fld'].includes(child.localName ?? '') ? elements(child,A,'t').map(t => t.textContent).join('') : '').join('')
 }
-function read(archive: PptxArchive) {
+export function readPptxParts(archive: PptxArchive) {
  const presentation = xml(archive.read('ppt/presentation.xml'))
  const rels = elements(xml(archive.read('ppt/_rels/presentation.xml.rels')), REL, 'Relationship')
  const relationships = new Map(rels.filter(r => r.getAttribute('Type') === `${R}/slide` && r.getAttribute('TargetMode') !== 'External').map(r => [r.getAttribute('Id'), r.getAttribute('Target')!]))
@@ -63,13 +63,15 @@ function read(archive: PptxArchive) {
    if (text.length > 100000) throw Error('PPTX 单段文本过长。')
    const siblings = children(paragraph.parentNode as Element).filter(c=>c.localName==='p')
    if (siblings.length > 1) label += ` · 段落 ${siblings.indexOf(paragraph)+1}`
-   fields.push({ id: `${part}#${paragraphIndex}`, text, label, paragraph })
+   const owner=shape??frame, nodeId=owner?elements(owner,P,'cNvPr')[0]?.getAttribute('id')??undefined:undefined
+   const table=cell?ancestor(cell,'tbl'):undefined, row=cell?ancestor(cell,'tr'):undefined
+   fields.push({ id: `${part}#${paragraphIndex}`, text, label, paragraph, nodeId, paragraphIndex:siblings.indexOf(paragraph), ...(cell&&row&&table?{row:children(table).filter(c=>c.localName==='tr').indexOf(row),column:children(row).filter(c=>c.localName==='tc').indexOf(cell)}:{}) })
   })
   return { index, part, document, fields }
  })
 }
 export function readPptxContent(bytes: Uint8Array): PptxContent {
- return { slides: read(new PptxArchive(bytes)).map(({index,fields})=>({index,fields:fields.map(({paragraph:_,...field})=>field)})) }
+ return { slides: readPptxParts(new PptxArchive(bytes)).map(({index,fields})=>({index,fields:fields.map(({paragraph:_,...field})=>field)})) }
 }
 
 /** Replace the changed span, retaining original run styles outside that span. */
@@ -126,7 +128,7 @@ function updateParagraph(paragraph: Element, text: string) {
 }
 export function editPptxContent(bytes: Uint8Array, edits: PptxEdit[]): Uint8Array {
  if(!Array.isArray(edits)||edits.length>10000)throw Error('PPTX 编辑请求无效。')
- const archive=new PptxArchive(bytes),slides=read(archive),fields=new Map(slides.flatMap(s=>s.fields.map(f=>[f.id,f] as const))), changed=new Set<string>(),seen=new Set<string>()
+ const archive=new PptxArchive(bytes),slides=readPptxParts(archive),fields=new Map(slides.flatMap(s=>s.fields.map(f=>[f.id,f] as const))), changed=new Set<string>(),seen=new Set<string>()
  for(const edit of edits){
   if(!edit||typeof edit.id!=='string'||typeof edit.text!=='string'||edit.text.length>100000||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(edit.text)||Buffer.from(edit.text,'utf8').toString('utf8')!==edit.text||seen.has(edit.id))throw Error('PPTX 编辑内容无效。')
   seen.add(edit.id);const field=fields.get(edit.id)

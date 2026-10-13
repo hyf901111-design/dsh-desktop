@@ -27,10 +27,10 @@
 Files: src/main/pptx/content.ts, archive.ts, scene.ts, charts.ts, service.ts; test/pptx-scene.test.ts.
 Interfaces: readPptxScene(bytes) returns nodes by slide and object identity; editPptxScene(bytes, changes) writes validated geometry/styles/chart values and preserves all other parts.
 
-- [ ] 写失败测试：分组子对象、文字属性、图形位置及旋转、图表类别数值和内嵌工作簿。
-- [ ] 运行并确认失败对应未实现行为。
-- [ ] 实现读取和写回，将有类型对象修改接入文件服务。
-- [ ] 运行聚焦测试、类型检查并中文提交。
+- [x] 写失败测试：文字属性、图形位置及旋转、图表类别数值和内嵌工作簿（分组交互在 Task 2 验证）。
+- [x] 运行并确认失败对应未实现行为。
+- [x] 实现读取和写回，将有类型对象修改接入文件服务及只读草稿渲染。
+- [x] 运行聚焦测试、类型检查并中文提交。
 
 ### Task 2: 原位交互控制器
 

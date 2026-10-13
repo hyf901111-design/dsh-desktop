@@ -81,3 +81,14 @@ it('keeps an edit session usable after preview expiry but revokes it with its Re
  expect(await editor.save({editToken:saved.document.editToken,version:saved.document.version,edits:[{id:saved.document.slides[0]!.fields[0]!.id,text:'revoked'}]})).toMatchObject({ok:false})
  expect(await readFile(file)).toEqual(bytes)
 })
+
+it('renders an authorized unsaved draft without writing the source file',async()=>{
+ const {root,file}=await setup(),editor=new service.PptxEditorService({resolveWorkspace:async()=>root,resolveCapability:async()=>null})
+ const opened=await editor.open(source);if(!opened.ok)throw Error(opened.error)
+ const before=await readFile(file),rendered=await editor.preview({...source,version:opened.document.version,edits:[{id:opened.document.slides[0]!.fields[0]!.id,text:'画面草稿'}],objects:[]})
+ expect(rendered.ok).toBe(true);if(!rendered.ok)throw Error(rendered.error)
+ expect(readPptxContent(rendered.bytes).slides[0]!.fields[0]!.text).toBe('画面草稿')
+ expect(await readFile(file)).toEqual(before)
+ await writeFile(file,fixture());await writeFile(file,'changed')
+ expect(await editor.preview({...source,version:opened.document.version,edits:[],objects:[]})).toMatchObject({ok:false,code:'conflict'})
+})
