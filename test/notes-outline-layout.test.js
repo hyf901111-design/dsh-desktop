@@ -56,7 +56,7 @@ it('keeps dropped files in order and inside component frames across asynchronous
   expect(await page.locator('.en-file-host').first().evaluate(el=>{const a=el.getBoundingClientRect(),b=el.querySelector('.rScV5Q_richNode').getBoundingClientRect();return Math.abs(a.x-b.x)<1&&Math.abs(a.width-b.width)<1})).toBe(true)
   await page.locator('.en-document .bn-editor').click({position:{x:20,y:10}});await page.keyboard.press('ControlOrMeta+z');await expect.poll(()=>page.locator('.en-note-file,.en-file-import').count()).toBe(0)
   expect(await page.locator('.en-document .bn-editor').textContent()).toContain('前文。')
-  await page.keyboard.press('ControlOrMeta+Shift+z');await expect.poll(()=>page.locator('.en-file-import [role=status]').count()).toBe(0)
+  await page.keyboard.press('ControlOrMeta+Shift+z');await expect.poll(()=>page.locator('.en-file-host[data-note-file-rendered] .rScV5Q_richNode header').allTextContents()).toEqual(['first.txt','second.txt'])
  }finally{await context.close()}
 },15000)
 it('does not resurrect a removed pending file when admission finishes',async()=>{
