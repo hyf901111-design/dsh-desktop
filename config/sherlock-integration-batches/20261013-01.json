@@ -11,25 +11,45 @@
         "schemaVersion": 1,
         "featureName": "右侧栏与研究组件PPTX画面直接编辑",
         "branch": "codex/feat/ppt-content-edit-20261013",
-        "baseCommit": "87e4ac0d4db3cb9a990b4836e1a70350961d6bab",
-        "tipCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
+        "baseCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
+        "tipCommit": "e14a833cb9b249f9551d613989291422ab496f20",
         "commits": [
           {
-            "commit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
+            "commit": "e14a833cb9b249f9551d613989291422ab496f20",
             "parents": [
-              "87e4ac0d4db3cb9a990b4836e1a70350961d6bab"
+              "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1"
             ],
-            "subject": "修复PPT撤销失焦后的连续快捷键并隔离多实例归属"
+            "subject": "将PPT统一为直接编辑并自动保存且保留撤销历史"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "docs/pptx-content-editing.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-direct-editor.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/lib/pptx-editor-ui.mjs"
           },
           {
             "status": "M",
+            "path": "scripts/preview-pptx-editor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/pptx/service.ts"
+          },
+          {
+            "status": "M",
             "path": "test/pptx-editor-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-service.test.ts"
           }
         ],
         "checks": [
@@ -47,9 +67,9 @@
               "test/research-file-preview.test.ts"
             ],
             "outcome": "passed",
-            "summary": "8个直接相关PPT测试文件127项通过",
-            "verifiedCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
-            "completedAt": "2026-10-13T22:57:39.037906Z",
+            "summary": "8个直接相关PPT测试文件134项通过",
+            "verifiedCommit": "e14a833cb9b249f9551d613989291422ab496f20",
+            "completedAt": "2026-10-13T23:27:29.457975+00:00",
             "timeoutMs": 120000
           },
           {
@@ -61,8 +81,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript检查通过",
-            "verifiedCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
-            "completedAt": "2026-10-13T22:57:39.037906Z",
+            "verifiedCommit": "e14a833cb9b249f9551d613989291422ab496f20",
+            "completedAt": "2026-10-13T23:27:29.457975+00:00",
             "timeoutMs": 120000
           },
           {
@@ -70,18 +90,18 @@
               "git",
               "diff",
               "--check",
-              "87e4ac0d4db3cb9a990b4836e1a70350961d6bab..HEAD"
+              "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1..HEAD"
             ],
             "outcome": "passed",
             "summary": "完整功能差异格式检查通过",
-            "verifiedCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
-            "completedAt": "2026-10-13T22:57:39.037906Z",
+            "verifiedCommit": "e14a833cb9b249f9551d613989291422ab496f20",
+            "completedAt": "2026-10-13T23:27:29.457975+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Office页面在BODY焦点下连续撤销、重做和保存已通过；独立复核及双factory React UI回归验证最近活动实例唯一归属、外部输入/切源/卸载清理。此前原生客户端已验证两处浮动栏、原生拖动和保存后Esc退出；当前增量待重新构建原生客户端验收。"
+          "summary": "实际Office页面已验证默认直接编辑、无模式切换/保存按钮、文字自动保存仍保留焦点、连续撤销重做及Esc退出无重载；实际图表标题与数值无需应用按钮自动落盘。独立审查已修复明确弃稿后旧timer落盘并加入回归。当前增量待重新构建原生客户端验收。"
         },
         "acceptanceCriteria": [
           "右侧栏与研究PPT组件均去除固定controls操作行",
@@ -90,65 +110,16 @@
           "退出文字编辑及取消选中不重新打开或重挂载整份PPT",
           "对象缩放保留必要内层重排且异步响应不改变用户最新选择",
           "用户接受精确集成tip之后才推进main",
-          "文字撤销失焦后连续重做保存仍进入最近操作的PPT，多个编辑器互不误保存"
+          "文字撤销失焦后连续重做保存仍进入最近操作的PPT，多个编辑器互不误保存",
+          "无预览编辑切换，文字图形格式图表修改自动保存",
+          "自动保存保留原始基线与撤销重做；切源写回原文件；明确弃稿取消旧任务"
         ],
         "risks": [
           "本次重新构建后仍需用户在共享客户端验收",
           "对象缩放、格式、图表或撤销操作仍保留必要的渲染以维护布局及富文本样式",
           "仅编辑现有对象及系列，不新增幻灯片或对象，不编辑SmartArt与动画"
         ],
-        "generatedAt": "2026-10-13T22:57:39.037906Z"
-      },
-      "merged": {
-        "mergeCommit": "16c61425b85a409793367d0ba69277434adf01a3",
-        "verificationCommit": "16c61425b85a409793367d0ba69277434adf01a3",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
-            "verifiedCommit": "16c61425b85a409793367d0ba69277434adf01a3",
-            "completedAt": "2026-10-13T22:57:54.602Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "16c61425b85a409793367d0ba69277434adf01a3",
-            "completedAt": "2026-10-13T22:57:54.602Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "16c61425b85a409793367d0ba69277434adf01a3",
-            "completedAt": "2026-10-13T22:57:54.602Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-13T22:57:54.602Z"
+        "generatedAt": "2026-10-13T23:27:29.457975+00:00"
       }
     }
   ],
