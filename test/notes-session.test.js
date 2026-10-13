@@ -104,3 +104,11 @@ it('stops abandoned requests on replay while keeping the actual live request run
  const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header));expect(noteConversationRows(replay)[0].phase).toBe('stopped')
  setNoteConversationRunning(session,'live',false);expect(noteConversationRows(session)[0].phase).toBe('stopped')
 })
+
+it('restores conversation replies as shared context without treating them as unadopted document content',async()=>{
+ const {recordNoteConversation,noteConversationRows,sharedNoteConversationContext,registerNoteConversationContext}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('clarification-replay');recordNoteConversation(session,{requestId:'r',phase:'preparing',prompt:'写一篇文章'});recordNoteConversation(session,{requestId:'r',phase:'replied',reasoning:'需要确定主题。',result:{kind:'conversation',markdown:'文章主题是什么？'},finishedAt:1000})
+ const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header));expect(noteConversationRows(replay)[0]).toMatchObject({phase:'replied',result:{kind:'conversation'},finishedAt:1000})
+ expect(sharedNoteConversationContext(replay)[0]).toMatchObject({reply:'文章主题是什么？'});expect(sharedNoteConversationContext(replay)[0]).not.toHaveProperty('suggestion')
+ let context;registerNoteConversationContext({systemPrompt:{context:value=>{context=value;return()=>{}}}});expect(context.text({agent:{session:replay}})).toContain('文章主题是什么？');expect(context.text({agent:{session:replay}})).toContain('replied 是对话回复')
+})
