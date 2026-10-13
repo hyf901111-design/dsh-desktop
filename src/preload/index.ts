@@ -239,6 +239,11 @@ contextBridge.exposeInMainWorld(
   })
 )
 
+contextBridge.exposeInMainWorld('sherlockPptEditor', Object.freeze({
+  open: (value: unknown) => ipcRenderer.invoke('pptx:editor:open', value),
+  save: (value: unknown) => ipcRenderer.invoke('pptx:editor:save', value)
+}))
+
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({

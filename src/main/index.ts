@@ -1,3 +1,4 @@
+import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
 import {installComponentLibrary} from './state/component-library'
@@ -1224,6 +1225,12 @@ async function bootstrap(): Promise<void> {
     storage: new FileResearchPreviewAuthorizationStorage(app.getPath('userData')),
     workspaceResolver: new HarnessWorkspaceFileResolver(dshHome)
   })
+  registerPptxEditorHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxEditorService({
+    resolveWorkspace: id => new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),
+    resolveCapability: url => researchFilePreviewRegistry!.resolvePptxEditSource(url),
+    resolveEditIdentity: identity => researchFilePreviewRegistry!.resolvePptxEditIdentity(identity),
+    refreshPreview: async identity => (await researchFilePreviewRegistry!.restore(identity))?.url ?? null
+  }) })
   const researchCanvasStorage = new ResearchCanvasStorage(app.getPath('userData'))
   const canvasActions = new CanvasActionBridge({
     send: value => { if(!mainWindow || mainWindow.isDestroyed())throw Error('画板窗口不可用'); mainWindow.webContents.send('research:canvas-actions:request',value) },

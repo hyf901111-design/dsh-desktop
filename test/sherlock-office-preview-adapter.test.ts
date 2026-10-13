@@ -4,6 +4,8 @@ import { runInNewContext } from 'node:vm'
 import { Window, type HTMLElement as HappyDOMHTMLElement } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 
+import { patchPptxEditor } from '../scripts/lib/pptx-editor-ui.mjs'
+
 import { patchPptxResize, stripPptxResizePatch } from '../scripts/lib/pptx-resize-settle.mjs'
 
 import { patchSherlockOfficePreviewClient } from '../scripts/lib/patch-sherlock-office-preview.mjs'
@@ -37,7 +39,7 @@ async function loadPatchedOfficeClient(options: {
   sourceTransform?(source: string): string
   testEngine?: Record<string, unknown>
 } = {}): Promise<ClientBundle> {
-  const patched = patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(await officeClientSource())))
+  const patched = patchPptxEditor(patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(await officeClientSource()))))
   const source = options.sourceTransform?.(patched) ?? patched
   let descriptor: BundleDescriptor | undefined
   const bundleWindow = options.window ?? {}

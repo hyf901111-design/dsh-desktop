@@ -590,7 +590,7 @@ function findOfficeZipEocd(value: Buffer): number {
   return -1
 }
 
-function validOfficePackage(value: Uint8Array, family: OfficeFamily): boolean {
+export function validOfficePackage(value: Uint8Array, family: OfficeFamily): boolean {
   if (value.byteLength < 22 || value.byteLength > MAX_OFFICE_PREVIEW_BYTES) return false
   const archive = Buffer.from(value.buffer, value.byteOffset, value.byteLength)
   const eocd = findOfficeZipEocd(archive)
@@ -973,6 +973,26 @@ export class ResearchFilePreviewRegistry {
     const records=[...this.authorizations.values()].filter(r=>r.sessionId===sessionId&&r.nodeId===nodeId)
     if(records.length!==1)return null
     return this.resolveExportSource({sessionId,nodeId,authorizationId:records[0]!.authorizationId})
+  }
+  async resolvePptxEditSource(url: string): Promise<{ path: string; root: string; identity: { authorizationId: string; sessionId: string; nodeId: string } } | null> {
+    const resource = requestResource(url)
+    if (!resource || resource.relativePath !== '') return null
+    const capability = this.capabilities.get(resource.token)
+    const record = capability && this.authorizations.get(capability.authorizationId)
+    if (!capability || capability.expiresAt <= this.now() || !record ||
+        path.extname(record.path).toLowerCase() !== '.pptx' || record.exportOnly) return null
+    if (!await this.verifyRecord(record)) return null
+    return this.capabilities.get(resource.token) === capability &&
+      this.authorizations.get(record.authorizationId) === record && capability.expiresAt > this.now()
+      ? { path: record.path, root: record.root, identity: { authorizationId: record.authorizationId, sessionId: record.sessionId, nodeId: record.nodeId } } : null
+  }
+  async resolvePptxEditIdentity(value: unknown): Promise<{ path: string; root: string } | null> {
+    if (!this.validRestoreRequest(value)) return null
+    const record = this.authorizations.get(value.authorizationId)
+    if (!record || path.extname(record.path).toLowerCase() !== '.pptx' || record.exportOnly) return null
+    const source = await this.resolveExportSource(value)
+    return source && this.authorizations.get(record.authorizationId) === record
+      ? { path: source.path, root: record.root } : null
   }
   async resolveExportSource(value: unknown): Promise<{ path: string; name: string } | null> {
     if (!this.validRestoreRequest(value) || Object.keys(value).length !== 3) return null
