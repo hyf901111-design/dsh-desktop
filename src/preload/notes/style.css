@@ -8,3 +8,7 @@
 @media(max-width:1200px){.en-document-scroll{padding:48px 30px 190px}.en-composer-area{bottom:20px;width:calc(100% - 48px)}.en-body[data-toc-open=true] .en-toc{position:absolute;left:0;top:56px;bottom:0;width:260px;background:var(--en-bg);z-index:30;box-shadow:12px 0 18px #0001}.en-document-actions{right:30px}.en-permission{max-width:112px;overflow:hidden}.en-model>button{max-width:120px}}
 
 .en-preview-content .bn-editor{min-height:0!important;font-size:14px;line-height:24px}.en-preview-content{white-space:normal}
+.en-root .bn-block-content[data-content-type=heading] :is(h1,h2,h3,h4){font-size:inherit!important;line-height:inherit!important;font-weight:inherit!important;margin:0}
+.en-root .bn-thread{width:320px!important;max-width:calc(100vw - 48px);border:1px solid var(--en-border);border-radius:8px;background:var(--en-popup);box-shadow:0 8px 28px #0003}
+.en-root .bn-thread .bn-editor{min-height:64px!important;max-height:180px;overflow:auto;font-size:13px;line-height:22px}
+.en-root .bn-thread .bn-block-content{padding-block:0!important;line-height:22px}
