@@ -61,3 +61,14 @@ it('preserves chart XML child order and literal series-name representation',()=>
  const changed=scene.editPptxScene(bytes,[{id:node.id,chart:{...node.chart!,series:[{name:'新名称',values:[30,40],color:'112233'}]}}]),chart=strFromU8(unzipSync(changed)['ppt/charts/chart1.xml']!)
  expect(chart).toContain('<c:tx><c:v>新名称</c:v></c:tx>');expect(chart.indexOf('<c:spPr>')).toBeLessThan(chart.indexOf('<c:cat>'))
 })
+it('retains a workbook-linked title and data formulas when only chart style changes',()=>{
+ const parts=unzipSync(chartFixture());parts['ppt/charts/chart1.xml']=strToU8(strFromU8(parts['ppt/charts/chart1.xml']!).replace('<c:chart>','<c:chart><c:title><c:tx><c:strRef><c:f>Sheet1!$C$1</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>工作簿标题</c:v></c:pt></c:strCache></c:strRef></c:tx></c:title>'))
+ const book=unzipSync(parts['ppt/embeddings/data.xlsx']!);book['xl/worksheets/sheet1.xml']=strToU8(strFromU8(book['xl/worksheets/sheet1.xml']!).replace('<c r="B2"><v>10</v></c>','<c r="B2"><f>SUM(10)</f><v>10</v></c>'));parts['ppt/embeddings/data.xlsx']=zipSync(book,{level:0})
+ const bytes=zipSync(parts,{level:0}),node=scene.readPptxScene(bytes).slides[0]!.nodes.find(n=>n.chart)!
+ expect(node.chart?.title).toBe('工作簿标题')
+ const styled=scene.editPptxScene(bytes,[{id:node.id,chart:{...node.chart!,series:node.chart!.series.map(s=>({...s,color:'112233'}))}}])
+ expect(unzipSync(styled)['ppt/embeddings/data.xlsx']).toEqual(parts['ppt/embeddings/data.xlsx'])
+ expect(strFromU8(unzipSync(styled)['ppt/charts/chart1.xml']!)).toContain('<c:title><c:tx><c:strRef>')
+ const data=scene.editPptxScene(bytes,[{id:node.id,chart:{...node.chart!,series:[{...node.chart!.series[0]!,values:[10,50]}]}}])
+ expect(strFromU8(unzipSync(unzipSync(data)['ppt/embeddings/data.xlsx']!)['xl/worksheets/sheet1.xml']!)).toContain('<f>SUM(10)</f>')
+})

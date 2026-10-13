@@ -33,7 +33,7 @@ export function readChart(archive:PptxArchive,slide:string,element:Element):Pptx
  const document=xml(archive.read(part)),series=elements(document,C,'ser');if(!series.length||series.length>128)return
  const categories=cache(child(series[0]!,'cat')??child(series[0]!,'xVal')).map(v=>v??'')
  const title=elements(document,C,'title')[0]
- return{part,title:title?elements(title,A,'t').map(t=>t.textContent).join(''): '',legend:elements(document,C,'legend').length>0,categories,series:series.map((s,i)=>({name:cache(child(s,'tx'))[0]??`系列 ${i+1}`,values:cache(child(s,'val')??child(s,'yVal')).map(v=>v!==null&&v!==''&&Number.isFinite(Number(v))?Number(v):null),color:child(s,'spPr')&&elements(child(s,'spPr')!,A,'srgbClr')[0]?.getAttribute('val')||undefined}))}
+ return{part,title:title?(elements(title,A,'t').map(t=>t.textContent).join('')||cache(child(title,'tx'))[0]||''): '',legend:elements(document,C,'legend').length>0,categories,series:series.map((s,i)=>({name:cache(child(s,'tx'))[0]??`系列 ${i+1}`,values:cache(child(s,'val')??child(s,'yVal')).map(v=>v!==null&&v!==''&&Number.isFinite(Number(v))?Number(v):null),color:child(s,'spPr')&&elements(child(s,'spPr')!,A,'srgbClr')[0]?.getAttribute('val')||undefined}))}
 }
 const validText=(v:unknown):v is string=>typeof v==='string'&&v.length<=8192&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(v)&&Buffer.from(v).toString()===v
 function replaceCache(container:Element,values:Array<string|number|null>,numeric:boolean){
@@ -58,7 +58,7 @@ function workbookUpdater(archive:PptxArchive,document:Document,part:string){
  if(!workbookPart)return null
  if(!/^ppt\/embeddings\/[^/]+\.xlsx$/.test(workbookPart))throw Error('图表内嵌工作簿类型不可编辑。')
  const workbook=new PptxArchive(archive.read(workbookPart),'xlsx'),root=xml(workbook.read('xl/workbook.xml')),rels=xml(workbook.read('xl/_rels/workbook.xml.rels')),parts=new Map<string,Buffer>(),sheets=new Map<string,{part:string;document:Document}>()
- const update=(formula:Element|undefined,values:Array<string|number|null>)=>{
+ const update=(formula:Element|undefined,values:Array<string|number|null>,previous?:Array<string|number|null>)=>{
   if(!formula)return
   const ref=reference(formula.textContent||''),sheet=elements(root,S,'sheet').find(s=>s.getAttribute('name')===ref.sheet),rid=sheet?.getAttributeNS(R,'id')
   const relation=elements(rels,REL,'Relationship').find(r=>r.getAttribute('Id')===rid)
@@ -71,6 +71,7 @@ function workbookUpdater(archive:PptxArchive,document:Document,part:string){
   if(ref.row!==ref.endRow&&ref.column!==ref.endColumn)throw Error('暂不支持二维图表数据范围。')
   const column=columnNumber(ref.column)
   values.forEach((value,i)=>{
+   if(previous&&i<previous.length&&value===previous[i])return
    const rowIndex=ref.row+(horizontal?0:i),columnIndex=column+(horizontal?i:0),address=columnName(columnIndex)+rowIndex
    let row=children(sheetData).find(r=>Number(r.getAttribute('r'))===rowIndex)
    if(!row){row=entry!.document.createElementNS(S,'row');row.setAttribute('r',String(rowIndex));sheetData.insertBefore(row,children(sheetData).find(r=>Number(r.getAttribute('r'))>rowIndex)??null)}
@@ -86,16 +87,17 @@ function workbookUpdater(archive:PptxArchive,document:Document,part:string){
 export function editChart(archive:PptxArchive,original:PptxChart,changed:PptxChart,parts:Map<string,Buffer>):void{
  if(changed.part!==original.part||!validText(changed.title)||typeof changed.legend!=='boolean'||!Array.isArray(changed.categories)||!changed.categories.length||changed.categories.length>1000||!changed.categories.every(validText)||!Array.isArray(changed.series)||changed.series.length!==original.series.length)throw Error('图表编辑数据无效。')
  for(const series of changed.series)if(!validText(series.name)||!Array.isArray(series.values)||series.values.length!==changed.categories.length||!series.values.every(v=>v===null||typeof v==='number'&&Number.isFinite(v))||series.color!==undefined&&!/^[A-Fa-f0-9]{6}$/.test(series.color))throw Error('图表系列数据无效。')
- const document=xml(parts.get(original.part)??archive.read(original.part)),root=elements(document,C,'chart')[0],series=elements(document,C,'ser'),workbook=workbookUpdater(archive,document,original.part)
+ const categoriesChanged=JSON.stringify(changed.categories)!==JSON.stringify(original.categories),dataChanged=categoriesChanged||changed.series.some((s,i)=>s.name!==original.series[i]!.name||JSON.stringify(s.values)!==JSON.stringify(original.series[i]!.values))
+ const document=xml(parts.get(original.part)??archive.read(original.part)),root=elements(document,C,'chart')[0],series=elements(document,C,'ser'),workbook=dataChanged?workbookUpdater(archive,document,original.part):null
  if(!root||series.length!==changed.series.length)throw Error('图表结构已变化。')
  changed.series.forEach((value,i)=>{
   const node=series[i]!,name=ensure(node,C,'tx'),cat=child(node,'cat')??child(node,'xVal'),val=child(node,'val')??child(node,'yVal')
   if(!cat||!val)throw Error('此类图表数据暂不可编辑。')
-  if(child(name,'strRef'))workbook?.update(replaceCache(name,[value.name],false),[value.name]);else{for(const old of children(name))name.removeChild(old);ensure(name,C,'v').textContent=value.name}
+  if(value.name!==original.series[i]!.name){if(child(name,'strRef'))workbook?.update(replaceCache(name,[value.name],false),[value.name],[original.series[i]!.name]);else{for(const old of children(name))name.removeChild(old);ensure(name,C,'v').textContent=value.name}}
   const numeric=!!child(cat,'numRef')||!!child(cat,'numLit'),categories=numeric?changed.categories.map(v=>Number(v)):changed.categories
   if(numeric&&categories.some(v=>!Number.isFinite(v)))throw Error('此图表的横轴需要数值。')
-  workbook?.update(replaceCache(cat,categories,numeric),categories)
-  workbook?.update(replaceCache(val,value.values,true),value.values)
+  if(categoriesChanged)workbook?.update(replaceCache(cat,categories,numeric),categories,numeric?original.categories.map(Number):original.categories)
+  if(JSON.stringify(value.values)!==JSON.stringify(original.series[i]!.values))workbook?.update(replaceCache(val,value.values,true),value.values,original.series[i]!.values)
   if(value.color){const props=ensure(node,C,'spPr');for(const old of children(props).filter(c=>['solidFill','gradFill','noFill'].includes(c.localName??'')))props.removeChild(old);ensure(ensure(props,A,'solidFill'),A,'srgbClr').setAttribute('val',value.color.toUpperCase())}
  })
  let title=child(root,'title')

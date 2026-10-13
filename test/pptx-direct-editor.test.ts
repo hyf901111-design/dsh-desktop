@@ -39,3 +39,26 @@ describe('direct slide interaction',()=>{
   }finally{v.controller.destroy()}
  })
 })
+
+it('moves the correct distance immediately after resizing before a renderer refresh',()=>{
+ const v=setup();try{
+  const object=v.host.querySelector('[data-pptx-node-id="2"]')! as any
+  object.dispatchEvent(new v.win.PointerEvent('pointerdown',{bubbles:true,button:0}))
+  v.win.document.querySelector('[data-pptx-handle="e"]')!.dispatchEvent(new v.win.PointerEvent('pointerdown',{bubbles:true,button:0,clientX:100,clientY:20,pointerId:1}))
+  v.win.document.dispatchEvent(new v.win.PointerEvent('pointermove',{bubbles:true,clientX:200,clientY:20,pointerId:1}));v.win.document.dispatchEvent(new v.win.PointerEvent('pointerup',{bubbles:true,pointerId:1}))
+  expect(v.entry.objects[v.selected.id].geometry.width).toBe(200)
+  v.win.document.querySelector('[data-pptx-handle="move"]')!.dispatchEvent(new v.win.PointerEvent('pointerdown',{bubbles:true,button:0,clientX:10,clientY:20,pointerId:2}))
+  v.win.document.dispatchEvent(new v.win.PointerEvent('pointermove',{bubbles:true,clientX:20,clientY:20,pointerId:2}));v.win.document.dispatchEvent(new v.win.PointerEvent('pointerup',{bubbles:true,pointerId:2}))
+  expect(v.entry.objects[v.selected.id].geometry.x).toBe(20)
+ }finally{v.controller.destroy()}
+})
+it('uses the position mapping of a nonuniform group independently of a rotated child width',()=>{
+ const v=setup();try{
+  const object=v.host.querySelector('[data-pptx-node-id="2"]')! as any
+  v.entry.document.slides[0].nodes[0].geometry={x:10,y:20,width:40,height:20,rotation:90};object.style.width='40px';object.style.height='40px';object.style.left='40px';object.style.top='10px';object.dataset.pptxPositionScaleX='2';object.dataset.pptxPositionScaleY='1';object.dataset.pptxPositionWidth='0.5';object.dataset.pptxPositionHeight='-0.5'
+  object.dispatchEvent(new v.win.PointerEvent('pointerdown',{bubbles:true,button:0}))
+  v.win.document.querySelector('[data-pptx-handle="move"]')!.dispatchEvent(new v.win.PointerEvent('pointerdown',{bubbles:true,button:0,clientX:0,clientY:0,pointerId:1}))
+  v.win.document.dispatchEvent(new v.win.PointerEvent('pointermove',{bubbles:true,clientX:20,clientY:0,pointerId:1}));v.win.document.dispatchEvent(new v.win.PointerEvent('pointerup',{bubbles:true,pointerId:1}))
+  expect(v.entry.objects[v.selected.id].geometry.x).toBe(20);expect(object.style.left).toBe('60px')
+ }finally{v.controller.destroy()}
+})

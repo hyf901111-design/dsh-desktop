@@ -59,3 +59,26 @@ it('moves the preview to the selected slide and retains it after save refresh',a
  const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:{...doc,version:'v2'}})}, {}, Preview)
  try{await act(async()=>{const select=view.host.querySelector('select')!;select.value='1';select.dispatchEvent(new view.win.Event('change',{bubbles:true}));await Promise.resolve()});expect(view.host.querySelector('[data-preview]')?.textContent).toContain('幻灯片 2');await input(view.win,editable(view.host),'200');await click(view.host,'保存');expect(view.host.querySelector('[data-preview]')?.textContent).toContain('幻灯片 2')}finally{await view.close()}
 })
+
+it('keeps the caret and undo for continued typing when a save resolves',async()=>{
+ let finish:(r:any)=>void=()=>{}
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:()=>new Promise(resolve=>{finish=resolve})})
+ try{
+  const paragraph=editable(view.host);await act(async()=>paragraph.focus());await input(view.win,paragraph,'已保存快照')
+  await act(async()=>paragraph.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,key:'s',metaKey:true})))
+  await input(view.win,paragraph,'保存时继续输入')
+  await act(async()=>{finish({ok:true,document:{...doc,previewUrl:'sherlock-preview://renewed/',version:'v2',slides:[{...doc.slides[0],fields:[{...doc.slides[0]!.fields[0],text:'已保存快照'}]},doc.slides[1]]}});await Promise.resolve()})
+  expect(view.win.document.activeElement).toBe(paragraph);expect(editable(view.host)).toBe(paragraph);expect(paragraph.textContent).toBe('保存时继续输入')
+  await click(view.host,'撤销');expect(editable(view.host)?.textContent).toBe('已保存快照')
+  await click(view.host,'重做');expect(editable(view.host)?.textContent).toBe('保存时继续输入')
+ }finally{await view.close()}
+})
+it('closes a chart draft when the same viewer switches to another file',async()=>{
+ const props={path:'a.pptx'},chart={part:'ppt/charts/chart1.xml',title:'A图表',legend:true,categories:['Q1'],series:[{name:'收入',values:[10]}]},a={...doc,id:'a',slides:[{...doc.slides[0],nodes:[{...doc.slides[0]!.nodes[0],type:'chart',chart}]}]},b={...a,id:'b',slides:[{...a.slides[0]!,nodes:[{...a.slides[0]!.nodes[0],chart:{...chart,title:'B图表'}}]}]}
+ const view=await mount({open:async(v:any)=>({ok:true,document:v.path==='a.pptx'?a:b}),save:async()=>({ok:true,document:b})},props)
+ try{
+  await act(async()=>view.host.querySelector('[data-pptx-node-id]')!.dispatchEvent(new view.win.MouseEvent('dblclick',{bubbles:true})))
+  expect(view.host.querySelector('[role=dialog]')).toBeTruthy();props.path='b.pptx';await view.render()
+  expect(view.host.querySelector('[role=dialog]')).toBeNull()
+ }finally{await view.close()}
+})
