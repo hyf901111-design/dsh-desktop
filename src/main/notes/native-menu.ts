@@ -3,10 +3,13 @@ import { randomUUID } from 'node:crypto'
 import type { NoteMenuState, NotesNativeMenu } from '../../shared/notes-menu'
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]!))
-const icons: Record<string, string> = {
-  heading:'H1', heading_2:'H2', heading_3:'H3', heading_4:'H4', heading_5:'H5', heading_6:'H6',
-  paragraph:'T', quote:'❞', toggle_list:'▸', numbered_list:'1.', bullet_list:'☷', check_list:'☑',
-  code_block:'‹›', divider:'―', table:'▦', image:'▧', video:'▷', audio:'♫', file:'▤', emoji:'☺'
+const BASIC_ICONS=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
+const paths:Record<string,string>={paragraph:'M3 3h10M8 3v10',quote:'M2 4h4v4H3l-1 4M9 4h4v4h-3l-1 4',toggle_list:'M4 3l7 5-7 5z',numbered_list:'M6 4h8M6 8h8M6 12h8M2 2h1v4M1 9c3-2 4 0 2 2l-1 2h2',bullet_list:'M6 4h8M6 8h8M6 12h8M2 4h1M2 8h1M2 12h1',check_list:'M3 2h10v12H3zM5 8l2 2 4-4',code_block:'M5 4 1 8l4 4M11 4l4 4-4 4M9 2 7 14',divider:'M2 6h12M2 10h12',table:'M2 2h12v12H2zM2 6h12M2 10h12M6 2v12M10 2v12',image:'M2 2h12v12H2zM2 11l4-4 3 3 2-2 3 3M10 5h.01',video:'M5 3l8 5-8 5z',audio:'M5 12V4l8-2v9M5 10H2v4h3M13 9h-3v4h3',file:'M3 2h7l3 3v9H3zM10 2v4h3M5 9h6M5 12h6',emoji:'M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M4 10c2 3 6 3 8 0M5 5h.01M11 5h.01'}
+const tone=(key:string)=>({image:'gold',video:'cyan',audio:'cyan',file:'cyan',table:'green',check_list:'blue',code_block:'green'}[key]||'neutral')
+function menuIcon(key:string){
+ const heading=key.match(/^(?:toggle_)?heading(?:_(\d))?$/)
+ const content=heading?'<text x="1" y="12" stroke="none" fill="currentColor" font-size="12" font-family="-apple-system,sans-serif">'+(key.startsWith('toggle_')?'▸':'')+'H'+(heading[1]||'1')+'</text>':'<path d="'+(paths[key]||paths.paragraph)+'"/>'
+ return '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+content+'</svg>'
 }
 export function validateNoteMenu(input: NoteMenuState): void {
   if (!input || !/^[\w-]{1,80}$/.test(input.menuId) || !Number.isSafeInteger(input.revision) || input.revision < 0 ||
@@ -24,7 +27,7 @@ export function validateNoteMenu(input: NoteMenuState): void {
 
 /** The screen, rather than the parent window, bounds this native floating menu. */
 export function noteMenuBounds(anchor: NoteMenuState['anchor'], work: Electron.Rectangle, desiredHeight: number, zoom = 1): Electron.Rectangle {
-  const margin = 8, width = Math.min(Math.ceil(320 * zoom), work.width - margin * 2), height = Math.min(Math.ceil(desiredHeight * zoom), work.height - margin * 2)
+  const margin = 8, width = Math.min(Math.ceil(264 * zoom), work.width - margin * 2), height = Math.min(Math.ceil(desiredHeight * zoom), work.height - margin * 2)
   const below = work.y + work.height - anchor.y - anchor.height - margin - 6, above = anchor.y - work.y - margin - 6
   const y = below >= height || below >= above ? anchor.y + anchor.height + 6 : anchor.y - height - 6
   return { x: Math.round(Math.max(work.x + margin, Math.min(anchor.x, work.x + work.width - width - margin))),
@@ -32,17 +35,17 @@ export function noteMenuBounds(anchor: NoteMenuState['anchor'], work: Electron.R
 }
 
 export function noteMenuPresentation(state: NoteMenuState, ticket: string): { html: string; height: number } {
-  let previous = '', groups = 0
-  const rows = state.items.map((item, index) => {
-    const group = item.group !== previous && item.group ? `<h2>${escapeHtml(item.group)}</h2>` : ''; previous = item.group; if (group) groups++
-    const glyph = icons[item.icon] || (item.icon.startsWith('toggle_heading') ? '▸ H' : 'T')
-    return `${group}<a role="option" aria-selected="${index === state.selectedIndex}" id="item-${index}" href="ework-note-menu://${ticket}/select/${item.id}?revision=${state.revision}"><span class="icon" aria-hidden="true">${glyph}</span><span class="label"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.subtext)}</small></span>${item.badge ? `<kbd>${escapeHtml(item.badge)}</kbd>` : ''}</a>`
-  }).join('')
-  return { html: `<div id="items" role="listbox" aria-label="笔记斜杠菜单">${rows || '<p class="empty">正在读取选项…</p>'}</div><footer>↑↓ 选择&nbsp; · &nbsp;↵ 插入&nbsp; · &nbsp;Esc 关闭</footer>`, height: state.items.length ? 16 + groups * 24 + state.items.length * 52 + 28 : 90 }
+  const grid=state.items.some(item=>item.icon==='paragraph')&&state.items.some(item=>item.icon==='heading')&&state.items.some(item=>item.icon==='bullet_list')
+  const basic=grid?state.items.filter(item=>BASIC_ICONS.includes(item.icon)):[],rest=grid?state.items.filter(item=>!BASIC_ICONS.includes(item.icon)):state.items
+  const row=(item:NoteMenuState['items'][number],iconOnly=false)=>{const index=state.items.indexOf(item);return `<a role="option" aria-label="${escapeHtml(item.title)}" title="${escapeHtml(item.title+(item.badge?' · '+item.badge:''))}" aria-selected="${index===state.selectedIndex}" id="item-${index}" href="ework-note-menu://${ticket}/select/${item.id}?revision=${state.revision}" class="${iconOnly?'basic-item':''}"><span class="icon ${tone(item.icon)}">${menuIcon(item.icon)}</span>${iconOnly?'':`<span class="label">${escapeHtml(item.title)}</span>`}</a>`}
+  const basicHtml=basic.length?'<h2>基础格式</h2><div class="basic-grid">'+basic.map(item=>row(item,true)).join('')+'</div>':''
+  const restHtml=rest.length?(grid?'<h2>插入</h2>':'')+rest.map(item=>row(item)).join(''):''
+  const height=18+(basic.length?24+Math.ceil(basic.length/6)*32+8:0)+(grid&&rest.length?24:0)+rest.length*32+24
+  return {html:`<div id="items" role="listbox" aria-label="笔记斜杠菜单">${basicHtml+restHtml||'<p class="empty">没有匹配的命令</p>'}</div><footer>↑↓ 选择 · ↵ 插入 · Esc 关闭</footer>`,height:Math.min(480,state.items.length?height:68)}
 }
-const documentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>笔记斜杠菜单</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:#f5f5f5;--hover:#e7e7e7;--muted:#777;--line:#ddd;--icon:#e5e5e5}body.dark{color:#eee;--bg:#272727;--hover:#383838;--muted:#aaa;--line:#414141;--icon:#191919}
-main{height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden;padding:7px 3px 0}#items{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}h2{font-size:12px;font-weight:500;line-height:24px;margin:0;padding:0 10px;color:var(--muted)}a{height:52px;display:flex;align-items:center;gap:10px;padding:6px 10px;text-decoration:none;color:inherit;border-radius:6px}a:hover,a[aria-selected=true]{background:var(--hover)}.icon{width:34px;height:34px;flex:none;display:grid;place-items:center;background:var(--icon);border-radius:5px;font-size:17px}.label{flex:1;min-width:0}strong,small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}strong{font-size:13px;font-weight:500}small{font-size:11px;line-height:16px;color:var(--muted)}kbd{flex:none;font:9px/16px -apple-system,sans-serif;background:var(--icon);border-radius:8px;padding:0 5px;color:var(--muted)}footer{flex:none;height:28px;border-top:1px solid var(--line);font-size:11px;line-height:27px;color:var(--muted);padding:0 10px}.empty{padding:8px 10px;margin:0}
+export const noteMenuDocumentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>笔记斜杠菜单</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:#f5f5f5;--hover:#e7e7e7;--muted:#777;--line:#d8d8d8}body.dark{color:#eee;--bg:#272727;--hover:#383838;--muted:#aaa;--line:#484848}
+main{height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden;padding:6px 5px 0}#items{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px}a:hover,a[aria-selected=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}footer{flex:none;height:24px;border-top:1px solid var(--line);font-size:10px;line-height:23px;color:var(--muted);padding:0 8px}.empty{padding:8px;margin:0}
 </style><main></main>`
 
 type OpenMenu = { input: NoteMenuState; owner: string; ticket: string; parent: BrowserWindow; popup: BrowserWindow; ready: Promise<unknown>; pending: boolean; updating: boolean; unlisten(): void }
@@ -57,7 +60,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
     if (this.retired.has(input.menuId)) throw Error('菜单已关闭。')
     if (this.current && (this.current.input.menuId !== input.menuId || this.current.owner !== owner || this.current.input.sessionId !== input.sessionId || this.current.parent !== parent)) this.close()
     if (!this.current) {
-      const popup = new BrowserWindow({ parent, title:'笔记斜杠菜单', width:320, height:90, show:false, frame:false, transparent:true,
+      const popup = new BrowserWindow({ parent, title:'笔记斜杠菜单', width:264, height:68, show:false, frame:false, transparent:true,
         focusable:false, acceptFirstMouse:true, resizable:false, movable:false, minimizable:false, maximizable:false, fullscreenable:false,
         skipTaskbar:true, hasShadow:true, webPreferences:{partition:'notes-menu',nodeIntegration:false,contextIsolation:true,sandbox:true,devTools:false} })
       const state: OpenMenu = { input, owner, ticket:randomUUID(), parent, popup, pending:true, updating:false, ready:Promise.resolve(), unlisten:()=>{} }
@@ -82,7 +85,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
         } catch { /* Invalid navigation never leaves the isolated menu. */ }
       })
       popup.on('closed',cancel)
-      state.ready = popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(documentHtml))
+      state.ready = popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(noteMenuDocumentHtml))
     }
     this.current.input = input
     this.current.pending = true
