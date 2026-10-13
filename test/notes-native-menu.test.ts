@@ -30,6 +30,13 @@ it('rejects invalid payloads and escapes labels instead of rendering supplied ma
  const presentation=noteMenuPresentation(input({items:[{...input().items[0]!,title:'<script>bad()</script>',subtext:'"<&',icon:'<img>'}]}),'ticket')
  expect(presentation.html).toContain('&lt;script&gt;');expect(presentation.html).not.toContain('<script>');expect(presentation.html).not.toContain('<img>')
 })
+it('keeps all commands and shortcuts in a compact icon grid and list without descriptive subtext',()=>{
+ const keys=['paragraph','heading','heading_2','heading_3','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list','image','video','audio','file','table'],items=keys.map(key=>({id:key,icon:key,title:key,subtext:'冗长的功能说明',badge:'⌘-Alt-1',group:'分组'}))
+ const result=noteMenuPresentation(input({items}),'ticket')
+ expect(result.height).toBeLessThanOrEqual(360);expect(result.html).toContain('basic-grid');expect(result.html).toContain('<svg');expect(result.html).not.toContain('<small>');expect(result.html).not.toContain('冗长的功能说明')
+ for(const item of items)expect(result.html).toContain('/select/'+item.id+'?revision=1')
+ expect(result.html).toContain('⌘-Alt-1');expect(noteMenuPresentation(input({items:Array.from({length:80},(_,i)=>({...items.at(-1)!,id:'x'+i}))}),'ticket').height).toBe(480)
+})
 it('shows a non-key isolated floating window and returns only a current valid selection',async()=>{
  const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1)
  await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled())
