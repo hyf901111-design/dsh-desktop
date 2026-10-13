@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Window } from 'happy-dom'
 import React, {act} from 'react'
 import {createRoot} from 'react-dom/client'
+import {createPortal} from 'react-dom'
 import {createPptxEditorComponent} from '../scripts/lib/pptx-editor-ui.mjs'
 
 const node={nodeId:'2',type:'shape',name:'标题',geometry:{x:10,y:20,width:200,height:100,rotation:0}}
@@ -13,13 +14,17 @@ async function mount(bridge:any,props:any={},Preview:any=FakePreview){
  const win=new Window({url:'http://localhost/'}),descriptors=new Map(['window','document','navigator','CustomEvent','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
  Object.defineProperties(globalThis,{window:{configurable:true,value:win},document:{configurable:true,value:win.document},navigator:{configurable:true,value:win.navigator},CustomEvent:{configurable:true,value:win.CustomEvent},IS_REACT_ACT_ENVIRONMENT:{configurable:true,value:true}})
  Object.assign(win,{sherlockPptEditor:bridge})
- const Component=createPptxEditorComponent(React,Preview)
+ const Component=createPptxEditorComponent(React,Preview,undefined,createPortal)
  const host=win.document.createElement('div');win.document.body.appendChild(host);const root=createRoot(host as any)
  const render=async()=>{await act(async()=>{root.render(React.createElement(Component,{scope:{sessionId:'s',cwd:''},path:'demo.pptx',...props}));await Promise.resolve()})}
  await render()
  return{win,host,root,render,async close(){await act(async()=>root.unmount());for(const [k,d]of descriptors){if(d)Object.defineProperty(globalThis,k,d);else delete (globalThis as any)[k]}}}
 }
-async function click(host:any,text:string){const button=[...host.querySelectorAll('button')].find((b:any)=>b.textContent===text);expect(button).toBeTruthy();await act(async()=>{button.click();await Promise.resolve()})}
+async function click(host:any,text:string){
+ const key=({'撤销':'z','重做':'y','保存':'s'} as Record<string,string>)[text]
+ if(key){await act(async()=>host.querySelector('[data-ppt-editor]').dispatchEvent(new host.ownerDocument.defaultView.KeyboardEvent('keydown',{bubbles:true,key,metaKey:true})));return}
+ const button=[...host.querySelectorAll('button')].find((b:any)=>b.textContent===text);expect(button).toBeTruthy();await act(async()=>{button.click();await Promise.resolve()})
+}
 async function input(win:any,element:any,value:string){await act(async()=>{element.textContent=value;element.dispatchEvent(new win.Event('input',{bubbles:true}));await Promise.resolve()})}
 describe('shared PPTX content editor',()=>{
  it('edits actual slide text by default and supports undo/redo',async()=>{
@@ -31,7 +36,7 @@ describe('shared PPTX content editor',()=>{
   const view=await mount({open:async()=>({ok:true,document:doc}),save:(value:any)=>{request=value;return new Promise(resolve=>{finish=resolve})}})
   try{await input(view.win,editable(view.host),'保存快照');await click(view.host,'保存');await input(view.win,editable(view.host),'保存期间继续输入');await act(async()=>{finish({ok:true,document:{...doc,version:'v2',slides:[{...doc.slides[0],fields:[{...doc.slides[0]!.fields[0],text:'保存快照'}]},doc.slides[1]]}});await Promise.resolve()});expect(request.edits).toEqual([{id:'title',text:'保存快照'}]);expect(view.host.textContent).toContain('未保存');expect(editable(view.host)?.textContent).toBe('保存期间继续输入');await click(view.host,'保存');await act(async()=>{finish({ok:false,code:'conflict',error:'文件已更改'});await Promise.resolve()});expect(view.host.textContent).toContain('文件已更改');expect(editable(view.host)?.textContent).toBe('保存期间继续输入')}finally{await view.close()}
  })
- it('publishes existing sidebar mode and save controls while keeping Research buttons available',async()=>{
+ it('publishes sidebar save controls while Research saves through shortcuts',async()=>{
   let controls:any,state:any
   const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:doc})},{toolbar:'host',onToolbarState:(v:any)=>{state=v},onToolbarControls:(v:any)=>{controls=v}})
   try{expect(state.modes).toBe(true);expect(controls.setMode).toBeTypeOf('function');await act(async()=>{controls.setMode('edit');await Promise.resolve()});expect(editable(view.host)?.textContent).toBe('原始标题')}finally{await view.close()}
@@ -54,10 +59,46 @@ it('uses a revocable edit session for saving and re-reading after preview expiry
  try{Object.defineProperty(view.win,'confirm',{value:()=>true});await input(view.win,editable(view.host),'长时间编辑');await click(view.host,'保存');await click(view.host,'重新读取文件');await input(view.win,editable(view.host),'重读后编辑');await click(view.host,'保存');expect(view.host.textContent).toContain('已保存');expect(view.host.textContent).not.toContain('preview expired')}finally{await view.close()}
 })
 
-it('moves the preview to the selected slide and retains it after save refresh',async()=>{
- function Preview(props:any){const [index,setIndex]=React.useState(0);React.useEffect(()=>{props.onPptxViewer?.({goToSlide:async(value:number)=>setIndex(value)});return()=>props.onPptxViewer?.(null)},[]);return React.createElement('div',{'data-preview':''},'幻灯片 '+(index+1),React.createElement(FakePreview))}
+it('keeps the existing slide DOM after shortcut save',async()=>{
+ function Preview(props:any){React.useEffect(()=>{props.onPptxViewer?.({currentSlideIndex:1,goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
  const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:{...doc,version:'v2'}})}, {}, Preview)
- try{await act(async()=>{const select=view.host.querySelector('select')!;select.value='1';select.dispatchEvent(new view.win.Event('change',{bubbles:true}));await Promise.resolve()});expect(view.host.querySelector('[data-preview]')?.textContent).toContain('幻灯片 2');await input(view.win,editable(view.host),'200');await click(view.host,'保存');expect(view.host.querySelector('[data-preview]')?.textContent).toContain('幻灯片 2')}finally{await view.close()}
+ try{const preview=view.host.querySelector('[data-preview]');await input(view.win,editable(view.host),'200');await click(view.host,'保存');expect(view.host.querySelector('[data-preview]')).toBe(preview)}finally{await view.close()}
+})
+
+it('shows a movable format toolbar above selected content without a fixed control row',async()=>{
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:doc})})
+ try{
+  expect(view.host.querySelector('.sherlock-ppt-controls')).toBeNull()
+  expect(view.win.document.querySelector('[aria-label="对象格式"]')).toBeNull()
+  await act(async()=>editable(view.host).focus())
+  const toolbar=view.win.document.querySelector('[role=toolbar][aria-label="对象格式"]')! as any
+  expect(toolbar).toBeTruthy();expect(view.host.contains(toolbar)).toBe(false)
+  const handle=toolbar.querySelector('[aria-label="拖动格式工具栏"]')!
+  const before={left:parseFloat(toolbar.style.left),top:parseFloat(toolbar.style.top)}
+  await act(async()=>{
+   handle.dispatchEvent(new view.win.PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:1,clientX:100,clientY:100}))
+   view.win.document.dispatchEvent(new view.win.PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:150,clientY:140}))
+   view.win.document.dispatchEvent(new view.win.PointerEvent('pointerup',{bubbles:true,pointerId:1}))
+  })
+  expect(parseFloat(toolbar.style.left)).toBe(before.left+50)
+  expect(parseFloat(toolbar.style.top)).toBe(before.top+40)
+  await act(async()=>editable(view.host).dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,key:'Escape'})))
+  expect(view.win.document.querySelector('[role=toolbar][aria-label="对象格式"]')).toBeNull()
+ }finally{await view.close()}
+})
+
+it('does not reopen or remount the presentation when leaving saved text editing',async()=>{
+ let mounts=0,previewRequests=0,rendererOpens=0
+ function Preview(props:any){React.useEffect(()=>{mounts++;props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{rendererOpens++},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
+ const saved={...doc,version:'v2',previewUrl:'sherlock-preview://renewed/',slides:[{...doc.slides[0],fields:[{...doc.slides[0]!.fields[0],text:'直接修改'}]},doc.slides[1]]}
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:saved}),preview:async()=>{previewRequests++;return{ok:true,bytes:[1]}}},{},Preview)
+ try{
+  const paragraph=editable(view.host);await act(async()=>paragraph.focus());await input(view.win,paragraph,'直接修改');await click(view.host,'保存')
+  await act(async()=>paragraph.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,key:'Escape'})))
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,220))})
+  expect(mounts).toBe(1);expect(rendererOpens).toBe(0);expect(previewRequests).toBe(0)
+  expect(editable(view.host)).toBe(paragraph);expect(paragraph.textContent).toBe('直接修改')
+ }finally{await view.close()}
 })
 
 it('keeps the caret and undo for continued typing when a save resolves',async()=>{
@@ -91,5 +132,62 @@ it('does not apply a pending preview from the previous file to a new viewer',asy
   await act(async()=>editable(view.host).focus());await input(view.win,editable(view.host),'A的草稿');await act(async()=>editable(view.host).blur());props.path='b.pptx';await view.render()
   await act(async()=>{await new Promise(resolve=>setTimeout(resolve,220))})
   expect(requests.some(r=>r.path==='a.pptx'&&r.version==='b-version')).toBe(false);expect(view.host.textContent).not.toContain('路径不匹配')
+ }finally{await view.close()}
+})
+
+it('rerenders resized group contents while text deselection keeps the current renderer',async()=>{
+ let previewRequest:any,opens=0
+ const groupDoc={...doc,slides:[{...doc.slides[0],nodes:[{...doc.slides[0]!.nodes[0],type:'group'}]}]}
+ function Preview(props:any){React.useEffect(()=>{props.onPptxViewer?.({currentSlideIndex:0,goToSlide:async()=>{},open:async()=>{opens++}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
+ const view=await mount({open:async()=>({ok:true,document:groupDoc}),save:async()=>({ok:true,document:groupDoc}),preview:async(r:any)=>{previewRequest=r;return{ok:true,bytes:[0]}}},{},Preview)
+ try{
+  const object=view.host.querySelector('[data-pptx-node-id]')!
+  await act(async()=>object.dispatchEvent(new view.win.PointerEvent('pointerdown',{bubbles:true,button:0})))
+  await act(async()=>{
+   view.win.document.querySelector('[data-pptx-handle=e]')!.dispatchEvent(new view.win.PointerEvent('pointerdown',{bubbles:true,button:0,clientX:200,clientY:100,pointerId:1}))
+   view.win.document.dispatchEvent(new view.win.PointerEvent('pointermove',{bubbles:true,clientX:300,clientY:100,pointerId:1}))
+   view.win.document.dispatchEvent(new view.win.PointerEvent('pointerup',{bubbles:true,pointerId:1}))
+   await new Promise(resolve=>setTimeout(resolve,220))
+  })
+  expect(previewRequest.objects[0].geometry.width).toBe(300);expect(opens).toBe(1)
+  await act(async()=>object.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,key:'Escape'})))
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,220))})
+  expect(opens).toBe(1)
+ }finally{await view.close()}
+})
+
+it('does not restore a stale selection when an earlier format preview finishes',async()=>{
+ let finish:(r:any)=>void=()=>{},requests=0
+ const namedDoc={...doc,slides:[doc.slides[0],{...doc.slides[1],nodes:[{...doc.slides[1]!.nodes[0],name:'另一个对象'}]}]}
+ function Preview(props:any){React.useEffect(()=>{props.onPptxViewer?.({currentSlideIndex:0,goToSlide:async()=>{},open:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
+ const view=await mount({open:async()=>({ok:true,document:namedDoc}),save:async()=>({ok:true,document:namedDoc}),preview:()=>{requests++;return new Promise(resolve=>{finish=resolve})}},{},Preview)
+ try{
+  await act(async()=>{editable(view.host).focus();editable(view.host).blur()})
+  await act(async()=>([...view.win.document.querySelectorAll('[role=toolbar] button')].find(b=>b.textContent==='加粗')! as any).click())
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,220))});expect(requests).toBe(1)
+  await act(async()=>view.host.querySelector('[data-pptx-part="ppt/slides/slide2.xml"]')!.dispatchEvent(new view.win.PointerEvent('pointerdown',{bubbles:true,button:0})))
+  expect(view.win.document.querySelector('[role=toolbar]')!.textContent).toContain('另一个对象')
+  await act(async()=>{finish({ok:true,bytes:[0]});await Promise.resolve()})
+  expect(view.win.document.querySelector('[role=toolbar]')!.textContent).toContain('另一个对象')
+ }finally{await view.close()}
+})
+
+it('restores the dragged toolbar position after cancelling chart data editing',async()=>{
+ const chart={part:'ppt/charts/chart1.xml',title:'图表',legend:true,categories:['Q1'],series:[{name:'收入',values:[10]}]},chartDoc={...doc,slides:[{...doc.slides[0],nodes:[{...doc.slides[0]!.nodes[0],type:'chart',chart}]}]}
+ const view=await mount({open:async()=>({ok:true,document:chartDoc}),save:async()=>({ok:true,document:chartDoc})})
+ try{
+  const object=view.host.querySelector('[data-pptx-node-id]')!
+  Object.defineProperty(object,'getBoundingClientRect',{value:()=>({left:300,top:400,right:500,bottom:500,width:200,height:100})})
+  await act(async()=>object.dispatchEvent(new view.win.PointerEvent('pointerdown',{bubbles:true,button:0})))
+  let bar=view.win.document.querySelector('[role=toolbar]')! as any
+  await act(async()=>{
+   bar.querySelector('[aria-label="拖动格式工具栏"]').dispatchEvent(new view.win.PointerEvent('pointerdown',{bubbles:true,button:0,clientX:100,clientY:100,pointerId:1}))
+   view.win.document.dispatchEvent(new view.win.PointerEvent('pointermove',{bubbles:true,clientX:150,clientY:140,pointerId:1}));view.win.document.dispatchEvent(new view.win.PointerEvent('pointerup',{bubbles:true,pointerId:1}))
+  })
+  const location=[bar.style.left,bar.style.top];expect(location).toEqual(['350px','360px'])
+  await act(async()=>[...bar.querySelectorAll('button')].find((b:any)=>b.textContent==='编辑图表数据').click())
+  expect(view.win.document.querySelector('[role=toolbar]')).toBeNull()
+  await click(view.host,'取消');bar=view.win.document.querySelector('[role=toolbar]')
+  expect([bar.style.left,bar.style.top]).toEqual(location)
  }finally{await view.close()}
 })
