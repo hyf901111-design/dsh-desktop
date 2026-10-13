@@ -1,4 +1,5 @@
 import {patchPptxResize,stripPptxResizePatch} from './pptx-resize-settle.mjs'
+import {patchPptxEditor,stripPptxEditorPatch} from './pptx-editor-ui.mjs'
 import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -130,6 +131,7 @@ function alignPptxZipEntryLimit(source) {
  * changes the lifecycle or registration points.
  */
 export function patchSherlockOfficePreviewClient(source) {
+  source = stripPptxEditorPatch(source)
   if (source.includes(PATCH_MARKER)) {
     let migrated = source.includes('...(kind === "pptx" ? { toolbar: "inline" } : {})')
       ? replaceExact(
@@ -478,6 +480,6 @@ export async function patchSherlockOfficePreviewPackage(packageDirectory) {
   }
   const clientPath = path.join(packageDirectory, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
-  const patched = patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(source)))
+  const patched = patchPptxEditor(patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(source))))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
 }
