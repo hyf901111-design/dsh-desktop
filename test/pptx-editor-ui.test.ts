@@ -82,3 +82,14 @@ it('closes a chart draft when the same viewer switches to another file',async()=
   expect(view.host.querySelector('[role=dialog]')).toBeNull()
  }finally{await view.close()}
 })
+
+it('does not apply a pending preview from the previous file to a new viewer',async()=>{
+ const props={path:'a.pptx'},requests:any[]=[],a={...doc,id:'a',version:'a-version'},b={...doc,id:'b',version:'b-version'}
+ function Preview(p:any){React.useEffect(()=>{p.onPptxViewer?.({currentSlideIndex:0,goToSlide:async()=>{},open:async()=>{}});return()=>p.onPptxViewer?.(null)},[p.path]);return React.createElement(FakePreview)}
+ const view=await mount({open:async(v:any)=>({ok:true,document:v.path==='a.pptx'?a:b}),preview:async(v:any)=>{requests.push(v);return{ok:false,error:'路径不匹配'}},save:async()=>({ok:true,document:b})},props,Preview)
+ try{
+  await act(async()=>editable(view.host).focus());await input(view.win,editable(view.host),'A的草稿');await act(async()=>editable(view.host).blur());props.path='b.pptx';await view.render()
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,220))})
+  expect(requests.some(r=>r.path==='a.pptx'&&r.version==='b-version')).toBe(false);expect(view.host.textContent).not.toContain('路径不匹配')
+ }finally{await view.close()}
+})

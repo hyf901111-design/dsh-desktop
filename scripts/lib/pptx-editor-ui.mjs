@@ -9,11 +9,12 @@ export function createPptxEditorComponent(React,Preview,download){
  const persist=entry=>{try{const key='sherlock:pptx-draft:'+entry.document.id;if(dirty(entry))window.sessionStorage.setItem(key,JSON.stringify({document:entry.document,...snapshot(entry)}));else window.sessionStorage.removeItem(key)}catch{entry.error='无法保留本地编辑稿，请保存文件后再关闭。'}}
  const request=(entry,source)=>({...(entry.document.editToken?{editToken:entry.document.editToken}:source),version:entry.document.version,edits:fields(entry).filter(f=>entry.values[f.id]!==f.text).map(f=>({id:f.id,text:entry.values[f.id]})),objects:Object.entries(entry.objects).map(([id,change])=>({id,...change}))})
  return function PptxView(props){
-  const {scope,path,toolbar,onToolbarState,onToolbarControls}=props,root=React.useRef(null),previewHost=React.useRef(null),entryRef=React.useRef(null),viewerRef=React.useRef(null),controller=React.useRef(null),generation=React.useRef(0),opening=React.useRef(null),token=React.useRef(null),pageRef=React.useRef(0),selectionRef=React.useRef(null),zoomRef=React.useRef(100),draftGeneration=React.useRef(0),renderTimer=React.useRef(null),pendingRender=React.useRef(false),gestureRef=React.useRef(false),deferredRefresh=React.useRef(false),previewPath=React.useRef(null)
+  const {scope,path,toolbar,onToolbarState,onToolbarControls}=props,root=React.useRef(null),previewHost=React.useRef(null),entryRef=React.useRef(null),viewerRef=React.useRef(null),controller=React.useRef(null),generation=React.useRef(0),opening=React.useRef(null),token=React.useRef(null),pageRef=React.useRef(0),selectionRef=React.useRef(null),zoomRef=React.useRef(100),draftGeneration=React.useRef(0),renderTimer=React.useRef(null),pendingRender=React.useRef(false),gestureRef=React.useRef(false),deferredRefresh=React.useRef(false),previewPath=React.useRef(null),sourceRef=React.useRef(null),sourceKeyRef=React.useRef(null),entrySourceKey=React.useRef(null)
   const [entry,setEntry]=React.useState(null),[page,setPage]=React.useState(0),[zoom,setZoom]=React.useState(100),[mode,setMode]=React.useState('edit'),[loading,setLoading]=React.useState(false),[error,setError]=React.useState(''),[revision,setRevision]=React.useState(0),[selection,setSelection]=React.useState(null),[chart,setChart]=React.useState(null),[,tick]=React.useState(0)
   pageRef.current=page;selectionRef.current=selection;zoomRef.current=zoom
   const bridge=window.sherlockPptEditor,available=typeof bridge?.open==='function'&&typeof bridge?.save==='function'
   const source=String(path).startsWith('sherlock-preview:')?{sourceUrl:path}:{sessionId:scope.sessionId,path},sourceKey=JSON.stringify(source)
+  sourceRef.current=source;sourceKeyRef.current=sourceKey
   const begin=()=>{const current=entryRef.current;if(current&&!current.pending)current.pending=snapshot(current)}
   const end=()=>{const current=entryRef.current;if(!current?.pending)return;if(JSON.stringify(current.pending)!==JSON.stringify(snapshot(current))){current.undo.push(current.pending);if(current.undo.length>100)current.undo.shift();current.redo=[]}current.pending=null;emit(current,true)}
   const changeText=(id,value)=>{const current=entryRef.current;if(!current)return;begin();current.values[id]=value;current.status='idle';persist(current);emit(current)}
@@ -22,10 +23,10 @@ export function createPptxEditorComponent(React,Preview,download){
    if(deferredRefresh.current&&!gestureRef.current&&!(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true')){deferredRefresh.current=false;previewPath.current=entryRef.current?.document.previewUrl||props.path;pendingRender.current=!!entryRef.current&&dirty(entryRef.current);setRevision(v=>v+1);return}
    pendingRender.current=true;clearTimeout(renderTimer.current)
    renderTimer.current=setTimeout(async()=>{
-    const current=entryRef.current,viewer=viewerRef.current;if(!current||!viewer||typeof bridge?.preview!=='function')return
+    const current=entryRef.current,viewer=viewerRef.current;if(!current||entrySourceKey.current!==sourceKeyRef.current||!viewer||typeof bridge?.preview!=='function')return
     if(gestureRef.current||(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true'))return
     pendingRender.current=false;const expected=++draftGeneration.current,viewGeneration=generation.current,selected=selectionRef.current?.id,index=viewer.currentSlideIndex??pageRef.current
-    try{const result=await bridge.preview(request(current,source));if(expected!==draftGeneration.current||viewGeneration!==generation.current||viewer!==viewerRef.current)return;if(!result.ok)throw Error(result.error)
+    try{const result=await bridge.preview(request(current,sourceRef.current));if(expected!==draftGeneration.current||viewGeneration!==generation.current||viewer!==viewerRef.current)return;if(!result.ok)throw Error(result.error)
      // Typing always wins over an asynchronous preview response.
      if(gestureRef.current||(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true')){pendingRender.current=true;return}
      await viewer.open(new Uint8Array(result.bytes),{renderMode:'list',lazySlides:true,lazyMedia:true,listOptions:{windowed:true,showSlideLabels:true}})
@@ -38,25 +39,25 @@ export function createPptxEditorComponent(React,Preview,download){
    const expected=generation.current;setLoading(true);setError('')
    const operation=(async()=>{try{
     if(!available)throw Error('PPTX 编辑服务不可用，请重新打开应用。')
-    const result=await bridge.open({...source,...(token.current?{editToken:token.current}:{})});if(expected!==generation.current)return null;if(!result.ok)throw Error(result.error)
+    const result=await bridge.open({...sourceRef.current,...(token.current?{editToken:token.current}:{})});if(expected!==generation.current)return null;if(!result.ok)throw Error(result.error)
     let current=drafts.get(result.document.id)
     if(!current){let restored;try{restored=JSON.parse(window.sessionStorage.getItem('sherlock:pptx-draft:'+result.document.id)||'null')}catch{}if(restored?.document?.id!==result.document.id||!restored.values)restored=null
      current={document:restored?.document||result.document,values:restored?.values||Object.fromEntries(result.document.slides.flatMap(s=>s.fields.map(f=>[f.id,f.text]))),objects:restored?.objects||{},undo:[],redo:[],pending:null,saving:false,status:'idle',error:'',listeners:new Set()};drafts.set(result.document.id,current)}
     if(current.document.version!==result.document.version){if(dirty(current))current.error='原 PPTX 已变化，当前编辑稿已保留。请核对内容后重新读取文件。';else{current.document=result.document;current.values=Object.fromEntries(fields(current).map(f=>[f.id,f.text]));current.objects={};current.error=''}}
-    if(result.document.editToken)current.document.editToken=result.document.editToken;token.current=current.document.editToken||null;entryRef.current=current;previewPath.current=result.document.previewUrl||props.path;setEntry(current);return current
+    if(result.document.editToken)current.document.editToken=result.document.editToken;token.current=current.document.editToken||null;entryRef.current=current;entrySourceKey.current=sourceKey;previewPath.current=result.document.previewUrl||props.path;setEntry(current);return current
    }catch(failure){if(expected===generation.current)setError(failure.message||'无法读取 PPTX。');return null}finally{if(expected===generation.current){setLoading(false);opening.current=null}}})();opening.current=operation;return operation
   }
   const save=async()=>{
-   end();const current=entryRef.current;if(!current||current.saving||!dirty(current))return
-   const savedState=snapshot(current),savedObjects=savedState.objects,input=request(current,source);current.saving=true;current.status='saving';current.error='';emit(current)
+   end();const current=entryRef.current;if(!current||entrySourceKey.current!==sourceKeyRef.current||current.saving||!dirty(current))return
+   const savedState=snapshot(current),savedObjects=savedState.objects,input=request(current,sourceRef.current);current.saving=true;current.status='saving';current.error='';emit(current)
    try{const result=await bridge.save(input);if(!result.ok)throw Error(result.error);current.document=result.document
     for(const [id,change]of Object.entries(savedObjects))if(JSON.stringify(current.objects[id])===JSON.stringify(change))delete current.objects[id]
     current.undo=[];current.redo=[];current.pending=null;if(JSON.stringify(current.values)!==JSON.stringify(savedState.values)||Object.keys(current.objects).length)current.undo.push({values:savedState.values,objects:{}});current.status='saved';persist(current);document.dispatchEvent(new CustomEvent('sherlock:pptx-saved',{detail:{id:current.document.id}}))
    }catch(failure){current.status='failed';current.error=failure.message||'保存失败，编辑稿已保留。'}finally{current.saving=false;emit(current)}
   }
   const history=direction=>{if(previewHost.current?.contains(document.activeElement))document.activeElement?.blur?.();end();const current=entryRef.current;if(!current)return;const stack=current[direction];if(!stack.length)return;current[direction==='undo'?'redo':'undo'].push(snapshot(current));const next=stack.pop();current.values=next.values;current.objects=next.objects;current.status='idle';persist(current);emit(current,true);controller.current?.refresh();renderDraft()}
-  const attachViewer=React.useCallback(viewer=>{viewerRef.current=viewer;if(viewer){if(zoomRef.current!==100)void viewer.setZoom?.(zoomRef.current);void viewer.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'});if(pendingRender.current)renderDraft()}},[])
-  React.useEffect(()=>{generation.current++;entryRef.current=null;opening.current=null;token.current=null;setEntry(null);setPage(0);setSelection(null);setChart(null);gestureRef.current=false;deferredRefresh.current=false;previewPath.current=props.path;setMode('edit');setError('');void open();return()=>{generation.current++;draftGeneration.current++;entryRef.current=null;clearTimeout(renderTimer.current)}},[sourceKey])
+  const attachViewer=React.useCallback(viewer=>{viewerRef.current=viewer;if(viewer){if(zoomRef.current!==100)void viewer.setZoom?.(zoomRef.current);void viewer.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'});if(pendingRender.current)renderDraft()}},[sourceKey])
+  React.useEffect(()=>{generation.current++;entryRef.current=null;opening.current=null;token.current=null;setEntry(null);setPage(0);setSelection(null);setChart(null);gestureRef.current=false;deferredRefresh.current=false;pendingRender.current=false;entrySourceKey.current=null;clearTimeout(renderTimer.current);previewPath.current=props.path;setMode('edit');setError('');void open();return()=>{generation.current++;draftGeneration.current++;entryRef.current=null;clearTimeout(renderTimer.current)}},[sourceKey])
   React.useEffect(()=>{if(!entry||!previewHost.current)return;controller.current=attachPptxDirectEditor(previewHost.current,{getEntry:()=>entryRef.current,changeText,changeObject,begin,end,render:renderDraft,select:setSelection,interaction:value=>{gestureRef.current=value},editChart:node=>setChart({id:node.id,value:clone(node.chart),documentId:entryRef.current.document.id,generation:generation.current})});controller.current.setEnabled(mode==='edit');if(dirty(entry))renderDraft();return()=>{controller.current?.destroy();controller.current=null}},[entry])
   React.useEffect(()=>controller.current?.setEnabled(mode==='edit'),[mode])
   React.useEffect(()=>{void viewerRef.current?.setZoom?.(zoom)},[zoom])
