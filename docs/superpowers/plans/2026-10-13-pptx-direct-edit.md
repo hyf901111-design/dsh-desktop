@@ -46,6 +46,6 @@ Interfaces: attachPptxDirectEditor(host, controller) marks click targets, edits 
 
 Files: scripts/preview-pptx-editor.mjs, docs/pptx-content-editing.md, isolated output evidence.
 
-- [ ] 用真实样本验证两个入口直接编辑、图形和图表数据、保存再读、深浅色与缩放。
-- [ ] 使用 requesting-code-review 独立审查并验证必要修复。
-- [ ] 更新中文验证记录，提交并重新生成精确交接卡；按集成预检决定后续可执行步骤。
+- [x] 用真实样本验证两个入口直接编辑、图形和图表数据、保存再读、深浅色与缩放。
+- [x] 使用 requesting-code-review 独立审查并验证必要修复。
+- [x] 更新中文验证记录、提交；重新生成交接卡并运行集成预检，验收前不推进 main。

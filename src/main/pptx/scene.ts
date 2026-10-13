@@ -12,8 +12,9 @@ function property(node:Element):Element|undefined{return child(node,node.localNa
 function transform(node:Element):Element|undefined{return node.localName==='graphicFrame'?child(node,'xfrm'):property(node)&&child(property(node)!,'xfrm')}
 // Insert DrawingML children in schema order, including properties absent in source.
 const order=['xfrm','prstGeom','custGeom','noFill','solidFill','gradFill','blipFill','pattFill','grpFill','ln','effectLst','effectDag','scene3d','sp3d','extLst']
+const lineOrder=['noFill','solidFill','gradFill','pattFill','prstDash','custDash','round','bevel','miter','headEnd','tailEnd','extLst']
 const runOrder=['ln','noFill','solidFill','gradFill','blipFill','pattFill','grpFill','effectLst','effectDag','highlight','uLnTx','uLn','uFillTx','uFill','latin','ea','cs','sym','hlinkClick','hlinkMouseOver','rtl','extLst']
-function ensure(e:Element,namespace:string,name:string){let node=child(e,name);if(!node){node=e.ownerDocument!.createElementNS(namespace,`${namespace===P?'p':'a'}:${name}`);const sequence=['rPr','endParaRPr','defRPr'].includes(e.localName??'')?runOrder:order,index=sequence.indexOf(name),before=index<0?undefined:children(e).find(c=>sequence.indexOf(c.localName??'')>index);if(name==='rPr')e.insertBefore(node,e.firstChild);else e.insertBefore(node,before??null)}return node}
+function ensure(e:Element,namespace:string,name:string){let node=child(e,name);if(!node){node=e.ownerDocument!.createElementNS(namespace,`${namespace===P?'p':'a'}:${name}`);const sequence=['rPr','endParaRPr','defRPr'].includes(e.localName??'')?runOrder:e.localName==='ln'?lineOrder:order,index=sequence.indexOf(name),before=index<0?undefined:children(e).find(c=>sequence.indexOf(c.localName??'')>index);if(name==='rPr')e.insertBefore(node,e.firstChild);else e.insertBefore(node,before??null)}return node}
 function setColor(parent:Element,key:string,value:string){
  if(value!=='none'&&!/^[A-Fa-f0-9]{6}$/.test(value))throw Error('PPTX 颜色值无效。')
  for(const c of children(parent).filter(c=>['solidFill','gradFill','blipFill','pattFill','noFill','grpFill'].includes(c.localName??'')))parent.removeChild(c)

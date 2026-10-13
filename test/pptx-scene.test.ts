@@ -78,3 +78,8 @@ it('updates cached chart data without an embedded workbook and preserves unchang
  expect(scene.readPptxScene(changed).slides[0]!.nodes.find(n=>n.chart)?.chart).toMatchObject({categories:['Q1','Q2'],series:[{name:'新系列',values:[30,40]}]})
  expect(strFromU8(unzipSync(changed)['ppt/charts/chart1.xml']!)).toContain('<a:alpha val="50000"/>')
 })
+it('writes line color before an existing dash definition in schema order',()=>{
+ const parts=unzipSync(drawingFixture());parts['ppt/slides/slide2.xml']=strToU8(strFromU8(parts['ppt/slides/slide2.xml']!).replace('</p:spPr>','<a:ln><a:prstDash val="dash"/></a:ln></p:spPr>'))
+ const bytes=zipSync(parts,{level:0}),node=scene.readPptxScene(bytes).slides[0]!.nodes[0]!,changed=scene.editPptxScene(bytes,[{id:node.id,stroke:'112233'}]),text=strFromU8(unzipSync(changed)['ppt/slides/slide2.xml']!),line=text.slice(text.indexOf('<a:ln>'),text.indexOf('</a:ln>'))
+ expect(line.indexOf('<a:solidFill>')).toBeLessThan(line.indexOf('<a:prstDash'))
+})
