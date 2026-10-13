@@ -191,3 +191,39 @@ it('restores the dragged toolbar position after cancelling chart data editing',a
   expect([bar.style.left,bar.style.top]).toEqual(location)
  }finally{await view.close()}
 })
+
+it('keeps redo and save shortcuts in the selected editor after undo releases text focus',async()=>{
+ let saved:any
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:async(r:any)=>{saved=r;return{ok:true,document:doc}}})
+ try{
+  await act(async()=>editable(view.host).focus());await input(view.win,editable(view.host),'快捷键连续编辑')
+  await act(async()=>editable(view.host).dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',metaKey:true})))
+  expect(view.win.document.activeElement).toBe(view.win.document.body);expect(editable(view.host).textContent).toBe('原始标题')
+  await act(async()=>view.win.document.body.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',metaKey:true,shiftKey:true})))
+  expect(editable(view.host).textContent).toBe('快捷键连续编辑')
+  await act(async()=>view.win.document.body.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'s',metaKey:true})))
+  expect(saved.edits).toEqual([{id:'title',text:'快捷键连续编辑'}])
+  const outside=view.win.document.createElement('textarea');view.win.document.body.appendChild(outside);outside.focus()
+  const outsideUndo=new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',metaKey:true})
+  await act(async()=>outside.dispatchEvent(outsideUndo));expect(outsideUndo.defaultPrevented).toBe(false)
+  outside.blur();await act(async()=>view.win.document.body.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'Escape'})))
+  const canvasUndo=new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',metaKey:true})
+  await act(async()=>view.win.document.body.dispatchEvent(canvasUndo));expect(canvasUndo.defaultPrevented).toBe(false)
+ }finally{await view.close()}
+})
+
+it('routes body shortcuts to the editor most recently focused through the keyboard',async()=>{
+ const saves:any[]=[],bridge={open:async(r:any)=>({ok:true,document:{...doc,id:r.path}}),save:async(r:any)=>{saves.push(r);return{ok:true,document:{...doc,id:r.path}}}}
+ const view=await mount(bridge,{path:'a.pptx'}),other=view.win.document.createElement('div');view.win.document.body.appendChild(other)
+ const otherRoot=createRoot(other as any),Other=createPptxEditorComponent(React,FakePreview,undefined,createPortal)
+ try{
+  await act(async()=>{otherRoot.render(React.createElement(Other,{scope:{sessionId:'s',cwd:''},path:'b.pptx'}));await Promise.resolve()})
+  await act(async()=>editable(view.host).focus());await input(view.win,editable(view.host),'A草稿')
+  await act(async()=>editable(other).focus());await input(view.win,editable(other),'B草稿')
+  await act(async()=>editable(other).dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',metaKey:true})))
+  await act(async()=>view.win.document.body.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'z',metaKey:true,shiftKey:true})))
+  expect(editable(other).textContent).toBe('B草稿');expect(editable(view.host).textContent).toBe('A草稿')
+  await act(async()=>view.win.document.body.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'s',metaKey:true})))
+  expect(saves.map(r=>r.path)).toEqual(['b.pptx']);expect(saves[0].edits).toEqual([{id:'title',text:'B草稿'}])
+ }finally{await act(async()=>otherRoot.unmount());await view.close()}
+})
