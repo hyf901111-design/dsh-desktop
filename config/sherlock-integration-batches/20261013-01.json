@@ -11,33 +11,21 @@
         "schemaVersion": 1,
         "featureName": "右侧栏与研究组件PPTX画面直接编辑",
         "branch": "codex/feat/ppt-content-edit-20261013",
-        "baseCommit": "db57bc665659e379baa47b7a6a3a0257c6e725e4",
-        "tipCommit": "87e4ac0d4db3cb9a990b4836e1a70350961d6bab",
+        "baseCommit": "87e4ac0d4db3cb9a990b4836e1a70350961d6bab",
+        "tipCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
         "commits": [
           {
-            "commit": "87e4ac0d4db3cb9a990b4836e1a70350961d6bab",
+            "commit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
             "parents": [
-              "db57bc665659e379baa47b7a6a3a0257c6e725e4"
+              "87e4ac0d4db3cb9a990b4836e1a70350961d6bab"
             ],
-            "subject": "将PPT格式栏改为可拖动浮层并消除退出文字编辑白屏"
+            "subject": "修复PPT撤销失焦后的连续快捷键并隔离多实例归属"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/pptx-direct-editor.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/pptx-editor-ui.d.mts"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/pptx-editor-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-direct-editor.test.ts"
           },
           {
             "status": "M",
@@ -59,9 +47,9 @@
               "test/research-file-preview.test.ts"
             ],
             "outcome": "passed",
-            "summary": "8个直接相关PPT测试文件125项通过",
-            "verifiedCommit": "87e4ac0d4db3cb9a990b4836e1a70350961d6bab",
-            "completedAt": "2026-10-13T22:23:37.093752Z",
+            "summary": "8个直接相关PPT测试文件127项通过",
+            "verifiedCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
+            "completedAt": "2026-10-13T22:57:39.037906Z",
             "timeoutMs": 120000
           },
           {
@@ -73,8 +61,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript检查通过",
-            "verifiedCommit": "87e4ac0d4db3cb9a990b4836e1a70350961d6bab",
-            "completedAt": "2026-10-13T22:23:37.093752Z",
+            "verifiedCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
+            "completedAt": "2026-10-13T22:57:39.037906Z",
             "timeoutMs": 120000
           },
           {
@@ -82,18 +70,18 @@
               "git",
               "diff",
               "--check",
-              "db57bc665659e379baa47b7a6a3a0257c6e725e4..HEAD"
+              "87e4ac0d4db3cb9a990b4836e1a70350961d6bab..HEAD"
             ],
             "outcome": "passed",
             "summary": "完整功能差异格式检查通过",
-            "verifiedCommit": "87e4ac0d4db3cb9a990b4836e1a70350961d6bab",
-            "completedAt": "2026-10-13T22:23:37.093752Z",
+            "verifiedCommit": "91e14bd44a9d2b74f01bc7e99bd502ec73d677e1",
+            "completedAt": "2026-10-13T22:57:39.037906Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际Office包隔离页面：侧栏与研究入口选中后浮动格式栏，指针拖动、主题取色、快捷键保存、Esc退出后整页保留；组合测试验证取消图表对话框保留拖动位置、异步格式响应不恢复旧选中对象。本次共享客户端待重新构建验证。"
+          "summary": "真实Office页面在BODY焦点下连续撤销、重做和保存已通过；独立复核及双factory React UI回归验证最近活动实例唯一归属、外部输入/切源/卸载清理。此前原生客户端已验证两处浮动栏、原生拖动和保存后Esc退出；当前增量待重新构建原生客户端验收。"
         },
         "acceptanceCriteria": [
           "右侧栏与研究PPT组件均去除固定controls操作行",
@@ -101,65 +89,15 @@
           "撤销重做与保存保留快捷键",
           "退出文字编辑及取消选中不重新打开或重挂载整份PPT",
           "对象缩放保留必要内层重排且异步响应不改变用户最新选择",
-          "用户接受精确集成tip之后才推进main"
+          "用户接受精确集成tip之后才推进main",
+          "文字撤销失焦后连续重做保存仍进入最近操作的PPT，多个编辑器互不误保存"
         ],
         "risks": [
           "本次重新构建后仍需用户在共享客户端验收",
           "对象缩放、格式、图表或撤销操作仍保留必要的渲染以维护布局及富文本样式",
           "仅编辑现有对象及系列，不新增幻灯片或对象，不编辑SmartArt与动画"
         ],
-        "generatedAt": "2026-10-13T22:23:37.093752Z"
-      },
-      "merged": {
-        "mergeCommit": "3266314736071994d6e1fe80212e906e69cc8f41",
-        "verificationCommit": "3266314736071994d6e1fe80212e906e69cc8f41",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
-            "verifiedCommit": "3266314736071994d6e1fe80212e906e69cc8f41",
-            "completedAt": "2026-10-13T22:24:02.316Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "3266314736071994d6e1fe80212e906e69cc8f41",
-            "completedAt": "2026-10-13T22:24:02.316Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "3266314736071994d6e1fe80212e906e69cc8f41",
-            "completedAt": "2026-10-13T22:24:02.316Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-13T22:24:02.316Z"
+        "generatedAt": "2026-10-13T22:57:39.037906Z"
       }
     }
   ],
