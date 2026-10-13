@@ -18,3 +18,8 @@ it('accepts a multi-paragraph text selection and rejects empty or structural sel
  expect(noteRangeHasOnlyText(doc,{from:positions[0]!,to:positions[0]!})).toBe(false)
  expect(noteRangeHasOnlyText(doc,{from:0,to:doc.content.size})).toBe(false)
 })
+it('rejects whitespace-only selections within an otherwise nonempty text node',()=>{
+ const doc=schema.node('doc',null,schema.node('blockContainer',null,paragraph('前文   后文')))
+ expect(noteRangeHasOnlyText(doc,{from:4,to:7})).toBe(false)
+ expect(noteRangeHasOnlyText(doc,{from:2,to:4})).toBe(true)
+})

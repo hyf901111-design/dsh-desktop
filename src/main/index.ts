@@ -123,6 +123,8 @@ import { ResearchVoiceController, registerResearchVoiceHandlers } from './state/
 import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
 import { CanvasActionBridge, registerCanvasActionHandlers } from './state/canvas-action-bridge'
 import { installNotesService } from './notes/service'
+import { NotesStore } from './notes/store'
+import { findNoteComponent } from './notes/component-library'
 import { NoteNativeMenu } from './notes/native-menu'
 import { NoteFiles, noteFileOwnerPrefix } from './notes/files'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
@@ -1333,12 +1335,14 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  let noteComponentLibrary:Awaited<ReturnType<typeof installComponentLibrary>>
+  const calendarNotes = new NotesStore(join(app.getPath('userData'),'workspace-notes'))
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
   const noteNativeMenu = new NoteNativeMenu({getWindow:()=>mainWindow,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession})
   app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow,
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
-    canRead:canReadNoteSession,nativeMenu:noteNativeMenu,
+    canRead:canReadNoteSession,nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,
     files:new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
   }))
   try {
@@ -1426,8 +1430,11 @@ async function bootstrap(): Promise<void> {
   const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
   registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openFinancialArticle(url,shell.openExternal))
-  await installComponentLibrary({ipcMain,getWindow:()=>mainWindow,file:join(app.getPath('userData'),'component-library.json'),readCanvas:id=>researchBoardsService?.isSharedSession(id)?researchBoardsService.readSharedCanvas(id):readStoredResearchCanvas(researchCanvasStorage,id),getBinding:(sessionId,nodeId)=>componentDataService?.engine.list(sessionId).find((b:any)=>b.nodeId===nodeId),owner:integrationOwner})
-  await installCalendarService({getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>readStoredResearchCanvas(researchCanvasStorage,target.sessionId).artifacts.some((n:any)=>n.id===target.nodeId&&n.containerSpec?.type==='calendar-tool')})
+  noteComponentLibrary=await installComponentLibrary({ipcMain,getWindow:()=>mainWindow,file:join(app.getPath('userData'),'component-library.json'),readCanvas:id=>researchBoardsService?.isSharedSession(id)?researchBoardsService.readSharedCanvas(id):readStoredResearchCanvas(researchCanvasStorage,id),getBinding:(sessionId,nodeId)=>componentDataService?.engine.list(sessionId).find((b:any)=>b.nodeId===nodeId),owner:integrationOwner})
+  await installCalendarService({getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>{
+    if(readStoredResearchCanvas(researchCanvasStorage,target.sessionId).artifacts.some((n:any)=>n.id===target.nodeId&&n.containerSpec?.type==='calendar-tool'))return true
+    try{return canReadNoteSession(target.sessionId)&&findNoteComponent(calendarNotes.load(integrationOwner()||'local',target.sessionId).saved.blocks,target.nodeId)?.containerSpec?.type==='calendar-tool'}catch{return false}
+  }})
   ipcMain.handle('component-data:request',async(event,sessionId:string,args:any)=>{
     assertTrustedMainWindowEvent(event,mainWindow)
     if(!componentDataService)throw Error('数据刷新服务不可用')

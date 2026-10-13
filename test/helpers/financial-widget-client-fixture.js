@@ -4,10 +4,10 @@ import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
 import {vi} from 'vitest'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
-export async function financialClientFixture(desktop={}){
+export async function financialClientFixture(desktop={},options={}){
  const win=new Window({url:'https://ework.local'}),document=win.document,keys=['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'],original=keys.map(k=>Object.getOwnPropertyDescriptor(globalThis,k));keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}));let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ let source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');if(options.notes)source=source.replace('exports.ResearchCanvas = ResearchCanvas;','exports.EWorkNoteComponentViews=EWorkNoteComponentViews;exports.ResearchCanvas = ResearchCanvas;')
  runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake),registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('financial-test'),host=document.createElement('div');document.body.append(host)
  let root=createRoot(host),canvas

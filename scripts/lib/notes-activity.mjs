@@ -60,7 +60,7 @@ export function mergeNoteConversationFlow(flow,nodeStore,rows){
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}`
+  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
@@ -101,8 +101,9 @@ export function patchNotesActivity(source) {
     if(source.split(signature).length!==2)throw Error('无法定位笔记会话滚动跟随。')
     source=source.replace(signature,'/* ework:notes-follow-stream:v1 */ '+signature.slice(0,-2)+':${noteRows.map(row=>[row.requestId,row.phase,row.stage,row.outputChars,row.reasoning?.length].join(\",\")).join(\";\")}`;')
   }
-  if(source.includes(next))return patchNotesFiles(source)
+  if(source.includes(next))return patchNotesComponents(patchNotesFiles(source))
   if (source.split(portal).length !== 2) throw Error('笔记无法定位原生对话过程区域。')
-  return patchNotesFiles(source.replace(portal,next))
+  return patchNotesComponents(patchNotesFiles(source.replace(portal,next)))
 }
 import { noteFileClientHelpers, patchNotesFiles } from './notes-files.mjs'
+import { noteComponentClientHelpers, patchNotesComponents } from './notes-components.mjs'

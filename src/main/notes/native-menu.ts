@@ -4,7 +4,7 @@ import type { NoteMenuState, NotesNativeMenu } from '../../shared/notes-menu'
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]!))
 const BASIC_ICONS=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
-const paths:Record<string,string>={paragraph:'M3 3h10M8 3v10',quote:'M2 4h4v4H3l-1 4M9 4h4v4h-3l-1 4',toggle_list:'M4 3l7 5-7 5z',numbered_list:'M6 4h8M6 8h8M6 12h8M2 2h1v4M1 9c3-2 4 0 2 2l-1 2h2',bullet_list:'M6 4h8M6 8h8M6 12h8M2 4h1M2 8h1M2 12h1',check_list:'M3 2h10v12H3zM5 8l2 2 4-4',code_block:'M5 4 1 8l4 4M11 4l4 4-4 4M9 2 7 14',divider:'M2 6h12M2 10h12',table:'M2 2h12v12H2zM2 6h12M2 10h12M6 2v12M10 2v12',image:'M2 2h12v12H2zM2 11l4-4 3 3 2-2 3 3M10 5h.01',video:'M5 3l8 5-8 5z',audio:'M5 12V4l8-2v9M5 10H2v4h3M13 9h-3v4h3',file:'M3 2h7l3 3v9H3zM10 2v4h3M5 9h6M5 12h6',emoji:'M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M4 10c2 3 6 3 8 0M5 5h.01M11 5h.01'}
+const paths:Record<string,string>={library:'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 11h5M11.5 9v5',watchlist:'M2 3h12M2 8h12M2 13h12M5 2v12',stock_quote:'M3 3v10M1 5h4v5H1M11 1v14M9 4h4v7H9',indices:'M2 12l4-4 3 2 5-7',news:'M2 2h12v12H2zM4 5h4v3H4zM10 5h2M10 8h2M4 11h8',announcements:'M3 2h10v12H3zM5 5h6M5 8h6M5 11h3',calendar:'M2 3h12v11H2zM2 6h12M5 1v4M11 1v4',paragraph:'M3 3h10M8 3v10',quote:'M2 4h4v4H3l-1 4M9 4h4v4h-3l-1 4',toggle_list:'M4 3l7 5-7 5z',numbered_list:'M6 4h8M6 8h8M6 12h8M2 2h1v4M1 9c3-2 4 0 2 2l-1 2h2',bullet_list:'M6 4h8M6 8h8M6 12h8M2 4h1M2 8h1M2 12h1',check_list:'M3 2h10v12H3zM5 8l2 2 4-4',code_block:'M5 4 1 8l4 4M11 4l4 4-4 4M9 2 7 14',divider:'M2 6h12M2 10h12',table:'M2 2h12v12H2zM2 6h12M2 10h12M6 2v12M10 2v12',image:'M2 2h12v12H2zM2 11l4-4 3 3 2-2 3 3M10 5h.01',video:'M5 3l8 5-8 5z',audio:'M5 12V4l8-2v9M5 10H2v4h3M13 9h-3v4h3',file:'M3 2h7l3 3v9H3zM10 2v4h3M5 9h6M5 12h6',emoji:'M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M4 10c2 3 6 3 8 0M5 5h.01M11 5h.01'}
 const tone=(key:string)=>({image:'gold',video:'cyan',audio:'cyan',file:'cyan',table:'green',check_list:'blue',code_block:'green'}[key]||'neutral')
 function menuIcon(key:string){
  const heading=key.match(/^(?:toggle_)?heading(?:_(\d))?$/)
@@ -18,34 +18,45 @@ export function validateNoteMenu(input: NoteMenuState): void {
       input.anchor.width < 0 || input.anchor.height < 0 || !Array.isArray(input.items) || input.items.length > 80 ||
       (input.selectedIndex !== undefined && (!Number.isInteger(input.selectedIndex) || input.selectedIndex < 0 || input.selectedIndex >= input.items.length))) throw Error('菜单内容无效。')
   const ids = new Set<string>()
-  for (const item of input.items) {
+  const check = (items:NoteMenuState['items'], child=false) => { for (const item of items) {
     if (!item || !/^[\w-]{1,80}$/.test(item.id) || ids.has(item.id) ||
         !(['title','subtext','group','badge','icon'] as const).every(key => typeof item[key] === 'string' && item[key].length <= 256)) throw Error('菜单选项无效。')
     ids.add(item.id)
-  }
+    if(item.children){if(child||!Array.isArray(item.children)||item.children.length>110)throw Error('子菜单无效。');check(item.children,true)}
+  }}
+  check(input.items)
+  if(input.submenu){const parent=input.items.find(item=>item.id===input.submenu!.parentId);if(!parent?.children?.length||!Number.isInteger(input.submenu.selectedIndex)||input.submenu.selectedIndex<0||input.submenu.selectedIndex>=parent.children.length)throw Error('子菜单选择无效。')}
 }
 
 /** The screen, rather than the parent window, bounds this native floating menu. */
-export function noteMenuBounds(anchor: NoteMenuState['anchor'], work: Electron.Rectangle, desiredHeight: number, zoom = 1): Electron.Rectangle {
-  const margin = 8, width = Math.min(Math.ceil(264 * zoom), work.width - margin * 2), height = Math.min(Math.ceil(desiredHeight * zoom), work.height - margin * 2)
+export function noteMenuBounds(anchor: NoteMenuState['anchor'], work: Electron.Rectangle, desiredHeight: number, zoom = 1, desiredWidth = 264): Electron.Rectangle {
+  const margin = 8, width = Math.min(Math.ceil(desiredWidth * zoom), work.width - margin * 2), height = Math.min(Math.ceil(desiredHeight * zoom), work.height - margin * 2)
   const below = work.y + work.height - anchor.y - anchor.height - margin - 6, above = anchor.y - work.y - margin - 6
   const y = below >= height || below >= above ? anchor.y + anchor.height + 6 : anchor.y - height - 6
   return { x: Math.round(Math.max(work.x + margin, Math.min(anchor.x, work.x + work.width - width - margin))),
     y: Math.round(Math.max(work.y + margin, Math.min(y, work.y + work.height - height - margin))), width, height }
 }
 
-export function noteMenuPresentation(state: NoteMenuState, ticket: string): { html: string; height: number } {
+export function noteMenuPresentation(state: NoteMenuState, ticket: string): { html: string; height: number; width:number } {
   const grid=state.items.some(item=>item.icon==='paragraph')&&state.items.some(item=>item.icon==='heading')&&state.items.some(item=>item.icon==='bullet_list')
   const basic=grid?state.items.filter(item=>BASIC_ICONS.includes(item.icon)):[],rest=grid?state.items.filter(item=>!BASIC_ICONS.includes(item.icon)):state.items
-  const row=(item:NoteMenuState['items'][number],iconOnly=false)=>{const index=state.items.indexOf(item);return `<a role="option" aria-label="${escapeHtml(item.title)}" title="${escapeHtml(item.title+(item.badge?' · '+item.badge:''))}" aria-selected="${index===state.selectedIndex}" id="item-${index}" href="ework-note-menu://${ticket}/select/${item.id}?revision=${state.revision}" class="${iconOnly?'basic-item':''}"><span class="icon ${tone(item.icon)}">${menuIcon(item.icon)}</span>${iconOnly?'':`<span class="label">${escapeHtml(item.title)}</span>`}</a>`}
+  const parent=state.items.find(item=>item.id===state.submenu?.parentId)
+  const row=(item:NoteMenuState['items'][number],iconOnly=false,parentId?:string)=>{
+    const index=parentId?parent!.children!.indexOf(item):state.items.indexOf(item),selected=parentId?index===state.submenu?.selectedIndex:!state.submenu&&index===state.selectedIndex
+    const route=item.children?'open':'select',suffix=parentId?'&parent='+parentId:''
+    return `<a role="option" aria-label="${escapeHtml(item.title)}" title="${escapeHtml(item.title+(item.badge?' · '+item.badge:''))}" aria-selected="${selected}" ${item.children?'aria-haspopup="menu" data-submenu=""':''} id="item-${parentId||'root'}-${index}" href="ework-note-menu://${ticket}/${route}/${item.id}?revision=${state.revision}${suffix}" class="${iconOnly?'basic-item':''}"><span class="icon ${tone(item.icon)}">${menuIcon(item.icon)}</span>${iconOnly?'':`<span class="label">${escapeHtml(item.title)}</span>`}${item.children?'<span class="chevron">›</span>':''}</a>`
+  }
   const basicHtml=basic.length?'<h2>基础格式</h2><div class="basic-grid">'+basic.map(item=>row(item,true)).join('')+'</div>':''
   const restHtml=rest.length?(grid?'<h2>插入</h2>':'')+rest.map(item=>row(item)).join(''):''
-  const height=18+(basic.length?24+Math.ceil(basic.length/6)*32+8:0)+(grid&&rest.length?24:0)+rest.length*32+24
-  return {html:`<div id="items" role="listbox" aria-label="笔记斜杠菜单">${basicHtml+restHtml||'<p class="empty">没有匹配的命令</p>'}</div><footer>↑↓ 选择 · ↵ 插入 · Esc 关闭</footer>`,height:Math.min(480,state.items.length?height:68)}
+  const rootHeight=Math.min(480,state.items.length?18+(basic.length?24+Math.ceil(basic.length/6)*32+8:0)+(grid&&rest.length?24:0)+rest.length*32+24:68)
+  let group='';const childHtml=parent?.children?.map(item=>{const heading=item.group!==group?'<h2>'+escapeHtml(item.group)+'</h2>':'';group=item.group;return heading+row(item,false,parent.id)}).join('')||''
+  const childHeight=Math.min(480,18+56+(parent?.children?.length||0)*32+new Set(parent?.children?.map(item=>item.group)).size*24)
+  const html=`<section class="menu root-menu" style="height:${rootHeight}px"><div id="items" role="listbox" aria-label="笔记斜杠菜单">${basicHtml+restHtml||'<p class="empty">没有匹配的命令</p>'}</div><footer>↑↓ 选择 · ↵ 插入 · Esc 关闭</footer></section>`+(parent?`<section class="menu child-menu" style="height:${childHeight}px"><div role="listbox" aria-label="组件库"><a class="back" href="ework-note-menu://${ticket}/back/${parent.id}?revision=${state.revision}">‹ 组件库</a>${childHtml}</div><footer>← 返回 · ↵ 插入 · Esc 关闭</footer></section>`:'')
+  return {html,height:parent?Math.max(rootHeight,childHeight):rootHeight,width:parent?528:264}
 }
 export const noteMenuDocumentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>笔记斜杠菜单</title><style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:#f5f5f5;--hover:#e7e7e7;--muted:#777;--line:#d8d8d8}body.dark{color:#eee;--bg:#272727;--hover:#383838;--muted:#aaa;--line:#484848}
-main{height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden;padding:6px 5px 0}#items{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px}a:hover,a[aria-selected=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}footer{flex:none;height:24px;border-top:1px solid var(--line);font-size:10px;line-height:23px;color:var(--muted);padding:0 8px}.empty{padding:8px;margin:0}
+main{height:100%;display:flex;align-items:flex-start;gap:4px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden;padding:6px 5px 0}.menu>[role=listbox]{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px}a:hover,a[aria-selected=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}footer{flex:none;height:24px;border-top:1px solid var(--line);font-size:10px;line-height:23px;color:var(--muted);padding:0 8px}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}@media(max-width:500px){main:has(.child-menu) .root-menu{display:none}.child-menu{width:100%}}
 </style><main></main>`
 
 type OpenMenu = { input: NoteMenuState; owner: string; ticket: string; parent: BrowserWindow; popup: BrowserWindow; ready: Promise<unknown>; pending: boolean; updating: boolean; unlisten(): void }
@@ -77,11 +88,13 @@ export class NoteNativeMenu implements NotesNativeMenu {
         event.preventDefault()
         if (this.current !== state) return
         try {
-          const link = new URL(url), id = link.pathname.slice('/select/'.length), revision = Number(link.searchParams.get('revision'))
-          if (link.protocol !== 'ework-note-menu:' || link.hostname !== state.ticket || !link.pathname.startsWith('/select/') || revision !== state.input.revision || !state.input.items.some(item => item.id === id)) return
+          const link = new URL(url), [,action,id] = link.pathname.split('/'), revision = Number(link.searchParams.get('revision')), parentId=link.searchParams.get('parent')||undefined
+          if (link.protocol !== 'ework-note-menu:' || link.hostname !== state.ticket || revision !== state.input.revision) return
+          const parentItem=state.input.items.find(item=>item.id===parentId),item=parentId?parentItem?.children?.find(item=>item.id===id):state.input.items.find(item=>item.id===id)
+          if(!item||parentId&&state.input.submenu?.parentId!==parentId||!['open','back','select'].includes(action!))return
           if (this.options.owner() !== state.owner || !this.options.canRead(state.input.sessionId)) { this.close(); return }
-          this.close()
-          state.parent.webContents.send('notes:menu-event',{sessionId:state.input.sessionId,owner:state.owner,menuId:state.input.menuId,revision,action:'select',itemId:id})
+          if(action==='open'||action==='back'){if(!item.children?.length||parentId)return}else{if(item.children)return;this.close()}
+          state.parent.webContents.send('notes:menu-event',{sessionId:state.input.sessionId,owner:state.owner,menuId:state.input.menuId,revision,action,itemId:id,...(parentId?{parentId}:{})})
         } catch { /* Invalid navigation never leaves the isolated menu. */ }
       })
       popup.on('closed',cancel)
@@ -101,9 +114,9 @@ export class NoteNativeMenu implements NotesNativeMenu {
         const input = state.input, presentation = noteMenuPresentation(input,state.ticket), content = state.parent.getContentBounds(), zoom = state.parent.webContents.getZoomFactor()
         const anchor = { x:content.x + input.anchor.x * zoom, y:content.y + input.anchor.y * zoom, width:input.anchor.width * zoom, height:input.anchor.height * zoom }
         const work = screen.getDisplayNearestPoint({x:Math.round(anchor.x),y:Math.round(anchor.y)}).workArea
-        state.popup.setBounds(noteMenuBounds(anchor,work,presentation.height,zoom))
+        state.popup.setBounds(noteMenuBounds(anchor,work,presentation.height,zoom,presentation.width))
         state.popup.webContents.setZoomFactor(zoom)
-        await state.popup.webContents.executeJavaScript(`document.body.className=${JSON.stringify(input.dark?'dark':'')};document.querySelector('main').innerHTML=${JSON.stringify(presentation.html)};document.querySelector('[aria-selected="true"]')?.scrollIntoView({block:'nearest'});`)
+        await state.popup.webContents.executeJavaScript(`document.body.className=${JSON.stringify(input.dark?'dark':'')};document.querySelector('main').innerHTML=${JSON.stringify(presentation.html)};document.querySelector('[aria-selected="true"]')?.scrollIntoView({block:'nearest'});document.querySelectorAll('.root-menu a').forEach(a=>a.onmouseenter=()=>{const child=document.querySelector('.child-menu');if(a.hasAttribute('data-submenu')){if(!child)location.href=a.href}else if(child)location.href=child.querySelector('.back').href});`)
         if (this.current === state && this.options.owner() === state.owner && this.options.canRead(input.sessionId) && !state.popup.isDestroyed()) state.popup.showInactive()
         else if (this.current === state) this.close()
       }

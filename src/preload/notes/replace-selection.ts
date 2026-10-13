@@ -5,10 +5,10 @@ import { noteText } from '../../shared/workspace-notes'
 export function noteRangeHasOnlyText(doc:any,range:{from:number;to:number}){
   if(range.from>=range.to||range.from<0||range.to>doc.content.size)return false
   if(!doc.resolve(range.from).parent.inlineContent||!doc.resolve(range.to).parent.inlineContent)return false
-  let valid=true,text=false
+  let valid=true
+  const text=doc.textBetween(range.from,range.to,'').trim().length>0
   doc.nodesBetween(range.from,range.to,(node:any)=>{
     if(node.type.spec.group?.split(' ').includes('blockContent')&&!node.inlineContent){valid=false;return false}
-    if(node.isText&&node.text?.trim())text=true
     return true
   })
   return valid&&text

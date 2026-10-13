@@ -1,20 +1,23 @@
-import { afterAll, beforeAll, expect, it } from 'vitest'
+import { afterAll, beforeAll, expect, it, vi } from 'vitest'
 import { build } from 'esbuild'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+
+import {noteMenuDocumentHtml,noteMenuPresentation} from '../src/main/notes/native-menu'
+vi.mock('electron',()=>({BrowserWindow:class{},screen:{}}))
 
 let browser, script, css
 beforeAll(async () => {
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
       import React from 'react'; import {createRoot} from 'react-dom/client';import {createPortal} from 'react-dom';import {EWorkNoteExportMenu} from './scripts/lib/notes-export-menu.mjs';window.react_dom={createPortal};
-      import {NotesApp} from './src/preload/notes/editor'; import {createNoteFileViewStore,EWorkNoteFileViews} from './scripts/lib/notes-files.mjs';
+      import {componentLibraryBuiltins} from './packages/dsh-research-task-runtime/component-library-catalog.js';import {financialWidgetDefaults,financialWidgetDimensions,financialWidgetSpec} from './packages/dsh-research-task-runtime/financial-widget-contract.js';import {createNoteComponentViewStore,EWorkNoteComponentViews} from './scripts/lib/notes-components.mjs';import {NotesApp} from './src/preload/notes/editor'; import {createNoteFileViewStore,EWorkNoteFileViews} from './scripts/lib/notes-files.mjs';
       import {createNotesActivityStore,EWorkNotesActivity} from './scripts/lib/notes-activity.mjs';
       window.react=React;window.eworkNotesActivity=createNotesActivityStore(document);const header=document.createElement('header');header.style.cssText='position:fixed;top:4px;left:360px;z-index:100';document.body.append(header);createRoot(header).render(<EWorkNoteExportMenu sessionId="outline-test"/>);
       import '@blocknote/mantine/style.css'; import './src/preload/notes/style.css';
       window.noteRequests=[];window.noteTasks=[];window.noteCommits=[];document.addEventListener('sherlock:notes-task-state',event=>window.noteTasks.push(event.detail));document.addEventListener('sherlock:notes-composer-commit',event=>window.noteCommits.push(event.detail));
-      window.eworkNoteFileViews=createNoteFileViewStore(document);window.eworkNoteOfficePreview={subscribe:()=>()=>{},getSnapshot:()=>null};window.ResearchCanvasFileCard=({node})=><section className="rScV5Q_richNode"><header>{node.name}</header><div>原生文件预览</div></section>;const fileViews=document.createElement('div');document.body.append(fileViews);createRoot(fileViews).render(<EWorkNoteFileViews sessionId="outline-test" active/>);window.resolveNoteFiles={};const bridge={filePath:file=>'/tmp/'+file.name,request:async(method,input)=>{window.noteRequests.push({method,input});return method==='load'?{saved:window.noteSaved||{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='clipboard'?{kind:'components',nodes:[window.noteComponent]}:method==='render'?{html:input.spec.html,document:window.noteComponentDocument}:method==='file-bind'?{previewSessionId:'note-files:fixture'}:method==='file-admit'?await new Promise(resolve=>{window.resolveNoteFiles[input.nodeId]=()=>resolve({id:input.nodeId,name:input.name,source:'computer',path:input.path,authorizationId:'fixture-grant-'+input.nodeId,previewSessionId:'note-files:fixture',contentType:'text/plain'})}):method==='generate'?await new Promise(resolve=>{window.resolveNoteSuggestion=result=>resolve(result||{kind:'text',markdown:'改写后的验收句子。'})}):{}},draft:async()=>{}};
+      window.eworkNoteFileViews=createNoteFileViewStore(document);window.eworkNoteOfficePreview={subscribe:()=>()=>{},getSnapshot:()=>null};window.ResearchCanvasFileCard=({node})=><section className="rScV5Q_richNode"><header>{node.name}</header><div>原生文件预览</div></section>;const fileViews=document.createElement('div');document.body.append(fileViews);createRoot(fileViews).render(<EWorkNoteFileViews sessionId="outline-test" active/>);window.financialWidgetSpec=financialWidgetSpec;window.eworkNoteComponentViews=createNoteComponentViewStore(document);window.ResearchContainerBody=({node})=><div>{node.containerSpec.content||node.title}</div>;window.FinancialWidget=({node,onSpecChange})=><div data-financial-widget={node.containerSpec.widget}><span>{node.title}</span><button onClick={()=>onSpecChange(node.containerSpec,{...node.containerSpec,symbols:[{code:'600519',market:'SH',name:'验收标的'}]})}>添加验收自选股</button></div>;window.FinancialLibraryIcon=()=>null;window.FinancialQuoteSelector=()=>null;window.FinancialNewsSearch=()=>null;const componentViews=document.createElement('div');document.body.append(componentViews);createRoot(componentViews).render(<EWorkNoteComponentViews sessionId="outline-test" active/>);window.resolveNoteFiles={};const bridge={filePath:file=>'/tmp/'+file.name,request:async(method,input)=>{window.noteRequests.push({method,input});return method==='library-list'?[...componentLibraryBuiltins().map(item=>({id:item.id,title:item.name,icon:item.widget,group:'内置组件'})),{id:'custom-demo',title:window.customLibraryName||'我的研究总结',icon:'library',group:'自定义组件'}]:method==='library-read'?await (window.deferLibraryRead?new Promise(resolve=>window.releaseLibraryRead=()=>resolve({id:crypto.randomUUID(),title:'延迟组件',noteLibrary:true,containerSpec:{version:1,type:'markdown',title:'延迟组件',content:'内容'}})):Promise.resolve((()=>{const item=componentLibraryBuiltins().find(item=>item.id===input.id),spec=item?(item.widget==='calendar'?{version:1,type:'calendar-tool',title:item.name}:financialWidgetDefaults(item.widget)):{version:1,type:'markdown',title:window.customLibraryName||'我的研究总结',content:'原始研究内容'};return {id:crypto.randomUUID(),kind:'generated-container',title:spec.title,noteLibrary:true,generationStatus:'completed',containerSpec:spec,...(item&&item.widget!=='calendar'?financialWidgetDimensions(spec):{height:320})}})())):method==='component-ready'?{ready:window.noteRequests.some(row=>row.method==='save'&&row.input.content.blocks.some(block=>block.type==='research'&&JSON.parse(block.props.payload).id===input.nodeId))}:method==='load'?{saved:window.noteSaved||{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='clipboard'?{kind:'components',nodes:[window.noteComponent]}:method==='render'?{html:input.spec.html,document:window.noteComponentDocument}:method==='file-bind'?{previewSessionId:'note-files:fixture'}:method==='file-admit'?await new Promise(resolve=>{window.resolveNoteFiles[input.nodeId]=()=>resolve({id:input.nodeId,name:input.name,source:'computer',path:input.path,authorizationId:'fixture-grant-'+input.nodeId,previewSessionId:'note-files:fixture',contentType:'text/plain'})}):method==='generate'?await new Promise(resolve=>{window.resolveNoteSuggestion=result=>resolve(result||{kind:'text',markdown:'改写后的验收句子。'})}):{}},draft:async()=>{}};
       const activity=document.createElement('div');activity.id='native-activity';activity.className='t8lSSG_panelBody';document.body.append(activity);createRoot(activity).render(<EWorkNotesActivity sessionId="outline-test" t={key=>key} UserBubble={({content})=><div>{content.map(b=>b.text)}</div>} Progress={({entry})=><div role="status">{entry.noteTask.status}</div>} Markdown={({blocks})=><div>{blocks.map(b=>b.text)}</div>}/>);
       const root=document.querySelector('.en-editor-host');
       createRoot(root).render(<NotesApp sessionId="outline-test" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);
@@ -40,7 +43,7 @@ afterAll(async () => { await browser?.close() })
 
 async function fileFixture(saved){
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
- await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body data-ds-dark-theme><section class="en-root" data-dark="true" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture')
+ await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body data-ds-dark-theme><section class="en-root" data-dark="true" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside style="position:fixed;right:10px;bottom:20px;width:320px"><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture')
  if(saved)await page.evaluate(value=>window.noteSaved=value,saved)
  await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();return {context,page}
 }
@@ -56,7 +59,7 @@ it('keeps dropped files in order and inside component frames across asynchronous
   expect(await page.locator('.en-file-host').first().evaluate(el=>{const a=el.getBoundingClientRect(),b=el.querySelector('.rScV5Q_richNode').getBoundingClientRect();return Math.abs(a.x-b.x)<1&&Math.abs(a.width-b.width)<1})).toBe(true)
   await page.locator('.en-document .bn-editor').click({position:{x:20,y:10}});await page.keyboard.press('ControlOrMeta+z');await expect.poll(()=>page.locator('.en-note-file,.en-file-import').count()).toBe(0)
   expect(await page.locator('.en-document .bn-editor').textContent()).toContain('前文。')
-  await page.keyboard.press('ControlOrMeta+Shift+z');await expect.poll(()=>page.locator('.en-file-import [role=status]').count()).toBe(0)
+  await page.keyboard.press('ControlOrMeta+Shift+z');await expect.poll(()=>page.locator('.en-file-host[data-note-file-rendered] .rScV5Q_richNode header').allTextContents()).toEqual(['first.txt','second.txt'])
  }finally{await context.close()}
 },15000)
 it('does not resurrect a removed pending file when admission finishes',async()=>{
@@ -96,11 +99,18 @@ it('centers the empty outline and formatting toolbar and uses legible comment an
   expect(await page.locator('.bn-panel').evaluate(el=>getComputedStyle(el).borderColor)).toBe('rgb(72, 72, 72)');expect(await page.locator('.bn-panel input').evaluate(el=>getComputedStyle(el).borderColor)).toBe('rgb(72, 72, 72)');expect(await page.locator('.bn-panel button[type=submit]').evaluate(el=>el.getBoundingClientRect().height)).toBe(30)
  }finally{await context.close()}
 },15000)
+it('fits a full-document suggestion to its content without a resize handle or a fixed empty body',async()=>{
+ const {context,page}=await fileFixture();try{
+  await page.locator('#native-input').fill('精简正文');await page.locator('#native-send').click();await page.locator('.en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion({kind:'text',markdown:'简短的正文。'}));await page.locator('.en-composer-area .en-preview').waitFor()
+  expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(0)
+  expect(await page.locator('.en-composer-area .en-preview').evaluate(el=>el.getBoundingClientRect().height)).toBeLessThan(180)
+ }finally{await context.close()}
+},15000)
 
 it('keeps native slash filtering and keyboard insertion in the editor and rejects stale mouse selections',async()=>{
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
  try{
-  await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
+  await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside style="position:fixed;right:10px;bottom:20px;width:320px"><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
   const latest=()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='menu-sync').at(-1)?.input)
   await page.locator('.en-document .bn-editor').click();await page.keyboard.type('/');await expect.poll(async()=> (await latest())?.items.length||0).toBeGreaterThan(0)
   const first=await latest();expect(first.items.some(item=>item.title==='一级标题')).toBe(true);expect(await page.locator('.en-document .bn-editor').evaluate(el=>el.contains(document.activeElement))).toBe(true)
@@ -255,5 +265,59 @@ for(const dark of [false,true])it(`pastes the complete research card and keeps i
   const shield=page.getByRole('button',{name:'选中组件并操作内容',exact:true});await shield.scrollIntoViewIfNeeded();const box=await shield.boundingBox(),before=await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop);await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.wheel(0,before>0?-100:100);await expect.poll(async()=>Math.abs((await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop))-before)).toBeGreaterThan(5)
   await shield.click();expect(await page.locator('.en-research [data-selected=true]').count()).toBe(0);expect(await page.locator('.en-research[data-selected=true]').count()).toBe(1);expect(await shield.count()).toBe(0)
   await page.evaluate(()=>{const editor=window.noteEditor;let position;editor._tiptapEditor.state.doc.descendants((node,pos)=>{if(node.type.name==='research')position=pos});editor._tiptapEditor.commands.setNodeSelection(position)});await expect.poll(()=>page.getByRole('button',{name:'AI 改写',exact:true}).count()).toBe(0);await page.locator('.en-title').click();await shield.waitFor();const renderCount=await page.evaluate(()=>window.noteRequests.filter(row=>row.method==='render').length);await page.getByRole('button',{name:'刷新组件',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='render').length)).toBe(renderCount+1);await frame.getByText('上涨 12',{exact:true}).waitFor();expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('opens the component library second level, inserts at the slash paragraph, persists native changes and survives reopen',async()=>{
+ const {context,page}=await fileFixture();let saved
+ try{
+  const latest=()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='menu-sync').at(-1)?.input)
+  const errors=[];page.on('pageerror',e=>errors.push(e.message))
+  await page.locator('.en-document .bn-editor').click();await page.keyboard.type('前文');await page.keyboard.press('Enter');await page.keyboard.type('/组件库')
+  await expect.poll(async()=> (await latest())?.items.map(item=>item.title)).toEqual(['组件库'])
+  const menu=await latest();expect(menu.items[0].children.map(item=>item.title)).toEqual(['自选股','个股行情','市场指数','新闻列表','公告列表','日历','我的研究总结'])
+  await page.keyboard.press('ArrowRight');await expect.poll(async()=> (await latest())?.submenu?.selectedIndex).toBe(0)
+  await page.keyboard.press('ArrowDown');await expect.poll(async()=> (await latest())?.submenu?.selectedIndex).toBe(1)
+  await page.keyboard.press('ArrowLeft');await expect.poll(async()=> (await latest())?.submenu).toBeUndefined()
+  await page.keyboard.press('Enter');await expect.poll(async()=> (await latest())?.submenu?.selectedIndex).toBe(0)
+  await page.keyboard.press('Enter');await page.locator('.en-native-component-host [data-financial-widget="watchlist"]').waitFor()
+  expect(await page.locator('.en-document .bn-inline-content').first().textContent()).toBe('前文')
+  expect(await page.locator('.en-document .bn-editor').textContent()).not.toContain('/组件库')
+  await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await page.getByRole('button',{name:'添加验收自选股',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.noteEditor.document.some(block=>block.type==='research'&&JSON.parse(block.props.payload).containerSpec.symbols?.[0]?.code==='600519'))).toBe(true)
+  await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='save').at(-1)?.input.content.blocks.some(block=>block.type==='research'&&JSON.parse(block.props.payload).containerSpec.symbols?.[0]?.code==='600519'))).toBe(true)
+  saved=await page.evaluate(()=>({...window.noteRequests.filter(row=>row.method==='save').at(-1).input.content,revision:1,updatedAt:1}))
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+ const reopened=await fileFixture(saved);try{await reopened.page.locator('.en-native-component-host [data-financial-widget="watchlist"]').waitFor();expect(await reopened.page.evaluate(()=>JSON.parse(window.noteEditor.document.find(block=>block.type==='research').props.payload).containerSpec.symbols[0].code)).toBe('600519')}finally{await reopened.context.close()}
+},15000)
+it('handles a current native child click and a renamed custom library entry without accepting stale clicks',async()=>{
+ const {context,page}=await fileFixture();try{
+  await page.evaluate(()=>window.customLibraryName='重命名的研究总结');await page.locator('.en-document .bn-editor').click();await page.keyboard.type('/组件库')
+  const latest=()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='menu-sync').at(-1)?.input)
+  await expect.poll(async()=> (await latest())?.items[0]?.children?.at(-1)?.title).toBe('重命名的研究总结')
+  const first=await latest();await page.evaluate(input=>document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...input,action:'open',itemId:input.items[0].id}})),first)
+  await expect.poll(async()=> Boolean((await latest())?.submenu)).toBe(true);const child=await latest()
+  await page.evaluate(input=>document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...input,action:'select',parentId:input.items[0].id,itemId:input.items[0].children.at(-1).id,revision:input.revision-1}})),child)
+  expect(await page.locator('.en-native-component').count()).toBe(0)
+  await page.evaluate(input=>document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...input,action:'select',parentId:input.items[0].id,itemId:input.items[0].children.at(-1).id}})),child)
+  await page.locator('.en-native-component-host').getByText('原始研究内容',{exact:true}).waitFor()
+  await page.locator('.en-document .bn-editor').focus();await page.keyboard.press('ControlOrMeta+z');await expect.poll(()=>page.locator('.en-native-component').count()).toBe(0)
+  await page.keyboard.press('ControlOrMeta+Shift+z');await page.locator('.en-native-component-host').getByText('原始研究内容',{exact:true}).waitFor()
+ }finally{await context.close()}
+},15000)
+
+it('renders the compact native second level without clipping in both themes and a narrow screen',async()=>{
+ const context=await browser.newContext({viewport:{width:528,height:340}}),page=await context.newPage();try{
+  const {componentLibraryBuiltins}=await import('../packages/dsh-research-task-runtime/component-library-catalog.js')
+  const children=componentLibraryBuiltins().map(item=>({id:item.id,title:item.name,icon:item.widget==='quote'?'stock_quote':item.widget,subtext:'',group:'内置组件',badge:''})),state={sessionId:'s',menuId:'m',revision:1,dark:true,selectedIndex:0,anchor:{x:0,y:0,width:0,height:20},items:[{id:'library',title:'组件库',icon:'library',subtext:'',group:'',badge:'',children}],submenu:{parentId:'library',selectedIndex:0}}
+  await page.route('http://127.0.0.1/native-menu-fixture',route=>route.fulfill({contentType:'text/html',body:noteMenuDocumentHtml}));await page.goto('http://127.0.0.1/native-menu-fixture')
+  const result=noteMenuPresentation(state,'ticket');await page.evaluate(html=>document.querySelector('main').innerHTML=html,result.html)
+  for(const dark of [true,false]){
+   await page.evaluate(dark=>document.body.className=dark?'dark':'',dark)
+   expect(await page.locator('.child-menu a[role=option]').count()).toBe(6)
+   expect(await page.locator('.child-menu').evaluate(el=>{const a=el.getBoundingClientRect(),last=el.querySelector('a[aria-label="日历"]').getBoundingClientRect(),footer=el.querySelector('footer').getBoundingClientRect();return last.bottom<=footer.top&&a.right<=innerWidth})).toBe(true)
+  }
+  await page.setViewportSize({width:264,height:340});expect(await page.locator('.root-menu').isVisible()).toBe(false);expect(await page.locator('.child-menu').evaluate(el=>el.getBoundingClientRect().width)).toBe(264)
  }finally{await context.close()}
 },15000)
