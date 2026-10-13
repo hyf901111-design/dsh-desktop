@@ -62,3 +62,17 @@ it('uses the position mapping of a nonuniform group independently of a rotated c
   expect(v.entry.objects[v.selected.id].geometry.x).toBe(20);expect(object.style.left).toBe('60px')
  }finally{v.controller.destroy()}
 })
+
+it('keeps object movement visible without replacing the slide and clears selection on a blank click',()=>{
+ const v=setup();try{
+  const object=v.host.querySelector('[data-pptx-node-id="2"]')! as import('happy-dom').HTMLElement
+  object.setAttribute('data-pptx-position-scale-x','2');object.setAttribute('data-pptx-position-scale-y','3')
+  object.dispatchEvent(new v.win.PointerEvent('pointerdown',{bubbles:true,button:0}))
+  object.dispatchEvent(new v.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowRight',shiftKey:true}))
+  object.dispatchEvent(new v.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowDown'}))
+  expect(object.style.left).toBe('30px');expect(object.style.top).toBe('23px')
+  expect(v.entry.objects[v.selected.id].geometry).toMatchObject({x:20,y:21})
+  v.host.dispatchEvent(new v.win.PointerEvent('pointerdown',{bubbles:true,button:0}))
+  expect(v.selected).toBeNull();expect(v.host.querySelector('[data-pptx-node-id="2"]')).toBe(object)
+ }finally{v.controller.destroy()}
+})
