@@ -9,6 +9,13 @@ function validate(value: unknown): asserts value is IntegrationState {
   for(const key of ['connections','plugins','skills','tools','operations','sources','taskBindings'] as const) {
     if(!v[key] || typeof v[key]!=='object' || Array.isArray(v[key])) throw Error('invalid collection')
   }
+  if(v.bundledSkillPreferences!==undefined) {
+    if(!v.bundledSkillPreferences || typeof v.bundledSkillPreferences!=='object' || Array.isArray(v.bundledSkillPreferences)) throw Error('invalid bundled preferences')
+    for(const preferences of Object.values(v.bundledSkillPreferences)) {
+      if(!preferences || typeof preferences!=='object' || Array.isArray(preferences)) throw Error('invalid bundled preferences')
+      for(const [id,preference] of Object.entries(preferences)) if(!id.startsWith('builtin:') || !preference || typeof preference.enabled!=='boolean' || !Number.isSafeInteger(preference.revision) || preference.revision<0) throw Error('invalid bundled preference')
+    }
+  }
   for(const [id,c] of Object.entries(v.connections)) if(c.id!==id || !['api','mcp','app'].includes(c.kind) || typeof c.enabled!=='boolean' || !Number.isSafeInteger(c.revision) || !c.config || !Array.isArray(c.toolGrants) || (c.deniedToolIds!==undefined && (!Array.isArray(c.deniedToolIds) || c.deniedToolIds.some(toolId=>typeof toolId!=='string'))) || !c.workspaceGrant || typeof c.ownerAccountId!=='string') throw Error('invalid connection')
   for(const plugin of Object.values(v.plugins)) if(plugin.excludedSkillIds !== undefined && (!Array.isArray(plugin.excludedSkillIds) || plugin.excludedSkillIds.some(id => typeof id !== 'string' || !id.startsWith(`${plugin.id}/skill/`) || id.length > 256))) throw Error('invalid skill exclusions')
   for(const key of ['plugins','skills','tools','operations','sources'] as const) for(const [id,entity] of Object.entries(v[key])) if(!entity || entity.id!==id) throw Error('invalid entity')

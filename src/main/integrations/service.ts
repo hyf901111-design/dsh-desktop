@@ -67,6 +67,7 @@ export class IntegrationService {
     private migrations = new Map<string, Promise<void>>();
     private compatibility = new Map<string, string>();
     private disposed = false;
+    private bundledDatayesSync: Promise<void> = Promise.resolve();
     private constructor(readonly store: IntegrationStore, private options: IntegrationServiceOptions) {
         this.vault = new CredentialVault(join(options.root, 'vault'), options.encryption);
         this.operations = new OperationManager(store);
@@ -77,10 +78,15 @@ export class IntegrationService {
         this.providers = options.providers ?? {};
     }
     static async open(options: IntegrationServiceOptions): Promise<IntegrationService> { const service = new IntegrationService(await IntegrationStore.open(options.root), options); await service.operations.recover(); await service.migrateDefaultToolGrants(); await service.refreshSkillSources(); for (const bundled of await loadBundledSkills(options.bundledSkillDirectory)) service.bundledSkills.set(bundled.skill.id, bundled); await service.syncBundledDatayes(); return service; }
-    private async syncBundledDatayes(resetAuthentication = false) {
+    private syncBundledDatayes(resetAuthentication = false): Promise<void> {
+        const pending = this.bundledDatayesSync.then(() => this.updateBundledDatayes(resetAuthentication));
+        this.bundledDatayesSync = pending.catch(() => {});
+        return pending;
+    }
+    private async updateBundledDatayes(resetAuthentication: boolean) {
         const options=this.options.bundledDatayes,owner=this.options.getOwnerId();if(this.disposed||!options||!owner)return;
         const authenticated=options.authenticated(),key=bundledDatayesId(owner),expected=bundledDatayesConnection(owner,authenticated);
-        const currentIsValid=(current?:Connection)=>current?.enabled&&current.configDigest===expected.configDigest
+        const currentIsValid=(current?:Connection)=>!!current&&current.configDigest===expected.configDigest
             &&(authenticated?!['unconfigured','revoked'].includes(current.authState):current.authState==='unconfigured')
             &&current.toolGrants.length===DATAYES_TOOLS.length&&current.deniedToolIds?.length===0;
         if(!resetAuthentication&&currentIsValid(this.store.snapshot().connections[key]))return;
@@ -88,7 +94,7 @@ export class IntegrationService {
             if(this.disposed||this.options.getOwnerId()!==owner||options.authenticated()!==authenticated)return;
             const prior=state.connections[key];
             if(!resetAuthentication&&currentIsValid(prior))return;
-            const connection={...expected,revision:prior?(prior.revision+1):1,createdAt:prior?.createdAt??expected.createdAt};
+            const connection={...expected,enabled:prior?.enabled??true,revision:prior?(prior.revision+1):1,createdAt:prior?.createdAt??expected.createdAt};
             state.connections[key]=connection;this.replaceTools(state,connection,DATAYES_TOOLS);
         });
     }
@@ -165,8 +171,15 @@ export class IntegrationService {
     }
     private owner(): string { const owner = this.options.getOwnerId(); if (!owner)
         throw new IntegrationError('AUTH_REQUIRED', '账户身份尚未确认，请等待登录完成'); return owner; }
+    private bundledSkill(entityId: string, state = this.store.snapshot()): SkillInstall | undefined {
+        const bundled = this.bundledSkills.get(entityId);
+        if (!bundled) return;
+        const owner = this.options.getOwnerId();
+        const preference = owner ? state.bundledSkillPreferences?.[owner]?.[entityId] : undefined;
+        return { ...bundled.skill, enabled: preference?.enabled ?? true, revision: bundled.skill.revision + (preference?.revision ?? 0) };
+    }
     private entity(kind: EntityKind, entityId: string, state = this.store.snapshot()) {
-        const value = kind === 'connection' ? state.connections[id(entityId)] : kind === 'plugin' ? state.plugins[id(entityId)] : this.bundledSkills.get(id(entityId))?.skill ?? state.skills[id(entityId)];
+        const value = kind === 'connection' ? state.connections[id(entityId)] : kind === 'plugin' ? state.plugins[id(entityId)] : this.bundledSkill(id(entityId), state) ?? state.skills[id(entityId)];
         if (!value)
             throw new IntegrationError('NOT_FOUND', '项目不存在或已移除');
         if (value.ownerAccountId && value.ownerAccountId !== this.owner())
@@ -205,13 +218,13 @@ export class IntegrationService {
         if (!command || typeof command !== 'object')
             throw new IntegrationError('INVALID_CONFIG', '请求格式无效');
         const connectionId=command.type==='save-connection'?command.draft?.id:'id' in command?command.id:undefined;
-        if(isBundledDatayesId(connectionId)&&['set-enabled','uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
-            this.owner();throw new IntegrationError('ACCESS_DENIED','内置通联 MCP 保持启用，随客户端更新，不能关闭、删除或修改配置');
+        if(isBundledDatayesId(connectionId)&&['uninstall','disconnect','save-connection','grant-tools','connection-draft','authorize'].includes(command.type)) {
+            this.owner();throw new IntegrationError('ACCESS_DENIED','内置通联 MCP 随客户端更新，可以启用或停用，不能删除或修改配置');
         }
         await this.syncBundledDatayes();
-        if ((command.type === 'set-enabled' || command.type === 'uninstall') && isBundledSkillId(command.id)) {
+        if (command.type === 'uninstall' && isBundledSkillId(command.id)) {
             this.owner();
-            throw new IntegrationError('ACCESS_DENIED', '内置技能保持启用，随客户端更新，不能关闭或删除');
+            throw new IntegrationError('ACCESS_DENIED', '内置技能随客户端更新，可以启用或停用，不能删除');
         }
         switch (command.type) {
             case 'snapshot': return { type: 'snapshot', snapshot: this.snapshot() };
@@ -225,8 +238,15 @@ export class IntegrationService {
             case 'set-enabled': return this.mutate(command.type, command.meta, command.kind, command.id, async (target, signal) => {
                 if (typeof command.enabled !== 'boolean')
                     throw new IntegrationError('INVALID_CONFIG', '开关值无效');
-                await this.store.change(state => { signal.throwIfAborted(); const entity = this.entity(command.kind, target, state); if (entity.revision !== command.meta.expectedRevision)
-                    throw new IntegrationError('VERSION_CONFLICT', '配置已变化'); entity.enabled = command.enabled; entity.revision++; });
+                const owner = this.owner();
+                await this.store.change(state => { signal.throwIfAborted(); if (owner !== this.owner()) throw new IntegrationError('ACCESS_DENIED', '账户已变化'); const entity = this.entity(command.kind, target, state); if (entity.revision !== command.meta.expectedRevision)
+                    throw new IntegrationError('VERSION_CONFLICT', '配置已变化');
+                    if (command.kind === 'skill' && this.bundledSkills.has(target)) {
+                        const preferences = (state.bundledSkillPreferences ??= {});
+                        const account = (preferences[owner] ??= {});
+                        account[target] = { enabled: command.enabled, revision: (account[target]?.revision ?? 0) + 1 };
+                    } else { entity.enabled = command.enabled; entity.revision++; }
+                });
                 if (command.kind === 'connection' && !command.enabled) {
                     this.abortCalls(target);
                     await this.mcp.dispose(target);
@@ -668,7 +688,7 @@ export class IntegrationService {
                 if (c.ownerAccountId === owner) {
                     const tools = Object.values(state.tools).filter(tool => tool.connectionId === c.id);
                     const bundled=isBundledDatayesId(c.id)&&!!this.options.bundledDatayes;
-                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'金融数据、研报、公告、会议纪要及宏观行业检索':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&!this.options.bundledDatayes?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:false,toggleDisabledReason:'内置通联 MCP，保持启用',toolsReadonly:true}:{}), connectionType: this.draft(c).type,
+                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'金融数据、研报、公告、会议纪要及宏观行业检索':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&c.enabled&&!this.options.bundledDatayes?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:true,toolsReadonly:true}:{}), connectionType: this.draft(c).type,
                         connectionSummary: {
                             workspaceLabel: c.workspaceGrant.mode === 'all-owned' ? '当前账号的所有工作区' : c.workspaceGrant.workspaceIds.length ? `已选择 ${c.workspaceGrant.workspaceIds.length} 个工作区` : '未选择工作区',
                             authLabel: bundled?'EWork 账号授权 · 云端密钥已配置':c.providerId === 'google-calendar' ? `OAuth 2.0 · ${c.authState === 'connected' ? '已授权' : c.authState === 'expired' ? '授权已过期' : '待授权'}` : c.config.auth.type === 'none' ? '无需认证' : c.config.auth.credentialRef ? `${c.config.auth.type === 'bearer' ? 'Token' : 'API Key'} · 已配置` : '尚未配置凭据',
@@ -676,8 +696,10 @@ export class IntegrationService {
                             healthDetail: c.lastError || (c.lastCheckedAt ? `上次检查：${new Date(c.lastCheckedAt).toLocaleString('zh-CN')}` : '尚未测试连接'),
                         }, toolCount: tools.length, tools: tools.map(tool => ({ id: tool.id, name: tool.name, description: tool.description, allowed: c.toolGrants.includes(tool.id) })) });
                 }
-            for (const { skill } of this.bundledSkills.values())
-                rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: true, status: '已启用', source: skill.source, revision: skill.revision, toggleable: false, toggleDisabledReason: '内置技能，保持启用', removable: false });
+            for (const bundled of this.bundledSkills.values()) {
+                const skill = this.bundledSkill(bundled.skill.id, state)!;
+                rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: skill.enabled, status: skill.enabled ? '已启用' : '已停用', source: skill.source, revision: skill.revision, toggleable: true, removable: false });
+            }
             for (const skill of Object.values(state.skills))
                 if (!skill.ownerAccountId || skill.ownerAccountId === owner) {
                     const plugin = skill.ownerPluginId ? state.plugins[skill.ownerPluginId] : undefined;
@@ -687,7 +709,7 @@ export class IntegrationService {
         return { revision: state.revision, rows, taskCapabilities: projectTaskCapabilities(state, owner), compatibilityStatus: owner ? this.compatibility.get(owner) : undefined, runtimeStatus: !owner ? '等待账户身份确认' : Date.now() - this.runtimeSeenAt < 30000 ? '运行时已连接' : '运行时尚未连接' };
     }
     dependencies(entityId: string): string[] { const state = this.store.snapshot(), tasks = Object.entries(state.taskBindings).filter(([, bindings]) => bindings.some(b => b.entityId === entityId)); return [...tasks.map(([task]) => `定时任务 ${task} 使用此能力`), '未显式绑定的对话或任务仍会在执行时检查权限；已有内容会保留']; }
-    runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: [...Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), ...(owner ? [...this.bundledSkills.values()].map(({ skill }) => structuredClone(skill)) : [])], plugins: Object.values(state.plugins).filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }
+    runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: [...Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), ...(owner ? [...this.bundledSkills.keys()].map(id => this.bundledSkill(id, state)!) : [])], plugins: Object.values(state.plugins).filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }
     private async skillDetail(input: unknown): Promise<SkillDetail> {
         if (!isSkillDetailCommand(input)) throw new IntegrationError('INVALID_CONFIG', '技能详情请求无效');
         const owner = this.owner(), epoch = this.runtimeEpoch;

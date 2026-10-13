@@ -1,5 +1,5 @@
-import { isAbsolute } from 'node:path'
-import { realpath } from 'node:fs/promises'
+import { isAbsolute, join } from 'node:path'
+import { realpath, readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 
 export function managedSkillInvocationName(skill) {
@@ -19,6 +19,7 @@ export function validateManagedSkills(snapshot) {
 export function registerLegacySkillPolicy(ctx, runtime) {
   if (typeof ctx.skills.registerCandidatePolicy !== 'function') throw Error('当前技能运行时缺少来源策略补丁，无法安全加载受管理技能')
   const managedSources = new Set()
+  const bundledDirectories = new Map()
   let initialized = false
   const remember = () => {
     const snapshot = runtime.snapshot
@@ -26,6 +27,7 @@ export function registerLegacySkillPolicy(ctx, runtime) {
     initialized = true
     for (const id of snapshot.managedSkillSources ?? []) managedSources.add(id)
     for (const skill of snapshot.skills) if (/^local:[a-f0-9]{64}$/.test(skill.sourceId ?? '')) managedSources.add(skill.sourceId)
+    for (const skill of snapshot.skills) if (skill.provider === 'bundled') bundledDirectories.set(skill.resourceRoot, skill.id)
   }
   const off = runtime.onChange(remember)
   const unregister = ctx.skills.registerCandidatePolicy(async (candidate, options) => {
@@ -38,6 +40,30 @@ export function registerLegacySkillPolicy(ctx, runtime) {
     if (!initialized) return false
     let canonical
     try { canonical = await realpath(directory) } catch { return false }
+    const snapshot = runtime.snapshot
+    if (!snapshot && candidate.source === 'bundled') return false
+    const bundled = snapshot?.skills.filter(skill => skill.provider === 'bundled') ?? []
+    let builtin = bundled.find(skill => skill.resourceRoot === canonical)
+    let builtinId = builtin?.id ?? bundledDirectories.get(canonical)
+    // Previous clients may have synchronized builtin eSkill copies into custom
+    // roots. Those copies must not bypass the toggle; independent same-name
+    // skills without the client metadata retain their own discovery behavior.
+    if (!builtin) {
+      try {
+        const metadata = JSON.parse(await readFile(join(canonical, '_meta.json'), 'utf8'))
+        if (metadata.source === 'eSkill') {
+          const id = `builtin:${metadata.slug}`
+          builtin = bundled.find(skill => skill.id === id)
+          if (builtin || [...bundledDirectories.values()].includes(id)) builtinId = id
+        }
+      } catch { /* An ordinary personal skill has no builtin metadata. */ }
+    }
+    if (builtinId) {
+      if (!enabledManagedSkill(snapshot, builtinId)) return false
+      // Finance has a pinned model-invocable alias so a same-name local skill
+      // cannot replace the default framework named by the routing instruction.
+      if (builtinId === 'builtin:ework-finance-analysis') return false
+    }
     const id = `local:${createHash('sha256').update(canonical).digest('hex')}`
     return !managedSources.has(id)
   })

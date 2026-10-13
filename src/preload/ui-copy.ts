@@ -4,6 +4,10 @@
 import {financialUiCopy} from './financial-ui-copy'
 export const englishUiCopy: Record<string, string> = {
   ...financialUiCopy,
+  "基础金融分析逻辑": "Core financial analysis",
+  "基础金融分析逻辑：用于公司、股票、基金、ETF、财报、估值、持仓、宏观、交易及量化研究，提供场景方法论、数据口径核验与分析脚本。金融分析研究需求优先加载，再按需读取参考；取数与组件展示遵循 EWork 当前可用工具和宿主模板。": "Financial research methods, data validation and analysis scripts for companies, stocks, funds, ETFs, earnings, valuation, portfolios, macroeconomics, trading and quantitative research. Prioritized for financial analysis using the available EWork tools and templates.",
+  "基础数据源": "Core data sources",
+  "随 EWork 提供，默认启用，可随时停用；使用前请登录 EWork。": "Included with EWork and enabled by default. You can disable it at any time. Sign in before use.",
   "收起": "Collapse",
   "更多": "More",
   "组件": "Component",

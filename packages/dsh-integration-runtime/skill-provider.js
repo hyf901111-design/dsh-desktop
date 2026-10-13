@@ -5,7 +5,7 @@ const PROVIDER = 'ework-managed-skills'
 const invocation = { modelInvocable: true, userInvocable: true }
 const bundledInvocation = { modelInvocable: false, userInvocable: true }
 // Builtin aliases pin explicit user picks; automatic discovery keeps the native provider.
-const invocationFor = skill => skill.provider === 'bundled' ? bundledInvocation : invocation
+const invocationFor = skill => skill.provider === 'bundled' && skill.id !== 'builtin:ework-finance-analysis' ? bundledInvocation : invocation
 
 /** Registry invalidation reaches model discovery, the skill tool, and slash consumers. */
 export function registerManagedSkillProvider(ctx, runtime) {

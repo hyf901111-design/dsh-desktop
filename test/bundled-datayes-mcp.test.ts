@@ -19,14 +19,14 @@ async function serviceFixture(){
  const row=async()=>{const reply=await service.request({type:'snapshot'});return (reply as any).snapshot.rows.find((r:any)=>r.id.startsWith('builtin:datayes-mcp:'))}
  return {service,row,setOwner:(value:string)=>{owner=value;service.rotateIdentity()}}
 }
-it('新用户自动获得默认开启的10个通联工具，内置连接不能停用、删除或改写',async()=>{
+it('新用户自动获得默认开启的10个通联工具，内置连接可以停用，不能删除或改写',async()=>{
  const f=await serviceFixture(),row=await f.row()
- expect(row).toMatchObject({kind:'connection',tab:'mcp',enabled:true,toggleable:false,removable:false,configurable:false,toolCount:10,source:'EWork 内置'})
+ expect(row).toMatchObject({kind:'connection',tab:'mcp',enabled:true,toggleable:true,removable:false,configurable:false,toolCount:10,source:'EWork 内置'})
  const snapshot=f.service.runtimeSnapshot(),c=snapshot.connections.find(item=>item.id===row.id)
  expect(c?.toolGrants).toHaveLength(10)
  expect(snapshot.tools.filter(tool=>tool.connectionId===row.id).map(tool=>tool.rawName)).toContain('call_api')
  const meta={requestId:'locked-attempt',expectedRevision:row.revision}
- for(const command of [{type:'set-enabled',kind:'connection',id:row.id,enabled:false,meta},{type:'uninstall',kind:'connection',id:row.id,meta},{type:'disconnect',id:row.id,meta},{type:'save-connection',draft:{id:row.id},meta},{type:'save-connection',id:'misleading-extra-id',draft:{id:row.id},meta}])
+ for(const command of [{type:'uninstall',kind:'connection',id:row.id,meta},{type:'disconnect',id:row.id,meta},{type:'save-connection',draft:{id:row.id},meta},{type:'save-connection',id:'misleading-extra-id',draft:{id:row.id},meta}])
   await expect(f.service.request(command)).rejects.toMatchObject({code:'ACCESS_DENIED'})
  expect((await f.row()).enabled).toBe(true)
 })

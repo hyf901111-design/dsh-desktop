@@ -26,7 +26,7 @@ const encryption = { isEncryptionAvailable: () => true, encryptString: value => 
 const bundledContent = '---\nname: efund-ppt-maker\ndescription: Builtin PPT fixture\n---\n\n# 内置 1.1.1 正文\n\n必须使用本目录的模板。\n'
 const personalContent = '---\nname: efund-ppt-maker\ndescription: Personal PPT fixture\n---\n\n个人同名技能，内容与内置完全不同。\n'
 
-async function fixture(personal = false) {
+async function fixture(personal = false, finance = false) {
     const root = await realpath(await mkdtemp(join(tmpdir(), 'ework-bundled-runtime-')))
     const bundledRoot = join(root, 'bundled'), skillRoot = join(bundledRoot, 'efund-ppt-maker'), personalRoot = join(root, 'personal'), workspace = join(root, 'workspace')
     let service, bridge, runtime
@@ -38,6 +38,11 @@ async function fixture(personal = false) {
     await mkdir(skillRoot, { recursive: true }); await mkdir(workspace)
     await writeFile(join(skillRoot, 'SKILL.md'), bundledContent)
     await writeFile(join(skillRoot, '_meta.json'), JSON.stringify({ slug: 'efund-ppt-maker', cnName: 'PPT制作助手', version: 'v1.1.1', source: 'eSkill' }))
+    if(finance){
+        const financeRoot=join(bundledRoot,'ework-finance-analysis');await mkdir(financeRoot)
+        await writeFile(join(financeRoot,'SKILL.md'),bundledContent.replace('efund-ppt-maker','ework-finance-analysis'))
+        await writeFile(join(financeRoot,'_meta.json'),JSON.stringify({slug:'ework-finance-analysis',cnName:'基础金融分析逻辑',version:'v1.7.3',source:'eSkill'}))
+    }
     if (personal) {
         await mkdir(join(personalRoot, 'efund-ppt-maker'), { recursive: true })
         await writeFile(join(personalRoot, 'efund-ppt-maker', 'SKILL.md'), personalContent)
@@ -62,7 +67,8 @@ it('marks only bundled aliases user-only in both the real registry summaries and
     cleanups.push(() => ctx.fiber.dispose())
     const bundled = { id: 'builtin:efund-ppt-maker', name: 'PPT制作助手', description: 'PPT', provider: 'bundled', source: 'EWork 内置', sourceId: 'bundled:efund-ppt-maker', resourceRoot: '/tmp/bundled-ppt', revision: 1, enabled: true }
     const managed = { ...bundled, id: 'personal-report', name: '个人技能', provider: 'managed', source: '个人', sourceId: 'personal-report', resourceRoot: '/tmp/personal-report' }
-    const snapshot = { runtimeEpoch: 'test', ownerAccountId: 'owner', skills: [bundled, managed], plugins: [] }
+    const finance = {...bundled,id:'builtin:ework-finance-analysis',name:'基础金融分析逻辑',resourceRoot:'/tmp/bundled-finance'}
+    const snapshot = { runtimeEpoch: 'test', ownerAccountId: 'owner', skills: [bundled, managed, finance], plugins: [] }
     registerManagedSkillProvider(ctx, { snapshot, sync: async () => {}, onChange: () => () => {}, contextFor: async () => ({}), request: async (_path, { id }) => {
         const skill = snapshot.skills.find(value => value.id === id)
         return { name: skill.name, description: skill.description, content: '真实provider读路径', directory: skill.resourceRoot }
@@ -72,6 +78,8 @@ it('marks only bundled aliases user-only in both the real registry summaries and
     expect((await ctx.skills.get(managedSkillInvocationName(bundled))).invocation).toEqual({ modelInvocable: false, userInvocable: true })
     expect(listed.find(value => value.name === managedSkillInvocationName(managed)).invocation).toEqual({ modelInvocable: true, userInvocable: true })
     expect((await ctx.skills.get(managedSkillInvocationName(managed))).invocation).toEqual({ modelInvocable: true, userInvocable: true })
+    expect(listed.find(value => value.name === managedSkillInvocationName(finance)).invocation).toEqual({ modelInvocable: true, userInvocable: true })
+    expect((await ctx.skills.get(managedSkillInvocationName(finance))).invocation).toEqual({ modelInvocable: true, userInvocable: true })
 })
 
 it('loads the virtual builtin through the real bridge/provider with exact bundled bytes and resource base', async () => {
@@ -87,6 +95,42 @@ it('loads the virtual builtin through the real bridge/provider with exact bundle
     expect(loaded.content).toBe(await readFile(join(f.skillRoot, 'SKILL.md'), 'utf8'))
     const result = await f.ctx.tools.execute({ name: 'skill', arguments: { name: alias }, callId: 'builtin-load', agent: f.agent, signal: new AbortController().signal })
     expect(result.isError).toBe(true)
+})
+
+it('disabling a builtin removes its native filesystem name and pinned alias from actual Harness consumers', async () => {
+    const f = await fixture(true), id = 'builtin:efund-ppt-maker'
+    const skill = f.service.runtimeSnapshot().skills.find(s => s.id === id), alias = managedSkillInvocationName(skill)
+    const reply = await f.service.request({type:'set-enabled',kind:'skill',id,enabled:false,meta:{requestId:'disable-builtin',expectedRevision:skill.revision}})
+    await f.service.operations.wait(reply.operation.id); await f.runtime.sync()
+    expect(await f.ctx.skills.get(alias, f.lookup)).toBeUndefined()
+    // A separately authored same-name personal skill still works.
+    expect((await f.ctx.skills.get('efund-ppt-maker', f.lookup)).content).toBe('个人同名技能，内容与内置完全不同。')
+    f.ctx.skills.registerProvider(control => new FileSystemSkillProvider(f.ctx, control, {providerName:'only-bundled',includeDefaultRoots:false,bundledSkillDir:join(f.skillRoot,'..'),watch:false}))
+    const candidates = await f.ctx.skills.list(f.lookup)
+    expect(candidates.find(s=>s.name===alias)).toBeUndefined()
+    const native = await f.ctx.tools.execute({name:'skill',arguments:{name:alias},callId:'disabled-builtin',agent:f.agent,signal:new AbortController().signal})
+    expect(native.isError).toBe(true)
+})
+
+it('a disabled builtin has no native model or slash route when there is no personal override',async()=>{
+    const f=await fixture(),id='builtin:efund-ppt-maker',skill=f.service.runtimeSnapshot().skills[0]
+    const reply=await f.service.request({type:'set-enabled',kind:'skill',id,enabled:false,meta:{requestId:'disabled-native',expectedRevision:skill.revision}})
+    await f.service.operations.wait(reply.operation.id);await f.runtime.sync()
+    expect(await f.ctx.skills.get('efund-ppt-maker',f.lookup)).toBeUndefined()
+    expect((await f.ctx.skills.list(f.lookup)).filter(isModelInvocable)).toEqual([])
+    expect((await f.ctx.skills.list(f.lookup)).filter(isUserInvocable)).toEqual([])
+})
+
+it('the actual model prompt prioritizes the finance alias and removes it immediately after disabling',async()=>{
+    const f=await fixture(false,true),id='builtin:ework-finance-analysis',skill=f.service.runtimeSnapshot().skills.find(s=>s.id===id),alias=managedSkillInvocationName(skill)
+    const before=await f.ctx.systemPrompt.assemble({agent:f.agent,scope:f.agent})
+    expect(before.contexts.find(c=>c.name==='ework:finance-skill').text).toContain(alias)
+    expect((await f.ctx.skills.list(f.lookup)).find(s=>s.name===alias).invocation.modelInvocable).toBe(true)
+    const reply=await f.service.request({type:'set-enabled',kind:'skill',id,enabled:false,meta:{requestId:'disable-finance',expectedRevision:skill.revision}})
+    await f.service.operations.wait(reply.operation.id)
+    const after=await f.ctx.systemPrompt.assemble({agent:f.agent,scope:f.agent})
+    expect(after.contexts.find(c=>c.name==='ework:finance-skill')).toBeUndefined()
+    expect(await f.ctx.skills.get(alias,f.lookup)).toBeUndefined()
 })
 
 it('preserves the existing native builtin and exposes only that one in automatic model discovery', async () => {

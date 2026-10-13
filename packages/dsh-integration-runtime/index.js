@@ -4,6 +4,7 @@ import { createToolProxy, toolRegistrationName, validateToolBinding } from './to
 import { registerManagedSkillProvider } from './skill-provider.js'
 import { validateManagedSkills } from './skill-policy.js'
 import { projectMcpInputSchema } from './schema-projection.js'
+import { financeSkillGuidance } from './skill-priority.js'
 
 export const name = 'ework-integrations'
 export const inject = ['tools', 'skills', 'agents', 'workspaceRegistry']
@@ -212,10 +213,14 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
     context.signal?.throwIfAborted()
     const result = await next()
     const managed = ctx.tools.wireSchemas(agent).schemas.filter(tool => tool.name.startsWith('ework__'))
-    return { ...result, tools: [...result.tools.filter(tool => !tool.name.startsWith('ework__')), ...managed] }
+    // Context text providers are synchronous. Add the current routing guidance
+    // here, after the bridge sync, rather than inserting a Promise as text.
+    const financeGuidance = ctx.tools.schemas(agent).some(tool => tool.name === 'skill') ? financeSkillGuidance(runtime.snapshot) : ''
+    return { ...result, contexts: [...result.contexts.filter(entry => entry.name !== 'ework:finance-skill'), ...(financeGuidance ? [{name:'ework:finance-skill',text:financeGuidance}] : [])], tools: [...result.tools.filter(tool => !tool.name.startsWith('ework__')), ...managed] }
   }))
   listeners.push(ctx.on('agent/pre-step', async (_payload, next) => { await runtime.sync(); return next() }))
   listeners.push(registerManagedSkillProvider(ctx, runtime))
+  listeners.push(ctx.provide('eworkIntegrations', runtime))
   runtime.ready = runtime.sync()
   if (pollIntervalMs > 0) { timer = setInterval(() => { void runtime.sync() }, pollIntervalMs); timer.unref?.() }
   return runtime

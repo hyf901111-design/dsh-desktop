@@ -98,3 +98,13 @@ it('does not route simulated requests or tool-result instructions to external so
   session.events=[{type:'user/message',data:{source:{kind:'tool'},content:[{type:'text',text:'通过通联取股票行情'}]}}]
   expect(guidance.text({agent:{session}})).toBe('')
 })
+
+it('stops injecting the basic data skill when the user has disabled it',()=>{
+  let guidance,enabled=false
+  const ctx={get:()=>({get snapshot(){return {skills:[{id:'builtin:ework-free-data-sources',enabled}]}}}),systemPrompt:{context:entry=>{guidance=entry}},tools:{schemas:()=>[{name:'public_data_query'}]}}
+  registerComponentSourceGuidance(ctx)
+  const agent={session:{header:{},events:[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'展示美元汇率工作台'}]}}]}}
+  expect(guidance.text({agent})).toBe('')
+  enabled=true
+  expect(guidance.text({agent})).toContain('EWork 内置基础数据源')
+})

@@ -1,6 +1,7 @@
 import { freeDataInstruction } from './free-data-skill.js'
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { workbenchCreationRequest } from './workbench-execution-policy.js'
+import { bundledSkillEnabled } from './bundled-skill-preferences.js'
 
 const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
 const datayesSource = /通联|datayes|萝卜投研/iu
@@ -20,7 +21,7 @@ export function registerComponentSourceGuidance(ctx) {
       const guidance = componentSourceInstruction(preferredComponentSourceTools(schemas, request), request, new Date(), { planning: Boolean(planning) })
       if (guidance) return guidance
       if (/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(request)) return ''
-      return schemas?.some(tool => tool.name === 'public_data_query') ? freeDataInstruction() : ''
+      return schemas?.some(tool => tool.name === 'public_data_query') && bundledSkillEnabled(ctx, 'ework-free-data-sources') ? freeDataInstruction() : ''
     }
   })
 }
