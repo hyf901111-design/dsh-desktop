@@ -1,7 +1,8 @@
+import { patchNotesActivity } from './notes-activity.mjs'
 /** Notes share the native research conversation pane and its open/close ledger. */
 export function patchNotesSidebar(source) {
   const marker='/* ework:notes-research-sidebar:v1 */'
-  if(source.includes(marker))return source
+  if(source.includes(marker))return patchNotesActivity(source)
   const start=source.indexOf('function ConversationRoot('),end=source.indexOf('//#region lib/types/client/skeleton/ConversationSession',start)
   if(start<0||end<0)throw Error('笔记无法定位共用右栏生命周期。')
   let root=source.slice(start,end)
@@ -18,5 +19,5 @@ if(activeView==='notes')composerPortalHost.dataset.eworkNotesComposerHost=sessio
   replace('[composerPortalHost, publishComposerHeight, activeView, notesComposerVersion, research, researchSidebarSnapshot.composerHost]','[composerPortalHost, publishComposerHeight, activeView, sidebarMode, researchSidebarSnapshot.composerHost]')
   replace('const researchConversationPortal = research &&','const researchConversationPortal = sidebarMode &&')
   root=root.replace(/const \[notesComposerVersion,setNotesComposerVersion\]=react.useState\(0\);\nreact.useEffect\(\(\)=>\{const ready=event=>\{if\(event.detail\?\.sessionId===sessionId\)setNotesComposerVersion\(v=>v\+1\)\};window.addEventListener\('sherlock:notes-composer-host',ready\);return\(\)=>window.removeEventListener\('sherlock:notes-composer-host',ready\)\},\[sessionId\]\);\n/,'')
-  return source.slice(0,start)+root+source.slice(end)
+  return patchNotesActivity(source.slice(0,start)+root+source.slice(end))
 }

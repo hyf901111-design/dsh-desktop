@@ -7,7 +7,7 @@ import * as React from 'react'
 import { StateDot, Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { admitSharedDraft } from './shared-send-draft'
 import { promoteSidebarOrder } from './sidebar-manual-order'
-import {sidebarUsageSnapshot,sidebarUsageTimes,recordSidebarSessionUse,subscribeSidebarUsage} from '../../scripts/lib/sidebar-session-recency.mjs'
+import {sidebarUsageSnapshot,sidebarUsageTimes,subscribeSidebarUsage} from '../../scripts/lib/sidebar-session-recency.mjs'
 import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
 import type {
   BoardView,
@@ -1820,7 +1820,6 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   ]
   const activeGroup=entries.find(e=>('boardId' in e.value?e.value.localSessionId:e.value.sessionId)===currentSession)?.group
   React.useEffect(()=>{
-    recordSidebarSessionUse(currentSession)
     const key=(currentSession??'')+':'+(activeGroup??'workspace')
     if(revealedBoardSession.current===key)return
     revealedBoardSession.current=key

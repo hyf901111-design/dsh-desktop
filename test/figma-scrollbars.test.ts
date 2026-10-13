@@ -2,6 +2,21 @@ import { Window, DOMRect } from 'happy-dom'
 import { expect, it } from 'vitest'
 import { mountFigmaScrollbars } from '../src/preload/figma-scrollbars'
 
+it('uses the same overlay for notes and nested suggestions without a layout gutter or settings overlay',async()=>{
+ const win=new Window(),doc=win.document
+ doc.body.innerHTML='<section class="en-root"><div class="en-document-scroll" style="overflow-y:auto"><div class="en-preview-content" style="overflow-y:auto"></div></div></section>'
+ const ports=[doc.querySelector('.en-document-scroll')!,doc.querySelector('.en-preview-content')!]
+ ports.forEach((port,i)=>{port.getBoundingClientRect=()=>new DOMRect(100+i*60,60+i*90,700-i*120,500-i*250);Object.defineProperties(port,{scrollHeight:{value:1500},clientHeight:{value:500-i*250}})})
+ Object.defineProperty(win,'ResizeObserver',{value:class {observe(){}unobserve(){}disconnect(){}}})
+ const dispose=mountFigmaScrollbars(doc as unknown as Document)
+ expect(doc.querySelectorAll('.odyssey-scroll-track')).toHaveLength(2)
+ expect(ports.every(port=>port.hasAttribute('data-odyssey-scrollport'))).toBe(true)
+ const rect=ports[0]!.getBoundingClientRect();ports[0]!.dispatchEvent(new win.Event('scroll'))
+ expect(doc.querySelector('.odyssey-scroll-track')!.getAttribute('data-visible')).toBe('true');expect(ports[0]!.getBoundingClientRect()).toEqual(rect)
+ ports[0]!.setAttribute('aria-hidden','true');ports[0]!.dispatchEvent(new win.Event('scroll'));expect(doc.querySelector('.odyssey-scroll-track')!.hasAttribute('hidden')).toBe(true)
+ dispose();await win.happyDOM.close()
+})
+
 it('shows scroll feedback without changing the port width, then removes overlays on disposal', async () => {
   const win=new Window()
   const doc=win.document

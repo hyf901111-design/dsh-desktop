@@ -4,7 +4,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   if (!win?.ResizeObserver) return () => {}
   type Bar = { port: HTMLElement; track: HTMLDivElement; thumb: HTMLDivElement; until: number; dragging: boolean; show: () => void; update: () => void; remove: () => void }
   const bars = new Map<HTMLElement, Bar>()
-  const scope = '[data-dsh-sidebar-root], .t8lSSG_panelBody'
+  const scope = '[data-dsh-sidebar-root], .t8lSSG_panelBody, .en-root'
   // The conversation has 16 px content padding; its thumb belongs to the
   // panel edge, not that inset text column. Nested previews retain their own edge.
   const rightEdge = (port: HTMLElement) => {
@@ -112,7 +112,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   const keyboard = (e: KeyboardEvent) => { if (!e.metaKey && !e.ctrlKey && !e.altKey) { keyboardMode = true; schedule() } }
   const pointer = () => { keyboardMode = false; schedule() }
   const blur = () => { for(const bar of bars.values()) { bar.dragging=false; delete bar.track.dataset.dragging } schedule() }
-  mutations.observe(doc.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['data-odyssey-panel-right','aria-hidden'] })
+  mutations.observe(doc.documentElement, { childList:true, subtree:true, attributes:true, attributeFilter:['data-odyssey-panel-right','aria-hidden','data-settings-open','data-workspace-surface','hidden'] })
   doc.addEventListener('keydown', keyboard, true); doc.addEventListener('pointerdown', pointer, true)
   doc.addEventListener('pointermove', edge, { passive:true }); win.addEventListener('resize', schedule); win.addEventListener('blur', blur); doc.addEventListener('transitionend', schedule)
   doc.addEventListener('scroll', schedule, { capture:true, passive:true }); scan()

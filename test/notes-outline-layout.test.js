@@ -10,9 +10,12 @@ beforeAll(async () => {
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
       import React from 'react'; import {createRoot} from 'react-dom/client';
       import {NotesApp} from './src/preload/notes/editor';
+      import {createNotesActivityStore,EWorkNotesActivity} from './scripts/lib/notes-activity.mjs';
+      window.react=React;window.eworkNotesActivity=createNotesActivityStore(document);
       import '@blocknote/mantine/style.css'; import './src/preload/notes/style.css';
-      window.noteRequests=[];
+      window.noteRequests=[];window.noteTasks=[];document.addEventListener('sherlock:notes-task-state',event=>window.noteTasks.push(event.detail));
       const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});return method==='load'?{saved:{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='generate'?await new Promise(resolve=>{window.resolveNoteSuggestion=()=>resolve({kind:'text',markdown:'改写后的验收句子。'})}):{}},draft:async()=>{}};
+      const activity=document.createElement('div');activity.id='native-activity';document.body.append(activity);createRoot(activity).render(<EWorkNotesActivity sessionId="outline-test"/>);
       const root=document.querySelector('.en-editor-host');
       createRoot(root).render(<NotesApp sessionId="outline-test" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);
       document.addEventListener('sherlock:notes-composer-draft',e=>{const input=document.querySelector('#native-input');input.value=e.detail.text;if(e.detail.focus)input.focus({preventScroll:true})});
@@ -44,6 +47,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     await page.addStyleTag({ content: css })
     await page.addScriptTag({ content: script })
     try { await page.locator('.en-title').waitFor({ timeout: 2000 }) } catch (e) { throw Error(errors.join('\n') || e.message) }
+    if(!dark&&width===900){const [download]=await Promise.all([page.waitForEvent('download'),page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-export',{detail:{sessionId:'outline-test'}})))]);expect(download.suggestedFilename()).toBe('浮层位置验收.md')}
     expect(await page.getByRole('button',{name:'展开目录',exact:true}).textContent()).toBe('')
     await page.getByRole('button',{name:'展开目录',exact:true}).click();expect(await page.locator('.en-toc-heading button').count()).toBe(0);expect(await page.getByText('添加标题后显示目录',{exact:true}).count()).toBe(0);await page.keyboard.press('Escape')
     // Paste into the actual BlockNote view to exercise live outline updates.
@@ -53,7 +57,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     await page.locator('.en-document-scroll').evaluate(el=>el.scrollTo(0,0))
     const before = await geometry()
     expect(before[2].x).toBeGreaterThan(before[0].x+before[0].width)
-    const actions=await page.locator('.en-document-actions').boundingBox();expect(actions.x).toBe(before[0].x);expect(actions.y).toBeGreaterThanOrEqual(before[0].y+before[0].height)
+    expect(await page.locator('.en-document-actions').count()).toBe(0);expect(before[0].x).toBeGreaterThanOrEqual(74)
     expect(await page.locator('.en-document-scroll').evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100)
     await page.getByRole('button', { name: '展开目录', exact: true }).click()
     await expect.poll(() => page.getByRole('dialog', { name: '文档目录' }).isVisible()).toBe(true)
@@ -82,11 +86,12 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     expect(await page.locator('.en-ai-selection').allTextContents()).toEqual(['目录展开时正文保持原位。'])
     expect(await page.locator('#native-input').evaluate(el=>el===document.activeElement)).toBe(true)
     await page.locator('#native-send').click()
-    await expect.poll(()=>page.locator('.en-inline-assistant .en-ai-loading').isVisible()).toBe(true)
+    await expect.poll(()=>page.locator('.en-inline-assistant .en-ai-loading').isVisible()).toBe(true);await page.locator('#native-activity').getByText('正在生成内容',{exact:true}).waitFor();
     const target=await page.locator('.en-ai-selection').boundingBox(),loading=await page.locator('.en-inline-assistant .en-ai-loading').boundingBox();expect(loading.y).toBeGreaterThan(target.y+target.height);await expect.poll(async()=>(await page.locator('.en-inline-assistant .en-ai-loading').boundingBox()).x).toBe(before[0].x)
     await page.evaluate(()=>window.resolveNoteSuggestion())
     await expect.poll(()=>page.locator('.en-inline-assistant .en-preview').isVisible()).toBe(true)
     expect(await page.locator('.en-composer-area .en-preview').count()).toBe(0)
+    const resize=page.getByRole('separator',{name:'调整建议面板高度'});const initialHeight=await page.locator('.en-preview-content').evaluate(el=>el.clientHeight);await resize.focus();await page.keyboard.press('ArrowUp');expect(await page.locator('.en-preview-content').evaluate(el=>el.clientHeight)).toBe(initialHeight+32);const handle=await resize.boundingBox();await page.mouse.move(handle.x+handle.width/2,handle.y+10);await page.mouse.down();await page.mouse.move(handle.x+handle.width/2,handle.y-50);await page.mouse.up();expect(await page.locator('.en-preview-content').evaluate(el=>el.clientHeight)).toBe(initialHeight+92);expect(await page.locator('.en-ai-selection').allTextContents()).toEqual(['目录展开时正文保持原位。']);
     await page.getByRole('button',{name:'替换所选',exact:true}).click()
     await expect.poll(()=>page.locator('.en-document .bn-editor').textContent()).toContain('改写后的验收句子。')
     expect(await page.locator('.en-document .bn-editor').textContent()).not.toContain('目录展开时正文保持原位。')
@@ -95,7 +100,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     expect(await page.getByText('输入框保持原位。',{exact:true}).count()).toBe(1)
     expect(JSON.stringify(await page.evaluate(()=>window.noteRequests.filter(r=>r.method==='save').map(r=>r.input.content)))).not.toContain('正在改写所选内容')
     expect(await page.evaluate(()=>window.noteRequests.find(r=>r.method==='generate').input.selection)).toBe('目录展开时正文保持原位。')
-    expect(errors).toEqual([])
+    expect(await page.evaluate(()=>window.noteTasks.map(row=>row.phase))).toEqual(['preparing','generating','ready','accepted']);expect(errors).toEqual([])
   } finally { await context.close() }
 })
 
@@ -105,6 +110,6 @@ it('keeps a visible suggestion and protects new text when its selected paragraph
   await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor'),data=new DataTransfer();data.setData('text/html','<p>待改写的旧段落，原文包含较长的说明与多个细节，需要保持原意并优化表达。</p><p>原来的下方段落。</p>');editor.focus();editor.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}))});await page.getByText('待改写的旧段落，原文包含较长的说明与多个细节，需要保持原意并优化表达。',{exact:true}).waitFor();
   await page.evaluate(()=>{const paragraph=[...document.querySelectorAll('.en-document .bn-inline-content')].find(el=>el.textContent==='待改写的旧段落，原文包含较长的说明与多个细节，需要保持原意并优化表达。');document.querySelector('.en-document .bn-editor').focus();const range=document.createRange();range.selectNodeContents(paragraph);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));paragraph.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}))});await page.getByRole('button',{name:/AI 改写/}).click();await page.locator('#native-send').click();await page.locator('.en-inline-assistant .en-ai-loading').waitFor();
   await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor');editor.focus();const range=document.createRange();range.selectNodeContents(editor);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));editor.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));const data=new DataTransfer();data.setData('text/html','<p>编辑期间的新正文。</p>');editor.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}))});await page.getByText('编辑期间的新正文。',{exact:true}).waitFor();await page.locator('.en-composer-area .en-ai-loading').waitFor();
-  await page.evaluate(()=>window.resolveNoteSuggestion());await page.locator('.en-composer-area .en-preview').waitFor();await page.getByRole('button',{name:'替换所选',exact:true}).click();await page.getByText('正文已变化，请重新生成后再替换选区。你仍可将建议插入到下方。',{exact:true}).waitFor();expect(await page.getByText('编辑期间的新正文。',{exact:true}).count()).toBe(1);await page.getByRole('button',{name:'继续调整',exact:true}).click();await page.locator('#native-send').click();await page.locator('.en-composer-area .en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion());await page.locator('.en-composer-area .en-preview').waitFor();await page.getByRole('button',{name:'替换所选',exact:true}).click();await page.getByText('正文已变化，请重新生成后再替换选区。你仍可将建议插入到下方。',{exact:true}).waitFor();await page.getByRole('button',{name:'插入到下方',exact:true}).click();await page.getByText('改写后的验收句子。',{exact:true}).waitFor();expect(await page.getByText('编辑期间的新正文。',{exact:true}).count()).toBe(1)
+  await page.evaluate(()=>window.resolveNoteSuggestion());await page.locator('.en-composer-area .en-preview').waitFor();await page.getByRole('button',{name:'替换所选',exact:true}).click();await page.getByText('正文已变化，请重新生成后再替换选区。你仍可将建议插入到下方。',{exact:true}).waitFor();expect(await page.getByText('编辑期间的新正文。',{exact:true}).count()).toBe(1);await page.getByRole('button',{name:'重新撰写',exact:true}).click();await page.locator('.en-composer-area .en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion());await page.locator('.en-composer-area .en-preview').waitFor();await page.getByRole('button',{name:'替换所选',exact:true}).click();await page.getByText('正文已变化，请重新生成后再替换选区。你仍可将建议插入到下方。',{exact:true}).waitFor();await page.getByRole('button',{name:'插入到下方',exact:true}).click();await page.getByText('改写后的验收句子。',{exact:true}).waitFor();expect(await page.getByText('编辑期间的新正文。',{exact:true}).count()).toBe(1)
  }finally{await context.close()}
 })

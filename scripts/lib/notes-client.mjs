@@ -1,3 +1,4 @@
+import { patchCanvasSessionActivity } from './sidebar-session-recency.mjs'
 /** Bind notes to the native session/view ledger, keeping one resident header. */
 export function patchNotesClient(source) {
   if (!source.includes('"data-ework-notes-session":sessionId')) {
@@ -29,5 +30,15 @@ function EWorkNotesView({sessionId}) {
 }
 slots.register({name:'conversation.view',id:'notes',order:7,label:()=> '笔记',inject:sessionId=>({sessionId})}, EWorkNotesView);`)
   }
-  return source
+  if (!source.includes('ework:notes-header-export:v1')) {
+    const anchor = 'children: renderSlot("conversation.session.header.utilities", {})'
+    if (source.split(anchor).length !== 2) throw Error('笔记无法定位共用顶栏导出位置。')
+    source = source.replace(anchor, `/* ework:notes-header-export:v1 */
+children: [active?.id === 'notes' && (0, react_jsx_runtime.jsxs)('button', {
+  type:'button',className:'en-header-export',title:'导出 Markdown', 'aria-label':'导出笔记',
+  onClick:()=>document.dispatchEvent(new CustomEvent('sherlock:notes-export',{detail:{sessionId}})),
+  children:[(0,react_jsx_runtime.jsx)('svg',{width:14,height:14,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.25,strokeLinecap:'round',strokeLinejoin:'round', 'aria-hidden':true,children:(0,react_jsx_runtime.jsx)('path',{d:'M8 10V2m-3 3 3-3 3 3M3 9v4a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9'})}), '导出']
+}), renderSlot("conversation.session.header.utilities", {})]`)
+  }
+  return source.includes('function createResearchWorkspaceSession(') ? patchCanvasSessionActivity(source) : source
 }
