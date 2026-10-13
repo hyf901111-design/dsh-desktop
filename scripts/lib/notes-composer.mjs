@@ -3,7 +3,7 @@ export const notesComposerSource = `
 const eworkNotesInputs = new Map();
 function eworkNotesInput(sessionId, ordinary, conversation) {
   if (eworkNotesInputs.has(sessionId)) return eworkNotesInputs.get(sessionId);
-  const record = {running:false,ready:false,shell:null};
+  const record = {running:false,ready:false,shell:null,submission:0};
   const shell = new SessionInputShell({...ordinary.deps,queue:undefined,sharedSubmit:undefined,sharedDraft:undefined,
     defaultSink:async(prompt,imageIds,_mode,admission)=>{
       if(record.running||record.preparing||!record.ready)return;
@@ -11,9 +11,13 @@ function eworkNotesInput(sessionId, ordinary, conversation) {
       try {
         const images=await conversation.serializeImages(conversation.draftImages(imageIds).map(a=>a.file));
         if(record.running||eworkNotesInputs.get(sessionId)!==record)return;
-        const detail={sessionId,prompt,images,admission,handled:false};
-        document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail}));
-        if(!detail.handled)shell.notify('error','笔记还未就绪，输入已保留。');
+        const submissionId=++record.submission;
+        let acknowledged=false;
+        const accepted=event=>{if(event.detail?.sessionId===sessionId&&event.detail.submissionId===submissionId)acknowledged=true};
+        document.addEventListener('sherlock:notes-submit-accepted',accepted);
+        try{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId,submissionId,prompt,images,admission}}))}
+        finally{document.removeEventListener('sherlock:notes-submit-accepted',accepted)}
+        if(!acknowledged)shell.notify('error','笔记还未就绪，输入已保留。');
       } catch(error){shell.notify('error',error.message||'附件读取失败，输入已保留。');}finally{record.preparing=false}
     }});
   // Keep the native draft/undo/attachment machinery. Note sends bypass agent commands.

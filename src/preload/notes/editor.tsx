@@ -188,7 +188,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   }
   const commands = useRef({generate,stop});commands.current={generate,stop}
   useEffect(()=>{
-    const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId!==props.sessionId||props.recovery)return;detail.handled=true;void commands.current.generate(detail.prompt,detail.images,detail.admission)}
+    const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId!==props.sessionId||props.recovery)return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
     const cancel=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.stop()}
     const menu=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId&&!props.recovery){clearSelection();editor.getExtension(SuggestionMenu)?.openSuggestionMenu('/',{ignoreQueryLength:true})}}
     const sessionError=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)setError((event as CustomEvent).detail.message)}
