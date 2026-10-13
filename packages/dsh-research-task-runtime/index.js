@@ -14,6 +14,7 @@ import { readTemplateModel, templateFor } from './component-template-registry.js
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
 import { registerNotesAi } from './notes-ai.js'
+import { registerNoteSessions } from './notes-session.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
@@ -47,7 +48,7 @@ import { selectedResearchExcerpt } from './context-index.js'
 import { MAX_RESEARCH_HTML_BYTES, RESEARCH_HTML_LIMIT_ERROR } from './html-artifact.js'
 
 export const name = 'sherlock-research-task-runtime'
-export const inject = ['llm', 'agentDefaultModel', 'systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy']
+export const inject = ['llm', 'agentDefaultModel', 'systemPrompt', 'agents', 'subagents', 'typert', 'web', 'webServer', 'tools', 'sessions', 'sessionPersistence', 'workspaceRegistry', 'apiProxy', 'attachments', 'sessionTitle']
 
 export const MAX_ACTIVE_PER_PARENT = 10
 // Heavy free-form pages keep two slots. Fixed-template data tasks can share
@@ -2393,6 +2394,7 @@ export async function apply(ctx) {
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
     const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody})
+    const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     let context
     try {
@@ -2406,6 +2408,7 @@ export async function apply(ctx) {
       disposeRoutes()
       disposeScheduledTitle()
       disposeNotesAi()
+      disposeNoteSessions()
       throw error
     }
     return async () => {
@@ -2424,6 +2427,7 @@ export async function apply(ctx) {
       disposeRoutes()
       disposeScheduledTitle()
       disposeNotesAi()
+      disposeNoteSessions()
       await runtime.dispose()
     }
   })

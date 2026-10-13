@@ -159,7 +159,7 @@ for (const dark of [false, true]) for (const view of ['home', 'chat', 'research'
       expect(m.headerGap).toBe('12px')
       expect(m.tabsGap).toBe('4px')
       expect(m.modeGap).toBe('6px')
-      expect(m.modeDisplay === 'none').toBe(view === 'home')
+      expect(m.modeDisplay).toBe('none')
       if (view !== 'home') expect(m.actionsGap).toBe(12)
       expect(m.paddingRight).toBe(closed ? '56px' : '20px')
       expect(m.tabs).toHaveLength(3)
@@ -191,7 +191,7 @@ for (const closed of [false, true]) it(`right ${closed ? 'closed' : 'open'} thre
     expect(m.membersDisplay).toBe(layout === 'regular' ? 'none' : 'flex')
     expect(m.membersGap).toBe('6px')
     expect(m.modeGap).toBe(layout === 'regular' ? '6px' : '4px')
-    if (layout !== 'regular') expect(m.modesWidth).toBe(40)
+    expect(m.modesWidth).toBe(0)
     expect(m.utilitiesRight).toBeLessThanOrEqual(m.headerRight - (closed ? 56 : 20) + .1)
     expect(m.overflow).toBe(false)
   }

@@ -22,6 +22,15 @@ export function installNotesService(options: {
       case 'save': return store.save(owner, session, input.revision, input.content, input.clientId)
       case 'draft': store.draft(owner, session, input.clientId, input.revision, input.content); return { ok: true }
       case 'discard': store.discardDraft(owner, session, input.clientId); return { ok: true }
+      case 'engage': {
+        const base = options.runtimeUrl(); if (!base) throw Error('会话服务尚未就绪，请稍后重试。')
+        const url = new URL('/sherlock/notes/session', base)
+        const response = await fetch(url, {method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,title:input.title})})
+        const result = await response.json()
+        if (!response.ok) throw Error(result.error || '笔记会话暂未保存，请重试。')
+        if (options.owner() !== owner) throw Error('账号已变化，请重新打开笔记。')
+        return result
+      }
       case 'models': return rpc('session.models', { sessionId: session })
       case 'model': return rpc('session.selectModel', { sessionId: session, provider: input.provider, model: input.model })
       case 'clipboard': return options.clipboard()?.read() ?? { kind: 'empty' }

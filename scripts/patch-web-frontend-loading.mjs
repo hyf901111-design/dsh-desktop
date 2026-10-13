@@ -1,6 +1,8 @@
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
 import { patchNotesComposer } from './lib/notes-composer.mjs'
+import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
+import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standard-mode-only.mjs'
 import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
@@ -249,4 +251,17 @@ writeFileSync(conversationPath, patchResearchGridWorkbench(patchCalendarToolClie
 
 // Bind the owned note surface to the real native session after other patches.
 const notesConversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(notesConversationPath, patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8'))))
+writeFileSync(notesConversationPath, patchNoteSessionClient(patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8')))))
+const notesRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
+writeFileSync(notesRuntimePath, patchNoteSessionRuntime(readFileSync(notesRuntimePath, 'utf8')))
+const modeClientPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js')
+writeFileSync(modeClientPath, patchStandardModeClient(readFileSync(modeClientPath, 'utf8')))
+const modeRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-agent-presets/lib/index.js')
+writeFileSync(modeRuntimePath, patchStandardModeRuntime(readFileSync(modeRuntimePath, 'utf8')))
+
+const noteHostPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js')
+writeFileSync(noteHostPath, patchNoteSessionHost(readFileSync(noteHostPath, 'utf8')))
+for (const catalog of ['lib/index.js', 'lib/types/known-event-types.js']) {
+  const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-session', catalog)
+  writeFileSync(path, patchNoteSessionCatalog(readFileSync(path, 'utf8')))
+}

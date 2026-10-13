@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { NotesApp } from './editor'
 import type { NotesBridge } from '../../shared/workspace-notes'
 import { WorkspaceSurfaceHost } from '../workspace-surface-host'
+import { alignNotesComposer } from './layout'
 import blockStyles from '@blocknote/mantine/style.css?inline'
 import noteStyles from './style.css?inline'
 
@@ -12,7 +13,14 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   const editorHost = document.createElement('div'); editorHost.className = 'en-editor-host'
   const composerHost = document.createElement('div'); composerHost.className = 'en-native-composer-host sRp_composer'
   surface.append(editorHost,composerHost)
-  const resize = new ResizeObserver(() => surface.style.setProperty('--en-native-composer-height', composerHost.offsetHeight + 'px')); resize.observe(composerHost)
+  let measuredDocument: Element | null = null
+  const measure = () => {
+    surface.style.setProperty('--en-native-composer-height', composerHost.offsetHeight + 'px')
+    const content = surface.querySelector('.en-document')
+    if (content !== measuredDocument) { if (measuredDocument) resize.unobserve(measuredDocument); measuredDocument = content; if (content) resize.observe(content) }
+    alignNotesComposer(surface, composerHost)
+  }
+  const resize = new ResizeObserver(measure); resize.observe(composerHost); resize.observe(surface)
   let reactRoot: Root | undefined, sessionId = '', frame = 0, lastAnchor: Element | null = null
   const nativeTab = (id: string) => document.querySelector<HTMLButtonElement>(`[data-srb-tabs] [data-conversation-view-id="${id}"]`)
   const navigate = (id: string) => { host.close('notes'); if (id === 'new') document.querySelector<HTMLButtonElement>('.hHd-Xa_newSession')?.click(); else nativeTab(id)?.click() }
@@ -26,6 +34,7 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
   const onNativeTabClick = (event: Event) => { if ((event.target as Element)?.closest?.('[data-srb-tabs] [data-conversation-view-id=notes]')) open() }
   const close = (event: Event) => { if ((event as CustomEvent).detail?.sessionId === sessionId) host.close('notes') }
   const sync = () => {
+    measure()
     const id = document.querySelector<HTMLElement>('[data-ework-notes-session]')?.dataset.eworkNotesSession
     const anchor = id ? document.querySelector('[data-ework-note-view="' + CSS.escape(id) + '"]') : null
     if (anchor && (anchor !== lastAnchor || !host.current()) && !document.querySelector('.VOzbGW_overlay')) { lastAnchor = anchor; open() }

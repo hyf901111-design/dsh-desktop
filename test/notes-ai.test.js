@@ -5,6 +5,10 @@ function context(text, kind = 'stop') {
   return { apiProxy: { sessions: { models: async () => ({ result: { ok: true, value: { current: { provider: 'session-provider', model: 'session-model' }, routable: true } } }) } }, llm: { stream: async function* (value) { options = value; yield { type: 'text-delta', text }; yield { type: 'finish', reason: { kind } } } }, options: () => options }
 }
 const input = { sessionId: 'session', title: '笔记', markdown: '正文资料', selection: '选中文字', prompt: '改写为简洁文字', mode: 'write' }
+it('declares the attachment dependency used by the real notes HTTP handler',async()=>{
+ const {inject}=await import('../packages/dsh-research-task-runtime/index.js')
+ expect(inject).toContain('attachments')
+})
 it('uses the selected session model and returns a preview without writing the document', async () => {
   const ctx = context('{"kind":"text","markdown":"简洁的新内容"}')
   expect(await generateNoteSuggestion(ctx, input)).toEqual({ kind: 'text', markdown: '简洁的新内容' })

@@ -10,10 +10,17 @@ beforeAll(async () => {
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
       import React from 'react'; import {createRoot} from 'react-dom/client';
       import {NotesApp} from './src/preload/notes/editor';
+      import {alignNotesComposer} from './src/preload/notes/layout';
       import '@blocknote/mantine/style.css'; import './src/preload/notes/style.css';
-      const bridge={request:async(method,input)=>method==='load'?{saved:{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:{},draft:async()=>{}};
+      window.noteRequests=[];
+      const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});return method==='load'?{saved:{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='generate'?{kind:'text',markdown:'改写后的验收句子。'}:{}},draft:async()=>{}};
       const root=document.querySelector('.en-editor-host');
       createRoot(root).render(<NotesApp sessionId="outline-test" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);
+      const surface=document.querySelector('.en-root'),composer=document.querySelector('.en-native-composer-host');
+      const align=()=>alignNotesComposer(surface,composer);new ResizeObserver(align).observe(surface);new MutationObserver(align).observe(root,{subtree:true,childList:true});
+      document.addEventListener('sherlock:notes-composer-draft',e=>{const input=document.querySelector('#native-input');input.value=e.detail.text;if(e.detail.focus)input.focus({preventScroll:true})});
+      document.querySelector('#native-command').onclick=()=>document.dispatchEvent(new CustomEvent('sherlock:notes-command',{detail:{sessionId:'outline-test'}}));
+      document.querySelector('#native-send').onclick=()=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'outline-test',prompt:document.querySelector('#native-input').value,images:[]}}));
     ` },
     bundle: true, platform: 'browser', conditions: ['browser', 'import', 'style'], format: 'iife', write: false, outfile: 'fixture.js',
     define: { 'process.env.NODE_ENV': '"production"' },
@@ -35,7 +42,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline f
   const context = await browser.newContext({ viewport: { width, height: 900 } }), page = await context.newPage()
   try {
     const errors = []; page.on('pageerror', e => errors.push(e.message))
-    await page.route('http://127.0.0.1/notes-outline-fixture', route => route.fulfill({ contentType: 'text/html', body: `<body ${dark ? 'data-ds-dark-theme' : ''}><section class="en-root" data-dark="${dark}" style="left:10px"><div class="en-editor-host"></div><div class="en-native-composer-host sRp_composer" style="height:138px">原生输入框宿主</div></section></body>` }))
+    await page.route('http://127.0.0.1/notes-outline-fixture', route => route.fulfill({ contentType: 'text/html', body: `<body ${dark ? 'data-ds-dark-theme' : ''}><section class="en-root" data-dark="${dark}" style="left:10px"><div class="en-editor-host"></div><div class="en-native-composer-host sRp_composer" style="height:138px"><textarea id="native-input" aria-label="原生输入框测试接口"></textarea><button id="native-command">命令测试接口</button><button id="native-send">发送测试接口</button></div></section></body>` }))
     await page.goto('http://127.0.0.1/notes-outline-fixture')
     await page.addStyleTag({ content: css })
     await page.addScriptTag({ content: script })
@@ -45,6 +52,8 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline f
     await page.getByText('目录展开时正文保持原位。', { exact: true }).waitFor()
     const geometry = () => page.evaluate(() => ['.en-title', '.bn-editor', '.en-native-composer-host'].map(selector => { const { x, y, width, height } = document.querySelector(selector).getBoundingClientRect(); return { x, y, width, height } }))
     const before = await geometry()
+    expect(before[2].x).toBe(before[0].x); expect(before[2].width).toBe(before[0].width)
+    expect(await page.locator('.en-document-scroll').evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100)
     await page.getByRole('button', { name: '展开目录', exact: true }).click()
     await expect.poll(() => page.getByRole('dialog', { name: '文档目录' }).isVisible()).toBe(true)
     expect(await geometry()).toEqual(before)
@@ -63,5 +72,19 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline f
     await page.getByRole('button', { name: '展开目录', exact: true }).click()
     await page.getByRole('button', { name: '下一步', exact: true }).click()
     expect(await page.getByRole('dialog', { name: '文档目录' }).count()).toBe(0)
+    await page.locator('#native-command').click()
+    await expect.poll(()=>page.locator('.bn-suggestion-menu').isVisible()).toBe(true)
+    await page.keyboard.press('Escape')
+    await page.evaluate(()=>{const paragraph=[...document.querySelectorAll('.en-document .bn-inline-content')].find(el=>el.textContent==='目录展开时正文保持原位。');document.querySelector('.en-document .bn-editor').focus();const range=document.createRange();range.selectNodeContents(paragraph);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));paragraph.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}))})
+    await page.getByRole('button',{name:/AI 改写/}).click()
+    expect(await page.locator('.en-ai-selection').allTextContents()).toEqual(['目录展开时正文保持原位。'])
+    expect(await page.locator('#native-input').evaluate(el=>el===document.activeElement)).toBe(true)
+    await page.locator('#native-send').click()
+    await page.getByRole('button',{name:'替换所选',exact:true}).click()
+    await expect.poll(()=>page.locator('.en-document .bn-editor').textContent()).toContain('改写后的验收句子。')
+    expect(await page.locator('.en-document .bn-editor').textContent()).not.toContain('目录展开时正文保持原位。')
+    expect(await page.locator('.en-ai-selection').count()).toBe(0)
+    expect(await page.evaluate(()=>window.noteRequests.find(r=>r.method==='generate').input.selection)).toBe('目录展开时正文保持原位。')
+    expect(errors).toEqual([])
   } finally { await context.close() }
 })

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
 import { BlockNoteSchema, defaultBlockSpecs, createUserStore } from '@blocknote/core'
 import { zh } from '@blocknote/core/locales'
-import { SideMenuExtension } from '@blocknote/core/extensions'
+import { SideMenuExtension, SuggestionMenu } from '@blocknote/core/extensions'
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteView } from '@blocknote/mantine'
@@ -9,6 +9,7 @@ import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, Formattin
 import * as Y from 'yjs'
 import { noteOutline, noteText, canApplySuggestion, restoreNoteDraft, noteSuggestionPreview, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
 import { NotesOutline } from './outline'
+import { NoteAiSelection } from './selection'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[]}
@@ -90,7 +91,21 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   titleRef.current = title
   const doc = useMemo(() => { const value = new Y.Doc(); if (props.initial.yjs) Y.applyUpdate(value, Uint8Array.from(atob(props.initial.yjs), c => c.charCodeAt(0))); return value }, [])
   const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: '我', avatarUrl: '' }))), [])
-  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: zh, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: '我', color: '#94b2ff' } }, extensions: [CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
+  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: zh, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: '我', color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
+  const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
+  const clearSelection = () => { pinnedSelection.current = undefined; selection.current={...selection.current,text:'',from:0,to:0}; editor.getExtension(NoteAiSelection)?.highlight() }
+  const engagement = useRef({started:false,target:'',sent:undefined as string|undefined,busy:false,timer:undefined as ReturnType<typeof setTimeout>|undefined})
+  const persistEngagement = async () => {
+    const state=engagement.current;if(!state.started||state.busy||state.sent===state.target)return;state.busy=true;const title=state.target
+    try { await props.bridge.request('engage',{sessionId:props.sessionId,title});state.sent=title }
+    catch(e){if(!disposed.current)setError((e as Error).message)}
+    finally{state.busy=false;if(state.target!==title)void persistEngagement()}
+  }
+  const engage = () => {
+    document.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:props.sessionId}}))
+    const state=engagement.current;state.started=true;state.target=titleRef.current;clearTimeout(state.timer)
+    if(state.sent===undefined)void persistEngagement();else state.timer=setTimeout(()=>void persistEngagement(),300)
+  }
   const snapshot = (): NoteContent => ({ title: titleRef.current, blocks: editor.document, yjs: encode(doc) })
   const save = () => {
     clearTimeout(saveTimer.current)
@@ -106,17 +121,19 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     })
   }
   const changed = () => {
+    engage()
     const content = snapshot(); latest.current = content; setOutline(noteOutline(content.blocks)); setStatus('保存中…')
     void props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content }).catch((e: Error) => { if (!disposed.current) { setStatus('草稿保存失败'); setError(e.message) } })
     clearTimeout(saveTimer.current); saveTimer.current = setTimeout(save, 750)
   }
   useEffect(() => {
     lastWritten.current = JSON.stringify(snapshot()); setOutline(noteOutline(editor.document))
+    if (props.initial.title.trim() || editor.document.some((b:any) => noteText(b.content).trim() || b.type === 'research')) engage()
     const off = editor.onChange(changed), offSelection = editor.onSelectionChange(() => { const tiptap = editor._tiptapEditor, range = tiptap.state.selection; selection.current = { text: editor.getSelectedText(), from: range.from, to: range.to, cursor: editor.getTextCursorPosition().block.id } })
     const commentChanged = () => changed(); doc.getMap('threads').observeDeep(commentChanged)
     const flush = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save() } }
     window.addEventListener('keydown', flush)
-    return () => { disposed.current = true; epoch.current++; clearTimeout(saveTimer.current); off(); offSelection(); doc.getMap('threads').unobserveDeep(commentChanged); window.removeEventListener('keydown', flush); if (request.current) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: request.current }); save() }
+    return () => { disposed.current = true; epoch.current++; clearTimeout(saveTimer.current); clearTimeout(engagement.current.timer);void persistEngagement(); off(); offSelection(); doc.getMap('threads').unobserveDeep(commentChanged); window.removeEventListener('keydown', flush); if (request.current) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: request.current }); save() }
   }, [])
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
@@ -131,7 +148,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const generatingBlock = useRef('')
   const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission) => {
     if ((!prompt.trim() && !images.length) || request.current || props.recovery) return
-    const attempt = ++epoch.current, captured = { ...selection.current }, fingerprint = JSON.stringify(editor.document), requestId = crypto.randomUUID()
+    const attempt = ++epoch.current, captured = { ...(pinnedSelection.current || selection.current) }, fingerprint = pinnedSelection.current?.fingerprint || JSON.stringify(editor.document), requestId = crypto.randomUUID()
     const component = /(?:创建|生成|做|画|添加).*(?:组件|图表|表格|时间线|新闻)/u.test(prompt)
     request.current = requestId; publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
@@ -167,33 +184,34 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
     if (replace && preview.selectedText && preview.result.kind === 'text') { const html = await editor.blocksToHTMLLossy(blocks); if (JSON.stringify(editor.document) !== preview.fingerprint) { setError('正文已变化，请重新生成后再替换选区。'); return }; const state = editor._tiptapEditor.state; state.plugins.find((p: any) => p.key.startsWith('y-undo'))?.getState(state)?.undoManager?.stopCapturing(); editor._tiptapEditor.commands.setTextSelection({ from: preview.from, to: preview.to }); editor._tiptapEditor.commands.insertContent(html) }
     else { const reference = editor.getBlock(preview.cursor) || editor.getTextCursorPosition().block; editor.insertBlocks(blocks, reference, 'after') }
-    commitNativeDraft(preview.nativeComposer); setPreview(undefined); changed()
+    commitNativeDraft(preview.nativeComposer); setPreview(undefined); clearSelection(); changed()
   }
   const commands = useRef({generate,stop});commands.current={generate,stop}
   useEffect(()=>{
     const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId!==props.sessionId||props.recovery)return;detail.handled=true;void commands.current.generate(detail.prompt,detail.images,detail.admission)}
     const cancel=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.stop()}
-    const menu=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId){editor.focus();editor.openSuggestionMenu('/')}}
+    const menu=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId&&!props.recovery){clearSelection();editor.getExtension(SuggestionMenu)?.openSuggestionMenu('/',{ignoreQueryLength:true})}}
+    const sessionError=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)setError((event as CustomEvent).detail.message)}
     const state=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)publishComposer({})}
-    document.addEventListener('sherlock:notes-submit',submit);document.addEventListener('sherlock:notes-stop',cancel);document.addEventListener('sherlock:notes-command',menu);document.addEventListener('sherlock:notes-composer-request-state',state);publishComposer({running:false})
-    return()=>{document.removeEventListener('sherlock:notes-submit',submit);document.removeEventListener('sherlock:notes-stop',cancel);document.removeEventListener('sherlock:notes-command',menu);document.removeEventListener('sherlock:notes-composer-request-state',state);publishComposer({ready:false,running:false})}
+    document.addEventListener('sherlock:notes-submit',submit);document.addEventListener('sherlock:notes-stop',cancel);document.addEventListener('sherlock:notes-command',menu);document.addEventListener('sherlock:notes-session-error',sessionError);document.addEventListener('sherlock:notes-composer-request-state',state);publishComposer({running:false})
+    return()=>{document.removeEventListener('sherlock:notes-submit',submit);document.removeEventListener('sherlock:notes-stop',cancel);document.removeEventListener('sherlock:notes-command',menu);document.removeEventListener('sherlock:notes-session-error',sessionError);document.removeEventListener('sherlock:notes-composer-request-state',state);publishComposer({ready:false,running:false})}
   },[props.sessionId,props.recovery])
   const exportNote = async () => { try { const markdown = '# ' + (title || '无标题文档') + '\n\n' + await editor.blocksToMarkdownLossy(editor.document); const blob = new Blob([markdown], { type: 'text/markdown' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = (title || '无标题文档').replace(/[\\/:*?"<>|]/g, '_') + '.md'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) } catch (e) { setError((e as Error).message) } }
   const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate }), [props.bridge, props.sessionId, props.dark, props.navigate])
   return <Context.Provider value={ctx}><div className="en-body">
     <NotesOutline title={title} headings={outline} active={active} onLocate={locate} onTop={() => scroll.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
-    <main className="en-main"><div className="en-document-scroll" ref={scroll} onScroll={track} onPasteCapture={paste}>
+    <main className="en-main"><div className="en-document-scroll" ref={scroll} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if((e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document"><div className="en-document-actions"><span role="status" aria-live="polite">{status}</span><button title="保存笔记" aria-label="保存笔记" onClick={save}>保存</button><button title="导出 Markdown" aria-label="导出 Markdown" onClick={exportNote}>导出</button></div>
         {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
         <BlockNoteView editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false}>
-          <FormattingToolbarController formattingToolbar={() => <FormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <span>T</span> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><button className="en-ai-format" onMouseDown={e => e.preventDefault()} onClick={() => { setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}>✧ AI 改写</button></FormattingToolbar>} />
+          <FormattingToolbarController formattingToolbar={() => <FormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <span>T</span> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><button className="en-ai-format" onMouseDown={e => e.preventDefault()} onClick={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text)return;pinnedSelection.current=captured;editor.getExtension(NoteAiSelection)?.highlight(captured);setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}>✧ AI 改写</button></FormattingToolbar>} />
           <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const box=content.getBoundingClientRect(),base=reference.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} />
         </BlockNoteView>
       </div>
     </div>
     <div className="en-composer-area">{error ? <div className="en-error" role="alert"><span>{error}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>重新读取并对比</button> : null}<button onClick={() => setError('')} aria-label="关闭提示">×</button></div> : null}
-      {preview ? <section className="en-preview" aria-label="AI 修改预览"><header><strong>{preview.result.kind === 'component' ? '创建的研究组件' : '修改预览'}</strong><button aria-label="放弃建议" onClick={() => setPreview(undefined)}>×</button></header><div className="en-preview-content">{preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}</div><footer>{preview.selectedText && preview.result.kind === 'text' ? <button onClick={() => apply(true)}>替换所选</button> : null}<button onClick={() => apply(false)}>{preview.result.kind === 'component' ? '写入正文' : '插入到下方'}</button><button onClick={() => { setPreview(undefined); setNativeDraft(undefined, true) }}>继续调整</button><button onClick={() => setPreview(undefined)}>放弃</button></footer></section> : null}
+      {preview ? <section className="en-preview" aria-label="AI 修改预览"><header><strong>{preview.result.kind === 'component' ? '创建的研究组件' : '修改预览'}</strong><button aria-label="放弃建议" onClick={() => { setPreview(undefined); clearSelection() }}>×</button></header><div className="en-preview-content">{preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}</div><footer>{preview.selectedText && preview.result.kind === 'text' ? <button onClick={() => apply(true)}>替换所选</button> : null}<button onClick={() => apply(false)}>{preview.result.kind === 'component' ? '写入正文' : '插入到下方'}</button><button onClick={() => { setPreview(undefined); setNativeDraft(undefined, true) }}>继续调整</button><button onClick={() => { setPreview(undefined); clearSelection() }}>放弃</button></footer></section> : null}
 
     </div></main>
     {compare && props.recovery ? <div className="en-dialog-backdrop" onClick={() => setCompare(false)}><section role="dialog" aria-modal="true" aria-label="本地草稿对比" className="en-compare" onClick={e => e.stopPropagation()}><header><strong>本地草稿对比</strong><button onClick={() => setCompare(false)}>关闭</button></header><div><section><h3>已保存版本</h3><pre>{plain(props.initial)}</pre></section><section><h3>本地草稿</h3><pre>{plain(props.recovery)}</pre></section></div><footer><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button onClick={() => setCompare(false)}>稍后处理</button></footer></section></div> : null}
