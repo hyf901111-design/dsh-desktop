@@ -22,9 +22,9 @@ export function createNotesActivityStore(doc) {
     dispose: () => { doc?.removeEventListener('sherlock:notes-task-state', update); doc?.removeEventListener('sherlock:notes-reset', reset);doc?.removeEventListener('sherlock:notes-history',history); reset(); listeners.clear() } }
 }
 
-export function useNotesConversationRows(sessionId){
+export function useNotesConversationRows(sessionId,openState){
   const rows = react.useSyncExternalStore(eworkNotesActivity.subscribe, () => eworkNotesActivity.snapshot(sessionId))
-  react.useEffect(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[sessionId])
+  react.useEffect(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[sessionId,openState])
   return rows
 }
 export function EWorkNoteConversationRow({row,t,loadImage,UserBubble=UserStyleBubble,Progress=ExecutionStatusGroup,Markdown=AssistantMarkdown}) {
@@ -76,6 +76,7 @@ export function patchNotesActivity(source) {
     if(source.split(status).length!==2)throw Error('笔记无法定位原生执行进度。')
     source=source.replace(status,'/* ework:notes-native-progress:v1 */ const status = entry.noteTask ? entry.noteTask.status : entry.canvasTask ?')
   }
+  source=source.replace('const noteRows=useNotesConversationRows(sessionId);','/* ework:notes-history-ready:v1 */ const noteRows=useNotesConversationRows(sessionId,openState);')
   if(!source.includes('/* ework:notes-follow-stream:v1 */')){
     const signature='const followSig = `${openState}:${firstSeq}:${lastKey}:${order.length}:${running ? 1 : 0}:${lastSteeringId ?? ""}`;'
     if(source.split(signature).length!==2)throw Error('无法定位笔记会话滚动跟随。')
