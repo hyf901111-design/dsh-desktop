@@ -2,6 +2,13 @@ import { randomUUID } from 'node:crypto'
 import type { ComponentLibraryStore } from '../state/component-library'
 import { componentLibraryBuiltins } from '../../../packages/dsh-research-task-runtime/component-library-catalog.js'
 import { financialWidgetDefaults, financialWidgetDimensions } from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
+import { parseResearchContainerSpec } from '../../../packages/dsh-research-task-runtime/artifact-validator.js'
+
+export function noteLibrarySpec(value:any){
+  // Personal calendar is a native research tool, outside the generated-artifact parser.
+  if(value?.type==='calendar-tool')return value.version===1&&typeof value.title==='string'&&value.title.trim()&&value.title.length<=256&&Object.keys(value).every(key=>['version','type','title'].includes(key))?{version:1,type:'calendar-tool',title:value.title}:null
+  return parseResearchContainerSpec(value)
+}
 
 export function noteLibraryItems(store: ComponentLibraryStore) {
   return [

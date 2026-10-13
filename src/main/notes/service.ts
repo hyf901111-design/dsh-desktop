@@ -13,7 +13,7 @@ import { buildResearchHtmlPreview } from '../../../packages/dsh-research-task-ru
 import type { NotesNativeMenu } from '../../shared/notes-menu'
 import type { NoteFiles } from './files'
 import type { ComponentLibraryStore } from '../state/component-library'
-import { findNoteComponent, noteLibraryItems, noteLibraryNode } from './component-library'
+import { findNoteComponent, noteLibraryItems, noteLibraryNode, noteLibrarySpec } from './component-library'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
@@ -28,7 +28,7 @@ export function installNotesService(options: {
       case 'library-list': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryItems(options.library()!)
       case 'library-read': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryNode(options.library()!,input.id,owner)
       case 'component-ready': return {ready:findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)?.containerSpec?.type==='calendar-tool'}
-      case 'component-render': {const spec=parseResearchContainerSpec(input.spec);if(!spec)throw Error('组件内容格式无效。');return {ok:true}}
+      case 'component-render': {if(!noteLibrarySpec(input.spec))throw Error('组件内容格式无效。');return {ok:true}}
       case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
       case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
       case 'file-revoke': return {ok:options.files?.revoke(owner,session,input.nodeId)??false}

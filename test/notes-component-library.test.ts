@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { ComponentLibraryStore } from '../src/main/state/component-library'
-import { noteLibraryItems, noteLibraryNode, findNoteComponent } from '../src/main/notes/component-library'
+import { noteLibraryItems, noteLibraryNode, findNoteComponent, noteLibrarySpec } from '../src/main/notes/component-library'
 import { componentLibraryBuiltins } from '../packages/dsh-research-task-runtime/component-library-catalog.js'
 
 it('uses the research library catalog and saved names, cloning a fresh independent note component', async () => {
@@ -15,12 +15,17 @@ it('uses the research library catalog and saved names, cloning a fresh independe
     const node = noteLibraryNode(store,item.id,'alice')
     expect(node).toMatchObject({kind:'generated-container',generationStatus:'completed',noteLibrary:true})
     expect(node.containerSpec.type).toBe(item.id==='builtin-calendar'?'calendar-tool':'financial-widget')
+    expect(noteLibrarySpec(node.containerSpec)).toBeTruthy()
   }
   const a = noteLibraryNode(store,'custom-1','alice'), b = noteLibraryNode(store,'custom-1','alice')
   expect(a.id).not.toBe(b.id); expect(a.id).not.toBe(saved.id)
   a.containerSpec.rows[0][0] = '更改后的内容'
   expect(b.containerSpec.rows).toEqual([['原内容']]); expect(saved.containerSpec.rows).toEqual([['原内容']])
   expect(()=>noteLibraryNode(store,'missing','alice')).toThrow()
+})
+it('validates a native personal calendar without accepting extra executable or malformed configuration',()=>{
+  expect(noteLibrarySpec({version:1,type:'calendar-tool',title:'日历'})).toEqual({version:1,type:'calendar-tool',title:'日历'})
+  for(const value of [{version:2,type:'calendar-tool',title:'日历'},{version:1,type:'calendar-tool',title:''},{version:1,type:'calendar-tool',title:'日历',html:'<script>x</script>'}])expect(noteLibrarySpec(value)).toBeNull()
 })
 
 it('finds only persisted nested note components by their identity', () => {
