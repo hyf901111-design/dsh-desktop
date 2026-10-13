@@ -14,7 +14,9 @@
 .en-root .bn-thread .bn-block-content{padding-block:0!important;line-height:22px}
 
 
-body[data-workspace-surface=notes] [data-ework-notes-session]{visibility:visible!important}
+/* The shared header remains visible while its native conversation ancestors
+   are hidden, so it must paint the same workspace surface as trajectory. */
+body[data-workspace-surface=notes] [data-ework-notes-session]{visibility:visible!important;background:var(--odyssey-workspace)!important;border-radius:16px 16px 0 0}
 
 .en-editor-host{height:100%}.en-root{--en-toc-width:260px}.en-root:has([data-toc-open=false]){--en-toc-width:40px}
 .en-root .en-native-composer-host{position:absolute;bottom:28px;left:calc(var(--en-toc-width) + (100% - var(--en-toc-width))/2);width:min(780px,calc(100% - var(--en-toc-width) - 64px));transform:translateX(-50%);z-index:40;padding:0;background:transparent}

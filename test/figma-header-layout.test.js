@@ -213,6 +213,8 @@ it('installs the same refinement CSS through the native client patch and preload
 })
 
 for (const dark of [false,true]) it(`notes share the native header without moving tabs or covering the right toggle (${dark?'dark':'light'})`, async () => {
+ const paintedHeaderBackground=()=>page.locator('main header').evaluate(header=>{for(let el=header;el;el=el.parentElement){const css=getComputedStyle(el);if(css.visibility==='visible' && css.backgroundColor!=='transparent' && css.backgroundColor!=='rgba(0, 0, 0, 0)')return css.backgroundColor;}return 'transparent';});
+ await open({view:'trajectory',dark,width:1090,closed:true,notesFixture:true});const trajectoryBackground=await paintedHeaderBackground();await page.context().close();
  const read=()=>page.evaluate(()=>({tabs:[...document.querySelectorAll('main header [data-srb-tabs] button')].map(b=>{const r=b.getBoundingClientRect();return{id:b.dataset.conversationViewId,x:r.x,y:r.y,width:r.width,height:r.height,selected:b.getAttribute('aria-selected')}}),toggle:(()=>{const r=document.querySelector('[data-odyssey-panel-entry="right"]').getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()}));
  await open({view:'home',dark,width:1090,closed:true,notesFixture:true});const before=await read();await page.context().close();
  await open({view:'notes',dark,width:1090,closed:true,notesFixture:true});await page.evaluate(()=>window.startNotes());const after=await read();
@@ -220,6 +222,7 @@ for (const dark of [false,true]) it(`notes share the native header without movin
  expect(after.tabs.map(({selected,...r})=>r)).toEqual(before.tabs.map(({selected,...r})=>r));expect(after.toggle).toEqual(before.toggle);
  const bounds=await page.evaluate(()=>({top:document.querySelector('.en-root').getBoundingClientRect().top,header:document.querySelector('main header').getBoundingClientRect().bottom,toggleHit:(()=>{const b=document.querySelector('[data-odyssey-panel-entry="right"]'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()}));
  expect(bounds.top).toBe(bounds.header);expect(bounds.toggleHit).toBe(true);
+ expect(await paintedHeaderBackground()).toBe(trajectoryBackground);
  expect(await page.locator('.en-root').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(await page.locator('main .wSkVaW_root').evaluate(el=>getComputedStyle(el).backgroundColor));
  await page.evaluate(()=>document.body.insertAdjacentHTML('beforeend','<div class="VOzbGW_overlay">原生设置</div>'));
  await expect.poll(()=>page.locator('.en-root').evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden');
