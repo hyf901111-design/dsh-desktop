@@ -123,6 +123,7 @@ import { ResearchVoiceController, registerResearchVoiceHandlers } from './state/
 import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
 import { CanvasActionBridge, registerCanvasActionHandlers } from './state/canvas-action-bridge'
 import { installNotesService } from './notes/service'
+import { NoteNativeMenu } from './notes/native-menu'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import {
   assertTrustedMainWindowEvent,
@@ -1330,10 +1331,12 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
+  const noteNativeMenu = new NoteNativeMenu({getWindow:()=>mainWindow,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession})
   app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow,
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
-    canRead: sessionId => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
+    canRead:canReadNoteSession,nativeMenu:noteNativeMenu
   }))
   try {
     integrationService = await IntegrationService.open({
@@ -1369,6 +1372,7 @@ async function bootstrap(): Promise<void> {
     execute: async () => unavailableIntegration(), readSkill: async () => unavailableIntegration(),
   })
   stopIntegrationIdentity = accountService.subscribeSessionChanged(() => {
+    noteNativeMenu.close()
     integrationService?.rotateIdentity()
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('integrations:identity-changed')
     void integrationService?.scanLegacySkills()

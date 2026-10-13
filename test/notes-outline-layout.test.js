@@ -15,7 +15,7 @@ beforeAll(async () => {
       import '@blocknote/mantine/style.css'; import './src/preload/notes/style.css';
       window.noteRequests=[];window.noteTasks=[];window.noteCommits=[];document.addEventListener('sherlock:notes-task-state',event=>window.noteTasks.push(event.detail));document.addEventListener('sherlock:notes-composer-commit',event=>window.noteCommits.push(event.detail));
       const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});return method==='load'?{saved:{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='clipboard'?{kind:'components',nodes:[window.noteComponent]}:method==='render'?{html:input.spec.html,document:window.noteComponentDocument}:method==='generate'?await new Promise(resolve=>{window.resolveNoteSuggestion=result=>resolve(result||{kind:'text',markdown:'改写后的验收句子。'})}):{}},draft:async()=>{}};
-      const activity=document.createElement('div');activity.id='native-activity';document.body.append(activity);createRoot(activity).render(<EWorkNotesActivity sessionId="outline-test" t={key=>key} UserBubble={({content})=><div>{content.map(b=>b.text)}</div>} Progress={({entry})=><div role="status">{entry.noteTask.status}</div>} Markdown={({blocks})=><div>{blocks.map(b=>b.text)}</div>}/>);
+      const activity=document.createElement('div');activity.id='native-activity';activity.className='t8lSSG_panelBody';document.body.append(activity);createRoot(activity).render(<EWorkNotesActivity sessionId="outline-test" t={key=>key} UserBubble={({content})=><div>{content.map(b=>b.text)}</div>} Progress={({entry})=><div role="status">{entry.noteTask.status}</div>} Markdown={({blocks})=><div>{blocks.map(b=>b.text)}</div>}/>);
       const root=document.querySelector('.en-editor-host');
       createRoot(root).render(<NotesApp sessionId="outline-test" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);
       document.addEventListener('sherlock:notes-composer-draft',e=>{const input=document.querySelector('#native-input');input.value=e.detail.text;if(e.detail.focus)input.focus({preventScroll:true})});
@@ -31,12 +31,32 @@ beforeAll(async () => {
     } }]
   })
   script = output.outputFiles.find(f => f.path.endsWith('.js')).text
-  css = output.outputFiles.find(f => f.path.endsWith('.css')).text + (await readFile('src/preload/figma-refinements.css','utf8')).split('\n').filter(line=>line.includes('.en-export-menu')||line.includes('.en-header-export')).join('\n')
+  css = output.outputFiles.find(f => f.path.endsWith('.css')).text + (await readFile('src/preload/figma-refinements.css','utf8')).split('\n').filter(line=>line.includes('.en-export-menu')||line.includes('.en-header-export')||line.includes('.en-task-result')).join('\n')
   const runtime = process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
   const { chromium } = await import(/* @vite-ignore */ pathToFileURL(runtime).href)
   browser = await chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
 })
 afterAll(async () => { await browser?.close() })
+
+it('keeps native slash filtering and keyboard insertion in the editor and rejects stale mouse selections',async()=>{
+ const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
+ try{
+  await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
+  const latest=()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='menu-sync').at(-1)?.input)
+  await page.locator('.en-document .bn-editor').click();await page.keyboard.type('/');await expect.poll(async()=> (await latest())?.items.length||0).toBeGreaterThan(0)
+  const first=await latest();expect(first.items.some(item=>item.title==='一级标题')).toBe(true);expect(await page.locator('.en-document .bn-editor').evaluate(el=>el.contains(document.activeElement))).toBe(true)
+  await page.keyboard.type('引用');await expect.poll(async()=> (await latest())?.items.map(item=>item.title)).toEqual(['引用'])
+  const query=await latest();await page.evaluate(input=>document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...input,action:'select',itemId:input.items[0].id,revision:input.revision-1}})),query)
+  expect(await page.locator('.en-document [data-content-type="quote"]').count()).toBe(0)
+  await page.keyboard.press('Enter');await page.locator('.en-document [data-content-type="quote"]').waitFor();await expect.poll(()=>page.locator('.en-native-menu-accessible').count()).toBe(0);expect(await page.evaluate(()=>window.noteRequests.some(row=>row.method==='menu-close'))).toBe(true)
+  await page.keyboard.type('/');await expect.poll(async()=> (await latest())?.menuId).not.toBe(first.menuId)
+  await page.keyboard.press('ArrowDown');await expect.poll(async()=> (await latest())?.selectedIndex).toBe(1)
+  const menu=await latest();await page.evaluate(input=>document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...input,action:'select',itemId:input.items.find(item=>item.icon==='paragraph').id}})),menu)
+  await page.locator('.en-document [data-content-type="paragraph"]').waitFor();await expect.poll(()=>page.locator('.en-document .bn-editor').textContent()).not.toContain('/')
+  await page.keyboard.type('/');await expect.poll(()=>page.locator('.en-native-menu-accessible').count()).toBe(1)
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change',{detail:{surface:'integrations'}})));await expect.poll(()=>page.locator('.en-native-menu-accessible').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
 
 it('shows clarification in the shared conversation and leaves the note empty without an acceptance panel',async()=>{
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
@@ -51,6 +71,28 @@ it('shows clarification in the shared conversation and leaves the note empty wit
   expect(await page.evaluate(()=>window.noteCommits.length)).toBe(1)
   await page.locator('#native-input').fill('创建一个收入趋势图表');await page.locator('#native-send').click();await page.locator('.en-research').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion({kind:'conversation',markdown:'请提供月份和收入数据。'}));await page.locator('#native-activity').getByText('请提供月份和收入数据。',{exact:true}).waitFor()
   expect(await page.locator('.en-research,.en-preview,.en-ai-loading').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+
+for(const generated of ['改写后的词句','> **改写后的词句**'])it(`replaces only selected inline text and preserves its original block and marks (${generated})`,async()=>{
+ const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
+ try{
+  await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside style="position:fixed;right:10px;bottom:20px;width:320px"><textarea id="native-input"></textarea><button id="native-command">命令测试接口</button><button id="native-send">发送测试接口</button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
+  await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor'),data=new DataTransfer();data.setData('text/html','<p>前文<strong><span data-style-type="textColor" data-value="red" data-editable>待改写的词句</span></strong>后文。</p>');editor.focus();editor.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}))});const original=page.locator('.en-document .bn-inline-content').filter({hasText:'待改写的词句'});await original.waitFor()
+  const block=await original.evaluate(el=>({id:el.closest('[data-id]').dataset.id,type:el.closest('[data-content-type]').dataset.contentType,style:getComputedStyle(el.querySelector('[data-style-type="textColor"]')).color}));expect(block.style).toBe('rgb(224, 62, 62)')
+  await page.evaluate(()=>{const el=document.querySelector('.en-document strong');document.querySelector('.en-document .bn-editor').focus();const range=document.createRange();range.selectNodeContents(el);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));el.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}))});await page.getByRole('button',{name:/AI 改写/}).click();await page.locator('#native-send').click();await page.locator('.en-ai-loading').waitFor();await page.evaluate(result=>window.resolveNoteSuggestion({kind:'text',markdown:result}),generated);await page.locator('.en-preview').waitFor();await page.locator('#native-activity .en-task-result').waitFor({timeout:1000})
+  await page.getByRole('button',{name:'替换所选',exact:true}).click();await expect.poll(()=>page.locator('.en-document .bn-inline-content').allTextContents()).toContain('前文改写后的词句后文。')
+  const rewritten=page.locator('.en-document .bn-inline-content').filter({hasText:'前文改写后的词句后文。'});expect(await rewritten.evaluate(el=>el.closest('[data-id]').dataset.id)).toBe(block.id);expect(await rewritten.evaluate(el=>el.closest('[data-content-type]').dataset.contentType)).toBe(block.type)
+  expect(await rewritten.locator('strong').textContent()).toBe('改写后的词句');expect(await rewritten.locator('[data-style-type="textColor"]').evaluate(el=>getComputedStyle(el).color)).toBe(block.style);expect(await page.locator('.en-document [data-content-type="quote"],.en-document .bn-block-group .bn-block-group').count()).toBe(0)
+  await page.locator('#native-activity .en-task-result').waitFor({timeout:2000});expect(await page.locator('#native-activity .en-task-result').textContent()).toContain('改写后的词句');expect(await page.locator('.en-preview').count()).toBe(0)
+  await rewritten.click();await page.keyboard.press('Meta+z');await expect.poll(()=>page.locator('.en-document .bn-inline-content').allTextContents()).toContain('前文待改写的词句后文。')
+  if(generated==='改写后的词句'){
+    await original.hover();await page.getByRole('button',{name:'段落操作',exact:true}).click();const menu=page.locator('.en-block-menu');await menu.waitFor()
+    const layout=await menu.evaluate(el=>({height:el.clientHeight,scroll:el.scrollHeight,lines:[...el.querySelectorAll('.en-block-types:first-child button')].map(button=>{const range=document.createRange();range.selectNodeContents(button.lastChild);return range.getClientRects().length})}))
+    expect(layout.lines).toEqual([1,1,1,1,1]);expect(layout.scroll).toBeLessThanOrEqual(layout.height)
+    await page.setViewportSize({width:1100,height:400});await expect.poll(()=>menu.evaluate(el=>el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(392)
+    await menu.evaluate(el=>el.scrollTop=el.scrollHeight);expect(await menu.getByRole('button',{name:'删除段落',exact:true}).isVisible()).toBe(true);await page.keyboard.press('Escape');expect(await menu.count()).toBe(0)
+  }
  }finally{await context.close()}
 },15000)
 
@@ -96,7 +138,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     await page.getByRole('button', { name: '下一步', exact: true }).click()
     expect(await page.getByRole('dialog', { name: '文档目录' }).count()).toBe(0)
     await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor');editor.focus();const range=document.createRange();range.selectNodeContents(editor);range.collapse(false);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range)})
-    await page.keyboard.press('Enter');await page.keyboard.type('/');await expect.poll(()=>page.locator('.bn-suggestion-menu').isVisible()).toBe(true);await page.keyboard.press('Escape');await page.keyboard.press('Backspace')
+    await page.keyboard.press('Enter');await page.keyboard.type('/');await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(r=>r.method==='menu-sync').at(-1)?.input.items.length||0)).toBeGreaterThan(0);await page.keyboard.press('Escape');await page.keyboard.press('Backspace')
     await page.evaluate(()=>{const paragraph=[...document.querySelectorAll('.en-document .bn-inline-content')].find(el=>el.textContent==='目录展开时正文保持原位。');document.querySelector('.en-document .bn-editor').focus();const range=document.createRange();range.selectNodeContents(paragraph);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));paragraph.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}))})
     await page.getByRole('button',{name:/AI 改写/}).click()
     expect(await page.locator('.en-ai-selection').allTextContents()).toEqual(['目录展开时正文保持原位。'])
@@ -113,6 +155,8 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     }
     await page.evaluate(()=>window.resolveNoteSuggestion())
     await expect.poll(()=>page.locator('.en-inline-assistant .en-preview').isVisible()).toBe(true)
+    const previewLayout=await page.locator('.en-preview').evaluate(el=>({title:el.querySelector('header strong').getBoundingClientRect().x,text:el.querySelector('.bn-inline-content').getBoundingClientRect().x,actions:[...el.querySelectorAll('footer button')].map(button=>button.getBoundingClientRect().height)}))
+    expect(Math.abs(previewLayout.title-previewLayout.text)).toBeLessThanOrEqual(1);expect(Math.max(...previewLayout.actions)).toBeLessThanOrEqual(32)
     expect(await page.locator('.en-composer-area .en-preview').count()).toBe(0)
     expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(0);expect(await page.locator('.en-preview').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toContain('rgba');
     await page.getByRole('button',{name:'替换所选',exact:true}).click()

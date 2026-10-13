@@ -10,10 +10,11 @@ import { renderMarketArtifact } from '../../../packages/dsh-research-task-runtim
 import { readNoteGenerationStream } from './stream'
 import { saveNoteExport } from './export'
 import { buildResearchHtmlPreview } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
+import type { NotesNativeMenu } from '../../shared/notes-menu'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
-  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean
+  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
@@ -21,6 +22,8 @@ export function installNotesService(options: {
     const owner = options.owner(), session = input.sessionId
     if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
+      case 'menu-sync': if (!options.nativeMenu) throw Error('原生菜单不可用。'); options.nativeMenu.sync(input,owner); return {ok:true}
+      case 'menu-close': options.nativeMenu?.close(input.menuId); return {ok:true}
       case 'load': return { ...store.load(owner, session), owner }
       case 'save': return store.save(owner, session, input.revision, input.content, input.clientId)
       case 'draft': store.draft(owner, session, input.clientId, input.revision, input.content); return { ok: true }
@@ -74,5 +77,5 @@ export function installNotesService(options: {
       default: throw Error('不支持的笔记操作。')
     }
   })
-  return () => { active.forEach(c => c.abort()); active.clear(); options.ipcMain.removeHandler('notes:request') }
+  return () => { options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear(); options.ipcMain.removeHandler('notes:request') }
 }
