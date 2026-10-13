@@ -29,11 +29,12 @@ export function officialDatayesRoute(rpc) {
   const { name, arguments: args } = rpc.params
   if (name === 'search_api') {
     const result = search(args.query)
-    return result ? { result } : null
+    return result ? { result } : error('官网 MCP 积分服务目录中没有匹配接口。可用 get_catalog 查看分类；文字新闻、研报或会议纪要请使用当前可用网页检索或其他来源，不调用旧套餐服务。')
   }
-  if (!['get_api_info', 'call_api'].includes(name)) return null
+  if(name==='get_catalog')return {result:{content:[{type:'text',text:'官网 MCP 积分服务接口目录（目录不是业务数据）：\n'+registry.services.map(service=>service.name+'：'+service.apis.join(', ')).join('\n')}]}}
+  if (!['get_api_info', 'call_api'].includes(name)) return error('此工具不属于内置官网 MCP 积分取数路径。')
   const service = apis.get(args.nameEn)
-  if (!service) return null
+  if (!service) return error('接口不在已确认的官网 MCP 目录中，请先使用 search_api 或 get_catalog 查找，不会回退到旧综合套餐。')
   if (name === 'get_api_info') return { endpoint: service.url, service,
     params: { name: service.infoTool, arguments: { api_name: args.nameEn } }, definition: args.nameEn }
   let url

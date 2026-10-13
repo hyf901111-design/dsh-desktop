@@ -11,11 +11,15 @@ export function installSkillCommandBridge(document:Document,bridge:Pick<Integrat
   const data=(event as CustomEvent).detail
   if(!data || typeof data.requestId!=='string' || data.requestId.length>100)return
   if(data.action==='cancel'){pending.get(data.requestId)?.abort();pending.delete(data.requestId);return}
-  if(!['list','use','resolve'].includes(data.action) || disposed || pending.has(data.requestId))return
+  if(!['list','use','resolve','labels'].includes(data.action) || disposed || pending.has(data.requestId))return
   const controller=new AbortController(),epoch=generation;pending.set(data.requestId,controller)
   let result:unknown,error:string|undefined
   try {
-   if(data.action==='list'){
+   if(data.action==='labels'){
+    const reply=await bridge.request({type:'snapshot'})
+    if(reply.type!=='snapshot')throw Error('技能名称暂不可用。')
+    result={owner:reply.snapshot.ownerAccountId??'',skills:reply.snapshot.rows.filter(row=>row.kind==='skill'&&row.invocationName&&row.invocationLabel).map(row=>({invocationName:row.invocationName,label:row.invocationLabel,name:row.name})),tools:[...(reply.snapshot.historicalToolLabels??[]),...reply.snapshot.rows.filter(row=>row.kind==='connection').flatMap(row=>(row.tools??[]).filter(tool=>/^[A-Za-z0-9_]{1,57}$/.test(tool.id)).map(tool=>({wireName:'ework__'+tool.id,label:row.name+' · '+tool.name})))]}
+   }else if(data.action==='list'){
     const reply=await bridge.request({type:'snapshot'})
     if(reply.type!=='snapshot')throw Error('技能列表暂不可用，请重试。')
     result=reply.snapshot.rows.filter(row=>row.kind==='skill' && row.enabled && row.status!=='已停用').map(row=>({id:row.id,label:row.name,detail:row.description,revision:row.revision}))

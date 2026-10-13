@@ -10,6 +10,7 @@ import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
 import { patchFigmaFilePreview } from './figma-file-preview-client.mjs'
 import { patchIntegrationSkillComposer } from './patch-integration-skill-composer.mjs'
 import {patchSidebarSessionExperience} from './sidebar-session-recency.mjs'
+import {patchSkillConversationPresentation,patchSkillWorkspacePresentation,patchSkillToolPresentation} from './skill-presentation.mjs'
 import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -511,6 +512,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
       'lib/client.js',
       patchResearchBoardConversation
     ],
+    ['dsh-client-ui-tool','lib/client.js',patchSkillToolPresentation],
     ['dsh-client-ui-sidebar', 'lib/client.js', patchResearchBoardSidebar],
     ['dsh-client-ui-workspace', 'lib/client.js', patchResearchBoardWorkspace],
     [
@@ -529,7 +531,7 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
       )
     const before = await readFile(path, 'utf8')
     const patched = await patch(before)
-    const after = name === 'dsh-client-ui-conversation' ? patchLegacyDashboardPreview(patched) : patched
+    const after = name === 'dsh-client-ui-conversation' ? patchSkillConversationPresentation(patchLegacyDashboardPreview(patched)) : name === 'dsh-client-ui-workspace' ? patchSkillWorkspacePresentation(patched) : patched
     if (before !== after) await writeFile(path, after)
   }
 }

@@ -10,7 +10,7 @@ type Contribution={name:string;description:string;available(session:Session):boo
 export function installSkillCommand(deps:{document?:Document;command:{register(value:Contribution):()=>void};inputTriggers?:{registerSource(value:InputTriggerSource):()=>void};sessions:{subagentAddress(id:string):unknown}}) {
  const document=deps.document??globalThis.document,win=document.defaultView!
  const catalogs=new Map<string,{rows:Skill[];signal:AbortSignal}>(),pending=new Set<()=>void>()
- const exchange=(action:'list'|'use'|'resolve',args:Record<string,unknown>,signal?:AbortSignal)=>new Promise<unknown>((resolve,reject)=>{
+ const exchange=(action:'list'|'use'|'resolve'|'labels',args:Record<string,unknown>,signal?:AbortSignal)=>new Promise<unknown>((resolve,reject)=>{
   if(signal?.aborted){reject(Error('技能菜单已关闭。'));return}
   const requestId=win.crypto.randomUUID()
   const cleanup=()=>{clearTimeout(timer);win.removeEventListener('sherlock:skill-menu-reply',onReply);signal?.removeEventListener('abort',cancel);pending.delete(cancel)}
@@ -20,8 +20,11 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
   pending.add(cancel);signal?.addEventListener('abort',cancel,{once:true});win.addEventListener('sherlock:skill-menu-reply',onReply)
   win.dispatchEvent(new win.CustomEvent('sherlock:skill-menu-request',{detail:{requestId,action,...args}}))
  })
- const reset=()=>{catalogs.clear();for(const cancel of [...pending])cancel()}
+ let stopped=false
+ const refreshLabels=()=>{void exchange('labels',{}).then(result=>{if(!stopped)win.dispatchEvent(new win.CustomEvent('sherlock:skill-presentation',{detail:result}))},()=>{})}
+ const reset=()=>{catalogs.clear();for(const cancel of [...pending])cancel();if(!stopped)refreshLabels()}
  win.addEventListener('sherlock:skill-menu-reset',reset)
+ refreshLabels();const labelTimer=win.setInterval(refreshLabels,10000)
  const unregisterReference=deps.inputTriggers?.registerSource({trigger:'/',name:SKILL_REFERENCE_SOURCE,order:3,candidates:async()=>[],onPick:()=>undefined,codec:{
   clipboardText:(ref:string)=>`/${decodeSkillReference(ref).label}`,
   serialize:async(ref:string,signal:AbortSignal)=>{
@@ -46,5 +49,5 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
    await exchange('use',{skill,sessionId:session.sessionId,commandSegment:session.skillCommandSegment},catalog!.signal)
   }
  }})
- return ()=>{unregister();unregisterReference?.();reset();win.removeEventListener('sherlock:skill-menu-reset',reset)}
+ return ()=>{stopped=true;win.clearInterval(labelTimer);unregister();unregisterReference?.();reset();win.removeEventListener('sherlock:skill-menu-reset',reset)}
 }

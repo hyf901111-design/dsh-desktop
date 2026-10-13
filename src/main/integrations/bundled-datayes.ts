@@ -1,9 +1,9 @@
 import {createHash} from 'node:crypto'
-import tools from '../../../config/datayes-tools.json'
+import tools from '../../../config/datayes-builtin-tools.json'
 import type {Connection} from '../../shared/integrations'
 
 export const DATAYES_GATEWAY='https://updates.evanarts.com/v1/datayes/mcp'
-export const DATAYES_TOOLS=tools.map(tool=>({...tool,effect:'unknown' as const}))
+export const DATAYES_TOOLS=tools.map(tool=>({...tool,effect:'read' as const}))
 export const isBundledDatayesId=(id:unknown):id is string=>typeof id==='string'&&/^builtin:datayes-mcp:[a-f0-9]{16}$/.test(id)
 export const bundledDatayesId=(owner:string)=>'builtin:datayes-mcp:'+createHash('sha256').update(owner).digest('hex').slice(0,16)
 export interface BundledDatayesOptions {

@@ -236,3 +236,5 @@ describe('managed integration runtime against real Harness services and HTTP bri
     expect(() => createIntegrationRuntime(f.ctx, { env: { EWORK_INTEGRATION_BRIDGE: JSON.stringify({ url: 'https://example.com', token: 'fixture-token' }) } })).toThrow()
   })
 })
+
+it('a retained proxy cannot contact a deleted MCP after the authoritative connection and tools disappear',async()=>{const f=await fixture(),proxy=f.ctx.tools.get('ework__lookup',f.a);f.snapshot.connections=[];f.snapshot.tools=[];f.snapshot.revision++;await expect(proxy.execute({query:'cached'},{agent:f.a,callId:'deleted-call',signal:new AbortController().signal})).rejects.toThrow();expect(f.received).toHaveLength(0);expect(f.ctx.tools.get('ework__lookup',f.a)).toBeUndefined()})

@@ -113,8 +113,7 @@ describe('managed skill enablement through actual Harness consumers', () => {
     expect((await f.ctx.skills.list(f.lookup)).filter(isUserInvocable)).toEqual([])
     expect(await f.ctx.skills.get(managedAlias, f.lookup)).toBeUndefined()
     expect((await f.load()).isError).toBe(true)
-    const decision = await f.step([createUserMessage({ content: [{ type: 'text', text: `/${managedAlias} 写报告` }], source: { kind: 'user' } })])
-    expect(decision.messages.some(message => message.source?.kind === 'skill-invocation')).toBe(false)
+    await expect(f.step([createUserMessage({ content: [{ type: 'text', text: `/${managedAlias} 写报告` }], source: { kind: 'user' } })])).rejects.toThrow('所选技能未能加载')
     expect(f.reads).toHaveLength(before)
   })
 
@@ -152,3 +151,5 @@ describe('managed skill enablement through actual Harness consumers', () => {
     expect((await f.ctx.skills.list(f.lookup)).length).toBe(0)
   })
 })
+
+it('rejects a removed explicitly selected skill before entering the model, including a still-cached alias',async()=>{const f=await fixture();await f.load();f.snapshot.skills=[];f.snapshot.revision++;await expect(f.step([createUserMessage({content:[{type:'text',text:`/${managedAlias} 分析`}],source:{kind:'user'}})])).rejects.toThrow('所选技能未能加载')})

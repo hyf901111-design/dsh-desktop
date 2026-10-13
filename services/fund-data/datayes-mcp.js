@@ -1,9 +1,8 @@
 import { authenticate, authError } from '../accounts/auth.js'
-import catalog from '../../config/datayes-tools.json' with { type: 'json' }
+import catalog from '../../config/datayes-builtin-tools.json' with { type: 'json' }
 import { officialDatayesRoute, officialDatayesResult } from './datayes-official.js'
 
 export const DATAYES_PATH = '/v1/datayes/mcp'
-const UPSTREAM = 'https://gw.datayes.com/rwtracker/datayes-mcp'
 const TOOL_NAMES = new Set(catalog.map(tool => tool.name))
 const REQUEST_BYTES = 256 * 1024
 const RESPONSE_BYTES = 8 * 1024 * 1024
@@ -91,7 +90,7 @@ async function readRpc(response, id, signal) {
   }
 }
 
-async function upstreamRpc(env, method, params, id, session, signal, endpoint = UPSTREAM) {
+async function upstreamRpc(env, method, params, id, session, signal, endpoint) {
   let response
   try { response = await (env.fetch ?? fetch)(endpoint, {
     method: 'POST', redirect: 'manual', signal,
@@ -138,6 +137,7 @@ export async function handleDatayesMcp(request, env) {
   if (rpc.method === 'initialize') return json({ jsonrpc: '2.0', id: rpc.id, result: {
     protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'EWork DataYes', version: '1.0.0' }
   } })
+  if (rpc.method === 'tools/list') return json({jsonrpc:'2.0',id:rpc.id,result:{tools:catalog}})
   if (rpc.method === 'ping') return json({ jsonrpc: '2.0', id: rpc.id, result: {} })
   let usageId
   let stage = 'usage'
@@ -153,7 +153,8 @@ export async function handleDatayesMcp(request, env) {
       status = 200
       return json({ jsonrpc: '2.0', id: rpc.id, result: route.result })
     }
-    const endpoint = route?.endpoint ?? UPSTREAM
+    const endpoint = route?.endpoint
+    if(!endpoint)throw new Error('Unsupported official MCP route')
     stage = 'initialize'
     const initialization = await upstreamRpc(env, 'initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'EWork', version: '1.1.1' } }, 1, undefined, signal, endpoint)
     if (initialization.reply.error) throw new Error('Initialization failed')

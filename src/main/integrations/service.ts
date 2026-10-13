@@ -24,6 +24,7 @@ import { manifestDigest, compareVersions } from './manifest';
 import { LegacySkillMigration, type LegacySkillRoot } from './legacy-skills';
 import { previewLegacyConnections, type LegacyConnectionSource } from './legacy-connections';
 import { loadBundledSkills, readBundledSkill, isBundledSkillId, type BundledSkill } from './bundled-skills';
+import datayesHistoricalTools from '../../../config/datayes-tools.json';
 import {bundledDatayesConnection,bundledDatayesId,isBundledDatayesId,DATAYES_TOOLS,type BundledDatayesOptions} from './bundled-datayes';
 export interface IntegrationServiceOptions {
     root: string;
@@ -689,7 +690,7 @@ export class IntegrationService {
                 if (c.ownerAccountId === owner) {
                     const tools = Object.values(state.tools).filter(tool => tool.connectionId === c.id);
                     const bundled=isBundledDatayesId(c.id)&&!!this.options.bundledDatayes;
-                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'金融数据、研报、公告、会议纪要及宏观行业检索':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&c.enabled&&!this.options.bundledDatayes?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:true,toolsReadonly:true}:{}), connectionType: this.draft(c).type,
+                    rows.push({ id: c.id, kind: 'connection', tab: c.kind === 'mcp' ? 'mcp' : 'apps', name: c.name, description: bundled?'官网 MCP 积分服务：股票、基金、指数、财务与估值等结构化数据':c.kind === 'api' ? '自定义 API' : c.kind === 'mcp' ? 'MCP 工具服务器' : c.providerId, enabled: c.enabled, status: bundled&&c.enabled&&!this.options.bundledDatayes?.authenticated()?'请先登录 EWork':rowStatus(c), source: bundled?'EWork 内置':c.accountLabel ?? '个人连接', detail: c.lastError, revision: c.revision, configurable: !bundled, removable: !bundled, ...(bundled?{toggleable:true,toolsReadonly:true}:{}), connectionType: this.draft(c).type,
                         connectionSummary: {
                             workspaceLabel: c.workspaceGrant.mode === 'all-owned' ? '当前账号的所有工作区' : c.workspaceGrant.workspaceIds.length ? `已选择 ${c.workspaceGrant.workspaceIds.length} 个工作区` : '未选择工作区',
                             authLabel: bundled?'EWork 账号授权 · 云端密钥已配置':c.providerId === 'google-calendar' ? `OAuth 2.0 · ${c.authState === 'connected' ? '已授权' : c.authState === 'expired' ? '授权已过期' : '待授权'}` : c.config.auth.type === 'none' ? '无需认证' : c.config.auth.credentialRef ? `${c.config.auth.type === 'bearer' ? 'Token' : 'API Key'} · 已配置` : '尚未配置凭据',
@@ -699,15 +700,15 @@ export class IntegrationService {
                 }
             for (const bundled of this.bundledSkills.values()) {
                 const skill = this.bundledSkill(bundled.skill.id, state)!;
-                rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: skill.enabled, status: skill.enabled ? '已启用' : '已停用', source: skill.source, revision: skill.revision, toggleable: true, removable: false });
+                rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: skill.enabled, status: skill.enabled ? '已启用' : '已停用', source: skill.source, revision: skill.revision, invocationName:`ework-skill-${createHash('sha256').update(skill.id).digest('hex').slice(0,16)}`,invocationLabel:skillEnglishName('',skill.id,skill.name),toggleable: true, removable: false });
             }
             for (const skill of Object.values(state.skills))
                 if (!skill.ownerAccountId || skill.ownerAccountId === owner) {
                     const plugin = skill.ownerPluginId ? state.plugins[skill.ownerPluginId] : undefined;
-                    rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: skill.enabled, status: skill.enabled && (!plugin || plugin.enabled) ? '已启用' : '已停用', source: plugin ? `来自${plugin.name}` : skill.source, revision: skill.revision, removable: true });
+                    rows.push({ id: skill.id, kind: 'skill', tab: 'skills', name: skill.name, description: skill.description, enabled: skill.enabled, status: skill.enabled && (!plugin || plugin.enabled) ? '已启用' : '已停用', source: plugin ? `来自${plugin.name}` : skill.source, revision: skill.revision, invocationName:`ework-skill-${createHash('sha256').update(skill.id).digest('hex').slice(0,16)}`,invocationLabel:skillEnglishName('',skill.id,skill.name),removable: true });
                 }
         }
-        return { revision: state.revision, rows, taskCapabilities: projectTaskCapabilities(state, owner), compatibilityStatus: owner ? this.compatibility.get(owner) : undefined, runtimeStatus: !owner ? '等待账户身份确认' : Date.now() - this.runtimeSeenAt < 30000 ? '运行时已连接' : '运行时尚未连接' };
+        return { revision: state.revision, ownerAccountId:owner??'',rows, historicalToolLabels: rows.filter(row=>row.kind==='connection'&&isBundledDatayesId(row.id)).flatMap(row=>datayesHistoricalTools.map(tool=>({wireName:`ework__t_${hash([row.id,tool.name]).slice(0,32)}`,label:row.name+' · '+tool.name}))),taskCapabilities: projectTaskCapabilities(state, owner), compatibilityStatus: owner ? this.compatibility.get(owner) : undefined, runtimeStatus: !owner ? '等待账户身份确认' : Date.now() - this.runtimeSeenAt < 30000 ? '运行时已连接' : '运行时尚未连接' };
     }
     dependencies(entityId: string): string[] { const state = this.store.snapshot(), tasks = Object.entries(state.taskBindings).filter(([, bindings]) => bindings.some(b => b.entityId === entityId)); return [...tasks.map(([task]) => `定时任务 ${task} 使用此能力`), '未显式绑定的对话或任务仍会在执行时检查权限；已有内容会保留']; }
     runtimeSnapshot() { this.runtimeSeenAt = Date.now(); const owner = this.options.getOwnerId(), state = this.store.snapshot(); return { revision: state.revision, runtimeEpoch: this.runtimeEpoch, ownerAccountId: owner ?? '', managedSkillSources: this.managedSkillSources, connections: Object.values(state.connections).filter(c => c.ownerAccountId === owner).map(({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants }) => ({ id, revision, enabled, ownerAccountId, workspaceGrant, authState, toolGrants, unattendedToolGrants })), tools: Object.values(state.tools).filter(tool => state.connections[tool.connectionId]?.ownerAccountId === owner), skills: [...Object.values(state.skills).filter(skill => !skill.ownerAccountId || skill.ownerAccountId === owner), ...(owner ? [...this.bundledSkills.keys()].map(id => this.bundledSkill(id, state)!) : [])], plugins: Object.values(state.plugins).filter(p => !p.ownerAccountId || p.ownerAccountId === owner).map(({ id, enabled }) => ({ id, enabled })) }; }

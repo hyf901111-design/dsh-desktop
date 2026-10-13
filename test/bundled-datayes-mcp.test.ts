@@ -19,11 +19,11 @@ async function serviceFixture(){
  const row=async()=>{const reply=await service.request({type:'snapshot'});return (reply as any).snapshot.rows.find((r:any)=>r.id.startsWith('builtin:datayes-mcp:'))}
  return {service,row,setOwner:(value:string)=>{owner=value;service.rotateIdentity()}}
 }
-it('新用户自动获得默认开启的10个通联工具，内置连接可以停用，不能删除或改写',async()=>{
+it('新用户自动获得默认开启的4个官网通联工具，内置连接可以停用，不能删除或改写',async()=>{
  const f=await serviceFixture(),row=await f.row()
- expect(row).toMatchObject({kind:'connection',tab:'mcp',enabled:true,toggleable:true,removable:false,configurable:false,toolCount:10,source:'EWork 内置'})
+ expect(row).toMatchObject({kind:'connection',tab:'mcp',enabled:true,toggleable:true,removable:false,configurable:false,toolCount:4,source:'EWork 内置'})
  const snapshot=f.service.runtimeSnapshot(),c=snapshot.connections.find(item=>item.id===row.id)
- expect(c?.toolGrants).toHaveLength(10)
+ expect(c?.toolGrants).toHaveLength(4)
  expect(snapshot.tools.filter(tool=>tool.connectionId===row.id).map(tool=>tool.rawName)).toContain('call_api')
  const meta={requestId:'locked-attempt',expectedRevision:row.revision}
  for(const command of [{type:'uninstall',kind:'connection',id:row.id,meta},{type:'disconnect',id:row.id,meta},{type:'save-connection',draft:{id:row.id},meta},{type:'save-connection',id:'misleading-extra-id',draft:{id:row.id},meta}])
@@ -63,10 +63,10 @@ function envFixture(){
  })}}
 }
 it('云端鉴权后只代理固定通联服务，以Secret替换用户认证且不公开上游Session',async()=>{
- const f=envFixture(),response=await handleRequest(request(),f.env)
+ const f=envFixture(),response=await handleRequest(request('tools/call',{name:'call_api',arguments:{nameEn:'getMktEqudEval',http_method:'GET',url:'https://gw.datayes.com/aladdin_proxy/data_api/api/market/getMktEqudEval.json',url_params:{ticker:'600519'}}}),f.env)
  expect(response.status).toBe(200);expect(response.headers.has('mcp-session-id')).toBe(false)
- expect(await response.json()).toMatchObject({id:7,result:{tools:[{name:'get_catalog'}]}})
- expect(f.calls.every(c=>c.url==='https://gw.datayes.com/rwtracker/datayes-mcp')).toBe(true)
+ expect(await response.json()).toMatchObject({id:7,result:{content:[{type:'text',text:'真实导航结果'}]}})
+ expect(f.calls.every(c=>c.url==='https://dataapi-mcp-server.datayes.com/stock-mkt/mcp')).toBe(true)
  expect(f.env.fetch.mock.calls.every(([,options])=>options.redirect==='manual')).toBe(true)
  expect(f.calls.every(c=>new Headers(c.headers).get('authorization')==='Bearer server-only-datayes-key')).toBe(true)
  expect(f.calls.some(c=>new Headers(c.headers).has('cf-connecting-ip'))).toBe(false)
@@ -74,7 +74,7 @@ it('云端鉴权后只代理固定通联服务，以Secret替换用户认证且�
 it('上游重定向立即失败，密钥不跟随到新地址，错误只包含受控诊断',async()=>{
  const f=envFixture()
  f.env.fetch=vi.fn(async()=>new Response(null,{status:302,headers:{location:'https://untrusted.invalid/collect'}}))
- const response=await handleRequest(request(),f.env)
+ const response=await handleRequest(request('tools/call',{name:'get_api_info',arguments:{nameEn:'getMktEqudEval'}}),f.env)
  expect(response.status).toBe(503)
  expect(response.headers.get('x-ework-datayes-stage')).toBe('initialize')
  expect(response.headers.get('x-ework-datayes-status')).toBe('302')
@@ -95,11 +95,10 @@ it('MCP SDK经账号传输完成发现与工具调用，上游使用独立会话
  const transport=new McpSupervisor(new CredentialVault(root,encryption),(body,signal)=>handleRequest(new Request(request().url,{method:'POST',headers:request().headers,body,signal}),f.env))
  cleanup.push(async()=>{await transport.disposeAll();await rm(root,{recursive:true,force:true})})
  const connection=bundledDatayesConnection('account-one',true)
- expect((await transport.connect(connection,AbortSignal.timeout(5000))).tools.map(t=>t.name)).toEqual(['get_catalog'])
+ expect((await transport.connect(connection,AbortSignal.timeout(5000))).tools.map(t=>t.name)).toEqual(['search_api','get_catalog','get_api_info','call_api'])
  const result=await transport.invoke(connection.id,'get_catalog',{},AbortSignal.timeout(5000))
- expect(JSON.stringify(result)).toContain('真实导航结果')
- expect(f.calls.filter(c=>c.body.method==='initialize')).toHaveLength(2)
- expect(f.calls.filter(c=>c.body.method==='tools/call')[0].headers['mcp-session-id']).toBe('private-upstream-session')
+ expect(JSON.stringify(result)).toContain('官网 MCP 积分服务接口目录')
+ expect(f.calls).toHaveLength(0)
 })
 it('内置服务不可用时立即结束发现，不以重复请求掩盖服务错误',async()=>{
  const root=await mkdtemp(join(tmpdir(),'datayes-failure-'))
@@ -116,11 +115,11 @@ it('支持SSE工具结果并隐藏上游回显的Key；服务错误不回传敏�
   const event='data: '+JSON.stringify({jsonrpc:'2.0',id:2,result:{content:[{type:'text',text:'result server-only-datayes-key'}]}})+'\n\n'
   return new Response(new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode(event))}}),{headers:{'content-type':'text/event-stream','mcp-session-id':'private'}})
  })
- const response=await handleRequest(request('tools/call',{name:'get_catalog',arguments:{}}),f.env)
+ const response=await handleRequest(request('tools/call',{name:'call_api',arguments:{nameEn:'getMktEqudEval',http_method:'GET',url:'https://gw.datayes.com/aladdin_proxy/data_api/api/market/getMktEqudEval.json'}}),f.env)
  expect(response.status).toBe(200)
  expect(await response.text()).toContain('result [redacted]')
  f.env.fetch=vi.fn(async()=>new Response('server-only-datayes-key',{status:401}))
- const failed=await handleRequest(request(),f.env)
+ const failed=await handleRequest(request('tools/call',{name:'get_api_info',arguments:{nameEn:'getMktEqudEval'}}),f.env)
  expect(failed.status).toBe(503);expect(await failed.text()).not.toContain('server-only-datayes-key')
 })
 it('拒绝批量、分页与超大参数请求，防止绕过固定工具边界',async()=>{
@@ -152,7 +151,7 @@ it('内置通联额度错误仅解释当前接口，不误判整个账号，其�
   await transport.connect(connection,signal)
   const first=await transport.invoke(connection.id,'call_api',{nameEn:'market_snapshot',ticker:'600519'},signal)
   expect(first).toMatchObject({isError:true,errorCode:'RUNTIME_UNAVAILABLE'})
-  expect(first.content[0]?.text).toContain('当前通联接口返回额度不足')
+  expect(first.content[0]?.text).toContain('当前通联接口返回 HTTP 402')
   expect(first.content[0]?.text).toContain('不代表其他数据包或整个账号')
   expect(first.content[0]?.text).not.toContain('ai.datayes.com/pricing')
   const repeated=await transport.invoke(connection.id,'call_api',{nameEn:'market_snapshot',ticker:'000858'},signal)

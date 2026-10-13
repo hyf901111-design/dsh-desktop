@@ -1,0 +1,56 @@
+/** Shared, account-scoped presentation. Stable IDs remain the execution authority. */
+export function skillPresentationStore() {
+ const key='__eworkSkillPresentationV1';if(window[key])return window[key]
+ let owner='',version=0;const skills=new Map(),tools=new Map(),listeners=new Set()
+ const notify=()=>{version++;for(const fn of listeners)fn()}
+ const store={skills,tools,version:()=>version,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},clear:()=>{owner='';skills.clear();tools.clear();notify()},set:value=>{
+  if(!value||typeof value.owner!=='string'||!Array.isArray(value.skills)||!Array.isArray(value.tools))return
+  if(owner!==value.owner){skills.clear();tools.clear();owner=value.owner}
+  for(const row of value.skills)if(/^ework-skill-[a-f0-9]{16}$/.test(row.invocationName)&&/^[a-zA-Z][a-zA-Z0-9_-]{0,99}$/.test(row.label)&&typeof row.name==='string')skills.set(row.invocationName,{label:row.label,name:row.name})
+  tools.clear();for(const row of value.tools)if(/^ework__\w+$/.test(row.wireName)&&typeof row.label==='string')tools.set(row.wireName,row.label)
+  notify()
+ }}
+ window.addEventListener('sherlock:skill-presentation',event=>store.set(event.detail))
+ window.addEventListener('sherlock:skill-menu-reset',store.clear)
+ window[key]=store;return store
+}
+export function projectSkillText(text) {
+ if(typeof text!=='string')return text
+ return text.replace(/(^|\s)\/((?:ework-skill-)[a-f0-9]{16})(?=\s|$)/g,(_match,prefix,name)=>prefix+'/'+(skillPresentationStore().skills.get(name)?.label||'removed-skill'))
+}
+export function skillDisplayName(name) {
+ const row=skillPresentationStore().skills.get(name)
+ return row?row.name+' · /'+row.label:projectSkillText('/'+name)
+}
+export function useSkillPresentation() {
+ const store=skillPresentationStore();return (0,react.useSyncExternalStore)(store.subscribe,store.version,store.version)
+}
+function helpers(source,anchor){const marker='/* ework:skill-presentation:v1 */';if(source.includes(marker))return source;if(source.split(anchor).length!==2)throw Error('Skill presentation entry drifted');return source.replace(anchor,marker+'\n'+[skillPresentationStore,projectSkillText,skillDisplayName,useSkillPresentation].map(f=>f.toString()).join('\n')+'\n'+anchor)}
+function once(source,anchor,next){if(source.split(anchor).length!==2)throw Error('Skill presentation anchor drifted: '+anchor.slice(0,85));return source.replace(anchor,next)}
+export function patchSkillConversationPresentation(source) {
+ const marker='/* ework:skill-conversation-presentation:v1 */';if(source.includes(marker))return source
+ source=helpers(source,'function projectUserText(text, openFile) {')
+ source=once(source,'function UserStyleBubble({ content, imageLoader, actions, openFile, pending = false, t }) {','function UserStyleBubble({ content, imageLoader, actions, openFile, pending = false, t }) {\nuseSkillPresentation();')
+ source=once(source,'"data-ref-chip": label.startsWith("@") ? "subagent" : "skill",\n\t\t\t\t\tchildren: label','"data-ref-chip": label.startsWith("@") ? "subagent" : "skill",\n\t\t\t\t\tchildren: projectSkillText(label)')
+ source=once(source,'actions?.(research.text)','actions?.(projectSkillText(research.text))')
+ source=once(source,'function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, rename, t }) {','function ConversationSessionHeader({ sessionId, useSession, useSessions, useStore, actions, renderSlot, views, open, rename, t }) {\nuseSkillPresentation();')
+ // Only the JSX title projection, never the summary identity or title-edit RPC.
+ source=source.replaceAll('?? summary.displayTitle) : summary.displayTitle','?? projectSkillText(summary.displayTitle)) : projectSkillText(summary.displayTitle)')
+ source=once(source,'function ContextInjectionRow({ content, source, provenance, form, t }) {','function ContextInjectionRow({ content, source, provenance, form, t }) {\nuseSkillPresentation();')
+ source=once(source,'title: t(provenance.role === "recall" ? "message.contextRecall" : "message.contextInjection"),','"data-ework-loaded-skill":source?.kind==="skill-invocation"?source.name:undefined,\ntitle: source?.kind==="skill-invocation" ? ((document.documentElement.dataset.odysseyLocale==="en"?"Loaded skill: ":"已加载技能：")+skillDisplayName(source.name)) : t(provenance.role === "recall" ? "message.contextRecall" : "message.contextInjection"),')
+ source=once(source,'children: provenance.label','children: source?.kind==="skill-invocation" ? null : provenance.label')
+ source=once(source,'if (node?.kind === "command") return "run-change";','if(node?.kind==="context"&&node.data?.source?.kind==="skill-invocation")return "tools-skills";\nif (node?.kind === "command") return "run-change";')
+ source=once(source,'node?.kind === "assistant-step" || node?.kind === "context" || typeof node?.key !== "string"','node?.kind === "assistant-step" || node?.kind === "context" && node.data?.source?.kind!=="skill-invocation" || typeof node?.key !== "string"')
+ source=once(source,'const routedNode = node;','useSkillPresentation();\nconst managedToolLabel=node?.kind==="tool-call"?skillPresentationStore().tools.get(node.data?.root?.name??node.data?.root?.call?.name):undefined;\nconst routedNode=managedToolLabel?{...node,data:{...node.data,root:{...node.data.root,eworkToolLabel:managedToolLabel}}}:node;')
+ return source+'\n'+marker
+}
+export function patchSkillWorkspacePresentation(source){
+ const marker='/* ework:skill-workspace-presentation:v1 */';if(source.includes(marker))return source
+ source=helpers(source,'function useSidebarRecencyList(list) {')
+ source=once(source,'function useSidebarRecencyList(list) {','function useSidebarRecencyList(list) {\nconst skillLabels=useSkillPresentation();')
+ source=once(source,'[id,{...s,updatedAt:Math.max(s.updatedAt||s.createdAt||0,times[id]||0)}]','[id,{...s,title:projectSkillText(s.title),displayTitle:projectSkillText(s.displayTitle),updatedAt:Math.max(s.updatedAt||s.createdAt||0,times[id]||0)}]')
+ source=once(source,'}},[list,usage]);','}},[list,usage,skillLabels]);')
+ return source+'\n'+marker
+}
+
+export function patchSkillToolPresentation(source){const marker='/* ework:managed-tool-origin:v1 */';if(source.includes(marker))return source;const start=source.indexOf('function GenericToolCard('),end=source.indexOf('//#endregion',start);if(start<0||end<0)throw Error('Generic tool card missing');const part=once(source.slice(start,end),'title: model.title,','title: block.eworkToolLabel ?? model.title,');return source.slice(0,start)+part+source.slice(end)+'\n'+marker}

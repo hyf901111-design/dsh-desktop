@@ -69,3 +69,6 @@ it('新准则财报名称中的括号不遮蔽利润表接口，避免误报没�
  expect(reply.result.content[0].text).toContain('合并利润表')
  expect(f.calls).toHaveLength(0)
 })
+
+it('内置工具目录只包含官网积分取数路径，旧套餐资料检索被拒绝且不联系旧入口',async()=>{const f=fixture();const request=new Request('https://updates.evanarts.com/v1/datayes/mcp',{method:'POST',headers:{authorization:'Bearer '+'a'.repeat(64),'content-type':'application/json','cf-connecting-ip':'192.0.2.1'},body:JSON.stringify({jsonrpc:'2.0',id:9,method:'tools/list'})});const reply=await(await handleRequest(request,f.env)).json();expect(reply.result.tools.map(t=>t.name)).toEqual(['search_api','get_catalog','get_api_info','call_api']);expect(f.calls).toHaveLength(0);const removed=await handleRequest(req('ai_search',{query:'机场袭击'}),f.env);expect(removed.status).toBe(400);expect(f.calls).toHaveLength(0);const unknown=await(await handleRequest(req('get_api_info',{nameEn:'unverified_api'}),f.env)).json();expect(unknown.result.isError).toBe(true);expect(f.calls).toHaveLength(0)})
+it('未命中的接口搜索返回清晰的边界和数据分类，不回落到旧综合套餐',async()=>{const f=fixture(),reply=await(await handleRequest(req('search_api',{query:'机场无人机最新新闻'}),f.env)).json();expect(reply.result.content[0].text).toContain('官网');expect(f.calls).toHaveLength(0)})

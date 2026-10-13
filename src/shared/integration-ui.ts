@@ -13,6 +13,8 @@ export type IntegrationRow = {
     source: string;
     detail?: string;
     revision: number;
+    invocationName?: string;
+    invocationLabel?: string;
     toolCount?: number;
     tools?: Array<{
         id: string;
@@ -42,6 +44,9 @@ export type TaskCapabilitySummary = {
     tools: Array<{ id: string; name: string; description: string; effect: 'read' | 'write' | 'destructive' | 'unknown'; schemaDigest: string; allowed: boolean; unavailableReason?: string }>;
 };
 export type IntegrationSnapshot = {
+    ownerAccountId?: string;
+    /** Historical names only; this projection never registers callable tools. */
+    historicalToolLabels?: Array<{wireName:string;label:string}>;
     revision: number;
     rows: IntegrationRow[];
     runtimeStatus?: string;

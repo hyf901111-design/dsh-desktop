@@ -167,8 +167,7 @@ describe('IntegrationService → authenticated bridge → Harness tools and skil
     expect(await f.ctx.skills.get(alias, lookup)).toBeUndefined()
     expect((await f.invoke('skill', { name: alias })).isError).toBe(true)
     const messages = [createUserMessage({ content: [{ type: 'text', text: `/${alias} 编写报告` }], source: { kind: 'user' } })]
-    const slash = await f.ctx.waterfall(scopeTarget(f.ctx, f.a), 'agent/pre-step', { agent: f.a, messages, turn: 0, step: 0, signal: new AbortController().signal }, () => Promise.resolve({ kind: 'enter', messages }))
-    expect(slash.messages.some(message => message.source?.kind === 'skill-invocation')).toBe(false)
+    await expect(f.ctx.waterfall(scopeTarget(f.ctx, f.a), 'agent/pre-step', { agent: f.a, messages, turn: 0, step: 0, signal: new AbortController().signal }, () => Promise.resolve({ kind: 'enter', messages }))).rejects.toThrow('所选技能未能加载')
     expect((await f.invoke('skill', { name: sibling })).content[0].text).toContain('资料核验')
     expect(f.service.runtimeSnapshot().plugins.find(plugin => plugin.id === kept.ownerPluginId)?.enabled).toBe(true)
     expect(f.requests).toHaveLength(0)
@@ -205,7 +204,7 @@ describe('IntegrationService → authenticated bridge → Harness tools and skil
     expect((await f.ctx.skills.list(lookup)).map(skill => skill.name)).not.toContain(alias)
     expect(await f.ctx.skills.get(alias, lookup)).toBeUndefined()
     expect((await f.invoke('skill', { name: alias })).isError).toBe(true)
-    expect((await slash()).messages.some(message => message.source?.kind === 'skill-invocation')).toBe(false)
+    await expect(slash()).rejects.toThrow('所选技能未能加载')
     expect(f.requests).toHaveLength(0)
   })
 })
