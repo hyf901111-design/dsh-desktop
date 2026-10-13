@@ -8,7 +8,7 @@ import { BlockNoteView } from '@blocknote/mantine'
 import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useExtensionState } from '@blocknote/react'
 import * as Y from 'yjs'
 import { noteOutline, noteText, canApplySuggestion, restoreNoteDraft, noteSuggestionPreview, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
-import collapse from '../../../build/notes/toc-collapse.svg?inline'
+import { NotesOutline } from './outline'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[]}
@@ -85,7 +85,7 @@ export function NotesApp(props: Props) {
 }
 
 function NotesEditor(props: Props & { initial: NoteContent & { revision: number }; recovery?: NoteLoad['draft']; recovering: boolean; onRecovery(restore: boolean): void; onReload(): void }) {
-  const [title, setTitle] = useState(props.initial.title), [status, setStatus] = useState(props.recovery ? '发现本地草稿' : '已保存'), [error, setError] = useState(''), [outline, setOutline] = useState<any[]>([]), [toc, setToc] = useState(window.innerWidth > 1200), [active, setActive] = useState(''), [preview, setPreview] = useState<NoteSuggestionPreview & {nativeComposer?:ComposerAdmission}>(), [compare, setCompare] = useState(false)
+  const [title, setTitle] = useState(props.initial.title), [status, setStatus] = useState(props.recovery ? '发现本地草稿' : '已保存'), [error, setError] = useState(''), [outline, setOutline] = useState<any[]>([]), [active, setActive] = useState(''), [preview, setPreview] = useState<NoteSuggestionPreview & {nativeComposer?:ComposerAdmission}>(), [compare, setCompare] = useState(false)
   const client = useRef((props.initial as any).clientId || crypto.randomUUID()), revision = useRef(props.initial.revision), titleRef = useRef(title), scroll = useRef<HTMLDivElement>(null), saveTimer = useRef<ReturnType<typeof setTimeout>>(), saveQueue = useRef(Promise.resolve()), disposed = useRef(false), request = useRef(''), epoch = useRef(0), selection = useRef({ text: '', from: 0, to: 0, cursor: '' }), lastWritten = useRef(''), latest = useRef<NoteContent>(props.initial)
   titleRef.current = title
   const doc = useMemo(() => { const value = new Y.Doc(); if (props.initial.yjs) Y.applyUpdate(value, Uint8Array.from(atob(props.initial.yjs), c => c.charCodeAt(0))); return value }, [])
@@ -118,7 +118,6 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     window.addEventListener('keydown', flush)
     return () => { disposed.current = true; epoch.current++; clearTimeout(saveTimer.current); off(); offSelection(); doc.getMap('threads').unobserveDeep(commentChanged); window.removeEventListener('keydown', flush); if (request.current) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: request.current }); save() }
   }, [])
-  useEffect(() => { const resize = () => { if (window.innerWidth <= 1200) setToc(false) }; window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize) }, [])
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
   const paste = async (event?: React.ClipboardEvent) => {
@@ -181,8 +180,8 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   },[props.sessionId,props.recovery])
   const exportNote = async () => { try { const markdown = '# ' + (title || '无标题文档') + '\n\n' + await editor.blocksToMarkdownLossy(editor.document); const blob = new Blob([markdown], { type: 'text/markdown' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = (title || '无标题文档').replace(/[\\/:*?"<>|]/g, '_') + '.md'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) } catch (e) { setError((e as Error).message) } }
   const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate }), [props.bridge, props.sessionId, props.dark, props.navigate])
-  return <Context.Provider value={ctx}><div className="en-body" data-toc-open={toc}>
-    <aside className="en-toc"><div className="en-toc-heading"><span>目录</span><button aria-label={toc ? '收起目录' : '展开目录'} title={toc ? '收起目录' : '展开目录'} onClick={() => setToc(!toc)}><img src={collapse} width="16" height="16" /></button></div>{toc ? <nav aria-label="文档目录"><button className="en-toc-title" onClick={() => scroll.current?.scrollTo({ top: 0, behavior: 'smooth' })}>{title || '无标题文档'}</button>{outline.length ? outline.map(h => <button key={h.id} data-active={h.id === active} style={{ paddingLeft: 8 + (h.level - 1) * 16 }} title={h.text} onClick={() => locate(h.id)}>{h.text}</button>) : <p className="en-toc-empty">添加标题后显示目录</p>}</nav> : null}</aside>
+  return <Context.Provider value={ctx}><div className="en-body">
+    <NotesOutline title={title} headings={outline} active={active} onLocate={locate} onTop={() => scroll.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
     <main className="en-main"><div className="en-document-scroll" ref={scroll} onScroll={track} onPasteCapture={paste}>
       <div className="en-document"><div className="en-document-actions"><span role="status" aria-live="polite">{status}</span><button title="保存笔记" aria-label="保存笔记" onClick={save}>保存</button><button title="导出 Markdown" aria-label="导出 Markdown" onClick={exportNote}>导出</button></div>
         {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
