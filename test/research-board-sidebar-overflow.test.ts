@@ -91,6 +91,8 @@ it.each(['p7','s6'])('恢复正在使用的 %s 时自动展开对应看板目录
  expect(f.group(group).querySelector('[role=treeitem]')?.getAttribute('aria-expanded')).toBe('false')
  await f.open(id==='p7'?'p6':'s5')
  expect(f.group(group).querySelector('[role=treeitem]')?.getAttribute('aria-expanded')).toBe('true')
+ await f.click(f.group(group).querySelector('[role=treeitem]'));await f.open('workspace-session');await f.open(id==='p7'?'p6':'s5')
+ expect(f.group(group).querySelector('[role=treeitem]')?.getAttribute('aria-expanded')).toBe('true')
 })
 it('五条以内不显示展开按钮，实时增删会话更新隐藏数量并保持当前会话可见', async () => {
   const f = await fixture(5, 1)

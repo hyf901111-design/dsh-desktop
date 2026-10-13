@@ -21,7 +21,13 @@ export function subscribeSidebarUsage(listener) {
 }
 
 export function patchSidebarSessionExperience(source) {
-  const marker='/* ework:sidebar-session-experience:v1 */'
+  const marker='/* ework:sidebar-session-experience:v2 */'
+  const oldAreaGuard='if(!sidebarActiveId||sidebarHidden.has(sidebarActiveId)||workspacePhase!=="ready"||revealedSidebarArea.current===sidebarActiveId)return;\n revealedSidebarArea.current=sidebarActiveId;'
+  const areaGuard='if(!sidebarActiveId||workspacePhase!=="ready")return;\n const key=sidebarActiveId+":"+(sidebarHidden.has(sidebarActiveId)?"board":"workspace");\n if(revealedSidebarArea.current===key)return;revealedSidebarArea.current=key;\n if(sidebarHidden.has(sidebarActiveId))return;'
+  if(source.includes('/* ework:sidebar-session-experience:v1 */')){
+    if(source.split(oldAreaGuard).length!==2)throw Error('Sidebar area reveal upgrade anchor drifted')
+    return source.replace('/* ework:sidebar-session-experience:v1 */',marker).replace(oldAreaGuard,areaGuard)
+  }
   if(source.includes(marker))return source
   const once=(before,after,count=1)=>{
     if(source.split(before).length!==count+1)throw Error('Sidebar session experience anchor drifted: '+before.slice(0,90))
@@ -45,8 +51,7 @@ export function patchSidebarSessionExperience(source) {
   once(section,`${section}
 const sidebarActiveId=useSessions(s=>s.current),sidebarHidden=useBoardHiddenSessions(),revealedSidebarArea=(0,react.useRef)(null);
 (0,react.useEffect)(()=>{
- if(!sidebarActiveId||sidebarHidden.has(sidebarActiveId)||workspacePhase!=="ready"||revealedSidebarArea.current===sidebarActiveId)return;
- revealedSidebarArea.current=sidebarActiveId;setSectionCollapsed(false);try{localStorage.setItem("sherlock.workspaces.collapsed","false")}catch{}
+ ${areaGuard}setSectionCollapsed(false);try{localStorage.setItem("sherlock.workspaces.collapsed","false")}catch{}
 },[sidebarActiveId,sidebarHidden,workspacePhase]);`)
   source=source.replace('const selected = result.id === currentId && boardSelection !== result.id;','const selected = result.id === currentId;').replace('const selected = node.id === currentId && boardSelection !== node.id;','const selected = node.id === currentId;')
   return source

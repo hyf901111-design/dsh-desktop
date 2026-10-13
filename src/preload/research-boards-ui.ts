@@ -1823,10 +1823,10 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   const activeGroup=entries.find(e=>('boardId' in e.value?e.value.localSessionId:e.value.sessionId)===currentSession)?.group
   React.useEffect(()=>{
     recordSidebarSessionUse(currentSession)
-    if(!currentSession||!activeGroup)return
-    const key=currentSession+':'+activeGroup
+    const key=(currentSession??'')+':'+(activeGroup??'workspace')
     if(revealedBoardSession.current===key)return
     revealedBoardSession.current=key
+    if(!currentSession||!activeGroup)return
     setCollapsed(false);localStorage.setItem('sherlock.boards.collapsed','false')
     if(preferences.collapsedGroups.includes(activeGroup))save((previous:any)=>({...previous,collapsedGroups:previous.collapsedGroups.filter((g:string)=>g!==activeGroup)}))
   },[currentSession,activeGroup])
