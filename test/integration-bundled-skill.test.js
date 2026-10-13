@@ -36,7 +36,7 @@ describe('client-owned bundled PPT skill integration', () => {
     const skill = f.service.runtimeSnapshot().skills.find(item => item.id === builtinId)
     expect(skill).toMatchObject({ provider: 'bundled', version: 'v1.1.1', enabled: true, resourceRoot: await realpath(f.skillRoot), sourceId: 'bundled:efund-ppt-maker' })
     const detail = await f.detail()
-    expect(detail).toEqual({ type: 'skill-detail', id: builtinId, revision: f.row.revision, content, invocationName: managedSkillInvocationName(skill), enabled: true })
+    expect(detail).toEqual({ type: 'skill-detail', id: builtinId, revision: f.row.revision, content, invocationName: managedSkillInvocationName(skill), invocationLabel:'efund-ppt-maker', enabled: true })
     expect(await f.service.readSkill({ id: builtinId, revision: f.row.revision, context: f.context() })).toEqual({ name: 'PPT制作助手', description: f.row.description, content, directory: skill.resourceRoot })
     expect(f.service.store.snapshot()).toEqual(stored)
   })

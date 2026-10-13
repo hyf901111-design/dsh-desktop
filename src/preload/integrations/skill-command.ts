@@ -1,14 +1,15 @@
 import type {SkillCommandSegment} from '../../shared/integration-ui'
+import {SKILL_REFERENCE_SOURCE,decodeSkillReference} from '../../shared/skill-reference'
 type Session={sessionId:string;skillCommandSegment?:SkillCommandSegment}
 type Skill={id:string;label:string;detail:string;revision:number}
 type Option=Pick<Skill,'id'|'label'|'detail'>
 type Contribution={name:string;description:string;available(session:Session):boolean;ui:{kind:'popupSelect';options(session:Session,signal:AbortSignal):Promise<Option[]>;onSelect(option:Option,session:Session):Promise<void>}}
 
 /** Uses the native command popup, including its search, keyboard and dismissal. */
-export function installSkillCommand(deps:{document?:Document;command:{register(value:Contribution):()=>void};sessions:{subagentAddress(id:string):unknown}}) {
+export function installSkillCommand(deps:{document?:Document;command:{register(value:Contribution):()=>void};inputTriggers?:{register(value:any):()=>void};sessions:{subagentAddress(id:string):unknown}}) {
  const document=deps.document??globalThis.document,win=document.defaultView!
  const catalogs=new Map<string,{rows:Skill[];signal:AbortSignal}>(),pending=new Set<()=>void>()
- const exchange=(action:'list'|'use',args:Record<string,unknown>,signal?:AbortSignal)=>new Promise<unknown>((resolve,reject)=>{
+ const exchange=(action:'list'|'use'|'resolve',args:Record<string,unknown>,signal?:AbortSignal)=>new Promise<unknown>((resolve,reject)=>{
   if(signal?.aborted){reject(Error('技能菜单已关闭。'));return}
   const requestId=win.crypto.randomUUID()
   const cleanup=()=>{clearTimeout(timer);win.removeEventListener('sherlock:skill-menu-reply',onReply);signal?.removeEventListener('abort',cancel);pending.delete(cancel)}
@@ -20,6 +21,15 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
  })
  const reset=()=>{catalogs.clear();for(const cancel of [...pending])cancel()}
  win.addEventListener('sherlock:skill-menu-reset',reset)
+ const unregisterReference=deps.inputTriggers?.register({trigger:'/',name:SKILL_REFERENCE_SOURCE,order:3,candidates:async()=>[],onPick:()=>undefined,codec:{
+  clipboardText:(ref:string)=>`/${decodeSkillReference(ref).label}`,
+  serialize:async(ref:string,signal:AbortSignal)=>{
+   const reference=decodeSkillReference(ref)
+   const result=await exchange('resolve',{reference},signal) as {invocationName:string}
+   if(result?.invocationName!==reference.invocationName)throw Error('技能引用已变化，请重新选择技能。')
+   return `/${result.invocationName}`
+  }
+ }})
  const unregister=deps.command.register({name:'skills',description:'选择在对话中使用的技能',available:session=>deps.sessions.subagentAddress(session.sessionId)===undefined,ui:{kind:'popupSelect',
   options:async(session,signal)=>{
    if(deps.sessions.subagentAddress(session.sessionId)!==undefined)throw Error('请返回主对话选择技能。')
@@ -35,5 +45,5 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
    await exchange('use',{skill,sessionId:session.sessionId,commandSegment:session.skillCommandSegment},catalog!.signal)
   }
  }})
- return ()=>{unregister();reset();win.removeEventListener('sherlock:skill-menu-reset',reset)}
+ return ()=>{unregister();unregisterReference?.();reset();win.removeEventListener('sherlock:skill-menu-reset',reset)}
 }

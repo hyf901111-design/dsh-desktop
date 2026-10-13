@@ -7,6 +7,7 @@ import { IntegrationError, type Connection, type ConnectionConfig, type Mutation
 import { IntegrationStore } from './store';
 import { CredentialVault, type PlatformEncryption } from './vault';
 import { OperationManager } from './operations';
+import {skillEnglishName} from './skill-names';
 import { SkillImportManager, readSkillResource, listManagedSkillSourceIds, skillImportErrorMessage } from './skill-import';
 import { HttpApiAdapter } from './adapters/http-api';
 import { compileOpenApi } from './adapters/openapi';
@@ -731,7 +732,7 @@ export class IntegrationService {
         const unavailableReason = !current.enabled ? '技能已停用，请先启用。' : current.ownerPluginId && !plugin?.enabled ? '所属插件已停用或移除，请先恢复插件。' : undefined;
         // Keep this stable-ID alias in parity with runtime managedSkillInvocationName (covered by a direct contract test).
         const invocationName = `ework-skill-${createHash('sha256').update(current.id).digest('hex').slice(0, 16)}`;
-        return { type: 'skill-detail', id: current.id, revision: current.revision, content, invocationName, enabled: current.enabled, ...(unavailableReason ? { usable: false, unavailableReason } : {}) };
+        return { type: 'skill-detail', id: current.id, revision: current.revision, content, invocationName, invocationLabel:skillEnglishName(content,current.id,current.name), enabled: current.enabled, ...(unavailableReason ? { usable: false, unavailableReason } : {}) };
     }
     async readSkill(input: {
         id: string;

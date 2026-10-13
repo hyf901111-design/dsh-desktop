@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { runInNewContext, Script } from 'node:vm'
 import { Window } from 'happy-dom'
-import { afterEach, expect, it } from 'vitest'
-import { installSkillComposer } from '../src/preload/integrations/skill-composer'
+import { afterEach, expect, it,vi } from 'vitest'
+import {SKILL_REFERENCE_SOURCE,decodeSkillReference} from '../src/shared/skill-reference'
+import { installSkillComposer,serializeSharedSkillDraft } from '../src/preload/integrations/skill-composer'
 // @ts-expect-error The build patch is an untyped Node module.
 import { patchIntegrationSkillComposer } from '../scripts/lib/patch-integration-skill-composer.mjs'
 
@@ -72,6 +73,37 @@ it('replaces the captured slash-menu token atomically and retains the original d
     expect(f.shell.snapshot.occurrences[0].occurrenceId).toBe(ref.occurrenceId)
     expect(f.shell.snapshot.imageIds).toEqual(['image-a']);expect(f.sent).toEqual([])
     f.shell.undo();expect(f.shell.snapshot.draft).toBe(before.draft)
+})
+
+it('inserts a readable English native reference and retains the stable skill ID, attachments and undo',async()=>{
+    const f=fixture();f.shell.setDraft('/skills 原有需求');f.shell.insertFilePaths(['/work/材料.md']);f.shell.addImages(['image-a'])
+    const before=f.shell.snapshot,old=before.occurrences[0],reference={id:'builtin:efund-ppt-maker',revision:3,invocationName:alias,label:'efund-ppt-maker'}
+    const prepared=await f.request('prepare',{sessionId:'current',commandSegment:{via:'menu',span:{start:0,end:7,draftRev:before.draftRev}}})
+    expect(await f.request('insert',{token:prepared.token,invocationName:alias,reference})).toMatchObject({ok:true})
+    expect(f.shell.snapshot.draft).toBe('\uFFFC 原有需求 \uFFFC ')
+    expect(f.shell.snapshot.occurrences[0]).toMatchObject({source:SKILL_REFERENCE_SOURCE,label:'/efund-ppt-maker',clipboardText:'/efund-ppt-maker',offset:0})
+    expect(decodeSkillReference(f.shell.snapshot.occurrences[0].ref)).toEqual(reference)
+    expect(f.shell.snapshot.occurrences[1].occurrenceId).toBe(old.occurrenceId)
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a']);expect(f.sent).toEqual([])
+    f.textarea.value=f.shell.snapshot.draft.replaceAll('\uFFFC','\uE000');f.document.querySelector('main')!.removeAttribute('inert')
+    expect(await f.request('focus',{token:prepared.token})).toMatchObject({ok:true});expect(f.textarea.selectionStart).toBe(2)
+    f.shell.undo();expect(f.shell.snapshot.draft).toBe(before.draft);expect(f.shell.snapshot.occurrences).toEqual(before.occurrences)
+})
+
+it('serializes a displayed English reference through its codec before the native send sink',async()=>{
+    const sent:string[]=[],reference={id:'builtin:efund-ppt-maker',revision:3,invocationName:alias,label:'efund-ppt-maker'}
+    const codec={serializeReference:async(source:string,ref:string)=>{expect(source).toBe(SKILL_REFERENCE_SOURCE);expect(decodeSkillReference(ref)).toEqual(reference);return `/${alias}`},adjudicate:async()=>undefined}
+    const shell=new client.SessionInputShell({actx:{},inputTriggers:()=>codec,defaultSink:(text:string)=>sent.push(text)})
+    shell.setDraft('制作演示文稿');shell.insertReference({source:SKILL_REFERENCE_SOURCE,ref:JSON.stringify(reference),label:'/efund-ppt-maker',clipboardText:'/efund-ppt-maker'},{start:0,end:0,draftRev:shell.snapshot.draftRev})
+    shell.submit();await vi.waitFor(()=>expect(sent).toEqual([`/${alias} 制作演示文稿`]))
+})
+
+it('retains shared board reference identities and offsets when expanding English skill chips',async()=>{
+ const original={draft:'\uFFFC 需求 \uFFFC',occurrences:[{source:SKILL_REFERENCE_SOURCE,ref:'skill',offset:0},{source:'research-artifact',ref:'board-component',offset:5}]}
+ const next=await serializeSharedSkillDraft(original,async()=>'/ework-skill-0123456789abcdef')
+ expect(next.draft).toBe('/ework-skill-0123456789abcdef 需求 \uFFFC')
+ expect(next.occurrences).toEqual([{source:'research-artifact',ref:'board-component',offset:next.draft.lastIndexOf('\uFFFC')}])
+ expect(original.occurrences).toHaveLength(2)
 })
 
 it('does not redirect a skill menu selection to a newly selected session or overwrite a changed slash span',async()=>{

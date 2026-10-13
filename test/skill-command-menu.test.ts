@@ -13,8 +13,9 @@ function fixture(){
  const request=vi.fn(async()=>({type:'snapshot',snapshot:{revision:1,rows:[skill,{...skill,id:'off',enabled:false,status:'已停用'},{...skill,id:'plugin-off',status:'已停用'}]}}))
  const bridge=installSkillCommandBridge(doc,{request:request as any,useSkill})
  let command:any
- const dispose=installSkillCommand({document:doc,command:{register:(value:any)=>{command=value;return ()=>{}}},sessions:{subagentAddress:()=>child?{}:undefined}})
- return {w,command,useSkill,request,skill,bridge,dispose,setChild:()=>{child=true}}
+ let source:any
+ const dispose=installSkillCommand({document:doc,command:{register:(value:any)=>{command=value;return ()=>{}}},inputTriggers:{register:(value:any)=>{source=value;return ()=>{}}},sessions:{subagentAddress:()=>child?{}:undefined}})
+ return {w,command,source,useSkill,request,skill,bridge,dispose,setChild:()=>{child=true}}
 }
 it('adds a native popup command and lists only enabled skills with a name and description',async()=>{
  const f=fixture();expect(f.command).toMatchObject({name:'skills',ui:{kind:'popupSelect'}})
@@ -47,4 +48,17 @@ it('cancels a pending selection when the native popup closes',async()=>{
  const selecting=f.command.ui.onSelect(options[0],{sessionId:'current'}),rejected=expect(selecting).rejects.toThrow('变化')
  controller.abort();await rejected;expect(selectionSignal?.aborted).toBe(true)
  release();f.dispose();f.bridge.dispose()
+})
+
+it('revalidates the installed skill before serializing its readable reference, rejecting a disabled or changed skill',async()=>{
+ const f=fixture(),reference={id:f.skill.id,revision:2,invocationName:'ework-skill-0123456789abcdef',label:'ework-finance-analysis'},ref=JSON.stringify(reference)
+ expect(f.source.codec.clipboardText(ref)).toBe('/ework-finance-analysis')
+ f.request.mockResolvedValueOnce({type:'skill-detail',...reference,enabled:true} as any)
+ await expect(f.source.codec.serialize(ref,new AbortController().signal)).resolves.toBe('/ework-skill-0123456789abcdef')
+ expect(f.request).toHaveBeenLastCalledWith({type:'skill-detail',id:reference.id,revision:2})
+ f.request.mockResolvedValueOnce({type:'skill-detail',...reference,enabled:false} as any)
+ await expect(f.source.codec.serialize(ref,new AbortController().signal)).rejects.toThrow('启用')
+ f.request.mockResolvedValueOnce({type:'skill-detail',...reference,enabled:true,revision:3} as any)
+ await expect(f.source.codec.serialize(ref,new AbortController().signal)).rejects.toThrow('变化')
+ f.dispose();f.bridge.dispose()
 })

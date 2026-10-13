@@ -1,8 +1,10 @@
-type InputSnapshot = { draft: string; draftRev: number; phase: string; researchContextPreparing?: boolean }
+import {SKILL_REFERENCE_SOURCE,encodeSkillReference,decodeSkillReference} from '../../shared/skill-reference'
+type InputSnapshot = { draft: string; draftRev: number; phase: string; researchContextPreparing?: boolean; occurrences?:Array<{source:string;ref:string;offset:number}> }
 type InputShell = {
     disposed?: boolean
     readonly snapshot: InputSnapshot
     insertText(text: string, span: { start: number; end: number; draftRev: number }): boolean
+    insertReference(reference:{source:string;ref:string;label:string;clipboardText:string},span:{start:number;end:number;draftRev:number}):boolean
 }
 type SessionScope = { sessionId: string }
 type Dependencies = {
@@ -25,6 +27,16 @@ type Dependencies = {
 type Ticket = { sessionId: string; shell: InputShell; revision: number; expires: number; inserted: boolean; caret: number; span: {start:number;end:number} }
 const REQUEST = 'sherlock:skill-compose-request'
 const REPLY = 'sherlock:skill-compose-reply'
+
+/** Expand method references while leaving shared file/artifact picks for the board adapter. */
+export async function serializeSharedSkillDraft<T extends {draft:string;occurrences:readonly {source:string;ref:string;offset:number}[]}>(snapshot:T,serialize:(source:string,ref:string)=>Promise<string>):Promise<T> {
+    const parts=await Promise.all(snapshot.occurrences.filter(o=>o.source===SKILL_REFERENCE_SOURCE).map(async o=>({offset:o.offset,text:await serialize(o.source,o.ref)})))
+    parts.sort((a,b)=>a.offset-b.offset)
+    let draft='',cursor=0
+    for(const part of parts){draft+=snapshot.draft.slice(cursor,part.offset)+part.text;cursor=part.offset+1}
+    draft+=snapshot.draft.slice(cursor)
+    return {...snapshot,draft,occurrences:snapshot.occurrences.filter(o=>o.source!==SKILL_REFERENCE_SOURCE).map(o=>({...o,offset:o.offset+parts.filter(p=>p.offset<o.offset).reduce((n,p)=>n+p.text.length-1,0)}))}
+}
 
 /** Lives beside the native input hub; no prompt, submit, command or DOM draft writes. */
 export function installSkillComposer(deps: Dependencies): () => void {
@@ -82,7 +94,7 @@ export function installSkillComposer(deps: Dependencies): () => void {
                 // Native file chips project their placeholder glyph in the textarea. The
                 // newly inserted plain prefix remains identical and determines this caret.
                 const prefix = ticket.shell.snapshot.draft.slice(0, ticket.caret)
-                const input = inputs(ticket.sessionId).find(element => !element.disabled && !element.readOnly && !element.closest('[hidden],[aria-hidden="true"],[inert]') && element.checkVisibility() && element.value.startsWith(prefix))
+                const input = inputs(ticket.sessionId).find(element => !element.disabled && !element.readOnly && !element.closest('[hidden],[aria-hidden="true"],[inert]') && element.checkVisibility() && (element.value.startsWith(prefix)||element.value.startsWith(prefix.replace(/\uFFFC/g,'\uE000'))))
                 if (!input) {
                     retry()
                     return
@@ -156,14 +168,22 @@ export function installSkillComposer(deps: Dependencies): () => void {
             if (ticket.inserted) throw Error('本次技能已加入草稿，请返回对话继续填写需求。')
             const research = deps.researchSidebar.stores.get(ticket.sessionId)?.getSnapshot().binding?.active === true
             if (research && !deps.researchSidebar.service) throw Error('对话面板尚未就绪，请稍后重试。')
+            const reference=request.reference===undefined?undefined:decodeSkillReference(JSON.stringify(request.reference))
+            if(reference&&reference.invocationName!==request.invocationName)throw Error('技能引用无效，请重新选择技能。')
             const prefix = `/${request.invocationName}`
+            if(reference){
+                const ref=encodeSkillReference(reference),label=`/${reference.label}`
+                const present=snapshot.occurrences?.some(o=>o.offset===ticket.span.start&&o.source===SKILL_REFERENCE_SOURCE&&o.ref===ref)
+                if(!present&&!shell.insertReference({source:SKILL_REFERENCE_SOURCE,ref,label,clipboardText:label},{...ticket.span,draftRev:ticket.revision}))throw Error('草稿发生变化，原输入已保留，请重试。')
+            }else{
             const present = snapshot.draft.startsWith(prefix) && (snapshot.draft.length === prefix.length || /\s/.test(snapshot.draft[prefix.length]!))
             const separator = /\s/.test(snapshot.draft[ticket.span.end] ?? '') ? '' : ' '
             if (!present && !shell.insertText(`${prefix}${separator}`, { ...ticket.span, draftRev: ticket.revision }))
                 throw Error('草稿发生变化，原输入已保留，请重试。')
+            }
             ticket.revision = shell.snapshot.draftRev
             ticket.inserted = true
-            ticket.caret = Math.min(ticket.span.start + prefix.length + 1, shell.snapshot.draft.length)
+            ticket.caret = Math.min(ticket.span.start + (reference?2:prefix.length+1), shell.snapshot.draft.length)
             if (research) {
                 const scope = { sessionId: ticket.sessionId }
                 deps.researchSidebar.service!.activateTab('sherlock-research-conversation', scope)

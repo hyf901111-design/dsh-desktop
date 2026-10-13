@@ -40,7 +40,7 @@ describe('installed skill detail from actual managed resources', () => {
   it.each([false, true])('previews %s imported skill bytes without mutation and matches the runtime invocation alias', async imported => {
     const f = await fixture(imported), before = f.service.store.snapshot()
     const result = await f.detail()
-    expect(result).toEqual({ type: 'skill-detail', id: f.skill.id, revision: f.skill.revision, content, invocationName: managedSkillInvocationName(f.skill), enabled: true })
+    expect(result).toEqual({ type: 'skill-detail', id: f.skill.id, revision: f.skill.revision, content, invocationName: managedSkillInvocationName(f.skill), invocationLabel:'custom-skill', enabled: true })
     expect(await readFile(join(f.skill.resourceRoot, 'SKILL.md'), 'utf8')).toBe(result.content)
     expect(result).not.toHaveProperty('resourceRoot'); expect(result).not.toHaveProperty('directory')
     expect(f.service.store.snapshot()).toEqual(before)

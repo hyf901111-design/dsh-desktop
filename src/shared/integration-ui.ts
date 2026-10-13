@@ -96,6 +96,8 @@ export type SkillDetail = {
     revision: number;
     content: string;
     invocationName: string;
+    /** Readable English name; presentation never determines runtime lookup. */
+    invocationLabel?: string;
     enabled: boolean;
     /** False identifies a known global block; absence does not grant session/workspace access. */
     usable?: false;
