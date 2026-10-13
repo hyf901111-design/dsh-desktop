@@ -1,11 +1,7 @@
 // Browser fixture: actual transformed module factories, production bridge/UI, real React primitives.
-// @ts-expect-error Hosted runtime ships no React declarations in Electron TS project.
 import * as React from 'react'
-// @ts-expect-error See React declaration note above.
 import { createRoot } from 'react-dom/client'
-// @ts-expect-error See React declaration note above.
 import * as jsx from 'react/jsx-runtime'
-// @ts-expect-error See React declaration note above.
 import * as ReactDOM from 'react-dom'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import * as slotModule from '@deepseek-ai/dsh-client-ui-slots'
@@ -444,7 +440,7 @@ function App() {
     )
   )
 }
-createRoot(document.getElementById('app')).render(h(App))
+createRoot(document.getElementById('app')!).render(h(App))
 mountAccountUi(
   document,
   async (action: string) =>

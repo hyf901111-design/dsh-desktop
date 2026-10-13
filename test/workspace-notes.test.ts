@@ -1,0 +1,74 @@
+import { afterEach, expect, it } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { NotesStore } from '../src/main/notes/store'
+import { noteOutline, canApplySuggestion } from '../src/shared/workspace-notes'
+
+const roots: string[] = []
+afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
+const setup = () => { const root = mkdtempSync(join(tmpdir(), 'ework-notes-test-')); roots.push(root); return { root, store: new NotesStore(root) } }
+const content = (text: string) => ({ title: '每周研究笔记', blocks: [{ id: 'p1', type: 'paragraph', content: [{ type: 'text', text, styles: {} }], children: [] }], yjs: '' })
+
+it('persists rich blocks and comments across a fresh store instance', () => {
+  const { root, store } = setup()
+  const rich = { ...content('已保存'), yjs: 'AQID', blocks: [...content('已保存').blocks, { id: 'chart1', type: 'research', props: { payload: '{"kind":"generated-container","containerSpec":{"type":"chart"}}' } }] }
+  const saved = store.save('owner', 'session', 0, rich)
+  expect(saved.status).toBe('saved')
+  const loaded = new NotesStore(root).load('owner', 'session')
+  expect(loaded.saved).toMatchObject({ revision: 1, ...rich })
+})
+
+it('keeps separate accounts and sessions separate even when identifiers contain paths', () => {
+  const { store } = setup()
+  store.save('owner1', '../session', 0, content('A'))
+  expect(store.load('owner2', '../session').saved.blocks).toEqual([])
+  expect(store.load('owner1', 'session2').saved.blocks).toEqual([])
+  expect(store.load('owner1', '../session').saved.title).toBe('每周研究笔记')
+})
+
+it('rejects stale saves without replacing the newer document or losing the stale draft', () => {
+  const { store } = setup()
+  store.save('owner', 'session', 0, content('较新内容'))
+  store.draft('owner', 'session', 'window-a', 0, content('旧窗口修改'))
+  const result = store.save('owner', 'session', 0, content('旧窗口修改'), 'window-a')
+  expect(result.status).toBe('conflict')
+  expect(store.load('owner', 'session').saved.blocks).toEqual(content('较新内容').blocks)
+  expect(store.load('owner', 'session').draft?.blocks).toEqual(content('旧窗口修改').blocks)
+})
+
+it('recovers an interrupted edit and removes only its matching draft after saving', () => {
+  const { root, store } = setup()
+  store.draft('owner', 'session', 'window-a', 0, content('尚未保存'))
+  expect(new NotesStore(root).load('owner', 'session').draft?.title).toBe('每周研究笔记')
+  store.save('owner', 'session', 0, content('尚未保存'), 'window-a')
+  expect(store.load('owner', 'session').draft).toBeUndefined()
+})
+
+it('cannot clear another window recovery draft when saving a different edit', () => {
+  const { store } = setup()
+  store.draft('owner', 'session', 'window-a', 0, content('A'))
+  store.draft('owner', 'session', 'window-b', 0, content('B'))
+  store.save('owner', 'session', 0, content('A'), 'window-a')
+  expect(store.load('owner', 'session').draft?.blocks).toEqual(content('B').blocks)
+})
+
+it('rejects malformed or excessively large documents before altering saved data', () => {
+  const { store } = setup()
+  store.save('owner', 'session', 0, content('保留'))
+  expect(() => store.save('owner', 'session', 1, { ...content('x'), blocks: 'invalid' } as any)).toThrow()
+  expect(() => store.save('owner', 'session', 1, content('x'.repeat(5 * 1024 * 1024)))).toThrow()
+  expect(store.load('owner', 'session').saved.blocks).toEqual(content('保留').blocks)
+})
+
+it('updates the directory from nested headings and retains stable block identities', () => {
+  const blocks = [{ id: 'a', type: 'heading', props: { level: 1 }, content: [{ text: '本周观察' }], children: [{ id: 'b', type: 'heading', props: { level: 4 }, content: [{ text: '来源记录' }] }] }, { id: 'c', type: 'paragraph', content: [{ text: '正文' }] }]
+  expect(noteOutline(blocks)).toEqual([{ id: 'a', level: 1, text: '本周观察' }, { id: 'b', level: 4, text: '来源记录' }])
+})
+
+it('does not apply late AI suggestions to another session or an edited selection', () => {
+  const captured = { documentId: 'one', fingerprint: 'old' }
+  expect(canApplySuggestion(captured, { documentId: 'one', fingerprint: 'old' })).toBe(true)
+  expect(canApplySuggestion(captured, { documentId: 'two', fingerprint: 'old' })).toBe(false)
+  expect(canApplySuggestion(captured, { documentId: 'one', fingerprint: 'new' })).toBe(false)
+})

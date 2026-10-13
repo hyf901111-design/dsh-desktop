@@ -1,8 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { Window } from 'happy-dom'
-// @ts-expect-error React is supplied by the hosted page; this Electron project has no React declarations.
 import * as React from 'react'
-// @ts-expect-error React DOM is used by this focused rendering fixture only.
 import { createRoot } from 'react-dom/client'
 const { act } = React
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ Menu: () => null, IconEllipsisOutline16: () => null, IconSearchOutline16: () => null, IconPersonalizationOutline16: () => null, IconCloseFill14: () => null, IconFolderOpenOutline16: () => null, IconEditOutline16: () => null, IconTriangleRightFill14: () => null }))
@@ -20,7 +18,7 @@ async function mount(kind: 'header' | 'presence', sharingState = 'shared', role 
   let snapshot: any = { viewport: { x: 10, y: 20, scale: .5 }, files: [], artifacts: [{ id: 'card', x: 400, y: 300, width: 656, height: 456 }] }
   const workspace: any = { subscribe: (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn) }, getSnapshot: () => snapshot }
   const host = w.document.createElement('div'); w.document.body.append(host); const root = createRoot(host as unknown as HTMLElement)
-  await act(async () => { root.render(React.createElement(kind === 'header' ? ResearchBoardHeader : ResearchBoardCanvasOverlay, { page, sessionId: 's', workspace, active: true })) })
+  await act(async () => { root.render(React.createElement((kind === 'header' ? ResearchBoardHeader : ResearchBoardCanvasOverlay) as React.ComponentType<any>, { page, sessionId: 's', workspace, active: true })) })
   cleanup.push(async () => { await act(async () => root.unmount()); await w.happyDOM.abort() })
   return { host, view, actions, setSnapshot: async (next: any) => { snapshot = next; await act(async () => listeners.forEach(fn => fn())) }, emit: async () => { currentState = { ...currentState }; await act(async () => listeners.forEach(fn => fn())) } }
 }

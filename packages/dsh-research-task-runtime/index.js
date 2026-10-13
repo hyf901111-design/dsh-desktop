@@ -13,6 +13,7 @@ import { requestedComponentRefreshInterval } from './component-refresh-policy.js
 import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
+import { registerNotesAi } from './notes-ai.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
 import { registerBrowserUseTool } from './browser-use-tools.js'
 import { sharedComponentIssue, SHARED_STATE_REPAIR } from './shared-component-validation.js'
@@ -2391,6 +2392,7 @@ export async function apply(ctx) {
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
+    const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     let context
     try {
@@ -2403,6 +2405,7 @@ export async function apply(ctx) {
       disposeCanvasTools()
       disposeRoutes()
       disposeScheduledTitle()
+      disposeNotesAi()
       throw error
     }
     return async () => {
@@ -2420,6 +2423,7 @@ export async function apply(ctx) {
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()
+      disposeNotesAi()
       await runtime.dispose()
     }
   })

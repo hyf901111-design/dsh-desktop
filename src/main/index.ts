@@ -121,6 +121,7 @@ import { ResearchCanvasStorage } from './state/research-canvas-storage'
 import { ResearchVoiceController, registerResearchVoiceHandlers } from './state/research-voice'
 import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
 import { CanvasActionBridge, registerCanvasActionHandlers } from './state/canvas-action-bridge'
+import { installNotesService } from './notes/service'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import {
   assertTrustedMainWindowEvent,
@@ -1322,6 +1323,11 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow,
+    root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
+    runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
+    canRead: sessionId => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
+  }))
   try {
     integrationService = await IntegrationService.open({
       root: join(app.getPath('userData'), 'integrations'), encryption: safeStorage,

@@ -1,8 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { Window } from 'happy-dom'
-// @ts-expect-error The hosted page supplies React.
 import * as React from 'react'
-// @ts-expect-error Runtime test renderer.
 import { createRoot } from 'react-dom/client'
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({ Menu: () => null, IconEllipsisOutline16: () => null, IconSearchOutline16: () => null, IconPersonalizationOutline16: () => null, IconCloseFill14: () => null, IconFolderOpenOutline16: () => null, IconEditOutline16: () => null, IconTriangleRightFill14: () => null }))
 import { ResearchBoardDiscussion } from '../src/preload/research-boards-ui'

@@ -3,8 +3,6 @@ import { orderBoardConversationGroups } from './research-board-conversation-orde
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
 import { TemporaryBoards } from './temporary-board'
 import { installBoardSessionFork } from './board-session-fork'
-// The hosted page supplies React; this Electron-only TS project has no React declarations.
-// @ts-expect-error Runtime dependency is supplied by the client module loader.
 import * as React from 'react'
 import { StateDot, Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { admitSharedDraft } from './shared-send-draft'
@@ -2793,7 +2791,7 @@ export function ResearchBoardDiscussion({
           'data-request-message-id': group.requestId,
           'data-execution-kind': group.requestId && componentTask(taskForMessage({ id: group.requestId }, v.tasks)) ? 'component' : 'conversation'
         },
-        group.requestId && componentTask(taskForMessage({ id: group.requestId }, v.tasks)) && h('div', { className: 'srb-component-activity-label' }, '◇ 组件子智能体 · 独立执行', h('span', null, v.canvas?.artifacts?.find((node: any) => node.id === taskForMessage({ id: group.requestId }, v.tasks)?.targetId)?.title ?? '画板组件')),
+        group.requestId && componentTask(taskForMessage({ id: group.requestId }, v.tasks)) && h('div', { className: 'srb-component-activity-label' }, '◇ 组件子智能体 · 独立执行', h('span', null, String(v.canvas?.artifacts?.find((node: any) => node.id === taskForMessage({ id: group.requestId }, v.tasks)?.targetId)?.title ?? '画板组件'))),
         ...(NativeGroup && group.requestId && !componentTask(taskForMessage({ id: group.requestId }, v.tasks))
           ? [h(NativeGroup, { key: 'native', group: { ...group, rows: group.rows.filter((m: any) => !componentTask(taskForMessage(m, v.tasks))) }, tasks: v.tasks.filter((t: any) => t.requestMessageId === group.requestId), nativeProps }), ...group.rows.filter((m: any) => componentTask(taskForMessage(m, v.tasks))).map(renderMessage)]
           : group.rows.map(renderMessage)),

@@ -1,4 +1,4 @@
-export type WorkspaceSurface = 'scheduled' | 'integrations';
+export type WorkspaceSurface = 'scheduled' | 'integrations' | 'notes';
 type SurfaceLocation = {
     surface: WorkspaceSurface;
     route?: string;

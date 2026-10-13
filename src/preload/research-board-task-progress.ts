@@ -1,4 +1,3 @@
-// @ts-expect-error React is supplied by the hosted page.
 import * as React from 'react'
 import { boardTaskStatus } from './research-board-presentation'
 const h = React.createElement
