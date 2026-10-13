@@ -174,7 +174,7 @@ function dispatchFileDrag(
 }
 
 describe('dsh-file-drop Research canvas compatibility', () => {
-  it('lets all file-drag events reach Research while preserving the ordinary window capture drop', async () => {
+  it.each(['data-research-canvas','data-note-file-drop-owner'])('lets all file-drag events reach %s while preserving the ordinary window capture drop', async (attribute) => {
     const { dshHome, clientPath } = await makeDshHome()
 
     expect(await ensureDshFileDropResearchCanvasCompatibility(dshHome)).toEqual({
@@ -203,7 +203,7 @@ describe('dsh-file-drop Research canvas compatibility', () => {
       (active) => { dragStates.push(active) }
     )
     const canvas = browserWindow.document.createElement('div')
-    canvas.setAttribute('data-research-canvas', '')
+    canvas.setAttribute(attribute, '')
     const canvasChild = browserWindow.document.createElement('span')
     canvas.appendChild(canvasChild)
     browserWindow.document.body.appendChild(canvas)
@@ -290,7 +290,7 @@ describe('dsh-file-drop Research canvas compatibility', () => {
     expect((await ensureDshFileDropResearchCanvasCompatibility(dshHome)).status)
       .toBe('patched')
     const current = await readFile(clientPath, 'utf8')
-    const legacy = current.replace(
+    const legacy = current.replace("(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))", "node.hasAttribute('data-research-canvas')").replace(
       `      if (!inputActions || !Array.isArray(paths) || paths.length === 0) return
       // ${DSH_FILE_DROP_INLINE_REFERENCE_MARKER}
       if (typeof inputActions.insertFilePaths === 'function') {

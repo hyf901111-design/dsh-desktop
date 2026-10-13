@@ -123,6 +123,7 @@ import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './st
 import { CanvasActionBridge, registerCanvasActionHandlers } from './state/canvas-action-bridge'
 import { installNotesService } from './notes/service'
 import { NoteNativeMenu } from './notes/native-menu'
+import { NoteFiles, noteFileOwnerPrefix } from './notes/files'
 import { ResearchContextBridge, readStoredResearchCanvas, registerResearchContextHandlers } from './state/research-context-bridge'
 import {
   assertTrustedMainWindowEvent,
@@ -1222,6 +1223,7 @@ async function bootstrap(): Promise<void> {
   if (process.platform === 'darwin') startHarnessThemePreferenceSync()
   const dshHome = join(app.getPath('userData'), 'harness')
   researchFilePreviewRegistry = new ResearchFilePreviewRegistry({
+    canReadAuthorization:record=>!record.sessionId.startsWith('note-files:')||record.sessionId.startsWith(noteFileOwnerPrefix(accountService?.authenticated?accountService.accountId||'local':'local')),
     storage: new FileResearchPreviewAuthorizationStorage(app.getPath('userData')),
     workspaceResolver: new HarnessWorkspaceFileResolver(dshHome)
   })
@@ -1329,7 +1331,8 @@ async function bootstrap(): Promise<void> {
   app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow,
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
-    canRead:canReadNoteSession,nativeMenu:noteNativeMenu
+    canRead:canReadNoteSession,nativeMenu:noteNativeMenu,
+    files:new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
   }))
   try {
     integrationService = await IntegrationService.open({

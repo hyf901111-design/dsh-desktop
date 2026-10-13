@@ -27,6 +27,9 @@ export function noteExportBlocks(content:NoteContent):ExportBlock[]{
        if(encoded)try{const model=JSON.parse(encoded);if(model.data)output.push({type:'codeBlock',level:depth,content:[{type:'text',text:JSON.stringify(model.data,null,2)}]})}catch{/* The readable static HTML remains available. */}
      }
      else output.push({type:'paragraph',level:depth,content:[{type:'text',text:spec?.content||node.sourceText||'研究组件'}]})
+   }else if(block.type==='attachment'){
+     let node:any;try{node=JSON.parse(block.props?.payload||'{}')}catch{node={}}
+     output.push({type:'paragraph',level:depth,content:[{type:'text',text:'附件：'+(node.displayName||node.name||'文件')}]})
    }else if(['image','file','video','audio'].includes(block.type)){
      const label=({image:'图片',file:'文件',video:'视频',audio:'音频'} as Record<string,string>)[block.type],href=safeLink(block.props?.url)
      output.push({type:'paragraph',level:depth,content:[{type:'text',text:label+'：'+(block.props?.caption||block.props?.name||block.props?.url||'未提供来源')},...href?[{type:'text',text:' '},{type:'link',href,content:[{type:'text',text:'查看原文件'}]}]:[]]})

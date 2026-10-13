@@ -104,6 +104,7 @@ export interface ResearchPreviewFileSystem {
 }
 
 export interface ResearchFilePreviewRegistryOptions {
+  canReadAuthorization?(record:ResearchPreviewAuthorizationRecord):boolean
   storage: ResearchPreviewAuthorizationStorage
   workspaceResolver?: ResearchPreviewWorkspaceResolver
   fileSystem?: ResearchPreviewFileSystem
@@ -966,7 +967,7 @@ export class ResearchFilePreviewRegistry {
     const record = this.authorizations.get(value.authorizationId)
     if (!record || record.sessionId !== value.sessionId || record.nodeId !== value.nodeId) return null
     const verified = await this.verifyRecord(record)
-    return verified ? this.issue(record) : null
+    return verified&&this.options.canReadAuthorization?.(record)!==false ? this.issue(record) : null
   }
 
   async resolveSessionNodeSource(sessionId:string,nodeId:string):Promise<{path:string;name:string}|null> {
@@ -983,7 +984,7 @@ export class ResearchFilePreviewRegistry {
       const target = await this.fileSystem.realpath(record.path)
       const root = await this.fileSystem.realpath(record.root)
       const file = await this.fileSystem.stat(target)
-      return file.isFile() && isContained(root, target)
+      return file.isFile() && isContained(root, target) && this.options.canReadAuthorization?.(record)!==false
         ? { path: target, name: record.name }
         : null
     } catch {
@@ -1041,7 +1042,7 @@ export class ResearchFilePreviewRegistry {
       return errorResponse(403, 'Preview capability denied.')
     }
     const authorization = this.authorizations.get(capability.authorizationId)
-    if (!authorization) {
+    if (!authorization || this.options.canReadAuthorization?.(authorization)===false) {
       this.capabilities.delete(resource.token)
       return errorResponse(403, 'Preview capability denied.')
     }
@@ -1206,6 +1207,7 @@ export class ResearchFilePreviewRegistry {
   }
 
   private async verifyRecord(record: ResearchPreviewAuthorizationRecord): Promise<boolean> {
+    if(this.options.canReadAuthorization?.(record)===false)return false
     try {
       const root = await this.fileSystem.realpath(record.root)
       const target = await this.fileSystem.realpath(record.path)

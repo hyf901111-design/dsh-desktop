@@ -9,12 +9,12 @@ beforeAll(async () => {
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
       import React from 'react'; import {createRoot} from 'react-dom/client';import {createPortal} from 'react-dom';import {EWorkNoteExportMenu} from './scripts/lib/notes-export-menu.mjs';window.react_dom={createPortal};
-      import {NotesApp} from './src/preload/notes/editor';
+      import {NotesApp} from './src/preload/notes/editor'; import {createNoteFileViewStore,EWorkNoteFileViews} from './scripts/lib/notes-files.mjs';
       import {createNotesActivityStore,EWorkNotesActivity} from './scripts/lib/notes-activity.mjs';
       window.react=React;window.eworkNotesActivity=createNotesActivityStore(document);const header=document.createElement('header');header.style.cssText='position:fixed;top:4px;left:360px;z-index:100';document.body.append(header);createRoot(header).render(<EWorkNoteExportMenu sessionId="outline-test"/>);
       import '@blocknote/mantine/style.css'; import './src/preload/notes/style.css';
       window.noteRequests=[];window.noteTasks=[];window.noteCommits=[];document.addEventListener('sherlock:notes-task-state',event=>window.noteTasks.push(event.detail));document.addEventListener('sherlock:notes-composer-commit',event=>window.noteCommits.push(event.detail));
-      const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});return method==='load'?{saved:{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='clipboard'?{kind:'components',nodes:[window.noteComponent]}:method==='render'?{html:input.spec.html,document:window.noteComponentDocument}:method==='generate'?await new Promise(resolve=>{window.resolveNoteSuggestion=result=>resolve(result||{kind:'text',markdown:'改写后的验收句子。'})}):{}},draft:async()=>{}};
+      window.eworkNoteFileViews=createNoteFileViewStore(document);window.eworkNoteOfficePreview={subscribe:()=>()=>{},getSnapshot:()=>null};window.ResearchCanvasFileCard=({node})=><section className="rScV5Q_richNode"><header>{node.name}</header><div>原生文件预览</div></section>;const fileViews=document.createElement('div');document.body.append(fileViews);createRoot(fileViews).render(<EWorkNoteFileViews sessionId="outline-test" active/>);window.resolveNoteFiles={};const bridge={filePath:file=>'/tmp/'+file.name,request:async(method,input)=>{window.noteRequests.push({method,input});return method==='load'?{saved:window.noteSaved||{title:'浮层位置验收',blocks:[],yjs:'',revision:0,updatedAt:0}}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:method==='clipboard'?{kind:'components',nodes:[window.noteComponent]}:method==='render'?{html:input.spec.html,document:window.noteComponentDocument}:method==='file-bind'?{previewSessionId:'note-files:fixture'}:method==='file-admit'?await new Promise(resolve=>{window.resolveNoteFiles[input.nodeId]=()=>resolve({id:input.nodeId,name:input.name,source:'computer',path:input.path,authorizationId:'fixture-grant-'+input.nodeId,previewSessionId:'note-files:fixture',contentType:'text/plain'})}):method==='generate'?await new Promise(resolve=>{window.resolveNoteSuggestion=result=>resolve(result||{kind:'text',markdown:'改写后的验收句子。'})}):{}},draft:async()=>{}};
       const activity=document.createElement('div');activity.id='native-activity';activity.className='t8lSSG_panelBody';document.body.append(activity);createRoot(activity).render(<EWorkNotesActivity sessionId="outline-test" t={key=>key} UserBubble={({content})=><div>{content.map(b=>b.text)}</div>} Progress={({entry})=><div role="status">{entry.noteTask.status}</div>} Markdown={({blocks})=><div>{blocks.map(b=>b.text)}</div>}/>);
       const root=document.querySelector('.en-editor-host');
       createRoot(root).render(<NotesApp sessionId="outline-test" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);
@@ -37,6 +37,49 @@ beforeAll(async () => {
   browser = await chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
 })
 afterAll(async () => { await browser?.close() })
+
+async function fileFixture(saved){
+ const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
+ await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body data-ds-dark-theme><section class="en-root" data-dark="true" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture')
+ if(saved)await page.evaluate(value=>window.noteSaved=value,saved)
+ await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();return {context,page}
+}
+async function dropNoteFiles(page,names){await page.evaluate(names=>{const target=document.querySelector('.en-document .bn-inline-content'),box=target.getBoundingClientRect(),data=new DataTransfer();for(const name of names)data.items.add(new File(['file content'],name,{type:'text/plain'}));target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data,clientX:box.x+10,clientY:box.bottom-1}))},names)}
+
+it('keeps dropped files in order and inside component frames across asynchronous completion and undo',async()=>{
+ const {context,page}=await fileFixture();try{
+  await page.locator('.en-document .bn-editor').click();await page.keyboard.type('前文。');await dropNoteFiles(page,['first.txt','second.txt']);await page.locator('.en-file-import').first().waitFor()
+  expect(await page.locator('.en-file-import [role=status]').count()).toBe(2);expect(await page.locator('.en-file-import [role=alert]').count()).toBe(0)
+  await expect.poll(()=>page.evaluate(()=>Object.keys(window.resolveNoteFiles).length)).toBe(1)
+  await page.evaluate(()=>Object.values(window.resolveNoteFiles)[0]());await expect.poll(()=>page.evaluate(()=>Object.keys(window.resolveNoteFiles).length)).toBe(2);await page.evaluate(()=>Object.values(window.resolveNoteFiles)[1]())
+  await expect.poll(()=>page.locator('.en-file-host[data-note-file-rendered] .rScV5Q_richNode header').allTextContents()).toEqual(['first.txt','second.txt'])
+  expect(await page.locator('.en-file-host').first().evaluate(el=>{const a=el.getBoundingClientRect(),b=el.querySelector('.rScV5Q_richNode').getBoundingClientRect();return Math.abs(a.x-b.x)<1&&Math.abs(a.width-b.width)<1})).toBe(true)
+  await page.locator('.en-document .bn-editor').click({position:{x:20,y:10}});await page.keyboard.press('ControlOrMeta+z');await expect.poll(()=>page.locator('.en-note-file,.en-file-import').count()).toBe(0)
+  expect(await page.locator('.en-document .bn-editor').textContent()).toContain('前文。')
+  await page.keyboard.press('ControlOrMeta+Shift+z');await expect.poll(()=>page.locator('.en-file-import [role=status]').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+it('does not resurrect a removed pending file when admission finishes',async()=>{
+ const {context,page}=await fileFixture();try{
+  await dropNoteFiles(page,['removed.txt']);await expect.poll(()=>page.evaluate(()=>Object.keys(window.resolveNoteFiles).length)).toBe(1);await page.getByRole('button',{name:'移除笔记中的文件',exact:true}).click();await page.evaluate(()=>Object.values(window.resolveNoteFiles)[0]())
+  await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-revoke').length)).toBeGreaterThan(0);expect(await page.locator('.en-note-file,.en-file-import').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+it('does not leave orphaned importing states after undoing an unfinished multi-file drop and redoing it',async()=>{
+ const {context,page}=await fileFixture();try{
+  await dropNoteFiles(page,['pending-first.txt','pending-second.txt']);await expect.poll(()=>page.evaluate(()=>Object.keys(window.resolveNoteFiles).length)).toBe(1)
+  await page.locator('.en-document .bn-editor').click({position:{x:20,y:10}});await page.keyboard.press('ControlOrMeta+z');await expect.poll(()=>page.locator('.en-file-import').count()).toBe(0)
+  await page.evaluate(()=>Object.values(window.resolveNoteFiles)[0]());await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-revoke').length)).toBeGreaterThan(0)
+  await page.keyboard.press('ControlOrMeta+Shift+z');await expect.poll(()=>page.locator('.en-file-import [role=alert]').count()).toBe(2);expect(await page.locator('.en-file-import [role=status]').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+it('shows an interrupted saved import as a terminal retryable error',async()=>{
+ const first=await fileFixture();let saved
+ try{await dropNoteFiles(first.page,['interrupted.txt']);await expect.poll(()=>first.page.evaluate(()=>window.noteRequests.filter(row=>row.method==='save').at(-1)?.input.content.blocks.some(block=>block.type==='attachment'))).toBe(true);saved=await first.page.evaluate(()=>({...window.noteRequests.filter(row=>row.method==='save').at(-1).input.content,revision:1,updatedAt:1}))}finally{await first.context.close()}
+ const {context,page}=await fileFixture(saved);try{
+  await page.getByRole('alert').filter({hasText:'上次文件导入已中断'}).waitFor();expect(await page.locator('.en-file-import [role=status]').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
 
 it('keeps native slash filtering and keyboard insertion in the editor and rejects stale mouse selections',async()=>{
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()

@@ -11,10 +11,11 @@ import { readNoteGenerationStream } from './stream'
 import { saveNoteExport } from './export'
 import { buildResearchHtmlPreview } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import type { NotesNativeMenu } from '../../shared/notes-menu'
+import type { NoteFiles } from './files'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
-  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu
+  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
@@ -22,6 +23,10 @@ export function installNotesService(options: {
     const owner = options.owner(), session = input.sessionId
     if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
+      case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
+      case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
+      case 'file-revoke': return {ok:options.files?.revoke(owner,session,input.nodeId)??false}
+      case 'file-reveal': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.reveal(owner,session,input)
       case 'menu-sync': if (!options.nativeMenu) throw Error('原生菜单不可用。'); options.nativeMenu.sync(input,owner); return {ok:true}
       case 'menu-close': options.nativeMenu?.close(input.menuId); return {ok:true}
       case 'load': return { ...store.load(owner, session), owner }

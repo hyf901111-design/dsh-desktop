@@ -1,5 +1,7 @@
 import {expect,it} from 'vitest'
 import {createNotesActivityStore} from '../scripts/lib/notes-activity.mjs'
+import React from 'react'
+import {renderToStaticMarkup} from 'react-dom/server'
 
 it('keeps actual requests per session through generation, adoption and account reset',()=>{
   const doc=new EventTarget(),store=createNotesActivityStore(doc),seen=[]
@@ -12,6 +14,16 @@ it('keeps actual requests per session through generation, adoption and account r
   expect(store.snapshot('a')[0]).toMatchObject({phase:'accepted',prompt:'撰写新内容'});expect(store.snapshot('b')[0].phase).toBe('preparing')
   doc.dispatchEvent(new Event('sherlock:notes-reset'));expect(store.snapshot('a')).toEqual([]);expect(store.snapshot('b')).toEqual([])
   off();store.dispose();const count=seen.length;send('a','t','preparing');expect(seen).toHaveLength(count)
+})
+it('routes live reasoning through the shared native process disclosure and keeps explicit result feedback',async()=>{
+ const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs');globalThis.react=React
+ const progress=[],markdown=[]
+ const props={t:key=>key,UserBubble:()=>null,Progress:({entry})=>{progress.push(entry);return React.createElement('div',{'data-running':entry.running},entry.noteTask.status)},Markdown:({blocks})=>{markdown.push(blocks);return React.createElement('div',null,blocks.map(b=>b.text).join(''))}}
+ renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:{requestId:'r',phase:'generating',stage:'thinking',reasoning:'process detail'}}))
+ expect(progress[0]).toMatchObject({running:true,noteTask:{status:'正在思考',reasoning:'process detail'}});expect(markdown).toEqual([])
+ const final=renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:{requestId:'r',phase:'accepted',reasoning:'process detail',result:{kind:'text',markdown:'正文内容'}}}))
+ expect(final).toContain('已将以下内容写入笔记。');expect(final).toContain('正文内容');expect(markdown.flat().some(block=>block.kind==='reasoning')).toBe(false)
+ delete globalThis.react
 })
 
 it('merges replayed durable notes with current task state and native message order',async()=>{

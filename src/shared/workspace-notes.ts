@@ -29,6 +29,7 @@ export function noteComponentRequest(prompt:string):boolean {
     /(?:创建|生成|制作|做|画|添加).*(?:组件|图表|表格|时间线|新闻)/u.test(clause))
 }
 export type NotesBridge = {
+  filePath?(file:File):string
   request(method: string, input: any): Promise<any>
   draft(input: { sessionId: string; clientId: string; revision: number; content: NoteContent }): Promise<void>
 }

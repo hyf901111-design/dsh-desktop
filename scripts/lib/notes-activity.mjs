@@ -36,8 +36,7 @@ export function EWorkNoteConversationRow({row,t,loadImage,UserBubble=UserStyleBu
     const feedback={ready:'已生成以下内容，可在文档预览中采纳。',accepted:'已将以下内容写入笔记。',discarded:'以下建议未被采纳。'}[row.phase]
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || '根据附件撰写内容'}],imageLoader:loadImage,t}),
-      h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
-      row.reasoning ? h(Markdown,{blocks:[{kind:'reasoning',text:row.reasoning}],streaming:pending&&row.stage==='thinking',interrupted:row.phase==='stopped',t}) : null,
+      h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t}) : null,
       row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:[feedback,row.result.markdown].filter(Boolean).join('\n\n')}],streaming:false,t})) : null,
@@ -61,7 +60,7 @@ export function mergeNoteConversationFlow(flow,nodeStore,rows){
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n`
+  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
@@ -89,13 +88,21 @@ export function patchNotesActivity(source) {
     if(source.split(status).length!==2)throw Error('笔记无法定位原生执行进度。')
     source=source.replace(status,'/* ework:notes-native-progress:v1 */ const status = entry.noteTask ? entry.noteTask.status : entry.canvasTask ?')
   }
+  if(!source.includes('/* ework:notes-shared-reasoning:v1 */')) {
+    const expandable='const expandable = !!entry.canvasTask || detailGroups.length > 0;'
+    const details='open && entry.canvasTask && react.createElement'
+    if(source.split(expandable).length!==2||source.split(details).length!==2)throw Error('笔记无法定位共用思考过程。')
+    source=source.replace(expandable,'/* ework:notes-shared-reasoning:v1 */ const expandable = !!entry.noteTask?.reasoning || !!entry.canvasTask || detailGroups.length > 0;')
+    source=source.replace(details,"open && entry.noteTask?.reasoning && react.createElement('div',{className:ChatView_module_css_default.executionDetails},react.createElement(AssistantMarkdown,{blocks:[{kind:'text',text:entry.noteTask.reasoning}],streaming:false,interrupted:false,t})), "+details)
+  }
   source=source.replace('const noteRows=useNotesConversationRows(sessionId);','/* ework:notes-history-ready:v1 */ const noteRows=useNotesConversationRows(sessionId,openState);')
   if(!source.includes('/* ework:notes-follow-stream:v1 */')){
     const signature='const followSig = `${openState}:${firstSeq}:${lastKey}:${order.length}:${running ? 1 : 0}:${lastSteeringId ?? ""}`;'
     if(source.split(signature).length!==2)throw Error('无法定位笔记会话滚动跟随。')
     source=source.replace(signature,'/* ework:notes-follow-stream:v1 */ '+signature.slice(0,-2)+':${noteRows.map(row=>[row.requestId,row.phase,row.stage,row.outputChars,row.reasoning?.length].join(\",\")).join(\";\")}`;')
   }
-  if(source.includes(next))return source
+  if(source.includes(next))return patchNotesFiles(source)
   if (source.split(portal).length !== 2) throw Error('笔记无法定位原生对话过程区域。')
-  return source.replace(portal,next)
+  return patchNotesFiles(source.replace(portal,next))
 }
+import { noteFileClientHelpers, patchNotesFiles } from './notes-files.mjs'

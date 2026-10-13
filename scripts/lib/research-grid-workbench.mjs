@@ -210,6 +210,6 @@ export function patchResearchGridWorkbench(source){
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   change('d: "M3 3.5h10v9H3z"','d: "M9.5 2.25h-6a1.25 1.25 0 0 0-1.25 1.25v9a1.25 1.25 0 0 0 1.25 1.25H7M13.75 6.5v-3a1.25 1.25 0 0 0-1.25-1.25h-3"')
   change('d: "M8 5.5v5M5.5 8h5"','d: "M11.25 8v6.5M8 11.25h6.5"')
-  for(const {before,after} of localizedWorkbenchFunctions(source))change(before,after)
+  for(const {before,after,name} of localizedWorkbenchFunctions(source))change(before,name==='ResearchCanvasFrameMenu'?after.replace('workbenchText("从画布移除")','workbenchText(node.noteDocument?"从笔记移除":"从画布移除")'):after)
   return source+'\n'+meta+JSON.stringify(changes).replaceAll('*/','*\\/')+' */'
 }

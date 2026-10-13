@@ -35,3 +35,7 @@ it('preserves HTML component body, tables, canonical model data and media refere
  const markdown=noteMarkdown(value),html=notePrintHtml(value),xml=await(await JSZip.loadAsync(await noteWordBuffer(value))).file('word/document.xml')!.async('string')
  for(const result of [markdown,html,xml]){expect(result).toContain('完整的事件正文');expect(result).toContain('42');expect(result).toContain('9876');expect(result).toContain('图表原图');expect(result).not.toContain('forbiddenScript()');expect(result).not.toContain('secret-style')}
 })
+it('keeps imported attachment names in every export without leaking preview capabilities or local paths',async()=>{
+ const c={title:'附件',yjs:'',blocks:[{id:'f',type:'attachment',props:{payload:JSON.stringify({name:'数据.xlsx',path:'/private/data.xlsx',authorizationId:'secret-grant'})}}]}
+ for(const result of [noteMarkdown(c),notePrintHtml(c),await(await JSZip.loadAsync(await noteWordBuffer(c))).file('word/document.xml')!.async('string')]){expect(result).toContain('数据.xlsx');expect(result).not.toContain('/private');expect(result).not.toContain('secret-grant')}
+})

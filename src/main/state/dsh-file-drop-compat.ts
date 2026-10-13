@@ -19,6 +19,8 @@ const LEGACY_PATCHED_CLIENT_SHA256 =
 const INLINE_REFERENCE_PATCHED_CLIENT_SHA256 =
   'c8e269525a469cb1733a8318ab429be3152835997c828eabc5568c07c2044cdf'
 const PATCHED_CLIENT_SHA256 =
+  'a466fa44bef9ab34fe42346f4afd6759d123009e7bc657e73194346f6ed49770'
+const PRE_NOTES_PATCHED_CLIENT_SHA256 =
   '333b2a3b543af91176cd5ff7d56163290d15b84861fbd6dcc59d45c24c18e1c9'
 const ORIGINAL_FILE_GUARD = '          if (!hasFiles(e)) return'
 const RESEARCH_FILE_GUARD =
@@ -83,6 +85,7 @@ function sourceIdentity(source: string): string {
 export function patchDshFileDropClientSource(source: string): string | undefined {
   const identity = sourceIdentity(source)
   if (identity === PATCHED_CLIENT_SHA256) return source
+  if(identity===PRE_NOTES_PATCHED_CLIENT_SHA256){const next=source.replace("node.hasAttribute('data-research-canvas')","(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))");return sourceIdentity(next)===PATCHED_CLIENT_SHA256?next:undefined}
   const pristine = identity === PRISTINE_CLIENT_SHA256
   const legacyPatched = identity === LEGACY_PATCHED_CLIENT_SHA256
   const inlineReferencePatched = identity === INLINE_REFERENCE_PATCHED_CLIENT_SHA256
@@ -104,7 +107,7 @@ export function patchDshFileDropClientSource(source: string): string | undefined
         // ${DSH_FILE_DROP_RESEARCH_CANVAS_MARKER}
         const isResearchCanvasEvent = (e) => {
           const path = typeof e.composedPath === 'function' ? e.composedPath() : [e.target]
-          return path.some((node) => node && typeof node.hasAttribute === 'function' && node.hasAttribute('data-research-canvas'))
+          return path.some((node) => node && typeof node.hasAttribute === 'function' && (node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner')))
         }
         const releaseResearchCanvasEvent = (e) => {
           if (!isResearchCanvasEvent(e)) return false
@@ -118,7 +121,7 @@ export function patchDshFileDropClientSource(source: string): string | undefined
         .replace(hasFiles, researchOwnership)
         .replaceAll(ORIGINAL_FILE_GUARD, RESEARCH_FILE_GUARD)
         .replace(ORIGINAL_LEAVE_START, RESEARCH_LEAVE_START)
-    : source
+    : source.replace("node.hasAttribute('data-research-canvas')", "(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))")
   const inlineCompatible = inlineReferencePatched
     ? researchCompatible
     : researchCompatible.replace(ORIGINAL_APPEND_HELPER, INLINE_REFERENCE_APPEND_HELPER)
@@ -259,7 +262,7 @@ export async function ensureDshFileDropResearchCanvasCompatibility(
   if (
     identity !== PRISTINE_CLIENT_SHA256 &&
     identity !== LEGACY_PATCHED_CLIENT_SHA256 &&
-    identity !== INLINE_REFERENCE_PATCHED_CLIENT_SHA256
+    identity !== INLINE_REFERENCE_PATCHED_CLIENT_SHA256 && identity !== PRE_NOTES_PATCHED_CLIENT_SHA256
   ) {
     return {
       status: 'unsupported',
