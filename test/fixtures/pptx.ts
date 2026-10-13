@@ -11,4 +11,3 @@ export function fixture() {
   'ppt/charts/chart1.xml':strToU8('<chart>preserved</chart>')
  },{level:0}))
 }
-
