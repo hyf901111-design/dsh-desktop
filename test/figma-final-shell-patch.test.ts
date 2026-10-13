@@ -220,7 +220,7 @@ describe('Figma shell patch installation', () => {
     const expression = installed.slice(start, end) + '\ninputBar'
     const resolve = (state: Record<string, unknown>) => runInNewContext(expression, {
       renderSlot: (_name: string, props: unknown) => props,
-      hero: false, researchEmpty: false, inert: false, composerBlock: undefined, subagentPanel: false,
+      hero: false, researchEmpty: false, inert: false, composerBlock: undefined, subagentPanel: false, activeView: 'research',
       researchFileReferences: undefined, researchArtifactReferences: undefined,
       research: true, sessionId: 'current', researchWorkspace: {}, pickerOpen: false,
       setPickerOpen() {}, zone: undefined, t: (key: string) => key, ...state

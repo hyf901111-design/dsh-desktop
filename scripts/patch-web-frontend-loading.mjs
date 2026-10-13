@@ -1,5 +1,6 @@
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
+import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
@@ -248,4 +249,4 @@ writeFileSync(conversationPath, patchResearchGridWorkbench(patchCalendarToolClie
 
 // Bind the owned note surface to the real native session after other patches.
 const notesConversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(notesConversationPath, patchNotesClient(readFileSync(notesConversationPath, 'utf8')))
+writeFileSync(notesConversationPath, patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8'))))

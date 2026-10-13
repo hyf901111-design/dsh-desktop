@@ -32,3 +32,10 @@ it('honors cancellation and refuses missing models', async () => {
   const ctx = context('hello'); ctx.apiProxy.sessions.models = async () => ({ result: { ok: true, value: { current: null, routable: false } } })
   await expect(generateNoteSuggestion(ctx, input)).rejects.toThrow()
 })
+it('uses the native attachment store for uploaded images and refuses malformed or oversized images',async()=>{
+ const ctx=context('{"kind":"text","markdown":"图片说明"}');let saved
+ ctx.attachments={imageLimits:{maxImagesPerMessage:1,maxImageBytes:16,maxMessageImageBytes:16,mediaTypes:['image/png']},saveImages:async inputs=>{saved=inputs;return[{attachmentId:'owned-image',mediaType:'image/png',bytes:3,width:1,height:1}]}}
+ await generateNoteSuggestion(ctx,{...input,images:[{type:'image',mediaType:'image/png',data:'AQID'}]});expect(saved[0].data).toEqual(Buffer.from([1,2,3]));expect(ctx.options().messages[0].content[0]).toMatchObject({type:'image',attachment:{attachmentId:'owned-image'}})
+ await expect(generateNoteSuggestion(ctx,{...input,images:[{type:'image',mediaType:'image/png',data:'bad!'}]})).rejects.toThrow('格式')
+ await expect(generateNoteSuggestion(ctx,{...input,images:[{type:'image',mediaType:'image/png',data:Buffer.alloc(17).toString('base64')}]})).rejects.toThrow('大小')
+})

@@ -107,6 +107,7 @@ export class WorkspaceSurfaceHost {
         const color = this.document.defaultView?.getComputedStyle(this.document.body).color || '';
         const dark = this.document.body.hasAttribute('data-ds-dark-theme') || html.dataset.theme === 'dark' || html.classList.contains('dark') || Number(color.match(/\d+/)?.[0] || 0) > 180;
         for (const element of this.surfaces.values()) {
+            element.dataset.settingsOpen = String(this.settingsOpen());
             if (element.style.left !== left)
                 element.style.left = left;
             if (element.dataset.dark !== String(dark))

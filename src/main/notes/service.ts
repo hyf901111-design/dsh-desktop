@@ -42,7 +42,7 @@ export function installNotesService(options: {
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)
         try {
-          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(125000)]), body: JSON.stringify({ sessionId: session, title: input.title, markdown: input.markdown, selection: input.selection, prompt: input.prompt, mode: input.mode }) })
+          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(125000)]), body: JSON.stringify({ sessionId: session, title: input.title, markdown: input.markdown, selection: input.selection, prompt: input.prompt, images: input.images, mode: input.mode }) })
           const result = await response.json()
           if (!response.ok) throw Error(result.error || '笔记生成失败，请重试。')
           if (options.owner() !== owner) throw Error('账号已变化，请重新生成。')

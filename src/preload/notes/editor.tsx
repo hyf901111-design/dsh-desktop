@@ -1,19 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
 import { BlockNoteSchema, defaultBlockSpecs, createUserStore } from '@blocknote/core'
 import { zh } from '@blocknote/core/locales'
+import { SideMenuExtension } from '@blocknote/core/extensions'
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteView } from '@blocknote/mantine'
-import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton } from '@blocknote/react'
+import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useExtensionState } from '@blocknote/react'
 import * as Y from 'yjs'
 import { noteOutline, noteText, canApplySuggestion, restoreNoteDraft, noteSuggestionPreview, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
-import attachment from '../../../build/notes/attachment.svg?inline'
-import permission from '../../../build/notes/permission.svg?inline'
-import sendCircle from '../../../build/notes/send-circle.svg?inline'
-import slashIcon from '../../../build/notes/slash.svg?inline'
 import collapse from '../../../build/notes/toc-collapse.svg?inline'
 
-type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void; nativeControl(kind: string): void }
+type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
+type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[]}
 const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: boolean; navigate(view: string): void } | null>(null)
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
 const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.map(b => noteText(b.content) || (b.type === 'research' ? '[研究组件]' : '')).join('\n\n')
@@ -33,7 +31,7 @@ function ResearchBlock({ block }: any) {
     window.addEventListener('message', receive); return () => window.removeEventListener('message', receive)
   }, [])
   const doc = useMemo(() => {
-    const foreground = context.dark ? '#e5e5e5' : '#252525', background = context.dark ? '#131316' : '#ffffff'
+    const foreground = context.dark ? '#e5e5e5' : '#252525', background = getComputedStyle(document.body).getPropertyValue('--odyssey-workspace').trim() || (context.dark ? '#1f1f1f' : '#f2f2f2')
     const palette = context.dark ? ['#7aaffe', '#ffbd69', '#b29ae3', '#ebd875', '#4bd3a3', '#ff7380', '#79c8e5', '#dfa4c3'] : ['#477ef3', '#b78122', '#8356b7', '#bd8420', '#008368', '#bc3545', '#0076a8', '#a85a81']
     return '<!doctype html><html data-sherlock-theme="' + (context.dark ? 'dark' : 'light') + '"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: https:; style-src \'unsafe-inline\'; script-src \'unsafe-inline\';"><style>:root{--sherlock-font-sans:system-ui;--sherlock-text:' + foreground + ';--sherlock-control-text:' + foreground + ';--sherlock-surface:' + background + ';--sherlock-muted:' + (context.dark ? '#9da5b2' : '#7d8490') + ';--sherlock-border:' + (context.dark ? '#303138' : '#e7e8eb') + ';--sherlock-surface-muted:' + (context.dark ? '#24242a' : '#f1f2f4') + ';' + palette.map((color, i) => '--sherlock-chart-' + (i + 1) + ':' + color).join(';') + '}html,body{margin:0;background:' + background + ';color:' + foreground + ';font:14px/1.8 system-ui}body{padding:0!important}svg{max-width:100%}table{max-width:100%}</style>' + html + '<script>new ResizeObserver(()=>parent.postMessage({type:"ework-note-height",height:document.documentElement.scrollHeight},"*")).observe(document.body);<\/script></html>'
   }, [html, context.dark])
@@ -51,9 +49,11 @@ function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }
 }
 
 function BlockMenu(props: any) {
-  const editor: any = useBlockNoteEditor(), block = props.block, [open, setOpen] = useState(false)
+  const editor: any = useBlockNoteEditor(), block = useExtensionState(SideMenuExtension, {selector: state => state?.block}), [open, setOpen] = useState(false)
   const menu = useRef<HTMLDivElement>(null)
   useEffect(() => { if (!open) return; const dismiss = (e: Event) => { if (!menu.current?.contains(e.target as Node)) setOpen(false) }; const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }; document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', key); return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', key) } }, [open])
+  useEffect(()=>{const extension=editor.getExtension(SideMenuExtension);if(open)extension?.freezeMenu();return()=>extension?.unfreezeMenu()},[editor,open])
+  if (!block) return null
   const change = (type: string, p: any = {}) => { editor.updateBlock(block, { type, props: p }); setOpen(false); editor.focus() }
   const duplicate = () => { const { id, ...copy } = block; editor.insertBlocks([copy], block, 'after'); setOpen(false) }
   return <div className="en-side" ref={menu}><button className="en-block-trigger" title="段落操作" aria-label="段落操作" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => setOpen(!open)}>T</button><SideMenu {...props}><DragHandleButton {...props} /></SideMenu>
@@ -85,8 +85,8 @@ export function NotesApp(props: Props) {
 }
 
 function NotesEditor(props: Props & { initial: NoteContent & { revision: number }; recovery?: NoteLoad['draft']; recovering: boolean; onRecovery(restore: boolean): void; onReload(): void }) {
-  const [title, setTitle] = useState(props.initial.title), [status, setStatus] = useState(props.recovery ? '发现本地草稿' : '已保存'), [error, setError] = useState(''), [outline, setOutline] = useState<any[]>([]), [toc, setToc] = useState(window.innerWidth > 1200), [active, setActive] = useState(''), [prompt, setPrompt] = useState(''), [generating, setGenerating] = useState(false), [preview, setPreview] = useState<NoteSuggestionPreview>(), [compare, setCompare] = useState(false), [models, setModels] = useState<any>(), [modelOpen, setModelOpen] = useState(false)
-  const client = useRef((props.initial as any).clientId || crypto.randomUUID()), revision = useRef(props.initial.revision), titleRef = useRef(title), scroll = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null), saveTimer = useRef<ReturnType<typeof setTimeout>>(), saveQueue = useRef(Promise.resolve()), disposed = useRef(false), request = useRef(''), epoch = useRef(0), selection = useRef({ text: '', from: 0, to: 0, cursor: '' }), lastWritten = useRef(''), latest = useRef<NoteContent>(props.initial)
+  const [title, setTitle] = useState(props.initial.title), [status, setStatus] = useState(props.recovery ? '发现本地草稿' : '已保存'), [error, setError] = useState(''), [outline, setOutline] = useState<any[]>([]), [toc, setToc] = useState(window.innerWidth > 1200), [active, setActive] = useState(''), [preview, setPreview] = useState<NoteSuggestionPreview & {nativeComposer?:ComposerAdmission}>(), [compare, setCompare] = useState(false)
+  const client = useRef((props.initial as any).clientId || crypto.randomUUID()), revision = useRef(props.initial.revision), titleRef = useRef(title), scroll = useRef<HTMLDivElement>(null), saveTimer = useRef<ReturnType<typeof setTimeout>>(), saveQueue = useRef(Promise.resolve()), disposed = useRef(false), request = useRef(''), epoch = useRef(0), selection = useRef({ text: '', from: 0, to: 0, cursor: '' }), lastWritten = useRef(''), latest = useRef<NoteContent>(props.initial)
   titleRef.current = title
   const doc = useMemo(() => { const value = new Y.Doc(); if (props.initial.yjs) Y.applyUpdate(value, Uint8Array.from(atob(props.initial.yjs), c => c.charCodeAt(0))); return value }, [])
   const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: '我', avatarUrl: '' }))), [])
@@ -118,7 +118,6 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     window.addEventListener('keydown', flush)
     return () => { disposed.current = true; epoch.current++; clearTimeout(saveTimer.current); off(); offSelection(); doc.getMap('threads').unobserveDeep(commentChanged); window.removeEventListener('keydown', flush); if (request.current) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: request.current }); save() }
   }, [])
-  useEffect(() => { let live = true; props.bridge.request('models', { sessionId: props.sessionId }).then(value => live && setModels(value)).catch(() => {}); return () => { live = false } }, [])
   useEffect(() => { const resize = () => { if (window.innerWidth <= 1200) setToc(false) }; window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize) }, [])
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
@@ -127,12 +126,15 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     if (event) { if (!event.clipboardData.getData('text/html').includes('sherlock-research-clipboard')) return; event.preventDefault() }
     try { const result = await props.bridge.request('clipboard', { sessionId: props.sessionId }); if (result.kind === 'components') { event?.preventDefault(); editor.insertBlocks(result.nodes.map((node: any) => ({ type: 'research', props: { payload: JSON.stringify(node) } })), editor.getTextCursorPosition().block, 'after'); editor.focus() } } catch (e) { setError((e as Error).message) }
   }
+  const publishComposer = (value: {running?: boolean;ready?: boolean}) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current,...value}}))
+  const setNativeDraft = (text?: string, focus=false) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))
+  const commitNativeDraft = (admission?:ComposerAdmission) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))
   const generatingBlock = useRef('')
-  const generate = async () => {
-    if (!prompt.trim() || generating || props.recovery) return
+  const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission) => {
+    if ((!prompt.trim() && !images.length) || request.current || props.recovery) return
     const attempt = ++epoch.current, captured = { ...selection.current }, fingerprint = JSON.stringify(editor.document), requestId = crypto.randomUUID()
     const component = /(?:创建|生成|做|画|添加).*(?:组件|图表|表格|时间线|新闻)/u.test(prompt)
-    request.current = requestId; setGenerating(true); setError(''); setPreview(undefined)
+    request.current = requestId; publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
     try {
       const markdown = await editor.blocksToMarkdownLossy(editor.document)
@@ -142,13 +144,13 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         pending = created[0].id; generatingBlock.current = pending
         requestAnimationFrame(() => locate(pending))
       }
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title, markdown, selection: captured.text, prompt, mode: component ? 'component' : 'write' })
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title, markdown, selection: captured.text, prompt, images, mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt) return
       if (component && result.kind === 'component' && editor.getBlock(pending)) {
-        editor.updateBlock(pending, { props: { payload: JSON.stringify(result.node) } }); setPrompt(''); changed(); requestAnimationFrame(() => locate(pending))
+        editor.updateBlock(pending, { props: { payload: JSON.stringify(result.node) } }); commitNativeDraft(admission); changed(); requestAnimationFrame(() => locate(pending))
       } else {
         if (pending && editor.getBlock(pending)) editor.removeBlocks([pending])
-        setPreview(noteSuggestionPreview(result, { ...captured, fingerprint, cursor: captured.cursor || editor.getTextCursorPosition().block.id }))
+        setPreview({...noteSuggestionPreview(result, { ...captured, fingerprint, cursor: captured.cursor || editor.getTextCursorPosition().block.id }),nativeComposer:admission})
       }
     } catch (e) {
       if (!disposed.current && epoch.current === attempt) {
@@ -156,9 +158,9 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         if (pending && editor.getBlock(pending)) editor.updateBlock(pending, { props: { payload: JSON.stringify({ id: requestId, title: '研究组件', kind: 'generated-container', generationStatus: 'failed', generationError: message, sourceText: '未绑定数据源 · 未刷新' }) } })
         setError(message)
       }
-    } finally { if (!disposed.current && epoch.current === attempt) { setGenerating(false); request.current = ''; generatingBlock.current = '' } }
+    } finally { if (!disposed.current && epoch.current === attempt) { publishComposer({running:false}); request.current = ''; generatingBlock.current = '' } }
   }
-  const stop = () => { epoch.current++; const id = request.current; request.current = ''; setGenerating(false); if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && editor.getBlock(generatingBlock.current)) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({ title: '研究组件', kind: 'generated-container', generationStatus: 'interrupted', sourceText: '未绑定数据源 · 未刷新' }) } }); generatingBlock.current = ''; setError('生成已停止，笔记内容已保留。') }
+  const stop = () => { epoch.current++; const id = request.current; request.current = ''; publishComposer({running:false}); if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && editor.getBlock(generatingBlock.current)) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({ title: '研究组件', kind: 'generated-container', generationStatus: 'interrupted', sourceText: '未绑定数据源 · 未刷新' }) } }); generatingBlock.current = ''; setError('生成已停止，笔记内容已保留。') }
   const apply = async (replace: boolean) => {
     if (!preview) return
     if (replace && !canApplySuggestion({ documentId: props.sessionId, fingerprint: preview.fingerprint }, { documentId: props.sessionId, fingerprint: JSON.stringify(editor.document) })) { setError('正文已变化，请重新生成后再替换选区。你仍可将建议插入到下方。'); return }
@@ -166,8 +168,17 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
     if (replace && preview.selectedText && preview.result.kind === 'text') { const html = await editor.blocksToHTMLLossy(blocks); if (JSON.stringify(editor.document) !== preview.fingerprint) { setError('正文已变化，请重新生成后再替换选区。'); return }; const state = editor._tiptapEditor.state; state.plugins.find((p: any) => p.key.startsWith('y-undo'))?.getState(state)?.undoManager?.stopCapturing(); editor._tiptapEditor.commands.setTextSelection({ from: preview.from, to: preview.to }); editor._tiptapEditor.commands.insertContent(html) }
     else { const reference = editor.getBlock(preview.cursor) || editor.getTextCursorPosition().block; editor.insertBlocks(blocks, reference, 'after') }
-    setPreview(undefined); setPrompt(''); changed()
+    commitNativeDraft(preview.nativeComposer); setPreview(undefined); changed()
   }
+  const commands = useRef({generate,stop});commands.current={generate,stop}
+  useEffect(()=>{
+    const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId!==props.sessionId||props.recovery)return;detail.handled=true;void commands.current.generate(detail.prompt,detail.images,detail.admission)}
+    const cancel=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.stop()}
+    const menu=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId){editor.focus();editor.openSuggestionMenu('/')}}
+    const state=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)publishComposer({})}
+    document.addEventListener('sherlock:notes-submit',submit);document.addEventListener('sherlock:notes-stop',cancel);document.addEventListener('sherlock:notes-command',menu);document.addEventListener('sherlock:notes-composer-request-state',state);publishComposer({running:false})
+    return()=>{document.removeEventListener('sherlock:notes-submit',submit);document.removeEventListener('sherlock:notes-stop',cancel);document.removeEventListener('sherlock:notes-command',menu);document.removeEventListener('sherlock:notes-composer-request-state',state);publishComposer({ready:false,running:false})}
+  },[props.sessionId,props.recovery])
   const exportNote = async () => { try { const markdown = '# ' + (title || '无标题文档') + '\n\n' + await editor.blocksToMarkdownLossy(editor.document); const blob = new Blob([markdown], { type: 'text/markdown' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = (title || '无标题文档').replace(/[\\/:*?"<>|]/g, '_') + '.md'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000) } catch (e) { setError((e as Error).message) } }
   const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate }), [props.bridge, props.sessionId, props.dark, props.navigate])
   return <Context.Provider value={ctx}><div className="en-body" data-toc-open={toc}>
@@ -177,14 +188,14 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
         <BlockNoteView editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false}>
-          <FormattingToolbarController formattingToolbar={() => <FormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <span>T</span> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><button className="en-ai-format" onMouseDown={e => e.preventDefault()} onClick={() => { setPrompt('改写选中文字，保留原意并让表达更清晰。'); input.current?.focus() }}>✧ AI 改写</button></FormattingToolbar>} />
-          <SideMenuController sideMenu={BlockMenu} />
+          <FormattingToolbarController formattingToolbar={() => <FormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <span>T</span> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><button className="en-ai-format" onMouseDown={e => e.preventDefault()} onClick={() => { setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}>✧ AI 改写</button></FormattingToolbar>} />
+          <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const box=content.getBoundingClientRect(),base=reference.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} />
         </BlockNoteView>
       </div>
     </div>
     <div className="en-composer-area">{error ? <div className="en-error" role="alert"><span>{error}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>重新读取并对比</button> : null}<button onClick={() => setError('')} aria-label="关闭提示">×</button></div> : null}
-      {preview ? <section className="en-preview" aria-label="AI 修改预览"><header><strong>{preview.result.kind === 'component' ? '创建的研究组件' : '修改预览'}</strong><button aria-label="放弃建议" onClick={() => setPreview(undefined)}>×</button></header><div className="en-preview-content">{preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}</div><footer>{preview.selectedText && preview.result.kind === 'text' ? <button onClick={() => apply(true)}>替换所选</button> : null}<button onClick={() => apply(false)}>{preview.result.kind === 'component' ? '写入正文' : '插入到下方'}</button><button onClick={() => { setPreview(undefined); input.current?.focus() }}>继续调整</button><button onClick={() => setPreview(undefined)}>放弃</button></footer></section> : null}
-      <div className="en-composer"><textarea ref={input} aria-label="笔记补充与组件创建" placeholder="补充、改写笔记，或描述要创建的组件…" value={prompt} maxLength={8000} onChange={e => setPrompt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void generate() } }} /><div className="en-composer-controls"><button className="en-chip" aria-label="笔记插入命令" onClick={() => { editor.focus(); editor.openSuggestionMenu('/') }}><img src={slashIcon} width={4.11523} height={20} /></button><button className="en-chip" aria-label="粘贴研究组件" title="粘贴已复制的研究组件" onClick={() => paste()}><img src={attachment} width="16" height="16" /></button><button className="en-permission" onClick={() => props.nativeControl('permission')}><img src={permission} width="16" height="16" />当前会话权限⌄</button><span className="en-control-spacer" /><div className="en-model"><button onClick={() => setModelOpen(!modelOpen)}>{models?.current?.model || '选择模型'}⌄</button>{modelOpen ? <div className="en-model-menu">{(models?.groups || []).flatMap((g: any) => (g.models || []).map((m: any) => <button key={g.id + ':' + m.id} onClick={async () => { try { await props.bridge.request('model', { sessionId: props.sessionId, provider: g.id, model: m.id }); setModels(await props.bridge.request('models', { sessionId: props.sessionId })); setModelOpen(false) } catch (e) { setError((e as Error).message) } }}>{m.name || m.label || m.id}</button>))}</div> : null}</div><button className="en-send" aria-label={generating ? '停止生成' : '生成笔记建议'} disabled={!generating && !prompt.trim()} onClick={() => generating ? stop() : void generate()}>{generating ? <span className="en-stop" /> : <><img src={sendCircle} width="30" height="30" /></>}</button></div></div>
+      {preview ? <section className="en-preview" aria-label="AI 修改预览"><header><strong>{preview.result.kind === 'component' ? '创建的研究组件' : '修改预览'}</strong><button aria-label="放弃建议" onClick={() => setPreview(undefined)}>×</button></header><div className="en-preview-content">{preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}</div><footer>{preview.selectedText && preview.result.kind === 'text' ? <button onClick={() => apply(true)}>替换所选</button> : null}<button onClick={() => apply(false)}>{preview.result.kind === 'component' ? '写入正文' : '插入到下方'}</button><button onClick={() => { setPreview(undefined); setNativeDraft(undefined, true) }}>继续调整</button><button onClick={() => setPreview(undefined)}>放弃</button></footer></section> : null}
+
     </div></main>
     {compare && props.recovery ? <div className="en-dialog-backdrop" onClick={() => setCompare(false)}><section role="dialog" aria-modal="true" aria-label="本地草稿对比" className="en-compare" onClick={e => e.stopPropagation()}><header><strong>本地草稿对比</strong><button onClick={() => setCompare(false)}>关闭</button></header><div><section><h3>已保存版本</h3><pre>{plain(props.initial)}</pre></section><section><h3>本地草稿</h3><pre>{plain(props.recovery)}</pre></section></div><footer><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button onClick={() => setCompare(false)}>稍后处理</button></footer></section></div> : null}
   </div></Context.Provider>

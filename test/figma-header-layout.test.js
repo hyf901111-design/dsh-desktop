@@ -220,4 +220,10 @@ for (const dark of [false,true]) it(`notes share the native header without movin
  expect(after.tabs.map(({selected,...r})=>r)).toEqual(before.tabs.map(({selected,...r})=>r));expect(after.toggle).toEqual(before.toggle);
  const bounds=await page.evaluate(()=>({top:document.querySelector('.en-root').getBoundingClientRect().top,header:document.querySelector('main header').getBoundingClientRect().bottom,toggleHit:(()=>{const b=document.querySelector('[data-odyssey-panel-entry="right"]'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()}));
  expect(bounds.top).toBe(bounds.header);expect(bounds.toggleHit).toBe(true);
+ expect(await page.locator('.en-root').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(await page.locator('main .wSkVaW_root').evaluate(el=>getComputedStyle(el).backgroundColor));
+ await page.evaluate(()=>document.body.insertAdjacentHTML('beforeend','<div class="VOzbGW_overlay">原生设置</div>'));
+ await expect.poll(()=>page.locator('.en-root').evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden');
+ expect(await page.locator('main header').evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden');
+ await page.evaluate(()=>document.querySelector('.VOzbGW_overlay').remove());
+ await expect.poll(()=>page.locator('.en-root').evaluate(el=>getComputedStyle(el).visibility)).toBe('visible');
 });
