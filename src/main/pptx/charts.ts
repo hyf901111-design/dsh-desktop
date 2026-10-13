@@ -5,7 +5,8 @@ import {xml,children,elements} from './content'
 const C='http://schemas.openxmlformats.org/drawingml/2006/chart',A='http://schemas.openxmlformats.org/drawingml/2006/main',R='http://schemas.openxmlformats.org/officeDocument/2006/relationships',REL='http://schemas.openxmlformats.org/package/2006/relationships',S='http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 export type PptxChart={part:string;title:string;legend:boolean;categories:string[];series:Array<{name:string;values:Array<number|null>;color?:string}>}
 const child=(e:Element,name:string)=>children(e).find(c=>c.localName===name)
-function ensure(e:Element,ns:string,name:string){let n=child(e,name);if(!n){n=e.ownerDocument!.createElementNS(ns,`${ns===C?'c':ns===A?'a':''}${ns===S?'':':'}${name}`);e.appendChild(n)}return n}
+const sequences:Record<string,string[]>={ser:['idx','order','tx','spPr','invertIfNegative','pictureOptions','marker','dPt','dLbls','trendline','errBars','cat','xVal','val','yVal','bubbleSize','smooth','shape','extLst'],spPr:['xfrm','prstGeom','custGeom','noFill','solidFill','gradFill','blipFill','pattFill','grpFill','ln','effectLst','effectDag','scene3d','sp3d','extLst']}
+function ensure(e:Element,ns:string,name:string){let n=child(e,name);if(!n){n=e.ownerDocument!.createElementNS(ns,`${ns===C?'c':ns===A?'a':''}${ns===S?'':':'}${name}`);const sequence=sequences[e.localName??'']??[],index=sequence.indexOf(name),before=index<0?undefined:children(e).find(c=>sequence.indexOf(c.localName??'')>index);e.insertBefore(n,before??null)}return n}
 const serialize=(d:Document)=>Buffer.from(new XMLSerializer().serializeToString(d))
 function related(archive:PptxArchive,part:string,id:string):string|undefined{
  const rels=path.posix.join(path.posix.dirname(part),'_rels',path.posix.basename(part)+'.rels')
@@ -90,7 +91,7 @@ export function editChart(archive:PptxArchive,original:PptxChart,changed:PptxCha
  changed.series.forEach((value,i)=>{
   const node=series[i]!,name=ensure(node,C,'tx'),cat=child(node,'cat')??child(node,'xVal'),val=child(node,'val')??child(node,'yVal')
   if(!cat||!val)throw Error('此类图表数据暂不可编辑。')
-  workbook?.update(replaceCache(name,[value.name],false),[value.name])
+  if(child(name,'strRef'))workbook?.update(replaceCache(name,[value.name],false),[value.name]);else{for(const old of children(name))name.removeChild(old);ensure(name,C,'v').textContent=value.name}
   const numeric=!!child(cat,'numRef')||!!child(cat,'numLit'),categories=numeric?changed.categories.map(v=>Number(v)):changed.categories
   if(numeric&&categories.some(v=>!Number.isFinite(v)))throw Error('此图表的横轴需要数值。')
   workbook?.update(replaceCache(cat,categories,numeric),categories)
@@ -98,7 +99,7 @@ export function editChart(archive:PptxArchive,original:PptxChart,changed:PptxCha
   if(value.color){const props=ensure(node,C,'spPr');for(const old of children(props).filter(c=>['solidFill','gradFill','noFill'].includes(c.localName??'')))props.removeChild(old);ensure(ensure(props,A,'solidFill'),A,'srgbClr').setAttribute('val',value.color.toUpperCase())}
  })
  let title=child(root,'title')
- if(changed.title){if(!title){title=document.createElementNS(C,'c:title');root.insertBefore(title,root.firstChild)};let tx=ensure(title,C,'tx');for(const old of children(tx))tx.removeChild(old);const rich=ensure(tx,C,'rich');ensure(rich,A,'bodyPr');ensure(rich,A,'lstStyle');ensure(ensure(ensure(rich,A,'p'),A,'r'),A,'t').textContent=changed.title}else if(title)root.removeChild(title)
+ if(changed.title!==original.title&&changed.title){if(!title){title=document.createElementNS(C,'c:title');root.insertBefore(title,root.firstChild)};const tx=ensure(title,C,'tx'),text=elements(tx,A,'t');if(text.length){text[0]!.textContent=changed.title;for(const extra of text.slice(1))extra.textContent=''}else{for(const old of children(tx))tx.removeChild(old);const rich=ensure(tx,C,'rich');ensure(rich,A,'bodyPr');ensure(rich,A,'lstStyle');ensure(ensure(ensure(rich,A,'p'),A,'r'),A,'t').textContent=changed.title}}else if(!changed.title&&title)root.removeChild(title)
  const legend=child(root,'legend')
  if(!changed.legend&&legend)root.removeChild(legend)
  else if(changed.legend&&!legend){const created=document.createElementNS(C,'c:legend');ensure(created,C,'legendPos').setAttribute('val','b');root.insertBefore(created,child(root,'plotArea')?.nextSibling??null)}

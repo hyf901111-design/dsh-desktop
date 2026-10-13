@@ -4,7 +4,7 @@ import {readPptxParts,children,elements,ancestor, type PptxField} from './conten
 import {readChart,editChart,type PptxChart} from './charts'
 const P='http://schemas.openxmlformats.org/presentationml/2006/main',A='http://schemas.openxmlformats.org/drawingml/2006/main'
 export type Geometry={x:number;y:number;width:number;height:number;rotation:number}
-export type PptxNode={id:string;nodeId:string;part:string;type:'shape'|'picture'|'group'|'table'|'chart';name:string;parentId?:string;geometry:Geometry|null;fill?:string;stroke?:string;strokeWidth?:number;preset?:string;fontSize?:number;bold?:boolean;color?:string;chart?:PptxChart}
+export type PptxNode={id:string;nodeId:string;part:string;type:'shape'|'picture'|'group'|'table'|'chart';name:string;parentId?:string;geometry:Geometry|null;fill?:string;stroke?:string;strokeWidth?:number;preset?:string;fontSize?:number;bold?:boolean;color?:string;chart?:PptxChart;chartWarning?:string}
 export type PptxScene={slides:Array<{index:number;part:string;fields:PptxField[];nodes:PptxNode[]}>}
 export type PptxNodeChange={id:string;geometry?:Geometry;fill?:string;stroke?:string;strokeWidth?:number;preset?:string;fontSize?:number;bold?:boolean;color?:string;chart?:PptxChart}
 const child=(e:Element,name:string)=>children(e).find(c=>c.localName===name)
@@ -31,7 +31,7 @@ function collect(archive:PptxArchive){return readPptxParts(archive).map(slide=>{
   const fill=props&&child(props,'solidFill'),line=props&&child(props,'ln'),run=elements(element,A,'rPr')[0],parent=ancestor(element,'grpSp'),parentId=parent&&elements(parent,P,'cNvPr')[0]?.getAttribute('id')
   const value:PptxNode&{element:Element}={id,nodeId,part:slide.part,type,name:elements(element,P,'cNvPr')[0]?.getAttribute('name')||type,geometry:geom,element,
    ...(parentId?{parentId}:{}),...(fill?{fill:child(fill,'srgbClr')?.getAttribute('val')??undefined}:{}),...(line?{stroke:elements(line,A,'srgbClr')[0]?.getAttribute('val')??undefined,strokeWidth:Number(line.getAttribute('w')??0)/9525}:{}),...(props?{preset:child(props,'prstGeom')?.getAttribute('prst')??undefined}:{}),...(run?{fontSize:run.hasAttribute('sz')?Number(run.getAttribute('sz'))/100:undefined,bold:run.hasAttribute('b')?run.getAttribute('b')==='1':undefined,color:elements(run,A,'srgbClr')[0]?.getAttribute('val')??undefined}:{})}
-  if(chart)value.chart=readChart(archive,slide.part,chart)
+  if(chart){try{value.chart=readChart(archive,slide.part,chart);if(!value.chart)value.chartWarning='此图表类型的内部数据暂不可编辑。'}catch(error){value.chartWarning=error instanceof Error?error.message:'此图表数据暂不可编辑。'}}
   nodes.push(value)
  }
  return {...slide,nodes}

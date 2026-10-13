@@ -37,10 +37,10 @@ Interfaces: readPptxScene(bytes) returns nodes by slide and object identity; edi
 Files: scripts/lib/pptx-direct-editor.mjs, pptx-editor-ui.mjs; test/pptx-direct-editor.test.ts.
 Interfaces: attachPptxDirectEditor(host, controller) marks click targets, edits text and geometry, emits object changes; updates undo/redo and selection state.
 
-- [ ] 写失败测试：默认文字点击、拖动和缩放、撤销重做、原位表格输入、图表数据入口。
-- [ ] 运行并确认失败。
-- [ ] 标识原渲染节点，实施选择及原位输入、变换与格式控件，替换字段面板。
-- [ ] 运行控制器与包补丁组合测试并中文提交。
+- [x] 写失败测试：默认文字点击、分组缩放下拖动、撤销重做、原位表格输入、图表数据入口（手柄缩放另做真实交互验证）。
+- [x] 运行并确认失败。
+- [x] 标识原渲染节点，实施选择及原位输入、变换与格式控件，替换字段面板。
+- [x] 运行控制器与包补丁组合测试并中文提交。
 
 ### Task 3: 实际预览验证与交接
 

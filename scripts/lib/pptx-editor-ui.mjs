@@ -1,108 +1,90 @@
+import {attachPptxDirectEditor} from './pptx-direct-editor.mjs'
 /** Self-contained factory embedded in the pinned Office client bundle. */
-export function createPptxEditorComponent(React, Preview, download) {
- const h=React.createElement, drafts=new Map()
- const fields=entry=>entry.document.slides.flatMap(slide=>slide.fields)
- const dirty=entry=>fields(entry).some(field=>entry.values[field.id]!==field.text)
- const emit=entry=>entry.listeners.forEach(listener=>listener())
- const persist=entry=>{
-  try{
-   const key='sherlock:pptx-draft:'+entry.document.id
-   if(dirty(entry))window.sessionStorage.setItem(key,JSON.stringify({document:entry.document,values:entry.values}))
-   else window.sessionStorage.removeItem(key)
-  }catch{entry.error='无法保留本地编辑稿，请保存文件后再关闭。'}
- }
- return function PptxView(props) {
-  const {scope,path,title,toolbar,onToolbarState,onToolbarControls}=props
-  const root=React.useRef(null),entryRef=React.useRef(null),generation=React.useRef(0),opening=React.useRef(null),editTokenRef=React.useRef(null),viewerRef=React.useRef(null),pageRef=React.useRef(0)
-  const [mode,setMode]=React.useState('preview'),[entry,setEntry]=React.useState(null),[page,setPage]=React.useState(0),[loading,setLoading]=React.useState(false),[error,setError]=React.useState(''),[revision,setRevision]=React.useState(0),[,tick]=React.useState(0)
-  pageRef.current=page
-  const attachViewer=React.useCallback(next=>{viewerRef.current=next;if(next&&pageRef.current>0)void next.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'})},[])
-  React.useEffect(()=>{void viewerRef.current?.goToSlide?.(page,{behavior:'auto',block:'nearest'})},[page])
+export function createPptxEditorComponent(React,Preview,download){
+ const h=React.createElement,drafts=new Map(),clone=value=>JSON.parse(JSON.stringify(value))
+ const fields=entry=>entry.document.slides.flatMap(s=>s.fields)
+ const dirty=entry=>fields(entry).some(f=>entry.values[f.id]!==f.text)||Object.keys(entry.objects).length>0
+ const emit=(entry,redraw=false)=>entry.listeners.forEach(fn=>fn(redraw))
+ const snapshot=entry=>({values:{...entry.values},objects:clone(entry.objects)})
+ const persist=entry=>{try{const key='sherlock:pptx-draft:'+entry.document.id;if(dirty(entry))window.sessionStorage.setItem(key,JSON.stringify({document:entry.document,...snapshot(entry)}));else window.sessionStorage.removeItem(key)}catch{entry.error='无法保留本地编辑稿，请保存文件后再关闭。'}}
+ const request=(entry,source)=>({...(entry.document.editToken?{editToken:entry.document.editToken}:source),version:entry.document.version,edits:fields(entry).filter(f=>entry.values[f.id]!==f.text).map(f=>({id:f.id,text:entry.values[f.id]})),objects:Object.entries(entry.objects).map(([id,change])=>({id,...change}))})
+ return function PptxView(props){
+  const {scope,path,toolbar,onToolbarState,onToolbarControls}=props,root=React.useRef(null),previewHost=React.useRef(null),entryRef=React.useRef(null),viewerRef=React.useRef(null),controller=React.useRef(null),generation=React.useRef(0),opening=React.useRef(null),token=React.useRef(null),pageRef=React.useRef(0),selectionRef=React.useRef(null),zoomRef=React.useRef(100),draftGeneration=React.useRef(0),renderTimer=React.useRef(null),pendingRender=React.useRef(false)
+  const [entry,setEntry]=React.useState(null),[page,setPage]=React.useState(0),[zoom,setZoom]=React.useState(100),[mode,setMode]=React.useState('edit'),[loading,setLoading]=React.useState(false),[error,setError]=React.useState(''),[revision,setRevision]=React.useState(0),[selection,setSelection]=React.useState(null),[chart,setChart]=React.useState(null),[,tick]=React.useState(0)
+  pageRef.current=page;selectionRef.current=selection;zoomRef.current=zoom
   const bridge=window.sherlockPptEditor,available=typeof bridge?.open==='function'&&typeof bridge?.save==='function'
-  const source=String(path).startsWith('sherlock-preview:')?{sourceUrl:path}:{sessionId:scope.sessionId,path}
-  const sourceKey=JSON.stringify(source)
+  const source=String(path).startsWith('sherlock-preview:')?{sourceUrl:path}:{sessionId:scope.sessionId,path},sourceKey=JSON.stringify(source)
+  const begin=()=>{const current=entryRef.current;if(current&&!current.pending)current.pending=snapshot(current)}
+  const end=()=>{const current=entryRef.current;if(!current?.pending)return;if(JSON.stringify(current.pending)!==JSON.stringify(snapshot(current))){current.undo.push(current.pending);if(current.undo.length>100)current.undo.shift();current.redo=[]}current.pending=null;emit(current,true)}
+  const changeText=(id,value)=>{const current=entryRef.current;if(!current)return;current.values[id]=value;current.status='idle';persist(current);emit(current)}
+  const changeObject=(id,change)=>{const current=entryRef.current;if(!current)return;current.objects[id]={...current.objects[id],...change};current.status='idle';persist(current);emit(current)}
+  const renderDraft=()=>{
+   pendingRender.current=true;clearTimeout(renderTimer.current)
+   renderTimer.current=setTimeout(async()=>{
+    const current=entryRef.current,viewer=viewerRef.current;if(!current||!viewer||typeof bridge?.preview!=='function')return
+    if(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true')return
+    pendingRender.current=false;const expected=++draftGeneration.current,viewGeneration=generation.current,selected=selectionRef.current?.id,index=viewer.currentSlideIndex??pageRef.current
+    try{const result=await bridge.preview(request(current,source));if(expected!==draftGeneration.current||viewGeneration!==generation.current||viewer!==viewerRef.current)return;if(!result.ok)throw Error(result.error)
+     // Typing always wins over an asynchronous preview response.
+     if(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true'){pendingRender.current=true;return}
+     await viewer.open(new Uint8Array(result.bytes),{renderMode:'list',lazySlides:true,lazyMedia:true,listOptions:{windowed:true,showSlideLabels:true}})
+     if(viewer!==viewerRef.current)return;await viewer.goToSlide?.(index,{behavior:'auto',block:'nearest'});controller.current?.refresh();if(selected)controller.current?.selectId(selected)
+    }catch(failure){current.error=failure.message||'草稿预览失败，修改已保留。';emit(current)}
+   },180)
+  }
   const open=async()=>{
-   if(entryRef.current)return entryRef.current
-   if(opening.current)return opening.current
-   const expected=generation.current
-   setLoading(true);setError('')
-   const operation=(async()=>{
-    try{
-     if(!available)throw Error('PPTX 编辑服务不可用，请重新打开应用。')
-     const result=await bridge.open({...source,...(editTokenRef.current?{editToken:editTokenRef.current}:{})})
-     if(expected!==generation.current)return null
-     if(!result.ok)throw Error(result.error)
-     let current=drafts.get(result.document.id)
-     if(!current){
-      let restored
-      try{restored=JSON.parse(window.sessionStorage.getItem('sherlock:pptx-draft:'+result.document.id)||'null')}catch{}
-      if(restored?.document?.id!==result.document.id||!restored.values)restored=null
-      current={document:restored?.document||result.document,values:restored?.values||Object.fromEntries(result.document.slides.flatMap(s=>s.fields.map(f=>[f.id,f.text]))),saving:false,status:'idle',error:'',listeners:new Set()}
-      drafts.set(result.document.id,current)
-     }
-     if(current.document.version!==result.document.version){
-      if(dirty(current))current.error='原 PPTX 已变化，当前编辑稿已保留。请核对内容后重新读取文件。'
-      else{current.document=result.document;current.values=Object.fromEntries(fields(current).map(f=>[f.id,f.text]));current.error=''}
-     }
-     if(result.document.editToken)current.document.editToken=result.document.editToken
-     editTokenRef.current=current.document.editToken||null
-     entryRef.current=current;setEntry(current);return current
-    }catch(failure){if(expected===generation.current)setError(failure.message||'无法读取 PPTX 内容。');return null}
-    finally{if(expected===generation.current){setLoading(false);opening.current=null}}
-   })()
-   opening.current=operation;return operation
+   if(entryRef.current)return entryRef.current;if(opening.current)return opening.current
+   const expected=generation.current;setLoading(true);setError('')
+   const operation=(async()=>{try{
+    if(!available)throw Error('PPTX 编辑服务不可用，请重新打开应用。')
+    const result=await bridge.open({...source,...(token.current?{editToken:token.current}:{})});if(expected!==generation.current)return null;if(!result.ok)throw Error(result.error)
+    let current=drafts.get(result.document.id)
+    if(!current){let restored;try{restored=JSON.parse(window.sessionStorage.getItem('sherlock:pptx-draft:'+result.document.id)||'null')}catch{}if(restored?.document?.id!==result.document.id||!restored.values)restored=null
+     current={document:restored?.document||result.document,values:restored?.values||Object.fromEntries(result.document.slides.flatMap(s=>s.fields.map(f=>[f.id,f.text]))),objects:restored?.objects||{},undo:[],redo:[],pending:null,saving:false,status:'idle',error:'',listeners:new Set()};drafts.set(result.document.id,current)}
+    if(current.document.version!==result.document.version){if(dirty(current))current.error='原 PPTX 已变化，当前编辑稿已保留。请核对内容后重新读取文件。';else{current.document=result.document;current.values=Object.fromEntries(fields(current).map(f=>[f.id,f.text]));current.objects={};current.error=''}}
+    if(result.document.editToken)current.document.editToken=result.document.editToken;token.current=current.document.editToken||null;entryRef.current=current;setEntry(current);return current
+   }catch(failure){if(expected===generation.current)setError(failure.message||'无法读取 PPTX。');return null}finally{if(expected===generation.current){setLoading(false);opening.current=null}}})();opening.current=operation;return operation
   }
-  const changeMode=next=>{setMode(next);if(next==='edit')void open()}
   const save=async()=>{
-   const current=entryRef.current
-   if(!current||current.saving||!dirty(current))return
-   const values={...current.values},edits=fields(current).filter(f=>values[f.id]!==f.text).map(f=>({id:f.id,text:values[f.id]}))
-   current.saving=true;current.status='saving';current.error='';emit(current)
-   try{
-    const result=await bridge.save({...(current.document.editToken?{editToken:current.document.editToken}:source),version:current.document.version,edits})
-    if(!result.ok)throw Error(result.error)
-    current.document=result.document;current.status='saved';persist(current)
-    document.dispatchEvent(new CustomEvent('sherlock:pptx-saved',{detail:{id:current.document.id}}))
-   }catch(failure){current.status='failed';current.error=failure.message||'保存失败，编辑稿已保留。'}
-   finally{current.saving=false;emit(current)}
+   end();const current=entryRef.current;if(!current||current.saving||!dirty(current))return
+   const savedObjects=clone(current.objects),input=request(current,source);current.saving=true;current.status='saving';current.error='';emit(current)
+   try{const result=await bridge.save(input);if(!result.ok)throw Error(result.error);current.document=result.document
+    for(const [id,change]of Object.entries(savedObjects))if(JSON.stringify(current.objects[id])===JSON.stringify(change))delete current.objects[id]
+    current.undo=[];current.redo=[];current.pending=null;current.status='saved';persist(current);document.dispatchEvent(new CustomEvent('sherlock:pptx-saved',{detail:{id:current.document.id}}))
+   }catch(failure){current.status='failed';current.error=failure.message||'保存失败，编辑稿已保留。'}finally{current.saving=false;emit(current)}
   }
-  React.useEffect(()=>{
-   generation.current++;entryRef.current=null;opening.current=null;editTokenRef.current=null;setEntry(null);setMode('preview');setPage(0);setError('')
-   return()=>{generation.current++;entryRef.current=null}
-  },[sourceKey])
-  React.useEffect(()=>{
-   if(!entry)return
-   const listener=()=>tick(value=>value+1)
-   entry.listeners.add(listener)
-   const saved=event=>{if(event.detail?.id===entry.document.id)setRevision(value=>value+1)}
-   const leave=event=>{if(dirty(entry)){event.preventDefault();event.returnValue=''}}
-   document.addEventListener('sherlock:pptx-saved',saved);window.addEventListener('beforeunload',leave)
-   return()=>{entry.listeners.delete(listener);document.removeEventListener('sherlock:pptx-saved',saved);window.removeEventListener('beforeunload',leave)}
-  },[entry])
-  React.useEffect(()=>{
-   if(toolbar==='host')onToolbarState?.({modes:available,mode,dirty:!!entry&&dirty(entry),editable:!!entry,saveState:entry?.status||'idle',downloadUrl:download?download(scope,path):String(path).startsWith('sherlock-preview:')?path:undefined})
-   onToolbarControls?.({setMode:changeMode,save})
-  })
-  const reload=async()=>{
-   if(entryRef.current?.saving)return
-   if(entryRef.current&&dirty(entryRef.current)&&!window.confirm('重新读取会放弃当前编辑稿，是否继续？'))return
-   if(entryRef.current){drafts.delete(entryRef.current.document.id);try{window.sessionStorage.removeItem('sherlock:pptx-draft:'+entryRef.current.document.id)}catch{}}
-   entryRef.current=null;setEntry(null);setPage(0);await open();setRevision(value=>value+1)
-  }
-  const selected=entry?.document.slides[Math.min(page,entry.document.slides.length-1)]
-  const message=error||entry?.error
+  const history=direction=>{if(previewHost.current?.contains(document.activeElement))document.activeElement?.blur?.();end();const current=entryRef.current;if(!current)return;const stack=current[direction];if(!stack.length)return;current[direction==='undo'?'redo':'undo'].push(snapshot(current));const next=stack.pop();current.values=next.values;current.objects=next.objects;current.status='idle';persist(current);emit(current,true);controller.current?.refresh();renderDraft()}
+  const attachViewer=React.useCallback(viewer=>{viewerRef.current=viewer;if(viewer){if(zoomRef.current!==100)void viewer.setZoom?.(zoomRef.current);void viewer.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'});if(pendingRender.current)renderDraft()}},[])
+  React.useEffect(()=>{generation.current++;entryRef.current=null;opening.current=null;token.current=null;setEntry(null);setPage(0);setSelection(null);setMode('edit');setError('');void open();return()=>{generation.current++;draftGeneration.current++;entryRef.current=null;clearTimeout(renderTimer.current)}},[sourceKey])
+  React.useEffect(()=>{if(!entry||!previewHost.current)return;controller.current=attachPptxDirectEditor(previewHost.current,{getEntry:()=>entryRef.current,changeText,changeObject,begin,end,render:renderDraft,select:setSelection,editChart:node=>setChart({id:node.id,value:clone(node.chart)})});controller.current.setEnabled(mode==='edit');if(dirty(entry))renderDraft();return()=>{controller.current?.destroy();controller.current=null}},[entry])
+  React.useEffect(()=>controller.current?.setEnabled(mode==='edit'),[mode])
+  React.useEffect(()=>{void viewerRef.current?.setZoom?.(zoom)},[zoom])
+  React.useEffect(()=>{void viewerRef.current?.goToSlide?.(page,{behavior:'auto',block:'nearest'})},[page])
+  React.useEffect(()=>{if(!entry)return;const listener=redraw=>{tick(v=>v+1);controller.current?.refresh();if(redraw)renderDraft()},saved=event=>{if(event.detail?.id===entry.document.id){draftGeneration.current++;setRevision(v=>v+1);pendingRender.current=dirty(entry)}},leave=event=>{if(dirty(entry)){event.preventDefault();event.returnValue=''}};entry.listeners.add(listener);document.addEventListener('sherlock:pptx-saved',saved);window.addEventListener('beforeunload',leave);return()=>{entry.listeners.delete(listener);document.removeEventListener('sherlock:pptx-saved',saved);window.removeEventListener('beforeunload',leave)}},[entry])
+  const changeMode=next=>setMode(next)
+  React.useEffect(()=>{if(toolbar==='host')onToolbarState?.({modes:available,mode,dirty:!!entry&&dirty(entry),editable:!!entry,saveState:entry?.status||'idle',downloadUrl:download?download(scope,path):String(path).startsWith('sherlock-preview:')?path:undefined});onToolbarControls?.({setMode:changeMode,save})})
+  const reload=async()=>{if(entryRef.current?.saving)return;if(entryRef.current&&dirty(entryRef.current)&&!window.confirm('重新读取会放弃当前编辑稿，是否继续？'))return;if(entryRef.current){drafts.delete(entryRef.current.document.id);try{window.sessionStorage.removeItem('sherlock:pptx-draft:'+entryRef.current.document.id)}catch{}}entryRef.current=null;setEntry(null);setSelection(null);await open();setRevision(v=>v+1)}
+  const format=(key,value)=>{if(!selection)return;begin();changeObject(selection.id,{[key]:value});end();setSelection(old=>({...old,[key]:value}));renderDraft()}
   const button=(text,action,disabled=false)=>h('button',{type:'button',onClick:action,disabled},text)
-  const controls=toolbar==='host'&&onToolbarControls?null:h('div',{className:'sherlock-ppt-controls'},button('预览',()=>changeMode('preview')),button('编辑内容',()=>changeMode('edit'),!available),entry&&button(entry.saving?'保存中…':'保存',save,entry.saving||!dirty(entry)),h('span',{'aria-live':'polite'},entry&&dirty(entry)?'未保存':entry?.status==='saved'?'已保存':''))
-  return h('div',{ref:root,className:'sherlock-ppt-editor','data-ppt-editor':'',onKeyDownCapture:event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='s'&&entryRef.current){event.preventDefault();event.stopPropagation();void save()}}},
-   h('style',null,`.sherlock-ppt-editor{--sherlock-ppt-ink:#2b2b2b;--sherlock-ppt-border:#dedede;--sherlock-ppt-control:#f2f2f2;--sherlock-ppt-input:#fafafa;height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;container-type:inline-size;color:var(--sherlock-ppt-ink)}[data-ds-dark-theme] .sherlock-ppt-editor{--sherlock-ppt-ink:#e5e5e5;--sherlock-ppt-border:#414141;--sherlock-ppt-control:#343434;--sherlock-ppt-input:#292929}.sherlock-ppt-controls{display:flex;align-items:center;gap:6px;padding:6px 10px;flex-wrap:wrap;border-bottom:1px solid var(--sherlock-ppt-border);flex-shrink:0}.sherlock-ppt-editor button,.sherlock-ppt-editor select{font:inherit;font-size:12px;color:inherit;background:var(--sherlock-ppt-control);border:1px solid var(--sherlock-ppt-border);border-radius:5px;padding:4px 8px}.sherlock-ppt-editor button{cursor:pointer}.sherlock-ppt-editor button:disabled{opacity:.5;cursor:default}.sherlock-ppt-editor button:focus-visible,.sherlock-ppt-editor select:focus-visible,.sherlock-ppt-editor textarea:focus-visible{outline:2px solid #6c8cff;outline-offset:1px}.sherlock-ppt-workspace{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}.sherlock-ppt-preview{flex:1;min-height:0;min-width:0;overflow:hidden}.sherlock-ppt-workspace.editing .sherlock-ppt-preview{flex:0 0 42%}.sherlock-ppt-fields{flex:1;min-height:0;min-width:0;overflow:auto;padding:12px;box-sizing:border-box;border-top:1px solid var(--sherlock-ppt-border)}.sherlock-ppt-fields header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;font-size:12px}.sherlock-ppt-fields label{display:block;margin:0 0 12px}.sherlock-ppt-fields label span{display:block;font-size:11px;opacity:.7;margin-bottom:5px;overflow-wrap:anywhere}.sherlock-ppt-fields textarea{display:block;width:100%;box-sizing:border-box;resize:vertical;min-height:38px;max-height:360px;background:var(--sherlock-ppt-input);color:inherit;border:1px solid var(--sherlock-ppt-border);border-radius:6px;padding:8px;font:inherit;font-size:13px;line-height:1.6}.sherlock-ppt-error{font-size:12px;color:#d16a56;padding:8px 12px;flex-shrink:0;overflow-wrap:anywhere}.sherlock-ppt-error button{margin-left:8px}@container(min-width:720px){.sherlock-ppt-workspace.editing{flex-direction:row}.sherlock-ppt-workspace.editing .sherlock-ppt-preview{flex:1}.sherlock-ppt-fields{flex:0 0 320px;border-top:0;border-left:1px solid var(--sherlock-ppt-border)}}`),controls,
+  const input=(label,value,onChange,type='text',extra={})=>h('label',null,h('span',null,label),h('input',{'aria-label':label,type,value,onChange:event=>onChange(event.target.value),...extra}))
+  const selectedNode=selection&&{...selection,...entry?.objects[selection.id]},message=error||entry?.error
+  const keyboard=event=>{if((event.metaKey||event.ctrlKey)&&!event.isComposing){const key=event.key.toLowerCase();if(['s','z','y'].includes(key)){event.preventDefault();event.stopPropagation();if(key==='s')void save();else history(key==='y'||event.shiftKey?'redo':'undo')}}}
+  const chartDialog=chart&&h('section',{className:'sherlock-ppt-chart',role:'dialog','aria-label':'图表数据编辑'},h('header',null,h('b',null,'图表数据'),button('应用到幻灯片',()=>{begin();changeObject(chart.id,{chart:chart.value});end();setChart(null);renderDraft()}),button('取消',()=>setChart(null))),input('图表标题',chart.value.title,value=>setChart(old=>({...old,value:{...old.value,title:value}}))),h('label',null,h('input',{type:'checkbox',checked:chart.value.legend,onChange:event=>setChart(old=>({...old,value:{...old.value,legend:event.target.checked}}))}),'显示图例'),h('div',{className:'sherlock-ppt-chart-table'},h('table',null,h('thead',null,h('tr',null,h('th',null,'类别'),chart.value.series.map((s,i)=>h('th',{key:i},input('系列 '+(i+1)+' 名称',s.name,value=>setChart(old=>{const next=clone(old);next.value.series[i].name=value;return next})),input('系列 '+(i+1)+' 颜色','#'+(s.color||'5470C6'),value=>setChart(old=>{const next=clone(old);next.value.series[i].color=value.slice(1);return next}),'color'))))),h('tbody',null,chart.value.categories.map((category,row)=>h('tr',{key:row},h('td',null,input('类别 '+(row+1),category,value=>setChart(old=>{const next=clone(old);next.value.categories[row]=value;return next}))),chart.value.series.map((s,col)=>h('td',{key:col},input('数值 '+(row+1)+'-'+(col+1),s.values[row]??'',value=>setChart(old=>{const next=clone(old);next.value.series[col].values[row]=value===''?null:Number(value);return next}),'number',{step:'any'})))))))),h('p',null,'数据会同步保存到 PPTX 的图表和内嵌工作簿。'))
+  return h('div',{ref:root,className:'sherlock-ppt-editor','data-ppt-editor':'',onKeyDownCapture:keyboard},
+   h('style',null,`.sherlock-ppt-editor{--ppt-ink:#292929;--ppt-border:#dedede;--ppt-control:#f5f5f5;--ppt-bg:#fff;color:var(--ppt-ink);height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;position:relative;font-size:12px}[data-ds-dark-theme] .sherlock-ppt-editor{--ppt-ink:#ededed;--ppt-border:#484848;--ppt-control:#333;--ppt-bg:#242424}.sherlock-ppt-controls,.sherlock-ppt-format{display:flex;align-items:center;gap:6px;padding:6px 8px;flex-wrap:wrap;border-bottom:1px solid var(--ppt-border);flex-shrink:0;background:var(--ppt-bg)}.sherlock-ppt-editor button,.sherlock-ppt-editor select,.sherlock-ppt-editor input{font:inherit;color:inherit;background:var(--ppt-control);border:1px solid var(--ppt-border);border-radius:4px;padding:4px 7px;min-width:0}.sherlock-ppt-editor button{cursor:pointer}.sherlock-ppt-editor button:disabled{opacity:.4;cursor:default}.sherlock-ppt-editor button:focus-visible,.sherlock-ppt-editor input:focus-visible,.sherlock-ppt-editor select:focus-visible{outline:2px solid #526fff}.sherlock-ppt-preview{flex:1;min-height:0;min-width:0;overflow:hidden}.sherlock-ppt-preview [contenteditable=true]:focus{outline:1px dashed #526fff;outline-offset:2px;user-select:text}.sherlock-ppt-format label{display:flex;align-items:center;gap:4px}.sherlock-ppt-format input[type=number]{width:52px}.sherlock-ppt-format input[type=color]{width:27px;height:26px;padding:2px}.sherlock-ppt-error{color:#cf664f;padding:8px}.sherlock-ppt-error button{margin-left:8px}.sherlock-ppt-hint{opacity:.65;font-size:11px}.sherlock-ppt-chart{position:absolute;z-index:100001;inset:8% 4%;background:var(--ppt-bg);border:1px solid var(--ppt-border);border-radius:10px;padding:14px;box-shadow:0 6px 30px #0003;overflow:auto}.sherlock-ppt-chart header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}.sherlock-ppt-chart header b{flex:1}.sherlock-ppt-chart label{display:flex;align-items:center;gap:6px;margin:4px 0}.sherlock-ppt-chart-table{overflow:auto;margin-top:10px}.sherlock-ppt-chart table{border-collapse:collapse;white-space:nowrap}.sherlock-ppt-chart td,.sherlock-ppt-chart th{border:1px solid var(--ppt-border);padding:5px}.sherlock-ppt-chart-table input[type=text],.sherlock-ppt-chart-table input[type=number]{width:110px}.sherlock-ppt-chart-table label span{display:none}`),
+   h('div',{className:'sherlock-ppt-controls'},button('撤销',()=>history('undo'),!entry||(!entry.undo.length&&(!entry.pending||JSON.stringify(entry.pending)===JSON.stringify(snapshot(entry))))),button('重做',()=>history('redo'),!entry?.redo.length),entry&&h('select',{'aria-label':'选择幻灯片',value:String(Math.min(page,entry.document.slides.length-1)),onChange:event=>setPage(Number(event.target.value))},entry.document.slides.map((s,i)=>h('option',{key:i,value:String(i)},'第 '+(i+1)+' 页'))),h('select',{'aria-label':'画面缩放',value:String(zoom),onChange:event=>setZoom(Number(event.target.value))},[100,150,200,300,400].map(v=>h('option',{key:v,value:String(v)},v===100?'适合宽度':v+'%'))),!(toolbar==='host'&&onToolbarControls)&&button(entry?.saving?'保存中…':'保存',save,!entry||entry.saving||!dirty(entry)),h('span',{'aria-live':'polite'},loading?'正在准备编辑…':entry&&dirty(entry)?'未保存':entry?.status==='saved'?'已保存':''),h('span',{className:'sherlock-ppt-hint'},mode==='edit'?'点击文字编辑 · 点击图形调整':'预览中')),
+   selectedNode&&mode==='edit'&&h('div',{className:'sherlock-ppt-format','aria-label':'对象格式'},h('span',null,selectedNode.name),selectedNode.type!=='picture'&&selectedNode.type!=='group'&&selectedNode.type!=='chart'&&h(React.Fragment,null,input('字号',selectedNode.fontSize||18,value=>format('fontSize',Number(value)),'number',{min:1,max:400}),button(selectedNode.bold?'取消加粗':'加粗',()=>format('bold',!selectedNode.bold)),input('文字色','#'+(selectedNode.color||'000000'),value=>format('color',value.slice(1)),'color')),selectedNode.type==='shape'&&h(React.Fragment,null,input('填充','#'+(selectedNode.fill||'FFFFFF'),value=>format('fill',value.slice(1)),'color'),button('无填充',()=>format('fill','none')),input('边框','#'+(selectedNode.stroke||'000000'),value=>format('stroke',value.slice(1)),'color'),h('select',{'aria-label':'图形形状',value:selectedNode.preset||'rect',onChange:event=>format('preset',event.target.value)},['rect','roundRect','ellipse','triangle','diamond','rightArrow','star5'].map((v,i)=>h('option',{key:v,value:v},['矩形','圆角矩形','椭圆','三角形','菱形','箭头','星形'][i])))),selectedNode.geometry&&input('旋转',Math.round(selectedNode.geometry.rotation),value=>format('geometry',{...selectedNode.geometry,rotation:Number(value)}),'number'),selectedNode.chartWarning&&h('span',{className:'sherlock-ppt-hint'},selectedNode.chartWarning),selectedNode.chart&&button('编辑图表数据',()=>setChart({id:selectedNode.id,value:clone(selectedNode.chart)}))),
    message&&h('div',{className:'sherlock-ppt-error',role:'alert'},message,button('重新读取文件',reload,!!entry?.saving)),
-   h('div',{className:'sherlock-ppt-workspace'+(mode==='edit'?' editing':'')},h('div',{className:'sherlock-ppt-preview'},h(Preview,{...props,path:entry?.document.previewUrl||props.path,key:sourceKey+':'+revision,onToolbarState:undefined,onToolbarControls:undefined,onPptxViewer:attachViewer,toolbar:'host'})),
-    mode==='edit'&&h('section',{className:'sherlock-ppt-fields','aria-label':'PPT 内容编辑'},
-     loading?h('div',null,'正在读取幻灯片内容…'):entry&&h(React.Fragment,null,
-      h('header',null,h('select',{'aria-label':'选择幻灯片',value:String(Math.min(page,entry.document.slides.length-1)),onChange:event=>setPage(Number(event.target.value))},entry.document.slides.map((slide,i)=>h('option',{key:i,value:String(i)},'第 '+(i+1)+' 页'))),h('span',null,'编辑文字与表格内容')),
-      selected?.fields.length?selected.fields.map(field=>h('label',{key:field.id},h('span',null,field.label),h('textarea',{'aria-label':field.label,value:entry.values[field.id],rows:Math.max(1,Math.min(8,Math.ceil(String(entry.values[field.id]).length/35)+String(entry.values[field.id]).split('\n').length-1)),onInput:event=>{entry.values[field.id]=event.currentTarget.value;entry.status='idle';persist(entry);emit(entry)}}))):h('div',null,'此页没有可编辑的文字或表格。')))))
+   h('div',{ref:previewHost,className:'sherlock-ppt-preview'},h(Preview,{...props,path:entry?.document.previewUrl||props.path,key:sourceKey+':'+revision,onToolbarState:undefined,onToolbarControls:undefined,onPptxViewer:attachViewer,toolbar:'host'})),chartDialog)
  }
 }
+const annotations=[
+ ['function yo(t, n) {',`function yo(t, n) { const element=renderPptxNode(t,n); Object.assign(element.dataset,{pptxNodeId:t.id,pptxPart:n.partPath,pptxType:t.nodeType,pptxWidth:String(t.size.w),pptxHeight:String(t.size.h),pptxFlipH:String(!!t.flipH),pptxFlipV:String(!!t.flipV)});return element; }
+function renderPptxNode(t, n) {`],
+ ['for (const [m, b] of t.paragraphs.entries()) {\n\t\t\t\tconst M = document.createElement("div");','for (const [m, b] of t.paragraphs.entries()) {\n\t\t\t\tconst M = document.createElement("div"); M.dataset.pptxParagraph=String(m);'],
+ ['G.textContent = I + " ";','G.textContent = I + " "; G.dataset.pptxBullet="";'],
+ ['const f = document.createElement("td");\n\t\t\t\t\tf.style.overflow', 'const f = document.createElement("td"); f.dataset.pptxRow=String(x); f.dataset.pptxColumn=String(u);\n\t\t\t\t\tf.style.overflow']
+]
 const marker='/* sherlock:pptx-content-editor:v1 */'
 const endMarker='/* sherlock:pptx-content-editor:end */\n'
 const viewerAttach='viewerRef.current = viewer;'
@@ -114,12 +96,15 @@ export function stripPptxEditorPatch(source) {
  if(start<0)return source
  const end=source.indexOf(endMarker,start)
  if(end<0)throw Error('PPT content editor patch end missing')
- return (source.slice(0,start)+source.slice(end+endMarker.length)).replace('function PptxPreview(props) {','function PptxView(props) {').replace(attached,viewerAttach).split(detached).join(viewerDetach)
+ source=source.slice(0,start)+source.slice(end+endMarker.length)
+ for(const [original,patched]of annotations)source=source.replace(patched,original)
+ return source.replace('function PptxPreview(props) {','function PptxView(props) {').replace(attached,viewerAttach).split(detached).join(viewerDetach)
 }
 export function patchPptxEditor(source) {
  if(source.includes(marker))return source
  const anchor='function PptxView(props) {'
  if(source.split(anchor).length!==2)throw Error('PPT content editor anchor drifted')
  if(source.split(viewerAttach).length!==2||source.split(viewerDetach).length!==3)throw Error('PPT viewer callback anchors drifted')
- return source.replace(viewerAttach,attached).split(viewerDetach).join(detached).replace(anchor,marker+'\n'+createPptxEditorComponent.toString()+'\nconst PptxView = createPptxEditorComponent(react$1, PptxPreview, downloadUrl);\n'+endMarker+'function PptxPreview(props) {')
+ for(const [original,patched]of annotations){if(source.split(original).length!==2)throw Error('PPT direct editor renderer anchor drifted: '+original.slice(0,55));source=source.replace(original,patched)}
+ return source.replace(viewerAttach,attached).split(viewerDetach).join(detached).replace(anchor,marker+'\n'+attachPptxDirectEditor.toString()+'\n'+createPptxEditorComponent.toString()+'\nconst PptxView = createPptxEditorComponent(react$1, PptxPreview, downloadUrl);\n'+endMarker+'function PptxPreview(props) {')
 }

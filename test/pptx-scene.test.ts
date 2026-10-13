@@ -49,3 +49,15 @@ it('updates chart caches, title, colors and its embedded workbook cells together
  expect(sheet).toContain('销售额');expect(sheet).toContain('<v>30</v>');expect(sheet).toContain('<v>50</v>');expect(sheet).toContain('Q2')
  expect(unzipSync(changed)['ppt/media/image1.png']).toEqual(unzipSync(bytes)['ppt/media/image1.png'])
 })
+
+it('keeps the rest of a presentation editable when one chart exceeds the editing limit',()=>{
+ const parts=unzipSync(chartFixture());parts['ppt/charts/chart1.xml']=strToU8(strFromU8(parts['ppt/charts/chart1.xml']!).replace(/val="2"/g,'val="2000"'))
+ const opened=scene.readPptxScene(zipSync(parts,{level:0}));expect(opened.slides[0]!.fields.length).toBeGreaterThan(0)
+ expect(opened.slides[0]!.nodes.find(n=>n.type==='chart')?.chartWarning).toContain('数据点')
+})
+it('preserves chart XML child order and literal series-name representation',()=>{
+ const parts=unzipSync(chartFixture());parts['ppt/charts/chart1.xml']=strToU8(strFromU8(parts['ppt/charts/chart1.xml']!).replace(/<c:tx>.*?<\/c:tx>/,'<c:tx><c:v>收入</c:v></c:tx>'))
+ const bytes=zipSync(parts,{level:0}),node=scene.readPptxScene(bytes).slides[0]!.nodes.find(n=>n.chart)!
+ const changed=scene.editPptxScene(bytes,[{id:node.id,chart:{...node.chart!,series:[{name:'新名称',values:[30,40],color:'112233'}]}}]),chart=strFromU8(unzipSync(changed)['ppt/charts/chart1.xml']!)
+ expect(chart).toContain('<c:tx><c:v>新名称</c:v></c:tx>');expect(chart.indexOf('<c:spPr>')).toBeLessThan(chart.indexOf('<c:cat>'))
+})
