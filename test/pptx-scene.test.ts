@@ -72,3 +72,9 @@ it('retains a workbook-linked title and data formulas when only chart style chan
  const data=scene.editPptxScene(bytes,[{id:node.id,chart:{...node.chart!,series:[{...node.chart!.series[0]!,values:[10,50]}]}}])
  expect(strFromU8(unzipSync(unzipSync(data)['ppt/embeddings/data.xlsx']!)['xl/worksheets/sheet1.xml']!)).toContain('<f>SUM(10)</f>')
 })
+it('updates cached chart data without an embedded workbook and preserves unchanged color transforms',()=>{
+ const parts=unzipSync(chartFixture());parts['ppt/charts/chart1.xml']=strToU8(strFromU8(parts['ppt/charts/chart1.xml']!).replace('<c:externalData r:id="workbook"/>','').replace('<c:cat>','<c:spPr><a:solidFill><a:srgbClr val="112233"><a:alpha val="50000"/></a:srgbClr></a:solidFill></c:spPr><c:cat>'))
+ const bytes=zipSync(parts,{level:0}),node=scene.readPptxScene(bytes).slides[0]!.nodes.find(n=>n.chart)!,changed=scene.editPptxScene(bytes,[{id:node.id,chart:{...node.chart!,title:'新标题',categories:['Q1','Q2'],series:[{...node.chart!.series[0]!,name:'新系列',values:[30,40]}]}}])
+ expect(scene.readPptxScene(changed).slides[0]!.nodes.find(n=>n.chart)?.chart).toMatchObject({categories:['Q1','Q2'],series:[{name:'新系列',values:[30,40]}]})
+ expect(strFromU8(unzipSync(changed)['ppt/charts/chart1.xml']!)).toContain('<a:alpha val="50000"/>')
+})

@@ -93,12 +93,12 @@ export function editChart(archive:PptxArchive,original:PptxChart,changed:PptxCha
  changed.series.forEach((value,i)=>{
   const node=series[i]!,name=ensure(node,C,'tx'),cat=child(node,'cat')??child(node,'xVal'),val=child(node,'val')??child(node,'yVal')
   if(!cat||!val)throw Error('此类图表数据暂不可编辑。')
-  if(value.name!==original.series[i]!.name){if(child(name,'strRef'))workbook?.update(replaceCache(name,[value.name],false),[value.name],[original.series[i]!.name]);else{for(const old of children(name))name.removeChild(old);ensure(name,C,'v').textContent=value.name}}
+  if(value.name!==original.series[i]!.name){if(child(name,'strRef')){const formula=replaceCache(name,[value.name],false);workbook?.update(formula,[value.name],[original.series[i]!.name]);}else{for(const old of children(name))name.removeChild(old);ensure(name,C,'v').textContent=value.name}}
   const numeric=!!child(cat,'numRef')||!!child(cat,'numLit'),categories=numeric?changed.categories.map(v=>Number(v)):changed.categories
   if(numeric&&categories.some(v=>!Number.isFinite(v)))throw Error('此图表的横轴需要数值。')
-  if(categoriesChanged)workbook?.update(replaceCache(cat,categories,numeric),categories,numeric?original.categories.map(Number):original.categories)
-  if(JSON.stringify(value.values)!==JSON.stringify(original.series[i]!.values))workbook?.update(replaceCache(val,value.values,true),value.values,original.series[i]!.values)
-  if(value.color){const props=ensure(node,C,'spPr');for(const old of children(props).filter(c=>['solidFill','gradFill','noFill'].includes(c.localName??'')))props.removeChild(old);ensure(ensure(props,A,'solidFill'),A,'srgbClr').setAttribute('val',value.color.toUpperCase())}
+  if(categoriesChanged){const formula=replaceCache(cat,categories,numeric);workbook?.update(formula,categories,numeric?original.categories.map(Number):original.categories)}
+  if(JSON.stringify(value.values)!==JSON.stringify(original.series[i]!.values)){const formula=replaceCache(val,value.values,true);workbook?.update(formula,value.values,original.series[i]!.values)}
+  if(value.color&&value.color.toUpperCase()!==original.series[i]!.color?.toUpperCase()){const props=ensure(node,C,'spPr');for(const old of children(props).filter(c=>['solidFill','gradFill','noFill'].includes(c.localName??'')))props.removeChild(old);ensure(ensure(props,A,'solidFill'),A,'srgbClr').setAttribute('val',value.color.toUpperCase())}
  })
  let title=child(root,'title')
  if(changed.title!==original.title&&changed.title){if(!title){title=document.createElementNS(C,'c:title');root.insertBefore(title,root.firstChild)};const tx=ensure(title,C,'tx'),text=elements(tx,A,'t');if(text.length){text[0]!.textContent=changed.title;for(const extra of text.slice(1))extra.textContent=''}else{for(const old of children(tx))tx.removeChild(old);const rich=ensure(tx,C,'rich');ensure(rich,A,'bodyPr');ensure(rich,A,'lstStyle');ensure(ensure(ensure(rich,A,'p'),A,'r'),A,'t').textContent=changed.title}}else if(!changed.title&&title)root.removeChild(title)
