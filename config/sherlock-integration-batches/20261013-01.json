@@ -3,7 +3,7 @@
   "batchId": "20261013-01",
   "branch": "codex/integration/20261013-01",
   "baseMainCommit": "f64b864d2354aaae902c0acc471deaf0fa19e02a",
-  "expectedMainCommit": "f64b864d2354aaae902c0acc471deaf0fa19e02a",
+  "expectedMainCommit": "bc7ef3b9bd89584015bfeb0b0c7e10da1813d6e8",
   "createdAt": "2026-10-13T14:22:33.172Z",
   "features": [
     {
@@ -359,5 +359,59 @@
       "timeoutMs": 120000
     }
   ],
-  "mainSynchronizations": []
+  "mainSynchronizations": [
+    {
+      "previousMainCommit": "f64b864d2354aaae902c0acc471deaf0fa19e02a",
+      "mainCommit": "bc7ef3b9bd89584015bfeb0b0c7e10da1813d6e8",
+      "mergeCommit": "bde0a6ceaa4b012fe24bc93e85bf95efc77d0556",
+      "verificationCommit": "bde0a6ceaa4b012fe24bc93e85bf95efc77d0556",
+      "checks": [
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/pptx-content.test.ts",
+            "test/pptx-service.test.ts",
+            "test/pptx-scene.test.ts",
+            "test/pptx-direct-editor.test.ts",
+            "test/pptx-editor-ui.test.ts",
+            "test/sherlock-office-preview-adapter.test.ts",
+            "test/pptx-resize-settle.test.js",
+            "test/research-file-preview.test.ts"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
+          "verifiedCommit": "bde0a6ceaa4b012fe24bc93e85bf95efc77d0556",
+          "completedAt": "2026-10-13T14:40:44.933Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/tsc",
+            "--noEmit",
+            "-p",
+            "tsconfig.node.json"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+          "verifiedCommit": "bde0a6ceaa4b012fe24bc93e85bf95efc77d0556",
+          "completedAt": "2026-10-13T14:40:44.933Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：git diff --check",
+          "verifiedCommit": "bde0a6ceaa4b012fe24bc93e85bf95efc77d0556",
+          "completedAt": "2026-10-13T14:40:44.933Z",
+          "timeoutMs": 120000
+        }
+      ],
+      "recordedAt": "2026-10-13T14:40:44.933Z"
+    }
+  ]
 }
