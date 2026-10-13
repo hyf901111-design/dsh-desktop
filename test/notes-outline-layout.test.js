@@ -38,6 +38,26 @@ beforeAll(async () => {
 })
 afterAll(async () => { await browser?.close() })
 
+it('keeps native slash filtering and keyboard insertion in the editor and rejects stale mouse selections',async()=>{
+ const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
+ try{
+  await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
+  const latest=()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='menu-sync').at(-1)?.input)
+  await page.locator('.en-document .bn-editor').click();await page.keyboard.type('/');await expect.poll(async()=> (await latest())?.items.length||0).toBeGreaterThan(0)
+  const first=await latest();expect(first.items.some(item=>item.title==='一级标题')).toBe(true);expect(await page.locator('.en-document .bn-editor').evaluate(el=>el.contains(document.activeElement))).toBe(true)
+  await page.keyboard.type('引用');await expect.poll(async()=> (await latest())?.items.map(item=>item.title)).toEqual(['引用'])
+  const query=await latest();await page.evaluate(input=>document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...input,action:'select',itemId:input.items[0].id,revision:input.revision-1}})),query)
+  expect(await page.locator('.en-document [data-content-type="quote"]').count()).toBe(0)
+  await page.keyboard.press('Enter');await page.locator('.en-document [data-content-type="quote"]').waitFor();await expect.poll(()=>page.locator('.en-native-menu-accessible').count()).toBe(0);expect(await page.evaluate(()=>window.noteRequests.some(row=>row.method==='menu-close'))).toBe(true)
+  await page.keyboard.type('/');await expect.poll(async()=> (await latest())?.menuId).not.toBe(first.menuId)
+  await page.keyboard.press('ArrowDown');await expect.poll(async()=> (await latest())?.selectedIndex).toBe(1)
+  const menu=await latest();await page.evaluate(input=>document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{...input,action:'select',itemId:input.items.find(item=>item.icon==='paragraph').id}})),menu)
+  await page.locator('.en-document [data-content-type="paragraph"]').waitFor();await expect.poll(()=>page.locator('.en-document .bn-editor').textContent()).not.toContain('/')
+  await page.keyboard.type('/');await expect.poll(()=>page.locator('.en-native-menu-accessible').count()).toBe(1)
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change',{detail:{surface:'integrations'}})));await expect.poll(()=>page.locator('.en-native-menu-accessible').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+
 it('shows clarification in the shared conversation and leaves the note empty without an acceptance panel',async()=>{
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
  try{
@@ -58,14 +78,21 @@ for(const generated of ['改写后的词句','> **改写后的词句**'])it(`rep
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
  try{
   await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside style="position:fixed;right:10px;bottom:20px;width:320px"><textarea id="native-input"></textarea><button id="native-command">命令测试接口</button><button id="native-send">发送测试接口</button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
-  await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor'),data=new DataTransfer();data.setData('text/html','<p>前文<strong style="color:rgb(220,40,40)">待改写的词句</strong>后文。</p>');editor.focus();editor.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}))});const original=page.locator('.en-document .bn-inline-content').filter({hasText:'待改写的词句'});await original.waitFor()
-  const block=await original.evaluate(el=>({id:el.closest('[data-id]').dataset.id,type:el.closest('[data-content-type]').dataset.contentType,style:getComputedStyle(el.querySelector('strong')).color}))
+  await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor'),data=new DataTransfer();data.setData('text/html','<p>前文<strong><span data-style-type="textColor" data-value="red" data-editable>待改写的词句</span></strong>后文。</p>');editor.focus();editor.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}))});const original=page.locator('.en-document .bn-inline-content').filter({hasText:'待改写的词句'});await original.waitFor()
+  const block=await original.evaluate(el=>({id:el.closest('[data-id]').dataset.id,type:el.closest('[data-content-type]').dataset.contentType,style:getComputedStyle(el.querySelector('[data-style-type="textColor"]')).color}));expect(block.style).toBe('rgb(224, 62, 62)')
   await page.evaluate(()=>{const el=document.querySelector('.en-document strong');document.querySelector('.en-document .bn-editor').focus();const range=document.createRange();range.selectNodeContents(el);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));el.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}))});await page.getByRole('button',{name:/AI 改写/}).click();await page.locator('#native-send').click();await page.locator('.en-ai-loading').waitFor();await page.evaluate(result=>window.resolveNoteSuggestion({kind:'text',markdown:result}),generated);await page.locator('.en-preview').waitFor();await page.locator('#native-activity .en-task-result').waitFor({timeout:1000})
   await page.getByRole('button',{name:'替换所选',exact:true}).click();await expect.poll(()=>page.locator('.en-document .bn-inline-content').allTextContents()).toContain('前文改写后的词句后文。')
   const rewritten=page.locator('.en-document .bn-inline-content').filter({hasText:'前文改写后的词句后文。'});expect(await rewritten.evaluate(el=>el.closest('[data-id]').dataset.id)).toBe(block.id);expect(await rewritten.evaluate(el=>el.closest('[data-content-type]').dataset.contentType)).toBe(block.type)
-  expect(await rewritten.locator('strong').textContent()).toBe('改写后的词句');expect(await rewritten.locator('strong').evaluate(el=>getComputedStyle(el).color)).toBe(block.style);expect(await page.locator('.en-document [data-content-type="quote"],.en-document .bn-block-group .bn-block-group').count()).toBe(0)
+  expect(await rewritten.locator('strong').textContent()).toBe('改写后的词句');expect(await rewritten.locator('[data-style-type="textColor"]').evaluate(el=>getComputedStyle(el).color)).toBe(block.style);expect(await page.locator('.en-document [data-content-type="quote"],.en-document .bn-block-group .bn-block-group').count()).toBe(0)
   await page.locator('#native-activity .en-task-result').waitFor({timeout:2000});expect(await page.locator('#native-activity .en-task-result').textContent()).toContain('改写后的词句');expect(await page.locator('.en-preview').count()).toBe(0)
   await rewritten.click();await page.keyboard.press('Meta+z');await expect.poll(()=>page.locator('.en-document .bn-inline-content').allTextContents()).toContain('前文待改写的词句后文。')
+  if(generated==='改写后的词句'){
+    await original.hover();await page.getByRole('button',{name:'段落操作',exact:true}).click();const menu=page.locator('.en-block-menu');await menu.waitFor()
+    const layout=await menu.evaluate(el=>({height:el.clientHeight,scroll:el.scrollHeight,lines:[...el.querySelectorAll('.en-block-types:first-child button')].map(button=>{const range=document.createRange();range.selectNodeContents(button.lastChild);return range.getClientRects().length})}))
+    expect(layout.lines).toEqual([1,1,1,1,1]);expect(layout.scroll).toBeLessThanOrEqual(layout.height)
+    await page.setViewportSize({width:1100,height:400});await expect.poll(()=>menu.evaluate(el=>el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(392)
+    await menu.evaluate(el=>el.scrollTop=el.scrollHeight);expect(await menu.getByRole('button',{name:'删除段落',exact:true}).isVisible()).toBe(true);await page.keyboard.press('Escape');expect(await menu.count()).toBe(0)
+  }
  }finally{await context.close()}
 },15000)
 
@@ -111,7 +138,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     await page.getByRole('button', { name: '下一步', exact: true }).click()
     expect(await page.getByRole('dialog', { name: '文档目录' }).count()).toBe(0)
     await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor');editor.focus();const range=document.createRange();range.selectNodeContents(editor);range.collapse(false);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range)})
-    await page.keyboard.press('Enter');await page.keyboard.type('/');await expect.poll(()=>page.locator('.bn-suggestion-menu').isVisible()).toBe(true);await page.keyboard.press('Escape');await page.keyboard.press('Backspace')
+    await page.keyboard.press('Enter');await page.keyboard.type('/');await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(r=>r.method==='menu-sync').at(-1)?.input.items.length||0)).toBeGreaterThan(0);await page.keyboard.press('Escape');await page.keyboard.press('Backspace')
     await page.evaluate(()=>{const paragraph=[...document.querySelectorAll('.en-document .bn-inline-content')].find(el=>el.textContent==='目录展开时正文保持原位。');document.querySelector('.en-document .bn-editor').focus();const range=document.createRange();range.selectNodeContents(paragraph);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));paragraph.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}))})
     await page.getByRole('button',{name:/AI 改写/}).click()
     expect(await page.locator('.en-ai-selection').allTextContents()).toEqual(['目录展开时正文保持原位。'])
@@ -128,6 +155,8 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     }
     await page.evaluate(()=>window.resolveNoteSuggestion())
     await expect.poll(()=>page.locator('.en-inline-assistant .en-preview').isVisible()).toBe(true)
+    const previewLayout=await page.locator('.en-preview').evaluate(el=>({title:el.querySelector('header strong').getBoundingClientRect().x,text:el.querySelector('.bn-inline-content').getBoundingClientRect().x,actions:[...el.querySelectorAll('footer button')].map(button=>button.getBoundingClientRect().height)}))
+    expect(Math.abs(previewLayout.title-previewLayout.text)).toBeLessThanOrEqual(1);expect(Math.max(...previewLayout.actions)).toBeLessThanOrEqual(32)
     expect(await page.locator('.en-composer-area .en-preview').count()).toBe(0)
     expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(0);expect(await page.locator('.en-preview').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toContain('rgba');
     await page.getByRole('button',{name:'替换所选',exact:true}).click()

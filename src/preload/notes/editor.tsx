@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { BlockNoteSchema, defaultBlockSpecs, createUserStore } from '@blocknote/core'
 import { zh } from '@blocknote/core/locales'
@@ -6,7 +6,7 @@ import { SideMenuExtension } from '@blocknote/core/extensions'
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteView } from '@blocknote/mantine'
-import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useExtensionState } from '@blocknote/react'
+import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useExtensionState, SuggestionMenuController } from '@blocknote/react'
 import * as Y from 'yjs'
 import { noteOutline, noteText, restoreNoteDraft, noteSuggestionPreview, noteComponentRequest, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
 import { NotesOutline } from './outline'
@@ -14,6 +14,7 @@ import { NoteAiSelection } from './selection'
 import { replaceNoteSelection } from './replace-selection'
 import { SuggestionPanel } from './suggestion-panel'
 import { NoteMenuIcon } from './menu-icon'
+import { NativeSlashMenu } from './native-slash-menu'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
@@ -55,19 +56,25 @@ function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }
 
 function BlockMenu(props: any) {
   const editor: any = useBlockNoteEditor(), block = useExtensionState(SideMenuExtension, {selector: state => state?.block}), [open, setOpen] = useState(false)
-  const menu = useRef<HTMLDivElement>(null)
-  useEffect(() => { if (!open) return; const dismiss = (e: Event) => { if (!menu.current?.contains(e.target as Node)) setOpen(false) }; const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }; document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', key); return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', key) } }, [open])
+  const menu = useRef<HTMLDivElement>(null), anchor=useRef<HTMLDivElement>(null),[position,setPosition]=useState<React.CSSProperties>()
+  useEffect(() => { if (!open) return; const dismiss = (e: Event) => { if (!menu.current?.contains(e.target as Node)&&!anchor.current?.contains(e.target as Node)) setOpen(false) }; const key = (e: KeyboardEvent) => { if (e.key === 'Escape') {setOpen(false);anchor.current?.querySelector<HTMLButtonElement>('button')?.focus()} }; document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', key); return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', key) } }, [open])
+  useLayoutEffect(()=>{
+    if(!open)return
+    const update=()=>{if(!menu.current||!anchor.current)return;const rect=anchor.current.getBoundingClientRect(),height=menu.current.scrollHeight+2,width=menu.current.offsetWidth,below=window.innerHeight-rect.bottom-12,above=rect.top-12,down=below>=height||below>=above,available=Math.max(40,down?below:above);setPosition({left:Math.max(8,Math.min(rect.left,window.innerWidth-width-8)),top:down?rect.bottom+4:Math.max(8,rect.top-4-Math.min(height,available)),maxHeight:available})}
+    update();window.addEventListener('resize',update);window.addEventListener('scroll',update,true)
+    return()=>{window.removeEventListener('resize',update);window.removeEventListener('scroll',update,true)}
+  },[open,block?.id])
   useEffect(()=>{const extension=editor.getExtension(SideMenuExtension);if(open)extension?.freezeMenu();return()=>extension?.unfreezeMenu()},[editor,open])
   if (!block) return null
   const change = (type: string, p: any = {}) => { editor.updateBlock(block, { type, props: p }); setOpen(false); editor.focus() }
   const duplicate = () => { const { id, ...copy } = block; editor.insertBlocks([copy], block, 'after'); setOpen(false) }
-  return <div className="en-side" ref={menu}><button className="en-block-trigger" title="段落操作" aria-label="段落操作" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => setOpen(!open)}>T</button><SideMenu {...props}><DragHandleButton {...props} /></SideMenu>
-    {open ? <div className="en-block-menu" role="menu"><div className="en-block-types">{[['正文', 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} onClick={() => change(String(type), level ? { level } : {})}><NoteMenuIcon kind={String(type)}/>{label}</button>)}</div>
+  return <div className="en-side" ref={anchor}><button className="en-block-trigger" title="段落操作" aria-label="段落操作" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => setOpen(!open)}>T</button><SideMenu {...props}><DragHandleButton {...props} /></SideMenu>
+    {open ? createPortal(<div ref={menu} className="en-block-menu" role="menu" style={{...position,visibility:position?'visible':'hidden'}}><div className="en-block-types">{[['正文', 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} onClick={() => change(String(type), level ? { level } : {})}><NoteMenuIcon kind={String(type)}/>{label}</button>)}</div>
       {([['无序列表', 'bulletListItem'], ['有序列表', 'numberedListItem'], ['待办列表', 'checkListItem'], ['代码块', 'codeBlock'], ['引用', 'quote'], ['分隔线', 'divider']] as const).map(([label, type]) => <button role="menuitem" key={type} onClick={() => change(type)}><NoteMenuIcon kind={type}/>{label}</button>)}
-      <hr /><div className="en-block-types">{[['左对齐', 'left'], ['居中', 'center'], ['右对齐', 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => change(block.type, { textAlignment })}><NoteMenuIcon kind={String(textAlignment)}/>{label}</button>)}</div>
+      <hr /><div className="en-block-types en-block-align">{[['左对齐', 'left'], ['居中', 'center'], ['右对齐', 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => change(block.type, { textAlignment })}><NoteMenuIcon kind={String(textAlignment)}/>{label}</button>)}</div>
       <button onClick={() => { editor.setTextCursorPosition(block, 'start'); editor.nestBlock(); setOpen(false) }}><NoteMenuIcon kind="indent"/>增加缩进</button><button onClick={() => { editor.setTextCursorPosition(block, 'start'); editor.unnestBlock(); setOpen(false) }}><NoteMenuIcon kind="outdent"/>减少缩进</button><hr />
       <button onClick={duplicate}><NoteMenuIcon kind="copy"/>复制段落</button><button onClick={() => { editor.insertBlocks([{ type: 'paragraph' }], block, 'after'); setOpen(false) }}><NoteMenuIcon kind="add"/>在下方添加</button><button className="en-danger" onClick={() => { editor.removeBlocks([block]); setOpen(false) }}><NoteMenuIcon kind="delete"/>删除段落</button>
-    </div> : null}</div>
+    </div>,document.body) : null}</div>
 }
 
 export function NotesApp(props: Props) {
@@ -225,6 +232,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   },[props.sessionId,props.recovery])
   const exportNote = async (format='md') => {try{await props.bridge.request('export',{sessionId:props.sessionId,format,content:snapshot()})}catch(e){setError((e as Error).message)}}
   const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor }), [props.bridge, props.sessionId, props.dark, props.navigate, editor])
+  const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>正在生成内容…</span><button onClick={stop}>停止</button></div> : null}{error ? <div className="en-error" role="alert"><span>{error}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>重新读取并对比</button> : null}<button onClick={() => setError('')} aria-label="关闭提示">×</button></div> : null}
       {preview ? <SuggestionPanel resizable={!assistantVisible} header={<><strong>{preview.result.kind === 'component' ? '创建的研究组件' : '内容预览'}</strong><button aria-label="放弃建议" onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() ? <button onClick={() => apply(true)}>替换所选</button> : null}<button onClick={() => apply(false)}>{preview.result.kind === 'component' ? '写入正文' : '插入到下方'}</button><button onClick={regenerate}>重新撰写</button><button onClick={discardPreview}>放弃</button></>}>
         {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
@@ -235,7 +243,8 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       <div className="en-document">
         {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
-        <BlockNoteView editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false}>
+        <BlockNoteView editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false}>
+          <SuggestionMenuController triggerCharacter="/" suggestionMenuComponent={slashMenu} portalElement={document.body} floatingUIOptions={{useFloatingOptions:{strategy:'fixed'},elementProps:{className:'en-note-menu-layer',style:{zIndex:110}}}} />
           <FormattingToolbarController formattingToolbar={() => <FormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <span>T</span> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><button className="en-ai-format" onMouseDown={e => e.preventDefault()} onClick={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text)return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}>✧ AI 改写</button></FormattingToolbar>} />
           <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const box=content.getBoundingClientRect(),base=reference.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} />
         </BlockNoteView>
