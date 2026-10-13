@@ -8,7 +8,7 @@ import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteView } from '@blocknote/mantine'
 import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useExtensionState } from '@blocknote/react'
 import * as Y from 'yjs'
-import { noteOutline, noteText, restoreNoteDraft, noteSuggestionPreview, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
+import { noteOutline, noteText, restoreNoteDraft, noteSuggestionPreview, noteComponentRequest, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
 import { NotesOutline } from './outline'
 import { NoteAiSelection } from './selection'
 import { SuggestionPanel } from './suggestion-panel'
@@ -24,15 +24,15 @@ const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.
 function ResearchBlock({ block }: any) {
   const context = useContext(Context)!, [html, setHtml] = useState(''), [error, setError] = useState('')
   const node = useMemo(() => { try { return JSON.parse(block.props.payload) } catch { return {} } }, [block.props.payload])
-  const [height, setHeight] = useState(420), frame = useRef<HTMLIFrameElement>(null)
+  const [height, setHeight] = useState(Number.isFinite(node.height)?Math.max(120,node.height-80):320), frame = useRef<HTMLIFrameElement>(null), intrinsic=useRef(false)
   useEffect(() => {
-    let live = true; setError(''); setHtml('')
+    let live = true; setError(''); setHtml('');intrinsic.current=false
     if (!node.containerSpec) { setError(node.generationError || (node.generationStatus === 'running' ? '正在创建组件，已保留正文中的位置…' : node.generationStatus === 'interrupted' ? '创建已停止，可重新描述需求。' : '组件尚未提供内容。')); return }
     context.bridge.request('render', { sessionId: context.sessionId, spec: node.containerSpec, dark:context.dark }).then((result: any) => { if (live) { setHtml(result.document || result.html); if (!result.html) setError('此组件保留在笔记中，可在研究中查看。') } }).catch((e: Error) => live && setError(e.message))
     return () => { live = false }
   }, [block.props.payload, context.bridge, context.sessionId])
   useEffect(() => {
-    const receive = (e: MessageEvent) => { if (e.source === frame.current?.contentWindow && ['ework-note-height','sherlock-content-size'].includes(e.data?.type) && Number.isFinite(e.data.height)) setHeight(Math.min(2400, Math.max(120, e.data.height))) }
+    const receive = (e: MessageEvent) => { if (e.source !== frame.current?.contentWindow || !Number.isFinite(e.data?.height))return;if(e.data.type==='sherlock-workbench-content-size')intrinsic.current=true;else if(intrinsic.current||!['ework-note-height','sherlock-content-size'].includes(e.data.type))return;setHeight(Math.min(2400,Math.max(120,e.data.height))) }
     window.addEventListener('message', receive); return () => window.removeEventListener('message', receive)
   }, [])
   useEffect(()=>{frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')},[context.dark,html])
@@ -157,7 +157,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission, retry?:typeof lastRequest.current) => {
     if ((!prompt.trim() && !images.length) || request.current || props.recovery) return
     const attempt = ++epoch.current, captured = { ...(retry?.captured || pinnedSelection.current || selection.current) }, fingerprint = retry?.fingerprint || pinnedSelection.current?.fingerprint || JSON.stringify(editor.document), requestId = crypto.randomUUID()
-    const component = /(?:创建|生成|做|画|添加).*(?:组件|图表|表格|时间线|新闻)/u.test(prompt)
+    const component = noteComponentRequest(prompt)
     engage()
     lastRequest.current={prompt,images,admission,captured,fingerprint}
     publishTask(requestId,'preparing',{prompt,operation:component?'component':captured.text?'rewrite':'write'})

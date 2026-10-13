@@ -7,7 +7,7 @@ export function setNoteConversationRunning(session,requestId,running){
 }
 export function noteConversationRows(session){
  const rows=new Map()
- for(const event of session.events){if(event.type!==NOTE_CONVERSATION_EVENT)continue;const row=event.data,previous=rows.get(row.requestId);rows.set(row.requestId,{...previous,...row,seq:previous?.seq??event.seq,startedAt:previous?.startedAt??event.time})}
+ for(const event of session.events){if(event.type!==NOTE_CONVERSATION_EVENT)continue;const row=event.data,previous=rows.get(row.requestId);rows.set(row.requestId,{...previous,...row,seq:previous?.seq??event.seq,startedAt:previous?.startedAt??event.time,...previous?.finishedAt&&['accepted','discarded'].includes(row.phase)?{finishedAt:previous.finishedAt}:{}})}
  return [...rows.values()].slice(-100).map(row=>row.phase==='preparing'&&!activeNoteRequests.get(session)?.has(row.requestId)?{...row,phase:'stopped',finishedAt:row.startedAt,error:'生成已中断，可重新撰写。'}:row)
 }
 export function recordNoteConversation(session,row){

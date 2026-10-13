@@ -90,7 +90,7 @@ it('replays note requests, reasoning and adoption in the native session without 
  recordNoteConversation(session,{requestId:'r',phase:'ready',reasoning:'真实模型思考',result:{kind:'text',markdown:'本周报告正文'},finishedAt:1000})
  recordNoteConversation(session,{requestId:'r',phase:'accepted',finishedAt:2000})
  const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header))
- expect(noteConversationRows(replay)).toMatchObject([{requestId:'r',phase:'accepted',seq:first.seq,reasoning:'真实模型思考',result:{markdown:'本周报告正文'}}])
+ expect(noteConversationRows(replay)).toMatchObject([{requestId:'r',phase:'accepted',seq:first.seq,finishedAt:1000,reasoning:'真实模型思考',result:{markdown:'本周报告正文'}}])
  expect(sharedNoteConversationContext(replay).map(r=>r.role)).toEqual(['user','note'])
  let context;registerNoteConversationContext({systemPrompt:{context:value=>{context=value;return()=>{}}}})
  expect(context.text({agent:{session:replay}})).toContain('本周报告正文');expect(context.text({agent:{session:Session.create('other')}})).toBe('')

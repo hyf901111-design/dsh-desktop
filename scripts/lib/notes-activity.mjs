@@ -9,12 +9,12 @@ export function createNotesActivityStore(doc) {
     const history = rows.get(next.sessionId) || empty, old = history.find(row => row.requestId === next.requestId)
     if (!old && next.phase !== 'preparing') return
     const row = { ...old, ...next, prompt: old?.prompt ?? String(next.prompt || '').slice(0,20000), startedAt: old?.startedAt ?? Date.now() }
-    if (!['preparing','generating'].includes(row.phase)) row.finishedAt = Date.now()
+    if (!['preparing','generating'].includes(row.phase)) row.finishedAt = old?.finishedAt ?? Date.now()
     rows.set(next.sessionId, [...history.filter(value => value.requestId !== row.requestId), row].slice(-20))
     notify()
   }
   const reset = () => { rows.clear(); notify() }
-  const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const row of value.rows){const old=merged.get(row.requestId);merged.set(row.requestId,old&&(['preparing','generating'].includes(old.phase)&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt)?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
+  const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const row of value.rows){const old=merged.get(row.requestId);merged.set(row.requestId,old&&(['preparing','generating'].includes(old.phase)&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt||['accepted','discarded'].includes(old.phase)&&row.phase==='ready')?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
   doc?.addEventListener('sherlock:notes-task-state', update)
   doc?.addEventListener('sherlock:notes-reset', reset)
   doc?.addEventListener('sherlock:notes-history',history)
