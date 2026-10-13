@@ -33,13 +33,15 @@ export function EWorkNoteConversationRow({row,t,loadImage,UserBubble=UserStyleBu
     const pending = ['preparing','generating'].includes(row.phase)
     const stage = {model:'正在连接当前模型',thinking:'正在思考',writing:'正在撰写内容',validating:'正在检查生成内容'}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
+    const feedback={ready:'已生成以下内容，可在文档预览中采纳。',accepted:'已将以下内容写入笔记。',discarded:'以下建议未被采纳。'}[row.phase]
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || '根据附件撰写内容'}],imageLoader:loadImage,t}),
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.reasoning ? h(Markdown,{blocks:[{kind:'reasoning',text:row.reasoning}],streaming:pending&&row.stage==='thinking',interrupted:row.phase==='stopped',t}) : null,
       row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t}) : null,
-      row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t})) : null)
+      row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:[feedback,row.result.markdown].filter(Boolean).join('\n\n')}],streaming:false,t})) : null,
+      row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?'已创建并写入笔记组件：':'已生成组件：')+(row.result.node.title||'研究组件')+'。'}],streaming:false,t}) : null)
 }
 export function EWorkNotesActivity(props){const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':'笔记任务过程'},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}
 export function EWorkNotesConversation({sessionId,empty,children,t}){

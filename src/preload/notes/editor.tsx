@@ -11,6 +11,7 @@ import * as Y from 'yjs'
 import { noteOutline, noteText, restoreNoteDraft, noteSuggestionPreview, noteComponentRequest, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
 import { NotesOutline } from './outline'
 import { NoteAiSelection } from './selection'
+import { replaceNoteSelection } from './replace-selection'
 import { SuggestionPanel } from './suggestion-panel'
 import { NoteMenuIcon } from './menu-icon'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
@@ -201,9 +202,8 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     if (!preview) return
     editor.focus()
     const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
-    const html=replace&&preview.result.kind==='text'?await editor.blocksToHTMLLossy(blocks):undefined
     const range=editor.getExtension(NoteAiSelection)?.currentRange()
-    if(replace&&html&&range){const state=editor._tiptapEditor.state;state.plugins.find((p:any)=>p.key.startsWith('y-undo'))?.getState(state)?.undoManager?.stopCapturing();editor._tiptapEditor.commands.setTextSelection(range);editor._tiptapEditor.commands.insertContent(html)}
+    if(replace&&preview.result.kind==='text'&&range)replaceNoteSelection(editor,range,blocks,preview.result.markdown)
     else { const reference = editor.getBlock(preview.cursor) || editor.getTextCursorPosition().block; editor.insertBlocks(blocks, reference, 'after') }
     setError('')
     publishTask(preview.requestId,'accepted'); if(preview.nativeComposer)commitNativeDraft(preview.nativeComposer); setPreview(undefined); clearSelection(); changed()
