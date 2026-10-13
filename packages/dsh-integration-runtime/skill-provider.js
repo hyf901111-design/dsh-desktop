@@ -20,11 +20,11 @@ export function registerManagedSkillProvider(ctx, runtime) {
         await runtime.sync()
         options.signal?.throwIfAborted()
         const snapshot = runtime.snapshot
-        return (snapshot?.skills ?? []).filter(skill => enabledManagedSkill(snapshot, skill.id)).map(skill => ({
+        return (snapshot?.skills ?? []).filter(skill => enabledManagedSkill(snapshot, skill.id)).flatMap(skill => {const candidate={
           name: managedSkillInvocationName(skill), description: `${skill.name}：${skill.description}`, source: skill.source, provider: PROVIDER,
           rank: 250, invocation: invocationFor(skill), resourceBase: { kind: 'directory', path: skill.resourceRoot },
           locator: { id: skill.id, revision: skill.revision, runtimeEpoch: snapshot.runtimeEpoch, ownerAccountId: snapshot.ownerAccountId }
-        }))
+        };return skill.id==='builtin:ework-finance-analysis'?[candidate,{...candidate,name:'ework-finance-analysis',rank:650,invocation:bundledInvocation}]:[candidate]})
       },
       async get(candidate, options) {
         await runtime.sync()
@@ -45,8 +45,8 @@ export function registerManagedSkillProvider(ctx, runtime) {
         if (!current()) return
         if (!result || result.name !== skill.name || typeof result.description !== 'string' || typeof result.content !== 'string' || Buffer.byteLength(result.content) > 2 * 1024 * 1024 || result.directory !== skill.resourceRoot) throw Error('技能内容与安装记录不一致，请重新导入')
         return {
-          name: managedSkillInvocationName(skill), description: `${skill.name}：${skill.description}`, source: skill.source, provider: PROVIDER,
-          invocation: invocationFor(skill), resourceBase: { kind: 'directory', path: result.directory }, path: join(result.directory, 'SKILL.md'), content: result.content
+          name: candidate.name, description: `${skill.name}：${skill.description}`, source: skill.source, provider: PROVIDER,
+          invocation: candidate.name==='ework-finance-analysis'?bundledInvocation:invocationFor(skill), resourceBase: { kind: 'directory', path: result.directory }, path: join(result.directory, 'SKILL.md'), content: result.content
         }
       }
     }

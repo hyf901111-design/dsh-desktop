@@ -156,3 +156,13 @@ it('keeps an independent same-name personal skill while the builtin alias still 
     expect(JSON.stringify(expanded)).toContain('内置 1.1.1 正文')
     expect(JSON.stringify(expanded)).not.toContain('个人同名技能')
 })
+
+it('a copied readable finance slash name loads the same pinned builtin and respects its toggle',async()=>{
+ const f=await fixture(false,true),id='builtin:ework-finance-analysis',skill=f.service.runtimeSnapshot().skills.find(s=>s.id===id)
+ const name='ework-finance-analysis',messages=[createUserMessage({content:[{type:'text',text:'/'+name+' 核验资料'}],source:{kind:'user'}})]
+ const step=()=>f.ctx.waterfall(scopeTarget(f.ctx,f.agent),'agent/pre-step',{agent:f.agent,messages,turn:0,step:0,signal:new AbortController().signal},()=>Promise.resolve({kind:'enter',messages}))
+ expect((await step()).messages.find(m=>m.source.kind==='skill-invocation')?.content[0].text).toContain('内置 1.1.1 正文')
+ expect((await f.ctx.skills.get(name,f.lookup)).resourceBase.path).toBe(skill.resourceRoot)
+ const reply=await f.service.request({type:'set-enabled',kind:'skill',id,enabled:false,meta:{requestId:'disable-readable-alias',expectedRevision:skill.revision}});await f.service.operations.wait(reply.operation.id)
+ await expect(step()).rejects.toThrow('所选技能未能加载')
+})

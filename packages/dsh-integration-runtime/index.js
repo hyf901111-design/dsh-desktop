@@ -222,11 +222,11 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
     await runtime.sync()
     const decision=await next()
     if(decision.kind!=='enter')return decision
-    const requested=new Set((messages??[]).filter(message=>message.source?.kind==='user').flatMap(message=>message.content.filter(block=>block.type==='text').flatMap(block=>[...block.text.matchAll(/(?:^|\s)\/(ework-skill-[a-f0-9]{16})(?=\s|$)/g)].map(match=>match[1]))))
+    const requested=new Set((messages??[]).filter(message=>message.source?.kind==='user').flatMap(message=>message.content.filter(block=>block.type==='text').flatMap(block=>[...block.text.matchAll(/(?:^|\s)\/(ework-skill-[a-f0-9]{16}|ework-finance-analysis)(?=\s|$)/g)].map(match=>match[1]))))
     if(!requested.size)return decision
     await runtime.sync();signal?.throwIfAborted()
     for(const name of requested){
-      const skill=runtime.snapshot?.skills.find(item=>managedSkillInvocationName(item)===name)
+      const skill=runtime.snapshot?.skills.find(item=>managedSkillInvocationName(item)===name||name==='ework-finance-analysis'&&item.id==='builtin:ework-finance-analysis')
       if(!skill||!enabledManagedSkill(runtime.snapshot,skill.id)||!decision.messages.some(message=>message.source?.kind==='skill-invocation'&&message.source.name===name&&message.content.some(block=>block.type==='text'&&block.text.includes('<skill_instructions>'))))
         throw new HarnessError('所选技能未能加载（可能已停用、移除或连接中断），本次执行已停止；请重新选择技能后发送。','SKILL_UNAVAILABLE')
     }
