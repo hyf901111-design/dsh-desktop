@@ -12,3 +12,4 @@
 .en-root .bn-thread{width:320px!important;max-width:calc(100vw - 48px);border:1px solid var(--en-border);border-radius:8px;background:var(--en-popup);box-shadow:0 8px 28px #0003}
 .en-root .bn-thread .bn-editor{min-height:64px!important;max-height:180px;overflow:auto;font-size:13px;line-height:22px}
 .en-root .bn-thread .bn-block-content{padding-block:0!important;line-height:22px}
+.en-root[data-dark=false] :is(.en-chip,.en-permission) img{filter:brightness(.4)}
