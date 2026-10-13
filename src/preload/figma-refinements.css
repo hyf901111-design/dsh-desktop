@@ -667,7 +667,7 @@ body .JObwrW_trigger>svg{display:block!important;width:14px!important;height:14p
 body .JObwrW_trigger:is(:hover,[aria-expanded=true]){background:var(--odyssey-menu-row)!important}
 
 /* Notes actions live in the existing shared header and research conversation pane. */
-.en-header-export{height:28px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--odyssey-menu-muted);font:12px/20px inherit;cursor:pointer;-webkit-app-region:no-drag}
+.en-header-export{height:28px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--odyssey-menu-muted);font-family:inherit;font-size:12px!important;line-height:20px!important;font-weight:400;white-space:nowrap;cursor:pointer;-webkit-app-region:no-drag}
 .en-header-export:hover{background:var(--odyssey-menu-row);color:var(--odyssey-menu-text)}
 .en-task-history{display:flex;flex-direction:column;gap:22px;padding:8px 0 24px;color:var(--odyssey-menu-text);font-size:14px;line-height:24px}
 .en-task-prompt{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--odyssey-menu-row);white-space:pre-wrap;overflow-wrap:anywhere}

@@ -219,6 +219,7 @@ for (const dark of [false,true]) it(`notes share the native header without movin
  await open({view:'home',dark,width:1090,closed:true,notesFixture:true});const before=await read();await page.context().close();
  await open({view:'notes',dark,width:1090,closed:true,notesFixture:true});await page.evaluate(()=>window.startNotes());const after=await read();
  expect(after.tabs.filter(t=>t.selected==='true').map(t=>t.id)).toEqual(['notes']);
+ expect(await page.locator('main .en-header-export').evaluate(button=>({font:getComputedStyle(button).fontSize,line:getComputedStyle(button).lineHeight,icon:button.querySelector('svg').getBoundingClientRect().width}))).toEqual({font:'12px',line:'20px',icon:14});
  expect(after.tabs.map(({selected,...r})=>r)).toEqual(before.tabs.map(({selected,...r})=>r));expect(after.toggle).toEqual(before.toggle);
  const bounds=await page.evaluate(()=>({top:document.querySelector('.en-root').getBoundingClientRect().top,header:document.querySelector('main header').getBoundingClientRect().bottom,toggleHit:(()=>{const b=document.querySelector('[data-odyssey-panel-entry="right"]'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()}));
  expect(bounds.top).toBe(bounds.header);expect(bounds.toggleHit).toBe(true);
