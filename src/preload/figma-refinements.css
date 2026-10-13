@@ -655,3 +655,13 @@ body .srb-avatar-info>svg { fill:var(--odyssey-menu)!important; stroke:var(--ody
 /* Workspace surfaces reuse the native pane entry and its normal open/closed geometry. */
 body[data-workspace-surface=integrations] [data-dsh-panel-host]{position:fixed;inset:0;z-index:901;pointer-events:none}
 body[data-workspace-surface=integrations] [data-dsh-panel-host] .t8lSSG_toggleCluster{pointer-events:auto;visibility:visible}
+
+/* Native composer slash menu shares the client neutral palette in every view. */
+._3e4SsG_menu{background:var(--odyssey-menu)!important;border:1px solid var(--odyssey-menu-border)!important;border-radius:10px!important;box-shadow:var(--odyssey-menu-shadow)!important;animation:odyssey-menu-enter 150ms cubic-bezier(.16,1,.3,1)}
+._3e4SsG_menu ._3e4SsG_item:is(:hover,._3e4SsG_active,[aria-selected=true]){background:var(--odyssey-menu-row)!important;color:inherit!important}._3e4SsG_menu ._3e4SsG_itemIcon{color:inherit!important;background:var(--odyssey-menu-row)!important}
+
+/* Center the context ring in the same 30 px target as adjacent composer tools. */
+body .JObwrW_root{display:inline-flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px}
+body .JObwrW_trigger{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;width:30px!important;height:30px!important;padding:0!important;margin:0!important;line-height:0;transform:none!important}
+body .JObwrW_trigger>svg{display:block!important;width:14px!important;height:14px!important;margin:0!important;transform:none!important;flex:none}
+body .JObwrW_trigger:is(:hover,[aria-expanded=true]){background:var(--odyssey-menu-row)!important}

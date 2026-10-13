@@ -1,9 +1,11 @@
+import { patchNotesSidebar } from './notes-sidebar.mjs'
 /** Adapt the existing native InputBar and input machine, without duplicating UI. */
 export const notesComposerSource = `
 const eworkNotesInputs = new Map();
+function eworkActiveInput(sessionId,ordinary){const record=eworkNotesInputs.get(sessionId);return record?.active?record.shell:ordinary}
 function eworkNotesInput(sessionId, ordinary, conversation) {
   if (eworkNotesInputs.has(sessionId)) return eworkNotesInputs.get(sessionId);
-  const record = {running:false,ready:false,shell:null,submission:0};
+  const record = {running:false,ready:false,active:false,shell:null,submission:0};
   const shell = new SessionInputShell({...ordinary.deps,queue:undefined,sharedSubmit:undefined,sharedDraft:undefined,
     defaultSink:async(prompt,imageIds,_mode,admission)=>{
       if(record.running||record.preparing||!record.ready)return;
@@ -20,9 +22,8 @@ function eworkNotesInput(sessionId, ordinary, conversation) {
         if(!acknowledged)shell.notify('error','笔记还未就绪，输入已保留。');
       } catch(error){shell.notify('error',error.message||'附件读取失败，输入已保留。');}finally{record.preparing=false}
     }});
-  // Keep the native draft/undo/attachment machinery. Note sends bypass agent commands.
-  shell.submit=()=>{if(record.ready&&!record.running)shell.sinkSerialized(shell.snapshot.draft,'queue')};
-  shell.track=()=>{};shell.arbitrate=()=> 'pass';shell.space=()=>false;
+  // Reuse native command adjudication; plain writing still uses the note sink.
+  shell.submit=mode=>{if(!record.ready||record.running)return;if(!shell.snapshot.draft.trim()&&shell.snapshot.imageIds.length&&shell.snapshot.phase==='plain')shell.sinkSerialized('',mode||'queue');else SessionInputShell.prototype.submit.call(shell,mode)};
   record.shell=shell;eworkNotesInputs.set(sessionId,record);
   ordinary.deps.actx?.effect(()=>()=>{if(eworkNotesInputs.get(sessionId)!==record)return;for(const id of shell.snapshot.imageIds)conversation.releaseDraftImage(id);shell.dispose();eworkNotesInputs.delete(sessionId)},'EWork note input');
   return record;
@@ -30,6 +31,7 @@ function eworkNotesInput(sessionId, ordinary, conversation) {
 function EWorkSharedInputBar(props) {
   const {eworkNotes=false,sessionId}=props;
   const record=props.keyboard&&sessionId?eworkNotesInput(sessionId,props.keyboard,conversationController):null;
+  if(record)record.active=eworkNotes;
   const [state,setState]=react.useState({running:false,ready:false});
   react.useEffect(()=>{
     if(!record)return;
@@ -50,14 +52,14 @@ function EWorkSharedInputBar(props) {
   return react_jsx_runtime.jsx(InputBar,{...props,
     useInput:select=>{props.useInput(value=>value);return select(notesInput)},inputActions:shell.actions,keyboard:shell,
     useNotices:select=>{props.useNotices(value=>value);return select(notesNotice)},
-    useSession:select=>nativeSession(value=>select({...value,running:state.running,promptError:null})),
+    useSession:select=>nativeSession(value=>select({...value,running:state.running||value.running,promptError:null})),
     placeholder:'补充、改写笔记，或描述要创建的组件…',
     blocked:state.ready?undefined:{reason:'正在打开笔记…'},
     addImages:files=>{try{const images=conversationController.createDraftImages(files);if(!shell.addImages(images.map(a=>a.id)))conversationController.releaseDraftImages(images);return null}catch(error){return error.message}},
     removeImage:id=>{conversationController.releaseDraftImage(id);shell.removeImage(id)},
-    toggleCommandMenu:()=>document.dispatchEvent(new CustomEvent('sherlock:notes-command',{detail:{sessionId}})),
-    queryCommandCandidates:undefined,
-    stop:()=>document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId}}))
+    toggleCommandMenu:selection=>{const controller=shell.deps.inputTriggers?.();if(!controller)return;shell.dismissPopup();const snapshot=shell.snapshot;controller.toggleSource('command',{trigger:'/',query:'',position:snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',span:{...selection,draftRev:snapshot.draftRev}})},
+    queryCommandCandidates:(selection,signal)=>ctx.get('commandUi')?.candidates(shell.deps.inputTriggers?.()?.project(),{query:'',position:shell.snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',signal})??[],
+    stop:()=>record.running?document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId}})):props.stop?.()
   });
 }
 ctx.effect(()=>{const reset=()=>{for(const record of eworkNotesInputs.values()){for(const id of record.shell.snapshot.imageIds)conversationController.releaseDraftImage(id);record.shell.dispose()}eworkNotesInputs.clear()};document.addEventListener('sherlock:notes-reset',reset);return()=>{document.removeEventListener('sherlock:notes-reset',reset);reset()}},'EWork native note composer');
@@ -68,7 +70,7 @@ export function patchNotesComposer(source) {
     const start=source.indexOf('const eworkNotesInputs = new Map();'),footer=source.indexOf("document.addEventListener('sherlock:notes-reset',",start),end=source.indexOf('\n',footer);
     if(start<0||footer<0||end<0)throw Error('笔记原生输入框适配器不完整。');
     source=source.slice(0,start)+notesComposerSource.trim()+source.slice(end);
-    return patchNotesSlots(patchNotesAdmission(source));
+    return patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source))));
   }
   const replace = (from,to) => { if(source.split(from).length!==2)throw Error('笔记无法定位共用输入框：'+from.slice(0,55));source=source.replace(from,to) };
   replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n eworkNotes:activeView === "notes",');
@@ -83,7 +85,23 @@ react.useEffect(()=>{const ready=event=>{if(event.detail?.sessionId===sessionId)
   replace('function InputBar({ subagentPanel=false,','function InputBar({ eworkNotes=false, subagentPanel=false,');
   source=source.replaceAll('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);','if(!eworkNotes)odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);');
   replace("const canvasRunning=canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));","const canvasRunning=!eworkNotes&&canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));");
-  return patchNotesSlots(patchNotesAdmission(source));
+  return patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source))));
+}
+
+function patchNotesCommands(source){
+ const marker='/* ework:notes-native-commands:v2 */';
+ if(source.includes('actx.on("slash/input-begin-command", '+marker))return source;
+ source=source.replace('\n/* ework:notes-native-commands:v1 */\n','\n').replace('/* ework:notes-native-commands:v1 */ ','');
+ for(const method of ['beginCommand','insertReference','consumeToken','insertText']){
+   const anchor='(req) => shell.'+method+'(';
+   if(source.includes('(req) => eworkActiveInput(id,shell).'+method+'('))continue;
+   if(source.split(anchor).length!==2)throw Error('笔记无法定位原生命令写入路径：'+method);
+   source=source.replace(anchor,'(req) => eworkActiveInput(id,shell).'+method+'(');
+ }
+ const resolver='if (id === void 0) throw new Error("conversation.input.for requires a session scope");\n\t\t\t\treturn this.shell(id);';
+ if(source.split(resolver).length!==2)throw Error('笔记无法定位原生命令通知输入框。');
+ source=source.replace(resolver,resolver.replace('return this.shell(id);','return eworkActiveInput(id,this.shell(id));'));
+ return source.replace('actx.on("slash/input-begin-command", (req)', 'actx.on("slash/input-begin-command", '+marker+' (req)');
 }
 
 function patchNotesSlots(source){
