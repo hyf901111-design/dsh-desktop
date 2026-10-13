@@ -1,19 +1,32 @@
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { installNotesService } from '../src/main/notes/service'
 
+vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
 const roots: string[] = []
-afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
-function service() {
+afterEach(() => {roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true }));vi.unstubAllGlobals()})
+function service(base?:string) {
   const root = mkdtempSync(join(tmpdir(), 'ework-note-ipc-')); roots.push(root)
-  const window = { isDestroyed: () => false, webContents: { mainFrame: { processId: 1, routingId: 2 } } }
+  const progress:any[]=[]
+  const window = { isDestroyed: () => false, webContents: { mainFrame: { processId: 1, routingId: 2 },send:(channel:string,value:any)=>progress.push({channel,value}) } }
   let handler: any, owner = 'alice', allowed = true
-  const dispose = installNotesService({ ipcMain: { handle: (_channel: string, fn: any) => { handler = fn }, removeHandler: () => {} }, root, getWindow: () => window, owner: () => owner, canRead: () => allowed, runtimeUrl: () => undefined, clipboard: () => undefined })
+  const dispose = installNotesService({ ipcMain: { handle: (_channel: string, fn: any) => { handler = fn }, removeHandler: () => {} }, root, getWindow: () => window, owner: () => owner, canRead: () => allowed, runtimeUrl: () => base, clipboard: () => undefined })
   const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
-  return { call: (method: string, input: any = {}) => handler(event, method, { sessionId: 'session', owner, ...input }), handler: () => handler, event, changeOwner: () => { owner = 'bob' }, deny: () => { allowed = false }, dispose }
+  return { call: (method: string, input: any = {}) => handler(event, method, { sessionId: 'session', owner, ...input }), handler: () => handler, event, progress,changeOwner: () => { owner = 'bob' }, deny: () => { allowed = false }, dispose }
 }
+it('relays progress to the trusted request and separates it from the final document result',async()=>{
+ const s=service('http://127.0.0.1:9999'),wire=[{type:'progress',stage:'thinking',reasoning:'先整理段落。',outputChars:0},{type:'result',result:{kind:'text',markdown:'结果正文'}}].map(v=>JSON.stringify(v)+'\n').join('')
+ vi.stubGlobal('fetch',async()=>new Response(wire))
+ expect(await s.call('generate',{requestId:'r',markdown:'正文',prompt:'写作',selection:''})).toEqual({kind:'text',markdown:'结果正文'})
+ expect(s.progress).toEqual([{channel:'notes:progress',value:{sessionId:'session',requestId:'r',owner:'alice',stage:'thinking',reasoning:'先整理段落。',outputChars:0}}]);s.dispose()
+})
+it('does not forward a previous account’s progress after identity changes',async()=>{
+ const s=service('http://127.0.0.1:9999')
+ vi.stubGlobal('fetch',async()=>{s.changeOwner();return new Response(JSON.stringify({type:'progress',stage:'thinking',reasoning:'旧账号内容',outputChars:0})+'\n'+JSON.stringify({type:'result',result:{kind:'text',markdown:'旧结果'}})+'\n')})
+ await expect(s.call('generate',{requestId:'r'})).rejects.toThrow('账号已变化');expect(s.progress).toEqual([]);s.dispose()
+})
 it('refuses child frames and sessions unavailable to the account', async () => {
   const s = service()
   expect(() => s.handler()({ ...s.event, senderFrame: { processId: 1, routingId: 3 } }, 'load', { sessionId: 'session' })).toThrow('main EWork')

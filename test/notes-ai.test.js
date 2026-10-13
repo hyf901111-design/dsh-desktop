@@ -5,6 +5,13 @@ function context(text, kind = 'stop') {
   return { apiProxy: { sessions: { models: async () => ({ result: { ok: true, value: { current: { provider: 'session-provider', model: 'session-model' }, routable: true } } }) } }, llm: { stream: async function* (value) { options = value; yield { type: 'text-delta', text }; yield { type: 'finish', reason: { kind } } } }, options: () => options }
 }
 const input = { sessionId: 'session', title: '笔记', markdown: '正文资料', selection: '选中文字', prompt: '改写为简洁文字', mode: 'write' }
+it('reports actual model reasoning and writing progress while returning the document only in the final result',async()=>{
+ const ctx=context(''),seen=[]
+ ctx.llm.stream=async function*(){yield{type:'reasoning-delta',index:0,text:'先保留原意，再整理段落。'};yield{type:'text-delta',index:1,text:'{"kind":"text","markdown":"新正文"}'};yield{type:'finish',reason:{kind:'stop'}}}
+ expect(await generateNoteSuggestion(ctx,input,undefined,value=>seen.push(value))).toEqual({kind:'text',markdown:'新正文'})
+ expect(seen.some(row=>row.reasoning.includes('保留原意'))).toBe(true);expect(seen.at(-1)).toMatchObject({stage:'validating',reasoning:'先保留原意，再整理段落。'})
+ expect(seen.every(row=>!('markdown' in row))).toBe(true)
+})
 it('declares the attachment dependency used by the real notes HTTP handler',async()=>{
  const {inject}=await import('../packages/dsh-research-task-runtime/index.js')
  expect(inject).toContain('attachments')
@@ -42,4 +49,11 @@ it('uses the native attachment store for uploaded images and refuses malformed o
  await generateNoteSuggestion(ctx,{...input,images:[{type:'image',mediaType:'image/png',data:'AQID'}]});expect(saved[0].data).toEqual(Buffer.from([1,2,3]));expect(ctx.options().messages[0].content[0]).toMatchObject({type:'image',attachment:{attachmentId:'owned-image'}})
  await expect(generateNoteSuggestion(ctx,{...input,images:[{type:'image',mediaType:'image/png',data:'bad!'}]})).rejects.toThrow('格式')
  await expect(generateNoteSuggestion(ctx,{...input,images:[{type:'image',mediaType:'image/png',data:Buffer.alloc(17).toString('base64')}]})).rejects.toThrow('大小')
+})
+
+it('uses the shared native conversation as context for note writing and durably records the result',async()=>{
+ const {Session}=await import('@deepseek-ai/dsh-session'),{noteConversationRows}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('session');session.append('user/message',{id:'u',role:'user',source:{kind:'user'},content:[{type:'text',text:'讨论里的验收目标'}]},{surfaceOp:'append'})
+ const ctx=context('{"kind":"text","markdown":"基于讨论的新正文"}');ctx.sessions={get:()=>session};ctx.sessionTitle={rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}}
+ await generateNoteSuggestion(ctx,{...input,requestId:'shared-request'});expect(ctx.options().messages[0].content[0].text).toContain('讨论里的验收目标');expect(noteConversationRows(session)[0]).toMatchObject({phase:'ready',prompt:input.prompt,result:{markdown:'基于讨论的新正文'}})
 })

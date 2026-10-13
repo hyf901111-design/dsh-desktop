@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { runInNewContext } from 'node:vm'
 import { patchNotesClient } from '../scripts/lib/notes-client.mjs'
-const source = `function Header({sessionId, blank, composerPhase, active}) {
+const source = `function ConversationSessionHeader({sessionId, blank, composerPhase, active}) {
 const homeHeader = blank && composerPhase === "blank" && active?.id === "chat";
 return {"data-srb-session-header":"", "data-odyssey-home-header":homeHeader, children: nativeTabs, utilities:{children: renderSlot("conversation.session.header.utilities", {})}};
 }
@@ -23,7 +23,7 @@ it('adds the session identity and registers notes in the native view ledger exac
 })
 it('retains the same header presentation when entering notes from chat or research', () => {
   const reference = {current:undefined}, nativeTabs = {}
-  const header = runInNewContext(patchNotesClient(source)+';Header', { nativeTabs, renderSlot:()=>null, react_jsx_runtime:{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}, react:{useRef:value=>{reference.current??=value;return reference}} })
+  const header = runInNewContext(patchNotesClient(source)+';ConversationSessionHeader', { nativeTabs, renderSlot:()=>null, react_jsx_runtime:{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}, react:{useRef:value=>{reference.current??=value;return reference}} })
   const props = { sessionId:'session', blank:true, composerPhase:'blank' }
   const chat = header({...props,active:{id:'chat'}})
   const notes = header({...props,active:{id:'notes'}})

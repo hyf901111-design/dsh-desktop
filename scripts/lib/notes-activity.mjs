@@ -14,42 +14,73 @@ export function createNotesActivityStore(doc) {
     notify()
   }
   const reset = () => { rows.clear(); notify() }
+  const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const row of value.rows){const old=merged.get(row.requestId);merged.set(row.requestId,old&&(['preparing','generating'].includes(old.phase)&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt)?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
   doc?.addEventListener('sherlock:notes-task-state', update)
   doc?.addEventListener('sherlock:notes-reset', reset)
+  doc?.addEventListener('sherlock:notes-history',history)
   return { snapshot: id => rows.get(id) || empty, subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) },
-    dispose: () => { doc?.removeEventListener('sherlock:notes-task-state', update); doc?.removeEventListener('sherlock:notes-reset', reset); reset(); listeners.clear() } }
+    dispose: () => { doc?.removeEventListener('sherlock:notes-task-state', update); doc?.removeEventListener('sherlock:notes-reset', reset);doc?.removeEventListener('sherlock:notes-history',history); reset(); listeners.clear() } }
 }
 
-export function EWorkNotesActivity({sessionId}) {
+export function useNotesConversationRows(sessionId){
   const rows = react.useSyncExternalStore(eworkNotesActivity.subscribe, () => eworkNotesActivity.snapshot(sessionId))
-  const [now, setNow] = react.useState(Date.now)
-  const running = rows.some(row => ['preparing','generating'].includes(row.phase))
-  react.useEffect(() => { if (!running) return; const timer = setInterval(() => setNow(Date.now()),1000); return () => clearInterval(timer) }, [running])
+  react.useEffect(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[sessionId])
+  return rows
+}
+export function EWorkNoteConversationRow({row,t,loadImage,UserBubble=UserStyleBubble,Progress=ExecutionStatusGroup,Markdown=AssistantMarkdown}) {
   const h = react.createElement
   const labels = {preparing:'正在读取笔记内容',generating:'正在生成内容',ready:'内容已生成，请在笔记中预览',accepted:'已写入笔记',discarded:'已放弃建议',failed:'生成失败',stopped:'已停止'}
-  return h('div', {className:'en-task-history', 'aria-label':'笔记任务过程'}, rows.map(row => {
     const pending = ['preparing','generating'].includes(row.phase)
-    return h('article', {key:row.requestId, className:'en-task', 'data-note-task':row.requestId, 'data-phase':row.phase},
-      h('p',{className:'en-task-prompt'},row.prompt || '根据附件撰写内容'),
-      h('div',{className:'en-task-progress',role:'status','aria-live':'polite'},
-        pending ? h('span',{className:'en-task-spinner','aria-hidden':true}) : null,
-        h('span',null,labels[row.phase]), h('small',null,Math.max(0,Math.floor(((row.finishedAt || now)-row.startedAt)/1000))+'s')),
-      row.error ? h('p',{className:'en-task-error'},row.error) : null)
-  }))
+    const stage = {model:'正在连接当前模型',thinking:'正在思考',writing:'正在撰写内容',validating:'正在检查生成内容'}[row.stage]
+    const status=(row.phase==='generating'?stage:null)||labels[row.phase]
+    return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
+      h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || '根据附件撰写内容'}],imageLoader:loadImage,t}),
+      h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
+      row.reasoning ? h(Markdown,{blocks:[{kind:'reasoning',text:row.reasoning}],streaming:pending&&row.stage==='thinking',interrupted:row.phase==='stopped',t}) : null,
+      row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
+      row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t})) : null)
+}
+export function EWorkNotesActivity(props){const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':'笔记任务过程'},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}
+export function mergeNoteConversationFlow(flow,nodeStore,rows){
+ let previous=-1
+ const entries=flow.map((entry,i)=>{const node=nodeStore.get(entry.kind==='node'?entry.key:entry.nodeKeys?.[0]);previous=node?.anchorSeq??previous;return{entry,seq:previous,index:i}})
+ for(const row of rows)entries.push({entry:{kind:'note-conversation',key:'note:'+row.requestId,row},seq:Number.isSafeInteger(row.seq)?row.seq:Infinity,index:entries.length})
+ return entries.sort((a,b)=>a.seq-b.seq||a.index-b.index).map(value=>value.entry)
 }
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${EWorkNotesActivity.toString()}\n`
+  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
     source=source.replace(anchor,helpers+anchor)
   }
+  source=source.replace('(EWorkNotesActivity,{sessionId})]','(EWorkNotesActivity,{sessionId,t})]')
   const old="activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId}) : "
   source=source.replace(old,'')
   const portal='(0, react_dom.createPortal)(sherlockShared(sessionId) ? researchConversationView'
-  const next="(0, react_dom.createPortal)(activeView === 'notes' ? (0,react_jsx_runtime.jsxs)('div',{className:'en-note-conversation-flow',children:[sessionPresentation.conversationView,(0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId})]}) : sherlockShared(sessionId) ? researchConversationView"
+  const oldNotes="activeView === 'notes' ? (0,react_jsx_runtime.jsxs)('div',{className:'en-note-conversation-flow',children:[sessionPresentation.conversationView,(0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId,t})]}) : "
+  source=source.replace(oldNotes,'')
+  const next="(0, react_dom.createPortal)(activeView === 'notes' ? sessionPresentation.conversationView || (0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId,t}) : sherlockShared(sessionId) ? researchConversationView"
+  if(!source.includes('/* ework:notes-common-conversation:v1 */')){
+    const flow='const renderFlow=react.useMemo(()=>mergeCanvasTaskFlow(nativeRenderFlow,nodeStore,canvasTasks),[nativeRenderFlow,nodeStore,canvasTasks]);'
+    if(source.split(flow).length!==2)throw Error('无法定位共用会话记录。')
+    source=source.replace(flow,`/* ework:notes-common-conversation:v1 */ const canvasRenderFlow=react.useMemo(()=>mergeCanvasTaskFlow(nativeRenderFlow,nodeStore,canvasTasks),[nativeRenderFlow,nodeStore,canvasTasks]);const noteRows=useNotesConversationRows(sessionId);const renderFlow=react.useMemo(()=>mergeNoteConversationFlow(canvasRenderFlow,nodeStore,noteRows),[canvasRenderFlow,nodeStore,noteRows]);`)
+    const render='renderFlow.map((entry) => {'
+    if(source.split(render).length!==2)throw Error('无法定位共用会话气泡。')
+    source=source.replace(render,render+"if(entry.kind==='note-conversation')return react.createElement(EWorkNoteConversationRow,{key:entry.key,row:entry.row,t,loadImage});")
+  }
+  if(!source.includes('/* ework:notes-native-progress:v1 */')) {
+    const status='const status = entry.canvasTask ?'
+    if(source.split(status).length!==2)throw Error('笔记无法定位原生执行进度。')
+    source=source.replace(status,'/* ework:notes-native-progress:v1 */ const status = entry.noteTask ? entry.noteTask.status : entry.canvasTask ?')
+  }
+  if(!source.includes('/* ework:notes-follow-stream:v1 */')){
+    const signature='const followSig = `${openState}:${firstSeq}:${lastKey}:${order.length}:${running ? 1 : 0}:${lastSteeringId ?? ""}`;'
+    if(source.split(signature).length!==2)throw Error('无法定位笔记会话滚动跟随。')
+    source=source.replace(signature,'/* ework:notes-follow-stream:v1 */ '+signature.slice(0,-2)+':${noteRows.map(row=>[row.requestId,row.phase,row.stage,row.outputChars,row.reasoning?.length].join(\",\")).join(\";\")}`;')
+  }
   if(source.includes(next))return source
   if (source.split(portal).length !== 2) throw Error('笔记无法定位原生对话过程区域。')
   return source.replace(portal,next)

@@ -7,6 +7,10 @@ const key = new PluginKey<DecorationSet>('ework-note-ai-selection')
 export const NoteAiSelection = createExtension(({ editor }) => ({
   key: 'ework-note-ai-selection',
   highlight(range?: { from: number; to: number }, widget?: HTMLElement, onDetach?: () => void) { editor.transact(tr => tr.setMeta(key, range ? { ...range, widget, onDetach } : null)) },
+  currentRange() {
+    const ranges=key.getState(editor._tiptapEditor.state)?.find(undefined,undefined,spec=>spec.noteSelection===true) || []
+    return ranges.length ? {from:Math.min(...ranges.map(range=>range.from)),to:Math.max(...ranges.map(range=>range.to))} : undefined
+  },
   prosemirrorPlugins: [new Plugin<DecorationSet>({
     key,
     state: {
@@ -16,7 +20,7 @@ export const NoteAiSelection = createExtension(({ editor }) => ({
         if (range === null) return DecorationSet.empty
         if (range) {
           if (!(range.from < range.to && range.from >= 0 && range.to <= tr.doc.content.size)) {range.onDetach?.();return DecorationSet.empty}
-          const decorations = [Decoration.inline(range.from, range.to, { class: 'en-ai-selection' })]
+          const decorations = [Decoration.inline(range.from, range.to, { class: 'en-ai-selection' }, {noteSelection:true})]
           if (range.widget) {
             const end = tr.doc.resolve(range.to)
             let anchor = range.to
