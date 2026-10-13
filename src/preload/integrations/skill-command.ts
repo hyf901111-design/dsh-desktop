@@ -1,4 +1,5 @@
 import type {SkillCommandSegment} from '../../shared/integration-ui'
+import type {InputTriggerSource} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import {SKILL_REFERENCE_SOURCE,decodeSkillReference} from '../../shared/skill-reference'
 type Session={sessionId:string;skillCommandSegment?:SkillCommandSegment}
 type Skill={id:string;label:string;detail:string;revision:number}
@@ -6,7 +7,7 @@ type Option=Pick<Skill,'id'|'label'|'detail'>
 type Contribution={name:string;description:string;available(session:Session):boolean;ui:{kind:'popupSelect';options(session:Session,signal:AbortSignal):Promise<Option[]>;onSelect(option:Option,session:Session):Promise<void>}}
 
 /** Uses the native command popup, including its search, keyboard and dismissal. */
-export function installSkillCommand(deps:{document?:Document;command:{register(value:Contribution):()=>void};inputTriggers?:{register(value:any):()=>void};sessions:{subagentAddress(id:string):unknown}}) {
+export function installSkillCommand(deps:{document?:Document;command:{register(value:Contribution):()=>void};inputTriggers?:{registerSource(value:InputTriggerSource):()=>void};sessions:{subagentAddress(id:string):unknown}}) {
  const document=deps.document??globalThis.document,win=document.defaultView!
  const catalogs=new Map<string,{rows:Skill[];signal:AbortSignal}>(),pending=new Set<()=>void>()
  const exchange=(action:'list'|'use'|'resolve',args:Record<string,unknown>,signal?:AbortSignal)=>new Promise<unknown>((resolve,reject)=>{
@@ -21,7 +22,7 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
  })
  const reset=()=>{catalogs.clear();for(const cancel of [...pending])cancel()}
  win.addEventListener('sherlock:skill-menu-reset',reset)
- const unregisterReference=deps.inputTriggers?.register({trigger:'/',name:SKILL_REFERENCE_SOURCE,order:3,candidates:async()=>[],onPick:()=>undefined,codec:{
+ const unregisterReference=deps.inputTriggers?.registerSource({trigger:'/',name:SKILL_REFERENCE_SOURCE,order:3,candidates:async()=>[],onPick:()=>undefined,codec:{
   clipboardText:(ref:string)=>`/${decodeSkillReference(ref).label}`,
   serialize:async(ref:string,signal:AbortSignal)=>{
    const reference=decodeSkillReference(ref)

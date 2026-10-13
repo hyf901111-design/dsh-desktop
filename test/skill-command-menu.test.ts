@@ -14,7 +14,7 @@ function fixture(){
  const bridge=installSkillCommandBridge(doc,{request:request as any,useSkill})
  let command:any
  let source:any
- const dispose=installSkillCommand({document:doc,command:{register:(value:any)=>{command=value;return ()=>{}}},inputTriggers:{register:(value:any)=>{source=value;return ()=>{}}},sessions:{subagentAddress:()=>child?{}:undefined}})
+ const dispose=installSkillCommand({document:doc,command:{register:(value:any)=>{command=value;return ()=>{}}},inputTriggers:{registerSource:(value:any)=>{source=value;return ()=>{}}},sessions:{subagentAddress:()=>child?{}:undefined}})
  return {w,command,source,useSkill,request,skill,bridge,dispose,setChild:()=>{child=true}}
 }
 it('adds a native popup command and lists only enabled skills with a name and description',async()=>{
