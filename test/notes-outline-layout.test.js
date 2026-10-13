@@ -40,7 +40,7 @@ afterAll(async () => { await browser?.close() })
 
 async function fileFixture(saved){
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
- await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body data-ds-dark-theme><section class="en-root" data-dark="true" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture')
+ await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body data-ds-dark-theme><section class="en-root" data-dark="true" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside style="position:fixed;right:10px;bottom:20px;width:320px"><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture')
  if(saved)await page.evaluate(value=>window.noteSaved=value,saved)
  await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();return {context,page}
 }
@@ -96,11 +96,18 @@ it('centers the empty outline and formatting toolbar and uses legible comment an
   expect(await page.locator('.bn-panel').evaluate(el=>getComputedStyle(el).borderColor)).toBe('rgb(72, 72, 72)');expect(await page.locator('.bn-panel input').evaluate(el=>getComputedStyle(el).borderColor)).toBe('rgb(72, 72, 72)');expect(await page.locator('.bn-panel button[type=submit]').evaluate(el=>el.getBoundingClientRect().height)).toBe(30)
  }finally{await context.close()}
 },15000)
+it('fits a full-document suggestion to its content without a resize handle or a fixed empty body',async()=>{
+ const {context,page}=await fileFixture();try{
+  await page.locator('#native-input').fill('精简正文');await page.locator('#native-send').click();await page.locator('.en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion({kind:'text',markdown:'简短的正文。'}));await page.locator('.en-composer-area .en-preview').waitFor()
+  expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(0)
+  expect(await page.locator('.en-composer-area .en-preview').evaluate(el=>el.getBoundingClientRect().height)).toBeLessThan(180)
+ }finally{await context.close()}
+},15000)
 
 it('keeps native slash filtering and keyboard insertion in the editor and rejects stale mouse selections',async()=>{
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage()
  try{
-  await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
+  await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside style="position:fixed;right:10px;bottom:20px;width:320px"><textarea id="native-input"></textarea><button id="native-command"></button><button id="native-send"></button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
   const latest=()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='menu-sync').at(-1)?.input)
   await page.locator('.en-document .bn-editor').click();await page.keyboard.type('/');await expect.poll(async()=> (await latest())?.items.length||0).toBeGreaterThan(0)
   const first=await latest();expect(first.items.some(item=>item.title==='一级标题')).toBe(true);expect(await page.locator('.en-document .bn-editor').evaluate(el=>el.contains(document.activeElement))).toBe(true)

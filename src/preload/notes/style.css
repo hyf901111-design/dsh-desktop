@@ -42,7 +42,7 @@ body:has(.VOzbGW_overlay:not([hidden])) [data-ework-notes-session]{visibility:hi
 
 .en-ai-position-note{margin:0 0 8px;font-size:12px;line-height:20px;color:var(--en-muted)}
 
-.en-preview-resizer{height:20px;display:flex;align-items:center;justify-content:center;cursor:ns-resize;touch-action:none;outline:none}.en-preview-resizer span{height:3px;width:36px;border-radius:3px;background:var(--en-muted);opacity:.35;transition:opacity 120ms,width 120ms}.en-preview-resizer:is(:hover,:focus-visible) span{opacity:.65;width:44px}.en-preview-wrap .en-preview{margin-bottom:0}.en-composer-area{width:min(820px,calc(100% - 144px))}@media(max-width:1200px){.en-composer-area{width:calc(100% - 128px)}}
+.en-preview-wrap .en-preview{margin-bottom:0}.en-composer-area{width:min(820px,calc(100% - 144px))}@media(max-width:1200px){.en-composer-area{width:calc(100% - 128px)}}
 
 .en-root{--en-drag-ink:rgb(0 0 0 / .22)}.en-root[data-dark=true]{--en-drag-ink:rgb(255 255 255 / .24)}
 
