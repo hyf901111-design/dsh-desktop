@@ -17,7 +17,7 @@ import { translateUiCopy } from '../src/preload/ui-localization'
 
 const cleanup: Array<() => Promise<void>> = []
 afterEach(async () => { for (const fn of cleanup.splice(0)) await fn(); vi.unstubAllGlobals() })
-async function fixture(privateCount = 8, sharedCount = 7) {
+async function fixture(privateCount = 8, sharedCount = 7,options:{current?:string;collapsed?:boolean;groups?:string[]}={}) {
   const w = new Window({ url: 'https://ework.local/' })
   vi.stubGlobal('window', w); vi.stubGlobal('document', w.document)
   vi.stubGlobal('localStorage', w.localStorage); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('Event', w.Event)
@@ -25,7 +25,9 @@ async function fixture(privateCount = 8, sharedCount = 7) {
     header: { sessionOverflowButton: 'native-session-overflow' }, rows: {},
     collapsedSessionLimit: 5, useNativeDragAcceptance: () => {}, WorkspaceFolderIcon: () => null
   } })
-  let current = '', version = 0
+  if(options.collapsed)w.localStorage.setItem('sherlock.boards.collapsed','true')
+  if(options.groups)w.localStorage.setItem('sherlock.boards.view.v3',JSON.stringify({collapsedGroups:options.groups}))
+  let current = options.current??'', version = 0
   const listeners = new Set<() => void>()
   const state = {
     favorites: Array.from({ length: privateCount }, (_, i) => ({ favoriteId: 'f' + i, sessionId: 'p' + i, title: '个人' + i, createdAt: 100 - i, pinned: true })),
@@ -64,20 +66,31 @@ it('个人与协作看板各默认显示五条，复用工作区按钮，分别�
   await f.click(overflow('private')); expect(f.titles('private')).toHaveLength(5)
   await f.click(overflow('shared')); expect(f.titles('shared')).toHaveLength(7)
 })
-it('收起仍保留当前打开的后排看板，不改变持久排序，重新打开分组恢复五条', async () => {
+it('最近打开的后排看板提升到前排，手动收起分组仍保留当前选择', async () => {
   const f = await fixture(), before = f.w.localStorage.getItem('sherlock.boards.view.v3')
   await f.click(f.group('private').querySelector('[data-srb-board-overflow]'))
   await f.click([...f.group('private').querySelectorAll('.srb-board-title')].find(el => el.textContent === '个人7')!)
   await f.click(f.group('private').querySelector('[data-srb-board-overflow]'))
-  expect(f.titles('private')).toEqual(['个人0', '个人1', '个人2', '个人3', '个人7'])
+  expect(f.titles('private')).toEqual(['个人7','个人0', '个人1', '个人2', '个人3'])
   expect(f.group('private').querySelector('[aria-current=true]')?.textContent).toContain('个人7')
-  expect(f.w.localStorage.getItem('sherlock.boards.view.v3')).toBe(before)
+  expect(f.w.localStorage.getItem('sherlock.boards.view.v3')).not.toBe(before)
   await f.click(f.group('private').querySelector('[data-srb-board-overflow]'))
   await f.click(f.group('private').querySelector('[role=treeitem]'))
   expect(f.titles('private')).toHaveLength(0)
   await f.click(f.group('private').querySelector('[role=treeitem]'))
   expect(f.titles('private')).toHaveLength(5)
   expect(f.group('private').querySelector('[data-srb-board-overflow]')?.getAttribute('aria-expanded')).toBe('false')
+})
+
+it.each(['p7','s6'])('恢复正在使用的 %s 时自动展开对应看板目录并高亮，刷新后尊重手动收起',async id=>{
+ const f=await fixture(8,7,{current:id,collapsed:true,groups:['private','shared']}),group=id==='p7'?'private':'shared'
+ expect(f.host.querySelector('[aria-label="折叠看板区"]')?.getAttribute('aria-expanded')).toBe('true')
+ expect(f.group(group).querySelector('[role=treeitem]')?.getAttribute('aria-expanded')).toBe('true')
+ expect(f.group(group).querySelector('[aria-current=true]')?.textContent).toContain(id==='p7'?'个人7':'协作6')
+ await f.click(f.group(group).querySelector('[role=treeitem]'));await f.emit()
+ expect(f.group(group).querySelector('[role=treeitem]')?.getAttribute('aria-expanded')).toBe('false')
+ await f.open(id==='p7'?'p6':'s5')
+ expect(f.group(group).querySelector('[role=treeitem]')?.getAttribute('aria-expanded')).toBe('true')
 })
 it('五条以内不显示展开按钮，实时增删会话更新隐藏数量并保持当前会话可见', async () => {
   const f = await fixture(5, 1)

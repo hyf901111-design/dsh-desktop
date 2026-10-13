@@ -9,6 +9,7 @@ import { researchNotoFontCss } from '../../packages/dsh-research-task-runtime/co
 import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
 import { patchFigmaFilePreview } from './figma-file-preview-client.mjs'
 import { patchIntegrationSkillComposer } from './patch-integration-skill-composer.mjs'
+import {patchSidebarSessionExperience} from './sidebar-session-recency.mjs'
 import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -829,7 +830,7 @@ export function patchResearchBoardWorkspace(source) {
   // Figma 22/44: idle search and the collapsed add-project glyph remain 16 px.
   source = source.replace('size: searchExpanded ? 11 : 14', 'size: searchExpanded ? 11 : 16')
     .replace('size: wide ? 16 : 18', 'size: 16')
-  if (source.includes('/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')) return patchWorkspaceSelection(source)
+  if (source.includes('/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')) return patchSidebarSessionExperience(patchWorkspaceSelection(source))
   source = replace(
     source,
     'const [query, setQuery] = (0, react.useState)("");',
@@ -857,7 +858,7 @@ export function patchResearchBoardWorkspace(source) {
     'className: WorkspaceBrowser_module_css_default.listArea,',
     'className: WorkspaceBrowser_module_css_default.listArea, "data-srb-workspace-list":"", hidden:wide && sectionCollapsed && !searchExpanded,'
   )
-  return patchWorkspaceSelection(source + '\n/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */')
+  return patchSidebarSessionExperience(patchWorkspaceSelection(source + '\n/* SHERLOCK_WORKSPACE_COLLAPSE_V1 */'))
 }
 
 function patchWorkspaceSelection(source) {

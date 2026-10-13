@@ -9,6 +9,7 @@ import * as React from 'react'
 import { StateDot, Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { admitSharedDraft } from './shared-send-draft'
 import { promoteSidebarOrder } from './sidebar-manual-order'
+import {sidebarUsageSnapshot,sidebarUsageTimes,recordSidebarSessionUse,subscribeSidebarUsage} from '../../scripts/lib/sidebar-session-recency.mjs'
 import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
 import type {
   BoardView,
@@ -1812,15 +1813,27 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
     catch { return { groupBy: 'type', collapsedGroups: [], sort: 'manual', order: [], updatedAt: {} } }
   })
   const selectedSession = React.useSyncExternalStore(subscribeBoardSelection, selectedBoardSession)
-  const save = (next: any) => { setPreferences(next); localStorage.setItem('sherlock.boards.view.v3', JSON.stringify(next)) }
+  React.useSyncExternalStore(subscribeSidebarUsage,sidebarUsageSnapshot)
+  const currentSession=page.current(),usage=sidebarUsageTimes(),revealedBoardSession=React.useRef<string|null>(null)
+  const save = (next: any) => { setPreferences((previous:any)=>{const value=typeof next==='function'?next(previous):next;localStorage.setItem('sherlock.boards.view.v3',JSON.stringify(value));return value}) }
   const entries = [
-    ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, page.editedAt(f.sessionId) ?? 0) })),
-    ...state.boards.filter(b => b.pinned).map(b => ({ key: 'shared:' + b.boardId, group: b.sharingState === 'shared' ? 'shared' : 'private', value: b, time: b.updatedAt ?? b.createdAt }))
+    ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, page.editedAt(f.sessionId) ?? 0,usage[f.sessionId]??0) })),
+    ...state.boards.filter(b => b.pinned).map(b => ({ key: 'shared:' + b.boardId, group: b.sharingState === 'shared' ? 'shared' : 'private', value: b, time: Math.max(b.updatedAt ?? b.createdAt,usage[b.localSessionId??'']??0) }))
   ]
+  const activeGroup=entries.find(e=>('boardId' in e.value?e.value.localSessionId:e.value.sessionId)===currentSession)?.group
+  React.useEffect(()=>{
+    recordSidebarSessionUse(currentSession)
+    if(!currentSession||!activeGroup)return
+    const key=currentSession+':'+activeGroup
+    if(revealedBoardSession.current===key)return
+    revealedBoardSession.current=key
+    setCollapsed(false);localStorage.setItem('sherlock.boards.collapsed','false')
+    if(preferences.collapsedGroups.includes(activeGroup))save((previous:any)=>({...previous,collapsedGroups:previous.collapsedGroups.filter((g:string)=>g!==activeGroup)}))
+  },[currentSession,activeGroup])
   const nextOrder = promoteSidebarOrder(entries, preferences.order, preferences.updatedAt)
   const order = nextOrder.order
   React.useEffect(() => {
-    if (entries.length && nextOrder.changed) save({ ...preferences, order: nextOrder.order, updatedAt: nextOrder.updatedAt })
+    if (entries.length && nextOrder.changed) save((previous:any)=>({ ...previous, order: nextOrder.order, updatedAt: nextOrder.updatedAt }))
   }, [JSON.stringify(nextOrder)])
   entries.sort((a, b) => preferences.sort === 'updated' ? b.time - a.time :
     (order.includes(a.key) ? order.indexOf(a.key) : 100000) - (order.includes(b.key) ? order.indexOf(b.key) : 100000))
@@ -1932,7 +1945,7 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
   const [deleting, setDeleting] = React.useState(false)
   const [deleteError, setDeleteError] = React.useState('')
   const R = skin.rows
-  const selected = selectedSession === ('boardId' in entry ? entry.localSessionId : entry.sessionId) && page.current() === selectedSession
+  const selected = page.current() === ('boardId' in entry ? entry.localSessionId : entry.sessionId)
   const shared = 'boardId' in entry
   const sessionId = shared ? entry.localSessionId : entry.sessionId
   const subscribeActivity = React.useCallback((listener: () => void) => page.subscribeActivity(sessionId, listener), [page, sessionId])
