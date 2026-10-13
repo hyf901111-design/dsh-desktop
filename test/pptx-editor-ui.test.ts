@@ -36,10 +36,10 @@ describe('shared PPTX content editor',()=>{
   const view=await mount({open:async()=>({ok:true,document:doc}),save:(value:any)=>{request=value;return new Promise(resolve=>{finish=resolve})}})
   try{await input(view.win,editable(view.host),'保存快照');await click(view.host,'保存');await input(view.win,editable(view.host),'保存期间继续输入');await act(async()=>{finish({ok:true,document:{...doc,version:'v2',slides:[{...doc.slides[0],fields:[{...doc.slides[0]!.fields[0],text:'保存快照'}]},doc.slides[1]]}});await Promise.resolve()});expect(request.edits).toEqual([{id:'title',text:'保存快照'}]);expect(view.host.textContent).toContain('未保存');expect(editable(view.host)?.textContent).toBe('保存期间继续输入');await click(view.host,'保存');await act(async()=>{finish({ok:false,code:'conflict',error:'文件已更改'});await Promise.resolve()});expect(view.host.textContent).toContain('文件已更改');expect(editable(view.host)?.textContent).toBe('保存期间继续输入')}finally{await view.close()}
  })
- it('publishes sidebar save controls while Research saves through shortcuts',async()=>{
+ it('keeps direct editing enabled without mode or manual save buttons',async()=>{
   let controls:any,state:any
   const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:doc})},{toolbar:'host',onToolbarState:(v:any)=>{state=v},onToolbarControls:(v:any)=>{controls=v}})
-  try{expect(state.modes).toBe(true);expect(controls.setMode).toBeTypeOf('function');await act(async()=>{controls.setMode('edit');await Promise.resolve()});expect(editable(view.host)?.textContent).toBe('原始标题')}finally{await view.close()}
+  try{expect(state.modes).toBe(false);expect(state.editable).toBe(false);expect(controls.setMode).toBeUndefined();expect(editable(view.host)?.textContent).toBe('原始标题')}finally{await view.close()}
  })
 })
 
@@ -172,7 +172,7 @@ it('does not restore a stale selection when an earlier format preview finishes',
  }finally{await view.close()}
 })
 
-it('restores the dragged toolbar position after cancelling chart data editing',async()=>{
+it('restores the dragged toolbar position after closing chart data editing',async()=>{
  const chart={part:'ppt/charts/chart1.xml',title:'图表',legend:true,categories:['Q1'],series:[{name:'收入',values:[10]}]},chartDoc={...doc,slides:[{...doc.slides[0],nodes:[{...doc.slides[0]!.nodes[0],type:'chart',chart}]}]}
  const view=await mount({open:async()=>({ok:true,document:chartDoc}),save:async()=>({ok:true,document:chartDoc})})
  try{
@@ -187,8 +187,26 @@ it('restores the dragged toolbar position after cancelling chart data editing',a
   const location=[bar.style.left,bar.style.top];expect(location).toEqual(['350px','360px'])
   await act(async()=>[...bar.querySelectorAll('button')].find((b:any)=>b.textContent==='编辑图表数据').click())
   expect(view.win.document.querySelector('[role=toolbar]')).toBeNull()
-  await click(view.host,'取消');bar=view.win.document.querySelector('[role=toolbar]')
+  await click(view.host,'关闭');bar=view.win.document.querySelector('[role=toolbar]')
   expect([bar.style.left,bar.style.top]).toEqual(location)
+ }finally{await view.close()}
+})
+
+it('automatically saves chart changes without an apply button and undoes saved chart data',async()=>{
+ const chart={part:'ppt/charts/chart1.xml',title:'图表',legend:true,categories:['Q1'],series:[{name:'收入',values:[10]}]},chartDoc={...doc,basisToken:'base',slides:[{...doc.slides[0],nodes:[{...doc.slides[0]!.nodes[0],type:'chart',chart}]}]},saves:any[]=[]
+ const view=await mount({open:async()=>({ok:true,document:chartDoc}),save:async(r:any)=>{saves.push(r);return{ok:true,document:{...chartDoc,version:'v'+(saves.length+1)}}}})
+ try{
+  await act(async()=>view.host.querySelector('[data-pptx-node-id]')!.dispatchEvent(new view.win.PointerEvent('pointerdown',{bubbles:true,button:0})))
+  await act(async()=>([...view.win.document.querySelectorAll('[role=toolbar] button')].find((b:any)=>b.textContent==='编辑图表数据') as any).click())
+  expect(view.host.textContent).not.toContain('应用到幻灯片')
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))});expect(saves).toHaveLength(0)
+  const field=view.host.querySelector('input[type=checkbox]') as any
+  await act(async()=>field.click())
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves[0]).toMatchObject({basisToken:'base',objects:[{id:chartDoc.slides[0]!.nodes[0]!.id,chart:{legend:false}}]})
+  await click(view.host,'撤销');expect(field.checked).toBe(true)
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves[1]).toMatchObject({version:'v2',objects:[]})
  }finally{await view.close()}
 })
 
@@ -226,4 +244,53 @@ it('routes body shortcuts to the editor most recently focused through the keyboa
   await act(async()=>view.win.document.body.dispatchEvent(new view.win.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'s',metaKey:true})))
   expect(saves.map(r=>r.path)).toEqual(['b.pptx']);expect(saves[0].edits).toEqual([{id:'title',text:'B草稿'}])
  }finally{await act(async()=>otherRoot.unmount());await view.close()}
+})
+
+it('automatically saves text and preserves undo and redo after saving',async()=>{
+ const saves:any[]=[],baseline={...doc,basisToken:'base'}
+ const view=await mount({open:async()=>({ok:true,document:baseline}),save:async(r:any)=>{saves.push(r);return{ok:true,document:{...baseline,version:'v'+(saves.length+1)}}}})
+ try{
+  await act(async()=>editable(view.host).focus());await input(view.win,editable(view.host),'自动保存文本')
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves).toHaveLength(1);expect(saves[0]).toMatchObject({basisToken:'base',edits:[{id:'title',text:'自动保存文本'}]})
+  expect(view.host.textContent).toContain('已保存')
+  await click(view.host,'撤销');expect(editable(view.host).textContent).toBe('原始标题')
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves[1]).toMatchObject({version:'v2',basisToken:'base',edits:[]})
+  await click(view.host,'重做');expect(editable(view.host).textContent).toBe('自动保存文本')
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves[2]).toMatchObject({version:'v3',edits:[{id:'title',text:'自动保存文本'}]})
+ }finally{await view.close()}
+})
+it('queues the latest typing behind an in-flight automatic save and retains the caret',async()=>{
+ const saves:any[]=[],replies:Array<(r:any)=>void>=[],baseline={...doc,basisToken:'base'}
+ const view=await mount({open:async()=>({ok:true,document:baseline}),save:(r:any)=>{saves.push(r);return new Promise(resolve=>replies.push(resolve))}})
+ try{
+  const paragraph=editable(view.host);await act(async()=>paragraph.focus());await input(view.win,paragraph,'第一段')
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))});expect(saves).toHaveLength(1)
+  await input(view.win,paragraph,'继续输入');await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))});expect(saves).toHaveLength(1)
+  await act(async()=>{replies[0]!({ok:true,document:{...baseline,version:'v2'}});await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves[1]).toMatchObject({version:'v2',edits:[{id:'title',text:'继续输入'}]});expect(view.win.document.activeElement).toBe(paragraph);expect(editable(view.host)).toBe(paragraph)
+  await act(async()=>{replies[1]!({ok:true,document:{...baseline,version:'v3'}});await Promise.resolve()})
+ }finally{await view.close()}
+})
+it('flushes automatic edits to the captured file when the component switches sources',async()=>{
+ const props={path:'a.pptx'},saves:any[]=[]
+ const view=await mount({open:async(r:any)=>({ok:true,document:{...doc,id:r.path,basisToken:r.path}}),save:async(r:any)=>{saves.push(r);return{ok:true,document:{...doc,id:r.path,basisToken:r.path,version:'v2'}}}},props)
+ try{
+  await input(view.win,editable(view.host),'A的修改');props.path='b.pptx';await view.render()
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves).toHaveLength(1);expect(saves[0]).toMatchObject({path:'a.pptx',basisToken:'a.pptx',edits:[{id:'title',text:'A的修改'}]})
+  expect(editable(view.host).textContent).toBe('原始标题')
+ }finally{await view.close()}
+})
+it('cancels pending automatic writes when the user explicitly discards a failed draft',async()=>{
+ const saves:any[]=[],view=await mount({open:async()=>({ok:true,document:{...doc,basisToken:'base'}}),save:async(r:any)=>{saves.push(r);return{ok:false,error:'保存失败'}}})
+ try{
+  Object.defineProperty(view.win,'confirm',{value:()=>true})
+  await input(view.win,editable(view.host),'失败稿');await click(view.host,'保存')
+  await input(view.win,editable(view.host),'明确放弃的修改');await click(view.host,'重新读取文件')
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(saves).toHaveLength(1);expect(editable(view.host).textContent).toBe('原始标题')
+ }finally{await view.close()}
 })

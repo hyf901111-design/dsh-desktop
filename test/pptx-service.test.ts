@@ -92,3 +92,27 @@ it('renders an authorized unsaved draft without writing the source file',async()
  await writeFile(file,fixture());await writeFile(file,'changed')
  expect(await editor.preview({...source,version:opened.document.version,edits:[],objects:[]})).toMatchObject({ok:false,code:'conflict'})
 })
+
+it('preserves the original OOXML baseline for undo and redo after automatic saves',async()=>{
+ const {root,file}=await setup(),editor=new service.PptxEditorService({resolveWorkspace:async()=>root,resolveCapability:async()=>null})
+ const original=await readFile(file),opened=await editor.open(source);if(!opened.ok)throw Error(opened.error)
+ expect(opened.document.basisToken).toBeTypeOf('string')
+ const field=opened.document.slides[0]!.fields[0]!,object=opened.document.slides[0]!.nodes.find(n=>n.nodeId===field.nodeId)!
+ const changes={edits:[{id:field.id,text:'自动保存后的标题'}],objects:[{id:object.id,fontSize:42,bold:true}]}
+ const saved=await editor.save({...source,basisToken:opened.document.basisToken,version:opened.document.version,...changes});if(!saved.ok)throw Error(saved.error)
+ const modified=await readFile(file);expect(modified).not.toEqual(original)
+ expect(saved.document.slides[0]!.fields[0]!.text).toBe(field.text)
+ const undone=await editor.save({...source,basisToken:opened.document.basisToken,version:saved.document.version,edits:[],objects:[]});if(!undone.ok)throw Error(undone.error)
+ expect(await readFile(file)).toEqual(original)
+ const redone=await editor.save({...source,basisToken:opened.document.basisToken,version:undone.document.version,...changes});if(!redone.ok)throw Error(redone.error)
+ expect(await readFile(file)).toEqual(modified)
+})
+
+it('does not allow an editing baseline to target another PPTX or overwrite external changes',async()=>{
+ const {root,file}=await setup(),other=path.join(root,'other.pptx');await writeFile(other,fixture())
+ const editor=new service.PptxEditorService({resolveWorkspace:async()=>root,resolveCapability:async()=>null}),opened=await editor.open(source);if(!opened.ok)throw Error(opened.error)
+ expect(opened.document.basisToken).toBeTypeOf('string')
+ const request={...source,basisToken:opened.document.basisToken,version:opened.document.version,edits:[],objects:[]}
+ const otherBefore=await readFile(other);expect(await editor.save({...request,path:'other.pptx'})).toMatchObject({ok:false});expect(await readFile(other)).toEqual(otherBefore)
+ await writeFile(file,'external change');expect(await editor.save(request)).toMatchObject({ok:false,code:'conflict'});expect((await readFile(file)).toString()).toBe('external change')
+})
