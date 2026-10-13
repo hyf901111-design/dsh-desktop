@@ -56,3 +56,7 @@ it('groups results, preserves stable rows on background updates, and dismisses o
   expect(unsubscribed).toBe(true)
   await w.happyDOM.abort()
 })
+it('searches and displays the same readable English skill name as the composer and sent bubble',async()=>{
+ const {vi}=await import('vitest');vi.stubGlobal('window',{__eworkSkillPresentationV1:{skills:new Map([['ework-skill-0123456789abcdef',{label:'ework-finance-analysis'}]])}})
+ try{const rows=sidebarSearchResults({favorites:[],boards:[]} as any,{a:{title:'/ework-skill-0123456789abcdef 机场遭'}},[],'finance-analysis');expect(rows[0]?.title).toBe('/ework-finance-analysis 机场遭')}finally{vi.unstubAllGlobals()}
+})

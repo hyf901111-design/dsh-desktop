@@ -1,3 +1,4 @@
+import {projectSkillText} from '../shared/skill-display.mjs'
 import { boardDialog } from './research-board-dialogs'
 import type { ResearchBoardsState } from '../shared/research-boards'
 export type SidebarSearchResult = { key: string; title: string; area: 'boards' | 'workspaces'; sessionId?: string; boardId?: string; time: number }
@@ -5,6 +6,7 @@ export function sidebarSearchResults(state: ResearchBoardsState, sessions: Recor
   const q = query.trim().toLocaleLowerCase(), results: SidebarSearchResult[] = [], included = new Set<string>()
   const archived = new Set(archivedIds)
   const add = (result: SidebarSearchResult) => {
+    result={...result,title:projectSkillText(result.title)}
     const identity = result.sessionId || result.key
     if (included.has(identity)) return
     included.add(identity)
@@ -84,7 +86,9 @@ export function showSidebarSessionSearch(doc: Document, source: { results(query:
     } else if (event.key === 'Enter' && event.target === input && results[active]) { event.preventDefault(); void open(results[active]!) }
   })
   const off = source.subscribe(render)
-  ui.dialog.addEventListener('close', off, { once: true })
+  const labels=(doc.defaultView as any)?.__eworkSkillPresentationV1
+  const offLabels=labels?.subscribe(render)
+  ui.dialog.addEventListener('close', ()=>{off();offLabels?.()}, { once: true })
   render(); input.focus()
   return ui
 }
