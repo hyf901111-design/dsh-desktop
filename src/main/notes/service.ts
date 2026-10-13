@@ -12,10 +12,12 @@ import { saveNoteExport } from './export'
 import { buildResearchHtmlPreview } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import type { NotesNativeMenu } from '../../shared/notes-menu'
 import type { NoteFiles } from './files'
+import type { ComponentLibraryStore } from '../state/component-library'
+import { findNoteComponent, noteLibraryItems, noteLibraryNode } from './component-library'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
-  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles
+  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
@@ -23,6 +25,10 @@ export function installNotesService(options: {
     const owner = options.owner(), session = input.sessionId
     if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
+      case 'library-list': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryItems(options.library()!)
+      case 'library-read': if(!options.library?.())throw Error('组件库暂不可用，请稍后重试。');return noteLibraryNode(options.library()!,input.id,owner)
+      case 'component-ready': return {ready:findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)?.containerSpec?.type==='calendar-tool'}
+      case 'component-render': {const spec=parseResearchContainerSpec(input.spec);if(!spec)throw Error('组件内容格式无效。');return {ok:true}}
       case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
       case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
       case 'file-revoke': return {ok:options.files?.revoke(owner,session,input.nodeId)??false}

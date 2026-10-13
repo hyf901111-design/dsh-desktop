@@ -1,0 +1,47 @@
+export function createNoteComponentViewStore(doc){
+ const entries=new Map(),listeners=new Set();let snapshot=[]
+ const notify=()=>{snapshot=[...entries.values()];for(const listener of listeners)listener()}
+ const update=event=>{const value=event.detail;if(typeof value?.instanceId!=='string')return
+  if(value.remove){entries.delete(value.instanceId);notify();return}
+  const host=doc.getElementById(value.hostId),header=doc.getElementById(value.headerId)
+  if(!host?.matches('.en-native-component-host')||host.dataset.noteComponent!==value.node?.id||host.dataset.noteSession!==value.sessionId||!header?.closest('.en-research')?.contains(host)||!host.closest('.en-root'))return
+  entries.set(value.instanceId,{...value,host,header});notify()
+ }
+ const reset=()=>{entries.clear();notify()}
+ doc?.addEventListener('sherlock:notes-component-view',update);doc?.addEventListener('sherlock:notes-reset',reset)
+ return {snapshot:()=>snapshot,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},dispose:()=>{doc?.removeEventListener('sherlock:notes-component-view',update);doc?.removeEventListener('sherlock:notes-reset',reset);reset()}}
+}
+export function EWorkNoteComponentView({entry,officePreview}){
+ const rootRef=react.useRef(entry.host.closest('[data-research-node-id]')),[indices,setIndices]=react.useState(false),[error,setError]=react.useState(''),pending=react.useRef(new Map()),sequence=react.useRef(0),node=entry.node,spec=node.containerSpec
+ const action=(name,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action:name,...value}}))
+ react.useEffect(()=>{
+  const receive=event=>{const value=event.detail;if(value?.instanceId!==entry.instanceId||value.sessionId!==entry.sessionId||!pending.current.has(value.requestId))return;clearTimeout(pending.current.get(value.requestId));pending.current.delete(value.requestId);setError(value.ok?'':value.message||'组件配置未保存，请重试')}
+  document.addEventListener('sherlock:notes-component-ack',receive)
+  return()=>{document.removeEventListener('sherlock:notes-component-ack',receive);for(const timer of pending.current.values())clearTimeout(timer);pending.current.clear()}
+ },[entry.instanceId,entry.sessionId])
+ const save=(expected,next)=>{
+  const parsed=financialWidgetSpec(next);if(!entry.host.isConnected||!parsed||parsed.widget!==spec.widget||JSON.stringify(expected)!==JSON.stringify(spec))return false
+  const requestId=entry.instanceId+':'+(++sequence.current);setError('');pending.current.set(requestId,setTimeout(()=>{pending.current.delete(requestId);setError('组件配置尚未保存，请重试')},6000));action('spec',{expected,next:parsed,requestId});return true
+ }
+ const body=spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,onSpecChange:save}):react.createElement(ResearchContainerBody,{node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}})
+ const title=['quote','announcements'].includes(spec.widget)?react.createElement(FinancialQuoteSelector,{node,sessionId:entry.sessionId,readOnly:false,onSpecChange:save}):spec.widget==='news'?react.createElement(FinancialNewsSearch,{node,sessionId:entry.sessionId,readOnly:false,onSpecChange:save}):react.createElement('strong',null,node.title)
+ return react.createElement(react.Fragment,null,
+  react_dom.createPortal(react.createElement('div',{className:'en-native-component-heading'},title,spec.widget==='indices'&&react.createElement('button',{'data-workbench-more':'','aria-label':'配置指数',onClick:()=>setIndices(true)},react.createElement(FinancialLibraryIcon,{name:'dots'}))),entry.header),
+  react_dom.createPortal(react.createElement('div',{className:'rScV5Q_containerBody en-native-component-body',key:entry.refresh},error&&react.createElement('div',{role:'alert',className:'en-component-error'},error),body,indices&&react.createElement(FinancialIndicesSettings,{node,sessionId:entry.sessionId,rootRef,readOnly:false,onClose:()=>setIndices(false),onChange:save})),entry.host,entry.instanceId)
+ )
+}
+export function EWorkNoteComponentViews({sessionId,active}){
+ const entries=react.useSyncExternalStore(eworkNoteComponentViews.subscribe,eworkNoteComponentViews.snapshot),officePreview=react.useSyncExternalStore(eworkNoteOfficePreview.subscribe,eworkNoteOfficePreview.getSnapshot)
+ react.useEffect(()=>{if(active)document.dispatchEvent(new CustomEvent('sherlock:notes-components-sync-request',{detail:{sessionId}}))},[sessionId,active])
+ return active?react.createElement(react.Fragment,null,entries.filter(entry=>entry.sessionId===sessionId&&entry.host.isConnected).map(entry=>react.createElement(EWorkNoteComponentView,{key:entry.instanceId,entry,officePreview}))):null
+}
+export function noteComponentClientHelpers(){return [createNoteComponentViewStore,EWorkNoteComponentView,EWorkNoteComponentViews].map(fn=>fn.toString()).join('\n')+"\nconst eworkNoteComponentViews=createNoteComponentViewStore(typeof document==='undefined'?undefined:document);\n"}
+export function patchNotesComponents(source){
+ const marker='/* ework:notes-native-components:v1 */'
+ if(!source.includes(marker)){
+  const anchor="react.createElement(EWorkNoteFileViews,{sessionId,active:activeView==='notes'}), "
+  if(source.split(anchor).length!==2)throw Error('无法定位笔记原生组件预览。')
+  source=source.replace(anchor,anchor+marker+" react.createElement(EWorkNoteComponentViews,{sessionId,active:activeView==='notes'}), ")
+ }
+ return source
+}

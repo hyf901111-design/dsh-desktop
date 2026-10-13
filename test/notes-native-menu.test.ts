@@ -53,6 +53,20 @@ it('keeps query updates in one window and ignores cleanup of a superseded menu',
  menu.sync(input({revision:2,selectedIndex:1}),'alice');await vi.waitFor(()=>expect(popup.webContents.executeJavaScript).toHaveBeenCalledTimes(2));expect(instances()).toHaveLength(2)
  menu.sync(input({menuId:'menu-b'}),'alice');const second=instances().at(-1);menu.close('menu-a');expect(second.destroyed).toBe(false);menu.close('menu-b');expect(second.destroyed).toBe(true)
 })
+it('opens the second level without closing the native menu and validates child selections',async()=>{
+ const {parent,menu}=fixture(),child={id:'library-one',title:'组件一',subtext:'',group:'自定义',badge:'',icon:'library'},library={id:'library',title:'组件库',subtext:'',group:'插入',badge:'',icon:'library',children:[child]}
+ menu.sync(input({items:[library]}),'alice');const popup=instances().at(-1);await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled())
+ const ticket=popup.webContents.executeJavaScript.mock.calls.at(-1)[0].match(/ework-note-menu:\/\/([\w-]+)\//)[1],event={preventDefault:vi.fn()}
+ popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/open/library?revision=1`)
+ expect(popup.destroyed).toBe(false);expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'open',itemId:'library'}))
+ menu.sync(input({revision:2,items:[library],submenu:{parentId:'library',selectedIndex:0}}),'alice')
+ await vi.waitFor(()=>expect(popup.setBounds.mock.calls.at(-1)[0].width).toBe(528))
+ expect(noteMenuPresentation(input({items:[library],submenu:{parentId:'library',selectedIndex:0}}),'ticket').html).toContain('组件一')
+ popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=1&parent=library`)
+ expect(popup.destroyed).toBe(false)
+ popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=2&parent=library`)
+ expect(parent.webContents.send).toHaveBeenLastCalledWith('notes:menu-event',expect.objectContaining({action:'select',parentId:'library',itemId:'library-one',revision:2}));expect(popup.destroyed).toBe(true)
+})
 for(const change of ['blur','move','resize','hide','minimize','closed'])it(`closes and notifies the editor on parent ${change}`,async()=>{
  const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1);await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled());parent.emit(change);expect(popup.destroyed).toBe(true);expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'cancel'}));expect(parent.listenerCount('blur')).toBe(0);expect(()=>menu.sync(input({revision:2}),'alice')).toThrow('已关闭')
 })

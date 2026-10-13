@@ -14,6 +14,7 @@ import { NoteAiSelection } from './selection'
 import { replaceNoteSelection, noteRangeHasOnlyText } from './replace-selection'
 import { SuggestionPanel } from './suggestion-panel'
 import { NoteMenuIcon } from './menu-icon'
+import { NativeComponentBlock } from './native-component-block'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
@@ -33,7 +34,11 @@ function AiRewriteButton({onRewrite}:{onRewrite():void}){
  const editor:any=useBlockNoteEditor(),valid=useEditorState({editor,selector:({editor}:any)=>editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection)})
  return valid?<button className="en-ai-format" aria-label="AI 改写" onMouseDown={e=>e.preventDefault()} onClick={onRewrite}><NoteMenuIcon kind="sparkles"/><span>AI 改写</span></button>:null
 }
-function ResearchBlock({ block }: any) {
+function ResearchBlock({block}:any){
+ const context=useContext(Context)!,node=useMemo(()=>{try{return JSON.parse(block.props.payload)}catch{return {}}},[block.props.payload])
+ return node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
+}
+function ResearchSnapshotBlock({ block }: any) {
   const interaction=useComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
   const context = useContext(Context)!, [html, setHtml] = useState(''), [error, setError] = useState('')
   const node = useMemo(() => { try { return JSON.parse(block.props.payload) } catch { return {} } }, [block.props.payload])
@@ -292,7 +297,28 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   },[props.sessionId,props.recovery])
   const exportNote = async (format='md') => {try{await props.bridge.request('export',{sessionId:props.sessionId,format,content:snapshot()})}catch(e){setError((e as Error).message)}}
   const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,importing:importing.current }), [props.bridge, props.sessionId, props.dark, props.navigate, editor])
-  const slashItems = useMemo(()=>async (query:string)=>{const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list'];return filterSuggestionItems(getDefaultReactSlashMenuItems(editor).sort((a:any,b:any)=>(order.indexOf(a.key)<0?100:order.indexOf(a.key))-(order.indexOf(b.key)<0?100:order.indexOf(b.key))),query)}, [editor])
+  const slashItems = useMemo(()=>async (query:string)=>{
+    const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
+    const defaults=getDefaultReactSlashMenuItems(editor).sort((a:any,b:any)=>(order.indexOf(a.key)<0?100:order.indexOf(a.key))-(order.indexOf(b.key)<0?100:order.indexOf(b.key)))
+    const library:any={key:'library',title:'组件库',group:'插入',aliases:['组件','研究','library'],onItemClick:()=>{}}
+    // Load on each opening/query so research-side renames and additions stay current.
+    try{
+      const items=await props.bridge.request('library-list',{sessionId:props.sessionId})
+      library.children=items.map((item:any)=>({key:item.id,title:item.title,group:item.group,iconKey:item.icon,onItemClick:async()=>{
+        const reference=editor.getTextCursorPosition().block
+        try{
+          const node=await props.bridge.request('library-read',{sessionId:props.sessionId,id:item.id})
+          if(disposed.current||!editor.isEditable||!editor.getBlock(reference.id))return
+          const current=editor.getBlock(reference.id),block={type:'research',props:{payload:JSON.stringify(node)}}
+          const undo=editor._tiptapEditor.state.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor._tiptapEditor.state)?.undoManager
+          undo?.stopCapturing()
+          editor.insertBlocks([block],reference.id,current.type==='paragraph'&&!noteText(current.content).trim()?'before':'after')
+          undo?.stopCapturing();editor.focus()
+        }catch(e){if(!disposed.current)setError((e as Error).message)}
+      }}))
+    }catch(e){library.children=[{key:'library_retry',title:'组件库暂不可用，重新打开重试',group:'组件库',onItemClick:()=>setError((e as Error).message)}]}
+    return filterSuggestionItems([...defaults,library],query)
+  }, [editor,props.bridge,props.sessionId])
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>正在生成内容…</span><button onClick={stop}>停止</button></div> : null}{error ? <div className="en-error" role="alert"><span>{error}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>重新读取并对比</button> : null}<button onClick={() => setError('')} aria-label="关闭提示">×</button></div> : null}
       {preview ? <SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? '创建的研究组件' : '内容预览'}</strong><button aria-label="放弃建议" onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>替换所选</button> : null}<button onClick={() => apply(false)}>{preview.result.kind === 'component' ? '写入正文' : '插入到下方'}</button><button onClick={regenerate}>重新撰写</button><button onClick={discardPreview}>放弃</button></>}>

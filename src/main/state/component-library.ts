@@ -136,5 +136,5 @@ export async function installComponentLibrary(options: {
             return store.remove(v.id);
         throw Error('不支持的组件库操作');
     });
-    return store;
+    return failed ? undefined : store;
 }
