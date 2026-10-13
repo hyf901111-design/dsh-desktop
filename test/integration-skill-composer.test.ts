@@ -62,6 +62,25 @@ it('prepends a native skill token without replacing text, image drafts or inline
     expect(f.shell.snapshot.draft).toBe(before.draft)
 })
 
+it('replaces the captured slash-menu token atomically and retains the original draft and attachments',async()=>{
+    const f=fixture();f.shell.setDraft('/ski 原有需求');f.shell.insertFilePaths(['/work/材料.md']);f.shell.addImages(['image-a'])
+    const before=f.shell.snapshot,ref=before.occurrences[0]
+    const prepared=await f.request('prepare',{sessionId:'current',commandSegment:{via:'menu',span:{start:0,end:4,draftRev:before.draftRev}}})
+    expect(prepared.ok).toBe(true)
+    expect(await f.request('insert',{token:prepared.token,invocationName:alias})).toMatchObject({ok:true})
+    expect(f.shell.snapshot.draft).toBe('/ework-skill-0123456789abcdef 原有需求 \uFFFC ')
+    expect(f.shell.snapshot.occurrences[0].occurrenceId).toBe(ref.occurrenceId)
+    expect(f.shell.snapshot.imageIds).toEqual(['image-a']);expect(f.sent).toEqual([])
+    f.shell.undo();expect(f.shell.snapshot.draft).toBe(before.draft)
+})
+
+it('does not redirect a skill menu selection to a newly selected session or overwrite a changed slash span',async()=>{
+    const f=fixture();f.shell.setDraft('/skills');const before=f.shell.snapshot
+    expect(await f.request('prepare',{sessionId:'previous'})).toMatchObject({ok:false})
+    expect(await f.request('prepare',{sessionId:'current',commandSegment:{via:'menu',span:{start:0,end:7,draftRev:before.draftRev-1}}})).toMatchObject({ok:false})
+    expect(f.shell.snapshot.draft).toBe('/skills')
+})
+
 it.each(['draft', 'session', 'disposed', 'readonly', 'blocked'])('rejects a stale or unavailable prepared input (%s) without changing it', async reason => {
     const f = fixture(), prepared = await f.request('prepare')
     if (reason === 'draft') f.shell.setDraft('后来输入')
@@ -194,7 +213,7 @@ it('patches the page plugin effect once and disposes its adapter with the owning
     const effects: Array<() => void> = [], releases: string[] = []
     const anchor = 'const composerBlocks = new ComposerBlockRegistry();'
     const patch = patchIntegrationSkillComposer(anchor)
-    const ctx = { effect: (fn: () => (() => void)) => effects.push(fn()) }
+    const ctx = { inject:()=>{}, effect: (fn: () => (() => void)) => effects.push(fn()) }
     runInNewContext(patch, { ComposerBlockRegistry: class {}, ctx, sessions: {}, inputHub: {}, researchSidebar: {}, window: { top: null }, sherlockBoardsPage: { installSkillComposer: () => () => releases.push('disposed') } })
     // Top-frame guard refuses iframe registration.
     expect(effects).toHaveLength(1)

@@ -1,7 +1,7 @@
-import type { IntegrationBridge } from '../../shared/integration-ui';
+import type { IntegrationBridge, SkillCommandSegment } from '../../shared/integration-ui';
 
 type ComposerReply = { requestId: string; ok: boolean; token?: string; message?: string };
-type ComposerRequest = { phase: 'prepare' | 'insert' | 'cancel' | 'focus'; token?: string; invocationName?: string };
+type ComposerRequest = { phase: 'prepare' | 'insert' | 'cancel' | 'focus'; token?: string; invocationName?: string; sessionId?:string; commandSegment?:SkillCommandSegment };
 const requestEvent = 'sherlock:skill-compose-request';
 const replyEvent = 'sherlock:skill-compose-reply';
 
@@ -40,7 +40,7 @@ export function createSkillUseBridge(document: Document, bridge: Pick<Integratio
     const useSkill: NonNullable<IntegrationBridge['useSkill']> = async input => {
         if (disposed) throw new Error('页面已关闭，请重新打开技能。');
         const attempt = generation;
-        const prepared = await exchange({ phase: 'prepare' }, input.signal);
+        const prepared = await exchange({ phase: 'prepare', ...(input.sessionId?{sessionId:input.sessionId}:{}), ...(input.commandSegment?{commandSegment:input.commandSegment}:{}) }, input.signal);
         const token = prepared.token;
         if (!token) throw new Error('无法定位当前对话，请重新选择会话。');
         tokens.add(token);

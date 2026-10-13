@@ -22,7 +22,7 @@ type Dependencies = {
         } | null
     }
 }
-type Ticket = { sessionId: string; shell: InputShell; revision: number; expires: number; inserted: boolean; caret: number }
+type Ticket = { sessionId: string; shell: InputShell; revision: number; expires: number; inserted: boolean; caret: number; span: {start:number;end:number} }
 const REQUEST = 'sherlock:skill-compose-request'
 const REPLY = 'sherlock:skill-compose-reply'
 
@@ -110,9 +110,23 @@ export function installSkillComposer(deps: Dependencies): () => void {
         try {
             if (request.phase === 'prepare') {
                 const { id, shell, snapshot } = current()
+                if (request.sessionId !== undefined && request.sessionId !== id) throw Error('当前对话已切换，请重新选择技能。')
+                let span = {start:0,end:0}
+                if (request.commandSegment !== undefined) {
+                    const segment = request.commandSegment as {via?:string;span?:{start:number;end:number;draftRev:number};token?:string}
+                    if(segment?.via==='menu') {
+                        const s=segment.span
+                        if(!s || !Number.isSafeInteger(s.start) || !Number.isSafeInteger(s.end) || s.start<0 || s.end<s.start || s.end>snapshot.draft.length || s.draftRev!==snapshot.draftRev || snapshot.draft.slice(0,s.start).trim()) throw Error('草稿已变化，请重新打开技能菜单。')
+                        const token=snapshot.draft.slice(s.start,s.end)
+                        if(token && (!token.startsWith('/') || !'skills'.startsWith(token.slice(1)))) throw Error('技能命令已变化，原输入已保留。')
+                        span={start:s.start,end:s.end}
+                    } else if(segment?.via==='enter' && segment.token==='/skills' && snapshot.draft.trim()==='/skills') {
+                        span={start:0,end:snapshot.draft.length}
+                    } else throw Error('技能命令已变化，原输入已保留。')
+                }
                 if (tickets.size >= 32) tickets.delete(tickets.keys().next().value!)
                 const token = window.crypto.randomUUID()
-                tickets.set(token, { sessionId: id, shell, revision: snapshot.draftRev, expires: Date.now() + 60_000, inserted: false, caret: 0 })
+                tickets.set(token, { sessionId: id, shell, revision: snapshot.draftRev, expires: Date.now() + 60_000, inserted: false, caret: 0, span })
                 reply(requestId, true, { token })
                 return
             }
@@ -144,11 +158,12 @@ export function installSkillComposer(deps: Dependencies): () => void {
             if (research && !deps.researchSidebar.service) throw Error('对话面板尚未就绪，请稍后重试。')
             const prefix = `/${request.invocationName}`
             const present = snapshot.draft.startsWith(prefix) && (snapshot.draft.length === prefix.length || /\s/.test(snapshot.draft[prefix.length]!))
-            if (!present && !shell.insertText(`${prefix} `, { start: 0, end: 0, draftRev: ticket.revision }))
+            const separator = /\s/.test(snapshot.draft[ticket.span.end] ?? '') ? '' : ' '
+            if (!present && !shell.insertText(`${prefix}${separator}`, { ...ticket.span, draftRev: ticket.revision }))
                 throw Error('草稿发生变化，原输入已保留，请重试。')
             ticket.revision = shell.snapshot.draftRev
             ticket.inserted = true
-            ticket.caret = Math.min(prefix.length + 1, shell.snapshot.draft.length)
+            ticket.caret = Math.min(ticket.span.start + prefix.length + 1, shell.snapshot.draft.length)
             if (research) {
                 const scope = { sessionId: ticket.sessionId }
                 deps.researchSidebar.service!.activateTab('sherlock-research-conversation', scope)

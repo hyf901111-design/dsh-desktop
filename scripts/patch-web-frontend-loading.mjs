@@ -29,6 +29,7 @@ import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPan
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
 import { patchFigmaModelMenu } from './lib/figma-model-menu.mjs'
+import { patchSkillCommandPopup, patchSkillCommandLabels } from './lib/skill-command-menu.mjs'
 import { patchFigmaPermissionMenu } from './lib/figma-permission-menu.mjs'
 import { patchFigmaMenuScope, patchFigmaSettingsModeDescription, patchFigmaEnterDescription } from './lib/figma-menu-scope.mjs'
 import { patchFigmaWorkspaceMenus } from './lib/figma-workspace-menus.mjs'
@@ -163,6 +164,8 @@ for (const [name, patch] of [
   ['dsh-client-locale', patchDesktopLocaleBridge],
   ['dsh-client-ui-user-questions', patchQuestionCountdown],
   ['dsh-client-ui-model-selection', patchFigmaModelMenu],
+  ['dsh-client-ui-commands', patchSkillCommandPopup],
+  ['dsh-client-ui-input-trigger', patchSkillCommandLabels],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
   ['dsh-client-ui-workspace', source => patchWorkspaceDragFeedback(patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source)))],
   ['dsh-client-ui-conversation', source => patchDesktopResearchDefaults(patchFigmaEnterDescription(patchFigmaContainerMenu(patchFigmaCanvasContextMenu(patchFigmaPermissionMenu(patchFigmaReadingConversation(patchFigmaContextDirectory(source)))))))],

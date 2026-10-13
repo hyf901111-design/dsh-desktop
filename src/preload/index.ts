@@ -1,6 +1,7 @@
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { IntegrationView } from './integrations/view'
 import { createSkillUseBridge } from './integrations/skill-use'
+import { installSkillCommandBridge } from './integrations/skill-command-bridge'
 import { ScheduledTaskView } from './scheduled/view'
 import { mountWindowResize } from './window-resize'
 import { createCanvasActionsBridge } from './canvas-actions'
@@ -184,6 +185,7 @@ function initializeUi(): void {
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
+  const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
@@ -192,10 +194,10 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) })
   scheduledView.mount()
-  const resetIntegrationIdentity = () => { skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity() }
+  const resetIntegrationIdentity = () => { skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
-  window.addEventListener('unload', () => { skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
+  window.addEventListener('unload', () => { skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
