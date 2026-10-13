@@ -24,3 +24,15 @@ export type NotesBridge = {
   request(method: string, input: any): Promise<any>
   draft(input: { sessionId: string; clientId: string; revision: number; content: NoteContent }): Promise<void>
 }
+export async function restoreNoteDraft(bridge: NotesBridge, sessionId: string, loaded: NoteLoad): Promise<NoteLoad> {
+  const draft = loaded.draft
+  if (!draft) return loaded
+  const content = { title: draft.title, blocks: draft.blocks, yjs: draft.yjs }
+  const result: NoteSave = await bridge.request('save', { sessionId, revision: loaded.saved.revision, content, clientId: draft.clientId })
+  if (result.status !== 'saved') throw Error('已有较新保存版本，请重新读取后对比草稿。')
+  return { saved: result.saved }
+}
+export type NoteSuggestionPreview = { result: NoteAiResult; fingerprint: string; selectedText: string; from: number; to: number; cursor: string }
+export function noteSuggestionPreview(result: NoteAiResult, captured: { fingerprint: string; text: string; from: number; to: number; cursor: string }): NoteSuggestionPreview {
+  return { result, fingerprint: captured.fingerprint, selectedText: captured.text, from: captured.from, to: captured.to, cursor: captured.cursor }
+}

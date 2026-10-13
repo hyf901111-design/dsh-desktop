@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { NotesStore } from '../src/main/notes/store'
-import { noteOutline, canApplySuggestion } from '../src/shared/workspace-notes'
+import { noteOutline, canApplySuggestion, restoreNoteDraft, noteSuggestionPreview } from '../src/shared/workspace-notes'
 
 const roots: string[] = []
 afterEach(() => roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true })))
@@ -71,4 +71,33 @@ it('does not apply late AI suggestions to another session or an edited selection
   expect(canApplySuggestion(captured, { documentId: 'one', fingerprint: 'old' })).toBe(true)
   expect(canApplySuggestion(captured, { documentId: 'two', fingerprint: 'old' })).toBe(false)
   expect(canApplySuggestion(captured, { documentId: 'one', fingerprint: 'new' })).toBe(false)
+})
+
+it('promotes a recovered draft to the saved revision before reporting recovery complete', async () => {
+  const { root, store } = setup()
+  store.save('owner', 'session', 0, content('旧正文'))
+  store.draft('owner', 'session', 'window-a', 1, content('恢复正文'))
+  const bridge = { request: async (_method: string, input: any) => store.save('owner', input.sessionId, input.revision, input.content, input.clientId), draft: async () => {} }
+  const restored = await restoreNoteDraft(bridge, 'session', store.load('owner', 'session'))
+  expect(restored.saved.revision).toBe(2)
+  expect(new NotesStore(root).load('owner', 'session')).toEqual(restored)
+  expect(restored.saved.blocks).toEqual(content('恢复正文').blocks)
+  expect(restored.draft).toBeUndefined()
+})
+
+it('does not silently restore over a save that arrived after the recovery comparison', async () => {
+  const { store } = setup()
+  store.draft('owner', 'session', 'window-a', 0, content('草稿'))
+  const comparison = store.load('owner', 'session')
+  store.save('owner', 'session', 0, content('另一窗口的新正文'))
+  const bridge = { request: async (_method: string, input: any) => store.save('owner', input.sessionId, input.revision, input.content, input.clientId), draft: async () => {} }
+  await expect(restoreNoteDraft(bridge, 'session', comparison)).rejects.toThrow('较新')
+  expect(store.load('owner', 'session').draft?.blocks).toEqual(content('草稿').blocks)
+})
+
+it('keeps the original selection baseline when a component request falls back to text', () => {
+  const captured = { fingerprint: 'original', text: '选区', from: 12, to: 14, cursor: 'p1' }
+  const preview = noteSuggestionPreview({ kind: 'text', markdown: '资料不足' }, captured)
+  expect(preview).toMatchObject({ from: 12, to: 14, selectedText: '选区' })
+  expect(canApplySuggestion({ documentId: 'session', fingerprint: preview.fingerprint }, { documentId: 'session', fingerprint: 'edited while creating component' })).toBe(false)
 })

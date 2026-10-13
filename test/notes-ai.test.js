@@ -20,6 +20,12 @@ it('validates a created component before returning it', async () => {
   expect(await generateNoteSuggestion(ctx, { ...input, mode: 'component' })).toMatchObject({ kind: 'component', node: { kind: 'generated-container', containerSpec: { type: 'table', title: '比较' } } })
   await expect(generateNoteSuggestion(context('{"kind":"component","artifact":{"type":"unknown"}}'), input)).rejects.toThrow()
 })
+it('uses the accepted native chart contract in its prompt and component output', async () => {
+  const ctx = context('{"kind":"component","artifact":{"version":1,"type":"chart","title":"趋势","variant":"line","labels":["一月","二月"],"series":[{"name":"收入","values":[10,20]}]}}')
+  expect(await generateNoteSuggestion(ctx, { ...input, mode: 'component' })).toMatchObject({ kind: 'component', node: { containerSpec: { variant: 'line' } } })
+  expect(ctx.options().system).toContain('variant:"line"')
+  expect(ctx.options().system).not.toContain('chartType')
+})
 it('honors cancellation and refuses missing models', async () => {
   const cancelled = new AbortController(); cancelled.abort()
   await expect(generateNoteSuggestion(context('hello'), input, cancelled.signal)).rejects.toThrow()

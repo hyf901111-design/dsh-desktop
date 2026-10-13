@@ -31,8 +31,8 @@ export function installNotesService(options: {
         if (!spec) throw Error('研究组件格式无效。')
         let html = ''
         if (spec.type === 'html') html = spec.html
-        else if (spec.type === 'chart') html = renderCartesianChart(spec)?.html ?? ''
-        else if (spec.type === 'table') html = renderMarketArtifact({ ...spec, type: 'market', variant: 'table' })?.html ?? ''
+        else if (spec.type === 'chart') html = renderCartesianChart({ ...spec, note: '来源：当前笔记或复制的研究内容' })?.html ?? ''
+        else if (spec.type === 'table') html = spec.rows.length ? renderMarketArtifact({ ...spec, type: 'market', variant: 'table', asOf: '来源：当前笔记或复制的研究内容' })?.html ?? '' : '<p>表格尚无数据行。</p>'
         else if (spec.type === 'markdown') html = '<article style="white-space:pre-wrap;line-height:1.8">' + String(spec.content ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!)) + '</article>'
         return { html, title: spec.title }
       }
