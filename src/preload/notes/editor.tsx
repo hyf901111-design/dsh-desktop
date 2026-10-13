@@ -79,7 +79,7 @@ export function NotesApp(props: Props) {
     finally { setRecovering(false) }
   }
   useEffect(() => { let live = true; props.bridge.request('load', { sessionId: props.sessionId }).then((value: NoteLoad) => { if (live) { setLoaded(value); setRecovery(!!value.draft) } }).catch((e: Error) => live && setLoadError(e.message)); return () => { live = false } }, [props.sessionId, props.bridge])
-  return <div className="en-shell"><header className="en-tabs"><button onClick={() => props.navigate('new')}>新会话</button>{[['chat', '对话'], ['research', '研究'], ['notes', '笔记'], ['trajectory', '轨迹']].map(([id, label]) => <button key={id} role="tab" aria-selected={id === 'notes'} onClick={() => id !== 'notes' && props.navigate(id!)}>{label}</button>)}</header>
+  return <div className="en-shell">
     {loadError ? <div className="en-load-error"><p>{loadError}</p><button onClick={refresh}>重新读取</button></div> : !loaded ? <div className="en-load-error">正在打开笔记…</div> : <NotesEditor key={props.sessionId + ':' + loadVersion} {...props} initial={loaded.saved} recovery={recovery ? loaded.draft : undefined} recovering={recovering} onRecovery={resolveRecovery} onReload={refresh} />}
   </div>
 }

@@ -109,3 +109,35 @@ it('cancels skill detail work when entering settings and ignores late reads or c
   if(mode==='read')resolveRead({type:'skill-detail',id:'s',revision:1,enabled:true,content:'# 过期私有正文',invocationName:'skill'});else{expect(signal?.aborted).toBe(true);rejectUse(Error('过期使用错误'))}await settle();expect(doc.body.textContent).not.toContain('过期');doc.querySelector('.VOzbGW_overlay')!.remove();await w.happyDOM.whenAsyncComplete();host.back();expect(doc.querySelector<HTMLElement>('.ig-root')!.hidden).toBe(true);view.dispose();host.dispose();
  }
 });
+
+it('keeps the native notes header interactive and positions content below it without moving chrome', () => {
+ const w = new Window(); windows.push(w); const doc = w.document as unknown as Document;
+ Object.defineProperty(w,'innerWidth',{value:1380});Object.defineProperty(w,'innerHeight',{value:900});
+ doc.body.innerHTML='<main class="pI_x6G_centerCol"><header data-ework-notes-session="session" data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="notes">笔记</button></header><textarea>原对话草稿</textarea></main><button id="right-toggle">展开右栏</button>';
+ const center=doc.querySelector<HTMLElement>('main')!,header=doc.querySelector<HTMLElement>('header')!,toggle=doc.getElementById('right-toggle')!;
+ center.getBoundingClientRect=()=>({left:88,right:1370,top:10,bottom:890} as DOMRect);header.getBoundingClientRect=()=>({left:88,right:1370,top:10,bottom:56} as DOMRect);
+ const host=new WorkspaceSurfaceHost(doc),notes=doc.createElement('section'),other=doc.createElement('section');host.register('notes',notes);host.register('integrations',other);host.open('notes');
+ expect(center.inert).toBe(false);expect(doc.querySelector('header')).toBe(header);expect(doc.getElementById('right-toggle')).toBe(toggle);
+ expect(notes.style.top).toBe('56px');expect(notes.style.left).toBe('88px');expect(notes.style.right).toBe('10px');
+ header.querySelector<HTMLButtonElement>('[data-conversation-view-id=chat]')!.click();expect(host.current()).toBeUndefined();expect(doc.querySelector('textarea')!.value).toBe('原对话草稿');
+ host.open('integrations');expect(center.inert).toBe(true);host.close('integrations');expect(center.inert).toBe(false);host.dispose();
+});
+
+it('observes notes geometry when the native sidebar and center mount after the host', async () => {
+ const w=new Window();windows.push(w);const doc=w.document as unknown as Document;Object.defineProperty(w,'innerWidth',{value:1380});Object.defineProperty(w,'innerHeight',{value:900});
+ let resized!:()=>void;const observed=new Set<Element>();Object.defineProperty(w,'ResizeObserver',{value:class {constructor(callback:()=>void){resized=callback}observe(element:Element){observed.add(element)}disconnect(){}}});
+ const host=new WorkspaceSurfaceHost(doc),notes=doc.createElement('section');host.register('notes',notes);
+ doc.body.insertAdjacentHTML('afterbegin','<aside data-dsh-sidebar-root></aside><main class="pI_x6G_centerCol"><header data-ework-notes-session="session"></header></main>');
+ const center=doc.querySelector<HTMLElement>('main')!,header=doc.querySelector<HTMLElement>('header')!;let right=1370;
+ center.getBoundingClientRect=()=>({left:88,right,top:10,bottom:890} as DOMRect);header.getBoundingClientRect=()=>({bottom:54} as DOMRect);
+ host.open('notes');await w.happyDOM.whenAsyncComplete();expect(observed.has(center)).toBe(true);expect(observed.has(header)).toBe(true);expect(observed.has(doc.querySelector('aside')!)).toBe(true);
+ right=1030;resized();expect(notes.style.right).toBe('350px');host.dispose();
+});
+
+it('keeps a native notes view visible when reopening its current session or ordinary settings', async () => {
+ const w=new Window();windows.push(w);const doc=w.document as unknown as Document;
+ doc.body.innerHTML='<aside data-dsh-sidebar-root><div role="row">当前会话</div><button class="VOzbGW_trigger">设置</button></aside><main class="pI_x6G_centerCol"><header data-ework-notes-session="session"></header><div data-ework-note-view="session"></div></main>';
+ const host=new WorkspaceSurfaceHost(doc),notes=doc.createElement('section');host.register('notes',notes);host.open('notes');
+ doc.querySelector<HTMLElement>('[role=row]')!.click();doc.dispatchEvent(new w.CustomEvent('sherlock:search-session-opened') as unknown as Event);expect(host.current()?.surface).toBe('notes');expect(notes.hidden).toBe(false);
+ doc.querySelector<HTMLButtonElement>('.VOzbGW_trigger')!.click();doc.body.insertAdjacentHTML('beforeend','<div class="VOzbGW_overlay"></div>');await w.happyDOM.whenAsyncComplete();expect(host.current()?.surface).toBe('notes');doc.querySelector('.VOzbGW_overlay')!.remove();await w.happyDOM.whenAsyncComplete();expect(notes.hidden).toBe(false);host.close('notes');expect(notes.hidden).toBe(true);host.dispose();
+});

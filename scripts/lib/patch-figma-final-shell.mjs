@@ -49,7 +49,7 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source, 'const activateChat = (event) => {\n\t\t\t\t\tif (event.detail?.sessionId !== sessionId) return;', 'const activateChat = (event) => {\n\t\t\t\t\tif (event.detail?.sessionId !== sessionId) return;\n\t\t\t\t\texplicitHomeViewSessions.add(sessionId);')
   const finalHideChrome = 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && (researchNavigation.current !== sessionId || explicitHomeViewSessions.has(sessionId));'
   const residentHeader = 'const hideChrome = false; /* odyssey:resident-home-header:20260912 */\n\t\t\tconst homeHeader = blank && composerPhase === "blank" && active?.id === "chat";'
-  if (!source.includes(residentHeader)) {
+  if (!source.includes(residentHeader) && !source.includes('ework:notes-header-presentation:v1')) {
     source = exact(source, source.includes('const hideChrome = blank && composerPhase === "blank" && active?.id === "chat";') ? 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat";' : 'const hideChrome = blank && composerPhase === "blank" && active?.id === "chat" && researchNavigation.current !== sessionId;', finalHideChrome)
     source = exact(source, finalHideChrome, residentHeader)
   }

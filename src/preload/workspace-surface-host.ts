@@ -13,7 +13,7 @@ export class WorkspaceSurfaceHost {
     private resizeObserver?: ResizeObserver;
     private expanded = false;
     constructor(private document: Document) {
-        document.addEventListener('sherlock:search-session-opened', this.closeAll);
+        document.addEventListener('sherlock:search-session-opened', this.onSessionOpened);
         document.addEventListener('click', this.onNavigate, true);
         document.defaultView?.addEventListener('resize', this.position);
         document.defaultView?.addEventListener('sherlock:workspace-panel-state', this.onPanelState);
@@ -24,9 +24,9 @@ export class WorkspaceSurfaceHost {
         }
         const Resize = document.defaultView?.ResizeObserver;
         const sidebar = document.querySelector('[data-dsh-sidebar-root]');
-        if (Resize && sidebar) {
+        if (Resize) {
             this.resizeObserver = new Resize(this.position);
-            this.resizeObserver.observe(sidebar);
+            if (sidebar) this.resizeObserver.observe(sidebar);
         }
     }
     register(surface: WorkspaceSurface, element: HTMLElement) {
@@ -34,11 +34,13 @@ export class WorkspaceSurfaceHost {
         element.hidden = true;
         element.style.display = 'none';
         element.dataset.workspaceSurface = surface;
-        (this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
+        // Notes use viewport coordinates from the shared header and pane.
+        // The blurred frame creates a fixed-position containing block.
+        (surface === 'notes' ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
         this.position();
     }
     open(surface: WorkspaceSurface, route?: string) {
-        if (this.settingsOpen()) { this.closeAll(); return; }
+        if (this.settingsOpen() && surface !== 'notes') { this.closeAll(); return; }
         const current = this.history.at(-1);
         if (current?.surface !== surface || current.route !== route)
             this.history.push({ surface, route });
@@ -69,10 +71,12 @@ export class WorkspaceSurfaceHost {
                 this.background = this.document.querySelector<HTMLElement>('.pI_x6G_centerCol') || undefined;
                 if (this.background) {
                     this.backgroundWasInert = this.background.inert;
-                    this.background.inert = true;
                     this.background.dataset.workspaceSurfaceHidden = 'true';
                 }
             }
+            // Notes share the resident native header; hidden conversation
+            // content cannot receive focus, while the header stays interactive.
+            if (this.background) this.background.inert = current.surface === 'notes' ? this.backgroundWasInert : true;
             this.document.body.dataset.workspaceSurface = current.surface;
         }
         else {
@@ -91,11 +95,13 @@ export class WorkspaceSurfaceHost {
     private onDomChanged = () => {
         // Native settings can also mount through keyboard or programmatic navigation.
         // End the surface session instead of concealing it behind another layer.
-        if (this.current() && this.settingsOpen()) { this.closeAll(); return; }
+        if (this.current() && this.current()?.surface !== 'notes' && this.settingsOpen()) { this.closeAll(); return; }
         this.position();
     };
     private position = () => {
-        const sidebar = this.document.querySelector('[data-dsh-sidebar-root]')?.getBoundingClientRect();
+        const sidebarElement = this.document.querySelector('[data-dsh-sidebar-root]');
+        if (sidebarElement) this.resizeObserver?.observe(sidebarElement);
+        const sidebar = sidebarElement?.getBoundingClientRect();
         const left = `${Math.max(10, sidebar?.right || 10)}px`;
         const html = this.document.documentElement;
         const color = this.document.defaultView?.getComputedStyle(this.document.body).color || '';
@@ -105,6 +111,20 @@ export class WorkspaceSurfaceHost {
                 element.style.left = left;
             if (element.dataset.dark !== String(dark))
                 element.dataset.dark = String(dark);
+            if (element.dataset.workspaceSurface === 'notes') {
+                const center = this.document.querySelector<HTMLElement>('.pI_x6G_centerCol');
+                const header = this.document.querySelector<HTMLElement>('[data-ework-notes-session]');
+                if (center && header) {
+                    const pane = center.getBoundingClientRect(), chrome = header.getBoundingClientRect();
+                    const view = this.document.defaultView;
+                    element.style.left = `${Math.max(0, pane.left)}px`;
+                    element.style.top = `${Math.max(0, chrome.bottom)}px`;
+                    element.style.right = `${Math.max(0, (view?.innerWidth || pane.right) - pane.right)}px`;
+                    element.style.bottom = `${Math.max(0, (view?.innerHeight || pane.bottom) - pane.bottom)}px`;
+                    this.resizeObserver?.observe(center);
+                    this.resizeObserver?.observe(header);
+                }
+            }
         }
     };
     private onPanelState = (event: Event) => {
@@ -118,23 +138,27 @@ export class WorkspaceSurfaceHost {
         }
     };
     private closeAll = () => { this.history = []; this.sync(); };
+    // The native notes view owns its lifecycle. Opening the same session does
+    // not unmount it and must not hide its content behind a selected tab.
+    private onSessionOpened = () => { if (this.current()?.surface !== 'notes') this.closeAll(); };
     private onNavigate = (event: Event) => {
         if (!this.current())
             return;
         const target = event.target as Element;
+        if (this.current()?.surface === 'notes' && target?.closest?.('[data-srb-tabs] [data-conversation-view-id]:not([data-conversation-view-id="notes"])')) { this.closeAll(); return; }
         // Account/settings entries ultimately click this existing native trigger.
         // Release inert and cancel the active surface before React mounts settings.
-        if (target?.closest?.('.VOzbGW_trigger')) { this.closeAll(); return; }
+        if (target?.closest?.('.VOzbGW_trigger')) { if (this.current()?.surface !== 'notes') this.closeAll(); return; }
         if (target?.closest?.('[data-sidebar-session-search],.st-more-zone'))
             return;
-        if (target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
+        if (this.current()?.surface !== 'notes' && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
             this.closeAll();
     };
     dispose() {
         this.closeAll();
         this.observer?.disconnect();
         this.resizeObserver?.disconnect();
-        this.document.removeEventListener('sherlock:search-session-opened', this.closeAll);
+        this.document.removeEventListener('sherlock:search-session-opened', this.onSessionOpened);
         this.document.removeEventListener('click', this.onNavigate, true);
         this.document.defaultView?.removeEventListener('resize', this.position);
         this.document.defaultView?.removeEventListener('sherlock:workspace-panel-state', this.onPanelState);

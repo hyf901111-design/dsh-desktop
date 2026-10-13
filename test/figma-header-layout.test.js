@@ -10,7 +10,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { patchFigmaFinalConversation } from '../scripts/lib/patch-figma-final-shell.mjs'
 
-let browser, page, script, Header, baseCss, installedCss, gridCss
+let browser, page, script, Header, baseCss, installedCss, gridCss, panelCss
 function clientFunctions(source) {
   const syntax = createSourceFile('client.js', source, ScriptTarget.Latest, false, ScriptKind.JS)
   const functions = new Map()
@@ -31,7 +31,9 @@ beforeAll(async () => {
     if (!functions.has(name)) throw Error(`Missing native function: ${name}`)
     return functions.get(name)
   }).join('\n') + '\nConversationSessionHeader', {
-    react: { useSyncExternalStore() {}, useCallback: fn => fn, useRef: () => ({ current: 'current' }), Fragment },
+    useSkillPresentation: () => {}, projectSkillText: text => text,
+    document: { title: 'EWork Odyssey', documentElement: { dataset: {} } },
+    react: { useSyncExternalStore() {}, useEffect() {}, useCallback: fn => fn, useRef: () => ({ current: 'current' }), Fragment },
     react_jsx_runtime: jsxRuntime,
     ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => 'wSkVaW_' + String(key) }),
     clsx: (...values) => values.filter(Boolean).join(' '),
@@ -45,10 +47,16 @@ beforeAll(async () => {
   if (!cssLiteral) throw Error('Missing native ConversationRoot CSS')
   baseCss = JSON.parse(cssLiteral[1])
   gridCss = await readFile('scripts/lib/research-grid-workbench.css', 'utf8')
+  const sidebarSource = await readFile('build/sherlock-plugin-profile/modules/dsh-better-sidebar/lib/client.js', 'utf8')
+  const panelLiteral = [...sidebarSource.matchAll(/const css\$?\d* = ("[^\n]+);/g)].find(m => m[1].includes('t8lSSG_toggleCluster'))
+  if (!panelLiteral) throw Error('Missing native sidebar panel CSS')
+  panelCss = JSON.parse(panelLiteral[1])
   const bundled = await build({
     stdin: { contents: `import {mountDesktopShellStyles} from './src/preload/shell-style';
       import {mountFigmaResponsiveHeader} from './src/preload/figma-responsive-header';
+      import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';
       import {installBoardUiStyles} from './src/preload/research-board-dialogs';
+      window.startNotes = () => { const host=new WorkspaceSurfaceHost(document),surface=document.createElement('section');surface.className='en-root';surface.textContent='笔记正文';host.register('notes',surface);host.open('notes'); };
       window.startHeader = () => { installBoardUiStyles(document); mountDesktopShellStyles(document); mountFigmaResponsiveHeader(document); };`, resolveDir: process.cwd(), loader: 'ts' },
     bundle: true, platform: 'browser', format: 'iife', write: false,
     plugins: [{ name: 'real-shell-css', setup(b) {
@@ -65,13 +73,13 @@ afterEach(async () => { await page?.context().close() })
 afterAll(async () => { await browser?.close() })
 
 const h = createElement
-function headerMarkup(view, crowded = false) {
-  const home = view === 'home'
+function headerMarkup(view, crowded = false, withNotes = false) {
+  const home = view === 'home' || (view === 'notes' && withNotes)
   return renderToStaticMarkup(Header({
     sessionId: 'current', useSession: fn => fn({ blank: home, composerPhase: home ? 'blank' : 'active' }),
     useSessions: fn => fn({ byId: { current: { id: 'current', title: '研究标题', displayTitle: crowded ? '这是一个需要省略并仍可切换导航的很长研究会话标题' : '研究标题' } } }),
-    useStore: fn => fn({ view: home ? 'chat' : view }),
-    views: { subscribe() {}, version: () => 1, list: () => ['chat', 'research', 'trajectory'].map((id, i) => ({ id, title: ['对话', '研究', '轨迹'][i] })) },
+    useStore: fn => fn({ view: view === 'home' ? 'chat' : view }),
+    views: { subscribe() {}, version: () => 1, list: () => (withNotes ? ['chat', 'research', 'notes', 'trajectory'] : ['chat', 'research', 'trajectory']).map(id => ({ id, title: {chat:'对话',research:'研究',notes:'笔记',trajectory:'轨迹'}[id] })) },
     actions: {}, open() {}, t: key => key,
     renderSlot: name => name.endsWith('.actions') ? h(Fragment, null,
       h('button', { className: 'cubgiG_seat' }, h('span', { className: 'cubgiG_seatIcon' }), h('span', { className: 'odyssey-mode-label' }, '标准模式'), h('span', { className: 'cubgiG_chevron' })),
@@ -81,9 +89,9 @@ function headerMarkup(view, crowded = false) {
       h('button', { className: 'srb-manage-button' }, '管理协作')) : null
   }))
 }
-async function open({ view = 'research', dark = false, width = 740, closed = false, crowded = false } = {}) {
+async function open({ view = 'research', dark = false, width = 740, closed = false, crowded = false, notesFixture = false } = {}) {
   page = await (await browser.newContext({ viewport: { width: 1380, height: 900 } })).newPage()
-  const markup = headerMarkup(view, crowded)
+  const markup = headerMarkup(view, crowded, notesFixture)
   // Native slots are layout-transparent but remain real CSS ancestors.
   await page.setContent(`<style>${baseCss}</style><style>${gridCss}</style><style>body{margin:0;--dsw-alias-label-primary:#0f1115;--dsw-alias-label-secondary:#81858c}body[data-ds-dark-theme]{--dsw-alias-label-primary:#f9fafb;--dsw-alias-label-secondary:#adb2b8}</style>
     <body ${dark ? 'data-ds-dark-theme' : ''}>
@@ -102,6 +110,7 @@ async function open({ view = 'research', dark = false, width = 740, closed = fal
       <section data-odyssey-subagent-panel><div class="wSkVaW_root" data-odyssey-page="conversation"><div data-slot="conversation.session.header" style="display:contents">${markup}</div></div></section>
     </body>`)
 
+  if (notesFixture) await page.addStyleTag({content: panelCss + '[data-workspace-surface-hidden=true]{visibility:hidden!important}' + await readFile('src/preload/notes/style.css','utf8')})
   await page.addScriptTag({ content: script })
   await page.evaluate(() => window.startHeader())
   await expect.poll(() => page.locator('main header').getAttribute('data-odyssey-header-layout')).not.toBeNull()
@@ -202,3 +211,13 @@ it('installs the same refinement CSS through the native client patch and preload
   expect(installedCss).toContain(refinement)
   expect(await page.locator('#sherlock-desktop-shell-style').textContent()).toContain(refinement)
 })
+
+for (const dark of [false,true]) it(`notes share the native header without moving tabs or covering the right toggle (${dark?'dark':'light'})`, async () => {
+ const read=()=>page.evaluate(()=>({tabs:[...document.querySelectorAll('main header [data-srb-tabs] button')].map(b=>{const r=b.getBoundingClientRect();return{id:b.dataset.conversationViewId,x:r.x,y:r.y,width:r.width,height:r.height,selected:b.getAttribute('aria-selected')}}),toggle:(()=>{const r=document.querySelector('[data-odyssey-panel-entry="right"]').getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()}));
+ await open({view:'home',dark,width:1090,closed:true,notesFixture:true});const before=await read();await page.context().close();
+ await open({view:'notes',dark,width:1090,closed:true,notesFixture:true});await page.evaluate(()=>window.startNotes());const after=await read();
+ expect(after.tabs.filter(t=>t.selected==='true').map(t=>t.id)).toEqual(['notes']);
+ expect(after.tabs.map(({selected,...r})=>r)).toEqual(before.tabs.map(({selected,...r})=>r));expect(after.toggle).toEqual(before.toggle);
+ const bounds=await page.evaluate(()=>({top:document.querySelector('.en-root').getBoundingClientRect().top,header:document.querySelector('main header').getBoundingClientRect().bottom,toggleHit:(()=>{const b=document.querySelector('[data-odyssey-panel-entry="right"]'),r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})()}));
+ expect(bounds.top).toBe(bounds.header);expect(bounds.toggleHit).toBe(true);
+});

@@ -1,15 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
+import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { Context, Service } from '@deepseek-ai/cordis'
 import { patchFigmaFinalConversation, patchFigmaFinalLayout } from '../scripts/lib/patch-figma-final-shell.mjs'
 
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
 
+const functionsByBundle = new Map<string, Map<string, string>>()
 function clientFunction(bundle: string, name: string) {
-  const start = bundle.indexOf(`\t\tfunction ${name}(`)
-  const end = bundle.indexOf('\n\t\t}', start) + '\n\t\t}'.length
-  return bundle.slice(start, end)
+  let functions = functionsByBundle.get(bundle)
+  if (!functions) {
+    functions = new Map()
+    const syntax = createSourceFile('client.js', bundle, ScriptTarget.Latest, false, ScriptKind.JS)
+    const visit = (node: any) => { if (isFunctionDeclaration(node) && node.name && !functions!.has(node.name.text)) functions!.set(node.name.text, node.getText(syntax)); forEachChild(node, visit) }
+    visit(syntax); functionsByBundle.set(bundle, functions)
+  }
+  return functions.get(name) || ''
 }
 
 describe('Figma shell patch installation', () => {
@@ -54,6 +61,8 @@ describe('Figma shell patch installation', () => {
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const ComposerSurface = runInNewContext(clientFunction(installed, 'ComposerSurface') + '\nComposerSurface', {
       EditableSessionTitle: "button",
+      useSkillPresentation: () => (text: unknown) => text,
+      projectSkillText: (text: unknown) => text,
       react_jsx_runtime: { jsx: element, jsxs: element },
       clsx: (...names: unknown[]) => names.filter(Boolean).join(' '),
       ConversationRoot_module_css_default: {}, HeroGlow: 'glow', HeroShell: 'headline'
@@ -158,8 +167,10 @@ describe('Figma shell patch installation', () => {
     }
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const header = runInNewContext(`${extract('deriveAncestry')}\n${extract('equalBreadcrumbs')}\n${extract('conversationViewTabProps')}\n${extract('ConversationSessionHeader')}\nConversationSessionHeader`, {
-      react: { useSyncExternalStore() {}, useCallback: (fn: unknown) => fn, useRef: () => ({ current: 'current' }), Fragment: 'fragment' },
+      react: { useSyncExternalStore() {}, useEffect() {}, useCallback: (fn: unknown) => fn, useRef: () => ({ current: 'current' }), Fragment: 'fragment' },
       EditableSessionTitle: "button",
+      useSkillPresentation: () => (text: unknown) => text,
+      projectSkillText: (text: unknown) => text,
       react_jsx_runtime: { jsx: element, jsxs: element },
       ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => key }),
       clsx: (...values: unknown[]) => values.filter(Boolean).join(' '),
@@ -232,6 +243,8 @@ describe('Figma shell patch installation', () => {
       parseResearchPrompt: () => research,
       projectResearchUserText: (value: typeof research) => { projected.push(value); return value.text },
       EditableSessionTitle: "button",
+      useSkillPresentation: () => (text: unknown) => text,
+      projectSkillText: (text: unknown) => text,
       react_jsx_runtime: { jsx: element, jsxs: element },
       MessageItem_module_css_default: { userRow: 'userRow', userStack: 'userStack', bubble: 'bubble' },
       _deepseek_ai_dsh_client_ui_attachment: { ImageGallery: 'images' },
