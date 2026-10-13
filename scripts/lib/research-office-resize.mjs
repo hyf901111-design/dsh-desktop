@@ -31,13 +31,23 @@ function ResearchOfficeResizeSurface({ resizing, children, ...props }) {
     ...props, ref: hostRef,
     children: (0, react_jsx_runtime.jsx)('div', {
       ref: contentRef, 'data-research-office-resize-content': '',
-      style: { width: '100%', height: '100%', minHeight: 0 }, children
+      // Office viewers are flex children. A block wrapper lets the PPT list
+      // grow to its full document height instead of creating a scroll viewport.
+      style: { display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minWidth: 0, minHeight: 0 }, children
     })
   });
 }
 
 export function patchResearchOfficeResize(source) {
-  if (source.includes('function ResearchOfficeResizeSurface(')) return source;
+  if (source.includes('function ResearchOfficeResizeSurface(')) {
+    const start=source.indexOf('function ResearchOfficeResizeSurface('),end=source.indexOf('function ResearchCanvasOfficePreview(',start);
+    if(end<0)throw Error('Office resize surface boundary drifted');
+    const block=source.slice(start,end);
+    const before="style: { width: '100%', height: '100%', minHeight: 0 }, children";
+    const after="style: { display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minWidth: 0, minHeight: 0 }, children";
+    if(!block.includes(before)&&!block.includes(after))throw Error('Office resize layout anchor drifted');
+    return source.slice(0,start)+block.replace(before,after)+source.slice(end);
+  }
   const replace = (before, after) => {
     if (source.split(before).length !== 2) throw Error('Office resize anchor missing or ambiguous: ' + before.slice(0, 80));
     source = source.replace(before, after);
