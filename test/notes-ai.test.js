@@ -57,3 +57,14 @@ it('uses the shared native conversation as context for note writing and durably 
  const ctx=context('{"kind":"text","markdown":"基于讨论的新正文"}');ctx.sessions={get:()=>session};ctx.sessionTitle={rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}}
  await generateNoteSuggestion(ctx,{...input,requestId:'shared-request'});expect(ctx.options().messages[0].content[0].text).toContain('讨论里的验收目标');expect(noteConversationRows(session)[0]).toMatchObject({phase:'ready',prompt:input.prompt,result:{markdown:'基于讨论的新正文'}})
 })
+
+it('routes a clarification as a durable conversation reply instead of a document suggestion',async()=>{
+ const {Session}=await import('@deepseek-ai/dsh-session'),{noteConversationRows,sharedNoteConversationContext}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('session'),ctx=context('{"kind":"conversation","markdown":"你想写什么主题？大约多少字？"}')
+ ctx.sessions={get:()=>session};ctx.sessionTitle={rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}}
+ expect(await generateNoteSuggestion(ctx,{...input,requestId:'clarification',title:'',markdown:'',selection:'',prompt:'写一篇文章'})).toEqual({kind:'conversation',markdown:'你想写什么主题？大约多少字？'})
+ expect(ctx.options().system).toContain('澄清');expect(ctx.options().system).toContain('"kind":"conversation"')
+ expect(noteConversationRows(session)[0]).toMatchObject({phase:'replied',result:{kind:'conversation'}})
+ expect(sharedNoteConversationContext(session)[0]).toMatchObject({reply:'你想写什么主题？大约多少字？'})
+ await expect(generateNoteSuggestion(context('{"kind":"conversation","markdown":""}'),input)).rejects.toThrow('格式')
+})

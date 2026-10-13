@@ -157,6 +157,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission, retry?:typeof lastRequest.current) => {
     if ((!prompt.trim() && !images.length) || request.current || props.recovery) return
     const attempt = ++epoch.current, captured = { ...(retry?.captured || pinnedSelection.current || selection.current) }, fingerprint = retry?.fingerprint || pinnedSelection.current?.fingerprint || JSON.stringify(editor.document), requestId = crypto.randomUUID()
+    if(!retry&&pinnedSelection.current){const range=editor.getExtension(NoteAiSelection)?.currentRange();Object.assign(captured,range?{...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n')}:{from:0,to:0,text:''})}
     const component = noteComponentRequest(prompt)
     engage()
     lastRequest.current={prompt,images,admission,captured,fingerprint}
@@ -179,7 +180,13 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         publishTask(requestId,'accepted',{result}); editor.updateBlock(pending, { props: { payload: JSON.stringify(result.node) } }); commitNativeDraft(admission); changed(); requestAnimationFrame(() => locate(pending))
       } else {
         if (pending && editor.getBlock(pending)) editor.removeBlocks([pending])
-        publishTask(requestId,'ready',{result}); setPreview({requestId,...noteSuggestionPreview(result, { ...captured, fingerprint, cursor: captured.cursor || editor.getTextCursorPosition().block.id }),nativeComposer:admission})
+        if(result.kind==='conversation') {
+          publishTask(requestId,'replied',{result}); commitNativeDraft(admission)
+          const range=editor.getExtension(NoteAiSelection)?.currentRange()
+          if(captured.text&&range)pinnedSelection.current={...captured,...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n'),fingerprint:JSON.stringify(editor.document)}
+          else if(captured.text)clearSelection()
+        }
+        else { publishTask(requestId,'ready',{result}); setPreview({requestId,...noteSuggestionPreview(result, { ...captured, fingerprint, cursor: captured.cursor || editor.getTextCursorPosition().block.id }),nativeComposer:admission}) }
       }
     } catch (e) {
       if (!disposed.current && epoch.current === attempt) {

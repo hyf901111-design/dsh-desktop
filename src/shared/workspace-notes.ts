@@ -19,7 +19,8 @@ export function noteOutline(blocks: any[]): Array<{ id: string; level: number; t
 export function canApplySuggestion(captured: { documentId: string; fingerprint: string }, current: { documentId: string; fingerprint: string }): boolean {
   return captured.documentId === current.documentId && captured.fingerprint === current.fingerprint
 }
-export type NoteAiResult = { kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any> }
+export type NoteDocumentResult = { kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any> }
+export type NoteAiResult = NoteDocumentResult | { kind: 'conversation'; markdown: string }
 
 /** Only an affirmative creation clause reserves a component in the document. */
 export function noteComponentRequest(prompt:string):boolean {
@@ -39,7 +40,7 @@ export async function restoreNoteDraft(bridge: NotesBridge, sessionId: string, l
   if (result.status !== 'saved') throw Error('已有较新保存版本，请重新读取后对比草稿。')
   return { saved: result.saved }
 }
-export type NoteSuggestionPreview = { result: NoteAiResult; fingerprint: string; selectedText: string; from: number; to: number; cursor: string }
-export function noteSuggestionPreview(result: NoteAiResult, captured: { fingerprint: string; text: string; from: number; to: number; cursor: string }): NoteSuggestionPreview {
+export type NoteSuggestionPreview = { result: NoteDocumentResult; fingerprint: string; selectedText: string; from: number; to: number; cursor: string }
+export function noteSuggestionPreview(result: NoteDocumentResult, captured: { fingerprint: string; text: string; from: number; to: number; cursor: string }): NoteSuggestionPreview {
   return { result, fingerprint: captured.fingerprint, selectedText: captured.text, from: captured.from, to: captured.to, cursor: captured.cursor }
 }

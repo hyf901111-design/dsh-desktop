@@ -5,7 +5,7 @@ export function createNotesActivityStore(doc) {
   const update = event => {
     const next = event.detail
     if (!next || typeof next.sessionId !== 'string' || typeof next.requestId !== 'string' ||
-        !['preparing','generating','ready','accepted','discarded','failed','stopped'].includes(next.phase)) return
+        !['preparing','generating','ready','replied','accepted','discarded','failed','stopped'].includes(next.phase)) return
     const history = rows.get(next.sessionId) || empty, old = history.find(row => row.requestId === next.requestId)
     if (!old && next.phase !== 'preparing') return
     const row = { ...old, ...next, prompt: old?.prompt ?? String(next.prompt || '').slice(0,20000), startedAt: old?.startedAt ?? Date.now() }
@@ -29,7 +29,7 @@ export function useNotesConversationRows(sessionId,openState){
 }
 export function EWorkNoteConversationRow({row,t,loadImage,UserBubble=UserStyleBubble,Progress=ExecutionStatusGroup,Markdown=AssistantMarkdown}) {
   const h = react.createElement
-  const labels = {preparing:'正在读取笔记内容',generating:'正在生成内容',ready:'内容已生成，请在笔记中预览',accepted:'已写入笔记',discarded:'已放弃建议',failed:'生成失败',stopped:'已停止'}
+  const labels = {preparing:'正在读取笔记内容',generating:'正在生成内容',ready:'内容已生成，请在笔记中预览',replied:'已回复',accepted:'已写入笔记',discarded:'已放弃建议',failed:'生成失败',stopped:'已停止'}
     const pending = ['preparing','generating'].includes(row.phase)
     const stage = {model:'正在连接当前模型',thinking:'正在思考',writing:'正在撰写内容',validating:'正在检查生成内容'}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
@@ -38,9 +38,18 @@ export function EWorkNoteConversationRow({row,t,loadImage,UserBubble=UserStyleBu
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.reasoning ? h(Markdown,{blocks:[{kind:'reasoning',text:row.reasoning}],streaming:pending&&row.stage==='thinking',interrupted:row.phase==='stopped',t}) : null,
       row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
+      row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t}) : null,
       row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t})) : null)
 }
 export function EWorkNotesActivity(props){const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':'笔记任务过程'},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}
+export function EWorkNotesConversation({sessionId,empty,children,t}){
+ const rows=useNotesConversationRows(sessionId),{tasks}=useCanvasTasks(sessionId)
+ const welcome=empty&&rows.length===0&&tasks.length===0
+ // Keep the native ChatView mounted: it replays notes again when openState becomes open.
+ return react.createElement(react.Fragment,null,
+   welcome?react.createElement('div',{className:'sRp_emptyState','data-research-empty-state':'','data-note-empty-state':''},'探索更远，洞见更深'):null,
+   react.createElement('div',{style:{display:welcome?'none':'contents'}},children||react.createElement(EWorkNotesActivity,{sessionId,t})))
+}
 export function mergeNoteConversationFlow(flow,nodeStore,rows){
  let previous=-1
  const entries=flow.map((entry,i)=>{const node=nodeStore.get(entry.kind==='node'?entry.key:entry.nodeKeys?.[0]);previous=node?.anchorSeq??previous;return{entry,seq:previous,index:i}})
@@ -50,7 +59,7 @@ export function mergeNoteConversationFlow(flow,nodeStore,rows){
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n`
+  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
@@ -62,7 +71,9 @@ export function patchNotesActivity(source) {
   const portal='(0, react_dom.createPortal)(sherlockShared(sessionId) ? researchConversationView'
   const oldNotes="activeView === 'notes' ? (0,react_jsx_runtime.jsxs)('div',{className:'en-note-conversation-flow',children:[sessionPresentation.conversationView,(0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId,t})]}) : "
   source=source.replace(oldNotes,'')
-  const next="(0, react_dom.createPortal)(activeView === 'notes' ? sessionPresentation.conversationView || (0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId,t}) : sherlockShared(sessionId) ? researchConversationView"
+  const previous="(0, react_dom.createPortal)(activeView === 'notes' ? sessionPresentation.conversationView || (0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId,t}) : sherlockShared(sessionId) ? researchConversationView"
+  const next="(0, react_dom.createPortal)(activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation,{sessionId,t,empty:(session?.chat?.order?.length ?? 0) === 0,children:sessionPresentation.conversationView}) : sherlockShared(sessionId) ? researchConversationView"
+  source=source.replace(previous,next)
   if(!source.includes('/* ework:notes-common-conversation:v1 */')){
     const flow='const renderFlow=react.useMemo(()=>mergeCanvasTaskFlow(nativeRenderFlow,nodeStore,canvasTasks),[nativeRenderFlow,nodeStore,canvasTasks]);'
     if(source.split(flow).length!==2)throw Error('无法定位共用会话记录。')
