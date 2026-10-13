@@ -184,6 +184,10 @@ function initializeUi(): void {
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
   const noteOwners = new Map<string, string>()
+  let noteIdentityEpoch=0
+  document.addEventListener('sherlock:notes-history-request',event=>{const sessionId=(event as CustomEvent).detail?.sessionId,epoch=noteIdentityEpoch;if(typeof sessionId!=='string')return;void ipcRenderer.invoke('notes:request','conversation-load',{sessionId}).then(value=>{if(epoch!==noteIdentityEpoch)return;noteOwners.set(sessionId,value.owner);document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId,rows:value.rows}}))}).catch(()=>{})})
+
+  ipcRenderer.on('notes:progress',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:value}))})
   const notes = mountNotes(document, {
     request: async (method, input) => {
       const result = await ipcRenderer.invoke('notes:request', method, { ...input, ...(method !== 'load' ? { owner: noteOwners.get(input.sessionId) } : {}) })
@@ -204,7 +208,7 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) })
   scheduledView.mount()
-  const resetIntegrationIdentity = () => { notes.resetIdentity(); noteOwners.clear(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity() }
+  const resetIntegrationIdentity = () => { noteIdentityEpoch++; notes.resetIdentity(); noteOwners.clear(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
   window.addEventListener('unload', () => { notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })

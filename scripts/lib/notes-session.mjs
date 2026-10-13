@@ -46,8 +46,8 @@ export function patchNoteSessionHost(source) {
 /** Register the EWork event in both bundled and unbundled native readers. */
 export function patchNoteSessionCatalog(source) {
   const marker = '/* ework:note-event-catalog:v1 */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return source.includes('"workspace-note/conversation",')?source:source.replace(marker,marker+'\n"workspace-note/conversation",')
   const anchor = /((?:export )?const KNOWN_SESSION_EVENT_TYPES = new Set\(\[)/g
   if ([...source.matchAll(anchor)].length !== 1) throw Error('笔记无法定位原生持久化事件目录。')
-  return source.replace(anchor, '$1\n' + marker + '\n"workspace-note/edited",')
+  return source.replace(anchor, '$1\n' + marker + '\n"workspace-note/edited",\n"workspace-note/conversation",')
 }

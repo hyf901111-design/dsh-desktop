@@ -1,4 +1,5 @@
 import { patchCanvasSessionActivity } from './sidebar-session-recency.mjs'
+import { patchNotesExportMenu } from './notes-export-menu.mjs'
 /** Bind notes to the native session/view ledger, keeping one resident header. */
 export function patchNotesClient(source) {
   if (!source.includes('"data-ework-notes-session":sessionId')) {
@@ -40,5 +41,6 @@ children: [active?.id === 'notes' && (0, react_jsx_runtime.jsxs)('button', {
   children:[(0,react_jsx_runtime.jsx)('svg',{width:14,height:14,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.25,strokeLinecap:'round',strokeLinejoin:'round', 'aria-hidden':true,children:(0,react_jsx_runtime.jsx)('path',{d:'M8 10V2m-3 3 3-3 3 3M3 9v4a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9'})}), '导出']
 }), renderSlot("conversation.session.header.utilities", {})]`)
   }
+  source=patchNotesExportMenu(source)
   return source.includes('function createResearchWorkspaceSession(') ? patchCanvasSessionActivity(source) : source
 }

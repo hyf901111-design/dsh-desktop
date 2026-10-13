@@ -7,6 +7,9 @@ import { harnessRpc } from '../scheduled/task-runner'
 import { parseResearchContainerSpec } from '../../../packages/dsh-research-task-runtime/artifact-validator.js'
 import { renderCartesianChart } from '../../../packages/dsh-research-task-runtime/cartesian-chart-artifact.js'
 import { renderMarketArtifact } from '../../../packages/dsh-research-task-runtime/market-artifact.js'
+import { readNoteGenerationStream } from './stream'
+import { saveNoteExport } from './export'
+import { buildResearchHtmlPreview } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
@@ -16,12 +19,19 @@ export function installNotesService(options: {
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
     if (!input || typeof input.sessionId !== 'string' || input.sessionId.length > 256 || !options.canRead(input.sessionId)) throw Error('笔记会话不可用。')
     const owner = options.owner(), session = input.sessionId
-    if (method !== 'load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
+    if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
       case 'load': return { ...store.load(owner, session), owner }
       case 'save': return store.save(owner, session, input.revision, input.content, input.clientId)
       case 'draft': store.draft(owner, session, input.clientId, input.revision, input.content); return { ok: true }
       case 'discard': store.discardDraft(owner, session, input.clientId); return { ok: true }
+      case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session))
+      case 'conversation-load':
+      case 'conversation-state': {
+        const base=options.runtimeUrl();if(!base)return {rows:[],owner}
+        const url=new URL('/sherlock/notes/session',base),response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,action:method,requestId:input.requestId,phase:input.phase})})
+        const result=await response.json();if(!response.ok)throw Error(result.error||'会话记录暂不可用。');if(options.owner()!==owner)throw Error('账号已变化');return {...result,owner}
+      }
       case 'engage': {
         const base = options.runtimeUrl(); if (!base) throw Error('会话服务尚未就绪，请稍后重试。')
         const url = new URL('/sherlock/notes/session', base)
@@ -43,7 +53,7 @@ export function installNotesService(options: {
         else if (spec.type === 'chart') html = renderCartesianChart({ ...spec, note: '来源：当前笔记或复制的研究内容' })?.html ?? ''
         else if (spec.type === 'table') html = spec.rows.length ? renderMarketArtifact({ ...spec, type: 'market', variant: 'table', asOf: '来源：当前笔记或复制的研究内容' })?.html ?? '' : '<p>表格尚无数据行。</p>'
         else if (spec.type === 'markdown') html = '<article style="white-space:pre-wrap;line-height:1.8">' + String(spec.content ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!)) + '</article>'
-        return { html, title: spec.title }
+        return { html, document:html?buildResearchHtmlPreview(html,spec.title,input.dark?'dark':'light',{workbench:true}):'',title:spec.title }
       }
       case 'generate': {
         if (typeof input.requestId !== 'string' || input.requestId.length > 128 || active.has(input.requestId) || active.size >= 2) throw Error('请等待当前笔记生成完成。')
@@ -51,9 +61,12 @@ export function installNotesService(options: {
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)
         try {
-          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(125000)]), body: JSON.stringify({ sessionId: session, title: input.title, markdown: input.markdown, selection: input.selection, prompt: input.prompt, images: input.images, mode: input.mode }) })
-          const result = await response.json()
-          if (!response.ok) throw Error(result.error || '笔记生成失败，请重试。')
+          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(125000)]), body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, prompt: input.prompt, images: input.images, mode: input.mode,stream:true }) })
+          if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
+          const result = await readNoteGenerationStream(response,progress=>{
+            if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
+            ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,...progress})
+          })
           if (options.owner() !== owner) throw Error('账号已变化，请重新生成。')
           return result
         } finally { active.delete(input.requestId) }

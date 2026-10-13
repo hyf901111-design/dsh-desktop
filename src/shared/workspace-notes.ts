@@ -20,6 +20,13 @@ export function canApplySuggestion(captured: { documentId: string; fingerprint: 
   return captured.documentId === current.documentId && captured.fingerprint === current.fingerprint
 }
 export type NoteAiResult = { kind: 'text'; markdown: string } | { kind: 'component'; node: Record<string, any> }
+
+/** Only an affirmative creation clause reserves a component in the document. */
+export function noteComponentRequest(prompt:string):boolean {
+  return prompt.split(/[，,。；;\n]/u).some(clause=>
+    !/(?:不要|不用|不必|不需要|无需|无须|别|不).{0,10}(?:创建|生成|制作|做|画|添加)/u.test(clause)&&
+    /(?:创建|生成|制作|做|画|添加).*(?:组件|图表|表格|时间线|新闻)/u.test(clause))
+}
 export type NotesBridge = {
   request(method: string, input: any): Promise<any>
   draft(input: { sessionId: string; clientId: string; revision: number; content: NoteContent }): Promise<void>

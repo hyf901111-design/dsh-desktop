@@ -27,13 +27,13 @@ beforeAll(async () => {
   installedCss = JSON.parse(block.match(/style.textContent=("[^\n]+");}/)[1])
   const functions = clientFunctions(source)
   // Render the installed native header tree; only its stores and extension slots are fixtures.
-  Header = runInNewContext(['deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'ConversationSessionHeader'].map(name => {
+  Header = runInNewContext(['deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'EWorkNoteExportMenu','ConversationSessionHeader'].map(name => {
     if (!functions.has(name)) throw Error(`Missing native function: ${name}`)
     return functions.get(name)
   }).join('\n') + '\nConversationSessionHeader', {
     useSkillPresentation: () => {}, projectSkillText: text => text,
     document: { title: 'EWork Odyssey', documentElement: { dataset: {} } },
-    react: { useSyncExternalStore() {}, useEffect() {}, useCallback: fn => fn, useRef: () => ({ current: 'current' }), Fragment },
+    react: { createElement, useState:value=>[typeof value==='function'?value():value,()=>{}], useSyncExternalStore() {}, useEffect() {}, useLayoutEffect() {}, useCallback: fn => fn, useRef: () => ({ current: 'current' }), Fragment },
     react_jsx_runtime: jsxRuntime,
     ConversationRoot_module_css_default: new Proxy({}, { get: (_target, key) => 'wSkVaW_' + String(key) }),
     clsx: (...values) => values.filter(Boolean).join(' '),

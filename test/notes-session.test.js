@@ -81,3 +81,26 @@ it('uses Standard as the native default even if the saved preference was Build',
   const runtime = patchStandardModeRuntime(await readFile('node_modules/@deepseek-ai/dsh-agent-presets/lib/index.js', 'utf8'))
   expect(patchStandardModeRuntime(runtime)).toBe(runtime)
 })
+
+it('replays note requests, reasoning and adoption in the native session without agent turn collisions',async()=>{
+ const {recordNoteConversation,noteConversationRows,sharedNoteConversationContext,registerNoteConversationContext}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('conversation-test')
+ session.append('user/message',{id:'u',role:'user',source:{kind:'user'},content:[{type:'text',text:'先讨论本周报告'}]},{surfaceOp:'append'})
+ const first=recordNoteConversation(session,{requestId:'r',phase:'preparing',prompt:'根据讨论撰写报告'})
+ recordNoteConversation(session,{requestId:'r',phase:'ready',reasoning:'真实模型思考',result:{kind:'text',markdown:'本周报告正文'},finishedAt:1000})
+ recordNoteConversation(session,{requestId:'r',phase:'accepted',finishedAt:2000})
+ const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header))
+ expect(noteConversationRows(replay)).toMatchObject([{requestId:'r',phase:'accepted',seq:first.seq,finishedAt:1000,reasoning:'真实模型思考',result:{markdown:'本周报告正文'}}])
+ expect(sharedNoteConversationContext(replay).map(r=>r.role)).toEqual(['user','note'])
+ let context;registerNoteConversationContext({systemPrompt:{context:value=>{context=value;return()=>{}}}})
+ expect(context.text({agent:{session:replay}})).toContain('本周报告正文');expect(context.text({agent:{session:Session.create('other')}})).toBe('')
+ expect(session.events.some(e=>e.type==='turn/start')).toBe(false)
+})
+
+it('stops abandoned requests on replay while keeping the actual live request running',async()=>{
+ const {recordNoteConversation,noteConversationRows,setNoteConversationRunning}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('interrupted-note');setNoteConversationRunning(session,'live',true);recordNoteConversation(session,{requestId:'live',phase:'preparing',prompt:'任务'})
+ expect(noteConversationRows(session)[0].phase).toBe('preparing')
+ const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header));expect(noteConversationRows(replay)[0].phase).toBe('stopped')
+ setNoteConversationRunning(session,'live',false);expect(noteConversationRows(session)[0].phase).toBe('stopped')
+})
