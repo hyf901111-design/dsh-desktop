@@ -280,7 +280,7 @@ it('opens the component library second level, inserts at the slash paragraph, pe
   await page.keyboard.press('ArrowDown');await expect.poll(async()=> (await latest())?.submenu?.selectedIndex).toBe(1)
   await page.keyboard.press('ArrowLeft');await expect.poll(async()=> (await latest())?.submenu).toBeUndefined()
   await page.keyboard.press('Enter');await expect.poll(async()=> (await latest())?.submenu?.selectedIndex).toBe(0)
-  await page.keyboard.press('Enter');await page.locator('.en-native-component-host [data-financial-widget="watchlist"]').waitFor()
+  await page.keyboard.press('Enter');await page.locator('.en-native-component-host [data-financial-widget="watchlist"]').waitFor();expect(await page.locator('.en-native-component-title > strong').first().evaluate(el=>getComputedStyle(el).display)).toBe('none')
   expect(await page.locator('.en-document .bn-inline-content').first().textContent()).toBe('前文')
   expect(await page.locator('.en-document .bn-editor').textContent()).not.toContain('/组件库')
   await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await page.getByRole('button',{name:'添加验收自选股',exact:true}).click()
