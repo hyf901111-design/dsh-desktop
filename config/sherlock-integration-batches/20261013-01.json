@@ -271,6 +271,57 @@
           "每系列超过1000点及不可识别的图表数据保留预览，显示编辑限制"
         ],
         "generatedAt": "2026-10-13T14:17:15.254Z"
+      },
+      "merged": {
+        "mergeCommit": "c9debb296953bd827eac10a83ca3bb7932bfd9a1",
+        "verificationCommit": "c9debb296953bd827eac10a83ca3bb7932bfd9a1",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/pptx-content.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-scene.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/research-file-preview.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
+            "verifiedCommit": "c9debb296953bd827eac10a83ca3bb7932bfd9a1",
+            "completedAt": "2026-10-13T14:25:59.837Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "c9debb296953bd827eac10a83ca3bb7932bfd9a1",
+            "completedAt": "2026-10-13T14:25:59.837Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c9debb296953bd827eac10a83ca3bb7932bfd9a1",
+            "completedAt": "2026-10-13T14:25:59.837Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-13T14:25:59.837Z"
       }
     }
   ],
