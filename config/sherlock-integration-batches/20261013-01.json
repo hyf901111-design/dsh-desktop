@@ -3,7 +3,7 @@
   "batchId": "20261013-01",
   "branch": "codex/integration/20261013-01",
   "baseMainCommit": "f64b864d2354aaae902c0acc471deaf0fa19e02a",
-  "expectedMainCommit": "9d5c497ef23cf3299dfe944810d1a57219d4ff6e",
+  "expectedMainCommit": "dcb8d1579dba73bf4c768a699f2190a03ac96b0a",
   "createdAt": "2026-10-13T14:22:33.172Z",
   "features": [
     {
@@ -423,6 +423,59 @@
         }
       ],
       "recordedAt": "2026-10-13T22:59:07.271Z"
+    },
+    {
+      "previousMainCommit": "9d5c497ef23cf3299dfe944810d1a57219d4ff6e",
+      "mainCommit": "dcb8d1579dba73bf4c768a699f2190a03ac96b0a",
+      "mergeCommit": "e3c5e93a341c5eb47ff6ebf7a47464e43f9770f8",
+      "verificationCommit": "e3c5e93a341c5eb47ff6ebf7a47464e43f9770f8",
+      "checks": [
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/pptx-content.test.ts",
+            "test/pptx-service.test.ts",
+            "test/pptx-scene.test.ts",
+            "test/pptx-direct-editor.test.ts",
+            "test/pptx-editor-ui.test.ts",
+            "test/sherlock-office-preview-adapter.test.ts",
+            "test/pptx-resize-settle.test.js",
+            "test/research-file-preview.test.ts"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
+          "verifiedCommit": "e3c5e93a341c5eb47ff6ebf7a47464e43f9770f8",
+          "completedAt": "2026-10-14T00:18:05.402Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/tsc",
+            "--noEmit",
+            "-p",
+            "tsconfig.node.json"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+          "verifiedCommit": "e3c5e93a341c5eb47ff6ebf7a47464e43f9770f8",
+          "completedAt": "2026-10-14T00:18:05.402Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：git diff --check",
+          "verifiedCommit": "e3c5e93a341c5eb47ff6ebf7a47464e43f9770f8",
+          "completedAt": "2026-10-14T00:18:05.402Z",
+          "timeoutMs": 120000
+        }
+      ],
+      "recordedAt": "2026-10-14T00:18:05.402Z"
     }
   ]
 }
