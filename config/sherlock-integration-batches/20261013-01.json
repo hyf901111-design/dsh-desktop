@@ -121,6 +121,57 @@
           "仅编辑现有对象及系列，不新增幻灯片或对象，不编辑SmartArt与动画"
         ],
         "generatedAt": "2026-10-14T01:19:28.861758+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
+        "verificationCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/pptx-content.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-scene.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/research-file-preview.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
+            "verifiedCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
+            "completedAt": "2026-10-14T01:20:11.303Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
+            "completedAt": "2026-10-14T01:20:11.303Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
+            "completedAt": "2026-10-14T01:20:11.303Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-14T01:20:11.303Z"
       }
     }
   ],
