@@ -30,7 +30,11 @@ for(const overlap of [true,false])it(`keeps the outside note handle and inside P
  const {context,page}=await admittedFile();try{
   await page.getByRole('button',{name:'选中文件并操作预览',exact:true}).click()
   const geometry=await page.evaluate(overlap=>{const root=document.querySelector('.en-note-file'),host=root.querySelector('.en-file-native-reader'),r=root.getBoundingClientRect(),h=host.getBoundingClientRect(),resize=root.querySelector('.en-component-resize-width').getBoundingClientRect(),x=overlap?resize.left+resize.width/2:r.right-2,y=resize.top+resize.height/2,shape=document.createElement('div');shape.dataset.pptxPart='slide1';shape.dataset.pptxNodeId='shape';shape.style.cssText='position:absolute;right:'+(h.right-x)+'px;top:'+(y-h.top-50)+'px;width:160px;height:100px;';host.append(shape);const node={id:'slide1#node:shape',part:'slide1',nodeId:'shape',geometry:{x:0,y:0,width:160,height:100}},entry={document:{slides:[{part:'slide1',nodes:[node],fields:[]}]},objects:{},values:{}};window.objectChanges=[];window.ppt=window.attachPpt(host,{getEntry:()=>entry,changeObject:(_id,change)=>window.objectChanges.push(change),begin(){},end(){},render(){}});window.ppt.selectId(node.id);return {x,y,width:r.width,hit:document.elementFromPoint(x,y)?.dataset.pptxHandle}},overlap)
-  expect(geometry.hit).toBe('e');await page.mouse.move(geometry.x,geometry.y);await page.mouse.down();await page.mouse.move(geometry.x-100,geometry.y,{steps:5});await page.mouse.up()
+  // The accepted PPT viewport clips its object handles at the reader edge;
+  // the note handle lives outside it and remains directly reachable.
+  if(overlap)expect(await page.locator('.en-component-resize-width').evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===el})).toBe(true)
+  else expect(geometry.hit).toBe('e')
+  await page.mouse.move(geometry.x,geometry.y);await page.mouse.down();await page.mouse.move(geometry.x-100,geometry.y,{steps:5});await page.mouse.up()
   expect(await page.locator('.en-note-file').boundingBox().then(r=>r.width)).toBe(overlap?geometry.width-100:geometry.width)
   if(overlap)expect(await page.evaluate(()=>window.objectChanges)).toEqual([]);else expect(await page.evaluate(()=>window.objectChanges.at(-1)?.geometry.width)).toBe(60)
   expect(await page.locator('.en-note-file').getAttribute('data-selected')).toBe('true')
