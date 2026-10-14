@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261014-01",
+  "branch": "codex/integration/20261014-01",
+  "baseMainCommit": "e5d6d278e1002051eeffeaf5e022fbabd36c3a03",
+  "expectedMainCommit": "e5d6d278e1002051eeffeaf5e022fbabd36c3a03",
+  "createdAt": "2026-10-14T03:20:20.565Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复多页PPT编辑预览全量挂载与组件内部滚动失效",
+        "branch": "codex/feat/pptx-large-scroll-20261014",
+        "baseCommit": "171f37c3f179e4ee713835cee82e1c8883a4012f",
+        "tipCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+        "commits": [
+          {
+            "commit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+            "parents": [
+              "171f37c3f179e4ee713835cee82e1c8883a4012f"
+            ],
+            "subject": "修复：限制PPT编辑预览高度并恢复多页按需渲染和内部滚动"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-scroll-viewport.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/pptx-content.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-scene.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-chart-composition.test.ts",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/research-file-preview.test.ts",
+              "test/pptx-scroll-viewport.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "11个直接相关文件154项通过",
+            "verifiedCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+            "completedAt": "2026-10-14T03:19:52.385809+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "Node项目TypeScript检查通过",
+            "verifiedCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+            "completedAt": "2026-10-14T03:19:52.385809+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "171f37c3f179e4ee713835cee82e1c8883a4012f..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "完整修改差异格式检查通过",
+            "verifiedCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+            "completedAt": "2026-10-14T03:19:52.385809+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium窄360/宽820布局回归先RED，520px视口被撑至7367/15905；修后视口有限且选中文本时mouse.wheel内滚、外层不滚。两份最新用户PPT只读A/B原35/46页全挂载、896/921段、无内滚；修后仅邻近4页、63/140段，预览ready约0.7-0.9秒。诊断JSON与CPUprofile在/tmp/ework-pptx-large-20261014，原生客户端待统一构建验收。独立只读复核无阻塞项。"
+        },
+        "acceptanceCriteria": [
+          "多页PPT编辑包装保持有限高度，内部viewport可用鼠标滚动",
+          "按需只挂载附近页，滚动经过的页可直接编辑",
+          "选中文字时内滚不带动笔记外层滚动",
+          "右侧栏、研究组件、笔记嵌入使用共用PPT布局修复",
+          "保留字体格式、拖拽工具栏、撤销重做、自动保存与无闪白更新",
+          "构建包含main最新菜单/尺寸独立提交并保留用户笔记及文件",
+          "用户验收集成测试包后才推进main"
+        ],
+        "risks": [
+          "隔离A/B已确认布局和内滚根因；真实原生CPU卡顿仍需重建后验证",
+          "测试页使用缓存的Chromium运行时，可通过SHERLOCK_TEST_PLAYWRIGHT/SHERLOCK_TEST_CHROMIUM设置环境"
+        ],
+        "generatedAt": "2026-10-14T03:19:52.385809+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/pptx-content.test.ts",
+        "test/pptx-service.test.ts",
+        "test/pptx-scene.test.ts",
+        "test/pptx-direct-editor.test.ts",
+        "test/pptx-editor-ui.test.ts",
+        "test/pptx-chart-composition.test.ts",
+        "test/pptx-stable-refresh.test.ts",
+        "test/sherlock-office-preview-adapter.test.ts",
+        "test/pptx-resize-settle.test.js",
+        "test/research-file-preview.test.ts",
+        "test/pptx-scroll-viewport.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
