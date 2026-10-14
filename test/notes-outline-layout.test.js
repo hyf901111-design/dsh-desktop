@@ -307,8 +307,23 @@ it('handles a current native child click and a renamed custom library entry with
  }finally{await context.close()}
 },15000)
 
-it('renders the compact native second level without clipping in both themes and a narrow screen',async()=>{
- const context=await browser.newContext({viewport:{width:528,height:340}}),page=await context.newPage();try{
+it('shows every slash command without internal scrolling, including the last component-library option',async()=>{
+ const context=await browser.newContext(),page=await context.newPage();try{
+  const icons=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list','table','image','video','audio','file','toggle_heading','toggle_heading_2','toggle_heading_3','heading_5','heading_6','emoji','library']
+  const state={sessionId:'s',menuId:'m',revision:1,dark:false,selectedIndex:0,anchor:{x:0,y:0,width:0,height:20},items:icons.map(icon=>({id:icon,title:icon,icon,subtext:'',group:'',badge:''}))}
+  await page.setContent(noteMenuDocumentHtml)
+  for(const height of [800,400]){
+   const result=noteMenuPresentation(state,'ticket',{height:height-48,width:900-48})
+   await page.setViewportSize({width:result.width,height:result.height});await page.evaluate(html=>document.querySelector('main').innerHTML=html,result.html)
+   expect(result.height).toBeLessThanOrEqual(height)
+   expect(await page.locator('[role=option]').evaluateAll(items=>items.every(el=>{const a=el.getBoundingClientRect(),menu=el.closest('.menu').getBoundingClientRect();return a.width>0&&a.height>=28&&a.top>=menu.top&&a.bottom<=menu.bottom&&a.right<=menu.right&&a.left>=menu.left}))).toBe(true)
+   expect(await page.locator('.menu>[role=listbox]').evaluate(el=>({scrolls:el.scrollHeight>el.clientHeight,overflow:getComputedStyle(el).overflowY}))).toEqual({scrolls:false,overflow:'hidden'})
+  }
+ }finally{await context.close()}
+},15000)
+
+it('renders every native second-level option without scrolling in both themes and on a short screen',async()=>{
+ const context=await browser.newContext({viewport:{width:576,height:340}}),page=await context.newPage();try{
   const {componentLibraryBuiltins}=await import('../packages/dsh-research-task-runtime/component-library-catalog.js')
   const children=componentLibraryBuiltins().map(item=>({id:item.id,title:item.name,icon:item.widget,subtext:'',group:'内置组件',badge:''})),state={sessionId:'s',menuId:'m',revision:1,dark:true,selectedIndex:0,anchor:{x:0,y:0,width:0,height:20},items:[{id:'library',title:'组件库',icon:'library',subtext:'',group:'',badge:'',children}],submenu:{parentId:'library',selectedIndex:0}}
   await page.route('http://127.0.0.1/native-menu-fixture',route=>route.fulfill({contentType:'text/html',body:noteMenuDocumentHtml}));await page.goto('http://127.0.0.1/native-menu-fixture')
@@ -316,11 +331,13 @@ it('renders the compact native second level without clipping in both themes and 
   expect(await page.locator('footer').count()).toBe(0)
   for(const dark of [true,false]){
    await page.evaluate(dark=>document.body.className=dark?'dark':'',dark)
-   expect(await page.locator('.child-menu a[role=option]').count()).toBe(6);expect(await page.locator('.child-menu>[role=listbox]').evaluate(el=>({bar:getComputedStyle(el).scrollbarWidth,webkit:getComputedStyle(el,'::-webkit-scrollbar').display}))).toEqual({bar:'none',webkit:'none'})
+   expect(await page.locator('.child-menu a[role=option]').count()).toBe(6);expect(await page.locator('.child-menu>[role=listbox]').evaluate(el=>({scrolls:el.scrollHeight>el.clientHeight,overflow:getComputedStyle(el).overflowY}))).toEqual({scrolls:false,overflow:'hidden'})
    expect(await page.locator('.child-menu').evaluate(el=>{const a=el.getBoundingClientRect(),last=el.querySelector('a[aria-label="日历"]').getBoundingClientRect();return {bottomGap:a.bottom-last.bottom,fits:a.right<=innerWidth}})).toEqual({bottomGap:7,fits:true})
    expect(await page.locator('.root-menu').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('a[role=option]').getBoundingClientRect().bottom)).toBe(7)
   }
-  await page.setViewportSize({width:264,height:340});expect(await page.locator('.root-menu').isVisible()).toBe(false);expect(await page.locator('.child-menu').evaluate(el=>el.getBoundingClientRect().width)).toBe(264)
-  await page.setViewportSize({width:264,height:140});await page.locator('.child-menu>[role=listbox]').hover();await page.mouse.wheel(0,400);await expect.poll(()=>page.locator('.child-menu>[role=listbox]').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.locator('.child-menu a[aria-label="日历"]').evaluate(el=>el.closest('.menu').getBoundingClientRect().bottom-el.getBoundingClientRect().bottom)).toBe(7)
+  const compact=noteMenuPresentation(state,'ticket',{height:152,width:528});await page.setViewportSize({width:compact.width,height:compact.height});await page.evaluate(html=>document.querySelector('main').innerHTML=html,compact.html)
+  expect(compact.height).toBeLessThanOrEqual(200)
+  expect(await page.locator('.child-menu a[role=option]').evaluateAll(items=>items.every(el=>{const a=el.getBoundingClientRect(),menu=el.closest('.menu').getBoundingClientRect();return a.top>=menu.top&&a.bottom<=menu.bottom&&a.left>=menu.left&&a.right<=menu.right}))).toBe(true)
+  expect(await page.locator('.child-menu>[role=listbox]').evaluate(el=>({scrolls:el.scrollHeight>el.clientHeight,overflow:getComputedStyle(el).overflowY}))).toEqual({scrolls:false,overflow:'hidden'})
  }finally{await context.close()}
 },15000)
