@@ -1,5 +1,12 @@
 import { createResearchGrid } from '../../packages/dsh-research-task-runtime/research-grid.js'
 export const researchGridNodeIds=new Set()
+export function workbenchScrollExtent(contentBottom,visibleHeight,rowStep,toolbarSpace) {
+  if(contentBottom>visibleHeight)return Math.ceil(contentBottom+15*rowStep)
+  // A nearly full first screen needs actual scroll range so the floating
+  // toolbar can be cleared, even before a card extends beyond the viewport.
+  if(contentBottom>0&&contentBottom>=visibleHeight*.75)return Math.ceil(visibleHeight+Math.max(160,visibleHeight*.25))
+  return Math.max(visibleHeight,Math.ceil(contentBottom+(toolbarSpace?80:0)))
+}
 export function createWorkbenchGridState(storage,sessionId) {
   const grid=createResearchGrid(), key='ework.research.grid.v1:'+sessionId
   let width=0,cells=[],initialized=false,previous=new Map(),nodesById=new Map(),forced=false,legacyRows=false

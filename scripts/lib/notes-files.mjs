@@ -3,27 +3,39 @@ export function createNoteFileViewStore(doc){
  const notify=()=>{snapshot=[...entries.values()];for(const listener of listeners)listener()}
  const update=event=>{const value=event.detail;if(typeof value?.instanceId!=='string')return
   if(value.remove){entries.delete(value.instanceId);notify();return}
-  const host=doc.getElementById(value.hostId)
-  if(!host?.matches('.en-file-host')||host.dataset.noteFile!==value.node?.id||host.dataset.noteSession!==value.sessionId||!host.closest('.en-root')||typeof value.node.authorizationId!=='string')return
-  entries.set(value.instanceId,{...value,host});notify()
+  const host=doc.getElementById(value.hostId),header=doc.getElementById(value.headerId)
+  if(!host?.matches('.en-file-host')||host.dataset.noteFile!==value.node?.id||host.dataset.noteSession!==value.sessionId||!host.closest('.en-root')||!header?.closest('.en-note-file')?.contains(host)||typeof value.node.authorizationId!=='string')return
+  entries.set(value.instanceId,{...value,host,header});notify()
  }
  const reset=()=>{entries.clear();notify()}
  doc?.addEventListener('sherlock:notes-file-view',update);doc?.addEventListener('sherlock:notes-reset',reset)
  return {snapshot:()=>snapshot,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},dispose:()=>{doc?.removeEventListener('sherlock:notes-file-view',update);doc?.removeEventListener('sherlock:notes-reset',reset);reset()}}
 }
+/** Reuse the research workbench chrome and authorized native reader without its canvas positioning layer. */
 export function EWorkNoteFileView({entry,officePreview}){
- const [editing,setEditing]=react.useState(false),[width,setWidth]=react.useState(()=>entry.host.clientWidth||640)
- const action=(name,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-file-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action:name,...value}}))
+ const [pdfStatus,setPdfStatus]=react.useState(null),[editing,setEditing]=react.useState(false),[name,setName]=react.useState(entry.node.displayName||entry.node.name),[refresh,setRefresh]=react.useState(0),[menu,setMenu]=react.useState(null),menuRef=react.useRef(null),input=react.useRef(null)
+ const action=(action,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-file-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action,...value}}))
  react.useLayoutEffect(()=>{
-  entry.host.dataset.noteFileRendered='true'
-  const measure=()=>setWidth(entry.host.clientWidth||640),observer=new ResizeObserver(measure);observer.observe(entry.host);measure()
-  return()=>{observer.disconnect();delete entry.host.dataset.noteFileRendered}
- },[entry.host])
- return react_dom.createPortal(react.createElement(ResearchCanvasFileCard,{sessionId:entry.node.previewSessionId,node:{...entry.node,x:0,y:0,width,height:entry.node.height||520,noteDocument:true},visible:true,officePreview,editing,
-  onRenameCommit:name=>{setEditing(false);action('rename',{name})},onRenameCancel:()=>setEditing(false),
-  onNaturalSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})},
-  onFrameAction:name=>{if(name==='rename')setEditing(true);else if(name==='remove')action('remove')}
- }),entry.host,entry.instanceId)
+  entry.host.dataset.noteFileRendered='true';entry.header.dataset.noteFileRendered='true'
+  return()=>{delete entry.host.dataset.noteFileRendered;delete entry.header.dataset.noteFileRendered}
+ },[entry.host,entry.header])
+ react.useEffect(()=>{
+  if(!menu)return
+  const outside=e=>{if(!menuRef.current?.contains(e.target))setMenu(null)},key=e=>{if(e.key==='Escape')setMenu(null)}
+  document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',key)
+  return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',key)}
+ },[menu])
+ react.useLayoutEffect(()=>{if(editing){input.current?.focus();input.current?.select()}},[editing])
+ const commit=()=>{setEditing(false);action('rename',{name})}
+ const header=editing?react.createElement('form',{className:'en-file-rename',onSubmit:e=>{e.preventDefault();commit()}},react.createElement('input',{ref:input,value:name,maxLength:512,'aria-label':'文件组件名称',onChange:e=>setName(e.target.value),onBlur:commit,onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();setEditing(false)}}})):react.createElement(WorkbenchChrome,{node:{...entry.node,noteDocument:true},sessionId:entry.sessionId,readOnly:entry.readOnly,titleExtra:pdfStatus?.total>0?react.createElement('span',{className:'en-file-page-count','aria-label':'PDF 页码'},pdfStatus.page+' / '+pdfStatus.total):null,
+  onReload:async()=>{setRefresh(value=>value+1);return {message:'已请求重新载入原文件预览'}},
+  onMore:(_node,e)=>{const box=e.currentTarget.getBoundingClientRect();setMenu({left:Math.max(8,Math.min(box.right-206,window.innerWidth-214)),top:Math.max(8,Math.min(box.bottom+5,window.innerHeight-118))})},onRemove:()=>action('remove')})
+ const item=(label,icon,click,disabled=false)=>react.createElement('button',{type:'button',role:'menuitem',disabled,onClick:()=>{setMenu(null);click()}},react.createElement(WorkbenchIcon,{name:icon}),label)
+ return react.createElement(react.Fragment,null,
+  react_dom.createPortal(header,entry.header),
+  react_dom.createPortal(react.createElement('div',{className:'en-file-native-reader',key:refresh},react.createElement(ResearchAttachmentLocalPreview,{item:entry.node,nodeId:entry.node.id,sessionId:entry.node.previewSessionId,visible:true,officePreview,noteDocument:true,onPageStatus:setPdfStatus})),entry.host,entry.instanceId),
+  menu&&react_dom.createPortal(react.createElement('div',{ref:menuRef,role:'menu','aria-label':'文件组件操作',className:'en-file-menu','data-dark':entry.dark,style:menu},item('修改名称','rename',()=>{setName(entry.node.displayName||entry.node.name);setEditing(true)},entry.readOnly),item('在访达中显示','expand',()=>action('reveal')),item('移除文件','remove',()=>action('remove'),entry.readOnly)),document.body)
+ )
 }
 export function EWorkNoteFileViews({sessionId,active}){
  const entries=react.useSyncExternalStore(eworkNoteFileViews.subscribe,eworkNoteFileViews.snapshot),officePreview=react.useSyncExternalStore(eworkNoteOfficePreview.subscribe,eworkNoteOfficePreview.getSnapshot)

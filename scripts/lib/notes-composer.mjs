@@ -66,6 +66,7 @@ ctx.effect(()=>{const reset=()=>{for(const record of eworkNotesInputs.values()){
 `;
 
 export function patchNotesComposer(source) {
+  source=patchNotesNativeDrop(source);
   if (source.includes('ework:notes-native-composer:v1')) {
     const start=source.indexOf('const eworkNotesInputs = new Map();'),footer=source.indexOf("document.addEventListener('sherlock:notes-reset',",start),end=source.indexOf('\n',footer);
     if(start<0||footer<0||end<0)throw Error('笔记原生输入框适配器不完整。');
@@ -86,6 +87,51 @@ react.useEffect(()=>{const ready=event=>{if(event.detail?.sessionId===sessionId)
   source=source.replaceAll('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);','if(!eworkNotes)odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);');
   replace("const canvasRunning=canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));","const canvasRunning=!eworkNotes&&canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));");
   return patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source))));
+}
+
+function patchNotesNativeDrop(source){
+  const marker='/* ework:notes-native-drop:v1 */';
+  if(source.includes(marker))return source;
+  const input=source.indexOf('function InputBar({'),start=source.indexOf('const canAcceptDrop = !locked && !machineBusy && addImages !== void 0;',input);
+  const end=source.indexOf('const closePreview = (0, react.useCallback)',start);
+  if(input<0||start<input||end<start)throw Error('笔记无法定位原生图片拖拽状态。');
+  let part=source.slice(start,end);
+  const replace=(from,to)=>{if(part.split(from).length!==2)throw Error('笔记无法定位原生拖拽事件：'+from.slice(0,60));part=part.replace(from,to)};
+  replace('const onDragEnter = (event) => {',`${marker}
+                    const ownsNoteDrop = (event) => {
+                        const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+                        return path.some(node => node && typeof node.hasAttribute === "function" && node.hasAttribute("data-note-file-drop-owner"));
+                    };
+                    // Release global image state before the note editor captures its drag.
+                    const releaseNoteDrop = (event) => { if (ownsNoteDrop(event)) reset(); };
+                    const onViewportLeave = (event) => {
+                        const leavingViewport = event.clientX <= 0 || event.clientY <= 0 || event.clientX >= window.innerWidth || event.clientY >= window.innerHeight;
+                        if ((event.target === document.documentElement || event.target === document.body) && leavingViewport) reset();
+                    };
+                    const onCancelDrag = (event) => { if (event.key === "Escape") reset(); };
+                    const onDragEnter = (event) => {`);
+  replace('const onDragEnter = (event) => {\n\t\t\t\t\tif (!hasFiles(event)) return;',
+    'const onDragEnter = (event) => {\n\t\t\t\t\tif (!hasFiles(event) || ownsNoteDrop(event)) return;');
+  replace('if (!hasFiles(event) || event.dataTransfer === null) return;',
+    'if (!hasFiles(event) || event.dataTransfer === null || ownsNoteDrop(event)) return;');
+  replace('if (!canAcceptDrop) return;', 'if (ownsNoteDrop(event) || !canAcceptDrop) return;');
+  replace('document.addEventListener("dragenter", onDragEnter);',`document.addEventListener("dragenter", releaseNoteDrop, true);
+                    document.addEventListener("dragover", releaseNoteDrop, true);
+                    document.addEventListener("dragleave", onViewportLeave, true);
+                    // Capture only clears state; the existing bubble drop still admits images.
+                    document.addEventListener("drop", reset, true);
+                    window.addEventListener("blur", reset);
+                    window.addEventListener("keydown", onCancelDrag, true);
+                    document.addEventListener("dragenter", onDragEnter);`);
+  replace('document.removeEventListener("dragenter", onDragEnter);',`document.removeEventListener("dragenter", releaseNoteDrop, true);
+                        document.removeEventListener("dragover", releaseNoteDrop, true);
+                        document.removeEventListener("dragleave", onViewportLeave, true);
+                        document.removeEventListener("drop", reset, true);
+                        window.removeEventListener("blur", reset);
+                        window.removeEventListener("keydown", onCancelDrag, true);
+                        reset();
+                        document.removeEventListener("dragenter", onDragEnter);`);
+  return source.slice(0,start)+part+source.slice(end);
 }
 
 function patchNotesCommands(source){

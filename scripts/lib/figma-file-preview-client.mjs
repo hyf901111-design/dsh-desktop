@@ -10,6 +10,13 @@ function replaceOnce(source, anchor, replacement) {
 }
 
 export function patchFigmaFilePreview(source) {
+  const notePdfWidth='const renderWidth = bodySize.width > 0 ? !node.noteDocument && preview.pageCount === 1 ? Math.min(bodySize.width, bodySize.height * pageRatio) : bodySize.width : 0;'
+  const notePdfStart=source.indexOf('function ResearchCanvasPdfPreview('),notePdfEnd=source.indexOf('function ResearchCanvasHtmlPreview(',notePdfStart)
+  if(notePdfStart<0||notePdfEnd<notePdfStart)throw Error('Note PDF preview boundary drifted')
+  let notePdf=source.slice(notePdfStart,notePdfEnd)
+  if(!notePdf.includes(notePdfWidth))notePdf=replaceOnce(notePdf,'const renderWidth = bodySize.width > 0 ? preview.pageCount === 1 ? Math.min(bodySize.width, bodySize.height * pageRatio) : bodySize.width : 0;',notePdfWidth)
+  source=source.slice(0,notePdfStart)+notePdf+source.slice(notePdfEnd)
+
   source=source.replaceAll('authorizationId: descriptor.authorizationId, contentType: descriptor.contentType }', 'authorizationId: descriptor.authorizationId, contentType: descriptor.contentType, ...(descriptor.previewEligible === false ? {previewEligible:false} : {}) }');
   source=source.replace("if(kind!=='image'&&kind!=='assistant')return", "if(kind!=='generic'&&kind!=='image'&&kind!=='assistant')return");
   {

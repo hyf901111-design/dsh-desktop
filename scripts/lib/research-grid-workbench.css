@@ -33,20 +33,20 @@ body [data-ework-grid] [data-research-node-id] :is(.rScV5Q_containerDraft,.rScV5
 body [data-ework-grid] .rScV5Q_containerDraft textarea{flex:1;min-height:48px!important;width:100%;box-sizing:border-box;font-size:13px!important;resize:none!important}
 body [data-ework-grid] .rScV5Q_containerDraftFooter{flex:none}
 body [data-ework-grid] .ew-grid-chrome-host{position:absolute;inset:0;pointer-events:none;z-index:55}
-body [data-ework-grid] .ew-grid-header{display:flex;align-items:center;gap:6px;box-sizing:border-box;height:34px;padding:0 10px;pointer-events:auto;cursor:grab;user-select:none;touch-action:none;background:var(--grid-card);color:var(--grid-text);font:600 12px/16px Inter,"Noto Sans SC",system-ui,sans-serif;border-radius:4px 4px 0 0}
-body [data-ework-grid] .ew-grid-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip}
-body [data-ework-grid] .ew-grid-title[data-overflow=true]{mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent)}
-body [data-ework-grid] .ew-grid-title-copy{display:inline-block;white-space:nowrap;width:max-content;max-width:none}
-body [data-ework-grid] .ew-grid-title:focus-visible{outline:1px solid var(--grid-accent);outline-offset:-1px;border-radius:3px}
-body [data-ework-grid] .ew-grid-header button{position:relative;display:grid;place-items:center;flex:0 0 20px;width:20px;height:24px;padding:0!important;border:0;border-radius:3px;background:none;color:inherit;cursor:pointer}
-body [data-ework-grid] .ew-grid-header button:hover{background:#8c8d9b22}
-body [data-ework-grid] .ew-grid-header button:focus-visible{outline:1px solid #249bfa}
-body [data-ework-grid] .ew-grid-header button:disabled{opacity:.4;cursor:default}
-body [data-ework-grid] .ew-grid-refresh{display:flex;position:relative;color:#c5804f}
+body :is([data-ework-grid],.en-note-file) .ew-grid-header{display:flex;align-items:center;gap:6px;box-sizing:border-box;height:34px;padding:0 10px;pointer-events:auto;cursor:grab;user-select:none;touch-action:none;background:var(--grid-card);color:var(--grid-text);font:600 12px/16px Inter,"Noto Sans SC",system-ui,sans-serif;border-radius:4px 4px 0 0}
+body :is([data-ework-grid],.en-note-file) .ew-grid-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip}
+body :is([data-ework-grid],.en-note-file) .ew-grid-title[data-overflow=true]{mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent)}
+body :is([data-ework-grid],.en-note-file) .ew-grid-title-copy{display:inline-block;white-space:nowrap;width:max-content;max-width:none}
+body :is([data-ework-grid],.en-note-file) .ew-grid-title:focus-visible{outline:1px solid var(--grid-accent);outline-offset:-1px;border-radius:3px}
+body :is([data-ework-grid],.en-note-file) .ew-grid-header button{position:relative;display:grid;place-items:center;flex:0 0 20px;width:20px;height:24px;padding:0!important;border:0;border-radius:3px;background:none;color:inherit;cursor:pointer}
+body :is([data-ework-grid],.en-note-file) .ew-grid-header button:hover{background:#8c8d9b22}
+body :is([data-ework-grid],.en-note-file) .ew-grid-header button:focus-visible{outline:1px solid #249bfa}
+body :is([data-ework-grid],.en-note-file) .ew-grid-header button:disabled{opacity:.4;cursor:default}
+body :is([data-ework-grid],.en-note-file) .ew-grid-refresh{display:flex;position:relative;color:#c5804f}
 .ew-grid-icon{display:block;flex:none;width:16px;height:16px;background:currentColor;mask-position:center;mask-repeat:no-repeat}
-body [data-ework-grid] .ew-grid-refresh [data-refresh-current=true]{color:#52b788}
-body [data-ework-grid] .ew-grid-refresh [data-busy=true]{color:#139dff}
-body [data-ework-grid] .ew-grid-refresh [data-busy=true] .ew-grid-icon{animation:ew-grid-spin 1s linear infinite}
+body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-refresh-current=true]{color:#52b788}
+body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-busy=true]{color:#139dff}
+body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-busy=true] .ew-grid-icon{animation:ew-grid-spin 1s linear infinite}
 .ew-grid-tooltip{position:fixed;z-index:2000;display:none;pointer-events:none;flex-direction:column;padding:7px 8px;border-radius:3px;background:#24242b;color:#e9e9ef;box-shadow:0 3px 14px #0003;font:400 12px/17px Inter,"Noto Sans SC",system-ui;white-space:nowrap}
 .ew-grid-tooltip time{color:#a4adbe}
 .ew-grid-refresh:hover>.ew-grid-tooltip,.ew-grid-refresh:focus-within>.ew-grid-tooltip{display:flex}
