@@ -15,6 +15,7 @@ import { replaceNoteSelection, noteRangeHasOnlyText } from './replace-selection'
 import { SuggestionPanel } from './suggestion-panel'
 import { NoteMenuIcon } from './menu-icon'
 import { NativeComponentBlock } from './native-component-block'
+import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
@@ -43,12 +44,13 @@ function ResearchSnapshotBlock({ block }: any) {
   const context = useContext(Context)!, [html, setHtml] = useState(''), [error, setError] = useState('')
   const node = useMemo(() => { try { return JSON.parse(block.props.payload) } catch { return {} } }, [block.props.payload])
   const [height, setHeight] = useState(Number.isFinite(node.height)?Math.max(120,node.height-80):320), frame = useRef<HTMLIFrameElement>(null), intrinsic=useRef(false)
+  const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height}),renderKey=JSON.stringify(node.containerSpec)
   useEffect(() => {
     let live = true; setError(''); setHtml('');intrinsic.current=false
     if (!node.containerSpec) { setRefreshing(false);setError(node.generationError || (node.generationStatus === 'running' ? '正在创建组件，已保留正文中的位置…' : node.generationStatus === 'interrupted' ? '创建已停止，可重新描述需求。' : '组件尚未提供内容。')); return }
     context.bridge.request('render', { sessionId: context.sessionId, spec: node.containerSpec, dark:context.dark }).then((result: any) => { if (live) { setHtml(result.document || result.html); if (!result.html) setError('此组件保留在笔记中，可在研究中查看。') } }).catch((e: Error) => live && setError(e.message)).finally(()=>{if(live)setRefreshing(false)})
     return () => { live = false }
-  }, [block.props.payload, context.bridge, context.sessionId,refresh])
+  }, [renderKey,node.generationError,node.generationStatus, context.bridge, context.sessionId,refresh])
   useEffect(() => {
     const receive = (e: MessageEvent) => { if (e.source !== frame.current?.contentWindow || !Number.isFinite(e.data?.height))return;if(e.data.type==='sherlock-workbench-content-size')intrinsic.current=true;else if(intrinsic.current||!['ework-note-height','sherlock-content-size'].includes(e.data.type))return;setHeight(Math.min(2400,Math.max(120,e.data.height))) }
     window.addEventListener('message', receive); return () => window.removeEventListener('message', receive)
@@ -56,10 +58,11 @@ function ResearchSnapshotBlock({ block }: any) {
   useEffect(()=>{frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')},[context.dark,html])
   const doc=html
 
-  return <section className="en-research" ref={interaction.root as React.RefObject<HTMLElement>} contentEditable={false} data-note-research-block={block.id} data-selected={interaction.selected||undefined}>
+  return <section className="en-research" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-research-block={block.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
     <header className="en-research-header"><button className="en-component-refresh" aria-label="刷新组件" title="刷新组件" disabled={refreshing||!node.containerSpec} onClick={()=>{setRefreshing(true);setRefresh(value=>value+1)}}><NoteMenuIcon kind="refresh"/></button><strong>{node.title||'研究组件'}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label="移除笔记中的组件" title="移除组件" onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
-    {html?<div className="en-research-view"><iframe ref={frame} title={node.title||'研究组件'} sandbox="allow-scripts" srcDoc={doc} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')} style={{height}}/>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={interaction.select}/>:null}</div>:<div className="en-component-empty"><strong>{node.title||'研究组件'}</strong><p>{error||'正在读取组件…'}</p></div>}
+    {html?<div className="en-research-view"><iframe ref={frame} title={node.title||'研究组件'} sandbox="allow-scripts" srcDoc={doc} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')} style={{height:size.height}}/>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={interaction.select}/>:null}</div>:<div className="en-component-empty"><strong>{node.title||'研究组件'}</strong><p>{error||'正在读取组件…'}</p></div>}
     {error&&html?<div className="en-component-error" role="alert">{error}</div>:null}
+    {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
 }
 const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' } }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload}>研究组件</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')! } : undefined })()
@@ -67,10 +70,11 @@ function FileBlock({block}:any){
   const interaction=useComponentInteraction()
   const context=useContext(Context)!,host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),[height,setHeight]=useState(520),[bound,setBound]=useState<string>(),[fileError,setFileError]=useState('')
   const node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:'上次文件导入已中断，请重新拖入文件。'}:value}catch{return {id:block.id,name:'文件',importStatus:'failed',error:'文件记录暂不可用。'} as NoteFileNode}},[block.props.payload])
+  const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height})
   const remove=()=>{if(node.importStatus)void context.bridge.request('file-revoke',{sessionId:context.sessionId,nodeId:node.id}).catch(()=>{});context.editor.removeBlocks([block.id])}
   useEffect(()=>{let live=true;setBound(undefined);setFileError('');if(!node.importStatus)void context.bridge.request('file-bind',{sessionId:context.sessionId,nodeId:node.id,authorizationId:node.authorizationId}).then(value=>{if(live)setBound(value.previewSessionId)}).catch(e=>{if(live)setFileError(e.message)});return()=>{live=false}},[context.sessionId,node.id,node.authorizationId,node.importStatus])
   useEffect(()=>{
-    const publish=()=>{if(host.current&&!node.importStatus&&bound)document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,hostId:host.current.id,sessionId:context.sessionId,headerId:'en-file-header-'+instance.current,dark:context.dark,readOnly:!context.editor?.isEditable,node:{...node,height,previewSessionId:bound}}}))}
+    const publish=()=>{if(host.current&&!node.importStatus&&bound)document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,hostId:host.current.id,sessionId:context.sessionId,headerId:'en-file-header-'+instance.current,dark:context.dark,readOnly:!context.editor?.isEditable,node:{...node,height:size.height,previewSessionId:bound}}}))}
     const action=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.instanceId!==instance.current||value.sessionId!==context.sessionId)return
       if(value.action==='remove')remove()
       else if(value.action==='rename'&&typeof value.name==='string'&&value.name.trim().length<=512)context.editor.updateBlock(block.id,{props:{payload:JSON.stringify({...node,displayName:value.name.trim()||node.name})}})
@@ -79,13 +83,14 @@ function FileBlock({block}:any){
     }
     publish();document.addEventListener('sherlock:notes-files-sync-request',publish);document.addEventListener('sherlock:notes-file-action',action)
     return()=>{document.removeEventListener('sherlock:notes-files-sync-request',publish);document.removeEventListener('sherlock:notes-file-action',action)}
-  },[node,height,context.sessionId,context.dark,bound])
+  },[node,size.height,context.sessionId,context.dark,bound])
   useEffect(()=>()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,remove:true}}))},[])
   if(node.importStatus)return <section className="en-research en-note-file en-file-import" contentEditable={false}><header className="en-research-header"><strong>{node.name}</strong><button aria-label="移除笔记中的文件" onClick={remove}>×</button></header><div className="en-component-empty" role={node.importStatus==='failed'?'alert':'status'}>{node.error||'正在导入文件…'}</div></section>
-  return <section className="en-research en-note-file" ref={interaction.root as React.RefObject<HTMLElement>} contentEditable={false} data-research-node-id={node.id} data-selected={interaction.selected||undefined}>
+  return <section className="en-research en-note-file" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-research-node-id={node.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
     <div id={'en-file-header-'+instance.current} className="en-file-header"><header className="en-research-header en-file-header-fallback"><strong>{node.displayName||node.name}</strong></header></div>
-    <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{fileError||'正在读取文件预览…'}</div>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中文件并操作预览" onClick={interaction.select}/>:null}</div>
+    <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height:size.height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{fileError||'正在读取文件预览…'}</div>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中文件并操作预览" onClick={interaction.select}/>:null}</div>
     {fileError?<div className="en-component-error" role="alert">{fileError}</div>:null}
+    {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
 }
 const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''}},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload}>笔记文件</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!}:undefined})()

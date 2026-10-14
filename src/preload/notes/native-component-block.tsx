@@ -1,12 +1,14 @@
 import React, {useEffect, useRef, useState} from 'react'
 import {financialWidgetSpec} from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {NoteMenuIcon} from './menu-icon'
+import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 
 /** Native research components are portalled here by the resident conversation renderer. */
 export function NativeComponentBlock({block,node,context}:any){
  const host=useRef<HTMLDivElement>(null),root=useRef<HTMLElement>(null),instance=useRef(crypto.randomUUID())
  const [selected,setSelected]=useState(false),[ready,setReady]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0),[busy,setBusy]=useState(false)
  const [height,setHeight]=useState(Math.max(160,Math.min(2400,(node.height||362)-42)))
+ const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height}),renderKey=JSON.stringify({...node,noteSize:undefined})
  useEffect(()=>{
   const outside=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))setSelected(false)},escape=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelected(false)}
   document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape)
@@ -41,7 +43,7 @@ export function NativeComponentBlock({block,node,context}:any){
   }
   document.addEventListener('sherlock:notes-components-sync-request',sync);document.addEventListener('sherlock:notes-component-action',action);void load()
   return()=>{live=false;clearTimeout(timer);document.removeEventListener('sherlock:notes-components-sync-request',sync);document.removeEventListener('sherlock:notes-component-action',action);document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,remove:true}}))}
- },[block.props.payload,context.bridge,context.sessionId,context.dark,refresh])
+ },[renderKey,context.bridge,context.sessionId,context.dark,refresh])
  const reload=async()=>{
   setBusy(true);setError('')
   try{const control=host.current?.querySelector('[data-financial-widget],[data-calendar-tool]') as any
@@ -49,9 +51,10 @@ export function NativeComponentBlock({block,node,context}:any){
    if(fn){const result=await fn();if(result?.error)setError(result.error)}else setRefresh(value=>value+1)
   }catch(e){setError((e as Error).message)}finally{setBusy(false)}
  }
- return <section className="en-research en-native-component" ref={root} contentEditable={false} data-note-research-block={block.id} data-research-node-id={node.id} data-selected={selected||undefined} data-financial-theme={context.dark?'dark':'light'}>
+ return <section className="en-research en-native-component" ref={root} style={size.style} contentEditable={false} data-note-research-block={block.id} data-research-node-id={node.id} data-selected={selected||undefined} data-resizing={size.resizing||undefined} data-financial-theme={context.dark?'dark':'light'}>
   <header className="en-research-header"><button className="en-component-refresh" aria-label="刷新组件" disabled={!ready||busy} onClick={reload}><NoteMenuIcon kind="refresh"/></button><div className="en-native-component-title" id={instance.current+'-title'}><strong>{node.title}</strong></div><button className="en-component-close" aria-label="移除笔记中的组件" disabled={!context.editor?.isEditable} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button></header>
-  <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height}}/>{!ready?<div className="en-component-empty" role="status">{error||'正在读取组件…'}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={()=>setSelected(true)}/>:null}</div>
+  <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{error||'正在读取组件…'}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={()=>setSelected(true)}/>:null}</div>
   {error&&ready?<div className="en-component-error" role="alert">{error}</div>:null}
+  {selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
  </section>
 }

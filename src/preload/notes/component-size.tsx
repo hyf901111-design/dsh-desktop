@@ -1,0 +1,65 @@
+import React, {useLayoutEffect, useRef, useState} from 'react'
+
+type Axis = 'width' | 'height'
+type Size = Partial<Record<Axis, number>>
+type Gesture = {axis:Axis; pointerId:number; start:number; value:number; next:number}
+const bounded = (value:number, min:number, max:number) => Math.round(Math.max(min, Math.min(max, value)))
+const finite = (value:unknown):value is number => typeof value === 'number' && Number.isFinite(value)
+
+/** Note dimensions are independent from the source research canvas geometry. */
+export function useNoteComponentSize({block,node,editor,root,naturalHeight}:{block:any;node:any;editor:any;root:React.RefObject<HTMLElement>;naturalHeight:number}) {
+ const [available,setAvailable]=useState(0),[preview,setPreview]=useState<Size>(),gesture=useRef<Gesture>()
+ const maxWidth=Math.max(1,available || 320),minWidth=Math.min(320,maxWidth),minHeight=180,maxHeight=2400
+ const saved:Size=node.noteSize || {},height=bounded(preview?.height ?? (finite(saved.height)?saved.height:naturalHeight),minHeight,maxHeight)
+ const width=bounded(preview?.width ?? (finite(saved.width)?saved.width:maxWidth),minWidth,maxWidth)
+ useLayoutEffect(()=>{
+  const parent=root.current?.parentElement;if(!parent)return
+  const measure=()=>{const style=getComputedStyle(parent),padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight),next=Math.max(1,Math.floor(parent.clientWidth-padding));setAvailable(old=>old===next?old:next)}
+  measure();const observer=new ResizeObserver(measure);observer.observe(parent);return()=>observer.disconnect()
+ },[root,node.importStatus])
+ const commit=(axis:Axis,value:number)=>{
+  const current=editor?.getBlock(block.id);if(!editor?.isEditable || !current)return
+  let payload:any;try{payload=JSON.parse(current.props.payload)}catch{return}
+  const next=bounded(value,axis==='width'?minWidth:minHeight,axis==='width'?maxWidth:maxHeight)
+  if(payload.noteSize?.[axis]===next)return
+  const tiptap=editor._tiptapEditor,undo=tiptap.state.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(tiptap.state)?.undoManager
+  undo?.stopCapturing()
+  editor.updateBlock(block.id,{props:{payload:JSON.stringify({...payload,noteSize:{...payload.noteSize,[axis]:next}})}})
+  undo?.stopCapturing()
+ }
+ const handle=(axis:Axis)=>({
+  onPointerDown:(e:React.PointerEvent<HTMLButtonElement>)=>{
+   if(e.button!==0 || !editor?.isEditable)return
+   e.preventDefault();e.stopPropagation();e.currentTarget.focus({preventScroll:true})
+   const value=axis==='width'?root.current?.getBoundingClientRect().width ?? width:height
+   gesture.current={axis,pointerId:e.pointerId,start:axis==='width'?e.clientX:e.clientY,value,next:value}
+   setPreview({[axis]:value});e.currentTarget.setPointerCapture(e.pointerId)
+  },
+  onPointerMove:(e:React.PointerEvent<HTMLButtonElement>)=>{
+   const active=gesture.current;if(!active || active.pointerId!==e.pointerId)return
+   const next=bounded(active.value+(axis==='width'?e.clientX:e.clientY)-active.start,axis==='width'?minWidth:minHeight,axis==='width'?maxWidth:maxHeight)
+   active.next=next;setPreview({[axis]:next})
+  },
+  onPointerUp:(e:React.PointerEvent<HTMLButtonElement>)=>{
+   const active=gesture.current;if(!active || active.pointerId!==e.pointerId)return
+   gesture.current=undefined;if(active.next!==Math.round(active.value))commit(axis,active.next)
+   setPreview(undefined);if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId)
+  },
+  onPointerCancel:()=>{gesture.current=undefined;setPreview(undefined)},
+  onLostPointerCapture:()=>{gesture.current=undefined;setPreview(undefined)},
+  onKeyDown:(e:React.KeyboardEvent<HTMLButtonElement>)=>{
+   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='z'){e.preventDefault();e.stopPropagation();e.shiftKey?editor?.redo():editor?.undo();return}
+   if(e.key==='Escape' && gesture.current){e.preventDefault();e.stopPropagation();gesture.current=undefined;setPreview(undefined);return}
+   const keys=axis==='width'?['ArrowLeft','ArrowRight']:['ArrowUp','ArrowDown']
+   if(![...keys,'Home','End'].includes(e.key))return
+   e.preventDefault();e.stopPropagation()
+   const min=axis==='width'?minWidth:minHeight,max=axis==='width'?maxWidth:maxHeight,value=axis==='width'?width:height
+   commit(axis,e.key==='Home'?min:e.key==='End'?max:value+(e.key===keys[0]?-1:1)*(e.shiftKey?64:16))
+  }
+ })
+ return {height,width,minWidth,maxWidth,minHeight,maxHeight,resizing:!!preview,style:{width:preview?.width ?? (finite(saved.width)?width:'100%'),maxWidth:'100%',minWidth:0} as React.CSSProperties,handle}
+}
+
+export function NoteComponentResizeHandles({size}:{size:ReturnType<typeof useNoteComponentSize>}) {
+ return <>{size.resizing?<div className="en-component-resize-shield"/>:null}{(['width','height'] as const).map(axis=><button key={axis} type="button" className={'en-component-resize en-component-resize-'+axis} role="separator" aria-label={axis==='width'?'调整组件宽度':'调整组件高度'} aria-orientation={axis==='width'?'vertical':'horizontal'} aria-valuemin={axis==='width'?size.minWidth:size.minHeight} aria-valuemax={axis==='width'?size.maxWidth:size.maxHeight} aria-valuenow={axis==='width'?size.width:size.height} aria-valuetext={(axis==='width'?size.width:size.height)+' 像素'} title={axis==='width'?'拖动或使用左右方向键调整宽度':'拖动或使用上下方向键调整高度'} {...size.handle(axis)}/>)}</>
+}

@@ -1,6 +1,6 @@
 export const NOTE_FILE_DRAG_TYPE = 'application/x-sherlock-file'
 export const NOTE_FILES_PER_DROP = 64
-export type NoteFileNode = {id:string;name:string;displayName?:string;path?:string;source:'computer';authorizationId?:string;contentType?:string;previewSessionId?:string;previewEligible?:false;height?:number;importStatus?:'importing'|'failed';error?:string}
+export type NoteFileNode = {id:string;name:string;displayName?:string;path?:string;source:'computer';authorizationId?:string;contentType?:string;previewSessionId?:string;previewEligible?:false;height?:number;noteSize?:{width?:number;height?:number};importStatus?:'importing'|'failed';error?:string}
 export function noteFileCandidates(transfer:Pick<DataTransfer,'files'|'getData'>,sessionId:string,pathForFile:(file:File)=>string) {
   const raw=transfer.getData(NOTE_FILE_DRAG_TYPE)
   if(raw){

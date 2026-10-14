@@ -128,3 +128,23 @@ body[data-ds-dark-theme] .en-block-menu{background:#272727;color:var(--odyssey-m
 .en-file-menu button:hover{background:#80808020}.en-file-menu button:disabled{opacity:.4;cursor:default}.en-file-menu button:last-child{color:#d96e6e}
 
 .en-file-import .en-research-header{height:34px;padding:0 10px}.en-file-page-count{flex:none;color:var(--grid-muted);font:12px/16px system-ui;white-space:nowrap}
+
+/* Centered note handles stay inside the frame, preserving document margins. */
+.en-research{position:relative;max-width:100%}
+.en-research[data-resizing=true]{user-select:none}
+.en-component-resize-shield{position:absolute;inset:0;z-index:6;background:transparent}
+.en-root .en-research>.en-component-resize{position:absolute;z-index:7;border:0!important;padding:0!important;background:transparent!important;touch-action:none;border-radius:3px;line-height:0}
+.en-component-resize::after{content:'';display:block;position:absolute;background:var(--en-accent);border-radius:2px;opacity:.8}
+.en-component-resize-width{right:0;top:50%;transform:translateY(-50%);width:12px;height:48px;cursor:ew-resize!important}
+.en-component-resize-width::after{width:4px;height:32px;right:1px;top:8px}
+.en-component-resize-height{bottom:0;left:50%;transform:translateX(-50%);width:48px;height:12px;cursor:ns-resize!important}
+.en-component-resize-height::after{width:32px;height:4px;left:8px;bottom:1px}
+.en-root .en-component-resize:focus-visible{outline:1px solid var(--en-accent)!important;outline-offset:-1px!important}
+.en-component-resize:hover::after,.en-component-resize:focus-visible::after{opacity:1}
+
+/* The shared financial input rules are grid-scoped; notes use the field border. */
+@layer ework-workbench{
+body .en-root .en-research .ew-financial-search-line input[type=search]{flex:1;width:100%;min-width:0;height:22px;min-height:22px;padding:0!important;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;color:var(--fw-text)!important;font:inherit}
+body .en-root .en-research .ew-financial-search-line input[type=search]:is(:focus,:focus-visible){border:0!important;outline:0!important;box-shadow:none!important}
+body .en-root .en-research .ew-financial-search-line>button{display:grid;place-items:center;width:16px;height:22px;min-height:22px;padding:0!important;flex:0 0 16px;border:0!important;background:transparent!important}
+}
