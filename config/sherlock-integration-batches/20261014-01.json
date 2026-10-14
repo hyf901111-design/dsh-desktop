@@ -3,7 +3,7 @@
   "batchId": "20261014-01",
   "branch": "codex/integration/20261014-01",
   "baseMainCommit": "e5d6d278e1002051eeffeaf5e022fbabd36c3a03",
-  "expectedMainCommit": "e5d6d278e1002051eeffeaf5e022fbabd36c3a03",
+  "expectedMainCommit": "60f9058e5ae51108d419ca5ac13dcb22e9b8f7d8",
   "createdAt": "2026-10-14T03:20:20.565Z",
   "features": [
     {
@@ -210,5 +210,62 @@
       "timeoutMs": 120000
     }
   ],
-  "mainSynchronizations": []
+  "mainSynchronizations": [
+    {
+      "previousMainCommit": "e5d6d278e1002051eeffeaf5e022fbabd36c3a03",
+      "mainCommit": "60f9058e5ae51108d419ca5ac13dcb22e9b8f7d8",
+      "mergeCommit": "5ace5527dae8e29c61575c98c6546f1ae7f5ac54",
+      "verificationCommit": "5ace5527dae8e29c61575c98c6546f1ae7f5ac54",
+      "checks": [
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/pptx-content.test.ts",
+            "test/pptx-service.test.ts",
+            "test/pptx-scene.test.ts",
+            "test/pptx-direct-editor.test.ts",
+            "test/pptx-editor-ui.test.ts",
+            "test/pptx-chart-composition.test.ts",
+            "test/pptx-stable-refresh.test.ts",
+            "test/sherlock-office-preview-adapter.test.ts",
+            "test/pptx-resize-settle.test.js",
+            "test/research-file-preview.test.ts",
+            "test/pptx-scroll-viewport.test.js"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
+          "verifiedCommit": "5ace5527dae8e29c61575c98c6546f1ae7f5ac54",
+          "completedAt": "2026-10-14T03:54:07.825Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/tsc",
+            "--noEmit",
+            "-p",
+            "tsconfig.node.json"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+          "verifiedCommit": "5ace5527dae8e29c61575c98c6546f1ae7f5ac54",
+          "completedAt": "2026-10-14T03:54:07.825Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：git diff --check",
+          "verifiedCommit": "5ace5527dae8e29c61575c98c6546f1ae7f5ac54",
+          "completedAt": "2026-10-14T03:54:07.825Z",
+          "timeoutMs": 120000
+        }
+      ],
+      "recordedAt": "2026-10-14T03:54:07.825Z"
+    }
+  ]
 }
