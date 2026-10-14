@@ -90,7 +90,7 @@ export function createPptxEditorComponent(React,Preview,download,createPortal){
     if(gestureRef.current||(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true'))return
     if(renderJob.current)return
     const viewGeneration=generation.current,index=viewer.currentSlideIndex??pageRef.current,job={expected,viewGeneration};renderJob.current=job
-    try{const result=await bridge.preview(request(current,sourceRef.current));if(expected!==draftGeneration.current||viewGeneration!==generation.current||viewer!==viewerRef.current)return;if(!result.ok)throw Error(result.error)
+    try{const input=request(current,sourceRef.current),result=await bridge.preview(input);if(expected!==draftGeneration.current||viewGeneration!==generation.current||viewer!==viewerRef.current)return;if(!result.ok){if(current.document.version!==input.version){renderDraft();return}throw Error(result.error)}
      // Typing always wins over an asynchronous preview response.
      if(gestureRef.current||(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true')){pendingRender.current=true;return}
      const committed=await viewer.open(new Uint8Array(result.bytes),{renderMode:'list',lazySlides:true,lazyMedia:true,listOptions:{...viewer.listOptions,windowed:true,showSlideLabels:false}},()=>expected===draftGeneration.current&&viewGeneration===generation.current&&viewer===viewerRef.current&&!gestureRef.current&&!(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true'))
