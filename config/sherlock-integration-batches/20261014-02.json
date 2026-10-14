@@ -9,35 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复笔记组件内容自适应并对齐研究宿主布局",
+        "featureName": "收紧笔记组件下方间距",
         "branch": "codex/feat/notes-component-fit-20261014",
-        "baseCommit": "b69912cb0062edd6dea927c96a8ce17d300e6aec",
-        "tipCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+        "baseCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+        "tipCommit": "5a166fa92bba1e784c29fe98de392046ce66cecb",
         "commits": [
           {
-            "commit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+            "commit": "5a166fa92bba1e784c29fe98de392046ce66cecb",
             "parents": [
-              "b69912cb0062edd6dea927c96a8ce17d300e6aec"
+              "282dfd4df31354dc6c285f1300b1dea236b74c82"
             ],
-            "subject": "修复笔记组件内容填满可用区域并对齐研究模式布局"
+            "subject": "收紧笔记组件与后续正文和组件之间的间距"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-14-notes-component-fit.md"
-          },
-          {
             "status": "M",
             "path": "src/preload/notes/style.css"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-component-import-interaction.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-component-layout.test.js"
           }
         ],
         "checks": [
@@ -52,9 +40,9 @@
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "4文件14项通过，新增严格iframe重建后尺寸恢复断言单项通过；原始150px RED及278px GREEN已观察",
-            "verifiedCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
-            "completedAt": "2026-10-14T13:42:09.107Z",
+            "summary": "4个直接相关文件14项通过；浏览器组件自适应、重开、缩放与内部编辑保留。",
+            "verifiedCommit": "5a166fa92bba1e784c29fe98de392046ce66cecb",
+            "completedAt": "2026-10-14T14:41:52.125Z",
             "timeoutMs": 120000
           },
           {
@@ -65,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查退出0",
-            "verifiedCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
-            "completedAt": "2026-10-14T13:42:09.107Z",
+            "verifiedCommit": "5a166fa92bba1e784c29fe98de392046ce66cecb",
+            "completedAt": "2026-10-14T14:41:52.125Z",
             "timeoutMs": 120000
           },
           {
@@ -77,104 +65,24 @@
             ],
             "outcome": "passed",
             "summary": "差异检查退出0",
-            "verifiedCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
-            "completedAt": "2026-10-14T13:42:09.107Z",
-            "timeoutMs": 120000
+            "verifiedCommit": "5a166fa92bba1e784c29fe98de392046ce66cecb",
+            "completedAt": "2026-10-14T14:41:52.125Z",
+            "timeoutMs": 10000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实NotesApp+原ResearchContainerBody+宿主热力图浏览器布局验证：同高278px、缩放和窄宽度不重建iframe，真实Yjs保存并重新打开恢复尺寸；native基线截图已复现裁切，修复包native检查将在集成阶段进行。"
+          "summary": "真实浏览器Notes组件聚焦检查通过。仅组件margin-bottom 22px改为8px，目标相邻组件间距44px至30px；共享客户端新包像素检查随合并后执行。"
         },
         "acceptanceCriteria": [
-          "笔记HTML内容填满组件实际可用空间，与研究宿主一致",
-          "调整组件宽高与窗口宽度后内容重新布局且交互状态保留",
-          "保留已保存笔记尺寸和原研究组件几何",
-          "保持外侧手柄、组件选中及内部PPT编辑独立"
+          "组件与后续组件或正文之间的间距收紧",
+          "外侧缩放手柄仍可见可操作",
+          "保持正文段落间距与组件内部布局"
         ],
         "risks": [
-          "功能分支仅完成真实浏览器UI检查，原生新包需在新集成批次验证",
-          "旧PPT外侧手柄fixture原先要求控件越过readerclip，已改为命中笔记外侧手柄；拖动结果及内部对象编辑断言保留"
+          "最终本地客户端须重建以包含新的CSS并观察实际间距"
         ],
-        "generatedAt": "2026-10-14T13:42:09.107Z"
-      },
-      "merged": {
-        "mergeCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
-        "verificationCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
-            "completedAt": "2026-10-14T14:17:02.953Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/notes-component-layout.test.js",
-              "test/notes-component-import-interaction.test.js",
-              "test/notes-native-components.test.js",
-              "test/notes-component-interaction.test.tsx",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/notes-component-layout.test.js test/notes-component-import-interaction.test.js test/notes-native-components.test.js test/notes-component-interaction.test.tsx --maxWorkers=1",
-            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
-            "completedAt": "2026-10-14T14:17:02.953Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node_modules/.bin/vitest",
-              "run",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/pptx-scroll-viewport.test.js",
-              "test/pptx-selection-viewport.test.js",
-              "test/pptx-resize-settle.test.js",
-              "test/pptx-stable-refresh.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-scroll-viewport.test.js test/pptx-selection-viewport.test.js test/pptx-resize-settle.test.js test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/bundled-plugin-profile.test.ts --maxWorkers=1",
-            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
-            "completedAt": "2026-10-14T14:17:02.953Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
-            "completedAt": "2026-10-14T14:17:02.953Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
-            "completedAt": "2026-10-14T14:17:02.953Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-14T14:17:02.953Z"
+        "generatedAt": "2026-10-14T14:41:52.125Z"
       }
     },
     {
