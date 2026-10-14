@@ -148,6 +148,18 @@ it('allows a fresh preview after re-reading the same file while an older preview
  }finally{await view.close()}
 })
 
+it('retries a preview version race after its own save without surfacing a false file-conflict error',async()=>{
+ let finish:(value:any)=>void=()=>{};const requests:any[]=[]
+ function Preview(props:any){React.useEffect(()=>{props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:{...doc,version:'v2'}}),preview:(value:any)=>{requests.push(value);return requests.length===1?new Promise(resolve=>{finish=resolve}):Promise.resolve({ok:true,bytes:[2]})}}, {}, Preview)
+ try{
+  await act(async()=>editable(view.host).focus());await click(view.win.document,'加粗');await act(async()=>editable(view.host).blur());await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350))})
+  expect(requests[0].version).toBe('v1')
+  await act(async()=>{finish({ok:false,error:'文件已更改'});await new Promise(resolve=>setTimeout(resolve,230))})
+  expect(requests).toHaveLength(2);expect(requests[1].version).toBe('v2');expect(view.host.querySelector('[role=alert]')).toBeNull()
+ }finally{await view.close()}
+})
+
 it('does not reopen or remount the presentation when leaving saved text editing',async()=>{
  let mounts=0,previewRequests=0,rendererOpens=0
  function Preview(props:any){React.useEffect(()=>{mounts++;props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{rendererOpens++},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
