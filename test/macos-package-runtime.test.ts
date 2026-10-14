@@ -78,6 +78,10 @@ describe('macOS package runtime verification', () => {
           path.join(projectRoot, 'skills', 'ework-free-data-sources'),
           path.join(packagedSkillRoot, 'ework-free-data-sources')
         )
+        symlinkSync(
+          path.join(projectRoot, 'skills', 'ework-finance-analysis'),
+          path.join(packagedSkillRoot, 'ework-finance-analysis')
+        )
 
         const strictResult = spawnSync(
           process.execPath,
@@ -102,7 +106,8 @@ describe('macOS package runtime verification', () => {
         expect(result.stdout).toContain('apache-arrow: loadable')
         expect(result.stdout).toContain('signature: skipped (unsigned CI package)')
         expect(result.stdout).toContain('bundled skill: ework-workbench-components v1.36.0 (source parity)')
-        expect(result.stdout).toContain('bundled skill: ework-free-data-sources v1.0.4 (source parity)')
+        expect(result.stdout).toContain('bundled skill: ework-free-data-sources v1.0.5 (source parity)')
+        expect(result.stdout).toContain('bundled skill: ework-finance-analysis v1.7.3 (source parity)')
         expect(result.stdout).toContain('package: verified')
       } finally {
         rmSync(temporaryRoot, { recursive: true, force: true })
