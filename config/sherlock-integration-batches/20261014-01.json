@@ -100,6 +100,60 @@
           "测试页使用缓存的Chromium运行时，可通过SHERLOCK_TEST_PLAYWRIGHT/SHERLOCK_TEST_CHROMIUM设置环境"
         ],
         "generatedAt": "2026-10-14T03:19:52.385809+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
+        "verificationCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/pptx-content.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-scene.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-chart-composition.test.ts",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/research-file-preview.test.ts",
+              "test/pptx-scroll-viewport.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
+            "verifiedCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
+            "completedAt": "2026-10-14T03:25:45.138Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
+            "completedAt": "2026-10-14T03:25:45.138Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
+            "completedAt": "2026-10-14T03:25:45.138Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-14T03:25:45.138Z"
       }
     }
   ],
