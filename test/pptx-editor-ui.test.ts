@@ -102,6 +102,52 @@ it('offers the original custom font and saves font selection automatically with 
  }finally{await view.close()}
 })
 
+it('changes bold and undoes it before a slow preview or save resolves without restarting its own preview',async()=>{
+ let previews=0,finishSave:(v:any)=>void=()=>{}
+ function Preview(props:any){React.useEffect(()=>{props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement('div',{'data-pptx-node-id':'2','data-pptx-part':'ppt/slides/slide1.xml','data-pptx-width':'200','data-pptx-height':'100'},React.createElement('div',{'data-pptx-paragraph':'0'},React.createElement('span',{style:{fontWeight:400}},'原始标题')))}
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:()=>new Promise(resolve=>{finishSave=resolve}),preview:()=>{previews++;return new Promise(()=>{})}}, {}, Preview)
+ try{
+  // Immediate styling must not wait for the deliberately unresolved preview.
+  await act(async()=>editable(view.host).focus());await click(view.win.document,'加粗')
+  const span=editable(view.host).querySelector('span')
+  expect(span.style.fontWeight).toBe('700')
+  await act(async()=>editable(view.host).blur())
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350))});expect(previews).toBe(1)
+  await act(async()=>{finishSave({ok:true,document:{...doc,version:'v2'}});await new Promise(resolve=>setTimeout(resolve,240))});expect(previews).toBe(1)
+  await click(view.host,'撤销');expect(span.style.fontWeight).toBe('400')
+ }finally{await view.close()}
+})
+
+it('coalesces rapid formatting while a preview is busy and renders only the latest state next',async()=>{
+ const replies:Array<(value:any)=>void>=[],requests:any[]=[];let rendered=0
+ function Preview(props:any){React.useEffect(()=>{props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{rendered++},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:doc}),preview:(value:any)=>{requests.push(value);return new Promise(resolve=>replies.push(resolve))}}, {}, Preview)
+ try{
+  await act(async()=>editable(view.host).focus());await click(view.win.document,'加粗');await act(async()=>editable(view.host).blur())
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,210))});expect(requests).toHaveLength(1)
+  await click(view.win.document,'取消加粗');await act(async()=>{await new Promise(resolve=>setTimeout(resolve,210))})
+  await click(view.win.document,'加粗');await act(async()=>{await new Promise(resolve=>setTimeout(resolve,210))})
+  expect(requests).toHaveLength(1)
+  await act(async()=>{replies[0]!({ok:true,bytes:[1]});await new Promise(resolve=>setTimeout(resolve,220))})
+  expect(rendered).toBe(0);expect(requests).toHaveLength(2);expect(requests[1].objects[0].bold).toBe(true)
+  await act(async()=>{replies[1]!({ok:true,bytes:[2]});await Promise.resolve()});expect(rendered).toBe(1)
+ }finally{await view.close()}
+})
+
+it('allows a fresh preview after re-reading the same file while an older preview is pending',async()=>{
+ const replies:Array<(value:any)=>void>=[];let rendered=0
+ function Preview(props:any){React.useEffect(()=>{props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{rendered++},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:false,error:'保存失败'}),preview:()=>new Promise(resolve=>replies.push(resolve))}, {}, Preview)
+ try{
+  Object.defineProperty(view.win,'confirm',{value:()=>true})
+  await act(async()=>editable(view.host).focus());await click(view.win.document,'加粗');await act(async()=>editable(view.host).blur());await act(async()=>{await new Promise(resolve=>setTimeout(resolve,210))})
+  expect(replies).toHaveLength(1);await click(view.host,'保存');await click(view.host,'重新读取文件')
+  await act(async()=>editable(view.host).focus());await click(view.win.document,'加粗');await act(async()=>editable(view.host).blur());await act(async()=>{await new Promise(resolve=>setTimeout(resolve,210))})
+  expect(replies).toHaveLength(2)
+  await act(async()=>{replies[0]!({ok:true,bytes:[1]});replies[1]!({ok:true,bytes:[2]});await Promise.resolve()});expect(rendered).toBe(1)
+ }finally{await view.close()}
+})
+
 it('does not reopen or remount the presentation when leaving saved text editing',async()=>{
  let mounts=0,previewRequests=0,rendererOpens=0
  function Preview(props:any){React.useEffect(()=>{mounts++;props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{rendererOpens++},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}
