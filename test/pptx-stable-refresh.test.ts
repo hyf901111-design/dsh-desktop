@@ -10,7 +10,7 @@ function fixture(media=false){
   container:any;viewerOptions:any;currentSlide=10;zoomPercent=150;destroyed=0;prepared:number[]=[];slideHandles=new Map<number,any>();get currentSlideIndex(){return this.currentSlide}
   constructor(container:any,options:any={scrollContainer:host}){this.container=container;this.viewerOptions=options;instances.push(this)}
   destroy(){this.destroyed++;this.container.replaceChildren()}
-  async open(){this.destroy();await new Promise<void>((resolve,reject)=>replies.push({resolve,reject}));this.container.innerHTML='<section data-slide-index="10"><div></div></section><section data-slide-index="11"><div></div></section>'}
+  async open(){this.destroy();this.container.style.position='relative';await new Promise<void>((resolve,reject)=>replies.push({resolve,reject}));this.container.innerHTML='<section data-slide-index="10"><div></div></section><section data-slide-index="11"><div></div></section>'}
   ensureListSlideMountedFn=(index:number)=>{this.prepared.push(index);const wrapper=this.container.querySelector(`[data-slide-index="${index}"]`)?.firstElementChild;if(!wrapper||wrapper.dataset.mounted)return;wrapper.dataset.mounted='1';wrapper.textContent='新幻灯片'+index;const ready=media&&index===10?new Promise<void>(resolve=>{finishMedia=()=>{const img=this.container.ownerDocument.createElement('img');img.dataset.newMedia='';img.decode=async()=>{};wrapper.appendChild(img);resolve()}}):Promise.resolve();this.slideHandles.set(index,{ready})}
  }
  host.scrollTop=60;host.scrollLeft=7
@@ -60,5 +60,18 @@ it('retains old media until asynchronously rendered slide media is ready',async(
  expect(committed).toBe(false);expect(f.host.querySelector('[data-old-media]')?.isConnected).toBe(true)
  f.finishMedia();await work
  expect(f.host.querySelector('[data-new-media]')?.isConnected).toBe(true);expect(f.host.querySelector('[data-old-media]')).toBeNull()
+ f.stable.destroy()
+})
+
+it('keeps renderer staging out of scroll flow even when the renderer changes its positioning',async()=>{
+ const f=fixture(),work=f.stable.open(new Uint8Array([1])),stage=f.instances[1].container
+ // The deployed renderer sets its own container to relative before parsing completes.
+ expect(stage.style.position).toBe('relative')
+ expect(stage.parentElement).not.toBe(f.host)
+ expect(stage.parentElement.style.position).toBe('absolute')
+ expect(stage.parentElement.style.visibility).toBe('hidden')
+ f.replies[0]!.resolve();await work
+ expect(stage.parentElement).toBe(f.host);expect(stage.style.visibility).toBe('')
+ expect(f.host.children.length).toBe(1);expect(f.host.scrollTop).toBe(60)
  f.stable.destroy()
 })

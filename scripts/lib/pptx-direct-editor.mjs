@@ -3,17 +3,18 @@ export function attachPptxDirectEditor(host,options){
  const doc=host.ownerDocument,win=doc.defaultView
  let selected=null,selectedId=null,gesture=null,enabled=true,destroyed=false,composing=false
  const overlay=doc.createElement('div');overlay.className='sherlock-ppt-selection';overlay.style.cssText='position:fixed;z-index:100000;pointer-events:none;box-sizing:border-box;border:1px solid #526fff;transform-origin:0 0;display:none;'
+ const rotateCursor='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M25 12A10 10 0 1 0 25 22M25 5v8h-8" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 12A10 10 0 1 0 25 22M25 5v8h-8" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>')+'") 16 16, crosshair'
  const handleNames=['move','nw','n','ne','e','se','s','sw','w','rotate']
  for(const name of handleNames){const handle=doc.createElement('button');handle.type='button';handle.dataset.pptxHandle=name;handle.setAttribute('aria-label',name==='move'?'拖动对象':name==='rotate'?'旋转对象':'缩放对象 '+name);handle.title=handle.getAttribute('aria-label');handle.style.cssText='position:absolute;pointer-events:auto;border:1px solid #526fff;background:white;padding:0;width:8px;height:8px;border-radius:1px;';
   if(name==='move'){handle.style.cssText+='left:0;top:-18px;width:36px;height:16px;cursor:move;font-size:10px;color:#526fff;';handle.textContent='↔'}
-  else if(name==='rotate'){handle.style.cssText+='left:50%;top:-28px;border-radius:50%;cursor:grab;transform:translate(-50%,-50%);'}
+  else if(name==='rotate'){handle.style.cssText+='left:50%;top:-28px;border-radius:50%;transform:translate(-50%,-50%);';handle.style.cursor=rotateCursor}
   else{handle.style.left=name.includes('w')?'0':name.includes('e')?'100%':'50%';handle.style.top=name.includes('n')?'0':name.includes('s')?'100%':'50%';handle.style.transform='translate(-50%,-50%)';handle.style.cursor=['n','s'].includes(name)?'ns-resize':['e','w'].includes(name)?'ew-resize':['nw','se'].includes(name)?'nwse-resize':'nesw-resize'}
   overlay.appendChild(handle)
  }
  doc.body.appendChild(overlay)
  const nodes=()=>options.getEntry()?.document.slides.flatMap(s=>s.nodes||[])||[]
  const model=element=>nodes().find(n=>n.nodeId===element.dataset.pptxNodeId&&n.part===element.dataset.pptxPart)
- const currentNode=()=>{const n=nodes().find(n=>n.id===selectedId);return n?{...n,...options.getEntry()?.objects?.[n.id]}:null}
+ const currentNode=()=>{const n=nodes().find(n=>n.id===selectedId);if(!n)return null;const value={...n,...options.getEntry()?.objects?.[n.id]};if(!value.fontFamily&&selected){const text=selected.querySelector('[data-pptx-paragraph] span:not([data-pptx-bullet])')||selected.querySelector('[data-pptx-paragraph]');const family=text&&win.getComputedStyle(text).fontFamily?.split(',')[0]?.trim().replace(/^["']|["']$/g,'');if(family)value.fontFamily=family}return value}
  const identity=element=>element?.closest?.('[data-pptx-node-id]')
  const fieldFor=paragraph=>{const element=identity(paragraph),node=element&&model(element);if(!node)return null;const cell=paragraph.closest('[data-pptx-row]');return options.getEntry().document.slides.filter(s=>s.part===node.part).flatMap(s=>s.fields).find(f=>f.nodeId===node.nodeId&&f.paragraphIndex===Number(paragraph.dataset.pptxParagraph)&&(cell?f.row===Number(cell.dataset.pptxRow)&&f.column===Number(cell.dataset.pptxColumn):f.row===undefined))}
  const textOf=element=>{
