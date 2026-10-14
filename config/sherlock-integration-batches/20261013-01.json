@@ -11,33 +11,21 @@
         "schemaVersion": 1,
         "featureName": "右侧栏与研究组件PPTX画面直接编辑",
         "branch": "codex/feat/ppt-content-edit-20261013",
-        "baseCommit": "ab751df406ca92e7a26bd51f8041e94a1fc166e3",
-        "tipCommit": "15dd4f2b64141da2567eabbfbb21cbf13371aa4f",
+        "baseCommit": "15dd4f2b64141da2567eabbfbb21cbf13371aa4f",
+        "tipCommit": "e17acee0095dd93dcedcff359080ce468e58b01f",
         "commits": [
           {
-            "commit": "15dd4f2b64141da2567eabbfbb21cbf13371aa4f",
+            "commit": "e17acee0095dd93dcedcff359080ce468e58b01f",
             "parents": [
-              "ab751df406ca92e7a26bd51f8041e94a1fc166e3"
+              "15dd4f2b64141da2567eabbfbb21cbf13371aa4f"
             ],
-            "subject": "优化：PPT格式与撤销即时反馈并合并后台重绘"
+            "subject": "修复：PPT自动保存与草稿预览并行时的版本竞态"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/pptx-direct-editor.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/pptx-editor-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/preview-pptx-editor.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-direct-editor.test.ts"
           },
           {
             "status": "M",
@@ -61,9 +49,9 @@
               "test/pptx-stable-refresh.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10个直接相关PPT测试文件151项通过",
-            "verifiedCommit": "15dd4f2b64141da2567eabbfbb21cbf13371aa4f",
-            "completedAt": "2026-10-14T01:19:28.861758+00:00",
+            "summary": "10个直接相关PPT测试文件152项通过",
+            "verifiedCommit": "e17acee0095dd93dcedcff359080ce468e58b01f",
+            "completedAt": "2026-10-14T01:31:10.069479+00:00",
             "timeoutMs": 120000
           },
           {
@@ -75,8 +63,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript检查通过",
-            "verifiedCommit": "15dd4f2b64141da2567eabbfbb21cbf13371aa4f",
-            "completedAt": "2026-10-14T01:19:28.861758+00:00",
+            "verifiedCommit": "e17acee0095dd93dcedcff359080ce468e58b01f",
+            "completedAt": "2026-10-14T01:31:10.069479+00:00",
             "timeoutMs": 120000
           },
           {
@@ -84,18 +72,18 @@
               "git",
               "diff",
               "--check",
-              "ab751df406ca92e7a26bd51f8041e94a1fc166e3..HEAD"
+              "15dd4f2b64141da2567eabbfbb21cbf13371aa4f..HEAD"
             ],
             "outcome": "passed",
             "summary": "完整功能差异格式检查通过",
-            "verifiedCommit": "15dd4f2b64141da2567eabbfbb21cbf13371aa4f",
-            "completedAt": "2026-10-14T01:19:28.861758+00:00",
+            "verifiedCommit": "e17acee0095dd93dcedcff359080ce468e58b01f",
+            "completedAt": "2026-10-14T01:31:10.069479+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "字体/字号/加粗/颜色/撤销在实际Office DOM立即更新；单页已测2.8-5.9ms、多页46页896段落已测29.6-41.6ms首次样式反馈，blankFrames=0、flowFrames=0。慢预览合并只排最新状态、自身保存不重启；重建controller、旧草稿未知基线、同源重读回归及独立复核通过。当前性能增量待重建原生客户端。"
+          "summary": "字体/字号/加粗/颜色/撤销在实际Office DOM立即更新；单页已测2.8-5.9ms、多页46页896段落已测29.6-41.6ms首次样式反馈，blankFrames=0、flowFrames=0。慢预览合并只排最新状态、自身保存不重启；重建controller、旧草稿未知基线、同源重读回归及独立复核通过。当前性能增量待重建原生客户端。保存/预览版本竞态新增RED/GREEN回归与独立复核通过。"
         },
         "acceptanceCriteria": [
           "右侧栏与研究PPT组件均去除固定controls操作行",
@@ -113,65 +101,15 @@
           "失焦必要刷新使用独立隐藏容器，不撑动右侧底部空白区和滚动布局",
           "字体、字号、加粗、颜色及其撤销立即反馈到实际幻灯片DOM，不等待整份PPT解析或保存",
           "连续修改合并为单个后台预览任务，自身自动保存不使同一预览重启",
-          "跨文件重开保留可信原样式，旧草稿无原样式缓存时不覆盖真正原始画面；重读不被旧预览阻塞"
+          "跨文件重开保留可信原样式，旧草稿无原样式缓存时不覆盖真正原始画面；重读不被旧预览阻塞",
+          "自身保存推进版本导致旧草稿预览拒绝时只补最新版本预览，不误报文件冲突；稳定版本失败继续保留并提示"
         ],
         "risks": [
           "本次重新构建后仍需用户在共享客户端验收",
           "对象缩放、格式、图表或撤销操作仍保留必要的渲染以维护布局及富文本样式",
           "仅编辑现有对象及系列，不新增幻灯片或对象，不编辑SmartArt与动画"
         ],
-        "generatedAt": "2026-10-14T01:19:28.861758+00:00"
-      },
-      "merged": {
-        "mergeCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
-        "verificationCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
-            "verifiedCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
-            "completedAt": "2026-10-14T01:20:11.303Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
-            "completedAt": "2026-10-14T01:20:11.303Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "7a13a5c195ee6c3fcb4491d7f8e68f40a7da42f1",
-            "completedAt": "2026-10-14T01:20:11.303Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-14T01:20:11.303Z"
+        "generatedAt": "2026-10-14T01:31:10.069479+00:00"
       }
     }
   ],
