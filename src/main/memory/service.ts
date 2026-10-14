@@ -1,12 +1,14 @@
-import { createHmac, randomBytes, randomUUID } from 'node:crypto'
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto'
 import { basename, isAbsolute, resolve } from 'node:path'
 import { realpath, readdir, readFile, stat } from 'node:fs/promises'
 import type { MemoryCandidate, MemoryCapture, MemoryCommand, MemoryInput, MemoryProject, MemoryRecall, MemoryRecord, MemoryRuntimeContext, MemoryRuntimeTurn, MemorySettings, MemorySnapshot, MemorySource, MemoryUsage } from '../../shared/memory'
+import {MemoryDocument,type DocumentEntry} from './document'
 import { MemoryStore, type MemoryEncryption } from './store'
 import { splitMemoryImport } from './import'
 import { canonicalMemoryKey, MemoryRetriever, normalizedMemoryText, MEMORY_BACKGROUND_INTRO } from './retriever'
 
-type State = { schemaVersion: 1; revision: number; scopeEpoch: number; secret: string; rows: Record<string,MemoryRecord>; versions: Record<string,MemoryRecord[]>; projects: Record<string,MemoryProject>; bindings: Record<string,string|null>; disabled: Record<string,boolean>; settings: MemorySettings; suppression: { key:string;content:string;sessionId?:string;seq?:number }[]; usages:MemoryUsage[]; jobs: Record<string,{turn:MemoryRuntimeTurn;state:'pending'|'done'|'failed';message?:string;attempts?:number}>; imported:string[]; warning?:string }
+type Summary = {signature:string;scopeEpoch:number;state:'pending'|'ready'|'failed';text?:string;updatedAt?:number;model?:string;attempts:number;ownerEpoch?:string}
+type State = { schemaVersion: 1; revision: number; scopeEpoch: number; secret: string; rows: Record<string,MemoryRecord>; versions: Record<string,MemoryRecord[]>; projects: Record<string,MemoryProject>; bindings: Record<string,string|null>; disabled: Record<string,boolean>; settings: MemorySettings; suppression: { key:string;content:string;sessionId?:string;seq?:number }[]; usages:MemoryUsage[]; jobs: Record<string,{turn:MemoryRuntimeTurn;state:'pending'|'done'|'failed';message?:string;attempts?:number}>; imported:string[]; documentHash?:string;documentSignature?:string;summary?:Summary;summaryRoute?:{provider:string;model:string};warning?:string }
 type Options = {root:string;encryption:MemoryEncryption;owner():string;isShared(sessionId:string):boolean;workspaceRoot(sessionId:string):Promise<string|null>;now?():number;legacyRoot?:string;changed?():void}
 type Capture = {owner:string;epoch:string;scopeEpoch:number;jobKey:string;turn:MemoryRuntimeTurn;projectId?:string}
 const kinds=new Set(['preference','background','decision','progress']), scopes=new Set(['global','project'])
@@ -23,7 +25,9 @@ export class MemoryService {
   private retriever=new MemoryRetriever()
   private queue:Promise<unknown>=Promise.resolve()
   private closed=false
-  private constructor(private options:Options,private store:MemoryStore){}
+  private documents:MemoryDocument
+  private documentError?:{owner:string;message:string}
+  private constructor(private options:Options,private store:MemoryStore){this.documents=new MemoryDocument(options.root)}
   static async open(options:Options) {return new MemoryService(options,await MemoryStore.open(options.root,options.encryption))}
   private now(){return this.options.now?.()??Date.now()}
   private owner(){return identifier(this.options.owner())}
@@ -33,19 +37,62 @@ export class MemoryService {
     const owner=this.owner(),epoch=this.epoch
     const operation=this.queue.then(async()=>{
       if(this.closed||owner!==this.owner()||epoch!==this.epoch)throw Error('账户状态已变化，请重新打开记忆。')
-      const result=await work(this.state(owner),owner)
+      const result=await work(this.syncDocument(this.state(owner),owner),owner)
       if(owner!==this.owner()||epoch!==this.epoch)throw Error('账户状态已变化，请重试。')
       return result
     })
     this.queue=operation.catch(()=>{});return operation
   }
-  private persist(state:State,owner:string,purge=false,contextChanged=true) {if(contextChanged)state.revision++;this.store.write(owner,state,purge);this.cache={owner,state};this.options.changed?.()}
+  private documentEntries(state:State):DocumentEntry[]{return Object.values(state.rows).map(({id,revision,title,content,kind,scope,projectId,status,pinned,expiresAt})=>({id,revision,title,content,kind,scope,projectId,status,pinned,expiresAt}))}
+  private documentSignature(state:State){return createHash('sha256').update(JSON.stringify([this.documentEntries(state).sort((a,b)=>a.id!.localeCompare(b.id!)),Object.values(state.projects).map(p=>({id:p.id,name:p.name})).sort((a,b)=>a.id.localeCompare(b.id))])).digest('hex')}
+  private summaryRecords(state:State){return Object.values(state.rows).filter(r=>r.status==='active'&&(r.expiresAt===undefined||r.expiresAt>this.now())).sort((a,b)=>a.id.localeCompare(b.id)).map(r=>({id:r.id,revision:r.revision,title:r.title,content:r.content,kind:r.kind,scope:r.scope,projectName:r.projectId?state.projects[r.projectId]?.name:undefined}))}
+  private summarySignature(state:State){return createHash('sha256').update(JSON.stringify(this.summaryRecords(state))).digest('hex')}
+  private persist(state:State,owner:string,purge=false,contextChanged=true) {
+    if(owner!==this.owner())throw Error('账户状态已变化，请重试。')
+    const signature=this.documentSignature(state)
+    if(!state.documentHash||signature!==state.documentSignature){state.documentHash=this.documents.write(owner,this.documentEntries(state),Object.values(state.projects),signature,state.documentHash);state.documentSignature=signature}
+    if(state.summary?.signature!==this.summarySignature(state))delete state.summary
+    if(contextChanged)state.revision++;this.store.write(owner,state,purge);this.cache={owner,state};this.options.changed?.()
+  }
+  private syncDocument(original:State,owner:string):State {
+    try{
+      const file=this.documents.read(owner)
+      if(!original.documentHash){this.persist(original,owner,false,false);this.documentError=undefined;return original}
+      if(file?.hash===original.documentHash){this.documentError=undefined;return original}
+      if(file&&file.signature!==original.documentSignature)throw Error('记忆文件版本已更新，请重新打开最新文件后修改；你的文件已保留。')
+      const state=structuredClone(original),entries=file?.entries??[],retained=new Set<string>(),now=this.now()
+      for(const entry of entries){const old=entry.id?state.rows[entry.id]:undefined
+        if(entry.id&&!old)throw Error('记忆文件中有未知条目，原文件已保留。')
+        if(old&&entry.revision!==old.revision)throw Error('记忆条目版本已更新，请重新读取。')
+        this.input(state,entry,entry.status==='candidate')
+        if(old)retained.add(old.id)
+        if(old&&JSON.stringify([entry.title,entry.content,entry.kind,entry.scope,entry.projectId,entry.status,entry.pinned,entry.expiresAt])===JSON.stringify([old.title,old.content,old.kind,old.scope,old.projectId,old.status,old.pinned,old.expiresAt]))continue
+        const row=this.save(state,{...entry,source:{kind:'manual',title:'记忆.md中编辑',excerpt:entry.content,createdAt:now}},old,entry.status,true)
+        retained.add(row.id);state.suppression=state.suppression.filter(s=>s.key!==this.hash(state,row.semanticKey)&&s.content!==this.hash(state,row.content))
+      }
+      let purge=false
+      for(const row of Object.values(state.rows))if(!retained.has(row.id)){
+        state.suppression.push({key:this.hash(state,row.semanticKey),content:this.hash(state,row.content)})
+        for(const source of row.sources)if(source.sessionId)state.suppression.push({key:this.hash(state,row.semanticKey),content:this.hash(state,row.content),sessionId:source.sessionId,seq:source.seq})
+        delete state.rows[row.id];delete state.versions[row.id];for(const usage of state.usages)usage.entries=usage.entries.filter(e=>e.id!==row.id);purge=true
+      }
+      state.documentHash=file?.hash;state.documentSignature=undefined;state.scopeEpoch++;this.cancelPending(state);this.captures.clear();this.retriever.clear();this.documentError=undefined;this.persist(state,owner,purge)
+      return state
+    }catch(error){this.documentError={owner,message:error instanceof Error?error.message:'记忆文件暂不可读取，原文件已保留。'};return original}
+  }
+  private summaryView(state:State):NonNullable<MemorySnapshot['summary']>{const count=this.summaryRecords(state).length,signature=this.summarySignature(state),summary=state.summary
+    if(this.documentError?.owner===this.owner())return {state:'failed',text:'',count}
+    if(!count)return {state:'empty',text:'',count}
+    if(!summary||summary.signature!==signature)return {state:'pending',text:'',count}
+    return {state:summary.state,text:summary.text??'',count,updatedAt:summary.updatedAt,model:summary.model}
+  }
+
   private cancelPending(state:State,sessionId?:string) {for(const job of Object.values(state.jobs))if((job.state==='pending'||job.state==='failed')&&(!sessionId||job.turn.sessionId===sessionId)){job.state='done';job.turn.events=[]}}
   private snapshot(state:State,sessionId?:string,query?:string):MemorySnapshot {
     const now=this.now()
     const rows=Object.values(state.rows).filter(row=>row.status!=='candidate'||now-row.createdAt<30*86400000).filter(row=>!query||normalizedMemoryText(row.title+row.content).includes(normalizedMemoryText(query)))
     const failed=Object.values(state.jobs).find(job=>job.state==='failed')
-    return structuredClone({revision:state.revision,owner:this.owner(),settings:state.settings,projects:Object.values(state.projects),rows:rows.sort((a,b)=>b.updatedAt-a.updatedAt),usages:state.usages.map(usage=>({...usage,entries:usage.entries.map(e=>state.rows[e.id]?e:{...e,title:'该记忆已删除',reason:'已删除'})})),...(sessionId?{session:{id:sessionId,projectId:state.bindings[sessionId]??undefined,disabled:state.disabled[sessionId]===true}}:{}),extraction:{state:failed||state.warning?'failed':Object.values(state.jobs).some(job=>job.state==='pending')?'running':'ready',message:state.warning??(failed?'最近一次自动整理未完成，可继续使用已保存记忆。':'已保存的记忆会在相关私人对话中使用。')}}) as MemorySnapshot
+    return structuredClone({revision:state.revision,owner:this.owner(),document:{...this.documents.location(this.owner()),...(this.documentError?.owner===this.owner()?{error:this.documentError.message}:{})},summary:this.summaryView(state),settings:state.settings,projects:Object.values(state.projects),rows:rows.sort((a,b)=>b.updatedAt-a.updatedAt),usages:state.usages.map(usage=>({...usage,entries:usage.entries.map(e=>state.rows[e.id]?e:{...e,title:'该记忆已删除',reason:'已删除'})})),...(sessionId?{session:{id:sessionId,projectId:state.bindings[sessionId]??undefined,disabled:state.disabled[sessionId]===true}}:{}),extraction:{state:failed||state.warning?'failed':Object.values(state.jobs).some(job=>job.state==='pending')?'running':'ready',message:state.warning??(failed?'最近一次自动整理未完成，可继续使用已保存记忆。':'已保存的记忆会在相关私人对话中使用。')}}) as MemorySnapshot
   }
   private async project(state:State,name:string,path?:string) {
     let canonical:string|undefined
@@ -146,8 +193,8 @@ export class MemoryService {
   })}
   async recall(context:MemoryRuntimeContext):Promise<MemoryRecall>{return this.serial(async(original,owner)=>{
     const sessionId=identifier(context.sessionId),state=structuredClone(original)
-    const enabled=state.settings.use&&!state.disabled[sessionId]&&!this.options.isShared(sessionId)
-    const autoEnabled=state.settings.auto&&!state.disabled[sessionId]&&!this.options.isShared(sessionId)
+    const enabled=this.documentError?.owner!==owner&&state.settings.use&&!state.disabled[sessionId]&&!this.options.isShared(sessionId)
+    const autoEnabled=this.documentError?.owner!==owner&&state.settings.auto&&!state.disabled[sessionId]&&!this.options.isShared(sessionId)
     const projectId=enabled||autoEnabled?await this.sessionProject(state,sessionId):state.bindings[sessionId]??undefined
     if(JSON.stringify(state.bindings)!==JSON.stringify(original.bindings))this.persist(state,owner)
     const entries=enabled?this.retriever.select(Object.values(state.rows),String(context.query??'').slice(0,6000),projectId,this.now()).map(({row,reason})=>({id:row.id,revision:row.revision,title:row.title,content:row.content,reason})):[]
@@ -155,7 +202,7 @@ export class MemoryService {
   })}
   async capture(turn:MemoryRuntimeTurn):Promise<MemoryCapture>{return this.serial(async(original,owner)=>{
     const state=structuredClone(original),sessionId=identifier(turn.sessionId),jobKey=sessionId+':'+identifier(turn.turnId)
-    if(!turn.anchor||turn.anchor.ownerEpoch!==this.epoch||turn.anchor.scopeEpoch!==state.scopeEpoch||!state.settings.auto||state.disabled[sessionId]||this.options.isShared(sessionId)||state.jobs[jobKey]?.state==='done')return {enabled:false,captureId:'',ownerEpoch:this.epoch,revision:state.revision}
+    if(this.documentError?.owner===owner||!turn.anchor||turn.anchor.ownerEpoch!==this.epoch||turn.anchor.scopeEpoch!==state.scopeEpoch||!state.settings.auto||state.disabled[sessionId]||this.options.isShared(sessionId)||state.jobs[jobKey]?.state==='done')return {enabled:false,captureId:'',ownerEpoch:this.epoch,revision:state.revision}
     for(const [id,capture]of this.captures)if(capture.jobKey===jobKey&&capture.owner===owner&&capture.epoch===this.epoch&&capture.scopeEpoch===state.scopeEpoch)return {enabled:true,captureId:id,ownerEpoch:this.epoch,revision:state.revision,projectId:capture.projectId}
     if(!Array.isArray(turn.events)||turn.events.length>80)throw Error('记忆来源无效。')
     const events=turn.events.filter(e=>e&&Number.isSafeInteger(e.seq)&&e.seq>=0&&['user','assistant'].includes(e.role)&&typeof e.text==='string'&&e.text.length<=16000)
@@ -163,7 +210,7 @@ export class MemoryService {
     const projectId=await this.sessionProject(state,sessionId)
     if(turn.anchor.projectId!==projectId)return {enabled:false,captureId:'',ownerEpoch:this.epoch,revision:state.revision}
     const captureId=randomBytes(24).toString('hex')
-    const clean={...turn,sessionId,events};state.jobs[jobKey]={turn:clean,state:'pending',attempts:state.jobs[jobKey]?.attempts??0}
+    const clean={...turn,sessionId,events};if(turn.route?.provider&&turn.route.model)state.summaryRoute={provider:identifier(turn.route.provider),model:identifier(turn.route.model)};state.jobs[jobKey]={turn:clean,state:'pending',attempts:state.jobs[jobKey]?.attempts??0}
     const pending=Object.keys(state.jobs);if(pending.length>2000)for(const key of pending.slice(0,pending.length-2000))if(state.jobs[key]?.state!=='pending')delete state.jobs[key]
     this.persist(state,owner);this.captures.set(captureId,{owner,epoch:this.epoch,scopeEpoch:state.scopeEpoch,jobKey,turn:clean,projectId})
     return {enabled:true,captureId,ownerEpoch:this.epoch,revision:state.revision,projectId}
@@ -219,7 +266,24 @@ export class MemoryService {
     const state=structuredClone(original);state.jobs[capture.jobKey]={turn:capture.turn,state:'failed',message:'自动整理未完成',attempts:state.jobs[capture.jobKey]?.attempts??0};this.captures.delete(input.captureId);this.persist(state,owner);return {ok:true}
   })}
   async pending(){return this.serial(state=>({items:Object.values(state.jobs).filter(j=>j.state==='pending'&&j.turn.anchor?.scopeEpoch===state.scopeEpoch&&j.turn.anchor.projectId===(state.bindings[j.turn.sessionId]??undefined)).map(j=>({turn:{...structuredClone(j.turn),anchor:{...j.turn.anchor!,ownerEpoch:this.epoch}}})).slice(0,20)}))}
-  rotateIdentity(){this.epoch=randomUUID();this.cache=undefined;this.captures.clear();this.retriever.clear();this.options.changed?.()}
+  async directory(){return this.serial((_state,owner)=>this.documents.location(owner))}
+  async summaryInput(){return this.serial((original,owner)=>{
+    const records=this.summaryRecords(original),signature=this.summarySignature(original),same=original.summary?.signature===signature
+    if(this.documentError?.owner===owner||!original.settings.use||!original.settings.auto||!records.length||!original.summaryRoute)return {enabled:false as const}
+    if(same&&(original.summary!.state==='ready'||original.summary!.ownerEpoch===this.epoch||original.summary!.attempts>=2))return {enabled:false as const}
+    const state=structuredClone(original);state.summary={signature,scopeEpoch:state.scopeEpoch,ownerEpoch:this.epoch,state:'pending',attempts:(same?state.summary?.attempts??0:0)+1}
+    this.persist(state,owner,false,false)
+    return {enabled:true as const,ownerEpoch:this.epoch,scopeEpoch:state.scopeEpoch,signature,route:state.summaryRoute!,records:records.slice(0,20),count:records.length}
+  })}
+  async summaryCommit(input:{ownerEpoch:string;scopeEpoch:number;signature:string;text:string;model:string}){return this.serial((original,owner)=>{
+    if(input.ownerEpoch!==this.epoch||input.scopeEpoch!==original.scopeEpoch||input.signature!==this.summarySignature(original)||original.summary?.state!=='pending'||this.documentError?.owner===owner||!original.settings.use||!original.settings.auto)return {ok:false}
+    const state=structuredClone(original);state.summary={...state.summary!,state:'ready',text:text(input.text,1600),model:text(input.model,256),updatedAt:this.now()};this.persist(state,owner,false,false);return {ok:true}
+  })}
+  async summaryFailure(input:{ownerEpoch:string;scopeEpoch:number;signature:string}){return this.serial((original,owner)=>{
+    if(input.ownerEpoch!==this.epoch||input.scopeEpoch!==original.scopeEpoch||input.signature!==this.summarySignature(original)||original.summary?.state!=='pending')return {ok:false}
+    const state=structuredClone(original);state.summary={...state.summary!,state:'failed',text:undefined};this.persist(state,owner,false,false);return {ok:true}
+  })}
+  rotateIdentity(){this.documentError=undefined;this.epoch=randomUUID();this.cache=undefined;this.captures.clear();this.retriever.clear();this.options.changed?.()}
   async close(){if(this.closed)return;await this.queue;this.closed=true;this.captures.clear();this.retriever.close();this.cache=undefined;this.store.close()}
   private async legacy(){
     const root=this.options.legacyRoot;if(!root)return []

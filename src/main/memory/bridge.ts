@@ -1,10 +1,10 @@
 import { createServer } from 'node:http'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
-type RuntimeService={recall(input:any):Promise<unknown>;capture(input:any):Promise<unknown>;commitExtraction(input:any):Promise<unknown>;validate(input:any):Promise<unknown>;usage(input:any):Promise<unknown>;failure(input:any):Promise<unknown>;pending():Promise<unknown>;attempt(input:any):Promise<unknown>}
+type RuntimeService={recall(input:any):Promise<unknown>;capture(input:any):Promise<unknown>;commitExtraction(input:any):Promise<unknown>;validate(input:any):Promise<unknown>;usage(input:any):Promise<unknown>;failure(input:any):Promise<unknown>;pending():Promise<unknown>;attempt(input:any):Promise<unknown>;summaryInput?():Promise<unknown>;summaryCommit?(input:any):Promise<unknown>;summaryFailure?(input:any):Promise<unknown>}
 export async function startMemoryBridge(service:RuntimeService) {
   const token=randomBytes(32).toString('hex')
-  const routes:Record<string,(input:any)=>Promise<unknown>>={'/recall':v=>service.recall(v),'/capture':v=>service.capture(v),'/commit':async v=>{await service.commitExtraction(v);return {ok:true}},'/validate':v=>service.validate(v),'/usage':v=>service.usage(v),'/failure':v=>service.failure(v),'/pending':()=>service.pending(),'/attempt':v=>service.attempt(v)}
+  const routes:Record<string,(input:any)=>Promise<unknown>>={'/recall':v=>service.recall(v),'/capture':v=>service.capture(v),'/commit':async v=>{await service.commitExtraction(v);return {ok:true}},'/validate':v=>service.validate(v),'/usage':v=>service.usage(v),'/failure':v=>service.failure(v),'/pending':()=>service.pending(),'/attempt':v=>service.attempt(v),'/summary-input':()=>service.summaryInput?.()??Promise.resolve({enabled:false}),'/summary-commit':v=>service.summaryCommit?.(v)??Promise.resolve({ok:false}),'/summary-failure':v=>service.summaryFailure?.(v)??Promise.resolve({ok:false})}
   let expectedHost=''
   const server=createServer(async(req,res)=>{
     const send=(status:number,value:unknown)=>{if(!res.destroyed){res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(value))}}

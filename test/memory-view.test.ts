@@ -5,87 +5,100 @@ import type {
   MemoryBridge,
   MemoryCommand,
   MemoryRecord,
-  MemorySnapshot
+  MemorySnapshot,
+  MemorySource
 } from '../src/shared/memory'
 
-const now = new Date('2026-10-14T08:00:00Z').getTime()
-const row = (overrides: Partial<MemoryRecord> = {}): MemoryRecord => ({
+type Snapshot = MemorySnapshot & {
+  document: { directory: string; file: string; error?: string }
+  summary: {
+    state: 'empty' | 'pending' | 'ready' | 'failed'
+    text: string
+    updatedAt?: number
+    model?: string
+    count: number
+  }
+}
+const at = new Date('2026-10-14T08:00:00Z').getTime()
+const record: MemoryRecord = {
   id: 'r1',
-  title: '阅读偏好',
-  content: '默认用中文回答。先给结论，再解释。',
+  title: '内部记录标题',
+  content: '没有经过概括的原始记录正文',
   kind: 'preference',
   scope: 'global',
-  semanticKey: 'language',
+  semanticKey: 'test',
   status: 'active',
-  revision: 3,
+  revision: 1,
   manualLocked: true,
   pinned: false,
-  createdAt: now,
-  updatedAt: now,
-  lastConfirmedAt: now,
-  sources: [
-    {
-      kind: 'conversation',
-      sessionId: 's1',
-      seq: 12,
-      title: '真实对话',
-      excerpt: '以后请默认中文，先给结论。',
-      createdAt: now
-    }
-  ],
-  ...overrides
-})
-const snapshot = (rows: MemoryRecord[] = [row()]): MemorySnapshot => ({
+  createdAt: at,
+  updatedAt: at,
+  lastConfirmedAt: at,
+  sources: []
+}
+const snapshot = (overrides: Partial<Snapshot> = {}): Snapshot => ({
   revision: 1,
   owner: 'local',
   settings: { use: true, auto: true },
+  rows: [record],
   projects: [
     {
       id: 'p1',
-      name: 'EWork 项目',
-      path: '/real/project',
+      name: '内部项目名称',
+      path: '/raw/project',
       aliases: [],
-      createdAt: now
+      createdAt: at
     }
   ],
-  rows,
   usages: [],
-  extraction: { state: 'ready', message: '' }
+  extraction: { state: 'ready', message: '' },
+  document: {
+    directory: '/actual/memory/local',
+    file: '/actual/memory/local/记忆.md'
+  },
+  summary: {
+    state: 'ready',
+    text: '用户喜欢先说明结论，再展开依据。\n\n项目继续沿用已确认的产品边界。',
+    updatedAt: at,
+    model: '当前模型',
+    count: 1
+  },
+  ...overrides
 })
 const resources: { window: Window; ui: ReturnType<typeof mountMemoryUi> }[] = []
 const tick = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
   await new Promise((resolve) => setTimeout(resolve, 0))
 }
-function setup(bridge: MemoryBridge) {
+function setup(bridge: MemoryBridge & { openDirectory?: () => Promise<void> }) {
   const window = new Window()
   window.document.body.innerHTML =
-    '<div class="VOzbGW_overlay"><div class="VOzbGW_panel"><nav><div class="VOzbGW_navList"><button data-account-nav>账户信息</button><button data-settings-section-id="general">通用设置</button></div></nav><main class="VOzbGW_content"><div class="VOzbGW_header"></div><div class="VOzbGW_options"><input id="original" value="原设置" /></div></main></div></div>'
-  const doc = window.document as unknown as Document
-  const ui = mountMemoryUi(doc, bridge)
+    '<div class="VOzbGW_overlay"><div class="VOzbGW_panel"><nav><div class="VOzbGW_navList"><button data-account-nav>账户信息</button><button data-settings-section-id="general">通用设置</button></div></nav><main class="VOzbGW_content"><header class="VOzbGW_header"></header><div class="VOzbGW_options"><input id="original" value="原设置" /></div></main></div></div>'
+  const doc = window.document as unknown as Document,
+    ui = mountMemoryUi(doc, bridge)
   resources.push({ window, ui })
   const button = (label: string) =>
     [...doc.querySelectorAll<HTMLButtonElement>('button')].find(
-      (b) => b.textContent === label || b.getAttribute('aria-label') === label
+      (el) =>
+        el.getAttribute('aria-label') === label || el.textContent === label
     )!
-  const field = (label: string) =>
-    doc.querySelector<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >(`[aria-label="${label}"]`)!
-  const change = (label: string, value: string) => {
-    const el = field(label)
-    el.value = value
-    el.dispatchEvent(
-      new window.Event(el.tagName === 'SELECT' ? 'change' : 'input', {
-        bubbles: true
-      }) as unknown as Event
-    )
-  }
+  const toggle = () =>
+    doc.querySelector<HTMLInputElement>('input[aria-label="启用记忆"]')!
   const open = async () => {
     button('记忆').click()
     await tick()
   }
-  return { window, doc, ui, button, field, change, open }
+  const selection = (
+    content: string,
+    source: MemorySource,
+    sessionId?: string
+  ) =>
+    doc.dispatchEvent(
+      new window.CustomEvent('sherlock:memory-save-selection', {
+        detail: { content, source, sessionId, title: '所选内容' }
+      }) as unknown as Event
+    )
+  return { window, doc, ui, button, toggle, open, selection }
 }
 afterEach(async () => {
   for (const { window, ui } of resources.splice(0)) {
@@ -94,73 +107,201 @@ afterEach(async () => {
   }
 })
 
-describe('ordinary settings memory UI', () => {
-  it('preserves input typed into the same draft while its earlier content is saving',async()=>{
-    let finish:(value:MemorySnapshot)=>void=()=>{}
-    const commands:MemoryCommand[]=[]
-    const {button,field,change,open}=setup({request:command=>{commands.push(command);return command.type==='save'?new Promise(resolve=>{finish=resolve}):Promise.resolve(snapshot([]))}})
-    await open();button('新增记忆').click();change('标题','标题');change('内容','提交的内容');button('保存记忆').click()
-    change('内容','保存期间继续输入的新内容')
-    finish(snapshot([row({id:'new-row',title:'标题',content:'提交的内容',revision:1})]));await tick()
-    expect(field('内容')?.value).toBe('保存期间继续输入的新内容')
-    button('保存记忆').click()
-    expect(commands.at(-1)).toMatchObject({type:'save',id:'new-row',expectedRevision:1,input:{content:'保存期间继续输入的新内容'}})
-    finish(snapshot([row({id:'new-row',title:'标题',content:'保存期间继续输入的新内容',revision:2})]));await tick()
-  })
-  it('opens without a chat and renders real readable previews without treating content as HTML', async () => {
-    const state = snapshot([
-      row(),
-      row({
-        id: 'project',
-        title: '项目约束',
-        content: '<img src=x onerror=alert(1)> 保留实际约束',
-        kind: 'decision',
-        scope: 'project',
-        projectId: 'p1'
-      })
-    ])
-    const { doc, button, open } = setup({ request: async () => state })
+describe('simple ordinary memory settings', () => {
+  it('shows exactly one master switch, the real document directory and the supplied AI summary', async () => {
+    const state = snapshot({
+      summary: {
+        state: 'ready',
+        text: '真实模型概括 <img src=x onerror=alert(1)>\n保留完整文本。',
+        updatedAt: at,
+        model: '本轮所选模型',
+        count: 3
+      }
+    })
+    const { doc, toggle, open } = setup({
+      request: async () => state,
+      openDirectory: async () => {}
+    })
     await open()
-    expect(doc.querySelector('[data-memory-page]')?.textContent).toContain(
-      '默认用中文回答。先给结论，再解释。'
+    expect(doc.querySelectorAll('input[type=checkbox]')).toHaveLength(1)
+    expect(toggle().checked).toBe(true)
+    expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain(
+      '记忆.md'
     )
-    expect(doc.querySelector('[data-memory-page]')?.textContent).toContain(
-      'EWork 项目'
+    expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain(
+      '/actual/memory/local'
     )
-    expect(doc.querySelector('[data-memory-page]')?.textContent).toContain(
-      '<img src=x onerror=alert(1)>'
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      state.summary.text
     )
-    expect(doc.querySelector('[data-memory-page] img')).toBeNull()
-    expect(
-      doc.querySelector('[data-memory-count="active"]')?.textContent
-    ).toContain('2')
-    button('阅读偏好').click()
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
-      '以后请默认中文，先给结论。'
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '本轮所选模型'
     )
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
-      '人工修改已锁定'
-    )
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
       '2026'
     )
+    expect(doc.querySelector('[data-memory-page] img')).toBeNull()
+    expect(doc.querySelector('[data-memory-page]')?.textContent).not.toContain(
+      record.content
+    )
+    expect(doc.querySelector('[data-memory-page]')?.textContent).not.toContain(
+      '内部项目名称'
+    )
+    expect(
+      doc.querySelector(
+        '[data-memory-row],[data-memory-editor],select,textarea'
+      )
+    ).toBeNull()
+    expect(
+      [...doc.querySelectorAll('button')].map((el) => el.textContent)
+    ).not.toContain('新增记忆')
   })
-
-  it('shows an honest empty state and restores the original native settings when switching sections', async () => {
-    const { doc, button, open } = setup({ request: async () => snapshot([]) })
-    const original = doc.querySelector('#original')
+  it('turns use and auto on together when the stored switches disagree, then turns both off', async () => {
+    let state = snapshot({ settings: { use: true, auto: false } })
+    const commands: MemoryCommand[] = []
+    const { toggle, open } = setup({
+      request: async (command) => {
+        commands.push(command)
+        if (command.type === 'settings')
+          state = {
+            ...state,
+            settings: { use: command.use!, auto: command.auto! }
+          }
+        return state
+      }
+    })
     await open()
-    expect(doc.querySelector('[data-memory-page]')?.textContent).toContain(
+    expect(toggle().checked).toBe(false)
+    toggle().click()
+    await tick()
+    expect(commands.at(-1)).toEqual({ type: 'settings', use: true, auto: true })
+    expect(toggle().checked).toBe(true)
+    toggle().click()
+    await tick()
+    expect(commands.at(-1)).toEqual({
+      type: 'settings',
+      use: false,
+      auto: false
+    })
+    expect(toggle().checked).toBe(false)
+  })
+  it('restores the saved master switch state when its write fails', async () => {
+    const { doc, toggle, open } = setup({
+      request: async (command) => {
+        if (command.type === 'settings') throw Error('write failed')
+        return snapshot()
+      }
+    })
+    await open()
+    toggle().click()
+    await tick()
+    expect(toggle().checked).toBe(true)
+    expect(toggle().disabled).toBe(false)
+    expect(doc.querySelector('[role=alert]')?.textContent).toContain('恢复')
+  })
+  it('opens the document directory through the native bridge and reports failure without hiding the path', async () => {
+    let calls = 0
+    const { doc, button, open } = setup({
+      request: async () => snapshot(),
+      openDirectory: async () => {
+        calls++
+        throw Error('open failed')
+      }
+    })
+    await open()
+    button('打开记忆存储目录').click()
+    await tick()
+    expect(calls).toBe(1)
+    expect(doc.querySelector('[role=alert]')?.textContent).toContain('目录')
+    expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain(
+      '/actual/memory/local'
+    )
+    expect(button('打开记忆存储目录').disabled).toBe(false)
+  })
+  it('shows an honest empty state instead of inventing an AI overview from internal rows', async () => {
+    const { doc, open } = setup({
+      request: async () =>
+        snapshot({ summary: { state: 'empty', text: '', count: 0 } })
+    })
+    await open()
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
       '还没有保存记忆'
     )
+    expect(doc.querySelector('[data-memory-page]')?.textContent).not.toContain(
+      record.content
+    )
     expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(0)
+  })
+  it('follows actual pending, ready and failed summary states while retaining the last real overview', async () => {
+    let state = snapshot({
+        summary: {
+          state: 'pending',
+          text: '上次模型概括',
+          updatedAt: at,
+          count: 2
+        }
+      }),
+      notify = () => {}
+    const { doc, open } = setup({
+      request: async () => state,
+      subscribe: (listener) => {
+        notify = listener
+        return () => {}
+      }
+    })
+    await open()
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '正在更新'
+    )
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '上次模型概括'
+    )
+    state = snapshot({
+      revision: 2,
+      summary: {
+        state: 'ready',
+        text: '刚完成的真实概括',
+        updatedAt: at + 60000,
+        count: 2
+      }
+    })
+    notify()
+    await tick()
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '刚完成的真实概括'
+    )
+    expect(
+      doc.querySelector('[data-memory-summary]')?.textContent
+    ).not.toContain('正在更新')
+    state = snapshot({
+      revision: 3,
+      summary: {
+        state: 'failed',
+        text: '刚完成的真实概括',
+        updatedAt: at + 60000,
+        count: 2
+      }
+    })
+    notify()
+    await tick()
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '暂未更新'
+    )
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '刚完成的真实概括'
+    )
+  })
+  it('preserves the native settings tree and removes its own page when other sections become active', async () => {
+    const { doc, button, open } = setup({ request: async () => snapshot() })
+    const original = doc.querySelector('#original')
+    await open()
     button('通用设置').click()
     await tick()
     expect(doc.querySelector('[data-memory-page]')).toBeNull()
+    expect(doc.querySelector('#original')).toBe(original)
     expect(
       doc.querySelector('.VOzbGW_panel')?.hasAttribute('data-memory-active')
     ).toBe(false)
-    expect(doc.querySelector('#original')).toBe(original)
     await open()
     button('账户信息').click()
     expect(doc.querySelector('[data-memory-page]')).toBeNull()
@@ -168,594 +309,285 @@ describe('ordinary settings memory UI', () => {
       doc.querySelector('[data-memory-nav]')?.hasAttribute('aria-current')
     ).toBe(false)
   })
-
-  it('preserves a failed draft, saves its scope and expiry, and edits with the record revision', async () => {
-    let state = snapshot([]),
-      fail = true
-    const commands: MemoryCommand[] = []
-    const { doc, button, change, field, open } = setup({
-      request: async (command) => {
-        commands.push(command)
-        if (command.type === 'save') {
-          if (fail) throw new Error('SECURE_STORAGE_UNAVAILABLE')
-          state = {
-            ...state,
-            revision: state.revision + 1,
-            rows: [
-              row({
-                ...command.input,
-                id: 'saved',
-                revision: command.id ? 5 : 4,
-                manualLocked: true
-              })
-            ]
-          }
-        }
-        return state
-      }
-    })
-    await open()
-    button('新增记忆').click()
-    change('标题', '实际产品基线')
-    change('内容', '保持用户确认的基线。')
-    change('分类', 'decision')
-    change('作用范围', 'project')
-    change('所属项目', 'p1')
-    change('有效期', '2026-10-21')
-    ;(field('置顶') as HTMLInputElement).click()
-    button('保存记忆').click()
-    await tick()
-    expect(field('内容').value).toBe('保持用户确认的基线。')
-    expect(doc.querySelector('[role="alert"]')?.textContent).toContain('保存')
-    fail = false
-    button('保存记忆').click()
-    await tick()
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
-      '保持用户确认的基线。'
-    )
-    const create = commands.find((c) => c.type === 'save')
-    expect(create).toMatchObject({
-      type: 'save',
-      input: {
-        title: '实际产品基线',
-        content: '保持用户确认的基线。',
-        kind: 'decision',
-        scope: 'project',
-        projectId: 'p1',
-        pinned: true
-      }
-    })
-    expect(create?.type === 'save' && create.input.expiresAt).toBeGreaterThan(
-      now
-    )
-    button('编辑').click()
-    change('内容', '更新后的人工约束。')
-    button('保存记忆').click()
-    await tick()
-    expect(commands.at(-1)).toMatchObject({
-      type: 'save',
-      id: 'saved',
-      expectedRevision: 4,
-      input: { content: '更新后的人工约束。' }
-    })
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
-      '更新后的人工约束。'
-    )
-  })
-
-  it('requires one deletion confirmation, leaves records on cancel or failure, and clears them after success', async () => {
-    let state = snapshot(),
-      fail = true,
-      deletions = 0
-    const { doc, button, open } = setup({
-      request: async (command) => {
-        if (command.type === 'action' && command.action === 'delete') {
-          expect(command.expectedRevisions).toEqual({ r1: 3 })
-          deletions++
-          if (fail) throw new Error('MEMORY_CONFLICT')
-          state = snapshot([])
-        }
-        return state
-      }
-    })
-    await open()
-    button('阅读偏好').click()
-    button('删除').click()
-    expect(doc.querySelector('[data-memory-confirm]')?.textContent).toContain(
-      '原对话中的文字会保留'
-    )
-    button('取消删除').click()
-    expect(deletions).toBe(0)
-    button('删除').click()
-    button('确认删除').click()
-    await tick()
-    expect(doc.querySelector('[data-memory-row]')).not.toBeNull()
-    expect(doc.querySelector('[data-memory-confirm]')).not.toBeNull()
-    fail = false
-    button('确认删除').click()
-    await tick()
-    expect(deletions).toBe(2)
-    expect(doc.querySelector('[data-memory-confirm]')).toBeNull()
-    expect(doc.querySelector('[data-memory-row]')).toBeNull()
-  })
-
-  it('accepts candidates and changes use settings while filtering real records', async () => {
-    let state = snapshot([
-      row(),
-      row({
-        id: 'candidate',
-        title: '待确认约束',
-        content: '需要确认的内容',
-        scope: 'project',
-        projectId: 'p1',
-        status: 'candidate'
-      })
-    ])
-    const { doc, button, field, change, open } = setup({
-      request: async (command) => {
-        if (command.type === 'action')
-          state = {
-            ...state,
-            rows: state.rows.map((r) =>
-              command.ids.includes(r.id)
-                ? {
-                    ...r,
-                    status: command.action === 'accept' ? 'active' : 'disabled'
-                  }
-                : r
-            )
-          }
-        if (command.type === 'settings')
-          state = {
-            ...state,
-            settings: {
-              ...state.settings,
-              ...(command.use !== undefined ? { use: command.use } : {})
-            }
-          }
-        return state
-      }
-    })
-    await open()
-    button('待确认').click()
-    expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(1)
-    button('待确认约束').click()
-    button('采用').click()
-    await tick()
-    expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(0)
-    button('全部').click()
-    change('搜索记忆', '需要确认')
-    expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(1)
-    ;(field('使用已保存记忆') as HTMLInputElement).click()
-    await tick()
-    expect((field('使用已保存记忆') as HTMLInputElement).checked).toBe(false)
-  })
-
-  it('keeps complete source text and explains unavailable native navigation', async () => {
-    const { doc, button, open } = setup({
-      request: async () => snapshot(),
-      openSource: async () => {
-        throw new Error('SOURCE_UNAVAILABLE')
-      }
-    })
-    await open()
-    button('阅读偏好').click()
-    button('查看来源').click()
-    await tick()
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
-      '以后请默认中文，先给结论。'
-    )
-    expect(doc.querySelector('[role="alert"]')?.textContent).toContain('来源')
-  })
-
-  it('discards old identity snapshot and mutation completions before rendering the new identity', async () => {
-    let oldSnapshot: (value: MemorySnapshot) => void = () => {},
-      oldMutation: (value: MemorySnapshot) => void = () => {}
-    let owner = 'old',
+  it('discards a pending snapshot from the previous identity and removes its old directory and overview', async () => {
+    let old: (value: Snapshot) => void = () => {},
       reads = 0
-    const { doc, ui, button, change, open } = setup({
-      request: (command) => {
-        if (command.type === 'snapshot') {
-          reads++
-          if (reads === 1)
-            return new Promise((resolve) => {
-              oldSnapshot = resolve
+    const { doc, ui, open } = setup({
+      request: () =>
+        ++reads === 1
+          ? new Promise((resolve) => {
+              old = resolve
             })
-          return Promise.resolve({
-            ...snapshot([
-              row({ title: owner === 'old' ? '旧身份内容' : '新身份内容' })
-            ]),
-            owner
-          })
-        }
-        return new Promise((resolve) => {
-          oldMutation = resolve
-        })
-      }
+          : Promise.resolve(
+              snapshot({
+                owner: 'new',
+                document: {
+                  directory: '/new/identity',
+                  file: '/new/identity/记忆.md'
+                },
+                summary: { state: 'ready', text: '新身份概括', count: 1 }
+              })
+            )
     })
     await open()
-    owner = 'new'
     ui.resetIdentity()
     await tick()
-    oldSnapshot({
-      ...snapshot([row({ title: '不可泄露旧正文' })]),
-      owner: 'old'
-    })
-    await tick()
-    expect(doc.querySelector('[data-memory-page]')?.textContent).toContain(
-      '新身份内容'
+    old(
+      snapshot({
+        document: { directory: '/old/private', file: '/old/private/记忆.md' },
+        summary: { state: 'ready', text: '旧身份私密概括', count: 1 }
+      })
     )
-    expect(doc.body.textContent).not.toContain('不可泄露旧正文')
-    button('新增记忆').click()
-    change('标题', '旧请求草稿')
-    change('内容', '切换前内容')
-    button('保存记忆').click()
-    owner = 'next'
-    ui.resetIdentity()
     await tick()
-    oldMutation({
-      ...snapshot([row({ title: '迟到的保存内容' })]),
-      owner: 'new'
-    })
-    await tick()
-    expect(doc.body.textContent).not.toContain('迟到的保存内容')
-    expect(doc.querySelector('[data-memory-editor]')).toBeNull()
+    expect(doc.body.textContent).toContain('新身份概括')
+    expect(doc.body.textContent).not.toContain('旧身份私密概括')
+    expect(doc.body.textContent).not.toContain('/old/private')
   })
-
-  it('uses selected session context for binding, session exclusion, selection save and actual usage details', async () => {
-    let state: MemorySnapshot = {
-      ...snapshot(),
-      session: { id: 's1', projectId: 'p1', disabled: false },
-      usages: [
-        {
-          id: 'usage1',
-          sessionId: 's1',
-          createdAt: now,
-          entries: [
-            { id: 'r1', revision: 2, title: '阅读偏好', reason: '语言习惯' },
-            { id: 'gone', revision: 1, title: '已删除标题', reason: '旧引用' }
-          ]
-        }
-      ]
-    }
-    const commands: MemoryCommand[] = []
-    const { doc, window, button, field, change, open } = setup({
-      request: async (command) => {
-        commands.push(command)
-        if (command.type === 'bind')
-          state = {
-            ...state,
-            session: {
-              id: command.sessionId,
-              projectId: command.projectId,
-              disabled: false
-            }
-          }
-        if (command.type === 'session')
-          state = {
-            ...state,
-            session: { ...state.session!, disabled: command.disabled }
-          }
-        return state
-      }
-    })
-    doc.documentElement.dataset.srbSelectedSession = 's1'
-    await open()
-    expect(commands[0]).toMatchObject({ type: 'snapshot', sessionId: 's1' })
-    change('当前对话所属项目', '')
-    await tick()
-    expect(commands.at(-1)).toEqual({
-      type: 'bind',
-      sessionId: 's1',
-      projectId: undefined
-    })
-    ;(field('本次对话不使用也不保存记忆') as HTMLInputElement).click()
-    await tick()
-    expect(commands.at(-1)).toEqual({
-      type: 'session',
-      sessionId: 's1',
-      disabled: true
-    })
-    button('本轮使用详情').click()
-    expect(doc.querySelector('[data-memory-usage]')?.textContent).toContain(
-      '语言习惯'
-    )
-    expect(doc.querySelector('[data-memory-usage]')?.textContent).toContain(
-      '该记忆已删除'
-    )
-    expect(doc.querySelector('[data-memory-usage]')?.textContent).not.toContain(
-      '已删除标题'
-    )
-    expect(doc.querySelector('[data-memory-usage]')?.textContent).toContain(
-      '现已更新'
-    )
-    doc.dispatchEvent(
-      new window.CustomEvent('sherlock:memory-save-selection', {
-        detail: {
-          sessionId: 's1',
-          content: '所选原文',
-          source: {
-            kind: 'note',
-            sessionId: 's1',
-            noteId: 'n1',
-            title: '笔记选区',
-            excerpt: '所选原文',
-            createdAt: now
-          }
-        }
-      }) as unknown as Event
-    )
-    await tick()
-    expect(field('内容').value).toBe('所选原文')
-  })
-
-  it('retains verified session context when a settings response has no session projection and follows sidebar changes', async () => {
-    const commands: MemoryCommand[] = []
-    const { doc, window, field, open } = setup({
-      request: async (command) => {
-        commands.push(command)
-        return command.type === 'snapshot'
-          ? {
-              ...snapshot(),
-              session: {
-                id: command.sessionId!,
-                projectId: 'p1',
-                disabled: false
-              }
-            }
-          : snapshot()
-      }
-    })
-    doc.dispatchEvent(
-      new window.CustomEvent('sherlock:memory-session', {
-        detail: { sessionId: 's1' }
-      }) as unknown as Event
-    )
-    await open()
-    ;(field('使用已保存记忆') as HTMLInputElement).click()
-    await tick()
-    expect(field('本次对话不使用也不保存记忆')).not.toBeNull()
-    expect(field('当前对话所属项目').value).toBe('p1')
-    doc.documentElement.dataset.srbSelectedSession = 's2'
-    doc.dispatchEvent(
-      new window.Event('sherlock-sidebar-selection') as unknown as Event
-    )
-    await tick()
-    expect(commands.at(-1)).toEqual({ type: 'snapshot', sessionId: 's2' })
-  })
-
-  it('does not replace a newer draft when the previous save finishes late', async () => {
-    let finish: (value: MemorySnapshot) => void = () => {}
-    const { button, field, change, open } = setup({
+  it('ignores old switch and directory completions after identity rotation', async () => {
+    let finish: (value: Snapshot) => void = () => {},
+      failOpen: (error: Error) => void = () => {},
+      owner = 'old'
+    const { doc, ui, toggle, button, open } = setup({
       request: (command) =>
-        command.type === 'save'
+        command.type === 'settings'
           ? new Promise((resolve) => {
               finish = resolve
             })
-          : Promise.resolve(snapshot([]))
+          : Promise.resolve(snapshot({ owner })),
+      openDirectory: () =>
+        new Promise((_resolve, reject) => {
+          failOpen = reject
+        })
     })
     await open()
-    button('新增记忆').click()
-    change('标题', '正在保存')
-    change('内容', '旧稿正文')
-    button('保存记忆').click()
-    button('新增记忆').click()
-    change('标题', '后来新建')
-    change('内容', '不能丢失的新草稿')
-    finish(snapshot([row({ title: '正在保存', content: '旧稿正文' })]))
+    toggle().click()
+    button('打开记忆存储目录').click()
+    owner = 'new'
+    ui.resetIdentity()
     await tick()
-    expect(field('标题').value).toBe('后来新建')
-    expect(field('内容').value).toBe('不能丢失的新草稿')
+    finish(
+      snapshot({
+        owner: 'old',
+        settings: { use: false, auto: false },
+        summary: { state: 'ready', text: '迟到的旧身份概括', count: 1 }
+      })
+    )
+    failOpen(Error('old opening failed'))
+    await tick()
+    expect(toggle().checked).toBe(true)
+    expect(doc.body.textContent).not.toContain('迟到的旧身份概括')
+    expect(doc.querySelector('[role=alert]')).toBeNull()
   })
-
-  it('preserves a project creation draft through a background refresh and a failed save', async () => {
-    let notify = () => {}
-    const { button, field, change, open } = setup({
+  it('directly saves a selected note to its captured project and shows a nonblocking document toast without opening settings', async () => {
+    const commands: MemoryCommand[] = []
+    const { doc, selection } = setup({
       request: async (command) => {
-        if (command.type === 'project') throw Error('目录不可用')
-        return snapshot()
-      },
-      subscribe: (listener) => {
-        notify = listener
-        return () => {}
+        commands.push(command)
+        return snapshot({
+          session: { id: 'note-session', projectId: 'p1', disabled: false }
+        })
       }
     })
-    await open()
-    button('新建项目').click()
-    change('项目名称', '真实项目')
-    change('工作区目录', '/real/new-project')
-    notify()
+    const source: MemorySource = {
+      kind: 'note',
+      sessionId: 'note-session',
+      noteId: 'note1',
+      noteRevision: 4,
+      title: '笔记选区',
+      excerpt: '仅保存所选原文',
+      createdAt: at
+    }
+    selection('仅保存所选原文', source, 'note-session')
     await tick()
-    expect(field('项目名称').value).toBe('真实项目')
-    expect(field('工作区目录').value).toBe('/real/new-project')
-    button('创建项目').click()
-    await tick()
-    expect(field('项目名称').value).toBe('真实项目')
-  })
-
-  it('keeps the revisions from deletion confirmation when records refresh in the background', async () => {
-    let state = snapshot(),
-      notify = () => {}
-    const { button, doc, open } = setup({
-      request: async (command) => {
-        if (command.type === 'action') {
-          expect(command.expectedRevisions).toEqual({ r1: 3 })
-          throw Error('记忆已更新，请刷新后重试。')
-        }
-        return state
-      },
-      subscribe: (listener) => {
-        notify = listener
-        return () => {}
+    expect(commands[0]).toEqual({ type: 'snapshot', sessionId: 'note-session' })
+    expect(commands[1]).toMatchObject({
+      type: 'save',
+      input: {
+        title: '所选内容',
+        content: '仅保存所选原文',
+        scope: 'project',
+        projectId: 'p1',
+        kind: 'background',
+        source
       }
     })
-    await open()
-    button('阅读偏好').click()
-    button('删除').click()
-    state = snapshot([row({ revision: 4, content: '另一处编辑过的正文' })])
-    notify()
-    await tick()
-    button('确认删除').click()
-    await tick()
-    expect(doc.querySelector('[data-memory-confirm]')).not.toBeNull()
-    expect(doc.querySelector('[role="alert"]')?.textContent).toContain('更新')
-  })
-
-  it('imports only selected real legacy files as candidates and supports reversible bulk disable', async () => {
-    let state = snapshot([row(), row({ id: 'r2', title: '第二条偏好' })])
-    const { button, field, change, doc, open } = setup({
-      request: async (command) => {
-        if (command.type === 'legacy-preview')
-          return {
-            ...state,
-            legacy: [
-              {
-                id: 'old1',
-                title: '保留的旧文件',
-                content: '实际旧文件正文',
-                createdAt: now
-              },
-              {
-                id: 'old2',
-                title: '未选择文件',
-                content: '不应导入',
-                createdAt: now
-              }
-            ]
-          }
-        if (command.type === 'import-legacy') {
-          expect(command.ids).toEqual(['old1'])
-          expect(command.projectId).toBe('p1')
-          state = {
-            ...state,
-            rows: [
-              ...state.rows,
-              row({
-                id: 'legacy',
-                title: '保留的旧文件',
-                content: '实际旧文件正文',
-                status: 'candidate',
-                scope: 'project',
-                projectId: 'p1'
-              })
-            ]
-          }
-        }
-        if (command.type === 'action') {
-          expect(command.action).toBe('disable')
-          expect(new Set(command.ids)).toEqual(new Set(['r1', 'r2']))
-          state = {
-            ...state,
-            rows: state.rows.map((r) =>
-              command.ids.includes(r.id) ? { ...r, status: 'disabled' } : r
-            )
-          }
-        }
-        return state
-      }
-    })
-    await open()
-    ;(field('选择当前列表') as HTMLInputElement).click()
-    button('批量停用').click()
-    await tick()
+    expect(doc.querySelector('[data-memory-toast]')?.textContent).toContain(
+      '已保存到记忆.md'
+    )
     expect(
-      [...doc.querySelectorAll('[data-memory-row]')].every((el) =>
-        el.textContent?.includes('已停用')
-      )
-    ).toBe(true)
-    button('导入旧记忆').click()
-    await tick()
-    expect(doc.querySelector('.ew-memory-legacy')?.textContent).toContain(
-      '实际旧文件正文'
-    )
-    ;(field('导入 保留的旧文件') as HTMLInputElement).click()
-    change('导入所属项目', 'p1')
-    button('导入所选').click()
-    await tick()
-    expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(1)
-    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain(
-      '待确认'
-    )
+      doc.querySelector('[data-memory-page],[data-memory-editor]')
+    ).toBeNull()
   })
-
-  it('keeps deletion keyboard focus inside confirmation and Escape cancels without writing', async () => {
-    let writes = 0
-    const { window, doc, button, open } = setup({
+  it('saves an unbound selection as a global preference and refuses oversized content without truncation', async () => {
+    const commands: MemoryCommand[] = []
+    const { doc, selection } = setup({
       request: async (command) => {
-        if (command.type !== 'snapshot') writes++
-        return snapshot()
+        commands.push(command)
+        return snapshot({ session: { id: 's1', disabled: false } })
       }
     })
-    await open()
-    button('阅读偏好').click()
-    button('删除').click()
-    const confirm = button('确认删除'),
-      cancel = button('取消删除')
-    confirm.focus()
-    doc.dispatchEvent(
-      new window.KeyboardEvent('keydown', {
-        key: 'Tab',
-        bubbles: true,
-        cancelable: true
-      }) as unknown as Event
+    const source: MemorySource = {
+      kind: 'conversation',
+      sessionId: 's1',
+      title: '对话选区',
+      excerpt: '默认中文回答',
+      seq: 2,
+      createdAt: at
+    }
+    selection('默认中文回答', source, 's1')
+    await tick()
+    expect(commands[1]).toMatchObject({
+      type: 'save',
+      input: { scope: 'global', kind: 'preference', content: '默认中文回答' }
+    })
+    const before = commands.length,
+      long = '中'.repeat(601)
+    selection(long, { ...source, excerpt: long }, 's1')
+    await tick()
+    expect(commands).toHaveLength(before)
+    expect(doc.querySelector('[data-memory-toast]')?.textContent).toContain(
+      '600'
     )
-    expect(doc.activeElement).toBe(cancel)
-    cancel.focus()
-    doc.dispatchEvent(
-      new window.KeyboardEvent('keydown', {
-        key: 'Tab',
-        shiftKey: true,
-        bubbles: true,
-        cancelable: true
-      }) as unknown as Event
-    )
-    expect(doc.activeElement).toBe(confirm)
-    doc.dispatchEvent(
-      new window.KeyboardEvent('keydown', {
-        key: 'Escape',
-        bubbles: true,
-        cancelable: true
-      }) as unknown as Event
-    )
-    expect(doc.querySelector('[data-memory-confirm]')).toBeNull()
-    expect(writes).toBe(0)
   })
-
-  it('lets the user compare a conflicting update and explicitly continue without dropping their draft', async () => {
-    let state = snapshot()
-    const { button, change, field, doc, open } = setup({
-      request: async (command) => {
+  it('does not save a queued selection or show its toast after its identity has changed', async () => {
+    let finish: (value: Snapshot) => void = () => {},
+      writes = 0
+    const { doc, selection, ui } = setup({
+      request: (command) => {
         if (command.type === 'save') {
-          if (command.expectedRevision !== state.rows[0]!.revision)
-            throw Error('记忆已更新，请重新读取最新版本后保存。')
-          state = snapshot([
-            row({ ...command.input, revision: state.rows[0]!.revision + 1 })
-          ])
+          writes++
+          return Promise.resolve(snapshot())
         }
-        return state
+        return new Promise((resolve) => {
+          finish = resolve
+        })
+      }
+    })
+    selection(
+      '旧身份选区',
+      {
+        kind: 'note',
+        sessionId: 's1',
+        title: '笔记',
+        excerpt: '旧身份选区',
+        createdAt: at
+      },
+      's1'
+    )
+    await tick()
+    ui.resetIdentity()
+    finish(
+      snapshot({ session: { id: 's1', projectId: 'p1', disabled: false } })
+    )
+    await tick()
+    expect(writes).toBe(0)
+    expect(doc.querySelector('[data-memory-toast]')).toBeNull()
+  })
+  it('shows a document write error alongside readable storage information without replacing the AI text', async () => {
+    const { doc, open } = setup({
+      request: async () =>
+        snapshot({
+          document: {
+            directory: '/actual/memory/local',
+            file: '/actual/memory/local/记忆.md',
+            error: '记忆.md写入失败，原数据已保留。'
+          }
+        })
+    })
+    await open()
+    expect(
+      doc.querySelector('[data-memory-document-error]')?.textContent
+    ).toContain('原数据已保留')
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '用户喜欢先说明结论'
+    )
+  })
+  it('does not claim the memory is empty when the service has not supplied a summary', async () => {
+    const { doc, open } = setup({
+      request: async () => ({ ...snapshot(), summary: undefined })
+    })
+    await open()
+    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
+      '暂不可用'
+    )
+    expect(
+      doc.querySelector('[data-memory-summary]')?.textContent
+    ).not.toContain('还没有保存记忆')
+    expect(doc.body.textContent).not.toContain(record.content)
+  })
+  it('does not report document save success when the service reports a file write failure', async () => {
+    const { doc, selection } = setup({
+      request: async (command) =>
+        snapshot({
+          ...(command.type === 'save'
+            ? {
+                document: {
+                  directory: '/actual/memory/local',
+                  file: '/actual/memory/local/记忆.md',
+                  error: 'write failed'
+                }
+              }
+            : {})
+        })
+    })
+    selection(
+      '选择的内容',
+      {
+        kind: 'note',
+        sessionId: 's1',
+        title: '笔记选区',
+        excerpt: '选择的内容',
+        createdAt: at
+      },
+      's1'
+    )
+    await tick()
+    expect(doc.querySelector('[data-memory-toast]')?.getAttribute('role')).toBe(
+      'alert'
+    )
+    expect(doc.querySelector('[data-memory-toast]')?.textContent).toContain(
+      '暂未写入'
+    )
+    expect(doc.querySelector('[data-memory-toast]')?.textContent).not.toContain(
+      '已保存到记忆.md'
+    )
+  })
+  it('reconciles a reopened settings shell once and removes listeners and styles on disposal', async () => {
+    let reads = 0,
+      unsubscribed = 0,
+      notify = () => {}
+    const { doc, window, ui, open } = setup({
+      request: async () => {
+        reads++
+        return snapshot()
+      },
+      subscribe: (listener) => {
+        notify = listener
+        return () => unsubscribed++
       }
     })
     await open()
-    button('阅读偏好').click()
-    button('编辑').click()
-    change('内容', '我的未保存修改')
-    state = snapshot([row({ revision: 4, content: '另一处刚更新的内容' })])
-    button('保存记忆').click()
+    doc.querySelector('.VOzbGW_panel')?.remove()
+    const next = doc.createElement('section')
+    next.className = 'VOzbGW_panel'
+    next.innerHTML =
+      '<nav><div class="VOzbGW_navList"></div></nav><main class="VOzbGW_content"></main>'
+    doc.body.append(next)
     await tick()
-    expect(field('内容').value).toBe('我的未保存修改')
-    button('刷新').click()
+    expect(doc.querySelectorAll('[data-memory-nav]')).toHaveLength(1)
+    ui.dispose()
+    const before = reads
+    notify()
+    doc.dispatchEvent(
+      new window.CustomEvent('sherlock:memory-open') as unknown as Event
+    )
     await tick()
-    expect(doc.querySelector('[data-memory-editor]')?.textContent).toContain(
-      '另一处刚更新的内容'
-    )
-    button('基于最新版本继续').click()
-    button('保存记忆').click()
-    await tick()
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
-      '我的未保存修改'
-    )
-    expect(doc.querySelector('[data-memory-detail]')?.textContent).toContain(
-      'v5'
-    )
+    expect(reads).toBe(before)
+    expect(unsubscribed).toBe(1)
+    expect(
+      doc.querySelector(
+        '[data-memory-style],[data-memory-nav],[data-memory-page]'
+      )
+    ).toBeNull()
   })
 })

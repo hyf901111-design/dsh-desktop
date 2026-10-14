@@ -29,7 +29,7 @@ async function fixture(options = {}) {
   expect(patchModule.patchMemoryRequestContext(patched)).toBe(patched)
   await writeFile(join(root, 'loop.mjs'), patched)
   const { default: AgentLoop } = await import(pathToFileURL(join(root, 'loop.mjs')).href)
-  const calls = [], wire = [], warnings = [], attempts = new Map(), control = { enabled:true, ownerEpoch: 'owner-1', scopeEpoch: 1, projectId: undefined, revision: 1, memory: '默认使用简体中文。', failModel: false, invalidEvidence: false, denyAttempt: false, contextWindow: options.contextWindow ?? 16000, beforeValidate: undefined, delayExtract: undefined }
+  const calls = [], wire = [], warnings = [], attempts = new Map(), summaryReservations = new Set(), control = { enabled: options.enabled ?? true, ownerEpoch: 'owner-1', scopeEpoch: 1, projectId: undefined, revision: 1, memory: '默认使用简体中文。', failModel: false, invalidEvidence: false, reasoning: options.reasoning ?? false, fencedJson: false, outputTool: false, denyAttempt: false, contextWindow: options.contextWindow ?? 16000, beforeValidate: undefined, delayExtract: undefined, summaryEnabled: options.summaryEnabled ?? false, signature: 'summary-1', summaryRoute: options.summaryNoRoute ? undefined : { provider: 'selected-provider', model: 'selected-model' }, summaryRecords: options.summaryRecords ?? [{ title: '表达偏好', content: '默认用中文，先给结论。', kind: 'preference', scope: 'global' }], summaryText: '默认使用中文，先给结论。\n\n项目上下文以已保存的内容为准。', summaryCache: undefined, delaySummary: undefined }
   const sockets = new Set()
   const server = createServer(async (request, response) => {
     expect(request.headers.authorization).toBe('Bearer memory-test-token')
@@ -39,9 +39,20 @@ async function fixture(options = {}) {
     if (request.url === '/pending') value = { items: options.pending ?? [] }
     if (request.url === '/recall') value = { enabled: control.enabled && !body.sessionId.includes('shared'), autoEnabled: true, ownerEpoch: control.ownerEpoch, scopeEpoch: control.scopeEpoch, projectId: control.projectId, revision: control.revision, entries: !control.enabled || body.sessionId.includes('shared') || !control.memory ? [] : [{ id: 'memory-1', revision: control.revision, title: '回答语言', content: control.memory, reason: '相关偏好' }], block: !control.enabled || body.sessionId.includes('shared') ? '' : control.memory }
     if (request.url === '/validate') { await control.beforeValidate?.(body); value = { valid: control.enabled && body.revision === control.revision } }
-    if (request.url === '/capture') { const enabled = !body.sessionId.includes('shared') && (!body.anchor || body.anchor.ownerEpoch === control.ownerEpoch && body.anchor.scopeEpoch === control.scopeEpoch && body.anchor.projectId === control.projectId); value = { captureId: enabled ? `${body.sessionId}/${body.turnId}` : '', enabled, ownerEpoch: control.ownerEpoch, revision: control.revision } }
+    if (request.url === '/capture') { const enabled = control.enabled && !body.sessionId.includes('shared') && (!body.anchor || body.anchor.ownerEpoch === control.ownerEpoch && body.anchor.scopeEpoch === control.scopeEpoch && body.anchor.projectId === control.projectId); value = { captureId: enabled ? `${body.sessionId}/${body.turnId}` : '', enabled, ownerEpoch: control.ownerEpoch, revision: control.revision } }
     if (request.url === '/attempt') { const count = attempts.get(body.captureId) ?? 0; const allowed = !control.denyAttempt && count < 2; if (allowed) attempts.set(body.captureId, count + 1); value = { allowed } }
     if (request.url === '/usage' || request.url === '/commit' || request.url === '/failure') value = { ok: true }
+    if (request.url === '/summary-input') {
+      const key = JSON.stringify([control.ownerEpoch, control.scopeEpoch, control.signature])
+      const enabled = control.enabled && control.summaryEnabled && !summaryReservations.has(key)
+      if (enabled) summaryReservations.add(key)
+      value = enabled ? { enabled, ownerEpoch: control.ownerEpoch, scopeEpoch: control.scopeEpoch, signature: control.signature, route: control.summaryRoute, records: control.summaryRecords, count: control.summaryRecords.length } : { enabled: false }
+    }
+    if (request.url === '/summary-commit' || request.url === '/summary-failure') {
+      const ok = control.enabled && body.ownerEpoch === control.ownerEpoch && body.scopeEpoch === control.scopeEpoch && body.signature === control.signature
+      if (ok && request.url === '/summary-commit') control.summaryCache = body.text
+      value = { ok }
+    }
     response.setHeader('content-type', 'application/json'); response.end(JSON.stringify(value ?? {}))
   })
   server.on('connection', socket => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)) })
@@ -56,23 +67,36 @@ async function fixture(options = {}) {
     async *stream(request) {
       calls.push(request)
       if (request.purpose === 'memory-extraction') await control.delayExtract?.()
+      if (request.purpose === 'memory-summary') await control.delaySummary?.(request)
       const input = request.messages.map(message => message.content.filter(block => block.type === 'text').map(block => block.text).join('')).join('')
       let answer = '已理解本轮请求。'
       if (request.purpose === 'memory-extraction') {
         const events = JSON.parse(input).events
         const source = events.find(item => item.role === 'user')
         answer = control.failModel ? 'not valid JSON' : JSON.stringify({ candidates: [{ title: '表达偏好', content: source.text, kind: 'preference', scope: 'global', semanticKey: 'preference.response.language', sourceSeq: source.seq, evidence: control.invalidEvidence ? '这句原文不存在' : source.text, explicit: true }] })
+        if (control.fencedJson) answer = '```json\n' + answer + '\n```'
+      }
+      if (request.purpose === 'memory-summary') answer = control.summaryText
+      if (control.reasoning && request.purpose?.startsWith('memory-')) {
+        yield { type: 'block-start', index: 1, blockType: 'reasoning' }
+        yield { type: 'reasoning-delta', index: 1, text: '内部推理禁止持久化' }
+        yield { type: 'block-end', index: 1, block: { type: 'reasoning', text: '内部推理禁止持久化' } }
       }
       yield { type: 'block-start', index: 0, blockType: 'text' }
       yield { type: 'text-delta', index: 0, text: answer }
       yield { type: 'block-end', index: 0, block: { type: 'text', text: answer } }
+      if (control.outputTool && request.purpose?.startsWith('memory-')) {
+        yield { type: 'block-start', index: 2, blockType: 'tool-call' }
+        yield { type: 'block-end', index: 2, block: { type: 'tool-call', id: 'forbidden-call', name: 'never_execute', arguments: '{}' } }
+      }
       yield { type: 'finish', reason: { kind: 'stop' } }
     }
   }
   const registration = ctx.llm.registerAdapter(['selected-provider'], new Adapter())
-  const runtime = runtimeModule.createMemoryRuntime(ctx, { env: { EWORK_MEMORY_BRIDGE: JSON.stringify({ url: `http://127.0.0.1:${server.address().port}`, token: 'memory-test-token' }) }, requestTimeoutMs: 1000, onWarning: message => warnings.push(message) })
+  const runtime = runtimeModule.createMemoryRuntime(ctx, { env: { EWORK_MEMORY_BRIDGE: JSON.stringify({ url: `http://127.0.0.1:${server.address().port}`, token: 'memory-test-token' }) }, requestTimeoutMs: 1000, summaryTimeoutMs: options.summaryTimeoutMs ?? 60000, summaryPollIntervalMs: options.summaryPollIntervalMs ?? 0, onWarning: message => warnings.push(message) })
   cleanup.push(async () => { await runtime.dispose(); await ctx.fiber.dispose(); for (const socket of sockets) socket.destroy(); await new Promise(resolve => server.close(resolve)); await rm(root, { recursive: true, force: true }) })
   await runtime.ready
+  await runtime.idle()
   const createAgent = async (id, meta = {}) => (await ctx.agents.create({ sessionId: id, meta: { cwd: '/tmp/memory-project', ...meta }, agentOptions: { provider: 'selected-provider', model: 'selected-model', maxTokens: 256 } })).agent
   const agent = await createAgent('memory-parent')
   const turn = async (text, target = agent) => { target.followup(createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } })); await target.whenIdle(); await runtime.idle(); expect(errors).toEqual([]) }
@@ -295,4 +319,156 @@ it('retains the routed model on subsequent turns whose unchanged request header 
   expect(f.agent.session.events.filter(event => event.type === 'request/header')).toHaveLength(1)
   expect(f.wire.filter(call => call.path === '/capture').map(call => call.body.route)).toEqual([{ provider: 'selected-provider', model: 'selected-model' }, { provider: 'selected-provider', model: 'selected-model' }])
   expect(f.calls.filter(call => call.purpose === 'memory-extraction')).toHaveLength(2)
+})
+
+it('accepts reasoning plus text extraction while discarding reasoning from commits and durable events', async () => {
+  const f = await fixture(); f.control.reasoning = true
+  await f.turn('请记住，我今后默认用中文回答。')
+  expect(f.wire.filter(call => call.path === '/commit')).toHaveLength(1)
+  expect(f.calls.filter(call => call.purpose === 'memory-extraction')).toHaveLength(1)
+  expect(JSON.stringify(f.wire)).not.toContain('内部推理禁止持久化')
+  expect((await f.ctx.sessionPersistence.readRaw(f.agent.id)).content).not.toContain('内部推理禁止持久化')
+  expect(f.warnings).toEqual([])
+})
+
+it('accepts one pure JSON code fence without relaxing evidence validation', async () => {
+  const f = await fixture(); f.control.fencedJson = true
+  await f.turn('请记住，我今后默认用中文回答。')
+  expect(f.wire.filter(call => call.path === '/commit')).toHaveLength(1)
+  f.control.invalidEvidence = true
+  await f.turn('请记住，我今后先看结论。')
+  expect(f.wire.filter(call => call.path === '/commit')).toHaveLength(1)
+  expect(f.wire.filter(call => call.path === '/failure')).toHaveLength(1)
+})
+
+it('rejects tool-call extraction output even when valid text and reasoning are also present', async () => {
+  const f = await fixture(); f.control.reasoning = true; f.control.outputTool = true
+  await f.turn('请记住，我今后默认用中文回答。')
+  expect(f.wire.some(call => call.path === '/commit')).toBe(false)
+  expect(f.wire.filter(call => call.path === '/failure')).toHaveLength(1)
+  expect(JSON.stringify(f.warnings)).not.toContain('内部推理禁止持久化')
+})
+
+it('generates a real text-only summary after recovery without adding a conversation or capture', async () => {
+  const f = await fixture({ summaryEnabled: true, reasoning: true })
+  const summaries = f.calls.filter(call => call.purpose === 'memory-summary')
+  expect(summaries).toHaveLength(1)
+  expect(summaries[0]).toMatchObject({ provider: 'selected-provider', model: 'selected-model', tools: [], maxTokens: 1000 })
+  expect(f.control.summaryCache).toBe(f.control.summaryText)
+  expect(f.wire.find(call => call.path === '/summary-commit').body).toMatchObject({ ownerEpoch: 'owner-1', scopeEpoch: 1, signature: 'summary-1', text: f.control.summaryText, model: 'selected-provider/selected-model' })
+  expect(f.wire.some(call => call.path === '/capture')).toBe(false)
+  expect(f.agent.session.events).toEqual([])
+  expect(JSON.stringify(f.wire)).not.toContain('内部推理禁止持久化')
+  expect(f.warnings).toEqual([])
+})
+
+it('checks for updated summary after capture while keeping summary text out of JSONL and recall history', async () => {
+  const f = await fixture(); f.control.summaryEnabled = true
+  await f.turn('请记住，我今后默认用中文回答。')
+  expect(f.calls.map(call => call.purpose ?? 'conversation')).toEqual(['conversation', 'memory-extraction', 'memory-summary'])
+  expect((await f.ctx.sessionPersistence.readRaw(f.agent.id)).content).not.toContain(f.control.summaryText)
+  expect(JSON.stringify(f.agent.session.deriveMessages())).not.toContain(f.control.summaryText)
+  expect(f.wire.filter(call => call.path === '/capture')).toHaveLength(1)
+})
+
+it('selects whole summary records under the UTF-8 input budget without chopping a fact', async () => {
+  const records = Array.from({ length: 20 }, (_, index) => ({ title: `项目决策${index}`, content: '已确认采用本地优先方案。'.repeat(40), kind: 'decision', scope: 'project', projectName: '测试项目' }))
+  const f = await fixture({ summaryEnabled: true, summaryRecords: records })
+  const call = f.calls.find(item => item.purpose === 'memory-summary')
+  expect(call).toBeDefined()
+  expect(Buffer.byteLength(call.system + JSON.stringify(call.messages))).toBeLessThanOrEqual(8000)
+  const input = JSON.parse(call.messages[0].content[0].text)
+  expect(input.records.length).toBeGreaterThan(0); expect(input.records.length).toBeLessThan(20)
+  expect(input.count).toBe(20)
+  for (const record of input.records) expect(records).toContainEqual(record)
+})
+
+it('does not generate summary while off or without an authorized selected route', async () => {
+  const disabled = await fixture({ summaryEnabled: true, enabled: false })
+  expect(disabled.calls).toEqual([]); expect(disabled.warnings).toEqual([])
+  await disabled.turn('请记住，我今后默认用中文回答。')
+  expect(disabled.calls.map(call => call.purpose ?? 'conversation')).toEqual(['conversation'])
+  const unrouted = await fixture({ summaryEnabled: true, summaryNoRoute: true })
+  expect(unrouted.calls).toEqual([])
+  expect(unrouted.wire.some(call => call.path === '/summary-commit')).toBe(false)
+})
+
+it('discards a summary committed after an owner and scope switch rather than updating another cache', async () => {
+  const f = await fixture(); f.control.summaryEnabled = true
+  let entered, release
+  const started = new Promise(resolve => { entered = resolve }), gate = new Promise(resolve => { release = resolve })
+  f.control.delaySummary = async () => { entered(); await gate }
+  expect(f.runtime.checkSummary).toBeTypeOf('function')
+  const checking = f.runtime.checkSummary()
+  await started
+  f.control.ownerEpoch = 'owner-2'; f.control.scopeEpoch = 2
+  release(); await checking
+  expect(f.control.summaryCache).toBeUndefined()
+  expect(f.wire.find(call => call.path === '/summary-commit').body).toMatchObject({ ownerEpoch: 'owner-1', scopeEpoch: 1 })
+  f.control.delaySummary = undefined
+  await f.runtime.checkSummary()
+  expect(f.control.summaryCache).toBe(f.control.summaryText)
+})
+
+it('reports tool output as generic summary failure and does not rerun an unchanged signature', async () => {
+  const f = await fixture(); f.control.summaryEnabled = true; f.control.outputTool = true; f.control.reasoning = true
+  expect(f.runtime.checkSummary).toBeTypeOf('function')
+  await f.runtime.checkSummary(); await f.runtime.checkSummary()
+  expect(f.calls.filter(call => call.purpose === 'memory-summary')).toHaveLength(1)
+  expect(f.wire.filter(call => call.path === '/summary-failure')).toHaveLength(1)
+  expect(f.control.summaryCache).toBeUndefined()
+  expect(f.warnings).toEqual(['记忆概括未完成，请稍后重试。'])
+  expect(JSON.stringify(f.wire)).not.toContain('内部推理禁止持久化')
+})
+
+it('polls summary changes outside chat and stops polling on dispose', async () => {
+  const f = await fixture({ summaryPollIntervalMs: 20 }); f.control.summaryEnabled = true
+  const stopAt = Date.now() + 1000
+  while (!f.control.summaryCache && Date.now() < stopAt) await new Promise(resolve => setTimeout(resolve, 10))
+  expect(f.control.summaryCache).toBe(f.control.summaryText)
+  await f.runtime.dispose()
+  const checks = f.wire.filter(call => call.path === '/summary-input').length
+  await new Promise(resolve => setTimeout(resolve, 70))
+  expect(f.wire.filter(call => call.path === '/summary-input')).toHaveLength(checks)
+  expect(f.agent.session.events).toEqual([])
+})
+
+it('keeps chat responsive while a summary is running and serializes extraction behind it', async () => {
+  const f = await fixture(); f.control.summaryEnabled = true
+  let entered, release
+  const started = new Promise(resolve => { entered = resolve }), gate = new Promise(resolve => { release = resolve })
+  f.control.delaySummary = async () => { entered(); await gate }
+  const checking = f.runtime.checkSummary(); await started
+  f.agent.followup(createUserMessage({ content: [{ type: 'text', text: '请记住，我今后默认用中文回答。' }], source: { kind: 'user' } }))
+  await f.agent.whenIdle()
+  expect(f.calls.map(call => call.purpose ?? 'conversation')).toEqual(['memory-summary', 'conversation'])
+  expect(f.wire.some(call => call.path === '/capture')).toBe(false)
+  release(); await checking; await f.runtime.idle()
+  expect(f.calls.map(call => call.purpose ?? 'conversation')).toEqual(['memory-summary', 'conversation', 'memory-extraction'])
+  expect(f.wire.filter(call => call.path === '/capture')).toHaveLength(1)
+})
+
+it('discards a failed summary after scope invalidation without changing or warning another scope', async () => {
+  const f = await fixture(); f.control.summaryEnabled = true; f.control.outputTool = true
+  let entered, release
+  const started = new Promise(resolve => { entered = resolve }), gate = new Promise(resolve => { release = resolve })
+  f.control.delaySummary = async () => { entered(); await gate }
+  const checking = f.runtime.checkSummary(); await started
+  f.control.scopeEpoch++
+  release(); await checking
+  expect(f.wire.find(call => call.path === '/summary-failure').body).toEqual({ ownerEpoch: 'owner-1', scopeEpoch: 1, signature: 'summary-1' })
+  expect(f.control.summaryCache).toBeUndefined()
+  expect(f.warnings).toEqual([])
+})
+
+it('bounds summary timeout to a generic failure without retrying the same model request', async () => {
+  const f = await fixture({ summaryTimeoutMs: 20 }); f.control.summaryEnabled = true
+  f.control.delaySummary = request => new Promise((resolve, reject) => {
+    request.signal.addEventListener('abort', () => reject(Error('PRIVATE SOURCE OR REASONING')), { once: true })
+  })
+  await f.runtime.checkSummary()
+  expect(f.calls.filter(call => call.purpose === 'memory-summary')).toHaveLength(1)
+  expect(f.wire.filter(call => call.path === '/summary-failure')).toHaveLength(1)
+  expect(f.warnings).toEqual(['记忆概括未完成，请稍后重试。'])
+  expect(JSON.stringify(f.wire)).not.toContain('PRIVATE SOURCE OR REASONING')
 })

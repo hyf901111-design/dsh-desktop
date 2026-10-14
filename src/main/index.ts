@@ -1352,6 +1352,12 @@ async function bootstrap(): Promise<void> {
     memoryEndpoint = await startMemoryBridge(memoryService)
   } catch { console.error('[memory] 本地记忆暂不可用，原数据已保留') }
   registerMemoryIpc(ipcMain, () => mainWindow, memoryService ?? {request: async () => { throw Error('本地记忆暂不可用，原数据已保留。') }})
+  registerTrustedMainWindowHandler(ipcMain,'memory:open-directory',()=>mainWindow,async()=>{
+    if(!memoryService)throw Error('记忆目录暂不可用。')
+    const location=await memoryService.directory(),error=await shell.openPath(location.directory)
+    if(error)throw Error('记忆目录暂时无法打开，请稍后重试。')
+    return {ok:true}
+  })
   registerTrustedMainWindowHandler(ipcMain, 'memory:open-source', () => mainWindow, async (_event, input) => {
     const source = input as import('../shared/memory').MemorySource
     if(!memoryService||typeof source?.sessionId!=='string'||typeof source.excerpt!=='string')throw Error('SOURCE_UNAVAILABLE')

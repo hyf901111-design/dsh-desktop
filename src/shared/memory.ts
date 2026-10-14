@@ -6,7 +6,7 @@ export type MemoryRecord = { id: string; title: string; content: string; kind: M
 export type MemoryProject = { id: string; name: string; path?: string; aliases: string[]; createdAt: number }
 export type MemorySettings = { use: boolean; auto: boolean }
 export type MemoryUsage = { id: string; sessionId: string; createdAt: number; entries: { id: string; revision: number; title: string; reason: string }[] }
-export type MemorySnapshot = { revision: number; owner: string; settings: MemorySettings; projects: MemoryProject[]; rows: MemoryRecord[]; usages: MemoryUsage[]; session?: { id: string; projectId?: string; disabled: boolean }; extraction: { state: 'ready' | 'running' | 'failed'; message: string }; source?: MemorySource; legacy?: { id: string; title: string; content: string; createdAt: number }[] }
+export type MemorySnapshot = { revision: number; owner: string; settings: MemorySettings; projects: MemoryProject[]; rows: MemoryRecord[]; usages: MemoryUsage[]; session?: { id: string; projectId?: string; disabled: boolean }; document?: {directory:string;file:string;error?:string}; summary?: {state:'empty'|'pending'|'ready'|'failed';text:string;updatedAt?:number;model?:string;count:number}; extraction: { state: 'ready' | 'running' | 'failed'; message: string }; source?: MemorySource; legacy?: { id: string; title: string; content: string; createdAt: number }[] }
 export type MemoryInput = { title: string; content: string; kind: MemoryKind; scope: MemoryScope; projectId?: string; pinned?: boolean; expiresAt?: number; source?: MemorySource }
 export type MemoryCommand =
   | { type: 'snapshot'; sessionId?: string; query?: string }
@@ -19,7 +19,7 @@ export type MemoryCommand =
   | { type: 'source'; id: string }
   | { type: 'legacy-preview' }
   | { type: 'import-legacy'; ids: string[]; projectId?: string }
-export type MemoryBridge = { request(command: MemoryCommand): Promise<MemorySnapshot>; openSource?(source: MemorySource): Promise<void>; subscribe?(listener: () => void): () => void }
+export type MemoryBridge = { request(command: MemoryCommand): Promise<MemorySnapshot>; openSource?(source: MemorySource): Promise<void>; openDirectory?():Promise<void>; subscribe?(listener: () => void): () => void }
 export type MemoryRuntimeContext = { sessionId: string; query: string; projectPath?: string; turnId?: string }
 export type MemoryRecall = { enabled: boolean; autoEnabled: boolean; ownerEpoch: string; revision: number; scopeEpoch: number; projectId?: string; entries: { id: string; revision: number; title: string; content: string; reason: string }[]; block: string }
 export type MemoryTurnEvent = { seq: number; role: 'user' | 'assistant'; text: string }
