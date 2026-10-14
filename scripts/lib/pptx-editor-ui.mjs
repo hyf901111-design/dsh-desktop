@@ -1,4 +1,54 @@
 import {attachPptxDirectEditor} from './pptx-direct-editor.mjs'
+/** Keep the live slide tree and its media until its replacement is ready. */
+export function createStablePptxViewer(initial){
+ if(!initial.container?.parentElement||!initial.viewerOptions||typeof initial.constructor!=='function')return initial
+ let active=initial,disposeActive=initial.destroy.bind(initial),disposed=false,revision=0
+ const pending=new Set()
+ const destroy=()=>{if(disposed)return;disposed=true;revision++;for(const job of pending){job.abort.abort();job.dispose();job.mount.remove()}pending.clear();disposeActive();if(active!==initial)active.container.remove()}
+ initial.destroy=destroy
+ return{
+  get currentSlideIndex(){return active.currentSlideIndex},
+  get listOptions(){return active.listOptions},
+  goToSlide:(...args)=>active.goToSlide?.(...args),
+  setZoom:(...args)=>active.setZoom?.(...args),
+  destroy,
+  async open(bytes,options={},canCommit=()=>true){
+   if(disposed)return false
+   const expected=++revision,previous=active,mount=previous.container,parent=mount.parentElement
+   if(!parent)return false
+   const scroll=previous.viewerOptions.scrollContainer
+   const stage=mount.cloneNode(false),position=parent.style.position,needsPosition=parent.ownerDocument.defaultView.getComputedStyle(parent).position==='static'
+   if(needsPosition)parent.style.position='relative'
+   stage.dataset.pptxStaging='';stage.setAttribute('aria-hidden','true');stage.inert=true
+   Object.assign(stage.style,{position:'absolute',left:mount.offsetLeft+'px',top:mount.offsetTop+'px',width:mount.clientWidth?mount.clientWidth+'px':'100%',visibility:'hidden',pointerEvents:'none'})
+   parent.appendChild(stage)
+   const abort=new AbortController(),next=new previous.constructor(stage,{...previous.viewerOptions,zoomPercent:previous.zoomPercent}),job={abort,mount:stage,dispose:next.destroy.bind(next)}
+   pending.add(job);let committed=false
+   try{
+    await next.open(bytes,{...options,signal:abort.signal})
+    if(disposed||expected!==revision||!canCommit())return false
+    const viewport=()=>({top:scroll?.scrollTop,left:scroll?.scrollLeft,index:previous.currentSlideIndex,slides:Array.from(mount.querySelectorAll('[data-slide-index]')).filter(item=>item.firstElementChild?.dataset.mounted==='1').map(item=>Number(item.dataset.slideIndex))})
+    // Navigation may continue while parsing or media decoding. Prepare its latest window.
+    while(true){
+     const visible=viewport(),indices=new Set([...visible.slides,visible.index])
+     for(const index of indices)next.ensureListSlideMountedFn?.(index)
+     await Promise.all(Array.from(indices,index=>next.slideHandles?.get(index)?.ready))
+     await Promise.all(Array.from(stage.querySelectorAll('img'),img=>img.decode?.().catch(()=>{})))
+     if(disposed||expected!==revision||!canCommit())return false
+     if(JSON.stringify(visible)!==JSON.stringify(viewport()))continue
+     stage.style.cssText=mount.style.cssText;stage.removeAttribute('aria-hidden');delete stage.dataset.pptxStaging;stage.inert=false;next.currentSlide=visible.index
+     // No asynchronous work occurs between removal of the old tree and its replacement.
+     mount.replaceWith(stage);const disposePrevious=disposeActive;active=next;disposeActive=job.dispose;committed=true;disposePrevious()
+     if(scroll){scroll.scrollTop=visible.top;scroll.scrollLeft=visible.left}
+     return true
+    }
+   }finally{
+    pending.delete(job);if(!committed){job.dispose();stage.remove()}
+    if(needsPosition&&parent.style.position==='relative')parent.style.position=position
+   }
+  }
+ }
+}
 /** Self-contained factory embedded in the pinned Office client bundle. */
 export function createPptxEditorComponent(React,Preview,download,createPortal){
  const h=React.createElement,drafts=new Map(),shortcutOwnerKey=Symbol.for('sherlock:pptx-shortcut-owner'),clone=value=>JSON.parse(JSON.stringify(value))
@@ -39,8 +89,9 @@ export function createPptxEditorComponent(React,Preview,download,createPortal){
     try{const result=await bridge.preview(request(current,sourceRef.current));if(expected!==draftGeneration.current||viewGeneration!==generation.current||viewer!==viewerRef.current)return;if(!result.ok)throw Error(result.error)
      // Typing always wins over an asynchronous preview response.
      if(gestureRef.current||(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true')){pendingRender.current=true;return}
-     await viewer.open(new Uint8Array(result.bytes),{renderMode:'list',lazySlides:true,lazyMedia:true,listOptions:{windowed:true,showSlideLabels:true}})
-     if(viewer!==viewerRef.current)return;await viewer.goToSlide?.(index,{behavior:'auto',block:'nearest'});pendingRender.current=false;controller.current?.refresh();const selected=selectionRef.current?.id;if(selected)controller.current?.selectId(selected)
+     const committed=await viewer.open(new Uint8Array(result.bytes),{renderMode:'list',lazySlides:true,lazyMedia:true,listOptions:{...viewer.listOptions,windowed:true,showSlideLabels:false}},()=>expected===draftGeneration.current&&viewGeneration===generation.current&&viewer===viewerRef.current&&!gestureRef.current&&!(previewHost.current?.contains(document.activeElement)&&document.activeElement?.getAttribute('contenteditable')==='true'))
+     if(committed===false){pendingRender.current=true;return}
+     if(viewer!==viewerRef.current)return;if(committed!==true)await viewer.goToSlide?.(index,{behavior:'auto',block:'nearest'});pendingRender.current=false;controller.current?.refresh();const selected=selectionRef.current?.id;if(selected)controller.current?.selectId(selected)
     }catch(failure){pendingRender.current=false;current.error=failure.message||'草稿预览失败，修改已保留。';emit(current)}
    },180)
   }
@@ -76,7 +127,7 @@ export function createPptxEditorComponent(React,Preview,download,createPortal){
   React.useLayoutEffect(()=>positionToolbar(),[selection,chart,mode])
   React.useEffect(()=>{const move=event=>{const drag=toolbarDrag.current,bar=floatingToolbar.current;if(!drag||!bar)return;event.preventDefault();bar.style.left=drag.left+event.clientX-drag.x+'px';bar.style.top=drag.top+event.clientY-drag.y+'px';positionToolbar()},end=()=>{toolbarDrag.current=null},resize=()=>positionToolbar();document.addEventListener('pointermove',move);document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);window.addEventListener('resize',resize);return()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',end);document.removeEventListener('pointercancel',end);window.removeEventListener('resize',resize)}},[])
   React.useEffect(()=>{const shortcut=event=>{if(document.activeElement===document.body&&document[shortcutOwnerKey]===instance.current&&entryRef.current&&entrySourceKey.current===sourceKeyRef.current){keyboardRef.current?.(event);if(event.defaultPrevented)event.stopImmediatePropagation()}},focus=event=>{if(event.target!==document.body&&document[shortcutOwnerKey]===instance.current&&!root.current?.contains(event.target)&&!floatingToolbar.current?.contains(event.target))controller.current?.clearSelection()};document.addEventListener('keydown',shortcut,true);document.addEventListener('focusin',focus,true);return()=>{document.removeEventListener('keydown',shortcut,true);document.removeEventListener('focusin',focus,true);if(document[shortcutOwnerKey]===instance.current)delete document[shortcutOwnerKey]}},[])
-  const attachViewer=React.useCallback(viewer=>{viewerRef.current=viewer;if(viewer){if(zoomRef.current!==100)void viewer.setZoom?.(zoomRef.current);void viewer.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'});if(pendingRender.current)renderDraft()}},[sourceKey])
+  const attachViewer=React.useCallback(viewer=>{viewerRef.current=viewer?createStablePptxViewer(viewer):null;if(viewer){if(zoomRef.current!==100)void viewerRef.current.setZoom?.(zoomRef.current);void viewerRef.current.goToSlide?.(pageRef.current,{behavior:'auto',block:'nearest'});if(pendingRender.current)renderDraft()}},[sourceKey])
   React.useEffect(()=>{generation.current++;entryRef.current=null;opening.current=null;token.current=null;setEntry(null);setPage(0);setSelection(null);setChart(null);gestureRef.current=false;manualPosition.current=false;toolbarDrag.current=null;pendingRender.current=false;entrySourceKey.current=null;clearTimeout(renderTimer.current);previewPath.current=props.path;setError('');void open();return()=>{generation.current++;draftGeneration.current++;entryRef.current=null;clearTimeout(renderTimer.current);if(document[shortcutOwnerKey]===instance.current)delete document[shortcutOwnerKey]}},[sourceKey])
   React.useEffect(()=>{if(!entry||!previewHost.current)return;controller.current=attachPptxDirectEditor(previewHost.current,{getEntry:()=>entryRef.current,changeText,changeObject,begin,end,render:renderDraft,renderPending:()=>{if(pendingRender.current)renderDraft()},select:selectNode,position:positionToolbar,isToolTarget:target=>floatingToolbar.current?.contains(target)||root.current?.querySelector('.sherlock-ppt-chart')?.contains(target),interaction:value=>{gestureRef.current=value;if(entryRef.current){entryRef.current.gesture=value;if(value)clearTimeout(entryRef.current.autoTimer)}},editChart:node=>setChart({id:node.id,value:clone(node.chart),documentId:entryRef.current.document.id,generation:generation.current})});controller.current.setEnabled(mode==='edit');if(dirty(entry))renderDraft();return()=>{controller.current?.destroy();controller.current=null}},[entry])
   React.useEffect(()=>controller.current?.setEnabled(mode==='edit'),[mode])
@@ -132,5 +183,5 @@ export function patchPptxEditor(source) {
  if(source.split(anchor).length!==2)throw Error('PPT content editor anchor drifted')
  if(source.split(viewerAttach).length!==2||source.split(viewerDetach).length!==3)throw Error('PPT viewer callback anchors drifted')
  for(const [original,patched]of annotations){if(source.split(original).length!==2)throw Error('PPT direct editor renderer anchor drifted: '+original.slice(0,55));source=source.replace(original,patched)}
- return source.replace(viewerAttach,attached).split(viewerDetach).join(detached).replace(anchor,marker+'\n'+attachPptxDirectEditor.toString()+'\n'+createPptxEditorComponent.toString()+'\nconst PptxView = createPptxEditorComponent(react$1, PptxPreview, downloadUrl, react_dom.createPortal);\n'+endMarker+'function PptxPreview(props) {')
+ return source.replace(viewerAttach,attached).split(viewerDetach).join(detached).replace(anchor,marker+'\n'+attachPptxDirectEditor.toString()+'\n'+createStablePptxViewer.toString()+'\n'+createPptxEditorComponent.toString()+'\nconst PptxView = createPptxEditorComponent(react$1, PptxPreview, downloadUrl, react_dom.createPortal);\n'+endMarker+'function PptxPreview(props) {')
 }
