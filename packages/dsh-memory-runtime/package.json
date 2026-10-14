@@ -1,0 +1,11 @@
+{
+  "name": "dsh-memory-runtime",
+  "version": "0.1.0",
+  "description": "EWork private memory capture and transient request context adapter.",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": { ".": "./index.js", "./package.json": "./package.json" },
+  "dependencies": { "@deepseek-ai/dsh-llm": "0.1.0-rc.7" },
+  "license": "MIT"
+}

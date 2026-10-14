@@ -31,7 +31,7 @@ export class MemoryStore {
     if (!this.encryption.isEncryptionAvailable()) throw Error('系统安全存储暂不可用，未保存记忆。')
     const payload = this.encryption.encryptString(JSON.stringify(value))
     this.db.prepare('INSERT INTO memory_state(owner,payload) VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET payload=excluded.payload').run(this.ownerKey(owner), payload)
-    if (purge) this.db.exec('VACUUM')
+    if (purge) {try {this.db.exec('VACUUM')}catch {console.warn('[memory] 空间回收未完成；删除已提交。')}}
   }
   close() { if (!this.closed) { this.closed = true; this.db.close() } }
 }

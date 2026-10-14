@@ -23,6 +23,17 @@ const preference = (content='默认用中文回答') => ({title:'回答语言',c
 afterEach(async()=>{for(const s of stores.splice(0))await s.close();for(const r of roots.splice(0))await rm(r,{recursive:true,force:true})})
 
 describe('长期记忆真实行为',()=>{
+  it('keeps recalled context valid after recording usage but invalidates it on settings changes',async()=>{
+    const {service}=await setup()
+    await service.request({type:'save',input:preference()})
+    const recall=await service.recall({sessionId:'a',query:'报告'})
+    const validation={sessionId:'a',ownerEpoch:recall.ownerEpoch,revision:recall.revision,scopeEpoch:recall.scopeEpoch}
+    await service.usage({...validation,entries:recall.entries})
+    expect((await service.validate(validation)).valid).toBe(true)
+    expect((await service.request({type:'snapshot'})).usages).toHaveLength(1)
+    await service.request({type:'settings',use:false})
+    expect((await service.validate(validation)).valid).toBe(false)
+  })
   it('provides an encrypted local memory service',async()=>{
     const module = await import('../src/main/memory/service').catch(()=>({MemoryService:undefined}))
     expect(module.MemoryService).toBeTypeOf('function')
@@ -122,5 +133,20 @@ describe('长期记忆真实行为',()=>{
     expect(active).toHaveLength(1)
     expect(active[0]!.content).toContain('英文')
     expect(Buffer.byteLength((await service.recall({sessionId:'a',query:'报告'})).block,'utf8')).toBeLessThanOrEqual(1200)
+  })
+  it('persists extraction attempt limits across restart and does not recover a deleted queued job',async()=>{
+    const {service,root}=await setup()
+    const turn={sessionId:'a',turnId:'1',events:[{seq:1,role:'user' as const,text:'以后默认中文回答'}]}
+    const cap=await service.capture(turn)
+    expect((await service.attempt({captureId:cap.captureId})).allowed).toBe(true)
+    await service.close()
+    const resumed=(await setup(root)).service,newCap=await resumed.capture(turn)
+    expect((await resumed.attempt({captureId:newCap.captureId})).allowed).toBe(true)
+    expect((await resumed.attempt({captureId:newCap.captureId})).allowed).toBe(false)
+    const row=(await resumed.request({type:'save',input:preference()})).rows[0]!
+    const pending=await resumed.capture({...turn,turnId:'2'})
+    await resumed.request({type:'action',ids:[row.id],action:'delete'})
+    expect((await resumed.pending()).items).toHaveLength(0)
+    await expect(resumed.attempt({captureId:pending.captureId})).rejects.toThrow(/失效/)
   })
 })

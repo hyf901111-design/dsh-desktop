@@ -4,7 +4,7 @@ afterEach(async()=>{await dispose?.();dispose=undefined})
 it('makes memory transport available only to the authenticated local runtime',async()=>{
   const {startMemoryBridge}=await import('../src/main/memory/bridge')
   let calls=0
-  const endpoint=await startMemoryBridge({recall:async()=>{calls++;return {entries:[]}},capture:async()=>({enabled:false}),commitExtraction:async()=>({ok:true}),validate:async()=>({valid:true}),usage:async()=>({ok:true}),failure:async()=>({ok:true}),pending:async()=>({items:[]})})
+  const endpoint=await startMemoryBridge({recall:async()=>{calls++;return {entries:[]}},capture:async()=>({enabled:false}),commitExtraction:async()=>({ok:true}),validate:async()=>({valid:true}),usage:async()=>({ok:true}),failure:async()=>({ok:true}),pending:async()=>({items:[]}),attempt:async()=>({allowed:true})})
   dispose=endpoint.dispose
   const send=(headers:Record<string,string>,body='{}')=>fetch(endpoint.url+'/recall',{method:'POST',headers:{'content-type':'application/json',...headers},body})
   expect((await send({})).status).toBe(403)

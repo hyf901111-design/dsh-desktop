@@ -22,7 +22,9 @@ const bundledMarketInstallerEntry = process.env.DSH_DESKTOP_MARKET_INSTALLER_ENT
 const bundledResearchTaskEntry = process.env.DSH_DESKTOP_RESEARCH_TASK_ENTRY
 const bundledFundResearchEntry = process.env.DSH_DESKTOP_FUND_RESEARCH_ENTRY
 const bundledIntegrationEntry = process.env.DSH_DESKTOP_INTEGRATION_ENTRY
+const bundledMemoryEntry = process.env.DSH_DESKTOP_MEMORY_ENTRY
 const bundledPackageEntries = new Map([
+  ...(bundledMemoryEntry ? [['dsh-memory-runtime', bundledMemoryEntry]] : []),
   ...(bundledIntegrationEntry ? [['dsh-integration-runtime', bundledIntegrationEntry]] : []),
   ...(bundledWebSearchEntry
     ? [['dsh-web-search-session-model', bundledWebSearchEntry]]

@@ -10,6 +10,9 @@ import { IntegrationService } from './integrations/service'
 import { maySkipGrantedToolPrompt } from './integrations/granted-tool-approval'
 import { startIntegrationBridge } from './integrations/runtime-bridge'
 import { registerIntegrationIpc } from './integrations/ipc'
+import { MemoryService } from './memory/service'
+import { startMemoryBridge } from './memory/bridge'
+import { registerMemoryIpc } from './memory/ipc'
 import { resolveIntegrationContext } from './integrations/context'
 import { DependencyIndex } from './integrations/dependency-index'
 import { GoogleCalendarAdapter } from './integrations/adapters/google-calendar'
@@ -182,6 +185,8 @@ let mainWindow: BrowserWindow | undefined
 let componentDataService: Awaited<ReturnType<typeof createComponentDataService>> | undefined
 let integrationService: IntegrationService | undefined
 let integrationEndpoint: Awaited<ReturnType<typeof startIntegrationBridge>> | undefined
+let memoryService: MemoryService | undefined
+let memoryEndpoint: Awaited<ReturnType<typeof startMemoryBridge>> | undefined
 let stopIntegrationIdentity = () => {}
 let runtime: HarnessRuntime
 let desktopComputer: ReturnType<typeof createDesktopComputer> | undefined
@@ -1335,6 +1340,27 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
+  try {
+    memoryService = await MemoryService.open({
+      root: join(app.getPath('userData'), 'memory'), encryption: safeStorage,
+      owner: () => integrationOwner() || 'local',
+      isShared: id => researchBoardsService?.isSharedSession(id) === true,
+      workspaceRoot: id => new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),
+      legacyRoot: join(dshHome, 'memories'),
+      changed: () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('memory:changed') }
+    })
+    memoryEndpoint = await startMemoryBridge(memoryService)
+  } catch { console.error('[memory] 本地记忆暂不可用，原数据已保留') }
+  registerMemoryIpc(ipcMain, () => mainWindow, memoryService ?? {request: async () => { throw Error('本地记忆暂不可用，原数据已保留。') }})
+  registerTrustedMainWindowHandler(ipcMain, 'memory:open-source', () => mainWindow, async (_event, input) => {
+    const source = input as {sessionId?:string;excerpt?:string;seq?:number}
+    if(!memoryService||typeof source?.sessionId!=='string'||typeof source.excerpt!=='string')throw Error('SOURCE_UNAVAILABLE')
+    const snapshot=await memoryService.request({type:'snapshot'})
+    if(!snapshot.rows.some(row=>row.sources.some(s=>s.sessionId===source.sessionId&&s.excerpt===source.excerpt&&s.seq===source.seq)))throw Error('SOURCE_UNAVAILABLE')
+    const response=await taskRpc<{items:{id:string}[]}>('session.list',{})
+    if(!response.items.some(s=>s.id===source.sessionId))throw Error('SOURCE_UNAVAILABLE')
+    return {ok:true}
+  })
   let noteComponentLibrary:Awaited<ReturnType<typeof installComponentLibrary>>
   const calendarNotes = new NotesStore(join(app.getPath('userData'),'workspace-notes'))
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
@@ -1379,6 +1405,7 @@ async function bootstrap(): Promise<void> {
     execute: async () => unavailableIntegration(), readSkill: async () => unavailableIntegration(),
   })
   stopIntegrationIdentity = accountService.subscribeSessionChanged(() => {
+    memoryService?.rotateIdentity()
     noteNativeMenu.close()
     integrationService?.rotateIdentity()
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('integrations:identity-changed')
@@ -1398,6 +1425,8 @@ async function bootstrap(): Promise<void> {
     bundledResearchTaskEntry: bundledResearchTaskEntry(),
     bundledFundResearchEntry: bundledFundResearchEntry(),
     bundledIntegrationEntry: pathToFileURL(join(app.getAppPath(), 'node_modules/dsh-integration-runtime/index.js')).href,
+    bundledMemoryEntry: pathToFileURL(join(app.getAppPath(), 'node_modules/dsh-memory-runtime/index.js')).href,
+    memoryEndpoint,
     integrationEndpoint,
     accountEndpoint,
     localSearchUrl: localSearchRuntime.endpoint.url,
@@ -1589,7 +1618,7 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => flushResearchNativeWeb?.(), () => componentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => flushResearchNativeWeb?.(), () => componentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => memoryEndpoint?.dispose(), () => memoryService?.close(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )

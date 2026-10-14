@@ -3,9 +3,10 @@ import { basename, isAbsolute, resolve } from 'node:path'
 import { realpath, readdir, readFile, stat } from 'node:fs/promises'
 import type { MemoryCandidate, MemoryCapture, MemoryCommand, MemoryInput, MemoryProject, MemoryRecall, MemoryRecord, MemoryRuntimeContext, MemoryRuntimeTurn, MemorySettings, MemorySnapshot, MemorySource, MemoryUsage } from '../../shared/memory'
 import { MemoryStore, type MemoryEncryption } from './store'
-import { canonicalMemoryKey, chooseMemories, normalizedMemoryText, MEMORY_BACKGROUND_INTRO } from './retriever'
+import { splitMemoryImport } from './import'
+import { canonicalMemoryKey, MemoryRetriever, normalizedMemoryText, MEMORY_BACKGROUND_INTRO } from './retriever'
 
-type State = { schemaVersion: 1; revision: number; scopeEpoch: number; secret: string; rows: Record<string,MemoryRecord>; versions: Record<string,MemoryRecord[]>; projects: Record<string,MemoryProject>; bindings: Record<string,string>; disabled: Record<string,boolean>; settings: MemorySettings; suppression: { key:string;content:string;sessionId?:string;seq?:number }[]; usages:MemoryUsage[]; jobs: Record<string,{turn:MemoryRuntimeTurn;state:'pending'|'done'|'failed';message?:string}>; imported:string[]; warning?:string }
+type State = { schemaVersion: 1; revision: number; scopeEpoch: number; secret: string; rows: Record<string,MemoryRecord>; versions: Record<string,MemoryRecord[]>; projects: Record<string,MemoryProject>; bindings: Record<string,string>; disabled: Record<string,boolean>; settings: MemorySettings; suppression: { key:string;content:string;sessionId?:string;seq?:number }[]; usages:MemoryUsage[]; jobs: Record<string,{turn:MemoryRuntimeTurn;state:'pending'|'done'|'failed';message?:string;attempts?:number}>; imported:string[]; warning?:string }
 type Options = {root:string;encryption:MemoryEncryption;owner():string;isShared(sessionId:string):boolean;workspaceRoot(sessionId:string):Promise<string|null>;now?():number;legacyRoot?:string;changed?():void}
 type Capture = {owner:string;epoch:string;scopeEpoch:number;jobKey:string;turn:MemoryRuntimeTurn;projectId?:string}
 const kinds=new Set(['preference','background','decision','progress']), scopes=new Set(['global','project'])
@@ -19,6 +20,7 @@ export class MemoryService {
   private cache?: {owner:string;state:State}
   private epoch=randomUUID()
   private captures=new Map<string,Capture>()
+  private retriever=new MemoryRetriever()
   private queue:Promise<unknown>=Promise.resolve()
   private closed=false
   private constructor(private options:Options,private store:MemoryStore){}
@@ -37,7 +39,8 @@ export class MemoryService {
     })
     this.queue=operation.catch(()=>{});return operation
   }
-  private persist(state:State,owner:string,purge=false) {state.revision++;this.store.write(owner,state,purge);this.cache={owner,state};this.options.changed?.()}
+  private persist(state:State,owner:string,purge=false,contextChanged=true) {if(contextChanged)state.revision++;this.store.write(owner,state,purge);this.cache={owner,state};this.options.changed?.()}
+  private cancelPending(state:State,sessionId?:string) {for(const job of Object.values(state.jobs))if(job.state==='pending'&&(!sessionId||job.turn.sessionId===sessionId)){job.state='done';job.turn.events=[]}}
   private snapshot(state:State,sessionId?:string,query?:string):MemorySnapshot {
     const now=this.now()
     const rows=Object.values(state.rows).filter(row=>row.status!=='candidate'||now-row.createdAt<30*86400000).filter(row=>!query||normalizedMemoryText(row.title+row.content).includes(normalizedMemoryText(query)))
@@ -126,12 +129,19 @@ export class MemoryService {
       if(!Array.isArray(command.ids)||command.ids.length>100)throw Error('导入数量无效。')
       const available=await this.legacy()
       for(const id of command.ids){const item=available.find(i=>i.id===id);if(!item||state.imported.includes(id))continue
-        this.save(state,{title:item.title,content:item.content.slice(0,600),kind:'background',scope:'project',projectId:command.projectId,source:{kind:'legacy',title:item.title,excerpt:item.content.slice(0,600),createdAt:item.createdAt}},undefined,'candidate',false)
+        const chunks=splitMemoryImport(item.content)
+        for(let index=0;index<chunks.length;index++){
+          const content=chunks[index]!
+          this.save(state,{title:item.title+(chunks.length>1?`（${index+1}/${chunks.length}）`:''),content,kind:'background',scope:'project',projectId:command.projectId,source:{kind:'legacy',title:item.title,excerpt:content,createdAt:item.createdAt}},undefined,'candidate',false)
+        }
         state.imported.push(id)
       }
       changed=true
     }else throw Error('未知记忆操作。')
-    if(changed)this.persist(state,owner,purge)
+    if(changed){
+      if(state.scopeEpoch!==original.scopeEpoch){this.cancelPending(state,'sessionId' in command?command.sessionId:undefined);this.retriever.clear()}
+      this.persist(state,owner,purge)
+    }
     return this.snapshot(state,'sessionId' in command?command.sessionId:undefined,command.type==='snapshot'?command.query:undefined)
   })}
   async recall(context:MemoryRuntimeContext):Promise<MemoryRecall>{return this.serial(async(original,owner)=>{
@@ -139,7 +149,7 @@ export class MemoryService {
     const enabled=state.settings.use&&!state.disabled[sessionId]&&!this.options.isShared(sessionId)
     const projectId=enabled?await this.sessionProject(state,sessionId):state.bindings[sessionId]
     if(JSON.stringify(state.bindings)!==JSON.stringify(original.bindings))this.persist(state,owner)
-    const entries=enabled?chooseMemories(Object.values(state.rows),String(context.query??'').slice(0,6000),projectId,this.now()).map(({row,reason})=>({id:row.id,revision:row.revision,title:row.title,content:row.content,reason})):[]
+    const entries=enabled?this.retriever.select(Object.values(state.rows),String(context.query??'').slice(0,6000),projectId,this.now()).map(({row,reason})=>({id:row.id,revision:row.revision,title:row.title,content:row.content,reason})):[]
     return {enabled,autoEnabled:state.settings.auto&&!state.disabled[sessionId]&&!this.options.isShared(sessionId),ownerEpoch:this.epoch,revision:state.revision,scopeEpoch:state.scopeEpoch,projectId,entries,block:entries.length?MEMORY_BACKGROUND_INTRO+entries.map(e=>`[记忆 ${e.id} v${e.revision}] ${e.title}\n${e.content}`).join('\n\n'):''}
   })}
   async capture(turn:MemoryRuntimeTurn):Promise<MemoryCapture>{return this.serial(async(original,owner)=>{
@@ -150,7 +160,7 @@ export class MemoryService {
     const events=turn.events.filter(e=>e&&Number.isSafeInteger(e.seq)&&e.seq>=0&&['user','assistant'].includes(e.role)&&typeof e.text==='string'&&e.text.length<=16000)
     if(!events.some(e=>e.role==='user'))return {enabled:false,captureId:'',ownerEpoch:this.epoch,revision:state.revision}
     const projectId=await this.sessionProject(state,sessionId),captureId=randomBytes(24).toString('hex')
-    const clean={...turn,sessionId,events};state.jobs[jobKey]={turn:clean,state:'pending'}
+    const clean={...turn,sessionId,events};state.jobs[jobKey]={turn:clean,state:'pending',attempts:state.jobs[jobKey]?.attempts??0}
     const pending=Object.keys(state.jobs);if(pending.length>2000)for(const key of pending.slice(0,pending.length-2000))if(state.jobs[key]?.state!=='pending')delete state.jobs[key]
     this.persist(state,owner);this.captures.set(captureId,{owner,epoch:this.epoch,scopeEpoch:state.scopeEpoch,jobKey,turn:clean,projectId})
     return {enabled:true,captureId,ownerEpoch:this.epoch,revision:state.revision,projectId}
@@ -180,25 +190,32 @@ export class MemoryService {
       if(same&&status==='active'){same.status='superseded';same.updatedAt=this.now()}
       this.save(state,{title:typeof candidate.title==='string'&&candidate.title.trim()?candidate.title.slice(0,120):'新记忆',content,kind:candidate.kind,scope,projectId,source:sourceRef},undefined,status,false,key)
     }
-    state.jobs[capture.jobKey]={turn:{...capture.turn,events:[]},state:'done'}
+    state.jobs[capture.jobKey]={turn:{...capture.turn,events:[]},state:'done',attempts:state.jobs[capture.jobKey]?.attempts??0}
     this.captures.delete(input.captureId);this.persist(state,owner);return this.snapshot(state)
   })}
   async validate(input:{sessionId:string;ownerEpoch:string;revision:number;scopeEpoch:number}){return this.serial(state=>({valid:this.epoch===input.ownerEpoch&&state.revision===input.revision&&state.scopeEpoch===input.scopeEpoch&&state.settings.use&&!state.disabled[input.sessionId]&&!this.options.isShared(input.sessionId)}))}
+  async attempt(input:{captureId:string}){return this.serial((original,owner)=>{
+    const capture=this.captures.get(input.captureId)
+    if(!capture||capture.owner!==owner||capture.epoch!==this.epoch||capture.scopeEpoch!==original.scopeEpoch||!original.settings.auto||original.disabled[capture.turn.sessionId]||this.options.isShared(capture.turn.sessionId))throw Error('记忆整理任务已失效。')
+    const state=structuredClone(original),job=state.jobs[capture.jobKey]
+    if(!job||job.state!=='pending'||(job.attempts??0)>=2)return {allowed:false}
+    job.attempts=(job.attempts??0)+1;this.persist(state,owner);return {allowed:true}
+  })}
   async usage(input:{sessionId:string;ownerEpoch:string;revision:number;entries:MemoryRecall['entries'];warning?:string}){return this.serial((original,owner)=>{
     if(input.ownerEpoch!==this.epoch||input.revision!==original.revision||this.options.isShared(input.sessionId))return {ok:false}
     const state=structuredClone(original),entries=input.entries.flatMap(e=>{const row=state.rows[e.id];return row?.status==='active'&&row.revision===e.revision?[{id:e.id,revision:e.revision,title:row.title,reason:String(e.reason).slice(0,120)}]:[]})
     const warnings=new Set(['记忆背景超出当前模型容量，本轮未使用。','记忆暂不可用，本轮未使用。'])
-    if(input.warning&&warnings.has(input.warning)){state.warning=input.warning;this.persist(state,owner)}
-    if(entries.length){delete state.warning;const now=this.now();for(const e of entries)state.rows[e.id]!.lastUsedAt=now;state.usages.unshift({id:randomUUID(),sessionId:identifier(input.sessionId),createdAt:now,entries});state.usages=state.usages.slice(0,100);this.persist(state,owner)}
+    if(input.warning&&warnings.has(input.warning)){state.warning=input.warning;this.persist(state,owner,false,false)}
+    if(entries.length){delete state.warning;const now=this.now();for(const e of entries)state.rows[e.id]!.lastUsedAt=now;state.usages.unshift({id:randomUUID(),sessionId:identifier(input.sessionId),createdAt:now,entries});state.usages=state.usages.slice(0,100);this.persist(state,owner,false,false)}
     return {ok:true}
   })}
   async failure(input:{captureId:string;message?:string}){return this.serial((original,owner)=>{
     const capture=this.captures.get(input.captureId);if(!capture||capture.epoch!==this.epoch)return {ok:false}
-    const state=structuredClone(original);state.jobs[capture.jobKey]={turn:capture.turn,state:'failed',message:'自动整理未完成'};this.captures.delete(input.captureId);this.persist(state,owner);return {ok:true}
+    const state=structuredClone(original);state.jobs[capture.jobKey]={turn:capture.turn,state:'failed',message:'自动整理未完成',attempts:state.jobs[capture.jobKey]?.attempts??0};this.captures.delete(input.captureId);this.persist(state,owner);return {ok:true}
   })}
   async pending(){return this.serial(state=>({items:Object.values(state.jobs).filter(j=>j.state==='pending').map(j=>({turn:structuredClone(j.turn)})).slice(0,20)}))}
-  rotateIdentity(){this.epoch=randomUUID();this.cache=undefined;this.captures.clear();this.options.changed?.()}
-  async close(){if(this.closed)return;await this.queue;this.closed=true;this.captures.clear();this.cache=undefined;this.store.close()}
+  rotateIdentity(){this.epoch=randomUUID();this.cache=undefined;this.captures.clear();this.retriever.clear();this.options.changed?.()}
+  async close(){if(this.closed)return;await this.queue;this.closed=true;this.captures.clear();this.retriever.close();this.cache=undefined;this.store.close()}
   private async legacy(){
     const root=this.options.legacyRoot;if(!root)return []
     const items:NonNullable<MemorySnapshot['legacy']>=[]

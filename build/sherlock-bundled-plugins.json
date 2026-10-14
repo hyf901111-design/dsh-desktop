@@ -8,6 +8,7 @@
   ],
   "runtimePackages": [
     "dsh-integration-runtime",
+    "dsh-memory-runtime",
     "dsh-desktop-market-installer",
     "dsh-fund-research-runtime",
     "dsh-research-task-runtime",
