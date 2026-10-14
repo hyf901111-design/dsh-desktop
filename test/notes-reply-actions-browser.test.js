@@ -3,9 +3,10 @@ import {readFile} from 'node:fs/promises'
 import {build} from 'esbuild'
 import {resolve} from 'node:path'
 import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
+import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 let browser,script,css
 beforeAll(async()=>{
- const native=patchNotesActivity(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.SessionInputShell = SessionInputShell;',`exports.SessionInputShell = SessionInputShell;exports.__NoteRow=EWorkNoteConversationRow;exports.__NoteViews=EWorkNoteComponentViews;exports.__CanvasAction=ResearchAssistantCanvasAction;`)
+ const native=patchNotesActivity(patchResearchGridWorkbench(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))).replace('exports.SessionInputShell = SessionInputShell;',`exports.SessionInputShell = SessionInputShell;exports.__NoteRow=EWorkNoteConversationRow;exports.__NoteViews=EWorkNoteComponentViews;exports.__CanvasAction=ResearchAssistantCanvasAction;`)
  const feedback=(await readFile('node_modules/@deepseek-ai/dsh-client-ui-message-feedback/lib/client.js','utf8')).replace('exports.apply = apply;','exports.apply = apply;exports.__Actions=MessageFeedbackActions;exports.__Controller=MessageFeedbackController;exports.__copy=zh;')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import React from 'react';import * as jsxRuntime from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';window.WorkspaceSurfaceHost=WorkspaceSurfaceHost;
@@ -29,7 +30,7 @@ beforeAll(async()=>{
  `},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]})
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text+'\n'+await readFile('scripts/lib/research-grid-workbench.css','utf8')
  const playwright=await import(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js');browser=await (playwright.default||playwright).chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
-})
+},30000)
 afterAll(async()=>{await browser?.close()})
 async function fixture(dark=true){
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))

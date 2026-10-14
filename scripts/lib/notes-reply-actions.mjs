@@ -31,19 +31,31 @@ export function createNoteActionDestinationStore(doc) {
 export function noteActionClientHelpers() {
  return [noteReplyText,createNoteActionDestinationStore].map(fn=>fn.toString()).join('\n')+"\nconst eworkNoteActionDestination=createNoteActionDestinationStore(typeof document==='undefined'?undefined:document);\n"
 }
-export function patchNoteAssistantDestination(source) {
- const start=source.indexOf('function ResearchAssistantCanvasAction('),end=source.indexOf('function registerResearchAssistantActions(',start)
- if(start<0||end<start)throw Error('无法定位助手回复添加按钮。')
- const old=source.slice(start,end)
+export function noteAssistantDestinationFunction(old) {
  const marker='/* ework:note-assistant-destination:v1 */'
- if(old.includes(marker))return source
+ if(old.includes(marker))return old
  let next=old.replace('const active = (0, react.useSyncExternalStore)',`${marker}\nconst noteSession=(0,react.useSyncExternalStore)(eworkNoteActionDestination.subscribe,eworkNoteActionDestination.snapshot,eworkNoteActionDestination.snapshot);\nconst notes=noteSession===sessionId;\nconst [failure,setFailure]=react.useState('');\nconst active = (0, react.useSyncExternalStore)`)
  next=next.replace('{ messageId, text, workspace }','{ messageId, text, workspace, sessionId }').replace('if (!active) return null;','if (!active&&!notes) return null;')
- next=next.replaceAll('workbenchText("添加到画布")','workbenchText(notes?"添加到笔记":"添加到画布")')
+ next=old.includes('workbenchText("添加到画布")')?next.replaceAll('workbenchText("添加到画布")','workbenchText(notes?"添加到笔记":"添加到画布")'):next.replaceAll('"添加到画布"','(notes?"添加到笔记":"添加到画布")')
  next=next.replace('onClick: () => workspace.addAssistantResult({ messageId, text, at: workspace.visibleCenter() }),',`onClick: () => {if(!notes){workspace.addAssistantResult({messageId,text,at:workspace.visibleCenter()});return}let response;const actionId=crypto.randomUUID(),ack=event=>{if(event.detail?.actionId===actionId&&event.detail?.sessionId===sessionId)response=event.detail};document.addEventListener('sherlock:notes-add-reply-ack',ack);try{document.dispatchEvent(new CustomEvent('sherlock:notes-add-reply',{detail:{sessionId,messageId,text,actionId}}))}finally{document.removeEventListener('sherlock:notes-add-reply-ack',ack)}setFailure(response?.ok?'':response?.message||'笔记暂不可编辑，请重新打开后重试。');},`)
  next=next.replace('return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {',"return react.createElement(react.Fragment,null,failure&&react.createElement('span',{role:'status'},failure),(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {").replace(/\}\);\s*\}\s*$/, ' }));\n}\n')
  if(next===old||!next.includes(marker)||next.includes('onClick: () => workspace.addAssistantResult'))throw Error('助手回复添加按钮适配不完整。')
+ return next
+}
+export function patchNoteAssistantDestination(source) {
+ const start=source.indexOf('function ResearchAssistantCanvasAction('),end=source.indexOf('function registerResearchAssistantActions(',start)
+ if(start<0||end<start)throw Error('无法定位助手回复添加按钮。')
+ const old=source.slice(start,end),next=noteAssistantDestinationFunction(old)
+ if(next===old)return source
  source=source.slice(0,start)+next+source.slice(end)
+ const restoreTag='/* EWORK_GRID_RESTORE ',restoreStart=source.indexOf(restoreTag)
+ if(restoreStart>=0){
+  const restoreEnd=source.lastIndexOf(' */'),changes=JSON.parse(source.slice(restoreStart+restoreTag.length,restoreEnd))
+  const entries=changes.filter(([,replacement])=>replacement===old.trimEnd())
+  if(entries.length!==1)throw Error('无法同步助手回复的工作台恢复记录。')
+  entries[0][0]=noteAssistantDestinationFunction(entries[0][0]).trimEnd();entries[0][1]=next.trimEnd()
+  source=source.slice(0,restoreStart+restoreTag.length)+JSON.stringify(changes).replaceAll('*/','*\\/')+source.slice(restoreEnd)
+ }
  const inject='inject: (sessionId) => ({ workspace: researchWorkspaces.for(sessionId) })'
  if(source.split(inject).length!==2)throw Error('无法定位助手回复会话来源。')
  return source.replace(inject,'inject: (sessionId) => ({ workspace: researchWorkspaces.for(sessionId),sessionId })')
