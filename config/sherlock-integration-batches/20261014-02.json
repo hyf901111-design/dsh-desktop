@@ -83,6 +83,84 @@
           "最终本地客户端须重建以包含新的CSS并观察实际间距"
         ],
         "generatedAt": "2026-10-14T14:41:52.125Z"
+      },
+      "merged": {
+        "mergeCommit": "c6c12de9b643b869ac8efbf9c04f8e29da9faa28",
+        "verificationCommit": "c6c12de9b643b869ac8efbf9c04f8e29da9faa28",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "c6c12de9b643b869ac8efbf9c04f8e29da9faa28",
+            "completedAt": "2026-10-14T14:43:28.361Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/notes-component-layout.test.js",
+              "test/notes-component-import-interaction.test.js",
+              "test/notes-native-components.test.js",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/notes-component-layout.test.js test/notes-component-import-interaction.test.js test/notes-native-components.test.js test/notes-component-interaction.test.tsx --maxWorkers=1",
+            "verifiedCommit": "c6c12de9b643b869ac8efbf9c04f8e29da9faa28",
+            "completedAt": "2026-10-14T14:43:28.361Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-scroll-viewport.test.js",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-resize-settle.test.js",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/bundled-plugin-profile.test.ts",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-scroll-viewport.test.js test/pptx-selection-viewport.test.js test/pptx-resize-settle.test.js test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/bundled-plugin-profile.test.ts --maxWorkers=1",
+            "verifiedCommit": "c6c12de9b643b869ac8efbf9c04f8e29da9faa28",
+            "completedAt": "2026-10-14T14:43:28.361Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c6c12de9b643b869ac8efbf9c04f8e29da9faa28",
+            "completedAt": "2026-10-14T14:43:28.361Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c6c12de9b643b869ac8efbf9c04f8e29da9faa28",
+            "completedAt": "2026-10-14T14:43:28.361Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-14T14:43:28.361Z"
       }
     },
     {
