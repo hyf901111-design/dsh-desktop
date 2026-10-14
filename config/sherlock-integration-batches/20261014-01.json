@@ -158,6 +158,131 @@
         ],
         "recordedAt": "2026-10-14T05:39:26.389Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复左侧栏宽度拖拽命中并保留折叠前宽度",
+        "branch": "codex/feat/left-sidebar-resize-20261014",
+        "baseCommit": "47e5268541c3cfd3d43da7ddccf88502b0d4d697",
+        "tipCommit": "88d998f2ca90bb0d541f8987d7915236557359c1",
+        "commits": [
+          {
+            "commit": "88d998f2ca90bb0d541f8987d7915236557359c1",
+            "parents": [
+              "47e5268541c3cfd3d43da7ddccf88502b0d4d697"
+            ],
+            "subject": "修复左侧栏宽度拖拽命中并保留折叠前宽度"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/verify-left-sidebar-resize.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-scrollbars.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-final-shell-patch.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-scrollbars.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-sidebar-overlay.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-sidebar-policy.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/figma-final-shell-patch.test.ts",
+              "test/figma-sidebar-overlay.test.ts",
+              "test/research-sidebar-policy.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/figma-resize-feedback.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "5个直接相关文件32项通过",
+            "verifiedCommit": "88d998f2ca90bb0d541f8987d7915236557359c1",
+            "completedAt": "2026-10-14T06:45:19.246235+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "Node项目TypeScript检查通过",
+            "verifiedCommit": "88d998f2ca90bb0d541f8987d7915236557359c1",
+            "completedAt": "2026-10-14T06:45:19.246235+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-left-sidebar-resize.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "隔离真实AppFrame浏览器pointer回归10/10通过",
+            "verifiedCommit": "88d998f2ca90bb0d541f8987d7915236557359c1",
+            "completedAt": "2026-10-14T06:45:19.246235+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "完整feature差异检查通过",
+            "verifiedCommit": "88d998f2ca90bb0d541f8987d7915236557359c1",
+            "completedAt": "2026-10-14T06:45:19.246235+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "合成浏览器调用真实AppFrame/layout store/Notes surface/overlay scrollbars，两主题header、nav、footer、Notes外缘与offset窗口，真实pointer命中与+40宽度、main/Notes跟随、相邻滚轮与滚动条、折叠320→0→320、重挂载单一portal全部通过；真实Electron窗口app-region仍需统一测试包验收。"
+        },
+        "acceptanceCriteria": [
+          "左侧栏边缘顶部、中部、底部均可拖拽调整宽度",
+          "笔记主屏随侧栏宽度即时更新",
+          "导航滚动条和相邻鼠标滚动仍可用",
+          "折叠展开保留当前store最近宽度，首次默认280px",
+          "右侧栏和PPT组件不受左侧命中带修改影响",
+          "用户验收统一测试包后才晋升本地main"
+        ],
+        "risks": [
+          "真实Electron窗口拖动与no-drag路径尚待统一签名客户端验证",
+          "layout store为transient，本修改未新增跨应用重启持久化"
+        ],
+        "generatedAt": "2026-10-14T06:45:19.246235+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -193,6 +318,35 @@
         "git",
         "diff",
         "--check"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/figma-final-shell-patch.test.ts",
+        "test/figma-sidebar-overlay.test.ts",
+        "test/research-sidebar-policy.test.ts",
+        "test/figma-scrollbars.test.ts",
+        "test/figma-resize-feedback.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/verify-left-sidebar-resize.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD"
       ],
       "timeoutMs": 120000
     }
