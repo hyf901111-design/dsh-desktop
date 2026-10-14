@@ -10,12 +10,21 @@ function replaceOnce(source, anchor, replacement) {
 }
 
 export function patchFigmaFilePreview(source) {
-  const notePdfWidth='const renderWidth = bodySize.width > 0 ? !node.noteDocument && preview.pageCount === 1 ? Math.min(bodySize.width, bodySize.height * pageRatio) : bodySize.width : 0;'
-  const notePdfStart=source.indexOf('function ResearchCanvasPdfPreview('),notePdfEnd=source.indexOf('function ResearchCanvasHtmlPreview(',notePdfStart)
-  if(notePdfStart<0||notePdfEnd<notePdfStart)throw Error('Note PDF preview boundary drifted')
-  let notePdf=source.slice(notePdfStart,notePdfEnd)
-  if(!notePdf.includes(notePdfWidth))notePdf=replaceOnce(notePdf,'const renderWidth = bodySize.width > 0 ? preview.pageCount === 1 ? Math.min(bodySize.width, bodySize.height * pageRatio) : bodySize.width : 0;',notePdfWidth)
-  source=source.slice(0,notePdfStart)+notePdf+source.slice(notePdfEnd)
+  const componentPdfWidth='const renderWidth = bodySize.width > 0 ? bodySize.width : 0;'
+  const pdfWidthStart=source.indexOf('function ResearchCanvasPdfPreview('),pdfWidthEnd=source.indexOf('function ResearchCanvasHtmlPreview(',pdfWidthStart)
+  if(pdfWidthStart<0||pdfWidthEnd<pdfWidthStart)throw Error('PDF preview boundary drifted')
+  let pdfPreview=source.slice(pdfWidthStart,pdfWidthEnd)
+  if(!pdfPreview.includes(componentPdfWidth)){
+    const legacyWidths=[
+      'const renderWidth = bodySize.width > 0 ? preview.pageCount === 1 ? Math.min(bodySize.width, bodySize.height * pageRatio) : bodySize.width : 0;',
+      'const renderWidth = bodySize.width > 0 ? !node.noteDocument && preview.pageCount === 1 ? Math.min(bodySize.width, bodySize.height * pageRatio) : bodySize.width : 0;'
+    ]
+    const previous=legacyWidths.find(width=>pdfPreview.includes(width))
+    if(!previous)throw Error('PDF component width anchor drifted')
+    // Height bounds the viewport; page layout and rendering always follow its width.
+    pdfPreview=replaceOnce(pdfPreview,previous,componentPdfWidth)
+  }
+  source=source.slice(0,pdfWidthStart)+pdfPreview+source.slice(pdfWidthEnd)
 
   source=source.replaceAll('authorizationId: descriptor.authorizationId, contentType: descriptor.contentType }', 'authorizationId: descriptor.authorizationId, contentType: descriptor.contentType, ...(descriptor.previewEligible === false ? {previewEligible:false} : {}) }');
   source=source.replace("if(kind!=='image'&&kind!=='assistant')return", "if(kind!=='generic'&&kind!=='image'&&kind!=='assistant')return");
