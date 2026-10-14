@@ -117,10 +117,19 @@ async function waitForCalls(calls: unknown[], count: number): Promise<void> {
 }
 
 describe('Sherlock bundled Office preview adapter', () => {
-  it('upgrades the installed legacy direct editor and keeps a second application identical', async () => {
-    const installedLegacy = await officeClientSource()
+  it('upgrades legacy-marked editor layers independently of the prepared cache version', async () => {
+    const prepared = await officeClientSource()
+    // Re-preparation may already have upgraded the shared build cache. Exercise
+    // the legacy version-tag path with an explicit, valid generated layer.
+    const legacyPayload = '/* legacy-only generated editor payload */'
+    const installedLegacy = patchPptxEditor(prepared).replace(
+      '/* sherlock:pptx-content-editor:v2 */',
+      `/* sherlock:pptx-content-editor:v1 */\n${legacyPayload}`
+    )
     expect(installedLegacy.includes('/* sherlock:pptx-content-editor:v1 */')).toBe(true)
+    expect(stripPptxEditorPatch(installedLegacy)).toBe(stripPptxEditorPatch(prepared))
     const upgraded = patchPptxEditor(installedLegacy)
+    expect(upgraded.includes(legacyPayload)).toBe(false)
     const fresh = patchPptxEditor(stripPptxEditorPatch(installedLegacy))
     expect(upgraded === fresh).toBe(true)
     expect(patchPptxEditor(upgraded) === upgraded).toBe(true)
