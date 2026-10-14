@@ -294,3 +294,38 @@ it('cancels pending automatic writes when the user explicitly discards a failed 
   expect(saves).toHaveLength(1);expect(editable(view.host).textContent).toBe('原始标题')
  }finally{await view.close()}
 })
+
+it('keeps the visible slide while a deferred format refresh runs after text loses focus',async()=>{
+ let release:()=>void=()=>{},started=0
+ function Preview(props:any){
+  const root=React.useRef<HTMLDivElement>(null)
+  React.useEffect(()=>{
+   const markup='<div data-pptx-node-id="2" data-pptx-part="ppt/slides/slide1.xml" style="width:200px;height:100px"><div data-pptx-paragraph="0">原始标题</div></div>'
+   class Viewer{
+    container:HTMLElement;viewerOptions:any={};currentSlideIndex=0;zoomPercent=100
+    constructor(container:HTMLElement,options:any={}){this.container=container;this.viewerOptions=options}
+    destroy(){this.container.replaceChildren()}
+    async open(){started++;this.destroy();await new Promise<void>(resolve=>{release=resolve});this.container.innerHTML=markup}
+    async goToSlide(){};async setZoom(){}
+   }
+   const mount=document.createElement('div');root.current!.appendChild(mount);mount.innerHTML=markup
+   const viewer=new Viewer(mount);props.onPptxViewer?.(viewer)
+   return()=>{viewer.destroy();props.onPptxViewer?.(null)}
+  },[])
+  return React.createElement('div',{ref:root})
+ }
+ const view=await mount({open:async()=>({ok:true,document:doc}),save:async()=>({ok:true,document:doc}),preview:async()=>({ok:true,bytes:[0]})},{},Preview)
+ try{
+  const paragraph=editable(view.host);await act(async()=>paragraph.focus())
+  await act(async()=>([...view.win.document.querySelectorAll('[role=toolbar] button')].find((b:any)=>b.textContent==='加粗') as any).click())
+  await input(view.win,paragraph,'编辑后的内容')
+  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,380))})
+  expect(started).toBe(0)
+  await act(async()=>{paragraph.blur();await new Promise(resolve=>setTimeout(resolve,220))})
+  expect(started).toBe(1)
+  expect(paragraph.isConnected).toBe(true)
+  expect(paragraph.textContent).toBe('编辑后的内容')
+  await act(async()=>{release();await Promise.resolve()})
+  expect(editable(view.host)?.textContent).toBe('编辑后的内容')
+ }finally{release();await view.close()}
+})
