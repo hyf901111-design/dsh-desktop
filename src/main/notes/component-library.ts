@@ -12,8 +12,8 @@ export function noteLibrarySpec(value:any){
 
 export function noteLibraryItems(store: ComponentLibraryStore) {
   return [
-    ...componentLibraryBuiltins().map(item=>({id:item.id,title:item.name,icon:item.widget==='quote'?'stock_quote':item.widget,group:'内置组件'})),
-    ...store.list().map(item=>({id:item.id,title:item.name,icon:'library',group:'自定义组件'}))
+    ...componentLibraryBuiltins().map(item=>({id:item.id,title:item.name,icon:item.widget,group:'内置组件'})),
+    ...store.list().map(item=>({id:item.id,title:item.name,icon:'custom',group:'自定义组件'}))
   ]
 }
 export function noteLibraryNode(store: ComponentLibraryStore, id: string, owner: string): Record<string, any> {
