@@ -18,13 +18,14 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-r
 .ew-attachment progress{width:100%!important;height:6px!important;accent-color:var(--grid-accent,#00a6e9)!important}.ew-attachment [role=alert]{color:var(--grid-text)!important}.ew-attachment-import{display:none!important}
 }
 `
-export function ResearchAttachmentLocalPreview({item,nodeId,sessionId,visible,officePreview}){
- const node={id:nodeId,authorizationId:item.authorizationId,name:item.name},extension=item.name.split('.').pop().toLowerCase(),jsx=react_jsx_runtime.jsx
- if(/^(png|jpe?g|gif|webp|svg|avif|bmp)$/.test(extension))return jsx(ResearchCanvasImagePreview,{node,sessionId,visible})
- if(extension==='pdf')return jsx(ResearchCanvasPdfPreview,{node,sessionId,visible})
+export function ResearchAttachmentLocalPreview({item,nodeId,sessionId,visible,officePreview,noteDocument=false,onNaturalSize,onPageStatus}){
+ if(noteDocument&&item.previewEligible===false)return react_jsx_runtime.jsx('p',{children:'此文件暂不支持组件内预览，可在访达中打开原文件。'})
+ const node={id:nodeId,authorizationId:item.authorizationId,name:item.name,noteDocument},extension=item.name.split('.').pop().toLowerCase(),jsx=react_jsx_runtime.jsx
+ if(/^(png|jpe?g|gif|webp|svg|avif|bmp)$/.test(extension))return jsx(ResearchCanvasImagePreview,{node,sessionId,visible,onNaturalSize})
+ if(extension==='pdf')return jsx(ResearchCanvasPdfPreview,{node,sessionId,visible,onNaturalSize,onPageStatus})
  if(/^(html?|md|markdown|txt|csv|json|log)$/.test(extension))return extension.startsWith('htm')?jsx(ResearchCanvasHtmlPreview,{node,sessionId,visible}):jsx(ResearchCanvasNativeTextPreview,{node,sessionId,visible,markdown:/^(md|markdown)$/.test(extension)})
  if(/^(docx|xlsx|pptx)$/.test(extension))return jsx(ResearchCanvasOfficePreview,{node,sessionId,visible,kind:extension,service:officePreview})
- return jsx('p',{children:'此格式暂不支持组件内预览，请下载原文件。'})
+ return jsx('p',{children:noteDocument?'此格式暂不支持组件内预览，可在访达中打开原文件。':'此格式暂不支持组件内预览，请下载原文件。'})
 }
 export function ResearchAttachmentPreset({node,sessionId,visible=true,officePreview}){
  const spec=node.containerSpec,jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs,key=sessionId+':'+node.id,root=react.useRef(null),dialog=react.useRef(null),picker=react.useRef(null),current=react.useRef(spec)

@@ -62,7 +62,7 @@ export function WorkbenchTitle({title,systemTitle=false}){
   const ref=react.useRef(null);react.useEffect(()=>installWorkbenchTitle(ref.current),[title]);
   return react_jsx_runtime.jsx('span',{ref,className:'ew-grid-title',title,tabIndex:0,'data-ui-system-title':systemTitle||undefined,'data-ui-preserve':systemTitle?undefined:true,children:react_jsx_runtime.jsx('span',{className:'ew-grid-title-copy',children:title})});
 }
-export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand}) {
+export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand,onReload,titleExtra}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
   const [busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[now,setNow]=react.useState(Date.now()),[tip,setTip]=react.useState(null)
   const rss=componentRssStatusView(node)
@@ -72,7 +72,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     setBusy(true);setError('')
     let message='指标数据已更新'
     try{
-      if(node.containerSpec?.type==='calendar-tool'){await document.querySelector('[data-research-node-id=\"'+CSS.escape(node.id)+'\"] [data-calendar-tool]')?.__eworkRefreshCalendar?.();message='日历已更新'}else if(node.containerSpec?.type==='financial-widget'){const preset=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-financial-widget]');if(!preset?.__eworkRefreshFinancial)throw Error('组件暂未就绪');const result=await preset.__eworkRefreshFinancial();if(result?.error)throw Error(result.error);message=result?.message||'已刷新通联数据'}else if(node.containerSpec?.type==='audio'){
+      if(onReload){const result=await onReload();if(result?.error)throw Error(result.error);message=result?.message||'已请求重新载入组件'}else if(node.containerSpec?.type==='calendar-tool'){await document.querySelector('[data-research-node-id=\"'+CSS.escape(node.id)+'\"] [data-calendar-tool]')?.__eworkRefreshCalendar?.();message='日历已更新'}else if(node.containerSpec?.type==='financial-widget'){const preset=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-financial-widget]');if(!preset?.__eworkRefreshFinancial)throw Error('组件暂未就绪');const result=await preset.__eworkRefreshFinancial();if(result?.error)throw Error(result.error);message=result?.message||'已刷新通联数据'}else if(node.containerSpec?.type==='audio'){
         const player=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-research-audio-preset]')
         if(!player?.__eworkReloadAudio)throw Error('请先添加音频网址');
         player.__eworkReloadAudio();message='已请求重新加载音源'
@@ -103,9 +103,10 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),
+      titleExtra,
       node.containerSpec?.type==='financial-widget'&&['quote','announcements'].includes(node.containerSpec.widget)&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly}),
       node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='news'&&react_jsx_runtime.jsx(FinancialNewsSearch,{node,sessionId,readOnly}),
-      button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
+      onAsk&&button('ask','针对组件提问',()=>onAsk(node),{'data-workbench-ask':node.id,onMouseEnter:hover('ask'),onMouseLeave:()=>setTip(null),onFocus:hover('ask'),onBlur:()=>setTip(null)}),
       button('more','组件更多操作',e=>onMore(node,e),{'data-workbench-more':node.id,'aria-haspopup':'menu'}),
       button('close','移除组件',()=>onRemove(node),{disabled:readOnly})
     ]}),
