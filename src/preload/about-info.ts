@@ -18,6 +18,39 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.3.0",
+      "date": "2026-10-14",
+      "items": [
+        "新增笔记模式，可在正文中编辑标题、段落、文字样式、列表、任务清单、表格、引用与代码，支持目录导航、自动保存和本地草稿恢复。",
+        "笔记支持 AI 续写、全文改写和选中文字改写；替换时保留原有文字样式与行内布局，并在右侧会话显示实际回复、生成进度和执行过程。",
+        "笔记右栏复用原生对话、模型和命令界面，恢复历史消息；消息发送后清空输入框，生成内容先预览，再决定是否添加至正文。",
+        "内容预览支持拖动顶部外侧手柄调整高度、重新撰写和放弃，按钮统一为“添加至正文”，面板布局随内容调整。",
+        "笔记回复补齐复制、点赞、点踩和新分支功能；“添加到笔记”将回复作为文本组件插入正文光标位置。",
+        "笔记支持导出 Word、PDF 和 Markdown，保留主要文字格式、列表、段落缩进、表格及组件文本内容。",
+        "笔记斜杠菜单改用可跨出应用窗口的原生浮窗，修复点击、悬停、滚动与二级组件库定位；精简重复标题、快捷键提示和表情选项，统一菜单图标与样式。",
+        "笔记可复用研究组件库中的行情、自选股、市场指数、新闻、公告和日历等组件，并支持拖入文件作为正文内嵌组件，复用文件预览和顶栏操作。",
+        "修复文件拖入后重复生成两个组件、全局拖入提示不消失，以及拖动组件顶栏时将预览内容错误插入正文的问题。",
+        "组件顶栏可选中并拖动组件，选中描边完整显示；右侧和下方尺寸手柄置于组件外侧，支持鼠标与方向键调整，避免被预览浮层遮挡。",
+        "笔记组件自适应布局与研究模式一致，修复内嵌网页高度不足和搜索框重复蓝色描边，收紧组件与后续段落或组件的间距；选中组件时隐藏评论按钮。",
+        "笔记日历复用研究模式的日期选中状态与交互，修复输入栏和小尺寸布局差异；组件库用鼠标展开时不再默认高亮第一项。",
+        "框选多段文字或使用段落菜单设置列表时，按实际换行统一分项；文本工具栏新增项目符号、编号和任务列表，修复首段缩进并保留文字格式与组件层级。",
+        "未产生对话的笔记切换到研究模式时保留欢迎页，切换到对话模式时显示原生首页，修复首次启动空工作区的欢迎态异常。",
+        "PPT 支持在幻灯片画面直接编辑文字、形状和图表，调整位置、尺寸、旋转、字体、字号、文字颜色、填充与边框，并编辑图表分类和系列数据。",
+        "PPT 编辑自动保存到原文件，支持撤销和重做；重新打开相同文件时保留有效保存基线与撤销记录，修复多实例、文件切换及异步预览与保存之间的版本竞态。",
+        "PPT 文字、格式和撤销即时反馈，后台合并重绘；修复退出文字编辑或切换焦点时闪白，并保留刷新前的画面、选区与阅读位置。",
+        "PPT 格式工具栏在组件外悬浮并可拖动，优化字体选择和旋转光标；选中对象滚出可视区域时隐藏选择框与工具栏，返回时恢复。",
+        "大尺寸多页 PPT 优先加载可见页面，分帧预热邻页并暂停离屏加载；减少滚动时重复解析、文字标注和图表重排，修复冷页白色占位与预览高度失控。",
+        "PPT 图表首次绘制完整曲线，保留全部数据点、原始日期轴标签间隔和颜色；完善图表写回、工作簿与公式保留，以及中文输入期间的自动保存。",
+        "研究和笔记中的 PDF 按组件宽度适配页面，组件高度只控制阅读窗口，长页面可在内部滚动。",
+        "新增跨对话长期记忆，可按账号与工作区隔离召回用户偏好、背景、决策和进展；记忆加密保存在本机，支持来源定位、管理与撤销删除。",
+        "简化长期记忆设置并统一总开关，支持查看和编辑记忆文档、导入旧记忆及 AI 概括预览后采用；完善并发草稿、召回上下文预留和故障恢复。",
+        "斜杠菜单新增技能选择，保留输入草稿与附件；英文技能名称在引用、会话搜索和窗口标题中一致显示，复制的英文技能指令加载同一技能正文。",
+        "内置基础金融分析逻辑，完善内置技能、免费数据来源和通联开关；技能引用与实际加载保持一致，并移除内置通联的旧套餐路径。",
+        "会话与工作区按实际使用活动排序并展开当前目录，单纯点击会话不改排序；返回工作区后恢复展开状态，左侧栏支持可靠拖动宽度并保留折叠前宽度。",
+        "研究组件接近满屏时保留底部滚动空间；统一消息中心的中性背景与按钮配色，浅色用户消息改为黑色气泡，完善笔记深浅主题、标题层级、菜单与图标。"
+      ]
+    },
+    {
       version: '1.2.2',
       date: '2026-10-12',
       items: [
@@ -373,6 +406,39 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.3.0",
+      "date": "2026-10-14",
+      "items": [
+        "Added Notes with headings, paragraphs, text formatting, lists, checklists, tables, quotes and code, plus an outline, autosave and local draft recovery.",
+        "Notes supports AI continuation, full-document rewriting and selected-text rewriting. Replacements preserve inline formatting, while the sidebar shows actual replies, progress and execution details.",
+        "Notes reuses native conversations, model selection and commands and restores message history. Sending clears the composer; generated content is previewed before adoption.",
+        "The content preview has an external top resize handle, Rewrite and Discard actions, and an Add to Body button. Its layout adapts to the content.",
+        "Notes replies include Copy, Like, Dislike and Branch actions. Add to Notes inserts a text component at the document cursor.",
+        "Export notes as Word, PDF or Markdown, retaining key text formatting, lists, indentation, tables and component text.",
+        "The Notes slash menu uses a native popover that can extend beyond the app window. Fixed clicks, hover, scrolling and submenu placement; simplified labels and unified icons and styling.",
+        "Notes reuses Research library components including charts, watchlists, indices, news, announcements and Calendar. Dropped files become embedded body components with shared previews and header actions.",
+        "Fixed duplicate components after dropping files, lingering global drop overlays and dragging a component header inserting preview content into the note body.",
+        "Component headers support selection and dragging with complete selection outlines. External right and bottom handles support pointer and arrow-key resizing without preview overlays blocking them.",
+        "Notes component layout now matches Research, fixing undersized embedded webpages and duplicate blue search outlines. Reduced spacing after components and removed comment buttons from component selections.",
+        "Notes Calendar shares Research date selection and interactions, fixing input and compact-layout differences. Opening the library with the mouse no longer highlights its first item by default.",
+        "List formatting applies consistently to selected text and splits items at explicit line breaks. Added bullet, numbered and task-list toolbar actions; fixed first-paragraph indentation while retaining formatting and component hierarchy.",
+        "Notes without conversation messages keeps the welcome view when switching to Research and opens the native homepage in Chat. Fixed the first-launch empty-workspace welcome state.",
+        "Edit PPT text, shapes and charts directly on slides, including position, size, rotation, fonts, text colors, fills and borders, plus chart categories and series data.",
+        "PPT edits autosave to the original file with undo and redo. Reopening the same file preserves its save baseline and undo history; fixed races between instances, file changes, previews and saves.",
+        "PPT text, formatting and undo respond immediately while background redraws are combined. Fixed white flashes when leaving text editing or changing focus, retaining the previous view, selection and reading position.",
+        "PPT formatting tools float outside components and can be dragged. Refined font selection and rotation cursors; offscreen object outlines and tools hide and return with their objects.",
+        "Large multipage PPTs prioritize visible slides, warm nearby slides over successive frames and pause offscreen loading. Reduced repeated parsing, text annotation and chart resizing, and fixed cold blank placeholders and unbounded previews.",
+        "PPT charts draw complete curves on first paint while retaining all data points, original date-axis intervals and colors. Improved chart, workbook and formula preservation and autosave during Chinese input.",
+        "PDF pages in Research and Notes fit component width. Component height controls the reading viewport, with internal scrolling for long pages.",
+        "Added cross-conversation long-term memory for preferences, background, decisions and progress, isolated by account and workspace. Memories are encrypted locally and support source navigation, management and undoing deletions.",
+        "Simplified memory settings under one main switch, with an editable memory document, legacy import and AI summary previews for adoption. Improved concurrent drafts, recall context reservation and failure recovery.",
+        "Added skill selection to the slash menu without losing drafts or attachments. English skill names stay consistent in references, session search and window titles; copied English commands load the same skill content.",
+        "Bundled core financial analysis logic and refined built-in skill, free-data and DataYes switches. Skill references match actual loading, and the legacy built-in DataYes plan route was removed.",
+        "Sessions and workspaces follow actual activity and expand the current directory; clicking alone does not reorder sessions. Directory expansion restores on return, and sidebar resizing preserves the width across collapse.",
+        "Research retains bottom scrolling space around nearly full-screen components. Unified neutral Message Center colors and buttons, black user-message bubbles in light mode, and Notes themes, title hierarchy, menus and icons."
+      ]
+    },
     {
       version: '1.2.2',
       date: '2026-10-12',
