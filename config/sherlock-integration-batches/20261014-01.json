@@ -9,23 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修正PPT编辑层版本升级的包准备回归检查",
+        "featureName": "防止PPT冷页滚轮先显示白占位并移除过期可见性锁存",
         "branch": "codex/feat/pptx-large-scroll-20261014",
-        "baseCommit": "22ba905a4f74f984ddf006459cdb2a9143d4a21b",
-        "tipCommit": "627d85a0c47ecd1df39fb2a582458d7e69e55c2e",
+        "baseCommit": "627d85a0c47ecd1df39fb2a582458d7e69e55c2e",
+        "tipCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
         "commits": [
           {
-            "commit": "627d85a0c47ecd1df39fb2a582458d7e69e55c2e",
+            "commit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
             "parents": [
-              "22ba905a4f74f984ddf006459cdb2a9143d4a21b"
+              "627d85a0c47ecd1df39fb2a582458d7e69e55c2e"
             ],
-            "subject": "修正PPT生成编辑层升级的包准备回归检查"
+            "subject": "修复PPT冷页滚动白占位并以实时裁剪判断可见性"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/pptx-resize-settle.mjs"
+          },
+          {
+            "status": "M",
             "path": "test/bundled-plugin-profile.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-resize-settle.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-scroll-viewport.test.js"
           }
         ],
         "checks": [
@@ -33,16 +45,18 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/bundled-plugin-profile.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/pptx-scroll-viewport.test.js",
               "test/pptx-selection-viewport.test.js",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/pptx-resize-settle.test.js"
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/bundled-plugin-profile.test.ts",
+              "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "5文件58项直接相关检查通过；首次升级校验生成层以外字节完全相同，二次准备byteequal和固定宿主篡改拒绝仍通过，独立只读审核无阻断",
-            "verifiedCommit": "627d85a0c47ecd1df39fb2a582458d7e69e55c2e",
-            "completedAt": "2026-10-14T08:25:20.669949+00:00",
+            "summary": "6文件44项直接相关检查通过；360/820 renderer冷页wheel、旧IO=false、noncancelable burst先RED后GREEN；实际v4→v5升级、二次幂等、固定fingerprint输入还原通过",
+            "verifiedCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
+            "completedAt": "2026-10-14T08:48:51.291380+00:00",
             "timeoutMs": 120000
           },
           {
@@ -54,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "627d85a0c47ecd1df39fb2a582458d7e69e55c2e",
-            "completedAt": "2026-10-14T08:25:20.669949+00:00",
+            "verifiedCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
+            "completedAt": "2026-10-14T08:48:51.291380+00:00",
             "timeoutMs": 120000
           },
           {
@@ -63,185 +77,32 @@
               "git",
               "diff",
               "--check",
-              "22ba905a4f74f984ddf006459cdb2a9143d4a21b..HEAD"
+              "627d85a0c47ecd1df39fb2a582458d7e69e55c2e..HEAD"
             ],
             "outcome": "passed",
-            "summary": "后继差异格式检查通过",
-            "verifiedCommit": "627d85a0c47ecd1df39fb2a582458d7e69e55c2e",
-            "completedAt": "2026-10-14T08:25:20.669949+00:00",
+            "summary": "后继完整差异格式检查通过",
+            "verifiedCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
+            "completedAt": "2026-10-14T08:48:51.291380+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "此后继只修已版本升级的包准备fixture，产品源没有变更；22ba浮层原生验收仍待统一构建，CC92后台46页滚动白页待前台新包复核。"
+          "outcome": "passed",
+          "summary": "真实Office renderer在360/820px内冷pixel wheel默认滚动前已具备可见页，后续noncancelable只准备内容并保留默认滚动；旧IO=false时实际可见内容保持。仅附近页挂载，热页/修饰键/横向/line-page/嵌套滚动/staging默认行为保留。独立原生46页用户原稿验收仍待统一新包，不能用headless结果替代。"
         },
         "acceptanceCriteria": [
-          "合法PPT生成层升级不再使包准备fixture误失败",
-          "固定Office宿主字节及指纹门禁保持不变，二次准备byteequal",
-          "统一原生PPT滚动及浮层验收通过后才接受或晋升"
+          "Cold普通垂直pixel wheel移动视口前准备目标可见页",
+          "noncancelable后续wheel仅预挂载并保留默认滚动，无双倍滚动",
+          "以实时window和ancestor裁剪判断可见性，过期IO通知不清空可见PPT",
+          "邻页保持有限窗口和按帧预热，保留编辑/保存/撤销/浮层裁剪",
+          "原生46页用户样稿滚动及左右侧栏真实检查通过后再接受或晋升"
         ],
         "risks": [
-          "真实46页跨页滚动首帧白页尚未验收，不以headless结果替代native结果",
-          "没有绕过插件源指纹或修改产品PPT代码"
+          "可取消冷wheel准备可见内容时仍有当前页渲染成本，不宣称消除全部渲染耗时",
+          "非pixel、程序滚动保留原有scroll/IO处理路径",
+          "原生46页首帧白页与实际交互需要最终同包验证，不对C4旧包计最新通过"
         ],
-        "generatedAt": "2026-10-14T08:25:20.669949+00:00"
-      },
-      "merged": {
-        "mergeCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-        "verificationCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/pptx-chart-composition.test.ts",
-              "test/pptx-stable-refresh.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts",
-              "test/pptx-scroll-viewport.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-sidebar-overlay.test.ts",
-              "test/research-sidebar-policy.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-resize-feedback.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/figma-final-shell-patch.test.ts test/figma-sidebar-overlay.test.ts test/research-sidebar-policy.test.ts test/figma-scrollbars.test.ts test/figma-resize-feedback.test.ts",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-left-sidebar-resize.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-left-sidebar-resize.mjs",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/memory-service.test.ts",
-              "test/memory-bridge.test.ts",
-              "test/memory-runtime.test.js",
-              "test/memory-view.test.ts",
-              "test/memory-import.test.ts",
-              "test/memory-search.test.ts",
-              "test/memory-source.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/memory-service.test.ts test/memory-bridge.test.ts test/memory-runtime.test.js test/memory-view.test.ts test/memory-import.test.ts test/memory-search.test.ts test/memory-source.test.ts",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-bridge.test.ts",
-              "test/memory-runtime.test.js",
-              "test/memory-view.test.ts",
-              "test/memory-import.test.ts",
-              "test/memory-search.test.ts",
-              "test/memory-source.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/figma-settings-dismiss.test.ts",
-              "test/figma-settings-scrollbar.test.js",
-              "test/settings-background.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-bundled-runtime.test.js",
-              "test/research-context-bridge.test.ts",
-              "test/research-context-index.test.js",
-              "test/research-preview-console-check.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/memory-service.test.ts test/memory-document.test.ts test/memory-bridge.test.ts test/memory-runtime.test.js test/memory-view.test.ts test/memory-import.test.ts test/memory-search.test.ts test/memory-source.test.ts test/figma-settings-layout.test.ts test/figma-settings-dismiss.test.ts test/figma-settings-scrollbar.test.js test/settings-background.test.ts test/bundled-plugin-profile.test.ts test/harness-bundled-package-resolution.test.ts test/integration-bundled-runtime.test.js test/research-context-bridge.test.ts test/research-context-index.test.js test/research-preview-console-check.test.ts",
-            "verifiedCommit": "016554e9dae6ebdc59e41f59cdbead4eaebca6da",
-            "completedAt": "2026-10-14T08:25:48.737Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-14T08:25:48.737Z"
+        "generatedAt": "2026-10-14T08:48:51.291380+00:00"
       }
     },
     {
