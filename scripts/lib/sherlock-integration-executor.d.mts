@@ -66,6 +66,15 @@ export function synchronizeIntegrationMain(options: {
   dryRun: boolean
   now: string
 }): IntegrationExecutionResult
+export function continueIntegrationMain(options: {
+  integrationRepository: string
+  manifestPath: string
+  confirmBatchId: string
+  confirmMainCommit: string
+  ownerToken: string
+  dryRun: boolean
+  now: string
+}): IntegrationExecutionResult
 export function acceptIntegrationBatch(options: {
   integrationRepository: string
   manifestPath: string

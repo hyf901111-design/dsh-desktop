@@ -753,6 +753,39 @@ export function synchronizeIntegrationMain({ integrationRepository, manifestPath
   }
 }
 
+// Like feature continuation, the owner first commits a resolved Git merge.
+// Only the exact two-parent boundary may then advance its lease and ledger.
+export function continueIntegrationMain({ integrationRepository, manifestPath, confirmBatchId, confirmMainCommit, ownerToken, dryRun, now }) {
+  if (typeof dryRun !== 'boolean') fail('dryRun 必须为布尔值。')
+  checkedNow(now)
+  const state = readManifestForMutation(integrationRepository, manifestPath)
+  verifyMutationOwner(state.context, state.lease, ownerToken, { requireLeaseTip: false })
+  requireExactConfirmation(confirmBatchId, state.lease.batchId, 'confirmBatchId')
+  const parents = mergeParents(state.context.worktreeRoot, state.context.head)
+  if (parents.length !== 2 || parents[0] !== state.lease.currentTip) fail('恢复 main 同步需要精确匹配租约 tip 的双父提交边界。')
+  requireExactConfirmation(confirmMainCommit, parents[1], 'confirmMainCommit')
+  if (isAncestor(state.context.worktreeRoot, parents[1], state.lease.currentTip)) fail('恢复边界必须包含尚未集成的 main 提交。')
+  const main = canonicalMainWorktree(state.context.worktreeRoot)
+  sourceClean(main.worktreeRoot, '规范 main worktree')
+  if (parents[1] === state.manifest.expectedMainCommit || !isAncestor(state.context.worktreeRoot, state.manifest.expectedMainCommit, parents[1]) || !isAncestor(state.context.worktreeRoot, parents[1], main.head)) fail('恢复边界必须同步 expectedMainCommit 之后的规范 main 历史。')
+  if (runGit(state.context.worktreeRoot, ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], { allowFailure: true }).status === 0) fail('main 冲突必须先解决并提交。')
+  const originalManifestBlob = runGit(state.context.worktreeRoot, ['rev-parse', `${state.lease.currentTip}:${state.lease.manifestPath}`]).stdout.trim()
+  const currentManifestBlob = runGit(state.context.worktreeRoot, ['hash-object', '--no-filters', '--', state.lease.manifestPath]).stdout.trim()
+  if (originalManifestBlob !== currentManifestBlob) fail('恢复边界不得修改原集成清单字节。')
+  requirePassingPreflight(state.context.worktreeRoot, 'sync-main', state.manifestPath, undefined, main.worktreeRoot)
+  const actions = [action('continue-main-sync', '重新验证精确的已解决 main 合并边界，再由执行器推进租约并记录同步证据。')]
+  if (dryRun) return resultFor('planned', state, state.context.head, state.context.head, actions)
+  try {
+    const checks = runDeclaredChecks(state.context.worktreeRoot, state.manifest.integrationChecks, state.context.head, now)
+    const lease = updateActiveBatchTip({ repository: state.context.worktreeRoot, ownerToken, expectedRevision: state.lease.revision, expectedTip: state.lease.currentTip, nextTip: state.context.head, updatedAt: now })
+    const afterCommit = recordMainSynchronization({ repository: state.context.worktreeRoot, lease, manifest: state.manifest, manifestPath: state.manifestPath, previousMainCommit: state.manifest.expectedMainCommit, mainCommit: parents[1], mergeCommit: state.context.head, checks, now, ownerToken })
+    return resultFor('main-synchronized', state, state.context.head, afterCommit, actions)
+  } catch (error) {
+    if (error?.checkFailure) fail(error.message)
+    return recoveryResult({ batchId: state.lease.batchId, branch: state.lease.branch, beforeCommit: state.context.head, repository: state.context.worktreeRoot, actions })
+  }
+}
+
 export function acceptIntegrationBatch({ integrationRepository, manifestPath, commit, confirmBatchId, ownerToken, now }) {
   checkedNow(now)
   const state = readManifestForMutation(integrationRepository, manifestPath)
