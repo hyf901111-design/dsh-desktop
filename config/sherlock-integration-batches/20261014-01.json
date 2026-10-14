@@ -832,6 +832,156 @@
         ],
         "recordedAt": "2026-10-14T07:18:23.161Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "简化记忆设置与可编辑记忆文档",
+        "branch": "codex/feat/memory-simple-20261014",
+        "baseCommit": "cf80707180202ceb9576cc42d65ace1bcabf03e5",
+        "tipCommit": "bbc3bd5e14e9af3368efac65340e69eaede1079f",
+        "commits": [
+          {
+            "commit": "3949435e618e8c7fa8cc4068efb8893760951122",
+            "parents": [
+              "cf80707180202ceb9576cc42d65ace1bcabf03e5"
+            ],
+            "subject": "简化记忆设置，接入可编辑记忆文档与真实AI概括预览"
+          },
+          {
+            "commit": "bbc3bd5e14e9af3368efac65340e69eaede1079f",
+            "parents": [
+              "3949435e618e8c7fa8cc4068efb8893760951122"
+            ],
+            "subject": "统一记忆总开关，修复概括预留与可编辑文档的故障恢复"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-14-ework-simple-memory.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/README.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/bridge.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/document.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/memory.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-document.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-view.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-bridge.test.ts",
+              "test/memory-runtime.test.js",
+              "test/memory-view.test.ts",
+              "test/memory-import.test.ts",
+              "test/memory-search.test.ts",
+              "test/memory-source.test.ts",
+              "test/figma-settings-layout.test.ts",
+              "test/figma-settings-dismiss.test.ts",
+              "test/figma-settings-scrollbar.test.js",
+              "test/settings-background.test.ts",
+              "test/bundled-plugin-profile.test.ts",
+              "test/harness-bundled-package-resolution.test.ts",
+              "test/integration-bundled-runtime.test.js",
+              "test/research-context-bridge.test.ts",
+              "test/research-context-index.test.js",
+              "test/research-preview-console-check.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "165项直接相关聚焦检查全部通过；包括真实文件编辑删除、总开关迁移、概括和故障恢复",
+            "verifiedCommit": "bbc3bd5e14e9af3368efac65340e69eaede1079f",
+            "completedAt": "2026-10-14T08:17:37.871659Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript及git diff --check通过",
+            "verifiedCommit": "bbc3bd5e14e9af3368efac65340e69eaede1079f",
+            "completedAt": "2026-10-14T08:17:37.871659Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实UI模块隔离渲染浅色、深色、900px窗口；无溢出，单开关/目录/实际AI概括。原生简化版本尚待统一构建验收。"
+        },
+        "acceptanceCriteria": [
+          "完整真实EWork主界面和原有会话可见",
+          "设置仅一个总开关、实际记忆.md目录、模型生成的概括",
+          "总开关关闭同时停止召回和自动整理",
+          "目录可打开、Markdown真实可编辑和删除同步",
+          "真实跨对话记忆及AI预览验证"
+        ],
+        "risks": [
+          "独立审查5项Important与1项Minor均已RED/GREEN修复，无延期；不对修复重复审查。",
+          "旧基线research-context-runtime composition fixture缺少systemPrompt，未改cf807071同样失败；不混入本功能修复。",
+          "原生自动记忆/AI概括验收待集成测试版；不声称已通过。",
+          "只做本地测试，不公证、不升级版本、不上传、不推送，不accept/promote。",
+          "可编辑记忆.md按用户要求存放明文，内部SQLite仍加密，目录/文件按账户隔离且权限0700/0600；旧编辑器冲突副本同目录保留。"
+        ],
+        "generatedAt": "2026-10-14T08:17:37.871659Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -919,6 +1069,32 @@
         "npm",
         "run",
         "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/memory-service.test.ts",
+        "test/memory-document.test.ts",
+        "test/memory-bridge.test.ts",
+        "test/memory-runtime.test.js",
+        "test/memory-view.test.ts",
+        "test/memory-import.test.ts",
+        "test/memory-search.test.ts",
+        "test/memory-source.test.ts",
+        "test/figma-settings-layout.test.ts",
+        "test/figma-settings-dismiss.test.ts",
+        "test/figma-settings-scrollbar.test.js",
+        "test/settings-background.test.ts",
+        "test/bundled-plugin-profile.test.ts",
+        "test/harness-bundled-package-resolution.test.ts",
+        "test/integration-bundled-runtime.test.js",
+        "test/research-context-bridge.test.ts",
+        "test/research-context-index.test.js",
+        "test/research-preview-console-check.test.ts"
       ],
       "timeoutMs": 120000
     }
