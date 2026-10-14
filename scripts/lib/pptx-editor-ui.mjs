@@ -122,7 +122,9 @@ export function createPptxEditorComponent(React,Preview,download,createPortal){
   const positionToolbar=(rect,remember=false)=>{
    if(rect!==undefined)anchorRect.current=rect
    const bar=floatingToolbar.current,r=anchorRect.current;if(!bar)return;if(!r){bar.style.visibility='hidden';return}
-   const viewport=r.viewport||{left:0,top:0,right:window.innerWidth,bottom:window.innerHeight},spaceX=viewport.right-viewport.left,spaceY=viewport.bottom-viewport.top
+   // Object visibility is clipped by the reader before reaching this callback.
+   // Its floating toolbar can escape the card and uses the client window.
+   const viewport={left:0,top:0,right:window.innerWidth,bottom:window.innerHeight},spaceX=viewport.right-viewport.left,spaceY=viewport.bottom-viewport.top
    bar.style.maxWidth=Math.max(0,spaceX-16)+'px'
    const width=bar.offsetWidth||Math.min(620,spaceX-16),height=bar.offsetHeight||40
    if(width+16>spaceX||height+16>spaceY){bar.style.visibility='hidden';return}
@@ -177,7 +179,7 @@ function renderPptxNode(t, n) {`],
  ['G.textContent = I + " ";','G.textContent = I + " "; G.dataset.pptxBullet="";'],
  ['const f = document.createElement("td");\n\t\t\t\t\tf.style.overflow', 'const f = document.createElement("td"); f.dataset.pptxRow=String(x); f.dataset.pptxColumn=String(u);\n\t\t\t\t\tf.style.overflow']
 ]
-const marker='/* sherlock:pptx-content-editor:v2 */'
+const marker='/* sherlock:pptx-content-editor:v3 */'
 const endMarker='/* sherlock:pptx-content-editor:end */\n'
 const viewerAttach='viewerRef.current = viewer;'
 const attached=viewerAttach+' props.onPptxViewer?.(viewer);'

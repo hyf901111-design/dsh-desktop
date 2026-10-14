@@ -67,7 +67,7 @@ async function fixture(width){
  }catch(error){await context.close();throw error}
 }
 
-for(const width of [360,686])it(`clips selection portals to the ${width}px real Notes reader and restores them after inner scroll/unmount`,async()=>{
+for(const width of [360,686])it(`clips selection to the ${width}px Notes reader while keeping the draggable toolbar outside the card`,async()=>{
  const v=await fixture(width),{page,reader,toolbar,outline}=v
  try{
   expect(await toolbar.evaluate(el=>el.parentElement===document.body)).toBe(true)
@@ -81,8 +81,12 @@ for(const width of [360,686])it(`clips selection portals to the ${width}px real 
   await expect.poll(()=>page.evaluate(()=>window.selectedPptNode.getBoundingClientRect().top<document.querySelector('.dsh_32k8zk_editorPptxHost').getBoundingClientRect().top)).toBe(true)
   const clipping=await page.evaluate(()=>{const root=document.querySelector('.dsh_32k8zk_editorPptxHost').getBoundingClientRect(),bar=document.querySelector('.sherlock-ppt-format').getBoundingClientRect(),corner=document.querySelector('[data-pptx-handle=nw]').getBoundingClientRect();return{top:root.top,left:root.left,bottom:Math.min(root.bottom,770),right:root.right,bar:bar.toJSON(),cornerHit:document.elementsFromPoint(corner.x+corner.width/2,corner.y+corner.height/2).some(el=>el.closest('.sherlock-ppt-selection'))}})
   expect(clipping.cornerHit).toBe(false)
-  expect(clipping.bar.top).toBeGreaterThanOrEqual(clipping.top);expect(clipping.bar.bottom).toBeLessThanOrEqual(clipping.bottom)
-  expect(clipping.bar.left).toBeGreaterThanOrEqual(clipping.left);expect(clipping.bar.right).toBeLessThanOrEqual(clipping.right)
+  // The selection belongs to the reader, but its body portal toolbar must use
+  // the whole client window. A narrow card must not force a second tool row.
+  expect(clipping.bar.width).toBeGreaterThan(width)
+  expect(clipping.bar.height).toBeLessThanOrEqual(48)
+  expect(clipping.bar.left).toBeGreaterThanOrEqual(8);expect(clipping.bar.right).toBeLessThanOrEqual(1092)
+  expect(clipping.bar.top).toBeGreaterThanOrEqual(8);expect(clipping.bar.bottom).toBeLessThanOrEqual(842)
   if(width===686&&process.env.SHERLOCK_PPT_SELECTION_SCREENSHOT)await page.screenshot({path:process.env.SHERLOCK_PPT_SELECTION_SCREENSHOT})
   await page.mouse.wheel(0,100)
   await expect.poll(()=>toolbar.evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden')
@@ -103,15 +107,17 @@ for(const width of [360,686])it(`clips selection portals to the ${width}px real 
  }finally{await v.context.close()}
 },20000)
 
-it('keeps the clipped selection but hides a toolbar that cannot fit in the remaining window slice',async()=>{
+it('keeps the toolbar floating above a reader with only a small visible slice',async()=>{
  const v=await fixture(686),{page,reader,toolbar,outline}=v
  try{
   const delta=await page.evaluate(()=>window.selectedPptNode.getBoundingClientRect().top-document.querySelector('.dsh_32k8zk_editorPptxHost').getBoundingClientRect().top-5)
   await reader.hover();await page.mouse.wheel(0,delta)
   await expect.poll(()=>reader.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
   const bounds=await reader.boundingBox();await page.setViewportSize({width:1100,height:Math.floor(bounds.y+14)})
-  await expect.poll(()=>toolbar.evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden')
+  await expect.poll(()=>toolbar.evaluate(el=>getComputedStyle(el).visibility)).toBe('visible')
   expect(await outline.evaluate(el=>getComputedStyle(el).display)).toBe('block')
+  const bar=await toolbar.boundingBox()
+  expect(bar.y).toBeGreaterThanOrEqual(8);expect(bar.y+bar.height).toBeLessThanOrEqual(Math.floor(bounds.y+14)-8)
   await page.setViewportSize({width:1100,height:850})
   await expect.poll(()=>toolbar.evaluate(el=>getComputedStyle(el).visibility)).toBe('visible')
   expect(v.errors).toEqual([])
