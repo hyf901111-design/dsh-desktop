@@ -19,5 +19,5 @@ it('restores the native sidebar welcome without hiding restored note replies or 
   await page.evaluate(()=>window.setNativeEmpty(false));await expect.poll(()=>page.locator('[data-note-empty-state]').count()).toBe(0);await page.evaluate(()=>window.setNativeEmpty(true));await page.getByText('探索更远，洞见更深',{exact:true}).waitFor()
   await page.evaluate(()=>window.openNativeSession());await page.getByText('文章的主题是什么？',{exact:true}).waitFor();expect(await page.locator('[data-note-empty-state]').count()).toBe(0);expect(await page.evaluate(()=>window.reads)).toContain(true)
  }finally{await browser.close()}
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchNotesActivity(source);expect(patchNotesActivity(patched)).toBe(patched);expect(patched).toContain('EWorkNotesConversation,{sessionId,t,empty:(session?.chat?.order?.length ?? 0) === 0')
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchNotesActivity(source);expect(patchNotesActivity(patched)).toBe(patched);expect(patched).toContain('EWorkNotesConversation,{sessionId,t,empty:conversationVacant')
 })

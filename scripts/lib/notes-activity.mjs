@@ -60,7 +60,7 @@ export function mergeNoteConversationFlow(flow,nodeStore,rows){
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
+  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[noteConversationVacant,useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
@@ -73,7 +73,9 @@ export function patchNotesActivity(source) {
   const oldNotes="activeView === 'notes' ? (0,react_jsx_runtime.jsxs)('div',{className:'en-note-conversation-flow',children:[sessionPresentation.conversationView,(0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId,t})]}) : "
   source=source.replace(oldNotes,'')
   const previous="(0, react_dom.createPortal)(activeView === 'notes' ? sessionPresentation.conversationView || (0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId,t}) : sherlockShared(sessionId) ? researchConversationView"
-  const next="(0, react_dom.createPortal)(activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation,{sessionId,t,empty:(session?.chat?.order?.length ?? 0) === 0,children:sessionPresentation.conversationView}) : sherlockShared(sessionId) ? researchConversationView"
+  const current="(0, react_dom.createPortal)(activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation,{sessionId,t,empty:(session?.chat?.order?.length ?? 0) === 0,children:sessionPresentation.conversationView}) : sherlockShared(sessionId) ? researchConversationView"
+  const next="(0, react_dom.createPortal)(activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation,{sessionId,t,empty:conversationVacant,children:sessionPresentation.conversationView}) : sherlockShared(sessionId) ? researchConversationView"
+  source=source.replace(current,next)
   source=source.replace(previous,next)
   if(!source.includes('/* ework:notes-common-conversation:v1 */')){
     const flow='const renderFlow=react.useMemo(()=>mergeCanvasTaskFlow(nativeRenderFlow,nodeStore,canvasTasks),[nativeRenderFlow,nodeStore,canvasTasks]);'
@@ -101,9 +103,10 @@ export function patchNotesActivity(source) {
     if(source.split(signature).length!==2)throw Error('无法定位笔记会话滚动跟随。')
     source=source.replace(signature,'/* ework:notes-follow-stream:v1 */ '+signature.slice(0,-2)+':${noteRows.map(row=>[row.requestId,row.phase,row.stage,row.outputChars,row.reasoning?.length].join(\",\")).join(\";\")}`;')
   }
-  if(source.includes(next))return patchNotesComponents(patchNotesFiles(source))
+  if(source.includes(next))return patchNoteConversationVacancy(patchNotesComponents(patchNotesFiles(source)))
   if (source.split(portal).length !== 2) throw Error('笔记无法定位原生对话过程区域。')
-  return patchNotesComponents(patchNotesFiles(source.replace(portal,next)))
+  return patchNoteConversationVacancy(patchNotesComponents(patchNotesFiles(source.replace(portal,next))))
 }
 import { noteFileClientHelpers, patchNotesFiles } from './notes-files.mjs'
 import { noteComponentClientHelpers, patchNotesComponents } from './notes-components.mjs'
+import {noteConversationVacant,patchNoteConversationVacancy} from './notes-conversation-vacancy.mjs'
