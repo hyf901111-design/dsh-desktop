@@ -106,6 +106,60 @@
           "其他会话欢迎态和外侧尺寸手柄需要同步到最终包"
         ],
         "generatedAt": "2026-10-14T05:30:39.955460+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6f8f828c4b7bdf79c2a540315bffcd607c932b79",
+        "verificationCommit": "6f8f828c4b7bdf79c2a540315bffcd607c932b79",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/pptx-content.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-scene.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-chart-composition.test.ts",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/research-file-preview.test.ts",
+              "test/pptx-scroll-viewport.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
+            "verifiedCommit": "6f8f828c4b7bdf79c2a540315bffcd607c932b79",
+            "completedAt": "2026-10-14T05:31:20.772Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "6f8f828c4b7bdf79c2a540315bffcd607c932b79",
+            "completedAt": "2026-10-14T05:31:20.772Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "6f8f828c4b7bdf79c2a540315bffcd607c932b79",
+            "completedAt": "2026-10-14T05:31:20.772Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-14T05:31:20.772Z"
       }
     }
   ],
