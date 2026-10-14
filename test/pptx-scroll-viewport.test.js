@@ -72,6 +72,12 @@ for(const width of [360,820])it(`keeps the ${width}px editable PPT viewport boun
    return results
   })
   expect(frames.map(frame=>frame.blank)).toEqual([[],[],[]])
+  // An embedded note reader below the window must stop warming invisible pages.
+  await page.locator('#surface').evaluate(element=>{element.style.marginTop='1000px'})
+  await expect.poll(()=>page.locator('[data-slide-index]>[data-mounted="1"]').count()).toBe(0)
+  await page.locator('#surface').evaluate(element=>{element.style.marginTop='0px'})
+  await expect.poll(()=>page.locator('[data-pptx-paragraph][contenteditable=true]').count()).toBeGreaterThan(0)
+
 
  }finally{await context.close()}
 },20000)

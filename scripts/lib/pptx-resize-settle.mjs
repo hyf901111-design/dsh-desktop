@@ -30,7 +30,7 @@ export function schedulePptxResize(viewer) {
 export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version) {
   const root = viewer.viewerOptions.scrollContainer ?? null
   const target = root ?? window
-  let active = true, frame = null, nearby = []
+  let active = true, rootVisible = true, frame = null, nearby = []
   const stale = () => !active || viewer.isRenderStale(version)
   const warm = () => {
     frame = null
@@ -43,7 +43,13 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
     if (stale()) return
     if (frame !== null) cancelAnimationFrame(frame)
     frame = null
-    const bounds = root ? root.getBoundingClientRect() : {top: 0, bottom: window.innerHeight}
+    const box = root ? root.getBoundingClientRect() : {top: 0, bottom: window.innerHeight}
+    const bounds = {top: Math.max(0, box.top), bottom: Math.min(window.innerHeight, box.bottom)}
+    if (!rootVisible || bounds.bottom <= bounds.top) {
+      nearby = []
+      for (const index of [...viewer.mountedSlides]) unmount(index)
+      return
+    }
     const margin = (bounds.bottom - bounds.top) * viewer.listOptions.overscanViewport
     // Read all bounds together, before mounting changes the slide DOM.
     const ranges = wrappers.map((wrapper, index) => {
@@ -61,6 +67,13 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
   const resize = window.ResizeObserver && root ? new window.ResizeObserver(update) : null
   resize?.observe(root)
   const intersection = new window.IntersectionObserver(update, {root, threshold: 0})
+  // The list observer uses an explicit root and does not track that root moving
+  // out of its enclosing note scroll area. Observe the viewport separately.
+  const visibility = root ? new window.IntersectionObserver(entries => {
+    rootVisible = entries[0]?.isIntersecting === true
+    update()
+  }) : null
+  if (root) visibility.observe(root)
   return {
     observe(wrapper) { intersection.observe(wrapper) },
     disconnect() {
@@ -69,12 +82,13 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
       target.removeEventListener('scroll', update)
       resize?.disconnect()
       intersection.disconnect()
+      visibility?.disconnect()
       nearby = []
     }
   }
 }
 
-const marker = '/* sherlock:pptx-resize-settle:v3 */'
+const marker = '/* sherlock:pptx-resize-settle:v4 */'
 const windowOriginal = "const u = this.viewerOptions.scrollContainer ?? null, x = this.listOptions.overscanViewport, p = u ? u.clientHeight : window.innerHeight, g = new h((f) => {\n\t\t\t\t\t\tfor (const y of f) {\n\t\t\t\t\t\t\tconst m = y.target.parentElement, b = Number((m == null ? void 0 : m.dataset.slideIndex) ?? \"-1\");\n\t\t\t\t\t\t\tNumber.isNaN(b) || b < 0 || (y.isIntersecting ? l(b) : a(b));\n\t\t\t\t\t\t}\n\t\t\t\t\t}, {\n\t\t\t\t\t\troot: u,\n\t\t\t\t\t\trootMargin: `${Math.round(p * x)}px 0px`,\n\t\t\t\t\t\tthreshold: 0\n\t\t\t\t\t});"
 const windowReplacement = 'const g = createPptxScrollWindow(this, c, l, a, s);'
 const original = 'this.resizeRafId = null, this.queueRender();'
