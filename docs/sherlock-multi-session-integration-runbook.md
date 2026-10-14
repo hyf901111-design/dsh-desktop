@@ -70,6 +70,8 @@ npm run git:integration:preflight -- --repo /absolute/path/to/integration-202608
 npm run git:integration -- sync-main --repo /absolute/path/to/integration-20260831-01 --manifest /absolute/path/to/integration-20260831-01/config/sherlock-integration-batches/20260831-01.json
 ```
 
+若 `sync-main` 保留了 main 冲突，先在集成 worktree 中解决并提交合并，保留 `MERGE_HEAD` 指定的 main 父提交。然后调用执行器 API `continueIntegrationMain`，提供原批次 ID、该完整 main SHA、持久 owner token 并先 `dryRun: true`。该入口只接受干净的双父提交边界（第一个父提交必须是活动租约 tip，第二个必须是明确确认的规范 main 历史），要求原 manifest 字节未变，并重新执行声明检查；之后由执行器记录同步与 CAS 推进租约。不要手改 manifest 或 lease。恢复已记录边界后，再正常 `sync-main` 到 canonical main 的最新提交。
+
 ## 5. 接受、晋升与取消
 
 用户先在批准的共享客户端中接受精确 integration tip；Plan B 到位前不在 feature worktree 构建共享客户端。接受只记录元数据，不推进 `main`：

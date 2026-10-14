@@ -14,6 +14,7 @@ import {
   acceptIntegrationBatch,
   cancelIntegrationBatch,
   continueIntegrationFeature,
+  continueIntegrationMain,
   createIntegrationBatch,
   formatIntegrationRecoveryCommand,
   mergeIntegrationFeature,
@@ -42,10 +43,11 @@ function prepareIntegrationRoot(repository: GitWorkflowFixture) {
   repository.commit(repository.main, '忽略集成 worktree')
 }
 
-function handoffFile(repository: GitWorkflowFixture, name: string): string {
+function handoffFile(repository: GitWorkflowFixture, name: string, conflict = false): string {
   const feature = repository.createWorktree(name, `codex/feat/${name}-20260831`)
   const base = repository.git(feature, 'rev-parse', 'HEAD')
   repository.write(feature, `src/${name}.ts`, 'export const integration = true\n')
+  if (conflict) repository.write(feature, 'README.md', 'feature\n')
   const tip = repository.commit(feature, '增加可集成功能')
   const handoff = buildFeatureHandoff({
     repository: feature,
@@ -646,6 +648,53 @@ exit "$status"
     expect(accepted).toMatchObject({ status: 'accepted', beforeCommit: beforeAcceptHead, afterCommit: beforeAcceptHead })
     expect(repository.git(integration, 'rev-parse', 'HEAD')).toBe(beforeAcceptHead)
     expect(readActiveBatchLease(integration)).toMatchObject({ acceptedTip: beforeAcceptHead, acceptedManifestDigest: digest })
+  }, 10000)
+
+  it.each([false, true])('recovers a resolved main conflict only at the owned boundary and preserves the exact synchronization evidence (redundant: %s)', (redundant) => {
+    const repository = fixture()
+    prepareIntegrationRoot(repository)
+    const handoff = handoffFile(repository, 'main-conflict', true)
+    const integration = repository.createWorktree('integration-main-conflict', 'codex/integration/20260831-32')
+    adoptIntegrationBatch({ integrationRepository: integration, batchId: '20260831-32', handoffPaths: [handoff], integrationChecks: [{ argv: [process.execPath, '-e', 'process.exit(0)'], timeoutMs: 1000 }], dryRun: false, now: '2026-08-31T06:00:00.000Z' })
+    const context = resolveRepositoryContext(integration)
+    const ownerToken = JSON.parse(readFileSync(path.join(context.gitDirectory, 'sherlock-integration-owner.json'), 'utf8')).ownerToken
+    const manifestPath = path.join(integration, 'config', 'sherlock-integration-batches', '20260831-32.json')
+    mergeIntegrationFeature({ integrationRepository: integration, manifestPath, featureBranch: 'codex/feat/main-conflict-20260831', ownerToken, dryRun: false, now: '2026-08-31T06:01:00.000Z' })
+    repository.write(repository.main, 'README.md', 'main\n')
+    const mainTip = repository.commit(repository.main, '推进主干同一文件')
+    expect(synchronizeIntegrationMain({ integrationRepository: integration, manifestPath, ownerToken, dryRun: false, now: '2026-08-31T06:02:00.000Z' }).status).toBe('recovery-required')
+    repository.write(integration, 'README.md', 'feature and main\n')
+    const boundary = repository.commit(integration, '解决主干同步冲突并保留双方')
+    const args = { integrationRepository: integration, manifestPath, confirmBatchId: '20260831-32', confirmMainCommit: mainTip, ownerToken, dryRun: false, now: '2026-08-31T06:03:00.000Z' }
+    const recover = continueIntegrationMain
+    if (redundant) {
+      const lease = readActiveBatchLease(integration)!
+      updateActiveBatchTip({ repository: integration, ownerToken, expectedRevision: lease.revision, expectedTip: lease.currentTip, nextTip: boundary, updatedAt: args.now })
+      const tree = repository.git(integration, 'rev-parse', 'HEAD^{tree}')
+      const extra = repository.git(integration, 'commit-tree', tree, '-p', boundary, '-p', mainTip, '-m', '合成已包含主干的冗余边界')
+      repository.git(integration, 'update-ref', 'refs/heads/codex/integration/20260831-32', extra, boundary)
+      const unchanged = repository.snapshot()
+      expect(() => recover(args)).toThrow(/尚未集成/)
+      expect(repository.snapshot()).toEqual(unchanged)
+      return
+    }
+    const before = repository.snapshot()
+    expect(() => recover({ ...args, ownerToken: 'wrong-owner' })).toThrow(/owner/)
+    expect(() => recover({ ...args, confirmMainCommit: '0'.repeat(40) })).toThrow(/confirmMainCommit/)
+    expect(repository.snapshot()).toEqual(before)
+    expect(recover({ ...args, dryRun: true }).status).toBe('planned')
+    expect(repository.snapshot()).toEqual(before)
+    const result = recover(args)
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    expect(result.status).toBe('main-synchronized')
+    expect(manifest.expectedMainCommit).toBe(mainTip)
+    expect(manifest.mainSynchronizations[0]).toMatchObject({ mainCommit: mainTip, mergeCommit: boundary, verificationCommit: boundary })
+    expect(manifest.mainSynchronizations[0].checks.every((check: any) => check.verifiedCommit === boundary)).toBe(true)
+    expect(readActiveBatchLease(integration)!.currentTip).toBe(result.afterCommit)
+    expect(repository.git(integration, 'show', 'HEAD:README.md')).toBe('feature and main')
+    const recorded = repository.snapshot()
+    expect(() => recover(args)).toThrow(/boundary|边界/)
+    expect(repository.snapshot()).toEqual(recorded)
   }, 10000)
 
   it('fast-forwards only an accepted exact integration tip into canonical clean main and archives the lease', () => {
