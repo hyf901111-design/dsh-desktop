@@ -181,8 +181,10 @@ function initializeUi(): void {
   ipcRenderer.on('memory:save-selection',(_event,value)=>{
     if(typeof value?.content!=='string'||!value.content.trim())return
     const sessionId=value.sessionId||document.documentElement.dataset.eworkMemorySession||document.documentElement.dataset.srbSelectedSession||undefined
-    const inNote=!!document.getSelection()?.anchorNode?.parentElement?.closest('.bn-editor,[data-note-session],.ew-note-editor')
-    document.dispatchEvent(new CustomEvent('sherlock:memory-save-selection',{detail:{content:value.content,title:'选中的内容',sessionId,source:{kind:inNote?'note':'conversation',sessionId,title:'客户端中选中的内容',excerpt:value.content,createdAt:Date.now()}}}))
+    const anchor=document.getSelection()?.anchorNode?.parentElement
+    const inNote=!!anchor?.closest('.bn-editor,[data-note-session],.ew-note-editor')
+    const block=anchor?.closest<HTMLElement>('.bn-block-outer[data-id]'),note=anchor?.closest<HTMLElement>('[data-note-source-revision]'),message=anchor?.closest<HTMLElement>('[data-event-seq],[data-message-id]')
+    document.dispatchEvent(new CustomEvent('sherlock:memory-save-selection',{detail:{content:value.content,title:'选中的内容',sessionId,source:{kind:inNote?'note':'conversation',sessionId,...(inNote&&block&&note?{noteId:block.dataset.id,noteRevision:Number(note.dataset.noteSourceRevision)}:{}),...(!inNote&&message?{...(message.dataset.eventSeq?{seq:Number(message.dataset.eventSeq)}:{}),...(message.dataset.messageId?{messageId:message.dataset.messageId}:{})}:{}),title:'客户端中选中的内容',excerpt:value.content,createdAt:Date.now()}}}))
   })
   mountResearchBoardNotifications(document, boards)
   mountDeveloperModeUi()

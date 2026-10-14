@@ -1,7 +1,7 @@
 export type MemoryKind = 'preference' | 'background' | 'decision' | 'progress'
 export type MemoryScope = 'global' | 'project'
 export type MemoryStatus = 'active' | 'candidate' | 'disabled' | 'superseded'
-export type MemorySource = { kind: 'conversation' | 'manual' | 'note' | 'legacy'; sessionId?: string; seq?: number; title: string; excerpt: string; createdAt: number; noteId?: string }
+export type MemorySource = { kind: 'conversation' | 'manual' | 'note' | 'legacy'; sessionId?: string; seq?: number; title: string; excerpt: string; createdAt: number; noteId?: string; noteRevision?: number; messageId?: string }
 export type MemoryRecord = { id: string; title: string; content: string; kind: MemoryKind; scope: MemoryScope; projectId?: string; semanticKey: string; status: MemoryStatus; revision: number; manualLocked: boolean; pinned: boolean; createdAt: number; updatedAt: number; lastConfirmedAt: number; expiresAt?: number; lastUsedAt?: number; sources: MemorySource[] }
 export type MemoryProject = { id: string; name: string; path?: string; aliases: string[]; createdAt: number }
 export type MemorySettings = { use: boolean; auto: boolean }
@@ -23,6 +23,6 @@ export type MemoryBridge = { request(command: MemoryCommand): Promise<MemorySnap
 export type MemoryRuntimeContext = { sessionId: string; query: string; projectPath?: string; turnId?: string }
 export type MemoryRecall = { enabled: boolean; autoEnabled: boolean; ownerEpoch: string; revision: number; scopeEpoch: number; projectId?: string; entries: { id: string; revision: number; title: string; content: string; reason: string }[]; block: string }
 export type MemoryTurnEvent = { seq: number; role: 'user' | 'assistant'; text: string }
-export type MemoryRuntimeTurn = { sessionId: string; turnId: string; events: MemoryTurnEvent[]; projectPath?: string; route?: { provider: string; model: string } }
+export type MemoryRuntimeTurn = { sessionId: string; turnId: string; events: MemoryTurnEvent[]; anchor?: { ownerEpoch:string;scopeEpoch:number;projectId?:string }; projectPath?: string; route?: { provider: string; model: string } }
 export type MemoryCandidate = { title: string; content: string; kind: MemoryKind; scope: MemoryScope; semanticKey?: string; sourceSeq: number; evidence: string; explicit: boolean }
 export type MemoryCapture = { captureId: string; enabled: boolean; ownerEpoch: string; revision: number; projectId?: string }

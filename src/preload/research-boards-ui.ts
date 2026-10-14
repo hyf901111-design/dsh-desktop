@@ -1,3 +1,4 @@
+import {waitForMemorySource} from './memory/source'
 import { researchBoardRunning } from './research-board-activity'
 import { orderBoardConversationGroups } from './research-board-conversation-order'
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
@@ -1827,17 +1828,14 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
         if(result.boardId)await page.openBoard(result.boardId)
         else if(result.area==='boards')await page.openPersonal(result.sessionId!)
         else page.openSearchSession(result.sessionId!)
+        const match=await waitForMemorySource(document,source,()=>page.current()??undefined,{onReady:()=>{
+          const tab=source.kind==='note'?'notes':'chat'
+          document.querySelector<HTMLButtonElement>(`[data-srb-tabs] [data-conversation-view-id="${tab}"]`)?.click()
+          if(source.kind==='note')document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:source.sessionId}}))
+        }})
+        if(!match){document.dispatchEvent(new CustomEvent('sherlock:memory-source-result',{detail:{requestId,ok:false}}));return}
         document.querySelector<HTMLButtonElement>('.VOzbGW_close')?.click()
-        const excerpt=String(source.excerpt??'').slice(0,80)
-        let attempts=0
-        const locate=()=>{
-          if(page.current()!==source.sessionId)return
-          const candidates=[...document.querySelectorAll<HTMLElement>('[data-message-id],[data-event-seq],[class*="_message"],[class*="_userMessage"]')]
-          const match=excerpt?candidates.filter(node=>node.textContent?.includes(excerpt)).sort((a,b)=>(a.textContent?.length??0)-(b.textContent?.length??0))[0]:undefined
-          if(match){match.scrollIntoView({block:'center',behavior:'smooth'});match.dataset.memorySourceHighlight='true';setTimeout(()=>delete match.dataset.memorySourceHighlight,3000)}
-          else if(attempts++<20)setTimeout(locate,100)
-        }
-        locate()
+        match.scrollIntoView({block:'center',behavior:'smooth'});match.dataset.memorySourceHighlight='true';setTimeout(()=>delete match.dataset.memorySourceHighlight,3000)
         document.dispatchEvent(new CustomEvent('sherlock:memory-source-result',{detail:{requestId,ok:true}}))
       })().catch(()=>document.dispatchEvent(new CustomEvent('sherlock:memory-source-result',{detail:{requestId,ok:false}})))
     }

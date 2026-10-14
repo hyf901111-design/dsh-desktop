@@ -90,7 +90,7 @@ function candidatesOf(raw, input) {
 export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchRequest = globalThis.fetch, requestTimeoutMs = 5000, extractionTimeoutMs = 60000, onWarning } = {}) {
   const config = bridgeConfig(env), abort = new AbortController()
   const request = createBridge(config, fetchRequest, requestTimeoutMs, abort.signal)
-  const states = new WeakMap(), seen = new WeakMap(), listeners = []
+  const states = new WeakMap(), turnAnchors = new WeakMap(), seen = new WeakMap(), listeners = []
   let queue = Promise.resolve(), disposed = false
   const warn = message => {
     if (disposed) return
@@ -157,7 +157,7 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
     if (!state || state.turn !== turn) { state = { turn, query: userText, snapshot: undefined }; states.set(agent, state) }
     else if (userText) state.query = userText
     if (!state.query) return decision
-    try { state.snapshot = await recall(agent, state.query, turn, signal) }
+    try { state.snapshot = await recall(agent, state.query, turn, signal);if(!turnAnchors.has(agent.session)||turnAnchors.get(agent.session).turn!==turn)turnAnchors.set(agent.session,{turn,anchor:{ownerEpoch:state.snapshot.ownerEpoch,scopeEpoch:state.snapshot.scopeEpoch,...(state.snapshot.projectId?{projectId:state.snapshot.projectId}:{})}}) }
     catch { state.snapshot = undefined; if (!signal.aborted) warn(recallFailure) }
     return decision
   }))
@@ -171,8 +171,9 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
       for (let attempt = 0; attempt < 2; attempt++) {
         let snapshot = state.snapshot
         if (!snapshot) snapshot = state.snapshot = await recall(agent, state.query, turn, signal)
+        if (!snapshot.enabled) return original
         if (!await valid(agent, snapshot, signal)) { state.snapshot = undefined; continue }
-        if (!snapshot.enabled || snapshot.entries.length === 0 || !snapshot.block) return original
+        if (snapshot.entries.length === 0 || !snapshot.block) return original
         // The authoritative bridge block already includes history/priority/no-permission framing.
         const message = createUserMessage({ content: [{ type: 'text', text: snapshot.block }], source: { kind: 'plugin', plugin: name } })
         const meter = ctx.get?.('tokenMeter')
@@ -206,6 +207,9 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
     if (!users.some(item => !simpleReply(textOf(item.data))) && !confirmationContext) return
     // A reused header need not be repeated inside this turn's persisted suffix.
     // Snapshot the routed config at the turn-end signal, before another turn can change it.
+    const anchored=turnAnchors.get(session)
+    if(!anchored||anchored.turn!==event.data.turn)return
+    const anchor={...anchored.anchor}
     const configAtEnd = session.requestHeader()?.config
     const route = configAtEnd?.provider && configAtEnd.model ? { provider: configAtEnd.provider, model: configAtEnd.model } : undefined
     enqueue(async () => {
@@ -220,7 +224,7 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
         if (item.type === 'assistant/message' && item.data.message?.role === 'assistant') return [{ seq: item.seq, role: 'assistant', text: textOf(item.data.message) }]
         return []
       }).filter(item => item.text.trim())
-      await extract({ sessionId: session.id, turnId: String(event.data.turn), events, ...(durable.meta.cwd ? { projectPath: durable.meta.cwd } : {}), ...(route?.provider && route.model ? { route: { provider: route.provider, model: route.model } } : {}) })
+      await extract({ anchor, sessionId: session.id, turnId: String(event.data.turn), events, ...(durable.meta.cwd ? { projectPath: durable.meta.cwd } : {}), ...(route?.provider && route.model ? { route: { provider: route.provider, model: route.model } } : {}) })
     })
   }))
 

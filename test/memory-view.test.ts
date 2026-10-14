@@ -95,6 +95,18 @@ afterEach(async () => {
 })
 
 describe('ordinary settings memory UI', () => {
+  it('preserves input typed into the same draft while its earlier content is saving',async()=>{
+    let finish:(value:MemorySnapshot)=>void=()=>{}
+    const commands:MemoryCommand[]=[]
+    const {button,field,change,open}=setup({request:command=>{commands.push(command);return command.type==='save'?new Promise(resolve=>{finish=resolve}):Promise.resolve(snapshot([]))}})
+    await open();button('新增记忆').click();change('标题','标题');change('内容','提交的内容');button('保存记忆').click()
+    change('内容','保存期间继续输入的新内容')
+    finish(snapshot([row({id:'new-row',title:'标题',content:'提交的内容',revision:1})]));await tick()
+    expect(field('内容')?.value).toBe('保存期间继续输入的新内容')
+    button('保存记忆').click()
+    expect(commands.at(-1)).toMatchObject({type:'save',id:'new-row',expectedRevision:1,input:{content:'保存期间继续输入的新内容'}})
+    finish(snapshot([row({id:'new-row',title:'标题',content:'保存期间继续输入的新内容',revision:2})]));await tick()
+  })
   it('opens without a chat and renders real readable previews without treating content as HTML', async () => {
     const state = snapshot([
       row(),

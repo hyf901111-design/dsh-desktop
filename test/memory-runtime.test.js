@@ -29,7 +29,7 @@ async function fixture(options = {}) {
   expect(patchModule.patchMemoryRequestContext(patched)).toBe(patched)
   await writeFile(join(root, 'loop.mjs'), patched)
   const { default: AgentLoop } = await import(pathToFileURL(join(root, 'loop.mjs')).href)
-  const calls = [], wire = [], warnings = [], attempts = new Map(), control = { revision: 1, memory: '默认使用简体中文。', failModel: false, invalidEvidence: false, denyAttempt: false, contextWindow: options.contextWindow ?? 16000, beforeValidate: undefined, delayExtract: undefined }
+  const calls = [], wire = [], warnings = [], attempts = new Map(), control = { enabled:true, ownerEpoch: 'owner-1', scopeEpoch: 1, projectId: undefined, revision: 1, memory: '默认使用简体中文。', failModel: false, invalidEvidence: false, denyAttempt: false, contextWindow: options.contextWindow ?? 16000, beforeValidate: undefined, delayExtract: undefined }
   const sockets = new Set()
   const server = createServer(async (request, response) => {
     expect(request.headers.authorization).toBe('Bearer memory-test-token')
@@ -37,9 +37,9 @@ async function fixture(options = {}) {
     const body = JSON.parse(text); wire.push({ path: request.url, body })
     let value
     if (request.url === '/pending') value = { items: options.pending ?? [] }
-    if (request.url === '/recall') value = { enabled: !body.sessionId.includes('shared'), autoEnabled: true, ownerEpoch: 'owner-1', scopeEpoch: 1, revision: control.revision, entries: body.sessionId.includes('shared') || !control.memory ? [] : [{ id: 'memory-1', revision: control.revision, title: '回答语言', content: control.memory, reason: '相关偏好' }], block: body.sessionId.includes('shared') ? '' : control.memory }
-    if (request.url === '/validate') { await control.beforeValidate?.(body); value = { valid: body.revision === control.revision } }
-    if (request.url === '/capture') value = { captureId: body.sessionId.includes('shared') ? '' : `${body.sessionId}/${body.turnId}`, enabled: !body.sessionId.includes('shared'), ownerEpoch: 'owner-1', revision: control.revision }
+    if (request.url === '/recall') value = { enabled: control.enabled && !body.sessionId.includes('shared'), autoEnabled: true, ownerEpoch: control.ownerEpoch, scopeEpoch: control.scopeEpoch, projectId: control.projectId, revision: control.revision, entries: !control.enabled || body.sessionId.includes('shared') || !control.memory ? [] : [{ id: 'memory-1', revision: control.revision, title: '回答语言', content: control.memory, reason: '相关偏好' }], block: !control.enabled || body.sessionId.includes('shared') ? '' : control.memory }
+    if (request.url === '/validate') { await control.beforeValidate?.(body); value = { valid: control.enabled && body.revision === control.revision } }
+    if (request.url === '/capture') { const enabled = !body.sessionId.includes('shared') && (!body.anchor || body.anchor.ownerEpoch === control.ownerEpoch && body.anchor.scopeEpoch === control.scopeEpoch && body.anchor.projectId === control.projectId); value = { captureId: enabled ? `${body.sessionId}/${body.turnId}` : '', enabled, ownerEpoch: control.ownerEpoch, revision: control.revision } }
     if (request.url === '/attempt') { const count = attempts.get(body.captureId) ?? 0; const allowed = !control.denyAttempt && count < 2; if (allowed) attempts.set(body.captureId, count + 1); value = { allowed } }
     if (request.url === '/usage' || request.url === '/commit' || request.url === '/failure') value = { ok: true }
     response.setHeader('content-type', 'application/json'); response.end(JSON.stringify(value ?? {}))
@@ -78,6 +78,27 @@ async function fixture(options = {}) {
   const turn = async (text, target = agent) => { target.followup(createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } })); await target.whenIdle(); await runtime.idle(); expect(errors).toEqual([]) }
   return { ctx, agent, runtime, calls, wire, control, warnings, turn, createAgent, root, registration }
 }
+
+it('treats a disabled use switch as a quiet request without memory',async()=>{
+ const f=await fixture();f.control.enabled=false;await f.turn('你好');
+ expect(f.calls[0].messages.some(m=>m.source?.plugin==='dsh-memory-runtime')).toBe(false);expect(f.warnings).toEqual([])
+})
+
+it('binds queued completed turns before an identity or project switch can retarget extraction', async () => {
+  const f = await fixture()
+  let release, started
+  const gate = new Promise(resolve => { release = resolve }), entered = new Promise(resolve => { started = resolve })
+  f.control.delayExtract = async () => { started(); await gate }
+  f.agent.followup(createUserMessage({ content: [{ type: 'text', text: '请记住，我今后默认用中文回答。' }], source: { kind: 'user' } }))
+  await f.agent.whenIdle(); await entered
+  const queued = await f.createAgent('queued-parent')
+  queued.followup(createUserMessage({ content: [{ type: 'text', text: '决定项目采用本地优先方案。' }], source: { kind: 'user' } }))
+  await queued.whenIdle()
+  f.control.ownerEpoch = 'owner-2'; f.control.scopeEpoch = 2; f.control.projectId = 'new-project'
+  release(); await f.runtime.idle()
+  expect(f.calls.filter(call => call.purpose === 'memory-extraction')).toHaveLength(1)
+  expect(f.wire.find(call => call.path === '/capture' && call.body.sessionId === 'queued-parent').body.anchor).toEqual({ ownerEpoch: 'owner-1', scopeEpoch: 1 })
+})
 
 it('injects memory into the real prepared request while durable history and headers remain clean', async () => {
   const f = await fixture()

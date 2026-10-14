@@ -11,3 +11,5 @@ Completed parent turns first pass `sessions.flush`, then `sessionPersistence.rea
 Startup recovery consumes only persisted `/pending` captures and reauthorizes each via idempotent `/capture`. It does not scan old sessions. Each model dispatch first reserves a durable attempt via `/attempt`; the bridge preserves the maximum-two budget across restart. An ambiguous reservation is never replayed. Already dispatched conversation requests cannot retract previously sent memory. Unknown adapter capacity falls back to the bridge byte budget; known capacity uses tokenMeter (or conservative byte estimation if absent).
 
 Focused verification: `npx vitest run test/memory-runtime.test.js`. Tests use real Cordis services, a copied and patched installed AgentLoop, a token meter, an authenticated local HTTP bridge, and a real JSONL backend. Canonical dependencies and shared clients are untouched.
+
+Each turn carries the owner epoch, scope epoch and project ID obtained before enqueueing. Capture rejects stale or absent anchors; durable recovery can only renew authorization for pending jobs with the same stored scope. A disabled use switch returns a quiet request without memory.

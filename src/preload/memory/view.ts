@@ -1276,6 +1276,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
         expiresAt,
         source: value.source
       }
+      const submittedDraft=JSON.stringify(value)
       void mutate(
         {
           type: 'save',
@@ -1286,6 +1287,8 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
         '保存记忆',
         (next) => {
           if (draft === value) {
+            const saved=next.rows.find(r=>r.id===value.id||(!value.id&&r.title===inputValue.title&&r.content===inputValue.content&&r.scope===inputValue.scope&&r.projectId===inputValue.projectId))
+            if(JSON.stringify(value)!==submittedDraft){if(saved){value.id=saved.id;value.expectedRevision=saved.revision}return}
             draft = undefined
             selectedId =
               value.id ??

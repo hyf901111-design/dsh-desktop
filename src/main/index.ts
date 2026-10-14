@@ -1353,10 +1353,17 @@ async function bootstrap(): Promise<void> {
   } catch { console.error('[memory] 本地记忆暂不可用，原数据已保留') }
   registerMemoryIpc(ipcMain, () => mainWindow, memoryService ?? {request: async () => { throw Error('本地记忆暂不可用，原数据已保留。') }})
   registerTrustedMainWindowHandler(ipcMain, 'memory:open-source', () => mainWindow, async (_event, input) => {
-    const source = input as {sessionId?:string;excerpt?:string;seq?:number}
+    const source = input as import('../shared/memory').MemorySource
     if(!memoryService||typeof source?.sessionId!=='string'||typeof source.excerpt!=='string')throw Error('SOURCE_UNAVAILABLE')
     const snapshot=await memoryService.request({type:'snapshot'})
-    if(!snapshot.rows.some(row=>row.sources.some(s=>s.sessionId===source.sessionId&&s.excerpt===source.excerpt&&s.seq===source.seq)))throw Error('SOURCE_UNAVAILABLE')
+    if(!snapshot.rows.some(row=>row.sources.some(s=>s.sessionId===source.sessionId&&s.excerpt===source.excerpt&&s.seq===source.seq&&s.kind===source.kind&&s.noteId===source.noteId&&s.noteRevision===source.noteRevision&&s.messageId===source.messageId)))throw Error('SOURCE_UNAVAILABLE')
+    if(source.kind==='note'){
+      if(!source.noteId||!Number.isSafeInteger(source.noteRevision))throw Error('SOURCE_UNAVAILABLE')
+      const note=calendarNotes.load(integrationOwner()||'local',source.sessionId).saved
+      const blocks=(items:any[]):any[]=>items.flatMap(b=>[b,...blocks(b.children??[])])
+      const block=blocks(note.blocks).find(b=>b.id===source.noteId)
+      if(note.revision!==source.noteRevision||!block)throw Error('SOURCE_UNAVAILABLE')
+    }else if(source.kind!=='conversation'||!Number.isSafeInteger(source.seq)&&!source.messageId)throw Error('SOURCE_UNAVAILABLE')
     const response=await taskRpc<{items:{id:string}[]}>('session.list',{})
     if(!response.items.some(s=>s.id===source.sessionId))throw Error('SOURCE_UNAVAILABLE')
     return {ok:true}
