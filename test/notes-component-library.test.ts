@@ -9,8 +9,8 @@ it('uses the research library catalog and saved names, cloning a fresh independe
   store.list = () => [{id:'custom-1',name:'已重命名组件'}]
   store.read = id => {if(id!=='custom-1')throw Error('组件不存在');return {node:structuredClone(saved) as any}}
   const items = noteLibraryItems(store)
-  expect(items.slice(0,6).map(item=>item.id)).toEqual(componentLibraryBuiltins().map(item=>item.id))
-  expect(items.at(-1)).toMatchObject({id:'custom-1',title:'已重命名组件'})
+  expect(items.slice(0,6).map(item=>item.id)).toEqual(componentLibraryBuiltins().map(item=>item.id));expect(items.slice(0,6).map(item=>item.icon)).toEqual(componentLibraryBuiltins().map(item=>item.widget))
+  expect(items.at(-1)).toMatchObject({id:'custom-1',title:'已重命名组件',icon:'custom'})
   for (const item of items.slice(0,6)) {
     const node = noteLibraryNode(store,item.id,'alice')
     expect(node).toMatchObject({kind:'generated-container',generationStatus:'completed',noteLibrary:true})

@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { BrowserWindow } from 'electron'
 import { NoteNativeMenu, noteMenuBounds, noteMenuPresentation, validateNoteMenu } from '../src/main/notes/native-menu'
 import type { NoteMenuState } from '../src/shared/notes-menu'
+import { readFileSync } from 'node:fs'
 
 vi.mock('electron',async()=>{
   const { EventEmitter } = await import('node:events')
@@ -36,6 +37,18 @@ it('keeps all commands and shortcuts in a compact icon grid and list without des
  expect(result.height).toBeLessThanOrEqual(360);expect(result.html).toContain('basic-grid');expect(result.html).toContain('<svg');expect(result.html).not.toContain('<small>');expect(result.html).not.toContain('冗长的功能说明')
  for(const item of items)expect(result.html).toContain('/select/'+item.id+'?revision=1')
  expect(result.html).toContain('⌘-Alt-1');expect(noteMenuPresentation(input({items:Array.from({length:80},(_,i)=>({...items.at(-1)!,id:'x'+i}))}),'ticket').height).toBe(480)
+})
+it('uses the exact research library SVG geometry for each component while preserving the quotation command icon',()=>{
+ const names=['watchlist','quote','indices','news','announcements','calendar','custom']
+ const children=names.map(icon=>({id:'library-'+icon,title:icon,icon,subtext:'',group:'组件库',badge:''}))
+ const library={id:'library',title:'组件库',icon:'library',subtext:'',group:'',badge:'',children}
+ const result=noteMenuPresentation(input({items:[library],submenu:{parentId:'library',selectedIndex:0}}),'ticket')
+ for(const name of names){
+  const asset=readFileSync(new URL('../build/figma-component-library/'+name+'.svg',import.meta.url),'utf8')
+  for(const path of asset.matchAll(/ d="([^"]+)"/g))expect(result.html).toContain('d="'+path[1]+'"')
+ }
+ const quote=noteMenuPresentation(input({items:[{...children[1]!,id:'quote-command'}]}),'ticket')
+ expect(quote.html).toContain('M2 4h4v4H3l-1 4M9 4h4v4h-3l-1 4')
 })
 it('shows a non-key isolated floating window and returns only a current valid selection',async()=>{
  const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1)
