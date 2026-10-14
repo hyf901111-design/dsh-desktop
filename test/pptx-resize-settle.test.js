@@ -32,9 +32,11 @@ function scrollFixture(){
  for(const [element,width,height] of [[outer,500,650],[root,400,300]])Object.defineProperties(element,{offsetWidth:{value:width},clientWidth:{value:width},offsetHeight:{value:height},clientHeight:{value:height}})
  Object.defineProperty(root,'scrollHeight',{value:3000})
  const wrappers=Array.from({length:10},(_,index)=>{const el=doc.createElement('div');el.getBoundingClientRect=()=>rect(10,rootTop+index*300-root.scrollTop,400,300);content.append(el);return el})
- const observers=[];win.IntersectionObserver=class{constructor(callback,options){this.callback=callback;this.options=options;observers.push(this)}observe(){}disconnect(){}}
+ const observers=[],frames=new Map();let clock=0,frameId=0
+ vi.spyOn(win.performance,'now').mockImplementation(()=>clock)
+ win.IntersectionObserver=class{constructor(callback,options){this.callback=callback;this.options=options;observers.push(this)}observe(){}disconnect(){}}
  win.ResizeObserver=class{observe(){}disconnect(){}}
- vi.stubGlobal('window',win);vi.stubGlobal('requestAnimationFrame',()=>1);vi.stubGlobal('cancelAnimationFrame',()=>{})
+ vi.stubGlobal('window',win);vi.stubGlobal('requestAnimationFrame',callback=>{frames.set(++frameId,callback);return frameId});vi.stubGlobal('cancelAnimationFrame',id=>frames.delete(id))
  const viewer={container:content,viewerOptions:{scrollContainer:root},listOptions:{overscanViewport:1},mountedSlides:new Set(),isRenderStale:()=>false}
  const mount=index=>{if(viewer.mountedSlides.has(index))return;wrappers[index].textContent='Slide '+index;viewer.mountedSlides.add(index)}
  const unmount=index=>{wrappers[index].replaceChildren();viewer.mountedSlides.delete(index)}
@@ -42,7 +44,8 @@ function scrollFixture(){
  const scroll=()=>root.dispatchEvent(new win.Event('scroll'))
  scroll()
  const wheel=(options={},element=root)=>{const event=new win.WheelEvent('wheel',{bubbles:true,cancelable:true,deltaY:900,...options});element.dispatchEvent(event);return event}
- return{win,root,outer,content,wrappers,viewer,scheduler,observers,scroll,wheel,mount,moveRoot:top=>{rootTop=top},moveOuter:(top,left=0)=>{outerTop=top;outerLeft=left}}
+ const tick=ms=>{clock+=ms;const pending=[...frames.values()];frames.clear();for(const frame of pending)frame(clock)}
+ return{win,root,outer,content,wrappers,viewer,scheduler,observers,scroll,wheel,mount,tick,moveRoot:top=>{rootTop=top},moveOuter:(top,left=0)=>{outerTop=top;outerLeft=left}}
 }
 
 it('keeps visible content when an old false IO delivery arrives and restores before a fresh IO callback',()=>{
@@ -115,5 +118,31 @@ it('leaves wheel ownership with the live viewer during staging and removes it on
   delete f.content.dataset.pptxStaging
   f.scheduler.disconnect()
   expect(f.wheel().defaultPrevented).toBe(false);expect(f.wrappers[3].textContent).toBe('')
+ }finally{f.scheduler.disconnect();f.win.happyDOM.abort()}
+})
+
+it('defers only neighboring warm work during rapid wheel and resumes one slide per idle frame',()=>{
+ const f=scrollFixture()
+ try{
+  f.wheel();expect(f.wrappers[3].textContent).toBe('Slide 3')
+  for(let frame=0;frame<4;frame++){f.tick(16);expect(f.wrappers[2].textContent).toBe('');expect(f.wrappers[4].textContent).toBe('')}
+  f.tick(16);expect(f.wrappers[2].textContent).toBe('Slide 2');expect(f.wrappers[4].textContent).toBe('')
+  f.tick(16);expect(f.wrappers[4].textContent).toBe('Slide 4')
+  expect(f.viewer.mountedSlides.size).toBe(3)
+ }finally{f.scheduler.disconnect();f.win.happyDOM.abort()}
+})
+
+it('uses actual vertical scrolling for diagonal wheel and scrollbar quiet periods without extending them on IO',()=>{
+ const f=scrollFixture()
+ try{
+  expect(f.wheel({deltaX:1}).defaultPrevented).toBe(false)
+  // The browser's default diagonal wheel, scrollbar or programmatic scroll
+  // changes scrollTop before delivering the same real scroller event.
+  f.root.scrollTop=900;f.scroll();expect(f.wrappers[3].textContent).toBe('Slide 3')
+  for(let frame=0;frame<4;frame++){f.observers[0].callback([]);f.tick(16);expect(f.wrappers[2].textContent).toBe('')}
+  f.observers[0].callback([]);f.tick(16);expect(f.wrappers[2].textContent).toBe('Slide 2')
+  f.root.scrollTop=0;f.scroll();expect(f.wrappers[0].textContent).toBe('Slide 0')
+  f.tick(16);expect(f.wrappers[1].textContent).toBe('')
+  f.tick(64);expect(f.wrappers[1].textContent).toBe('Slide 1')
  }finally{f.scheduler.disconnect();f.win.happyDOM.abort()}
 })
