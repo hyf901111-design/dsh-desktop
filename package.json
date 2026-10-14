@@ -102,6 +102,7 @@
     "dsh-desktop-market-installer": "file:packages/dsh-desktop-market-installer",
     "dsh-fund-research-runtime": "file:packages/dsh-fund-research-runtime",
     "dsh-integration-runtime": "file:packages/dsh-integration-runtime",
+    "dsh-memory-runtime": "file:packages/dsh-memory-runtime",
     "dsh-research-collaboration": "file:packages/dsh-research-collaboration",
     "dsh-research-task-runtime": "file:packages/dsh-research-task-runtime",
     "dsh-web-search-session-model": "file:packages/dsh-web-search-session-model",

@@ -1,3 +1,4 @@
+import {waitForMemorySource} from './memory/source'
 import { researchBoardRunning } from './research-board-activity'
 import { orderBoardConversationGroups } from './research-board-conversation-order'
 import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './research-board-task-progress'
@@ -1813,6 +1814,34 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   const selectedSession = React.useSyncExternalStore(subscribeBoardSelection, selectedBoardSession)
   React.useSyncExternalStore(subscribeSidebarUsage,sidebarUsageSnapshot)
   const currentSession=page.current(),usage=sidebarUsageTimes(),revealedBoardSession=React.useRef<string|null>(null)
+  React.useEffect(()=>{
+    document.documentElement.dataset.eworkMemorySession=currentSession??''
+    document.dispatchEvent(new CustomEvent('sherlock:memory-session',{detail:{sessionId:currentSession??undefined}}))
+  },[currentSession])
+  React.useEffect(()=>{
+    const open=(event:Event)=>{
+      const {requestId,source}=(event as CustomEvent).detail??{}
+      if(typeof requestId!=='string'||typeof source?.sessionId!=='string')return
+      const result=page.searchSessions('').find(row=>row.sessionId===source.sessionId)
+      if(!result){document.dispatchEvent(new CustomEvent('sherlock:memory-source-result',{detail:{requestId,ok:false}}));return}
+      void (async()=>{
+        if(result.boardId)await page.openBoard(result.boardId)
+        else if(result.area==='boards')await page.openPersonal(result.sessionId!)
+        else page.openSearchSession(result.sessionId!)
+        const match=await waitForMemorySource(document,source,()=>page.current()??undefined,{onReady:()=>{
+          const tab=source.kind==='note'?'notes':'chat'
+          document.querySelector<HTMLButtonElement>(`[data-srb-tabs] [data-conversation-view-id="${tab}"]`)?.click()
+          if(source.kind==='note')document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:source.sessionId}}))
+        }})
+        if(!match){document.dispatchEvent(new CustomEvent('sherlock:memory-source-result',{detail:{requestId,ok:false}}));return}
+        document.querySelector<HTMLButtonElement>('.VOzbGW_close')?.click()
+        match.scrollIntoView({block:'center',behavior:'smooth'});match.dataset.memorySourceHighlight='true';setTimeout(()=>delete match.dataset.memorySourceHighlight,3000)
+        document.dispatchEvent(new CustomEvent('sherlock:memory-source-result',{detail:{requestId,ok:true}}))
+      })().catch(()=>document.dispatchEvent(new CustomEvent('sherlock:memory-source-result',{detail:{requestId,ok:false}})))
+    }
+    document.addEventListener('sherlock:memory-source-open',open)
+    return()=>document.removeEventListener('sherlock:memory-source-open',open)
+  },[page])
   const save = (next: any) => { setPreferences((previous:any)=>{const value=typeof next==='function'?next(previous):next;localStorage.setItem('sherlock.boards.view.v3',JSON.stringify(value));return value}) }
   const entries = [
     ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, page.editedAt(f.sessionId) ?? 0,usage[f.sessionId]??0) })),

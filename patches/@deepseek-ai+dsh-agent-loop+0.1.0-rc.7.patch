@@ -1,5 +1,5 @@
 diff --git a/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js b/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js
-index b172a4f..1e3cdca 100644
+index b172a4f..ecf7eb1 100644
 --- a/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js
 +++ b/node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js
 @@ -151,6 +151,27 @@ function parseArguments(raw) {
@@ -61,25 +61,48 @@ index b172a4f..1e3cdca 100644
  					slots[index] = {
  						exec: prepared.exec,
  						result: outcome.result,
-@@ -1292,4 +1314,4 @@ var AgentLoop = class extends Service {
+@@ -610,7 +632,14 @@ var ReactLoopAgent = class {
+ 		signal.throwIfAborted();
+ 		const system = renderPrompt(assembly);
+ 		while (true) {
+-			const { request, preparedCall } = await this.buildRequest(turn, step, assembly.tools, system, this.session.deriveMessages(), signal);
++			const { request: baseRequest, preparedCall } = await this.buildRequest(turn, step, assembly.tools, system, this.session.deriveMessages(), signal);
++			/* ework:memory-request-context:rc7:v1 */
++			// Compose only after durable headers; retain the exact prepared adapter and signal.
++			const request = markAgentLoopRequest(deepFreeze(await this.dispatch.waterfall("agent/request-context", {
++				turn, step, request: baseRequest,
++				contextWindow: preparedCall?.context?.contextWindow, signal
++			}, () => Promise.resolve(baseRequest))));
++			signal.throwIfAborted();
+ 			const assembler = new BlockAssembler();
+ 			const chunkSeqs = [];
+ 			const stream = preparedCall?.stream(request) ?? this.loopCtx.llm.stream(request);
+@@ -1292,4 +1321,4 @@ var AgentLoop = class extends Service {
  	}
  };
  //#endregion
 -export { AGENT_LOOP_SETTINGS_NAMESPACE, AGENT_LOOP_SETTINGS_SCHEMA, AgentLoop, AgentLoop as default, CONFIGURED_AGENT_IDENTITIES_KEY, DEFAULT_MAX_PARALLEL_TOOL_CALLS };
 +export { AGENT_LOOP_SETTINGS_NAMESPACE, AGENT_LOOP_SETTINGS_SCHEMA, AgentLoop, AgentLoop as default, CONFIGURED_AGENT_IDENTITIES_KEY, DEFAULT_MAX_PARALLEL_TOOL_CALLS, resolveToolRuntimeScheduler };
 diff --git a/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts b/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts
-index 11b5535..1d96063 100644
+index 11b5535..6fa8c39 100644
 --- a/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts
 +++ b/node_modules/@deepseek-ai/dsh-agent-loop/lib/types/index.d.ts
-@@ -9,6 +9,7 @@ import z from '@deepseek-ai/schemastery';
+@@ -9,8 +9,14 @@ import z from '@deepseek-ai/schemastery';
  import type { Agent, AgentFactory, AgentHandle, AgentOptions, CreateAgentOptions, ResumeAgentOptions } from '@deepseek-ai/dsh-agent';
  import { SessionId } from '@deepseek-ai/dsh-session';
  import type { SessionHeader } from '@deepseek-ai/dsh-session';
++import type { GenerateOptions } from '@deepseek-ai/dsh-llm';
 +import type { ToolRuntimeScheduler } from '@deepseek-ai/dsh-tools';
  import { DEFAULT_MAX_PARALLEL_TOOL_CALLS } from './constants.ts';
  declare module '@deepseek-ai/cordis' {
++    interface Events {
++        /** Request-only context, after header logging and before the bound adapter dispatch. */
++        'agent/request-context'(payload: { agent: Agent; turn: number; step: number; request: GenerateOptions; contextWindow?: number; signal: AbortSignal }, next: () => Promise<GenerateOptions>): Promise<GenerateOptions>;
++    }
      interface Context {
-@@ -40,6 +41,8 @@ declare module '@deepseek-ai/cordis' {
+         agentLoop: AgentLoop;
+         /**
+@@ -40,6 +46,8 @@ declare module '@deepseek-ai/cordis' {
      }
  }
  export { DEFAULT_MAX_PARALLEL_TOOL_CALLS };

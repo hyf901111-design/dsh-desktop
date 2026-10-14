@@ -1,6 +1,7 @@
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountNotes } from './notes/mount'
 import { IntegrationView } from './integrations/view'
+import { mountMemoryUi } from './memory/view'
 import { createSkillUseBridge } from './integrations/skill-use'
 import { installSkillCommandBridge } from './integrations/skill-command-bridge'
 import { ScheduledTaskView } from './scheduled/view'
@@ -161,6 +162,31 @@ function initializeUi(): void {
   mountFloatingSurfaces(document)
   const boards = createResearchBoardsBridge(ipcRenderer)
   mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards)
+  const memoryListeners = new Set<() => void>()
+  ipcRenderer.on('memory:changed', () => { for (const listener of memoryListeners) listener() })
+  const memoryUi = mountMemoryUi(document, {
+    openDirectory:async()=>{await ipcRenderer.invoke('memory:open-directory')},
+    request: command => ipcRenderer.invoke('memory:request', command),
+    subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) },
+    openSource: async source => {
+      await ipcRenderer.invoke('memory:open-source', source)
+      return new Promise<void>((resolve, reject) => {
+        const requestId=crypto.randomUUID()
+        const timeout=window.setTimeout(()=>{document.removeEventListener('sherlock:memory-source-result',result);reject(Error('SOURCE_UNAVAILABLE'))},4000)
+        const result=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.requestId!==requestId)return;window.clearTimeout(timeout);document.removeEventListener('sherlock:memory-source-result',result);detail.ok?resolve():reject(Error('SOURCE_UNAVAILABLE'))}
+        document.addEventListener('sherlock:memory-source-result',result)
+        document.dispatchEvent(new CustomEvent('sherlock:memory-source-open',{detail:{requestId,source}}))
+      })
+    }
+  })
+  ipcRenderer.on('memory:save-selection',(_event,value)=>{
+    if(typeof value?.content!=='string'||!value.content.trim())return
+    const sessionId=value.sessionId||document.documentElement.dataset.eworkMemorySession||document.documentElement.dataset.srbSelectedSession||undefined
+    const anchor=document.getSelection()?.anchorNode?.parentElement
+    const inNote=!!anchor?.closest('.bn-editor,[data-note-session],.ew-note-editor')
+    const block=anchor?.closest<HTMLElement>('.bn-block-outer[data-id]'),note=anchor?.closest<HTMLElement>('[data-note-source-revision]'),message=anchor?.closest<HTMLElement>('[data-event-seq],[data-message-id]')
+    document.dispatchEvent(new CustomEvent('sherlock:memory-save-selection',{detail:{content:value.content,title:'选中的内容',sessionId,source:{kind:inNote?'note':'conversation',sessionId,...(inNote&&block&&note?{noteId:block.dataset.id,noteRevision:Number(note.dataset.noteSourceRevision)}:{}),...(!inNote&&message?{...(message.dataset.eventSeq?{seq:Number(message.dataset.eventSeq)}:{}),...(message.dataset.messageId?{messageId:message.dataset.messageId}:{})}:{}),title:'客户端中选中的内容',excerpt:value.content,createdAt:Date.now()}}}))
+  })
   mountResearchBoardNotifications(document, boards)
   mountDeveloperModeUi()
   if (process.platform === 'win32') {
@@ -210,10 +236,10 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) })
   scheduledView.mount()
-  const resetIntegrationIdentity = () => { noteIdentityEpoch++; notes.resetIdentity(); noteOwners.clear(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity() }
+  const resetIntegrationIdentity = () => { noteIdentityEpoch++; notes.resetIdentity(); noteOwners.clear(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
-  window.addEventListener('unload', () => { notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
+  window.addEventListener('unload', () => { memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
