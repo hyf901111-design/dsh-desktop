@@ -378,6 +378,253 @@
         ],
         "recordedAt": "2026-10-14T06:46:22.777Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "长期记忆与设置管理",
+        "branch": "codex/feat/long-term-memory-20261014",
+        "baseCommit": "47e5268541c3cfd3d43da7ddccf88502b0d4d697",
+        "tipCommit": "cf80707180202ceb9576cc42d65ace1bcabf03e5",
+        "commits": [
+          {
+            "commit": "0bcc6164291851f2dbe7d48c24e63496fa7072f0",
+            "parents": [
+              "47e5268541c3cfd3d43da7ddccf88502b0d4d697"
+            ],
+            "subject": "规划长期记忆服务、设置管理与本地测试交付"
+          },
+          {
+            "commit": "d84621a3da3942d031cdc981d213c921e4464b3b",
+            "parents": [
+              "0bcc6164291851f2dbe7d48c24e63496fa7072f0"
+            ],
+            "subject": "实现加密长期记忆存储、隔离召回与可撤销管理服务"
+          },
+          {
+            "commit": "cb2002b3fc50ef1a1c678757e23f2104e4e82ce7",
+            "parents": [
+              "d84621a3da3942d031cdc981d213c921e4464b3b"
+            ],
+            "subject": "接入长期记忆运行时与设置管理，支持跨对话召回和用户开关"
+          },
+          {
+            "commit": "cf80707180202ceb9576cc42d65ace1bcabf03e5",
+            "parents": [
+              "cb2002b3fc50ef1a1c678757e23f2104e4e82ce7"
+            ],
+            "subject": "修复记忆队列隔离、删除一致性与并发草稿，精确核验来源定位"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "build/dsh-desktop.patch.yml"
+          },
+          {
+            "status": "M",
+            "path": "build/harness-node-entry.mjs"
+          },
+          {
+            "status": "M",
+            "path": "build/sherlock-bundled-plugins.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-14-ework-long-term-memory.md"
+          },
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/README.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-memory-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "patches/@deepseek-ai+dsh-agent-loop+0.1.0-rc.7.patch"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/memory-request-context.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/memory-source-anchors.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/memory-source-anchors.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/context-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/bridge.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/import.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/ipc.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/retriever.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/memory/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/memory/source.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/memory/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/memory.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-plugin-profile.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-bridge.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-import.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-runtime.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-search.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-source.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/memory-view.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/memory-service.test.ts",
+              "test/memory-bridge.test.ts",
+              "test/memory-runtime.test.js",
+              "test/memory-view.test.ts",
+              "test/memory-import.test.ts",
+              "test/memory-search.test.ts",
+              "test/memory-source.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "59项记忆服务、运行时、UI、精确来源、导入和索引测试通过",
+            "verifiedCommit": "cf80707180202ceb9576cc42d65ace1bcabf03e5",
+            "completedAt": "2026-10-14T07:15:21.928Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript节点/预加载/测试源码检查通过",
+            "verifiedCommit": "cf80707180202ceb9576cc42d65ace1bcabf03e5",
+            "completedAt": "2026-10-14T07:15:21.928Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离Chromium验证真实管理UI浅/深色与900px窄窗口，新增编辑和删除流程通过；原生客户端验收将在集成构建后执行。"
+        },
+        "acceptanceCriteria": [
+          "真实EWork主界面与原有会话仍可见",
+          "设置记忆入口展示真实内容，使用与自动保存开关可操作",
+          "跨对话召回、项目/账户隔离，删除阻止旧任务恢复",
+          "可查看编辑停用删除记忆并追踪来源"
+        ],
+        "risks": [
+          "旧协作通知聚合测试在未改main同样失败，不属本次回归。",
+          "现有本机Office插件漂移；构建使用经固定指纹校验的任务私有插件来源，不削弱校验。",
+          "本地测试不公证、不上传、不推送，不代表云同步或正式发布验收。",
+          "独立复核7项已全部RED/GREEN修复；精确来源不匹配或笔记已更新时明确不可定位；UI保存期间输入保持草稿。"
+        ],
+        "generatedAt": "2026-10-14T07:15:21.928Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -442,6 +689,29 @@
         "diff",
         "--check",
         "47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/memory-service.test.ts",
+        "test/memory-bridge.test.ts",
+        "test/memory-runtime.test.js",
+        "test/memory-view.test.ts",
+        "test/memory-import.test.ts",
+        "test/memory-search.test.ts",
+        "test/memory-source.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
       ],
       "timeoutMs": 120000
     }
