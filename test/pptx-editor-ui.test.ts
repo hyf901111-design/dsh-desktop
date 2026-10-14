@@ -12,6 +12,8 @@ const editable=(host:any)=>host.querySelector('[data-pptx-field-id=title]')
 
 async function mount(bridge:any,props:any={},Preview:any=FakePreview){
  const win=new Window({url:'http://localhost/'}),descriptors=new Map(['window','document','navigator','CustomEvent','IS_REACT_ACT_ENVIRONMENT'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]))
+ // happy-dom has no layout. Model a visible pane rather than a zero-size reader.
+ win.HTMLElement.prototype.getBoundingClientRect=function(){return this.hasAttribute('data-pptx-node-id')?new win.DOMRect(100,180,200,100):new win.DOMRect(0,0,win.innerWidth,win.innerHeight)}
  Object.defineProperties(globalThis,{window:{configurable:true,value:win},document:{configurable:true,value:win.document},navigator:{configurable:true,value:win.navigator},CustomEvent:{configurable:true,value:win.CustomEvent},IS_REACT_ACT_ENVIRONMENT:{configurable:true,value:true}})
  Object.assign(win,{sherlockPptEditor:bridge})
  const Component=createPptxEditorComponent(React,Preview,undefined,createPortal)

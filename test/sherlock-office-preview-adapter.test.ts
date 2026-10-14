@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm'
 import { Window, type HTMLElement as HappyDOMHTMLElement } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 
-import { patchPptxEditor } from '../scripts/lib/pptx-editor-ui.mjs'
+import { patchPptxEditor, stripPptxEditorPatch } from '../scripts/lib/pptx-editor-ui.mjs'
 
 import { patchPptxResize, stripPptxResizePatch } from '../scripts/lib/pptx-resize-settle.mjs'
 
@@ -117,6 +117,15 @@ async function waitForCalls(calls: unknown[], count: number): Promise<void> {
 }
 
 describe('Sherlock bundled Office preview adapter', () => {
+  it('upgrades the installed legacy direct editor and keeps a second application identical', async () => {
+    const installedLegacy = await officeClientSource()
+    expect(installedLegacy.includes('/* sherlock:pptx-content-editor:v1 */')).toBe(true)
+    const upgraded = patchPptxEditor(installedLegacy)
+    const fresh = patchPptxEditor(stripPptxEditorPatch(installedLegacy))
+    expect(upgraded === fresh).toBe(true)
+    expect(patchPptxEditor(upgraded) === upgraded).toBe(true)
+  })
+
   it('round trips the resize patch without changing the pinned preview fingerprint', async () => {
     const base = patchSherlockOfficePreviewClient(stripPptxResizePatch(await officeClientSource()))
     const patched = patchPptxResize(base)
