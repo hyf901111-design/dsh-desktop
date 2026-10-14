@@ -36,3 +36,7 @@ export function createPptxScrollWindow(
   unmount: (index: number) => void,
   version: number
 ): { observe(wrapper: HTMLElement): void; disconnect(): void }
+
+export function createPptxXmlLookupCache(): <T>(element: object | null, kind: 'attribute' | 'child', name: string, load: () => T) => T
+
+export function observePptxChartResize<T extends { isDisposed(): boolean; dispose(): void; getWidth(): number; getHeight(): number; resize(): void }>(chart: T, element: HTMLElement, instances?: Set<T>): ResizeObserver
