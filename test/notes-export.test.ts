@@ -13,6 +13,13 @@ const content:NoteContent={title:'中文笔记 <验收>',blocks:[
  {id:'r',type:'research',props:{payload:JSON.stringify({title:'来源数据',containerSpec:{type:'table',columns:['字段','值'],rows:[['数量',42]]}})}},
  {id:'unsafe',type:'paragraph',content:[{type:'link',href:'javascript:alert(1)',content:[{type:'text',text:'被拒绝的链接'}]},{type:'text',text:'<script>evil()</script>'}]}
 ],yjs:''} as any
+it('preserves paragraph indentation in PDF HTML and Word without losing inline styles',async()=>{
+ const indented={title:'缩进',yjs:'',blocks:[{id:'first',type:'paragraph',props:{noteIndent:2},content:[{type:'text',text:'首段正文',styles:{bold:true}}]},{id:'heading',type:'heading',props:{level:2,noteIndent:1},content:[{type:'text',text:'缩进标题'}]}]} as any
+ expect(notePrintHtml(indented)).toContain('<p style="margin-left:64px"><strong>首段正文</strong></p>')
+ expect(notePrintHtml(indented)).toContain('<h2 style="margin-left:32px">缩进标题</h2>')
+ const xml=await(await JSZip.loadAsync(await noteWordBuffer(indented))).file('word/document.xml')!.async('string')
+ expect(xml).toContain('w:left="960"');expect(xml).toContain('w:left="480"');expect(xml).toContain('首段正文');expect(xml).toContain('<w:b/>')
+})
 it('exports the complete long reply added as a note component to Markdown, PDF HTML and Word',async()=>{
  const text='# 回复标题\n\n'+'完整回复 <资料>。'.repeat(5000),reply={title:'回复导出',yjs:'',blocks:[{id:'reply',type:'research',props:{payload:JSON.stringify({kind:'assistant-result',noteReply:true,title:'助手回复',excerpt:text})}}]}
  expect(noteExportBlocks(reply).at(-1)?.content[0].text===text).toBe(true)

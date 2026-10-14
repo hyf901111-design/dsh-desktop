@@ -5,8 +5,9 @@ import type {NoteContent} from '../../shared/workspace-notes'
 import {noteText} from '../../shared/workspace-notes'
 import {validateNoteContent} from './store'
 import {researchHtmlText} from '../../../packages/dsh-research-task-runtime/html-artifact.js'
+import {noteIndentLevel,NOTE_INDENT_STEP} from '../../shared/note-indent'
 
-type ExportBlock={type:string;level:number;content:any[];rows?:any[][];checked?:boolean}
+type ExportBlock={type:string;level:number;content:any[];rows?:any[][];checked?:boolean;indent?:number}
 const escape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const safeLink=(value:unknown)=>typeof value==='string'&&/^(https?:|mailto:)/i.test(value)?value:undefined
 export function noteExportBlocks(content:NoteContent):ExportBlock[]{
@@ -33,7 +34,7 @@ export function noteExportBlocks(content:NoteContent):ExportBlock[]{
    }else if(['image','file','video','audio'].includes(block.type)){
      const label=({image:'图片',file:'文件',video:'视频',audio:'音频'} as Record<string,string>)[block.type],href=safeLink(block.props?.url)
      output.push({type:'paragraph',level:depth,content:[{type:'text',text:label+'：'+(block.props?.caption||block.props?.name||block.props?.url||'未提供来源')},...href?[{type:'text',text:' '},{type:'link',href,content:[{type:'text',text:'查看原文件'}]}]:[]]})
-   }else output.push({type:block.type,level:block.type==='heading'?Math.min(6,Math.max(1,block.props?.level||1)):Math.min(depth,8),content:Array.isArray(block.content)?block.content:[],...block.type==='table'?{rows:block.content?.rows?.map((row:any)=>row.cells.map((cell:any)=>Array.isArray(cell)?cell:cell.content||[]))}: {},checked:block.props?.checked===true})
+   }else output.push({type:block.type,level:block.type==='heading'?Math.min(6,Math.max(1,block.props?.level||1)):Math.min(depth,8),content:Array.isArray(block.content)?block.content:[],...block.type==='table'?{rows:block.content?.rows?.map((row:any)=>row.cells.map((cell:any)=>Array.isArray(cell)?cell:cell.content||[]))}: {},checked:block.props?.checked===true,...noteIndentLevel(block.props?.noteIndent)?{indent:noteIndentLevel(block.props.noteIndent)}:{}})
    if(block.children?.length)visit(block.children,depth+1)
  }};visit(content.blocks,0);return output
 }
@@ -58,15 +59,15 @@ const htmlInline=(items:any[]):string=>items.map(item=>{if(typeof item==='string
 export function notePrintHtml(content:NoteContent):string{
  let numbered=0
  const body=noteExportBlocks(content).map(block=>{
-   const text=htmlInline(block.content)
+   const text=htmlInline(block.content),indent=(block.indent||0)*NOTE_INDENT_STEP,style=indent?' style="margin-left:'+indent+'px"':''
    if(block.type==='table')return '<table>'+block.rows?.map((row,i)=>'<tr>'+row.map(cell=>'<'+(i?'td':'th')+'>'+htmlInline(cell)+'</'+(i?'td':'th')+'>').join('')+'</tr>').join('')+'</table>'
-   if(block.type==='heading')return '<h'+block.level+'>'+text+'</h'+block.level+'>'
-   if(block.type==='codeBlock')return '<pre>'+escape(noteText(block.content))+'</pre>'
+   if(block.type==='heading')return '<h'+block.level+style+'>'+text+'</h'+block.level+'>'
+   if(block.type==='codeBlock')return '<pre'+style+'>'+escape(noteText(block.content))+'</pre>'
    if(block.type==='divider')return '<hr>'
-   if(block.type==='quote')return '<blockquote>'+text+'</blockquote>'
+   if(block.type==='quote')return '<blockquote'+style+'>'+text+'</blockquote>'
    const prefix=block.type==='bulletListItem'?'• ':block.type==='checkListItem'?(block.checked?'☑ ':'☐ '):block.type==='numberedListItem'?(++numbered)+'. ':''
    if(block.type!=='numberedListItem')numbered=0
-   return '<p style="margin-left:'+block.level*16+'px">'+prefix+text+'</p>'
+   return '<p style="margin-left:'+(block.level*16+indent)+'px">'+prefix+text+'</p>'
  }).join('')
  return '<!doctype html><html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\';"><style>@page{size:A4;margin:20mm}body{margin:0;color:#222;background:white;font:11pt/1.65 "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif}h1{font-size:23pt}h2{font-size:18pt}h3{font-size:15pt}h4,h5,h6{font-size:12pt}h1,h2,h3,h4,h5,h6{line-height:1.35;break-after:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8pt 0}table{border-collapse:collapse;width:100%;font-size:10pt;margin:12pt 0}th,td{border:1px solid #bbb;padding:6pt;overflow-wrap:anywhere}tr{break-inside:avoid}th{background:#f5f5f5}pre,blockquote{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:10pt;margin:12pt 0}a{color:#333}code{font-family:monospace}</style><body><h1>'+escape(content.title||'无标题文档')+'</h1>'+body+'</body></html>'
 }
@@ -80,7 +81,8 @@ export async function noteWordBuffer(content:NoteContent):Promise<Buffer>{
  const children:Array<Paragraph|Table>=[new Paragraph({text:content.title||'无标题文档',heading:HeadingLevel.TITLE})]
  for(const block of noteExportBlocks(content)){
    if(block.type==='table'){children.push(new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:(block.rows||[]).map((row,i)=>new TableRow({tableHeader:i===0,children:row.map(cell=>new TableCell({children:[new Paragraph({children:wordInline(cell)})]}))}))}));continue}
-   children.push(new Paragraph({children:wordInline(block.content),...block.type==='heading'?{heading:headings[block.level-1]}:{},...block.type==='bulletListItem'?{bullet:{level:block.level}}:{},...block.type==='numberedListItem'?{numbering:{reference:'notes-numbered',level:block.level}}:{},...block.type==='checkListItem'?{children:[new TextRun(block.checked?'☑ ':'☐ '),...wordInline(block.content)]}:{},...block.type==='quote'?{indent:{left:360}}:{},spacing:{after:160,line:340}}))
+   const list=['bulletListItem','numberedListItem'].includes(block.type)
+   children.push(new Paragraph({children:wordInline(block.content),...block.type==='heading'?{heading:headings[block.level-1]}:{},...block.type==='bulletListItem'?{bullet:{level:block.level}}:{},...block.type==='numberedListItem'?{numbering:{reference:'notes-numbered',level:block.level}}:{},...block.type==='checkListItem'?{children:[new TextRun(block.checked?'☑ ':'☐ '),...wordInline(block.content)]}:{},...block.type==='quote'?{indent:{left:360}}:{},...block.indent?{indent:{left:block.indent*NOTE_INDENT_STEP*15+(list?720*(block.level+1):block.type==='quote'?360:0),...list?{hanging:360}:{}}}:{},spacing:{after:160,line:340}}))
  }
  return Packer.toBuffer(new Document({styles:{default:{document:{run:{font:'Arial',size:22},paragraph:{spacing:{line:340}}}}},numbering:{config:[{reference:'notes-numbered',levels:Array.from({length:9},(_,level)=>({level,format:LevelFormat.DECIMAL,text:'%'+(level+1)+'.',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:720*(level+1),hanging:360}}}}))}]},sections:[{properties:{page:{margin:{top:1134,bottom:1134,left:1134,right:1134}}},children}]}))
 }
