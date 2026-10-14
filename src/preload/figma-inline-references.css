@@ -41,7 +41,8 @@
 }
 .sherlock-inline-reference-remove svg { width:14px!important; height:14px!important; }
 body[data-ds-dark-theme] .uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel,
-body[data-ds-dark-theme] .gdEzaW_refChip {
+body[data-ds-dark-theme] .gdEzaW_refChip,
+body .gdEzaW_bubble .gdEzaW_refChip {
   background:#333335!important; box-shadow:inset 0 0 0 1px #505054!important; color:#ececee!important;
 }
 body[data-ds-dark-theme] .uV2eYG_root[data-figma-inline-ready] .uV2eYG_chip[data-selected] .uV2eYG_chipLabel {

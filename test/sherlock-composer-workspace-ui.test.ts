@@ -10,6 +10,7 @@ import {
 } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { canvasWheelPassThroughPatch } from '../scripts/lib/patch-research-board-client.mjs'
+import { patchFigmaFinalConversation } from '../scripts/lib/patch-figma-final-shell.mjs'
 
 type TestResearchVoiceBridge = {
   setActive(value: { sessionId: string; active: boolean }): Promise<{ ok: boolean; error?: string }>
@@ -1426,11 +1427,12 @@ describe('Sherlock workspace and composer controls', () => {
     expect(browserWindow.getComputedStyle(label).color).toBe('rgb(15, 17, 21)')
   })
 
-  it('renders light-theme user messages with a neutral surface and dark text', async () => {
+  it('renders light-theme user messages with a black surface and the dark content palette', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     await loadClientBundle('dsh-client-ui-conversation', undefined, {
       document: browserWindow.document,
-      window: browserWindow
+      window: browserWindow,
+      transformSource: patchFigmaFinalConversation
     })
     browserWindow.document.body.style.setProperty(
       '--dsw-alias-bg-module-platform',
@@ -1454,11 +1456,9 @@ describe('Sherlock workspace and composer controls', () => {
     expect(inlineCode).not.toBeNull()
     if (bubble === null || text === null || inlineCode === null) return
 
-    expect(browserWindow.getComputedStyle(bubble).backgroundColor).toBe(
-      'rgb(245, 246, 247)'
-    )
-    expect(browserWindow.getComputedStyle(text).color).toBe('rgb(15, 17, 21)')
-    expect(browserWindow.getComputedStyle(inlineCode).color).toBe('rgb(15, 17, 21)')
+    expect(browserWindow.getComputedStyle(bubble).backgroundColor).toMatch(/^(#000|rgb\(0, 0, 0\))$/)
+    expect(browserWindow.getComputedStyle(text).color).toMatch(/^(#e5e5e5|rgb\(229, 229, 229\))$/)
+    expect(browserWindow.getComputedStyle(inlineCode).color).toMatch(/^(#e5e5e5|rgb\(229, 229, 229\))$/)
   })
 
   it('keeps sent Research tags in the same compact inline rhythm as the composer', async () => {
