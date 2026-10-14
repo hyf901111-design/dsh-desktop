@@ -2,16 +2,43 @@ import {describe,it,expect} from 'vitest'
 import {Window} from 'happy-dom'
 import * as direct from '../scripts/lib/pptx-direct-editor.mjs'
 const geometry={x:10,y:20,width:100,height:60,rotation:0}
-function setup(){
+function setup(extra:any={}){
  const win=new Window(),host=win.document.createElement('div');win.document.body.appendChild(host)
  host.innerHTML='<div data-pptx-node-id="2" data-pptx-part="ppt/slides/slide1.xml" data-pptx-width="100" data-pptx-height="60" style="position:absolute;left:10px;top:20px;width:100px;height:60px"><div data-pptx-paragraph="0"><span data-pptx-bullet>• </span><span style="color:red">原文</span></div></div><div data-pptx-node-id="3" data-pptx-part="ppt/slides/slide1.xml" data-pptx-width="200" data-pptx-height="100"><table><tbody><tr><td data-pptx-row="0" data-pptx-column="0"><div data-pptx-paragraph="0">100</div></td></tr></tbody></table></div><div data-pptx-node-id="4" data-pptx-part="ppt/slides/slide1.xml"></div>'
  const node={id:'ppt/slides/slide1.xml#node:2',nodeId:'2',part:'ppt/slides/slide1.xml',type:'shape',name:'标题',geometry},chart={id:'ppt/slides/slide1.xml#node:4',nodeId:'4',part:'ppt/slides/slide1.xml',type:'chart',name:'数据图',geometry,chart:{}}
  const entry:any={document:{slides:[{part:node.part,fields:[{id:'text',nodeId:'2',paragraphIndex:0,label:'标题',text:'原文'},{id:'cell',nodeId:'3',paragraphIndex:0,row:0,column:0,label:'单元格',text:'100'}],nodes:[node,{...node,id:'ppt/slides/slide1.xml#node:3',nodeId:'3',type:'table'},chart]}]},values:{text:'原文',cell:'100'},objects:{}}
  let selected:any,chartOpened=false
- const controller=direct.attachPptxDirectEditor(host,{getEntry:()=>entry,changeText:(id:string,value:string)=>{entry.values[id]=value},changeObject:(id:string,change:any)=>{entry.objects[id]={...entry.objects[id],...change}},select:(n:any)=>{selected=n},editChart:()=>{chartOpened=true}})
+ const controller=direct.attachPptxDirectEditor(host,{getEntry:()=>entry,changeText:(id:string,value:string)=>{entry.values[id]=value},changeObject:(id:string,change:any)=>{entry.objects[id]={...entry.objects[id],...change}},select:(n:any)=>{selected=n},editChart:()=>{chartOpened=true},...extra})
  return{win,host,entry,controller,get selected(){return selected},get chartOpened(){return chartOpened}}
 }
 describe('direct slide interaction',()=>{
+ it('clips selection to independent ancestor axes without losing its identity',()=>{
+  let position:any
+  const v=setup({position:(value:any)=>{position=value}})
+  try{
+   const x=v.win.document.createElement('div'),y=v.win.document.createElement('div');x.style.overflowX='hidden';y.style.overflowY='auto'
+   x.getBoundingClientRect=()=>new v.win.DOMRect(80,0,200,700);y.getBoundingClientRect=()=>new v.win.DOMRect(0,120,500,480)
+   v.win.document.body.append(x);x.append(y);y.append(v.host)
+   const node=v.host.querySelector('[data-pptx-node-id="2"]')! as any;let box=new v.win.DOMRect(50,100,300,100);node.getBoundingClientRect=()=>box
+   v.controller.selectId(v.entry.document.slides[0].nodes[0].id)
+   expect(position).toMatchObject({left:80,top:120,right:280,bottom:200,width:200,height:80,viewport:{left:80,top:120,right:280,bottom:600}})
+   const id=v.selected.id;box=new v.win.DOMRect(0,100,70,100);v.controller.refresh()
+   expect(position).toBeNull();expect(v.selected.id).toBe(id)
+   box=new v.win.DOMRect(50,100,300,100);v.controller.refresh();expect(position.left).toBe(80)
+  }finally{v.controller.destroy()}
+ })
+
+ it('hides a virtualized selection until its live node returns and ignores staging replicas',()=>{
+  let position:any
+  const v=setup({position:(value:any)=>{position=value}})
+  try{
+   const node=v.host.querySelector('[data-pptx-node-id="2"]')! as any;node.getBoundingClientRect=()=>new v.win.DOMRect(100,100,100,60)
+   v.controller.selectId(v.entry.document.slides[0].nodes[0].id);const id=v.selected.id,staging=v.win.document.createElement('div');staging.dataset.pptxStaging=''
+   const replica=node.cloneNode(true);replica.getBoundingClientRect=node.getBoundingClientRect;staging.append(replica);v.host.append(staging);node.remove();v.controller.refresh()
+   expect(position).toBeNull();expect(v.selected.id).toBe(id)
+   v.host.append(node);v.controller.refresh();expect(position.left).toBe(100)
+  }finally{v.controller.destroy()}
+ })
  it('makes the actual slide paragraph and table cell editable immediately and excludes the bullet',()=>{
   const v=setup();try{
    const paragraph=v.host.querySelector('[data-pptx-paragraph]')!

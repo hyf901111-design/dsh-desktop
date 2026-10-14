@@ -4,7 +4,8 @@ export function attachPptxDirectEditor(host,options){
  let selected=null,selectedId=null,gesture=null,enabled=true,destroyed=false,composing=false,indexedDocument=null,nodeIndex=new Map(),fieldIndex=new Map()
  const entry=options.getEntry(),originalTextStyles=(entry.textStyles||={}),knownFormats=entry.formatTouched||={},touchedFormats=new Map(),styleKeys=['fontFamily','fontSize','fontWeight','color'],initialParagraphs=new WeakSet(host.querySelectorAll('[data-pptx-paragraph]'))
  const initialFormats=new Map(Object.entries(entry.objects||{}).map(([id,change])=>[id,new Set(styleKeys.filter(key=>(key==='fontWeight'?change.bold:change[key])!==undefined))]))
- const overlay=doc.createElement('div');overlay.className='sherlock-ppt-selection';overlay.style.cssText='position:fixed;z-index:100000;pointer-events:none;box-sizing:border-box;border:1px solid #526fff;transform-origin:0 0;display:none;'
+ const clipper=doc.createElement('div');clipper.className='sherlock-ppt-selection-clip';clipper.style.cssText='position:fixed;z-index:100000;pointer-events:none;overflow:hidden;display:none;'
+ const overlay=doc.createElement('div');overlay.className='sherlock-ppt-selection';overlay.style.cssText='position:absolute;pointer-events:none;box-sizing:border-box;border:1px solid #526fff;transform-origin:0 0;display:none;'
  const rotateCursor='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M25 12A10 10 0 1 0 25 22M25 5v8h-8" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 12A10 10 0 1 0 25 22M25 5v8h-8" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>')+'") 16 16, crosshair'
  const handleNames=['move','nw','n','ne','e','se','s','sw','w','rotate']
  for(const name of handleNames){const handle=doc.createElement('button');handle.type='button';handle.dataset.pptxHandle=name;handle.setAttribute('aria-label',name==='move'?'拖动对象':name==='rotate'?'旋转对象':'缩放对象 '+name);handle.title=handle.getAttribute('aria-label');handle.style.cssText='position:absolute;pointer-events:auto;border:1px solid #526fff;background:white;padding:0;width:8px;height:8px;border-radius:1px;';
@@ -13,7 +14,7 @@ export function attachPptxDirectEditor(host,options){
   else{handle.style.left=name.includes('w')?'0':name.includes('e')?'100%':'50%';handle.style.top=name.includes('n')?'0':name.includes('s')?'100%':'50%';handle.style.transform='translate(-50%,-50%)';handle.style.cursor=['n','s'].includes(name)?'ns-resize':['e','w'].includes(name)?'ew-resize':['nw','se'].includes(name)?'nwse-resize':'nesw-resize'}
   overlay.appendChild(handle)
  }
- doc.body.appendChild(overlay)
+ clipper.appendChild(overlay);doc.body.appendChild(clipper)
  const index=()=>{const document=options.getEntry()?.document;if(document===indexedDocument)return;indexedDocument=document;nodeIndex=new Map();fieldIndex=new Map();for(const slide of document?.slides||[]){for(const node of slide.nodes||[])nodeIndex.set(node.part+'#node:'+node.nodeId,node);for(const field of slide.fields)fieldIndex.set(JSON.stringify([slide.part,field.nodeId,field.paragraphIndex,field.row,field.column]),field)}}
  const model=element=>{index();return nodeIndex.get(element.dataset.pptxPart+'#node:'+element.dataset.pptxNodeId)}
  const currentNode=()=>{index();const n=nodeIndex.get(selectedId);if(!n)return null;const value={...n,...options.getEntry()?.objects?.[n.id]};if(!value.fontFamily&&selected){const text=selected.querySelector('[data-pptx-paragraph] span:not([data-pptx-bullet])')||selected.querySelector('[data-pptx-paragraph]');const family=text&&win.getComputedStyle(text).fontFamily?.split(',')[0]?.trim().replace(/^["']|["']$/g,'');if(family)value.fontFamily=family}return value}
@@ -37,15 +38,31 @@ export function attachPptxDirectEditor(host,options){
  // Accumulate the linear parts of all CSS transforms, including slide zoom and groups.
  const matrix=(element,includeSelf=false)=>{let out=[1,0,0,1],e=includeSelf?element:element.parentElement;while(e){const value=win.getComputedStyle(e).transform;if(value&&value!=='none'){let m;try{const Matrix=win.DOMMatrix||win.WebKitCSSMatrix;if(Matrix){const v=new Matrix(value);m=[v.a,v.b,v.c,v.d]}}catch{}if(!m){const match=value.match(/^matrix\(([^)]+)\)/);if(match)m=match[1].split(',').slice(0,4).map(Number);else{const scale=value.match(/scale\(([^)]+)\)/);if(scale){const [x,y]=scale[1].split(',').map(Number);m=[x,0,0,y??x]}}}if(m){const[a,b,c,d]=m,[e,f,g,h]=out;out=[a*e+c*f,b*e+d*f,a*g+c*h,b*g+d*h]}}e=e.parentElement}return out}
  const inverse=(m,x,y)=>{const[a,b,c,d]=m,det=a*d-b*c;return Math.abs(det)>1e-10?{x:(d*x-c*y)/det,y:(a*y-b*x)/det}:{x,y}}
+ const liveNode=id=>Array.from(host.querySelectorAll('[data-pptx-node-id]')).find(e=>!e.closest('[data-pptx-staging]')&&model(e)?.id===id)
+ const visibleViewport=element=>{
+  const viewport={left:0,top:0,right:win.innerWidth,bottom:win.innerHeight}
+  for(let parent=element.parentElement;parent;parent=parent.parentElement){
+   const style=win.getComputedStyle(parent),x=/^(auto|scroll|hidden|clip)$/.test(style.overflowX||style.overflow),y=/^(auto|scroll|hidden|clip)$/.test(style.overflowY||style.overflow)
+   if(!x&&!y)continue
+   const box=parent.getBoundingClientRect(),sx=parent.offsetWidth?box.width/parent.offsetWidth:1,sy=parent.offsetHeight?box.height/parent.offsetHeight:1
+   const left=box.left+parent.clientLeft*sx,top=box.top+parent.clientTop*sy,right=left+(parent.offsetWidth?parent.clientWidth*sx:box.width),bottom=top+(parent.offsetHeight?parent.clientHeight*sy:box.height)
+   if(x){viewport.left=Math.max(viewport.left,left);viewport.right=Math.min(viewport.right,right)}
+   if(y){viewport.top=Math.max(viewport.top,top);viewport.bottom=Math.min(viewport.bottom,bottom)}
+  }
+  return viewport
+ }
+ const hidePosition=()=>{clipper.style.display='none';overlay.style.display='none';options.position?.(null)}
  const updatePosition=()=>{
-  if(!enabled||!selectedId){overlay.style.display='none';options.position?.(null);return}
-  if(!selected?.isConnected)selected=Array.from(host.querySelectorAll('[data-pptx-node-id]')).find(e=>model(e)?.id===selectedId)
-  if(!selected){overlay.style.display='none';options.position?.(null);return}
+  if(!enabled||!selectedId){hidePosition();return}
+  if(!selected?.isConnected||selected.closest('[data-pptx-staging]'))selected=liveNode(selectedId)
+  if(!selected){hidePosition();return}
   const rect=selected.getBoundingClientRect(),w=parseFloat(selected.style.width)||selected.offsetWidth,h=parseFloat(selected.style.height)||selected.offsetHeight,m=matrix(selected,true),[a,b,c,d]=m
+  const viewport=visibleViewport(selected),left=Math.max(rect.left,viewport.left),top=Math.max(rect.top,viewport.top),right=Math.min(rect.right,viewport.right),bottom=Math.min(rect.bottom,viewport.bottom)
+  if(right<=left||bottom<=top){hidePosition();return}
+  Object.assign(clipper.style,{display:'block',left:viewport.left+'px',top:viewport.top+'px',width:viewport.right-viewport.left+'px',height:viewport.bottom-viewport.top+'px'})
   const xs=[0,a*w,c*h,a*w+c*h],ys=[0,b*w,d*h,b*w+d*h]
-  overlay.style.left=(rect.left-Math.min(...xs))+'px';overlay.style.top=(rect.top-Math.min(...ys))+'px';overlay.style.width=w+'px';overlay.style.height=h+'px';overlay.style.transform=`matrix(${a},${b},${c},${d},0,0)`
-  options.position?.({left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height});
-  const clipped=rect.bottom<0||rect.right<0||rect.top>win.innerHeight||rect.left>win.innerWidth;overlay.style.display=clipped?'none':'block'
+  overlay.style.left=(rect.left-Math.min(...xs)-viewport.left)+'px';overlay.style.top=(rect.top-Math.min(...ys)-viewport.top)+'px';overlay.style.width=w+'px';overlay.style.height=h+'px';overlay.style.transform=`matrix(${a},${b},${c},${d},0,0)`;overlay.style.display='block'
+  options.position?.({left,top,right,bottom,width:right-left,height:bottom-top,viewport});
   // Keep handles at a usable screen size regardless of slide zoom.
   const sx=Math.hypot(a,b)||1,sy=Math.hypot(c,d)||1
   for(const button of overlay.children){button.style.width=(button.dataset.pptxHandle==='move'?36:8)/sx+'px';button.style.height=(button.dataset.pptxHandle==='move'?16:8)/sy+'px';if(button.dataset.pptxHandle==='move'){button.style.top=-18/sy+'px';button.style.fontSize=12/sy+'px';button.style.lineHeight='1';}if(button.dataset.pptxHandle==='rotate')button.style.top=-28/sy+'px'}
@@ -86,5 +103,5 @@ export function attachPptxDirectEditor(host,options){
  const handlers=[['pointerdown',down],['input',input],['focusin',focus],['focusout',blur],['paste',paste],['keydown',keys],['dblclick',double],['compositionstart',()=>{composing=true}],['compositionend',event=>{composing=false;input(event)}]]
  handlers.forEach(([name,fn])=>host.addEventListener(name,fn,true));overlay.addEventListener('pointerdown',start);doc.addEventListener('pointermove',move,true);doc.addEventListener('pointerup',end,true);doc.addEventListener('pointercancel',end,true);doc.addEventListener('scroll',updatePosition,true);win.addEventListener('resize',updatePosition)
  refresh()
- return{refresh,clearSelection,selectId(id){const element=Array.from(host.querySelectorAll('[data-pptx-node-id]')).find(e=>model(e)?.id===id);if(element)select(element)},setEnabled(value){enabled=value;if(!value)select(null);refresh()},destroy(){destroyed=true;doc.removeEventListener('pointerdown',outside,true);observer.disconnect();resize?.disconnect();overlay.remove();handlers.forEach(([name,fn])=>host.removeEventListener(name,fn,true));doc.removeEventListener('pointermove',move,true);doc.removeEventListener('pointerup',end,true);doc.removeEventListener('pointercancel',end,true);doc.removeEventListener('scroll',updatePosition,true);win.removeEventListener('resize',updatePosition);host.querySelectorAll('[data-pptx-field-id]').forEach(p=>p.removeAttribute('contenteditable'))}}
+ return{refresh,clearSelection,selectId(id){const element=liveNode(id);if(element)select(element)},setEnabled(value){enabled=value;if(!value)select(null);refresh()},destroy(){destroyed=true;doc.removeEventListener('pointerdown',outside,true);observer.disconnect();resize?.disconnect();clipper.remove();handlers.forEach(([name,fn])=>host.removeEventListener(name,fn,true));doc.removeEventListener('pointermove',move,true);doc.removeEventListener('pointerup',end,true);doc.removeEventListener('pointercancel',end,true);doc.removeEventListener('scroll',updatePosition,true);win.removeEventListener('resize',updatePosition);host.querySelectorAll('[data-pptx-field-id]').forEach(p=>p.removeAttribute('contenteditable'))}}
 }
