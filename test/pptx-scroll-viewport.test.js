@@ -54,5 +54,24 @@ for(const width of [360,820])it(`keeps the ${width}px editable PPT viewport boun
   // A narrow pane can show more short slides within the two-viewport overscan.
   await expect.poll(()=>page.locator('[data-slide-index]>[data-mounted="1"]').count()).toBeLessThan(15)
   expect(await page.locator('[data-pptx-paragraph][contenteditable=true]').count()).toBeGreaterThan(0)
+  // IO runs after paint. A cold three-page jump must have its visible slide
+  // content in the scroll frame itself, before a white placeholder is painted.
+  const frames=await page.evaluate(async()=>{
+   const viewport=document.querySelector('.dsh_32k8zk_editorPptxHost'),results=[]
+   for(const index of [12,20,28]){
+    await new Promise(resolve=>{
+     viewport.addEventListener('scroll',()=>requestAnimationFrame(()=>{
+      const bounds=viewport.getBoundingClientRect()
+      const visible=[...viewport.querySelectorAll('[data-slide-index]')].filter(item=>{const box=item.getBoundingClientRect();return box.bottom>bounds.top&&box.top<bounds.bottom})
+      results.push({index,blank:visible.filter(item=>!item.querySelector('[data-pptx-node-id]')).map(item=>item.dataset.slideIndex)})
+      resolve()
+     }),{once:true})
+     viewport.scrollTop=viewport.querySelector('[data-slide-index="'+index+'"]').offsetTop
+    })
+   }
+   return results
+  })
+  expect(frames.map(frame=>frame.blank)).toEqual([[],[],[]])
+
  }finally{await context.close()}
 },20000)
