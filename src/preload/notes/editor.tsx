@@ -32,6 +32,19 @@ function AiRewriteButton({onRewrite}:{onRewrite():void}){
  const editor:any=useBlockNoteEditor(),valid=useEditorState({editor,selector:({editor}:any)=>editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection)})
  return valid?<button className="en-ai-format" aria-label="AI 改写" onMouseDown={e=>e.preventDefault()} onClick={onRewrite}><NoteMenuIcon kind="sparkles"/><span>AI 改写</span></button>:null
 }
+function NoteFormattingToolbar({children}:{children:React.ReactNode}){
+ const editor:any=useBlockNoteEditor(),componentSelected=useEditorState({editor,selector:({editor}:any)=>{
+  const {doc,selection}=editor._tiptapEditor.state
+  if(selection.empty)return false
+  let selected=false
+  doc.nodesBetween(selection.from,selection.to,(node:any)=>{
+   if(node.type.name==='research'||node.type.name==='attachment'){selected=true;return false}
+   return !selected
+  })
+  return selected
+ }})
+ return componentSelected?null:<FormattingToolbar>{children}</FormattingToolbar>
+}
 function ResearchBlock({block}:any){
  const context=useContext(Context)!,node=useMemo(()=>{try{return JSON.parse(block.props.payload)}catch{return {}}},[block.props.payload])
  return node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
@@ -340,7 +353,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
         <BlockNoteView editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false}>
           <SuggestionMenuController getItems={slashItems} triggerCharacter="/" suggestionMenuComponent={slashMenu} portalElement={document.body} floatingUIOptions={{useFloatingOptions:{strategy:'fixed'},elementProps:{className:'en-note-menu-layer',style:{zIndex:110}}}} />
-          <FormattingToolbarController formattingToolbar={() => <FormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}/></FormattingToolbar>} />
+          <FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}/></NoteFormattingToolbar>} />
           <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const base=reference.getBoundingClientRect(),component=reference.querySelector<HTMLElement>('.en-research,.en-note-file');if(component)return{y:y+component.getBoundingClientRect().top-base.top};const box=content.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} />
         </BlockNoteView>
       </div>
