@@ -313,12 +313,14 @@ it('renders the compact native second level without clipping in both themes and 
   const children=componentLibraryBuiltins().map(item=>({id:item.id,title:item.name,icon:item.widget,subtext:'',group:'内置组件',badge:''})),state={sessionId:'s',menuId:'m',revision:1,dark:true,selectedIndex:0,anchor:{x:0,y:0,width:0,height:20},items:[{id:'library',title:'组件库',icon:'library',subtext:'',group:'',badge:'',children}],submenu:{parentId:'library',selectedIndex:0}}
   await page.route('http://127.0.0.1/native-menu-fixture',route=>route.fulfill({contentType:'text/html',body:noteMenuDocumentHtml}));await page.goto('http://127.0.0.1/native-menu-fixture')
   const result=noteMenuPresentation(state,'ticket');await page.evaluate(html=>document.querySelector('main').innerHTML=html,result.html)
+  expect(await page.locator('footer').count()).toBe(0)
   for(const dark of [true,false]){
    await page.evaluate(dark=>document.body.className=dark?'dark':'',dark)
    expect(await page.locator('.child-menu a[role=option]').count()).toBe(6);expect(await page.locator('.child-menu>[role=listbox]').evaluate(el=>({bar:getComputedStyle(el).scrollbarWidth,webkit:getComputedStyle(el,'::-webkit-scrollbar').display}))).toEqual({bar:'none',webkit:'none'})
-   expect(await page.locator('.child-menu').evaluate(el=>{const a=el.getBoundingClientRect(),last=el.querySelector('a[aria-label="日历"]').getBoundingClientRect(),footer=el.querySelector('footer').getBoundingClientRect();return last.bottom<=footer.top&&a.right<=innerWidth})).toBe(true)
+   expect(await page.locator('.child-menu').evaluate(el=>{const a=el.getBoundingClientRect(),last=el.querySelector('a[aria-label="日历"]').getBoundingClientRect();return {bottomGap:a.bottom-last.bottom,fits:a.right<=innerWidth}})).toEqual({bottomGap:7,fits:true})
+   expect(await page.locator('.root-menu').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('a[role=option]').getBoundingClientRect().bottom)).toBe(7)
   }
   await page.setViewportSize({width:264,height:340});expect(await page.locator('.root-menu').isVisible()).toBe(false);expect(await page.locator('.child-menu').evaluate(el=>el.getBoundingClientRect().width)).toBe(264)
-  await page.setViewportSize({width:264,height:140});await page.locator('.child-menu>[role=listbox]').hover();await page.mouse.wheel(0,400);await expect.poll(()=>page.locator('.child-menu>[role=listbox]').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.locator('.child-menu a[aria-label="日历"]').evaluate(el=>el.getBoundingClientRect().bottom<=el.closest('.menu').querySelector('footer').getBoundingClientRect().top)).toBe(true)
+  await page.setViewportSize({width:264,height:140});await page.locator('.child-menu>[role=listbox]').hover();await page.mouse.wheel(0,400);await expect.poll(()=>page.locator('.child-menu>[role=listbox]').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.locator('.child-menu a[aria-label="日历"]').evaluate(el=>el.closest('.menu').getBoundingClientRect().bottom-el.getBoundingClientRect().bottom)).toBe(7)
  }finally{await context.close()}
 },15000)
