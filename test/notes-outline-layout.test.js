@@ -341,3 +341,16 @@ it('renders every native second-level option without scrolling in both themes an
   expect(await page.locator('.child-menu>[role=listbox]').evaluate(el=>({scrolls:el.scrollHeight>el.clientHeight,overflow:getComputedStyle(el).overflowY}))).toEqual({scrolls:false,overflow:'hidden'})
  }finally{await context.close()}
 },15000)
+
+it('places the component-library submenu beside its hovered row rather than the top of the root menu',async()=>{
+ const context=await browser.newContext(),page=await context.newPage();try{
+  const {componentLibraryBuiltins}=await import('../packages/dsh-research-task-runtime/component-library-catalog.js')
+  const icons=['paragraph','heading','heading_2','heading_3','bullet_list','table','image','video','audio','file','emoji','library']
+  const children=componentLibraryBuiltins().map(item=>({id:item.id,title:item.name,icon:item.widget,subtext:'',group:'内置组件',badge:''}))
+  const state={sessionId:'s',menuId:'m',revision:1,dark:false,selectedIndex:0,anchor:{x:0,y:0,width:0,height:20},items:icons.map(icon=>({id:icon,title:icon,icon,subtext:'',group:'',badge:'',...(icon==='library'?{children}:{})})),submenu:{parentId:'library',selectedIndex:0}}
+  const result=noteMenuPresentation(state,'ticket',{height:1000,width:1400});await page.setViewportSize({width:result.width,height:result.height});await page.setContent(noteMenuDocumentHtml);await page.evaluate(html=>document.querySelector('main').innerHTML=html,result.html)
+  expect(await page.locator('.child-menu').evaluate(el=>el.getBoundingClientRect().top)).toBe(await page.locator('.root-menu a[aria-label=library]').evaluate(el=>el.getBoundingClientRect().top))
+  await page.locator('.root-menu a[aria-label=image]').hover()
+  expect(await page.locator('.root-menu a[aria-label=image]').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+ }finally{await context.close()}
+},15000)
