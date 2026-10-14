@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest'
 import JSZip from 'jszip'
 vi.mock('electron',()=>({BrowserWindow:vi.fn(),dialog:{showSaveDialog:vi.fn()}}))
-import {noteWordBuffer,noteMarkdown,notePrintHtml,saveNoteExport} from '../src/main/notes/export'
+import {noteWordBuffer,noteMarkdown,notePrintHtml,saveNoteExport,noteExportBlocks} from '../src/main/notes/export'
 import {dialog} from 'electron'
 import type {NoteContent} from '../src/shared/workspace-notes'
 const content:NoteContent={title:'中文笔记 <验收>',blocks:[
@@ -13,6 +13,12 @@ const content:NoteContent={title:'中文笔记 <验收>',blocks:[
  {id:'r',type:'research',props:{payload:JSON.stringify({title:'来源数据',containerSpec:{type:'table',columns:['字段','值'],rows:[['数量',42]]}})}},
  {id:'unsafe',type:'paragraph',content:[{type:'link',href:'javascript:alert(1)',content:[{type:'text',text:'被拒绝的链接'}]},{type:'text',text:'<script>evil()</script>'}]}
 ],yjs:''} as any
+it('exports the complete long reply added as a note component to Markdown, PDF HTML and Word',async()=>{
+ const text='# 回复标题\n\n'+'完整回复 <资料>。'.repeat(5000),reply={title:'回复导出',yjs:'',blocks:[{id:'reply',type:'research',props:{payload:JSON.stringify({kind:'assistant-result',noteReply:true,title:'助手回复',excerpt:text})}}]}
+ expect(noteExportBlocks(reply).at(-1)?.content[0].text===text).toBe(true)
+ expect(noteMarkdown(reply).includes(text)).toBe(true);expect(notePrintHtml(reply).includes(text.replaceAll('<','&lt;').replaceAll('>','&gt;'))).toBe(true)
+ const xml=await(await JSZip.loadAsync(await noteWordBuffer(reply))).file('word/document.xml')!.async('string');expect(xml.includes('完整回复 &lt;资料&gt;。'.repeat(5000))).toBe(true)
+})
 it('creates an actual docx with Chinese text, headings, links and tables',async()=>{
  const bytes=await noteWordBuffer(content),zip=await JSZip.loadAsync(bytes),xml=await zip.file('word/document.xml')!.async('string')
  expect(xml).toContain('中文笔记 &lt;验收&gt;');expect(xml).toContain('w:pStyle w:val="Heading2"');expect(xml).toContain('w:tbl');expect(xml).toContain('一月');expect(xml).toContain('数量');expect(xml).not.toContain('javascript:')

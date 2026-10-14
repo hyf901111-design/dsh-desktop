@@ -14,9 +14,9 @@ export function NativeComponentBlock({block,node,context}:any){
   let attempts=0,live=true,timer:ReturnType<typeof setTimeout>|undefined;setReady(false);setError('')
   const publish=()=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,hostId:host.current?.id,headerId:instance.current+'-title',sessionId:context.sessionId,node,dark:context.dark,refresh}}))
   const load=async()=>{try{
-   await context.bridge.request('component-render',{sessionId:context.sessionId,spec:node.containerSpec})
+   await context.bridge.request(node.noteReply?'reply-render':'component-render',{sessionId:context.sessionId,...node.noteReply?{text:node.excerpt}:{spec:node.containerSpec}})
    if(!live)return
-   if(node.containerSpec.type==='calendar-tool'){
+   if(node.containerSpec?.type==='calendar-tool'){
     const result=await context.bridge.request('component-ready',{sessionId:context.sessionId,nodeId:node.id})
     if(!live)return;if(!result.ready){if(++attempts>25)throw Error('请先保存笔记，再重新打开日历组件。');timer=setTimeout(load,400);return}
    }

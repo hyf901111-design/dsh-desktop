@@ -27,20 +27,24 @@ export function useNotesConversationRows(sessionId,openState){
   react.useEffect(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[sessionId,openState])
   return rows
 }
-export function EWorkNoteConversationRow({row,t,loadImage,UserBubble=UserStyleBubble,Progress=ExecutionStatusGroup,Markdown=AssistantMarkdown}) {
+export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,forkAt,renderSlot,branchUnavailable=false,UserBubble=UserStyleBubble,Progress=ExecutionStatusGroup,Markdown=AssistantMarkdown,Actions=typeof MessageIconActions==='undefined'?null:MessageIconActions}) {
   const h = react.createElement
   const labels = {preparing:'正在读取笔记内容',generating:'正在生成内容',ready:'内容已生成，请在笔记中预览',replied:'已回复',accepted:'已写入笔记',discarded:'已放弃建议',failed:'生成失败',stopped:'已停止'}
     const pending = ['preparing','generating'].includes(row.phase)
     const stage = {model:'正在连接当前模型',thinking:'正在思考',writing:'正在撰写内容',validating:'正在检查生成内容'}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
     const feedback={ready:'已生成以下内容，可在文档预览中采纳。',accepted:'已将以下内容写入笔记。',discarded:'以下建议未被采纳。'}[row.phase]
+    const text=['text','conversation'].includes(row.result?.kind)?String(row.result.markdown||''):row.result?.kind==='component'?'已生成组件：'+(row.result.node?.title||'研究组件')+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
+    // Read the durable final-event position after generation; the preparing seq is only for row ordering.
+    react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || '根据附件撰写内容'}],imageLoader:loadImage,t}),
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t}) : null,
       row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:[feedback,row.result.markdown].filter(Boolean).join('\n\n')}],streaming:false,t})) : null,
-      row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?'已创建并写入笔记组件：':'已生成组件：')+(row.result.node.title||'研究组件')+'。'}],streaming:false,t}) : null)
+      row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?'已创建并写入笔记组件：':'已生成组件：')+(row.result.node.title||'研究组件')+'。'}],streaming:false,t}) : null,
+      settled&&Actions?h(Actions,{text,time:row.finishedAt,clock:'end',onBranch:forkAt?()=>forkAt(row.completedSeq):undefined,branchUnavailable:branchUnavailable||!Number.isSafeInteger(row.completedSeq),extraActions:renderSlot?.('conversation.chat.assistant-actions',{messageId:'ework-note:'+row.requestId,text}),className:'osXY9a_actions',t}):null)
 }
 export function EWorkNotesActivity(props){const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':'笔记任务过程'},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}
 export function EWorkNotesConversation({sessionId,empty,children,t}){
@@ -60,7 +64,7 @@ export function mergeNoteConversationFlow(flow,nodeStore,rows){
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${[noteConversationVacant,useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
+  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${noteActionClientHelpers()}\n${[noteConversationVacant,useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
@@ -103,6 +107,7 @@ export function patchNotesActivity(source) {
     if(source.split(signature).length!==2)throw Error('无法定位笔记会话滚动跟随。')
     source=source.replace(signature,'/* ework:notes-follow-stream:v1 */ '+signature.slice(0,-2)+':${noteRows.map(row=>[row.requestId,row.phase,row.stage,row.outputChars,row.reasoning?.length].join(\",\")).join(\";\")}`;')
   }
+  source=patchNoteReplyActionRow(patchNoteAssistantDestination(source))
   if(source.includes(next))return patchNoteConversationVacancy(patchNotesComponents(patchNotesFiles(source)))
   if (source.split(portal).length !== 2) throw Error('笔记无法定位原生对话过程区域。')
   return patchNoteConversationVacancy(patchNotesComponents(patchNotesFiles(source.replace(portal,next))))
@@ -110,3 +115,4 @@ export function patchNotesActivity(source) {
 import { noteFileClientHelpers, patchNotesFiles } from './notes-files.mjs'
 import { noteComponentClientHelpers, patchNotesComponents } from './notes-components.mjs'
 import {noteConversationVacant,patchNoteConversationVacancy} from './notes-conversation-vacancy.mjs'
+import {noteActionClientHelpers,patchNoteAssistantDestination,patchNoteReplyActionRow} from './notes-reply-actions.mjs'

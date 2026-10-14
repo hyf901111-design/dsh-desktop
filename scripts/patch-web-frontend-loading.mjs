@@ -1,6 +1,7 @@
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
 import { patchNotesComposer } from './lib/notes-composer.mjs'
+import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
 import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standard-mode-only.mjs'
 import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
@@ -260,7 +261,9 @@ const modeRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-agent
 writeFileSync(modeRuntimePath, patchStandardModeRuntime(readFileSync(modeRuntimePath, 'utf8')))
 
 const noteHostPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js')
-writeFileSync(noteHostPath, patchNoteSessionHost(readFileSync(noteHostPath, 'utf8')))
+writeFileSync(noteHostPath, patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8'))))
+const noteFeedbackPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js')
+writeFileSync(noteFeedbackPath,patchNoteFeedbackHost(readFileSync(noteFeedbackPath,'utf8')))
 for (const catalog of ['lib/index.js', 'lib/types/known-event-types.js']) {
   const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-session', catalog)
   writeFileSync(path, patchNoteSessionCatalog(readFileSync(path, 'utf8')))

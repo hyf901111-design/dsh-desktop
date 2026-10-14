@@ -7,7 +7,7 @@ export function setNoteConversationRunning(session,requestId,running){
 }
 export function noteConversationRows(session){
  const rows=new Map()
- for(const event of session.events){if(event.type!==NOTE_CONVERSATION_EVENT)continue;const row=event.data,previous=rows.get(row.requestId);rows.set(row.requestId,{...previous,...row,seq:previous?.seq??event.seq,startedAt:previous?.startedAt??event.time,...previous?.finishedAt&&['accepted','discarded'].includes(row.phase)?{finishedAt:previous.finishedAt}:{}})}
+ for(const event of session.events){if(event.type!==NOTE_CONVERSATION_EVENT)continue;const row=event.data,previous=rows.get(row.requestId);rows.set(row.requestId,{...previous,...row,seq:previous?.seq??event.seq,startedAt:previous?.startedAt??event.time,...previous?.completedSeq!==undefined?{completedSeq:previous.completedSeq}:['ready','replied'].includes(row.phase)&&row.result?{completedSeq:event.seq}:{},...previous?.finishedAt&&['accepted','discarded'].includes(row.phase)?{finishedAt:previous.finishedAt}:{}})}
  return [...rows.values()].slice(-100).map(row=>row.phase==='preparing'&&!activeNoteRequests.get(session)?.has(row.requestId)?{...row,phase:'stopped',finishedAt:row.startedAt,error:'生成已中断，可重新撰写。'}:row)
 }
 export function recordNoteConversation(session,row){
@@ -32,7 +32,7 @@ export function sharedNoteConversationContext(session){
 
 export function registerNoteConversationContext(ctx){
  return ctx.systemPrompt?.context({name:'sherlock:note-conversation',order:146,text:({agent})=>{
-   if(!agent?.session||agent.session.header?.parentSession)return ''
+   if(!agent?.session||agent.session.header?.origin==='subagent')return ''
    const rows=noteConversationRows(agent.session).slice(-8)
    if(!rows.length)return ''
    const content=rows.map(row=>({instruction:row.prompt,phase:row.phase,...row.result?.kind==='text'?{suggestion:row.result.markdown.slice(-6000)}:row.result?.kind==='conversation'?{reply:row.result.markdown.slice(-6000)}:{}})).reduceRight((rows,item)=>JSON.stringify([item,...rows]).length<=16000?[item,...rows]:rows,[])
