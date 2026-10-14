@@ -10,7 +10,7 @@ export type NoteSlashItem = DefaultReactSuggestionItem & {key?:string;children?:
 export function NativeSlashMenu(props: SuggestionMenuProps<NoteSlashItem> & {bridge:NotesBridge;sessionId:string;dark:boolean}) {
   const editor = useBlockNoteEditor(), state = useExtensionState(SuggestionMenuExtension)
   const menuId = useRef(crypto.randomUUID()), revision = useRef(0), current = useRef(props), latestRevision = useRef(0), wasShowing = useRef(false)
-  const [submenu,setSubmenu]=useState<{parentId:string;selectedIndex:number}>(), sub=useRef(submenu), menuState=useRef(state)
+  const [submenu,setSubmenu]=useState<{parentId:string;selectedIndex:number;keyboardActive:boolean}>(), sub=useRef(submenu), menuState=useRef(state)
   sub.current=submenu;menuState.current=state
   current.current = props
   const itemId = (item: NoteSlashItem, index:number) => `${(item as any).key || 'item'}-${index}`
@@ -29,7 +29,7 @@ export function NativeSlashMenu(props: SuggestionMenuProps<NoteSlashItem> & {bri
         return
       }
       const item = current.current.items.find((item,index) => itemId(item,index) === value.itemId)
-      if(item?.children?.length){setSubmenu({parentId:value.itemId!,selectedIndex:0});return}
+      if(item?.children?.length){setSubmenu({parentId:value.itemId!,selectedIndex:0,keyboardActive:false});return}
       if (item) current.current.onItemClick?.(item)
     }
     const surface = (event:Event) => { if ((event as CustomEvent).detail?.surface !== 'notes') cancel() }
@@ -40,11 +40,11 @@ export function NativeSlashMenu(props: SuggestionMenuProps<NoteSlashItem> & {bri
         event.preventDefault();event.stopImmediatePropagation()
         if(event.key==='ArrowLeft'){setSubmenu(undefined);return}
         if(event.key==='Enter'){const ext=editor.getExtension(SuggestionMenuExtension);ext?.closeMenu();ext?.clearQuery();parent.children[open.selectedIndex]!.onItemClick();return}
-        const count=parent.children.length,index=event.key==='Home'?0:event.key==='End'?count-1:(open.selectedIndex+(event.key==='ArrowDown'?1:-1)+count)%count
-        setSubmenu({...open,selectedIndex:index});return
+        const count=parent.children.length,index=event.key==='Home'?0:event.key==='End'?count-1:!open.keyboardActive?(event.key==='ArrowDown'?0:count-1):(open.selectedIndex+(event.key==='ArrowDown'?1:-1)+count)%count
+        setSubmenu({...open,selectedIndex:index,keyboardActive:true});return
       }
       if(!open&&parent?.children?.length&&['Enter','ArrowRight'].includes(event.key)){
-        event.preventDefault();event.stopImmediatePropagation();setSubmenu({parentId:itemId(parent,current.current.items.indexOf(parent)),selectedIndex:0})
+        event.preventDefault();event.stopImmediatePropagation();setSubmenu({parentId:itemId(parent,current.current.items.indexOf(parent)),selectedIndex:0,keyboardActive:true})
       }
     }
     document.addEventListener('keydown',key,true)
@@ -74,5 +74,5 @@ export function NativeSlashMenu(props: SuggestionMenuProps<NoteSlashItem> & {bri
   },[submenu,props.items,props.selectedIndex,props.dark,props.loadingState,state?.referencePos,state?.show,props.bridge,props.sessionId,editor])
   // Retain the editor's accessible list and active descendant while the visible
   // panel is rendered in a non-key native window. Arrow/Enter/IME stay here.
-  return <div id="bn-suggestion-menu" className="en-native-menu-accessible" role="listbox" aria-label="笔记斜杠菜单">{props.items.map((item,index)=><div key={itemId(item,index)} id={`bn-suggestion-menu-item-${index}`} role="option" aria-selected={props.selectedIndex===index} aria-haspopup={item.children?'menu':undefined}>{item.title}</div>)}{submenu?<div role="listbox" aria-label="组件库">{props.items.find((item,index)=>itemId(item,index)===submenu.parentId)?.children?.map((item,index)=><div key={itemId(item,index)} role="option" aria-selected={submenu.selectedIndex===index}>{item.title}</div>)}</div>:null}</div>
+  return <div id="bn-suggestion-menu" className="en-native-menu-accessible" role="listbox" aria-label="笔记斜杠菜单">{props.items.map((item,index)=><div key={itemId(item,index)} id={`bn-suggestion-menu-item-${index}`} role="option" aria-selected={props.selectedIndex===index} aria-haspopup={item.children?'menu':undefined}>{item.title}</div>)}{submenu?<div role="listbox" aria-label="组件库">{props.items.find((item,index)=>itemId(item,index)===submenu.parentId)?.children?.map((item,index)=><div key={itemId(item,index)} role="option" aria-selected={submenu.keyboardActive&&submenu.selectedIndex===index}>{item.title}</div>)}</div>:null}</div>
 }

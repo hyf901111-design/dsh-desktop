@@ -28,7 +28,7 @@ export function validateNoteMenu(input: NoteMenuState): void {
     if(item.children){if(child||!Array.isArray(item.children)||item.children.length>110)throw Error('子菜单无效。');check(item.children,true)}
   }}
   check(input.items)
-  if(input.submenu){const parent=input.items.find(item=>item.id===input.submenu!.parentId);if(!parent?.children?.length||!Number.isInteger(input.submenu.selectedIndex)||input.submenu.selectedIndex<0||input.submenu.selectedIndex>=parent.children.length)throw Error('子菜单选择无效。')}
+  if(input.submenu){const parent=input.items.find(item=>item.id===input.submenu!.parentId);if(!parent?.children?.length||!Number.isInteger(input.submenu.selectedIndex)||input.submenu.selectedIndex<0||input.submenu.selectedIndex>=parent.children.length||(input.submenu.keyboardActive!==undefined&&typeof input.submenu.keyboardActive!=='boolean'))throw Error('子菜单选择无效。')}
 }
 
 /** The screen, rather than the parent window, bounds this native floating menu. */
@@ -52,7 +52,7 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
   const basic=grid?state.items.filter(item=>BASIC_ICONS.includes(item.icon)):[],rest=grid?state.items.filter(item=>!BASIC_ICONS.includes(item.icon)):state.items
   const parent=state.items.find(item=>item.id===state.submenu?.parentId)
   const row=(item:NoteMenuState['items'][number],iconOnly=false,parentId?:string)=>{
-    const index=parentId?parent!.children!.indexOf(item):state.items.indexOf(item),selected=parentId?index===state.submenu?.selectedIndex:!state.submenu&&index===state.selectedIndex
+    const index=parentId?parent!.children!.indexOf(item):state.items.indexOf(item),selected=parentId?state.submenu?.keyboardActive!==false&&index===state.submenu?.selectedIndex:!state.submenu&&index===state.selectedIndex
     const route=item.children?'open':'select',suffix=parentId?'&parent='+parentId:''
     return `<a role="option" aria-label="${escapeHtml(item.title)}" title="${escapeHtml(item.title+(item.badge?' · '+item.badge:''))}" aria-selected="${selected}" ${item.children?'aria-haspopup="menu" aria-expanded="'+(state.submenu?.parentId===item.id)+'" data-submenu=""':''} id="item-${parentId||'root'}-${index}" href="ework-note-menu://${ticket}/${route}/${item.id}?revision=${state.revision}${suffix}" class="${iconOnly?'basic-item':''}"><span class="icon ${parentId?'library-icon':tone(item.icon)}">${menuIcon(item.icon,!!parentId)}</span>${iconOnly?'':`<span class="label">${escapeHtml(item.title)}</span>`}${item.children?'<span class="chevron">›</span>':''}</a>`
   }

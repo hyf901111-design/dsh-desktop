@@ -65,6 +65,13 @@ it('shows only component choices in the child pane without a back title or group
  expect(result.child!.html).not.toContain('<h2>');expect(result.child!.html).not.toContain('class="back"');expect(result.child!.html).not.toContain('‹ 组件库')
  expect(result.child!.html.match(/role="option"/g)).toHaveLength(3);expect(result.child!.html).toContain('aria-label="组件库"');expect(result.child!.height).toBe(14+3*32+48)
 })
+it('does not highlight the first child when opened by pointer, but retains keyboard selection',()=>{
+ const children=['watchlist','quote'].map(icon=>({id:icon,title:icon,icon,subtext:'',badge:'',group:''})),library={id:'library',title:'组件库',icon:'library',subtext:'',badge:'',group:'',children}
+ const pointer=input({items:[library],submenu:{parentId:'library',selectedIndex:0,keyboardActive:false}})
+ expect(noteMenuPresentation(pointer,'ticket').child!.html).not.toContain('aria-selected="true"')
+ expect(noteMenuPresentation({...pointer,submenu:{...pointer.submenu!,keyboardActive:true}},'ticket').child!.html).toContain('aria-selected="true"')
+ expect(()=>validateNoteMenu({...pointer,submenu:{...pointer.submenu!,keyboardActive:'yes' as any}})).toThrow('子菜单选择无效')
+})
 it('keeps native clicks from stealing editor focus and accepts only a current selection',async()=>{
  const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1)
  await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled())

@@ -51,6 +51,39 @@ async function fileFixture(saved,dark=true){
 }
 async function dropNoteFiles(page,names){await page.evaluate(names=>{const target=document.querySelector('.en-document .bn-inline-content'),box=target.getBoundingClientRect(),data=new DataTransfer();for(const name of names)data.items.add(new File(['file content'],name,{type:'text/plain'}));target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data,clientX:box.x+10,clientY:box.bottom-1}))},names)}
 
+async function componentBorderPixels(page,section){
+ const screenshot=await section.screenshot({animations:'disabled'})
+ return page.evaluate(async bytes=>{
+  const bitmap=await createImageBitmap(new Blob([new Uint8Array(bytes)],{type:'image/png'})),canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height
+  const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data,probe=document.createElement('span');probe.style.color='var(--en-accent)';document.querySelector('.en-root').append(probe);const accent=getComputedStyle(probe).color.match(/\d+/g).map(Number);probe.remove()
+  const match=(x,y)=>{const offset=(y*canvas.width+x)*4;return accent.every((v,i)=>Math.abs(v-pixels[offset+i])<=1)}
+  const horizontal=y=>[.25,.75].map(ratio=>Array.from({length:3},(_,depth)=>match(Math.floor(canvas.width*ratio),y(depth))).some(Boolean)),vertical=x=>[.25,.75].map(ratio=>Array.from({length:3},(_,depth)=>match(x(depth),Math.floor(canvas.height*ratio))).some(Boolean))
+  return {top:horizontal(depth=>depth),bottom:horizontal(depth=>canvas.height-1-depth),left:vertical(depth=>depth),right:vertical(depth=>canvas.width-1-depth)}
+ },Array.from(screenshot))
+}
+
+for(const dark of [false,true])for(const kind of ['snapshot','native','file'])it(`draws all four selection edges above layered ${kind} content without covering controls (${dark?'dark':'light'})`,async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),{context,page}=await fileFixture(undefined,dark),errors=[];page.on('pageerror',e=>errors.push(e.message))
+ try{
+  const node=kind==='file'?{id:'note-file-edge',name:'描边验收.pptx',source:'computer',authorizationId:'fixture-grant'}:kind==='native'?{id:'edge-native',title:'描边验收行情',noteLibrary:true,containerSpec:financialWidgetDefaults('quote')}:{id:'edge-snapshot',title:'描边验收快照',containerSpec:{version:1,type:'html',html:'<body style="margin:0;background:white"><button onclick="this.textContent=\'已点击\'">快照内部按钮</button></body>'}}
+  await page.evaluate(({node,kind})=>{window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'edge-block',type:kind==='file'?'attachment':'research',props:{payload:JSON.stringify({...node,noteSize:{height:240}})}}])},{node,kind})
+  const section=page.locator('.en-research'),guard=page.getByRole('button',{name:kind==='file'?'选中文件并操作预览':'选中组件并操作内容',exact:true});await guard.waitFor();await guard.click()
+  await section.evaluate((root,kind)=>{
+   if(kind==='snapshot'){const frame=root.querySelector('iframe');frame.style.position='relative';frame.style.zIndex='100000';return}
+   const reader=root.querySelector(kind==='file'?'.en-file-native-reader':'.en-native-component-body'),cover=document.createElement('div');cover.dataset.edgeLayer='';cover.style.cssText='position:absolute;inset:0;z-index:100000;background:white;color:black';cover.innerHTML='<button type="button">组件内部按钮</button>';cover.firstChild.onclick=e=>e.currentTarget.textContent='已点击';reader.append(cover)
+  },kind)
+  if(process.env.SHERLOCK_NOTES_EDGE_EVIDENCE)await page.screenshot({path:process.env.SHERLOCK_NOTES_EDGE_EVIDENCE+'-'+kind+'-'+(dark?'dark':'light')+'.png'})
+  expect(await componentBorderPixels(page,section)).toEqual({top:[true,true],bottom:[true,true],left:[true,true],right:[true,true]})
+  expect(await section.evaluate(root=>getComputedStyle(root,'::after').pointerEvents)).toBe('none')
+  if(kind==='snapshot')await page.frameLocator('.en-research iframe').getByRole('button',{name:'快照内部按钮',exact:true}).click();else await section.getByRole('button',{name:'组件内部按钮',exact:true}).click()
+  await (kind==='snapshot'?page.frameLocator('.en-research iframe').getByRole('button',{name:'已点击',exact:true}):section.getByRole('button',{name:'已点击',exact:true})).waitFor()
+  const handle=section.getByRole('separator',{name:'调整组件宽度',exact:true}),before=await section.boundingBox(),box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2-48,box.y+box.height/2);await page.mouse.up();await expect.poll(async()=>Math.round((await section.boundingBox()).width)).toBe(Math.round(before.width)-48)
+  expect(await componentBorderPixels(page,section)).toEqual({top:[true,true],bottom:[true,true],left:[true,true],right:[true,true]})
+  await page.locator('.en-title').click();expect(await section.getByRole('separator').count()).toBe(0);expect(await section.evaluate(root=>getComputedStyle(root,'::after').content)).toBe('none');await guard.waitFor()
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
 for(const kind of ['snapshot','native','file'])it(`resizes a selected ${kind} note component, saves one gesture per undo step and retains sizes on reopen`,async()=>{
  const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js')
  const node=kind==='file'?{id:'size-file',name:'尺寸验收.pdf',source:'computer',authorizationId:'fixture-grant'}:kind==='native'?{id:'size-native',title:'尺寸验收自选股',noteLibrary:true,height:520,containerSpec:financialWidgetDefaults('watchlist')}:{id:'size-snapshot',title:'尺寸验收快照',height:480,containerSpec:{version:1,type:'html',html:'<button>组件内容</button>'}}
