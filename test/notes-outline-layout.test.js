@@ -13,6 +13,7 @@ beforeAll(async () => {
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
       import React from 'react'; import * as jsxRuntime from 'react/jsx-runtime';import {WorkbenchChrome,WorkbenchTitle,WorkbenchIcon} from './scripts/lib/research-grid-ui.mjs';import {createRoot} from 'react-dom/client';import {createPortal} from 'react-dom';import {EWorkNoteExportMenu} from './scripts/lib/notes-export-menu.mjs';window.react_dom={createPortal};
+      import {FormattingToolbarExtension} from '@blocknote/core/extensions';window.noteFormattingToolbarExtension=FormattingToolbarExtension;
       ${financialSearchSource}
       import {componentLibraryBuiltins} from './packages/dsh-research-task-runtime/component-library-catalog.js';import {financialWidgetDefaults,financialWidgetDimensions,financialWidgetSpec,financialNewsQuery} from './packages/dsh-research-task-runtime/financial-widget-contract.js';import {createNoteComponentViewStore,EWorkNoteComponentViews} from './scripts/lib/notes-components.mjs';import {NotesApp} from './src/preload/notes/editor'; import {createNoteFileViewStore,EWorkNoteFileViews} from './scripts/lib/notes-files.mjs';
       import {createNotesActivityStore,EWorkNotesActivity} from './scripts/lib/notes-activity.mjs';
@@ -259,6 +260,35 @@ it('shows an interrupted saved import as a terminal retryable error',async()=>{
  try{await dropNoteFiles(first.page,['interrupted.txt']);await expect.poll(()=>first.page.evaluate(()=>window.noteRequests.filter(row=>row.method==='save').at(-1)?.input.content.blocks.some(block=>block.type==='attachment'))).toBe(true);saved=await first.page.evaluate(()=>({...window.noteRequests.filter(row=>row.method==='save').at(-1).input.content,revision:1,updatedAt:1}))}finally{await first.context.close()}
  const {context,page}=await fileFixture(saved);try{
   await page.getByRole('alert').filter({hasText:'上次文件导入已中断'}).waitFor();expect(await page.locator('.en-file-import [role=status]').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+
+for(const dark of [false,true])for(const kind of ['snapshot','native','file'])it(`hides the comment toolbar for a selected ${kind} component and restores it for body text (${dark?'dark':'light'})`,async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),{context,page}=await fileFixture(undefined,dark)
+ try{
+  const node=kind==='file'?{id:'comment-file',name:'评论边界.pdf',source:'computer',authorizationId:'fixture-grant'}:kind==='native'?{id:'comment-native',title:'评论边界行情',noteLibrary:true,containerSpec:financialWidgetDefaults('quote')}:{id:'comment-snapshot',title:'评论边界快照',containerSpec:{version:1,type:'html',html:'<p>组件内的预览内容</p>'}}
+  await page.evaluate(({node,kind})=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'comment-component',type:kind==='file'?'attachment':'research',props:{payload:JSON.stringify(node)}},{id:'comment-text',type:'paragraph',content:'正文仍然支持评论与改写。'}]),{node,kind})
+  const component=page.locator('.en-research');await component.getByRole('button',{name:kind==='file'?'选中文件并操作预览':'选中组件并操作内容',exact:true}).click()
+  await page.locator('.en-research[data-selected=true]').waitFor()
+  await page.evaluate(kind=>{const editor=window.noteEditor;let position;editor._tiptapEditor.state.doc.descendants((node,pos)=>{if(node.type.name===(kind==='file'?'attachment':'research'))position=pos});editor.focus();editor._tiptapEditor.commands.setNodeSelection(position)},kind)
+  await expect.poll(()=>page.evaluate(()=>window.noteEditor.getExtension(window.noteFormattingToolbarExtension).store.state)).toBe(true)
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  expect(await page.getByRole('button',{name:'添加评论',exact:true}).count()).toBe(0)
+  expect(await page.locator('.bn-formatting-toolbar').count()).toBe(0)
+  expect(await page.getByRole('button',{name:'AI 改写',exact:true}).count()).toBe(0)
+  await page.evaluate(()=>{const editor=window.noteEditor;let range;editor._tiptapEditor.state.doc.descendants((node,pos)=>{if(node.isText&&node.text==='正文仍然支持评论与改写。')range={from:pos,to:pos+node.nodeSize}});editor._tiptapEditor.commands.setTextSelection(range);editor.focus()})
+  await page.getByRole('button',{name:'添加评论',exact:true}).waitFor();await page.getByRole('button',{name:'AI 改写',exact:true}).waitFor()
+ }finally{await context.close()}
+},15000)
+
+for(const dark of [false,true])it(`hides the comment toolbar for a text selection spanning an embedded component (${dark?'dark':'light'})`,async()=>{
+ const {context,page}=await fileFixture(undefined,dark)
+ try{
+  await page.evaluate(()=>{const editor=window.noteEditor;editor.replaceBlocks(editor.document,[{type:'paragraph',content:'组件前面的正文。'},{type:'research',props:{payload:JSON.stringify({id:'mixed-comment',title:'混合选区组件',noteLibrary:true,containerSpec:{version:1,type:'markdown',content:'组件内文本'}})}},{type:'paragraph',content:'组件后面的正文。'}]);let from,to;editor._tiptapEditor.state.doc.descendants((node,pos)=>{if(node.isText&&node.text==='组件前面的正文。')from=pos;if(node.isText&&node.text==='组件后面的正文。')to=pos+node.nodeSize});editor.focus();editor._tiptapEditor.commands.setTextSelection({from,to})})
+  await expect.poll(()=>page.evaluate(()=>window.noteEditor.getExtension(window.noteFormattingToolbarExtension).store.state)).toBe(true)
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+  expect(await page.getByRole('button',{name:'添加评论',exact:true}).count()).toBe(0)
+  expect(await page.locator('.bn-formatting-toolbar').count()).toBe(0)
  }finally{await context.close()}
 },15000)
 
