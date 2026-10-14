@@ -11,6 +11,7 @@ import { installBundledPluginProfile } from '../src/main/bundled-plugin-profile'
 import { patchBetterSidebarClient } from '../scripts/lib/patch-sherlock-better-sidebar.mjs'
 import { patchSherlockOfficePreviewClient } from '../scripts/lib/patch-sherlock-office-preview.mjs'
 import { stripPptxResizePatch } from '../scripts/lib/pptx-resize-settle.mjs'
+import { stripPptxEditorPatch } from '../scripts/lib/pptx-editor-ui.mjs'
 
 const temporaryDirectories: string[] = []
 
@@ -132,7 +133,7 @@ describe('bundled Sherlock plugin profile', () => {
     }
   })
 
-  it('reprepares the complete Office package byte-for-byte and rejects changes outside the resize layer', async () => {
+  it('upgrades versioned PPT layers, then reprepares byte-for-byte and rejects unrelated Office changes', async () => {
     const packaged = path.resolve(import.meta.dirname, '../build/sherlock-plugin-profile/vendor/@huanlin/dsh-plugin-better-sidebar-plugin-office')
     const fixture = await temporaryDirectory('sherlock-office-package')
     await mkdir(path.join(fixture, 'lib'))
@@ -147,7 +148,10 @@ describe('bundled Sherlock plugin profile', () => {
       `import {patchSherlockOfficePreviewPackage} from ${JSON.stringify(moduleUrl)}; await patchSherlockOfficePreviewPackage(process.argv[1]);`, fixture])
     await prepare()
     const once = await readFile(clientPath, 'utf8')
-    expect(once).toBe(original)
+    const withoutPptLayers = (source: string) => stripPptxResizePatch(stripPptxEditorPatch(source))
+    expect(withoutPptLayers(once)).toBe(withoutPptLayers(original))
+    expect(once).toContain('/* sherlock:pptx-content-editor:v2 */')
+    expect(once).toContain('/* sherlock:pptx-resize-settle:v4 */')
     await prepare()
     expect(await readFile(clientPath, 'utf8')).toBe(once)
     const drifted = `${once}\n/* unexpected vendor drift */\n`
