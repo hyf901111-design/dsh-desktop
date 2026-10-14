@@ -8,6 +8,20 @@ export interface PptxResizeViewer {
 }
 export function cancelPptxResize(viewer: PptxResizeViewer): void
 export function schedulePptxResize(viewer: PptxResizeViewer): void
+export function configurePptxCategoryAxis(axis: {
+  type?: string
+  data?: unknown[]
+  axisLabel?: { interval?: number | string | ((index: number) => boolean); [key: string]: unknown }
+}, source: {
+  sherlockTickLabelSkip?: number
+  sherlockAuto?: boolean
+  sherlockDateAxis?: boolean
+  sherlockDateStep?: number
+  sherlockDateUnit?: string
+  deleted?: boolean
+  tickLblPos?: string
+  min?: number
+}): void
 export function stripPptxResizePatch(source: string): string
 export function patchPptxResize(source: string): string
 export function createPptxScrollWindow(

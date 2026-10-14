@@ -24,12 +24,43 @@ export function schedulePptxResize(viewer) {
     if (viewer.presentation) void viewer.queueRender()
   }, 160)
 }
+/** Preserve Office's explicit label interval; let dense automatic axes fit. */
+export function configurePptxCategoryAxis(axis, source) {
+  if (axis.type !== 'category' || !axis.axisLabel || source.deleted || source.tickLblPos === 'none') return
+  const skip = source.sherlockTickLabelSkip
+  // Office draws every Nth label; ECharts counts the N-1 labels between them.
+  if (Number.isSafeInteger(skip) && skip > 0) axis.axisLabel.interval = skip - 1
+  else if (source.sherlockAuto && axis.data?.length > 200 && axis.axisLabel.interval === 0) {
+    const step = source.sherlockDateStep, unit = source.sherlockDateUnit
+    if (source.sherlockDateAxis && Number.isSafeInteger(step) && step > 0 && ['days', 'months', 'years'].includes(unit)) {
+      const dateOf = value => {
+        if (value && typeof value === 'object') value = value.value
+        const serial = Number(value)
+        if (Number.isFinite(serial) && serial > 60 && serial < 2958466) return new Date((serial - 25569) * 86400000)
+        const match = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/.exec(String(value))
+        if (!match) return new Date(NaN)
+        const [, year, month, day] = match.map(Number), date = new Date(Date.UTC(year, month - 1, day))
+        return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? date : new Date(NaN)
+      }
+      const bucket = date => unit === 'months' ? date.getUTCFullYear() * 12 + date.getUTCMonth() : unit === 'years' ? date.getUTCFullYear() : Math.floor(date.getTime() / 86400000)
+      const values = axis.data.map(value => bucket(dateOf(value)))
+      if (values.every((value, index) => Number.isFinite(value) && (index === 0 || value >= values[index - 1]))) {
+        const anchor = bucket(dateOf(source.min)), labels = new Set()
+        let next = Number.isFinite(anchor) ? anchor : values[0]
+        values.forEach((value, index) => { if (value >= next) { labels.add(index); next += (Math.floor((value - next) / step) + 1) * step } })
+        axis.axisLabel.interval = index => labels.has(index)
+        return
+      }
+    }
+    axis.axisLabel.interval = 'auto'
+  }
+}
 // Prepare cold wheel destinations before compositor scrolling. Scroll/IO still
 // fill programmatic destinations, then warm one nearby slide per frame.
 export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version) {
   const root = viewer.viewerOptions.scrollContainer ?? null
   const target = root ?? window
-  let active = true, frame = null, nearby = []
+  let active = true, frame = null, nearby = [], quietUntil = 0, lastScrollTop = root?.scrollTop ?? window.scrollY
   const stale = () => !active || viewer.isRenderStale(version)
   const viewport = () => {
     const bounds = {left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight}
@@ -52,6 +83,12 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
   const warm = () => {
     frame = null
     if (stale()) return
+    // Visible destinations stay synchronous. Do not parse/render neighboring
+    // pages that a rapid gesture would immediately unmount again.
+    if (window.performance.now() < quietUntil) {
+      frame = requestAnimationFrame(warm)
+      return
+    }
     const index = nearby.shift()
     if (index !== undefined) mount(index)
     if (nearby.length) frame = requestAnimationFrame(warm)
@@ -88,6 +125,7 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
       const style = window.getComputedStyle(element)
       if (element.scrollHeight > element.clientHeight && /^(auto|scroll)$/.test(style.overflowY || style.overflow)) return
     }
+    quietUntil = window.performance.now() + 80
     const next = Math.max(0, Math.min(root.scrollHeight - root.clientHeight, root.scrollTop + event.deltaY))
     if (next === root.scrollTop) return
     const bounds = viewport()
@@ -105,7 +143,15 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
     root.scrollTo({top: next, behavior: 'instant'})
     update()
   }
-  target.addEventListener('scroll', update, {passive: true})
+  const scroll = () => {
+    const top = root?.scrollTop ?? window.scrollY
+    if (top !== lastScrollTop) {
+      lastScrollTop = top
+      quietUntil = window.performance.now() + 80
+    }
+    update()
+  }
+  target.addEventListener('scroll', scroll, {passive: true})
   if (root) root.addEventListener('wheel', wheel, {passive: false})
   const resize = window.ResizeObserver && root ? new window.ResizeObserver(update) : null
   resize?.observe(root)
@@ -120,7 +166,7 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
     disconnect() {
       active = false
       if (frame !== null) cancelAnimationFrame(frame)
-      target.removeEventListener('scroll', update)
+      target.removeEventListener('scroll', scroll)
       if (root) root.removeEventListener('wheel', wheel)
       resize?.disconnect()
       intersection.disconnect()
@@ -130,7 +176,13 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
   }
 }
 
-const marker = '/* sherlock:pptx-resize-settle:v5 */'
+const marker = '/* sherlock:pptx-resize-settle:v6 */'
+const fontFit = 'gt = N.style.overflowY, Qt = () => {'
+const guardedFontFit = fontFit + '\nif (n.signal?.aborted) return;'
+const categorySource = '\n\t\t\t\ttickLblPos: o,'
+const categorySourceExtended = categorySource + '\n\t\t\t\tsherlockAuto: we(t.child("auto")),\n\t\t\t\tsherlockTickLabelSkip: t.child("tickLblSkip").numAttr("val"),\n\t\t\t\tsherlockDateAxis: t.localName === "dateAx",\n\t\t\t\tsherlockDateStep: t.child("majorUnit").numAttr("val"),\n\t\t\t\tsherlockDateUnit: t.child("majorTimeUnit").attr("val"),'
+const categoryAxis = 'function Re(t, n, e) {'
+const configuredCategoryAxis = categoryAxis + '\nconfigurePptxCategoryAxis(t, n);'
 const windowOriginal = "const u = this.viewerOptions.scrollContainer ?? null, x = this.listOptions.overscanViewport, p = u ? u.clientHeight : window.innerHeight, g = new h((f) => {\n\t\t\t\t\t\tfor (const y of f) {\n\t\t\t\t\t\t\tconst m = y.target.parentElement, b = Number((m == null ? void 0 : m.dataset.slideIndex) ?? \"-1\");\n\t\t\t\t\t\t\tNumber.isNaN(b) || b < 0 || (y.isIntersecting ? l(b) : a(b));\n\t\t\t\t\t\t}\n\t\t\t\t\t}, {\n\t\t\t\t\t\troot: u,\n\t\t\t\t\t\trootMargin: `${Math.round(p * x)}px 0px`,\n\t\t\t\t\t\tthreshold: 0\n\t\t\t\t\t});"
 const windowReplacement = 'const g = createPptxScrollWindow(this, c, l, a, s);'
 const original = 'this.resizeRafId = null, this.queueRender();'
@@ -151,15 +203,19 @@ export function stripPptxResizePatch(source) {
     .replace(replacement, original).replace(cleanup, teardown)
     .replace(scaledMount, mount).replace(scaledUnmount, unmount)
     .replace(windowReplacement, windowOriginal)
+    .replace(guardedFontFit, fontFit).replace(categorySourceExtended, categorySource)
+    .replace(configuredCategoryAxis, categoryAxis)
 }
 export function patchPptxResize(source) {
   if (source.includes(marker)) return source
   source = stripPptxResizePatch(source)
-  for (const anchor of [original, teardown, mount, unmount, windowOriginal]) {
+  for (const anchor of [original, teardown, mount, unmount, windowOriginal, fontFit, categorySource, categoryAxis]) {
     if (source.split(anchor).length !== 2) throw Error('PPT resize anchors drifted')
   }
-  return marker + '\n' + cancelPptxResize.toString() + '\n' + schedulePptxResize.toString() + '\n' + createPptxScrollWindow.toString() + '\n/* sherlock:pptx-resize-settle:end */\n' + source
+  return marker + '\n' + cancelPptxResize.toString() + '\n' + schedulePptxResize.toString() + '\n' + configurePptxCategoryAxis.toString() + '\n' + createPptxScrollWindow.toString() + '\n/* sherlock:pptx-resize-settle:end */\n' + source
     .replace(original, replacement).replace(teardown, cleanup)
     .replace(mount, scaledMount).replace(unmount, scaledUnmount)
     .replace(windowOriginal, windowReplacement)
+    .replace(fontFit, guardedFontFit).replace(categorySource, categorySourceExtended)
+    .replace(categoryAxis, configuredCategoryAxis)
 }

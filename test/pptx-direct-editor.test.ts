@@ -12,6 +12,20 @@ function setup(extra:any={}){
  return{win,host,entry,controller,get selected(){return selected},get chartOpened(){return chartOpened}}
 }
 describe('direct slide interaction',()=>{
+ it('does not invalidate unchanged text annotations during repeated slide refreshes',()=>{
+  const v=setup(),observer=new v.win.MutationObserver(()=>{})
+  observer.observe(v.host,{attributes:true,subtree:true,attributeFilter:['contenteditable','role','aria-label','spellcheck','data-pptx-field-id']})
+  try{
+   for(let i=0;i<20;i++)v.controller.refresh()
+   expect(observer.takeRecords()).toHaveLength(0)
+   v.entry.document=JSON.parse(JSON.stringify(v.entry.document));v.entry.document.slides[0].fields[0].label='更新标题'
+   v.controller.refresh();expect(v.host.querySelector('[data-pptx-field-id="text"]')!.getAttribute('aria-label')).toBe('更新标题')
+   expect(observer.takeRecords().map(record=>record.attributeName)).toEqual(['aria-label'])
+   v.controller.setEnabled(false);expect(v.host.querySelector('[data-pptx-field-id="text"]')!.getAttribute('contenteditable')).toBe('false')
+   v.controller.setEnabled(true);expect(v.host.querySelector('[data-pptx-field-id="text"]')!.getAttribute('contenteditable')).toBe('true')
+   expect(v.host.querySelector('[data-pptx-bullet]')!.getAttribute('contenteditable')).toBe('false')
+  }finally{observer.disconnect();v.controller.destroy()}
+ })
  it('clips selection to independent ancestor axes without losing its identity',()=>{
   let position:any
   const v=setup({position:(value:any)=>{position=value}})

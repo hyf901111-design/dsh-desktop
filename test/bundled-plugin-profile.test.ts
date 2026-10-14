@@ -150,8 +150,8 @@ describe('bundled Sherlock plugin profile', () => {
     const once = await readFile(clientPath, 'utf8')
     const withoutPptLayers = (source: string) => stripPptxResizePatch(stripPptxEditorPatch(source))
     expect(withoutPptLayers(once)).toBe(withoutPptLayers(original))
-    expect(once).toContain('/* sherlock:pptx-content-editor:v3 */')
-    expect(once).toContain('/* sherlock:pptx-resize-settle:v5 */')
+    expect(once).toContain('/* sherlock:pptx-content-editor:v4 */')
+    expect(once).toContain('/* sherlock:pptx-resize-settle:v6 */')
     await prepare()
     expect(await readFile(clientPath, 'utf8')).toBe(once)
     const drifted = `${once}\n/* unexpected vendor drift */\n`
