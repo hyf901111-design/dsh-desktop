@@ -165,6 +165,7 @@ function initializeUi(): void {
   const memoryListeners = new Set<() => void>()
   ipcRenderer.on('memory:changed', () => { for (const listener of memoryListeners) listener() })
   const memoryUi = mountMemoryUi(document, {
+    openDirectory:async()=>{await ipcRenderer.invoke('memory:open-directory')},
     request: command => ipcRenderer.invoke('memory:request', command),
     subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) },
     openSource: async source => {

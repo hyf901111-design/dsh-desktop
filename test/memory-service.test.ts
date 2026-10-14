@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile, rm, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
@@ -24,6 +24,132 @@ const preference = (content='默认用中文回答') => ({title:'回答语言',c
 afterEach(async()=>{for(const s of stores.splice(0))await s.close();for(const r of roots.splice(0))await rm(r,{recursive:true,force:true})})
 
 describe('长期记忆真实行为',()=>{
+
+  it('uses a single conservative master switch for persisted mixed legacy settings',async()=>{
+    const {service,root}=await setup();await service.request({type:'save',input:preference()});await service.close()
+    const {MemoryStore}=await import('../src/main/memory/store');const store=await MemoryStore.open(root,encryption),state:any=store.read('local')
+    state.settings={use:true,auto:false};store.write('local',state);store.close()
+    const resumed=(await setup(root)).service
+    expect((await resumed.request({type:'snapshot'})).settings).toEqual({use:false,auto:false})
+    expect((await resumed.recall({sessionId:'a',query:'报告'})).enabled).toBe(false)
+    expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后中文'}]})).enabled).toBe(false)
+    await resumed.request({type:'settings',use:true})
+    expect((await resumed.request({type:'snapshot'})).settings).toEqual({use:true,auto:true})
+  })
+  it('renews invalidated summary reservations across scope changes within the persisted budget',async()=>{
+    const {service}=await setup();await service.request({type:'save',input:preference()})
+    await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后中文'}],route:{provider:'chosen',model:'chosen'}})
+    const first=await service.summaryInput();expect(first.enabled).toBe(true);if(!first.enabled)throw Error('no summary')
+    await service.request({type:'settings',use:false});await service.request({type:'settings',use:true})
+    expect((await service.summaryCommit({...first,text:'旧概括',model:'chosen'})).ok).toBe(false)
+    const second=await service.summaryInput();expect(second.enabled).toBe(true)
+    await service.request({type:'bind',sessionId:'a'})
+    expect((await service.summaryInput()).enabled).toBe(false)
+    expect((await service.request({type:'snapshot'})).summary?.state).toBe('failed')
+  })
+  it('revokes recall and extraction authorization when the editable file becomes incomplete',async()=>{
+    const {service}=await setup();const saved=await service.request({type:'save',input:preference()})
+    const recall=await service.recall({sessionId:'a',query:'报告'}),cap=await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后中文'}]})
+    await writeFile(saved.document!.file,'编辑尚未完成')
+    const validation={sessionId:'a',ownerEpoch:recall.ownerEpoch,revision:recall.revision,scopeEpoch:recall.scopeEpoch}
+    expect((await service.validate(validation)).valid).toBe(false)
+    await expect(service.attempt({captureId:cap.captureId})).rejects.toThrow(/失效/)
+    await expect(service.commitExtraction({captureId:cap.captureId,candidates:[]})).rejects.toThrow(/失效/)
+    expect((await service.pending()).items).toHaveLength(0)
+    expect(await readFile(saved.document!.file,'utf8')).toBe('编辑尚未完成')
+  })
+  it('recovers a document commit interrupted after rename without losing the committed rows',async()=>{
+    const {service,root}=await setup();const saved=await service.request({type:'save',input:preference()})
+    const documents=(service as any).documents,write=documents.write.bind(documents)
+    documents.write=(...args:any[])=>{write(...args);throw Error('simulated crash after rename')}
+    await expect(service.request({type:'save',id:saved.rows[0]!.id,expectedRevision:saved.rows[0]!.revision,input:preference('默认用英文回答')})).rejects.toThrow()
+    await service.close();const resumed=(await setup(root)).service
+    const recovered=await resumed.request({type:'snapshot'})
+    expect(recovered.document?.error).toBeUndefined();expect(recovered.rows[0]!.content).toBe('默认用英文回答')
+    expect((await resumed.recall({sessionId:'b',query:'报告'})).entries[0]!.content).toBe('默认用英文回答')
+  })
+  it('leaves the editable file unchanged if the encrypted commit fails',async()=>{
+    const {service}=await setup();const saved=await service.request({type:'save',input:preference()}),before=await readFile(saved.document!.file,'utf8')
+    const store=(service as any).store,write=store.write.bind(store);store.write=()=>{throw Error('simulated storage failure')}
+    await expect(service.request({type:'save',id:saved.rows[0]!.id,expectedRevision:saved.rows[0]!.revision,input:preference('默认用英文回答')})).rejects.toThrow()
+    store.write=write;expect(await readFile(saved.document!.file,'utf8')).toBe(before)
+    expect((await service.request({type:'snapshot'})).rows[0]!.content).toBe('默认用中文回答')
+  })
+  it('waits honestly for a trusted model route instead of displaying perpetual generation',async()=>{
+    const {service}=await setup();await service.request({type:'save',input:preference()})
+    expect((await service.summaryInput()).enabled).toBe(false)
+    expect((await service.request({type:'snapshot'})).summary?.state).toBe('waiting')
+  })
+
+  it('recovers one abandoned summary reservation after restart and obeys the combined off switch',async()=>{
+    const {service,root}=await setup();await service.request({type:'save',input:preference()})
+    await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后默认中文回答'}],route:{provider:'chosen',model:'chosen-model'}})
+    const first=await service.summaryInput();expect(first.enabled).toBe(true)
+    await service.close();const resumed=(await setup(root)).service
+    const second=await resumed.summaryInput();expect(second.enabled).toBe(true)
+    if(!first.enabled||!second.enabled)throw Error('summary not enabled')
+    expect((await resumed.summaryCommit({...first,text:'旧进程的概括',model:'chosen'})).ok).toBe(false)
+    expect((await resumed.summaryInput()).enabled).toBe(false)
+    expect((await resumed.summaryCommit({...second,text:'恢复后的真实概括',model:'chosen'})).ok).toBe(true)
+    await resumed.request({type:'settings',use:false,auto:false})
+    expect((await resumed.summaryInput()).enabled).toBe(false)
+    expect((await resumed.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
+    expect((await authorizedCapture(resumed,{sessionId:'a',turnId:'2',events:[{seq:2,role:'user',text:'以后默认简短'}]})).enabled).toBe(false)
+  })
+  it('accepts a manually added Markdown preference and removes memory and cached summary when its file is deleted',async()=>{
+    const {service}=await setup();const initial=await service.request({type:'snapshot'})
+    await writeFile(initial.document!.file,(await readFile(initial.document!.file,'utf8'))+'\n### 回答顺序\n每次先给结论，再解释依据。\n')
+    let state=await service.request({type:'snapshot'})
+    expect(state.rows[0]!.content).toBe('每次先给结论，再解释依据。');expect(state.rows[0]!.manualLocked).toBe(true)
+    expect((await service.recall({sessionId:'b',query:'整理报告'})).entries).toHaveLength(1)
+    await rm(initial.document!.file)
+    state=await service.request({type:'snapshot'})
+    expect(state.rows).toHaveLength(0);expect(state.summary?.text).toBe('')
+    expect(await readFile(initial.document!.file,'utf8')).not.toContain('每次先给结论')
+  })
+  it('makes memory.md the editable owner document and forgets removed entries without reviving queued turns',async()=>{
+    const {service,setOwner}=await setup()
+    const saved=await service.request({type:'save',input:preference()})
+    expect(saved.document?.file.endsWith('/记忆.md')).toBe(true)
+    const file=saved.document!.file
+    await writeFile(file,(await readFile(file,'utf8')).replace('默认用中文回答','默认用英文回答'))
+    expect((await service.recall({sessionId:'a',query:'报告'})).entries[0]!.content).toBe('默认用英文回答')
+    const cap=await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后默认用中文回答'}]})
+    const body=await readFile(file,'utf8')
+    await writeFile(file,body.replace(/<!-- ework-memory:[\s\S]*?<!-- \/ework-memory -->/u,''))
+    expect((await service.recall({sessionId:'b',query:'报告'})).entries).toHaveLength(0)
+    await expect(service.commitExtraction({captureId:cap.captureId,candidates:[]})).rejects.toThrow(/失效/)
+    setOwner('another-account')
+    expect((await service.request({type:'snapshot'})).document!.file).not.toBe(file)
+    expect((await service.request({type:'snapshot'})).rows).toHaveLength(0)
+  })
+  it('preserves a stale edit separately and restores a usable current document',async()=>{
+    const {service}=await setup();const saved=await service.request({type:'save',input:preference()})
+    const file=saved.document!.file,old=await readFile(file,'utf8'),row=saved.rows[0]!
+    await service.request({type:'save',id:row.id,expectedRevision:row.revision,input:preference('默认用英文回答')})
+    await writeFile(file,old.replace('默认用中文回答','只使用古汉语回答'))
+    const state=await service.request({type:'snapshot'})
+    expect(state.document?.error).toMatch(/保留/)
+    expect((await readFile(file,'utf8'))).toContain('默认用英文回答')
+    const backup=(await readdir(state.document!.directory)).find(name=>name.startsWith('记忆冲突-'))!
+    expect(await readFile(join(state.document!.directory,backup),'utf8')).toContain('只使用古汉语回答')
+    expect((await service.recall({sessionId:'a',query:'报告'})).entries[0]!.content).toBe('默认用英文回答')
+  })
+  it('caches actual AI summary, limits reservation, and rejects stale or switched-owner results',async()=>{
+    const {service,setOwner}=await setup();await service.request({type:'save',input:preference()})
+    await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后默认中文回答'}],route:{provider:'chosen',model:'chosen-model'}})
+    const input=await service.summaryInput()
+    expect(input.enabled).toBe(true);if(!input.enabled)throw Error('summary not enabled');expect(input.route).toEqual({provider:'chosen',model:'chosen-model'})
+    expect((await service.summaryInput()).enabled).toBe(false)
+    expect((await service.summaryCommit({...input,text:'偏好使用中文，并在项目中延续已确认的上下文。',model:'chosen/chosen-model'})).ok).toBe(true)
+    expect((await service.request({type:'snapshot'})).summary?.text).toContain('偏好使用中文')
+    const row=(await service.request({type:'snapshot'})).rows[0]!
+    await service.request({type:'action',ids:[row.id],action:'delete'})
+    expect((await service.summaryCommit({...input,text:'已经删除的旧概括',model:'chosen/chosen-model'})).ok).toBe(false)
+    expect((await service.request({type:'snapshot'})).summary?.text).toBe('')
+    setOwner('another-account');expect((await service.summaryCommit({...input,text:'错账户',model:'chosen/chosen-model'})).ok).toBe(false)
+  })
+
   it('retains an explicit unbound project even when the session has a workspace directory',async()=>{
     const {service}=await setup()
     expect((await service.request({type:'snapshot',sessionId:'a'})).session?.projectId).toBeDefined()
@@ -84,7 +210,7 @@ describe('长期记忆真实行为',()=>{
     const module = await import('../src/main/memory/service').catch(()=>({MemoryService:undefined}))
     expect(module.MemoryService).toBeTypeOf('function')
   })
-  it('remembers a global preference across independent conversations and restart without plaintext on disk',async()=>{
+  it('remembers a global preference across independent conversations and restart without plaintext in the SQLite cache',async()=>{
     const {service,root}=await setup()
     const snapshot=await service.request({type:'save',input:preference()})
     expect(snapshot.rows[0]!.content).toBe('默认用中文回答')
@@ -141,12 +267,12 @@ describe('长期记忆真实行为',()=>{
     await service.request({type:'save',input:{...preference('昨天进展'),kind:'progress',scope:'project',projectId:project.id,expiresAt:1}})
     expect((await service.recall({sessionId:'a',query:'进展'})).entries).toHaveLength(0)
   })
-  it('supports global, auto-capture and per-conversation switches independently',async()=>{
+  it('supports the master and per-conversation switches',async()=>{
     const {service}=await setup();await service.request({type:'save',input:preference()})
     await service.request({type:'settings',use:false})
     expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
     await service.request({type:'settings',use:true,auto:false})
-    expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(1)
+    expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
     expect((await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'记住我喜欢中文'}]})).enabled).toBe(false)
     await service.request({type:'session',sessionId:'a',disabled:true})
     expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
