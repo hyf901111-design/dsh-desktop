@@ -19,6 +19,7 @@ import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
+import {useNoteDragAndDrop} from './drag-and-drop'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[]}
@@ -205,11 +206,11 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     try { const result = await props.bridge.request('clipboard', { sessionId: props.sessionId }); if (result.kind === 'components') { event?.preventDefault(); editor.insertBlocks(result.nodes.map((node: any) => ({ type: 'research', props: { payload: JSON.stringify(node) } })), editor.getTextCursorPosition().block, 'after'); editor.focus() } } catch (e) { setError((e as Error).message) }
   }
   const [fileDrag,setFileDrag]=useState(false)
-  const ownsFiles=(event:React.DragEvent)=>!props.recovery&&Array.from(event.dataTransfer.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
-  const dropFiles=async(event:React.DragEvent)=>{
+  const ownsFiles=(event:React.DragEvent|DragEvent)=>!props.recovery&&Array.from(event.dataTransfer!.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
+  const dropFiles=async(event:DragEvent)=>{
     setFileDrag(false);if(!ownsFiles(event))return
     event.preventDefault();event.stopPropagation()
-    const files=noteFileCandidates(event.dataTransfer,props.sessionId,file=>props.bridge.filePath?.(file)||'')
+    const files=noteFileCandidates(event.dataTransfer!,props.sessionId,file=>props.bridge.filePath?.(file)||'')
     if(!files.length){setError('请从访达或当前会话的文件区拖入文件。');return}
     const target=(event.target as HTMLElement).closest('.bn-block-outer[data-id]') as HTMLElement|null
     const reference=target&&editor.getBlock(target.dataset.id)?editor.getBlock(target.dataset.id):editor.document.at(-1)
@@ -230,6 +231,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       finally{importing.current.delete(block.id)}
     }
   }
+  useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly:!!props.recovery,dropFiles,finish:()=>setFileDrag(false)})
   const publishComposer = (value: {running?: boolean;ready?: boolean}) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current,...value}}))
   const setNativeDraft = (text?: string, focus=false) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))
   const commitNativeDraft = (admission?:ComposerAdmission) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))
@@ -336,7 +338,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       </SuggestionPanel> : null}</>
   return <Context.Provider value={ctx}><div className="en-body">
     <NotesOutline headings={outline} active={active} onLocate={locate} />
-    <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onDropCapture={dropFiles} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
+    <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document">
         {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />

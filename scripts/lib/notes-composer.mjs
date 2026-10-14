@@ -91,7 +91,7 @@ react.useEffect(()=>{const ready=event=>{if(event.detail?.sessionId===sessionId)
 
 function patchNotesNativeDrop(source){
   const marker='/* ework:notes-native-drop:v1 */';
-  if(source.includes(marker))return source;
+  if(source.includes(marker))return source.replace('document.addEventListener("drop", reset, true);','window.addEventListener("drop", reset, true);').replace('document.removeEventListener("drop", reset, true);','window.removeEventListener("drop", reset, true);');
   const input=source.indexOf('function InputBar({'),start=source.indexOf('const canAcceptDrop = !locked && !machineBusy && addImages !== void 0;',input);
   const end=source.indexOf('const closePreview = (0, react.useCallback)',start);
   if(input<0||start<input||end<start)throw Error('笔记无法定位原生图片拖拽状态。');
@@ -118,15 +118,15 @@ function patchNotesNativeDrop(source){
   replace('document.addEventListener("dragenter", onDragEnter);',`document.addEventListener("dragenter", releaseNoteDrop, true);
                     document.addEventListener("dragover", releaseNoteDrop, true);
                     document.addEventListener("dragleave", onViewportLeave, true);
-                    // Capture only clears state; the existing bubble drop still admits images.
-                    document.addEventListener("drop", reset, true);
+                    // Window capture clears state even when notes claim the drop before BlockNote.
+                    window.addEventListener("drop", reset, true);
                     window.addEventListener("blur", reset);
                     window.addEventListener("keydown", onCancelDrag, true);
                     document.addEventListener("dragenter", onDragEnter);`);
   replace('document.removeEventListener("dragenter", onDragEnter);',`document.removeEventListener("dragenter", releaseNoteDrop, true);
                         document.removeEventListener("dragover", releaseNoteDrop, true);
                         document.removeEventListener("dragleave", onViewportLeave, true);
-                        document.removeEventListener("drop", reset, true);
+                        window.removeEventListener("drop", reset, true);
                         window.removeEventListener("blur", reset);
                         window.removeEventListener("keydown", onCancelDrag, true);
                         reset();
