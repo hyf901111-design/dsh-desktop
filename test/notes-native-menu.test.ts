@@ -1,15 +1,16 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { BrowserWindow } from 'electron'
-import { NoteNativeMenu, noteMenuBounds, noteMenuPresentation, validateNoteMenu } from '../src/main/notes/native-menu'
+import { NoteNativeMenu, noteMenuBounds, noteMenuPresentation, noteSubmenuBounds, validateNoteMenu } from '../src/main/notes/native-menu'
 import type { NoteMenuState } from '../src/shared/notes-menu'
 import { readFileSync } from 'node:fs'
 
 vi.mock('electron',async()=>{
   const { EventEmitter } = await import('node:events')
   class Window extends EventEmitter {
-    static instances:Window[]=[];destroyed=false;webContents:any
-    constructor(public options:any){super();Window.instances.push(this);this.webContents=Object.assign(new EventEmitter(),{getZoomFactor:()=>1,setZoomFactor:vi.fn(),setWindowOpenHandler:vi.fn(),executeJavaScript:vi.fn(async()=>{}),send:vi.fn(),session:{setPermissionRequestHandler:vi.fn()}})}
-    isDestroyed=()=>this.destroyed;isVisible=()=>true;isFocused=()=>true;getContentBounds=()=>({x:50,y:50,width:700,height:300})
+    static instances:Window[]=[];destroyed=false;focused:boolean;webContents:any
+    constructor(public options:any){super();this.focused=!options.parent;Window.instances.push(this);this.webContents=Object.assign(new EventEmitter(),{getZoomFactor:()=>1,setZoomFactor:vi.fn(),setWindowOpenHandler:vi.fn(),executeJavaScript:vi.fn(async()=>({pane:{x:24,y:24,width:264,height:46},item:{x:31,y:31,width:252,height:32}})),send:vi.fn(),session:{setPermissionRequestHandler:vi.fn()}})}
+    isDestroyed=()=>this.destroyed;isVisible=()=>true;isFocused=()=>this.focused;getContentBounds=()=>({x:50,y:50,width:700,height:300})
+    focus(){if(this.options.focusable===false)return;for(const win of Window.instances)if(win!==this&&win.focused){win.focused=false;win.emit('blur')}this.focused=true;this.emit('focus')}
     setBounds=vi.fn();showInactive=vi.fn();loadURL=vi.fn(async()=>{});destroy(){this.destroyed=true;this.emit('closed')}
   }
   return {BrowserWindow:Window,screen:{getDisplayNearestPoint:()=>({workArea:{x:0,y:25,width:1440,height:1000}})}}
@@ -57,10 +58,11 @@ it('uses the exact research library SVG geometry for each component while preser
  const quote=noteMenuPresentation(input({items:[{...children[1]!,id:'quote-command'}]}),'ticket')
  expect(quote.html).toContain('M2 4h4v4H3l-1 4M9 4h4v4h-3l-1 4')
 })
-it('shows a non-key isolated floating window and returns only a current valid selection',async()=>{
+it('allows native pointer tracking, restores editor focus after activation and accepts only a current selection',async()=>{
  const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1)
  await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled())
- expect(popup.options.focusable).toBe(false);expect(popup.options.parent).toBe(parent);expect(popup.options.webPreferences).toMatchObject({nodeIntegration:false,sandbox:true,contextIsolation:true,partition:'notes-menu'})
+ expect(popup.options.focusable).toBe(true);expect(popup.options.parent).toBe(parent);expect(popup.options.webPreferences).toMatchObject({nodeIntegration:false,sandbox:true,contextIsolation:true,partition:'notes-menu'})
+ popup.focus();expect(parent.isFocused()).toBe(true);expect(popup.isFocused()).toBe(false);expect(popup.destroyed).toBe(false)
  expect(popup.setBounds.mock.calls[0][0].y+popup.setBounds.mock.calls[0][0].height).toBeGreaterThan(350)
  const js=popup.webContents.executeJavaScript.mock.calls.at(-1)[0],ticket=js.match(/ework-note-menu:\/\/([\w-]+)\//)[1],event={preventDefault:vi.fn()}
  popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/heading-0?revision=0`);expect(parent.webContents.send).not.toHaveBeenCalled()
@@ -80,18 +82,46 @@ it('opens the second level without closing the native menu and validates child s
  popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/open/library?revision=1`)
  expect(popup.destroyed).toBe(false);expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'open',itemId:'library'}))
  menu.sync(input({revision:2,items:[library],submenu:{parentId:'library',selectedIndex:0}}),'alice')
- await vi.waitFor(()=>expect(popup.setBounds.mock.calls.at(-1)[0].width).toBe(576))
+ const rootBounds=popup.setBounds.mock.calls[0][0]
+ await vi.waitFor(()=>expect(instances()).toHaveLength(3));const childPopup=instances().at(-1)
+ await vi.waitFor(()=>expect(childPopup.showInactive).toHaveBeenCalled())
+ expect(popup.setBounds.mock.calls.at(-1)[0]).toEqual(rootBounds);expect(childPopup.setBounds.mock.calls.at(-1)[0].width).toBe(308)
+ childPopup.focus();expect(parent.isFocused()).toBe(true);expect(childPopup.isFocused()).toBe(false)
  expect(noteMenuPresentation(input({items:[library],submenu:{parentId:'library',selectedIndex:0}}),'ticket').html).toContain('组件一')
- popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=1&parent=library`)
+ childPopup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=1&parent=library`)
  expect(popup.destroyed).toBe(false)
- popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=2&parent=library`)
- expect(parent.webContents.send).toHaveBeenLastCalledWith('notes:menu-event',expect.objectContaining({action:'select',parentId:'library',itemId:'library-one',revision:2}));expect(popup.destroyed).toBe(true)
+ childPopup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=2&parent=library`)
+ expect(parent.webContents.send).toHaveBeenLastCalledWith('notes:menu-event',expect.objectContaining({action:'select',parentId:'library',itemId:'library-one',revision:2}));expect(popup.destroyed).toBe(true);expect(childPopup.destroyed).toBe(true)
 })
 for(const change of ['blur','move','resize','hide','minimize','closed'])it(`closes and notifies the editor on parent ${change}`,async()=>{
- const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1);await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled());parent.emit(change);expect(popup.destroyed).toBe(true);expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'cancel'}));expect(parent.listenerCount('blur')).toBe(0);expect(()=>menu.sync(input({revision:2}),'alice')).toThrow('已关闭')
+ const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1);await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled());if(change==='blur')parent.focused=false;parent.emit(change);await vi.waitFor(()=>expect(popup.destroyed).toBe(true));expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'cancel'}));expect(parent.listenerCount('blur')).toBe(0);parent.focus();expect(()=>menu.sync(input({revision:2}),'alice')).toThrow('已关闭')
 })
 it('drops pending and clicked results after account or session access changes',async()=>{
  const {parent,menu,owner,allowed}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1);await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled());const ticket=popup.webContents.executeJavaScript.mock.calls.at(-1)[0].match(/ework-note-menu:\/\/([\w-]+)\//)[1]
  owner.value='bob';popup.webContents.emit('will-navigate',{preventDefault:()=>{}},`ework-note-menu://${ticket}/select/heading-0?revision=1`);expect(popup.destroyed).toBe(true);expect(parent.webContents.send).not.toHaveBeenCalled();expect(()=>menu.sync(input(),'alice')).toThrow()
  allowed.value=false;expect(()=>menu.sync(input(),'bob')).toThrow()
+})
+
+it('anchors the submenu beside its parent row and flips within the screen at zoom',()=>{
+ const work={x:0,y:25,width:1440,height:1000},pane={x:200,y:100,width:264,height:518},item={x:207,y:572,width:252,height:32}
+ const beside=noteSubmenuBounds(pane,item,work,286,308)
+ expect(beside.x+24).toBe(pane.x+pane.width+4);expect(beside.y+24).toBe(item.y)
+ const left=noteSubmenuBounds({...pane,x:1160},item,work,286,308)
+ expect(left.x+left.width-24).toBe(1156)
+ const bottom=noteSubmenuBounds(pane,{...item,y:975},work,286,308)
+ expect(bottom.y+bottom.height).toBe(1017)
+ const zoom=noteSubmenuBounds({...pane,width:396},item,work,286,308,1.5)
+ expect(zoom.x+36).toBe(pane.x+396+6);expect(zoom.y+36).toBe(item.y);expect(zoom.width).toBe(462)
+})
+it('closes only the child when returning to the root and revokes both panes on owner loss',async()=>{
+ const {parent,menu,owner}=fixture(),library={id:'library',title:'组件库',subtext:'',group:'',badge:'',icon:'library',children:[{id:'one',title:'自选股',subtext:'',group:'',badge:'',icon:'watchlist'}]}
+ menu.sync(input({items:[library],submenu:{parentId:'library',selectedIndex:0}}),'alice')
+ const popup=instances()[1];await vi.waitFor(()=>expect(instances()).toHaveLength(3));const child=instances()[2];await vi.waitFor(()=>expect(child.showInactive).toHaveBeenCalled())
+ const ticket=child.webContents.executeJavaScript.mock.calls.at(-1)[0].match(/ework-note-menu:\/\/([\w-]+)\//)[1]
+ child.webContents.emit('will-navigate',{preventDefault:()=>{}},`ework-note-menu://${ticket}/back/library?revision=1`)
+ expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'back'}))
+ menu.sync(input({items:[library],revision:2}),'alice');await vi.waitFor(()=>expect(child.destroyed).toBe(true));expect(popup.destroyed).toBe(false)
+ menu.sync(input({items:[library],revision:3,submenu:{parentId:'library',selectedIndex:0}}),'alice');await vi.waitFor(()=>expect(instances()).toHaveLength(4));const next=instances()[3];await vi.waitFor(()=>expect(next.showInactive).toHaveBeenCalled())
+ owner.value='bob';next.webContents.emit('will-navigate',{preventDefault:()=>{}},`ework-note-menu://${ticket}/select/one?revision=3&parent=library`)
+ expect(popup.destroyed).toBe(true);expect(next.destroyed).toBe(true)
 })

@@ -9,6 +9,9 @@ import figmaInlineStyles from './figma-inline-references.css?raw'
 import figmaMotionStyles from './figma-motion.css?raw'
 import figmaRefinementStyles from './figma-refinements.css?raw'
 import focusStyles from './focus-style.css?raw'
+import themePalette from '@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css?raw'
+import syntaxPalette from '@deepseek-ai/dsh-client-ui-theme/styles/shiki.css?raw'
+import {userMessageThemeCss} from '../../scripts/lib/user-message-theme.mjs'
 const DESKTOP_SHELL_STYLE_ID = 'sherlock-desktop-shell-style'
 
 const desktopShellStyles = `
@@ -27,7 +30,7 @@ export function mountDesktopShellStyles(document: Document): void {
 
   const style = document.createElement('style')
   style.id = DESKTOP_SHELL_STYLE_ID
-  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles + figmaReadingStyles + figmaWelcomeStyles + focusStyles
+  style.textContent = desktopShellStyles + figmaFinalStyles + figmaHomeStyles + figmaPanelStyles + figmaFilePanelStyles + figmaTrajectoryStyles + figmaInlineStyles + figmaMotionStyles + figmaRefinementStyles + figmaReadingStyles + figmaWelcomeStyles + focusStyles + userMessageThemeCss(themePalette,syntaxPalette,figmaFinalStyles)
   document.documentElement.appendChild(style)
   document.getElementById('odyssey-figma-final-shell')?.remove()
   // Native draggable regions need a real element. Keep it inside the current
