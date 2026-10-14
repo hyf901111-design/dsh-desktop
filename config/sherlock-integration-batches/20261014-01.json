@@ -282,6 +282,101 @@
           "layout store为transient，本修改未新增跨应用重启持久化"
         ],
         "generatedAt": "2026-10-14T06:45:19.246235+00:00"
+      },
+      "merged": {
+        "mergeCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+        "verificationCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/pptx-content.test.ts",
+              "test/pptx-service.test.ts",
+              "test/pptx-scene.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-chart-composition.test.ts",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/research-file-preview.test.ts",
+              "test/pptx-scroll-viewport.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
+            "verifiedCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+            "completedAt": "2026-10-14T06:46:22.777Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+            "verifiedCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+            "completedAt": "2026-10-14T06:46:22.777Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+            "completedAt": "2026-10-14T06:46:22.777Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/figma-final-shell-patch.test.ts",
+              "test/figma-sidebar-overlay.test.ts",
+              "test/research-sidebar-policy.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/figma-resize-feedback.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/figma-final-shell-patch.test.ts test/figma-sidebar-overlay.test.ts test/research-sidebar-policy.test.ts test/figma-scrollbars.test.ts test/figma-resize-feedback.test.ts",
+            "verifiedCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+            "completedAt": "2026-10-14T06:46:22.777Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/verify-left-sidebar-resize.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/verify-left-sidebar-resize.mjs",
+            "verifiedCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+            "completedAt": "2026-10-14T06:46:22.777Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check 47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD",
+            "verifiedCommit": "16612be2b64d0210729ce23b24fbf4c12622e985",
+            "completedAt": "2026-10-14T06:46:22.777Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-14T06:46:22.777Z"
       }
     }
   ],
