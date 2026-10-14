@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261014-02",
+  "branch": "codex/integration/20261014-02",
+  "baseMainCommit": "b69912cb0062edd6dea927c96a8ce17d300e6aec",
+  "expectedMainCommit": "b69912cb0062edd6dea927c96a8ce17d300e6aec",
+  "createdAt": "2026-10-14T14:08:37.559Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复笔记组件内容自适应并对齐研究宿主布局",
+        "branch": "codex/feat/notes-component-fit-20261014",
+        "baseCommit": "b69912cb0062edd6dea927c96a8ce17d300e6aec",
+        "tipCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+        "commits": [
+          {
+            "commit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+            "parents": [
+              "b69912cb0062edd6dea927c96a8ce17d300e6aec"
+            ],
+            "subject": "修复笔记组件内容填满可用区域并对齐研究模式布局"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-14-notes-component-fit.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-component-import-interaction.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-component-layout.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/notes-component-layout.test.js",
+              "test/notes-component-import-interaction.test.js",
+              "test/notes-native-components.test.js",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "4文件14项通过，新增严格iframe重建后尺寸恢复断言单项通过；原始150px RED及278px GREEN已观察",
+            "verifiedCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+            "completedAt": "2026-10-14T13:42:09.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查退出0",
+            "verifiedCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+            "completedAt": "2026-10-14T13:42:09.107Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查退出0",
+            "verifiedCommit": "282dfd4df31354dc6c285f1300b1dea236b74c82",
+            "completedAt": "2026-10-14T13:42:09.107Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实NotesApp+原ResearchContainerBody+宿主热力图浏览器布局验证：同高278px、缩放和窄宽度不重建iframe，真实Yjs保存并重新打开恢复尺寸；native基线截图已复现裁切，修复包native检查将在集成阶段进行。"
+        },
+        "acceptanceCriteria": [
+          "笔记HTML内容填满组件实际可用空间，与研究宿主一致",
+          "调整组件宽高与窗口宽度后内容重新布局且交互状态保留",
+          "保留已保存笔记尺寸和原研究组件几何",
+          "保持外侧手柄、组件选中及内部PPT编辑独立"
+        ],
+        "risks": [
+          "功能分支仅完成真实浏览器UI检查，原生新包需在新集成批次验证",
+          "旧PPT外侧手柄fixture原先要求控件越过readerclip，已改为命中笔记外侧手柄；拖动结果及内部对象编辑断言保留"
+        ],
+        "generatedAt": "2026-10-14T13:42:09.107Z"
+      }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "PPT连续滚动CPU与完整图表渲染优化",
+        "branch": "codex/feat/pptx-scroll-next-20261014",
+        "baseCommit": "b69912cb0062edd6dea927c96a8ce17d300e6aec",
+        "tipCommit": "4b45b57114de722d0f4ec65d087794fc26ea5d81",
+        "commits": [
+          {
+            "commit": "4b45b57114de722d0f4ec65d087794fc26ea5d81",
+            "parents": [
+              "b69912cb0062edd6dea927c96a8ce17d300e6aec"
+            ],
+            "subject": "优化PPT滚动重复解析与标注并避免图表无效重排"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-direct-editor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-resize-settle.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-resize-settle.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-plugin-profile.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-direct-editor.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-scroll-viewport.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-office-preview-adapter.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-scroll-viewport.test.js",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-resize-settle.test.js",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/bundled-plugin-profile.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "8文件94项聚焦通过，原地缩放、选区越界隐藏恢复、body工具栏、编辑重parse字体/几何/图表、注入升级字节一致；运行日志 /tmp/ework-pptx-scroll-next-20261014/focused.log。验证的源码字节与当前tip一致。",
+            "verifiedCommit": "4b45b57114de722d0f4ec65d087794fc26ea5d81",
+            "completedAt": "2026-10-14T13:54:27Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "补丁格式和工作区干净。",
+            "verifiedCommit": "4b45b57114de722d0f4ec65d087794fc26ea5d81",
+            "completedAt": "2026-10-14T14:04:20.830883Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "仅独立真实renderer/Notes浏览器fixture。两份原35/46页PPT冷浏览器交叉144 wheel@8ms，723px全16组0blank峰5；1200/340px功能样本图表全部ready，原地尺寸变化通过。原稿/输出均在/tmp；共享native由root后续验证。完整证据 /tmp/ework-pptx-scroll-next-20261014/report.json。"
+        },
+        "acceptanceCriteria": [
+          "连续快速wheel时可见内容无空白，保持完整图表series和直接编辑。",
+          "浮动工具栏仍在body，选区越界隐藏、返回恢复和窗口/宽度缩放通过。",
+          "原PPT新字节重新解析后正文、字体、几何及图表数据为新值，XML弱缓存不跨element身份复用旧值。",
+          "旧resize v6/editor4升级到v7/editor5可重复准备，剥离恢复完全相同的pinned宿主。",
+          "不得从功能worktree替换共享客户端；root统一integration/native验收。"
+        ],
+        "risks": [
+          "46页仍有72–109ms长任务，340px极端输入p95 350ms、peak mounted9；不要宣称全面无卡顿。",
+          "固定工作负载GC后JS heap比baseline多约8–10MiB；XML弱缓存按解析对象身份释放，未做长期客户端泄漏保证。",
+          "中间实现777ms native/program长任务保留原始证据，静态图表动画修复后两轮冷AB未再观测同级异常，但不足以保证它永不发生。",
+          "共享客户端native实际Notes/研究/右侧340px最终验收由root执行。"
+        ],
+        "generatedAt": "2026-10-14T14:04:20.830883Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/notes-component-layout.test.js",
+        "test/notes-component-import-interaction.test.js",
+        "test/notes-native-components.test.js",
+        "test/notes-component-interaction.test.tsx",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node_modules/.bin/vitest",
+        "run",
+        "test/pptx-direct-editor.test.ts",
+        "test/pptx-editor-ui.test.ts",
+        "test/pptx-scroll-viewport.test.js",
+        "test/pptx-selection-viewport.test.js",
+        "test/pptx-resize-settle.test.js",
+        "test/pptx-stable-refresh.test.ts",
+        "test/sherlock-office-preview-adapter.test.ts",
+        "test/bundled-plugin-profile.test.ts",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
