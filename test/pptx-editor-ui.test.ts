@@ -402,3 +402,31 @@ it('keeps the visible slide while a deferred format refresh runs after text lose
   expect(editable(view.host)?.textContent).toBe('编辑后的内容')
  }finally{release();await view.close()}
 })
+
+
+it('renews an unchanged cached editing basis when reopening the component',async()=>{
+ let opens=0;const saves:any[]=[]
+ const view=await mount({open:async()=>({ok:true,document:{...doc,basisToken:'base-'+(++opens)}}),save:async(r:any)=>{saves.push(r);return r.basisToken==='base-'+opens?{ok:true,document:{...doc,basisToken:r.basisToken,version:'v2'}}:{ok:false,error:'编辑基线已失效'}}})
+ try{
+  await input(view.win,editable(view.host),'重新打开后继续修改')
+  await act(async()=>view.root.render(React.createElement('div',null,'研究模式')))
+  await view.render()
+  expect(editable(view.host).textContent).toBe('重新打开后继续修改')
+  await click(view.host,'保存')
+  expect(saves[0]).toMatchObject({basisToken:'base-2',edits:[{id:'title',text:'重新打开后继续修改'}]})
+  expect(view.host.textContent).toContain('已保存')
+  expect(view.host.textContent).not.toContain('编辑基线已失效')
+ }finally{await view.close()}
+})
+
+it('retains the original cumulative basis for undo after a saved component reopens',async()=>{
+ const saves:any[]=[];let version='v1',opens=0
+ const view=await mount({open:async()=>({ok:true,document:opens++?{...doc,version,basisToken:'fresh-file',slides:[{...doc.slides[0],fields:[{...doc.slides[0]!.fields[0],text:'已保存文字'}]},doc.slides[1]]}:{...doc,basisToken:'original'}}),save:async(r:any)=>{saves.push(r);version='v'+(saves.length+1);return{ok:true,document:{...doc,version,basisToken:'original'}}}})
+ try{
+  await input(view.win,editable(view.host),'已保存文字');await click(view.host,'保存')
+  await act(async()=>view.root.render(React.createElement('div',null,'研究模式')));await view.render()
+  await click(view.host,'撤销');await click(view.host,'保存')
+  expect(editable(view.host).textContent).toBe('原始标题')
+  expect(saves[1]).toMatchObject({basisToken:'original',edits:[]})
+ }finally{await view.close()}
+})

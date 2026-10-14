@@ -52,6 +52,9 @@ export class PptxEditorService {
  }
  private document(target:string,bytes:Uint8Array,editToken?:string):PptxDocument{return{...readPptxScene(bytes),id:hash(target),name:path.basename(target),version:hash(bytes),...(editToken?{editToken}:{})}}
  private rememberBasis(target:string,bytes:Buffer,document:PptxDocument):void {
+  // Reopening unchanged bytes must not fill the bounded cache with duplicates
+  // and evict the earlier cumulative baseline used by an existing editor's undo.
+  for(const [key,value] of this.bases){if(value.target===target&&value.version===document.version&&value.bytes.equals(bytes)){this.bases.delete(key);this.bases.set(key,value);document.basisToken=key;return}}
   while(this.bases.size>=32||this.basisBytes+bytes.length>128*1024*1024){const oldest=this.bases.keys().next().value;if(!oldest)break;this.basisBytes-=this.bases.get(oldest)!.bytes.length;this.bases.delete(oldest)}
   const key=randomUUID();document.basisToken=key;this.bases.set(key,{target,bytes,document:structuredClone(document),version:document.version});this.basisBytes+=bytes.length
  }

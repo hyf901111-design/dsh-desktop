@@ -116,3 +116,20 @@ it('does not allow an editing baseline to target another PPTX or overwrite exter
  const otherBefore=await readFile(other);expect(await editor.save({...request,path:'other.pptx'})).toMatchObject({ok:false});expect(await readFile(other)).toEqual(otherBefore)
  await writeFile(file,'external change');expect(await editor.save(request)).toMatchObject({ok:false,code:'conflict'});expect((await readFile(file)).toString()).toBe('external change')
 })
+
+
+it('keeps cumulative undo valid across repeated opens of the same saved file',async()=>{
+ const {root,file}=await setup(),editor=new service.PptxEditorService({resolveWorkspace:async()=>root,resolveCapability:async()=>null})
+ const original=await readFile(file),opened=await editor.open(source);if(!opened.ok)throw Error(opened.error)
+ const field=opened.document.slides[0]!.fields[0]!
+ const saved=await editor.save({...source,basisToken:opened.document.basisToken,version:opened.document.version,edits:[{id:field.id,text:'多次重开前保存'}],objects:[]});if(!saved.ok)throw Error(saved.error)
+ const tokens=new Set<string>()
+ for(let i=0;i<40;i++){
+  const reopened=await editor.open(source);if(!reopened.ok)throw Error(reopened.error)
+  tokens.add(reopened.document.basisToken!)
+ }
+ const undone=await editor.save({...source,basisToken:opened.document.basisToken,version:saved.document.version,edits:[],objects:[]})
+ expect(undone.ok).toBe(true)
+ expect(await readFile(file)).toEqual(original)
+ expect(tokens.size).toBe(1)
+})

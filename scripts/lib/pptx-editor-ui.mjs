@@ -109,6 +109,11 @@ export function createPptxEditorComponent(React,Preview,download,createPortal){
     if(!current){let restored;try{restored=JSON.parse(window.sessionStorage.getItem('sherlock:pptx-draft:'+result.document.id)||'null')}catch{}if(restored?.document?.id!==result.document.id||!restored.values)restored=null
      current={document:restored?.document||result.document,values:restored?.values||Object.fromEntries(result.document.slides.flatMap(s=>s.fields.map(f=>[f.id,f.text]))),objects:restored?.objects||{},textStyles:restored?.textStyles||{},formatTouched:restored?.formatTouched||{},undo:[],redo:[],pending:null,saving:false,status:'idle',error:'',savedState:restored?.savedState||{values:Object.fromEntries(result.document.slides.flatMap(s=>s.fields.map(f=>[f.id,f.text]))),objects:{}},environment:{window,document},listeners:new Set()};drafts.set(result.document.id,current)}
     if(current.document.version!==result.document.version){if(dirty(current))current.error='原 PPTX 已变化，当前编辑稿已保留。请核对内容后重新读取文件。';else{current.document=result.document;current.values=Object.fromEntries(fields(current).map(f=>[f.id,f.text]));current.objects={};current.savedState=snapshot(current);current.error=''}}
+    // A remounted component receives a new live token. Renew it while the
+    // draft is still relative to the unchanged file; a cumulative saved basis
+    // must stay intact so undo can restore content from before earlier saves.
+    const originalState={values:Object.fromEntries(fields(current).map(f=>[f.id,f.text])),objects:{}}
+    if(current.document.version===result.document.version&&result.document.basisToken&&JSON.stringify(current.savedState)===JSON.stringify(originalState))current.document.basisToken=result.document.basisToken
     if(result.document.editToken)current.document.editToken=result.document.editToken;token.current=current.document.editToken||null;entryRef.current=current;entrySourceKey.current=sourceKey;previewPath.current=result.document.previewUrl||props.path;setEntry(current);if(dirty(current))scheduleAuto(current,autoTarget());return current
    }catch(failure){if(expected===generation.current)setError(failure.message||'无法读取 PPTX。');return null}finally{if(expected===generation.current){setLoading(false);opening.current=null}}})();opening.current=operation;return operation
   }
