@@ -9,23 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "恢复PPT组件外浮动格式工具栏并保留选中内容离屏隐藏",
+        "featureName": "优化PPT连续快速滚动并保留直接编辑与浮动工具栏",
         "branch": "codex/feat/pptx-large-scroll-20261014",
-        "baseCommit": "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3",
-        "tipCommit": "b5f38df0b6671782a0e26fea864296719110770b",
+        "baseCommit": "b5f38df0b6671782a0e26fea864296719110770b",
+        "tipCommit": "3f8bd0dbf3df0c3f84624cf4b606690a7507a10b",
         "commits": [
           {
-            "commit": "b5f38df0b6671782a0e26fea864296719110770b",
+            "commit": "3f8bd0dbf3df0c3f84624cf4b606690a7507a10b",
             "parents": [
-              "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3"
+              "b5f38df0b6671782a0e26fea864296719110770b"
             ],
-            "subject": "恢复PPT格式工具栏在组件外悬浮并保留离屏隐藏"
+            "subject": "优化PPT快速滚动预热与文字标注并保留日期轴标签间隔"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/pptx-direct-editor.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-resize-settle.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-resize-settle.mjs"
           },
           {
             "status": "M",
@@ -33,7 +45,15 @@
           },
           {
             "status": "M",
-            "path": "test/pptx-selection-viewport.test.js"
+            "path": "test/pptx-direct-editor.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-resize-settle.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-scroll-viewport.test.js"
           },
           {
             "status": "M",
@@ -45,16 +65,21 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/pptx-resize-settle.test.js",
+              "test/pptx-scroll-viewport.test.js",
               "test/pptx-selection-viewport.test.js",
-              "test/pptx-editor-ui.test.ts",
+              "test/pptx-stable-refresh.test.ts",
               "test/sherlock-office-preview-adapter.test.ts",
               "test/bundled-plugin-profile.test.ts",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-chart-composition.test.ts",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "4 files 57直接相关检查通过；真实Notes360/686窄卡片外浮单行和短可视slice已RED3→GREEN，inner scroll/unmount与outerNotes隐藏恢复保留；独立同scope57通过无Important",
-            "verifiedCommit": "b5f38df0b6671782a0e26fea864296719110770b",
-            "completedAt": "2026-10-14T10:44:24.494Z",
+            "summary": "9文件90检查全部通过，55.17秒；owner观察输出摘要见/tmp/ework-pptx-rapid-20261014/final-verification.log；独立review exact tip三文件25通过，无Important",
+            "verifiedCommit": "3f8bd0dbf3df0c3f84624cf4b606690a7507a10b",
+            "completedAt": "2026-10-14T12:08:35.387Z",
             "timeoutMs": 120000
           },
           {
@@ -65,9 +90,9 @@
               "tsconfig.node.json"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "b5f38df0b6671782a0e26fea864296719110770b",
-            "completedAt": "2026-10-14T10:44:24.494Z",
+            "summary": "类型检查exit0",
+            "verifiedCommit": "3f8bd0dbf3df0c3f84624cf4b606690a7507a10b",
+            "completedAt": "2026-10-14T12:08:35.387Z",
             "timeoutMs": 120000
           },
           {
@@ -75,186 +100,33 @@
               "git",
               "diff",
               "--check",
-              "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3..HEAD"
+              "b5f38df0b6671782a0e26fea864296719110770b..HEAD"
             ],
             "outcome": "passed",
-            "summary": "4文件后继差异检查通过",
-            "verifiedCommit": "b5f38df0b6671782a0e26fea864296719110770b",
-            "completedAt": "2026-10-14T10:44:24.494Z",
+            "summary": "9文件后继差异exit0，feature worktree干净",
+            "verifiedCommit": "3f8bd0dbf3df0c3f84624cf4b606690a7507a10b",
+            "completedAt": "2026-10-14T12:08:35.387Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Notes→Office renderer 360/686px卡片使用窗口范围布局body portal工具栏，不由卡片宽度强制换行，内容仍按reader/outerNotes/window裁剪可见性，manual位置恢复、卸载返回和旧v1/v2升级v3幂等与fixed host拒绝保留；最终原生客户端新v3工具栏仍待统一包验收。"
+          "summary": "隔离真实Office renderer连续144次8ms反向wheel对比35/46页、选中/未选，全部0blank；46页选中p95 279→165ms，未选272→211ms；35页两态135/114→64/59ms。新增360/820px真实compositor diagonal burst72次8ms，末尾实际wheel/scroll quiet后严格toolbar返回通过；v3窗口外浮布局未改，实际b5旧层v5/v3→v6/v4还原/二次幂等通过。新包原生两入口仍待root构建后检查。"
         },
         "acceptanceCriteria": [
-          "工具栏可悬浮在PPT组件外并按整个客户端窗口容纳",
-          "360/686px窄卡片不强制工具栏两行且可拖动",
-          "选中内容完全滚离reader/outerNotes时工具栏与selection隐藏，返回恢复",
-          "新包包含7e6564b1 Notes与v3工具栏，原生验证后供human测试"
+          "连续滚动期间可见页立即挂载，邻页预热仅在实际滚动停下后恢复",
+          "斜向触控板、滚动条与程序滚动均基于实际scrollTop暂停邻页预热",
+          "显式标签间隔和日期major时间单位优先，隐藏轴保持隐藏，所有原数据点和曲线保留",
+          "文字重复refresh不重复写同值标注，字体/加粗/撤销/自动保存和组件外浮工具栏保留",
+          "新包包含editor v4和resize v6，两个PPT入口原生核验后供用户测试"
         ],
         "risks": [
-          "真正狭窄的客户端窗口仍可按窗口宽度自然换行",
-          "此次只更改工具栏布局边界，PPT46原文件原生验证需在最终包复核"
+          "46页密集图表仍有测得p95 165/211ms，不能承诺所有PPT绝对无延迟",
+          "日期轴仍沿用既有category坐标；本次仅优化标签绘制，不重构连续日期坐标",
+          "XML每系列实际1155pt但两系列ptCount1156含稀疏idx；原renderer输出[1156,1156,1155]与新版本一致",
+          "source headless量化和原生真实交互证据分别记录，不将逐次截图当连续滚动性能证明"
         ],
-        "generatedAt": "2026-10-14T10:44:24.494Z"
-      },
-      "merged": {
-        "mergeCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-        "verificationCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/pptx-chart-composition.test.ts",
-              "test/pptx-stable-refresh.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts",
-              "test/pptx-scroll-viewport.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-sidebar-overlay.test.ts",
-              "test/research-sidebar-policy.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-resize-feedback.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/figma-final-shell-patch.test.ts test/figma-sidebar-overlay.test.ts test/research-sidebar-policy.test.ts test/figma-scrollbars.test.ts test/figma-resize-feedback.test.ts",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/verify-left-sidebar-resize.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/verify-left-sidebar-resize.mjs",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/memory-service.test.ts",
-              "test/memory-bridge.test.ts",
-              "test/memory-runtime.test.js",
-              "test/memory-view.test.ts",
-              "test/memory-import.test.ts",
-              "test/memory-search.test.ts",
-              "test/memory-source.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/memory-service.test.ts test/memory-bridge.test.ts test/memory-runtime.test.js test/memory-view.test.ts test/memory-import.test.ts test/memory-search.test.ts test/memory-source.test.ts",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-bridge.test.ts",
-              "test/memory-runtime.test.js",
-              "test/memory-view.test.ts",
-              "test/memory-import.test.ts",
-              "test/memory-search.test.ts",
-              "test/memory-source.test.ts",
-              "test/figma-settings-layout.test.ts",
-              "test/figma-settings-dismiss.test.ts",
-              "test/figma-settings-scrollbar.test.js",
-              "test/settings-background.test.ts",
-              "test/bundled-plugin-profile.test.ts",
-              "test/harness-bundled-package-resolution.test.ts",
-              "test/integration-bundled-runtime.test.js",
-              "test/research-context-bridge.test.ts",
-              "test/research-context-index.test.js",
-              "test/research-preview-console-check.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/memory-service.test.ts test/memory-document.test.ts test/memory-bridge.test.ts test/memory-runtime.test.js test/memory-view.test.ts test/memory-import.test.ts test/memory-search.test.ts test/memory-source.test.ts test/figma-settings-layout.test.ts test/figma-settings-dismiss.test.ts test/figma-settings-scrollbar.test.js test/settings-background.test.ts test/bundled-plugin-profile.test.ts test/harness-bundled-package-resolution.test.ts test/integration-bundled-runtime.test.js test/research-context-bridge.test.ts test/research-context-index.test.js test/research-preview-console-check.test.ts",
-            "verifiedCommit": "55663114123322c02c0aaa2a8cbc406e471c5e29",
-            "completedAt": "2026-10-14T10:45:16.800Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-14T10:45:16.800Z"
+        "generatedAt": "2026-10-14T12:08:35.387Z"
       }
     },
     {
