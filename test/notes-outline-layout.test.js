@@ -51,6 +51,71 @@ async function fileFixture(saved,dark=true){
 }
 async function dropNoteFiles(page,names){await page.evaluate(names=>{const target=document.querySelector('.en-document .bn-inline-content'),box=target.getBoundingClientRect(),data=new DataTransfer();for(const name of names)data.items.add(new File(['file content'],name,{type:'text/plain'}));target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data,clientX:box.x+10,clientY:box.bottom-1}))},names)}
 
+it('admits one file once when dropped below the last note block',async()=>{
+ const {context,page}=await fileFixture();try{
+  await page.evaluate(()=>{const target=document.querySelector('.bn-editor'),box=target.querySelector('.bn-block-group').getBoundingClientRect(),data=new DataTransfer();data.items.add(new File(['file'],'blank-area.txt',{type:'text/plain'}));target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data,clientX:box.x+10,clientY:box.bottom+100}))})
+  expect(await page.evaluate(()=>window.noteEditor.document.filter(block=>block.type==='attachment').length)).toBe(1)
+  expect(await page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-admit').length)).toBe(1)
+ }finally{await context.close()}
+},15000)
+
+it('keeps separate intentional drops of one sidebar file as separate components',async()=>{
+ const {context,page}=await fileFixture();try{
+  const drop=()=>page.evaluate(()=>{const target=document.querySelector('.bn-editor'),box=target.querySelector('.bn-block-group').getBoundingClientRect(),data=new DataTransfer();data.setData('application/x-sherlock-file',JSON.stringify({sessionId:'outline-test',name:'same.pptx',relativePath:'same.pptx'}));target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data,clientX:box.x+10,clientY:box.bottom+20}))})
+  await drop();expect(await page.evaluate(()=>window.noteEditor.document.filter(block=>block.type==='attachment').length)).toBe(1)
+  await page.evaluate(()=>Object.values(window.resolveNoteFiles)[0]());await page.locator('.en-file-native-reader').waitFor()
+  await drop();expect(await page.evaluate(()=>window.noteEditor.document.filter(block=>block.type==='attachment').length)).toBe(2)
+  expect(await page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-admit').length)).toBe(2)
+ }finally{await context.close()}
+},15000)
+
+it('moves a portalled file header as one component without importing its preview text',async()=>{
+ const node={id:'header-file',name:'拖动验收.pptx',source:'computer',authorizationId:'fixture-grant',noteSize:{width:420,height:240}},blocks=[{id:'dragged-file',type:'attachment',props:{payload:JSON.stringify(node)}},{id:'after-file',type:'paragraph',content:'组件后面的正文。'}]
+ const {context,page}=await fileFixture();try{
+  await page.evaluate(blocks=>window.noteEditor.replaceBlocks(window.noteEditor.document,blocks),blocks)
+  await page.locator('.en-file-header .ew-grid-title').waitFor()
+  const drag=await page.evaluate(()=>{const header=document.querySelector('.en-file-header .ew-grid-title'),target=document.querySelector('[data-id="after-file"] .bn-inline-content'),box=target.getBoundingClientRect(),data=new DataTransfer();data.setData('text/html','<p>预览内容不能变成正文</p>');header.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:data}));const token=data.getData('application/x-ework-note-component');target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data,clientX:box.x+8,clientY:box.bottom-1}));return {token,blocks:window.noteEditor.document}})
+  expect(drag.token).not.toBe('')
+  expect(drag.blocks.map(block=>block.id)).toEqual(['after-file','dragged-file'])
+  expect(drag.blocks[1].props.payload).toBe(blocks[0].props.payload)
+  expect(JSON.stringify(drag.blocks)).not.toContain('预览内容不能变成正文')
+  expect(await page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-admit').length)).toBe(0)
+  await page.locator('.bn-editor').focus();await page.keyboard.press('ControlOrMeta+z')
+  expect(await page.evaluate(()=>window.noteEditor.document.map(block=>block.id))).toEqual(['dragged-file','after-file'])
+ }finally{await context.close()}
+},15000)
+
+it('repeatedly moves an actual file header with the mouse while keeping its preview out of the note',async()=>{
+ const node={id:'repeat-header-file',name:'重复拖动.pptx',source:'computer',authorizationId:'fixture-grant',noteSize:{width:420,height:180}},blocks=[{id:'before-header',type:'paragraph',content:'组件前段。'},{id:'repeat-header',type:'attachment',props:{payload:JSON.stringify(node)}},{id:'after-header',type:'paragraph',content:'组件后段。'}]
+ const {context,page}=await fileFixture();try{
+  await page.evaluate(blocks=>window.noteEditor.replaceBlocks(window.noteEditor.document,blocks),blocks)
+  await page.locator('.en-file-header .ew-grid-title').waitFor()
+  expect(await page.locator('.en-file-header').evaluate(header=>header.draggable)).toBe(true)
+  await page.evaluate(()=>{window.headerDragPayloads=[];window.addEventListener('dragstart',event=>window.headerDragPayloads.push({html:event.dataTransfer.getData('text/html'),token:event.dataTransfer.getData('application/x-ework-note-component')}),true)})
+  for(const placement of ['after','before','after']){
+   const target=page.locator('[data-id="after-header"] .bn-inline-content'),box=await target.boundingBox()
+   await page.locator('.en-file-header .ew-grid-title').dragTo(target,{targetPosition:{x:20,y:placement==='before'?1:box.height-1}})
+   expect(await page.evaluate(()=>window.noteEditor.document.map(block=>block.id))).toEqual(placement==='after'?['before-header','after-header','repeat-header']:['before-header','repeat-header','after-header'])
+   expect(await page.evaluate(()=>window.noteEditor.getBlock('repeat-header').props.payload)).toBe(blocks[1].props.payload)
+  }
+  expect(await page.evaluate(()=>window.headerDragPayloads.length)).toBe(3)
+  expect(await page.evaluate(()=>window.headerDragPayloads.every(value=>value.html===''&&value.token))).toBe(true)
+  await page.locator('.bn-editor').focus();await page.keyboard.press('ControlOrMeta+z')
+  expect(await page.evaluate(()=>window.noteEditor.document.map(block=>block.id))).toEqual(['before-header','repeat-header','after-header'])
+ }finally{await context.close()}
+},15000)
+
+for(const target of ['reader','header','guard','text'])it(`admits one file once when dropped on the ${target} of a portalled note component`,async()=>{
+ const {context,page}=await fileFixture();try{
+  await dropNoteFiles(page,['existing.txt']);await expect.poll(()=>page.evaluate(()=>Object.keys(window.resolveNoteFiles).length)).toBe(1);await page.evaluate(()=>Object.values(window.resolveNoteFiles)[0]());await page.locator('.en-file-native-reader').waitFor()
+  if(target!=='guard')await page.getByRole('button',{name:'选中文件并操作预览',exact:true}).click()
+  await page.evaluate(target=>{const element=document.querySelector(target==='reader'?'.en-file-native-reader':target==='header'?'.en-file-header .ew-grid-title':target==='guard'?'.en-component-scroll-guard':'.bn-inline-content'),box=element.getBoundingClientRect(),data=new DataTransfer();data.items.add(new File(['next file'],'once.txt',{type:'text/plain'}));element.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data,clientX:box.x+10,clientY:box.y+10}))},target)
+  await expect.poll(()=>page.locator('.en-file-import,.en-note-file').count()).toBe(2)
+  await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-admit').length)).toBe(2)
+  expect(await page.evaluate(()=>window.noteEditor.document.filter(block=>block.type==='attachment').length)).toBe(2)
+ }finally{await context.close()}
+},15000)
+
 async function componentBorderPixels(page,section){
  const screenshot=await section.screenshot({animations:'disabled'})
  return page.evaluate(async bytes=>{

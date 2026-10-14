@@ -16,9 +16,11 @@ import { SuggestionPanel } from './suggestion-panel'
 import { NoteMenuIcon } from './menu-icon'
 import { NativeComponentBlock } from './native-component-block'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
+import {useNoteComponentInteraction} from './component-interaction'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
+import {useNoteDragAndDrop} from './drag-and-drop'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[]}
@@ -26,11 +28,6 @@ const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: bo
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
 const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.map(b => noteText(b.content) || (b.type === 'research' ? '[研究组件]' : '')).join('\n\n')
 
-function useComponentInteraction(){
- const root=useRef<HTMLElement>(null),[selected,setSelected]=useState(false)
- useEffect(()=>{const outside=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))setSelected(false)},escape=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelected(false)};document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape)}},[])
- return {root,selected,select:()=>setSelected(true)}
-}
 function AiRewriteButton({onRewrite}:{onRewrite():void}){
  const editor:any=useBlockNoteEditor(),valid=useEditorState({editor,selector:({editor}:any)=>editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection)})
  return valid?<button className="en-ai-format" aria-label="AI 改写" onMouseDown={e=>e.preventDefault()} onClick={onRewrite}><NoteMenuIcon kind="sparkles"/><span>AI 改写</span></button>:null
@@ -40,7 +37,7 @@ function ResearchBlock({block}:any){
  return node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
 }
 function ResearchSnapshotBlock({ block }: any) {
-  const interaction=useComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
+  const interaction=useNoteComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
   const context = useContext(Context)!, [html, setHtml] = useState(''), [error, setError] = useState('')
   const node = useMemo(() => { try { return JSON.parse(block.props.payload) } catch { return {} } }, [block.props.payload])
   const [height, setHeight] = useState(Number.isFinite(node.height)?Math.max(120,node.height-80):320), frame = useRef<HTMLIFrameElement>(null), intrinsic=useRef(false)
@@ -59,7 +56,7 @@ function ResearchSnapshotBlock({ block }: any) {
   const doc=html
 
   return <section className="en-research" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-research-block={block.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
-    <header className="en-research-header"><button className="en-component-refresh" aria-label="刷新组件" title="刷新组件" disabled={refreshing||!node.containerSpec} onClick={()=>{setRefreshing(true);setRefresh(value=>value+1)}}><NoteMenuIcon kind="refresh"/></button><strong>{node.title||'研究组件'}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label="移除笔记中的组件" title="移除组件" onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
+    <header className="en-research-header" draggable={!!context.editor?.isEditable}><button className="en-component-refresh" aria-label="刷新组件" title="刷新组件" disabled={refreshing||!node.containerSpec} onClick={()=>{setRefreshing(true);setRefresh(value=>value+1)}}><NoteMenuIcon kind="refresh"/></button><strong>{node.title||'研究组件'}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label="移除笔记中的组件" title="移除组件" onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
     {html?<div className="en-research-view"><iframe ref={frame} title={node.title||'研究组件'} sandbox="allow-scripts" srcDoc={doc} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')} style={{height:size.height}}/>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={interaction.select}/>:null}</div>:<div className="en-component-empty"><strong>{node.title||'研究组件'}</strong><p>{error||'正在读取组件…'}</p></div>}
     {error&&html?<div className="en-component-error" role="alert">{error}</div>:null}
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
@@ -67,7 +64,7 @@ function ResearchSnapshotBlock({ block }: any) {
 }
 const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' } }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload}>研究组件</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')! } : undefined })()
 function FileBlock({block}:any){
-  const interaction=useComponentInteraction()
+  const interaction=useNoteComponentInteraction()
   const context=useContext(Context)!,host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),[height,setHeight]=useState(520),[bound,setBound]=useState<string>(),[fileError,setFileError]=useState('')
   const node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:'上次文件导入已中断，请重新拖入文件。'}:value}catch{return {id:block.id,name:'文件',importStatus:'failed',error:'文件记录暂不可用。'} as NoteFileNode}},[block.props.payload])
   const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height})
@@ -87,7 +84,7 @@ function FileBlock({block}:any){
   useEffect(()=>()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,remove:true}}))},[])
   if(node.importStatus)return <section className="en-research en-note-file en-file-import" contentEditable={false}><header className="en-research-header"><strong>{node.name}</strong><button aria-label="移除笔记中的文件" onClick={remove}>×</button></header><div className="en-component-empty" role={node.importStatus==='failed'?'alert':'status'}>{node.error||'正在导入文件…'}</div></section>
   return <section className="en-research en-note-file" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-research-node-id={node.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
-    <div id={'en-file-header-'+instance.current} className="en-file-header"><header className="en-research-header en-file-header-fallback"><strong>{node.displayName||node.name}</strong></header></div>
+    <div id={'en-file-header-'+instance.current} className="en-file-header" draggable={!!context.editor?.isEditable}><header className="en-research-header en-file-header-fallback"><strong>{node.displayName||node.name}</strong></header></div>
     <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height:size.height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{fileError||'正在读取文件预览…'}</div>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中文件并操作预览" onClick={interaction.select}/>:null}</div>
     {fileError?<div className="en-component-error" role="alert">{fileError}</div>:null}
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
@@ -205,11 +202,11 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     try { const result = await props.bridge.request('clipboard', { sessionId: props.sessionId }); if (result.kind === 'components') { event?.preventDefault(); editor.insertBlocks(result.nodes.map((node: any) => ({ type: 'research', props: { payload: JSON.stringify(node) } })), editor.getTextCursorPosition().block, 'after'); editor.focus() } } catch (e) { setError((e as Error).message) }
   }
   const [fileDrag,setFileDrag]=useState(false)
-  const ownsFiles=(event:React.DragEvent)=>!props.recovery&&Array.from(event.dataTransfer.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
-  const dropFiles=async(event:React.DragEvent)=>{
+  const ownsFiles=(event:React.DragEvent|DragEvent)=>!props.recovery&&Array.from(event.dataTransfer!.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
+  const dropFiles=async(event:DragEvent)=>{
     setFileDrag(false);if(!ownsFiles(event))return
     event.preventDefault();event.stopPropagation()
-    const files=noteFileCandidates(event.dataTransfer,props.sessionId,file=>props.bridge.filePath?.(file)||'')
+    const files=noteFileCandidates(event.dataTransfer!,props.sessionId,file=>props.bridge.filePath?.(file)||'')
     if(!files.length){setError('请从访达或当前会话的文件区拖入文件。');return}
     const target=(event.target as HTMLElement).closest('.bn-block-outer[data-id]') as HTMLElement|null
     const reference=target&&editor.getBlock(target.dataset.id)?editor.getBlock(target.dataset.id):editor.document.at(-1)
@@ -230,6 +227,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       finally{importing.current.delete(block.id)}
     }
   }
+  useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly:!!props.recovery,dropFiles,finish:()=>setFileDrag(false)})
   const publishComposer = (value: {running?: boolean;ready?: boolean}) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:!props.recovery,running:!!request.current,...value}}))
   const setNativeDraft = (text?: string, focus=false) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-draft',{detail:{sessionId:props.sessionId,...text===undefined?{}:{text,clearImages:text===''},focus}}))
   const commitNativeDraft = (admission?:ComposerAdmission) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))
@@ -336,7 +334,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       </SuggestionPanel> : null}</>
   return <Context.Provider value={ctx}><div className="en-body">
     <NotesOutline headings={outline} active={active} onLocate={locate} />
-    <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onDropCapture={dropFiles} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
+    <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document">
         {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />

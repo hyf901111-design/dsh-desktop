@@ -27,14 +27,32 @@ export function useNoteComponentSize({block,node,editor,root,naturalHeight}:{blo
   editor.updateBlock(block.id,{props:{payload:JSON.stringify({...payload,noteSize:{...payload.noteSize,[axis]:next}})}})
   undo?.stopCapturing()
  }
+ const start=(axis:Axis,e:Pick<PointerEvent,'button'|'pointerId'|'clientX'|'clientY'|'preventDefault'|'stopPropagation'>,target:HTMLButtonElement)=>{
+  if(e.button!==0 || !editor?.isEditable || gesture.current)return
+  e.preventDefault();e.stopPropagation();target.focus({preventScroll:true})
+  const value=axis==='width'?root.current?.getBoundingClientRect().width ?? width:height
+  gesture.current={axis,pointerId:e.pointerId,start:axis==='width'?e.clientX:e.clientY,value,next:value}
+  setPreview({[axis]:value});target.setPointerCapture(e.pointerId)
+ }
+ const begin=useRef(start);begin.current=start
+ useLayoutEffect(()=>{
+  const view=root.current?.ownerDocument.defaultView||window
+  const overlap=(event:PointerEvent)=>{
+   const element=root.current;if(!element)return
+   // A reader's body-level object handles can cover the note's resize strip.
+   // Own only that exact overlap; ordinary object handles and toolbars still edit the reader.
+   if(event.button!==0||!editor?.isEditable||element.dataset.selected!=='true'||!(event.target as HTMLElement)?.closest?.('.sherlock-ppt-selection [data-pptx-handle]'))return
+   for(const axis of ['width','height'] as const){
+    const target=element.querySelector<HTMLButtonElement>('.en-component-resize-'+axis),rect=target?.getBoundingClientRect()
+    if(!target||!rect||event.clientX<rect.left||event.clientX>=rect.right||event.clientY<rect.top||event.clientY>=rect.bottom)continue
+    event.stopImmediatePropagation();begin.current(axis,event,target);return
+   }
+  }
+  view.addEventListener('pointerdown',overlap,true)
+  return()=>view.removeEventListener('pointerdown',overlap,true)
+ },[root,editor])
  const handle=(axis:Axis)=>({
-  onPointerDown:(e:React.PointerEvent<HTMLButtonElement>)=>{
-   if(e.button!==0 || !editor?.isEditable)return
-   e.preventDefault();e.stopPropagation();e.currentTarget.focus({preventScroll:true})
-   const value=axis==='width'?root.current?.getBoundingClientRect().width ?? width:height
-   gesture.current={axis,pointerId:e.pointerId,start:axis==='width'?e.clientX:e.clientY,value,next:value}
-   setPreview({[axis]:value});e.currentTarget.setPointerCapture(e.pointerId)
-  },
+  onPointerDown:(e:React.PointerEvent<HTMLButtonElement>)=>start(axis,e,e.currentTarget),
   onPointerMove:(e:React.PointerEvent<HTMLButtonElement>)=>{
    const active=gesture.current;if(!active || active.pointerId!==e.pointerId)return
    const next=bounded(active.value+(axis==='width'?e.clientX:e.clientY)-active.start,axis==='width'?minWidth:minHeight,axis==='width'?maxWidth:maxHeight)

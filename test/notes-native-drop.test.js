@@ -84,8 +84,9 @@ it('clears an outside overlay on the captured notes dragover even without a new 
   f.cleanup()
 })
 
-it('resets on document drop capture before the notes owner stops propagation',()=>{
+it('resets on window drop capture before the notes owner stops document propagation',()=>{
   const f=fixture()
+  f.window.addEventListener('drop',event=>{event.preventDefault();event.stopPropagation()},true)
   f.dispatch(f.outside,'dragenter')
   expect(f.active()).toBe(true)
   f.dispatch(f.note,'drop')
