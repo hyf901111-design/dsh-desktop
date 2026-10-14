@@ -4,9 +4,9 @@ import {readPptxParts,children,elements,ancestor, type PptxField} from './conten
 import {readChart,editChart,type PptxChart} from './charts'
 const P='http://schemas.openxmlformats.org/presentationml/2006/main',A='http://schemas.openxmlformats.org/drawingml/2006/main'
 export type Geometry={x:number;y:number;width:number;height:number;rotation:number}
-export type PptxNode={id:string;nodeId:string;part:string;type:'shape'|'picture'|'group'|'table'|'chart';name:string;parentId?:string;geometry:Geometry|null;fill?:string;stroke?:string;strokeWidth?:number;preset?:string;fontSize?:number;bold?:boolean;color?:string;chart?:PptxChart;chartWarning?:string}
+export type PptxNode={id:string;nodeId:string;part:string;type:'shape'|'picture'|'group'|'table'|'chart';name:string;parentId?:string;geometry:Geometry|null;fill?:string;stroke?:string;strokeWidth?:number;preset?:string;fontFamily?:string;fontSize?:number;bold?:boolean;color?:string;chart?:PptxChart;chartWarning?:string}
 export type PptxScene={slides:Array<{index:number;part:string;fields:PptxField[];nodes:PptxNode[]}>}
-export type PptxNodeChange={id:string;geometry?:Geometry;fill?:string;stroke?:string;strokeWidth?:number;preset?:string;fontSize?:number;bold?:boolean;color?:string;chart?:PptxChart}
+export type PptxNodeChange={id:string;geometry?:Geometry;fill?:string;stroke?:string;strokeWidth?:number;preset?:string;fontFamily?:string;fontSize?:number;bold?:boolean;color?:string;chart?:PptxChart}
 const child=(e:Element,name:string)=>children(e).find(c=>c.localName===name)
 function property(node:Element):Element|undefined{return child(node,node.localName==='grpSp'?'grpSpPr':'spPr')}
 function transform(node:Element):Element|undefined{return node.localName==='graphicFrame'?child(node,'xfrm'):property(node)&&child(property(node)!,'xfrm')}
@@ -32,6 +32,8 @@ function collect(archive:PptxArchive){return readPptxParts(archive).map(slide=>{
   const fill=props&&child(props,'solidFill'),line=props&&child(props,'ln'),run=elements(element,A,'rPr')[0],parent=ancestor(element,'grpSp'),parentId=parent&&elements(parent,P,'cNvPr')[0]?.getAttribute('id')
   const value:PptxNode&{element:Element}={id,nodeId,part:slide.part,type,name:elements(element,P,'cNvPr')[0]?.getAttribute('name')||type,geometry:geom,element,
    ...(parentId?{parentId}:{}),...(fill?{fill:child(fill,'srgbClr')?.getAttribute('val')??undefined}:{}),...(line?{stroke:elements(line,A,'srgbClr')[0]?.getAttribute('val')??undefined,strokeWidth:Number(line.getAttribute('w')??0)/9525}:{}),...(props?{preset:child(props,'prstGeom')?.getAttribute('prst')??undefined}:{}),...(run?{fontSize:run.hasAttribute('sz')?Number(run.getAttribute('sz'))/100:undefined,bold:run.hasAttribute('b')?run.getAttribute('b')==='1':undefined,color:elements(run,A,'srgbClr')[0]?.getAttribute('val')??undefined}:{})}
+  const fontStyles=[...elements(element,A,'rPr'),...elements(element,A,'defRPr'),...elements(element,A,'endParaRPr')]
+  value.fontFamily=fontStyles.flatMap(style=>[child(style,'ea')?.getAttribute('typeface'),child(style,'latin')?.getAttribute('typeface')]).find(font=>font&&!font.startsWith('+'))??undefined
   if(chart){try{value.chart=readChart(archive,slide.part,chart);if(!value.chart)value.chartWarning='此图表类型的内部数据暂不可编辑。'}catch(error){value.chartWarning=error instanceof Error?error.message:'此图表数据暂不可编辑。'}}
   nodes.push(value)
  }
@@ -51,11 +53,12 @@ export function editPptxScene(bytes:Uint8Array,changes:PptxNodeChange[]):Uint8Ar
   if(change.fill!==undefined){if(!props)throw Error('此对象不支持填充编辑。');setColor(props,'solidFill',change.fill)}
   if(change.stroke!==undefined||change.strokeWidth!==undefined){if(!props)throw Error('此对象不支持边框编辑。');const line=ensure(props,A,'ln');if(change.stroke!==undefined)setColor(line,'solidFill',change.stroke);if(change.strokeWidth!==undefined){if(!Number.isFinite(change.strokeWidth)||change.strokeWidth<0||change.strokeWidth>100)throw Error('边框宽度无效。');line.setAttribute('w',String(Math.round(change.strokeWidth*9525)))}}
   if(change.preset!==undefined){if(!props||!['rect','roundRect','ellipse','triangle','diamond','line','rightArrow','star5'].includes(change.preset))throw Error('图形类型无效。');child(props,'custGeom')?.parentNode?.removeChild(child(props,'custGeom')!);ensure(props,A,'prstGeom').setAttribute('prst',change.preset)}
-  if(change.fontSize!==undefined||change.bold!==undefined||change.color!==undefined){
+  if(change.fontFamily!==undefined||change.fontSize!==undefined||change.bold!==undefined||change.color!==undefined){
+   if(change.fontFamily!==undefined&&(typeof change.fontFamily!=='string'||!change.fontFamily.trim()||change.fontFamily.length>255||/[\u0000-\u001f\u007f]/.test(change.fontFamily)))throw Error('字体名称无效。')
    if(change.fontSize!==undefined&&(!Number.isFinite(change.fontSize)||change.fontSize<1||change.fontSize>400))throw Error('字号无效。')
    for(const p of elements(node.element,A,'p')){
-    const targets=children(p).filter(c=>['r','br'].includes(c.localName??''));const styles=targets.map(r=>ensure(r,A,'rPr'));styles.push(ensure(p,A,'endParaRPr'))
-    for(const style of styles){if(change.fontSize!==undefined)style.setAttribute('sz',String(Math.round(change.fontSize*100)));if(change.bold!==undefined)style.setAttribute('b',change.bold?'1':'0');if(change.color!==undefined)setColor(style,'solidFill',change.color)}
+    const targets=children(p).filter(c=>['r','br','fld'].includes(c.localName??''));const styles=targets.map(r=>ensure(r,A,'rPr'));styles.push(ensure(p,A,'endParaRPr'))
+    for(const style of styles){if(change.fontFamily!==undefined)for(const script of ['latin','ea','cs'])ensure(style,A,script).setAttribute('typeface',change.fontFamily);if(change.fontSize!==undefined)style.setAttribute('sz',String(Math.round(change.fontSize*100)));if(change.bold!==undefined)style.setAttribute('b',change.bold?'1':'0');if(change.color!==undefined)setColor(style,'solidFill',change.color)}
    }
   }
   if(change.chart){if(!node.chart)throw Error('此对象不包含可编辑图表。');editChart(archive,node.chart,change.chart,parts)}

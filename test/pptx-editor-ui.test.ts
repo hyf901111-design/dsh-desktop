@@ -87,6 +87,21 @@ it('shows a movable format toolbar above selected content without a fixed contro
  }finally{await view.close()}
 })
 
+it('offers the original custom font and saves font selection automatically with undo support',async()=>{
+ let saved:any
+ const fontDoc={...doc,slides:doc.slides.map(s=>({...s,nodes:s.nodes.map(n=>({...n,fontFamily:'华文黑体_易方达'}))}))}
+ const view=await mount({open:async()=>({ok:true,document:fontDoc}),save:async(value:any)=>{saved=value;return{ok:true,document:fontDoc}}})
+ try{
+  await act(async()=>editable(view.host).focus())
+  const fonts=view.win.document.querySelector('select[aria-label="字体"]')! as any
+  expect(fonts).toBeTruthy();expect(fonts.value).toBe('华文黑体_易方达')
+  expect([...fonts.options].map((o:any)=>o.value)).toContain('Songti SC')
+  await act(async()=>{fonts.value='Songti SC';fonts.dispatchEvent(new view.win.Event('change',{bubbles:true}));await new Promise(resolve=>setTimeout(resolve,350))})
+  expect(saved.objects).toEqual([{id:fontDoc.slides[0]!.nodes[0]!.id,fontFamily:'Songti SC'}])
+  await click(view.host,'撤销');expect(fonts.value).toBe('华文黑体_易方达')
+ }finally{await view.close()}
+})
+
 it('does not reopen or remount the presentation when leaving saved text editing',async()=>{
  let mounts=0,previewRequests=0,rendererOpens=0
  function Preview(props:any){React.useEffect(()=>{mounts++;props.onPptxViewer?.({currentSlideIndex:0,open:async()=>{rendererOpens++},goToSlide:async()=>{}});return()=>props.onPptxViewer?.(null)},[]);return React.createElement(FakePreview)}

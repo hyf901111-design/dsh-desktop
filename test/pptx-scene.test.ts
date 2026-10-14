@@ -9,6 +9,23 @@ function drawingFixture(){
  return zipSync(parts,{level:0})
 }
 describe('PPTX editable scene',()=>{
+ it('reads and saves custom font families for Latin, Chinese and complex-script text',()=>{
+  const parts=unzipSync(drawingFixture());parts['ppt/slides/slide2.xml']=strToU8(strFromU8(parts['ppt/slides/slide2.xml']!).replace('<a:rPr b="1"/>','<a:rPr b="1"><a:latin typeface="Arial"/><a:ea typeface="华文黑体_易方达"/></a:rPr>'))
+  const bytes=zipSync(parts,{level:0}),node=scene.readPptxScene(bytes).slides[0]!.nodes[0]!
+  expect(node.fontFamily).toBe('华文黑体_易方达')
+  const changed=scene.editPptxScene(bytes,[{id:node.id,fontFamily:'Songti SC'}])
+  expect(scene.readPptxScene(changed).slides[0]!.nodes[0]!.fontFamily).toBe('Songti SC')
+  const xml=strFromU8(unzipSync(changed)['ppt/slides/slide2.xml']!)
+  for(const script of ['latin','ea','cs'])expect(xml.match(new RegExp(`<a:${script} typeface="Songti SC"`, 'g'))).toHaveLength(3)
+  expect(xml).toContain('b="1"');expect(xml).toContain('i="1"');expect(xml).toContain('lang="zh-CN"')
+  for(const name of Object.keys(parts).filter(n=>n!=='ppt/slides/slide2.xml'))expect(unzipSync(changed)[name]).toEqual(parts[name])
+ })
+ it('sets the font in empty table cells and rejects invalid font names',()=>{
+  const bytes=drawingFixture(),node=scene.readPptxScene(bytes).slides[0]!.nodes.find(n=>n.type==='table')!
+  const changed=scene.editPptxScene(bytes,[{id:node.id,fontFamily:'PingFang SC'}]),xml=strFromU8(unzipSync(changed)['ppt/slides/slide2.xml']!)
+  expect(xml).toContain('<a:endParaRPr sz="1200"><a:latin typeface="PingFang SC"/>')
+  for(const fontFamily of ['', ' ', 'a\u0000b','x'.repeat(256),123])expect(()=>scene.editPptxScene(bytes,[{id:node.id,fontFamily} as any])).toThrow('字体')
+ })
  it('identifies real slide objects, local geometry and paragraph identities',()=>{
   expect(typeof scene.readPptxScene).toBe('function')
   const doc=scene.readPptxScene(drawingFixture())
