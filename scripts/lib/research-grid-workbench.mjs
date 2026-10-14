@@ -14,6 +14,7 @@ import {serializeWorkbenchContent,installWorkbenchExport,isPassiveWorkbenchSvg} 
 import {installWorkbenchRefresh,workbenchRefreshCss} from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 import {WORKBENCH_PRESENTATION_CSS} from '../../packages/dsh-research-task-runtime/workbench-presentation.js'
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../../packages/dsh-research-task-runtime/workbench-scrollbars.js'
+import {noteAssistantDestinationFunction} from './notes-reply-actions.mjs'
 const begin='/* EWORK_GRID_WORKBENCH_BEGIN */',end='/* EWORK_GRID_WORKBENCH_END */',meta='/* EWORK_GRID_RESTORE '
 const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherlock-theme="dark"]','__GRID_DARK__').replaceAll(':root','__GRID_ROOT__').replace(/\bhtml\b|\bbody\b/g,'body [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_DARK__','body[data-ds-dark-theme] [data-ework-grid] .rScV5Q_containerContent').replaceAll('__GRID_ROOT__','body [data-ework-grid] .rScV5Q_containerContent')
 const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/20px 20px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
@@ -37,7 +38,15 @@ export function restoreResearchGridWorkbench(source){
   const changes=JSON.parse(source.slice(a+meta.length,b))
   source=source.slice(0,a-1)+source.slice(b+3)
   for(const [original,replacement] of changes.reverse()){
-    if(!source.includes(replacement))throw Error('Workbench restore anchor changed: '+replacement.slice(0,90))
+    if(!source.includes(replacement)){
+      // Older restore records predate the owned Notes destination transform.
+      // Match that complete transform exactly, then preserve it on both sides.
+      if(replacement.startsWith('function ResearchAssistantCanvasAction({ messageId, text, workspace }) {')){
+        const migrated=noteAssistantDestinationFunction(replacement).trimEnd()
+        if(source.includes(migrated)){source=source.replace(migrated,noteAssistantDestinationFunction(original).trimEnd());continue}
+      }
+      throw Error('Workbench restore anchor changed: '+replacement.slice(0,90))
+    }
     source=source.replace(replacement,original)
   }
   const restoredStart=source.indexOf(begin),restoredEnd=source.indexOf(end,restoredStart)
@@ -210,6 +219,9 @@ export function patchResearchGridWorkbench(source){
   source=source.replace('function createResearchWorkspaceSession(storage, sessionId) {',begin+'\nconst researchGridNodeIds=new Set();\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+definitions+`\nif(typeof document!=='undefined'){let style=document.getElementById('ework-grid-workbench-style');if(!style){style=document.createElement('style');style.id='ework-grid-workbench-style';document.head.prepend(style);}style.textContent=${JSON.stringify(css)}}\n`+end+'\nfunction createResearchWorkspaceSession(storage, sessionId) {')
   change('d: "M3 3.5h10v9H3z"','d: "M9.5 2.25h-6a1.25 1.25 0 0 0-1.25 1.25v9a1.25 1.25 0 0 0 1.25 1.25H7M13.75 6.5v-3a1.25 1.25 0 0 0-1.25-1.25h-3"')
   change('d: "M8 5.5v5M5.5 8h5"','d: "M11.25 8v6.5M8 11.25h6.5"')
-  for(const {before,after,name} of localizedWorkbenchFunctions(source))change(before,name==='ResearchCanvasFrameMenu'?after.replace('workbenchText("从画布移除")','workbenchText(node.noteDocument?"从笔记移除":"从画布移除")'):after)
+  for(const {before,after,name} of localizedWorkbenchFunctions(source)){
+    const localized=name==='ResearchCanvasFrameMenu'?after.replace('workbenchText("从画布移除")','workbenchText(node.noteDocument?"从笔记移除":"从画布移除")'):name==='ResearchAssistantCanvasAction'&&before.includes('/* ework:note-assistant-destination:v1 */')?after.replaceAll('(notes?"添加到笔记":workbenchText("添加到画布"))','workbenchText(notes?"添加到笔记":"添加到画布")'):after
+    change(before,localized)
+  }
   return source+'\n'+meta+JSON.stringify(changes).replaceAll('*/','*\\/')+' */'
 }
