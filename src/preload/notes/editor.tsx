@@ -299,7 +299,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,importing:importing.current }), [props.bridge, props.sessionId, props.dark, props.navigate, editor])
   const slashItems = useMemo(()=>async (query:string)=>{
     const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
-    const defaults=getDefaultReactSlashMenuItems(editor).sort((a:any,b:any)=>(order.indexOf(a.key)<0?100:order.indexOf(a.key))-(order.indexOf(b.key)<0?100:order.indexOf(b.key)))
+    const defaults=getDefaultReactSlashMenuItems(editor).filter((item:any)=>item.key!=='emoji').sort((a:any,b:any)=>(order.indexOf(a.key)<0?100:order.indexOf(a.key))-(order.indexOf(b.key)<0?100:order.indexOf(b.key)))
     const library:any={key:'library',title:'组件库',group:'插入',aliases:['组件','研究','library'],onItemClick:()=>{}}
     // Load on each opening/query so research-side renames and additions stay current.
     try{
