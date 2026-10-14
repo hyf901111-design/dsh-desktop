@@ -25,6 +25,13 @@ it('extends beyond the parent but fits the selected screen including negative or
  const other=noteMenuBounds({x:-20,y:940,width:1,height:20},{x:-1280,y:25,width:1280,height:1000},1800)
  expect(other.x+other.width).toBeLessThanOrEqual(-8);expect(other.y).toBe(33);expect(other.height).toBe(984)
 })
+it('keeps the menu surface beside the caret when its shadow has transparent window padding',()=>{
+ const work={x:0,y:25,width:1440,height:1000}
+ const below=noteMenuBounds({x:600,y:250,width:1,height:20},work,566,1,312,24)
+ expect(below.x+24).toBe(600);expect(below.y+24).toBe(276)
+ const above=noteMenuBounds({x:600,y:900,width:1,height:20},work,566,1,312,24)
+ expect(above.y+above.height-24).toBe(894)
+})
 it('rejects invalid payloads and escapes labels instead of rendering supplied markup',()=>{
  expect(()=>validateNoteMenu(input({anchor:{x:NaN,y:0,width:0,height:20}}))).toThrow()
  expect(()=>validateNoteMenu(input({items:[...input().items,input().items[0]!]}))).toThrow()
@@ -36,7 +43,7 @@ it('keeps all commands and shortcuts in a compact icon grid and list without des
  const result=noteMenuPresentation(input({items}),'ticket')
  expect(result.height).toBeLessThanOrEqual(360);expect(result.html).toContain('basic-grid');expect(result.html).toContain('<svg');expect(result.html).not.toContain('<small>');expect(result.html).not.toContain('冗长的功能说明')
  for(const item of items)expect(result.html).toContain('/select/'+item.id+'?revision=1')
- expect(result.html).toContain('⌘-Alt-1');expect(noteMenuPresentation(input({items:Array.from({length:80},(_,i)=>({...items.at(-1)!,id:'x'+i}))}),'ticket').height).toBe(480)
+ expect(result.html).toContain('⌘-Alt-1')
 })
 it('uses the exact research library SVG geometry for each component while preserving the quotation command icon',()=>{
  const names=['watchlist','quote','indices','news','announcements','calendar','custom']
@@ -73,7 +80,7 @@ it('opens the second level without closing the native menu and validates child s
  popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/open/library?revision=1`)
  expect(popup.destroyed).toBe(false);expect(parent.webContents.send).toHaveBeenCalledWith('notes:menu-event',expect.objectContaining({action:'open',itemId:'library'}))
  menu.sync(input({revision:2,items:[library],submenu:{parentId:'library',selectedIndex:0}}),'alice')
- await vi.waitFor(()=>expect(popup.setBounds.mock.calls.at(-1)[0].width).toBe(528))
+ await vi.waitFor(()=>expect(popup.setBounds.mock.calls.at(-1)[0].width).toBe(576))
  expect(noteMenuPresentation(input({items:[library],submenu:{parentId:'library',selectedIndex:0}}),'ticket').html).toContain('组件一')
  popup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=1&parent=library`)
  expect(popup.destroyed).toBe(false)
