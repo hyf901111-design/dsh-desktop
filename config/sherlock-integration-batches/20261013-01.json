@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "右侧栏与研究组件PPTX画面直接编辑",
         "branch": "codex/feat/ppt-content-edit-20261013",
-        "baseCommit": "e14a833cb9b249f9551d613989291422ab496f20",
-        "tipCommit": "a5debf114f8b11afea3e917049ce09fb1257e967",
+        "baseCommit": "a5debf114f8b11afea3e917049ce09fb1257e967",
+        "tipCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
         "commits": [
           {
-            "commit": "a5debf114f8b11afea3e917049ce09fb1257e967",
+            "commit": "f1807f657cf965ed59144526e7f791898f9c22b9",
             "parents": [
-              "e14a833cb9b249f9551d613989291422ab496f20"
+              "a5debf114f8b11afea3e917049ce09fb1257e967"
             ],
-            "subject": "修复PPT图表中文组字期间误自动保存并增加回归验证"
+            "subject": "修复PPT编辑失焦闪白并保留刷新期间的画面与当前位置"
           }
         ],
         "files": [
@@ -29,11 +29,27 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/pptx-direct-editor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-editor-ui.d.mts"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/pptx-editor-ui.mjs"
           },
           {
+            "status": "M",
+            "path": "scripts/preview-pptx-editor.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-editor-ui.test.ts"
+          },
+          {
             "status": "A",
-            "path": "test/pptx-chart-composition.test.ts"
+            "path": "test/pptx-stable-refresh.test.ts"
           }
         ],
         "checks": [
@@ -49,12 +65,13 @@
               "test/sherlock-office-preview-adapter.test.ts",
               "test/pptx-resize-settle.test.js",
               "test/research-file-preview.test.ts",
-              "test/pptx-chart-composition.test.ts"
+              "test/pptx-chart-composition.test.ts",
+              "test/pptx-stable-refresh.test.ts"
             ],
             "outcome": "passed",
-            "summary": "9个直接相关PPT测试文件135项通过",
-            "verifiedCommit": "a5debf114f8b11afea3e917049ce09fb1257e967",
-            "completedAt": "2026-10-13T23:32:54.540902+00:00",
+            "summary": "10个直接相关PPT测试文件141项通过",
+            "verifiedCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
+            "completedAt": "2026-10-14T00:15:56.021216+00:00",
             "timeoutMs": 120000
           },
           {
@@ -66,8 +83,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript检查通过",
-            "verifiedCommit": "a5debf114f8b11afea3e917049ce09fb1257e967",
-            "completedAt": "2026-10-13T23:32:54.540902+00:00",
+            "verifiedCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
+            "completedAt": "2026-10-14T00:15:56.021216+00:00",
             "timeoutMs": 120000
           },
           {
@@ -75,18 +92,18 @@
               "git",
               "diff",
               "--check",
-              "e14a833cb9b249f9551d613989291422ab496f20..HEAD"
+              "a5debf114f8b11afea3e917049ce09fb1257e967..HEAD"
             ],
             "outcome": "passed",
             "summary": "完整功能差异格式检查通过",
-            "verifiedCommit": "a5debf114f8b11afea3e917049ce09fb1257e967",
-            "completedAt": "2026-10-13T23:32:54.540902+00:00",
+            "verifiedCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
+            "completedAt": "2026-10-14T00:15:56.021216+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际Office页面已验证默认直接编辑、无模式切换/保存按钮、文字自动保存仍保留焦点、连续撤销重做及Esc退出无重载；实际图表标题与数值无需应用按钮自动落盘。独立审查已修复明确弃稿后旧timer落盘并加入回归。当前增量待重新构建原生客户端验收。 图表输入法中间文本不落盘，compositionend后最终文字自动保存并保留焦点，独立DOM-first回归通过。"
+          "summary": "实际Office页面逐RAF复现编辑字号后继续输入并失焦，旧实现出现1个空白帧；修复后右侧/研究同路径为0。46页模板第22页图表刷新0空白帧、当前位置相同、无隐藏stage残留。独立复核及失败/过期/卸载/邻页/媒体/滚动回归通过；当前增量待重建原生客户端验收。"
         },
         "acceptanceCriteria": [
           "右侧栏与研究PPT组件均去除固定controls操作行",
@@ -97,65 +114,15 @@
           "用户接受精确集成tip之后才推进main",
           "文字撤销失焦后连续重做保存仍进入最近操作的PPT，多个编辑器互不误保存",
           "无预览编辑切换，文字图形格式图表修改自动保存",
-          "自动保存保留原始基线与撤销重做；切源写回原文件；明确弃稿取消旧任务"
+          "自动保存保留原始基线与撤销重做；切源写回原文件；明确弃稿取消旧任务",
+          "释放焦点及必要重绘时保留旧画面直到新页和异步媒体完成，刷新中继续滚动保持最新位置"
         ],
         "risks": [
           "本次重新构建后仍需用户在共享客户端验收",
           "对象缩放、格式、图表或撤销操作仍保留必要的渲染以维护布局及富文本样式",
           "仅编辑现有对象及系列，不新增幻灯片或对象，不编辑SmartArt与动画"
         ],
-        "generatedAt": "2026-10-13T23:32:54.540902+00:00"
-      },
-      "merged": {
-        "mergeCommit": "aa0d4f9fee69bc9d8bae392ed90566cf7f6feb7e",
-        "verificationCommit": "aa0d4f9fee69bc9d8bae392ed90566cf7f6feb7e",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
-            "verifiedCommit": "aa0d4f9fee69bc9d8bae392ed90566cf7f6feb7e",
-            "completedAt": "2026-10-13T23:33:27.581Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "aa0d4f9fee69bc9d8bae392ed90566cf7f6feb7e",
-            "completedAt": "2026-10-13T23:33:27.581Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "aa0d4f9fee69bc9d8bae392ed90566cf7f6feb7e",
-            "completedAt": "2026-10-13T23:33:27.581Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-13T23:33:27.581Z"
+        "generatedAt": "2026-10-14T00:15:56.021216+00:00"
       }
     }
   ],
