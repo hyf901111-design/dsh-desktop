@@ -278,6 +278,84 @@
           "共享客户端native实际Notes/研究/右侧340px最终验收由root执行。"
         ],
         "generatedAt": "2026-10-14T14:04:20.830883Z"
+      },
+      "merged": {
+        "mergeCommit": "687f1f12c198b2a1219e5378b23da699aee32b0d",
+        "verificationCommit": "687f1f12c198b2a1219e5378b23da699aee32b0d",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "687f1f12c198b2a1219e5378b23da699aee32b0d",
+            "completedAt": "2026-10-14T14:25:28.600Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/notes-component-layout.test.js",
+              "test/notes-component-import-interaction.test.js",
+              "test/notes-native-components.test.js",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/notes-component-layout.test.js test/notes-component-import-interaction.test.js test/notes-native-components.test.js test/notes-component-interaction.test.tsx --maxWorkers=1",
+            "verifiedCommit": "687f1f12c198b2a1219e5378b23da699aee32b0d",
+            "completedAt": "2026-10-14T14:25:28.600Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-scroll-viewport.test.js",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-resize-settle.test.js",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/bundled-plugin-profile.test.ts",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-scroll-viewport.test.js test/pptx-selection-viewport.test.js test/pptx-resize-settle.test.js test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/bundled-plugin-profile.test.ts --maxWorkers=1",
+            "verifiedCommit": "687f1f12c198b2a1219e5378b23da699aee32b0d",
+            "completedAt": "2026-10-14T14:25:28.600Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "687f1f12c198b2a1219e5378b23da699aee32b0d",
+            "completedAt": "2026-10-14T14:25:28.600Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "687f1f12c198b2a1219e5378b23da699aee32b0d",
+            "completedAt": "2026-10-14T14:25:28.600Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-14T14:25:28.600Z"
       }
     }
   ],
