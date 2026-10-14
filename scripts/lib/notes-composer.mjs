@@ -3,29 +3,48 @@ import { patchNotesSidebar } from './notes-sidebar.mjs'
 export const notesComposerSource = `
 const eworkNotesInputs = new Map();
 function eworkActiveInput(sessionId,ordinary){const record=eworkNotesInputs.get(sessionId);return record?.active?record.shell:ordinary}
+// Match native ConversationController: commit the admitted snapshot, restore only an untouched draft.
+function eworkSettleNoteInput(record, admission, conversation, failed=false){
+  const pending=record.pending.get(admission?.submissionId);if(!pending)return;
+  record.pending.delete(admission.submissionId);
+  if(failed){
+    record.shell.restoreImages(pending.admission.imageIds);
+    const current=record.shell.snapshot;
+    if(pending.cleared&&current.draft===''&&current.draftRev===pending.draftRev)record.shell.restoreDraftState(pending.admission);
+  }else for(const id of pending.admission.imageIds)conversation.releaseDraftImage(id);
+}
+function eworkDisposeNoteInput(record,conversation){
+  const ids=new Set([...record.shell.snapshot.imageIds,...[...record.pending.values()].flatMap(pending=>pending.admission.imageIds)]);
+  record.pending.clear();for(const id of ids)conversation.releaseDraftImage(id);record.shell.dispose();
+}
 function eworkNotesInput(sessionId, ordinary, conversation) {
   if (eworkNotesInputs.has(sessionId)) return eworkNotesInputs.get(sessionId);
-  const record = {running:false,ready:false,active:false,shell:null,submission:0};
+  const record = {running:false,ready:false,active:false,shell:null,submission:0,pending:new Map()};
   const shell = new SessionInputShell({...ordinary.deps,queue:undefined,sharedSubmit:undefined,sharedDraft:undefined,
     defaultSink:async(prompt,imageIds,_mode,admission)=>{
       if(record.running||record.preparing||!record.ready)return;
       record.preparing=true;
+      let admitted;
       try {
         const images=await conversation.serializeImages(conversation.draftImages(imageIds).map(a=>a.file));
-        if(record.running||eworkNotesInputs.get(sessionId)!==record)return;
+        if(record.running||!record.ready||eworkNotesInputs.get(sessionId)!==record)return;
         const submissionId=++record.submission;
+        admitted={...(admission||shell.snapshot),imageIds:[...imageIds],submissionId};
+        const current=shell.snapshot,cleared=current.draftRev===admitted.draftRev&&current.draft===admitted.draft;
+        shell.commitSend(admitted.imageIds,cleared?admitted.draft:null);
+        record.pending.set(submissionId,{admission:admitted,cleared,draftRev:shell.snapshot.draftRev});
         let acknowledged=false;
         const accepted=event=>{if(event.detail?.sessionId===sessionId&&event.detail.submissionId===submissionId)acknowledged=true};
         document.addEventListener('sherlock:notes-submit-accepted',accepted);
-        try{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId,submissionId,prompt,images,admission}}))}
+        try{document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId,submissionId,prompt,images,admission:admitted}}))}
         finally{document.removeEventListener('sherlock:notes-submit-accepted',accepted)}
-        if(!acknowledged)shell.notify('error','笔记还未就绪，输入已保留。');
-      } catch(error){shell.notify('error',error.message||'附件读取失败，输入已保留。');}finally{record.preparing=false}
+        if(!acknowledged){eworkSettleNoteInput(record,admitted,conversation,true);shell.notify('error','笔记还未就绪，输入已保留。');}
+      } catch(error){eworkSettleNoteInput(record,admitted,conversation,true);shell.notify('error',error.message||'附件读取失败，输入已保留。');}finally{record.preparing=false}
     }});
   // Reuse native command adjudication; plain writing still uses the note sink.
   shell.submit=mode=>{if(!record.ready||record.running)return;if(!shell.snapshot.draft.trim()&&shell.snapshot.imageIds.length&&shell.snapshot.phase==='plain')shell.sinkSerialized('',mode||'queue');else SessionInputShell.prototype.submit.call(shell,mode)};
   record.shell=shell;eworkNotesInputs.set(sessionId,record);
-  ordinary.deps.actx?.effect(()=>()=>{if(eworkNotesInputs.get(sessionId)!==record)return;for(const id of shell.snapshot.imageIds)conversation.releaseDraftImage(id);shell.dispose();eworkNotesInputs.delete(sessionId)},'EWork note input');
+  ordinary.deps.actx?.effect(()=>()=>{if(eworkNotesInputs.get(sessionId)!==record)return;eworkDisposeNoteInput(record,conversation);eworkNotesInputs.delete(sessionId)},'EWork note input');
   return record;
 }
 function EWorkSharedInputBar(props) {
@@ -38,11 +57,12 @@ function EWorkSharedInputBar(props) {
     setState({running:record.running,ready:record.ready});
     const status=event=>{if(event.detail?.sessionId!==sessionId)return;record.running=event.detail.running===true;record.ready=event.detail.ready===true;setState({running:record.running,ready:record.ready})};
     const draft=event=>{if(event.detail?.sessionId!==sessionId)return;if(typeof event.detail.text==='string')record.shell.setDraft(event.detail.text);if(event.detail.clearImages){for(const id of record.shell.snapshot.imageIds)conversationController.releaseDraftImage(id);record.shell.pruneImages([])}if(event.detail.focus)requestAnimationFrame(()=>document.querySelector('[data-ework-notes-composer-host] textarea')?.focus({preventScroll:true}))};
-    const commit=event=>{if(event.detail?.sessionId!==sessionId)return;const admitted=event.detail.admission;if(!admitted)return;const current=record.shell.snapshot,clear=current.draftRev===admitted.draftRev&&current.draft===admitted.draft;record.shell.commitSend(admitted.imageIds,clear?admitted.draft:null);for(const id of admitted.imageIds)conversationController.releaseDraftImage(id)};
+    const commit=event=>{if(event.detail?.sessionId!==sessionId)return;const admitted=event.detail.admission;if(!admitted)return;if(admitted.submissionId!==undefined){eworkSettleNoteInput(record,admitted,conversationController);return}const current=record.shell.snapshot,clear=current.draftRev===admitted.draftRev&&current.draft===admitted.draft;record.shell.commitSend(admitted.imageIds,clear?admitted.draft:null);for(const id of admitted.imageIds)conversationController.releaseDraftImage(id)};
+    const rollback=event=>{if(event.detail?.sessionId===sessionId)eworkSettleNoteInput(record,event.detail.admission,conversationController,true)};
     document.addEventListener('sherlock:notes-composer-state',status);document.addEventListener('sherlock:notes-composer-draft',draft);
-    document.addEventListener('sherlock:notes-composer-commit',commit);
+    document.addEventListener('sherlock:notes-composer-commit',commit);document.addEventListener('sherlock:notes-composer-rollback',rollback);
     document.dispatchEvent(new CustomEvent('sherlock:notes-composer-request-state',{detail:{sessionId}}));
-    return()=>{document.removeEventListener('sherlock:notes-composer-state',status);document.removeEventListener('sherlock:notes-composer-draft',draft);document.removeEventListener('sherlock:notes-composer-commit',commit)};
+    return()=>{document.removeEventListener('sherlock:notes-composer-state',status);document.removeEventListener('sherlock:notes-composer-draft',draft);document.removeEventListener('sherlock:notes-composer-commit',commit);document.removeEventListener('sherlock:notes-composer-rollback',rollback)};
   },[record,sessionId]);
   // Subscribe in both views so hook order and the native InputBar identity stay stable.
   const notesInput=react.useSyncExternalStore(record?.shell.state.subscribe||(()=>()=>{}),record?.shell.state.getSnapshot||(()=>undefined));
@@ -62,7 +82,7 @@ function EWorkSharedInputBar(props) {
     stop:()=>record.running?document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId}})):props.stop?.()
   });
 }
-ctx.effect(()=>{const reset=()=>{for(const record of eworkNotesInputs.values()){for(const id of record.shell.snapshot.imageIds)conversationController.releaseDraftImage(id);record.shell.dispose()}eworkNotesInputs.clear()};document.addEventListener('sherlock:notes-reset',reset);return()=>{document.removeEventListener('sherlock:notes-reset',reset);reset()}},'EWork native note composer');
+ctx.effect(()=>{const reset=()=>{for(const record of eworkNotesInputs.values())eworkDisposeNoteInput(record,conversationController);eworkNotesInputs.clear()};document.addEventListener('sherlock:notes-reset',reset);return()=>{document.removeEventListener('sherlock:notes-reset',reset);reset()}},'EWork native note composer');
 `;
 
 export function patchNotesComposer(source) {
@@ -171,10 +191,16 @@ function patchNotesSlots(source){
 }
 
 function patchNotesAdmission(source){
- if(source.includes('ework:notes-composer-admission:v1'))return source;
+ const admission='const noteAdmission={draft:this.snapshot.draft,draftRev:this.snapshot.draftRev,imageIds:[...this.imageIds],occurrences:this.snapshot.occurrences.map(occurrence=>({...occurrence}))};';
+ if(source.includes('ework:notes-composer-admission:v2'))return source;
+ if(source.includes('ework:notes-composer-admission:v1')){
+  const legacy='const noteAdmission={draft:this.snapshot.draft,draftRev:this.snapshot.draftRev,imageIds:[...this.imageIds]};';
+  if(source.split(legacy).length!==2)throw Error('笔记无法升级原生草稿提交快照。');
+  return source.replace('ework:notes-composer-admission:v1','ework:notes-composer-admission:v2').replace(legacy,admission);
+ }
  const method='sinkSerialized(draft, mode) {';
  if(source.split(method).length!==2)throw Error('笔记无法定位原生草稿提交快照。');
- source=source.replace(method,method+`\n/* ework:notes-composer-admission:v1 */\nconst noteAdmission={draft:this.snapshot.draft,draftRev:this.snapshot.draftRev,imageIds:[...this.imageIds]};`);
+ source=source.replace(method,method+`\n/* ework:notes-composer-admission:v2 */\n${admission}`);
  for(const from of ['this.deps.defaultSink(draft.trim(), imageIds, mode);','this.deps.defaultSink(out.trim(), imageIds, mode);']){if(source.split(from).length!==2)throw Error('笔记无法定位原生草稿序列化提交。');source=source.replace(from,from.replace(', mode);',', mode, noteAdmission);'))}
  return source;
 }

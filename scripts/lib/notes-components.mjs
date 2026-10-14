@@ -12,7 +12,7 @@ export function createNoteComponentViewStore(doc){
  return {snapshot:()=>snapshot,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},dispose:()=>{doc?.removeEventListener('sherlock:notes-component-view',update);doc?.removeEventListener('sherlock:notes-reset',reset);reset()}}
 }
 export function EWorkNoteComponentView({entry,officePreview}){
- const rootRef=react.useRef(entry.host.closest('[data-research-node-id]')),[indices,setIndices]=react.useState(false),[error,setError]=react.useState(''),pending=react.useRef(new Map()),sequence=react.useRef(0),node=entry.node,spec=node.containerSpec
+ const rootRef=react.useRef(entry.host.closest('[data-research-node-id]')),[indices,setIndices]=react.useState(false),[error,setError]=react.useState(''),pending=react.useRef(new Map()),sequence=react.useRef(0),node=entry.node,spec=node.containerSpec||{type:'assistant-result'}
  const action=(name,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action:name,...value}}))
  react.useEffect(()=>{
   const receive=event=>{const value=event.detail;if(value?.instanceId!==entry.instanceId||value.sessionId!==entry.sessionId||!pending.current.has(value.requestId))return;clearTimeout(pending.current.get(value.requestId));pending.current.delete(value.requestId);setError(value.ok?'':value.message||'组件配置未保存，请重试')}
@@ -23,7 +23,7 @@ export function EWorkNoteComponentView({entry,officePreview}){
   const parsed=financialWidgetSpec(next);if(!entry.host.isConnected||!parsed||parsed.widget!==spec.widget||JSON.stringify(expected)!==JSON.stringify(spec))return false
   const requestId=entry.instanceId+':'+(++sequence.current);setError('');pending.current.set(requestId,setTimeout(()=>{pending.current.delete(requestId);setError('组件配置尚未保存，请重试')},6000));action('spec',{expected,next:parsed,requestId});return true
  }
- const body=spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,onSpecChange:save}):react.createElement(ResearchContainerBody,{node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}})
+ const body=node.noteReply?react.createElement(ResearchDerivedSummary,{node,onUpgradeSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}}):spec.type==='financial-widget'?react.createElement(FinancialWidget,{node,sessionId:entry.sessionId,visible:true,onSpecChange:save}):react.createElement(ResearchContainerBody,{node,sessionId:entry.sessionId,visible:true,officePreview,preserveHeading:true,onHtmlSize:(_id,size)=>{if(size?.height)action('size',{height:size.height})}})
  const title=['quote','announcements'].includes(spec.widget)?react.createElement(FinancialQuoteSelector,{node,sessionId:entry.sessionId,readOnly:false,onSpecChange:save}):spec.widget==='news'?react.createElement(FinancialNewsSearch,{node,sessionId:entry.sessionId,readOnly:false,onSpecChange:save}):react.createElement('strong',null,node.title)
  return react.createElement(react.Fragment,null,
   react_dom.createPortal(react.createElement('div',{className:'en-native-component-heading'},title,spec.widget==='indices'&&react.createElement('button',{'data-workbench-more':'','aria-label':'配置指数',onClick:()=>setIndices(true)},react.createElement(FinancialLibraryIcon,{name:'dots'}))),entry.header),

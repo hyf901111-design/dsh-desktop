@@ -26,7 +26,7 @@ export function noteExportBlocks(content:NoteContent):ExportBlock[]{
        const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
        if(encoded)try{const model=JSON.parse(encoded);if(model.data)output.push({type:'codeBlock',level:depth,content:[{type:'text',text:JSON.stringify(model.data,null,2)}]})}catch{/* The readable static HTML remains available. */}
      }
-     else output.push({type:'paragraph',level:depth,content:[{type:'text',text:spec?.content||node.sourceText||'研究组件'}]})
+     else output.push({type:'paragraph',level:depth,content:[{type:'text',text:node.noteReply===true&&node.kind==='assistant-result'?String(node.excerpt||''):spec?.content||node.sourceText||'研究组件'}]})
    }else if(block.type==='attachment'){
      let node:any;try{node=JSON.parse(block.props?.payload||'{}')}catch{node={}}
      output.push({type:'paragraph',level:depth,content:[{type:'text',text:'附件：'+(node.displayName||node.name||'文件')}]})

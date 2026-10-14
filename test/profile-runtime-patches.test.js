@@ -6,7 +6,7 @@ import {syncProfileRuntimePatches,verifyProfileRuntimePatches} from '../scripts/
 it('ships patched runtime into the independent plugin profile and verifies parity',async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),'profile-patches-'))
  try{
-  for(const name of ['dsh-llm','dsh-tool-fs','dsh-subagent','dsh-skill']){
+  for(const name of ['dsh-llm','dsh-tool-fs','dsh-subagent','dsh-skill','dsh-message-feedback']){
    const source=JSON.parse(await readFile(`node_modules/@deepseek-ai/${name}/package.json`,'utf8'))
    const dir=path.join(root,'node_modules/@deepseek-ai',name)
    await mkdir(path.join(dir,'lib'),{recursive:true})
@@ -20,6 +20,7 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   await expect(verifyProfileRuntimePatches(process.cwd(),path.join(root,'node_modules'))).rejects.toThrow()
   const digest=await syncProfileRuntimePatches(process.cwd(),root)
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-subagent/lib/index.js'),'utf8')).toContain('CANVAS_TASK_OWNED_SETTLEMENT')
+  expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js'),'utf8')).toContain('ework:note-feedback-target:v1')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-skill/lib/index.js'),'utf8')).toContain('registerCandidatePolicy(policy)')
   expect(await readFile(path.join(nested,'lib/index.js'),'utf8')).toContain('registerCandidatePolicy(policy)')
   expect(digest).toMatch(/^[a-f0-9]{64}$/)

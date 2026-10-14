@@ -13384,7 +13384,7 @@ it('pans the canvas over a selected component with no scrollable content', async
   } finally {await mounted.cleanup()}
 })
 
-it('fills the note document width with a single PDF page while retaining the bounded research preview',async()=>{
+it('fills the component width with a single PDF page in both notes and research',async()=>{
  const bodySize={width:640,height:400},harness=createPdfJsHarness({pageCount:1,pageWidth:600,pageHeight:800})
  const mounted=await mountResearchCanvas({sessionId:'note-pdf-fit-width',pdfjs:harness.pdfjs,pdfBodySize:bodySize,resizeObserverCallbacks:[],transformSource:source=>patchFigmaFilePreview(source).replace('exports.ResearchCanvasFileCard = ResearchCanvasFileCard;','exports.__NotePdfPreview = ResearchCanvasPdfPreview;exports.ResearchCanvasFileCard = ResearchCanvasFileCard;'),dshDesktop:{researchPreview:{restore:async()=>({authorizationId:'grant',capabilityToken:'cap',url:'sherlock-preview://cap/'}),release:async()=>({ok:true})}}})
  const host=mounted.browserWindow.document.createElement('div');mounted.host.append(host);const root=createRoot(host),Preview=mounted.client.__NotePdfPreview as any
@@ -13394,6 +13394,6 @@ it('fills the note document width with a single PDF page while retaining the bou
   expect((host.querySelector('[data-research-pdf-preview]') as unknown as HTMLCanvasElement)?.style.width).toBe('640px')
   await act(async()=>root.render(createElement(Preview,{node:{id:'research-pdf',name:'research.pdf',authorizationId:'grant',aspectRatio:.75},sessionId:'research-preview',visible:true})))
   await act(async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve()})
-  expect((host.querySelector('[data-research-pdf-preview]') as unknown as HTMLCanvasElement)?.style.width).toBe('300px')
+  expect((host.querySelector('[data-research-pdf-preview]') as unknown as HTMLCanvasElement)?.style.width).toBe('640px')
  }finally{await act(async()=>root.unmount());await mounted.cleanup()}
 })
