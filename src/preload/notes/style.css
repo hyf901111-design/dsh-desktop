@@ -53,6 +53,14 @@ body:has(.VOzbGW_overlay:not([hidden])) [data-ework-notes-session]{visibility:hi
 .en-research{border:1px solid var(--en-border);border-radius:0;overflow:hidden;background:var(--en-component-bg,#fff)}.en-root[data-dark=true] .en-research{--en-component-bg:#131317}.en-research-header{height:48px;display:flex;align-items:center;gap:8px;padding:0 18px;color:var(--en-ink);font-size:13px}.en-research-header>svg{color:#c9833d}.en-research-header strong{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.en-research-header button{font-size:20px;width:26px;height:26px;padding:0;line-height:26px;border-radius:4px}.en-research iframe{background:var(--en-component-bg)}.en-research .en-source{min-height:32px;margin:0;padding:6px 12px;border-top:1px solid var(--en-border);font-size:11px}
 
 /* The preview editor is a separate document even when mounted inside a block. */
+.en-root .bn-block-content[data-note-indent="1"]{margin-inline-start:32px}
+.en-root .bn-block-content[data-note-indent="2"]{margin-inline-start:64px}
+.en-root .bn-block-content[data-note-indent="3"]{margin-inline-start:96px}
+.en-root .bn-block-content[data-note-indent="4"]{margin-inline-start:128px}
+.en-root .bn-block-content[data-note-indent="5"]{margin-inline-start:160px}
+.en-root .bn-block-content[data-note-indent="6"]{margin-inline-start:192px}
+.en-root .bn-block-content[data-note-indent="7"]{margin-inline-start:224px}
+.en-root .bn-block-content[data-note-indent="8"]{margin-inline-start:256px}
 .en-preview{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:10px}
 .en-preview>header{min-height:24px;gap:12px;font-size:13px;line-height:20px}
 .en-preview>header strong{font-weight:600}

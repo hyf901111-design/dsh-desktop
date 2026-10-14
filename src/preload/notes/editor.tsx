@@ -22,6 +22,7 @@ import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../.
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
 import {useNoteDragAndDrop} from './drag-and-drop'
 import {useNoteReplyInsertion} from './reply-insertion'
+import {withNoteIndentSpecs,changeNoteIndent} from './paragraph-indent'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -105,7 +106,7 @@ function FileBlock({block}:any){
   </section>
 }
 const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''}},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload}>笔记文件</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!}:undefined})()
-const schema = BlockNoteSchema.create({ blockSpecs: { ...defaultBlockSpecs, research: researchSpec,attachment:fileSpec } })
+const schema = BlockNoteSchema.create({ blockSpecs: { ...withNoteIndentSpecs(defaultBlockSpecs), research: researchSpec,attachment:fileSpec } })
 function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }) {
   const editor = useCreateBlockNote({ dictionary: zh })
   useEffect(() => { editor.replaceBlocks(editor.document, editor.tryParseMarkdownToBlocks(markdown)) }, [editor, markdown])
@@ -130,7 +131,7 @@ function BlockMenu(props: any) {
     {open ? createPortal(<div ref={menu} className="en-block-menu" role="menu" style={{...position,visibility:position?'visible':'hidden'}}><div className="en-block-types">{[['正文', 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} title={String(label)} aria-label={String(label)} onClick={() => change(String(type), level ? { level } : {})}>{type==='paragraph'?<NoteMenuIcon kind="paragraph"/>:label}</button>)}</div>
       <div className="en-block-formats">{([['无序列表', 'bulletListItem'], ['有序列表', 'numberedListItem'], ['待办列表', 'checkListItem'], ['代码块', 'codeBlock'], ['引用', 'quote'], ['分隔线', 'divider']] as const).map(([label, type]) => <button role="menuitem" key={type} title={label} aria-label={label} onClick={() => change(type)}><NoteMenuIcon kind={type}/></button>)}</div>
       <hr /><div className="en-block-types en-block-align">{[['左对齐', 'left'], ['居中', 'center'], ['右对齐', 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => change(block.type, { textAlignment })}><NoteMenuIcon kind={String(textAlignment)}/>{label}</button>)}</div>
-      <button onClick={() => { editor.setTextCursorPosition(block, 'start'); editor.nestBlock(); setOpen(false) }}><NoteMenuIcon kind="indent"/>增加缩进</button><button onClick={() => { editor.setTextCursorPosition(block, 'start'); editor.unnestBlock(); setOpen(false) }}><NoteMenuIcon kind="outdent"/>减少缩进</button><hr />
+      <button onClick={() => { changeNoteIndent(editor,block.id,1); setOpen(false) }}><NoteMenuIcon kind="indent"/>增加缩进</button><button onClick={() => { changeNoteIndent(editor,block.id,-1); setOpen(false) }}><NoteMenuIcon kind="outdent"/>减少缩进</button><hr />
       <button onClick={duplicate}><NoteMenuIcon kind="copy"/>复制段落</button><button onClick={() => { editor.insertBlocks([{ type: 'paragraph' }], block, 'after'); setOpen(false) }}><NoteMenuIcon kind="add"/>在下方添加</button><button className="en-danger" onClick={() => { editor.removeBlocks([block]); setOpen(false) }}><NoteMenuIcon kind="delete"/>删除段落</button>
     </div>,document.body) : null}</div>
 }
