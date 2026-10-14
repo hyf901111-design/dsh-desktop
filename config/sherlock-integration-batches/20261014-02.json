@@ -97,6 +97,84 @@
           "旧PPT外侧手柄fixture原先要求控件越过readerclip，已改为命中笔记外侧手柄；拖动结果及内部对象编辑断言保留"
         ],
         "generatedAt": "2026-10-14T13:42:09.107Z"
+      },
+      "merged": {
+        "mergeCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
+        "verificationCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
+            "completedAt": "2026-10-14T14:17:02.953Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/notes-component-layout.test.js",
+              "test/notes-component-import-interaction.test.js",
+              "test/notes-native-components.test.js",
+              "test/notes-component-interaction.test.tsx",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/notes-component-layout.test.js test/notes-component-import-interaction.test.js test/notes-native-components.test.js test/notes-component-interaction.test.tsx --maxWorkers=1",
+            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
+            "completedAt": "2026-10-14T14:17:02.953Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node_modules/.bin/vitest",
+              "run",
+              "test/pptx-direct-editor.test.ts",
+              "test/pptx-editor-ui.test.ts",
+              "test/pptx-scroll-viewport.test.js",
+              "test/pptx-selection-viewport.test.js",
+              "test/pptx-resize-settle.test.js",
+              "test/pptx-stable-refresh.test.ts",
+              "test/sherlock-office-preview-adapter.test.ts",
+              "test/bundled-plugin-profile.test.ts",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node_modules/.bin/vitest run test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-scroll-viewport.test.js test/pptx-selection-viewport.test.js test/pptx-resize-settle.test.js test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/bundled-plugin-profile.test.ts --maxWorkers=1",
+            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
+            "completedAt": "2026-10-14T14:17:02.953Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
+            "completedAt": "2026-10-14T14:17:02.953Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ffa1c1eb440608d29e67e3f28a43cbce3ac1fcb8",
+            "completedAt": "2026-10-14T14:17:02.953Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-14T14:17:02.953Z"
       }
     },
     {
