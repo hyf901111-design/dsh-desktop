@@ -11,29 +11,21 @@
         "schemaVersion": 1,
         "featureName": "右侧栏与研究组件PPTX画面直接编辑",
         "branch": "codex/feat/ppt-content-edit-20261013",
-        "baseCommit": "a5debf114f8b11afea3e917049ce09fb1257e967",
-        "tipCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
+        "baseCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
+        "tipCommit": "ab751df406ca92e7a26bd51f8041e94a1fc166e3",
         "commits": [
           {
-            "commit": "f1807f657cf965ed59144526e7f791898f9c22b9",
+            "commit": "ab751df406ca92e7a26bd51f8041e94a1fc166e3",
             "parents": [
-              "a5debf114f8b11afea3e917049ce09fb1257e967"
+              "f1807f657cf965ed59144526e7f791898f9c22b9"
             ],
-            "subject": "修复PPT编辑失焦闪白并保留刷新期间的画面与当前位置"
+            "subject": "优化：PPT字体选择与旋转光标并修复失焦底部闪白"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/pptx-content-editing.md"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/pptx-direct-editor.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/pptx-editor-ui.d.mts"
           },
           {
             "status": "M",
@@ -45,10 +37,18 @@
           },
           {
             "status": "M",
+            "path": "src/main/pptx/scene.ts"
+          },
+          {
+            "status": "M",
             "path": "test/pptx-editor-ui.test.ts"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "test/pptx-scene.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/pptx-stable-refresh.test.ts"
           }
         ],
@@ -69,9 +69,9 @@
               "test/pptx-stable-refresh.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10个直接相关PPT测试文件141项通过",
-            "verifiedCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
-            "completedAt": "2026-10-14T00:15:56.021216+00:00",
+            "summary": "10个直接相关PPT测试文件145项通过",
+            "verifiedCommit": "ab751df406ca92e7a26bd51f8041e94a1fc166e3",
+            "completedAt": "2026-10-14T00:52:53.856650+00:00",
             "timeoutMs": 120000
           },
           {
@@ -83,8 +83,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript检查通过",
-            "verifiedCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
-            "completedAt": "2026-10-14T00:15:56.021216+00:00",
+            "verifiedCommit": "ab751df406ca92e7a26bd51f8041e94a1fc166e3",
+            "completedAt": "2026-10-14T00:52:53.856650+00:00",
             "timeoutMs": 120000
           },
           {
@@ -92,18 +92,18 @@
               "git",
               "diff",
               "--check",
-              "a5debf114f8b11afea3e917049ce09fb1257e967..HEAD"
+              "f1807f657cf965ed59144526e7f791898f9c22b9..HEAD"
             ],
             "outcome": "passed",
             "summary": "完整功能差异格式检查通过",
-            "verifiedCommit": "f1807f657cf965ed59144526e7f791898f9c22b9",
-            "completedAt": "2026-10-14T00:15:56.021216+00:00",
+            "verifiedCommit": "ab751df406ca92e7a26bd51f8041e94a1fc166e3",
+            "completedAt": "2026-10-14T00:52:53.856650+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际Office页面逐RAF复现编辑字号后继续输入并失焦，旧实现出现1个空白帧；修复后右侧/研究同路径为0。46页模板第22页图表刷新0空白帧、当前位置相同、无隐藏stage残留。独立复核及失败/过期/卸载/邻页/媒体/滚动回归通过；当前增量待重建原生客户端验收。"
+          "summary": "真实Office独立右侧及研究预览验证字体下拉、中文字体回显、自动保存文件、快捷键撤销；真实renderer改写自身position时隐藏shell仍保持绝对定位，RAF blankFrames和flowFrames均0。原生客户端待本次集成构建核验。"
         },
         "acceptanceCriteria": [
           "右侧栏与研究PPT组件均去除固定controls操作行",
@@ -115,65 +115,17 @@
           "文字撤销失焦后连续重做保存仍进入最近操作的PPT，多个编辑器互不误保存",
           "无预览编辑切换，文字图形格式图表修改自动保存",
           "自动保存保留原始基线与撤销重做；切源写回原文件；明确弃稿取消旧任务",
-          "释放焦点及必要重绘时保留旧画面直到新页和异步媒体完成，刷新中继续滚动保持最新位置"
+          "释放焦点及必要重绘时保留旧画面直到新页和异步媒体完成，刷新中继续滚动保持最新位置",
+          "旋转锚点悬停显示圆形旋转箭头鼠标样式",
+          "文字与表格浮动格式工具栏提供原文档字体及常用中英文字体下拉，选择自动保存且快捷键撤销同步回显",
+          "失焦必要刷新使用独立隐藏容器，不撑动右侧底部空白区和滚动布局"
         ],
         "risks": [
           "本次重新构建后仍需用户在共享客户端验收",
           "对象缩放、格式、图表或撤销操作仍保留必要的渲染以维护布局及富文本样式",
           "仅编辑现有对象及系列，不新增幻灯片或对象，不编辑SmartArt与动画"
         ],
-        "generatedAt": "2026-10-14T00:15:56.021216+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f164c405abbf227efa90164e63934191b0f101ca",
-        "verificationCommit": "f164c405abbf227efa90164e63934191b0f101ca",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts",
-            "verifiedCommit": "f164c405abbf227efa90164e63934191b0f101ca",
-            "completedAt": "2026-10-14T00:16:38.456Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "f164c405abbf227efa90164e63934191b0f101ca",
-            "completedAt": "2026-10-14T00:16:38.456Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "f164c405abbf227efa90164e63934191b0f101ca",
-            "completedAt": "2026-10-14T00:16:38.456Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-14T00:16:38.456Z"
+        "generatedAt": "2026-10-14T00:52:53.856650+00:00"
       }
     }
   ],
