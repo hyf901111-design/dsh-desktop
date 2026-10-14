@@ -9,27 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复多页PPT编辑预览全量挂载与组件内部滚动失效",
+        "featureName": "优化多页PPT内部滚动并裁剪离屏编辑浮层",
         "branch": "codex/feat/pptx-large-scroll-20261014",
-        "baseCommit": "8335358b660be227f2fc148b439cf014a12936af",
-        "tipCommit": "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903",
+        "baseCommit": "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903",
+        "tipCommit": "22ba905a4f74f984ddf006459cdb2a9143d4a21b",
         "commits": [
           {
-            "commit": "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903",
+            "commit": "22ba905a4f74f984ddf006459cdb2a9143d4a21b",
             "parents": [
-              "8335358b660be227f2fc148b439cf014a12936af"
+              "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903"
             ],
-            "subject": "优化：暂停离屏PPT预加载并在返回视口时恢复内容"
+            "subject": "修复PPT选择浮层随滚动隐藏和裁剪并保留选中状态"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/pptx-resize-settle.mjs"
+            "path": "scripts/lib/pptx-direct-editor.mjs"
           },
           {
             "status": "M",
-            "path": "test/pptx-scroll-viewport.test.js"
+            "path": "scripts/lib/pptx-editor-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-direct-editor.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-editor-ui.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/pptx-selection-viewport.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-office-preview-adapter.test.ts"
           }
         ],
         "checks": [
@@ -37,22 +53,19 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
+              "test/pptx-selection-viewport.test.js",
               "test/pptx-direct-editor.test.ts",
               "test/pptx-editor-ui.test.ts",
-              "test/pptx-chart-composition.test.ts",
-              "test/pptx-stable-refresh.test.ts",
               "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts",
-              "test/pptx-scroll-viewport.test.js"
+              "test/pptx-stable-refresh.test.ts",
+              "test/pptx-scroll-viewport.test.js",
+              "test/pptx-chart-composition.test.ts",
+              "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "11个直接相关文件157项通过",
-            "verifiedCommit": "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903",
-            "completedAt": "2026-10-14T05:38:43.656868+00:00",
+            "summary": "实现者7文件64项直接相关测试通过，独立只读审查另复核51单元/交互与4真实Notes reader鼠标用例全部通过；最终commit与测试树一致",
+            "verifiedCommit": "22ba905a4f74f984ddf006459cdb2a9143d4a21b",
+            "completedAt": "2026-10-14T07:45:57.779102+00:00",
             "timeoutMs": 120000
           },
           {
@@ -64,8 +77,8 @@
             ],
             "outcome": "passed",
             "summary": "Node项目TypeScript检查通过",
-            "verifiedCommit": "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903",
-            "completedAt": "2026-10-14T05:38:43.656868+00:00",
+            "verifiedCommit": "22ba905a4f74f984ddf006459cdb2a9143d4a21b",
+            "completedAt": "2026-10-14T07:45:57.779102+00:00",
             "timeoutMs": 120000
           },
           {
@@ -73,90 +86,32 @@
               "git",
               "diff",
               "--check",
-              "8335358b660be227f2fc148b439cf014a12936af..HEAD"
+              "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903..HEAD"
             ],
             "outcome": "passed",
-            "summary": "完整修改差异格式检查通过",
-            "verifiedCommit": "b8a4a2b116d1a3d0e69f03bfe1082100f7c73903",
-            "completedAt": "2026-10-14T05:38:43.656868+00:00",
+            "summary": "完整后继提交差异格式检查通过",
+            "verifiedCommit": "22ba905a4f74f984ddf006459cdb2a9143d4a21b",
+            "completedAt": "2026-10-14T07:45:57.779102+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实NotesApp→ResearchAttachmentLocalPreview→ResearchCanvasOfficePreview、只读46页原始ZIP（与当前授权copy SHA一致）和35页ZIP，resize596到686后各8次三页wheel：旧版各8次首frame存在可见空白占位，新版两份均0次；复杂图表页面截图实际显示。360/820浏览器可见首frame测试先RED后GREEN，157直接相关回归通过，独立审查无阻断。833新版原生客户端快速滚动验收仍待统一构建。补离屏边界：显式root IO不能感知root移出笔记窗口，增加root可见性observer和window交集；360/820宽离屏保持7–10页先RED，修改后0页且返回正文恢复GREEN。独立review在Chromium验证6→0→6，无阻断。最新157聚焦、node tsc和diff通过；统一原生包待构建。"
+          "summary": "真实NotesApp→ResearchAttachmentLocalPreview→ResearchCanvasOfficePreview→Office reader/body portals，360/686精确clientWidth真实内部wheel和外层Notes wheel，旧版3场景稳定RED。新版4场景GREEN：半可见选择框裁剪且reader外手柄不可命中，完全离开或窗口化unmount隐藏框和toolbar，返回恢复原selection；仅14px可见时toolbar隐藏，手动位置在可见reader内约束/返回恢复。v1→v2升级与二次patch幂等通过。root已视觉复核686截图，当前64聚焦，独立review55无阻塞；原生新包尚待集成。"
         },
         "acceptanceCriteria": [
-          "多页PPT编辑包装保持有限高度，内部viewport可用鼠标滚动",
-          "按需只挂载附近页，滚动经过的页可直接编辑",
-          "选中文字时内滚不带动笔记外层滚动",
-          "右侧栏、研究组件、笔记嵌入使用共用PPT布局修复",
-          "保留字体格式、拖拽工具栏、撤销重做、自动保存与无闪白更新",
-          "构建包含main最新菜单/尺寸独立提交并保留用户笔记及文件",
-          "用户验收集成测试包后才推进main",
-          "快速跳转三页优先绘制可见内容，邻页分帧加载且不出现秒级白页",
-          "笔记PPT完全离屏后不继续预热，返回时恢复可见内容"
+          "PPT元素完全滚出内部或祖先可见区域时隐藏选择框和工具栏",
+          "半可见选择框与鼠标手柄受实际reader裁剪，工具栏不覆盖Notes正文或标题",
+          "返回视口或窗口化重新挂载后恢复同一对象选择，可继续编辑",
+          "保留工具栏手动位置、字体格式、自动保存、撤销和既有性能优化",
+          "与已交接PPT多页内部滚动及左侧栏宽度修复一起集成",
+          "用户在新包验收后才晋升本地main"
         ],
         "risks": [
-          "单个复杂图表首次渲染仍有计算开销；可见页优先，邻页按帧分摊",
-          "最新b8后继修复尚需统一签名包实际客户端验收",
-          "其他会话欢迎态和外侧尺寸手柄需要同步到最终包"
+          "新增浮层行为需要统一原生Electron包验收",
+          "已存量v1补丁改为v2，由标准安装链重新patch，不绕过插件源指纹"
         ],
-        "generatedAt": "2026-10-14T05:38:43.656868+00:00"
-      },
-      "merged": {
-        "mergeCommit": "190cc0b6786ad701619ddce373b582d180ffb129",
-        "verificationCommit": "190cc0b6786ad701619ddce373b582d180ffb129",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/pptx-chart-composition.test.ts",
-              "test/pptx-stable-refresh.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts",
-              "test/pptx-scroll-viewport.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
-            "verifiedCommit": "190cc0b6786ad701619ddce373b582d180ffb129",
-            "completedAt": "2026-10-14T05:39:26.389Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "190cc0b6786ad701619ddce373b582d180ffb129",
-            "completedAt": "2026-10-14T05:39:26.389Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "190cc0b6786ad701619ddce373b582d180ffb129",
-            "completedAt": "2026-10-14T05:39:26.389Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-14T05:39:26.389Z"
+        "generatedAt": "2026-10-14T07:45:57.779102+00:00"
       }
     },
     {
