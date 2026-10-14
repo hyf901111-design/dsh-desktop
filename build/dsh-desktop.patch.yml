@@ -47,6 +47,9 @@
     - id: ework-integration-runtime
       name: dsh-integration-runtime
 
+    - id: ework-memory-runtime
+      name: dsh-memory-runtime
+
 # dsh-market normally offers to restart its own Node process after mutations.
 # The desktop shell has the real lifecycle authority, so keep that behavior off
 # whenever the optional plugin is present in the composed profile.

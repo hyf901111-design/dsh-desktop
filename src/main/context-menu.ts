@@ -82,6 +82,13 @@ export function installContextMenu(
       }
     })
 
+    if(params.selectionText?.trim()&&params.selectionText.length<=600) {
+      if(template.length)template.push({type:'separator'})
+      template.push({label:locale()==='zh'?'记住选中内容':'Remember Selection',click:()=>{
+        if(!window.isDestroyed())window.webContents.send('memory:save-selection',{content:params.selectionText,sessionId:elementCandidates.sessionId})
+      }})
+    }
+
     if (template.length === 0 || window.isDestroyed()) return
     Menu.buildFromTemplate(template).popup({ window })
   })

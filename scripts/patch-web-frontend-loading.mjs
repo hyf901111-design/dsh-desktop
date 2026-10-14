@@ -1,3 +1,4 @@
+import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
 import { patchNotesComposer } from './lib/notes-composer.mjs'
@@ -251,7 +252,7 @@ writeFileSync(conversationPath, patchResearchGridWorkbench(patchCalendarToolClie
 
 // Bind the owned note surface to the real native session after other patches.
 const notesConversationPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(notesConversationPath, patchNoteSessionClient(patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8')))))
+writeFileSync(notesConversationPath, patchMemorySourceAnchors(patchNoteSessionClient(patchNotesComposer(patchNotesClient(readFileSync(notesConversationPath, 'utf8'))))))
 const notesRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
 writeFileSync(notesRuntimePath, patchNoteSessionRuntime(readFileSync(notesRuntimePath, 'utf8')))
 const modeClientPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js')

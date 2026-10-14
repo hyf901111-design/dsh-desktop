@@ -324,6 +324,7 @@ describe('bundled Sherlock plugin profile', () => {
     expect(policy.bundles).not.toContain('@vectorize-io/hindsight-coding-agents')
     expect(policy.runtimePackages).toEqual([
       'dsh-integration-runtime',
+      'dsh-memory-runtime',
       'dsh-desktop-market-installer',
       'dsh-fund-research-runtime',
       'dsh-research-task-runtime',

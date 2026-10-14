@@ -18,6 +18,8 @@ export interface HarnessRuntimeOptions {
   bundledFundResearchEntry?: string
   bundledIntegrationEntry?: string
   integrationEndpoint?: {url:string;token:string}
+  bundledMemoryEntry?: string
+  memoryEndpoint?: {url:string;token:string}
   localSearchUrl: string
   accountEndpoint?: { url: string; token: string }
   localSearchToken: string
@@ -218,6 +220,8 @@ export class HarnessRuntime {
           process.platform,
           { ...process.env, SHERLOCK_ACCOUNT_BRIDGE: this.options.accountEndpoint ? JSON.stringify(this.options.accountEndpoint) : undefined,
             EWORK_INTEGRATION_BRIDGE:this.options.integrationEndpoint?JSON.stringify(this.options.integrationEndpoint):undefined,
+            EWORK_MEMORY_BRIDGE:this.options.memoryEndpoint?JSON.stringify(this.options.memoryEndpoint):undefined,
+            DSH_DESKTOP_MEMORY_ENTRY:this.options.bundledMemoryEntry,
             DSH_DESKTOP_INTEGRATION_ENTRY:this.options.bundledIntegrationEntry },
           this.options.bundledSkillDirectory,
           this.options.bundledWebSearchEntry,
