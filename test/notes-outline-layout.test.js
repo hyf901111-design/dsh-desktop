@@ -149,6 +149,25 @@ for(const dark of [false,true])for(const kind of ['snapshot','native','file'])it
  }finally{await context.close()}
 },15000)
 
+for(const dark of [false,true])for(const kind of ['snapshot','native','file'])it(`places usable note resize handles outside the ${kind} frame with research dimensions (${dark?'dark':'light'})`,async()=>{
+ const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js'),{context,page}=await fileFixture(undefined,dark)
+ try{
+  const node=kind==='file'?{id:'outer-file',name:'外侧手柄.pptx',source:'computer',authorizationId:'fixture-grant'}:kind==='native'?{id:'outer-native',title:'外侧手柄行情',noteLibrary:true,containerSpec:financialWidgetDefaults('quote')}:{id:'outer-snapshot',title:'外侧手柄快照',containerSpec:{version:1,type:'html',html:'<p>组件正文</p>'}}
+  await page.evaluate(({node,kind})=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'outer-handle',type:kind==='file'?'attachment':'research',props:{payload:JSON.stringify({...node,noteSize:{height:240}})}}]),{node,kind})
+  const section=page.locator('.en-research');await section.getByRole('button',{name:kind==='file'?'选中文件并操作预览':'选中组件并操作内容',exact:true}).click()
+  for(const narrow of [false,true]){
+   if(narrow)await page.setViewportSize({width:700,height:900})
+   const frame=await section.boundingBox(),width=section.getByRole('separator',{name:'调整组件宽度',exact:true}),height=section.getByRole('separator',{name:'调整组件高度',exact:true}),w=await width.boundingBox(),h=await height.boundingBox()
+   expect(w.x).toBeGreaterThanOrEqual(frame.x+frame.width-1);expect(h.y).toBeGreaterThanOrEqual(frame.y+frame.height-1)
+   expect([w.width,w.height,h.width,h.height]).toEqual([10,36,36,10])
+   for(const handle of [width,height])expect(await handle.evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el})).toBe(true)
+   const before=frame.width;await page.mouse.move(w.x+w.width/2,w.y+w.height/2);await page.mouse.down();await page.mouse.move(w.x+w.width/2-32,w.y+w.height/2,{steps:4});await page.mouse.up()
+   expect(Math.round((await section.boundingBox()).width)).toBe(Math.max(Math.min(320,before),Math.round(before)-32))
+   const b=await height.boundingBox(),beforeHeight=await height.getAttribute('aria-valuenow');await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2,b.y+b.height/2+24,{steps:4});await page.mouse.up();expect(await height.getAttribute('aria-valuenow')).toBe(String(Number(beforeHeight)+24))
+  }
+ }finally{await context.close()}
+},15000)
+
 for(const kind of ['snapshot','native','file'])it(`resizes a selected ${kind} note component, saves one gesture per undo step and retains sizes on reopen`,async()=>{
  const {financialWidgetDefaults}=await import('../packages/dsh-research-task-runtime/financial-widget-contract.js')
  const node=kind==='file'?{id:'size-file',name:'尺寸验收.pdf',source:'computer',authorizationId:'fixture-grant'}:kind==='native'?{id:'size-native',title:'尺寸验收自选股',noteLibrary:true,height:520,containerSpec:financialWidgetDefaults('watchlist')}:{id:'size-snapshot',title:'尺寸验收快照',height:480,containerSpec:{version:1,type:'html',html:'<button>组件内容</button>'}}
