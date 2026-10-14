@@ -11,15 +11,22 @@
         "schemaVersion": 1,
         "featureName": "修复多页PPT编辑预览全量挂载与组件内部滚动失效",
         "branch": "codex/feat/pptx-large-scroll-20261014",
-        "baseCommit": "171f37c3f179e4ee713835cee82e1c8883a4012f",
-        "tipCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+        "baseCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+        "tipCommit": "f00b7eaff1872bc9cedc95b33c9c2df39ec92259",
         "commits": [
           {
-            "commit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
+            "commit": "8e9a8da2f38183a3dc136da08154973c3ac80779",
             "parents": [
-              "171f37c3f179e4ee713835cee82e1c8883a4012f"
+              "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e"
             ],
-            "subject": "修复：限制PPT编辑预览高度并恢复多页按需渲染和内部滚动"
+            "subject": "修复：重新打开PPT组件时续接有效保存基线并保留撤销历史"
+          },
+          {
+            "commit": "f00b7eaff1872bc9cedc95b33c9c2df39ec92259",
+            "parents": [
+              "8e9a8da2f38183a3dc136da08154973c3ac80779"
+            ],
+            "subject": "修复：复用相同PPT文件基线避免重复打开淘汰撤销记录"
           }
         ],
         "files": [
@@ -28,8 +35,16 @@
             "path": "scripts/lib/pptx-editor-ui.mjs"
           },
           {
-            "status": "A",
-            "path": "test/pptx-scroll-viewport.test.js"
+            "status": "M",
+            "path": "src/main/pptx/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-editor-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-service.test.ts"
           }
         ],
         "checks": [
@@ -50,9 +65,9 @@
               "test/pptx-scroll-viewport.test.js"
             ],
             "outcome": "passed",
-            "summary": "11个直接相关文件154项通过",
-            "verifiedCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
-            "completedAt": "2026-10-14T03:19:52.385809+00:00",
+            "summary": "11个直接相关文件157项通过",
+            "verifiedCommit": "f00b7eaff1872bc9cedc95b33c9c2df39ec92259",
+            "completedAt": "2026-10-14T03:52:43.776193+00:00",
             "timeoutMs": 120000
           },
           {
@@ -64,8 +79,8 @@
             ],
             "outcome": "passed",
             "summary": "Node项目TypeScript检查通过",
-            "verifiedCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
-            "completedAt": "2026-10-14T03:19:52.385809+00:00",
+            "verifiedCommit": "f00b7eaff1872bc9cedc95b33c9c2df39ec92259",
+            "completedAt": "2026-10-14T03:52:43.776193+00:00",
             "timeoutMs": 120000
           },
           {
@@ -73,18 +88,18 @@
               "git",
               "diff",
               "--check",
-              "171f37c3f179e4ee713835cee82e1c8883a4012f..HEAD"
+              "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e..HEAD"
             ],
             "outcome": "passed",
             "summary": "完整修改差异格式检查通过",
-            "verifiedCommit": "a38521b2a6e94a0c5b262cccbd2136ba7f2b096e",
-            "completedAt": "2026-10-14T03:19:52.385809+00:00",
+            "verifiedCommit": "f00b7eaff1872bc9cedc95b33c9c2df39ec92259",
+            "completedAt": "2026-10-14T03:52:43.776193+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium窄360/宽820布局回归先RED，520px视口被撑至7367/15905；修后视口有限且选中文本时mouse.wheel内滚、外层不滚。两份最新用户PPT只读A/B原35/46页全挂载、896/921段、无内滚；修后仅邻近4页、63/140段，预览ready约0.7-0.9秒。诊断JSON与CPUprofile在/tmp/ework-pptx-large-20261014，原生客户端待统一构建验收。独立只读复核无阻塞项。"
+          "summary": "edb6987316原生包35页note选中组件及选中文字时内部wheel、外层固定；46页右侧文字选择和内滚到后续图表页通过，动作状态约1-2秒，无分钟级挂死。补查重开后expired保存basis，未累计保存的cached draft续接fresh token；service相同路径/版本/bytes去重避免反复open耗尽32项缓存，保留累计Undo。新UI回归先RED后GREEN，service真实保存后40次open再Undo精确原ZIP先RED后GREEN，独立复核无阻塞。最终统一包原生自动保存待验证。"
         },
         "acceptanceCriteria": [
           "多页PPT编辑包装保持有限高度，内部viewport可用鼠标滚动",
@@ -96,64 +111,11 @@
           "用户验收集成测试包后才推进main"
         ],
         "risks": [
-          "隔离A/B已确认布局和内滚根因；真实原生CPU卡顿仍需重建后验证",
-          "测试页使用缓存的Chromium运行时，可通过SHERLOCK_TEST_PLAYWRIGHT/SHERLOCK_TEST_CHROMIUM设置环境"
+          "32项/128MiB跨不同文件基线缓存上限保持既有策略",
+          "真实研究画布当前仅总结卡，未恢复用户移除的PPT；shared adapter及browser regression覆盖共用修复",
+          "新缓存补丁原生自动保存仍需最终包验证"
         ],
-        "generatedAt": "2026-10-14T03:19:52.385809+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
-        "verificationCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
-        "checks": [
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/pptx-content.test.ts",
-              "test/pptx-service.test.ts",
-              "test/pptx-scene.test.ts",
-              "test/pptx-direct-editor.test.ts",
-              "test/pptx-editor-ui.test.ts",
-              "test/pptx-chart-composition.test.ts",
-              "test/pptx-stable-refresh.test.ts",
-              "test/sherlock-office-preview-adapter.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/research-file-preview.test.ts",
-              "test/pptx-scroll-viewport.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
-            "verifiedCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
-            "completedAt": "2026-10-14T03:25:45.138Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/tsc",
-              "--noEmit",
-              "-p",
-              "tsconfig.node.json"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
-            "verifiedCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
-            "completedAt": "2026-10-14T03:25:45.138Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c7dd11930f75e6cc3a37b55c29dac1b0366c60aa",
-            "completedAt": "2026-10-14T03:25:45.138Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-14T03:25:45.138Z"
+        "generatedAt": "2026-10-14T03:52:43.776193+00:00"
       }
     }
   ],
