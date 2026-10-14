@@ -85,6 +85,26 @@ it('moves a portalled file header as one component without importing its preview
  }finally{await context.close()}
 },15000)
 
+it('repeatedly moves an actual file header with the mouse while keeping its preview out of the note',async()=>{
+ const node={id:'repeat-header-file',name:'重复拖动.pptx',source:'computer',authorizationId:'fixture-grant',noteSize:{width:420,height:180}},blocks=[{id:'before-header',type:'paragraph',content:'组件前段。'},{id:'repeat-header',type:'attachment',props:{payload:JSON.stringify(node)}},{id:'after-header',type:'paragraph',content:'组件后段。'}]
+ const {context,page}=await fileFixture();try{
+  await page.evaluate(blocks=>window.noteEditor.replaceBlocks(window.noteEditor.document,blocks),blocks)
+  await page.locator('.en-file-header .ew-grid-title').waitFor()
+  expect(await page.locator('.en-file-header').evaluate(header=>header.draggable)).toBe(true)
+  await page.evaluate(()=>{window.headerDragPayloads=[];window.addEventListener('dragstart',event=>window.headerDragPayloads.push({html:event.dataTransfer.getData('text/html'),token:event.dataTransfer.getData('application/x-ework-note-component')}),true)})
+  for(const placement of ['after','before','after']){
+   const target=page.locator('[data-id="after-header"] .bn-inline-content'),box=await target.boundingBox()
+   await page.locator('.en-file-header .ew-grid-title').dragTo(target,{targetPosition:{x:20,y:placement==='before'?1:box.height-1}})
+   expect(await page.evaluate(()=>window.noteEditor.document.map(block=>block.id))).toEqual(placement==='after'?['before-header','after-header','repeat-header']:['before-header','repeat-header','after-header'])
+   expect(await page.evaluate(()=>window.noteEditor.getBlock('repeat-header').props.payload)).toBe(blocks[1].props.payload)
+  }
+  expect(await page.evaluate(()=>window.headerDragPayloads.length)).toBe(3)
+  expect(await page.evaluate(()=>window.headerDragPayloads.every(value=>value.html===''&&value.token))).toBe(true)
+  await page.locator('.bn-editor').focus();await page.keyboard.press('ControlOrMeta+z')
+  expect(await page.evaluate(()=>window.noteEditor.document.map(block=>block.id))).toEqual(['before-header','repeat-header','after-header'])
+ }finally{await context.close()}
+},15000)
+
 for(const target of ['reader','header','guard','text'])it(`admits one file once when dropped on the ${target} of a portalled note component`,async()=>{
  const {context,page}=await fileFixture();try{
   await dropNoteFiles(page,['existing.txt']);await expect.poll(()=>page.evaluate(()=>Object.keys(window.resolveNoteFiles).length)).toBe(1);await page.evaluate(()=>Object.values(window.resolveNoteFiles)[0]());await page.locator('.en-file-native-reader').waitFor()

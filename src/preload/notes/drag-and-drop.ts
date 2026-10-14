@@ -12,11 +12,14 @@ export function useNoteDragAndDrop(options:Options){
   if(!root||!view)return
   const contains=(event:Event)=>root.contains(event.target as Node)
   const componentDrag=(event:DragEvent)=>event.dataTransfer?.types.includes(COMPONENT_DRAG_TYPE)
+  let headerControl=false
+  const down=(event:PointerEvent)=>{const target=event.target as Element;headerControl=contains(event)&&!!target.closest?.('.en-research-header,.en-file-header')&&!!target.closest('button,input,textarea,select,a,[role=separator]')}
   const start=(event:DragEvent)=>{
    const {editor,readOnly,sessionId,clientId}=current.current
    if(readOnly||!contains(event)||!event.dataTransfer)return
    const target=event.target as Element
-   if(!target.closest?.('.en-research-header,.en-file-header')||target.closest('button,input,textarea,select,a,[role=separator]'))return
+   if(!target.closest?.('.en-research-header,.en-file-header'))return
+   if(headerControl||target.closest('button,input,textarea,select,a,[role=separator]')){event.preventDefault();event.stopPropagation();return}
    const outer=target.closest<HTMLElement>('.bn-block-outer[data-id]'),block=outer&&editor.getBlock(outer.dataset.id)
    if(!block||!['research','attachment'].includes(block.type))return
    // Serialize the block identity, never the resident preview's DOM.
@@ -44,7 +47,7 @@ export function useNoteDragAndDrop(options:Options){
     undo?.stopCapturing();editor.transact(()=>{editor.removeBlocks([block.id]);editor.insertBlocks([block],reference,placement)});undo?.stopCapturing()
    }catch{return}
   }
-  view.addEventListener('dragstart',start,true);view.addEventListener('dragover',over,true);view.addEventListener('drop',drop,true)
-  return()=>{view.removeEventListener('dragstart',start,true);view.removeEventListener('dragover',over,true);view.removeEventListener('drop',drop,true)}
+  view.addEventListener('pointerdown',down,true);view.addEventListener('dragstart',start,true);view.addEventListener('dragover',over,true);view.addEventListener('drop',drop,true)
+  return()=>{view.removeEventListener('pointerdown',down,true);view.removeEventListener('dragstart',start,true);view.removeEventListener('dragover',over,true);view.removeEventListener('drop',drop,true)}
  },[options.editor,options.root])
 }
