@@ -176,7 +176,34 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
   }
 }
 
-const marker = '/* sherlock:pptx-resize-settle:v6 */'
+/** XML in the renderer belongs to one parsed PPTX document and is read-only.
+ * Draft edits and source reloads parse a fresh document, so element identity is
+ * the cache boundary. Weak keys release the old document after viewer teardown.
+ */
+export function createPptxXmlLookupCache() {
+  const elements = new WeakMap()
+  return (element, kind, name, load) => {
+    if (!element) return load()
+    let entry = elements.get(element)
+    if (!entry) elements.set(element, entry = {attribute: new Map(), child: new Map()})
+    const values = entry[kind]
+    if (!values.has(name)) values.set(name, load())
+    return values.get(name)
+  }
+}
+/** The chart host has no padding; client dimensions match ECharts' size input. */
+export function observePptxChartResize(chart, element, instances) {
+  const observer = new ResizeObserver(() => {
+    if (!element.isConnected) {
+      observer.disconnect()
+      if (!chart.isDisposed()) chart.dispose()
+      instances?.delete(chart)
+    } else if (!chart.isDisposed() && (element.clientWidth !== chart.getWidth() || element.clientHeight !== chart.getHeight())) chart.resize()
+  })
+  observer.observe(element)
+  return observer
+}
+const marker = '/* sherlock:pptx-resize-settle:v7 */'
 const fontFit = 'gt = N.style.overflowY, Qt = () => {'
 const guardedFontFit = fontFit + '\nif (n.signal?.aborted) return;'
 const categorySource = '\n\t\t\t\ttickLblPos: o,'
@@ -190,9 +217,22 @@ const replacement = 'this.resizeRafId = null, schedulePptxResize(this);'
 const teardown = 'teardownAdaptiveResize() {'
 const cleanup = 'teardownAdaptiveResize() { cancelPptxResize(this);'
 const mount = 'mountListSlide(n, e, o, s, i) {'
-const scaledMount = mount + '\n({ scale: o, displayWidth: s, displayHeight: i } = this.getDisplayMetrics());'
+const legacyScaledMount = mount + '\n({ scale: o, displayWidth: s, displayHeight: i } = this.getDisplayMetrics());'
+const scaledMount = mount + '\nif (!this.presentation || e.dataset.mounted === "1") return;\n({ scale: o, displayWidth: s, displayHeight: i } = this.getDisplayMetrics());'
 const unmount = 'unmountListSlide(n, e, o) {'
-const scaledUnmount = unmount + '\no = this.getDisplayMetrics().displayHeight;'
+const legacyScaledUnmount = unmount + '\no = this.getDisplayMetrics().displayHeight;'
+const scaledUnmount = unmount + '\nif (e.dataset.mounted !== "1") return;\no = this.getDisplayMetrics().displayHeight;'
+// Imported PPT pages are static; every chart must draw all points on first paint.
+const chartSetup = 'const o = init(t);'
+const staticChartSetup = 'n.animation = false;\n' + chartSetup
+const chartResize = 'const s = new ResizeObserver(() => {\n\t\t\t\t\tt.isConnected ? o.resize() : (s.disconnect(), o.isDisposed() || o.dispose(), e?.delete(o));\n\t\t\t\t});\n\t\t\t\ts.observe(t);'
+const observedChartResize = 'observePptxChartResize(o, t, e);'
+const xmlClass = 've = class ve {'
+const cachedXmlClass = 'const sherlockPptxXmlLookup = createPptxXmlLookupCache();\n' + xmlClass
+const xmlAttribute = 'attr(n) {'
+const cachedXmlAttribute = 'attr(n) { return sherlockPptxXmlLookup(this.el, "attribute", n, () => this.sherlockUncachedAttr(n)); }\nsherlockUncachedAttr(n) {'
+const xmlChild = 'child(n) {'
+const cachedXmlChild = 'child(n) { return sherlockPptxXmlLookup(this.el, "child", n, () => this.sherlockUncachedChild(n)); }\nsherlockUncachedChild(n) {'
 export function stripPptxResizePatch(source) {
   const start = source.indexOf('/* sherlock:pptx-resize-settle:v')
   if (start < 0) return source
@@ -202,6 +242,9 @@ export function stripPptxResizePatch(source) {
   return (source.slice(0, start) + source.slice(end + endMarker.length + 1))
     .replace(replacement, original).replace(cleanup, teardown)
     .replace(scaledMount, mount).replace(scaledUnmount, unmount)
+    .replace(legacyScaledMount, mount).replace(legacyScaledUnmount, unmount)
+    .replace(cachedXmlClass, xmlClass).replace(cachedXmlAttribute, xmlAttribute).replace(cachedXmlChild, xmlChild)
+    .replace(observedChartResize, chartResize).replace(staticChartSetup, chartSetup)
     .replace(windowReplacement, windowOriginal)
     .replace(guardedFontFit, fontFit).replace(categorySourceExtended, categorySource)
     .replace(configuredCategoryAxis, categoryAxis)
@@ -209,13 +252,15 @@ export function stripPptxResizePatch(source) {
 export function patchPptxResize(source) {
   if (source.includes(marker)) return source
   source = stripPptxResizePatch(source)
-  for (const anchor of [original, teardown, mount, unmount, windowOriginal, fontFit, categorySource, categoryAxis]) {
+  for (const anchor of [original, teardown, mount, unmount, windowOriginal, fontFit, categorySource, categoryAxis, xmlClass, xmlAttribute, xmlChild, chartResize, chartSetup]) {
     if (source.split(anchor).length !== 2) throw Error('PPT resize anchors drifted')
   }
-  return marker + '\n' + cancelPptxResize.toString() + '\n' + schedulePptxResize.toString() + '\n' + configurePptxCategoryAxis.toString() + '\n' + createPptxScrollWindow.toString() + '\n/* sherlock:pptx-resize-settle:end */\n' + source
+  return marker + '\n' + cancelPptxResize.toString() + '\n' + schedulePptxResize.toString() + '\n' + configurePptxCategoryAxis.toString() + '\n' + createPptxScrollWindow.toString() + '\n' + createPptxXmlLookupCache.toString() + '\n' + observePptxChartResize.toString() + '\n/* sherlock:pptx-resize-settle:end */\n' + source
     .replace(original, replacement).replace(teardown, cleanup)
     .replace(mount, scaledMount).replace(unmount, scaledUnmount)
     .replace(windowOriginal, windowReplacement)
     .replace(fontFit, guardedFontFit).replace(categorySource, categorySourceExtended)
     .replace(categoryAxis, configuredCategoryAxis)
+    .replace(xmlClass, cachedXmlClass).replace(xmlAttribute, cachedXmlAttribute).replace(xmlChild, cachedXmlChild)
+    .replace(chartResize, observedChartResize).replace(chartSetup, staticChartSetup)
 }

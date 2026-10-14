@@ -68,9 +68,9 @@ export function attachPptxDirectEditor(host,options){
   for(const button of overlay.children){button.style.width=(button.dataset.pptxHandle==='move'?36:8)/sx+'px';button.style.height=(button.dataset.pptxHandle==='move'?16:8)/sy+'px';if(button.dataset.pptxHandle==='move'){button.style.top=-18/sy+'px';button.style.fontSize=12/sy+'px';button.style.lineHeight='1';}if(button.dataset.pptxHandle==='rotate')button.style.top=-28/sy+'px'}
  }
  const select=element=>{selected=element;selectedId=element&&model(element)?.id;updatePosition();options.select?.(currentNode());return currentNode()}
- const refresh=()=>{
+ const refresh=(paragraphs=host.querySelectorAll('[data-pptx-paragraph]'))=>{
   if(destroyed)return
-  for(const paragraph of host.querySelectorAll('[data-pptx-paragraph]')){if(paragraph.closest('[data-pptx-staging]'))continue;const field=fieldFor(paragraph);if(!field)continue;for(const[name,value]of[['contenteditable',String(enabled)],['role','textbox'],['aria-label',field.label],['spellcheck','false'],['data-pptx-field-id',field.id]])if(paragraph.getAttribute(name)!==String(value))paragraph.setAttribute(name,String(value));paragraph.style.cursor=enabled?'text':'';paragraph.style.minHeight='1em';paragraph.querySelectorAll('[data-pptx-bullet]').forEach(b=>{if(b.getAttribute('contenteditable')!=='false')b.contentEditable='false'});const value=options.getEntry()?.values[field.id];if(doc.activeElement!==paragraph&&value!==undefined&&textOf(paragraph)!==value)setText(paragraph,value);formatText(paragraph,field)}
+  for(const paragraph of paragraphs){if(!host.contains(paragraph)||paragraph.closest('[data-pptx-staging]'))continue;const field=fieldFor(paragraph);if(!field)continue;for(const[name,value]of[['contenteditable',String(enabled)],['role','textbox'],['aria-label',field.label],['spellcheck','false'],['data-pptx-field-id',field.id]])if(paragraph.getAttribute(name)!==String(value))paragraph.setAttribute(name,String(value));paragraph.style.cursor=enabled?'text':'';paragraph.style.minHeight='1em';paragraph.querySelectorAll('[data-pptx-bullet]').forEach(b=>{if(b.getAttribute('contenteditable')!=='false')b.contentEditable='false'});const value=options.getEntry()?.values[field.id];if(doc.activeElement!==paragraph&&value!==undefined&&textOf(paragraph)!==value)setText(paragraph,value);formatText(paragraph,field)}
   updatePosition()
  }
  const down=event=>{if(!enabled||event.button!==0)return;const element=identity(event.target);if(!element||!host.contains(element)||!model(element))return;event.stopPropagation();select(element);if(!event.target.closest('[data-pptx-field-id]')){event.preventDefault();element.tabIndex=-1;element.focus({preventScroll:true})}}
@@ -98,7 +98,16 @@ export function attachPptxDirectEditor(host,options){
  const clearSelection=()=>{if(host.contains(doc.activeElement))doc.activeElement?.blur?.();select(null)}
  const outside=event=>{if(!selectedId||gesture||overlay.contains(event.target)||options.isToolTarget?.(event.target))return;const element=identity(event.target);if(element&&host.contains(element))return;clearSelection()}
  doc.addEventListener('pointerdown',outside,true)
- const observer=new win.MutationObserver(()=>refresh());observer.observe(host,{childList:true,subtree:true})
+ // ECharts canvas and image descendants do not change paragraph identities.
+ // Annotate only added/replaced text; still update retained selection on removal.
+ const observer=new win.MutationObserver(records=>{
+  const paragraphs=new Set()
+  for(const record of records){
+   const paragraph=record.target.closest?.('[data-pptx-paragraph]');if(paragraph)paragraphs.add(paragraph)
+   for(const node of record.addedNodes){if(node.nodeType!==1)continue;if(node.matches('[data-pptx-paragraph]'))paragraphs.add(node);node.querySelectorAll('[data-pptx-paragraph]').forEach(p=>paragraphs.add(p))}
+  }
+  refresh(paragraphs)
+ });observer.observe(host,{childList:true,subtree:true})
  const resize=win.ResizeObserver?new win.ResizeObserver(updatePosition):null;resize?.observe(host)
  const handlers=[['pointerdown',down],['input',input],['focusin',focus],['focusout',blur],['paste',paste],['keydown',keys],['dblclick',double],['compositionstart',()=>{composing=true}],['compositionend',event=>{composing=false;input(event)}]]
  handlers.forEach(([name,fn])=>host.addEventListener(name,fn,true));overlay.addEventListener('pointerdown',start);doc.addEventListener('pointermove',move,true);doc.addEventListener('pointerup',end,true);doc.addEventListener('pointercancel',end,true);doc.addEventListener('scroll',updatePosition,true);win.addEventListener('resize',updatePosition)

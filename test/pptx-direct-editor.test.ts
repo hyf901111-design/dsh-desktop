@@ -155,3 +155,32 @@ it('keeps object movement visible without replacing the slide and clears selecti
   expect(v.selected).toBeNull();expect(v.host.querySelector('[data-pptx-node-id="2"]')).toBe(object)
  }finally{v.controller.destroy()}
 })
+
+
+it('annotates only changed paragraphs when chart children change and restores virtualized selection immediately',async()=>{
+ let position:any
+ const v=setup({position:(value:any)=>{position=value}})
+ try{
+  await v.win.happyDOM.whenAsyncComplete()
+  const paragraph=v.host.querySelector('[data-pptx-field-id="text"]')! as any,node=paragraph.closest('[data-pptx-node-id]')
+  node.getBoundingClientRect=()=>new v.win.DOMRect(100,100,100,60)
+  v.controller.selectId(v.entry.document.slides[0].nodes[0].id)
+  const original=paragraph.getAttribute.bind(paragraph);let reads=0
+  paragraph.getAttribute=(name:string)=>{reads++;return original(name)}
+  v.host.querySelector('[data-pptx-node-id="4"]')!.append(v.win.document.createElement('canvas'))
+  await v.win.happyDOM.whenAsyncComplete()
+  expect(reads).toBe(0)
+  const cell=v.host.querySelector('td [data-pptx-paragraph]')!.cloneNode(true) as any
+  cell.removeAttribute('contenteditable');cell.removeAttribute('data-pptx-field-id')
+  v.host.querySelector('td')!.replaceChildren(cell)
+  await v.win.happyDOM.whenAsyncComplete()
+  expect(cell.getAttribute('contenteditable')).toBe('true');expect(cell.getAttribute('data-pptx-field-id')).toBe('cell')
+  expect(reads).toBe(0)
+  v.entry.values.text='新段落';paragraph.innerHTML='<span>新段落</span>'
+  await v.win.happyDOM.whenAsyncComplete();expect(paragraph.textContent).toBe('新段落')
+  expect(position).toMatchObject({left:100,top:100})
+  node.remove();await v.win.happyDOM.whenAsyncComplete();expect(position).toBeNull()
+  v.host.append(node);await v.win.happyDOM.whenAsyncComplete();expect(position).toMatchObject({left:100,top:100})
+  expect(v.selected.id).toBe(v.entry.document.slides[0].nodes[0].id)
+ }finally{v.controller.destroy();await v.win.happyDOM.abort()}
+})
