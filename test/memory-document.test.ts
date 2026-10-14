@@ -24,3 +24,9 @@ it('rejects mismatched owner and symbolic links without overwriting original fil
  expect(()=>doc.write('a',[],[],'empty')).toThrow(/符号链接|读取/)
  expect(await readFile(doc.location('b').file,'utf8')).toContain('# 记忆')
 })
+it('roundtrips legacy multiline titles and neutralizes project heading structure',async()=>{
+ const {MemoryDocument}=await import('../src/main/memory/document');const root=await mkdtemp(join(tmpdir(),'memory-document-'));roots.push(root);const doc=new MemoryDocument(root)
+ const rows=[{id:'one',revision:1,title:'第一行\n第二行',content:'真实正文',kind:'background' as const,scope:'project' as const,projectId:'p',status:'active' as const,pinned:false}]
+ doc.write('a',rows,[{id:'p',name:'项目\n## 手动补充',aliases:[],createdAt:0}],'signature')
+ expect(doc.read('a')!.entries).toEqual(rows)
+})

@@ -12,7 +12,7 @@ import type {
 type Snapshot = MemorySnapshot & {
   document: { directory: string; file: string; error?: string }
   summary: {
-    state: 'empty' | 'pending' | 'ready' | 'failed'
+    state: 'empty' | 'waiting' | 'pending' | 'ready' | 'failed'
     text: string
     updatedAt?: number
     model?: string

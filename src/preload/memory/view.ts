@@ -303,7 +303,11 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       )
     else {
       const state =
-        value.state === 'pending'
+        value.state === 'waiting'
+          ? data.settings.use && data.settings.auto
+            ? '完成一次对话后，将自动生成记忆概括。'
+            : '记忆已关闭，开启后将自动生成概括。'
+          : value.state === 'pending'
           ? value.text
             ? '正在更新概括，以下为上次内容。'
             : '正在生成概括…'
