@@ -3,7 +3,7 @@
   "batchId": "20261014-01",
   "branch": "codex/integration/20261014-01",
   "baseMainCommit": "e5d6d278e1002051eeffeaf5e022fbabd36c3a03",
-  "expectedMainCommit": "a8f22f0de90b9ff23c737a8a7255ffa6dbf85b04",
+  "expectedMainCommit": "f322be187f23e861f40074ad87fb887495027060",
   "createdAt": "2026-10-14T03:20:20.565Z",
   "features": [
     {
@@ -1244,6 +1244,134 @@
         }
       ],
       "recordedAt": "2026-10-14T06:56:26.761Z"
+    },
+    {
+      "previousMainCommit": "a8f22f0de90b9ff23c737a8a7255ffa6dbf85b04",
+      "mainCommit": "f322be187f23e861f40074ad87fb887495027060",
+      "mergeCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+      "verificationCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+      "checks": [
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/pptx-content.test.ts",
+            "test/pptx-service.test.ts",
+            "test/pptx-scene.test.ts",
+            "test/pptx-direct-editor.test.ts",
+            "test/pptx-editor-ui.test.ts",
+            "test/pptx-chart-composition.test.ts",
+            "test/pptx-stable-refresh.test.ts",
+            "test/sherlock-office-preview-adapter.test.ts",
+            "test/pptx-resize-settle.test.js",
+            "test/research-file-preview.test.ts",
+            "test/pptx-scroll-viewport.test.js"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/pptx-content.test.ts test/pptx-service.test.ts test/pptx-scene.test.ts test/pptx-direct-editor.test.ts test/pptx-editor-ui.test.ts test/pptx-chart-composition.test.ts test/pptx-stable-refresh.test.ts test/sherlock-office-preview-adapter.test.ts test/pptx-resize-settle.test.js test/research-file-preview.test.ts test/pptx-scroll-viewport.test.js",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/tsc",
+            "--noEmit",
+            "-p",
+            "tsconfig.node.json"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/tsc --noEmit -p tsconfig.node.json",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：git diff --check",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "npm",
+            "test",
+            "--",
+            "test/figma-final-shell-patch.test.ts",
+            "test/figma-sidebar-overlay.test.ts",
+            "test/research-sidebar-policy.test.ts",
+            "test/figma-scrollbars.test.ts",
+            "test/figma-resize-feedback.test.ts"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：npm test -- test/figma-final-shell-patch.test.ts test/figma-sidebar-overlay.test.ts test/research-sidebar-policy.test.ts test/figma-scrollbars.test.ts test/figma-resize-feedback.test.ts",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "node",
+            "scripts/verify-left-sidebar-resize.mjs"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：node scripts/verify-left-sidebar-resize.mjs",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "git",
+            "diff",
+            "--check",
+            "47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：git diff --check 47e5268541c3cfd3d43da7ddccf88502b0d4d697..HEAD",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "npx",
+            "vitest",
+            "run",
+            "test/memory-service.test.ts",
+            "test/memory-bridge.test.ts",
+            "test/memory-runtime.test.js",
+            "test/memory-view.test.ts",
+            "test/memory-import.test.ts",
+            "test/memory-search.test.ts",
+            "test/memory-source.test.ts"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：npx vitest run test/memory-service.test.ts test/memory-bridge.test.ts test/memory-runtime.test.js test/memory-view.test.ts test/memory-import.test.ts test/memory-search.test.ts test/memory-source.test.ts",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        },
+        {
+          "argv": [
+            "npm",
+            "run",
+            "typecheck"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：npm run typecheck",
+          "verifiedCommit": "e3d52bed8f523d482d413798e6f16fb583af1e1d",
+          "completedAt": "2026-10-14T08:14:10.730Z",
+          "timeoutMs": 120000
+        }
+      ],
+      "recordedAt": "2026-10-14T08:14:10.730Z"
     }
   ]
 }
