@@ -16,6 +16,7 @@ import { SuggestionPanel } from './suggestion-panel'
 import { NoteMenuIcon } from './menu-icon'
 import { NativeComponentBlock } from './native-component-block'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
+import {useNoteComponentInteraction} from './component-interaction'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
@@ -27,11 +28,6 @@ const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: bo
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
 const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.map(b => noteText(b.content) || (b.type === 'research' ? '[研究组件]' : '')).join('\n\n')
 
-function useComponentInteraction(){
- const root=useRef<HTMLElement>(null),[selected,setSelected]=useState(false)
- useEffect(()=>{const outside=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))setSelected(false)},escape=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelected(false)};document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape)}},[])
- return {root,selected,select:()=>setSelected(true)}
-}
 function AiRewriteButton({onRewrite}:{onRewrite():void}){
  const editor:any=useBlockNoteEditor(),valid=useEditorState({editor,selector:({editor}:any)=>editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection)})
  return valid?<button className="en-ai-format" aria-label="AI 改写" onMouseDown={e=>e.preventDefault()} onClick={onRewrite}><NoteMenuIcon kind="sparkles"/><span>AI 改写</span></button>:null
@@ -41,7 +37,7 @@ function ResearchBlock({block}:any){
  return node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
 }
 function ResearchSnapshotBlock({ block }: any) {
-  const interaction=useComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
+  const interaction=useNoteComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
   const context = useContext(Context)!, [html, setHtml] = useState(''), [error, setError] = useState('')
   const node = useMemo(() => { try { return JSON.parse(block.props.payload) } catch { return {} } }, [block.props.payload])
   const [height, setHeight] = useState(Number.isFinite(node.height)?Math.max(120,node.height-80):320), frame = useRef<HTMLIFrameElement>(null), intrinsic=useRef(false)
@@ -68,7 +64,7 @@ function ResearchSnapshotBlock({ block }: any) {
 }
 const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' } }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload}>研究组件</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')! } : undefined })()
 function FileBlock({block}:any){
-  const interaction=useComponentInteraction()
+  const interaction=useNoteComponentInteraction()
   const context=useContext(Context)!,host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),[height,setHeight]=useState(520),[bound,setBound]=useState<string>(),[fileError,setFileError]=useState('')
   const node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:'上次文件导入已中断，请重新拖入文件。'}:value}catch{return {id:block.id,name:'文件',importStatus:'failed',error:'文件记录暂不可用。'} as NoteFileNode}},[block.props.payload])
   const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height})

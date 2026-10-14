@@ -2,18 +2,14 @@ import React, {useEffect, useRef, useState} from 'react'
 import {financialWidgetSpec} from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {NoteMenuIcon} from './menu-icon'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
+import {useNoteComponentInteraction} from './component-interaction'
 
 /** Native research components are portalled here by the resident conversation renderer. */
 export function NativeComponentBlock({block,node,context}:any){
- const host=useRef<HTMLDivElement>(null),root=useRef<HTMLElement>(null),instance=useRef(crypto.randomUUID())
- const [selected,setSelected]=useState(false),[ready,setReady]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0),[busy,setBusy]=useState(false)
+ const host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),interaction=useNoteComponentInteraction(),{root,selected}=interaction
+ const [ready,setReady]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0),[busy,setBusy]=useState(false)
  const [height,setHeight]=useState(Math.max(160,Math.min(2400,(node.height||362)-42)))
  const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height}),renderKey=JSON.stringify({...node,noteSize:undefined})
- useEffect(()=>{
-  const outside=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))setSelected(false)},escape=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelected(false)}
-  document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape)
-  return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape)}
- },[])
  useEffect(()=>{
   let attempts=0,live=true,timer:ReturnType<typeof setTimeout>|undefined;setReady(false);setError('')
   const publish=()=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,hostId:host.current?.id,headerId:instance.current+'-title',sessionId:context.sessionId,node,dark:context.dark,refresh}}))
@@ -53,7 +49,7 @@ export function NativeComponentBlock({block,node,context}:any){
  }
  return <section className="en-research en-native-component" ref={root} style={size.style} contentEditable={false} data-note-research-block={block.id} data-research-node-id={node.id} data-selected={selected||undefined} data-resizing={size.resizing||undefined} data-financial-theme={context.dark?'dark':'light'}>
   <header className="en-research-header"><button className="en-component-refresh" aria-label="刷新组件" disabled={!ready||busy} onClick={reload}><NoteMenuIcon kind="refresh"/></button><div className="en-native-component-title" id={instance.current+'-title'}><strong>{node.title}</strong></div><button className="en-component-close" aria-label="移除笔记中的组件" disabled={!context.editor?.isEditable} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button></header>
-  <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{error||'正在读取组件…'}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={()=>setSelected(true)}/>:null}</div>
+  <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{error||'正在读取组件…'}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={interaction.select}/>:null}</div>
   {error&&ready?<div className="en-component-error" role="alert">{error}</div>:null}
   {selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
  </section>
