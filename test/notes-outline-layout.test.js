@@ -307,10 +307,10 @@ it('centers the empty outline and formatting toolbar and uses legible comment an
   expect(await page.locator('.bn-panel').evaluate(el=>getComputedStyle(el).borderColor)).toBe('rgb(72, 72, 72)');expect(await page.locator('.bn-panel input').evaluate(el=>getComputedStyle(el).borderColor)).toBe('rgb(72, 72, 72)');expect(await page.locator('.bn-panel button[type=submit]').evaluate(el=>el.getBoundingClientRect().height)).toBe(30)
  }finally{await context.close()}
 },15000)
-it('fits a full-document suggestion to its content without a resize handle or a fixed empty body',async()=>{
+it('fits a full-document suggestion to its content before the top resize handle is used',async()=>{
  const {context,page}=await fileFixture();try{
   await page.locator('#native-input').fill('精简正文');await page.locator('#native-send').click();await page.locator('.en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion({kind:'text',markdown:'简短的正文。'}));await page.locator('.en-composer-area .en-preview').waitFor()
-  expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(0)
+  expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(1)
   expect(await page.locator('.en-composer-area .en-preview').evaluate(el=>el.getBoundingClientRect().height)).toBeLessThan(180)
  }finally{await context.close()}
 },15000)
@@ -341,7 +341,7 @@ it('shows clarification in the shared conversation and leaves the note empty wit
   await page.route('http://127.0.0.1/notes-outline-fixture',route=>route.fulfill({contentType:'text/html',body:'<body><section class="en-root" style="left:10px;right:340px"><div class="en-editor-host"></div></section><aside style="position:fixed;right:10px;bottom:20px;width:320px"><textarea id="native-input"></textarea><button id="native-command">命令测试接口</button><button id="native-send">发送测试接口</button></aside></body>'}));await page.goto('http://127.0.0.1/notes-outline-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor()
   await page.locator('#native-input').fill('写一篇文章');await page.locator('#native-send').click();await page.locator('.en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion({kind:'conversation',markdown:'你想写什么主题？大约多少字？'}))
   await page.locator('#native-activity').getByText('你想写什么主题？大约多少字？',{exact:true}).waitFor({timeout:2000})
-  expect(await page.locator('.en-preview,.en-ai-loading').count()).toBe(0);expect(await page.getByRole('button',{name:'插入到下方',exact:true}).count()).toBe(0)
+  expect(await page.locator('.en-preview,.en-ai-loading').count()).toBe(0);expect(await page.getByRole('button',{name:'添加至正文',exact:true}).count()).toBe(0)
   expect(await page.locator('.en-document .bn-editor').textContent()).not.toContain('你想写什么主题')
   expect(await page.evaluate(()=>window.noteTasks.at(-1).phase)).toBe('replied')
   expect(await page.locator('#native-activity .en-task-result').count()).toBe(0)
@@ -435,7 +435,7 @@ for (const dark of [false, true]) for (const width of [1380, 900]) it(`outline a
     const previewLayout=await page.locator('.en-preview').evaluate(el=>({title:el.querySelector('header strong').getBoundingClientRect().x,text:el.querySelector('.bn-inline-content').getBoundingClientRect().x,actions:[...el.querySelectorAll('footer button')].map(button=>button.getBoundingClientRect().height)}))
     expect(Math.abs(previewLayout.title-previewLayout.text)).toBeLessThanOrEqual(1);expect(Math.max(...previewLayout.actions)).toBeLessThanOrEqual(32)
     expect(await page.locator('.en-composer-area .en-preview').count()).toBe(0)
-    expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(0);expect(await page.locator('.en-preview').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toContain('rgba');
+    expect(await page.getByRole('separator',{name:'调整建议面板高度'}).count()).toBe(1);expect(await page.locator('.en-preview').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toContain('rgba');
     await page.getByRole('button',{name:'替换所选',exact:true}).click()
     await expect.poll(()=>page.locator('.en-document .bn-editor').textContent()).toContain('改写后的验收句子。')
     expect(await page.locator('.en-document .bn-editor').textContent()).not.toContain('目录展开时正文保持原位。')
@@ -456,7 +456,7 @@ it('keeps a visible suggestion and protects new text when its selected paragraph
   await page.evaluate(()=>{const editor=document.querySelector('.en-document .bn-editor');editor.focus();const range=document.createRange();range.selectNodeContents(editor);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);document.dispatchEvent(new Event('selectionchange'));editor.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));const data=new DataTransfer();data.setData('text/html','<p>编辑期间的新正文。</p>');editor.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}))});await page.getByText('编辑期间的新正文。',{exact:true}).waitFor();await page.locator('.en-composer-area .en-ai-loading').waitFor();
   await page.evaluate(()=>window.resolveNoteSuggestion());await page.locator('.en-composer-area .en-preview').waitFor();expect(await page.getByRole('button',{name:'替换所选',exact:true}).count()).toBe(0);expect(await page.getByText('编辑期间的新正文。',{exact:true}).count()).toBe(1);
   const resize=page.getByRole('separator',{name:'调整建议面板高度'}),initialHeight=await page.locator('.en-preview-content').evaluate(el=>el.clientHeight);await resize.focus();await page.keyboard.press('ArrowUp');expect(await page.locator('.en-preview-content').evaluate(el=>el.clientHeight)).toBe(initialHeight+32);const handle=await resize.boundingBox();await page.mouse.move(handle.x+handle.width/2,handle.y+10);await page.mouse.down();await page.mouse.move(handle.x+handle.width/2,handle.y-50);await page.mouse.up();expect(await page.locator('.en-preview-content').evaluate(el=>el.clientHeight)).toBe(initialHeight+92);
-  await page.getByRole('button',{name:'重新撰写',exact:true}).click();await page.locator('.en-composer-area .en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion());await page.locator('.en-composer-area .en-preview').waitFor();expect(await page.getByRole('button',{name:'替换所选',exact:true}).count()).toBe(0);await page.getByRole('button',{name:'插入到下方',exact:true}).click();await page.locator('.en-document').getByText('改写后的验收句子。',{exact:true}).waitFor();expect(await page.getByText('编辑期间的新正文。',{exact:true}).count()).toBe(1);expect(await page.locator('.en-preview').count()).toBe(0);expect(await page.getByText(/正文已变化/).count()).toBe(0)
+  await page.getByRole('button',{name:'重新撰写',exact:true}).click();await page.locator('.en-composer-area .en-ai-loading').waitFor();await page.evaluate(()=>window.resolveNoteSuggestion());await page.locator('.en-composer-area .en-preview').waitFor();expect(await page.getByRole('button',{name:'替换所选',exact:true}).count()).toBe(0);await page.getByRole('button',{name:'添加至正文',exact:true}).click();await page.locator('.en-document').getByText('改写后的验收句子。',{exact:true}).waitFor();expect(await page.getByText('编辑期间的新正文。',{exact:true}).count()).toBe(1);expect(await page.locator('.en-preview').count()).toBe(0);expect(await page.getByText(/正文已变化/).count()).toBe(0)
  }finally{await context.close()}
 },15000)
 
