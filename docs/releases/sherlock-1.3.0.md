@@ -43,4 +43,27 @@
 - Harness 后台、Windows 客户端和独立金融工作台实验继续排除。
 - 同步 GitHub `awake-ai-lab/sherlock-desktop` 的 `hyf` 和 `main`，不推送版本标签。
 
-发布证据目录：`/tmp/ework-release-1.3.0-20261014`。发布结果将在验证后补充。
+发布证据目录：`/tmp/ework-release-1.3.0-20261014`。
+
+## 发布结果
+
+- 正式构建提交：`08405581ecfc33964c2026bbfb83daf9b5e8a3c1`。版本日志自 2026-10-14 起整理；发布验证完成于北京时间 2026-10-15 00:31:11。
+- 发布聚焦测试 13 个文件、88 项通过，类型检查与生产构建通过；集成时直接受影响的笔记和 PPT 检查已通过。未运行全功能测试。
+- 标准 App 与 DMG 的 Developer ID 签名、兼容桥旧证书指定要求、内嵌 App 标识及 Squirrel/ShipIt、Mantle、ReactiveObjC 运行依赖均验证通过。两套 ZIP 完整性、DMG CRC、9 项关键构建源码一致性验证通过。
+- 明确跳过 Apple 公证、stapling 和 Gatekeeper 公证验收。标准 feed 路径中的 `notarized` 仅为既有更新通道名称。
+- 两条公开更新源均为 1.3.0，包含完整 27 条中文和 27 条英文更新说明；两个公开 blockmap 与本地构建相同。五个资源 HEAD/长度/缓存及 15 次首段、中段、末段 Range/206 字节抽样通过。
+- 标准通道差分（1.2.2 → 1.3.0）：784 次单段 Range/206 请求，传输 174016587 字节，复用 353326202 字节（67.00%），合成 ZIP SHA-512 与签名产物完全一致。
+- 兼容通道差分（1.2.2 → 1.3.0）：749 次单段 Range/206 请求，传输 228531085 字节，复用 353611596 字节（60.74%），合成 ZIP SHA-512 与签名产物完全一致。
+- 差分仅复用已验证的 1.2.2 ZIP 缓存和公开 blockmap；未全量下载安装包，未执行旧客户端安装替换或重启升级测试。
+- 真实正式客户端主界面、原账号与工作区恢复正常；“关于”显示 1.3.0 和全部 27 条中文日志，保留 1.2.2 历史日志。发布后手动检查更新显示“已是最新版本”，客户端保持打开。
+- 按滚动保留策略，仅精确删除 `releases/v1.1.4/` 五个资源并逐项验证 404；保留 1.1.5、1.2.0、1.2.1、1.2.2、1.3.0，1.2.2 的两套 blockmap 仍可访问。
+- GitHub `hyf` 与 `main` 通过原子快进推送同步，本地两个分支一致；不推送标签，不合并上游或已停放实验。
+
+| 资源 | 字节数 | SHA-512 |
+| --- | ---: | --- |
+| 标准 ZIP | 527342789 | `5evqqYtZ0ljdlT4lIsuvgbBZazv10ffjAr2BAbhKHXXn/Jb/QHhakGd4LePMzUs78SsuyjBITW170LhCGXWT3Q==` |
+| 兼容 ZIP | 582142681 | `NcgjZWa+3a7pJyh1tIs0dKqUytc1SGAY880XMA+4pwmb0uqaGm7R329YxjCT/tJ7PPEAeLTpr1FYLFv18M8QGQ==` |
+
+- [稳定 DMG 下载](https://updates.evanarts.com/download/EWork-Odyssey-mac-arm64.dmg)
+- [标准更新源](https://updates.evanarts.com/notarized/latest/latest-mac.yml)
+- [兼容更新源](https://updates.evanarts.com/latest/latest-mac.yml)
