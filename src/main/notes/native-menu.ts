@@ -59,13 +59,13 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
   const maxHeight=limits.height??Infinity,maxWidth=limits.width??Infinity
   // All commands are visible. Short displays add columns rather than a scroll area.
   const columns=(items:NoteMenuState['items'],baseHeight:number,columnWidth:number,parentId?:string)=>{
-    const capacity=Math.max(32,maxHeight-baseHeight),showGroups=!!parentId&&capacity>=56
-    const parts:{html:string;height:number}[]=[{html:'',height:0}],positions=new Map<string,number>();let group=''
+    const capacity=Math.max(32,maxHeight-baseHeight)
+    const parts:{html:string;height:number}[]=[{html:'',height:0}],positions=new Map<string,number>()
     for(const item of items){
-      let heading=showGroups&&item.group!==group?24:0,part=parts.at(-1)!
-      if(part.height&&part.height+heading+32>capacity){part={html:'',height:0};parts.push(part);group='';heading=showGroups&&item.group?24:0}
-      positions.set(item.id,baseHeight-7+part.height+heading)
-      part.html+=(heading?'<h2>'+escapeHtml(item.group)+'</h2>':'')+row(item,false,parentId);part.height+=heading+32;group=item.group
+      let part=parts.at(-1)!
+      if(part.height&&part.height+32>capacity){part={html:'',height:0};parts.push(part)}
+      positions.set(item.id,baseHeight-7+part.height)
+      part.html+=row(item,false,parentId);part.height+=32
     }
     return {html:'<div class="menu-columns" style="grid-template-columns:repeat('+parts.length+',minmax(0,1fr))">'+parts.map(part=>'<div>'+part.html+'</div>').join('')+'</div>',height:baseHeight+Math.max(...parts.map(part=>part.height)),width:Math.min(maxWidth,parts.length*columnWidth),positions}
   }
@@ -76,8 +76,8 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
   root.width=Math.min(maxWidth,Math.max(root.width,basic.length?gridColumns*42+12:0))
   if(!state.items.length)root.height=50
   const rootHtml=`<section class="menu root-menu" style="height:${root.height}px;width:${root.width}px"><div id="items" role="listbox" aria-label="笔记斜杠菜单">${state.items.length?basicHtml+(grid&&rest.length?'<h2>插入</h2>':'')+root.html:'<p class="empty">没有匹配的命令</p>'}</div></section>`
-  const child=parent?columns(parent.children!,46,260,parent.id):undefined,showRoot=!child||root.width+4+child.width<=maxWidth
-  const childHtml=child?`<section class="menu child-menu" style="height:${child.height}px;width:${child.width}px"><div role="listbox" aria-label="组件库"><a class="back" href="ework-note-menu://${ticket}/back/${parent!.id}?revision=${state.revision}">‹ 组件库</a>${child.html}</div></section>`:''
+  const child=parent?columns(parent.children!,14,260,parent.id):undefined,showRoot=!child||root.width+4+child.width<=maxWidth
+  const childHtml=child?`<section class="menu child-menu" style="height:${child.height}px;width:${child.width}px"><div role="listbox" aria-label="组件库">${child.html}</div></section>`:''
   const childTop=showRoot&&child?Math.max(0,Math.min(root.positions.get(parent!.id)||0,maxHeight-child.height)):0
   const html=(showRoot?rootHtml:'')+(child?childHtml.replace('style="height:','style="margin-top:'+childTop+'px;height:'):'')
   return {html,height:Math.max(showRoot?root.height:0,(child?.height||0)+childTop)+MENU_SHADOW_INSET*2,width:(showRoot?root.width:0)+(child?(showRoot?4:0)+child.width:0)+MENU_SHADOW_INSET*2,root:{html:rootHtml,height:root.height+MENU_SHADOW_INSET*2,width:root.width+MENU_SHADOW_INSET*2},...(child?{child:{html:childHtml,height:child.height+MENU_SHADOW_INSET*2,width:child.width+MENU_SHADOW_INSET*2}}:{})}

@@ -59,6 +59,12 @@ it('uses the exact research library SVG geometry for each component while preser
  const quote=noteMenuPresentation(input({items:[{...children[1]!,id:'quote-command'}]}),'ticket')
  expect(quote.html).toContain('M2 4h4v4H3l-1 4M9 4h4v4h-3l-1 4')
 })
+it('shows only component choices in the child pane without a back title or group heading',()=>{
+ const children=['watchlist','quote','custom'].map((icon,index)=>({id:icon,title:icon,icon,subtext:'',badge:'',group:index<2?'内置组件':'自定义组件'})),library={id:'library',title:'组件库',icon:'library',subtext:'',badge:'',group:'',children}
+ const result=noteMenuPresentation(input({items:[library],submenu:{parentId:'library',selectedIndex:0}}),'ticket')
+ expect(result.child!.html).not.toContain('<h2>');expect(result.child!.html).not.toContain('class="back"');expect(result.child!.html).not.toContain('‹ 组件库')
+ expect(result.child!.html.match(/role="option"/g)).toHaveLength(3);expect(result.child!.html).toContain('aria-label="组件库"');expect(result.child!.height).toBe(14+3*32+48)
+})
 it('keeps native clicks from stealing editor focus and accepts only a current selection',async()=>{
  const {parent,menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1)
  await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled())
