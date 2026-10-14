@@ -12,7 +12,7 @@
         "featureName": "防止PPT冷页滚轮先显示白占位并移除过期可见性锁存",
         "branch": "codex/feat/pptx-large-scroll-20261014",
         "baseCommit": "627d85a0c47ecd1df39fb2a582458d7e69e55c2e",
-        "tipCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
+        "tipCommit": "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3",
         "commits": [
           {
             "commit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
@@ -20,6 +20,13 @@
               "627d85a0c47ecd1df39fb2a582458d7e69e55c2e"
             ],
             "subject": "修复PPT冷页滚动白占位并以实时裁剪判断可见性"
+          },
+          {
+            "commit": "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3",
+            "parents": [
+              "89a9d0186efb20b26e9688e09361aed5e3f87a1c"
+            ],
+            "subject": "解除PPT旧编辑层升级回归对构建缓存版本的依赖"
           }
         ],
         "files": [
@@ -38,6 +45,10 @@
           {
             "status": "M",
             "path": "test/pptx-scroll-viewport.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sherlock-office-preview-adapter.test.ts"
           }
         ],
         "checks": [
@@ -54,9 +65,9 @@
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "6文件44项直接相关检查通过；360/820 renderer冷页wheel、旧IO=false、noncancelable burst先RED后GREEN；实际v4→v5升级、二次幂等、固定fingerprint输入还原通过",
-            "verifiedCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
-            "completedAt": "2026-10-14T08:48:51.291380+00:00",
+            "summary": "最终6文件44项直接相关检查通过；旧IO/cold wheel/burst已RED→GREEN，cache无版本假设且legacy-only sentinel升级后移除，固定宿主一致和fingerprint拒绝保留；独立源审查无阻断并另58项编辑Undo通过",
+            "verifiedCommit": "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3",
+            "completedAt": "2026-10-14T09:06:02.817433+00:00",
             "timeoutMs": 120000
           },
           {
@@ -68,8 +79,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
-            "completedAt": "2026-10-14T08:48:51.291380+00:00",
+            "verifiedCommit": "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3",
+            "completedAt": "2026-10-14T09:06:02.817433+00:00",
             "timeoutMs": 120000
           },
           {
@@ -81,14 +92,14 @@
             ],
             "outcome": "passed",
             "summary": "后继完整差异格式检查通过",
-            "verifiedCommit": "89a9d0186efb20b26e9688e09361aed5e3f87a1c",
-            "completedAt": "2026-10-14T08:48:51.291380+00:00",
+            "verifiedCommit": "1f4ba9418896a962e8ba4f4e25c87c4dcaa8ada3",
+            "completedAt": "2026-10-14T09:06:02.817433+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Office renderer在360/820px内冷pixel wheel默认滚动前已具备可见页，后续noncancelable只准备内容并保留默认滚动；旧IO=false时实际可见内容保持。仅附近页挂载，热页/修饰键/横向/line-page/嵌套滚动/staging默认行为保留。独立原生46页用户原稿验收仍待统一新包，不能用headless结果替代。"
+          "summary": "真实Office renderer在360/820px内冷pixel wheel默认滚动前已具备可见页，后续noncancelable只准备内容并保留默认滚动；旧IO=false时实际可见内容保持。仅附近页挂载，热页/修饰键/横向/line-page/嵌套滚动/staging默认行为保留。独立原生46页用户原稿验收仍待统一新包，不能用headless结果替代。 本后继同时修prepared-cache当前版本导致的旧tag假设，显式legacy-tag/sentinel测试保持重建与幂等硬断言。"
         },
         "acceptanceCriteria": [
           "Cold普通垂直pixel wheel移动视口前准备目标可见页",
@@ -102,7 +113,7 @@
           "非pixel、程序滚动保留原有scroll/IO处理路径",
           "原生46页首帧白页与实际交互需要最终同包验证，不对C4旧包计最新通过"
         ],
-        "generatedAt": "2026-10-14T08:48:51.291380+00:00"
+        "generatedAt": "2026-10-14T09:06:02.817433+00:00"
       }
     },
     {
