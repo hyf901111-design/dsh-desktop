@@ -28,8 +28,8 @@ it.each([800, 840, 841])('uses an overlay through 840 px and preserves wider sid
   for (const [i, value] of [win, win.document, win.navigator, true].entries()) Object.defineProperty(globalThis, globals[i]!, { configurable: true, value })
   const bundle = patchFigmaFinalLayout(source)
   const { AppFrame, store } = runInNewContext(
-    ['clampWidth', 'computeColumns', 'CenterColumn', 'DetailsColumn', 'DragHandle', 'AppFrame', 'createLayoutStore'].map(name => extract(bundle, name)).join('\n') + '\n({AppFrame,store:createLayoutStore()})', {
-      react: React, react_jsx_runtime: require('react/jsx-runtime'), window: win,
+    ['clampWidth', 'computeColumns', 'CenterColumn', 'DetailsColumn', 'DragHandle', 'SidebarDragHandle', 'AppFrame', 'createLayoutStore'].map(name => extract(bundle, name)).join('\n') + '\n({AppFrame,store:createLayoutStore()})', {
+      react: React, react_dom: require('react-dom'), react_jsx_runtime: require('react/jsx-runtime'), window: win,
       ResizeObserver: win.ResizeObserver, requestAnimationFrame: win.requestAnimationFrame.bind(win), cancelAnimationFrame: win.cancelAnimationFrame.bind(win),
       COLLAPSED_SIDEBAR_WIDTH: 80, SIDEBAR_AUTO_COLLAPSE: 1024,
       AppFrame_module_css_default: { frame: 'frame', sidebarCol: 'pI_x6G_sidebarCol', centerCol: 'center', detailsCol: 'details', handle: 'handle' },
@@ -85,7 +85,8 @@ it.each([800, 840, 841])('uses an overlay through 840 px and preserves wider sid
     if (width > 840) {
       expect(frame.dataset.odysseySidebarOverlay).toBeUndefined()
       expect(frame.style.gridTemplateColumns).toBe('280px minmax(0, 1fr) 0px')
-      expect(host.querySelector('[data-side="sidebar"]')).not.toBeNull()
+      expect(win.document.body.querySelector('[data-side="sidebar"]')).not.toBeNull()
+      expect(host.querySelector('[data-side="sidebar"]')).toBeNull()
       return
     }
     expect(frame.dataset.odysseySidebarOverlay).toBe('true')

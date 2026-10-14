@@ -49,6 +49,9 @@ body:has(#dsh-desktop-drag-region) .hHd-Xa_root:not(.hHd-Xa_collapsed) > .dsh-si
 .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(255 255 255 / .6); border:0; box-shadow:none; }
 body[data-ds-dark-theme] .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession { background:rgb(39.575 39.575 39.575); }
 .pI_x6G_sidebarCol { background: transparent !important; border: 0; }
+/* The native left handle is a body portal above Notes and overlay scrollbars.
+   Reserve a continuous 12px hit strip while keeping window dragging outside it. */
+.pI_x6G_handle[data-side="sidebar"] { width:12px; margin-left:-6px; z-index:89; pointer-events:auto; -webkit-app-region:no-drag; }
 .pI_x6G_centerCol { margin:10px 10px 10px 0; border-radius:16px; background:var(--odyssey-workspace) !important; isolation:isolate; }
 .wSkVaW_root { background:var(--odyssey-workspace); border-radius:inherit; position:relative; }
 .wSkVaW_header,.wSkVaW_tabs,.wSkVaW_titleRow,.sRp_root,.srb-section,.srb-dialog,.srb-presence,.srb-actions { font-family:var(--odyssey-font-ui); }

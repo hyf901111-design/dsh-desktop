@@ -15,7 +15,12 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
       (port.closest('.sRp_messages') && port.matches('.sRp_messages,.wSkVaW_scrollBody,.Md3f7G_scroll')
         ? port.closest<HTMLElement>('.t8lSSG_panel') : null)
     const shellRect = shell?.getBoundingClientRect()
-    return shellRect?.width ? shellRect.right : port.getBoundingClientRect().right
+    // The sidebar's navigation thumb must remain fully operable beside the
+    // centered 12px width handle. Settings, nested previews and right panels
+    // keep their own existing edge; the collapsed rail has no width handle.
+    const sidebarInset = port.matches('[data-srb-navigation-scroll]') &&
+      shell?.matches('[data-dsh-sidebar-root]') && doc.querySelector('.pI_x6G_handle[data-side="sidebar"]') ? 6 : 0
+    return shellRect?.width ? shellRect.right - sidebarInset : port.getBoundingClientRect().right
   }
   let scheduled = 0, disposed = false, keyboardMode = false
   const refresh = () => {

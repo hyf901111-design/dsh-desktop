@@ -21,8 +21,8 @@ it.each([1023, 1136, 1279, 1280, 1484])('honors the research threshold and manua
   const previous = globals.map(key => Object.getOwnPropertyDescriptor(globalThis, key))
   for (const [i, value] of [win, win.document, win.navigator, true].entries()) Object.defineProperty(globalThis, globals[i]!, { configurable: true, value })
   const { AppFrame, store } = runInNewContext(
-    ['clampWidth', 'computeColumns', 'CenterColumn', 'DetailsColumn', 'DragHandle', 'AppFrame', 'createLayoutStore'].map(extract).join('\n') + '\n({AppFrame,store:createLayoutStore()})', {
-      react: React, react_jsx_runtime: require('react/jsx-runtime'), window: win,
+    ['clampWidth', 'computeColumns', 'CenterColumn', 'DetailsColumn', 'DragHandle', 'SidebarDragHandle', 'AppFrame', 'createLayoutStore'].map(extract).join('\n') + '\n({AppFrame,store:createLayoutStore()})', {
+      react: React, react_dom: require('react-dom'), react_jsx_runtime: require('react/jsx-runtime'), window: win,
       ResizeObserver: win.ResizeObserver, requestAnimationFrame: win.requestAnimationFrame.bind(win), cancelAnimationFrame: win.cancelAnimationFrame.bind(win),
       COLLAPSED_SIDEBAR_WIDTH: 80, SIDEBAR_AUTO_COLLAPSE: 1024,
       AppFrame_module_css_default: { frame: 'frame', sidebarCol: 'pI_x6G_sidebarCol', centerCol: 'center', detailsCol: 'details', handle: 'handle' },
