@@ -34,7 +34,7 @@ export function EWorkNoteFileView({entry,officePreview}){
  return react.createElement(react.Fragment,null,
   react_dom.createPortal(header,entry.header),
   react_dom.createPortal(react.createElement('div',{className:'en-file-native-reader',key:refresh},react.createElement(ResearchAttachmentLocalPreview,{item:entry.node,nodeId:entry.node.id,sessionId:entry.node.previewSessionId,visible:true,officePreview,noteDocument:true,onPageStatus:setPdfStatus})),entry.host,entry.instanceId),
-  menu&&react_dom.createPortal(react.createElement('div',{ref:menuRef,role:'menu','aria-label':'文件组件操作',className:'en-file-menu','data-dark':entry.dark,style:menu},item('修改名称','rename',()=>{setName(entry.node.displayName||entry.node.name);setEditing(true)},entry.readOnly),item('在访达中显示','expand',()=>action('reveal')),item('移除文件','remove',()=>action('remove'),entry.readOnly)),document.body)
+  menu&&react_dom.createPortal(react.createElement('div',{ref:menuRef,role:'menu','aria-label':'文件组件操作',className:'en-file-menu','data-dark':entry.dark,style:menu},item('修改名称','rename',()=>{setName(entry.node.displayName||entry.node.name);setEditing(true)},entry.readOnly),item('在访达中显示','folder',()=>action('reveal')),item('移除文件','remove',()=>action('remove'),entry.readOnly)),document.body)
  )
 }
 export function EWorkNoteFileViews({sessionId,active}){

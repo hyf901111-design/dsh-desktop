@@ -120,7 +120,7 @@ body[data-ds-dark-theme] .en-block-menu{background:#272727;color:var(--odyssey-m
 .en-file-header[data-note-file-rendered]>.en-file-header-fallback{display:none}
 .en-file-host{overflow:hidden}.en-file-native-reader{width:100%;height:100%;min-width:0;min-height:0}
 .en-file-native-reader>[data-research-preview-interactive]{width:100%;height:100%}
-.en-note-file .ew-grid-header{cursor:default;touch-action:auto}.en-note-file .ew-grid-header button:last-child{opacity:.55}.en-note-file .ew-grid-header button:last-child:hover{opacity:1}
+.en-note-file .ew-grid-header{cursor:default;touch-action:auto}.en-note-file .ew-grid-header > button:last-child{opacity:.55}.en-note-file .ew-grid-header > button:last-child:hover{opacity:1}
 .en-file-rename{height:34px;display:flex;align-items:center;padding:0 10px}.en-file-rename input{width:100%;min-width:0;color:var(--grid-text);background:transparent;border:1px solid var(--en-field-border);border-radius:4px;padding:2px 5px;font:12px/20px system-ui}
 .en-file-menu{position:fixed;z-index:180;width:206px;padding:6px;border:1px solid #e7e8eb;border-radius:8px;background:#fff;color:#252525;box-shadow:0 8px 24px #0002;font:13px/20px system-ui}
 .en-file-menu[data-dark=true]{background:#292929;color:#eee;border-color:#444}

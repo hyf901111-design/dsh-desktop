@@ -19,7 +19,7 @@ const nativePresentation=WORKBENCH_PRESENTATION_CSS.replaceAll(':root[data-sherl
 const toolbarIcons=['link','voice'].map(name=>`body [data-ework-toolbar] .odyssey-global-${name}{background:currentColor!important;mask:center/20px 20px no-repeat url("data:image/svg+xml;base64,${readFileSync(new URL('../../build/figma-canvas-icons/tool-'+name+'.svg',import.meta.url)).toString('base64')}")}`).join('\n')
 // Preserve Figma path geometry while giving all workbench glyphs one frame and
 // stroke family. Supplementary glyphs use the same pipeline as reference assets.
-const workbenchIconNames=['refresh','ask','more','close','expand','duplicate','rename','edit','settings','branch','summary','plus','download','link','voice','schedule','data','remove','zoom-in','zoom-out','zoom-reset','library-add']
+const workbenchIconNames=['refresh','ask','more','close','expand','folder','duplicate','rename','edit','settings','branch','summary','plus','download','link','voice','schedule','data','remove','zoom-in','zoom-out','zoom-reset','library-add']
 const workbenchIcons=workbenchIconNames.map(name=>{
   const asset=readFileSync(new URL('../../build/figma-workbench-icons/'+name+'.svg',import.meta.url),'utf8')
   const [,rawWidth,rawHeight]=asset.match(/width="([\d.]+)" height="([\d.]+)"/),width=Number(rawWidth),height=Number(rawHeight)

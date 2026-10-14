@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import {noteMenuDocumentHtml,noteMenuPresentation} from '../src/main/notes/native-menu'
+import {noteMenuDocumentHtml,noteMenuPresentation,noteMenuPointerScript} from '../src/main/notes/native-menu'
 vi.mock('electron',()=>({BrowserWindow:class{},screen:{}}))
 
 let browser, script, css
@@ -355,6 +355,24 @@ it('places the component-library submenu beside its hovered row rather than the 
  }finally{await context.close()}
 },15000)
 
+it('shows pointer hover in inactive panes, hits nested SVGs and clears feedback when the cursor leaves',async()=>{
+ const context=await browser.newContext(),page=await context.newPage();try{
+  const state={sessionId:'s',menuId:'m',revision:1,dark:false,selectedIndex:0,anchor:{x:0,y:0,width:0,height:20},items:['image','video','library'].map(icon=>({id:icon,title:icon,icon,subtext:'',group:'',badge:'',...(icon==='library'?{children:[{id:'watchlist',title:'自选股',icon:'watchlist',subtext:'',group:'',badge:''}]}:{})}))}
+  const result=noteMenuPresentation(state,'ticket');await page.setViewportSize({width:result.width,height:result.height});await page.setContent(noteMenuDocumentHtml);await page.evaluate(html=>document.querySelector('main').innerHTML=html,result.root.html)
+  for(const dark of [false,true]){
+   await page.evaluate(dark=>document.body.className=dark?'dark':'',dark)
+   for(const icon of ['video','library']){
+    const box=await page.locator('a[aria-label='+icon+'] svg').boundingBox(),hit=await page.evaluate(noteMenuPointerScript(box.x+box.width/2,box.y+box.height/2))
+    expect(hit.href).toContain(icon==='library'?'/open/library':'/select/video');expect(hit.submenu).toBe(icon==='library')
+    expect(await page.locator('a[aria-label='+icon+']').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+    expect(await page.locator('[data-pointer-hover]').count()).toBe(1)
+   }
+   expect(await page.evaluate(noteMenuPointerScript(-1,-1))).toBeNull();expect(await page.locator('[data-pointer-hover]').count()).toBe(0)
+   expect(await page.locator('a[aria-label=video]').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+  }
+ }finally{await context.close()}
+},15000)
+
 for(const dark of [false,true])it(`uses the shared file component header at the document edges and aligns its side controls (${dark?'dark':'light'})`,async()=>{
  const {context,page}=await fileFixture(undefined,dark);try{
   await page.locator('.en-document .bn-editor').click();await page.keyboard.type('文件组件前的正文。');await dropNoteFiles(page,['aligned.pdf'])
@@ -365,7 +383,7 @@ for(const dark of [false,true])it(`uses the shared file component header at the 
   expect(await page.locator('.en-note-file>footer').count()).toBe(0)
   await page.mouse.move(rects.file.left+20,rects.file.top+10);await page.getByRole('button',{name:'段落操作',exact:true}).waitFor()
   expect(Math.abs((await page.locator('.en-side').boundingBox()).y-rects.file.top)).toBeLessThanOrEqual(1)
-  await page.getByRole('button',{name:'刷新组件',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.values(window.noteReaderMounts)[0])).toBe(2);await page.getByRole('button',{name:'组件更多操作',exact:true}).click();await page.getByRole('menuitem',{name:'在访达中显示',exact:true}).click()
+  await page.getByRole('button',{name:'刷新组件',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.values(window.noteReaderMounts)[0])).toBe(2);await page.getByRole('button',{name:'组件更多操作',exact:true}).click();expect(await page.getByRole('menuitem',{name:'在访达中显示',exact:true}).locator('.ew-grid-icon-folder').count()).toBe(1);await page.getByRole('menuitem',{name:'在访达中显示',exact:true}).click()
   expect(await page.evaluate(()=>window.noteRequests.some(row=>row.method==='file-reveal'))).toBe(true)
  }finally{await context.close()}
 },15000)

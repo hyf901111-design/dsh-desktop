@@ -84,10 +84,14 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
 }
 export const noteMenuDocumentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>笔记斜杠菜单</title><style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:#fff;--hover:#e7e7e7;--muted:#777;--line:rgba(0,0,0,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.16)}body.dark{color:#eee;--bg:#292929;--hover:#383838;--muted:#aaa;--line:rgba(255,255,255,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.32)}
-main{height:100%;display:flex;align-items:flex-start;gap:4px;padding:24px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);box-shadow:var(--shadow);overflow:hidden;padding:6px 5px}.menu>[role=listbox]{flex:1;min-height:0;overflow:hidden}.menu-columns{display:grid;gap:8px;align-items:start}.library-icon{width:16px;height:16px;color:#667085}body.dark .library-icon{color:#9da5b2}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px;cursor:pointer}a:hover,a[aria-selected=true],a[aria-expanded=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}
+main{height:100%;display:flex;align-items:flex-start;gap:4px;padding:24px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);box-shadow:var(--shadow);overflow:hidden;padding:6px 5px}.menu>[role=listbox]{flex:1;min-height:0;overflow:hidden}.menu-columns{display:grid;gap:8px;align-items:start}.library-icon{width:16px;height:16px;color:#667085}body.dark .library-icon{color:#9da5b2}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px;cursor:pointer}a:hover,a[data-pointer-hover=true],a[aria-selected=true],a[aria-expanded=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}
 </style><main></main>`
 
-type OpenMenu = { input: NoteMenuState; owner: string; ticket: string; parent: BrowserWindow; popup: BrowserWindow; childPopup?:BrowserWindow; childReady?:Promise<unknown>; ready: Promise<unknown>; pending: boolean; updating: boolean; unlisten(): void }
+/** Non-key macOS panels do not reliably deliver pointer moves to Chromium. */
+export function noteMenuPointerScript(x:number,y:number):string {
+  return `(()=>{const a=document.elementFromPoint(${JSON.stringify(x)},${JSON.stringify(y)})?.closest('a');document.querySelectorAll('a[data-pointer-hover]').forEach(item=>{if(item!==a)item.removeAttribute('data-pointer-hover')});if(a)a.setAttribute('data-pointer-hover','true');return a?{href:a.href,submenu:a.hasAttribute('data-submenu')}:null})()`
+}
+type OpenMenu = { input: NoteMenuState; owner: string; ticket: string; parent: BrowserWindow; popup: BrowserWindow; childPopup?:BrowserWindow; childReady?:Promise<unknown>; ready: Promise<unknown>; pending: boolean; updating: boolean; pointerTimer?:ReturnType<typeof setInterval>; pointerPending?:boolean; pointerSignature?:string; pointerPoint?:string; unlisten(): void }
 export class NoteNativeMenu implements NotesNativeMenu {
   private current?: OpenMenu
   private retired = new Set<string>()
@@ -95,7 +99,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
   private createPopup(parent: BrowserWindow): BrowserWindow {
     return new BrowserWindow({ parent, title:'笔记斜杠菜单', width:312, height:98, show:false, frame:false, transparent:true,
       ...(process.platform === 'darwin' ? {type:'panel' as const} : {}),
-      focusable:true, acceptFirstMouse:true, resizable:false, movable:false, minimizable:false, maximizable:false, fullscreenable:false,
+      focusable:false, acceptFirstMouse:true, resizable:false, movable:false, minimizable:false, maximizable:false, fullscreenable:false,
       skipTaskbar:true, hasShadow:false, webPreferences:{partition:'notes-menu',nodeIntegration:false,contextIsolation:true,sandbox:true,devTools:false} })
   }
   private checkBlur(state: OpenMenu): void {
@@ -107,23 +111,56 @@ export class NoteNativeMenu implements NotesNativeMenu {
   private configurePopup(state: OpenMenu, popup: BrowserWindow): Promise<unknown> {
     popup.webContents.setWindowOpenHandler(() => ({action:'deny'}))
     popup.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
-    popup.on('focus', () => { if (this.current === state && !state.parent.isDestroyed()) state.parent.focus() })
+    // Keep the editor key throughout a native click, including IME input.
     popup.on('blur', () => this.checkBlur(state))
     popup.on('closed', () => { if (this.current === state && (popup === state.popup || popup === state.childPopup)) this.dismiss(state) })
     popup.webContents.on('will-navigate', (event, url) => {
       event.preventDefault()
       if (this.current !== state) return
+      this.navigate(state,url)
+    })
+    return popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(noteMenuDocumentHtml))
+  }
+  private navigate(state:OpenMenu,url:string):void {
       try {
         const link = new URL(url), [,action,id] = link.pathname.split('/'), revision = Number(link.searchParams.get('revision')), parentId=link.searchParams.get('parent')||undefined
         if (link.protocol !== 'ework-note-menu:' || link.hostname !== state.ticket || revision !== state.input.revision) return
+        if (this.options.owner() !== state.owner || !this.options.canRead(state.input.sessionId)) { this.close(); return }
         const parentItem=state.input.items.find(item=>item.id===parentId),item=parentId?parentItem?.children?.find(item=>item.id===id):state.input.items.find(item=>item.id===id)
         if(!item||parentId&&state.input.submenu?.parentId!==parentId||!['open','back','select'].includes(action!))return
-        if (this.options.owner() !== state.owner || !this.options.canRead(state.input.sessionId)) { this.close(); return }
         if(action==='open'||action==='back'){if(!item.children?.length||parentId)return}else{if(item.children)return;this.close()}
+        state.parent.focus()
         state.parent.webContents.send('notes:menu-event',{sessionId:state.input.sessionId,owner:state.owner,menuId:state.input.menuId,revision,action,itemId:id,...(parentId?{parentId}:{})})
       } catch { /* Invalid navigation never leaves the isolated menu. */ }
-    })
-    return popup.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(noteMenuDocumentHtml))
+  }
+  private trackPointer(state:OpenMenu):void {
+    state.pointerSignature=undefined
+    if(state.pointerTimer)return
+    const tick=async()=>{
+      if(this.current!==state||state.updating||state.pointerPending||state.parent.isDestroyed())return
+      const input=state.input
+      if(!this.currentInput(state,input)){if(this.current===state)this.close();return}
+      const point=screen.getCursorScreenPoint(),pointKey=point.x+','+point.y,zoom=state.parent.webContents.getZoomFactor()
+      const panes=[state.popup,state.childPopup].filter((pane):pane is BrowserWindow=>!!pane&&!pane.isDestroyed()&&pane.isVisible()).map(pane=>({pane,bounds:pane.getBounds()}))
+      const signature=JSON.stringify([input.revision,point,zoom,panes.map(({bounds})=>bounds)])
+      if(state.pointerSignature===signature)return
+      const moved=state.pointerPoint!==pointKey
+      state.pointerSignature=signature;state.pointerPoint=pointKey;state.pointerPending=true
+      try {
+        for(const {pane,bounds} of panes){
+          const hit=await pane.webContents.executeJavaScript(noteMenuPointerScript((point.x-bounds.x)/zoom,(point.y-bounds.y)/zoom)) as {href:string;submenu:boolean}|null
+          if(!this.currentInput(state,input))return
+          // Keyboard repainting must not close a child under a stationary mouse.
+          if(moved&&pane===state.popup&&typeof hit?.href==='string'){
+            if(hit.submenu&&!input.submenu)this.navigate(state,hit.href)
+            else if(!hit.submenu&&input.submenu)this.navigate(state,`ework-note-menu://${state.ticket}/back/${input.submenu.parentId}?revision=${input.revision}`)
+          }
+        }
+      }catch { /* A dismissed pane may finish its last pointer update. */ }
+      finally {state.pointerPending=false}
+    }
+    state.pointerTimer=setInterval(()=>{void tick()},40)
+    state.pointerTimer.unref?.()
   }
   sync(input: NoteMenuState, owner: string): void {
     validateNoteMenu(input)
@@ -170,8 +207,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
         state.popup.setBounds(bounds)
         state.popup.webContents.setZoomFactor(zoom)
         const parentIndex=input.items.findIndex(item=>item.id===input.submenu?.parentId)
-        const back=input.submenu?`ework-note-menu://${state.ticket}/back/${input.submenu.parentId}?revision=${input.revision}`:''
-        const geometry=await state.popup.webContents.executeJavaScript(`document.body.className=${JSON.stringify(input.dark?'dark':'')};document.querySelector('main').innerHTML=${JSON.stringify(presentation.root.html)};document.querySelectorAll('.root-menu a').forEach(a=>a.onmouseenter=()=>{if(a.hasAttribute('data-submenu')){if(a.getAttribute('aria-expanded')!=='true')location.href=a.href}else if(${JSON.stringify(back)})location.href=${JSON.stringify(back)}});({pane:document.querySelector('.root-menu').getBoundingClientRect().toJSON(),item:document.getElementById('item-root-${parentIndex}')?.getBoundingClientRect().toJSON()});`) as {pane:Electron.Rectangle;item?:Electron.Rectangle}
+        const geometry=await state.popup.webContents.executeJavaScript(`document.body.className=${JSON.stringify(input.dark?'dark':'')};document.querySelector('main').innerHTML=${JSON.stringify(presentation.root.html)};({pane:document.querySelector('.root-menu').getBoundingClientRect().toJSON(),item:document.getElementById('item-root-${parentIndex}')?.getBoundingClientRect().toJSON()});`) as {pane:Electron.Rectangle;item?:Electron.Rectangle}
         if (!this.currentInput(state,input)) { if(this.current===state&&state.input===input)this.close(); continue }
         state.popup.showInactive()
         if (presentation.child && geometry.item) {
@@ -184,6 +220,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
           await child.webContents.executeJavaScript(`document.body.className=${JSON.stringify(input.dark?'dark':'')};document.querySelector('main').innerHTML=${JSON.stringify(presentation.child.html)};`)
           if (this.currentInput(state,input) && !child.isDestroyed()) child.showInactive()
         } else this.closeChild(state)
+        this.trackPointer(state)
       }
     } catch { if (this.current === state) this.dismiss(state) }
     finally { state.updating = false }
@@ -197,7 +234,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
     if (!state || (menuId && menuId !== state.input.menuId)) return
     this.retired.add(state.input.menuId)
     if(this.retired.size>64)this.retired.delete(this.retired.values().next().value!)
-    this.current = undefined; state.unlisten();this.closeChild(state)
+    this.current = undefined; if(state.pointerTimer)clearInterval(state.pointerTimer); state.unlisten();this.closeChild(state)
     if (!state.popup.isDestroyed()) state.popup.destroy()
   }
 }
