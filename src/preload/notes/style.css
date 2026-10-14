@@ -167,8 +167,9 @@ body .en-root .en-research .ew-financial-search-line>button{display:grid;place-i
 }
 
 /* The top edge resizes every suggestion while short results retain their natural height. */
+.en-preview-wrap{padding-top:24px}
 .en-preview{position:relative}
-.en-preview-resize{position:absolute;top:-10px;left:10px;right:10px;height:20px;cursor:ns-resize;touch-action:none;user-select:none;z-index:1}
+.en-preview-resize{position:absolute;top:-23px;left:10px;right:10px;height:20px;cursor:ns-resize;touch-action:none;user-select:none;z-index:1}
 .en-preview-resize::after{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);width:36px;height:3px;border-radius:2px;background:var(--en-muted);opacity:.45}
 .en-preview-resize:hover::after,.en-preview-resize:focus-visible::after{opacity:.85}
 .en-preview-resize:focus-visible{outline:2px solid var(--en-muted);outline-offset:1px;border-radius:4px}

@@ -6,7 +6,7 @@ import { SideMenuExtension, filterSuggestionItems } from '@blocknote/core/extens
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteView } from '@blocknote/mantine'
-import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useExtensionState, useEditorState, getDefaultReactSlashMenuItems, SuggestionMenuController } from '@blocknote/react'
+import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useComponentsContext, useExtensionState, useEditorState, getDefaultReactSlashMenuItems, SuggestionMenuController } from '@blocknote/react'
 import * as Y from 'yjs'
 import { noteOutline, noteText, restoreNoteDraft, noteSuggestionPreview, noteComponentRequest, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult } from '../../shared/workspace-notes'
 import { NotesOutline } from './outline'
@@ -23,6 +23,7 @@ import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-re
 import {useNoteDragAndDrop} from './drag-and-drop'
 import {useNoteReplyInsertion} from './reply-insertion'
 import {withNoteIndentSpecs,changeNoteIndent} from './paragraph-indent'
+import {changeNoteList,type NoteListType} from './paragraph-style'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -46,6 +47,12 @@ function NoteFormattingToolbar({children}:{children:React.ReactNode}){
   return selected
  }})
  return componentSelected?null:<FormattingToolbar>{children}</FormattingToolbar>
+}
+function NoteListButtons(){
+ const Components=useComponentsContext()!
+ const editor:any=useBlockNoteEditor(),selection=useEditorState({editor,selector:({editor}:any)=>({valid:editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection),blocks:editor.getSelection()?.blocks||[]})})
+ if(!selection.valid)return null
+ return <>{([['无序列表','bulletListItem'],['有序列表','numberedListItem'],['待办列表','checkListItem']] as const).map(([label,type])=><Components.FormattingToolbar.Button key={type} className="bn-button" label={label} mainTooltip={label} isSelected={selection.blocks.length>0&&selection.blocks.every((block:any)=>block.type===type)} onClick={()=>changeNoteList(editor,type)} icon={<NoteMenuIcon kind={type}/>}/>)}</>
 }
 function ResearchBlock({block}:any){
  const context=useContext(Context)!,node=useMemo(()=>{try{return JSON.parse(block.props.payload)}catch{return {}}},[block.props.payload])
@@ -125,7 +132,7 @@ function BlockMenu(props: any) {
   },[open,block?.id])
   useEffect(()=>{const extension=editor.getExtension(SideMenuExtension);if(open)extension?.freezeMenu();return()=>extension?.unfreezeMenu()},[editor,open])
   if (!block) return null
-  const change = (type: string, p: any = {}) => { editor.updateBlock(block, { type, props: p }); setOpen(false); editor.focus() }
+  const change = (type: string, p: any = {}) => { if(['bulletListItem','numberedListItem','checkListItem'].includes(type)&&Object.keys(p).length===0)changeNoteList(editor,type as NoteListType,block.id);else editor.updateBlock(block, { type, props: p }); setOpen(false); editor.focus() }
   const duplicate = () => { const { id, ...copy } = block; editor.insertBlocks([copy], block, 'after'); setOpen(false) }
   return <div className="en-side" ref={anchor}><button className="en-block-trigger" title="段落操作" aria-label="段落操作" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => setOpen(!open)}><NoteMenuIcon kind="paragraph"/></button><SideMenu {...props}><DragHandleButton {...props} /></SideMenu>
     {open ? createPortal(<div ref={menu} className="en-block-menu" role="menu" style={{...position,visibility:position?'visible':'hidden'}}><div className="en-block-types">{[['正文', 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} title={String(label)} aria-label={String(label)} onClick={() => change(String(type), level ? { level } : {})}>{type==='paragraph'?<NoteMenuIcon kind="paragraph"/>:label}</button>)}</div>
@@ -358,7 +365,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
         <BlockNoteView editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false}>
           <SuggestionMenuController getItems={slashItems} triggerCharacter="/" suggestionMenuComponent={slashMenu} portalElement={document.body} floatingUIOptions={{useFloatingOptions:{strategy:'fixed'},elementProps:{className:'en-note-menu-layer',style:{zIndex:110}}}} />
-          <FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}/></NoteFormattingToolbar>} />
+          <FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><NoteListButtons/><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}/></NoteFormattingToolbar>} />
           <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const base=reference.getBoundingClientRect(),component=reference.querySelector<HTMLElement>('.en-research,.en-note-file');if(component)return{y:y+component.getBoundingClientRect().top-base.top};const box=content.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} />
         </BlockNoteView>
       </div>
