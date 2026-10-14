@@ -52,6 +52,44 @@ it('moves the correct distance immediately after resizing before a renderer refr
   expect(v.entry.objects[v.selected.id].geometry.x).toBe(20)
  }finally{v.controller.destroy()}
 })
+
+it('updates typography immediately and restores original mixed styles on undo even after a DOM refresh',()=>{
+ const v=setup();try{
+  const paragraph=v.host.querySelector('[data-pptx-paragraph]')! as any
+  paragraph.querySelector('span:not([data-pptx-bullet])').style.cssText='font-family:Arial;font-size:18pt;font-weight:400;color:red'
+  v.controller.refresh()
+  const id=v.entry.document.slides[0].nodes[0].id
+  v.entry.objects[id]={fontFamily:'Songti SC',fontSize:24,bold:true,color:'112233'};v.controller.refresh()
+  const span=paragraph.querySelector('span:not([data-pptx-bullet])')
+  expect(span.style.fontFamily.replaceAll('\"','')).toBe('Songti SC');expect(span.style.fontSize).toBe('24pt');expect(span.style.fontWeight).toBe('700');expect(span.style.color).toBe('#112233')
+  // A completed background renderer contains the edited style, not the original.
+  const replacement=paragraph.cloneNode(true);paragraph.replaceWith(replacement);v.controller.refresh()
+  v.entry.objects={};v.controller.refresh()
+  const restored=replacement.querySelector('span:not([data-pptx-bullet])')
+  expect(restored.style.fontFamily).toBe('Arial');expect(restored.style.fontSize).toBe('18pt');expect(restored.style.fontWeight).toBe('400');expect(restored.style.color).toBe('red')
+ }finally{v.controller.destroy()}
+})
+
+it('retains original styles across editor teardown and reattachment after saving formats',()=>{
+ const v=setup();v.entry.document.slides[0].nodes[0].fontFamily='Arial'
+ const span=v.host.querySelector('[data-pptx-paragraph] span:not([data-pptx-bullet])')! as any;span.style.fontFamily='Arial';span.style.fontWeight='400'
+ const id=v.entry.document.slides[0].nodes[0].id
+ v.entry.objects[id]={fontFamily:'Songti SC',bold:true};v.controller.refresh();v.controller.destroy()
+ const controller=direct.attachPptxDirectEditor(v.host,{getEntry:()=>v.entry})
+ try{v.entry.objects={};controller.refresh();expect(span.style.fontFamily).toBe('Arial');expect(span.style.fontWeight).toBe('400')}finally{controller.destroy()}
+})
+it('does not learn an already formatted initial DOM as the original style of an older draft',()=>{
+ const v=setup();v.controller.destroy();const id=v.entry.document.slides[0].nodes[0].id
+ v.entry.objects[id]={fontFamily:'Songti SC',bold:true}
+ const paragraph=v.host.querySelector('[data-pptx-paragraph]')! as any,span=paragraph.querySelector('span:not([data-pptx-bullet])')
+ span.style.fontFamily='Songti SC';span.style.fontWeight='700'
+ const controller=direct.attachPptxDirectEditor(v.host,{getEntry:()=>v.entry})
+ try{
+  v.entry.objects={};controller.refresh()
+  const original=paragraph.cloneNode(true),originalSpan=original.querySelector('span:not([data-pptx-bullet])');original.style.fontFamily='';original.style.fontWeight='';originalSpan.style.fontFamily='Arial';originalSpan.style.fontWeight='400';paragraph.replaceWith(original);controller.refresh()
+  expect(originalSpan.style.fontFamily).toBe('Arial');expect(originalSpan.style.fontWeight).toBe('400')
+ }finally{controller.destroy()}
+})
 it('uses the position mapping of a nonuniform group independently of a rotated child width',()=>{
  const v=setup();try{
   const object=v.host.querySelector('[data-pptx-node-id="2"]')! as any

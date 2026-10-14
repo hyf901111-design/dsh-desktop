@@ -1,7 +1,9 @@
 /** Actual renderer DOM remains the canvas; selection chrome lives above it. */
 export function attachPptxDirectEditor(host,options){
  const doc=host.ownerDocument,win=doc.defaultView
- let selected=null,selectedId=null,gesture=null,enabled=true,destroyed=false,composing=false
+ let selected=null,selectedId=null,gesture=null,enabled=true,destroyed=false,composing=false,indexedDocument=null,nodeIndex=new Map(),fieldIndex=new Map()
+ const entry=options.getEntry(),originalTextStyles=(entry.textStyles||={}),knownFormats=entry.formatTouched||={},touchedFormats=new Map(),styleKeys=['fontFamily','fontSize','fontWeight','color'],initialParagraphs=new WeakSet(host.querySelectorAll('[data-pptx-paragraph]'))
+ const initialFormats=new Map(Object.entries(entry.objects||{}).map(([id,change])=>[id,new Set(styleKeys.filter(key=>(key==='fontWeight'?change.bold:change[key])!==undefined))]))
  const overlay=doc.createElement('div');overlay.className='sherlock-ppt-selection';overlay.style.cssText='position:fixed;z-index:100000;pointer-events:none;box-sizing:border-box;border:1px solid #526fff;transform-origin:0 0;display:none;'
  const rotateCursor='url("data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M25 12A10 10 0 1 0 25 22M25 5v8h-8" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 12A10 10 0 1 0 25 22M25 5v8h-8" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>')+'") 16 16, crosshair'
  const handleNames=['move','nw','n','ne','e','se','s','sw','w','rotate']
@@ -12,11 +14,21 @@ export function attachPptxDirectEditor(host,options){
   overlay.appendChild(handle)
  }
  doc.body.appendChild(overlay)
- const nodes=()=>options.getEntry()?.document.slides.flatMap(s=>s.nodes||[])||[]
- const model=element=>nodes().find(n=>n.nodeId===element.dataset.pptxNodeId&&n.part===element.dataset.pptxPart)
- const currentNode=()=>{const n=nodes().find(n=>n.id===selectedId);if(!n)return null;const value={...n,...options.getEntry()?.objects?.[n.id]};if(!value.fontFamily&&selected){const text=selected.querySelector('[data-pptx-paragraph] span:not([data-pptx-bullet])')||selected.querySelector('[data-pptx-paragraph]');const family=text&&win.getComputedStyle(text).fontFamily?.split(',')[0]?.trim().replace(/^["']|["']$/g,'');if(family)value.fontFamily=family}return value}
+ const index=()=>{const document=options.getEntry()?.document;if(document===indexedDocument)return;indexedDocument=document;nodeIndex=new Map();fieldIndex=new Map();for(const slide of document?.slides||[]){for(const node of slide.nodes||[])nodeIndex.set(node.part+'#node:'+node.nodeId,node);for(const field of slide.fields)fieldIndex.set(JSON.stringify([slide.part,field.nodeId,field.paragraphIndex,field.row,field.column]),field)}}
+ const model=element=>{index();return nodeIndex.get(element.dataset.pptxPart+'#node:'+element.dataset.pptxNodeId)}
+ const currentNode=()=>{index();const n=nodeIndex.get(selectedId);if(!n)return null;const value={...n,...options.getEntry()?.objects?.[n.id]};if(!value.fontFamily&&selected){const text=selected.querySelector('[data-pptx-paragraph] span:not([data-pptx-bullet])')||selected.querySelector('[data-pptx-paragraph]');const family=text&&win.getComputedStyle(text).fontFamily?.split(',')[0]?.trim().replace(/^["']|["']$/g,'');if(family)value.fontFamily=family}return value}
  const identity=element=>element?.closest?.('[data-pptx-node-id]')
- const fieldFor=paragraph=>{const element=identity(paragraph),node=element&&model(element);if(!node)return null;const cell=paragraph.closest('[data-pptx-row]');return options.getEntry().document.slides.filter(s=>s.part===node.part).flatMap(s=>s.fields).find(f=>f.nodeId===node.nodeId&&f.paragraphIndex===Number(paragraph.dataset.pptxParagraph)&&(cell?f.row===Number(cell.dataset.pptxRow)&&f.column===Number(cell.dataset.pptxColumn):f.row===undefined))}
+ const fieldFor=paragraph=>{const element=identity(paragraph),node=element&&model(element);if(!node)return null;const cell=paragraph.closest('[data-pptx-row]');return fieldIndex.get(JSON.stringify([node.part,node.nodeId,Number(paragraph.dataset.pptxParagraph),cell?Number(cell.dataset.pptxRow):undefined,cell?Number(cell.dataset.pptxColumn):undefined]))}
+ const formatText=(paragraph,field)=>{
+  const node=model(identity(paragraph)),change=options.getEntry()?.objects?.[node.id]||{},targets=[paragraph,...paragraph.querySelectorAll('span:not([data-pptx-bullet])')]
+  let touched=touchedFormats.get(node.id);if(!touched&&knownFormats[node.id])touched=new Set(knownFormats[node.id]);if(!touched&&!styleKeys.some(key=>(key==='fontWeight'?change.bold:change[key])!==undefined))return;if(!touched)touched=new Set();touchedFormats.set(node.id,touched)
+  const originals=originalTextStyles[field.id]||targets.map(()=>({}))
+  targets.forEach((element,i)=>{const original=(originals[i]||={});for(const key of styleKeys){if(original[key]!==undefined)continue;const value=key==='fontWeight'?change.bold:change[key];if(initialFormats.get(node.id)?.has(key)&&(initialParagraphs.has(paragraph)||value!==undefined))continue;original[key]=element.style[key]||win.getComputedStyle(element)[key]||''}})
+  originalTextStyles[field.id]=originals
+  for(const key of styleKeys)if((key==='fontWeight'?change.bold:change[key])!==undefined)touched.add(key)
+  knownFormats[node.id]=Array.from(touched)
+  targets.forEach((element,i)=>{for(const key of touched){const value=key==='fontWeight'?change.bold:change[key],original=(originals[i]||originals[1]||originals[0])[key];if(value!==undefined||original!==undefined)element.style[key]=value===undefined?original:key==='fontWeight'?(value?'700':'400'):key==='fontSize'?value+'pt':key==='color'?'#'+value:value}})
+ }
  const textOf=element=>{
   const walk=node=>{if(node.nodeType===3)return node.textContent;if(node.nodeType!==1||node.hasAttribute('data-pptx-bullet'))return'';if(node.tagName==='BR')return'\n';return Array.from(node.childNodes).map((c,i)=>((i>0&&c.nodeType===1&&['DIV','P'].includes(c.tagName))?'\n':'')+walk(c)).join('')}
   return walk(element).replace(/\u00a0/g,' ')
@@ -41,7 +53,7 @@ export function attachPptxDirectEditor(host,options){
  const select=element=>{selected=element;selectedId=element&&model(element)?.id;updatePosition();options.select?.(currentNode());return currentNode()}
  const refresh=()=>{
   if(destroyed)return
-  for(const paragraph of host.querySelectorAll('[data-pptx-paragraph]')){if(paragraph.closest('[data-pptx-staging]'))continue;const field=fieldFor(paragraph);if(!field)continue;paragraph.setAttribute('contenteditable',String(enabled));paragraph.setAttribute('role','textbox');paragraph.setAttribute('aria-label',field.label);paragraph.setAttribute('spellcheck','false');paragraph.dataset.pptxFieldId=field.id;paragraph.style.cursor=enabled?'text':'';paragraph.style.minHeight='1em';paragraph.querySelectorAll('[data-pptx-bullet]').forEach(b=>b.contentEditable='false');const value=options.getEntry()?.values[field.id];if(doc.activeElement!==paragraph&&value!==undefined&&textOf(paragraph)!==value)setText(paragraph,value)}
+  for(const paragraph of host.querySelectorAll('[data-pptx-paragraph]')){if(paragraph.closest('[data-pptx-staging]'))continue;const field=fieldFor(paragraph);if(!field)continue;paragraph.setAttribute('contenteditable',String(enabled));paragraph.setAttribute('role','textbox');paragraph.setAttribute('aria-label',field.label);paragraph.setAttribute('spellcheck','false');paragraph.dataset.pptxFieldId=field.id;paragraph.style.cursor=enabled?'text':'';paragraph.style.minHeight='1em';paragraph.querySelectorAll('[data-pptx-bullet]').forEach(b=>b.contentEditable='false');const value=options.getEntry()?.values[field.id];if(doc.activeElement!==paragraph&&value!==undefined&&textOf(paragraph)!==value)setText(paragraph,value);formatText(paragraph,field)}
   updatePosition()
  }
  const down=event=>{if(!enabled||event.button!==0)return;const element=identity(event.target);if(!element||!host.contains(element)||!model(element))return;event.stopPropagation();select(element);if(!event.target.closest('[data-pptx-field-id]')){event.preventDefault();element.tabIndex=-1;element.focus({preventScroll:true})}}
