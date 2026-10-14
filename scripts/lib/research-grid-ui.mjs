@@ -1,3 +1,4 @@
+import {workbenchScrollExtent} from './research-grid-state.mjs'
 // Functions are serialized into the existing page factory. React and the trusted
 // content renderers are supplied by that factory, never by an iframe.
 import {researchCandleTemplate} from '../../packages/dsh-research-task-runtime/bento-layout.js'
@@ -710,7 +711,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
   },[workspace,sessionId,readOnly])
   react.useLayoutEffect(()=>{
     const root=rootRef.current;if(!root)return
-    const nodes=[...snapshot.files,...snapshot.artifacts,...workspace.getWorkbenchPlanningNodes()],width=snapshot.canvasSize.availableWidth||root.clientWidth,m=createResearchGrid().metrics(width),visibleHeight=root.clientHeight||snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height||700,contentBottom=Math.max(0,...nodes.map(n=>n.y+n.height/2)),bottom=contentBottom<=visibleHeight?Math.max(visibleHeight,Math.ceil(contentBottom+(root.hasAttribute('data-workbench-toolbar-space')?80:0))):Math.ceil(contentBottom+15*m.rowStep)
+    const nodes=[...snapshot.files,...snapshot.artifacts,...workspace.getWorkbenchPlanningNodes()],width=snapshot.canvasSize.availableWidth||root.clientWidth,m=createResearchGrid().metrics(width),visibleHeight=root.clientHeight||snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height||700,contentBottom=Math.max(0,...nodes.map(n=>n.y+n.height/2)),bottom=workbenchScrollExtent(contentBottom,visibleHeight,m.rowStep,root.hasAttribute('data-workbench-toolbar-space'))
     for(const [id,value] of root.__eworkContentMeasurements||[])if(!nodes.some(n=>n.id===id&&n.containerSpec?.html===value.html))root.__eworkContentMeasurements.delete(id)
     const layer=root.querySelector('[data-research-content-layer]');if(layer){layer.style.height=bottom+'px';layer.style.width=width+'px';layer.style.setProperty('--grid-gap',m.gap+'px');layer.style.setProperty('--grid-step',m.step+'px');layer.style.setProperty('--grid-pattern',workbenchGridPattern(width))}
     const viewport=snapshot.viewport;if(!root.hasAttribute('data-grid-operation')){const scrollTop=Math.max(0,Math.min(bottom-visibleHeight,-viewport.y));if(Math.abs(root.scrollTop-scrollTop)>.5)root.scrollTop=scrollTop;if(Math.abs(viewport.y+scrollTop)>.5)workspace.setViewport({x:0,y:-scrollTop,scale:1})}

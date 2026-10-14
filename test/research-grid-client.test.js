@@ -1641,7 +1641,7 @@ it('Shift多选顶栏与正文只切换组件，阻止文本选区且不启动�
  expect(ordinary.defaultPrevented).toBe(false)
 })
 
-it('空画布及一屏内内容不因留白溢出；长画布底部只保留15格仍可创建',async()=>{
+it('空画布及顶部少量内容不增加滚动，接近底栏可继续滑动，长画布保留15格仍可创建',async()=>{
  const f=await fixture(true),layer=f.host.querySelector('[data-research-content-layer]')
  expect(parseFloat(layer.style.height)).toBe(700)
  await act(async()=>f.workspace.setArtifacts([text('a')]))
@@ -1664,8 +1664,12 @@ it('空画布及一屏内内容不因留白溢出；长画布底部只保留15�
  await act(async()=>{f.workspace.setArtifacts([text('edge')]);f.workspace.applyWorkbenchCells([{id:'edge',x:0,y:0,w:20,h:28}],true);f.workspace.updateSelection(['edge'],'replace')})
  const handle=f.document.querySelector('[data-workbench-resize="edge"][data-workbench-resize-axis="y"]')
  expect(parseFloat(handle.style.top)+parseFloat(handle.style.height)).toBeLessThanOrEqual(700)
- const edge=w=>w.y+w.height/2
- expect(parseFloat(layer.style.height)).toBe(Math.max(700,Math.ceil(edge(f.workspace.getSnapshot().artifacts[0])+80)))
+ const edge=f.workspace.getSnapshot().artifacts[0]
+ expect(parseFloat(layer.style.height)).toBe(875)
+ await act(async()=>f.workspace.setViewport({x:0,y:-500,scale:1}))
+ expect(f.canvas.scrollTop).toBe(175)
+ expect(edge.y+edge.height/2-f.canvas.scrollTop).toBeLessThan(614)
+ expect(f.workspace.getSnapshot().artifacts[0]).toEqual(edge)
 })
 
 
