@@ -128,7 +128,7 @@ describe('Figma shell patch installation', () => {
     expect(lifecycle).toEqual(['start', 'end', 'start', 'end'])
   })
 
-  it('keeps a 240 px sidebar after dragging and layout restoration, with the original collapse/default behavior', async () => {
+  it('keeps a custom sidebar width after dragging, collapse and layout restoration', async () => {
     const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
     expect(patchFigmaFinalLayout(layout)).toBe(layout)
     const { store, compute } = runInNewContext([
@@ -142,9 +142,46 @@ describe('Figma shell patch installation', () => {
     store.actions.setSidebar(state, 100)
     expect(state.sidebar).toBe(240)
     store.actions.toggleSidebar(state)
+    expect(state.sidebar).toBe(0)
     expect(compute(1380, state.sidebar, 0).sidebar).toBe(80)
     store.actions.toggleSidebar(state)
-    expect(state.sidebar).toBe(280)
+    expect(state.sidebar).toBe(240)
+    store.actions.setSidebar(state, 320)
+    store.actions.toggleSidebar(state)
+    store.actions.toggleSidebar(state)
+    expect(state.sidebar).toBe(320)
+    // Automatic research collapse also preserves the most recent width.
+    state.sidebarManuallyExpanded = false
+    store.actions.collapseSidebarForResearch(state)
+    expect(state.sidebar).toBe(0)
+    store.actions.toggleSidebar(state)
+    expect(state.sidebar).toBe(320)
+    const previousState = { ...store.init(), sidebar: 360 }
+    delete previousState.sidebarExpandedWidth
+    store.actions.toggleSidebar(previousState)
+    store.actions.toggleSidebar(previousState)
+    expect(previousState.sidebar).toBe(360)
+    expect(store.init().sidebar).toBe(280)
+  })
+
+  it('upgrades the installed layout once and safely renders the left handle before a DOM frame exists', async () => {
+    const current = await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8')
+    const installed = patchFigmaFinalLayout(current)
+    expect(patchFigmaFinalLayout(installed)).toBe(installed)
+    expect(installed.match(/function SidebarDragHandle\(/g)).toHaveLength(1)
+    expect(clientFunction(installed, 'AppFrame')).toContain('jsx)(SidebarDragHandle,')
+    // The right splitter keeps the native component and its existing scope.
+    expect(clientFunction(installed, 'AppFrame')).toContain('cols.details > 0 && (0, react_jsx_runtime.jsx)(DragHandle,')
+    const effects: (() => unknown)[] = []
+    const SidebarDragHandle = runInNewContext(clientFunction(installed, 'SidebarDragHandle') + '\nSidebarDragHandle', {
+      react: { useState: () => [null, () => {}], useEffect: (fn: () => unknown) => effects.push(fn) },
+      react_jsx_runtime: { jsx: (type: unknown, props: unknown) => ({ type, props }) },
+      DragHandle: 'native'
+    })
+    const result = SidebarDragHandle({ side: 'sidebar', left: 280, frameRef: { current: null } })
+    expect(result.type).toBe('native')
+    expect(result.props.left).toBe(280)
+    expect(effects[0]!()).toBeUndefined()
   })
 
   it('can refresh a previously installed block without duplicating runtime styles', () => {

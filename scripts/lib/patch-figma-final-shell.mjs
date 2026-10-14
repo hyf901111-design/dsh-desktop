@@ -244,6 +244,61 @@ export function patchFigmaFinalLayout(source) {
     handle = exact(handle, '\t\t\t\tonPointerUp\n', '\t\t\t\tonPointerUp, onPointerCancel\n')
     source = source.slice(0, start) + handle + source.slice(end)
   }
+  // Notes and the overlay scrollbars are body portals. The blurred frame is a
+  // stacking context, so increasing its handle's z-index cannot reach them.
+  // Portal only the left handle; native pointer capture and layout actions
+  // continue to own the gesture. Frame bounds keep its viewport coordinates
+  // correct for resized/offset windows without involving screen coordinates.
+  if (!source.includes('/* ODYSSEY_LEFT_RESIZE_PORTAL */')) {
+    source = exact(source, 'let react = require("react");', 'let react = require("react");\n\t\tlet react_dom = require("react-dom");')
+    source = exact(source, 'style: { left: props.left },', 'style: { ...props.style, left: props.left },')
+    const portal = `
+\t\tfunction SidebarDragHandle(props) { /* ODYSSEY_LEFT_RESIZE_PORTAL */
+          const [bounds, setBounds] = (0, react.useState)(null);
+          (0, react.useEffect)(() => {
+            const frame = props.frameRef.current;
+            const doc = frame?.ownerDocument;
+            const win = doc?.defaultView;
+            if (!frame || !doc?.body || !win) return;
+            const sync = () => {
+              const rect = frame.getBoundingClientRect();
+              setBounds(previous => previous && previous.left === rect.left && previous.top === rect.top && previous.height === rect.height
+                ? previous : { left: rect.left, top: rect.top, height: rect.height, body: doc.body });
+            };
+            sync();
+            const observer = typeof win.ResizeObserver === "function" ? new win.ResizeObserver(sync) : null;
+            observer?.observe(frame);
+            win.addEventListener("resize", sync);
+            doc.addEventListener("scroll", sync, true);
+            return () => {
+              observer?.disconnect();
+              win.removeEventListener("resize", sync);
+              doc.removeEventListener("scroll", sync, true);
+            };
+          }, [props.frameRef]);
+          const handle = (0, react_jsx_runtime.jsx)(DragHandle, {
+            ...props,
+            left: props.left + (bounds?.left || 0),
+            style: bounds ? { position: "fixed", top: bounds.top, bottom: "auto", height: bounds.height } : void 0
+          });
+          return bounds ? (0, react_dom.createPortal)(handle, bounds.body) : handle;
+\t\t}
+`
+    source = exact(source, '\t\t/** The three-column frame (see module doc). */', portal + '\t\t/** The three-column frame (see module doc). */')
+    source = exact(source, '!sidebarCollapsed && !sidebarOverlay && (0, react_jsx_runtime.jsx)(DragHandle,', '!sidebarCollapsed && !sidebarOverlay && (0, react_jsx_runtime.jsx)(SidebarDragHandle,')
+    source = exact(source, 'side: "sidebar",\n\t\t\t\t\t\tleft: cols.sidebar,', 'side: "sidebar",\n\t\t\t\t\t\tframeRef,\n\t\t\t\t\t\tleft: cols.sidebar,')
+  }
+  // Closing the rail is a visibility choice, not a reset of the last drag.
+  // This stays in the existing transient layout store, including research's
+  // automatic collapse. A fresh store still starts at the contract default.
+  if (!source.includes('/* ODYSSEY_LEFT_RESIZE_RESTORE */')) {
+    source = exact(source, 'sidebar: 280,', 'sidebar: 280,\n                    sidebarExpandedWidth: 280, /* ODYSSEY_LEFT_RESIZE_RESTORE */')
+    source = exact(source, source.includes('d.sidebar = clampWidth(px, 240, 420);') ? 'd.sidebar = clampWidth(px, 240, 420);' : 'd.sidebar = clampWidth(px, 264, 420);', 'd.sidebar = clampWidth(px, 240, 420);\n                        d.sidebarExpandedWidth = d.sidebar;')
+    source = exact(source, 'toggleSidebar: (d) => {', 'toggleSidebar: (d) => {\n                        if (d.sidebar > 0) d.sidebarExpandedWidth = clampWidth(d.sidebar, 240, 420);')
+    source = exact(source, 'if (d.sidebarManuallyExpanded) return;', 'if (d.sidebarManuallyExpanded) return;\n                        if (d.sidebar > 0) d.sidebarExpandedWidth = clampWidth(d.sidebar, 240, 420);')
+    source = source.replaceAll('d.sidebar === 0 ? 280 : 0', 'd.sidebar === 0 ? d.sidebarExpandedWidth || 280 : 0')
+    source = exact(source, 'if (d.narrowExpanded && d.sidebar === 0) d.sidebar = 280;', 'if (d.narrowExpanded && d.sidebar === 0) d.sidebar = d.sidebarExpandedWidth || 280;')
+  }
   // 194:4 / 370 explicitly show 280 → 240. Apply the same minimum when
   // dragging and when restoring persisted widths; the initial width stays 280.
   if (source.includes('clampWidth(sidebar, 280, 420)')) {

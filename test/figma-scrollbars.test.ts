@@ -1,6 +1,27 @@
-import { Window, DOMRect } from 'happy-dom'
+import { Window, DOMRect, type HTMLElement as HappyHTMLElement } from 'happy-dom'
 import { expect, it } from 'vitest'
 import { mountFigmaScrollbars } from '../src/preload/figma-scrollbars'
+
+it('reserves the left width strip only beside sidebar navigation and restores the rail edge', async () => {
+  const win = new Window(), doc = win.document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><nav data-srb-navigation-scroll style="overflow-y:auto"></nav><div class="VOzbGW_overlay"><nav id="settings" style="overflow-y:auto"></nav></div></aside><div class="pI_x6G_handle" data-side="sidebar"></div><section class="t8lSSG_panelBody" style="overflow-y:auto"></section><section class="en-root"><div id="component" style="overflow-y:auto"></div></section>'
+  doc.querySelector('aside')!.getBoundingClientRect = () => new DOMRect(0, 0, 280, 900)
+  const ports = [...doc.querySelectorAll('nav,#component,.t8lSSG_panelBody')]
+  for (const port of ports) {
+    port.getBoundingClientRect = () => new DOMRect(0, 50, 280, 500)
+    Object.defineProperties(port, { scrollHeight: { value: 1500 }, clientHeight: { value: 500 } })
+  }
+  Object.defineProperty(win, 'ResizeObserver', { value: class { observe() {} unobserve() {} disconnect() {} } })
+  const dispose = mountFigmaScrollbars(doc as unknown as Document, true)
+  try {
+    const tracks = [...doc.querySelectorAll<HappyHTMLElement>('.odyssey-scroll-track')]
+    // Sidebar navigation alone yields the inner 6px of the width handle.
+    expect(tracks.map(track => track.style.left)).toEqual(['262px', '268px', '268px', '268px'])
+    doc.querySelector('.pI_x6G_handle')!.remove()
+    ports[0]!.dispatchEvent(new win.Event('scroll'))
+    expect(tracks[0]!.style.left).toBe('268px')
+  } finally { dispose(); await win.happyDOM.close() }
+})
 
 it('uses the same overlay for notes and nested suggestions without a layout gutter or settings overlay',async()=>{
  const win=new Window(),doc=win.document
