@@ -215,6 +215,12 @@ body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHe
   backdrop-filter:blur(12px);
   font-family:"OdysseyChipCell","Noto Sans SC",sans-serif;
 }
+/* Figma 2527:365255/365541: only the primary empty-home input is glass.
+   The shared reading stylesheet consumes these card-local material tokens. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_card:not([data-odyssey-subagent-panel] *, .sRp_composer *) {
+  --odyssey-composer-fill:var(--odyssey-home-input);
+  --odyssey-composer-backdrop:blur(12px);
+}
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_scroll { min-height:78px; }
 .wSkVaW_root[data-odyssey-page="home"] :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) {
   padding:15px 17px 0;

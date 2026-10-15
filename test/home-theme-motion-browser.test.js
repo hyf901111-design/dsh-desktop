@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { build } from 'esbuild'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { PNG } from 'pngjs'
@@ -11,21 +12,25 @@ beforeAll(async () => {
   const native = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
   const base = [...native.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1])).join('\n')
   const composer = [...native.matchAll(/tag\.textContent (?:\+?=) ("(?:[^"\\]|\\.)*")/g)].map(match => JSON.parse(match[1])).filter(value => value.includes('[data-center-composer-host]')).join('\n')
-  css = base + '\n' + composer + '\n' + (await Promise.all(['src/preload/figma-final-shell.css', 'src/preload/figma-home.css', 'src/preload/figma-panels.css'].map(path => readFile(path, 'utf8')))).join('\n')
+  css = base + '\n' + composer
+  const require = createRequire(import.meta.url)
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'ts', contents: `
       import {mountHomeThemes} from './src/preload/home-themes';
+      import {mountDesktopShellStyles} from './src/preload/shell-style';
       const records=[];const animate=HTMLElement.prototype.animate;
       HTMLElement.prototype.animate=function(frames,options){const result=animate.call(this,frames,options);records.push({element:this,animation:result,frames,options});return result};
       const colors=[],blendColor=WebGL2RenderingContext.prototype.blendColor;
       WebGL2RenderingContext.prototype.blendColor=function(r,g,b,a){if(this.canvas.hasAttribute('data-home-theme-canvas'))colors.push({time:performance.now(),alpha:a});return blendColor.call(this,r,g,b,a)};
       const draw=WebGL2RenderingContext.prototype.drawArrays;
       WebGL2RenderingContext.prototype.drawArrays=function(...args){const result=draw.apply(this,args),capture=window.themeMotion?.captureAppearance;if(capture&&this.canvas.hasAttribute('data-home-theme-canvas')&&!this.getParameter(this.FRAMEBUFFER_BINDING)){const blend=this.isEnabled(this.BLEND),alpha=this.getParameter(this.BLEND_COLOR)[3],key=blend?(alpha>.98?'light':'middle'):'dark';if(!capture[key]){const still=document.createElement('canvas');still.width=360;still.height=280;still.getContext('2d').drawImage(this.canvas,0,0,360,280);capture[key]=still.toDataURL()}}return result};
-      window.themeMotion={records,colors,captureAppearance:null,mount(){this.dispose=mountHomeThemes(document)},surface(value){if(value)document.body.dataset.workspaceSurface=value;else delete document.body.dataset.workspaceSurface;document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))},next(){document.querySelector('[data-home-theme-position="next"]').click()},current(){return document.querySelector('[aria-pressed="true"][data-home-theme-id]').dataset.homeThemeId}};
+      window.themeMotion={records,colors,captureAppearance:null,mount(){mountDesktopShellStyles(document);this.dispose=mountHomeThemes(document)},surface(value){if(value)document.body.dataset.workspaceSurface=value;else delete document.body.dataset.workspaceSurface;document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))},next(){document.querySelector('[data-home-theme-position="next"]').click()},current(){return document.querySelector('[aria-pressed="true"][data-home-theme-id]').dataset.homeThemeId}};
     ` }, bundle: true, format: 'iife', platform: 'browser', write: false,
     plugins: [{ name: 'inline-theme-images', setup(builder) {
       builder.onResolve({ filter: /\.png\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'theme-inline' }))
       builder.onLoad({ filter: /.*/, namespace: 'theme-inline' }, async args => ({ contents: 'export default ' + JSON.stringify('data:image/png;base64,' + (await readFile(args.path)).toString('base64')), loader: 'js' }))
+      builder.onResolve({ filter: /\.css\?raw$/ }, args => ({ path: args.path.startsWith('.') ? resolve(args.resolveDir, args.path.slice(0, -4)) : require.resolve(args.path.slice(0, -4)), namespace: 'raw-css' }))
+      builder.onLoad({ filter: /.*/, namespace: 'raw-css' }, async args => ({ contents: 'export default ' + JSON.stringify(await readFile(args.path, 'utf8')), loader: 'js' }))
     } }]
   })
   script = output.outputFiles[0].text
@@ -45,7 +50,7 @@ async function fixture({ dark = false, reduced = false, theme = 'default', width
     .wSkVaW_composerHero{display:flex;flex-direction:column}.uV2eYG_grow{min-height:78px}button{font:inherit}
     .wSkVaW_root>.wSkVaW_scrollBody{pointer-events:none}.uV2eYG_input{color:var(--odyssey-text)}
     [data-settings]{position:fixed;inset:0;background:#eee;z-index:99}
-  </style><body ${dark ? 'data-ds-dark-theme' : ''}><div id="root"><div data-dsh-frame><main data-pane="conversation" class="pI_x6G_centerCol">
+  </style><body ${dark ? 'data-ds-dark-theme' : ''}><div id="root"><div data-dsh-frame><main data-pane="conversation" class="pI_x6G_centerCol" style="position:absolute;left:40px;top:20px;width:${width}px;height:${height}px;margin:0;isolation:isolate;overflow:hidden">
     <section class="wSkVaW_root" data-phase="hero" data-odyssey-page="home">
       <header class="wSkVaW_header"><span>新对话</span><button>对话</button><button>研究</button><button>笔记</button></header>
       <div class="wSkVaW_scrollBody"></div><div data-center-composer-host><div data-composer-portal-host><div class="wSkVaW_composerStack wSkVaW_composerSeat wSkVaW_composerHero">
