@@ -95,6 +95,37 @@
           "待刷新集成客户端后验证真实模型的所引热力图总结和真实主窗口布局。"
         ],
         "generatedAt": "2026-10-15T02:22:37.111840+00:00"
+      },
+      "merged": {
+        "mergeCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
+        "verificationCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
+            "completedAt": "2026-10-15T02:23:12.109Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
+            "completedAt": "2026-10-15T02:23:12.109Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-15T02:23:12.109Z"
       }
     }
   ],
