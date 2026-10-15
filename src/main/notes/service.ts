@@ -9,6 +9,7 @@ import { renderCartesianChart } from '../../../packages/dsh-research-task-runtim
 import { renderMarketArtifact } from '../../../packages/dsh-research-task-runtime/market-artifact.js'
 import { readNoteGenerationStream } from './stream'
 import { saveNoteExport } from './export'
+import { captureNoteComponentSnapshots } from './component-snapshot'
 import { buildResearchHtmlPreview } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import type { NotesNativeMenu } from '../../shared/notes-menu'
 import type { NoteFiles } from './files'
@@ -44,6 +45,10 @@ export function installNotesService(options: {
       case 'save': return store.save(owner, session, input.revision, input.content, input.clientId)
       case 'draft': store.draft(owner, session, input.clientId, input.revision, input.content); return { ok: true }
       case 'discard': store.discardDraft(owner, session, input.clientId); return { ok: true }
+      case 'component-snapshots': {
+        const window=options.getWindow(),key='note-snapshot:'+randomUUID(),controller=new AbortController();active.set(key,controller)
+        try{return await captureNoteComponentSnapshots(window,input,()=>options.owner()===owner&&options.canRead(session)&&options.getWindow()===window,controller.signal)}finally{active.delete(key)}
+      }
       case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session))
       case 'conversation-load':
       case 'conversation-state': {

@@ -60,7 +60,7 @@ export function configurePptxCategoryAxis(axis, source) {
 export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version) {
   const root = viewer.viewerOptions.scrollContainer ?? null
   const target = root ?? window
-  let active = true, frame = null, nearby = [], quietUntil = 0, lastScrollTop = root?.scrollTop ?? window.scrollY
+  let active = true, frame = null, nearby = [], quietUntil = 0, snapshotLeases = 0, lastScrollTop = root?.scrollTop ?? window.scrollY
   const stale = () => !active || viewer.isRenderStale(version)
   const viewport = () => {
     const bounds = {left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight}
@@ -94,7 +94,7 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
     if (nearby.length) frame = requestAnimationFrame(warm)
   }
   const update = () => {
-    if (stale()) return
+    if (stale() || snapshotLeases) return
     if (frame !== null) cancelAnimationFrame(frame)
     frame = null
     const bounds = viewport()
@@ -116,6 +116,38 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
     nearby = ranges.filter(item => !viewer.mountedSlides.has(item.index)).map(item => item.index)
     if (nearby.length) frame = requestAnimationFrame(warm)
   }
+  // Export mounts only the reader's current internal viewport. It never scrolls
+  // the note or changes the slide model, and releases its temporary DOM afterward.
+  const prepareNoteSnapshot = async () => {
+    if (!root?.closest('.en-root') || stale()) throw Error('PPT 预览尚未就绪，请稍后导出。')
+    const previous = new Set(viewer.mountedSlides)
+    snapshotLeases++
+    if (frame !== null) { cancelAnimationFrame(frame); frame = null }
+    const release = () => {
+      if (!snapshotLeases) return
+      snapshotLeases--
+      if (!active) return
+      for (const index of [...viewer.mountedSlides]) if (!previous.has(index)) unmount(index)
+    }
+    try {
+      const bounds = root.getBoundingClientRect()
+      const current = wrappers.map((wrapper, index) => ({wrapper, index, box: wrapper.getBoundingClientRect()}))
+        .filter(item => item.box.bottom > bounds.top && item.box.top < bounds.bottom)
+      if (!current.length) throw Error('PPT 当前页尚未就绪，请稍后导出。')
+      for (const item of current) mount(item.index)
+      await Promise.all(current.flatMap(item => [...item.wrapper.querySelectorAll('img')]).filter(image => !image.complete).map(image => new Promise((resolve, reject) => {
+        const timer = setTimeout(() => { cleanup(); reject(Error('PPT 图片尚未载入，请稍后导出。')) }, 5000)
+        const cleanup = () => { clearTimeout(timer); image.removeEventListener('load', loaded); image.removeEventListener('error', failed) }
+        const loaded = () => { cleanup(); resolve() }, failed = () => { cleanup(); reject(Error('PPT 图片无法载入。')) }
+        image.addEventListener('load', loaded, {once: true}); image.addEventListener('error', failed, {once: true})
+      })))
+      await new Promise(resolve => setTimeout(resolve, 30))
+      if (stale()) throw Error('PPT 预览已变化，请重新导出。')
+      let released = false
+      return {release() { if (!released) { released = true; release() } }}
+    } catch (error) { release(); throw error }
+  }
+  if (root) root.__sherlockPrepareNoteSnapshot = prepareNoteSnapshot
   const wheel = event => {
     if (!root || stale() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.deltaX || event.deltaMode !== 0 || !Number.isFinite(event.deltaY) || !event.deltaY) return
     // A replacement viewer shares the live scroller while preparing its hidden
@@ -165,6 +197,7 @@ export function createPptxScrollWindow(viewer, wrappers, mount, unmount, version
     observe(wrapper) { intersection.observe(wrapper) },
     disconnect() {
       active = false
+      if (root?.__sherlockPrepareNoteSnapshot === prepareNoteSnapshot) delete root.__sherlockPrepareNoteSnapshot
       if (frame !== null) cancelAnimationFrame(frame)
       target.removeEventListener('scroll', scroll)
       if (root) root.removeEventListener('wheel', wheel)
@@ -203,7 +236,7 @@ export function observePptxChartResize(chart, element, instances) {
   observer.observe(element)
   return observer
 }
-const marker = '/* sherlock:pptx-resize-settle:v7 */'
+const marker = '/* sherlock:pptx-resize-settle:v8 */'
 const fontFit = 'gt = N.style.overflowY, Qt = () => {'
 const guardedFontFit = fontFit + '\nif (n.signal?.aborted) return;'
 const categorySource = '\n\t\t\t\ttickLblPos: o,'
