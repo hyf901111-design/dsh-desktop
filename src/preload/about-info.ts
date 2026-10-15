@@ -18,6 +18,14 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.3.2",
+      "date": "2026-10-15",
+      "items": [
+        "修复切换到笔记模式后顶栏消失的问题，恢复会话标题、模式切换与导出入口。",
+        "修复笔记任务进度和结果区域可能显示失败的问题，保持中英文界面正常显示。"
+      ]
+    },
+    {
       "version": "1.3.1",
       "date": "2026-10-15",
       "items": [
@@ -433,6 +441,14 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.3.2",
+      "date": "2026-10-15",
+      "items": [
+        "Fix the missing header in Notes mode, restoring the session title, mode tabs, and export menu.",
+        "Fix note task progress and results failing to display, with consistent Chinese and English interfaces."
+      ]
+    },
     {
       "version": "1.3.1",
       "date": "2026-10-15",
