@@ -83,6 +83,11 @@ export function patchNotesActivity(source) {
     source=source.replace(inline,'/* ework:note-reference-bubble:v1 */ const noteReferences=arguments[0].noteReferences;\nconst inlineResearch = !!noteReferences?.length || text.includes(')
     source=source.replace(children,"children: [noteReferences?.map(reference=>react.createElement(EWorkNoteMessageReference,{key:reference.blockId,reference})),projectResearchUserText(research, openFile), rest.map(")
   }
+  const visible='const showBubble = research.text !== ""',withReferences='const showBubble = (noteReferences?.length ?? 0) > 0 || research.text !== ""'
+  if(!source.includes(withReferences)){
+    if(source.split(visible).length!==2)throw Error('无法定位笔记引用气泡可见状态。')
+    source=source.replace(visible,withReferences)
+  }
   source=source.replace('(EWorkNotesActivity,{sessionId})]','(EWorkNotesActivity,{sessionId,t})]')
   const old="activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId}) : "
   source=source.replace(old,'')

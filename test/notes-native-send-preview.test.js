@@ -62,12 +62,13 @@ it('keeps single and multiple quoted component labels inside their original nati
 for(const dark of [false,true])it(`replays file and text quote labels inside the bubble with full tooltips (${dark?'dark':'light'})`,async()=>{
  const {context,page,errors}=await fixture(dark);try{
   const title='这是一段被选中的原始文字，'.repeat(25)+'结束标记'
-  await page.evaluate(title=>document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'send-preview',rows:[{requestId:'replayed-refs',phase:'replied',prompt:'总结这些内容',startedAt:1,finishedAt:2,references:[{blockId:'file',title:'选区替换样式验收.pdf',type:'attachment'},{blockId:'text-selection',title,type:'text'}],result:{kind:'conversation',markdown:'总结'}}]}})),title)
+  await page.evaluate(title=>document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'send-preview',rows:[{requestId:'replayed-refs',phase:'replied',prompt:'总结这些内容',startedAt:1,finishedAt:2,references:[{blockId:'file',title:'选区替换样式验收.pdf',type:'attachment'},{blockId:'text-selection',title,type:'text'}],result:{kind:'conversation',markdown:'总结'}},{requestId:'image-only-refs',phase:'replied',prompt:'',content:[{type:'image',attachment:{attachmentId:'image'}},{type:'text',text:''}],startedAt:3,finishedAt:4,references:[{blockId:'image-ref',type:'research',title:'图片对应的研究组件'}],result:{kind:'conversation',markdown:'已比较'}}]}})),title)
   const row=page.locator('#history [data-note-task="replayed-refs"]');await row.waitFor()
   expect(await row.locator('[data-note-message-reference]').count()).toBe(2)
   expect(await row.locator('[data-file-kind="pdf"]').textContent()).toBe('PDF')
   expect(await row.locator('[data-note-message-reference="text-selection"]').getAttribute('title')).toBe(title)
   expect(await row.textContent()).toContain('总结这些内容');expect(errors).toEqual([])
+  expect(await page.locator('#history [data-note-task="image-only-refs"] [data-note-message-reference]').count()).toBe(1)
  }finally{await context.close()}
 },15000)
 for(const dark of [false,true])it(`shows note sources, toggles actual context and keeps selected text when focusing the native composer (${dark?'dark':'light'})`,async()=>{
