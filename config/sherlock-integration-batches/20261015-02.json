@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首页输入框半透明背景模糊修复",
+        "featureName": "首页新增四款动态主题及输入按钮材质优化",
         "branch": "codex/feat/home-theme-switch-20261015",
-        "baseCommit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
-        "tipCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
+        "baseCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
+        "tipCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
         "commits": [
           {
-            "commit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
+            "commit": "84ef21e34d426c16d802b407158973f3a89441e9",
             "parents": [
-              "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4"
+              "4d6c960a7f4a02218acc9e1df97cb5d60133b375"
             ],
-            "subject": "修复：首页输入框恢复半透明背景模糊效果"
+            "subject": "优化：首页命令与附件按钮使用半透明底色"
+          },
+          {
+            "commit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
+            "parents": [
+              "84ef21e34d426c16d802b407158973f3a89441e9"
+            ],
+            "subject": "新增：接入四款首页动态主题及对应预览卡片"
           }
         ],
         "files": [
@@ -28,8 +35,24 @@
             "path": "src/preload/figma-home.css"
           },
           {
+            "status": "A",
+            "path": "src/preload/home-theme-assets/boz-glyph-atlas.json"
+          },
+          {
             "status": "M",
-            "path": "src/preload/figma-reading.css"
+            "path": "src/preload/home-theme-configs.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-renderer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-shaders.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-themes.ts"
           },
           {
             "status": "M",
@@ -37,7 +60,15 @@
           },
           {
             "status": "M",
+            "path": "test/home-theme-controller.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/home-theme-motion-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-renderer-browser.test.js"
           }
         ],
         "checks": [
@@ -46,17 +77,31 @@
               "npx",
               "vitest",
               "run",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-renderer-browser.test.js",
+              "test/home-theme-motion-browser.test.js",
               "test/figma-home-materials.test.js",
               "test/figma-home-entry-spacing.test.js",
-              "test/home-theme-motion-browser.test.js",
               "--maxWorkers=1",
               "--testTimeout=30000",
               "--hookTimeout=60000"
             ],
             "outcome": "passed",
-            "summary": "20项完整样式级联、实际模糊像素、输入位置及主题动效检查通过",
-            "verifiedCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
-            "completedAt": "2026-10-15T06:51:07.286616+00:00",
+            "summary": "39项主题、渲染、动效、按钮材质与输入布局聚焦检查通过",
+            "verifiedCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
+            "completedAt": "2026-10-15T07:50:03.319336+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
+            "completedAt": "2026-10-15T07:50:03.319336+00:00",
             "timeoutMs": 180000
           },
           {
@@ -67,54 +112,23 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
-            "completedAt": "2026-10-15T06:51:07.286616+00:00",
+            "verifiedCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
+            "completedAt": "2026-10-15T07:50:03.319336+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium执行完整生产样式加载，亮暗输入框49%填充和12px背景模糊通过；截图像素证实背景色彩保留、细纹理被模糊，普通会话、右栏及子代理输入保持原材质。最终客户端将在集成构建后复核。"
+          "summary": "真实Chromium渲染并检查八款动效的深浅色、动态像素、快速切换、九主题循环与键盘操作；新增四款截图已对照Figma核验。两个按钮在生产样式下的半透明底色和悬停反馈通过。最终客户端将在集成构建后复核。"
         },
         "acceptanceCriteria": [
-          "对话首页输入框匹配Figma亮暗49%填充及背景模糊",
-          "只模糊背景，文字和按钮保持清晰、可交互",
-          "主题切换、首页重入和输入框几何保持正常",
+          "新增Accelbia、Boz、Shashidhar、LotusTech四款动态背景和Figma预览卡片",
+          "九主题循环、记忆选择、渐变切换和首页错落入场正常",
+          "斜杠与附件按钮改为半透明底色并保留交互反馈",
           "最终客户端实际复核并保持打开供用户测试"
         ],
         "risks": [],
-        "generatedAt": "2026-10-15T06:51:07.286616+00:00"
-      },
-      "merged": {
-        "mergeCommit": "571e721cd25a7a5bb14d1c27e26d4e8d201ade23",
-        "verificationCommit": "571e721cd25a7a5bb14d1c27e26d4e8d201ade23",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "571e721cd25a7a5bb14d1c27e26d4e8d201ade23",
-            "completedAt": "2026-10-15T06:54:15.865Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "571e721cd25a7a5bb14d1c27e26d4e8d201ade23",
-            "completedAt": "2026-10-15T06:54:15.865Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-15T06:54:15.865Z"
+        "generatedAt": "2026-10-15T07:50:03.319336+00:00"
       }
     }
   ],
