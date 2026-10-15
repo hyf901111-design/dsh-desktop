@@ -9,82 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首页五种动态背景主题、错落入场及小窗口侧栏布局修复",
+        "featureName": "首页输入框半透明背景模糊修复",
         "branch": "codex/feat/home-theme-switch-20261015",
-        "baseCommit": "0ebaf0b84fe9f385be575b19ee8e5b133efe8ea1",
-        "tipCommit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
+        "baseCommit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
+        "tipCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
         "commits": [
           {
-            "commit": "5d36451b30c12de6fdaa7b51f0fb1b72e6b8f104",
+            "commit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
             "parents": [
-              "0ebaf0b84fe9f385be575b19ee8e5b133efe8ea1"
+              "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4"
             ],
-            "subject": "修复：小窗口展开侧栏时统一笔记和研究页面可见布局"
-          },
-          {
-            "commit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
-            "parents": [
-              "5d36451b30c12de6fdaa7b51f0fb1b72e6b8f104"
-            ],
-            "subject": "功能：首页接入五种动态主题与错落切换动效"
+            "subject": "修复：首页输入框恢复半透明背景模糊效果"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/assets.d.ts"
-          },
           {
             "status": "M",
             "path": "src/preload/figma-home.css"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-flow.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-assets/default-dark.png"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-assets/default-light.png"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-configs.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-renderer.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-shaders.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-themes.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-header-layout.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-home-entry-spacing.test.js"
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
@@ -92,23 +37,7 @@
           },
           {
             "status": "M",
-            "path": "test/home-flow.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/home-theme-controller.test.ts"
-          },
-          {
-            "status": "A",
             "path": "test/home-theme-motion-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/home-theme-renderer-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workspace-narrow-layout.test.js"
           }
         ],
         "checks": [
@@ -117,52 +46,17 @@
               "npx",
               "vitest",
               "run",
-              "test/home-theme-controller.test.ts",
-              "test/home-theme-renderer-browser.test.js",
-              "test/home-theme-motion-browser.test.js",
-              "test/home-flow.test.ts",
-              "test/figma-home-entry-spacing.test.js",
               "test/figma-home-materials.test.js",
+              "test/figma-home-entry-spacing.test.js",
+              "test/home-theme-motion-browser.test.js",
               "--maxWorkers=1",
               "--testTimeout=30000",
               "--hookTimeout=60000"
             ],
             "outcome": "passed",
-            "summary": "42项首页控制、实际WebGL与动画、材质和认证背景验证通过",
-            "verifiedCommit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
-            "completedAt": "2026-10-15T06:10:12.142534+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/workspace-narrow-layout.test.js",
-              "test/figma-sidebar-overlay.test.ts",
-              "test/research-sidebar-policy.test.ts",
-              "test/figma-responsive-header.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/figma-final-shell-patch.test.ts",
-              "test/figma-header-layout.test.js",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "49项实际原生布局及侧栏回归通过",
-            "verifiedCommit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
-            "completedAt": "2026-10-15T06:10:12.142534+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "完整类型检查通过",
-            "verifiedCommit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
-            "completedAt": "2026-10-15T06:10:12.142534+00:00",
+            "summary": "20项完整样式级联、实际模糊像素、输入位置及主题动效检查通过",
+            "verifiedCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
+            "completedAt": "2026-10-15T06:51:07.286616+00:00",
             "timeoutMs": 180000
           },
           {
@@ -173,57 +67,23 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "e09b920b4386ab9f4f678dca8f003f2b8d4aa0f4",
-            "completedAt": "2026-10-15T06:10:12.142534+00:00",
+            "verifiedCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
+            "completedAt": "2026-10-15T06:51:07.286616+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "独立真实Chromium验证五主题亮暗纹理、24fps生命周期、35/100/175ms错落、快速连续切换、隐藏后明暗恢复，以及180px可用区域点击；原生AppFrame/store布局fixture覆盖800/720px笔记与研究。共享客户端验证将在集成构建后执行。"
+          "summary": "真实Chromium执行完整生产样式加载，亮暗输入框49%填充和12px背景模糊通过；截图像素证实背景色彩保留、细纹理被模糊，普通会话、右栏及子代理输入保持原材质。最终客户端将在集成构建后复核。"
         },
         "acceptanceCriteria": [
-          "首页展示默认、Berber、Vghodki、Jarrick、Lowfreez，支持亮暗及记住选择",
-          "点击侧预览循环切换，背景自然淡入，回首页三卡错落弹出",
-          "小窗口展开左栏后笔记、顶部栏、研究画布和工具栏共享正确可见边界",
-          "共享客户端构建后实测并保留打开，等待用户验收精确集成提交"
+          "对话首页输入框匹配Figma亮暗49%填充及背景模糊",
+          "只模糊背景，文字和按钮保持清晰、可交互",
+          "主题切换、首页重入和输入框几何保持正常",
+          "最终客户端实际复核并保持打开供用户测试"
         ],
-        "risks": [
-          "新主题需要WebGL2；不可用时保留灰阶动态回退并保留输入功能",
-          "本地测试构建跳过公证，不对外发布；新批次尚待用户验收"
-        ],
-        "generatedAt": "2026-10-15T06:10:12.142534+00:00"
-      },
-      "merged": {
-        "mergeCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
-        "verificationCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
-            "completedAt": "2026-10-15T06:11:41.695Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
-            "completedAt": "2026-10-15T06:11:41.695Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-15T06:11:41.695Z"
+        "risks": [],
+        "generatedAt": "2026-10-15T06:51:07.286616+00:00"
       }
     }
   ],
