@@ -434,10 +434,11 @@ export function WorkbenchToolbar({rootRef,sessionId,workspace,availableWidth,bot
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     if(bottomOffset===20)root.setAttribute('data-workbench-toolbar-space','')
-    const measure=()=>{const r=root.getBoundingClientRect(),width=Math.min(r.width,availableWidth||r.width),next={left:r.left+width/2,bottom:Math.max(bottomOffset,window.innerHeight-r.bottom+bottomOffset),width:Math.max(120,width-24)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom&&previous.width===next.width?previous:next)}
+    const measure=()=>{const r=root.getBoundingClientRect(),width=Math.min(r.width,availableWidth||r.width),panelHeight=parseFloat(root.ownerDocument.defaultView?.getComputedStyle(root.ownerDocument.documentElement).getPropertyValue('--dsh-sidebar-height')||'0')||0,next={left:r.left+width/2,bottom:Math.max(bottomOffset+panelHeight,window.innerHeight-r.bottom+bottomOffset),width:Math.max(120,width-24)};setBounds(previous=>previous&&previous.left===next.left&&previous.bottom===next.bottom&&previous.width===next.width?previous:next)}
     measure();const observer=new ResizeObserver(measure);observer.observe(root);if(root.parentElement)observer.observe(root.parentElement)
+    const panelObserver=new MutationObserver(measure);panelObserver.observe(root.ownerDocument.documentElement,{attributes:true,attributeFilter:['style']})
     window.addEventListener('resize',measure)
-    return()=>{observer.disconnect();window.removeEventListener('resize',measure);if(bottomOffset===20)root.removeAttribute('data-workbench-toolbar-space')}
+    return()=>{observer.disconnect();panelObserver.disconnect();window.removeEventListener('resize',measure);if(bottomOffset===20)root.removeAttribute('data-workbench-toolbar-space')}
   },[rootRef,availableWidth,bottomOffset])
   return react_dom.createPortal(react_jsx_runtime.jsx('div',{...props,'data-ework-toolbar':bottomOffset===20?'':undefined,'data-ework-toolbar-owner':sessionId,'data-toolbar-overflow':bottomOffset===20&&bounds?.width<375||undefined,style:{...props.style,'--ework-toolbar-available-width':bounds?.width+'px',position:'fixed',left:bounds?.left||0,bottom:bounds?.bottom||bottomOffset,top:'auto',visibility:bounds?'visible':'hidden'},children:bottomOffset===20&&workspace?(function(){const tools=react.Children.toArray(children),index=tools.findIndex(c=>c.type===WorkbenchArrangeTool);tools.splice(index>=0?index+1:2,0,react_jsx_runtime.jsx(FinancialLibrary,{rootRef,workspace,sessionId},'financial-library'));return [...tools,react_jsx_runtime.jsx(WorkbenchStylePicker,{workspace},'workbench-style')]})():children}),document.body)
 }

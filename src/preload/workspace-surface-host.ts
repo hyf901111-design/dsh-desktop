@@ -117,13 +117,16 @@ export class WorkspaceSurfaceHost {
                 const header = this.document.querySelector<HTMLElement>('[data-ework-notes-session]');
                 if (center && header) {
                     const pane = center.getBoundingClientRect(), chrome = header.getBoundingClientRect();
+                    const viewport = header.closest<HTMLElement>('.wSkVaW_root[data-odyssey-page]');
+                    const bottom = Math.min(pane.bottom, viewport?.getBoundingClientRect().bottom ?? pane.bottom);
                     const view = this.document.defaultView;
                     element.style.left = `${Math.max(0, pane.left)}px`;
                     element.style.top = `${Math.max(0, chrome.bottom)}px`;
                     element.style.right = `${Math.max(0, (view?.innerWidth || pane.right) - pane.right)}px`;
-                    element.style.bottom = `${Math.max(0, (view?.innerHeight || pane.bottom) - pane.bottom)}px`;
+                    element.style.bottom = `${Math.max(0, (view?.innerHeight || pane.bottom) - bottom)}px`;
                     this.resizeObserver?.observe(center);
                     this.resizeObserver?.observe(header);
+                    if (viewport) this.resizeObserver?.observe(viewport);
                 }
             }
         }
