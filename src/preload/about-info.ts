@@ -18,6 +18,32 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.3.1",
+      "date": "2026-10-15",
+      "items": [
+        "笔记中的组件框支持居左、居中和居右，与段落对齐命令一致，并保留组件自身尺寸。",
+        "笔记支持选中一个或多个组件、框选正文或附件文字作为 AI 引用，输入框显示对应标签，可针对选中内容提问、补充或修改。",
+        "未选择内容时，可切换“参考当前笔记内容”或“不参考当前笔记内容”；参考列表包含当前组件和“笔记全文”。",
+        "笔记引用能够读取组件实际内容、附件原文及 PDF 正文；按当次引用范围组织上下文，避免只读取文件名和页码。",
+        "笔记用户消息气泡保留发送时的单个或多个引用标签，支持组件、文字选区与附件，便于回看每次提问的依据。",
+        "修复研究模式引用单个组件时误总结整个看板的问题，优先读取当前所选组件的数据并严格限定引用范围。",
+        "笔记输入提示统一为“撰写、补充或改写笔记...”，参考内容开关不再附加组件数量。",
+        "笔记斜杠菜单中的图片、视频、音频和文件直接打开对应格式的系统文件选择器，选好后插入正文光标位置。",
+        "图片自然嵌入笔记正文，视频和音频可在文档内播放预览；不支持直接预览的文件以紧凑标签卡片展示。",
+        "笔记斜杠菜单新增智能组件和链接，默认与正文等宽；智能组件直接交由子代理生成，不占用主代理或在右侧会话中插入生成消息。",
+        "笔记智能组件复用研究模式的生成进度卡片，链接组件复用相同加载能力，支持未填写协议前缀的网址。",
+        "笔记导出 PDF 和 Word 时嵌入组件快照，保留组件在文档中的可视内容。",
+        "笔记正文末尾增加半屏可滚动留白，方便继续撰写和阅读底部内容。",
+        "修复笔记模式底部面板被正文遮挡的问题；研究工具栏随底部面板展开和高度调整移动到面板上方。",
+        "修复小尺寸窗口中笔记页面及强制展开左侧栏时的遮挡和裁切，统一笔记与研究页面的可见布局。",
+        "恢复研究模式派生思维导图的节点、连线和完整内容编辑，避免以普通列表替代导图。",
+        "会话与笔记采用系统中文字体，优化正文字号、行距和中英文阅读体验；统一智能组件、链接及组件顶栏图标，修复刷新图标裁切。",
+        "对话首页新增 13 款动态主题，并保留默认背景；支持三卡预览、循环切换、键盘操作和选择记忆，兼容深浅外观。",
+        "首页主题切换采用自然渐变，返回对话首页时预览卡片错落入场；相邻卡片保留毛玻璃与渐进模糊，并随窗口和侧栏变化保持居中。",
+        "首页输入框采用半透明背景模糊，斜杠和附件按钮改为轻薄透明底色；增强右上角展开按钮的底色与辨识度。"
+      ]
+    },
+    {
       "version": "1.3.0",
       "date": "2026-10-14",
       "items": [
@@ -406,6 +432,32 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.3.1",
+      "date": "2026-10-15",
+      "items": [
+        "Component frames in Notes now support left, center and right paragraph alignment while retaining their own sizes.",
+        "Select one or more components or highlight body or attachment text as AI references in Notes. Composer tags identify the selected material for questions, additions and edits.",
+        "Without a selection, switch between referencing the current note and answering without it. The reference list includes current components and the full note.",
+        "Notes references read actual component content, attachment text and PDF bodies. Each request uses its current reference scope instead of only filenames and page numbers.",
+        "User message bubbles in Notes retain the single or multiple reference tags used when sending, including components, text selections and attachments.",
+        "Fixed Research summarizing the entire board when only one component was referenced. Current selected-component data and reference scope take priority.",
+        "The Notes composer now prompts users to write, extend or rewrite notes, and the reference toggle no longer appends a component count.",
+        "Image, video, audio and file slash commands in Notes open the matching system file picker and insert the selected file at the document cursor.",
+        "Images embed naturally in the note body; videos and audio play directly in the document. Files without inline previews appear as compact file tags.",
+        "Added Smart Component and Link slash entries in Notes, initially matching the body width. Smart generation goes directly to a subagent without adding requests or results to the main conversation.",
+        "Smart components in Notes reuse Research generation-progress cards. Link components share the same loading behavior and accept addresses without a protocol prefix.",
+        "PDF and Word exports of Notes now include component snapshots, preserving their visible document content.",
+        "Added half a viewport of scrollable space after the end of a note for writing and reading near the bottom.",
+        "Fixed the Notes body covering the bottom panel. The Research toolbar stays above the panel as it opens or changes height.",
+        "Fixed clipping and overlap in small Notes windows and when manually expanding the left sidebar, with consistent visible layouts in Notes and Research.",
+        "Restored nodes, connecting lines and complete content editing for mind maps derived from Research components, replacing the unintended plain-list view.",
+        "Conversations and Notes use native system Chinese fonts with refined body sizing and line spacing. Unified Smart Component, Link and header icons and fixed cropped refresh icons.",
+        "Added 13 animated homepage themes alongside the default background, with three-card previews, cyclic and keyboard navigation, saved selection and light/dark appearances.",
+        "Themes crossfade smoothly and preview cards enter with staggered motion on returning home. Neighboring cards retain glass and progressive blur and stay centered as windows and side panels change.",
+        "The homepage composer uses translucent background blur, with lightweight command and attachment button fills. The top-right panel entry has a clearer backing and improved visibility."
+      ]
+    },
     {
       "version": "1.3.0",
       "date": "2026-10-14",
