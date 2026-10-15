@@ -11,21 +11,40 @@
         "schemaVersion": 1,
         "featureName": "笔记组件对齐与选择引用",
         "branch": "codex/feat/notes-context-alignment-20261015",
-        "baseCommit": "2d3db055cf2580161ca094852a8a18c54c842e4b",
-        "tipCommit": "48585bac2015cae4bd0af4396759f8ae8b4e3658",
+        "baseCommit": "48585bac2015cae4bd0af4396759f8ae8b4e3658",
+        "tipCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
         "commits": [
           {
-            "commit": "48585bac2015cae4bd0af4396759f8ae8b4e3658",
+            "commit": "0f5320622f632bc2e68bd2bb86ca800d64f01496",
             "parents": [
-              "2d3db055cf2580161ca094852a8a18c54c842e4b"
+              "48585bac2015cae4bd0af4396759f8ae8b4e3658"
             ],
-            "subject": "功能：支持笔记组件对齐和选区引用并按引用范围修改内容"
+            "subject": "修复：笔记引用读取附件原文并精简输入提示"
+          },
+          {
+            "commit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+            "parents": [
+              "0f5320622f632bc2e68bd2bb86ca800d64f01496"
+            ],
+            "subject": "修复：恢复研究派生思维导图的节点连线和完整内容编辑"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/notes-reference-content.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/derived-preset-client.mjs"
           },
           {
             "status": "M",
@@ -33,47 +52,59 @@
           },
           {
             "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/files.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/notes/reference-context.ts"
+          },
+          {
+            "status": "M",
             "path": "src/main/notes/service.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/notes/component-interaction.tsx"
+            "path": "src/main/state/research-context-bridge.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/notes/component-size.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "A",
             "path": "src/preload/notes/reference-context.ts"
           },
           {
-            "status": "M",
-            "path": "src/shared/workspace-notes.ts"
+            "status": "A",
+            "path": "test/derived-mind-map-browser.test.js"
           },
           {
             "status": "M",
-            "path": "test/notes-ai.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-component-import-interaction.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-component-layout.test.js"
+            "path": "test/note-files.test.ts"
           },
           {
             "status": "M",
             "path": "test/notes-native-send-preview.test.js"
           },
           {
+            "status": "A",
+            "path": "test/notes-reference-content.test.js"
+          },
+          {
             "status": "M",
             "path": "test/notes-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-context-bridge.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-extraction-cancellation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-client.test.js"
           }
         ],
         "checks": [
@@ -82,22 +113,35 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/notes-native-send-preview.test.js",
-              "test/notes-component-layout.test.js",
-              "test/notes-component-import-interaction.test.js",
-              "test/notes-service.test.ts",
-              "test/notes-ai.test.js",
-              "test/notes-component-interaction.test.tsx",
               "test/notes-composer.test.js",
-              "test/notes-menu-selection.test.js",
-              "test/notes-rewrite-range.test.ts",
-              "test/notes-paragraph-style.test.js",
-              "test/notes-native-components.test.js",
-              "test/notes-reply-actions-browser.test.js"
+              "test/notes-ai.test.js",
+              "test/notes-service.test.ts",
+              "test/note-files.test.ts",
+              "test/notes-reference-content.test.js",
+              "test/research-context-bridge.test.ts",
+              "test/research-file-extraction-cancellation.test.js",
+              "test/notes-component-import-interaction.test.js",
+              "test/notes-rewrite-range.test.ts"
             ],
             "outcome": "passed",
-            "summary": "12 个直接相关测试文件、92 项检查通过，含真实浏览器夹具验证",
-            "verifiedCommit": "48585bac2015cae4bd0af4396759f8ae8b4e3658",
-            "completedAt": "2026-10-15T01:00:44.723767Z",
+            "summary": "10个笔记与原文提取相关测试文件、104项通过",
+            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+            "completedAt": "2026-10-15T01:35:35.762994+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-grid-client.test.js",
+              "test/derived-mind-map-browser.test.js",
+              "-t",
+              "派生|horizontal hierarchy"
+            ],
+            "outcome": "passed",
+            "summary": "派生导图12项与真实浏览器几何、滚动、只读2项通过",
+            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+            "completedAt": "2026-10-15T01:35:35.762994+00:00",
             "timeoutMs": 180000
           },
           {
@@ -107,9 +151,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript 检查通过",
-            "verifiedCommit": "48585bac2015cae4bd0af4396759f8ae8b4e3658",
-            "completedAt": "2026-10-15T01:00:44.723767Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+            "completedAt": "2026-10-15T01:35:35.762994+00:00",
             "timeoutMs": 180000
           },
           {
@@ -120,59 +164,25 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "48585bac2015cae4bd0af4396759f8ae8b4e3658",
-            "completedAt": "2026-10-15T01:00:44.723767Z",
+            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+            "completedAt": "2026-10-15T01:35:35.762994+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器夹具验证明暗主题、1440/1100/800px 视口、真实段落菜单对齐与保存恢复、标题和正文选择标签、窄输入框长标签、嵌套及屏幕外组件目录、实际请求范围、所选组件写回、失败停止与新编辑保护；未构建或替换共享客户端。"
+          "summary": "原生笔记输入框浏览器夹具验证无统计标签及新占位文案；真实双页PDF通过私有捕获和研究生产提取器将未渲染第二页送入模型请求；派生导图在380/900px浏览器验证节点几何、SVG连线、121个完整节点、滚动与只读，旧导图保存恢复及长节点编辑验证通过。"
         },
         "acceptanceCriteria": [
-          "组件与附件框可通过现有左中右对齐菜单定位，并保存恢复。",
-          "正文选区和所选组件在原生输入框显示可移除的引用标签，聚焦输入框保持引用。",
-          "无局部引用时可切换参考当前笔记，目录列出全部组件和笔记全文。",
-          "关闭参考时不发送当前笔记正文、标题、选区或组件；局部引用只发送所选内容。",
-          "修改所选研究组件写回原位置，并保护等待期间较新编辑；旧会话回复组件显示新结果；停止失败不留多余组件。"
+          "笔记附件通过与研究模式相同的授权原文提取器供AI读取，引用范围和关闭状态有效。",
+          "标签不显示组件数量，输入提示为撰写、补充或改写笔记...。",
+          "已生成和新生成的派生思维导图显示中心主题、层级节点和连线，保留来源原文与可编辑结果。",
+          "长节点不截断，超过48个节点完整呈现并可滚动访问。"
         ],
         "risks": [
-          "功能在隔离分支，尚未集成到本地 main 或进行共享客户端验收。",
-          "附件引用使用笔记组件中的可读预览内容；本批次未新增附件全文解析器。",
-          "未调用真实在线模型进行端到端生成验收；模型输出与写回使用真实浏览器加受控模型结果验证。"
+          "待更新共享客户端后验证真实界面和在线模型；本卡记录聚焦源码及浏览器验证。"
         ],
-        "generatedAt": "2026-10-15T01:00:44.723767Z"
-      },
-      "merged": {
-        "mergeCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
-        "verificationCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
-            "completedAt": "2026-10-15T01:03:52.720Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
-            "completedAt": "2026-10-15T01:03:52.720Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-15T01:03:52.720Z"
+        "generatedAt": "2026-10-15T01:35:35.762994+00:00"
       }
     }
   ],
