@@ -25,6 +25,18 @@ it('adds a native popup command and lists only enabled skills with a name and de
  expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({id:f.skill.id,revision:2,sessionId:'current',commandSegment:{via:'enter',token:'/skills'}}))
  f.dispose();f.bridge.dispose()
 })
+it('shows the English built-in skill names in the slash popup while preserving custom skill names and identities',async()=>{
+ const f=fixture();f.w.document.documentElement.dataset.odysseyLocale='en'
+ const names=['PPT制作助手','工作台组件生成','基础数据源','基础金融分析逻辑']
+ const rows=names.map((name,index)=>({...f.skill,id:'builtin:skill-'+index,name}))
+ f.request.mockResolvedValueOnce({type:'snapshot',snapshot:{revision:1,rows:[...rows,{...f.skill,id:'custom:finance'}]}} as any)
+ const options=await f.command.ui.options({sessionId:'current'},new AbortController().signal)
+ expect(options.map((row:any)=>row.label)).toEqual(['Presentation assistant','Workbench component builder','Core data sources','Core financial analysis','基础金融分析逻辑'])
+ expect(options.map((row:any)=>row.id)).toEqual([...rows.map(row=>row.id),'custom:finance'])
+ await f.command.ui.onSelect(options[0],{sessionId:'current'})
+ expect(f.useSkill).toHaveBeenCalledWith(expect.objectContaining({id:'builtin:skill-0',revision:2,sessionId:'current'}))
+ f.dispose();f.bridge.dispose()
+})
 it('does not offer the command in child sessions and drops aborted catalog loads',async()=>{
  const f=fixture(),controller=new AbortController();controller.abort()
  await expect(f.command.ui.options({sessionId:'current'},controller.signal)).rejects.toThrow()

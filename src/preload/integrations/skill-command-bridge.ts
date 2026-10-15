@@ -1,10 +1,17 @@
 import type {IntegrationBridge,SkillCommandSegment} from '../../shared/integration-ui'
 import {decodeSkillReference} from '../../shared/skill-reference'
+import {integrationUiCopy} from '../integration-ui-copy'
+import {englishUiCopy} from '../ui-copy'
 
 const REQUEST='sherlock:skill-menu-request',REPLY='sherlock:skill-menu-reply'
 /** Isolated preload owns listing and the existing verified composer transfer. */
 export function installSkillCommandBridge(document:Document,bridge:Pick<IntegrationBridge,'request'|'useSkill'>) {
  const win=document.defaultView!
+ const display=(row:{id:string;name:string;description?:string})=>{
+  const english=document.documentElement.dataset.odysseyLocale==='en'&&row.id.startsWith('builtin:')
+  const text=(value:string)=>integrationUiCopy[value]??englishUiCopy[value]??value
+  return {name:english?text(row.name):row.name,description:english?text(row.description??''):row.description}
+ }
  const pending=new Map<string,AbortController>()
  let generation=0,disposed=false
  const onRequest=async(event:Event)=>{
@@ -18,11 +25,11 @@ export function installSkillCommandBridge(document:Document,bridge:Pick<Integrat
    if(data.action==='labels'){
     const reply=await bridge.request({type:'snapshot'})
     if(reply.type!=='snapshot')throw Error('技能名称暂不可用。')
-    result={owner:reply.snapshot.ownerAccountId??'',skills:reply.snapshot.rows.filter(row=>row.kind==='skill'&&row.invocationName&&row.invocationLabel).map(row=>({invocationName:row.invocationName,label:row.invocationLabel,name:row.name})),tools:[...(reply.snapshot.historicalToolLabels??[]),...reply.snapshot.rows.filter(row=>row.kind==='connection').flatMap(row=>(row.tools??[]).filter(tool=>/^[A-Za-z0-9_]{1,57}$/.test(tool.id)).map(tool=>({wireName:'ework__'+tool.id,label:row.name+' · '+tool.name})))]}
+    result={owner:reply.snapshot.ownerAccountId??'',skills:reply.snapshot.rows.filter(row=>row.kind==='skill'&&row.invocationName&&row.invocationLabel).map(row=>({invocationName:row.invocationName,label:row.invocationLabel,name:display(row).name})),tools:[...(reply.snapshot.historicalToolLabels??[]),...reply.snapshot.rows.filter(row=>row.kind==='connection').flatMap(row=>(row.tools??[]).filter(tool=>/^[A-Za-z0-9_]{1,57}$/.test(tool.id)).map(tool=>({wireName:'ework__'+tool.id,label:row.name+' · '+tool.name})))]}
    }else if(data.action==='list'){
     const reply=await bridge.request({type:'snapshot'})
     if(reply.type!=='snapshot')throw Error('技能列表暂不可用，请重试。')
-    result=reply.snapshot.rows.filter(row=>row.kind==='skill' && row.enabled && row.status!=='已停用').map(row=>({id:row.id,label:row.name,detail:row.description,revision:row.revision}))
+    result=reply.snapshot.rows.filter(row=>row.kind==='skill' && row.enabled && row.status!=='已停用').map(row=>({id:row.id,label:display(row).name,detail:display(row).description,revision:row.revision}))
    } else if(data.action==='resolve'){
     const reference=decodeSkillReference(JSON.stringify(data.reference))
     const detail=await bridge.request({type:'skill-detail',id:reference.id,revision:reference.revision})

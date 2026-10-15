@@ -25,6 +25,8 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
  const reset=()=>{catalogs.clear();for(const cancel of [...pending])cancel();if(!stopped)refreshLabels()}
  win.addEventListener('sherlock:skill-menu-reset',reset)
  refreshLabels();const labelTimer=win.setInterval(refreshLabels,10000)
+ const localeObserver=new win.MutationObserver(refreshLabels)
+ localeObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']})
  const unregisterReference=deps.inputTriggers?.registerSource({trigger:'/',name:SKILL_REFERENCE_SOURCE,order:3,candidates:async()=>[],onPick:()=>undefined,codec:{
   clipboardText:(ref:string)=>`/${decodeSkillReference(ref).label}`,
   serialize:async(ref:string,signal:AbortSignal)=>{
@@ -49,5 +51,5 @@ export function installSkillCommand(deps:{document?:Document;command:{register(v
    await exchange('use',{skill,sessionId:session.sessionId,commandSegment:session.skillCommandSegment},catalog!.signal)
   }
  }})
- return ()=>{stopped=true;win.clearInterval(labelTimer);unregister();unregisterReference?.();reset();win.removeEventListener('sherlock:skill-menu-reset',reset)}
+ return ()=>{stopped=true;localeObserver.disconnect();win.clearInterval(labelTimer);unregister();unregisterReference?.();reset();win.removeEventListener('sherlock:skill-menu-reset',reset)}
 }
