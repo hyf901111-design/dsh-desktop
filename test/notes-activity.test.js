@@ -2,6 +2,17 @@ import {expect,it} from 'vitest'
 import {createNotesActivityStore} from '../scripts/lib/notes-activity.mjs'
 import React from 'react'
 import {renderToStaticMarkup} from 'react-dom/server'
+import {readFile} from 'node:fs/promises'
+import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
+import {patchFigmaFinalConversation} from '../scripts/lib/patch-figma-final-shell.mjs'
+
+it('retains note reference chips when the production shell patch runs again during a rebuild',async()=>{
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const installed=patchNotesActivity(patchFigmaFinalConversation(source))
+ expect(patchFigmaFinalConversation(installed)).toBe(installed)
+ expect(patchNotesActivity(patchFigmaFinalConversation(installed))).toBe(installed)
+ expect(installed).toContain('noteReferences?.map(reference=>react.createElement(EWorkNoteMessageReference')
+})
 
 it('keeps actual requests per session through generation, adoption and account reset',()=>{
   const doc=new EventTarget(),store=createNotesActivityStore(doc),seen=[]

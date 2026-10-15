@@ -70,13 +70,13 @@ export function patchFigmaFinalConversation(source) {
   source = exact(source, 'null /* Figma final: manual references remain native inline chips. */,', 'researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),')
   source = exact(source, '|| research.canvasContext !== void 0 || rest.length > 0;', '|| rest.length > 0; /* Automatic context alone is not visible message content. */')
   source = exact(source, [
-    'children: [projectResearchUserText(research, openFile), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {',
+    'projectResearchUserText(research, openFile), research.canvasContext !== void 0 && (0, react_jsx_runtime.jsx)("div", {',
     '\t\t\t\t\t\t\t"data-research-context-provenance": "",',
     '\t\t\t\t\t\t\tstyle: { marginTop: research.text === "" ? 0 : 6, fontSize: 11, lineHeight: "16px", color: "var(--dsw-alias-label-tertiary)" },',
     '\t\t\t\t\t\t\ttitle: `${t("research.context.initialSources")}: ${research.canvasContext.initialSourceIds.join(", ") || t("research.context.noInitialSources")}`,',
     '\t\t\t\t\t\t\tchildren: t("research.context.sent", { total: research.canvasContext.totalSources, initial: research.canvasContext.initialSourceIds.length })',
     '\t\t\t\t\t\t}), rest.map'
-  ].join('\n'), 'children: [projectResearchUserText(research, openFile), rest.map')
+  ].join('\n'), 'projectResearchUserText(research, openFile), rest.map')
   // The canvas task patch now permits editing the visible text while preserving context.
   if (!source.includes('canvasQueuedContext: research')) source = exact(source,
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };',
