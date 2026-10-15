@@ -25,6 +25,29 @@ beforeAll(async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },30000)
 afterAll(async()=>browser?.close())
+it('keeps about half the visible note pane scrollable below the final paragraph as the pane resizes',async()=>{
+ const f=await fixture();try{
+  const original=await f.page.evaluate(()=>{
+   const blocks=Array.from({length:32},(_,index)=>({id:'tail-paragraph-'+index,type:'paragraph',content:index===31?'最后一段仍可继续编辑。':'正文段落 '+index+'：滚动留白不能改变笔记正文。'}))
+   window.noteEditor.replaceBlocks(window.noteEditor.document,blocks)
+   return JSON.stringify(window.noteEditor.document)
+  })
+  const measure=()=>f.page.locator('.en-document-scroll').evaluate(element=>{
+   element.scrollTop=element.scrollHeight
+   const pane=element.getBoundingClientRect(),tail=element.querySelector('[data-id="tail-paragraph-31"] .bn-block-content').getBoundingClientRect()
+   return {height:element.clientHeight,gap:pane.bottom-tail.bottom}
+  })
+  for(const height of [1000,720,420]){
+   if(height===720)await f.page.setViewportSize({width:1440,height})
+   if(height===420)await f.page.locator('#notes').evaluate(element=>{element.style.height='420px';element.style.bottom='auto'})
+   await expect.poll(async()=>{const size=await measure();return size.gap/size.height}).toBeGreaterThan(.46)
+   const size=await measure();expect(size.height).toBe(height);expect(size.gap/size.height).toBeLessThan(.58)
+  }
+  expect(await f.page.evaluate(()=>JSON.stringify(window.noteEditor.document))).toBe(original)
+  await f.page.locator('[data-id="tail-paragraph-31"] .bn-inline-content').click()
+  expect(await f.page.locator('.bn-editor').evaluate(element=>element.contains(document.activeElement))).toBe(true)
+ }finally{await f.context.close()}
+},15000)
 it('aligns the entire narrowed component without losing its payload, frame or saved alignment',async()=>{
  const f=await fixture();try{
   await f.notes.locator('.en-native-component-heading strong').click()
