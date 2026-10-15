@@ -215,6 +215,7 @@ function initializeUi(): void {
 
   ipcRenderer.on('notes:progress',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:value}))})
   ipcRenderer.on('notes:menu-event',(_event,value)=>{if(value?.owner&&value.owner===noteOwners.get(value?.sessionId))document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:value}))})
+  ipcRenderer.on('notes:component-data-action',(_event,value)=>{if(value?.owner===noteOwners.get(value?.sessionId)||value?.cancel)document.dispatchEvent(new CustomEvent('sherlock:notes-component-data-action',{detail:value}))})
   const notes = mountNotes(document, {
     filePath:file=>safePathForFile(file,webUtils.getPathForFile),
     request: async (method, input) => {

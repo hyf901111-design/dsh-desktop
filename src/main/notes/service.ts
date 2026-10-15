@@ -21,7 +21,7 @@ import { pickNoteFiles } from './file-picker'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
-  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number}
+  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
@@ -45,6 +45,15 @@ export function installNotesService(options: {
       case 'save': return store.save(owner, session, input.revision, input.content, input.clientId)
       case 'draft': store.draft(owner, session, input.clientId, input.revision, input.content); return { ok: true }
       case 'discard': store.discardDraft(owner, session, input.clientId); return { ok: true }
+      case 'component-data-reply': options.componentData?.reply(input);return {ok:true}
+      case 'component-data-visible': if(typeof input.active!=='boolean')throw Error('组件可见状态无效。');options.componentData?.visible(session,input.active);return {ok:true}
+      case 'component-data': {
+        if(!options.componentData)throw Error('组件数据刷新服务暂不可用。')
+        const node=findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)
+        if(!node)throw Error('笔记组件尚未保存或已移除，请稍后重试。')
+        if(input.action==='bind-generated'&&JSON.stringify(node.containerSpec)!==JSON.stringify(input.initialSpec))throw Error('笔记组件内容已变化，请重新生成或绑定。')
+        return options.componentData.request(session,{action:input.action,nodeId:input.nodeId,recipe:input.recipe,initialSpec:input.initialSpec,settings:input.settings})
+      }
       case 'component-snapshots': {
         const window=options.getWindow(),key='note-snapshot:'+randomUUID(),controller=new AbortController();active.set(key,controller)
         try{return await captureNoteComponentSnapshots(window,input,()=>options.owner()===owner&&options.canRead(session)&&options.getWindow()===window,controller.signal)}finally{active.delete(key)}
@@ -85,9 +94,9 @@ export function installNotesService(options: {
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)
         try {
-          const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(125000)])
+          const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(input.mode==='component'?245000:125000)])
           const context=await prepareNoteReferences(input.context,{sessionId:session,owner,files:options.files,captureSources:options.captureSources,signal,current:()=>options.owner()===owner&&options.canRead(session)})
-          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,stream:true }) })
+          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},stream:true }) })
           if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
           const result = await readNoteGenerationStream(response,progress=>{
             if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
