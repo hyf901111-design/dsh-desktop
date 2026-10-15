@@ -9,34 +9,98 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记引用标签与研究引用范围及底部面板布局",
+        "featureName": "笔记斜杠文件及智能链接组件与字体阅读优化",
         "branch": "codex/feat/notes-context-alignment-20261015",
-        "baseCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
-        "tipCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
+        "baseCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
+        "tipCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
         "commits": [
           {
-            "commit": "2746e2d1c9f24a078bb42b8db4f6aed77e4bc3dd",
+            "commit": "5b07b8248ba48a4b3f1bbbd6bfe5ce88e8859db1",
             "parents": [
-              "2f75c25699d96c0cff88635e9841a734408fc3fa"
+              "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf"
             ],
-            "subject": "测试：覆盖笔记标签与研究气泡的组合渲染"
+            "subject": "功能：笔记斜杠插入文件及智能和链接组件"
           },
           {
-            "commit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
+            "commit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
             "parents": [
-              "2746e2d1c9f24a078bb42b8db4f6aed77e4bc3dd"
+              "5b07b8248ba48a4b3f1bbbd6bfe5ce88e8859db1"
             ],
-            "subject": "修复：补齐笔记会话补丁的类型声明"
+            "subject": "优化：采用系统中文字体改善会话和笔记阅读"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "scripts/lib/notes-activity.d.mts"
+            "status": "M",
+            "path": "scripts/lib/notes-components.mjs"
           },
           {
             "status": "M",
-            "path": "test/figma-final-shell-patch.test.ts"
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-native-web-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/notes/file-picker.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/client-typography.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/creation-block.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/menu-icon.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/native-component-block.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/shell-style.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-file-picker.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-menu-selection.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-native-web.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-slash-insert.test.js"
           }
         ],
         "checks": [
@@ -44,16 +108,19 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/notes-slash-insert.test.js",
+              "test/notes-native-web.test.js",
+              "test/notes-menu-selection.test.js",
+              "test/notes-file-picker.test.ts",
+              "test/notes-service.test.ts",
+              "test/research-native-web.test.ts",
               "test/notes-activity.test.js",
-              "test/figma-final-shell-patch.test.ts",
-              "test/notes-native-send-preview.test.js",
-              "-t",
-              "Figma shell patch installation|note task activity|quoted component labels|full tooltips|repeated|native note|notes activity"
+              "test/figma-final-shell-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "18项通过，覆盖笔记标签补丁组合后的研究消息与原生标签气泡",
-            "verifiedCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
-            "completedAt": "2026-10-15T02:22:37.111840+00:00",
+            "summary": "8文件73项通过，含真实编辑器插入、生成停止及并发保护、原生网页加载和重复补丁",
+            "verifiedCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
+            "completedAt": "2026-10-15T03:07:11.587654+00:00",
             "timeoutMs": 180000
           },
           {
@@ -64,8 +131,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
-            "completedAt": "2026-10-15T02:22:37.111840+00:00",
+            "verifiedCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
+            "completedAt": "2026-10-15T03:07:11.587654+00:00",
             "timeoutMs": 180000
           },
           {
@@ -76,56 +143,25 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
-            "completedAt": "2026-10-15T02:22:37.111840+00:00",
+            "verifiedCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
+            "completedAt": "2026-10-15T03:07:11.587654+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "本次补齐组合补丁测试和类型声明，生产行为未改变；原生引用气泡浏览器3项继续通过。"
+          "summary": "真实NotesApp浏览器验证四类斜杠文件选择及位置、取消、等宽智能框、生成和追问、失败及中断恢复、较新内容保护；原生研究网页在笔记viewport正确加载；系统字体8个宽窄明暗状态、实际PingFang、代码标题和引用输入框几何验证通过。"
         },
         "acceptanceCriteria": [
-          "笔记发送后用户气泡以原生样式显示当次单个或多个引用标签，标签随会话历史保留，不混入源正文或授权。",
-          "研究显式单多引用在发送时读取当前对应组件真实正文，排除残留选区和全画板自动捕获，本次请求优先于历史工作台创建指令。",
-          "笔记正文末尾可继续向下滚动约半个面板，随面板高度变化且不改变正文。",
-          "笔记底部面板可见可交互，研究工具栏实时位于展开面板上方，收起和缩放正确恢复。"
+          "笔记图片、视频、音频、文件斜杠命令打开对应格式的原生文件选择器，所选文件直接插入当时光标处正文。",
+          "笔记斜杠菜单新增智能组件、链接，默认铺满正文宽度，框内输入后原位生成或加载并保留需求供重试。",
+          "智能组件追问在会话显示，取消和旧请求结果不覆盖较新内容。",
+          "会话与笔记采用系统中文字体和舒适行距，明暗及窄栏下引用、代码和标题正常。"
         ],
         "risks": [
-          "待刷新集成客户端后验证真实模型的所引热力图总结和真实主窗口布局。"
+          "待集成客户端构建后验收真实系统文件对话框、模型生成、网页加载及字体可见效果。"
         ],
-        "generatedAt": "2026-10-15T02:22:37.111840+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
-        "verificationCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
-            "completedAt": "2026-10-15T02:23:12.109Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "d127e5ac1783fcf5479d2fbe6d0e7cdd102fddeb",
-            "completedAt": "2026-10-15T02:23:12.109Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-15T02:23:12.109Z"
+        "generatedAt": "2026-10-15T03:07:11.587654+00:00"
       }
     }
   ],
