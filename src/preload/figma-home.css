@@ -100,6 +100,18 @@ body:has([data-odyssey-panel-right="open"]) #root [data-dsh-frame] > [data-pane=
 @media (prefers-reduced-motion:reduce) {
   [data-odyssey-theme-dock] button, .odyssey-theme-card-body, .odyssey-theme-edge-blur { transition:none; }
 }
+/* A stable tab-like backing keeps the panel entry legible over every shader. */
+body:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odyssey-subagent-panel] *)) [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleButton {
+  background:rgb(255 255 255 / .8);
+  color:#252525;
+  border-radius:7px;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+body:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odyssey-subagent-panel] *)) [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleButton:hover { background:rgb(255 255 255 / .95); }
+body[data-ds-dark-theme]:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odyssey-subagent-panel] *)) [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleButton { background:rgb(38 39 45 / .78); color:#f5f5f5; }
+body[data-ds-dark-theme]:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odyssey-subagent-panel] *)) [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleButton:hover { background:rgb(54 56 64 / .88); }
+body:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odyssey-subagent-panel] *)) [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleButton > [data-odyssey-panel-toggle] { color:inherit; }
 .wSkVaW_root[data-odyssey-page="home"] { background:transparent; }
 /* The empty home has no reading content passing behind its resident header.
    Figma 683:27243/27493 keeps that atmosphere continuous to the top edge. */

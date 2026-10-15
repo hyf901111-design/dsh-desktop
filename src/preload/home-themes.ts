@@ -3,9 +3,9 @@ import { createHomeThemeRenderer, type HomeShaderThemeId } from './home-theme-re
 import defaultLight from './home-theme-assets/default-light.png?inline'
 import defaultDark from './home-theme-assets/default-dark.png?inline'
 
-const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'lotustech'] as const
+const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar'] as const
 type Theme = typeof THEMES[number]
-const LABELS: Record<Theme, string> = { default: '默认', berber: 'Berber', vghodki: 'Vghodki', jarrick: 'Jarrick', lowfreez: 'Lowfreez', accelbia: 'Accelbia', boz: 'Boz', shashidhar: 'Shashidhar', lotustech: 'LotusTech' }
+const LABELS: Record<Theme, string> = { default: '默认', berber: 'Berber', vghodki: 'Vghodki', jarrick: 'Jarrick', lowfreez: 'Lowfreez', accelbia: 'Accelbia', boz: 'Boz', shashidhar: 'Shashidhar' }
 const STORAGE_KEY = 'ework.home-background.v1'
 const mounted = new WeakMap<Document, () => void>()
 const validTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)

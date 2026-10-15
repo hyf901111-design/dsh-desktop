@@ -96,6 +96,35 @@ for (const dark of [false, true]) {
     } finally { await page.close() }
   })
 
+  it(`${dark ? 'dark' : 'light'} homepage panel entry stays readable over bright and dark backgrounds`, async () => {
+    const page = await browser.newPage({ viewport: { width: 720, height: 400 } })
+    try {
+      await page.route('**/*', route => route.abort())
+      await setContent(page, `<style>body{margin:0}button{border:0;width:28px;height:28px}.t8lSSG_toggleCluster{position:absolute;z-index:20}.t8lSSG_toggleButton{color:#a0a0a0;background:transparent}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
+        <main class="pI_x6G_centerCol" style="width:720px;height:400px;margin:0"><div class="wSkVaW_root" data-odyssey-page="home"></div></main>
+        <aside data-dsh-panel-host data-odyssey-panel-right="closed"><div class="t8lSSG_toggleCluster"><button class="t8lSSG_toggleButton" aria-label="展开侧边栏"><svg data-odyssey-panel-toggle width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor"/><path d="M10 2v12" stroke="currentColor"/></svg></button></div></aside>
+      </body>`)
+      const button = page.locator('.t8lSSG_toggleButton')
+      const expected = dark ? 'rgba(38, 39, 45, 0.78)' : 'rgba(255, 255, 255, 0.8)'
+      expect(await button.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(expected)
+      expect(await button.evaluate(node => getComputedStyle(node).backdropFilter)).toBe('blur(12px)')
+      expect(await button.locator('svg').evaluate(node => getComputedStyle(node).color)).toBe(dark ? 'rgb(245, 245, 245)' : 'rgb(37, 37, 37)')
+      await button.hover()
+      expect(await button.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(dark ? 'rgba(54, 56, 64, 0.88)' : 'rgba(255, 255, 255, 0.95)')
+      await page.mouse.move(360, 200)
+      for (const fill of ['#fff', '#090909']) {
+        await page.locator('main').evaluate((node, fill) => node.style.setProperty('background', fill, 'important'), fill)
+        const rect = await button.boundingBox()
+        const {data, info} = await sharp(await page.screenshot()).removeAlpha().raw().toBuffer({resolveWithObject:true})
+        const at = (Math.round(rect.y + 3) * info.width + Math.round(rect.x + 3)) * info.channels
+        const lightness = data[at] * .2126 + data[at + 1] * .7152 + data[at + 2] * .0722
+        expect(dark ? lightness < 100 : lightness > 190).toBe(true)
+      }
+      await page.locator('.wSkVaW_root').evaluate(node => node.dataset.odysseyPage = 'conversation')
+      expect(await button.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+    } finally { await page.close() }
+  })
+
   it(`${dark ? 'dark' : 'light'} research header overlays the canvas within the compact 44 px bar`, async () => {
     const page = await browser.newPage()
     try {
