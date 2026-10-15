@@ -2,11 +2,12 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
 import {notesComposerSource,patchNotesComposer} from '../scripts/lib/notes-composer.mjs'
+import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 const repo=process.cwd(),require=createRequire(repo+'/package.json'),{build}=require('esbuild')
 let browser,script,css
 beforeAll(async()=>{
  const runtime=await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
- const native=patchNotesComposer(await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')).replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell; exports.__InputBar=InputBar;')
+ const native=patchNotesActivity(patchNotesComposer(await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))).replace('exports.SessionInputShell = SessionInputShell;','exports.SessionInputShell = SessionInputShell; exports.__InputBar=InputBar; exports.__NoteHistory=EWorkNotesActivity;')
 const output=await build({stdin:{resolveDir:repo,loader:'tsx',contents:`
 import React from 'react';import * as jsxRuntime from 'react/jsx-runtime';import * as ReactDOM from 'react-dom';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';
 import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
@@ -27,6 +28,7 @@ const bridge={request:async(method,input)=>{window.noteRequests.push({method,inp
 window.notesRoot=createRoot(document.querySelector('#notes'));window.notesRoot.render(<NotesApp sessionId='send-preview' bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);
 function NativeComposer(){const props={sessionId:'send-preview',eworkNotes:true,keyboard:ordinary,inputActions:ordinary.actions,useInput:select=>select(React.useSyncExternalStore(ordinary.state.subscribe,ordinary.state.getSnapshot)),useNotices:select=>select(React.useSyncExternalStore(ordinary.notices.subscribe,ordinary.notices.getSnapshot)),useSession:select=>select({running:false,promptError:null,subagent:null,removed:false}),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(undefined),useProjection:()=>undefined,draftImages:ids=>conversationController.draftImages(ids),resolveSubmitMode:()=> 'queue',t:key=>key,renderSlot:()=>null,stop:()=>{},command:()=>{}};return <EWorkSharedInputBar {...props}/>};
 createRoot(document.querySelector('#composer')).render(<NativeComposer/>);
+createRoot(document.querySelector('#history')).render(<nativeExports.__NoteHistory sessionId='send-preview' t={key=>key} UserBubble={undefined} Progress={()=>null} Markdown={()=>null} Actions={null}/>);
 `},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:require('node:path').resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]});
 
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
@@ -36,11 +38,37 @@ createRoot(document.querySelector('#composer')).render(<NativeComposer/>);
 afterAll(async()=>{await browser?.close()})
 async function fixture(dark=true){
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage(),errors=[];page.setDefaultTimeout(3500);page.on('pageerror',error=>errors.push(error.message))
- await page.route('http://127.0.0.1/notes-native-send',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root" data-dark="${dark}" style="left:10px;right:340px"><div id="notes" class="en-editor-host"></div></section><aside id="composer" data-ework-notes-composer-host style="position:fixed;right:10px;bottom:20px;width:320px"></aside></body>`}));await page.goto('http://127.0.0.1/notes-native-send');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();await page.locator('#composer textarea').waitFor();return {context,page,errors,input:page.locator('#composer textarea')}
+ await page.route('http://127.0.0.1/notes-native-send',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root" data-dark="${dark}" style="left:10px;right:340px"><div id="notes" class="en-editor-host"></div></section><aside id="history" style="position:fixed;right:10px;top:20px;width:320px;max-height:450px;overflow:auto"></aside><aside id="composer" data-ework-notes-composer-host style="position:fixed;right:10px;bottom:20px;width:320px"></aside></body>`}));await page.goto('http://127.0.0.1/notes-native-send');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();await page.locator('#composer textarea').waitFor();return {context,page,errors,input:page.locator('#composer textarea')}
 }
 async function send(page,text='请帮我改写正文。'){await page.locator('#composer textarea').fill(text);await page.locator('#composer textarea').press('Enter');await page.locator('.en-ai-loading').waitFor()}
 it('uses the concise note reference label and requested writing placeholder',async()=>{
  const {context,page,input}=await fixture();try{expect(await page.locator('[data-note-context-badge]').textContent()).toBe('参考当前笔记内容');expect(await input.getAttribute('placeholder')).toBe('撰写、补充或改写笔记...')}finally{await context.close()}
+},15000)
+it('keeps single and multiple quoted component labels inside their original native user bubbles',async()=>{
+ const {context,page,errors}=await fixture();try{
+  const nodes=[{id:'chart-a',title:'收入图',containerSpec:{version:1,type:'table',title:'收入图',columns:['项目','值'],rows:[['A',12]]}},{id:'chart-b',title:'利润表',containerSpec:{version:1,type:'table',title:'利润表',columns:['项目','值'],rows:[['B',34]]}}]
+  await page.evaluate(nodes=>window.noteEditor.replaceBlocks(window.noteEditor.document,nodes.map((node,i)=>({id:'block-'+i,type:'research',props:{payload:JSON.stringify(node)}}))),nodes)
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'send-preview',blockId:'block-0'}})))
+  await send(page,'总结所选组件');await page.locator('#history [data-note-message-reference="block-0"]').waitFor({timeout:2500})
+  const row=page.locator('#history [data-note-task]').first();expect(await row.locator('[data-note-message-reference]').count()).toBe(1);expect(await row.textContent()).toContain('收入图')
+  expect(await row.locator('[data-note-message-reference]').evaluate(el=>el.closest('[data-research-inline]')!==null)).toBe(true)
+  await page.evaluate(()=>window.resolveGeneration({kind:'conversation',markdown:'完成'}));await page.locator('.en-ai-loading').waitFor({state:'hidden'})
+  await page.evaluate(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'send-preview',blockId:'block-0'}}));document.dispatchEvent(new CustomEvent('sherlock:notes-reference-component',{detail:{sessionId:'send-preview',blockId:'block-1',append:true}}))})
+  await send(page,'比较这两项');await expect.poll(()=>page.locator('#history [data-note-task]').nth(1).locator('[data-note-message-reference]').count()).toBe(2)
+  await page.evaluate(()=>window.noteEditor.updateBlock('block-0',{props:{payload:JSON.stringify({id:'chart-a',title:'后来改名'})}}))
+  expect(await row.locator('[data-note-message-reference]').textContent()).toContain('收入图');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+for(const dark of [false,true])it(`replays file and text quote labels inside the bubble with full tooltips (${dark?'dark':'light'})`,async()=>{
+ const {context,page,errors}=await fixture(dark);try{
+  const title='这是一段被选中的原始文字，'.repeat(25)+'结束标记'
+  await page.evaluate(title=>document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'send-preview',rows:[{requestId:'replayed-refs',phase:'replied',prompt:'总结这些内容',startedAt:1,finishedAt:2,references:[{blockId:'file',title:'选区替换样式验收.pdf',type:'attachment'},{blockId:'text-selection',title,type:'text'}],result:{kind:'conversation',markdown:'总结'}}]}})),title)
+  const row=page.locator('#history [data-note-task="replayed-refs"]');await row.waitFor()
+  expect(await row.locator('[data-note-message-reference]').count()).toBe(2)
+  expect(await row.locator('[data-file-kind="pdf"]').textContent()).toBe('PDF')
+  expect(await row.locator('[data-note-message-reference="text-selection"]').getAttribute('title')).toBe(title)
+  expect(await row.textContent()).toContain('总结这些内容');expect(errors).toEqual([])
+ }finally{await context.close()}
 },15000)
 for(const dark of [false,true])it(`shows note sources, toggles actual context and keeps selected text when focusing the native composer (${dark?'dark':'light'})`,async()=>{
  const {context,page,input,errors}=await fixture(dark);try{

@@ -3,6 +3,7 @@ import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { acceptArtifactOutput, extractArtifactObjects } from './artifact-output.js'
 import { engageNoteSession,recordNoteConversation,sharedNoteConversationContext,setNoteConversationRunning } from './notes-session.js'
 import {loadNoteReferenceContent} from './notes-reference-content.js'
+import {noteMessageReferences} from './notes-message-references.js'
 
 export async function generateNoteSuggestion(ctx, input, requestedSignal, progress = () => {},sourceOptions={}) {
  const session=ctx.sessions?.get(input?.sessionId)
@@ -17,7 +18,7 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
   const document=references.scope==='note'?input.markdown:'',selection=references.scope==='none'?'':input.selection,title=references.scope==='note'?input.title:''
   const selectedReferences=await loadNoteReferenceContent(input.sessionId,references,input.prompt,signal,sourceOptions)
   const conversation=sharedNoteConversationContext(session)
-  if(session){engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title||''});setNoteConversationRunning(session,input.requestId,true);const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt});latest={...latest,...metadata};started=true}
+  if(session){engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title||''});setNoteConversationRunning(session,input.requestId,true);const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,references:noteMessageReferences(references,selection)});latest={...latest,...metadata};started=true}
   emit({stage:'model',reasoning:'',outputChars:0})
   const response = await ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } })
   if (!response.result.ok || !response.result.value.current || !response.result.value.routable) throw Error('当前会话模型不可用，请选择模型后重试。')

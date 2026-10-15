@@ -25,6 +25,7 @@ import {useNoteReplyInsertion} from './reply-insertion'
 import {withNoteIndentSpecs,changeNoteIndent} from './paragraph-indent'
 import {changeNoteList,type NoteListType} from './paragraph-style'
 import {useNoteReferenceContext,type NoteReferenceContext} from './reference-context'
+import {noteMessageReferences} from '../../../packages/dsh-research-task-runtime/notes-message-references.js'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -274,7 +275,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     const component = noteComponentRequest(prompt)
     engage()
     lastRequest.current={prompt,images,admission,captured,fingerprint,context}
-    publishTask(requestId,'preparing',{prompt,operation:component?'component':captured.text?'rewrite':'write'})
+    publishTask(requestId,'preparing',{prompt,references:noteMessageReferences(context,captured.text),operation:component?'component':captured.text?'rewrite':'write'})
     if(!component&&captured.text)paintSelection(captured)
     request.current = requestId;setWriting(true); publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
