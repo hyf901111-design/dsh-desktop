@@ -11,125 +11,25 @@
         "schemaVersion": 1,
         "featureName": "笔记引用标签与研究引用范围及底部面板布局",
         "branch": "codex/feat/notes-context-alignment-20261015",
-        "baseCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
-        "tipCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
+        "baseCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
+        "tipCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
         "commits": [
           {
-            "commit": "c7842c068001f4ffd09497860f78975ead9beca6",
+            "commit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
             "parents": [
-              "bf97b9a67b80931818603615e0755cb93e28c2aa"
+              "6401ce677dc06e44b46841446d6be844f2cc02db"
             ],
-            "subject": "功能：在笔记用户气泡中保留当次引用标签"
-          },
-          {
-            "commit": "6b5fb7fe07d441bf4b7e9309e830365baf33a5b9",
-            "parents": [
-              "c7842c068001f4ffd09497860f78975ead9beca6"
-            ],
-            "subject": "优化：笔记正文末尾保留半屏可滚动留白"
-          },
-          {
-            "commit": "23e7a3c6ea420c7d1ad014c52471ec68e4ab19fb",
-            "parents": [
-              "6b5fb7fe07d441bf4b7e9309e830365baf33a5b9"
-            ],
-            "subject": "修复：仅发送图片时仍在笔记气泡显示引用标签"
-          },
-          {
-            "commit": "bdfdd8588e97c4c164da98c581acb719ea4411c1",
-            "parents": [
-              "23e7a3c6ea420c7d1ad014c52471ec68e4ab19fb"
-            ],
-            "subject": "修复：研究总结读取所引组件数据并限定当前引用范围"
-          },
-          {
-            "commit": "6401ce677dc06e44b46841446d6be844f2cc02db",
-            "parents": [
-              "bdfdd8588e97c4c164da98c581acb719ea4411c1"
-            ],
-            "subject": "修复：笔记和研究工具栏实时避让底部面板"
+            "subject": "修复：重复构建时兼容笔记引用气泡补丁"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/context-runtime.js"
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-ai.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/notes-message-references.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/notes-message-references.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/research-reference-scope.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/canvas-actions-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-activity.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-native-web-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/research-reference-evidence.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-ai.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-component-layout.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-native-send-preview.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-canvas-actions-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-context-runtime.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-reference-scope.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workspace-bottom-panel-layout.test.js"
+            "path": "test/notes-activity.test.js"
           }
         ],
         "checks": [
@@ -137,19 +37,13 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/notes-ai.test.js",
               "test/notes-activity.test.js",
-              "test/notes-component-layout.test.js",
-              "test/workspace-bottom-panel-layout.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/research-reference-scope.test.js",
-              "test/research-context-runtime.test.js",
-              "test/research-canvas-actions-client.test.js"
+              "test/figma-final-shell-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "8个相关文件82项通过，含原生浏览器几何、真实发送封装、生产runtime注册",
-            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
-            "completedAt": "2026-10-15T02:09:34.114580+00:00",
+            "summary": "16项通过，生产shell与notes补丁可重复组合且产物逐字一致",
+            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
+            "completedAt": "2026-10-15T02:14:45.970536+00:00",
             "timeoutMs": 180000
           },
           {
@@ -161,9 +55,9 @@
               "quoted component labels|full tooltips"
             ],
             "outcome": "passed",
-            "summary": "单多引用气泡及图片空提示历史恢复3项通过",
-            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
-            "completedAt": "2026-10-15T02:09:34.114580+00:00",
+            "summary": "原生气泡单多引用与明暗历史恢复3项通过",
+            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
+            "completedAt": "2026-10-15T02:14:45.970536+00:00",
             "timeoutMs": 180000
           },
           {
@@ -174,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
-            "completedAt": "2026-10-15T02:09:34.114580+00:00",
+            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
+            "completedAt": "2026-10-15T02:14:45.970536+00:00",
             "timeoutMs": 180000
           },
           {
@@ -186,14 +80,14 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
-            "completedAt": "2026-10-15T02:09:34.114580+00:00",
+            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
+            "completedAt": "2026-10-15T02:14:45.970536+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器验证单/多组件、文件和文本引用标签位于原生用户气泡，明暗两主题、图片空提示、历史回放和发送后改名保持快照；笔记末尾1000/720/420px面板高度下保留约半屏空白；原生底部面板两模式两主题的真实展开、实时拖动、窗口缩放、收起恢复、画布已缩小时不重复避让通过。"
+          "summary": "本次仅缩小shell补丁匹配边界以容纳已有气泡前置标签；重建后代码逐字一致，原生引用气泡浏览器3项继续通过。前一交接已验证四项产品行为。"
         },
         "acceptanceCriteria": [
           "笔记发送后用户气泡以原生样式显示当次单个或多个引用标签，标签随会话历史保留，不混入源正文或授权。",
@@ -204,38 +98,7 @@
         "risks": [
           "待刷新集成客户端后验证真实模型的所引热力图总结和真实主窗口布局。"
         ],
-        "generatedAt": "2026-10-15T02:09:34.114580+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f84259524466069f000e91eee4c1ffeec3cb52d7",
-        "verificationCommit": "f84259524466069f000e91eee4c1ffeec3cb52d7",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f84259524466069f000e91eee4c1ffeec3cb52d7",
-            "completedAt": "2026-10-15T02:10:09.075Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "f84259524466069f000e91eee4c1ffeec3cb52d7",
-            "completedAt": "2026-10-15T02:10:09.075Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-15T02:10:09.075Z"
+        "generatedAt": "2026-10-15T02:14:45.970536+00:00"
       }
     }
   ],
