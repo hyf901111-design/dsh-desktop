@@ -9,37 +9,47 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记导出组件快照及斜杠插入和字体优化",
+        "featureName": "笔记复用研究子代理生成卡片与链接加载",
         "branch": "codex/feat/notes-context-alignment-20261015",
-        "baseCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
-        "tipCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+        "baseCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+        "tipCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
         "commits": [
           {
-            "commit": "5b07b8248ba48a4b3f1bbbd6bfe5ce88e8859db1",
+            "commit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
             "parents": [
-              "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf"
+              "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79"
             ],
-            "subject": "功能：笔记斜杠插入文件及智能和链接组件"
-          },
-          {
-            "commit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
-            "parents": [
-              "5b07b8248ba48a4b3f1bbbd6bfe5ce88e8859db1"
-            ],
-            "subject": "优化：采用系统中文字体改善会话和笔记阅读"
-          },
-          {
-            "commit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
-            "parents": [
-              "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab"
-            ],
-            "subject": "功能：笔记导出PDF和Word时嵌入组件快照"
+            "subject": "修复：笔记复用研究子代理生成卡片与链接加载能力"
           }
         ],
         "files": [
           {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/market-font.d.ts"
+            "path": "packages/dsh-research-task-runtime/notes-component-generation.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/web-url.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/web-url.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-file-preview-client.mjs"
           },
           {
             "status": "M",
@@ -47,46 +57,30 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
+            "path": "src/main/component-data/service.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/pptx-resize-settle.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-native-web-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/main/notes/component-snapshot.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/export.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/notes/file-picker.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/native-menu.ts"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
             "path": "src/main/notes/service.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/client-typography.css"
+            "status": "M",
+            "path": "src/main/notes/stream.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
           },
           {
             "status": "A",
-            "path": "src/preload/notes/component-snapshots.ts"
+            "path": "src/preload/notes/component-data-actions.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/notes/creation-block.tsx"
           },
           {
@@ -95,63 +89,55 @@
           },
           {
             "status": "M",
-            "path": "src/preload/notes/menu-icon.tsx"
-          },
-          {
-            "status": "M",
             "path": "src/preload/notes/native-component-block.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/notes/style.css"
+            "path": "src/shared/workspace-notes.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/shell-style.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/note-component-snapshot.ts"
+            "path": "test/component-data-refresh.test.js"
           },
           {
             "status": "M",
-            "path": "test/bundled-plugin-profile.test.ts"
+            "path": "test/component-data-service.test.ts"
           },
           {
             "status": "M",
-            "path": "test/helpers/financial-widget-client-fixture.js"
+            "path": "test/notes-ai.test.js"
           },
           {
             "status": "A",
-            "path": "test/notes-component-snapshots.test.ts"
+            "path": "test/notes-component-data-actions.test.ts"
           },
           {
             "status": "A",
-            "path": "test/notes-export-snapshots.test.ts"
+            "path": "test/notes-component-generation.test.js"
           },
           {
             "status": "A",
-            "path": "test/notes-file-picker.test.ts"
+            "path": "test/notes-generation-block.test.tsx"
           },
           {
             "status": "M",
-            "path": "test/notes-menu-selection.test.js"
+            "path": "test/notes-native-components.test.js"
           },
           {
-            "status": "A",
-            "path": "test/notes-native-web.test.js"
+            "status": "M",
+            "path": "test/notes-service.test.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/notes-slash-insert.test.js"
           },
           {
             "status": "M",
-            "path": "test/pptx-resize-settle.test.js"
+            "path": "test/notes-stream.test.ts"
           },
           {
-            "status": "M",
-            "path": "test/pptx-scroll-viewport.test.js"
+            "status": "A",
+            "path": "test/research-web-url.test.js"
           }
         ],
         "checks": [
@@ -161,53 +147,58 @@
               "vitest",
               "run",
               "test/notes-slash-insert.test.js",
-              "test/notes-native-web.test.js",
-              "test/notes-menu-selection.test.js",
-              "test/notes-file-picker.test.ts",
               "test/notes-service.test.ts",
-              "test/research-native-web.test.ts",
-              "test/notes-activity.test.js",
-              "test/figma-final-shell-patch.test.ts"
+              "test/notes-stream.test.ts",
+              "test/notes-ai.test.js",
+              "test/notes-component-generation.test.js",
+              "test/notes-component-data-actions.test.ts",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "--hookTimeout=30000"
             ],
             "outcome": "passed",
-            "summary": "8文件73项斜杠、引用、网页和字体补丁回归通过",
-            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
-            "completedAt": "2026-10-15T03:38:42.321960+00:00",
-            "timeoutMs": 180000
+            "summary": "6文件105项通过，后端追加DataYes只读插件parity后27项通过",
+            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "timeoutMs": 240000
           },
           {
             "argv": [
               "npx",
               "vitest",
               "run",
-              "test/notes-export.test.ts",
               "test/notes-export-snapshots.test.ts",
               "test/notes-component-snapshots.test.ts",
-              "test/pptx-resize-settle.test.js",
-              "test/pptx-scroll-viewport.test.js",
-              "test/notes-service.test.ts"
+              "test/notes-reference-content.test.js",
+              "test/notes-native-web.test.js",
+              "test/notes-generation-block.test.tsx",
+              "test/notes-native-components.test.js",
+              "test/research-web-url.test.js",
+              "test/figma-final-shell-patch.test.ts",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "--hookTimeout=30000"
             ],
             "outcome": "passed",
-            "summary": "6文件61项聚焦检查通过",
-            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
-            "completedAt": "2026-10-15T03:37:12.830463+00:00",
-            "timeoutMs": 180000
+            "summary": "8文件67项回归通过",
+            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "timeoutMs": 240000
           },
           {
             "argv": [
               "npx",
               "vitest",
               "run",
-              "test/bundled-plugin-profile.test.ts",
-              "-t",
-              "upgrades versioned PPT layers",
-              "--testTimeout=30000"
+              "test/component-data-service.test.ts",
+              "test/component-data-refresh.test.js",
+              "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "PPT补丁升级和重复准备检查通过",
-            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
-            "completedAt": "2026-10-15T03:37:12.830463+00:00",
-            "timeoutMs": 180000
+            "summary": "45项共享刷新与账号边界检查通过",
+            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "timeoutMs": 240000
           },
           {
             "argv": [
@@ -217,9 +208,9 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
-            "completedAt": "2026-10-15T03:37:12.830463+00:00",
-            "timeoutMs": 180000
+            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "timeoutMs": 240000
           },
           {
             "argv": [
@@ -229,57 +220,26 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
-            "completedAt": "2026-10-15T03:37:12.830463+00:00",
-            "timeoutMs": 180000
+            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "独立真实Electron验证离屏canvas、sandbox iframe、SVG、输入及内部滚动快照，原笔记状态未改变；实际PDF/Word经渲染检查正文顺序、中文、图像与长图分页；真实生产字体屏障3次首帧与稳定截图一致；两轮独立review问题已修。"
+          "summary": "真实BlockNote浏览器场景验证菜单顺序、生成portal与child进度、停止、新内容CAS、尺寸保留、保存后绑定和隐藏暂停；原ResearchGenerationProcess与过程入口fixture验证子会话参数及停止/重试事件。"
         },
         "acceptanceCriteria": [
-          "PDF与Word在对应正文位置嵌入组件当前画面快照，保留标题、宽度和对齐，长图分页。",
-          "支持离屏PPT、图表、文件及网页画面，快照不修改笔记与组件持久内容。",
-          "大体积快照经私有临时HTML打印，PNG数据有格式、尺寸及容量校验。",
-          "此前斜杠文件选择、智能组件、链接和系统中文字体修改保持有效。"
+          "智能组件和链接紧随文件命令之前移至折叠标题上方。",
+          "笔记组件走真实研究子代理、校验与数据源配方，生成卡片复用ResearchGenerationProcess。",
+          "baidu.com等裸域名使用研究地址解析，并复用原生链接正文加载组件。",
+          "共享刷新实现分别绑定笔记与画布承载面，保持引用范围、账号和可见性隔离。"
         ],
         "risks": [
-          "仍需集成客户端实际入口验收文件选择、智能生成、链接、PDF与Word导出。",
-          "受浏览器安全限制无法离线读取的跨源图像会明确报错，避免导出空白成功图。"
+          "仍需集成包真实入口确认生成过程与链接读取。",
+          "仅使用当前父会话可见且已授权的工具；外部数据暂时不可用时保留错误与现有内容。"
         ],
-        "generatedAt": "2026-10-15T03:37:12.830463+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
-        "verificationCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
-            "completedAt": "2026-10-15T03:39:35.591Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
-            "completedAt": "2026-10-15T03:39:35.591Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-15T03:39:35.591Z"
+        "generatedAt": "2026-10-15T04:25:52.595630+00:00"
       }
     }
   ],
