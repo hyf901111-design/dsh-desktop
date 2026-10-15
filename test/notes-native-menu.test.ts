@@ -3,6 +3,10 @@ import { BrowserWindow, screen } from 'electron'
 import { NoteNativeMenu, noteMenuBounds, noteMenuPresentation, noteSubmenuBounds, validateNoteMenu } from '../src/main/notes/native-menu'
 import type { NoteMenuState } from '../src/shared/notes-menu'
 import { readFileSync } from 'node:fs'
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { Window } from 'happy-dom'
+import { NoteMenuIcon } from '../src/preload/notes/menu-icon'
 
 vi.mock('electron',async()=>{
   const { EventEmitter } = await import('node:events')
@@ -46,6 +50,18 @@ it('keeps all commands and shortcuts in a compact icon grid and list without des
  expect(result.height).toBeLessThanOrEqual(360);expect(result.html).toContain('basic-grid');expect(result.html).toContain('<svg');expect(result.html).not.toContain('<small>');expect(result.html).not.toContain('冗长的功能说明')
  for(const item of items)expect(result.html).toContain('/select/'+item.id+'?revision=1')
  expect(result.html).toContain('⌘-Alt-1')
+})
+it.each(['sparkles','link'])('keeps the %s creation icon identical in native and inline menus at 18px',kind=>{
+ const native=noteMenuPresentation(input({items:[{id:kind,icon:kind,title:kind,subtext:'',badge:'',group:''}]}),'ticket').html
+ const document=new Window().document
+ document.body.innerHTML=native+renderToStaticMarkup(React.createElement(NoteMenuIcon,{kind}))
+ const [menu,inline]=Array.from(document.querySelectorAll('svg'))
+ for(const icon of [menu!,inline!]){
+  expect(icon.getAttribute('width')).toBe('18');expect(icon.getAttribute('height')).toBe('18');expect(icon.getAttribute('viewBox')).toBe('0 0 18 18')
+  expect(icon.getAttribute('stroke-width')).toBe('1.5');expect(icon.getAttribute('fill')).toBe('none');expect(icon.getAttribute('stroke-linecap')).toBe('round');expect(icon.getAttribute('stroke-linejoin')).toBe('round')
+ }
+ expect(Array.from(menu!.querySelectorAll('path'),path=>path.getAttribute('d'))).toEqual(Array.from(inline!.querySelectorAll('path'),path=>path.getAttribute('d')))
+ expect(menu!.querySelectorAll('path')).toHaveLength(2)
 })
 it('uses the exact research library SVG geometry for each component while preserving the quotation command icon',()=>{
  const names=['watchlist','quote','indices','news','announcements','calendar','custom']

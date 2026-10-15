@@ -68,6 +68,11 @@ export interface ResearchFilePreviewDescriptor {
   name: string
 }
 
+export interface ResearchFileMediaDescriptor extends ResearchFilePreviewDescriptor {
+  kind: 'image' | 'audio' | 'video'
+  expiresAt: number
+}
+
 export interface ResearchPreviewAuthorizationRecord {
   authorizationId: string
   source: ResearchPreviewSource
@@ -138,6 +143,8 @@ type ReleaseCapabilityRequest = RestoreRequest & {
 type Capability = {
   authorizationId: string
   expiresAt: number
+  mediaContentType?: string
+  canRead?: () => boolean
 }
 
 type PreviewKind = {
@@ -256,6 +263,9 @@ const previewKinds = new Map<string, PreviewKind>([
   ['.ogg', { contentType: 'audio/ogg', rootPreview: false, validateMagic: (value) =>
     Buffer.from(value.subarray(0, 4)).toString('ascii') === 'OggS' }],
   ['.mp4', { contentType: 'video/mp4', rootPreview: false, validateMagic: mp4Magic }],
+  ['.m4a', { contentType: 'audio/mp4', rootPreview: false, validateMagic: mp4Magic }],
+  ['.mov', { contentType: 'video/quicktime', rootPreview: false, validateMagic: mp4Magic }],
+  ['.m4v', { contentType: 'video/mp4', rootPreview: false, validateMagic: mp4Magic }],
   ['.webm', { contentType: 'video/webm', rootPreview: false, validateMagic: (value) =>
     startsWith(value, [0x1a, 0x45, 0xdf, 0xa3]) }]
 ])
@@ -889,6 +899,10 @@ function isMissingFileError(error: unknown): boolean {
     'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')
 }
 
+function canReadCapability(capability: Capability): boolean {
+  try { return capability.canRead?.() !== false } catch { return false }
+}
+
 export class ResearchFilePreviewRegistry {
   private readonly authorizations = new Map<string, ResearchPreviewAuthorizationRecord>()
   private readonly capabilities = new Map<string, Capability>()
@@ -968,6 +982,27 @@ export class ResearchFilePreviewRegistry {
     if (!record || record.sessionId !== value.sessionId || record.nodeId !== value.nodeId) return null
     const verified = await this.verifyRecord(record)
     return verified&&this.options.canReadAuthorization?.(record)!==false ? this.issue(record) : null
+  }
+
+  /** Exact-file, passive media access; never promotes HTML or adjacent files. */
+  async restoreMedia(value: unknown, canRead?: () => boolean): Promise<ResearchFileMediaDescriptor | null> {
+    if (!this.validRestoreRequest(value)) return null
+    const record = this.authorizations.get(value.authorizationId)
+    if (!record || record.sessionId !== value.sessionId || record.nodeId !== value.nodeId) return null
+    const current = () => this.authorizations.get(record.authorizationId) === record &&
+      this.options.canReadAuthorization?.(record) !== false && canRead?.() !== false
+    try {
+      if (!current() || !await this.verifyRecord(record)) return null
+      const target = await this.fileSystem.realpath(record.path), file = await this.fileSystem.stat(target)
+      const kind = kindForPath(target), media = kind?.contentType.split('/')[0]
+      if (!file.isFile() || !kind || !['image', 'audio', 'video'].includes(media!) ||
+          !await validatesPreviewKind(this.fileSystem, target, file.size, kind, false) || !current()) return null
+      for (const [token, capability] of this.capabilities) if (capability.expiresAt <= this.now()) this.capabilities.delete(token)
+      if (this.capabilities.size >= MAX_AUTHORIZATIONS) return null
+      const token = this.nextOpaqueId(), expiresAt = this.now() + Math.min(this.capabilityTtlMs, 5 * 60 * 1000)
+      this.capabilities.set(token, {authorizationId:record.authorizationId,expiresAt,mediaContentType:kind.contentType,canRead:current})
+      return {authorizationId:record.authorizationId,capabilityToken:token,url:`${RESEARCH_PREVIEW_SCHEME}://${token}/`,contentType:kind.contentType,name:record.name,kind:media as 'image'|'audio'|'video',expiresAt}
+    } catch { return null }
   }
 
   async resolveSessionNodeSource(sessionId:string,nodeId:string):Promise<{path:string;name:string}|null> {
@@ -1057,7 +1092,7 @@ export class ResearchFilePreviewRegistry {
     const resource = requestResource(request.url)
     if (!resource) return errorResponse(403, 'Preview capability denied.')
     const capability = this.capabilities.get(resource.token)
-    if (!capability || capability.expiresAt <= this.now()) {
+    if (!capability || capability.expiresAt <= this.now() || !canReadCapability(capability)) {
       this.capabilities.delete(resource.token)
       return errorResponse(403, 'Preview capability denied.')
     }
@@ -1067,6 +1102,7 @@ export class ResearchFilePreviewRegistry {
       return errorResponse(403, 'Preview capability denied.')
     }
     const capabilityOrigin = `${RESEARCH_PREVIEW_SCHEME}://${resource.token}`
+    if (capability.mediaContentType && resource.relativePath !== '') return errorResponse(403, 'Preview path denied.')
     if (
       requestOrigin !== null && requestOrigin !== allowedOrigin &&
       (!authorization.allowSubresources || requestOrigin !== capabilityOrigin)
@@ -1118,8 +1154,8 @@ export class ResearchFilePreviewRegistry {
       const file = await this.fileSystem.stat(candidate)
       if (!file.isFile()) return fail(404, 'Preview file not found.')
       const rootPreview = resource.relativePath === '' && !authorization.allowSubresources
-      const kind = rootPreview ? rootKindForPath(candidate) : kindForPath(candidate)
-      if (!kind || (!authorization.allowSubresources && kind.contentType !== authorization.contentType)) {
+      const kind = rootPreview && !capability.mediaContentType ? rootKindForPath(candidate) : kindForPath(candidate)
+      if (!kind || (capability.mediaContentType ? kind.contentType !== capability.mediaContentType : !authorization.allowSubresources && kind.contentType !== authorization.contentType)) {
         return fail(415, 'Unsupported preview type.')
       }
       const officeBytes = rootPreview && kind.officeFamily !== undefined
@@ -1129,6 +1165,8 @@ export class ResearchFilePreviewRegistry {
           !await validatesPreviewKind(this.fileSystem, candidate, file.size, kind, rootPreview))) {
         return fail(415, 'Preview type mismatch.')
       }
+      if (capability.mediaContentType && (this.capabilities.get(resource.token) !== capability ||
+          this.authorizations.get(capability.authorizationId) !== authorization || capability.expiresAt <= this.now() || !canReadCapability(capability))) return fail(403, 'Preview capability denied.')
 
       const htmlCapability = authorization.allowSubresources &&
         kind.contentType === 'text/html; charset=utf-8' && allowedOrigin

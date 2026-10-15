@@ -59,6 +59,14 @@ it('refuses child frames and sessions unavailable to the account', async () => {
   expect(() => s.handler()({ ...s.event, senderFrame: { processId: 1, routingId: 3 } }, 'load', { sessionId: 'session' })).toThrow('main EWork')
   s.deny(); await expect(s.call('load')).rejects.toThrow('不可用')
 })
+it('routes media lease lifecycle through the current note owner and rejects stale identities',async()=>{
+ const media=vi.fn(async()=>({url:'sherlock-preview://opaque/',releaseId:'opaque',expiresAt:1234,kind:'video'})),s=service(undefined,{files:{media}})
+ const input={nodeId:'note-file-video',authorizationId:'authorized',action:'renew',releaseId:'old'}
+ expect(await s.call('file-media',input)).toMatchObject({releaseId:'opaque',kind:'video'})
+ expect(media).toHaveBeenCalledWith('alice','session',expect.objectContaining(input))
+ s.changeOwner();await expect(s.call('file-media',{...input,owner:'alice'})).rejects.toThrow('账号已变化')
+ s.deny();await expect(s.call('file-media',input)).rejects.toThrow('不可用');expect(media).toHaveBeenCalledOnce();s.dispose()
+})
 it('rejects writes from an earlier account and keeps account notes separate', async () => {
   const s = service(), content = { title: 'A', blocks: [], yjs: '' }
   await s.call('save', { revision: 0, content, clientId: 'client' })
