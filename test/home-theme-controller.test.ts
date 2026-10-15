@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { mountHomeThemes } from '../src/preload/home-themes'
 
 const STORAGE_KEY = 'ework.home-background.v1'
-const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez']
+const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'lotustech']
 const fixtures: Array<{ dispose(): void; win: Window }> = []
 
 function fixture({ reducedMotion = false, initial = undefined as string | undefined, storageBlocked = false } = {}) {
@@ -158,10 +158,33 @@ describe('home background theme controller', () => {
     }
     f.click('previous')
     await f.settle()
-    check('lowfreez')
+    check('lotustech')
     f.click('current')
     await f.settle()
-    check('lowfreez')
+    check('lotustech')
+  })
+
+  it('navigates and restores all nine themes with keyboard wrap and Home/End', async () => {
+    const f = fixture({ initial: 'boz' })
+    f.mount()
+    expect(f.current()!.dataset.homeThemeId).toBe('boz')
+    const key = async (value: string) => {
+      f.current()!.dispatchEvent(new f.win.KeyboardEvent('keydown', { key: value, bubbles: true }) as unknown as Event)
+      await f.settle()
+    }
+    await key('End')
+    expect(f.current()!.dataset.homeThemeId).toBe('lotustech')
+    await key('ArrowRight')
+    expect(f.current()!.dataset.homeThemeId).toBe('default')
+    await key('ArrowLeft')
+    expect(f.current()!.dataset.homeThemeId).toBe('lotustech')
+    await key('Home')
+    expect(f.current()!.dataset.homeThemeId).toBe('default')
+    for (const id of THEME_IDS.slice(1)) {
+      await key('ArrowRight')
+      expect(f.current()!.dataset.homeThemeId).toBe(id)
+      expect(f.win.document.activeElement?.getAttribute('data-home-theme-id')).toBe(id)
+    }
   })
 
   it('restores a whitelisted preference and saves switches without changing the application light or dark mode', async () => {
@@ -179,7 +202,7 @@ describe('home background theme controller', () => {
     f.click('next')
     await f.settle()
     expect(f.win.document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
-    expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('default')
+    expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('accelbia')
   })
 
   it.each(['not-a-theme', '{"id":"berber"}', '<img src=x onerror=alert(1)>'])('ignores an unknown stored preference: %s', (initial) => {

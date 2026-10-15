@@ -1,5 +1,6 @@
 // OpenShaders profile Copy Code exports, retrieved 2026-10-15.
-// https://openshaders.com/@berber, @vghodki306809, @jarrick, @lowfreez.
+// https://openshaders.com/@berber, @vghodki306809, @jarrick, @lowfreez,
+// @accelbia, @boz, @shashidhar, @lotustech.
 // Keep the original fold field and surface effects; only final intensity is
 // composed here to match the approved Odyssey theme designs.
 export const HOME_THEME_VERTEX_SHADER = `#version 300 es
@@ -290,6 +291,161 @@ vec3 halftone(vec2 frag) {
 
 void main() {
   vec3 ink = halftone(gl_FragCoord.xy);
+  vec3 color = fromInk(clamp(ink, 0.0, 1.0));
+  vec3 background = mix(uDarkBackground, uLightBackground, uLightMode);
+  fragColor = vec4(mix(background, color, uIntensity), 1.0);
+}
+`,
+  wave: `#version 300 es
+precision highp float;
+uniform sampler2D tScene;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uLightMode;
+uniform vec3 uDarkBackground;
+uniform vec3 uLightBackground;
+uniform float uPixelRatio;
+uniform float uStrength;
+uniform float uScale;
+uniform float uSeed;
+uniform float uIntensity;
+out vec4 fragColor;
+const float TAU = 6.28318530718;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 toInk(vec3 c) { return mix(c - uDarkBackground, uLightBackground - c, uLightMode); }
+vec3 fromInk(vec3 ink) { return mix(uDarkBackground + ink, uLightBackground - ink, uLightMode); }
+vec3 sceneInk(vec2 uv) { return toInk(texture(tScene, clamp(uv, 0.0, 1.0)).rgb); }
+
+const mat4 BAYER = mat4(
+  0.94118, 0.29412, 0.76471, 0.05882,
+  0.47059, 0.70588, 0.23529, 0.52941,
+  0.82353, 0.11765, 0.88235, 0.17647,
+  0.35294, 0.58824, 0.41176, 0.64706
+);
+
+// Continuous crosscurrents bend the field without adding surface colour.
+vec2 liquidFlow(vec2 p, float t) {
+  vec2 drift = vec2(p.y * 3.1 + t * 0.21, p.x * 2.7 - t * 0.17);
+  vec2 q = p + 0.22 * sin(drift);
+  vec2 bend = 0.22 * vec2(3.1, 2.7) * cos(drift);
+  vec2 d0 = vec2(0.94, 0.342);
+  vec2 d1 = vec2(-0.6, 0.8);
+  vec2 d2 = vec2(0.28, 0.96);
+  vec2 g = 0.38 * cos(dot(q, d0) * 10.0 - t * 0.65) * d0;
+  g += 0.24 * cos(dot(q, d1) * 16.0 - t * 0.83 + 2.1) * d1;
+  g += 0.12 * cos(dot(q, d2) * 23.0 - t * 1.1 + 4.3) * d2;
+  return vec2(g.x + g.y * bend.y, g.y + g.x * bend.x);
+}
+vec3 wave(vec2 frag) {
+  vec2 uv = frag / iResolution;
+  float aspect = iResolution.x / iResolution.y;
+  vec2 p = (frag - 0.5 * iResolution) / iResolution.y * uScale;
+  p += vec2(uSeed * 7.1, uSeed * 11.3);
+  vec2 shift = liquidFlow(p, iTime + uSeed * TAU) * 0.22 * uStrength * vec2(1.0 / aspect, 1.0);
+  return sceneInk(uv + shift);
+}
+
+
+void main() {
+  vec3 ink = wave(gl_FragCoord.xy);
+  vec3 color = fromInk(clamp(ink, 0.0, 1.0));
+  vec3 background = mix(uDarkBackground, uLightBackground, uLightMode);
+  fragColor = vec4(mix(background, color, uIntensity), 1.0);
+}
+`,
+  ascii: `#version 300 es
+precision highp float;
+uniform sampler2D tScene;
+uniform sampler2D tGlyphs;
+const float uGlyphCount = 10.0;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uLightMode;
+uniform vec3 uDarkBackground;
+uniform vec3 uLightBackground;
+uniform float uPixelRatio;
+uniform float uStrength;
+uniform float uScale;
+uniform float uSeed;
+uniform float uIntensity;
+out vec4 fragColor;
+const float TAU = 6.28318530718;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 toInk(vec3 c) { return mix(c - uDarkBackground, uLightBackground - c, uLightMode); }
+vec3 fromInk(vec3 ink) { return mix(uDarkBackground + ink, uLightBackground - ink, uLightMode); }
+vec3 sceneInk(vec2 uv) { return toInk(texture(tScene, clamp(uv, 0.0, 1.0)).rgb); }
+
+const mat4 BAYER = mat4(
+  0.94118, 0.29412, 0.76471, 0.05882,
+  0.47059, 0.70588, 0.23529, 0.52941,
+  0.82353, 0.11765, 0.88235, 0.17647,
+  0.35294, 0.58824, 0.41176, 0.64706
+);
+
+// Text mode: cells read the field's tone and pick a glyph of matching density,
+// drawn in the field's own colour over a dimmed copy of the field, so the glow
+// still reads through the type instead of the glyphs floating on black.
+vec3 ascii(vec2 frag) {
+  vec2 cellPx = vec2(0.62, 1.0) * floor(uScale * 9.0 * uPixelRatio + 0.5);
+  vec2 cell = floor(frag / cellPx);
+  vec2 centre = (cell + 0.5) * cellPx;
+  vec3 ink = vec3(0.0);
+  ink += sceneInk(centre / iResolution) * 2.0;
+  ink += sceneInk((centre + cellPx * vec2(0.3, 0.3)) / iResolution);
+  ink += sceneInk((centre + cellPx * vec2(-0.3, 0.3)) / iResolution);
+  ink += sceneInk((centre + cellPx * vec2(0.3, -0.3)) / iResolution);
+  ink += sceneInk((centre + cellPx * vec2(-0.3, -0.3)) / iResolution);
+  ink /= 6.0;
+  float level = pow(clamp(dot(ink, LUMA) * (0.9 + 0.3 * uStrength), 0.0, 1.0), 0.9);
+  float glyph = floor(level * (uGlyphCount - 1.0) + 0.5);
+  vec2 local = (frag - cell * cellPx) / cellPx;
+  vec2 atlas = vec2((glyph + local.x) / uGlyphCount, 1.0 - local.y);
+  float mask = texture(tGlyphs, atlas).r;
+  vec3 under = sceneInk(frag / iResolution) * 0.45;
+  return under + ink * mask * (1.0 + 0.7 * uLightMode);
+}
+
+
+void main() {
+  vec3 ink = ascii(gl_FragCoord.xy);
+  vec3 color = fromInk(clamp(ink, 0.0, 1.0));
+  vec3 background = mix(uDarkBackground, uLightBackground, uLightMode);
+  fragColor = vec4(mix(background, color, uIntensity), 1.0);
+}
+`,
+  none: `#version 300 es
+precision highp float;
+uniform sampler2D tScene;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uLightMode;
+uniform vec3 uDarkBackground;
+uniform vec3 uLightBackground;
+uniform float uPixelRatio;
+uniform float uStrength;
+uniform float uScale;
+uniform float uSeed;
+uniform float uIntensity;
+out vec4 fragColor;
+const float TAU = 6.28318530718;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 toInk(vec3 c) { return mix(c - uDarkBackground, uLightBackground - c, uLightMode); }
+vec3 fromInk(vec3 ink) { return mix(uDarkBackground + ink, uLightBackground - ink, uLightMode); }
+vec3 sceneInk(vec2 uv) { return toInk(texture(tScene, clamp(uv, 0.0, 1.0)).rgb); }
+
+const mat4 BAYER = mat4(
+  0.94118, 0.29412, 0.76471, 0.05882,
+  0.47059, 0.70588, 0.23529, 0.52941,
+  0.82353, 0.11765, 0.88235, 0.17647,
+  0.35294, 0.58824, 0.41176, 0.64706
+);
+
+
+void main() {
+  vec3 ink = sceneInk(gl_FragCoord.xy / iResolution);
   vec3 color = fromInk(clamp(ink, 0.0, 1.0));
   vec3 background = mix(uDarkBackground, uLightBackground, uLightMode);
   fragColor = vec4(mix(background, color, uIntensity), 1.0);

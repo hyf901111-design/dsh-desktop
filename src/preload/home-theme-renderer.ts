@@ -1,5 +1,6 @@
 import { HOME_THEME_CONFIGS, type HomeShaderThemeId } from './home-theme-configs'
 import { HOME_THEME_FIELD_SHADER, HOME_THEME_POST_SHADERS, HOME_THEME_VERTEX_SHADER } from './home-theme-shaders'
+import glyphRuns from './home-theme-assets/boz-glyph-atlas.json'
 
 export type { HomeShaderThemeId } from './home-theme-configs'
 
@@ -14,14 +15,14 @@ export interface HomeThemeRenderer {
 
 type Options = { dark: boolean; thumbnail?: boolean }
 type UniformName = 'iResolution' | 'iTime' | 'uLightMode' | 'uDarkBackground' | 'uLightBackground' |
-  'uP' | 'tScene' | 'uPixelRatio' | 'uStrength' | 'uScale' | 'uSeed' | 'uIntensity'
+  'uP' | 'tScene' | 'tGlyphs' | 'uPixelRatio' | 'uStrength' | 'uScale' | 'uSeed' | 'uIntensity'
 type Uniforms = Record<UniformName, WebGLUniformLocation | null>
 const MAX_PIXELS = 2_400_000
 const BACKGROUND_DARK = [9 / 255, 9 / 255, 9 / 255]
 const BACKGROUND_LIGHT = [1, 1, 1]
 
 /**
- * Original OpenShaders fold field and dither / halftone / grain, in two passes.
+ * Original OpenShaders fold field and surface textures, in two passes.
  * Scheduling belongs to the homepage controller so hidden pages and static
  * cards never retain their own animation loops, observers or event listeners.
  */
@@ -45,6 +46,7 @@ export function createHomeThemeRenderer(
   const programs: WebGLProgram[] = []
   const shaders: WebGLShader[] = []
   let scene: WebGLTexture | null = null
+  let glyphs: WebGLTexture | null = null
   let framebuffer: WebGLFramebuffer | null = null
   let vertices: WebGLVertexArrayObject | null = null
   let fieldWidth = 0, fieldHeight = 0, cssWidth = 1, pixelRatio = 1
@@ -57,14 +59,18 @@ export function createHomeThemeRenderer(
     context.useProgram(null)
     context.bindFramebuffer(context.FRAMEBUFFER, null)
     context.bindTexture(context.TEXTURE_2D, null)
+    context.activeTexture(context.TEXTURE1)
+    context.bindTexture(context.TEXTURE_2D, null)
+    context.activeTexture(context.TEXTURE0)
     context.bindVertexArray(null)
     for (const program of programs) context.deleteProgram(program)
     for (const shader of shaders) context.deleteShader(shader)
     if (scene) context.deleteTexture(scene)
+    if (glyphs) context.deleteTexture(glyphs)
     if (framebuffer) context.deleteFramebuffer(framebuffer)
     if (vertices) context.deleteVertexArray(vertices)
     programs.length = 0; shaders.length = 0
-    scene = null; framebuffer = null; vertices = null
+    scene = glyphs = null; framebuffer = null; vertices = null
   }
   const dispose = () => {
     if (disposed) return
@@ -115,7 +121,7 @@ export function createHomeThemeRenderer(
     const post = program(HOME_THEME_POST_SHADERS[config.traits.rarity], vertex)
     const sharedNames: UniformName[] = ['iResolution', 'iTime', 'uLightMode', 'uDarkBackground', 'uLightBackground']
     const fieldUniforms = uniforms(field, [...sharedNames, 'uP'])
-    const postUniforms = uniforms(post, [...sharedNames, 'tScene', 'uPixelRatio', 'uStrength', 'uScale', 'uSeed', 'uIntensity'])
+    const postUniforms = uniforms(post, [...sharedNames, 'tScene', 'tGlyphs', 'uPixelRatio', 'uStrength', 'uScale', 'uSeed', 'uIntensity'])
     scene = context.createTexture()
     framebuffer = context.createFramebuffer()
     vertices = context.createVertexArray()
@@ -134,6 +140,29 @@ export function createHomeThemeRenderer(
     context.uniform1f(postUniforms.uStrength, config.traits.strength)
     context.uniform1f(postUniforms.uScale, config.traits.scale)
     context.uniform1f(postUniforms.uSeed, config.traits.seed)
+    if (config.traits.rarity === 'ascii') {
+      // Exact atlas exported with the Figma theme: Menlo 500, " .:;+*oO8@".
+      // Keep it local and synchronous so the first frame never lacks glyphs.
+      glyphs = context.createTexture()
+      if (!glyphs) throw new Error('Cannot allocate homepage glyph atlas')
+      const pixels = new Uint8Array(480 * 80)
+      let at = 0
+      for (let i = 0; i < glyphRuns.length; i += 2) {
+        const count = glyphRuns[i]!, value = glyphRuns[i + 1]!
+        pixels.fill(value, at, at + count); at += count
+      }
+      context.activeTexture(context.TEXTURE1)
+      context.bindTexture(context.TEXTURE_2D, glyphs)
+      context.texImage2D(context.TEXTURE_2D, 0, context.R8, 480, 80, 0, context.RED, context.UNSIGNED_BYTE, pixels)
+      context.generateMipmap(context.TEXTURE_2D)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAX_LEVEL, 4)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.LINEAR_MIPMAP_LINEAR)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, context.LINEAR)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, context.CLAMP_TO_EDGE)
+      context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, context.CLAMP_TO_EDGE)
+      context.uniform1i(postUniforms.tGlyphs, 1)
+      context.activeTexture(context.TEXTURE0)
+    }
     const maxDimension = Math.min(4096, context.getParameter(context.MAX_TEXTURE_SIZE), context.getParameter(context.MAX_RENDERBUFFER_SIZE))
     canvas.addEventListener('webglcontextlost', contextLost)
 
