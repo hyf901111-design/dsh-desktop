@@ -6,8 +6,8 @@ import { build } from 'esbuild'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import sharp from 'sharp'
 
-// Use the actual stylesheet order. The newer universal input rule intentionally
-// makes every composer opaque; only empty-home header and corner rules differ.
+// Use the actual stylesheet order: empty-home glass must survive the reading
+// stylesheet while ordinary conversation and side-panel inputs stay opaque.
 let browser, shellRuntime
 beforeAll(async () => {
   const require = createRequire(import.meta.url)
@@ -108,10 +108,11 @@ for (const dark of [false, true]) {
             <main class="pI_x6G_centerCol" data-pane="conversation">
               <div data-slot="conversation" style="display:contents"><div class="wSkVaW_root" data-odyssey-page="home">
                 <div data-slot="conversation.session.header" style="display:contents"><header class="wSkVaW_header" data-srb-session-header data-odyssey-home-header="true" data-odyssey-header-layout="regular"></header></div>
-                <div class="uV2eYG_card"></div>
+                <div class="wSkVaW_composerHero"><div class="uV2eYG_card"></div></div>
               </div></div>
               <section data-odyssey-subagent-panel><div class="wSkVaW_root" data-odyssey-page="conversation">
                 <div data-slot="conversation.session.header" style="display:contents"><header class="wSkVaW_header" data-srb-session-header data-odyssey-home-header="false"></header></div>
+                <div class="wSkVaW_composerHero"><div class="uV2eYG_card"></div></div>
               </div></section>
             </main>
           </div>
@@ -132,15 +133,59 @@ for (const dark of [false, true]) {
         root.setAttribute('data-odyssey-page', 'conversation')
         document.querySelector('[data-odyssey-subagent-panel] .wSkVaW_root').setAttribute('data-odyssey-page', 'home')
         const childHomeParent = measure()
-        return { home, openRadius, reading, compactHomeBlurs, childHomeParent, childBlur, sideColor: getComputedStyle(document.querySelector('aside .uV2eYG_card')).backgroundColor }
+        const childCard = getComputedStyle(document.querySelector('[data-odyssey-subagent-panel] .uV2eYG_card'))
+        return { home, openRadius, reading, compactHomeBlurs, childHomeParent, childBlur, childColor: childCard.backgroundColor, childCardBlur: childCard.backdropFilter, sideColor: getComputedStyle(document.querySelector('aside .uV2eYG_card')).backgroundColor }
       })
-      expect(results.home).toEqual({ color: dark ? 'rgb(41, 41, 41)' : 'rgb(249, 249, 249)', blur: 'none', headerBlur: 'none', radius: '12px' })
+      expect(results.home).toEqual({ color: dark ? 'rgba(0, 0, 0, 0.49)' : 'rgba(255, 255, 255, 0.49)', blur: 'blur(12px)', headerBlur: 'none', radius: '12px' })
       expect(results.openRadius).toBe('16px')
       expect(results.childBlur).toBe('blur(32px)')
       expect(results.compactHomeBlurs).toEqual(['none', 'none'])
       expect(results.childHomeParent).toMatchObject({ headerBlur: 'blur(32px)', radius: '16px' })
       results.reading.forEach((reading, index) => expect(reading).toEqual({ color: dark ? 'rgb(41, 41, 41)' : 'rgb(249, 249, 249)', blur: 'none', headerBlur: index < 2 ? 'blur(32px)' : 'none', radius: '16px' }))
       expect(results.sideColor).toBe(dark ? 'rgb(41, 41, 41)' : 'rgb(249, 249, 249)')
+      expect(results.childColor).toBe(dark ? 'rgb(41, 41, 41)' : 'rgb(249, 249, 249)')
+      expect(results.childCardBlur).toBe('none')
+    } finally { await page.close() }
+  })
+
+  it(`${dark ? 'dark' : 'light'} homepage glass retains background color while softening its fine texture`, async () => {
+    const page = await browser.newPage({ viewport: { width: 720, height: 360 }, deviceScaleFactor: 1 })
+    try {
+      await page.route('**/*', route => route.abort())
+      await setContent(page, `<style>
+        body { margin:0 }
+        .pattern { position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 2px,#ffffff99 2px 4px),linear-gradient(90deg,#204273 50%,#406c9b 50%) }
+      </style><body ${dark ? 'data-ds-dark-theme' : ''}>
+        <main class="pI_x6G_centerCol" style="position:relative;width:720px;height:360px;margin:0;isolation:isolate;overflow:hidden">
+          <div data-odyssey-home-theme-background><div class="pattern"></div></div>
+          <div class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:360px">
+            <div class="wSkVaW_composerHero" style="position:absolute;left:48px;top:120px;width:624px;padding:0;margin:0">
+              <div class="uV2eYG_card" style="height:126px"><textarea aria-label="首页输入" style="position:absolute;left:17px;top:15px;background:transparent;border:0;color:inherit">清晰的输入内容</textarea></div>
+            </div>
+          </div>
+        </main>
+      </body>`)
+      const card = page.locator('.uV2eYG_card')
+      const image = async () => sharp(await card.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+      const stats = ({ data, info }) => {
+        const channel = (x, y, c) => data[(y * info.width + x) * info.channels + c]
+        const mean = (from, to) => [0, 1, 2].map(c => {
+          let total = 0
+          for (let y = 60; y < 96; y++) for (let x = from; x < to; x++) total += channel(x, y, c)
+          return total / ((to - from) * 36)
+        })
+        let edges = 0
+        for (let y = 60; y < 96; y++) for (let x = 40; x < 240; x++) for (let c = 0; c < 3; c++) edges += Math.abs(channel(x + 1, y, c) - channel(x, y, c))
+        return { left: mean(40, 240), right: mean(400, 600), texture: edges / (36 * 200 * 3) }
+      }
+      const blurred = stats(await image())
+      await card.evaluate(node => { node.style.setProperty('backdrop-filter', 'none', 'important'); node.style.setProperty('-webkit-backdrop-filter', 'none', 'important') })
+      const unblurred = stats(await image())
+      expect(blurred.left.reduce((difference, value, c) => difference + Math.abs(value - blurred.right[c]), 0)).toBeGreaterThan(20)
+      expect(unblurred.texture).toBeGreaterThan(8)
+      expect(blurred.texture).toBeLessThan(unblurred.texture * .2)
+      expect(await page.locator('textarea').inputValue()).toBe('清晰的输入内容')
+      expect(await card.evaluate(node => getComputedStyle(node).filter)).toBe('none')
     } finally { await page.close() }
   })
 }

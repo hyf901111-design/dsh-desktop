@@ -2,8 +2,8 @@
 body { --odyssey-composer-solid:#f9f9f9; --odyssey-reading-border:rgba(0,0,0,.1); --odyssey-reading-glass:rgba(242,242,242,.65); }
 body[data-ds-dark-theme] { --odyssey-composer-solid:#292929; --odyssey-reading-border:rgba(255,255,255,.12); --odyssey-reading-glass:rgba(31,31,31,.65); }
 body .uV2eYG_card, body[data-ds-dark-theme] .uV2eYG_card {
-  background:var(--odyssey-composer-solid)!important;
-  backdrop-filter:none!important; -webkit-backdrop-filter:none!important;
+  background:var(--odyssey-composer-fill,var(--odyssey-composer-solid))!important;
+  backdrop-filter:var(--odyssey-composer-backdrop,none)!important; -webkit-backdrop-filter:var(--odyssey-composer-backdrop,none)!important;
   box-shadow:none!important; border:0; border-radius:10.5px;
 }
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_card {
