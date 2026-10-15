@@ -9,30 +9,51 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记组件对齐与选择引用",
+        "featureName": "笔记引用标签与研究引用范围及底部面板布局",
         "branch": "codex/feat/notes-context-alignment-20261015",
-        "baseCommit": "48585bac2015cae4bd0af4396759f8ae8b4e3658",
-        "tipCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+        "baseCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+        "tipCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
         "commits": [
           {
-            "commit": "0f5320622f632bc2e68bd2bb86ca800d64f01496",
+            "commit": "c7842c068001f4ffd09497860f78975ead9beca6",
             "parents": [
-              "48585bac2015cae4bd0af4396759f8ae8b4e3658"
+              "bf97b9a67b80931818603615e0755cb93e28c2aa"
             ],
-            "subject": "修复：笔记引用读取附件原文并精简输入提示"
+            "subject": "功能：在笔记用户气泡中保留当次引用标签"
           },
           {
-            "commit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
+            "commit": "6b5fb7fe07d441bf4b7e9309e830365baf33a5b9",
             "parents": [
-              "0f5320622f632bc2e68bd2bb86ca800d64f01496"
+              "c7842c068001f4ffd09497860f78975ead9beca6"
             ],
-            "subject": "修复：恢复研究派生思维导图的节点连线和完整内容编辑"
+            "subject": "优化：笔记正文末尾保留半屏可滚动留白"
+          },
+          {
+            "commit": "23e7a3c6ea420c7d1ad014c52471ec68e4ab19fb",
+            "parents": [
+              "6b5fb7fe07d441bf4b7e9309e830365baf33a5b9"
+            ],
+            "subject": "修复：仅发送图片时仍在笔记气泡显示引用标签"
+          },
+          {
+            "commit": "bdfdd8588e97c4c164da98c581acb719ea4411c1",
+            "parents": [
+              "23e7a3c6ea420c7d1ad014c52471ec68e4ab19fb"
+            ],
+            "subject": "修复：研究总结读取所引组件数据并限定当前引用范围"
+          },
+          {
+            "commit": "6401ce677dc06e44b46841446d6be844f2cc02db",
+            "parents": [
+              "bdfdd8588e97c4c164da98c581acb719ea4411c1"
+            ],
+            "subject": "修复：笔记和研究工具栏实时避让底部面板"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/context-runtime.js"
           },
           {
             "status": "M",
@@ -40,71 +61,75 @@
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/notes-reference-content.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/derived-preset-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-composer.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/files.ts"
+            "path": "packages/dsh-research-task-runtime/notes-message-references.d.ts"
           },
           {
             "status": "A",
-            "path": "src/main/notes/reference-context.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-context-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/reference-context.ts"
+            "path": "packages/dsh-research-task-runtime/notes-message-references.js"
           },
           {
             "status": "A",
-            "path": "test/derived-mind-map-browser.test.js"
+            "path": "packages/dsh-research-task-runtime/research-reference-scope.js"
           },
           {
             "status": "M",
-            "path": "test/note-files.test.ts"
+            "path": "scripts/lib/canvas-actions-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-native-web-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-reference-evidence.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-ai.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-component-layout.test.js"
           },
           {
             "status": "M",
             "path": "test/notes-native-send-preview.test.js"
           },
           {
+            "status": "M",
+            "path": "test/research-canvas-actions-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-context-runtime.test.js"
+          },
+          {
             "status": "A",
-            "path": "test/notes-reference-content.test.js"
+            "path": "test/research-reference-scope.test.js"
           },
           {
-            "status": "M",
-            "path": "test/notes-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-context-bridge.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-file-extraction-cancellation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-grid-client.test.js"
+            "status": "A",
+            "path": "test/workspace-bottom-panel-layout.test.js"
           }
         ],
         "checks": [
@@ -112,36 +137,33 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/notes-native-send-preview.test.js",
-              "test/notes-composer.test.js",
               "test/notes-ai.test.js",
-              "test/notes-service.test.ts",
-              "test/note-files.test.ts",
-              "test/notes-reference-content.test.js",
-              "test/research-context-bridge.test.ts",
-              "test/research-file-extraction-cancellation.test.js",
-              "test/notes-component-import-interaction.test.js",
-              "test/notes-rewrite-range.test.ts"
+              "test/notes-activity.test.js",
+              "test/notes-component-layout.test.js",
+              "test/workspace-bottom-panel-layout.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/research-reference-scope.test.js",
+              "test/research-context-runtime.test.js",
+              "test/research-canvas-actions-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "10个笔记与原文提取相关测试文件、104项通过",
-            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
-            "completedAt": "2026-10-15T01:35:35.762994+00:00",
+            "summary": "8个相关文件82项通过，含原生浏览器几何、真实发送封装、生产runtime注册",
+            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
+            "completedAt": "2026-10-15T02:09:34.114580+00:00",
             "timeoutMs": 180000
           },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-grid-client.test.js",
-              "test/derived-mind-map-browser.test.js",
+              "test/notes-native-send-preview.test.js",
               "-t",
-              "派生|horizontal hierarchy"
+              "quoted component labels|full tooltips"
             ],
             "outcome": "passed",
-            "summary": "派生导图12项与真实浏览器几何、滚动、只读2项通过",
-            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
-            "completedAt": "2026-10-15T01:35:35.762994+00:00",
+            "summary": "单多引用气泡及图片空提示历史恢复3项通过",
+            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
+            "completedAt": "2026-10-15T02:09:34.114580+00:00",
             "timeoutMs": 180000
           },
           {
@@ -152,8 +174,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
-            "completedAt": "2026-10-15T01:35:35.762994+00:00",
+            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
+            "completedAt": "2026-10-15T02:09:34.114580+00:00",
             "timeoutMs": 180000
           },
           {
@@ -164,56 +186,25 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "bf97b9a67b80931818603615e0755cb93e28c2aa",
-            "completedAt": "2026-10-15T01:35:35.762994+00:00",
+            "verifiedCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
+            "completedAt": "2026-10-15T02:09:34.114580+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生笔记输入框浏览器夹具验证无统计标签及新占位文案；真实双页PDF通过私有捕获和研究生产提取器将未渲染第二页送入模型请求；派生导图在380/900px浏览器验证节点几何、SVG连线、121个完整节点、滚动与只读，旧导图保存恢复及长节点编辑验证通过。"
+          "summary": "浏览器验证单/多组件、文件和文本引用标签位于原生用户气泡，明暗两主题、图片空提示、历史回放和发送后改名保持快照；笔记末尾1000/720/420px面板高度下保留约半屏空白；原生底部面板两模式两主题的真实展开、实时拖动、窗口缩放、收起恢复、画布已缩小时不重复避让通过。"
         },
         "acceptanceCriteria": [
-          "笔记附件通过与研究模式相同的授权原文提取器供AI读取，引用范围和关闭状态有效。",
-          "标签不显示组件数量，输入提示为撰写、补充或改写笔记...。",
-          "已生成和新生成的派生思维导图显示中心主题、层级节点和连线，保留来源原文与可编辑结果。",
-          "长节点不截断，超过48个节点完整呈现并可滚动访问。"
+          "笔记发送后用户气泡以原生样式显示当次单个或多个引用标签，标签随会话历史保留，不混入源正文或授权。",
+          "研究显式单多引用在发送时读取当前对应组件真实正文，排除残留选区和全画板自动捕获，本次请求优先于历史工作台创建指令。",
+          "笔记正文末尾可继续向下滚动约半个面板，随面板高度变化且不改变正文。",
+          "笔记底部面板可见可交互，研究工具栏实时位于展开面板上方，收起和缩放正确恢复。"
         ],
         "risks": [
-          "待更新共享客户端后验证真实界面和在线模型；本卡记录聚焦源码及浏览器验证。"
+          "待刷新集成客户端后验证真实模型的所引热力图总结和真实主窗口布局。"
         ],
-        "generatedAt": "2026-10-15T01:35:35.762994+00:00"
-      },
-      "merged": {
-        "mergeCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
-        "verificationCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
-            "completedAt": "2026-10-15T01:36:01.422Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
-            "completedAt": "2026-10-15T01:36:01.422Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-15T01:36:01.422Z"
+        "generatedAt": "2026-10-15T02:09:34.114580+00:00"
       }
     }
   ],
