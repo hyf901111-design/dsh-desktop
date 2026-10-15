@@ -1,11 +1,8 @@
-import {NOTE_ENGLISH,noteUiText} from '../../packages/dsh-research-task-runtime/notes-locale.js'
+import {notesUiLocaleSource} from './notes-ui-locale.mjs'
 import { patchNotesSidebar } from './notes-sidebar.mjs'
 /** Adapt the existing native InputBar and input machine, without duplicating UI. */
 export const notesComposerSource = `
-const NOTE_ENGLISH=${JSON.stringify(NOTE_ENGLISH)};
-${noteUiText.toString()}
-function useNoteUiLocale(){const [,render]=react.useState(0);react.useEffect(()=>{if(typeof MutationObserver==='undefined')return;const observer=new MutationObserver(()=>render(n=>n+1));observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});return()=>observer.disconnect()},[])}
-
+${notesUiLocaleSource}
 const eworkNotesInputs = new Map();
 function EWorkNotesReferenceBar({sessionId}){
  useNoteUiLocale();

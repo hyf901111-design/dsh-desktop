@@ -10,6 +10,8 @@ import * as jsxRuntime from 'react/jsx-runtime'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { patchFigmaFinalConversation } from '../scripts/lib/patch-figma-final-shell.mjs'
+import { patchNotesClient } from '../scripts/lib/notes-client.mjs'
+import { notesUiLocaleSource } from '../scripts/lib/notes-ui-locale.mjs'
 
 let browser, page, script, Header, baseCss, installedCss, gridCss, panelCss
 const require = createRequire(import.meta.url)
@@ -24,12 +26,12 @@ function clientFunctions(source) {
   return functions
 }
 beforeAll(async () => {
-  const source = patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const source = patchNotesClient(patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
   const block = source.slice(source.indexOf('/* ODYSSEY_FIGMA_FINAL_SHELL_START */'), source.indexOf('/* ODYSSEY_FIGMA_FINAL_SHELL_END */'))
   installedCss = JSON.parse(block.match(/style.textContent=("[^\n]+");}/)[1])
   const functions = clientFunctions(source)
   // Render the installed native header tree; only its stores and extension slots are fixtures.
-  Header = runInNewContext(['deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'EWorkNoteExportMenu','ConversationSessionHeader'].map(name => {
+  Header = runInNewContext(notesUiLocaleSource+'\n'+['deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'EWorkNoteExportMenu','ConversationSessionHeader'].map(name => {
     if (!functions.has(name)) throw Error(`Missing native function: ${name}`)
     return functions.get(name)
   }).join('\n') + '\nConversationSessionHeader', {
