@@ -4,5 +4,5 @@ const paths:Record<string,string>={file:'M3 1.5h6.5L13 5v9.5H3zM9 1.5V5h4M5.5 8h
 export function NoteMenuIcon({kind}:{kind:string}){
  const creation=noteCreationIcon(kind)
  if(creation)return <svg className="en-menu-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{width:18,height:18,color:creation.color,opacity:1}}>{creation.paths.map((path,index)=><path key={index} d={path}/>)}</svg>
- return <svg className="en-menu-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={kind==='close'?'M4 4l8 8M12 4l-8 8':kind==='refresh'?'M3 4a6 6 0 1 1-1 6M3 1v4H0M8 4v4l3 2':paths[kind]||paths.paragraph}/></svg>
+ return <svg className="en-menu-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={kind==='refresh'?1.5:1.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={kind==='close'?'M4 4l8 8M12 4l-8 8':kind==='refresh'?'M12.75 6A5.25 5.25 0 1 0 13 10M12.75 2.75V6H9.5':paths[kind]||paths.paragraph}/></svg>
 }
