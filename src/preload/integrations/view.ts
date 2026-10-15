@@ -829,7 +829,7 @@ export class IntegrationView {
         if(this.menuId===id){this.closeMenu();return;}
         this.closeMenu();if(!this.root)return;
         this.menuAnchor=anchor;this.menuId=id;anchor.setAttribute('aria-expanded','true');
-        const menu=this.document.createElement('div');menu.className='ig-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label',label);menu.innerHTML=markup;
+        const menu=this.document.createElement('div');menu.className='ig-menu';menu.dataset.integrationEntity=id;menu.setAttribute('role','menu');menu.setAttribute('aria-label',label);menu.innerHTML=markup;
         this.root.append(menu);
         const rect=anchor.getBoundingClientRect(),panel=this.root.getBoundingClientRect(),bounds=menu.getBoundingClientRect();
         const viewportWidth=this.document.defaultView?.innerWidth||1280,viewportHeight=this.document.defaultView?.innerHeight||800;

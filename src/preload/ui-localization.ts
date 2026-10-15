@@ -23,14 +23,18 @@ export function translateUiCopy(value: string, context?: Element): string {
  if(key.includes(' · ') && /^(下次运行|每天|工作日|每周[日一二三四五六]|\d{4}-\d{2}-\d{2}|北京时间|香港时间|东京时间|纽约时间|伦敦时间|UTC|[A-Za-z_]+\/)/.test(key))
   return value.replace(key,key.split(' · ').map(part=>translateUiCopy(part,context)).join(' · '))
  if(context?.closest('.ig-root,.ig-overlay')){
+  const displayName=(name:string)=>context.closest('[data-row-id^="builtin:"],[data-integration-entity^="builtin:"]')?translateUiCopy(name,context):name
   const integrationPatterns: Array<[RegExp,(...args:string[])=>string]> = [
+  [/^EWork 内置 · (.+)$/,(_m,detail)=>`Built into EWork · ${translateUiCopy(detail,context)}`],
+  [/^已选择 (\d+) 个工作区$/,(_m,n)=>`${n} ${n==='1'?'workspace':'workspaces'} selected`],
+  [/^上次检查：(.+)$/,(_m,time)=>`Last checked: ${time}`],
   [/^(\d+) 项 · (\d+) 项已启用$/,(_m,n,enabled)=>`${n} ${n==='1'?'item':'items'} · ${enabled} enabled`],
   [/^(\d+) 个工具$/,(_m,n)=>`${n} ${n==='1'?'tool':'tools'}`],
   [/^包含 (\d+) 个文件$/,(_m,n)=>`Includes ${n} ${n==='1'?'file':'files'}`],
   [/^版本 (.+)$/,(_m,v)=>`Version ${v}`],
   [/^(.*) · 版本 (.+?)( · 已安装)?$/,(_m,name,v,installed)=>`${name} · Version ${v}${installed?' · Installed':''}`],
-  [/^(.+)的更多操作$/,(_m,name)=>`${name}: more actions`],
-  [/^(启用|停用)(.+)$/,(_m,action,name)=>`${action==='启用'?'Enable':'Disable'} ${name}`],
+  [/^(.+)的更多操作$/,(_m,name)=>`${displayName(name)}: more actions`],
+  [/^(启用|停用)(.+)$/,(_m,action,name)=>`${action==='启用'?'Enable':'Disable'} ${displayName(name)}`],
   [/^移除工具 (.+)$/,(_m,name)=>`Remove tool ${name}`],
   [/^查看(.+)$/,(_m,name)=>`View ${name.trim()}`],
   [/^(断开|删除|卸载)“(.+)”？$/,(_m,action,name)=>`${({断开:'Disconnect',删除:'Delete',卸载:'Uninstall'} as Record<string,string>)[action]} “${name}”?`],

@@ -52,3 +52,25 @@ it('keeps skill documents unchanged and translates only generated readonly form 
   expect(doc.querySelector<HTMLInputElement>('[data-ui-system-value]')?.value).toBe('只读：查询数据')
  }finally{stop();await w.happyDOM.close()}
 })
+
+it('localizes bundled service and skill metadata, including composite source labels',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const w=new Window(),doc=w.document as unknown as Document
+ doc.body.innerHTML='<main class="pI_x6G_centerCol"></main>';doc.documentElement.dataset.odysseyLocale='en'
+ const rows:any[]=[]
+ for(const slug of ['efund-ppt-maker','ework-workbench-components','ework-free-data-sources','ework-finance-analysis']){
+  const meta=JSON.parse(await readFile(`skills/${slug}/_meta.json`,'utf8'))
+  const raw=await readFile(`skills/${slug}/SKILL.md`,'utf8')
+  rows.push({id:'builtin:skill:'+slug,kind:'skill',tab:'skills',name:meta.cnName,description:raw.match(/^description: (.*)$/m)![1],enabled:true,status:'已启用',source:'EWork 内置 · v1',revision:1})
+ }
+ rows.push({id:'builtin:datayes',kind:'connection',tab:'mcp',name:'通联 DataYes MCP（内置）',description:'官网 MCP 积分服务：股票、基金、指数、财务与估值等结构化数据',enabled:true,status:'请先登录 EWork',source:'EWork 内置',toolCount:4,revision:1})
+ const view=new IntegrationView(doc,{request:async()=>({type:'snapshot',snapshot:{revision:1,rows}})}),stop=mountUiLocalization(doc)
+ try{
+  for(const tab of ['skills','mcp']){
+   await view.open('integrations/'+tab)
+   await expect.poll(()=>[...doc.querySelectorAll('.ig-row-main,.ig-row-meta')].map(el=>el.textContent).join('')).not.toMatch(/[\u4e00-\u9fff]/)
+  }
+  expect(doc.querySelector('.ig-row-meta')?.textContent).toContain('Sign in to EWork first')
+  expect(doc.querySelector('.ig-row-meta')?.textContent).toContain('Built into EWork · 4 tools')
+ }finally{stop();view.dispose();await w.happyDOM.close()}
+})
