@@ -175,3 +175,12 @@ body .en-root .en-research .ew-financial-search-line>button{display:grid;place-i
 .en-preview-resize:hover::after,.en-preview-resize:focus-visible::after{opacity:.85}
 .en-preview-resize:focus-visible{outline:2px solid var(--en-muted);outline-offset:1px;border-radius:4px}
 .en-preview-content{flex:none}
+/* Creation drafts follow the research component form inside the note's frame. */
+.en-root .en-creation-draft{display:flex;flex-direction:column;gap:10px;padding:10px;min-height:180px;overflow:auto;background:var(--en-component-bg)}
+.en-root .en-creation-draft textarea{display:block;width:100%;flex:1;min-height:60px;resize:none;padding:12px;border:1px solid var(--en-field-border);border-radius:4px;background:var(--en-input);color:var(--en-ink);font:inherit;font-size:13px;line-height:19px;white-space:pre-wrap}
+.en-root .en-creation-draft textarea:focus{outline:2px solid var(--en-accent);outline-offset:-2px}
+.en-root .en-creation-draft .rScV5Q_containerDraftFooter{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+.en-root .en-creation-draft .rScV5Q_containerDraftFooter span{flex:1;color:var(--en-muted);font-size:12px;line-height:18px}
+.en-root .en-creation-draft .rScV5Q_containerDraftFooter button{flex:none;width:104px;height:32px;padding:0 8px;border-radius:4px;background:var(--en-ink);color:var(--en-bg);font-size:13px}
+
+.en-root .en-creation-feedback{max-height:90px;overflow:auto;white-space:pre-wrap;color:var(--en-muted);font-size:12px;line-height:18px}
