@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { Context, Service } from '@deepseek-ai/cordis'
 import { patchFigmaFinalConversation, patchFigmaFinalLayout } from '../scripts/lib/patch-figma-final-shell.mjs'
+import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
 
@@ -269,8 +270,8 @@ describe('Figma shell patch installation', () => {
     expect(resolve({ researchEmpty: true, inert: true })).toBe('placeholder.workspace')
   })
 
-  it('renders short Research messages without exposing automatic context while keeping explicit inline references', () => {
-    const installed = patchFigmaFinalConversation(source)
+  it.each([false,true])('renders short Research messages without exposing automatic context with note bubbles %s', notes => {
+    const installed = patchFigmaFinalConversation(notes?patchNotesActivity(source):source)
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const context = { totalSources: 1, initialSourceIds: [] }
     const research = { text: '好', files: [] as unknown[], artifacts: [] as unknown[], canvasContext: context }
@@ -289,7 +290,8 @@ describe('Figma shell patch installation', () => {
       _deepseek_ai_dsh_client_ui_primitives: { JsonBlock: 'json' }
     })
     const tree = bubble({ content: [], t: (key: string) => key })
-    expect(tree.props.children[0].props.children[1].props.children).toEqual(['好', []])
+    // React omits null/undefined children, including absent optional references.
+    expect(tree.props.children[0].props.children[1].props.children.filter((child:unknown)=>child!==undefined&&child!==null)).toEqual(['好', []])
     expect(JSON.stringify(tree)).not.toContain('research-context-provenance')
     expect(projected[0]).toBe(research)
     expect(research.canvasContext).toBe(context)
