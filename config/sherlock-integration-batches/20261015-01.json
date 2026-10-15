@@ -142,6 +142,37 @@
           "未调用真实在线模型进行端到端生成验收；模型输出与写回使用真实浏览器加受控模型结果验证。"
         ],
         "generatedAt": "2026-10-15T01:00:44.723767Z"
+      },
+      "merged": {
+        "mergeCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
+        "verificationCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
+            "completedAt": "2026-10-15T01:03:52.720Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "da3388d125816c70a2bb0b6082d113b243585f01",
+            "completedAt": "2026-10-15T01:03:52.720Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-15T01:03:52.720Z"
       }
     }
   ],
