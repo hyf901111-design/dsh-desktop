@@ -101,7 +101,7 @@ export const homeFlowLuminance = createHomeFlowField()
 
 const mounted = new WeakMap<Document, () => void>()
 
-export function mountHomeFlow(doc: Document = document): () => void {
+export function mountHomeFlow(doc: Document = document, options: { home?: boolean } = {}): () => void {
   const existing = mounted.get(doc)
   if (existing) return existing
   const win = doc.defaultView
@@ -163,7 +163,7 @@ export function mountHomeFlow(doc: Document = document): () => void {
   }
   const observer = new win.ResizeObserver(resize)
   const sync = () => {
-    const next = doc.querySelector('.sherlock-auth-dialog[open] .sherlock-auth-scenery') ?? doc.querySelector('.pI_x6G_centerCol:has([data-odyssey-page="home"])')
+    const next = doc.querySelector('.sherlock-auth-dialog[open] .sherlock-auth-scenery') ?? (options.home === false ? null : doc.querySelector('.pI_x6G_centerCol:has([data-odyssey-page="home"])'))
     const nextDark = doc.body.hasAttribute('data-ds-dark-theme')
     if (next === host && (!host || canvas?.isConnected)) {
       if (dark !== nextDark) { dark = nextDark; draw() }

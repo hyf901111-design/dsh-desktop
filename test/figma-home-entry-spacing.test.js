@@ -1,20 +1,32 @@
 import { readFileSync, readdirSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { build } from 'esbuild'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 
-// Full native CSS and production shell order; retain every observed composer
-// slot, including the empty workspace anchor and the mode trigger wrapper.
+// Full native CSS and production shell order; retain the empty workspace
+// anchor and mode wrapper. The current client hides the mode trigger, so only
+// visible controls contribute to spacing; workspace clearance stays exact.
 const read = path => readFileSync(path, 'utf8')
 const assets = 'node_modules/@deepseek-ai/dsh-web-frontend/dist/assets'
 const frontend = readdirSync(assets).filter(name => /^index-.*\.css$/.test(name)).map(name => read(`${assets}/${name}`)).join('\n')
 const native = ['layout', 'conversation', 'agent-preset'].map(name => [...read(`node_modules/@deepseek-ai/dsh-client-ui-${name}/lib/client.js`).matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(m => JSON.parse(m[1])).join('\n')).join('\n')
-const shell = read('src/preload/shell-style.ts')
-const imports = [...shell.matchAll(/import (\w+) from '(\.\/[^']+\.css)\?raw'/g)]
-const css = shell.match(/style\.textContent = ([^\n]+)/)[1].split('+').map(name => name.trim() === 'desktopShellStyles'
-  ? shell.match(/const desktopShellStyles = `([\s\S]*?)`/)[1]
-  : read('src/preload/' + imports.find(m => m[1] === name.trim())[2].slice(2))).join('\n')
-let browser
+let browser, shellRuntime
 beforeAll(async () => {
+  // Compile the actual mount, resolving both local and package raw styles.
+  // This retains generated palette rules and their production cascade order.
+  const require = createRequire(import.meta.url)
+  const result = await build({
+    stdin: { contents: "import {mountDesktopShellStyles} from './src/preload/shell-style'; mountDesktopShellStyles(document)", resolveDir: process.cwd(), loader: 'ts' },
+    bundle: true, platform: 'browser', format: 'iife', write: false,
+    plugins: [{ name: 'raw-css', setup(b) {
+      b.onResolve({ filter: /\.css\?raw$/ }, a => ({ path: a.path.startsWith('.') ? resolve(a.resolveDir, a.path.slice(0, -4)) : require.resolve(a.path.slice(0, -4)), namespace: 'raw' }))
+      b.onLoad({ filter: /.*/, namespace: 'raw' }, async a => ({ contents: 'export default ' + JSON.stringify(await readFile(a.path, 'utf8')), loader: 'js' }))
+    } }]
+  })
+  shellRuntime = result.outputFiles[0].text
   const module = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
   browser = await (module.default ?? module).chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
 })
@@ -37,7 +49,7 @@ function hero() {
 async function open(dark = false) {
   const page = await browser.newPage({ viewport: { width: 1380, height: 900 }, reducedMotion: 'reduce' })
   await page.route('**/*', r => r.abort())
-  await page.setContent(`<style>${frontend}\n${native}\n${portalCss}\n${css}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
+  await page.setContent(`<style>${frontend}\n${native}\n${portalCss}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
     <div id="root"><div data-slot="root" style="display:contents"><div class="pI_x6G_frame" data-dsh-frame="true" style="grid-template-columns:280px minmax(0,1fr) 0px">
       <aside></aside><main class="pI_x6G_centerCol" data-pane="conversation"><div data-slot="conversation" style="display:contents"><div class="wSkVaW_root" data-phase="hero" data-odyssey-page="home">
         <div data-slot="conversation.session.header" style="display:contents"><header class="wSkVaW_header" data-srb-session-header data-odyssey-home-header="true"></header></div>
@@ -46,31 +58,35 @@ async function open(dark = false) {
       </div></div></main>
     </div></div></div><aside data-dsh-panel-host data-odyssey-panel-right="closed"></aside>
   </body>`)
+  await page.addScriptTag({ content: shellRuntime })
   return page
 }
 async function measure(page) {
   return page.locator('main .wSkVaW_composerHero').evaluate(hero => {
     const row = hero.querySelector('.wSkVaW_heroWorkspaceRow'), workspace = row.querySelector('.pXSMma_workspace'), mode = row.querySelector('.cubgiG_seat')
     const card = hero.querySelector('.uV2eYG_card').getBoundingClientRect(), wr = workspace.getBoundingClientRect(), mr = mode.getBoundingClientRect(), rr = row.getBoundingClientRect()
-    return { card: { x: card.x, y: card.y, width: card.width, height: card.height }, left: wr.x - card.x, gap: mr.x - wr.right,
-      bottom: card.y - wr.bottom, sameTop: wr.y === mr.y, rowHeight: rr.height, controls: [wr.height, mr.height], overflow: row.scrollWidth > row.clientWidth }
+    const visible = [workspace, mode].filter(control => getComputedStyle(control).display !== 'none').map(control => control.getBoundingClientRect())
+    return { card: { x: card.x, y: card.y, width: card.width, height: card.height }, left: wr.x - card.x,
+      gap: visible.length > 1 ? visible[1].x - visible[0].right : null,
+      bottom: card.y - wr.bottom, sameTop: visible.every(control => control.y === visible[0].y), rowHeight: rr.height,
+      controls: [wr.height, mr.height], modeDisplay: getComputedStyle(mode).display, overflow: row.scrollWidth > row.clientWidth }
   })
 }
-for (const dark of [false, true]) it(`${dark ? 'dark' : 'light'} native home slots preserve the input center with 8/12/8 entry spacing`, async () => {
+for (const dark of [false, true]) it(`${dark ? 'dark' : 'light'} home preserves the input center and 8 px workspace clearance with the mode trigger hidden`, async () => {
   const page = await open(dark)
   try {
     for (const open of [false, true, false]) {
       await page.locator('[data-dsh-panel-host]').evaluate((el, open) => el.dataset.odysseyPanelRight = open ? 'open' : 'closed', open)
-      expect(await measure(page)).toEqual({ card: { x: open ? 330 : 435, y: 417, width: open ? 640 : 780, height: 126 }, left: 8, gap: 12, bottom: 8, sameTop: true, rowHeight: 32, controls: [28, 28], overflow: false })
+      expect(await measure(page)).toEqual({ card: { x: open ? 330 : 435, y: 417, width: open ? 640 : 780, height: 126 }, left: 8, gap: null, bottom: 8, sameTop: true, rowHeight: 32, controls: [28, 0], modeDisplay: 'none', overflow: false })
     }
   } finally { await page.close() }
 })
-it('keeps the same input center and entry clearance in a short, narrow home pane', async () => {
+it('keeps input geometry and workspace clearance in a short, narrow home pane with the mode trigger hidden', async () => {
   const page = await open()
   try {
     await page.setViewportSize({ width: 1040, height: 640 })
     await page.locator('[data-dsh-panel-host]').evaluate(el => el.dataset.odysseyPanelRight = 'open')
-    expect(await measure(page)).toEqual({ card: { x: 304, y: 287, width: 352, height: 126 }, left: 8, gap: 12, bottom: 8, sameTop: true, rowHeight: 32, controls: [28, 28], overflow: false })
+    expect(await measure(page)).toEqual({ card: { x: 304, y: 287, width: 352, height: 126 }, left: 8, gap: null, bottom: 8, sameTop: true, rowHeight: 32, controls: [28, 0], modeDisplay: 'none', overflow: false })
   } finally { await page.close() }
 })
 it('does not apply the new entry spacing to started sessions, right-side or child composers', async () => {

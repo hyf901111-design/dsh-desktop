@@ -114,4 +114,39 @@ describe('procedural home atmosphere', () => {
     expect(callbacks.size).toBe(0)
     await w.happyDOM.close()
   })
+
+  it('keeps authentication scenery when homepage drawing is delegated to the theme controller', async () => {
+    const w = new Window()
+    const callbacks = new Map<number, FrameRequestCallback>()
+    let next = 0, draws = 0
+    w.requestAnimationFrame = ((cb: FrameRequestCallback) => { callbacks.set(++next, cb); return next }) as unknown as typeof w.requestAnimationFrame
+    w.cancelAnimationFrame = ((id: number) => { callbacks.delete(id) }) as unknown as typeof w.cancelAnimationFrame
+    w.HTMLCanvasElement.prototype.getContext = (() => ({
+      createImageData: (width: number, height: number) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }),
+      putImageData: () => { draws++ }
+    })) as unknown as typeof w.HTMLCanvasElement.prototype.getContext
+    w.document.body.innerHTML = '<main class="pI_x6G_centerCol"><section data-odyssey-page="home"></section></main>'
+    const dispose = mountHomeFlow(w.document as unknown as Document, { home: false })
+    try {
+      expect(w.document.querySelector('canvas')).toBeNull()
+      expect(callbacks.size).toBe(0)
+      const dialog = w.document.createElement('dialog')
+      dialog.className = 'sherlock-auth-dialog'
+      dialog.open = true
+      dialog.innerHTML = '<div class="sherlock-auth-scenery"></div>'
+      w.document.body.append(dialog)
+      await Promise.resolve(); await Promise.resolve()
+      expect(dialog.querySelectorAll('.sherlock-auth-scenery > canvas')).toHaveLength(1)
+      expect(w.document.querySelector('main canvas')).toBeNull()
+      expect(draws).toBeGreaterThan(0)
+      expect(callbacks.size).toBe(1)
+      dialog.remove()
+      await Promise.resolve(); await Promise.resolve()
+      expect(w.document.querySelector('canvas')).toBeNull()
+      expect(callbacks.size).toBe(0)
+    } finally {
+      dispose()
+      await w.happyDOM.close()
+    }
+  })
 })
