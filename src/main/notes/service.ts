@@ -14,10 +14,12 @@ import type { NotesNativeMenu } from '../../shared/notes-menu'
 import type { NoteFiles } from './files'
 import type { ComponentLibraryStore } from '../state/component-library'
 import { findNoteComponent, noteLibraryItems, noteLibraryNode, noteLibrarySpec } from './component-library'
+import {prepareNoteReferences} from './reference-context'
+import type {ResearchContextSource} from '../state/research-context-bridge'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
-  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined
+  runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number}
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
@@ -76,7 +78,9 @@ export function installNotesService(options: {
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)
         try {
-          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(125000)]), body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context:input.context,prompt: input.prompt, images: input.images, mode: input.mode,stream:true }) })
+          const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(125000)])
+          const context=await prepareNoteReferences(input.context,{sessionId:session,owner,files:options.files,captureSources:options.captureSources,signal,current:()=>options.owner()===owner&&options.canRead(session)})
+          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,stream:true }) })
           if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
           const result = await readNoteGenerationStream(response,progress=>{
             if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}

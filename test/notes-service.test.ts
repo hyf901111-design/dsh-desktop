@@ -7,12 +7,12 @@ import { installNotesService } from '../src/main/notes/service'
 vi.mock('electron',()=>({BrowserWindow:class{},dialog:{showSaveDialog:async()=>({canceled:true})}}))
 const roots: string[] = []
 afterEach(() => {roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true }));vi.unstubAllGlobals()})
-function service(base?:string) {
+function service(base?:string,extra:any={}) {
   const root = mkdtempSync(join(tmpdir(), 'ework-note-ipc-')); roots.push(root)
   const progress:any[]=[]
   const window = { isDestroyed: () => false, webContents: { mainFrame: { processId: 1, routingId: 2 },send:(channel:string,value:any)=>progress.push({channel,value}) } }
   let handler: any, owner = 'alice', allowed = true
-  const dispose = installNotesService({ ipcMain: { handle: (_channel: string, fn: any) => { handler = fn }, removeHandler: () => {} }, root, getWindow: () => window, owner: () => owner, canRead: () => allowed, runtimeUrl: () => base, clipboard: () => undefined })
+  const dispose = installNotesService({ ipcMain: { handle: (_channel: string, fn: any) => { handler = fn }, removeHandler: () => {} }, root, getWindow: () => window, owner: () => owner, canRead: () => allowed, runtimeUrl: () => base, clipboard: () => undefined,...extra })
   const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
   return { call: (method: string, input: any = {}) => handler(event, method, { sessionId: 'session', owner, ...input }), handler: () => handler, event, progress,changeOwner: () => { owner = 'bob' }, deny: () => { allowed = false }, dispose }
 }
@@ -26,6 +26,28 @@ it('forwards the exact note reference scope through the real generation request'
  const s=service('http://127.0.0.1:9999'),context={scope:'selection',components:[{blockId:'chart',title:'收入表',type:'research',content:'123'}]};let body:any
  vi.stubGlobal('fetch',async(_url:any,options:any)=>{body=JSON.parse(options.body);return new Response(JSON.stringify({type:'result',result:{kind:'conversation',markdown:'123'}})+'\n')})
  await s.call('generate',{requestId:'context',markdown:'',selection:'',prompt:'说明',context});expect(body.context).toEqual(context);s.dispose()
+})
+it('captures authorized attachment sources for AI without forwarding a renderer supplied path or capability',async()=>{
+ const reference=vi.fn(async()=>({path:'/owned/source.pdf',name:'source.pdf',revision:{size:42,mtimeMs:123}})),captureSources=vi.fn(()=>({captureId:'trusted-note-capture',totalSources:1})),s=service('http://127.0.0.1:9999',{files:{reference},captureSources});let body:any
+ vi.stubGlobal('fetch',async(_url:any,options:any)=>{body=JSON.parse(options.body);return new Response(JSON.stringify({type:'result',result:{kind:'conversation',markdown:'内容'}})+'\n')})
+ const component={blockId:'attachment-block',type:'attachment',title:'PDF',content:'文件名和页码',file:{nodeId:'note-file-one',authorizationId:'grant',path:'/private/not-authorized'}}
+ await s.call('generate',{requestId:'file',markdown:'',selection:'',prompt:'总结',context:{scope:'selection',captureId:'forged',components:[component]}})
+ expect(reference).toHaveBeenCalledWith('alice','session',expect.objectContaining({nodeId:'note-file-one',authorizationId:'grant'}))
+ expect(captureSources).toHaveBeenCalledWith('session',[expect.objectContaining({id:'attachment-block',path:'/owned/source.pdf',revision:{size:42,mtimeMs:123}})])
+ expect(body.context.captureId).toBe('trusted-note-capture');expect(body.context.components[0]).not.toHaveProperty('file');expect(JSON.stringify(body)).not.toContain('/private/');s.dispose()
+})
+it('never captures file contents when note references are disabled',async()=>{
+ const reference=vi.fn(),captureSources=vi.fn(),s=service('http://127.0.0.1:9999',{files:{reference},captureSources});let body:any
+ vi.stubGlobal('fetch',async(_url:any,options:any)=>{body=JSON.parse(options.body);return new Response(JSON.stringify({type:'result',result:{kind:'conversation',markdown:'内容'}})+'\n')})
+ await s.call('generate',{requestId:'none',markdown:'',selection:'',prompt:'总结',context:{scope:'none',captureId:'forged',components:[{blockId:'file',type:'attachment',title:'PDF',content:'',file:{nodeId:'note-file-one',authorizationId:'grant'}}]}})
+ expect(reference).not.toHaveBeenCalled();expect(captureSources).not.toHaveBeenCalled();expect(body.context).toEqual({scope:'none',components:[]});s.dispose()
+})
+it('stops before capture or model submission if the account changes while resolving an attachment',async()=>{
+ const captureSources=vi.fn();let s:ReturnType<typeof service>
+ const reference=vi.fn(async()=>{s.changeOwner();return {path:'/old-account/private.pdf',name:'private.pdf',revision:{size:42,mtimeMs:123}}})
+ s=service('http://127.0.0.1:9999',{files:{reference},captureSources});const send=vi.fn();vi.stubGlobal('fetch',send)
+ await expect(s.call('generate',{requestId:'changed-owner',markdown:'',selection:'',prompt:'总结',context:{scope:'selection',components:[{blockId:'file',type:'attachment',title:'PDF',content:'',file:{nodeId:'note-file-one',authorizationId:'grant'}}]}})).rejects.toThrow('账号或会话已变化')
+ expect(captureSources).not.toHaveBeenCalled();expect(send).not.toHaveBeenCalled();s.dispose()
 })
 it('does not forward a previous account’s progress after identity changes',async()=>{
  const s=service('http://127.0.0.1:9999')

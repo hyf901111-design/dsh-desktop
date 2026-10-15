@@ -57,3 +57,12 @@ it('binds persisted attachments only to their owning note and denies old capabil
  expect(await f.registry.resolveExportSource({sessionId:node.previewSessionId,nodeId:node.id,authorizationId:node.authorizationId})).toBeNull()
  expect((await f.registry.handle(new Request(descriptor!.url))).status).toBe(403)
 })
+it('resolves a frozen AI reference only through the owning note authorization, ignoring supplied paths',async()=>{
+ const f=await fixture(),source=join(f.root,'证据.txt');await writeFile(source,'只在原文件内的完整证据')
+ const node=await f.files.admit('alice','s',{nodeId:'note-file-reference',path:source});await rm(source)
+ const identity={nodeId:node.id,authorizationId:node.authorizationId,path:'/private/untrusted-path'}
+ const reference=await f.files.reference('alice','s',identity)
+ expect(reference.path).toBe(node.path);expect(reference.revision.size).toBeGreaterThan(0);expect(await readFile(reference.path,'utf8')).toContain('完整证据')
+ await expect(f.files.reference('alice','other',identity)).rejects.toThrow('不属于')
+ f.state.owner='bob';await expect(f.files.reference('alice','s',identity)).rejects.toThrow()
+})

@@ -166,7 +166,7 @@ describe('owned research file cancellation', () => {
     })
     const routes = new Map()
     let dispose
-    await apply({ agents: new Map([['parent', { id: 'parent' }]]), typert: { lookups: new Map() }, tools: { register: () => () => {} }, webServer: { register: (route) => { routes.set(route.path, route); return () => routes.delete(route.path) } }, effect: (setup) => { dispose = setup() } })
+    await apply({ on: () => () => {}, systemPrompt: { context: () => () => {} }, agents: new Map([['parent', { id: 'parent' }]]), typert: { lookups: new Map() }, tools: { register: () => () => {} }, webServer: { register: (route) => { routes.set(route.path, route); return () => routes.delete(route.path) } }, effect: (setup) => { dispose = setup() } })
     const req = Object.assign(Readable.from([JSON.stringify({ sessionId: 'parent', captureId: 'capture', query: '库存' })]), { method: 'POST', headers: { host: '127.0.0.1:4310', origin: 'http://127.0.0.1:4310' }, socket: { remoteAddress: '127.0.0.1' } })
     let status
     const res = Object.assign(new EventEmitter(), { writeHead: (value) => { status = value }, end() { this.writableEnded = true } })

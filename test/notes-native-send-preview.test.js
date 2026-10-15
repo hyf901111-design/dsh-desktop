@@ -39,6 +39,9 @@ async function fixture(dark=true){
  await page.route('http://127.0.0.1/notes-native-send',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root" data-dark="${dark}" style="left:10px;right:340px"><div id="notes" class="en-editor-host"></div></section><aside id="composer" data-ework-notes-composer-host style="position:fixed;right:10px;bottom:20px;width:320px"></aside></body>`}));await page.goto('http://127.0.0.1/notes-native-send');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();await page.locator('#composer textarea').waitFor();return {context,page,errors,input:page.locator('#composer textarea')}
 }
 async function send(page,text='请帮我改写正文。'){await page.locator('#composer textarea').fill(text);await page.locator('#composer textarea').press('Enter');await page.locator('.en-ai-loading').waitFor()}
+it('uses the concise note reference label and requested writing placeholder',async()=>{
+ const {context,page,input}=await fixture();try{expect(await page.locator('[data-note-context-badge]').textContent()).toBe('参考当前笔记内容');expect(await input.getAttribute('placeholder')).toBe('撰写、补充或改写笔记...')}finally{await context.close()}
+},15000)
 for(const dark of [false,true])it(`shows note sources, toggles actual context and keeps selected text when focusing the native composer (${dark?'dark':'light'})`,async()=>{
  const {context,page,input,errors}=await fixture(dark);try{
   await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'body',type:'paragraph',content:'仅针对这段验收文字。'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'source',title:'收入表',containerSpec:{version:1,type:'table',title:'收入表',columns:['项目','收入'],rows:[['甲',123]]}})}}]))
@@ -63,9 +66,9 @@ it('references a selected component in place of the full note and removes its ch
 it('lists nested and off-screen components, keeps long chips within a narrow composer and drops deleted references',async()=>{
  const {context,page,errors}=await fixture();try{
   await page.setViewportSize({width:800,height:700});await page.evaluate(()=>{const nodes=Array.from({length:12},(_,i)=>({id:'chart-'+i,type:'research',props:{payload:JSON.stringify({id:'source-'+i,title:'嵌套组件'+i+'超长标题'.repeat(20),containerSpec:{version:1,type:'table',title:'数据',columns:['收入'],rows:[[i]]}})}}));window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'parent',type:'paragraph',content:'正文',children:nodes}])})
-  const badge=page.locator('[data-note-context-badge]');await expect.poll(()=>badge.textContent()).toContain('12个组件');await badge.click();expect(await page.locator('[data-note-context-directory] li').count()).toBe(13);expect(await page.locator('[data-note-context-directory] ul').evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);await badge.click()
+  const badge=page.locator('[data-note-context-badge]');await expect.poll(()=>badge.textContent()).toBe('参考当前笔记内容');await badge.click();expect(await page.locator('[data-note-context-directory] li').count()).toBe(13);expect(await page.locator('[data-note-context-directory] ul').evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);await badge.click()
   await page.locator('[data-id="chart-0"] .en-research-header strong').click();await page.locator('[data-note-reference-chip]').waitFor();await page.locator('#composer textarea').focus();expect(await page.locator('[data-note-reference-chip]').evaluate(el=>el.getBoundingClientRect().right<=el.parentElement.getBoundingClientRect().right+1)).toBe(true)
-  await page.evaluate(()=>window.noteEditor.removeBlocks(['chart-0']));await expect.poll(()=>page.locator('[data-note-reference-chip]').count()).toBe(0);await expect.poll(()=>badge.textContent()).toContain('11个组件');expect(errors).toEqual([])
+  await page.evaluate(()=>window.noteEditor.removeBlocks(['chart-0']));await expect.poll(()=>page.locator('[data-note-reference-chip]').count()).toBe(0);await expect.poll(()=>badge.textContent()).toBe('参考当前笔记内容');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 for(const changed of [false,true])it(`updates only the referenced component and protects newer edits (${changed?'changed':'unchanged'})`,async()=>{
