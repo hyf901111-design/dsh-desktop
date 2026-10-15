@@ -2393,7 +2393,7 @@ export async function apply(ctx) {
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
-    const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody})
+    const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     let context

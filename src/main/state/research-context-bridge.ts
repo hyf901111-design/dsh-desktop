@@ -10,7 +10,8 @@ const CAPTURE_TTL_MS = 10 * 60 * 1000
 const MAX_BODY_BYTES = 8192
 const SUPPORTED_EXTENSIONS = new Set('.c .cc .cpp .css .csv .go .h .hpp .html .java .js .json .jsx .kt .log .md .mjs .py .rb .rs .sh .sql .swift .toml .ts .tsx .txt .xml .yaml .yml .pdf .pptx'.split(' '))
 type Node = Record<string, unknown>
-type Source = { id: string; title: string; kind: string; text: string; status: string; path?: string; revision?: { size: number; mtimeMs: number }; truncated?: boolean; sourceNodeIds?: string[]; sourceUrl?: string }
+export type ResearchContextSource = { id: string; title: string; kind: string; text: string; status: string; path?: string; revision?: { size: number; mtimeMs: number }; truncated?: boolean; sourceNodeIds?: string[]; sourceUrl?: string }
+type Source = ResearchContextSource
 type Canvas = { files: unknown[]; artifacts: unknown[] }
 type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes: number }
 type Options = {
@@ -219,6 +220,13 @@ export class ResearchContextBridge {
       }
       sources.push(source)
     }
+    return this.captureSources(sessionId,sources,createdAt)
+  }
+
+  /** Trusted main-process callers can freeze note-owned files without reading the research canvas. */
+  captureSources(sessionId:string,input:Source[],createdAt=this.now()):{captureId:string;totalSources:number}{
+    if(!id(sessionId)||!Array.isArray(input)||input.length>1000)throw Error('资料参数无效。')
+    const sources:Source[]=JSON.parse(JSON.stringify(input))
     if (this.stopped || this.options.canReadSession?.(sessionId) === false || this.now() - createdAt > CAPTURE_TTL_MS) throw new Error('资料捕获已失效。')
     this.purge()
     const bytes = Buffer.byteLength(JSON.stringify(sources))

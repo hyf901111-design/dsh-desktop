@@ -7,10 +7,7 @@ export const derivedPresetCss=`
 .ew-derived-result{min-width:0;white-space:normal;font:12px/18px DINPro,'Noto Sans SC',sans-serif!important;color:var(--grid-text,#3c3c3c)!important;}
 .ew-derived-result *{font-family:inherit!important;font-size:inherit!important;line-height:inherit!important;color:inherit!important;}
 .ew-derived-result p{margin:0 0 10px!important;}.ew-derived-result :is(h1,h2,h3){margin:0 0 10px!important;font-weight:700;}.ew-derived-result ul{margin:0 0 10px!important;padding-left:18px!important;}.ew-derived-result li{margin:0 0 4px!important;}.ew-derived-result a{color:var(--grid-accent,#168fff)!important;}
-.ew-derived-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px;min-width:0;}
-.ew-derived-branch{box-sizing:border-box;min-width:0;min-height:185px;border-radius:4px;padding:16px 12px 12px;background:var(--grid-control,#f3f5f7);display:flex;flex-direction:column;gap:12px;}
-.ew-derived-branch ul{padding-left:16px;margin:0;}.ew-derived-branch li{white-space:pre-wrap;overflow-wrap:anywhere;}
-@container (max-width:580px){.ew-derived-branch{min-height:0;}}
+.ew-derived-preset>.rScV5Q_mindMap{flex:none;min-height:220px;max-width:100%;}
 .ew-derived-note,.ew-derived-original{font-size:12px;color:var(--grid-muted,#666);}
 .ew-derived-source .ew-derived-original{display:inline-block;margin-left:12px;font-size:11px;}
 .ew-derived-source .ew-derived-original[open]{display:block;margin:8px 0 0;}
@@ -28,6 +25,32 @@ export function researchLegacyDerivedSpec(node){
  if(source.type!=='artifact'||typeof source.text!=='string')return null
  return researchDerivedSpec({version:1,type:node.kind==='generated-summary'?'summary':'mind-map',title:node.title,content:node.excerpt,source:{title:source.title,text:source.text,nodeId:source.id}})
 }
+export function researchDerivedNodeLabel(value){
+ return value.replace(/<br\s*\/?>/gi,'\n').replace(/\*\*|__|`/g,'')
+}
+export function replaceResearchDerivedNodeLabel(content,line,rawLabel){
+ const newline=content.includes('\r\n')?'\r\n':'\n',lines=content.split(/\r?\n/),source=lines[line]
+ if(source===undefined||typeof rawLabel!=='string'||!rawLabel.trim())return null
+ const prefix=source.match(/^(?:#\s+| *[-*+] )/)?.[0]
+ if(!prefix)return null
+ if(researchDerivedNodeLabel(source.slice(prefix.length))===rawLabel)return content
+ lines[line]=prefix+rawLabel.trim().replace(/\r?\n/g,'<br>')
+ return lines.join(newline)
+}
+export function ResearchDerivedMindMap({nodeId,outline,content,readOnly,onCommit}){
+ const ref=react.useRef(null),[editing,setEditing]=react.useState(null)
+ react.useEffect(()=>{setEditing(null)},[content,readOnly])
+ // Reuse the established node and edge renderers, with the complete validated
+ // outline instead of the legacy parser's 48-node and detail-level limits.
+ const convert=item=>({label:researchDerivedNodeLabel(item.label),sourceLineIndex:item.line,children:item.children.map(convert)})
+ const tree=convert(outline),cancel=()=>setEditing(null),commit=(line,label)=>{setEditing(null);if(!readOnly){const next=replaceResearchDerivedNodeLabel(content,line,label);if(next!==null&&next!==content)onCommit(next)}}
+ const props={artifactId:nodeId,editingLineIndex:readOnly?null:editing,onBeginEdit:readOnly?()=>{}:setEditing,onCommit:commit,onCancel:cancel}
+ return react_jsx_runtime.jsxs('div',{ref,className:'rScV5Q_mindMap','data-research-mind-map':'','data-research-mind-map-detail':'detailed',role:'group','aria-label':outline.label,children:[
+  react_jsx_runtime.jsx(ResearchMindMapConnections,{rootRef:ref,revision:content+'|'+editing}),
+  react_jsx_runtime.jsx(ResearchMindMapDisplayNode,{...props,node:tree,depth:0,root:true}),
+  react_jsx_runtime.jsx(ResearchMindMapBranches,{...props,nodes:tree.children})
+ ]})
+}
 export function ResearchDerivedPreset({node,sessionId}){
  const spec=node.containerSpec,host=react.useRef(null),editor=react.useRef(null),[editing,setEditing]=react.useState(false),[error,setError]=react.useState('')
  react.useSyncExternalStore(sherlockBoardsAdapter?.subscribe??(()=>()=>{}),sherlockBoardsAdapter?.version??(()=>0))
@@ -35,13 +58,13 @@ export function ResearchDerivedPreset({node,sessionId}){
  react.useEffect(()=>{if(readOnly)setEditing(false)},[readOnly])
  const open=()=>{if(!readOnly){setError('');setEditing(true)}}
  react.useLayoutEffect(()=>{const element=host.current;if(!element)return;element.__eworkEditDerived=open;return()=>{delete element.__eworkEditDerived}},[readOnly])
- const cancel=()=>{setEditing(false);setError('')},save=()=>{
+ const cancel=()=>{setEditing(false);setError('')},saveContent=content=>{
   if(readOnly)return
-  const next=researchDerivedSpec({...spec,content:editor.current.value})
+  const next=researchDerivedSpec({...spec,content})
   if(!next){setError(spec.type==='mind-map'?'请保留一个根标题及完整缩进列表，普通正文不能被丢弃。':'请填写完整结果，结果和来源快照总长度不能超过64KB。');return}
   if(!researchDerivedSinks.get(sessionId)?.(node.id,spec.content,next)){setError('结果尚未保存，请重试。');return}
   cancel()
- }
+ },save=()=>saveContent(editor.current.value)
  const focusSource=e=>{
   e.stopPropagation()
   if(!researchDerivedFocus.get(sessionId)?.(spec.source.nodeId)){setError('来源组件已删除或不可用，完整原文仍保留。');return}
@@ -49,8 +72,7 @@ export function ResearchDerivedPreset({node,sessionId}){
   window.requestAnimationFrame(()=>host.current?.closest('[data-research-canvas]')?.querySelector('[data-research-node-id="'+CSS.escape(spec.source.nodeId)+'"]')?.scrollIntoView({block:'nearest',inline:'nearest'}))
  }
  const outline=spec.type==='mind-map'?researchDerivedOutline(spec.content):null
- const list=items=>react_jsx_runtime.jsx('ul',{children:items.map(item=>react_jsx_runtime.jsxs('li',{children:[item.label,item.children.length?list(item.children):null]},item.line))})
- const result=outline?react_jsx_runtime.jsx('div',{className:'ew-derived-branches',role:'group','aria-label':outline.label,children:outline.children.map(branch=>react_jsx_runtime.jsxs('section',{className:'ew-derived-branch','data-derived-branch':branch.line,children:[react_jsx_runtime.jsx('strong',{children:branch.label}),branch.children.length?list(branch.children):null]},branch.line))}):react_jsx_runtime.jsx('div',{className:'ew-derived-result',children:react_jsx_runtime.jsx(_deepseek_ai_dsh_client_ui_primitives.MarkdownText,{text:spec.content,streaming:false})})
+ const result=outline?react_jsx_runtime.jsx(ResearchDerivedMindMap,{nodeId:node.id,outline,content:spec.content,readOnly,onCommit:saveContent}):react_jsx_runtime.jsx('div',{className:'ew-derived-result',children:react_jsx_runtime.jsx(_deepseek_ai_dsh_client_ui_primitives.MarkdownText,{text:spec.content,streaming:false})})
  return react_jsx_runtime.jsxs('div',{ref:host,className:'ew-derived-preset','data-research-derived-preset':spec.type,onDoubleClick:e=>{e.stopPropagation();open()},children:[
   spec.asOf&&react_jsx_runtime.jsx('p',{className:'ew-derived-source',children:'数据时点：'+spec.asOf}),
   react_jsx_runtime.jsxs('div',{className:'ew-derived-source',children:['来源组件：',spec.source.nodeId?react_jsx_runtime.jsx('button',{type:'button','data-research-reference-node-id':spec.source.nodeId,onClick:focusSource,onDoubleClick:e=>e.stopPropagation(),children:spec.source.title}):spec.source.title,react_jsx_runtime.jsxs('details',{className:'ew-derived-original',onDoubleClick:e=>e.stopPropagation(),children:[react_jsx_runtime.jsx('summary',{children:'查看来源原文'}),react_jsx_runtime.jsx('pre',{children:spec.source.text})]})]}),
@@ -66,7 +88,7 @@ export function ResearchDerivedPreset({node,sessionId}){
 }
 export function patchDerivedPresetClient(source){
  const start='/* ODYSSEY_DERIVED_PRESET_V1 */',end='/* ODYSSEY_DERIVED_PRESET_END */'
- const definitions=`${start}\nconst researchDerivedSinks=new Map(),researchDerivedFocus=new Map(),RESEARCH_DERIVED_PRESET_CSS=${JSON.stringify(derivedPresetCss)};\nconst researchDerivedOutline=${derivedOutline.toString()},researchDerivedSpec=${parseDerivedSpec.toString().replaceAll('derivedOutline(','researchDerivedOutline(')};\n${researchLegacyDerivedSpec.toString()}\n${ResearchDerivedPreset.toString()}\n${end}`
+ const definitions=`${start}\nconst researchDerivedSinks=new Map(),researchDerivedFocus=new Map(),RESEARCH_DERIVED_PRESET_CSS=${JSON.stringify(derivedPresetCss)};\nconst researchDerivedOutline=${derivedOutline.toString()},researchDerivedSpec=${parseDerivedSpec.toString().replaceAll('derivedOutline(','researchDerivedOutline(')};\n${researchLegacyDerivedSpec.toString()}\n${researchDerivedNodeLabel.toString()}\n${replaceResearchDerivedNodeLabel.toString()}\n${ResearchDerivedMindMap.toString()}\n${ResearchDerivedPreset.toString()}\n${end}`
  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)throw Error('Derived preset definitions boundary missing');source=source.slice(0,a)+definitions+source.slice(b+end.length)}
  else{const anchor='function createResearchWorkspaceSession(storage, sessionId) {';if(source.split(anchor).length!==2)throw Error('Derived preset definitions host missing');source=source.replace(anchor,definitions+'\n'+anchor)}
  const once=(a,b)=>{if(source.includes(b))return;if(source.split(a).length!==2)throw Error('Derived preset anchor missing or ambiguous: '+a.slice(0,90));source=source.replace(a,b)}

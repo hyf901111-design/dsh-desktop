@@ -36,6 +36,13 @@ async function fixture(options = {}) {
 }
 
 describe('trusted research canvas capture', () => {
+  it('freezes note-owned sources in a separate session-bound capture without including research board files',async()=>{
+    const f=await fixture(),sources=[{id:'note-file',title:'笔记附件',kind:'file',text:'',status:'ready',path:f.file,revision:{size:1,mtimeMs:2}}]
+    const capture=f.bridge.captureSources('parent',sources);sources[0]!.title='后来修改'
+    const response=await f.snapshot({sessionId:'parent',captureId:capture.captureId});expect(response.status).toBe(200)
+    expect((await response.json()).sources).toEqual([{...sources[0],title:'笔记附件'}])
+    expect((await f.snapshot({sessionId:'other',captureId:capture.captureId})).status).toBe(404)
+  })
   it('captures static HTML body evidence without executing or indexing scripts and styles', async () => {
     const f = await fixture()
     f.storage.setItem('sherlock.research.canvas.files.v1:parent', '[]')

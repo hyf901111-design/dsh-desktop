@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { join, isAbsolute, relative, resolve } from 'node:path'
-import { realpath } from 'node:fs/promises'
+import { realpath,stat } from 'node:fs/promises'
 import { copyResearchFile } from '../state/research-owned-files'
 import type { ResearchFilePreviewRegistry } from '../state/research-file-preview'
 import type { NoteFileNode } from '../../shared/note-files'
@@ -40,6 +40,14 @@ export class NoteFiles {
   }
   revoke(owner:string,sessionId:string,nodeId:string){const identity=this.identity(owner,sessionId,nodeId),pending=this.importing.get(identity.sessionId+':'+nodeId);if(pending)pending.cancelled=true;return this.options.registry.revokeNode(identity.sessionId,nodeId)}
   async bind(owner:string,sessionId:string,input:any){const identity=this.identity(owner,sessionId,input.nodeId),file=await this.options.registry.resolveExportSource({sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:input.authorizationId});if(!file||owner!==this.options.owner()||!this.options.canRead(sessionId))throw Error('此附件不属于当前笔记，请重新拖入文件。');return {previewSessionId:identity.sessionId}}
+  async reference(owner:string,sessionId:string,input:any){
+    const identity=this.identity(owner,sessionId,input.nodeId)
+    const file=await this.options.registry.resolveExportSource({sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:input.authorizationId})
+    if(!file||owner!==this.options.owner()||!this.options.canRead(sessionId))throw Error('此附件不属于当前笔记，请重新拖入文件。')
+    const path=await realpath(file.path),info=await stat(path)
+    if(!info.isFile()||info.size>64*1024*1024||owner!==this.options.owner()||!this.options.canRead(sessionId))throw Error('附件当前无法读取。')
+    return {path,name:file.name,revision:{size:info.size,mtimeMs:info.mtimeMs}}
+  }
   async reveal(owner:string,sessionId:string,input:any){
     const identity=this.identity(owner,sessionId,input.nodeId),file=await this.options.registry.resolveExportSource({sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:input.authorizationId})
     if(!file||owner!==this.options.owner()||!this.options.canRead(sessionId))throw Error('文件暂不可用，请重新拖入。')
