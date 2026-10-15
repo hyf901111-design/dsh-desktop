@@ -101,6 +101,56 @@
         ],
         "risks": [],
         "generatedAt": "2026-10-15T14:18:14.549471+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5807a7e7f601af9a9b3bc89f622e6cb5c9747447",
+        "verificationCommit": "5807a7e7f601af9a9b3bc89f622e6cb5c9747447",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "5807a7e7f601af9a9b3bc89f622e6cb5c9747447",
+            "completedAt": "2026-10-15T14:22:00.266Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "5807a7e7f601af9a9b3bc89f622e6cb5c9747447",
+            "completedAt": "2026-10-15T14:22:00.266Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-header-runtime.test.js",
+              "test/figma-header-layout.test.js",
+              "test/notes-client.test.js",
+              "test/notes-composer.test.js",
+              "test/notes-activity.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/workspace-narrow-layout.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-header-runtime.test.js test/figma-header-layout.test.js test/notes-client.test.js test/notes-composer.test.js test/notes-activity.test.js test/workspace-surface-host.test.ts test/workspace-narrow-layout.test.js",
+            "verifiedCommit": "5807a7e7f601af9a9b3bc89f622e6cb5c9747447",
+            "completedAt": "2026-10-15T14:22:00.266Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-15T14:22:00.266Z"
       }
     }
   ],
