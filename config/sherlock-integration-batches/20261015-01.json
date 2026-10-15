@@ -185,6 +185,37 @@
           "需新客户端从原生slash picker实际导入验收。"
         ],
         "generatedAt": "2026-10-15T04:47:31.305423+00:00"
+      },
+      "merged": {
+        "mergeCommit": "707ea0ef98ba44b3b2ce47c26358e2ea5ef28182",
+        "verificationCommit": "707ea0ef98ba44b3b2ce47c26358e2ea5ef28182",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "707ea0ef98ba44b3b2ce47c26358e2ea5ef28182",
+            "completedAt": "2026-10-15T04:49:48.955Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "707ea0ef98ba44b3b2ce47c26358e2ea5ef28182",
+            "completedAt": "2026-10-15T04:49:48.955Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-15T04:49:48.955Z"
       }
     }
   ],
