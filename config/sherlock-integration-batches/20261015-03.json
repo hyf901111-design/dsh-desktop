@@ -190,6 +190,37 @@
         ],
         "risks": [],
         "generatedAt": "2026-10-15T09:50:10.172Z"
+      },
+      "merged": {
+        "mergeCommit": "5c0af0e6d97c21a6b72124b413e8e8c798c6def8",
+        "verificationCommit": "5c0af0e6d97c21a6b72124b413e8e8c798c6def8",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "5c0af0e6d97c21a6b72124b413e8e8c798c6def8",
+            "completedAt": "2026-10-15T09:53:00.387Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "5c0af0e6d97c21a6b72124b413e8e8c798c6def8",
+            "completedAt": "2026-10-15T09:53:00.387Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-10-15T09:53:00.387Z"
       }
     }
   ],
