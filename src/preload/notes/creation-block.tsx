@@ -8,11 +8,11 @@ import {NoteMenuIcon} from './menu-icon'
 /** A draft occupies the same note block throughout creation, retry and loading. */
 export function NoteCreationBlock({block,node,context}:any){
  const interaction=useNoteComponentInteraction(),size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:240})
- const [error,setError]=useState(''),link=node.noteDraft==='link',interrupted=node.generationStatus==='running'&&context.generatingBlock?.current!==block.id,running=node.generationStatus==='running'&&!interrupted,editable=!!context.editor?.isEditable
+ const [error,setError]=useState(''),link=node.noteDraft==='link',active=typeof context.isGeneratingComponent==='function'?context.isGeneratingComponent(block.id):context.generatingBlock?.current===block.id,interrupted=node.generationStatus==='running'&&!active,running=node.generationStatus==='running'&&!interrupted,editable=!!context.editor?.isEditable
  const update=(value:string)=>{const current=context.editor.getBlock(block.id);if(!editable||!current)return;const latest=JSON.parse(current.props.payload);context.editor.updateBlock(block.id,{props:{payload:JSON.stringify({...latest,containerPrompt:value,generationError:undefined,generationDetail:undefined})}});setError('')}
  const submit=()=>{
   if(!editable||running||!node.containerPrompt?.trim())return
-  if(!link){context.generateComponent(block.id,node.containerPrompt.trim());return}
+  if(!link){const result=context.generateComponent(block.id,node.containerPrompt.trim());if(result===false||result?.ok===false)setError(result?.error||'组件任务尚未开始，请重试。');return}
   const url=normalizeResearchWebUrl(node.containerPrompt)
   const spec=parseResearchContainerSpec({version:1,type:'web',title:'链接',url})
   if(!spec){setError('请输入有效的网页链接');return}
@@ -23,12 +23,12 @@ export function NoteCreationBlock({block,node,context}:any){
   context.editor.updateBlock(block.id,{props:{payload:JSON.stringify(next)}})
  }
  return <section className="en-research en-creation-component" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-creation-draft={link?'link':'smart'} data-note-research-block={block.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
-  <header className="en-research-header" draggable={editable&&!running}><NoteMenuIcon kind={link?'link':'sparkles'}/><strong>{link?'添加链接':'智能组件'}</strong><button className="en-component-close" aria-label="移除笔记中的组件" disabled={!editable} onClick={()=>{if(running)context.stopGeneration();context.editor.removeBlocks([block.id])}}><NoteMenuIcon kind="close"/></button></header>
+  <header className="en-research-header" draggable={editable&&!running}><NoteMenuIcon kind={link?'link':'sparkles'}/><strong>{link?'添加链接':'智能组件'}</strong><button className="en-component-close" aria-label="移除笔记中的组件" disabled={!editable} onClick={()=>{if(running)context.stopGeneration(block.id);context.editor.removeBlocks([block.id])}}><NoteMenuIcon kind="close"/></button></header>
   <div className="en-creation-draft rScV5Q_containerDraft" style={{height:size.height}} data-research-template-draft={link?'link':'smart'}>
    <textarea aria-label={link?'输入链接':'描述要创建的组件内容'} placeholder={link?'粘贴网页或文章链接…':'描述想创建的内容，例如：交互活动页、专业用户体验地图、月度趋势图或对比表格…'} inputMode={link?'url':'text'} maxLength={link?8192:8000} value={node.containerPrompt||''} disabled={!editable||running} onChange={event=>update(event.currentTarget.value)} onKeyDown={event=>{event.stopPropagation();if(event.key==='Enter'&&!event.shiftKey&&!event.altKey&&!event.nativeEvent.isComposing&&event.keyCode!==229){event.preventDefault();submit()}}}/>
    {error||node.generationError||interrupted?<div className="en-component-error" role="alert">{error||node.generationError||'上次创建已中断，可调整需求后重试。'}</div>:null}
    {node.generationDetail&&!running?<div className="en-creation-feedback" role="status">{node.generationDetail}</div>:null}
-   <div className="rScV5Q_containerDraftFooter"><span>{running?'正在创建组件…':link?'支持网页与文章链接':'Enter 创建 · Shift Enter 换行'}</span>{running?<button onClick={()=>context.stopGeneration()}>停止</button>:<button onClick={submit} disabled={!editable||!node.containerPrompt?.trim()}>{link?'添加链接':'创建'}</button>}</div>
+   <div className="rScV5Q_containerDraftFooter"><span>{running?'正在创建组件…':link?'支持网页与文章链接':'Enter 创建 · Shift Enter 换行'}</span>{running?<button onClick={()=>context.stopGeneration(block.id)}>停止</button>:<button onClick={submit} disabled={!editable||!node.containerPrompt?.trim()}>{link?'添加链接':'创建'}</button>}</div>
   </div>
   {interaction.selected&&editable&&!running?<NoteComponentResizeHandles size={size}/>:null}
  </section>

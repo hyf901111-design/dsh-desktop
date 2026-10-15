@@ -24,6 +24,7 @@ export function installNotesService(options: {
   runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
+  const generations=new Map<string,{owner:string;sessionId:string;cardLocal:boolean}>()
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
     if (!input || typeof input.sessionId !== 'string' || input.sessionId.length > 256 || !options.canRead(input.sessionId)) throw Error('笔记会话不可用。')
     const owner = options.owner(), session = input.sessionId
@@ -78,7 +79,7 @@ export function installNotesService(options: {
       case 'models': return rpc('session.models', { sessionId: session })
       case 'model': return rpc('session.selectModel', { sessionId: session, provider: input.provider, model: input.model })
       case 'clipboard': return options.clipboard()?.read() ?? { kind: 'empty' }
-      case 'stop': active.get(input.requestId)?.abort(); return { ok: true }
+      case 'stop': {const job=generations.get(input.requestId);if(job?.owner===owner&&job.sessionId===session)active.get(input.requestId)?.abort();return {ok:true}}
       case 'render': {
         const spec = parseResearchContainerSpec(input.spec)
         if (!spec) throw Error('研究组件格式无效。')
@@ -90,14 +91,16 @@ export function installNotesService(options: {
         return { html, document:html?buildResearchHtmlPreview(html,spec.title,input.dark?'dark':'light',{workbench:true}):'',title:spec.title }
       }
       case 'generate': {
-        if (typeof input.requestId !== 'string' || input.requestId.length > 128 || active.has(input.requestId) || active.size >= 2) throw Error('请等待当前笔记生成完成。')
+        const cardLocal=input.mode==='component'&&input.entryPoint==='component'
+        if (typeof input.requestId !== 'string' || !input.requestId || input.requestId.length > 128 || active.has(input.requestId) || [...generations.values()].filter(job=>job.cardLocal===cardLocal).length >= (cardLocal?3:1)) throw Error('请等待当前笔记生成完成。')
         const base = options.runtimeUrl(); if (!base) throw Error('模型服务尚未就绪，请稍后重试。')
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)
+        generations.set(input.requestId,{owner,sessionId:session,cardLocal})
         try {
           const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(input.mode==='component'?245000:125000)])
           const context=await prepareNoteReferences(input.context,{sessionId:session,owner,files:options.files,captureSources:options.captureSources,signal,current:()=>options.owner()===owner&&options.canRead(session)})
-          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},stream:true }) })
+          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal, body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context,prompt: input.prompt, images: input.images, mode: input.mode,...input.entryPoint===undefined?{}:{entryPoint:input.entryPoint},...input.targetBlockId===undefined?{}:{targetBlockId:input.targetBlockId},stream:true }) })
           if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
           const result = await readNoteGenerationStream(response,progress=>{
             if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}
@@ -105,10 +108,10 @@ export function installNotesService(options: {
           })
           if (options.owner() !== owner) throw Error('账号已变化，请重新生成。')
           return result
-        } finally { active.delete(input.requestId) }
+        } finally { active.delete(input.requestId);generations.delete(input.requestId) }
       }
       default: throw Error('不支持的笔记操作。')
     }
   })
-  return () => { options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear(); options.ipcMain.removeHandler('notes:request') }
+  return () => { options.nativeMenu?.close(); active.forEach(c => c.abort()); active.clear();generations.clear(); options.ipcMain.removeHandler('notes:request') }
 }
