@@ -183,6 +183,37 @@
           "待更新共享客户端后验证真实界面和在线模型；本卡记录聚焦源码及浏览器验证。"
         ],
         "generatedAt": "2026-10-15T01:35:35.762994+00:00"
+      },
+      "merged": {
+        "mergeCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
+        "verificationCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
+            "completedAt": "2026-10-15T01:36:01.422Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "952817e224e3edd3a241e78fef088c2b89f1e5c9",
+            "completedAt": "2026-10-15T01:36:01.422Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-15T01:36:01.422Z"
       }
     }
   ],
