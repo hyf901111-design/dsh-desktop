@@ -71,6 +71,22 @@ it('uses the shared native conversation as context for note writing and durably 
  const ctx=context('{"kind":"text","markdown":"基于讨论的新正文"}');ctx.sessions={get:()=>session};ctx.sessionTitle={rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}}
  await generateNoteSuggestion(ctx,{...input,requestId:'shared-request'});expect(ctx.options().messages[0].content[0].text).toContain('讨论里的验收目标');expect(noteConversationRows(session)[0]).toMatchObject({phase:'ready',prompt:input.prompt,result:{markdown:'基于讨论的新正文'}})
 })
+it('persists only the explicitly referenced labels for the exact request, including on session replay',async()=>{
+ const {Session}=await import('@deepseek-ai/dsh-session'),{noteConversationRows}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('session'),ctx=context('{"kind":"conversation","markdown":"已总结"}')
+ ctx.sessions={get:()=>session};ctx.sessionTitle={rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}}
+ const refs={scope:'selection',components:[{blockId:'chart',type:'research',title:'收入图',content:'不能复制到标签的正文'},{blockId:'pdf',type:'attachment',title:'资料.pdf',content:'仅文件元信息',file:{nodeId:'note-file-secret',authorizationId:'secret-grant'}}]}
+ await generateNoteSuggestion(ctx,{...input,requestId:'labels',context:refs,selection:'仅总结这段文字'})
+ refs.components[0].title='发送后改名'
+ const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header))
+ const row=noteConversationRows(replay).find(row=>row.requestId==='labels')
+ expect(row.references).toEqual([{blockId:'chart',type:'research',title:'收入图'},{blockId:'pdf',type:'attachment',title:'资料.pdf'},{blockId:'text-selection',type:'text',title:'仅总结这段文字'}])
+ expect(JSON.stringify(row.references)).not.toMatch(/secret|正文/)
+ await generateNoteSuggestion(ctx,{...input,requestId:'automatic',context:{scope:'note',components:refs.components}})
+ await generateNoteSuggestion(ctx,{...input,requestId:'disabled',context:{scope:'none',components:refs.components}})
+ expect(noteConversationRows(session).find(row=>row.requestId==='automatic').references).toEqual([])
+ expect(noteConversationRows(session).find(row=>row.requestId==='disabled').references).toEqual([])
+})
 
 it('routes a clarification as a durable conversation reply instead of a document suggestion',async()=>{
  const {Session}=await import('@deepseek-ai/dsh-session'),{noteConversationRows,sharedNoteConversationContext}=await import('../packages/dsh-research-task-runtime/notes-session.js')

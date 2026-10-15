@@ -27,6 +27,12 @@ export function useNotesConversationRows(sessionId,openState){
   react.useEffect(()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[sessionId,openState])
   return rows
 }
+export function EWorkNoteMessageReference({reference}){
+ const file=reference.type==='attachment',artifact={kind:reference.type==='text'?'assistant-excerpt':'generated-container',title:reference.title}
+ return react.createElement('span',{className:MessageItem_module_css_default.refChip,'data-ref-chip':file?'research-file':'research-artifact','data-note-message-reference':reference.blockId,title:reference.title},
+  file?react.createElement(FileReferenceIcon,{name:reference.title}):react.createElement(ResearchArtifactReferenceIcon,{artifact}),
+  react.createElement('span',{className:'gdEzaW_refChipLabel',children:reference.title}))
+}
 export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,forkAt,renderSlot,branchUnavailable=false,UserBubble=UserStyleBubble,Progress=ExecutionStatusGroup,Markdown=AssistantMarkdown,Actions=typeof MessageIconActions==='undefined'?null:MessageIconActions}) {
   const h = react.createElement
   const labels = {preparing:'正在读取笔记内容',generating:'正在生成内容',ready:'内容已生成，请在笔记中预览',replied:'已回复',accepted:'已写入笔记',discarded:'已放弃建议',failed:'生成失败',stopped:'已停止'}
@@ -38,7 +44,7 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     // Read the durable final-event position after generation; the preparing seq is only for row ordering.
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
-      h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || '根据附件撰写内容'}],imageLoader:loadImage,t}),
+      h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || '根据附件撰写内容'}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t}) : null,
@@ -64,11 +70,23 @@ export function mergeNoteConversationFlow(flow,nodeStore,rows){
 
 export function patchNotesActivity(source) {
   const marker='/* ework:notes-activity:v1 */',anchor='function ConversationRoot('
-  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${noteActionClientHelpers()}\n${[noteConversationVacant,useNotesConversationRows,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
+  const helpers=`${marker}\n${createNotesActivityStore.toString()}\nconst eworkNotesActivity=createNotesActivityStore(typeof document==='undefined'?undefined:document);\n${noteActionClientHelpers()}\n${[noteConversationVacant,useNotesConversationRows,EWorkNoteMessageReference,EWorkNoteConversationRow,EWorkNotesActivity,EWorkNotesConversation,mergeNoteConversationFlow].map(fn=>fn.toString()).join('\n')}\n${noteFileClientHelpers()}\n${noteComponentClientHelpers()}`
   if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
   else {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位任务过程面板。')
     source=source.replace(anchor,helpers+anchor)
+  }
+  // Keep the signature used by the other native-bubble patches unchanged.
+  if(!source.includes('/* ework:note-reference-bubble:v1 */')){
+    const inline='const inlineResearch = text.includes(',children='children: [projectResearchUserText(research, openFile), rest.map('
+    if(source.split(inline).length!==2||source.split(children).length!==2)throw Error('无法定位笔记引用气泡。')
+    source=source.replace(inline,'/* ework:note-reference-bubble:v1 */ const noteReferences=arguments[0].noteReferences;\nconst inlineResearch = !!noteReferences?.length || text.includes(')
+    source=source.replace(children,"children: [noteReferences?.map(reference=>react.createElement(EWorkNoteMessageReference,{key:reference.blockId,reference})),projectResearchUserText(research, openFile), rest.map(")
+  }
+  const visible='const showBubble = research.text !== ""',withReferences='const showBubble = (noteReferences?.length ?? 0) > 0 || research.text !== ""'
+  if(!source.includes(withReferences)){
+    if(source.split(visible).length!==2)throw Error('无法定位笔记引用气泡可见状态。')
+    source=source.replace(visible,withReferences)
   }
   source=source.replace('(EWorkNotesActivity,{sessionId})]','(EWorkNotesActivity,{sessionId,t})]')
   const old="activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesActivity,{sessionId}) : "

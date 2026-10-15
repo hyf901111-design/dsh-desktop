@@ -2,6 +2,7 @@ import { realpath, stat } from 'node:fs/promises'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { ResearchContextIndex } from './context-index.js'
 import { abortable } from './context-abort.js'
+import { registerResearchReferenceScope } from './research-reference-scope.js'
 
 export const PREPARE_CONTEXT_PATH = '/sherlock/research-context/prepare'
 const unavailable = () => new Error('研究资料当前不可用，请重新发送问题。')
@@ -147,6 +148,7 @@ export function registerResearchContextRuntime(ctx, { isTrustedRequest, readJson
     res.end(body)
   }
   try {
+    disposers.push(registerResearchReferenceScope(ctx))
     disposers.push(ctx.webServer.register({ kind: 'exact', path: PREPARE_CONTEXT_PATH, handler: async (req, res) => {
       if (req.method !== 'POST') return send(res, 405, { error: '资料请求方式无效。' })
       if (!isTrustedRequest(req, true)) return send(res, 403, { error: '资料请求被拒绝。' })

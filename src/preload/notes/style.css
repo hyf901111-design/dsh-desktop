@@ -30,7 +30,8 @@ body:has(.VOzbGW_overlay:not([hidden])) [data-ework-notes-session]{visibility:hi
 .en-root .bn-container{--bn-colors-menu-background:var(--en-popup);--bn-colors-hovered-background:var(--en-control);--bn-colors-selected-background:var(--en-control);--bn-colors-selected-text:var(--en-ink);--bn-colors-side-menu:var(--en-muted);--bn-colors-highlights-gray-background:var(--en-control)}
 .en-root .bn-suggestion-menu{border-radius:10px;box-shadow:var(--odyssey-menu-shadow,0 8px 24px #0002);animation:en-outline-enter 150ms cubic-bezier(.16,1,.3,1)}
 .en-root .bn-suggestion-menu :is([aria-selected=true],[data-hovered]){background:var(--en-control)!important;color:var(--en-ink)!important}
-.en-document-scroll{padding-bottom:100px}.en-composer-area{bottom:28px}
+/* Keep the writing tail relative to this pane, including embedded or resized notes. */
+.en-main{container-type:size}.en-document-scroll{padding-bottom:50cqh}.en-composer-area{bottom:28px}
 .en-inline-assistant{display:block;margin:12px 0 20px;user-select:none;animation:en-outline-enter 150ms cubic-bezier(.16,1,.3,1)}.en-inline-assistant:empty{display:none}
 .en-ai-loading{display:flex;align-items:center;gap:9px;padding:12px 14px;border:1px solid var(--en-border);border-radius:9px;background:var(--en-popup);font-size:13px;color:var(--en-muted)}.en-ai-loading button{margin-left:auto;padding:4px 8px;border-radius:5px}
 .en-ai-spinner{width:14px;height:14px;border:1.5px solid var(--en-border);border-top-color:var(--en-muted);border-radius:50%;animation:en-ai-spin 800ms linear infinite}.en-preview footer button:first-child{color:var(--en-ink);font-weight:500}.en-inline-assistant .en-preview{margin:0;box-shadow:none}
