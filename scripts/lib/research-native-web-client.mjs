@@ -1,4 +1,7 @@
+import { patchResearchReferenceEvidence } from './research-reference-evidence.mjs'
+
 export function patchResearchNativeWeb(source) {
+  source = patchResearchReferenceEvidence(source)
   // Workspace release on session switch cancels transient canvas interactions,
   // not the webpage's authenticated Chromium document or sessionStorage.
   source=source.replace('Promise.resolve(window.dshDesktop?.researchLinkFrame?.releaseSession?.(sessionId)).catch(() => void 0);','/* ODYSSEY_RETAIN_WEB_SESSION */ Promise.resolve(window.dshDesktop?.researchLinkFrame?.hideNative?.({sessionId})).catch(() => void 0);');

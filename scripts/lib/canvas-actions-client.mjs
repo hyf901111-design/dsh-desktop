@@ -48,6 +48,9 @@ function ResearchCanvasActionReceipt({workspace}) {
   ]});
 }
 export function patchCanvasActionsClient(source) {
+  // Explicit references also own the tool selection. A stale canvas selection
+  // must not add another component to the current request's bound IDs.
+  source = source.replace('...attempt.artifacts.map(n=>n.id),...currentSelection.selectedNodeIds', '...attempt.artifacts.map(n=>n.id),...(attempt.files.length || attempt.artifacts.length ? [] : currentSelection.selectedNodeIds)')
   const definitions=start+'\n'+readFileSync(new URL('../../packages/dsh-research-task-runtime/canvas-actions.js',import.meta.url),'utf8').replace(/^export /gm,'')+'\n'+canvasWorkspaceActions.toString()+'\n'+ResearchCanvasActionReceipt.toString()+'\n'+end+'\n'
   if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);return (source.slice(0,a)+definitions+source.slice(b+end.length+1)).replace("if(method!=='inspect'&&result.status!=='unchanged')","if(method!=='inspect'&&result.status!=='unchanged'&&options?.silent!==true)").replace("{isCancelled:request.isCancelled}","{isCancelled:request.isCancelled,silent:request.source==='component-data-refresh'}")}
   source=replace(source,'function createResearchWorkspaceSession(storage, sessionId) {',definitions+'function createResearchWorkspaceSession(storage, sessionId) {')
@@ -91,7 +94,7 @@ export function patchCanvasActionsClient(source) {
         });
       },'Sherlock canvas actions');`)
   source=replace(source,'const autoContext = researchActive &&',`if(researchActive){
-        try{await window.dshDesktop?.researchCanvasActions?.bind({sessionId:session.sessionId,selectedIds:[...new Set([...attempt.files.map(n=>n.id),...attempt.artifacts.map(n=>n.id),...currentSelection.selectedNodeIds])]});}
+        try{await window.dshDesktop?.researchCanvasActions?.bind({sessionId:session.sessionId,selectedIds:[...new Set([...attempt.files.map(n=>n.id),...attempt.artifacts.map(n=>n.id),...(attempt.files.length || attempt.artifacts.length ? [] : currentSelection.selectedNodeIds)])]});}
         catch(error){shell?.notify('error',error.message);return;}
       }
       const autoContext = researchActive &&`)
