@@ -179,6 +179,37 @@
           "需最终客户端实际原生文件选择器及本地子代理入口验收。"
         ],
         "generatedAt": "2026-10-15T05:02:09.052359+00:00"
+      },
+      "merged": {
+        "mergeCommit": "0b9293f6618744b50dea62edc24ab50702f8ca78",
+        "verificationCommit": "0b9293f6618744b50dea62edc24ab50702f8ca78",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "0b9293f6618744b50dea62edc24ab50702f8ca78",
+            "completedAt": "2026-10-15T05:05:39.894Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "0b9293f6618744b50dea62edc24ab50702f8ca78",
+            "completedAt": "2026-10-15T05:05:39.894Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-15T05:05:39.894Z"
       }
     }
   ],
