@@ -189,10 +189,13 @@ export async function installDownloadedUpdate(): Promise<void> {
   installRequested = true
   installing = true
   let cancelRecovery: (() => void) | undefined
-  activeInstallCleanup = () => {
-    cancelRecovery?.()
+  const cleanupInstall = () => {
+    const cancel = cancelRecovery
+    cancelRecovery = undefined
+    cancel?.()
     cancelUpdateRestartReceipt(app.getPath('userData'))
   }
+  activeInstallCleanup = cleanupInstall
   try {
     if (!prepareForRestart) throw Error('研究状态保存入口尚未就绪，应用尚未退出。')
     transition({ type: 'install', stage: 'saving' }, true)
@@ -207,7 +210,10 @@ export async function installDownloadedUpdate(): Promise<void> {
     if (process.platform === 'darwin') nativeUpdater.quitAndInstall()
     else autoUpdater.quitAndInstall(false, true)
   } catch (error) {
-    cancelPendingInstall()
+    if (activeInstallCleanup === cleanupInstall) activeInstallCleanup = undefined
+    // Recovery may finish arming after an earlier error cleared the global
+    // cleanup handle. The attempt still owns that late-created guard.
+    cleanupInstall()
     installing = false
     if (!stopped) transition({ type: 'error', errorStage: 'install', message: errorMessage(error) }, true)
   } finally { installRequested = false }

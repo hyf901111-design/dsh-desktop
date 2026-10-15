@@ -4,13 +4,13 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {afterEach,beforeEach,expect,it,vi} from 'vitest'
 
-const host=vi.hoisted(()=>({latest:'1.3.3',userData:'',native:undefined as any,updater:undefined as any,states:[] as any[],cancelRecovery:vi.fn()}))
+const host=vi.hoisted(()=>({latest:'1.3.3',userData:'',native:undefined as any,updater:undefined as any,states:[] as any[],cancelRecovery:vi.fn(),armRecovery:vi.fn()}))
 vi.mock('electron',()=>({get autoUpdater(){return host.native},app:{getVersion:()=> '1.3.2',getName:()=> 'EWork Odyssey',getPath:()=>host.userData,isPackaged:true,isReady:()=>false},BrowserWindow:{getAllWindows:()=>[{isDestroyed:()=>false,webContents:{send:(_channel:string,status:unknown)=>host.states.push(status)}}]},ipcMain:{handle:vi.fn()},powerMonitor:{on:vi.fn(),removeListener:vi.fn()}}))
 vi.mock('electron-updater',()=>({default:{get autoUpdater(){return host.updater}}}))
-vi.mock('../src/main/update/mac-update-recovery',()=>({armMacRenameRecovery:async()=>host.cancelRecovery,repairRenamedMacDock:async()=>{}}))
+vi.mock('../src/main/update/mac-update-recovery',()=>({armMacRenameRecovery:(...args:unknown[])=>host.armRecovery(...args),repairRenamedMacDock:async()=>{}}))
 let manager:typeof import('../src/main/update/update-manager')
 beforeEach(async()=>{
- vi.resetModules();host.cancelRecovery.mockClear();host.latest='1.3.3';host.states=[];host.userData=await mkdtemp(join(tmpdir(),'ework-background-update-'))
+ vi.resetModules();host.cancelRecovery.mockClear();host.armRecovery.mockReset().mockResolvedValue(host.cancelRecovery);host.latest='1.3.3';host.states=[];host.userData=await mkdtemp(join(tmpdir(),'ework-background-update-'))
  host.native=Object.assign(new EventEmitter(),{checkForUpdates:vi.fn(),quitAndInstall:vi.fn()})
  host.updater=Object.assign(new EventEmitter(),{autoDownload:true,autoInstallOnAppQuit:true,allowPrerelease:true,logger:undefined,
   checkForUpdates:vi.fn(async()=>{host.updater.emit('checking-for-update');host.updater.emit('update-available',{version:host.latest})}),
@@ -86,4 +86,11 @@ it('cancels the restart receipt and recovery guard if native installation fails 
  const {consumeUpdateRestartReceipt}=await import('../src/main/update/restart-receipt')
  expect(consumeUpdateRestartReceipt(host.userData,'1.3.3')).toBeUndefined()
  expect(manager.getUpdateStatus()).toMatchObject({phase:'error',errorStage:'install'})
+})
+it('cancels a recovery guard that finishes arming after an asynchronous installer error',async()=>{
+ await ready();let finishArm!:(cancel:()=>void)=>void
+ host.armRecovery.mockImplementationOnce(()=>new Promise<()=>void>(resolve=>{finishArm=resolve}))
+ const install=manager.installDownloadedUpdate();await vi.waitFor(()=>expect(finishArm).toBeTypeOf('function'))
+ host.updater.emit('error',Error('native installer unavailable'));finishArm(host.cancelRecovery);await install
+ expect(host.cancelRecovery).toHaveBeenCalledOnce();expect(host.native.quitAndInstall).not.toHaveBeenCalled()
 })
