@@ -1,5 +1,6 @@
 /** UI copy only. Never pass note text, filenames or memory summaries through this map. */
 export const NOTE_ENGLISH = {
+  "我":"Me",
   "笔记": "Notes",
   "新笔记": "New Note",
   "无标题文档": "Untitled document",

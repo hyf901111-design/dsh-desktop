@@ -38,7 +38,7 @@ type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(v
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
 const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: boolean; navigate(view: string): void; editor?: any; importing?:Set<string> } | null>(null)
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
-const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.map(b => noteText(b.content) || (b.type === 'research' ? '[研究组件]' : '')).join('\n\n')
+const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.map(b => noteText(b.content) || (b.type === 'research' ? t('研究组件') : '')).join('\n\n')
 
 function AiRewriteButton({onRewrite}:{onRewrite():void}){
  const editor:any=useBlockNoteEditor(),valid=useEditorState({editor,selector:({editor}:any)=>editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection)})
@@ -127,7 +127,7 @@ function ComponentFileBlock({block,inline=false}:any){
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
 }
-const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''},textAlignment:componentAlignment},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload} data-text-alignment={block.props.textAlignment}>笔记文件</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left'}:undefined})()
+const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''},textAlignment:componentAlignment},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload} data-text-alignment={block.props.textAlignment}>{t("文件")}</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left'}:undefined})()
 const schema = BlockNoteSchema.create({ blockSpecs: { ...withNoteIndentSpecs(defaultBlockSpecs), research: researchSpec,attachment:fileSpec } })
 function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }) {
   const editor = useCreateBlockNote({ dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)} })
@@ -183,8 +183,8 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const client = useRef((props.initial as any).clientId || crypto.randomUUID()), revision = useRef(props.initial.revision), titleRef = useRef(title), scroll = useRef<HTMLDivElement>(null), saveTimer = useRef<ReturnType<typeof setTimeout>>(), saveQueue = useRef(Promise.resolve()), disposed = useRef(false), request = useRef(''), epoch = useRef(0), selection = useRef({ text: '', from: 0, to: 0, cursor: '' }), lastWritten = useRef(''), latest = useRef<NoteContent>(props.initial)
   titleRef.current = title
   const doc = useMemo(() => { const value = new Y.Doc(); if (props.initial.yjs) Y.applyUpdate(value, Uint8Array.from(atob(props.initial.yjs), c => c.charCodeAt(0))); return value }, [])
-  const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: '我', avatarUrl: '' }))), [])
-  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: '我', color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
+  const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: t('我'), avatarUrl: '' }))), [])
+  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: t('我'), color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
   editor.dictionary = document.documentElement.dataset.odysseyLocale==='en'?en:zh
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery)

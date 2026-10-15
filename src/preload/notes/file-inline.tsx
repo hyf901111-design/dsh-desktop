@@ -84,7 +84,7 @@ export function InlineNoteFileBlock({block,node,context}:{block:any;node:NoteFil
  useEffect(()=>setReady(false),[runtime.lease?.url])
  const title=node.displayName||node.name,message=node.error||runtime.error||revealError
  const reveal=()=>void context.bridge.request('file-reveal',{sessionId:context.sessionId,nodeId:node.id,authorizationId:node.authorizationId}).catch((e:Error)=>setRevealError(e.message))
- const label=<div className="en-inline-file-label"><button type="button" className="en-inline-file-open" title={t("在访达中显示")} disabled={!node.authorizationId||!!node.importStatus} onClick={reveal}><NoteMenuIcon kind="file"/><span>{title}</span></button>{message?<span className="en-inline-file-status" role="alert">{message}</span>:node.importStatus==='importing'||runtime.loading?<span className="en-inline-file-status" role="status">{node.importStatus==='importing'?t("正在导入…"):t("正在读取…")}</span>:null}{runtime.error?<button type="button" className="en-inline-file-retry" onClick={runtime.retry}>{t("重试")}</button>:null}</div>
+ const label=<div className="en-inline-file-label"><button type="button" className="en-inline-file-open" title={t("在访达中显示")} disabled={!node.authorizationId||!!node.importStatus} onClick={reveal}><NoteMenuIcon kind="file"/><span>{title}</span></button>{message?<span className="en-inline-file-status" role="alert">{t(message)}</span>:node.importStatus==='importing'||runtime.loading?<span className="en-inline-file-status" role="status">{node.importStatus==='importing'?t("正在导入…"):t("正在读取…")}</span>:null}{runtime.error?<button type="button" className="en-inline-file-retry" onClick={runtime.retry}>{t("重试")}</button>:null}</div>
  const value=runtime.lease,visual=!!value&&!message
  const height=(node.noteSize?.height||size.resizing)?size.height:undefined
  const metadata=()=>{runtime.loaded();setReady(true);const element=runtime.media.current;if(element instanceof HTMLVideoElement&&element.videoWidth)setNaturalHeight(Math.min(2400,size.width*element.videoHeight/element.videoWidth))}
@@ -92,7 +92,7 @@ export function InlineNoteFileBlock({block,node,context}:{block:any;node:NoteFil
   <div className="en-inline-file-content" data-note-file={node.id} data-note-session={context.sessionId} data-note-file-rendered="true">
    {visual?<div className="en-inline-media" data-media-ready={ready} data-media-kind={value.kind}>
     {value.kind==='image'?<img src={value.url} crossOrigin="anonymous" alt={title} draggable={false} style={{height,objectFit:height?'contain':undefined}} onLoad={event=>{setReady(true);if(event.currentTarget.naturalWidth)setNaturalHeight(Math.min(2400,size.width*event.currentTarget.naturalHeight/event.currentTarget.naturalWidth))}} onError={runtime.fail}/>:value.kind==='video'?<video ref={runtime.setMedia} src={value.url} crossOrigin="anonymous" controls playsInline preload="metadata" aria-label={title} style={{height,objectFit:height?'contain':undefined}} onLoadedMetadata={metadata} onError={runtime.fail}/>:<audio ref={runtime.setMedia} src={value.url} crossOrigin="anonymous" controls preload="metadata" aria-label={title} onLoadedMetadata={metadata} onError={runtime.fail}/>}
-    {!ready?<div className="en-inline-media-loading" role="status">正在读取 {title}…</div>:null}
+    {!ready?<div className="en-inline-media-loading" role="status">{t("正在读取 ")}{title}…</div>:null}
    </div>:label}
   </div>
   {visual&&ready&&value.kind!=='audio'&&interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
