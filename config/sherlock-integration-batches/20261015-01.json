@@ -9,59 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记复用研究子代理生成卡片与链接加载",
+        "featureName": "笔记正文媒体预览与菜单图标优化",
         "branch": "codex/feat/notes-context-alignment-20261015",
-        "baseCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
-        "tipCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+        "baseCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+        "tipCommit": "37994818a681165de48c04837bcde12dd7dc0b1d",
         "commits": [
           {
-            "commit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
+            "commit": "c52d463aa2851a757364093a522b548afd21f1b3",
             "parents": [
-              "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79"
+              "bcd161389d44f183cf658b10fb94d3de28c1d61d"
             ],
-            "subject": "修复：笔记复用研究子代理生成卡片与链接加载能力"
+            "subject": "优化：统一笔记智能组件与链接菜单图标"
+          },
+          {
+            "commit": "37994818a681165de48c04837bcde12dd7dc0b1d",
+            "parents": [
+              "c52d463aa2851a757364093a522b548afd21f1b3"
+            ],
+            "subject": "功能：在笔记正文直接预览图片音视频并紧凑展示文件"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+            "path": "scripts/lib/notes-files.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "src/main/notes/files.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-ai.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/notes-component-generation.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/web-url.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/web-url.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-file-preview-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-components.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/component-data/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
+            "path": "src/main/notes/native-menu.ts"
           },
           {
             "status": "M",
@@ -69,75 +48,51 @@
           },
           {
             "status": "M",
-            "path": "src/main/notes/stream.ts"
+            "path": "src/main/state/research-file-preview.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/notes/component-data-actions.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/creation-block.tsx"
+            "path": "src/preload/notes/component-interaction.tsx"
           },
           {
             "status": "M",
             "path": "src/preload/notes/editor.tsx"
           },
           {
-            "status": "M",
-            "path": "src/preload/notes/native-component-block.tsx"
+            "status": "A",
+            "path": "src/preload/notes/file-inline.tsx"
           },
           {
             "status": "M",
-            "path": "src/shared/workspace-notes.ts"
+            "path": "src/preload/notes/menu-icon.tsx"
           },
           {
             "status": "M",
-            "path": "test/component-data-refresh.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-ai.test.js"
+            "path": "src/preload/notes/style.css"
           },
           {
             "status": "A",
-            "path": "test/notes-component-data-actions.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-component-generation.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-generation-block.test.tsx"
+            "path": "src/shared/note-creation-icons.ts"
           },
           {
             "status": "M",
-            "path": "test/notes-native-components.test.js"
+            "path": "src/shared/note-files.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/note-media.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-inline-files.test.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
           },
           {
             "status": "M",
             "path": "test/notes-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-slash-insert.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-stream.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-web-url.test.js"
           }
         ],
         "checks": [
@@ -146,58 +101,49 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-slash-insert.test.js",
-              "test/notes-service.test.ts",
-              "test/notes-stream.test.ts",
-              "test/notes-ai.test.js",
-              "test/notes-component-generation.test.js",
-              "test/notes-component-data-actions.test.ts",
-              "--maxWorkers=1",
-              "--testTimeout=30000",
-              "--hookTimeout=30000"
-            ],
-            "outcome": "passed",
-            "summary": "6文件105项通过，后端追加DataYes只读插件parity后27项通过",
-            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
-            "completedAt": "2026-10-15T04:25:52.595630+00:00",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-export-snapshots.test.ts",
-              "test/notes-component-snapshots.test.ts",
-              "test/notes-reference-content.test.js",
-              "test/notes-native-web.test.js",
-              "test/notes-generation-block.test.tsx",
-              "test/notes-native-components.test.js",
-              "test/research-web-url.test.js",
-              "test/figma-final-shell-patch.test.ts",
-              "--maxWorkers=1",
-              "--testTimeout=30000",
-              "--hookTimeout=30000"
-            ],
-            "outcome": "passed",
-            "summary": "8文件67项回归通过",
-            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
-            "completedAt": "2026-10-15T04:25:52.595630+00:00",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/component-data-service.test.ts",
-              "test/component-data-refresh.test.js",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-component-interaction.test.tsx",
+              "test/notes-file-views.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "45项共享刷新与账号边界检查通过",
-            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
-            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "summary": "15项正文媒体/多选/reader聚焦通过",
+            "verifiedCommit": "37994818a681165de48c04837bcde12dd7dc0b1d",
+            "completedAt": "2026-10-15T04:47:31.305423+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/note-media.test.ts",
+              "test/note-files.test.ts",
+              "test/notes-service.test.ts",
+              "test/research-file-preview.test.ts",
+              "--maxWorkers=1",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "101项媒体授权及文件读取检查通过",
+            "verifiedCommit": "37994818a681165de48c04837bcde12dd7dc0b1d",
+            "completedAt": "2026-10-15T04:47:31.305423+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-inline-files.test.tsx",
+              "test/notes-native-menu.test.ts",
+              "--maxWorkers=1",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "最新30项正文及菜单检查通过",
+            "verifiedCommit": "37994818a681165de48c04837bcde12dd7dc0b1d",
+            "completedAt": "2026-10-15T04:47:31.305423+00:00",
             "timeoutMs": 240000
           },
           {
@@ -207,9 +153,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
-            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "summary": "限定项目类型检查通过",
+            "verifiedCommit": "37994818a681165de48c04837bcde12dd7dc0b1d",
+            "completedAt": "2026-10-15T04:47:31.305423+00:00",
             "timeoutMs": 240000
           },
           {
@@ -220,57 +166,25 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "bcd161389d44f183cf658b10fb94d3de28c1d61d",
-            "completedAt": "2026-10-15T04:25:52.595630+00:00",
+            "verifiedCommit": "37994818a681165de48c04837bcde12dd7dc0b1d",
+            "completedAt": "2026-10-15T04:47:31.305423+00:00",
             "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实BlockNote浏览器场景验证菜单顺序、生成portal与child进度、停止、新内容CAS、尺寸保留、保存后绑定和隐藏暂停；原ResearchGenerationProcess与过程入口fixture验证子会话参数及停止/重试事件。"
+          "summary": "真实production InlineNoteFileBlock的Electron实播、续期、隐藏、卸载验证通过；实际主进程媒体CORS/Range/快照及PDFWord导出渲染检查通过；菜单明暗截图目视通过。"
         },
         "acceptanceCriteria": [
-          "智能组件和链接紧随文件命令之前移至折叠标题上方。",
-          "笔记组件走真实研究子代理、校验与数据源配方，生成卡片复用ResearchGenerationProcess。",
-          "baidu.com等裸域名使用研究地址解析，并复用原生链接正文加载组件。",
-          "共享刷新实现分别绑定笔记与画布承载面，保持引用范围、账号和可见性隔离。"
+          "slash媒体正文自然插入，图片无大卡框，音视频原位播放。",
+          "可预览文档使用原reader，不支持格式紧凑标签卡。",
+          "媒体切页暂停、续期保留进度、卸载释放，持久内容不含临时URL。",
+          "智能组件与链接菜单使用协调双星/链环图标。"
         ],
         "risks": [
-          "仍需集成包真实入口确认生成过程与链接读取。",
-          "仅使用当前父会话可见且已授权的工具；外部数据暂时不可用时保留错误与现有内容。"
+          "需新客户端从原生slash picker实际导入验收。"
         ],
-        "generatedAt": "2026-10-15T04:25:52.595630+00:00"
-      },
-      "merged": {
-        "mergeCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
-        "verificationCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
-            "completedAt": "2026-10-15T04:27:02.594Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
-            "completedAt": "2026-10-15T04:27:02.594Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-15T04:27:02.594Z"
+        "generatedAt": "2026-10-15T04:47:31.305423+00:00"
       }
     }
   ],
