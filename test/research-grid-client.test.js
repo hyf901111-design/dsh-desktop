@@ -9,6 +9,7 @@ import {afterEach,it,expect,vi} from 'vitest'
 import {patchResearchGridWorkbench,restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {patchCanvasCreationTools} from '../scripts/lib/canvas-creation-tools.mjs'
 import {patchAttachmentClient} from '../scripts/lib/attachment-client.mjs'
+import {patchDerivedPresetClient} from '../scripts/lib/derived-preset-client.mjs'
 import {workbenchRefreshTooltip,measureWorkbenchContents} from '../scripts/lib/research-grid-ui.mjs'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {researchOptimalDimensions,researchCandleTemplate} from '../packages/dsh-research-task-runtime/bento-layout.js'
@@ -165,7 +166,7 @@ async function fixture(mount=false,desktop={}){
  keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}))
  let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
- const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const source=patchDerivedPresetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake)
@@ -2394,11 +2395,40 @@ it('嵌入网页刷新只报告重载请求，往返会话隐藏原生网页而�
  await f.render({sessionId:'other',measure:false});f.registry.release('grid-test');await f.render({measure:false})
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec);expect(bridge.hideNative).toHaveBeenCalled();expect(bridge.releaseNative).not.toHaveBeenCalled();expect(bridge.releaseSession).not.toHaveBeenCalled()
 })
+it.each(['generated-container','generated-mind-map'])('派生导图恢复 %s 的根主题、层级节点与连线，节点编辑不丢来源',async kind=>{
+ const f=await fixture(true),content='# 市场资讯\n- 科技\n  - 半导体走弱\n- 宏观\n  - 中间价6.7253',source={title:'加密货币市场资讯',text:'原始冻结资讯',nodeId:'news'}
+ const spec={version:1,type:'mind-map',title:'思维导图',content,source}
+ const node={...text('restored-map'),kind,generationStatus:'completed',...(kind==='generated-container'?{containerPrompt:'生成导图',refreshMinutes:0,containerSpec:spec}:{excerpt:content,sourceNodeIds:['news'],generationSources:[{id:'news',type:'artifact',title:source.title,text:source.text}]})}
+ await act(async()=>f.workspace.setArtifacts([text('news'),node]))
+ const map=f.host.querySelector('[data-research-derived-preset] [data-research-mind-map]')
+ expect(map).not.toBeNull();expect(map.querySelector('[data-research-mind-map-depth="0"]').textContent).toBe('市场资讯')
+ expect(map.querySelectorAll('[data-research-mind-map-branch]')).toHaveLength(4)
+ expect(map.querySelector('[data-research-mind-map-edges] path')).not.toBeNull();expect(f.host.querySelector('.ew-derived-branches')).toBeNull()
+ const leaf=[...map.querySelectorAll('[data-research-mind-map-node]')].find(n=>n.textContent==='半导体走弱')
+ await f.event('dblclick',leaf);const input=f.host.querySelector('[data-research-mind-map-node-input]');expect(input).not.toBeNull();input.value='半导体回升'
+ await f.event('keydown',input,{key:'Enter',keyCode:13})
+ const stored=f.workspace.getSnapshot().artifacts.find(n=>n.id===node.id)
+ expect(kind==='generated-container'?stored.containerSpec.content:stored.excerpt).toContain('半导体回升')
+ expect(kind==='generated-container'?stored.containerSpec.source.text:stored.generationSources[0].text).toBe(source.text)
+ const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('grid-test').getSnapshot().artifacts.find(n=>n.id===node.id)
+ expect(restored).toEqual(stored)
+})
+it('派生导图长节点完整显示，双击后未修改不丢失尾部或原格式',async()=>{
+ const f=await fixture(true),label='完整研究证据'.repeat(40)+'最后证据END',content='# 根主题\n- **'+label+'**',source={title:'冻结材料',text:'不可改变的原文'},spec={version:1,type:'mind-map',title:'长节点',content,source}
+ await act(async()=>f.workspace.setArtifacts([{...text('long-map'),kind:'generated-container',generationStatus:'completed',containerPrompt:'导图',refreshMinutes:0,containerSpec:spec}]))
+ const leaf=f.host.querySelector('[data-research-mind-map-depth="1"]');expect(leaf.textContent).toContain('最后证据END')
+ await f.event('dblclick',leaf);const input=f.host.querySelector('textarea');expect(input.value).toContain('最后证据END')
+ await f.event('keydown',input,{key:'Enter',keyCode:13})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
+ await f.event('dblclick',f.host.querySelector('[data-research-mind-map-depth="1"]'));const edit=f.host.querySelector('textarea');edit.value=label+'已修订';await f.event('keydown',edit,{key:'Enter',keyCode:13})
+ expect(f.workspace.getSnapshot().artifacts[0].containerSpec.content).toContain('最后证据END已修订')
+})
 it('派生预置完整呈现超过48个导图节点，编辑保留来源和同一节点',async()=>{
  const f=await fixture(true),content='# 本人材料\n'+Array.from({length:60},(_,i)=>'- 分支'+i+'\n  - 原数值 '+(i===0?'0':-i)).join('\n')
  const spec={version:1,type:'mind-map',title:'本人材料导图',content,source:{title:'原始材料',text:'原始冻结正文，不被结果编辑覆盖'}}
  await act(async()=>f.workspace.setArtifacts([{...text('derived-own'),kind:'generated-container',generationStatus:'completed',containerPrompt:'仅根据原始材料创建',refreshMinutes:0,containerSpec:spec}]))
- expect(f.host.querySelectorAll('[data-derived-branch]')).toHaveLength(60)
+ expect(f.host.querySelectorAll('[data-research-mind-map-depth="1"]')).toHaveLength(60)
+ expect(f.host.querySelectorAll('[data-research-mind-map-node]')).toHaveLength(121)
  expect(f.host.textContent).toContain('分支59');expect(f.host.textContent).toContain('原数值 0');expect(f.host.textContent).toContain('原数值 -59')
  const settings=f.host.querySelector('[data-research-container-more]').__eworkWorkbenchSettings
  expect(settings[0].label).toBe('编辑结果');await act(async()=>settings[0].run())
