@@ -349,7 +349,7 @@ contextBridge.exposeInMainWorld(
   createSherlockAboutBridge(
     () => ipcRenderer.invoke('updates:status') as Promise<UpdateStatus>,
     () => sidebarUpdateControl.checkFromAbout(() => ipcRenderer.invoke('updates:check') as Promise<UpdateStatus>),
-    locale,
+    () => document.documentElement.dataset.odysseyLocale === 'en' ? 'en' : document.documentElement.dataset.odysseyLocale === 'zh' ? 'zh' : locale,
     {
       downloadUpdate: () => ipcRenderer.invoke('updates:download') as Promise<UpdateStatus>,
       installUpdate: () => ipcRenderer.invoke('updates:install') as Promise<void>,

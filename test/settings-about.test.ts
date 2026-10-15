@@ -462,3 +462,13 @@ describe('EWork Odyssey About settings', () => {
     expect(html).toContain('隐藏开发者标签页')
   })
 })
+
+it('reads release notes in the current app language rather than the startup language',async()=>{
+ const {createSherlockAboutBridge}=await import('../src/preload/about-info')
+ let language:'en'|'zh'='zh'
+ const status=async()=>({currentVersion:'1.3.1',phase:'up-to-date'} as any)
+ const bridge=createSherlockAboutBridge(status,status,()=>language,{downloadUpdate:status,installUpdate:async()=>{},onUpdateStatusChanged:()=>()=>{}})
+ expect((await bridge.getInfo()).releaseNotes[0]!.items[0]!).toContain('补齐')
+ language='en';expect((await bridge.getInfo()).releaseNotes[0]!.items[0]!).toContain('Completed English UI')
+ language='zh';expect((await bridge.getInfo()).releaseNotes[0]!.items[0]!).toContain('补齐')
+})

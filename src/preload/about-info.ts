@@ -883,7 +883,7 @@ export function buildSherlockAboutInfo(
 export function createSherlockAboutBridge(
   readUpdateStatus: () => Promise<UpdateStatus>,
   checkForUpdates: ManualUpdateChecker,
-  locale: SherlockAboutLocale,
+  locale: SherlockAboutLocale | (() => SherlockAboutLocale),
   actions: {
     downloadUpdate(): Promise<UpdateStatus>
     installUpdate(): Promise<void>
@@ -900,7 +900,7 @@ export function createSherlockAboutBridge(
   return Object.freeze({
     async getInfo(): Promise<SherlockAboutInfo> {
       const status = await readUpdateStatus()
-      return buildSherlockAboutInfo(status.currentVersion, locale)
+      return buildSherlockAboutInfo(status.currentVersion, typeof locale === 'function' ? locale() : locale)
     },
     getUpdateStatus: readUpdateStatus,
     ...actions,
