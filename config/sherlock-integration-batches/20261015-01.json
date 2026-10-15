@@ -249,6 +249,37 @@
           "受浏览器安全限制无法离线读取的跨源图像会明确报错，避免导出空白成功图。"
         ],
         "generatedAt": "2026-10-15T03:37:12.830463+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
+        "verificationCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
+            "completedAt": "2026-10-15T03:39:35.591Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "c5c4bdd468cde2cf75a355ecd21b2deb40bda147",
+            "completedAt": "2026-10-15T03:39:35.591Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-15T03:39:35.591Z"
       }
     }
   ],
