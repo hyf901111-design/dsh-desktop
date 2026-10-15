@@ -1,3 +1,4 @@
+import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React, {useLayoutEffect, useRef, useState} from 'react'
 
 /** Content sets the initial height; a top-edge gesture opts into a bounded manual height. */
@@ -24,8 +25,8 @@ export function SuggestionPanel({children, header, footer}: {children: React.Rea
     return()=>{observer.disconnect();window.removeEventListener('resize',measure);window.visualViewport?.removeEventListener('resize',measure)}
   }, [])
   return <div ref={wrap} className="en-preview-wrap">
-    <section ref={panel} className="en-preview" aria-label="AI 内容预览">
-      <div className="en-preview-resize" role="separator" tabIndex={0} aria-label="调整建议面板高度" aria-orientation="horizontal" aria-valuemin={bounds.min} aria-valuemax={bounds.max} aria-valuenow={height??bounds.current}
+    <section ref={panel} className="en-preview" aria-label={t("AI 内容预览")}>
+      <div className="en-preview-resize" role="separator" tabIndex={0} aria-label={t("调整建议面板高度")} aria-orientation="horizontal" aria-valuemin={bounds.min} aria-valuemax={bounds.max} aria-valuenow={height??bounds.current}
         onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.stopPropagation();gesture.current={pointer:event.pointerId,y:event.clientY,height:content.current?.getBoundingClientRect().height||bounds.current};event.currentTarget.setPointerCapture(event.pointerId)}}
         onPointerMove={event=>{const active=gesture.current;if(active?.pointer===event.pointerId){event.preventDefault();setHeight(clamp(active.height+active.y-event.clientY))}}}
         onPointerUp={event=>{if(gesture.current?.pointer!==event.pointerId)return;gesture.current=undefined;if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId)}}

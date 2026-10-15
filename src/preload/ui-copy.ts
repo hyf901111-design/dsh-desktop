@@ -1,8 +1,10 @@
+import {NOTE_ENGLISH} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 /** Desktop-owned copy shared by preload surfaces and legacy plugin controls.
  * Keys are exact UI strings. User documents, input values and saved titles are never translated.
  */
 import {financialUiCopy} from './financial-ui-copy'
 export const englishUiCopy: Record<string, string> = {
+ ...NOTE_ENGLISH,
   ...financialUiCopy,
   "基础金融分析逻辑": "Core financial analysis",
   "基础金融分析逻辑：用于公司、股票、基金、ETF、财报、估值、持仓、宏观、交易及量化研究，提供场景方法论、数据口径核验与分析脚本。金融分析研究需求优先加载，再按需读取参考；取数与组件展示遵循 EWork 当前可用工具和宿主模板。": "Financial research methods, data validation and analysis scripts for companies, stocks, funds, ETFs, earnings, valuation, portfolios, macroeconomics, trading and quantitative research. Prioritized for financial analysis using the available EWork tools and templates.",

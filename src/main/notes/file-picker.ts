@@ -1,3 +1,4 @@
+import {noteUiText} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import { stat } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
 import { dialog } from 'electron'
@@ -10,13 +11,13 @@ const mediaFilters = {
   audio: { name: '音频', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac', 'aiff', 'opus', 'caf'] }
 }
 
-export async function pickNoteFiles(kind: unknown, window: TrustedWindow | undefined, current: () => boolean): Promise<{ files: Array<{ name: string; path: string }> }> {
+export async function pickNoteFiles(kind: unknown, window: TrustedWindow | undefined, current: () => boolean, locale?:string): Promise<{ files: Array<{ name: string; path: string }> }> {
   if (kind !== 'image' && kind !== 'video' && kind !== 'audio' && kind !== 'file') throw Error('文件选择类型无效。')
   if (!window || window.isDestroyed() || !current()) return { files: [] }
   const filter = kind === 'file' ? undefined : mediaFilters[kind]
   const selection = await dialog.showOpenDialog(window as BrowserWindow, {
     properties: ['openFile', 'multiSelections'],
-    ...(filter ? { filters: [filter] } : {})
+    ...(filter ? { filters: [{...filter,name:noteUiText(filter.name,locale)}] } : {})
   })
   if (!current() || selection.canceled) return { files: [] }
   if (selection.filePaths.length > 64) throw Error('每次最多选择 64 个文件。')

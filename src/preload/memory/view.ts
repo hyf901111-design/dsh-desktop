@@ -1,3 +1,4 @@
+import { noteUiText as localize } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import type {
   MemoryBridge,
   MemoryInput,
@@ -15,6 +16,7 @@ type Selection = {
 
 /** Adds one ordinary settings section without replacing the native settings tree. */
 export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
+  const t = (value: string) => localize(value, document.documentElement.dataset.odysseyLocale)
   const win = document.defaultView!
   const style = document.createElement('style')
   style.dataset.memoryStyle = ''
@@ -83,7 +85,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     return element
   }
   const date = (time: number) =>
-    new Intl.DateTimeFormat('zh-CN', {
+    new Intl.DateTimeFormat(document.documentElement.dataset.odysseyLocale==='en'?'en-US':'zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -152,7 +154,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       }
     } catch {
       if (!current(epoch) || sequence !== readSequence) return
-      setNotice('记忆暂不可用，原有数据会保留。请稍后重试。', true)
+      setNotice(t("记忆暂不可用，原有数据会保留。请稍后重试。"), true)
       render()
     }
   }
@@ -173,7 +175,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       accept(next, epoch)
     } catch {
       if (!current(epoch)) return
-      setNotice('修改记忆设置未完成，已恢复之前的设置。请稍后重试。', true)
+      setNotice(t("修改记忆设置未完成，已恢复之前的设置。请稍后重试。"), true)
     } finally {
       if (current(epoch)) {
         settingPending = undefined
@@ -194,7 +196,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     try {
       await bridge.openDirectory()
     } catch {
-      if (current(epoch)) setNotice('记忆目录暂时无法打开，请稍后重试。', true)
+      if (current(epoch)) setNotice(t("记忆目录暂时无法打开，请稍后重试。"), true)
     } finally {
       if (current(epoch)) {
         directoryPending = false
@@ -211,8 +213,8 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     const content = node('div', undefined, 'ew-memory-content'),
       heading = node('header', undefined, 'ew-memory-heading')
     heading.append(
-      node('h1', '记忆'),
-      node('p', '记住你的偏好，让新对话接得上。')
+      node('h1', t("记忆")),
+      node('p', t("记住你的偏好，让新对话接得上。"))
     )
     content.append(heading)
     const status = node('div', undefined, 'ew-memory-notice')
@@ -225,25 +227,25 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       content.append(
         node(
           'p',
-          noticeError ? '已保存的记忆会保留。' : '正在读取记忆…',
+          noticeError ? t("已保存的记忆会保留。") : t("正在读取记忆…"),
           'ew-memory-muted'
         )
       )
       if (noticeError)
-        content.append(button('重试', () => void load(), 'ew-memory-retry'))
+        content.append(button(t("重试"), () => void load(), 'ew-memory-retry'))
       return
     }
     const settings = node('section', undefined, 'ew-memory-controls')
     const label = node('label', undefined, 'ew-memory-switch-row'),
       copy = node('span', undefined, 'ew-memory-row-copy')
     copy.append(
-      node('strong', '启用记忆'),
-      node('small', '自动记住偏好与项目上下文，在新对话中继续使用。')
+      node('strong', t("启用记忆")),
+      node('small', t("自动记住偏好与项目上下文，在新对话中继续使用。"))
     )
     const toggle = node('input')
     toggle.type = 'checkbox'
     toggle.role = 'switch'
-    toggle.setAttribute('aria-label', '启用记忆')
+    toggle.setAttribute('aria-label', t("启用记忆"))
     toggle.checked = settingPending ?? (data.settings.use && data.settings.auto)
     toggle.disabled = settingPending !== undefined
     toggle.onchange = () => void setEnabled(toggle.checked)
@@ -256,21 +258,21 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       'ew-memory-directory-row'
     )
     directory.dataset.memoryDirectory = ''
-    directory.setAttribute('aria-label', '打开记忆存储目录')
+    directory.setAttribute('aria-label', t("打开记忆存储目录"))
     directory.disabled =
       directoryPending || !bridge.openDirectory || !storage?.directory
     const folder = icon('folder')
     folder.classList.add('ew-memory-folder')
     const location = node('span', undefined, 'ew-memory-row-copy')
     location.append(
-      node('strong', storage?.file.split(/[\\/]/).at(-1) || '记忆.md'),
+      node('strong', storage?.file.split(/[\\/]/).at(-1) || t("记忆.md")),
       node(
         'small',
-        storage?.directory || '存储目录信息暂不可用',
+        storage?.directory || t("存储目录信息暂不可用"),
         'ew-memory-path'
       )
     )
-    const action = node('span', '打开目录', 'ew-memory-directory-action')
+    const action = node('span', t("打开目录"), 'ew-memory-directory-action')
     action.append(icon('arrow'))
     directory.append(folder, location, action)
     settings.append(directory)
@@ -283,21 +285,21 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     content.append(settings)
     const summary = node('section', undefined, 'ew-memory-summary')
     summary.dataset.memorySummary = ''
-    summary.setAttribute('aria-label', '记忆内容的 AI 概括')
+    summary.setAttribute('aria-label', t("记忆内容的 AI 概括"))
     const title = node('div', undefined, 'ew-memory-summary-heading')
-    title.append(node('h2', 'AI 概括'))
+    title.append(node('h2', t("AI 概括")))
     summary.append(title)
     const value = data.summary
     if (!value)
       summary.append(
-        node('p', 'AI 概括暂不可用，已保存的记忆会保留。', 'ew-memory-muted')
+        node('p', t("AI 概括暂不可用，已保存的记忆会保留。"), 'ew-memory-muted')
       )
     else if (value.state === 'empty')
       summary.append(
-        node('p', '还没有保存记忆。', 'ew-memory-empty'),
+        node('p', t("还没有保存记忆。"), 'ew-memory-empty'),
         node(
           'p',
-          '保存偏好或项目内容后，这里会显示 AI 概括。',
+          t("保存偏好或项目内容后，这里会显示 AI 概括。"),
           'ew-memory-muted'
         )
       )
@@ -305,16 +307,16 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       const state =
         value.state === 'waiting'
           ? data.settings.use && data.settings.auto
-            ? '完成一次对话后，将自动生成记忆概括。'
-            : '记忆已关闭，开启后将自动生成概括。'
+            ? t("完成一次对话后，将自动生成记忆概括。")
+            : t("记忆已关闭，开启后将自动生成概括。")
           : value.state === 'pending'
           ? value.text
-            ? '正在更新概括，以下为上次内容。'
-            : '正在生成概括…'
+            ? t("正在更新概括，以下为上次内容。")
+            : t("正在生成概括…")
           : value.state === 'failed'
             ? value.text
-              ? 'AI 概括暂未更新，以下为上次内容。'
-              : 'AI 概括暂不可用，已保存的记忆会保留。'
+              ? t("AI 概括暂未更新，以下为上次内容。")
+              : t("AI 概括暂不可用，已保存的记忆会保留。")
             : undefined
       if (state) {
         const message = node('p', state, 'ew-memory-summary-state')
@@ -325,11 +327,11 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       if (value.text)
         summary.append(node('div', value.text, 'ew-memory-summary-text'))
       else if (value.state === 'ready')
-        summary.append(node('p', 'AI 尚未返回概括内容。', 'ew-memory-muted'))
+        summary.append(node('p', t("AI 尚未返回概括内容。"), 'ew-memory-muted'))
       const meta = [
-        value.count ? `${value.count} 条记忆` : '',
-        value.updatedAt !== undefined ? `${date(value.updatedAt)} 更新` : '',
-        value.model ? `由 ${value.model} 概括` : ''
+        value.count ? (document.documentElement.dataset.odysseyLocale==='en'?`${value.count} ${value.count===1?'memory':'memories'}`:`${value.count} 条记忆`) : '',
+        value.updatedAt !== undefined ? (document.documentElement.dataset.odysseyLocale==='en'?`Updated ${date(value.updatedAt)}`:`${date(value.updatedAt)} 更新`) : '',
+        value.model ? (document.documentElement.dataset.odysseyLocale==='en'?`Summarized by ${value.model}`:`由 ${value.model} 概括`) : ''
       ].filter(Boolean)
       if (meta.length)
         summary.append(node('p', meta.join(' · '), 'ew-memory-summary-meta'))
@@ -359,7 +361,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     if (!page?.isConnected) {
       page = node('section', undefined, 'ew-memory-page')
       page.dataset.memoryPage = ''
-      page.setAttribute('aria-label', '记忆设置')
+      page.setAttribute('aria-label', t("记忆设置"))
       panel.querySelector('.VOzbGW_content')?.append(page)
     }
     render()
@@ -374,7 +376,13 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       document.querySelector<HTMLButtonElement>('.VOzbGW_trigger')?.click()
     }
   }
+  let renderedLocale = document.documentElement.dataset.odysseyLocale
   function reconcile() {
+    if (renderedLocale !== document.documentElement.dataset.odysseyLocale) {
+      renderedLocale = document.documentElement.dataset.odysseyLocale
+      for (const nav of navs) { nav.setAttribute('aria-label', t('记忆')); nav.querySelector('span')!.textContent=t('记忆') }
+      if (page) {page.setAttribute('aria-label',t('记忆设置'));render()}
+    }
     if (disposed) return
     for (const nav of navs) if (!nav.isConnected) navs.delete(nav)
     if (root && !root.isConnected) root = undefined
@@ -386,10 +394,10 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       if (!list || panel.querySelector('[data-memory-nav]')) continue
       const nav = button('', () => activate(panel), 'VOzbGW_navCell')
       nav.dataset.memoryNav = ''
-      nav.setAttribute('aria-label', '记忆')
+      nav.setAttribute('aria-label', t("记忆"))
       const mark = icon('memory')
       mark.classList.add('VOzbGW_navIcon')
-      nav.append(mark, node('span', '记忆', 'VOzbGW_navLabel'))
+      nav.append(mark, node('span', t("记忆"), 'VOzbGW_navLabel'))
       const account = list.querySelector('[data-account-nav]')
       if (account) account.after(nav)
       else list.prepend(nav)
@@ -454,7 +462,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     if (typeof value?.content !== 'string' || !value.content.trim()) return
     const content = value.content.trim()
     if (content.length > 600) {
-      showToast('所选内容超过 600 字，请选择较短的一段再记住。', true)
+      showToast(t("所选内容超过 600 字，请选择较短的一段再记住。"), true)
       return
     }
     const epoch = identityEpoch,
@@ -476,7 +484,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
             ? context.session?.projectId
             : undefined
         const input: MemoryInput = {
-          title: (value.title?.trim() || source?.title || '选区记忆').slice(
+          title: (value.title?.trim() || source?.title || t("选区记忆")).slice(
             0,
             120
           ),
@@ -491,13 +499,13 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
         if (next.owner !== context.owner) return
         if (accept(next, epoch)) render()
         if (next.document?.error)
-          showToast('记忆.md 暂未写入，原内容仍会保留。请稍后重试。', true)
+          showToast(t("记忆.md 暂未写入，原内容仍会保留。请稍后重试。"), true)
         else if (!next.document)
-          showToast('记忆已保存，存储文件状态暂不可用。', true)
-        else showToast('已保存到记忆.md')
+          showToast(t("记忆已保存，存储文件状态暂不可用。"), true)
+        else showToast(t("已保存到记忆.md"))
       } catch {
         if (current(epoch))
-          showToast('记忆保存未完成，原内容仍会保留。请稍后重试。', true)
+          showToast(t("记忆保存未完成，原内容仍会保留。请稍后重试。"), true)
       }
     })
   }
@@ -511,7 +519,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['data-account-active']
+    attributeFilter: ['data-account-active','data-odyssey-locale']
   })
   const unsubscribe = bridge.subscribe?.(() => {
     if (page?.isConnected) void load()

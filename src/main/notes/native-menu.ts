@@ -1,3 +1,4 @@
+import {noteUiText} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import { BrowserWindow, screen } from 'electron'
 import { randomUUID } from 'node:crypto'
 import type { NoteMenuState, NotesNativeMenu } from '../../shared/notes-menu'
@@ -19,7 +20,7 @@ function menuIcon(key:string, library=false){
 }
 export function validateNoteMenu(input: NoteMenuState): void {
   if (!input || !/^[\w-]{1,80}$/.test(input.menuId) || !Number.isSafeInteger(input.revision) || input.revision < 0 ||
-      typeof input.dark !== 'boolean' || !input.anchor || Object.values(input.anchor).length !== 4 ||
+      typeof input.dark !== 'boolean' || (input.locale !== undefined && input.locale !== 'en' && input.locale !== 'zh') || !input.anchor || Object.values(input.anchor).length !== 4 ||
       !(['x','y','width','height'] as const).every(key => typeof input.anchor[key] === 'number' && Number.isFinite(input.anchor[key]) && Math.abs(input.anchor[key]) <= 20000) ||
       input.anchor.width < 0 || input.anchor.height < 0 || !Array.isArray(input.items) || input.items.length > 80 ||
       (input.selectedIndex !== undefined && (!Number.isInteger(input.selectedIndex) || input.selectedIndex < 0 || input.selectedIndex >= input.items.length))) throw Error('菜单内容无效。')
@@ -51,6 +52,7 @@ export function noteSubmenuBounds(pane:Electron.Rectangle,item:Electron.Rectangl
 }
 type MenuPane={html:string;height:number;width:number}
 export function noteMenuPresentation(state: NoteMenuState, ticket: string, limits: {height?:number;width?:number} = {}): MenuPane&{root:MenuPane;child?:MenuPane} {
+  const t=(value:string)=>noteUiText(value,state.locale)
   const grid=state.items.some(item=>item.icon==='paragraph')&&state.items.some(item=>item.icon==='heading')&&state.items.some(item=>item.icon==='bullet_list')
   const basic=grid?state.items.filter(item=>BASIC_ICONS.includes(item.icon)):[],rest=grid?state.items.filter(item=>!BASIC_ICONS.includes(item.icon)):state.items
   const parent=state.items.find(item=>item.id===state.submenu?.parentId)
@@ -74,18 +76,18 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
   }
   const gridRows=Math.max(1,Math.floor((maxHeight-14-24-8-(rest.length?56:0))/32)),gridColumns=Math.max(6,Math.ceil(basic.length/gridRows))
   const basicHeight=basic.length?24+Math.ceil(basic.length/gridColumns)*32+8:0
-  const basicHtml=basic.length?'<h2>基础格式</h2><div class="basic-grid" style="grid-template-columns:repeat('+gridColumns+',minmax(0,1fr));max-width:'+gridColumns*42+'px">'+basic.map(item=>row(item,true)).join('')+'</div>':''
+  const basicHtml=basic.length?'<h2>'+t('基础格式')+'</h2><div class="basic-grid" style="grid-template-columns:repeat('+gridColumns+',minmax(0,1fr));max-width:'+gridColumns*42+'px">'+basic.map(item=>row(item,true)).join('')+'</div>':''
   const root=columns(rest,14+basicHeight+(grid&&rest.length?24:0),264)
   root.width=Math.min(maxWidth,Math.max(root.width,basic.length?gridColumns*42+12:0))
   if(!state.items.length)root.height=50
-  const rootHtml=`<section class="menu root-menu" style="height:${root.height}px;width:${root.width}px"><div id="items" role="listbox" aria-label="笔记斜杠菜单">${state.items.length?basicHtml+(grid&&rest.length?'<h2>插入</h2>':'')+root.html:'<p class="empty">没有匹配的命令</p>'}</div></section>`
+  const rootHtml=`<section class="menu root-menu" style="height:${root.height}px;width:${root.width}px"><div id="items" role="listbox" aria-label="${t('笔记斜杠菜单')}">${state.items.length?basicHtml+(grid&&rest.length?'<h2>'+t('插入')+'</h2>':'')+root.html:'<p class="empty">'+t('没有匹配的命令')+'</p>'}</div></section>`
   const child=parent?columns(parent.children!,14,260,parent.id):undefined,showRoot=!child||root.width+4+child.width<=maxWidth
-  const childHtml=child?`<section class="menu child-menu" style="height:${child.height}px;width:${child.width}px"><div role="listbox" aria-label="组件库">${child.html}</div></section>`:''
+  const childHtml=child?`<section class="menu child-menu" style="height:${child.height}px;width:${child.width}px"><div role="listbox" aria-label="${t('组件库')}">${child.html}</div></section>`:''
   const childTop=showRoot&&child?Math.max(0,Math.min(root.positions.get(parent!.id)||0,maxHeight-child.height)):0
   const html=(showRoot?rootHtml:'')+(child?childHtml.replace('style="height:','style="margin-top:'+childTop+'px;height:'):'')
   return {html,height:Math.max(showRoot?root.height:0,(child?.height||0)+childTop)+MENU_SHADOW_INSET*2,width:(showRoot?root.width:0)+(child?(showRoot?4:0)+child.width:0)+MENU_SHADOW_INSET*2,root:{html:rootHtml,height:root.height+MENU_SHADOW_INSET*2,width:root.width+MENU_SHADOW_INSET*2},...(child?{child:{html:childHtml,height:child.height+MENU_SHADOW_INSET*2,width:child.width+MENU_SHADOW_INSET*2}}:{})}
 }
-export const noteMenuDocumentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>笔记斜杠菜单</title><style>
+export const noteMenuDocumentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>Note commands</title><style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:#fff;--hover:#e7e7e7;--muted:#777;--line:rgba(0,0,0,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.16)}body.dark{color:#eee;--bg:#292929;--hover:#383838;--muted:#aaa;--line:rgba(255,255,255,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.32)}
 main{height:100%;display:flex;align-items:flex-start;gap:4px;padding:24px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);box-shadow:var(--shadow);overflow:hidden;padding:6px 5px}.menu>[role=listbox]{flex:1;min-height:0;overflow:hidden}.menu-columns{display:grid;gap:8px;align-items:start}.library-icon{width:16px;height:16px;color:#667085}body.dark .library-icon{color:#9da5b2}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px;cursor:pointer}a:hover,a[data-pointer-hover=true],a[aria-selected=true],a[aria-expanded=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}
 </style><main></main>`

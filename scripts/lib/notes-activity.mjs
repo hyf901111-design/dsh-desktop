@@ -1,3 +1,4 @@
+import {noteUiText} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 /** Actual direct-model note requests, separate from native agent/tool turns. */
 export function createNotesActivityStore(doc) {
   const rows = new Map(), listeners = new Set(), empty = []
@@ -29,27 +30,27 @@ export function useNotesConversationRows(sessionId,openState){
 }
 export function EWorkNoteMessageReference({reference}){
  const file=reference.type==='attachment',artifact={kind:reference.type==='text'?'assistant-excerpt':'generated-container',title:reference.title}
- return react.createElement('span',{className:MessageItem_module_css_default.refChip,'data-ref-chip':file?'research-file':'research-artifact','data-note-message-reference':reference.blockId,title:reference.title},
+ return react.createElement('span',{className:MessageItem_module_css_default.refChip,'data-ref-chip':file?'research-file':'research-artifact','data-note-message-reference':reference.blockId,title:reference.title,'data-ui-preserve':''},
   file?react.createElement(FileReferenceIcon,{name:reference.title}):react.createElement(ResearchArtifactReferenceIcon,{artifact}),
   react.createElement('span',{className:'gdEzaW_refChipLabel',children:reference.title}))
 }
 export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,forkAt,renderSlot,branchUnavailable=false,UserBubble=UserStyleBubble,Progress=ExecutionStatusGroup,Markdown=AssistantMarkdown,Actions=typeof MessageIconActions==='undefined'?null:MessageIconActions}) {
   const h = react.createElement
-  const labels = {preparing:'正在读取笔记内容',generating:'正在生成内容',ready:'内容已生成，请在笔记中预览',replied:'已回复',accepted:'已写入笔记',discarded:'已放弃建议',failed:'生成失败',stopped:'已停止'}
+  const labels = {preparing:noteUiText("正在读取笔记内容"),generating:noteUiText("正在生成内容"),ready:noteUiText("内容已生成，请在笔记中预览"),replied:noteUiText("已回复"),accepted:noteUiText("已写入笔记"),discarded:noteUiText("已放弃建议"),failed:noteUiText("生成失败"),stopped:noteUiText("已停止")}
     const pending = ['preparing','generating'].includes(row.phase)
-    const stage = {model:'正在连接当前模型',thinking:'正在思考',writing:'正在撰写内容',validating:'正在检查生成内容'}[row.stage]
+    const stage = {model:noteUiText("正在连接当前模型"),thinking:noteUiText("正在思考"),writing:noteUiText("正在撰写内容"),validating:noteUiText("正在检查生成内容")}[row.stage]
     const status=(row.phase==='generating'?stage:null)||labels[row.phase]
-    const feedback={ready:'已生成以下内容，可在文档预览中采纳。',accepted:'已将以下内容写入笔记。',discarded:'以下建议未被采纳。'}[row.phase]
-    const text=['text','conversation'].includes(row.result?.kind)?String(row.result.markdown||''):row.result?.kind==='component'?'已生成组件：'+(row.result.node?.title||'研究组件')+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
+    const feedback={ready:noteUiText("已生成以下内容，可在文档预览中采纳。"),accepted:noteUiText("已将以下内容写入笔记。"),discarded:noteUiText("以下建议未被采纳。")}[row.phase]
+    const text=['text','conversation'].includes(row.result?.kind)?String(row.result.markdown||''):row.result?.kind==='component'?noteUiText("已生成组件：")+(row.result.node?.title||noteUiText("研究组件"))+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
     // Read the durable final-event position after generation; the preparing seq is only for row ordering.
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
-      h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || '根据附件撰写内容'}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
+      h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || noteUiText("根据附件撰写内容")}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status,reasoning:row.reasoning}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:row.error}],streaming:false,t}) : null,
       row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,t}) : null,
       row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:[feedback,row.result.markdown].filter(Boolean).join('\n\n')}],streaming:false,t})) : null,
-      row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?'已创建并写入笔记组件：':'已生成组件：')+(row.result.node.title||'研究组件')+'。'}],streaming:false,t}) : null,
+      row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?noteUiText("已创建并写入笔记组件："):noteUiText("已生成组件："))+(row.result.node.title||noteUiText("研究组件"))+'。'}],streaming:false,t}) : null,
       settled&&Actions?h(Actions,{text,time:row.finishedAt,clock:'end',onBranch:forkAt?()=>forkAt(row.completedSeq):undefined,branchUnavailable:branchUnavailable||!Number.isSafeInteger(row.completedSeq),extraActions:renderSlot?.('conversation.chat.assistant-actions',{messageId:'ework-note:'+row.requestId,text}),className:'osXY9a_actions',t}):null)
 }
 export function EWorkNotesActivity(props){const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':'笔记任务过程'},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}

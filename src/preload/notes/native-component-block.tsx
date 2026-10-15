@@ -1,3 +1,4 @@
+import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React, {useEffect, useRef, useState} from 'react'
 import {financialWidgetSpec} from '../../../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {NoteMenuIcon} from './menu-icon'
@@ -19,7 +20,7 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
    if(!live)return
    if(!generation&&node.containerSpec?.type==='calendar-tool'){
     const result=await context.bridge.request('component-ready',{sessionId:context.sessionId,nodeId:node.id})
-    if(!live)return;if(!result.ready){if(++attempts>25)throw Error('请先保存笔记，再重新打开日历组件。');timer=setTimeout(load,400);return}
+    if(!live)return;if(!result.ready){if(++attempts>25)throw Error(t("请先保存笔记，再重新打开日历组件。"));timer=setTimeout(load,400);return}
    }
    publish();setReady(true)
   }catch(e){if(live)setError((e as Error).message)}}
@@ -29,17 +30,17 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
    if(value.action==='generation-stop'||value.action==='generation-retry'){
     const reply=(ok:boolean,message?:string)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:instance.current,sessionId:context.sessionId,requestId:value.requestId,ok,message}}))
     try{
-     if(!context.editor?.isEditable)throw Error('笔记当前不可编辑。')
-     const current=context.editor.getBlock(block.id);if(!current)throw Error('组件已移除。')
+     if(!context.editor?.isEditable)throw Error(t("笔记当前不可编辑。"))
+     const current=context.editor.getBlock(block.id);if(!current)throw Error(t("组件已移除。"))
      const latest=JSON.parse(current.props.payload)
-     if(latest.id!==value.nodeId||latest.generationTaskId!==value.taskId)throw Error('组件任务已变化，请重试。')
+     if(latest.id!==value.nodeId||latest.generationTaskId!==value.taskId)throw Error(t("组件任务已变化，请重试。"))
      if(value.action==='generation-stop'){
       const active=typeof context.isGeneratingComponent==='function'?context.isGeneratingComponent(block.id):!context.generatingBlock||context.generatingBlock.current===block.id
-      if(!['queued','running','retrying'].includes(latest.generationStatus)||!active||typeof context.stopGeneration!=='function')throw Error('当前组件没有正在运行的任务。')
-      const result=await context.stopGeneration(block.id);if(result===false||result?.ok===false)throw Error('停止请求未完成。')
+      if(!['queued','running','retrying'].includes(latest.generationStatus)||!active||typeof context.stopGeneration!=='function')throw Error(t("当前组件没有正在运行的任务。"))
+      const result=await context.stopGeneration(block.id);if(result===false||result?.ok===false)throw Error(t("停止请求未完成。"))
      }else{
-      if(!['failed','cancelled','interrupted'].includes(latest.generationStatus)||!latest.containerPrompt?.trim()||typeof context.generateComponent!=='function')throw Error('组件暂不能重新生成，请调整需求后重试。')
-      const result=await context.generateComponent(block.id,latest.containerPrompt.trim());if(result===false||result?.ok===false)throw Error('组件任务尚未开始，请重试。')
+      if(!['failed','cancelled','interrupted'].includes(latest.generationStatus)||!latest.containerPrompt?.trim()||typeof context.generateComponent!=='function')throw Error(t("组件暂不能重新生成，请调整需求后重试。"))
+      const result=await context.generateComponent(block.id,latest.containerPrompt.trim());if(result===false||result?.ok===false)throw Error(t("组件任务尚未开始，请重试。"))
      }
      reply(true)
     }catch(e){reply(false,(e as Error).message)}
@@ -56,10 +57,10 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
    if(value.action==='spec'){
     const reply=(ok:boolean,message?:string)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:instance.current,sessionId:context.sessionId,requestId:value.requestId,ok,message}}))
     try{
-      if(!context.editor?.isEditable)throw Error('笔记当前不可编辑。')
-      const current=context.editor.getBlock(block.id);if(!current)throw Error('组件已移除。')
+      if(!context.editor?.isEditable)throw Error(t("笔记当前不可编辑。"))
+      const current=context.editor.getBlock(block.id);if(!current)throw Error(t("组件已移除。"))
       const previous=JSON.parse(current.props.payload),spec=financialWidgetSpec(value.next)
-      if(!spec||previous.containerSpec?.type!=='financial-widget'||spec.widget!==previous.containerSpec.widget||JSON.stringify(previous.containerSpec)!==JSON.stringify(value.expected))throw Error('组件配置已变化，请重试。')
+      if(!spec||previous.containerSpec?.type!=='financial-widget'||spec.widget!==previous.containerSpec.widget||JSON.stringify(previous.containerSpec)!==JSON.stringify(value.expected))throw Error(t("组件配置已变化，请重试。"))
       context.editor.updateBlock(block.id,{props:{payload:JSON.stringify({...previous,containerSpec:spec})}});reply(true)
     }catch(e){reply(false,(e as Error).message)}
    }
@@ -82,8 +83,8 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
   {selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
  </section>
  return <section className="en-research en-native-component" ref={root} style={size.style} contentEditable={false} data-note-research-block={block.id} data-research-node-id={node.id} data-selected={selected||undefined} data-resizing={size.resizing||undefined} data-financial-theme={context.dark?'dark':'light'}>
-  <header className="en-research-header" draggable={!!context.editor?.isEditable}><button className="en-component-refresh" aria-label="刷新组件" disabled={!ready||busy} onClick={reload}><NoteMenuIcon kind="refresh"/></button><div className="en-native-component-title" id={instance.current+'-title'}><strong>{node.title}</strong></div><button className="en-component-close" aria-label="移除笔记中的组件" disabled={!context.editor?.isEditable} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button></header>
-  <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{error||'正在读取组件…'}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={interaction.select}/>:null}</div>
+  <header className="en-research-header" draggable={!!context.editor?.isEditable}><button className="en-component-refresh" aria-label={t("刷新组件")} disabled={!ready||busy} onClick={reload}><NoteMenuIcon kind="refresh"/></button><div className="en-native-component-title" id={instance.current+'-title'}><strong>{node.title}</strong></div><button className="en-component-close" aria-label={t("移除笔记中的组件")} disabled={!context.editor?.isEditable} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button></header>
+  <div className="en-research-view"><div ref={host} id={instance.current} className="en-native-component-host" data-note-component={node.id} data-note-session={context.sessionId} style={{height:size.height}}/>{!ready?<div className="en-component-empty" role="status">{error||t("正在读取组件…")}</div>:null}{ready&&!selected?<button className="en-component-scroll-guard" aria-label={t("选中组件并操作内容")} onClick={interaction.select}/>:null}</div>
   {error&&ready?<div className="en-component-error" role="alert">{error}</div>:null}
   {selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
  </section>

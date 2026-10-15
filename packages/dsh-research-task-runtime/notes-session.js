@@ -53,7 +53,7 @@ export function engageNoteSession(ctx, input) {
   // Publish participation before a title change; this is genuine note activity,
   // without manufacturing a conversation turn or an assistant message.
   if (!previous) session.append(NOTE_SESSION_EVENT, { automatic, lastAutoSeq, lastAutoTitle })
-  const wanted = input.title.replace(/\s+/g, ' ').trim().slice(0, 120) || lastAutoTitle || '新笔记'
+  const wanted = input.title.replace(/\s+/g, ' ').trim().slice(0, 120) || lastAutoTitle || (input.locale==='en'?'New Note':'新笔记')
   if (automatic && titleEvent?.data.title !== wanted) {
     const accepted = ctx.sessionTitle.rename(session, wanted)
     lastAutoTitle = accepted.title

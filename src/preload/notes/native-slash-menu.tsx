@@ -1,3 +1,4 @@
+import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React, { useEffect, useRef, useState } from 'react'
 import { SuggestionMenu as SuggestionMenuExtension } from '@blocknote/core/extensions'
 import { useBlockNoteEditor, useExtensionState, type SuggestionMenuProps, type DefaultReactSuggestionItem } from '@blocknote/react'
@@ -68,11 +69,11 @@ export function NativeSlashMenu(props: SuggestionMenuProps<NoteSlashItem> & {bri
     const serialize=(item:NoteSlashItem,index:number):NoteMenuItem=>({id:itemId(item,index),title:item.title,subtext:item.subtext||'',group:item.group||'',badge:item.badge||'',icon:(item as any).iconKey||item.key||'paragraph',...(item.children?{children:item.children.map(serialize)}:{})})
     const items=props.items.map(serialize)
     const validSubmenu=submenu&&items.find(item=>item.id===submenu.parentId)?.children?.[submenu.selectedIndex]?submenu:undefined
-    void props.bridge.request('menu-sync',{sessionId:props.sessionId,menuId:menuId.current,revision:next,dark:props.dark,selectedIndex:props.selectedIndex,anchor:{x,y,width,height},items,submenu:validSubmenu}).catch(() => {
+    void props.bridge.request('menu-sync',{sessionId:props.sessionId,menuId:menuId.current,revision:next,dark:props.dark,locale:document.documentElement.dataset.odysseyLocale==='en'?'en':'zh',selectedIndex:props.selectedIndex,anchor:{x,y,width,height},items,submenu:validSubmenu}).catch(() => {
       if(latestRevision.current === next) editor.getExtension(SuggestionMenuExtension)?.closeMenu()
     })
   },[submenu,props.items,props.selectedIndex,props.dark,props.loadingState,state?.referencePos,state?.show,props.bridge,props.sessionId,editor])
   // Retain the editor's accessible list and active descendant while the visible
   // panel is rendered in a non-key native window. Arrow/Enter/IME stay here.
-  return <div id="bn-suggestion-menu" className="en-native-menu-accessible" role="listbox" aria-label="笔记斜杠菜单">{props.items.map((item,index)=><div key={itemId(item,index)} id={`bn-suggestion-menu-item-${index}`} role="option" aria-selected={props.selectedIndex===index} aria-haspopup={item.children?'menu':undefined}>{item.title}</div>)}{submenu?<div role="listbox" aria-label="组件库">{props.items.find((item,index)=>itemId(item,index)===submenu.parentId)?.children?.map((item,index)=><div key={itemId(item,index)} role="option" aria-selected={submenu.keyboardActive&&submenu.selectedIndex===index}>{item.title}</div>)}</div>:null}</div>
+  return <div id="bn-suggestion-menu" className="en-native-menu-accessible" role="listbox" aria-label={t("笔记斜杠菜单")}>{props.items.map((item,index)=><div key={itemId(item,index)} id={`bn-suggestion-menu-item-${index}`} role="option" aria-selected={props.selectedIndex===index} aria-haspopup={item.children?'menu':undefined}>{item.title}</div>)}{submenu?<div role="listbox" aria-label={t("组件库")}>{props.items.find((item,index)=>itemId(item,index)===submenu.parentId)?.children?.map((item,index)=><div key={itemId(item,index)} role="option" aria-selected={submenu.keyboardActive&&submenu.selectedIndex===index}>{item.title}</div>)}</div>:null}</div>
 }

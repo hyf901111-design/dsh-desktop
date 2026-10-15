@@ -1,3 +1,4 @@
+import {noteUiText} from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import {mkdtemp,rm,writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -183,8 +184,8 @@ export async function noteWordBuffer(content:NoteContent,snapshots?:NoteComponen
 }
 export async function saveNoteExport(input:any,allowed:()=>boolean){
  if(!['docx','pdf','md'].includes(input.format))throw Error('不支持的笔记导出格式。')
- const content=validateNoteContent(input.content),name=(content.title||'无标题文档').replace(/[\u0000-\u001f\\/:*?"<>|]/g,'_').slice(0,140)
- const result=await dialog.showSaveDialog({title:'导出笔记',defaultPath:name+'.'+input.format,filters:[{name:({docx:'Word 文档',pdf:'PDF 文档',md:'Markdown 文档'} as Record<string,string>)[input.format]!,extensions:[input.format]}]})
+ const content=validateNoteContent(input.content),name=(content.title||noteUiText('无标题文档',input.locale)).replace(/[\u0000-\u001f\\/:*?"<>|]/g,'_').slice(0,140)
+ const result=await dialog.showSaveDialog({title:noteUiText('导出笔记',input.locale),defaultPath:name+'.'+input.format,filters:[{name:noteUiText(({docx:'Word 文档',pdf:'PDF 文档',md:'Markdown 文档'} as Record<string,string>)[input.format]!,input.locale),extensions:[input.format]}]})
  if(result.canceled||!result.filePath)return {status:'cancelled'}
  if(!allowed())throw Error('账号已变化，请重新导出。')
  const snapshots=input.format==='md'?undefined:input.snapshots??[]

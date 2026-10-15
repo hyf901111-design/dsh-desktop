@@ -1,3 +1,4 @@
+import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React,{useCallback,useEffect,useRef,useState} from 'react'
 import type {NoteFileNode,NoteMediaKind,NoteMediaLease} from '../../shared/note-files'
 import {useNoteComponentInteraction} from './component-interaction'
@@ -45,7 +46,7 @@ function useNoteMedia(node:NoteFileNode,context:any,root:React.RefObject<HTMLEle
   const release=(value?:NoteMediaLease)=>{if(value)void context.bridge.request('file-media',{...input,action:'release',releaseId:value.releaseId}).catch(()=>{})}
   const remember=(stayPaused=false)=>{const element=media.current;if(element){playback.current={time:Number.isFinite(element.currentTime)?element.currentTime:0,paused:stayPaused||element.paused,rate:element.playbackRate,volume:element.volume,muted:element.muted};element.pause()}else if(stayPaused)playback.current.paused=true}
   const clear=()=>{version++;pending=false;if(timer)clearTimeout(timer);timer=undefined;remember(true);release(current);current=undefined;if(live){setLease(undefined);setLoading(false)}}
-  const fail=(message:string)=>{if(!live)return;failed=true;clear();setError(message||'文件暂时无法读取。')}
+  const fail=(message:string)=>{if(!live)return;failed=true;clear();setError(message||t("文件暂时无法读取。"))}
   failure.current=fail
   const acquire=async(renew=false)=>{
    if(!live||pending||failed||!enabled||!visible(root.current))return
@@ -53,7 +54,7 @@ function useNoteMedia(node:NoteFileNode,context:any,root:React.RefObject<HTMLEle
    if(!renew)setLoading(true)
    try{
     const value:NoteMediaLease=await context.bridge.request('file-media',{...input,action:renew?'renew':'acquire',...(renew&&previous?{releaseId:previous.releaseId}:{})})
-    if(!value||!/^sherlock-preview:\/\/[^/]+\/$/.test(value.url)||!value.releaseId||!['image','audio','video'].includes(value.kind)||!Number.isFinite(value.expiresAt)||value.expiresAt<=Date.now())throw Error('文件预览授权无效，请重试。')
+    if(!value||!/^sherlock-preview:\/\/[^/]+\/$/.test(value.url)||!value.releaseId||!['image','audio','video'].includes(value.kind)||!Number.isFinite(value.expiresAt)||value.expiresAt<=Date.now())throw Error(t("文件预览授权无效，请重试。"))
     if(!live||ticket!==version||!visible(root.current)){release(value);return}
     if(renew)remember()
     current=value;setLease(value);setLoading(false)
@@ -74,7 +75,7 @@ function useNoteMedia(node:NoteFileNode,context:any,root:React.RefObject<HTMLEle
   try{element.currentTime=state.time;element.playbackRate=state.rate;element.volume=state.volume;element.muted=state.muted}catch{}
   if(!state.paused&&visible(root.current))void element.play().catch(()=>{})
  }
- return {lease,error,loading,media,setMedia,loaded,retry:()=>setAttempt(value=>value+1),fail:()=>failure.current('文件无法播放或读取，请重试。')}
+ return {lease,error,loading,media,setMedia,loaded,retry:()=>setAttempt(value=>value+1),fail:()=>failure.current(t("文件无法播放或读取，请重试。"))}
 }
 
 export function InlineNoteFileBlock({block,node,context}:{block:any;node:NoteFileNode;context:any}){
@@ -83,7 +84,7 @@ export function InlineNoteFileBlock({block,node,context}:{block:any;node:NoteFil
  useEffect(()=>setReady(false),[runtime.lease?.url])
  const title=node.displayName||node.name,message=node.error||runtime.error||revealError
  const reveal=()=>void context.bridge.request('file-reveal',{sessionId:context.sessionId,nodeId:node.id,authorizationId:node.authorizationId}).catch((e:Error)=>setRevealError(e.message))
- const label=<div className="en-inline-file-label"><button type="button" className="en-inline-file-open" title="在访达中显示" disabled={!node.authorizationId||!!node.importStatus} onClick={reveal}><NoteMenuIcon kind="file"/><span>{title}</span></button>{message?<span className="en-inline-file-status" role="alert">{message}</span>:node.importStatus==='importing'||runtime.loading?<span className="en-inline-file-status" role="status">{node.importStatus==='importing'?'正在导入…':'正在读取…'}</span>:null}{runtime.error?<button type="button" className="en-inline-file-retry" onClick={runtime.retry}>重试</button>:null}</div>
+ const label=<div className="en-inline-file-label"><button type="button" className="en-inline-file-open" title={t("在访达中显示")} disabled={!node.authorizationId||!!node.importStatus} onClick={reveal}><NoteMenuIcon kind="file"/><span>{title}</span></button>{message?<span className="en-inline-file-status" role="alert">{message}</span>:node.importStatus==='importing'||runtime.loading?<span className="en-inline-file-status" role="status">{node.importStatus==='importing'?t("正在导入…"):t("正在读取…")}</span>:null}{runtime.error?<button type="button" className="en-inline-file-retry" onClick={runtime.retry}>{t("重试")}</button>:null}</div>
  const value=runtime.lease,visual=!!value&&!message
  const height=(node.noteSize?.height||size.resizing)?size.height:undefined
  const metadata=()=>{runtime.loaded();setReady(true);const element=runtime.media.current;if(element instanceof HTMLVideoElement&&element.videoWidth)setNaturalHeight(Math.min(2400,size.width*element.videoHeight/element.videoWidth))}
