@@ -11,6 +11,7 @@ const trajectoryCss = await readFile(new URL('../../src/preload/figma-trajectory
 const inlineCss = await readFile(new URL('../../src/preload/figma-inline-references.css', import.meta.url), 'utf8')
 const motionCss = await readFile(new URL('../../src/preload/figma-motion.css', import.meta.url), 'utf8')
 const refinementCss = await readFile(new URL('../../src/preload/figma-refinements.css', import.meta.url), 'utf8')
+const clientTypography = await readFile(new URL('../../src/preload/client-typography.css', import.meta.url), 'utf8')
 const require=createRequire(import.meta.url)
 const userThemeCss=userMessageThemeCss(await readFile(require.resolve('@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css'),'utf8'),await readFile(require.resolve('@deepseek-ai/dsh-client-ui-theme/styles/shiki.css'),'utf8'),css)
 const START = '/* ODYSSEY_FIGMA_FINAL_SHELL_START */'
@@ -82,7 +83,7 @@ export function patchFigmaFinalConversation(source) {
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || t("research.context.sent", { initial: research.canvasContext.initialSourceIds.length, total: research.canvasContext.totalSources }), frozenCanvasContext: true };',
     'return research.canvasContext === void 0 ? row : { ...row, text: null, preview: research.text || (Array.isArray(row.content) && contentParts(row.content).images.length > 0 ? t("image.pending") + " · " + contentParts(row.content).images.length : ""), frozenCanvasContext: true };')
   source = patchFigmaSessionTitle(source)
-  const block = `${START}\nif(typeof document!=="undefined"&&!document.getElementById?.("sherlock-desktop-shell-style")){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.documentElement.appendChild(style);}style.textContent=${JSON.stringify(css + homeCss + panelCss + filePanelCss + trajectoryCss + inlineCss + motionCss + refinementCss + readingCss + userThemeCss)};}\n${END}`
+  const block = `${START}\nif(typeof document!=="undefined"&&!document.getElementById?.("sherlock-desktop-shell-style")){let style=document.getElementById?.("odyssey-figma-final-shell");if(!style){style=document.createElement("style");style.id="odyssey-figma-final-shell";document.documentElement.appendChild(style);}style.textContent=${JSON.stringify(css + homeCss + panelCss + filePanelCss + trajectoryCss + inlineCss + motionCss + refinementCss + readingCss + userThemeCss + clientTypography)};}\n${END}`
   const starts=source.split(START).length-1, ends=source.split(END).length-1
   if(starts!==ends || starts>1 || (starts===1 && source.indexOf(END)<source.indexOf(START))) throw Error('Figma final shell marker is incomplete or duplicated')
   if(starts===1) return source.slice(0,source.indexOf(START))+block+source.slice(source.indexOf(END)+END.length)
