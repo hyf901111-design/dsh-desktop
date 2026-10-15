@@ -240,6 +240,37 @@
           "仅使用当前父会话可见且已授权的工具；外部数据暂时不可用时保留错误与现有内容。"
         ],
         "generatedAt": "2026-10-15T04:25:52.595630+00:00"
+      },
+      "merged": {
+        "mergeCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
+        "verificationCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
+            "completedAt": "2026-10-15T04:27:02.594Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "9cad77162ce798e3a861872b8f2e95ff5e056bc3",
+            "completedAt": "2026-10-15T04:27:02.594Z",
+            "timeoutMs": 10000
+          }
+        ],
+        "recordedAt": "2026-10-15T04:27:02.594Z"
       }
     }
   ],
