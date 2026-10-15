@@ -25,6 +25,24 @@ beforeAll(async()=>{
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },30000)
 afterAll(async()=>browser?.close())
+it('aligns the entire narrowed component without losing its payload, frame or saved alignment',async()=>{
+ const f=await fixture();try{
+  await f.notes.locator('.en-native-component-heading strong').click()
+  await f.notes.getByRole('separator',{name:'调整组件宽度',exact:true}).press('Home')
+  await f.frame.evaluate(el=>el.dataset.identity='aligned')
+  const positions=[]
+  for(const [label,alignment] of [['左对齐','left'],['居中','center'],['右对齐','right']]){
+   await f.notes.locator('header').first().hover();await f.page.getByRole('button',{name:'段落操作',exact:true}).click();await f.page.locator('.en-block-menu').getByRole('button',{name:label,exact:true}).click()
+   expect(await f.page.evaluate(()=>window.noteEditor.getBlock('heat-block').props.textAlignment)).toBe(alignment)
+   positions.push((await f.notes.boundingBox()).x)
+   expect(await f.frame.getAttribute('data-identity')).toBe('aligned')
+   expect(await f.page.evaluate(()=>JSON.parse(window.noteEditor.getBlock('heat-block').props.payload).containerSpec.title)).toBe('布局验收')
+  }
+  expect(positions[1]).toBeGreaterThan(positions[0]+100);expect(positions[2]).toBeGreaterThan(positions[1]+100)
+  await expect.poll(()=>f.page.evaluate(()=>window.savedNote?.blocks[0].props.textAlignment)).toBe('right')
+  await f.page.evaluate(()=>window.reopen());await expect.poll(()=>f.notes.boundingBox().then(r=>r.x)).toBe(positions[2])
+ }finally{await f.context.close()}
+},15000)
 async function fixture(){
  const context=await browser.newContext({viewport:{width:1440,height:1000}}),page=await context.newPage()
  page.on('pageerror',e=>console.error('layout-browser-error:',e.message))

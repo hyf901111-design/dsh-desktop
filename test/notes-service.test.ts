@@ -22,6 +22,11 @@ it('relays progress to the trusted request and separates it from the final docum
  expect(await s.call('generate',{requestId:'r',markdown:'正文',prompt:'写作',selection:''})).toEqual({kind:'text',markdown:'结果正文'})
  expect(s.progress).toEqual([{channel:'notes:progress',value:{sessionId:'session',requestId:'r',owner:'alice',stage:'thinking',reasoning:'先整理段落。',outputChars:0}}]);s.dispose()
 })
+it('forwards the exact note reference scope through the real generation request',async()=>{
+ const s=service('http://127.0.0.1:9999'),context={scope:'selection',components:[{blockId:'chart',title:'收入表',type:'research',content:'123'}]};let body:any
+ vi.stubGlobal('fetch',async(_url:any,options:any)=>{body=JSON.parse(options.body);return new Response(JSON.stringify({type:'result',result:{kind:'conversation',markdown:'123'}})+'\n')})
+ await s.call('generate',{requestId:'context',markdown:'',selection:'',prompt:'说明',context});expect(body.context).toEqual(context);s.dispose()
+})
 it('does not forward a previous account’s progress after identity changes',async()=>{
  const s=service('http://127.0.0.1:9999')
  vi.stubGlobal('fetch',async()=>{s.changeOwner();return new Response(JSON.stringify({type:'progress',stage:'thinking',reasoning:'旧账号内容',outputChars:0})+'\n'+JSON.stringify({type:'result',result:{kind:'text',markdown:'旧结果'}})+'\n')})

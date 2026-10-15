@@ -75,7 +75,8 @@ export function useNoteComponentSize({block,node,editor,root,naturalHeight}:{blo
    commit(axis,e.key==='Home'?min:e.key==='End'?max:value+(e.key===keys[0]?-1:1)*(e.shiftKey?64:16))
   }
  })
- return {height,width,minWidth,maxWidth,minHeight,maxHeight,resizing:!!preview,style:{width:preview?.width ?? (finite(saved.width)?width:'100%'),maxWidth:'100%',minWidth:0} as React.CSSProperties,handle}
+ const alignment=block.props.textAlignment||'left'
+ return {height,width,minWidth,maxWidth,minHeight,maxHeight,resizing:!!preview,style:{width:preview?.width ?? (finite(saved.width)?width:'100%'),maxWidth:'100%',minWidth:0,marginLeft:alignment==='left'?0:'auto',marginRight:alignment==='right'?0:'auto',textAlign:'left'} as React.CSSProperties,handle}
 }
 
 export function NoteComponentResizeHandles({size}:{size:ReturnType<typeof useNoteComponentSize>}) {

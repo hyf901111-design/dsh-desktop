@@ -5,6 +5,20 @@ function context(text, kind = 'stop') {
   return { apiProxy: { sessions: { models: async () => ({ result: { ok: true, value: { current: { provider: 'session-provider', model: 'session-model' }, routable: true } } }) } }, llm: { stream: async function* (value) { options = value; yield { type: 'text-delta', text }; yield { type: 'finish', reason: { kind } } } }, options: () => options }
 }
 const input = { sessionId: 'session', title: '笔记', markdown: '正文资料', selection: '选中文字', prompt: '改写为简洁文字', mode: 'write' }
+it('passes the selected component data to the model and excludes the note when opted out',async()=>{
+ const ctx=context('{"kind":"conversation","markdown":"说明"}')
+ const selected={scope:'selection',components:[{blockId:'chart',title:'收入表',type:'research',content:'甲收入123'}]}
+ await generateNoteSuggestion(ctx,{...input,selection:'',markdown:'',context:selected})
+ expect(JSON.parse(ctx.options().messages[0].content[0].text).references).toEqual(selected)
+ await generateNoteSuggestion(ctx,{...input,context:{scope:'none',components:[]}})
+ const sent=JSON.parse(ctx.options().messages[0].content[0].text);expect(sent.document).toBe('');expect(sent.selection).toBe('');expect(sent.title).toBe('')
+})
+it('permits updates only to an explicitly selected research component',async()=>{
+ const ctx=context('{"kind":"component","targetBlockId":"chart","artifact":{"version":1,"type":"table","title":"调整后收入","columns":["项目","收入"],"rows":[["甲",456]]}}')
+ const selected={scope:'selection',components:[{blockId:'chart',title:'收入表',type:'research',content:'甲收入123'}]}
+ expect(await generateNoteSuggestion(ctx,{...input,context:selected})).toMatchObject({kind:'component',targetBlockId:'chart',node:{containerSpec:{title:'调整后收入'}}})
+ await expect(generateNoteSuggestion(ctx,{...input,context:{scope:'note',components:selected.components}})).rejects.toThrow('引用')
+})
 it('reports actual model reasoning and writing progress while returning the document only in the final result',async()=>{
  const ctx=context(''),seen=[]
  ctx.llm.stream=async function*(){yield{type:'reasoning-delta',index:0,text:'先保留原意，再整理段落。'};yield{type:'text-delta',index:1,text:'{"kind":"text","markdown":"新正文"}'};yield{type:'finish',reason:{kind:'stop'}}}
