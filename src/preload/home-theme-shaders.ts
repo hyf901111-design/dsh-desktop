@@ -1,6 +1,7 @@
 // OpenShaders profile Copy Code exports, retrieved 2026-10-15.
 // https://openshaders.com/@berber, @vghodki306809, @jarrick, @lowfreez,
-// @accelbia, @boz, @shashidhar, @lotustech.
+// @accelbia, @boz, @shashidhar, @haseeb, @kirian, @splines,
+// @antiquue, @emreturan, @abramovdesign.
 // Keep the original fold field and surface effects; only final intensity is
 // composed here to match the approved Odyssey theme designs.
 export const HOME_THEME_VERTEX_SHADER = `#version 300 es
@@ -446,6 +447,109 @@ const mat4 BAYER = mat4(
 
 void main() {
   vec3 ink = sceneInk(gl_FragCoord.xy / iResolution);
+  vec3 color = fromInk(clamp(ink, 0.0, 1.0));
+  vec3 background = mix(uDarkBackground, uLightBackground, uLightMode);
+  fragColor = vec4(mix(background, color, uIntensity), 1.0);
+}
+`,
+  prism: `#version 300 es
+precision highp float;
+uniform highp sampler2D tScene;
+const vec2 uTilt = vec2(0.0);
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uLightMode;
+uniform vec3 uDarkBackground;
+uniform vec3 uLightBackground;
+uniform float uPixelRatio;
+uniform float uStrength;
+uniform float uScale;
+uniform float uSeed;
+uniform float uIntensity;
+out vec4 fragColor;
+const float TAU = 6.28318530718;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 toInk(vec3 c) { return mix(c - uDarkBackground, uLightBackground - c, uLightMode); }
+vec3 fromInk(vec3 ink) { return mix(uDarkBackground + ink, uLightBackground - ink, uLightMode); }
+vec3 sceneInk(vec2 uv) { return toInk(texture(tScene, clamp(uv, 0.0, 1.0)).rgb); }
+
+// Chroma: broad iridescent reflections inside the original ribbons.
+vec3 prism(vec2 frag) {
+  vec2 uv = frag / iResolution;
+  vec2 aspect = vec2(iResolution.x / iResolution.y, 1.0);
+  float time = iTime * 0.22 + uSeed * TAU;
+  float angle = time * 0.7 + uv.y * 1.6;
+  vec2 direction = vec2(cos(angle), sin(angle)) + vec2(-uTilt.x, uTilt.y) * 1.2;
+  vec2 split = direction * 0.008 * uStrength * uScale / aspect;
+  vec3 base = sceneInk(uv);
+  vec3 red = sceneInk(uv + split);
+  vec3 blue = sceneInk(uv - split);
+  vec3 refracted = vec3(red.r, base.g, blue.b);
+  float intensity = length(base) * 0.57735026919 * mix(1.0, 3.2, uLightMode);
+  float presence = smoothstep(0.025, 0.2, intensity);
+  float phase = intensity * 4.0 + dot(uv, vec2(1.6, -1.2)) + time + dot(uTilt, vec2(1.2, -0.8));
+  float coat = smoothstep(0.04, 0.28, intensity) * (1.0 - smoothstep(0.72, 1.0, intensity));
+  vec3 color = max(refracted, 0.0);
+  vec4 K = vec4(0.0, -0.3333333333, 0.6666666667, -1.0);
+  vec4 p = mix(vec4(color.bg, K.wz), vec4(color.gb, K.xy), step(color.b, color.g));
+  vec4 q = mix(vec4(p.xyw, color.r), vec4(color.r, p.yzx), step(p.x, color.r));
+  float chroma = q.x - min(q.w, q.y);
+  float hue = abs(q.z + (q.w - q.y) / (6.0 * chroma + 1e-10));
+  float saturation = chroma / (q.x + 1e-10);
+  hue += sin(phase) * 0.24 * coat;
+  saturation += (1.0 - saturation) * coat * 0.22 * smoothstep(0.04, 0.16, saturation);
+  vec3 wheel = abs(fract(vec3(hue) + vec3(1.0, 0.6666666667, 0.3333333333)) * 6.0 - 3.0);
+  vec3 film = q.x * mix(vec3(1.0), clamp(wheel - 1.0, 0.0, 1.0), saturation);
+  return mix(base, film, presence);
+}
+
+
+void main() {
+  vec3 ink = prism(gl_FragCoord.xy);
+  vec3 color = fromInk(clamp(ink, 0.0, 1.0));
+  vec3 background = mix(uDarkBackground, uLightBackground, uLightMode);
+  fragColor = vec4(mix(background, color, uIntensity), 1.0);
+}
+`,
+  pixel: `#version 300 es
+precision highp float;
+uniform sampler2D tScene;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform float uLightMode;
+uniform vec3 uDarkBackground;
+uniform vec3 uLightBackground;
+uniform float uPixelRatio;
+uniform float uStrength;
+uniform float uScale;
+uniform float uSeed;
+uniform float uIntensity;
+out vec4 fragColor;
+const float TAU = 6.28318530718;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 toInk(vec3 c) { return mix(c - uDarkBackground, uLightBackground - c, uLightMode); }
+vec3 fromInk(vec3 ink) { return mix(uDarkBackground + ink, uLightBackground - ink, uLightMode); }
+vec3 sceneInk(vec2 uv) { return toInk(texture(tScene, clamp(uv, 0.0, 1.0)).rgb); }
+
+// Mosaic: the field is held to a grid of small tiles, each carrying the
+// averaged tone under it.
+vec3 pixelate(vec2 frag) {
+  float cell = max(3.0, floor(uScale * 6.0 * uPixelRatio + 0.5));
+  vec2 grid = floor(frag / cell);
+  vec2 centre = (grid + 0.5) * cell;
+  vec3 ink = vec3(0.0);
+  ink += sceneInk((centre + cell * vec2(-0.25, -0.25)) / iResolution);
+  ink += sceneInk((centre + cell * vec2(0.25, -0.25)) / iResolution);
+  ink += sceneInk((centre + cell * vec2(-0.25, 0.25)) / iResolution);
+  ink += sceneInk((centre + cell * vec2(0.25, 0.25)) / iResolution);
+  return ink * 0.25;
+}
+
+
+void main() {
+  vec3 ink = pixelate(gl_FragCoord.xy);
   vec3 color = fromInk(clamp(ink, 0.0, 1.0));
   vec3 background = mix(uDarkBackground, uLightBackground, uLightMode);
   fragColor = vec4(mix(background, color, uIntensity), 1.0);

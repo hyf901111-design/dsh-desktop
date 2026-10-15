@@ -32,14 +32,14 @@ async function fixture() {
 }
 
 describe('original theme shaders in real WebGL2', () => {
-  it('renders all seven designs in light and dark with distinct textures and moving fields', async () => {
+  it('renders all thirteen designs in light and dark with distinct textures and moving fields', async () => {
     const page = await fixture(), errors = []
     page.on('pageerror', error => errors.push(error.message))
     try {
       const result = await page.evaluate(() => {
         document.body.style.cssText = 'margin:0;background:#888;font:15px system-ui'
         document.querySelector('main').style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px'
-        const names = ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar'], result = []
+        const names = ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'emreturan', 'abramovdesign'], result = []
         const stats = (gl, canvas) => {
           const bytes = new Uint8Array(canvas.width * canvas.height * 4)
           gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, bytes)
@@ -74,22 +74,22 @@ describe('original theme shaders in real WebGL2', () => {
         return result
       })
       expect(errors).toEqual([])
-      expect(result).toHaveLength(14)
+      expect(result).toHaveLength(26)
       for (const entry of result) {
         expect(entry.max - entry.min).toBeGreaterThan(25)
         expect(entry.changedFraction).toBeGreaterThan(.04)
         expect(entry.afterDispose).toBe(false)
       }
-      for (const name of ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar']) {
+      for (const name of ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'emreturan', 'abramovdesign']) {
         const dark = result.find(entry => entry.name === name && entry.dark), light = result.find(entry => entry.name === name && !entry.dark)
         expect(light.luminance - dark.luminance).toBeGreaterThan(50)
       }
-      expect(new Set(result.filter(entry => entry.dark).map(entry => entry.hash)).size).toBe(7)
+      expect(new Set(result.filter(entry => entry.dark).map(entry => entry.hash)).size).toBe(13)
       await page.screenshot({ path: join(evidence, 'all-themes.png'), fullPage: true })
       await writeFile(join(evidence, 'render-results.json'), JSON.stringify(result, null, 2))
       console.log('Theme render evidence:', evidence)
     } finally { await page.close() }
-  }, 60000)
+  }, 90000)
 
   it('exports stable thumbnails, bounds Retina allocations and changes theme while paused', async () => {
     const page = await fixture()
@@ -174,7 +174,7 @@ describe('original theme shaders in real WebGL2', () => {
         const first = active.render(0), losses = []
         for (let i = 0; i < 25; i++) {
           const canvas = document.createElement('canvas')
-          const renderer = window.createTheme(canvas, ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar'][i % 7], { dark: i % 2 === 0 })
+          const renderer = window.createTheme(canvas, ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'emreturan', 'abramovdesign'][i % 13], { dark: i % 2 === 0 })
           if (!renderer) throw new Error('Renderer creation failed at switch ' + i)
           renderer.resize(80, 48)
           if (!renderer.render(i / 24)) throw new Error('Renderer failed at switch ' + i)
