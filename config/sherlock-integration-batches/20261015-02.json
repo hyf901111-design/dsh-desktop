@@ -9,24 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首页新增四款动态主题及输入按钮材质优化",
+        "featureName": "首页新增六款主题、移除指定主题与展开按钮优化",
         "branch": "codex/feat/home-theme-switch-20261015",
-        "baseCommit": "4d6c960a7f4a02218acc9e1df97cb5d60133b375",
-        "tipCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
+        "baseCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
+        "tipCommit": "8d1b51de7e0bea90abb5321ab0ecb0cb9fe30387",
         "commits": [
           {
-            "commit": "84ef21e34d426c16d802b407158973f3a89441e9",
+            "commit": "1a29fe190b300f5f3aac011dca2363e4a34d866a",
             "parents": [
-              "4d6c960a7f4a02218acc9e1df97cb5d60133b375"
+              "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1"
             ],
-            "subject": "优化：首页命令与附件按钮使用半透明底色"
+            "subject": "调整：首页移除指定主题并增强展开按钮辨识度"
           },
           {
-            "commit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
+            "commit": "8d1b51de7e0bea90abb5321ab0ecb0cb9fe30387",
             "parents": [
-              "84ef21e34d426c16d802b407158973f3a89441e9"
+              "1a29fe190b300f5f3aac011dca2363e4a34d866a"
             ],
-            "subject": "新增：接入四款首页动态主题及对应预览卡片"
+            "subject": "新增：首页接入六款动态主题与预览卡片"
           }
         ],
         "files": [
@@ -35,16 +35,8 @@
             "path": "src/preload/figma-home.css"
           },
           {
-            "status": "A",
-            "path": "src/preload/home-theme-assets/boz-glyph-atlas.json"
-          },
-          {
             "status": "M",
             "path": "src/preload/home-theme-configs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-theme-renderer.ts"
           },
           {
             "status": "M",
@@ -87,10 +79,10 @@
               "--hookTimeout=60000"
             ],
             "outcome": "passed",
-            "summary": "39项主题、渲染、动效、按钮材质与输入布局聚焦检查通过",
-            "verifiedCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
-            "completedAt": "2026-10-15T07:50:03.319336+00:00",
-            "timeoutMs": 180000
+            "summary": "45项主题、渲染、动效、窗口居中、展开按钮材质与输入布局聚焦检查通过",
+            "verifiedCommit": "8d1b51de7e0bea90abb5321ab0ecb0cb9fe30387",
+            "completedAt": "2026-10-15T08:49:04.072503+00:00",
+            "timeoutMs": 300000
           },
           {
             "argv": [
@@ -100,8 +92,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
-            "completedAt": "2026-10-15T07:50:03.319336+00:00",
+            "verifiedCommit": "8d1b51de7e0bea90abb5321ab0ecb0cb9fe30387",
+            "completedAt": "2026-10-15T08:49:04.072503+00:00",
             "timeoutMs": 180000
           },
           {
@@ -112,54 +104,24 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "927fc3c7f9c5ca1aa59e289a674da3821ab4aec1",
-            "completedAt": "2026-10-15T07:50:03.319336+00:00",
+            "verifiedCommit": "8d1b51de7e0bea90abb5321ab0ecb0cb9fe30387",
+            "completedAt": "2026-10-15T08:49:04.072503+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium渲染并检查八款动效的深浅色、动态像素、快速切换、九主题循环与键盘操作；新增四款截图已对照Figma核验。两个按钮在生产样式下的半透明底色和悬停反馈通过。最终客户端将在集成构建后复核。"
+          "summary": "真实Chromium渲染13款动态背景的深浅色并对照Figma检查，14主题循环及键盘切换、旧LotusTech偏好回退、三种窗口宽度中三卡与背景中心误差小于0.6px均通过；展开按钮在明暗背景上保持清晰。最终客户端将在集成构建后复核。"
         },
         "acceptanceCriteria": [
-          "新增Accelbia、Boz、Shashidhar、LotusTech四款动态背景和Figma预览卡片",
-          "九主题循环、记忆选择、渐变切换和首页错落入场正常",
-          "斜杠与附件按钮改为半透明底色并保留交互反馈",
+          "新增Haseeb、Kirian、Splines、Antiquue、EmreTuran、AbramovDesign六款动态背景及Figma预览",
+          "移除LotusTech并让旧偏好安全回退默认主题",
+          "底部三卡相对背景区域居中，侧栏和窄窗口下正常",
+          "右上角展开按钮具有更明显的半透明底色",
           "最终客户端实际复核并保持打开供用户测试"
         ],
         "risks": [],
-        "generatedAt": "2026-10-15T07:50:03.319336+00:00"
-      },
-      "merged": {
-        "mergeCommit": "81fbffa425de67de1878a1c120b7cb3d488fde75",
-        "verificationCommit": "81fbffa425de67de1878a1c120b7cb3d488fde75",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "81fbffa425de67de1878a1c120b7cb3d488fde75",
-            "completedAt": "2026-10-15T07:51:26.985Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "81fbffa425de67de1878a1c120b7cb3d488fde75",
-            "completedAt": "2026-10-15T07:51:26.985Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-15T07:51:26.985Z"
+        "generatedAt": "2026-10-15T08:49:04.072503+00:00"
       }
     }
   ],
