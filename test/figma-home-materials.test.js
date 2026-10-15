@@ -1,32 +1,39 @@
-import { readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { build } from 'esbuild'
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import sharp from 'sharp'
 
 // Use the actual stylesheet order. The newer universal input rule intentionally
 // makes every composer opaque; only empty-home header and corner rules differ.
-const shell = readFileSync('src/preload/shell-style.ts', 'utf8')
-const imports = [...shell.matchAll(/import (\w+) from '(\.\/[^']+\.css)\?raw'/g)]
-const order = shell.match(/style\.textContent = ([^\n]+)/)?.[1] ?? ''
-const css = order.split('+').map(name => {
-  if (name.trim() === 'desktopShellStyles') return shell.match(/const desktopShellStyles = `([\s\S]*?)`/)?.[1] ?? ''
-  const entry = imports.find(match => match[1] === name.trim())
-  if (!entry) throw new Error('Stylesheet order anchor drifted: ' + name)
-  return readFileSync('src/preload/' + entry[2].slice(2), 'utf8')
-}).join('\n')
-
-let browser
+let browser, shellRuntime
 beforeAll(async () => {
+  const require = createRequire(import.meta.url)
+  const result = await build({
+    stdin: { contents: "import {mountDesktopShellStyles} from './src/preload/shell-style'; mountDesktopShellStyles(document)", resolveDir: process.cwd(), loader: 'ts' },
+    bundle: true, platform: 'browser', format: 'iife', write: false,
+    plugins: [{ name: 'raw-css', setup(b) {
+      b.onResolve({ filter: /\.css\?raw$/ }, a => ({ path: a.path.startsWith('.') ? resolve(a.resolveDir, a.path.slice(0, -4)) : require.resolve(a.path.slice(0, -4)), namespace: 'raw' }))
+      b.onLoad({ filter: /.*/, namespace: 'raw' }, async a => ({ contents: 'export default ' + JSON.stringify(await readFile(a.path, 'utf8')), loader: 'js' }))
+    } }]
+  })
+  shellRuntime = result.outputFiles[0].text
   const runtime = process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js'
   const { chromium } = await import(/* @vite-ignore */ pathToFileURL(runtime).href)
   browser = await chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
 })
 afterAll(async () => { await browser?.close() })
+async function setContent(page, html) {
+  await page.setContent(html)
+  await page.addScriptTag({ content: shellRuntime })
+}
 
 it('research header keeps its vertical fade at both edges and covers the top-right cutout', async () => {
   const page = await browser.newPage({ viewport: { width: 720, height: 160 }, deviceScaleFactor: 1 })
   try {
-    await page.setContent(`<style>${css}</style><style>
+    await setContent(page, `<style>
       body { margin:0 }
       .tile { position:absolute; top:0; width:30px; height:140px; background:#00c880 }
       .tile.left { left:85px }
@@ -56,7 +63,7 @@ for (const dark of [false, true]) {
   it(`${dark ? 'dark' : 'light'} research header overlays the canvas within the compact 44 px bar`, async () => {
     const page = await browser.newPage()
     try {
-      await page.setContent(`<style>${css}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
+      await setContent(page, `<body ${dark ? 'data-ds-dark-theme' : ''}>
         <main class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="research" style="display:flex;flex-direction:column;height:400px">
           <header class="wSkVaW_header" data-srb-session-header data-odyssey-header-layout="regular"></header>
           <div class="wSkVaW_scrollBody" data-research-center style="flex:1;position:relative"></div>
@@ -95,7 +102,7 @@ for (const dark of [false, true]) {
       await page.route('**/*', route => route.abort())
       // These display:contents slots and the #root/frame/data-pane ancestry
       // are present in the native app; CSS child combinators still see them.
-      await page.setContent(`<style>${css}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
+      await setContent(page, `<body ${dark ? 'data-ds-dark-theme' : ''}>
         <div id="root"><div data-slot="root" style="display:contents">
           <div class="pI_x6G_frame" data-dsh-frame="true">
             <main class="pI_x6G_centerCol" data-pane="conversation">

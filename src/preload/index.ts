@@ -29,6 +29,7 @@ import { isPluginLoadError } from './plugin-error-view'
 import { mountDesktopShellStyles } from './shell-style'
 import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
+import { mountHomeThemes } from './home-themes'
 import { mountFigmaResizeFeedback } from './figma-resize-feedback'
 import { mountFigmaScrollbars } from './figma-scrollbars'
 import { mountFigmaTaskScrollbar } from './figma-task-scrollbar'
@@ -195,7 +196,8 @@ function initializeUi(): void {
     mountNativeThemeSync({ document, ipcRenderer })
     mountDesktopShellStyles(document)
     window.addEventListener('unload', mountFigmaMotionController(document), { once: true })
-    window.addEventListener('unload', mountHomeFlow(document), { once: true })
+    window.addEventListener('unload', mountHomeFlow(document, { home: false }), { once: true })
+    window.addEventListener('unload', mountHomeThemes(document), { once: true })
     window.addEventListener('unload', mountFigmaResizeFeedback(document), { once: true })
     if (process.platform === 'darwin') window.addEventListener('unload', mountWindowResize(document, edge => ipcRenderer.send('desktop-window:resize', edge)), { once: true })
     window.addEventListener('unload', mountFigmaResponsiveHeader(document), { once: true })
