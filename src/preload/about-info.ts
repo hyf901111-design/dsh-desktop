@@ -21,6 +21,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       "version": "1.3.1",
       "date": "2026-10-15",
       "items": [
+        "补齐新增功能的英文界面：笔记页签、编辑器、斜杠与格式菜单、引用、组件与文件操作、导出和记忆设置随应用语言切换，保留用户正文与记忆内容。",
         "笔记中的组件框支持居左、居中和居右，与段落对齐命令一致，并保留组件自身尺寸。",
         "笔记支持选中一个或多个组件、框选正文或附件文字作为 AI 引用，输入框显示对应标签，可针对选中内容提问、补充或修改。",
         "未选择内容时，可切换“参考当前笔记内容”或“不参考当前笔记内容”；参考列表包含当前组件和“笔记全文”。",
@@ -436,6 +437,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       "version": "1.3.1",
       "date": "2026-10-15",
       "items": [
+        "Completed English UI for Notes, slash and formatting menus, references, component and file actions, exports and Memory settings; language switching preserves user notes and saved memories.",
         "Component frames in Notes now support left, center and right paragraph alignment while retaining their own sizes.",
         "Select one or more components or highlight body or attachment text as AI references in Notes. Composer tags identify the selected material for questions, additions and edits.",
         "Without a selection, switch between referencing the current note and answering without it. The reference list includes current components and the full note.",

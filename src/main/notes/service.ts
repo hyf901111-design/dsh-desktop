@@ -35,7 +35,7 @@ export function installNotesService(options: {
       case 'component-ready': return {ready:findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)?.containerSpec?.type==='calendar-tool'}
       case 'component-render': {if(!noteLibrarySpec(input.spec))throw Error('组件内容格式无效。');return {ok:true}}
       case 'reply-render': {if(typeof input.text!=='string'||!input.text.trim()||input.text.length>100000)throw Error('回复内容不可用。');return {ok:true}}
-      case 'file-pick': return pickNoteFiles(input.kind,options.getWindow(),()=>options.owner()===owner&&options.canRead(session))
+      case 'file-pick': return pickNoteFiles(input.kind,options.getWindow(),()=>options.owner()===owner&&options.canRead(session),input.locale)
       case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
       case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
       case 'file-media': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.media(owner,session,input)
@@ -70,7 +70,7 @@ export function installNotesService(options: {
       case 'engage': {
         const base = options.runtimeUrl(); if (!base) throw Error('会话服务尚未就绪，请稍后重试。')
         const url = new URL('/sherlock/notes/session', base)
-        const response = await fetch(url, {method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,title:input.title})})
+        const response = await fetch(url, {method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,title:input.title,locale:input.locale})})
         const result = await response.json()
         if (!response.ok) throw Error(result.error || '笔记会话暂未保存，请重试。')
         if (options.owner() !== owner) throw Error('账号已变化，请重新打开笔记。')

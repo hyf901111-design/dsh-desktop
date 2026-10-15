@@ -1,3 +1,4 @@
+import {noteUiText} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import { createHomeFlowField } from './home-flow'
 import { createHomeThemeRenderer, type HomeShaderThemeId } from './home-theme-renderer'
 import defaultLight from './home-theme-assets/default-light.png?inline'
@@ -167,8 +168,8 @@ export function mountHomeThemes(doc: Document = document): () => void {
       button.setAttribute('aria-hidden', String(Math.abs(offset) > 1))
       button.setAttribute('aria-pressed', String(offset === 0))
       button.tabIndex = Math.abs(offset) > 1 ? -1 : 0
-      button.setAttribute('aria-label', offset === 0 ? '当前背景：' + LABELS[id] : '切换到 ' + LABELS[id] + ' 背景')
-      button.title = LABELS[id]
+      button.setAttribute('aria-label', doc.documentElement.dataset.odysseyLocale==='en' ? (offset===0?'Current background: ':'Switch background: ')+noteUiText(LABELS[id],'en') : offset === 0 ? '当前背景：' + LABELS[id] : '切换到 ' + LABELS[id] + ' 背景')
+      button.title = noteUiText(LABELS[id],doc.documentElement.dataset.odysseyLocale)
       const value = thumbnail(id)
       if (value) button.style.setProperty('--theme-thumbnail', `url("${value}")`)
       else button.style.removeProperty('--theme-thumbnail')
@@ -224,8 +225,11 @@ export function mountHomeThemes(doc: Document = document): () => void {
     updateCards(); replaceSurface(false); observer.observe(host)
   }
   const observer = new win.ResizeObserver(resize)
+  let renderedLocale=doc.documentElement.dataset.odysseyLocale
   const sync = () => {
     if (disposed) return
+    dock?.setAttribute('aria-label',noteUiText('首页背景主题',doc.documentElement.dataset.odysseyLocale))
+    if(renderedLocale!==doc.documentElement.dataset.odysseyLocale){renderedLocale=doc.documentElement.dataset.odysseyLocale;if(dock)updateCards()}
     const root = [...doc.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]')].find(node => !node.closest('[data-odyssey-subagent-panel]'))
     const nextHost = root?.closest<HTMLElement>('.pI_x6G_centerCol') ?? null
     const nextDark = doc.body.hasAttribute('data-ds-dark-theme')
@@ -247,13 +251,14 @@ export function mountHomeThemes(doc: Document = document): () => void {
   const onStorage = (event: StorageEvent) => { if (event.key !== STORAGE_KEY) return; const value = event.newValue === null ? 'default' : event.newValue; if (validTheme(value)) select(value, false) }
   const changes = new win.MutationObserver(sync)
   changes.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-odyssey-page', 'data-ds-dark-theme', 'data-workspace-surface', 'hidden', 'class', 'style'] })
+  const localeObserver=new win.MutationObserver(sync);localeObserver.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']})
   doc.addEventListener('visibilitychange', onVisibility)
   doc.addEventListener('sherlock:workspace-surface-change', sync)
   reduced.addEventListener('change', onReduced); win.addEventListener('storage', onStorage)
   sync()
   const dispose = () => {
     if (disposed) return
-    disposed = true; changes.disconnect(); teardown()
+    disposed = true; changes.disconnect(); localeObserver.disconnect(); teardown()
     doc.removeEventListener('visibilitychange', onVisibility); doc.removeEventListener('sherlock:workspace-surface-change', sync)
     reduced.removeEventListener('change', onReduced); win.removeEventListener('storage', onStorage)
     thumbs.clear(); mounted.delete(doc)

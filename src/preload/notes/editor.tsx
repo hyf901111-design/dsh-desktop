@@ -1,7 +1,9 @@
+import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { BlockNoteSchema, defaultBlockSpecs, createUserStore } from '@blocknote/core'
-import { zh } from '@blocknote/core/locales'
+import { en, zh } from '@blocknote/core/locales'
+import {useNoteUiLocale,notePlaceholderCss} from './locale'
 import { SideMenuExtension, filterSuggestionItems } from '@blocknote/core/extensions'
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
 import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
@@ -40,7 +42,7 @@ const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.
 
 function AiRewriteButton({onRewrite}:{onRewrite():void}){
  const editor:any=useBlockNoteEditor(),valid=useEditorState({editor,selector:({editor}:any)=>editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection)})
- return valid?<button className="en-ai-format" aria-label="AI 改写" onMouseDown={e=>e.preventDefault()} onClick={onRewrite}><NoteMenuIcon kind="sparkles"/><span>AI 改写</span></button>:null
+ return valid?<button className="en-ai-format" aria-label={t("AI 改写")} onMouseDown={e=>e.preventDefault()} onClick={onRewrite}><NoteMenuIcon kind="sparkles"/><span>{t("AI 改写")}</span></button>:null
 }
 function NoteFormattingToolbar({children}:{children:React.ReactNode}){
  const editor:any=useBlockNoteEditor(),componentSelected=useEditorState({editor,selector:({editor}:any)=>{
@@ -59,7 +61,7 @@ function NoteListButtons(){
  const Components=useComponentsContext()!
  const editor:any=useBlockNoteEditor(),selection=useEditorState({editor,selector:({editor}:any)=>({valid:editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection),blocks:editor.getSelection()?.blocks||[]})})
  if(!selection.valid)return null
- return <>{([['无序列表','bulletListItem'],['有序列表','numberedListItem'],['待办列表','checkListItem']] as const).map(([label,type])=><Components.FormattingToolbar.Button key={type} className="bn-button" label={label} mainTooltip={label} isSelected={selection.blocks.length>0&&selection.blocks.every((block:any)=>block.type===type)} onClick={()=>changeNoteList(editor,type)} icon={<NoteMenuIcon kind={type}/>}/>)}</>
+ return <>{([[t("无序列表"),'bulletListItem'],[t("有序列表"),'numberedListItem'],[t("待办列表"),'checkListItem']] as const).map(([label,type])=><Components.FormattingToolbar.Button key={type} className="bn-button" label={label} mainTooltip={label} isSelected={selection.blocks.length>0&&selection.blocks.every((block:any)=>block.type===type)} onClick={()=>changeNoteList(editor,type)} icon={<NoteMenuIcon kind={type}/>}/>)}</>
 }
 function ResearchBlock({block}:any){
  const context=useContext(Context)!,node=useMemo(()=>{try{return JSON.parse(block.props.payload)}catch{return {}}},[block.props.payload])
@@ -73,8 +75,8 @@ function ResearchSnapshotBlock({ block }: any) {
   const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height}),renderKey=JSON.stringify(node.containerSpec)
   useEffect(() => {
     let live = true; setError(''); setHtml('');intrinsic.current=false
-    if (!node.containerSpec) { setRefreshing(false);setError(node.generationError || (node.generationStatus === 'running' ? '正在创建组件，已保留正文中的位置…' : node.generationStatus === 'interrupted' ? '创建已停止，可重新描述需求。' : '组件尚未提供内容。')); return }
-    context.bridge.request('render', { sessionId: context.sessionId, spec: node.containerSpec, dark:context.dark }).then((result: any) => { if (live) { setHtml(result.document || result.html); if (!result.html) setError('此组件保留在笔记中，可在研究中查看。') } }).catch((e: Error) => live && setError(e.message)).finally(()=>{if(live)setRefreshing(false)})
+    if (!node.containerSpec) { setRefreshing(false);setError(node.generationError || (node.generationStatus === 'running' ? t("正在创建组件，已保留正文中的位置…") : node.generationStatus === 'interrupted' ? t("创建已停止，可重新描述需求。") : t("组件尚未提供内容。"))); return }
+    context.bridge.request('render', { sessionId: context.sessionId, spec: node.containerSpec, dark:context.dark }).then((result: any) => { if (live) { setHtml(result.document || result.html); if (!result.html) setError(t("此组件保留在笔记中，可在研究中查看。")) } }).catch((e: Error) => live && setError(e.message)).finally(()=>{if(live)setRefreshing(false)})
     return () => { live = false }
   }, [renderKey,node.generationError,node.generationStatus, context.bridge, context.sessionId,refresh])
   useEffect(() => {
@@ -85,23 +87,23 @@ function ResearchSnapshotBlock({ block }: any) {
   const doc=html
 
   return <section className="en-research" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-research-block={block.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
-    <header className="en-research-header" draggable={!!context.editor?.isEditable}><button className="en-component-refresh" aria-label="刷新组件" title="刷新组件" disabled={refreshing||!node.containerSpec} onClick={()=>{setRefreshing(true);setRefresh(value=>value+1)}}><NoteMenuIcon kind="refresh"/></button><strong>{node.title||'研究组件'}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label="移除笔记中的组件" title="移除组件" onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
-    {html?<div className="en-research-view"><iframe ref={frame} title={node.title||'研究组件'} sandbox="allow-scripts" srcDoc={doc} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')} style={{height:size.height}}/>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中组件并操作内容" onClick={interaction.select}/>:null}</div>:<div className="en-component-empty"><strong>{node.title||'研究组件'}</strong><p>{error||'正在读取组件…'}</p></div>}
+    <header className="en-research-header" draggable={!!context.editor?.isEditable}><button className="en-component-refresh" aria-label={t("刷新组件")} title={t("刷新组件")} disabled={refreshing||!node.containerSpec} onClick={()=>{setRefreshing(true);setRefresh(value=>value+1)}}><NoteMenuIcon kind="refresh"/></button><strong>{node.title||t("研究组件")}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label={t("移除笔记中的组件")} title={t("移除组件")} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
+    {html?<div className="en-research-view"><iframe ref={frame} title={node.title||t("研究组件")} sandbox="allow-scripts" srcDoc={doc} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')} style={{height:size.height}}/>{!interaction.selected?<button className="en-component-scroll-guard" aria-label={t("选中组件并操作内容")} onClick={interaction.select}/>:null}</div>:<div className="en-component-empty"><strong>{node.title||t("研究组件")}</strong><p>{error||t("正在读取组件…")}</p></div>}
     {error&&html?<div className="en-component-error" role="alert">{error}</div>:null}
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
 }
 const componentAlignment={default:'left',values:['left','center','right'] as const}
-const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' },textAlignment:componentAlignment }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload} data-text-alignment={block.props.textAlignment}>研究组件</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left' } : undefined })()
+const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' },textAlignment:componentAlignment }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload} data-text-alignment={block.props.textAlignment}>{t("研究组件")}</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left' } : undefined })()
 function FileBlock({block}:any){
-  const context=useContext(Context)!,node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:'上次文件导入已中断，请重新插入文件。'}:value}catch{return {id:block.id,name:'文件',importStatus:'failed',error:'文件记录暂不可用。'} as NoteFileNode}},[block.props.payload])
+  const context=useContext(Context)!,node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:t("上次文件导入已中断，请重新插入文件。")}:value}catch{return {id:block.id,name:t("文件"),importStatus:'failed',error:t("文件记录暂不可用。")} as NoteFileNode}},[block.props.payload])
   const presentation=noteFilePresentation(node)
   return presentation==='media'||presentation==='file'||node.importStatus&&node.noteDisplay==='inline'?<InlineNoteFileBlock block={block} node={node} context={context}/>:<ComponentFileBlock block={block} inline={presentation==='document'}/>
 }
 function ComponentFileBlock({block,inline=false}:any){
   const interaction=useNoteComponentInteraction()
   const context=useContext(Context)!,host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),[height,setHeight]=useState(520),[bound,setBound]=useState<string>(),[fileError,setFileError]=useState('')
-  const node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:'上次文件导入已中断，请重新拖入文件。'}:value}catch{return {id:block.id,name:'文件',importStatus:'failed',error:'文件记录暂不可用。'} as NoteFileNode}},[block.props.payload])
+  const node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:t("上次文件导入已中断，请重新拖入文件。")}:value}catch{return {id:block.id,name:t("文件"),importStatus:'failed',error:t("文件记录暂不可用。")} as NoteFileNode}},[block.props.payload])
   const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height})
   const remove=()=>{if(node.importStatus)void context.bridge.request('file-revoke',{sessionId:context.sessionId,nodeId:node.id}).catch(()=>{});context.editor.removeBlocks([block.id])}
   useEffect(()=>{let live=true;setBound(undefined);setFileError('');if(!node.importStatus)void context.bridge.request('file-bind',{sessionId:context.sessionId,nodeId:node.id,authorizationId:node.authorizationId}).then(value=>{if(live)setBound(value.previewSessionId)}).catch(e=>{if(live)setFileError(e.message)});return()=>{live=false}},[context.sessionId,node.id,node.authorizationId,node.importStatus])
@@ -117,10 +119,10 @@ function ComponentFileBlock({block,inline=false}:any){
     return()=>{document.removeEventListener('sherlock:notes-files-sync-request',publish);document.removeEventListener('sherlock:notes-file-action',action)}
   },[node,size.height,context.sessionId,context.dark,bound,inline])
   useEffect(()=>()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,remove:true}}))},[])
-  if(node.importStatus)return <section className="en-research en-note-file en-file-import" contentEditable={false}><header className="en-research-header"><strong>{node.name}</strong><button aria-label="移除笔记中的文件" onClick={remove}>×</button></header><div className="en-component-empty" role={node.importStatus==='failed'?'alert':'status'}>{node.error||'正在导入文件…'}</div></section>
+  if(node.importStatus)return <section className="en-research en-note-file en-file-import" contentEditable={false}><header className="en-research-header"><strong>{node.name}</strong><button aria-label={t("移除笔记中的文件")} onClick={remove}>×</button></header><div className="en-component-empty" role={node.importStatus==='failed'?'alert':'status'}>{node.error||t("正在导入文件…")}</div></section>
   return <section className={'en-research en-note-file'+(inline?' en-inline-file en-inline-document':'')} ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-research-block={block.id} data-note-session={context.sessionId} data-research-node-id={node.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
     <div id={'en-file-header-'+instance.current} className="en-file-header" draggable={!!context.editor?.isEditable}><header className={inline?'en-inline-document-caption en-file-header-fallback':'en-research-header en-file-header-fallback'}><strong>{node.displayName||node.name}</strong></header></div>
-    <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height:inline&&fileError?'auto':size.height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{fileError||'正在读取文件预览…'}</div>{!inline&&!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中文件并操作预览" onClick={interaction.select}/>:null}</div>
+    <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height:inline&&fileError?'auto':size.height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{fileError||t("正在读取文件预览…")}</div>{!inline&&!interaction.selected?<button className="en-component-scroll-guard" aria-label={t("选中文件并操作预览")} onClick={interaction.select}/>:null}</div>
     {fileError?<div className="en-component-error" role="alert">{fileError}</div>:null}
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
@@ -128,9 +130,9 @@ function ComponentFileBlock({block,inline=false}:any){
 const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''},textAlignment:componentAlignment},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload} data-text-alignment={block.props.textAlignment}>笔记文件</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left'}:undefined})()
 const schema = BlockNoteSchema.create({ blockSpecs: { ...withNoteIndentSpecs(defaultBlockSpecs), research: researchSpec,attachment:fileSpec } })
 function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }) {
-  const editor = useCreateBlockNote({ dictionary: zh })
+  const editor = useCreateBlockNote({ dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)} })
   useEffect(() => { editor.replaceBlocks(editor.document, editor.tryParseMarkdownToBlocks(markdown)) }, [editor, markdown])
-  return <BlockNoteView editor={editor} theme={dark ? 'dark' : 'light'} editable={false} formattingToolbar={false} sideMenu={false} slashMenu={false} />
+  return <BlockNoteView key={document.documentElement.dataset.odysseyLocale} editor={editor} theme={dark ? 'dark' : 'light'} editable={false} formattingToolbar={false} sideMenu={false} slashMenu={false} />
 }
 
 function BlockMenu(props: any) {
@@ -147,16 +149,17 @@ function BlockMenu(props: any) {
   if (!block) return null
   const change = (type: string, p: any = {}) => { if(['bulletListItem','numberedListItem','checkListItem'].includes(type)&&Object.keys(p).length===0)changeNoteList(editor,type as NoteListType,block.id);else editor.updateBlock(block, { type, props: p }); setOpen(false); editor.focus() }
   const duplicate = () => { const { id, ...copy } = block; editor.insertBlocks([copy], block, 'after'); setOpen(false) }
-  return <div className="en-side" ref={anchor}><button className="en-block-trigger" title="段落操作" aria-label="段落操作" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => setOpen(!open)}><NoteMenuIcon kind="paragraph"/></button><SideMenu {...props}><DragHandleButton {...props} /></SideMenu>
-    {open ? createPortal(<div ref={menu} className="en-block-menu" role="menu" style={{...position,visibility:position?'visible':'hidden'}}><div className="en-block-types">{[['正文', 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} title={String(label)} aria-label={String(label)} onClick={() => change(String(type), level ? { level } : {})}>{type==='paragraph'?<NoteMenuIcon kind="paragraph"/>:label}</button>)}</div>
-      <div className="en-block-formats">{([['无序列表', 'bulletListItem'], ['有序列表', 'numberedListItem'], ['待办列表', 'checkListItem'], ['代码块', 'codeBlock'], ['引用', 'quote'], ['分隔线', 'divider']] as const).map(([label, type]) => <button role="menuitem" key={type} title={label} aria-label={label} onClick={() => change(type)}><NoteMenuIcon kind={type}/></button>)}</div>
-      <hr /><div className="en-block-types en-block-align">{[['左对齐', 'left'], ['居中', 'center'], ['右对齐', 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => change(block.type, { textAlignment })}><NoteMenuIcon kind={String(textAlignment)}/>{label}</button>)}</div>
-      <button onClick={() => { changeNoteIndent(editor,block.id,1); setOpen(false) }}><NoteMenuIcon kind="indent"/>增加缩进</button><button onClick={() => { changeNoteIndent(editor,block.id,-1); setOpen(false) }}><NoteMenuIcon kind="outdent"/>减少缩进</button><hr />
-      <button onClick={duplicate}><NoteMenuIcon kind="copy"/>复制段落</button><button onClick={() => { editor.insertBlocks([{ type: 'paragraph' }], block, 'after'); setOpen(false) }}><NoteMenuIcon kind="add"/>在下方添加</button><button className="en-danger" onClick={() => { editor.removeBlocks([block]); setOpen(false) }}><NoteMenuIcon kind="delete"/>删除段落</button>
+  return <div className="en-side" ref={anchor}><button className="en-block-trigger" title={t("段落操作")} aria-label={t("段落操作")} aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => setOpen(!open)}><NoteMenuIcon kind="paragraph"/></button><SideMenu {...props}><DragHandleButton {...props} /></SideMenu>
+    {open ? createPortal(<div ref={menu} className="en-block-menu" role="menu" style={{...position,visibility:position?'visible':'hidden'}}><div className="en-block-types">{[[t("正文"), 'paragraph', 0], ['H1', 'heading', 1], ['H2', 'heading', 2], ['H3', 'heading', 3], ['H4', 'heading', 4]].map(([label, type, level]) => <button role="menuitem" key={label} title={String(label)} aria-label={String(label)} onClick={() => change(String(type), level ? { level } : {})}>{type==='paragraph'?<NoteMenuIcon kind="paragraph"/>:label}</button>)}</div>
+      <div className="en-block-formats">{([[t("无序列表"), 'bulletListItem'], [t("有序列表"), 'numberedListItem'], [t("待办列表"), 'checkListItem'], [t("代码块"), 'codeBlock'], [t("引用"), 'quote'], [t("分隔线"), 'divider']] as const).map(([label, type]) => <button role="menuitem" key={type} title={label} aria-label={label} onClick={() => change(type)}><NoteMenuIcon kind={type}/></button>)}</div>
+      <hr /><div className="en-block-types en-block-align">{[[t("左对齐"), 'left'], [t("居中"), 'center'], [t("右对齐"), 'right']].map(([label, textAlignment]) => <button key={label} onClick={() => change(block.type, { textAlignment })}><NoteMenuIcon kind={String(textAlignment)}/>{label}</button>)}</div>
+      <button onClick={() => { changeNoteIndent(editor,block.id,1); setOpen(false) }}><NoteMenuIcon kind="indent"/>{t("增加缩进")}</button><button onClick={() => { changeNoteIndent(editor,block.id,-1); setOpen(false) }}><NoteMenuIcon kind="outdent"/>{t("减少缩进")}</button><hr />
+      <button onClick={duplicate}><NoteMenuIcon kind="copy"/>{t("复制段落")}</button><button onClick={() => { editor.insertBlocks([{ type: 'paragraph' }], block, 'after'); setOpen(false) }}><NoteMenuIcon kind="add"/>{t("在下方添加")}</button><button className="en-danger" onClick={() => { editor.removeBlocks([block]); setOpen(false) }}><NoteMenuIcon kind="delete"/>{t("删除段落")}</button>
     </div>,document.body) : null}</div>
 }
 
 export function NotesApp(props: Props) {
+  useNoteUiLocale()
   const [loaded, setLoaded] = useState<NoteLoad>(), [loadError, setLoadError] = useState(''), [recovery, setRecovery] = useState(false), [loadVersion, setLoadVersion] = useState(0), [recovering, setRecovering] = useState(false)
   const refresh = () => { setLoadError(''); props.bridge.request('load', { sessionId: props.sessionId }).then((value: NoteLoad) => { setLoaded(value); setRecovery(!!value.draft); setLoadVersion(v => v + 1) }).catch((e: Error) => setLoadError(e.message)) }
   const resolveRecovery = async (restore: boolean) => {
@@ -170,8 +173,8 @@ export function NotesApp(props: Props) {
     finally { setRecovering(false) }
   }
   useEffect(() => { let live = true; props.bridge.request('load', { sessionId: props.sessionId }).then((value: NoteLoad) => { if (live) { setLoaded(value); setRecovery(!!value.draft) } }).catch((e: Error) => live && setLoadError(e.message)); return () => { live = false } }, [props.sessionId, props.bridge])
-  return <div className="en-shell">
-    {loadError ? <div className="en-load-error"><p>{loadError}</p><button onClick={refresh}>重新读取</button></div> : !loaded ? <div className="en-load-error">正在打开笔记…</div> : <NotesEditor key={props.sessionId + ':' + loadVersion} {...props} initial={loaded.saved} recovery={recovery ? loaded.draft : undefined} recovering={recovering} onRecovery={resolveRecovery} onReload={refresh} />}
+  return <div className="en-shell"><style>{notePlaceholderCss(document.documentElement.dataset.odysseyLocale)}</style>
+    {loadError ? <div className="en-load-error"><p>{loadError}</p><button onClick={refresh}>{t("重新读取")}</button></div> : !loaded ? <div className="en-load-error">{t("正在打开笔记…")}</div> : <NotesEditor key={props.sessionId + ':' + loadVersion} {...props} initial={loaded.saved} recovery={recovery ? loaded.draft : undefined} recovering={recovering} onRecovery={resolveRecovery} onReload={refresh} />}
   </div>
 }
 
@@ -181,7 +184,8 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   titleRef.current = title
   const doc = useMemo(() => { const value = new Y.Doc(); if (props.initial.yjs) Y.applyUpdate(value, Uint8Array.from(atob(props.initial.yjs), c => c.charCodeAt(0))); return value }, [])
   const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: '我', avatarUrl: '' }))), [])
-  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: zh, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: '我', color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
+  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: '我', color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
+  editor.dictionary = document.documentElement.dataset.odysseyLocale==='en'?en:zh
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
@@ -196,7 +200,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const engagement = useRef({started:false,target:'',sent:undefined as string|undefined,busy:false,timer:undefined as ReturnType<typeof setTimeout>|undefined})
   const persistEngagement = async () => {
     const state=engagement.current;if(!state.started||state.busy||state.sent===state.target)return;state.busy=true;const title=state.target
-    try { await props.bridge.request('engage',{sessionId:props.sessionId,title});state.sent=title }
+    try { await props.bridge.request('engage',{sessionId:props.sessionId,title,locale:document.documentElement.dataset.odysseyLocale});state.sent=title }
     catch(e){if(!disposed.current)setError((e as Error).message)}
     finally{state.busy=false;if(state.target!==title)void persistEngagement()}
   }
@@ -263,7 +267,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     setFileDrag(false);if(!ownsFiles(event))return
     event.preventDefault();event.stopPropagation()
     const files=noteFileCandidates(event.dataTransfer!,props.sessionId,file=>props.bridge.filePath?.(file)||'')
-    if(!files.length){setError('请从访达或当前会话的文件区拖入文件。');return}
+    if(!files.length){setError(t("请从访达或当前会话的文件区拖入文件。"));return}
     const target=(event.target as HTMLElement).closest('.bn-block-outer[data-id]') as HTMLElement|null
     const reference=target&&editor.getBlock(target.dataset.id)?editor.getBlock(target.dataset.id):editor.document.at(-1)
     const placement=target&&event.clientY<target.getBoundingClientRect().top+target.getBoundingClientRect().height/2?'before':'after'
@@ -330,7 +334,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         const node=JSON.parse(draftBlock.props.payload);const draftPayload=JSON.stringify({...node,containerPrompt:prompt,generationStatus:'running',generationError:undefined,generationTaskId:requestId,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:''});editor.updateBlock(pending,{props:{payload:draftPayload}})
       }else if (component&&!targetBlockId) {
         const reference = captured.cursor ? editor.getBlock(captured.cursor) : editor.getTextCursorPosition().block
-        const created = editor.insertBlocks([{ type: 'research', props: { payload: JSON.stringify({ id: 'note-component-'+requestId, title: '智能组件', kind: 'generated-container', noteLibrary:true,noteDraft:'smart',containerPrompt:prompt,generationStatus: 'running',generationTaskId:requestId,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:'', generationDetail: prompt, sourceText: '正在生成组件' }) } }], reference || editor.getTextCursorPosition().block, 'after')
+        const created = editor.insertBlocks([{ type: 'research', props: { payload: JSON.stringify({ id: 'note-component-'+requestId, title: t("智能组件"), kind: 'generated-container', noteLibrary:true,noteDraft:'smart',containerPrompt:prompt,generationStatus: 'running',generationTaskId:requestId,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:'', generationDetail: prompt, sourceText: t("正在生成组件") }) } }], reference || editor.getTextCursorPosition().block, 'after')
         pending = created[0].id; generatingBlock.current = pending
         requestAnimationFrame(() => locate(pending))
       }
@@ -338,14 +342,14 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       publishTask(requestId,'generating')
       const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt) return
-      if(pending&&!currentGeneration())throw Error('组件已变化，较新内容已保留。')
+      if(pending&&!currentGeneration())throw Error(t("组件已变化，较新内容已保留。"))
       let completedBlock=''
       if(draftBlockId&&result.kind==='conversation'){
         const previous=JSON.parse(editor.getBlock(pending).props.payload);editor.updateBlock(pending,{props:{payload:JSON.stringify({...previous,generationStatus:'draft',generationDetail:result.markdown})}});publishTask(requestId,'replied',{result})
       }else if(result.kind==='component'&&result.targetBlockId){
         const current=editor.getBlock(result.targetBlockId)
-        if(context.scope!=='selection'||!context.components.some(item=>item.blockId===result.targetBlockId&&item.type==='research'))throw Error('组件不在当前引用范围内，请重新选择。')
-        if(!current||current.props.payload!==targetPayloads.get(result.targetBlockId))throw Error('组件已变化，请重新选择后修改，较新内容已保留。')
+        if(context.scope!=='selection'||!context.components.some(item=>item.blockId===result.targetBlockId&&item.type==='research'))throw Error(t("组件不在当前引用范围内，请重新选择。"))
+        if(!current||current.props.payload!==targetPayloads.get(result.targetBlockId))throw Error(t("组件已变化，请重新选择后修改，较新内容已保留。"))
         const original=JSON.parse(current.props.payload)
         if(pending&&editor.getBlock(pending))editor.removeBlocks([pending])
         const updated={...original,...result.node,id:original.id.startsWith('note-component-')?original.id:'note-component-'+crypto.randomUUID(),noteSize:original.noteSize};delete updated.noteReply;delete updated.excerpt
@@ -354,7 +358,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       }else if (component && result.kind === 'component' && editor.getBlock(pending)) {
         publishTask(requestId,'accepted',{result}); const previous=JSON.parse(editor.getBlock(pending).props.payload); editor.updateBlock(pending, { props: { payload: JSON.stringify({...result.node,id:previous.id,noteLibrary:true,noteSize:previous.noteSize}) } }); completedBlock=pending;changed(); requestAnimationFrame(() => locate(pending))
       } else {
-        if(draftBlockId)throw Error('组件生成未返回有效内容，请重试。')
+        if(draftBlockId)throw Error(t("组件生成未返回有效内容，请重试。"))
         if (pending && editor.getBlock(pending)) editor.removeBlocks([pending])
         if(result.kind==='conversation') {
           publishTask(requestId,'replied',{result})
@@ -372,29 +376,29 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
           const node=JSON.parse(payload)
           try{
             const binding=await props.bridge.request('component-data',{sessionId:props.sessionId,action:'bind-generated',nodeId:node.id,recipe:result.sourceResult.recipe,initialSpec:node.containerSpec})
-            if(!disposed.current&&epoch.current===attempt&&editor.getBlock(completedBlock)?.props.payload===payload)updateSystemComponent(completedBlock,{...node,noteDataBound:true,sourceText:binding.enabled===false?'已绑定数据源 · 手动刷新':'已绑定数据源 · 可见时自动刷新'})
+            if(!disposed.current&&epoch.current===attempt&&editor.getBlock(completedBlock)?.props.payload===payload)updateSystemComponent(completedBlock,{...node,noteDataBound:true,sourceText:binding.enabled===false?t("已绑定数据源 · 手动刷新"):t("已绑定数据源 · 可见时自动刷新")})
           }catch(error){
-            if(!disposed.current&&epoch.current===attempt&&editor.getBlock(completedBlock)?.props.payload===payload){updateSystemComponent(completedBlock,{...node,noteDataBound:false,sourceText:'已验证数据来源 · 当前为快照，自动刷新未启用'});setError((error as Error).message)}
+            if(!disposed.current&&epoch.current===attempt&&editor.getBlock(completedBlock)?.props.payload===payload){updateSystemComponent(completedBlock,{...node,noteDataBound:false,sourceText:t("已验证数据来源 · 当前为快照，自动刷新未启用")});setError((error as Error).message)}
           }
         }
       }
       commitNativeDraft(admission)
     } catch (e) {
       if (!disposed.current && epoch.current === attempt) {
-        const message = (e as Error).name === 'AbortError' ? '生成已停止，可调整需求后重试。' : (e as Error).message
+        const message = (e as Error).name === 'AbortError' ? t("生成已停止，可调整需求后重试。") : (e as Error).message
         if (pending && currentGeneration()) editor.updateBlock(pending, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}) } })
         rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); setError(message)
       }
     } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); publishComposer({running:false}); request.current = ''; generatingBlock.current = '';activeGeneration.current=undefined } }
   }
-  const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:'生成已停止，可调整需求后重试。'}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError('生成已停止，笔记内容已保留。') }
+  const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:t("生成已停止，可调整需求后重试。")}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError(t("生成已停止，笔记内容已保留。")) }
   const inlineComponents=useInlineComponentGeneration({sessionId:props.sessionId,bridge:props.bridge,editor,current:()=>!disposed.current&&!props.recovery,persist:async()=>{save();await saveQueue.current},changed,update:updateSystemComponent})
   const apply = async (replace: boolean) => {
     if (!preview) return
     editor.focus()
     const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
     const range=editor.getExtension(NoteAiSelection)?.currentRange()
-    if(replace&&range&&!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,range)){setError('请只选择正文文字进行改写。');return}
+    if(replace&&range&&!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,range)){setError(t("请只选择正文文字进行改写。"));return}
     if(replace&&preview.result.kind==='text'&&range)replaceNoteSelection(editor,range,blocks,preview.result.markdown)
     else { const reference = editor.getBlock(preview.cursor) || editor.getTextCursorPosition().block; editor.insertBlocks(blocks, reference, 'after') }
     setError('')
@@ -426,7 +430,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const exportNote = async (format='md') => {
     if(exportPending.current||disposed.current)return
     exportPending.current=true;setExporting(true);setError('')
-    try{await exportNoteWithSnapshots({snapshot,bridge:props.bridge,sessionId:props.sessionId,format,current:()=>!disposed.current})}
+    try{await exportNoteWithSnapshots({snapshot,bridge:props.bridge,sessionId:props.sessionId,format,locale:document.documentElement.dataset.odysseyLocale,current:()=>!disposed.current})}
     catch(e){if(!disposed.current)setError((e as Error).message)}
     finally{exportPending.current=false;if(!disposed.current)setExporting(false)}
   }
@@ -435,21 +439,21 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
     const pick=async(kind:string)=>{
       const reference=editor.getTextCursorPosition().block
-      try{const result=await props.bridge.request('file-pick',{sessionId:props.sessionId,kind});if(disposed.current||!editor.isEditable||!editor.getBlock(reference.id)||!result.files?.length)return
+      try{const result=await props.bridge.request('file-pick',{sessionId:props.sessionId,kind,locale:document.documentElement.dataset.odysseyLocale});if(disposed.current||!editor.isEditable||!editor.getBlock(reference.id)||!result.files?.length)return
         const current=editor.getBlock(reference.id);await importFiles(result.files,current,current.type==='paragraph'&&!noteText(current.content).trim()?'before':'after','inline');editor.focus()
       }catch(e){if(!disposed.current)setError((e as Error).message)}
     }
     const draft=(kind:'smart'|'link')=>{if(!editor.isEditable)return;const reference=editor.getTextCursorPosition().block
-      const node={id:'note-component-'+crypto.randomUUID(),kind:'generated-container',title:kind==='smart'?'智能组件':'添加链接',noteDraft:kind,containerPrompt:'',generationStatus:'draft'}
+      const node={id:'note-component-'+crypto.randomUUID(),kind:'generated-container',title:kind==='smart'?t("智能组件"):t("添加链接"),noteDraft:kind,containerPrompt:'',generationStatus:'draft'}
       const created=editor.insertBlocks([{type:'research',props:{payload:JSON.stringify(node)}}],reference,reference.type==='paragraph'&&!noteText(reference.content).trim()?'before':'after');requestAnimationFrame(()=>{const input=scroll.current?.querySelector<HTMLTextAreaElement>('[data-id="'+CSS.escape(created[0].id)+'"] textarea');input?.closest('.en-research')?.scrollIntoView({block:'nearest'});input?.focus({preventScroll:true})})
     }
-    const creation=[{key:'smart_component',iconKey:'sparkles',title:'智能组件',group:'插入',aliases:['智能','生成','组件','smart','ai'],onItemClick:()=>draft('smart')},{key:'link_component',iconKey:'link',title:'链接',group:'插入',aliases:['链接','网页','link','url'],onItemClick:()=>draft('link')}]
+    const creation=[{key:'smart_component',iconKey:'sparkles',title:t("智能组件"),group:t("插入"),aliases:['智能','生成','组件','smart','ai'],onItemClick:()=>draft('smart')},{key:'link_component',iconKey:'link',title:t("链接"),group:t("插入"),aliases:['链接','网页','link','url'],onItemClick:()=>draft('link')}]
     const defaults=getDefaultReactSlashMenuItems(editor).filter((item:any)=>item.key!=='emoji').map((item:any)=>['image','video','audio','file'].includes(item.key)?{...item,onItemClick:()=>pick(item.key)}:item).sort((a:any,b:any)=>(order.indexOf(a.key)<0?100:order.indexOf(a.key))-(order.indexOf(b.key)<0?100:order.indexOf(b.key)))
-    const library:any={key:'library',title:'组件库',group:'插入',aliases:['组件','研究','library'],onItemClick:()=>{}}
+    const library:any={key:'library',title:t("组件库"),group:t("插入"),aliases:['组件','研究','library'],onItemClick:()=>{}}
     // Load on each opening/query so research-side renames and additions stay current.
     try{
       const items=await props.bridge.request('library-list',{sessionId:props.sessionId})
-      library.children=items.map((item:any)=>({key:item.id,title:item.title,group:item.group,iconKey:item.icon,onItemClick:async()=>{
+      library.children=items.map((item:any)=>({key:item.id,title:item.id.startsWith('builtin-')?t(item.title):item.title,group:t(item.group),iconKey:item.icon,onItemClick:async()=>{
         const reference=editor.getTextCursorPosition().block
         try{
           const node=await props.bridge.request('library-read',{sessionId:props.sessionId,id:item.id})
@@ -461,30 +465,30 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
           undo?.stopCapturing();editor.focus()
         }catch(e){if(!disposed.current)setError((e as Error).message)}
       }}))
-    }catch(e){library.children=[{key:'library_retry',title:'组件库暂不可用，重新打开重试',group:'组件库',onItemClick:()=>setError((e as Error).message)}]}
+    }catch(e){library.children=[{key:'library_retry',title:t("组件库暂不可用，重新打开重试"),group:t("组件库"),onItemClick:()=>setError((e as Error).message)}]}
     const fileIndex=defaults.findIndex((item:any)=>item.key==='file')
     const choices=fileIndex<0?[...defaults,...creation]:[...defaults.slice(0,fileIndex+1),...creation,...defaults.slice(fileIndex+1)]
     return filterSuggestionItems([...choices,library],query)
-  }, [editor,props.bridge,props.sessionId])
+  }, [editor,props.bridge,props.sessionId,document.documentElement.dataset.odysseyLocale])
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
-  const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>准备组件快照与导出文件…</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>正在生成内容…</span><button onClick={stop}>停止</button></div> : null}{error ? <div className="en-error" role="alert"><span>{error}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>重新读取并对比</button> : null}<button onClick={() => setError('')} aria-label="关闭提示">×</button></div> : null}
-      {preview ? <SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? '创建的研究组件' : '内容预览'}</strong><button aria-label="放弃建议" onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>替换所选</button> : null}<button onClick={() => apply(false)}>添加至正文</button><button onClick={regenerate}>重新撰写</button><button onClick={discardPreview}>放弃</button></>}>
+  const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("正在生成内容…")}</span><button onClick={stop}>{t("停止")}</button></div> : null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
+      {preview ? <SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button onClick={() => apply(false)}>{t("添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
         {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
       </SuggestionPanel> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
     <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant,.en-research')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document">
-        {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
-        <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
-        <BlockNoteView editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false}>
+        {props.recovery ? <div className="en-recovery"><strong>{t("发现未保存的本地草稿")}</strong><span>{t("上次编辑内容已保留，可对比后恢复。")}</span><div><button onClick={() => setCompare(true)}>{t("对比草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>{t("保留已保存版本")}</button></div></div> : null}
+        <input className="en-title" aria-label={t("笔记标题")} placeholder={t("无标题文档")} value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
+        <BlockNoteView key={document.documentElement.dataset.odysseyLocale} editor={editor} editable={!props.recovery} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false}>
           <SuggestionMenuController getItems={slashItems} triggerCharacter="/" suggestionMenuComponent={slashMenu} portalElement={document.body} floatingUIOptions={{useFloatingOptions:{strategy:'fixed'},elementProps:{className:'en-note-menu-layer',style:{zIndex:110}}}} />
-          <FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: '正文', type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: '标题 ' + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><NoteListButtons/><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft('改写选中文字，保留原意并让表达更清晰。', true) }}/></NoteFormattingToolbar>} />
+          <FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: t("正文"), type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: t("标题 ") + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><NoteListButtons/><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft(t("改写选中文字，保留原意并让表达更清晰。"), true) }}/></NoteFormattingToolbar>} />
           <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const base=reference.getBoundingClientRect(),component=reference.querySelector<HTMLElement>('.en-research,.en-note-file');if(component)return{y:y+component.getBoundingClientRect().top-base.top};const box=content.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} />
         </BlockNoteView>
       </div>
     </div>
     {assistantVisible ? createPortal(suggestion,assistantHost) : <div className="en-composer-area">{suggestion}</div>}</main>
-    {compare && props.recovery ? <div className="en-dialog-backdrop" onClick={() => setCompare(false)}><section role="dialog" aria-modal="true" aria-label="本地草稿对比" className="en-compare" onClick={e => e.stopPropagation()}><header><strong>本地草稿对比</strong><button onClick={() => setCompare(false)}>关闭</button></header><div><section><h3>已保存版本</h3><pre>{plain(props.initial)}</pre></section><section><h3>本地草稿</h3><pre>{plain(props.recovery)}</pre></section></div><footer><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button onClick={() => setCompare(false)}>稍后处理</button></footer></section></div> : null}
+    {compare && props.recovery ? <div className="en-dialog-backdrop" onClick={() => setCompare(false)}><section role="dialog" aria-modal="true" aria-label={t("本地草稿对比")} className="en-compare" onClick={e => e.stopPropagation()}><header><strong>{t("本地草稿对比")}</strong><button onClick={() => setCompare(false)}>{t("关闭")}</button></header><div><section><h3>{t("已保存版本")}</h3><pre>{plain(props.initial)}</pre></section><section><h3>{t("本地草稿")}</h3><pre>{plain(props.recovery)}</pre></section></div><footer><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button onClick={() => setCompare(false)}>{t("稍后处理")}</button></footer></section></div> : null}
   </div></Context.Provider>
 }

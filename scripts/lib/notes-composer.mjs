@@ -1,8 +1,14 @@
+import {NOTE_ENGLISH,noteUiText} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import { patchNotesSidebar } from './notes-sidebar.mjs'
 /** Adapt the existing native InputBar and input machine, without duplicating UI. */
 export const notesComposerSource = `
+const NOTE_ENGLISH=${JSON.stringify(NOTE_ENGLISH)};
+${noteUiText.toString()}
+function useNoteUiLocale(){const [,render]=react.useState(0);react.useEffect(()=>{if(typeof MutationObserver==='undefined')return;const observer=new MutationObserver(()=>render(n=>n+1));observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']});return()=>observer.disconnect()},[])}
+
 const eworkNotesInputs = new Map();
 function EWorkNotesReferenceBar({sessionId}){
+ useNoteUiLocale();
  const [scope,setScope]=react.useState({enabled:true,components:[],references:[]}),[open,setOpen]=react.useState(false);
  react.useEffect(()=>{
   const receive=event=>{if(event.detail?.sessionId===sessionId)setScope(event.detail)};
@@ -11,9 +17,9 @@ function EWorkNotesReferenceBar({sessionId}){
  },[sessionId]);
  const action=(action,blockId)=>document.dispatchEvent(new CustomEvent('sherlock:notes-reference-action',{detail:{sessionId,action,blockId}}));
  const buttonStyle={border:'none',borderRadius:8,background:'var(--dsw-alias-interactive-bg-hover, #8882)',color:'var(--dsw-alias-label-secondary, inherit)',font:'inherit',fontSize:12,lineHeight:'20px',cursor:'pointer',padding:'3px 8px'};
- return react_jsx_runtime.jsx('div',{'data-note-context-anchor':'',style:{position:'relative',minWidth:0,width:'100%'},onKeyDown:event=>{if(event.key==='Escape'){setOpen(false);event.stopPropagation()}},onBlur:event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false)},children:scope.references.length?react_jsx_runtime.jsx('div',{style:{display:'flex',gap:6,flexWrap:'wrap',minWidth:0},children:scope.references.map(reference=>react_jsx_runtime.jsx('span',{'data-note-reference-chip':reference.blockId,style:{...buttonStyle,display:'inline-flex',boxSizing:'border-box',minWidth:0,maxWidth:'100%',alignItems:'center',gap:6,cursor:'default'},children:[react_jsx_runtime.jsx('span',{'aria-hidden':true,children:reference.type==='text'?'T':'▧'}),react_jsx_runtime.jsx('span',{title:reference.title,style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0},children:reference.title}),react_jsx_runtime.jsx('button',{type:'button','aria-label':'移除引用：'+reference.title,onClick:()=>action('remove',reference.blockId),style:{border:0,padding:0,background:'transparent',color:'inherit',cursor:'pointer',flex:'none'},children:'×'})]},reference.blockId))}):[
-  react_jsx_runtime.jsx('button',{type:'button','data-note-context-badge':'','data-opt-out':!scope.enabled||undefined,'aria-expanded':open,onClick:()=>setOpen(!open),style:buttonStyle,children:scope.enabled?'参考当前笔记内容':'不参考当前笔记内容'}),
-  open&&react_jsx_runtime.jsx('div',{role:'region','aria-label':'当前笔记参考内容','data-note-context-directory':'',style:{position:'absolute',bottom:'calc(100% + 8px)',left:0,width:'min(320px, 100%)',boxSizing:'border-box',zIndex:20,padding:12,borderRadius:12,background:'var(--dsw-specific-input-major, #fff)',color:'var(--dsw-alias-label-secondary, #555)',border:'1px solid var(--dsw-alias-border-l3, #8884)',boxShadow:'var(--dsw-shadow-lv2)',fontSize:12,lineHeight:'18px'},children:[react_jsx_runtime.jsx('ul',{style:{listStyle:'none',padding:0,margin:'0 0 10px',maxHeight:200,overflowY:'auto'},children:[...scope.components,{blockId:'note-full-text',title:'笔记全文',type:'text'}].map(source=>react_jsx_runtime.jsx('li',{style:{display:'flex',alignItems:'center',gap:8,padding:'4px 0'},children:[react_jsx_runtime.jsx('span',{'aria-hidden':true,children:source.type==='text'?'T':'▧'}),react_jsx_runtime.jsx('span',{title:source.title,style:{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},children:source.title})]},source.blockId))}),react_jsx_runtime.jsx('button',{type:'button','data-note-context-toggle':'',style:{...buttonStyle,width:'100%',minHeight:34},onClick:()=>{action('toggle');setOpen(false)},children:scope.enabled?'不参考当前笔记内容':'参考当前笔记内容'})]})
+ return react_jsx_runtime.jsx('div',{'data-note-context-anchor':'',style:{position:'relative',minWidth:0,width:'100%'},onKeyDown:event=>{if(event.key==='Escape'){setOpen(false);event.stopPropagation()}},onBlur:event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false)},children:scope.references.length?react_jsx_runtime.jsx('div',{style:{display:'flex',gap:6,flexWrap:'wrap',minWidth:0},children:scope.references.map(reference=>react_jsx_runtime.jsx('span',{'data-note-reference-chip':reference.blockId,style:{...buttonStyle,display:'inline-flex',boxSizing:'border-box',minWidth:0,maxWidth:'100%',alignItems:'center',gap:6,cursor:'default'},children:[react_jsx_runtime.jsx('span',{'aria-hidden':true,children:reference.type==='text'?'T':'▧'}),react_jsx_runtime.jsx('span',{'data-ui-preserve':'',title:reference.title,style:{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0},children:reference.title}),react_jsx_runtime.jsx('button',{type:'button','aria-label':noteUiText('移除引用：')+reference.title,onClick:()=>action('remove',reference.blockId),style:{border:0,padding:0,background:'transparent',color:'inherit',cursor:'pointer',flex:'none'},children:'×'})]},reference.blockId))}):[
+  react_jsx_runtime.jsx('button',{type:'button','data-note-context-badge':'','data-opt-out':!scope.enabled||undefined,'aria-expanded':open,onClick:()=>setOpen(!open),style:buttonStyle,children:scope.enabled?noteUiText('参考当前笔记内容'):noteUiText('不参考当前笔记内容')}),
+  open&&react_jsx_runtime.jsx('div',{role:'region','aria-label':noteUiText('当前笔记参考内容'),'data-note-context-directory':'',style:{position:'absolute',bottom:'calc(100% + 8px)',left:0,width:'min(320px, 100%)',boxSizing:'border-box',zIndex:20,padding:12,borderRadius:12,background:'var(--dsw-specific-input-major, #fff)',color:'var(--dsw-alias-label-secondary, #555)',border:'1px solid var(--dsw-alias-border-l3, #8884)',boxShadow:'var(--dsw-shadow-lv2)',fontSize:12,lineHeight:'18px'},children:[react_jsx_runtime.jsx('ul',{style:{listStyle:'none',padding:0,margin:'0 0 10px',maxHeight:200,overflowY:'auto'},children:[...scope.components,{blockId:'note-full-text',title:noteUiText('笔记全文'),type:'text'}].map(source=>react_jsx_runtime.jsx('li',{style:{display:'flex',alignItems:'center',gap:8,padding:'4px 0'},children:[react_jsx_runtime.jsx('span',{'aria-hidden':true,children:source.type==='text'?'T':'▧'}),react_jsx_runtime.jsx('span',{'data-ui-preserve':'',title:source.title,style:{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},children:source.title})]},source.blockId))}),react_jsx_runtime.jsx('button',{type:'button','data-note-context-toggle':'',style:{...buttonStyle,width:'100%',minHeight:34},onClick:()=>{action('toggle');setOpen(false)},children:scope.enabled?noteUiText('不参考当前笔记内容'):noteUiText('参考当前笔记内容')})]})
  ]});
 }
 function eworkActiveInput(sessionId,ordinary){const record=eworkNotesInputs.get(sessionId);return record?.active?record.shell:ordinary}
@@ -62,6 +68,7 @@ function eworkNotesInput(sessionId, ordinary, conversation) {
   return record;
 }
 function EWorkSharedInputBar(props) {
+ useNoteUiLocale();
   const {eworkNotes=false,sessionId}=props;
   const record=props.keyboard&&sessionId?eworkNotesInput(sessionId,props.keyboard,conversationController):null;
   if(record)record.active=eworkNotes;
@@ -89,8 +96,8 @@ function EWorkSharedInputBar(props) {
     useInput:select=>{props.useInput(value=>value);return select(notesInput)},inputActions:shell.actions,keyboard:shell,
     useNotices:select=>{props.useNotices(value=>value);return select(notesNotice)},
     useSession:select=>nativeSession(value=>select({...value,running:state.running||value.running,promptError:null})),
-    placeholder:'撰写、补充或改写笔记...',
-    blocked:state.ready?undefined:{reason:'正在打开笔记…'},
+    placeholder:noteUiText('撰写、补充或改写笔记...'),
+    blocked:state.ready?undefined:{reason:noteUiText('正在打开笔记…')},
     addImages:files=>{try{const images=conversationController.createDraftImages(files);if(!shell.addImages(images.map(a=>a.id)))conversationController.releaseDraftImages(images);return null}catch(error){return error.message}},
     removeImage:id=>{conversationController.releaseDraftImage(id);shell.removeImage(id)},
     toggleCommandMenu:selection=>{const controller=shell.deps.inputTriggers?.();if(!controller)return;shell.dismissPopup();const snapshot=shell.snapshot;controller.toggleSource('command',{trigger:'/',query:'',position:snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',span:{...selection,draftRev:snapshot.draftRev}})},
@@ -104,7 +111,7 @@ ctx.effect(()=>{const reset=()=>{for(const record of eworkNotesInputs.values())e
 export function patchNotesComposer(source) {
   source=patchNotesNativeDrop(source);
   if (source.includes('ework:notes-native-composer:v1')) {
-    const start=source.indexOf('const eworkNotesInputs = new Map();'),footer=source.indexOf("document.addEventListener('sherlock:notes-reset',",start),end=source.indexOf('\n',footer);
+    const marker=source.indexOf('/* ework:notes-native-composer:v1 */'),start=source.indexOf('\n',marker)+1,footer=source.indexOf("document.addEventListener('sherlock:notes-reset',",start),end=source.indexOf('\n',footer);
     if(start<0||footer<0||end<0)throw Error('笔记原生输入框适配器不完整。');
     source=source.slice(0,start)+notesComposerSource.trim()+source.slice(end);
     return patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source))));

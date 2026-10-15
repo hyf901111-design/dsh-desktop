@@ -1,6 +1,6 @@
 export type NoteMenuItem = { id: string; title: string; subtext: string; group: string; badge: string; icon: string; children?: NoteMenuItem[] }
 export type NoteMenuState = {
-  sessionId: string; menuId: string; revision: number; dark: boolean; selectedIndex: number | undefined;
+  sessionId: string; menuId: string; revision: number; dark: boolean; locale?: 'en'|'zh'; selectedIndex: number | undefined;
   anchor: { x: number; y: number; width: number; height: number }; items: NoteMenuItem[]
   submenu?: {parentId:string;selectedIndex:number;keyboardActive?:boolean}
 }

@@ -29,7 +29,7 @@ function EWorkNotesView({sessionId}) {
   }, [sessionId]);
   return (0, react_jsx_runtime.jsx)('div',{'data-ework-note-view':sessionId});
 }
-slots.register({name:'conversation.view',id:'notes',order:7,label:()=> '笔记',inject:sessionId=>({sessionId})}, EWorkNotesView);`)
+slots.register({name:'conversation.view',id:'notes',order:7,label:()=> document.documentElement.dataset.odysseyLocale==='en'?'Notes':'笔记',inject:sessionId=>({sessionId})}, EWorkNotesView);`)
   }
   if (!source.includes('ework:notes-header-export:v1')) {
     const anchor = 'children: renderSlot("conversation.session.header.utilities", {})'
@@ -41,6 +41,7 @@ children: [active?.id === 'notes' && (0, react_jsx_runtime.jsxs)('button', {
   children:[(0,react_jsx_runtime.jsx)('svg',{width:14,height:14,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.25,strokeLinecap:'round',strokeLinejoin:'round', 'aria-hidden':true,children:(0,react_jsx_runtime.jsx)('path',{d:'M8 10V2m-3 3 3-3 3 3M3 9v4a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9'})}), '导出']
 }), renderSlot("conversation.session.header.utilities", {})]`)
   }
+  source=source.replace("label:()=> '笔记'", "label:()=> document.documentElement.dataset.odysseyLocale==='en'?'Notes':'笔记'")
   source=patchNotesExportMenu(source)
   return source.includes('function createResearchWorkspaceSession(') ? patchCanvasSessionActivity(source) : source
 }

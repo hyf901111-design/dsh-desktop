@@ -1,3 +1,4 @@
+import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
 import React, {useLayoutEffect, useRef, useState} from 'react'
 
 type Axis = 'width' | 'height'
@@ -80,5 +81,5 @@ export function useNoteComponentSize({block,node,editor,root,naturalHeight}:{blo
 }
 
 export function NoteComponentResizeHandles({size}:{size:ReturnType<typeof useNoteComponentSize>}) {
- return <>{size.resizing?<div className="en-component-resize-shield"/>:null}{(['width','height'] as const).map(axis=><button key={axis} type="button" className={'en-component-resize en-component-resize-'+axis} role="separator" aria-label={axis==='width'?'调整组件宽度':'调整组件高度'} aria-orientation={axis==='width'?'vertical':'horizontal'} aria-valuemin={axis==='width'?size.minWidth:size.minHeight} aria-valuemax={axis==='width'?size.maxWidth:size.maxHeight} aria-valuenow={axis==='width'?size.width:size.height} aria-valuetext={(axis==='width'?size.width:size.height)+' 像素'} title={axis==='width'?'拖动或使用左右方向键调整宽度':'拖动或使用上下方向键调整高度'} {...size.handle(axis)}/>)}</>
+ return <>{size.resizing?<div className="en-component-resize-shield"/>:null}{(['width','height'] as const).map(axis=><button key={axis} type="button" className={'en-component-resize en-component-resize-'+axis} role="separator" aria-label={axis==='width'?t("调整组件宽度"):t("调整组件高度")} aria-orientation={axis==='width'?'vertical':'horizontal'} aria-valuemin={axis==='width'?size.minWidth:size.minHeight} aria-valuemax={axis==='width'?size.maxWidth:size.maxHeight} aria-valuenow={axis==='width'?size.width:size.height} aria-valuetext={(axis==='width'?size.width:size.height)+t(" 像素")} title={axis==='width'?t("拖动或使用左右方向键调整宽度"):t("拖动或使用上下方向键调整高度")} {...size.handle(axis)}/>)}</>
 }

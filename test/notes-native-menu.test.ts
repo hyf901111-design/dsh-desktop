@@ -180,3 +180,9 @@ it('closes only the child when returning to the root and revokes both panes on o
  owner.value='bob';next.webContents.emit('will-navigate',{preventDefault:()=>{}},`ework-note-menu://${ticket}/select/one?revision=3&parent=library`)
  expect(popup.destroyed).toBe(true);expect(next.destroyed).toBe(true)
 })
+it('localizes native headings and empty states with the owning editor locale',()=>{
+ const items=['paragraph','heading','bullet_list','image'].map((icon,i)=>({id:'e-'+i,title:'User 中文 title',icon,subtext:'',badge:'',group:''}))
+ const result=noteMenuPresentation(input({locale:'en',items}),'ticket');expect(result.html).toContain('Basic formatting');expect(result.html).toContain('Insert');expect(result.html).toContain('User 中文 title');expect(result.html).not.toContain('基础格式')
+ expect(noteMenuPresentation(input({locale:'en',items:[],selectedIndex:undefined}),'t').html).toContain('No matching commands')
+ expect(()=>validateNoteMenu(input({locale:'invalid' as any}))).toThrow()
+})
