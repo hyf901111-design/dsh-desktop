@@ -125,16 +125,16 @@ describe('real homepage theme motion and interaction', () => {
     try {
       await pauseEntry(page, 745)
       const ids = []
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 14; i++) {
         await page.locator('[data-home-theme-position="next"]').click()
         await expect.poll(() => page.locator('[data-theme-freeze]').count()).toBe(0)
         const id = await current(page).getAttribute('data-home-theme-id'); ids.push(id)
         expect(await page.locator('[data-home-theme-canvas]').getAttribute('data-home-theme-canvas')).toBe(id)
         expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')).toBe(id)
       }
-      expect(ids).toEqual(['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'lotustech', 'default'])
+      expect(ids).toEqual(['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'emreturan', 'abramovdesign', 'default'])
       const rapid = await page.evaluate(() => {
-        for (let i = 0; i < 11; i++) window.themeMotion.next()
+        for (let i = 0; i < 16; i++) window.themeMotion.next()
         const freeze = document.querySelector('[data-theme-freeze]'), bytes = freeze.getContext('2d').getImageData(0, 0, freeze.width, freeze.height).data
         let transparent = 0, chroma = 0
         for (let i = 0; i < bytes.length; i += 4) { if (bytes[i + 3] < 255) transparent++; chroma += Math.max(bytes[i], bytes[i + 1], bytes[i + 2]) - Math.min(bytes[i], bytes[i + 1], bytes[i + 2]) }
@@ -142,7 +142,7 @@ describe('real homepage theme motion and interaction', () => {
       })
       expect(rapid.current).toBe('vghodki'); expect(rapid.canvases).toBe(1)
       expect(rapid.transparent).toBe(0)
-      // All eleven clicks happen before any new GL frame gains opacity. The
+      // All sixteen clicks happen before any new GL frame gains opacity. The
       // frozen composite must therefore still show the original grayscale.
       expect(rapid.chroma).toBeLessThan(.1)
       await page.evaluate(() => {
@@ -157,7 +157,7 @@ describe('real homepage theme motion and interaction', () => {
       expect(errors).toEqual([])
       await writeFile(`${evidence}/rapid-state.json`, JSON.stringify(rapid, null, 2))
     } finally { await page.close() }
-  }, 30000)
+  }, 60000)
 
   it('crossfades dark themes without a white flash, and eases dark-to-light through actual intermediate colors', async () => {
     const page = await fixture({ dark: true, theme: 'berber' })
@@ -235,6 +235,24 @@ describe('real homepage theme motion and interaction', () => {
       await page.locator('[data-sherlock-settings-panel]').evaluate(node => node.remove())
       await expect.poll(() => current(page).evaluate(button => button.style.getPropertyValue('--theme-thumbnail'))).toBe(light)
       expect(await current(page).getAttribute('data-home-theme-id')).toBe('berber')
+    } finally { await page.close() }
+  }, 30000)
+
+  it.each([[900, 700], [1560, 900], [560, 700]])('centers the current card and both neighbors on the %ix%i background', async (width, height) => {
+    const page = await fixture({ reduced: true, width, height })
+    try {
+      for (let i = 0; i < 14; i++) {
+        const bounds = await page.evaluate(() => {
+          const bg = document.querySelector('[data-odyssey-home-theme-background]').getBoundingClientRect()
+          const cards = [...document.querySelectorAll('[data-odyssey-theme-dock] [aria-hidden="false"]')].map(button => ({position:button.dataset.homeThemePosition,rect:button.getBoundingClientRect().toJSON()}))
+          const center = rect => rect.x + rect.width / 2
+          const byPosition = value => cards.find(card => card.position === value).rect
+          return { background:center(bg), current:center(byPosition('current')), neighbors:(center(byPosition('previous'))+center(byPosition('next')))/2 }
+        })
+        expect(Math.abs(bounds.background - bounds.current)).toBeLessThan(.6)
+        expect(Math.abs(bounds.background - bounds.neighbors)).toBeLessThan(.6)
+        await page.locator('[data-home-theme-position="next"]').click()
+      }
     } finally { await page.close() }
   }, 30000)
 

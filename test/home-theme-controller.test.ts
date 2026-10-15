@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { mountHomeThemes } from '../src/preload/home-themes'
 
 const STORAGE_KEY = 'ework.home-background.v1'
-const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'lotustech']
+const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'emreturan', 'abramovdesign']
 const fixtures: Array<{ dispose(): void; win: Window }> = []
 
 function fixture({ reducedMotion = false, initial = undefined as string | undefined, storageBlocked = false } = {}) {
@@ -158,13 +158,13 @@ describe('home background theme controller', () => {
     }
     f.click('previous')
     await f.settle()
-    check('lotustech')
+    check('abramovdesign')
     f.click('current')
     await f.settle()
-    check('lotustech')
+    check('abramovdesign')
   })
 
-  it('navigates and restores all nine themes with keyboard wrap and Home/End', async () => {
+  it('navigates and restores all fourteen themes with keyboard wrap and Home/End', async () => {
     const f = fixture({ initial: 'boz' })
     f.mount()
     expect(f.current()!.dataset.homeThemeId).toBe('boz')
@@ -173,11 +173,11 @@ describe('home background theme controller', () => {
       await f.settle()
     }
     await key('End')
-    expect(f.current()!.dataset.homeThemeId).toBe('lotustech')
+    expect(f.current()!.dataset.homeThemeId).toBe('abramovdesign')
     await key('ArrowRight')
     expect(f.current()!.dataset.homeThemeId).toBe('default')
     await key('ArrowLeft')
-    expect(f.current()!.dataset.homeThemeId).toBe('lotustech')
+    expect(f.current()!.dataset.homeThemeId).toBe('abramovdesign')
     await key('Home')
     expect(f.current()!.dataset.homeThemeId).toBe('default')
     for (const id of THEME_IDS.slice(1)) {
@@ -205,7 +205,7 @@ describe('home background theme controller', () => {
     expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('accelbia')
   })
 
-  it.each(['not-a-theme', '{"id":"berber"}', '<img src=x onerror=alert(1)>'])('ignores an unknown stored preference: %s', (initial) => {
+  it.each(['lotustech', 'not-a-theme', '{"id":"berber"}', '<img src=x onerror=alert(1)>'])('ignores an unknown stored preference: %s', (initial) => {
     const f = fixture({ initial })
     f.mount()
     expect(f.current()!.dataset.homeThemeId).toBe('default')
