@@ -1,3 +1,4 @@
+import {notesUiLocaleSource} from './notes-ui-locale.mjs'
 export function EWorkNoteExportMenu({sessionId}) {
  useNoteUiLocale();
  const h=react.createElement,[open,setOpen]=react.useState(false),button=react.useRef(null),menu=react.useRef(null),[position,setPosition]=react.useState({left:0,top:0})
@@ -12,7 +13,7 @@ export function EWorkNoteExportMenu({sessionId}) {
 }
 export function patchNotesExportMenu(source) {
  const marker='/* ework:notes-export-menu:v1 */',anchor='function ConversationSessionHeader('
- const helpers=marker+'\n'+EWorkNoteExportMenu.toString()+'\n'
+ const helpers=marker+'\n'+notesUiLocaleSource+'\n'+EWorkNoteExportMenu.toString()+'\n'
  if(source.includes(marker))source=source.slice(0,source.indexOf(marker))+helpers+source.slice(source.indexOf(anchor,source.indexOf(marker)))
  else {if(source.split(anchor).length!==2)throw Error('无法定位笔记导出菜单。');source=source.replace(anchor,helpers+anchor)}
  const start=source.indexOf('/* ework:notes-header-export:v1 */'),end=source.indexOf('renderSlot("conversation.session.header.utilities", {})]',start)
