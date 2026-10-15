@@ -14,7 +14,7 @@ import { NoteAiSelection } from './selection'
 import { replaceNoteSelection, noteRangeHasOnlyText } from './replace-selection'
 import { SuggestionPanel } from './suggestion-panel'
 import { NoteMenuIcon } from './menu-icon'
-import { NativeComponentBlock } from './native-component-block'
+import { NativeComponentBlock, NoteGenerationBlock } from './native-component-block'
 import {NoteCreationBlock} from './creation-block'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import {useNoteComponentInteraction} from './component-interaction'
@@ -28,6 +28,7 @@ import {changeNoteList,type NoteListType} from './paragraph-style'
 import {useNoteReferenceContext,type NoteReferenceContext} from './reference-context'
 import {noteMessageReferences} from '../../../packages/dsh-research-task-runtime/notes-message-references.js'
 import {exportNoteWithSnapshots} from './component-snapshots'
+import {createNoteComponentDataActions} from './component-data-actions'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -60,7 +61,7 @@ function NoteListButtons(){
 }
 function ResearchBlock({block}:any){
  const context=useContext(Context)!,node=useMemo(()=>{try{return JSON.parse(block.props.payload)}catch{return {}}},[block.props.payload])
- return node.noteDraft?<NoteCreationBlock block={block} node={node} context={context}/>:node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
+ return (context as any).generatingBlock?.current===block.id&&node.generationTaskId&&['queued','running','retrying'].includes(node.generationStatus)?<NoteGenerationBlock block={block} node={node} context={context}/>:node.noteDraft?<NoteCreationBlock block={block} node={node} context={context}/>:node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
 }
 function ResearchSnapshotBlock({ block }: any) {
   const interaction=useNoteComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
@@ -212,8 +213,14 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       } catch (e) { if (!disposed.current) { setStatus('保存失败 · 本地草稿'); setError((e as Error).message) } }
     })
   }
+  const systemMutation=useRef(false)
+  const updateSystemComponent=(blockId:string,node:Record<string,any>)=>{
+    systemMutation.current=true
+    try{editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);editor.updateBlock(blockId,{props:{payload:JSON.stringify(node)}})})}
+    finally{queueMicrotask(()=>{systemMutation.current=false})}
+  }
   const changed = () => {
-    engage()
+    if(!systemMutation.current)engage()
     const content = snapshot(); latest.current = content; setOutline(noteOutline(content.blocks)); setStatus('保存中…')
     void props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content }).catch((e: Error) => { if (!disposed.current) { setStatus('草稿保存失败'); setError(e.message) } })
     clearTimeout(saveTimer.current); saveTimer.current = setTimeout(save, 750)
@@ -226,12 +233,22 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     window.addEventListener('keydown', flush)
     return () => { disposed.current = true; epoch.current++; clearTimeout(saveTimer.current); clearTimeout(engagement.current.timer);void persistEngagement(); off(); offSelection(); doc.getMap('threads').unobserveDeep(commentChanged); window.removeEventListener('keydown', flush); if (request.current) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(request.current,'stopped'); void props.bridge.request('stop', { sessionId: props.sessionId, requestId: request.current }) }; save() }
   }, [])
+  useEffect(()=>{
+    let live=true
+    const isVisible=()=>{const surface=scroll.current?.closest<HTMLElement>('.en-root');return !!surface&&!surface.hidden&&surface.style.display!=='none'&&document.visibilityState!=='hidden'}
+    const handle=createNoteComponentDataActions({sessionId:props.sessionId,editor,current:()=>live&&!disposed.current&&!props.recovery&&isVisible(),update:updateSystemComponent})
+    const receive=(event:Event)=>{void handle((event as CustomEvent).detail).then(reply=>{if(live&&reply)return props.bridge.request('component-data-reply',reply)}).catch(()=>{})}
+    const visible=()=>{if(live&&!props.recovery)void props.bridge.request('component-data-visible',{sessionId:props.sessionId,active:isVisible()}).catch(()=>{})}
+    document.addEventListener('sherlock:notes-component-data-action',receive);document.addEventListener('visibilitychange',visible);document.addEventListener('sherlock:workspace-surface-change',visible);visible()
+    const timer=setInterval(visible,10000)
+    return()=>{live=false;clearInterval(timer);document.removeEventListener('sherlock:notes-component-data-action',receive);document.removeEventListener('visibilitychange',visible);document.removeEventListener('sherlock:workspace-surface-change',visible);void props.bridge.request('component-data-visible',{sessionId:props.sessionId,active:false}).catch(()=>{})}
+  },[editor,props.sessionId,props.recovery,props.bridge])
   const locate = (id: string) => { const element = scroll.current?.querySelector<HTMLElement>('[data-id="' + CSS.escape(id) + '"]'); if (element) { element.scrollIntoView({ block: 'start', behavior: 'smooth' }); setActive(id) } }
   const track = () => { const top = scroll.current?.getBoundingClientRect().top ?? 0; let current = outline[0]?.id; for (const h of outline) { const el = scroll.current?.querySelector('[data-id="' + CSS.escape(h.id) + '"]'); if (el && el.getBoundingClientRect().top <= top + 140) current = h.id } setActive(current || '') }
   const paste = async (event?: React.ClipboardEvent) => {
     if (props.recovery) return
     if (event) { if (!event.clipboardData.getData('text/html').includes('sherlock-research-clipboard')) return; event.preventDefault() }
-    try { const result = await props.bridge.request('clipboard', { sessionId: props.sessionId }); if (result.kind === 'components') { event?.preventDefault(); editor.insertBlocks(result.nodes.map((node: any) => ({ type: 'research', props: { payload: JSON.stringify(node) } })), editor.getTextCursorPosition().block, 'after'); editor.focus() } } catch (e) { setError((e as Error).message) }
+    try { const result = await props.bridge.request('clipboard', { sessionId: props.sessionId }); if (result.kind === 'components') { event?.preventDefault(); editor.insertBlocks(result.nodes.map((node: any) => ({ type: 'research', props: { payload: JSON.stringify({...node,id:'note-component-'+crypto.randomUUID()}) } })), editor.getTextCursorPosition().block, 'after'); editor.focus() } } catch (e) { setError((e as Error).message) }
   }
   const [fileDrag,setFileDrag]=useState(false)
   const ownsFiles=(event:React.DragEvent|DragEvent)=>!props.recovery&&Array.from(event.dataTransfer!.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
@@ -271,6 +288,16 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={}) => {document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
   const lastRequest=useRef<{prompt:string;images:any[];admission?:ComposerAdmission;captured:typeof selection.current;fingerprint:string;context:NoteReferenceContext;draftBlockId?:string}>()
   const generatingBlock = useRef('')
+  const activeGeneration=useRef<{requestId:string;blockId:string;expected:string}>()
+  const currentGeneration=(active=activeGeneration.current)=>{
+    if(!active)return
+    const block=editor.getBlock(active.blockId);if(!block)return
+    try{const latest=JSON.parse(block.props.payload),expected=JSON.parse(active.expected)
+      // Component size is independent of the generated content and remains editable.
+      if(JSON.stringify({...latest,noteSize:undefined})!==JSON.stringify({...expected,noteSize:undefined}))return
+      active.expected=block.props.payload;return block
+    }catch{return}
+  }
   const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission, retry?:typeof lastRequest.current, targetDraft?:string) => {
     if ((!prompt.trim() && !images.length) || request.current || props.recovery) return
     const draftBlockId=targetDraft||retry?.draftBlockId
@@ -281,27 +308,31 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     if(!retry&&context.range&&pinnedSelection.current){const range=editor.getExtension(NoteAiSelection)?.currentRange();Object.assign(captured,range?{...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n')}:{from:0,to:0,text:''})}
     const targetPayloads=new Map(context.components.map(item=>[item.blockId,editor.getBlock(item.blockId)?.props.payload]))
     const component = !!draftBlockId || noteComponentRequest(prompt)
+    const selectedResearch=context.scope==='selection'?context.components.filter(item=>item.type==='research'):[]
+    const targetBlockId=component&&selectedResearch.length===1&&/(修改|改为|改成|调整|更新|替换|重做|重绘|重新生成|重新制作)/u.test(prompt)?selectedResearch[0]?.blockId:undefined
     engage()
     lastRequest.current={prompt,images,admission,captured,fingerprint,context,draftBlockId}
     publishTask(requestId,'preparing',{prompt,references:noteMessageReferences(context,captured.text),operation:component?'component':captured.text?'rewrite':'write'})
     if(!component&&captured.text)paintSelection(captured)
     request.current = requestId;setWriting(true); publishComposer({running:true}); setError(''); setPreview(undefined)
-    let pending = '', draftPayload = ''
+    let pending = ''
     try {
       const markdown = context.scope==='note'?await editor.blocksToMarkdownLossy(editor.document):''
       if(draftBlockId){
         pending=draftBlockId;generatingBlock.current=pending
-        const node=JSON.parse(draftBlock.props.payload);draftPayload=JSON.stringify({...node,containerPrompt:prompt,generationStatus:'running',generationError:undefined});editor.updateBlock(pending,{props:{payload:draftPayload}})
-      }else if (component&&!(context.scope==='selection'&&context.components.some(item=>item.type==='research'))) {
+        const node=JSON.parse(draftBlock.props.payload);const draftPayload=JSON.stringify({...node,containerPrompt:prompt,generationStatus:'running',generationError:undefined,generationTaskId:requestId,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:''});editor.updateBlock(pending,{props:{payload:draftPayload}})
+      }else if (component&&!targetBlockId) {
         const reference = captured.cursor ? editor.getBlock(captured.cursor) : editor.getTextCursorPosition().block
-        const created = editor.insertBlocks([{ type: 'research', props: { payload: JSON.stringify({ id: requestId, title: '正在创建研究组件', kind: 'generated-container', generationStatus: 'running', generationDetail: prompt, sourceText: '未绑定数据源 · 未刷新' }) } }], reference || editor.getTextCursorPosition().block, 'after')
+        const created = editor.insertBlocks([{ type: 'research', props: { payload: JSON.stringify({ id: 'note-component-'+requestId, title: '智能组件', kind: 'generated-container', noteLibrary:true,noteDraft:'smart',containerPrompt:prompt,generationStatus: 'running',generationTaskId:requestId,generationStartedAt:Date.now(),generationEvents:[],generationPartialText:'', generationDetail: prompt, sourceText: '正在生成组件' }) } }], reference || editor.getTextCursorPosition().block, 'after')
         pending = created[0].id; generatingBlock.current = pending
         requestAnimationFrame(() => locate(pending))
       }
+      if(pending)activeGeneration.current={requestId,blockId:pending,expected:editor.getBlock(pending).props.payload}
       publishTask(requestId,'generating')
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, mode: component ? 'component' : 'write' })
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, ...targetBlockId?{targetBlockId}:{},mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt) return
-      if(draftBlockId&&editor.getBlock(pending)?.props.payload!==draftPayload)throw Error('组件已变化，较新内容已保留。')
+      if(pending&&!currentGeneration())throw Error('组件已变化，较新内容已保留。')
+      let completedBlock=''
       if(draftBlockId&&result.kind==='conversation'){
         const previous=JSON.parse(editor.getBlock(pending).props.payload);editor.updateBlock(pending,{props:{payload:JSON.stringify({...previous,generationStatus:'draft',generationDetail:result.markdown})}});publishTask(requestId,'replied',{result})
       }else if(result.kind==='component'&&result.targetBlockId){
@@ -310,11 +341,11 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         if(!current||current.props.payload!==targetPayloads.get(result.targetBlockId))throw Error('组件已变化，请重新选择后修改，较新内容已保留。')
         const original=JSON.parse(current.props.payload)
         if(pending&&editor.getBlock(pending))editor.removeBlocks([pending])
-        const updated={...original,...result.node,id:original.id,noteSize:original.noteSize};delete updated.noteReply;delete updated.excerpt
+        const updated={...original,...result.node,id:original.id.startsWith('note-component-')?original.id:'note-component-'+crypto.randomUUID(),noteSize:original.noteSize};delete updated.noteReply;delete updated.excerpt
         editor.updateBlock(current.id,{props:{payload:JSON.stringify(updated)}})
-        publishTask(requestId,'accepted',{result});changed();requestAnimationFrame(()=>locate(current.id))
+        completedBlock=current.id;publishTask(requestId,'accepted',{result});changed();requestAnimationFrame(()=>locate(current.id))
       }else if (component && result.kind === 'component' && editor.getBlock(pending)) {
-        publishTask(requestId,'accepted',{result}); const previous=JSON.parse(editor.getBlock(pending).props.payload); editor.updateBlock(pending, { props: { payload: JSON.stringify(draftBlockId?{...result.node,id:previous.id,noteLibrary:true,noteSize:previous.noteSize}:result.node) } }); changed(); requestAnimationFrame(() => locate(pending))
+        publishTask(requestId,'accepted',{result}); const previous=JSON.parse(editor.getBlock(pending).props.payload); editor.updateBlock(pending, { props: { payload: JSON.stringify({...result.node,id:previous.id,noteLibrary:true,noteSize:previous.noteSize}) } }); completedBlock=pending;changed(); requestAnimationFrame(() => locate(pending))
       } else {
         if(draftBlockId)throw Error('组件生成未返回有效内容，请重试。')
         if (pending && editor.getBlock(pending)) editor.removeBlocks([pending])
@@ -326,16 +357,30 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         }
         else { publishTask(requestId,'ready',{result}); setPreview({requestId,...noteSuggestionPreview(result, { ...captured, fingerprint, cursor: captured.cursor || editor.getTextCursorPosition().block.id })}) }
       }
+      if(completedBlock&&result.kind==='component'&&result.sourceResult?.status==='verified'){
+        // Persist the generated block before binding the same research refresh engine to it.
+        const payload=editor.getBlock(completedBlock)?.props.payload
+        save();await saveQueue.current
+        if(!disposed.current&&epoch.current===attempt&&editor.getBlock(completedBlock)?.props.payload===payload){
+          const node=JSON.parse(payload)
+          try{
+            const binding=await props.bridge.request('component-data',{sessionId:props.sessionId,action:'bind-generated',nodeId:node.id,recipe:result.sourceResult.recipe,initialSpec:node.containerSpec})
+            if(!disposed.current&&epoch.current===attempt&&editor.getBlock(completedBlock)?.props.payload===payload)updateSystemComponent(completedBlock,{...node,noteDataBound:true,sourceText:binding.enabled===false?'已绑定数据源 · 手动刷新':'已绑定数据源 · 可见时自动刷新'})
+          }catch(error){
+            if(!disposed.current&&epoch.current===attempt&&editor.getBlock(completedBlock)?.props.payload===payload){updateSystemComponent(completedBlock,{...node,noteDataBound:false,sourceText:'已验证数据来源 · 当前为快照，自动刷新未启用'});setError((error as Error).message)}
+          }
+        }
+      }
       commitNativeDraft(admission)
     } catch (e) {
       if (!disposed.current && epoch.current === attempt) {
         const message = (e as Error).name === 'AbortError' ? '生成已停止，可调整需求后重试。' : (e as Error).message
-        if (pending && editor.getBlock(pending)&&(!draftBlockId||editor.getBlock(pending).props.payload===draftPayload)) editor.updateBlock(pending, { props: { payload: JSON.stringify(draftBlockId?{...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}:{ id: requestId, title: '研究组件', kind: 'generated-container', generationStatus: 'failed', generationError: message, sourceText: '未绑定数据源 · 未刷新' }) } })
+        if (pending && currentGeneration()) editor.updateBlock(pending, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(pending).props.payload),generationStatus:'failed',generationError:message}) } })
         rollbackNativeDraft(admission); publishTask(requestId,'failed',{error:message}); setError(message)
       }
-    } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); publishComposer({running:false}); request.current = ''; generatingBlock.current = '' } }
+    } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); publishComposer({running:false}); request.current = ''; generatingBlock.current = '';activeGeneration.current=undefined } }
   }
-  const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && editor.getBlock(generatingBlock.current)) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:'生成已停止，可调整需求后重试。'}) } }); generatingBlock.current = ''; setError('生成已停止，笔记内容已保留。') }
+  const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:'生成已停止，可调整需求后重试。'}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError('生成已停止，笔记内容已保留。') }
   const apply = async (replace: boolean) => {
     if (!preview) return
     editor.focus()
@@ -351,7 +396,15 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const regenerate=()=>{const previous=lastRequest.current;if(!previous||request.current)return;if(preview)publishTask(preview.requestId,'discarded');const range=editor.getExtension(NoteAiSelection)?.currentRange();void generate(previous.prompt,previous.images,previous.admission,{...previous,captured:{...previous.captured,...(range||{from:0,to:0}),text:range?editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n'):''}})}
   const commands = useRef({generate,stop,exportNote:(_format?:string)=>{}});commands.current={generate,stop,exportNote:(format?:string)=>{void exportNote(format)}}
   useEffect(()=>{
-    const progress=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.sessionId===props.sessionId&&value.requestId===request.current)publishTask(value.requestId,'generating',{stage:value.stage,reasoning:value.reasoning,outputChars:value.outputChars,...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}})}
+    const progress=(event:Event)=>{
+      const value=(event as CustomEvent).detail
+      if(value?.sessionId!==props.sessionId||value.requestId!==request.current)return
+      publishTask(value.requestId,'generating',{stage:value.stage,reasoning:value.reasoning,outputChars:value.outputChars,...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}})
+      const active=activeGeneration.current,task=value.componentTask
+      if(!active||active.requestId!==value.requestId||!task||!currentGeneration(active))return
+      const node=JSON.parse(active.expected),next={...node,generationTaskId:task.generationTaskId||node.generationTaskId,generationChildSessionId:task.childSessionId||node.generationChildSessionId,generationStartedAt:task.generationStartedAt||node.generationStartedAt,generationEvents:task.generationEvents||node.generationEvents,generationPartialText:task.generationPartialText??node.generationPartialText,generationStatus:'running'}
+      updateSystemComponent(active.blockId,next);active.expected=JSON.stringify(next)
+    }
     document.addEventListener('sherlock:notes-generation-progress',progress)
     const submit=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.sessionId!==props.sessionId||props.recovery||request.current||(!detail.prompt?.trim()&&!detail.images?.length))return;document.dispatchEvent(new CustomEvent('sherlock:notes-submit-accepted',{detail:{sessionId:props.sessionId,submissionId:detail.submissionId}}));void commands.current.generate(detail.prompt,detail.images,detail.admission)}
     const exportRequested=(event:Event)=>{if((event as CustomEvent).detail?.sessionId===props.sessionId)commands.current.exportNote((event as CustomEvent).detail.format)}
@@ -369,7 +422,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     catch(e){if(!disposed.current)setError((e as Error).message)}
     finally{exportPending.current=false;if(!disposed.current)setExporting(false)}
   }
-  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,importing:importing.current,generatingBlock,generateComponent:(id:string,prompt:string)=>void commands.current.generate(prompt,[],undefined,undefined,id),stopGeneration:()=>commands.current.stop() }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing])
+  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,importing:importing.current,generatingBlock,generateComponent:(id:string,prompt:string)=>{if(request.current||props.recovery)return {ok:false};void commands.current.generate(prompt,[],undefined,undefined,id);return {ok:true}},stopGeneration:()=>commands.current.stop() }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing])
   const slashItems = useMemo(()=>async (query:string)=>{
     const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
     const pick=async(kind:string)=>{
@@ -401,7 +454,9 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
         }catch(e){if(!disposed.current)setError((e as Error).message)}
       }}))
     }catch(e){library.children=[{key:'library_retry',title:'组件库暂不可用，重新打开重试',group:'组件库',onItemClick:()=>setError((e as Error).message)}]}
-    return filterSuggestionItems([...defaults,...creation,library],query)
+    const fileIndex=defaults.findIndex((item:any)=>item.key==='file')
+    const choices=fileIndex<0?[...defaults,...creation]:[...defaults.slice(0,fileIndex+1),...creation,...defaults.slice(fileIndex+1)]
+    return filterSuggestionItems([...choices,library],query)
   }, [editor,props.bridge,props.sessionId])
   const slashMenu = useMemo(() => (menuProps:any) => <NativeSlashMenu {...menuProps} bridge={props.bridge} sessionId={props.sessionId} dark={props.dark} />,[props.bridge,props.sessionId,props.dark])
   const suggestion=<>{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>准备组件快照与导出文件…</span></div>:null}{writing ? <div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>正在生成内容…</span><button onClick={stop}>停止</button></div> : null}{error ? <div className="en-error" role="alert"><span>{error}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>重新读取并对比</button> : null}<button onClick={() => setError('')} aria-label="关闭提示">×</button></div> : null}

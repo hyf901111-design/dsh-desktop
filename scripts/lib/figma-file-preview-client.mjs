@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { normalizeResearchWebUrl } from '../../packages/dsh-research-task-runtime/web-url.js'
 const fileIcon = 'data:image/svg+xml;base64,' + readFileSync(new URL('../../docs/figma-file-web-evidence/figma-file.svg', import.meta.url)).toString('base64')
 const linkIcon = 'data:image/svg+xml;base64,' + readFileSync(new URL('../../docs/figma-file-web-evidence/figma-link.svg', import.meta.url)).toString('base64')
 const startMarker = '/* ODYSSEY_FILE_PREVIEW_START */'
@@ -34,18 +35,11 @@ export function patchFigmaFilePreview(source) {
   }
   source=source.replace('"data-research-link-input": "",\n\t\t\t\t\t\t\t\t\ttype: "url",', '"data-research-link-input": "",\n\t\t\t\t\t\t\t\t\ttype: "text", inputMode: "url",');
   source=source.replace('placeholder: "https://example.com",','placeholder: "example.com 或完整网址",');
-  if(!source.includes('/* ODYSSEY_WEB_ADDRESS_COMPLETION */')) {
-    source=replaceOnce(source,'const url = new Url(source);',`/* ODYSSEY_WEB_ADDRESS_COMPLETION */
-        let address=source;
-        if(address.startsWith('//'))address='https:'+address;
-        else if(!/^[a-z][a-z0-9+.-]*:/i.test(address) || /^(?:localhost|[^/:]+\\.[^/:]+):[0-9]+(?:[/?#]|$)/i.test(address)) {
-          const host=address.split(/[/?#]/)[0];
-          if(!host.includes('.')&&!/^localhost(?::[0-9]+)?$/i.test(host))return null;
-          address='https://'+address;
-        }
-        const url = new Url(address);`);
-    source=source.replace('请输入有效的 http 或 https 地址','请输入有效的网站地址，例如 baidu.com');
-  }
+  // Refresh already-patched clients too, so both creation forms use one implementation.
+  const urlStart=source.indexOf('function normalizeResearchWebUrl('),urlEnd=source.indexOf('function researchWebUrlHostname(',urlStart)
+  if(urlStart<0||urlEnd<urlStart)throw Error('Research web URL normalizer boundary drifted')
+  source=source.slice(0,urlStart)+normalizeResearchWebUrl.toString()+'\n\t\t'+source.slice(urlEnd)
+  source=source.replace('请输入有效的 http 或 https 地址','请输入有效的网站地址，例如 baidu.com');
 
   if(!source.includes('/* ODYSSEY_FRAME_SOURCE_MENU */')) {
     const start=source.indexOf('function ResearchCanvasFrameMenu('),end=source.indexOf('function ResearchCanvasRichNodeFrame(',start);

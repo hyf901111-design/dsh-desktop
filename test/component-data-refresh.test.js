@@ -240,6 +240,14 @@ describe('data refresh without generation',()=>{
 })
 
 describe('concurrent data consumers and account changes',()=>{
+ it.each(['inspect','validate'])('rejects a binding without persisting after its owner changes during %s',async stage=>{
+  const f=setup();await f.service.load();let owner='owner';f.service.options.owner=()=>owner
+  const save=vi.fn(f.service.options.save);f.service.options.save=save
+  if(stage==='inspect')f.service.options.inspect=async()=>{owner='next-owner';return {revision:'r1',spec:f.spec(),writable:true}}
+  else f.service.options.validateRequest=async r=>{owner='next-owner';return {...r,connectionId:'c',connectionRevision:1,schemaDigest:'d'}}
+  await expect(f.service.bind(f.input)).rejects.toThrow('账号已变化')
+  expect(save).not.toHaveBeenCalled();expect(f.service.list()).toEqual([]);owner='owner';expect(f.service.list()).toEqual([])
+ })
  it('fetches concurrently but commits all four cards against the real board revision protocol',async()=>{
   const initial=JSON.parse(acceptArtifactOutput(JSON.stringify(data)))
   let board={files:[],artifacts:['a','b','c','d'].map(id=>({id,containerSpec:initial,x:0,y:0,width:400,height:300})),selection:{selectedNodeIds:[],orderedFileIds:[]}}

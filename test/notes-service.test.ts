@@ -78,3 +78,25 @@ it('renders a native table and escapes supplied cell markup', async () => {
   expect(result.html).toContain('&lt;script&gt;unsafe&lt;/script&gt;')
   expect(result.html).toContain('-5')
 })
+
+it('routes generated note bindings only after the exact component has been saved',async()=>{
+ const request=vi.fn(async()=>({id:'binding'})),visible=vi.fn(),reply=vi.fn(),s=service(undefined,{componentData:{request,visible,reply}})
+ const spec={version:1,type:'table',title:'BTC',columns:['价格'],rows:[[100]]},node={id:'note-component-one',kind:'generated-container',containerSpec:spec},recipe={intervalMinutes:1,requests:[]}
+ await expect(s.call('component-data',{action:'bind-generated',nodeId:node.id,initialSpec:spec,recipe})).rejects.toThrow('尚未保存')
+ await s.call('save',{revision:0,clientId:'client',content:{title:'笔记',blocks:[{id:'block',type:'research',props:{payload:JSON.stringify(node)}}],yjs:''}})
+ await expect(s.call('component-data',{action:'bind-generated',nodeId:node.id,initialSpec:{...spec,title:'过期'},recipe})).rejects.toThrow('内容已变化')
+ expect(request).not.toHaveBeenCalled()
+ await expect(s.call('component-data',{action:'bind-generated',nodeId:node.id,initialSpec:spec,recipe})).resolves.toEqual({id:'binding'})
+ expect(request).toHaveBeenCalledWith('session',expect.objectContaining({action:'bind-generated',nodeId:node.id,initialSpec:spec,recipe}))
+ await s.call('component-data-visible',{active:true});expect(visible).toHaveBeenCalledWith('session',true)
+ await expect(s.call('component-data-visible',{active:'true'})).rejects.toThrow('可见状态')
+ await s.call('component-data-reply',{requestId:'reply',result:{revision:'revision'}});expect(reply).toHaveBeenCalledWith(expect.objectContaining({sessionId:'session',requestId:'reply'}))
+ s.changeOwner();await expect(s.call('component-data-reply',{owner:'alice',requestId:'reply'})).rejects.toThrow('账号已变化');s.dispose()
+})
+
+it('forwards an explicit selected component target to the child generation boundary',async()=>{
+ const s=service('http://127.0.0.1:9999');let body:any
+ vi.stubGlobal('fetch',async(_url:any,options:any)=>{body=JSON.parse(options.body);return new Response(JSON.stringify({type:'result',result:{kind:'component',targetBlockId:'selected',node:{id:'generated'}}})+'\n')})
+ await s.call('generate',{requestId:'target',mode:'component',targetBlockId:'selected',prompt:'重新生成所选图表',context:{scope:'selection',components:[{blockId:'selected',type:'research',title:'所选图表',content:'内容'}]}})
+ expect(body.targetBlockId).toBe('selected');expect(body.context.components.map((item:any)=>item.blockId)).toEqual(['selected']);s.dispose()
+})

@@ -217,14 +217,16 @@ export class ComponentDataRefresh {
   input.intervalMinutes??=1
   if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>8||!record(input.mapping))throw Error('数据绑定参数无效')
   const owner=this.options.owner();if(!owner)throw Error('当前账户不可用')
+  const checkOwner=()=>{if(this.options.owner()!==owner)throw Error('账号已变化，请重新打开后重试。')}
   // Generation registers its verified recipe before the renderer mounts the
   // completed card. Every refresh still checks the live node and edit rights.
   const target=initialSpec?{spec:initialSpec,writable:true}:await this.options.inspect(input)
+  checkOwner()
   const model=readTemplateModel(target.spec)
   if(!target.writable||!model)throw Error('该组件尚未保存模板数据，请先使用结构化模板创建或更新一次')
   if(templateFor(input.mapping)?.id!==model.templateId)throw Error('字段映射必须保留当前模板类型')
   const requests=[]
-  for(const r of input.requests){if(!id(r.key)||!id(r.toolId)||!record(r.args)||requests.some(x=>x.key===r.key))throw Error('数据请求无效');requests.push(await this.options.validateRequest({...r,toolId:/^ework__t_[a-f\d]+$/i.test(r.toolId)?r.toolId.slice('ework__'.length):r.toolId},input))}
+  for(const r of input.requests){if(!id(r.key)||!id(r.toolId)||!record(r.args)||requests.some(x=>x.key===r.key))throw Error('数据请求无效');requests.push(await this.options.validateRequest({...r,toolId:/^ework__t_[a-f\d]+$/i.test(r.toolId)?r.toolId.slice('ework__'.length):r.toolId},input));checkOwner()}
   const previous=this.records.find(b=>b.ownerAccountId===owner&&b.sessionId===input.sessionId&&b.nodeId===input.nodeId)
   const intervalMinutes=preserveSettings&&previous?previous.intervalMinutes:input.intervalMinutes
   const enabled=intervalMinutes>0&&(preserveSettings&&previous?previous.enabled:true)

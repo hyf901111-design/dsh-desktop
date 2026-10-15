@@ -6,6 +6,48 @@ import {componentRefreshBindings,createComponentDataService} from '../src/main/c
 import {validateIntegrationBindings} from '../src/shared/scheduled-tasks'
 const {acceptArtifactOutput}=await import(new URL('../packages/dsh-research-task-runtime/artifact-output.js',import.meta.url).href)
 
+it.each([
+ {action:'list',pauseAt:1},
+ {action:'bind-generated',pauseAt:2},
+ {action:'bind-generated',pauseAt:4}
+])('rejects $action when the owner changes during identity RPC $pauseAt',async({action,pauseAt})=>{
+ const directory=await mkdtemp(join(tmpdir(),'component-data-owner-'))
+ let owner='alice',calls=0
+ const data={version:1,type:'kpi',title:'Alice price',asOf:'Kraken',items:[{label:'BTC/USD',value:'100'}]},spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))!)
+ const validate=vi.fn(async()=>({sourceId:'kraken-ticker',sourceName:'Kraken'}))
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=>owner,isShared:()=>false,integrations:{} as any,canvas:{} as any,
+  publicData:{validate,query:vi.fn()},
+  rpc:async(method:string)=>{if(++calls===pauseAt)owner='bob';return {items:method==='session.list'?[{sessionId:'note',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}}})
+ try{
+  await expect(service.request('note',{action,nodeId:'note-component-alice',initialSpec:spec,recipe:{requests:[{key:'q',toolId:'public_data_query',args:{sourceId:'kraken-ticker'}}],mapping:data}})).rejects.toThrow('账号已变化')
+  expect(service.engine.list()).toEqual([]);owner='alice';expect(service.engine.list()).toEqual([]);expect(validate).not.toHaveBeenCalled()
+ }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
+})
+
+it('refreshes note components through the same engine using an independent note sink and visibility lease',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'note-data-refresh-'))
+ const data={version:1,type:'kpi',title:'BTC',asOf:'Kraken',items:[{label:'BTC/USD',value:'100'}]}
+ let spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))!),at=Date.now()
+ const noteBind=vi.fn(),noteExecute=vi.fn(async(call:any)=>{
+  if(call.method==='apply'){spec=call.args.changes[0].fields.containerSpec;return {status:'applied'}}
+  return {revision:'note-current',writable:true,nodes:[{id:'note-component-one',content:{containerSpec:spec},capabilities:{fields:{containerSpec:true}}}]}
+ })
+ const query=vi.fn(async()=>({records:[{price:101}]}))
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,
+  publicData:{validate:async()=>({sourceId:'kraken-ticker',sourceName:'Kraken'}),query},integrations:{} as any,
+  rpc:async(method:string)=>({items:method==='session.list'?[{sessionId:'note',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}),
+  canvas:{bind:noteBind,execute:noteExecute}} as any)
+ ;(service.engine as any).options.now=()=>at
+ try{
+  await service.request('note',{action:'bind-generated',nodeId:'note-component-one',initialSpec:spec,recipe:{intervalMinutes:1,requests:[{key:'q',toolId:'public_data_query',args:{sourceId:'kraken-ticker',parameters:{pair:'XBTUSD'}}}],mapping:{...data,items:[{label:'BTC/USD',value:{$from:'q',$path:'records.0.price',$as:'string'}}]}}})
+  at+=60000;service.engine.setVisible('note',true);await service.engine.tick()
+  expect(query).toHaveBeenCalledOnce();expect(noteExecute.mock.calls.map(call=>call[0].method)).toEqual(['inspect','inspect','apply'])
+  expect(noteBind).toHaveBeenCalledWith({sessionId:'note',selectedIds:['note-component-one']})
+  expect(service.engine.list('note')[0]).toMatchObject({status:'success',successSequence:1})
+  service.engine.setVisible('note',false);at+=60000;await service.engine.tick();expect(query).toHaveBeenCalledOnce()
+ }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
+})
+
 it('refreshes a builtin source every minute without MCP grants, pauses outside the board and retains data on failure',async()=>{
  const directory=await mkdtemp(join(tmpdir(),'public-data-refresh-'))
  const args={operation:'query',source:'kraken-ticker',parameters_json:'{"pair":"XBTUSD"}'}
@@ -15,7 +57,7 @@ it('refreshes a builtin source every minute without MCP grants, pauses outside t
  let spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))!)
  const canvasExecute=vi.fn(async(call:any)=>{if(call.method==='apply'){spec=call.args.changes[0].fields.containerSpec;return {}}return {revision:'r',writable:true,nodes:[{id:'n',content:{containerSpec:spec},capabilities:{fields:{containerSpec:true}}}]}})
  const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,publicData:{validate,query},integrations:{} as any,
-  rpc:async(method)=>({items:method==='session.list'?[{sessionId:'s',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}),canvas:{bind:()=>{},execute:canvasExecute} as any})
+  rpc:async(method:string)=>({items:method==='session.list'?[{sessionId:'s',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}),canvas:{bind:()=>{},execute:canvasExecute} as any})
  ;(service.engine as any).options.now=()=>at
  try{
   await service.request('s',{action:'bind-generated',nodeId:'n',initialSpec:spec,recipe:{intervalMinutes:1,requests:[{key:'q',toolId:'public_data_query',args}],mapping:{...data,items:[{label:'BTC/USD',value:{$from:'q',$path:'records.0.price',$as:'string'}}]}}})
@@ -56,7 +98,7 @@ it('binds and refreshes successful MCP numeric query arguments through the same 
  const canvasExecute=vi.fn(async()=>({revision:'r',writable:true,nodes:[{id:'n',content:{containerSpec:spec},capabilities:{fields:{containerSpec:true}}}]}))
  const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,
   integrations:{store:{snapshot:()=>({tools:{t:tool},connections:{c:connection}})},runtimeSnapshot:()=>({tools:[tool],connections:[connection],runtimeEpoch:'e'}),execute} as any,
-  rpc:async(method)=>({items:method==='session.list'?[{sessionId:'s',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}),
+  rpc:async(method:string)=>({items:method==='session.list'?[{sessionId:'s',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}),
   canvas:{bind:()=>{},execute:canvasExecute} as any})
  try{
   await service.request('s',{action:'bind-generated',nodeId:'n',initialSpec:spec,recipe:{requests:[{key:'q',toolId:'t',args:{url_params:{num:20,flag:1,dateString:{$date:{format:'yyyyMMdd000000'}}}}}],mapping:{...data,items:[{label:'价格',value:{$from:'q',$path:'value',$as:'string'}}]}}})

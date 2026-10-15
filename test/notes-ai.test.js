@@ -1,8 +1,10 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { generateNoteSuggestion } from '../packages/dsh-research-task-runtime/notes-ai.js'
+import {inject} from '../packages/dsh-research-task-runtime/index.js'
 function context(text, kind = 'stop') {
-  let options
-  return { apiProxy: { sessions: { models: async () => ({ result: { ok: true, value: { current: { provider: 'session-provider', model: 'session-model' }, routable: true } } }) } }, llm: { stream: async function* (value) { options = value; yield { type: 'text-delta', text }; yield { type: 'finish', reason: { kind } } } }, options: () => options }
+  let options, childOptions
+  const parent={id:'session',session:{events:[]}},child={id:'note-component-child',session:{id:'note-component-child',events:[]}}
+  return { agents:{get:id=>id===parent.id?parent:undefined},tools:{schemas:()=>[]},on:()=>()=>{},subagents:{start:vi.fn(async(_provider,value)=>{childOptions=value;const result=JSON.parse(text);return{id:child.id,localAgent:child,result:Promise.resolve({stopReason:kind==='stop'?'completed':kind,output:[{type:'text',text:JSON.stringify(result.artifact??result)}]}),dispose:async()=>{}}})},apiProxy: { sessions: { models: async () => ({ result: { ok: true, value: { current: { provider: 'session-provider', model: 'session-model' }, routable: true } } }) } }, llm: { stream: async function* (value) { options = value; yield { type: 'text-delta', text }; yield { type: 'finish', reason: { kind } } } }, options: () => options,childOptions:()=>childOptions }
 }
 const input = { sessionId: 'session', title: '笔记', markdown: '正文资料', selection: '选中文字', prompt: '改写为简洁文字', mode: 'write' }
 it('passes the selected component data to the model and excludes the note when opted out',async()=>{
@@ -26,8 +28,7 @@ it('reports actual model reasoning and writing progress while returning the docu
  expect(seen.some(row=>row.reasoning.includes('保留原意'))).toBe(true);expect(seen.at(-1)).toMatchObject({stage:'validating',reasoning:'先保留原意，再整理段落。'})
  expect(seen.every(row=>!('markdown' in row))).toBe(true)
 })
-it('declares the attachment dependency used by the real notes HTTP handler',async()=>{
- const {inject}=await import('../packages/dsh-research-task-runtime/index.js')
+it('declares the attachment dependency used by the real notes HTTP handler',()=>{
  expect(inject).toContain('attachments')
 })
 it('uses the selected session model and returns a preview without writing the document', async () => {
@@ -35,6 +36,7 @@ it('uses the selected session model and returns a preview without writing the do
   expect(await generateNoteSuggestion(ctx, input)).toEqual({ kind: 'text', markdown: '简洁的新内容' })
   expect(ctx.options()).toMatchObject({ provider: 'session-provider', model: 'session-model' })
   expect(ctx.options().tools).toBeUndefined()
+  expect(ctx.subagents.start).not.toHaveBeenCalled()
   expect(ctx.options().messages[0].content[0].text).toContain('选中文字')
 })
 it('rejects a truncated answer instead of offering it for acceptance', async () => {
@@ -48,14 +50,45 @@ it('validates a created component before returning it', async () => {
 it('uses the accepted native chart contract in its prompt and component output', async () => {
   const ctx = context('{"kind":"component","artifact":{"version":1,"type":"chart","title":"趋势","variant":"line","labels":["一月","二月"],"series":[{"name":"收入","values":[10,20]}]}}')
   expect(await generateNoteSuggestion(ctx, { ...input, mode: 'component' })).toMatchObject({ kind: 'component', node: { containerSpec: { variant: 'line' } } })
-  expect(ctx.options().system).toContain('variant:"line"')
-  expect(ctx.options().system).not.toContain('chartType')
+  expect(ctx.childOptions().prompt.at(-1).text).toContain('labels/series')
+  expect(ctx.childOptions().prompt.at(-1).text).not.toContain('chartType')
+  expect(ctx.options()).toBeUndefined()
 })
 it('honors cancellation and refuses missing models', async () => {
   const cancelled = new AbortController(); cancelled.abort()
   await expect(generateNoteSuggestion(context('hello'), input, cancelled.signal)).rejects.toThrow()
   const ctx = context('hello'); ctx.apiProxy.sessions.models = async () => ({ result: { ok: true, value: { current: null, routable: false } } })
   await expect(generateNoteSuggestion(ctx, input)).rejects.toThrow()
+})
+it('starts a component child with only the authorized note evidence and records its result in the same conversation',async()=>{
+ const {Session}=await import('@deepseek-ai/dsh-session'),{noteConversationRows}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('session');session.append('user/message',{id:'u',role:'user',source:{kind:'user'},content:[{type:'text',text:'未引用的历史机密'}]},{surfaceOp:'append'})
+ const ctx=context('{"kind":"component","artifact":{"version":1,"type":"table","title":"选中资料","columns":["收入"],"rows":[[123]]}}'),seen=[]
+ ctx.sessions={get:()=>session};ctx.sessionTitle={rename:(s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}}}
+ await generateNoteSuggestion(ctx,{...input,mode:'component',requestId:'component-child',markdown:'未引用的整篇机密',context:{scope:'selection',components:[{blockId:'selected',type:'research',title:'选中资料',content:'收入123'}]}},undefined,state=>seen.push(state))
+ const sent=ctx.childOptions().prompt.at(-1).text
+ expect(sent).toContain('收入123');expect(sent).not.toMatch(/未引用的历史机密|未引用的整篇机密/)
+ expect(ctx.options()).toBeUndefined();expect(ctx.subagents.start).toHaveBeenCalledOnce()
+ expect(noteConversationRows(session)[0]).toMatchObject({requestId:'component-child',phase:'ready',result:{kind:'component'}})
+ expect(seen.at(-1)).toMatchObject({seq:seen[0].seq,startedAt:seen[0].startedAt,componentTask:{childSessionId:'note-component-child'}})
+})
+
+it('passes uploaded native image attachments to the actual component child',async()=>{
+ const ctx=context('{"kind":"component","artifact":{"version":1,"type":"markdown","title":"图示","content":"图片中的说明"}}')
+ ctx.attachments={imageLimits:{maxImagesPerMessage:1,maxImageBytes:16,maxMessageImageBytes:16,mediaTypes:['image/png']},saveImages:async()=>[{attachmentId:'owned-image',mediaType:'image/png',bytes:3,width:1,height:1}]}
+ await generateNoteSuggestion(ctx,{...input,mode:'component',images:[{type:'image',mediaType:'image/png',data:'AQID'}]})
+ expect(ctx.childOptions().prompt[0]).toMatchObject({type:'image',attachment:{attachmentId:'owned-image'}})
+ expect(JSON.stringify(ctx.childOptions().prompt)).not.toContain('AQID')
+})
+it('reserves the research generation budget only for component mode',async()=>{
+ const timeout=vi.spyOn(AbortSignal,'timeout')
+ try{
+  await generateNoteSuggestion(context('{"kind":"component","artifact":{"version":1,"type":"table","title":"结果","columns":["项目"],"rows":[["A"]]}}'),{...input,mode:'component'})
+  expect(timeout.mock.calls[0][0]).toBe(240000)
+  timeout.mockClear()
+  await generateNoteSuggestion(context('{"kind":"text","markdown":"正文"}'),input)
+  expect(timeout.mock.calls[0][0]).toBe(120000)
+ }finally{timeout.mockRestore()}
 })
 it('uses the native attachment store for uploaded images and refuses malformed or oversized images',async()=>{
  const ctx=context('{"kind":"text","markdown":"图片说明"}');let saved

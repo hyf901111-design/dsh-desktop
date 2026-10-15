@@ -183,6 +183,7 @@ let researchBoardsService: ResearchBoardsService | undefined
 let disposeResearchBoardsHandlers: (() => void) | undefined
 let mainWindow: BrowserWindow | undefined
 let componentDataService: Awaited<ReturnType<typeof createComponentDataService>> | undefined
+let noteComponentDataService: Awaited<ReturnType<typeof createComponentDataService>> | undefined
 let integrationService: IntegrationService | undefined
 let integrationEndpoint: Awaited<ReturnType<typeof startIntegrationBridge>> | undefined
 let memoryService: MemoryService | undefined
@@ -1248,6 +1249,11 @@ async function bootstrap(): Promise<void> {
   })
   const disposeCanvasActions = registerCanvasActionHandlers({ipcMain,getMainWindow:()=>mainWindow,bridge:canvasActions})
   app.once('before-quit',disposeCanvasActions)
+  const noteComponentActions = new CanvasActionBridge({
+    send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('笔记窗口不可用。');mainWindow.webContents.send('notes:component-data-action',{...(value as object),owner:integrationOwner()||'local'})},
+    canRead:sessionId=>canReadNoteSession(sessionId)
+  })
+  app.once('before-quit',()=>noteComponentActions.dispose())
   const rssService=createResearchRssService({canvas:canvasActions,isShared:id=>researchBoardsService?.isSharedSession(id)===true})
   app.once('before-quit',registerResearchRssHandlers({ipcMain,getMainWindow:()=>mainWindow,service:rssService}))
   let isScheduledSession = (_id: string) => false
@@ -1382,6 +1388,7 @@ async function bootstrap(): Promise<void> {
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
     canRead:canReadNoteSession,nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,
+    componentData:{request:(sessionId,args)=>{if(!noteComponentDataService)throw Error('组件数据刷新服务暂不可用。');return noteComponentDataService.request(sessionId,args)},visible:(sessionId,active)=>noteComponentDataService?.engine.setVisible(sessionId,active),reply:value=>noteComponentActions.respond(value)},
     captureSources:(sessionId,sources)=>{if(!researchContextBridge)throw Error('笔记资料服务暂不可用。');return researchContextBridge.captureSources(sessionId,sources)},
     files:new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
   }))
@@ -1400,7 +1407,7 @@ async function bootstrap(): Promise<void> {
         return result.canceled ? null : result.filePaths[0] ?? null
       },
       resolveContext: context => resolveIntegrationContext(context, {
-        ownerId: integrationOwner(), tasks: [...(scheduledStoreForIntegrations?.list() ?? []),...(componentDataService?.contextTasks() ?? [])],
+        ownerId: integrationOwner(), tasks: [...(scheduledStoreForIntegrations?.list() ?? []),...(componentDataService?.contextTasks() ?? []),...(noteComponentDataService?.contextTasks() ?? [])],
         workspaces: async () => (await taskRpc('workspace.list', {})).items,
         sessions: async () => (await taskRpc('session.list', {})).items,
       }),
@@ -1469,6 +1476,7 @@ async function bootstrap(): Promise<void> {
     else try{await dependencyIndex?.syncBindings(task.id, task.integrationBindings ?? [])}catch{console.warn('[integrations] task dependency index update unavailable')}
   }
   try { if (integrationService) componentDataService = await createComponentDataService({file:join(app.getPath('userData'),'component-data-bindings.json'),skillDirectory:bundledSkillDirectory(),integrations:integrationService,canvas:canvasActions,rpc:taskRpc,owner:integrationOwner,isShared:id=>researchBoardsService?.isSharedSession(id)===true,onStatusChange:(sessionId,rows)=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('component-data:status',{sessionId,rows})}}) } catch(error) { console.error('[component-data] 配置读取失败，原文件已保留',error) }
+  try { if(integrationService) noteComponentDataService=await createComponentDataService({file:join(app.getPath('userData'),'note-component-data-bindings.json'),skillDirectory:bundledSkillDirectory(),integrations:integrationService,canvas:noteComponentActions,rpc:taskRpc,owner:integrationOwner,isShared:id=>researchBoardsService?.isSharedSession(id)===true}) } catch(error) { console.error('[notes-component-data] 配置读取失败，原文件已保留',error) }
   const financialIdentity=()=>accountService?.authenticated?accountService.accountId??null:null
   const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
@@ -1632,7 +1640,7 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => flushResearchNativeWeb?.(), () => componentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => memoryEndpoint?.dispose(), () => memoryService?.close(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => flushResearchNativeWeb?.(), () => componentDataService?.dispose(), () => noteComponentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => memoryEndpoint?.dispose(), () => memoryService?.close(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )

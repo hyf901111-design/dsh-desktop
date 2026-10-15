@@ -1,5 +1,6 @@
 import React,{useState} from 'react'
 import {parseResearchContainerSpec} from '../../../packages/dsh-research-task-runtime/artifact-validator.js'
+import {normalizeResearchWebUrl} from '../../../packages/dsh-research-task-runtime/web-url.js'
 import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import {useNoteComponentInteraction} from './component-interaction'
 import {NoteMenuIcon} from './menu-icon'
@@ -12,7 +13,8 @@ export function NoteCreationBlock({block,node,context}:any){
  const submit=()=>{
   if(!editable||running||!node.containerPrompt?.trim())return
   if(!link){context.generateComponent(block.id,node.containerPrompt.trim());return}
-  const spec=parseResearchContainerSpec({version:1,type:'web',title:'链接',url:node.containerPrompt})
+  const url=normalizeResearchWebUrl(node.containerPrompt)
+  const spec=parseResearchContainerSpec({version:1,type:'web',title:'链接',url})
   if(!spec){setError('请输入有效的网页链接');return}
   const current=context.editor.getBlock(block.id);if(!current)return
   const latest=JSON.parse(current.props.payload),title=new URL(spec.url).hostname

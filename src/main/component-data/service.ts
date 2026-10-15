@@ -77,13 +77,14 @@ export async function createComponentDataService(options:{file:string;integratio
  const contextTasks=():ScheduledTask[]=>engine.list().filter(b=>b.status==='refreshing').map((b:any)=>({id:'component-data:'+b.id,title:'组件数据刷新',prompt:'按已保存接口映射刷新数据',workspaceId:b.workspaceId,component:{sessionId:b.sessionId,nodeId:b.nodeId,title:'组件',boardTitle:'工作台'},state:b.enabled?'enabled':'paused',createdAt:0,nextRun:b.nextRun,schedule:{frequency:'daily',time:'00:00',timezone:'Asia/Shanghai',weekday:0,date:''},notification:'never',runs:[{id:b.id,status:'running',startedAt:b.lastAttempt??0}],integrationBindings:componentRefreshBindings(b.requests)}))
  const request=async(sessionId:string,args:any)=>{
   if(!args||typeof args!=='object')throw Error('数据操作参数无效')
+  const owner=options.owner(),checkOwner=()=>{if(options.owner()!==owner)throw Error('账号已变化，请重新打开后重试。')}
   // Reading saved state does not execute tools and must remain available for
   // static boards whose original workspace was removed from the sidebar.
-  if(args.action==='list'){await sessionIdentity(sessionId);return engine.list(sessionId)}
-  await identity(sessionId)
+  if(args.action==='list'){await sessionIdentity(sessionId);checkOwner();return engine.list(sessionId)}
+  await identity(sessionId);checkOwner()
   const rows=engine.list(sessionId),binding=rows.find((b:any)=>b.nodeId===args.nodeId)
   if(args.action==='bind'||args.action==='bind-generated'){
-   const {workspace}=await identity(sessionId)
+   const {workspace}=await identity(sessionId);checkOwner()
    const recipe=typeof args.recipe==='string'?JSON.parse(args.recipe):args.recipe
    return engine.bind({...recipe,sessionId,nodeId:args.nodeId,workspaceId:workspace.workspaceId},args.action==='bind-generated'?args.initialSpec:undefined,{preserveSettings:args.action==='bind-generated'})
   }

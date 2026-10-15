@@ -1660,7 +1660,7 @@ function canSynthesizeResult(result) {
   return ['completed', 'max-tokens'].includes(result?.stopReason) || result?.stopReason === 'timeout' && result.localDeadlineExceeded === true
 }
 
-export function createSubagentAdapter(ctx) {
+export function createSubagentAdapter(ctx, { surface } = {}) {
   let disposed = false
 
   const resolveParent = async (parentSessionId) => {
@@ -1731,7 +1731,7 @@ export function createSubagentAdapter(ctx) {
     }
   }
 
-  const collectContainerEvidence = async (parent, plan, signal, onProgress) => {
+  const collectContainerEvidence = async (parent, plan, signal, onProgress, allowFetch = true) => {
     if (typeof ctx.web?.search !== 'function') throw unavailableContainerData()
     try {
       const result = await withEvidenceProgress('检索网页', async () => {
@@ -1756,8 +1756,7 @@ export function createSubagentAdapter(ctx) {
       const content = sources.length === candidates.length ? evidenceText(result?.content) : ''
       if (sources.length === 0 && (candidates.length > 0 || !containerEvidenceMatches(content, plan.terms, plan.codes, plan.requiredTerms))) throw unavailableContainerData()
       const fetched = await Promise.all(
-        sources
-          .slice(0, MAX_CONTAINER_FETCH_RESULTS)
+        (allowFetch ? sources.slice(0, MAX_CONTAINER_FETCH_RESULTS) : [])
           .map((source) => fetchEvidence(parent, source, signal, onProgress))
       )
       const fetchedByUrl = new Map(
@@ -1798,7 +1797,7 @@ export function createSubagentAdapter(ctx) {
       if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL){if(task.publicData)throw Error('宿主自动刷新绑定不可用');return}
       return callCanvas(task.parentSessionId,'data',{action:'bind-generated',nodeId:task.canvasNodeId,recipe,initialSpec:JSON.parse(output)},signal)
     },
-    async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress, synthesisOnly = false, onWorkbenchPlan }) {
+    async start({ parentSessionId, kind, query, prompt, signal, onSessionEvent, onProgress, synthesisOnly = false, onWorkbenchPlan, imageContent = [], executionContext = '' }) {
       const parent = await resolveParent(parentSessionId)
       await ctx.get?.('eworkIntegrations')?.sync()
       const bundledSkills = { component: bundledSkillEnabled(ctx, 'ework-workbench-components'), data: bundledSkillEnabled(ctx, 'ework-free-data-sources') }
@@ -1818,11 +1817,23 @@ export function createSubagentAdapter(ctx) {
       const permitsTools = !synthesisOnly && (['qa', 'board'].includes(kind) || kind === 'container' && containerAllowsWebSearch(query ?? ''))
       // Inspect the parent's scoped registry before planning any host lookup.
       // A connected source should not be preceded by an unrelated web search.
-      const scopedSchemas = ctx.tools?.schemas?.(parent)
+      const visibleSchemas = ctx.tools?.schemas?.(parent)
+      // Notes already carry a frozen reference scope. A component child may
+      // use the same authorized external read sources, but cannot use parent
+      // file/context/write tools to expand it or mutate the research canvas.
+      // schemas() strips effects; only the managed bridge's authenticated
+      // binding metadata can identify read-only plugin tools. Parent visibility
+      // remains mandatory, and the bridge rechecks grants for the actual child.
+      const readPluginTools = surface === 'note' ? new Set((ctx.get?.('eworkIntegrations')?.snapshot?.tools ?? [])
+        .filter(tool => tool.effect === 'read' && /^t_[a-f\d]+$/iu.test(tool.id))
+        .map(tool => `ework__${tool.id}`)) : undefined
+      const scopedSchemas = surface === 'note'
+        ? (Array.isArray(visibleSchemas) ? visibleSchemas.filter(tool => ['public_data_query','financial_query','web_search','web_fetch'].includes(tool.name) || readPluginTools.has(tool.name)) : [])
+        : visibleSchemas
       const preferredSources = (kind === 'container' || kind === 'board') && permitsTools ? preferredComponentSourceTools(scopedSchemas, query) : []
       const preferredSourceNames = preferredSources.map(tool => tool.name)
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
-      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(query ?? '')
+      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(query ?? '') && (surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_search'))
       if (signal.aborted) throw signal.reason
       const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__') || tool.name === 'public_data_query')
       const pluginRequired = boundTemplate && /通联|datayes|\bmcp\b|插件/iu.test(query ?? '')
@@ -1845,7 +1856,7 @@ export function createSubagentAdapter(ctx) {
         let timer
         try {
           const evidence = await Promise.race([
-            collectContainerEvidence(parent, containerSearchPlan(query), lookup.signal, (event) => !lookup.signal.aborted && onProgress?.(event)),
+            collectContainerEvidence(parent, containerSearchPlan(query), lookup.signal, (event) => !lookup.signal.aborted && onProgress?.(event), surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_fetch')),
             new Promise((_, reject) => { timer = setTimeout(() => { lookup.abort(); reject(unavailableContainerData()) }, 5000) })
           ])
           hostEvidence = evidence
@@ -1899,11 +1910,14 @@ export function createSubagentAdapter(ctx) {
       )
       const sourceCollector=componentSourceCollector(childTools.filter(name=>name.startsWith('ework__')||['public_data_query','web_fetch','financial_query'].includes(name)),scopedSchemas??[])
       const run = await startComponentAgent(ctx, {
-        label: '画布生成任务',
+        label: surface === 'note' ? '智能组件' : '画布生成任务',
         ...(agentOptions ? { agentOptions } : {}),
         parent,
         signal,
-        prompt: [{ type: 'text', text: effectivePrompt }],
+        // A typed panel rebuilds effectivePrompt from the public query. Keep
+        // frozen note evidence separate so it survives that rewrite and never
+        // becomes a host search query or a template-selection instruction.
+        prompt: [...(surface === 'note' ? imageContent : []), { type: 'text', text: effectivePrompt + (surface === 'note' ? executionContext : '') }],
         maxDepth: 1,
         toolFilter: {
           // Tool availability must not depend on a freshness keyword match.

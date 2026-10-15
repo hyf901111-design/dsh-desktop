@@ -6,7 +6,7 @@ let browser,script,css
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
- window.noteRequests=[];window.noteTaskRows=[];document.addEventListener('sherlock:notes-task-state',e=>window.noteTaskRows.push(e.detail));window.pickedFiles=[{name:'picked.png',path:'/synthetic/picked.png'}];window.savedNote=null;
+ window.noteRequests=[];window.noteComponentViews=[];document.addEventListener('sherlock:notes-component-view',e=>window.noteComponentViews.push(e.detail));window.noteTaskRows=[];document.addEventListener('sherlock:notes-task-state',e=>window.noteTaskRows.push(e.detail));window.pickedFiles=[{name:'picked.png',path:'/synthetic/picked.png'}];window.savedNote=null;
  const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});if(method==='load')return {saved:window.savedNote||{title:'斜杠插入验收',blocks:[{id:'before',type:'paragraph',content:'保留前文'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后文'}],yjs:'',revision:0}};if(method==='library-list')return [];if(method==='file-pick')return new Promise(resolve=>window.finishPick=()=>resolve({files:window.pickedFiles}));if(method==='file-admit')return {...input,id:input.nodeId,source:'computer',authorizationId:'grant'};if(method==='file-bind')return {previewSessionId:'synthetic'};if(method==='generate')return new Promise((resolve,reject)=>{window.finishGenerate=resolve;window.failGenerate=()=>reject(Error('合成生成失败'))});if(method==='save'){window.savedNote={...input.content,revision:input.revision+1};return {status:'saved',saved:window.savedNote}};return {}},draft:async()=>{}};
  const root=createRoot(document.querySelector('#notes'));window.remount=()=>root.render(<NotesApp key={Date.now()} sessionId="slash-insert" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);window.remount();
  `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}}]})
@@ -24,6 +24,14 @@ async function slash(page,title){
  await expect.poll(()=>page.evaluate(title=>window.noteRequests.filter(v=>v.method==='menu-sync').at(-1)?.input.items.some(item=>item.title===title),title)).toBe(true)
  await page.evaluate(title=>{const s=window.noteRequests.filter(v=>v.method==='menu-sync').at(-1).input,item=s.items.find(i=>i.title===title);document.dispatchEvent(new CustomEvent('sherlock:notes-menu-event',{detail:{sessionId:s.sessionId,menuId:s.menuId,revision:s.revision,action:'select',itemId:item.id}}))},title)
 }
+it('places smart and link creation after files and before collapsible headings in the real slash menu',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await page.locator('[data-id="anchor"] .bn-inline-content').click();await page.keyboard.type('/')
+  const keys=['file','smart_component','link_component','toggle_heading'],indices=()=>page.evaluate(keys=>{const items=window.noteRequests.filter(v=>v.method==='menu-sync').at(-1)?.input.items||[];return keys.map(key=>items.findIndex(item=>item.id.startsWith(key+'-')))},keys)
+  await expect.poll(async()=>(await indices()).every(index=>index>=0)).toBe(true)
+  const positions=await indices();expect(positions).toEqual([...positions].sort((a,b)=>a-b));expect(new Set(positions).size).toBe(4);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
 for(const [title,kind] of [['图片','image'],['视频','video'],['音频','audio'],['文件','file']])it(`opens ${kind} picker and imports selected files at the captured slash position`,async()=>{
  const {context,page,errors}=await fixture();try{
   await slash(page,title);await expect.poll(()=>page.evaluate(()=>window.noteRequests.find(v=>v.method==='file-pick')?.input.kind)).toBe(kind)
@@ -54,16 +62,41 @@ it('validates a link and loads it in the same note block without invoking AI',as
   const id=await page.evaluate(()=>window.noteEditor.document.find(b=>b.type==='research').id);await input.fill('https://EXAMPLE.com/path');await page.getByRole('button',{name:'添加链接',exact:true}).click();await expect.poll(()=>page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload).url)).toBe('https://example.com/path');expect(await page.evaluate(()=>window.noteEditor.document.filter(b=>b.type==='research').map(b=>b.id))).toEqual([id]);expect(await page.evaluate(()=>window.noteRequests.some(v=>v.method==='generate'))).toBe(false);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+for(const [label,address,url] of [
+ ['defaults a bare public domain to HTTPS',' baidu.com ','https://baidu.com/'],
+ ['completes a public domain with a port and path','example.com:8443/notes?q=test#section','https://example.com:8443/notes?q=test#section'],
+ ['preserves an existing HTTPS address','https://example.com/notes?q=test#section','https://example.com/notes?q=test#section'],
+ ['matches research for an existing bare localhost address','localhost:3000/notes','https://localhost:3000/notes'],
+ ['preserves existing explicit local HTTP validation','http://localhost:3000/notes','http://localhost:3000/notes']
+])it(`link draft ${label}`,async()=>{
+ const {context,page,errors}=await fixture();try{
+  await slash(page,'链接');const input=page.getByRole('textbox',{name:'输入链接',exact:true}),id=await page.evaluate(()=>window.noteEditor.document.find(b=>b.type==='research').id)
+  await input.fill(address);await input.press('Enter')
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload).url)).toBe(url)
+  const blocks=await page.evaluate(()=>window.noteEditor.document),links=blocks.filter(b=>b.type==='research');expect(links.map(b=>b.id)).toEqual([id]);expect(JSON.parse(links[0].props.payload)).toMatchObject({kind:'web-link',title:new URL(url).hostname,url,excerpt:url,generationStatus:'completed'});expect(JSON.parse(links[0].props.payload).noteDraft).toBeUndefined()
+  expect(blocks.findIndex(b=>b.id==='before')).toBeLessThan(blocks.findIndex(b=>b.id===id));expect(blocks.findIndex(b=>b.id===id)).toBeLessThan(blocks.findIndex(b=>b.id==='after'));expect(await page.evaluate(()=>window.noteRequests.some(v=>v.method==='generate'))).toBe(false);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('keeps unsafe schemes, plain text and credentialed URLs in the editable link draft',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await slash(page,'链接');const input=page.getByRole('textbox',{name:'输入链接',exact:true}),id=await page.evaluate(()=>window.noteEditor.document.find(b=>b.type==='research').id)
+  for(const address of ['javascript:alert(1)','file:///tmp/note.html','普通文字','https://user:password@example.com/notes']){
+   await input.fill(address);await page.getByRole('button',{name:'添加链接',exact:true}).click();expect(await page.locator('[data-note-creation-draft="link"] [role=alert]').textContent()).toContain('有效');expect(await input.isEnabled()).toBe(true)
+   const blocks=await page.evaluate(()=>window.noteEditor.document.filter(b=>b.type==='research'));expect(blocks.map(b=>b.id)).toEqual([id]);expect(JSON.parse(blocks[0].props.payload).url).toBeUndefined()
+  }
+  expect(await page.evaluate(()=>window.noteRequests.some(v=>v.method==='generate'))).toBe(false);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
 it('restores an interrupted smart draft as an editable requirement instead of a permanently running frame',async()=>{
  const {context,page}=await fixture();try{
   await page.evaluate(()=>window.noteEditor.insertBlocks([{id:'stale-draft',type:'research',props:{payload:JSON.stringify({id:'note-component-stale',kind:'generated-container',title:'智能组件',noteDraft:'smart',containerPrompt:'上次输入',generationStatus:'running'})}}],'anchor','before'))
   const input=page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true});await input.waitFor();expect(await input.isEnabled()).toBe(true);expect(await input.inputValue()).toBe('上次输入');expect(await page.getByRole('button',{name:'创建',exact:true}).isEnabled()).toBe(true)
  }finally{await context.close()}
 },15000)
-for(const changed of ['stop','newer','resize'])it(`does not replace a ${changed} smart draft with a late result`,async()=>{
+for(const changed of ['stop','newer'])it(`does not replace a ${changed} smart draft with a late result`,async()=>{
  const {context,page}=await fixture();try{
   await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('待生成内容');await page.getByRole('button',{name:'创建',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.finishGenerate)).toBe('function')
-  if(changed==='stop')await page.locator('[data-note-creation-draft="smart"]').getByRole('button',{name:'停止',exact:true}).click()
+  if(changed==='stop')await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId:'slash-insert'}})))
   else await page.evaluate(changed=>{const b=window.noteEditor.document.find(b=>b.type==='research'),node=JSON.parse(b.props.payload);window.noteEditor.updateBlock(b.id,{props:{payload:JSON.stringify(changed==='resize'?{...node,noteSize:{height:300}}:{...node,containerPrompt:'较新的需求',generationStatus:'draft'})}})},changed)
   await page.evaluate(()=>window.finishGenerate({kind:'component',node:{id:'late',title:'不应写入的结果',containerSpec:{version:1,type:'table',title:'晚到结果',columns:['值'],rows:[[1]]}}}))
   await expect.poll(()=>page.locator('.en-ai-loading').count()).toBe(0);expect(await page.locator('[data-note-creation-draft="smart"]').count()).toBe(1);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).inputValue()).toBe(changed==='newer'?'较新的需求':'待生成内容');expect(await page.evaluate(()=>window.noteEditor.document.filter(b=>b.type==='research').length)).toBe(1);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).isEnabled()).toBe(true)
@@ -74,5 +107,58 @@ it('shows a model clarification in conversation and preserves the editable smart
  const {context,page}=await fixture();try{
   await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('按我的数据做图');await page.getByRole('button',{name:'创建',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.finishGenerate)).toBe('function');await page.evaluate(()=>window.finishGenerate({kind:'conversation',markdown:'请补充月份和收入数据。'}))
   await expect.poll(()=>page.evaluate(()=>window.noteTaskRows.find(row=>row.phase==='replied')?.result.markdown)).toBe('请补充月份和收入数据。');expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).isEnabled()).toBe(true);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).inputValue()).toBe('按我的数据做图');expect(await page.locator('.en-error').count()).toBe(0)
+ }finally{await context.close()}
+},15000)
+
+it('uses the shared research generation portal with actual child progress before replacing the same block',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('比特币价格面板');await page.getByRole('button',{name:'创建',exact:true}).click()
+  await page.locator('.en-note-generation').waitFor();expect(await page.locator('[data-note-creation-draft="smart"]').count()).toBe(0)
+  const original=await page.evaluate(()=>window.noteEditor.document.find(b=>b.type==='research'))
+  await page.evaluate(()=>{const request=window.noteRequests.find(v=>v.method==='generate').input;document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId:'slash-insert',requestId:request.requestId,stage:'thinking',reasoning:'',outputChars:0,componentTask:{generationTaskId:'note-component-real-task',childSessionId:'actual-child-session',generationStartedAt:Date.now(),phase:'reading',generationEvents:[{type:'tool-started',seq:1,time:Date.now(),tool:'读取数据',detail:'Kraken'}],generationPartialText:'读取实时数据'}}}))})
+  await expect.poll(()=>page.evaluate(()=>window.noteComponentViews.filter(v=>v.mode==='generation').at(-1)?.node.generationChildSessionId)).toBe('actual-child-session')
+  expect(await page.evaluate(()=>window.noteComponentViews.filter(v=>v.mode==='generation').at(-1).node.generationEvents[0].detail)).toBe('Kraken')
+  await page.evaluate(()=>window.finishGenerate({kind:'component',node:{id:'generated',kind:'generated-container',title:'BTC',containerSpec:{version:1,type:'table',title:'BTC',columns:['价格'],rows:[[100]]}}}))
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload).containerSpec?.title)).toBe('BTC')
+  expect(await page.evaluate(()=>window.noteEditor.document.find(b=>b.type==='research').id)).toBe(original.id);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('saves and binds a verified generated recipe then applies refresh only to the note block',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('实时价格');await page.getByRole('button',{name:'创建',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.finishGenerate)).toBe('function')
+  await page.evaluate(()=>window.finishGenerate({kind:'component',node:{id:'generated',kind:'generated-container',title:'BTC',containerSpec:{version:1,type:'table',title:'BTC',columns:['价格'],rows:[[100]]}},sourceResult:{status:'verified',refreshStatus:'unbound',recipe:{intervalMinutes:1,requests:[]},sourceNames:['Kraken']}}))
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload).noteDataBound)).toBe(true)
+  const result=await page.evaluate(()=>({node:JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload),methods:window.noteRequests.map(v=>v.method),bind:window.noteRequests.find(v=>v.method==='component-data').input}))
+  expect(result.methods.indexOf('save')).toBeLessThan(result.methods.indexOf('component-data'));expect(result.bind.action).toBe('bind-generated');expect(result.bind.nodeId).toBe(result.node.id)
+  await page.evaluate(async()=>{const node=JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload),send=(requestId,method,args)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-data-action',{detail:{requestId,sessionId:'slash-insert',selectedIds:[node.id],expiresAt:Date.now()+10000,method,args}}));send('inspect-note','inspect',{ids:[node.id]});})
+  await expect.poll(()=>page.evaluate(()=>window.noteRequests.find(v=>v.method==='component-data-reply'&&v.input.requestId==='inspect-note')?.input.result?.revision?.length)).toBe(64)
+  await page.evaluate(()=>{const node=JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload),revision=window.noteRequests.find(v=>v.method==='component-data-reply'&&v.input.requestId==='inspect-note').input.result.revision;document.dispatchEvent(new CustomEvent('sherlock:notes-component-data-action',{detail:{requestId:'apply-note',sessionId:'slash-insert',selectedIds:[node.id],expiresAt:Date.now()+10000,method:'apply',args:{requestId:'refresh-op',revision,changes:[{op:'update',id:node.id,fields:{containerSpec:{...node.containerSpec,rows:[[101]]}}}]}}}))})
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload).containerSpec.rows[0][0])).toBe(101)
+  expect(await page.locator('.bn-block-outer[data-id="before"]').textContent()).toBe('保留前文');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('preserves user resizing during generation while accepting the completed component',async()=>{
+ const {context,page}=await fixture();try{
+  await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('待生成内容');await page.getByRole('button',{name:'创建',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.finishGenerate)).toBe('function')
+  await page.evaluate(()=>{const b=window.noteEditor.document.find(b=>b.type==='research'),node=JSON.parse(b.props.payload);window.noteEditor.updateBlock(b.id,{props:{payload:JSON.stringify({...node,noteSize:{height:300}})}});window.finishGenerate({kind:'component',node:{id:'result',title:'完成内容',kind:'generated-container',containerSpec:{version:1,type:'table',title:'完成内容',columns:['值'],rows:[[1]]}}})})
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload).containerSpec?.title)).toBe('完成内容');expect(await page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload).noteSize)).toEqual({height:300})
+ }finally{await context.close()}
+},15000)
+it('stopping an older request preserves a replacement component and ignores its late result',async()=>{
+ const {context,page}=await fixture();try{
+  await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('旧需求');await page.getByRole('button',{name:'创建',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.finishGenerate)).toBe('function')
+  await page.evaluate(()=>{const b=window.noteEditor.document.find(b=>b.type==='research');window.noteEditor.updateBlock(b.id,{props:{payload:JSON.stringify({id:'note-component-replacement',kind:'generated-container',title:'用户新内容',noteLibrary:true,generationStatus:'completed',containerSpec:{version:1,type:'table',title:'用户新内容',columns:['值'],rows:[[2]]}})}});document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId:'slash-insert'}}));window.finishGenerate({kind:'component',node:{id:'old-result',title:'旧结果'}})})
+  await expect.poll(()=>page.locator('.en-ai-loading').count()).toBe(0);expect(await page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='research').props.payload))).toMatchObject({title:'用户新内容',generationStatus:'completed',containerSpec:{rows:[[2]]}})
+ }finally{await context.close()}
+},15000)
+
+it('pauses note data visibility as soon as the retained notes surface is hidden',async()=>{
+ const {context,page}=await fixture();try{
+  await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(v=>v.method==='component-data-visible').at(-1)?.input.active)).toBe(true)
+  await page.evaluate(()=>{const root=document.querySelector('.en-root');root.hidden=true;root.style.display='none';document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change',{detail:{active:false}}))})
+  await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(v=>v.method==='component-data-visible').at(-1)?.input.active)).toBe(false)
+  await page.evaluate(()=>{const root=document.querySelector('.en-root');root.hidden=false;root.style.display='';document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change',{detail:{surface:'notes',active:true}}))})
+  await expect.poll(()=>page.evaluate(()=>window.noteRequests.filter(v=>v.method==='component-data-visible').at(-1)?.input.active)).toBe(true)
  }finally{await context.close()}
 },15000)
