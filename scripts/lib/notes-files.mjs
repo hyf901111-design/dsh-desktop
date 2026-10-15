@@ -11,14 +11,25 @@ export function createNoteFileViewStore(doc){
  doc?.addEventListener('sherlock:notes-file-view',update);doc?.addEventListener('sherlock:notes-reset',reset)
  return {snapshot:()=>snapshot,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},dispose:()=>{doc?.removeEventListener('sherlock:notes-file-view',update);doc?.removeEventListener('sherlock:notes-reset',reset);reset()}}
 }
-/** Reuse the research workbench chrome and authorized native reader without its canvas positioning layer. */
+/** Reuse the authorized research reader; inline documents omit the workbench chrome. */
 export function EWorkNoteFileView({entry,officePreview}){
- const [pdfStatus,setPdfStatus]=react.useState(null),[editing,setEditing]=react.useState(false),[name,setName]=react.useState(entry.node.displayName||entry.node.name),[refresh,setRefresh]=react.useState(0),[menu,setMenu]=react.useState(null),menuRef=react.useRef(null),input=react.useRef(null)
+ const [pdfStatus,setPdfStatus]=react.useState(null),[inlineState,setInlineState]=react.useState('loading'),[editing,setEditing]=react.useState(false),[name,setName]=react.useState(entry.node.displayName||entry.node.name),[refresh,setRefresh]=react.useState(0),[menu,setMenu]=react.useState(null),menuRef=react.useRef(null),input=react.useRef(null)
  const action=(action,value={})=>document.dispatchEvent(new CustomEvent('sherlock:notes-file-action',{detail:{instanceId:entry.instanceId,sessionId:entry.sessionId,action,...value}}))
  react.useLayoutEffect(()=>{
   entry.host.dataset.noteFileRendered='true';entry.header.dataset.noteFileRendered='true'
   return()=>{delete entry.host.dataset.noteFileRendered;delete entry.header.dataset.noteFileRendered}
  },[entry.host,entry.header])
+ react.useLayoutEffect(()=>{
+  if(!entry.inline)return
+  const update=()=>{
+   const failed=entry.host.querySelector('[data-research-preview-unavailable],[data-research-pdf-error],[data-sherlock-office-preview-unavailable],[role=alert]'),loading=entry.host.querySelector('[data-research-preview-loading],[data-research-offscreen-placeholder]'),ready=entry.host.querySelector('[data-research-preview-interactive],iframe,canvas')
+   const state=failed?'failed':loading||!ready?'loading':'ready'
+   if(entry.host.dataset.noteInlineState!==state)entry.host.dataset.noteInlineState=state
+   setInlineState(state)
+  }
+  update();const observer=new MutationObserver(update);observer.observe(entry.host,{childList:true,subtree:true,attributes:true,attributeFilter:['data-research-preview-loading','data-research-preview-interactive','data-research-preview-unavailable','data-research-pdf-error','data-sherlock-office-preview-unavailable','role']})
+  return()=>{observer.disconnect();delete entry.host.dataset.noteInlineState}
+ },[entry.host,entry.inline,refresh])
  react.useEffect(()=>{
   if(!menu)return
   const outside=e=>{if(!menuRef.current?.contains(e.target))setMenu(null)},key=e=>{if(e.key==='Escape')setMenu(null)}
@@ -27,7 +38,7 @@ export function EWorkNoteFileView({entry,officePreview}){
  },[menu])
  react.useLayoutEffect(()=>{if(editing){input.current?.focus();input.current?.select()}},[editing])
  const commit=()=>{setEditing(false);action('rename',{name})}
- const header=editing?react.createElement('form',{className:'en-file-rename',onSubmit:e=>{e.preventDefault();commit()}},react.createElement('input',{ref:input,value:name,maxLength:512,'aria-label':'文件组件名称',onChange:e=>setName(e.target.value),onBlur:commit,onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();setEditing(false)}}})):react.createElement(WorkbenchChrome,{node:{...entry.node,noteDocument:true},sessionId:entry.sessionId,readOnly:entry.readOnly,titleExtra:pdfStatus?.total>0?react.createElement('span',{className:'en-file-page-count','aria-label':'PDF 页码'},pdfStatus.page+' / '+pdfStatus.total):null,
+ const header=entry.inline?react.createElement('div',{className:'en-inline-document-caption'},react.createElement('button',{type:'button',title:'在访达中显示',onClick:()=>action('reveal')},react.createElement(WorkbenchIcon,{name:'file'}),react.createElement('span',null,entry.node.displayName||entry.node.name)),pdfStatus?.total>0?react.createElement('span',{className:'en-file-page-count','aria-label':'PDF 页码'},pdfStatus.page+' / '+pdfStatus.total):null,inlineState==='failed'?react.createElement('button',{type:'button',className:'en-inline-file-retry',onClick:()=>setRefresh(value=>value+1)},'重试'):null):editing?react.createElement('form',{className:'en-file-rename',onSubmit:e=>{e.preventDefault();commit()}},react.createElement('input',{ref:input,value:name,maxLength:512,'aria-label':'文件组件名称',onChange:e=>setName(e.target.value),onBlur:commit,onKeyDown:e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();setEditing(false)}}})):react.createElement(WorkbenchChrome,{node:{...entry.node,noteDocument:true},sessionId:entry.sessionId,readOnly:entry.readOnly,titleExtra:pdfStatus?.total>0?react.createElement('span',{className:'en-file-page-count','aria-label':'PDF 页码'},pdfStatus.page+' / '+pdfStatus.total):null,
   onReload:async()=>{setRefresh(value=>value+1);return {message:'已请求重新载入原文件预览'}},
   onMore:(_node,e)=>{const box=e.currentTarget.getBoundingClientRect();setMenu({left:Math.max(8,Math.min(box.right-206,window.innerWidth-214)),top:Math.max(8,Math.min(box.bottom+5,window.innerHeight-118))})},onRemove:()=>action('remove')})
  const item=(label,icon,click,disabled=false)=>react.createElement('button',{type:'button',role:'menuitem',disabled,onClick:()=>{setMenu(null);click()}},react.createElement(WorkbenchIcon,{name:icon}),label)

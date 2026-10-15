@@ -29,6 +29,7 @@ import {useNoteReferenceContext,type NoteReferenceContext} from './reference-con
 import {noteMessageReferences} from '../../../packages/dsh-research-task-runtime/notes-message-references.js'
 import {exportNoteWithSnapshots} from './component-snapshots'
 import {createNoteComponentDataActions} from './component-data-actions'
+import {InlineNoteFileBlock,noteFilePresentation} from './file-inline'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -92,6 +93,11 @@ function ResearchSnapshotBlock({ block }: any) {
 const componentAlignment={default:'left',values:['left','center','right'] as const}
 const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' },textAlignment:componentAlignment }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload} data-text-alignment={block.props.textAlignment}>研究组件</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left' } : undefined })()
 function FileBlock({block}:any){
+  const context=useContext(Context)!,node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:'上次文件导入已中断，请重新插入文件。'}:value}catch{return {id:block.id,name:'文件',importStatus:'failed',error:'文件记录暂不可用。'} as NoteFileNode}},[block.props.payload])
+  const presentation=noteFilePresentation(node)
+  return presentation==='media'||presentation==='file'||node.importStatus&&node.noteDisplay==='inline'?<InlineNoteFileBlock block={block} node={node} context={context}/>:<ComponentFileBlock block={block} inline={presentation==='document'}/>
+}
+function ComponentFileBlock({block,inline=false}:any){
   const interaction=useNoteComponentInteraction()
   const context=useContext(Context)!,host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),[height,setHeight]=useState(520),[bound,setBound]=useState<string>(),[fileError,setFileError]=useState('')
   const node=useMemo(()=>{try{const value=JSON.parse(block.props.payload) as NoteFileNode;return value.importStatus==='importing'&&!context.importing?.has(value.id)?{...value,importStatus:'failed' as const,error:'上次文件导入已中断，请重新拖入文件。'}:value}catch{return {id:block.id,name:'文件',importStatus:'failed',error:'文件记录暂不可用。'} as NoteFileNode}},[block.props.payload])
@@ -99,7 +105,7 @@ function FileBlock({block}:any){
   const remove=()=>{if(node.importStatus)void context.bridge.request('file-revoke',{sessionId:context.sessionId,nodeId:node.id}).catch(()=>{});context.editor.removeBlocks([block.id])}
   useEffect(()=>{let live=true;setBound(undefined);setFileError('');if(!node.importStatus)void context.bridge.request('file-bind',{sessionId:context.sessionId,nodeId:node.id,authorizationId:node.authorizationId}).then(value=>{if(live)setBound(value.previewSessionId)}).catch(e=>{if(live)setFileError(e.message)});return()=>{live=false}},[context.sessionId,node.id,node.authorizationId,node.importStatus])
   useEffect(()=>{
-    const publish=()=>{if(host.current&&!node.importStatus&&bound)document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,hostId:host.current.id,sessionId:context.sessionId,headerId:'en-file-header-'+instance.current,dark:context.dark,readOnly:!context.editor?.isEditable,node:{...node,height:size.height,previewSessionId:bound}}}))}
+    const publish=()=>{if(host.current&&!node.importStatus&&bound)document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,hostId:host.current.id,sessionId:context.sessionId,headerId:'en-file-header-'+instance.current,dark:context.dark,readOnly:!context.editor?.isEditable,inline,node:{...node,height:size.height,previewSessionId:bound}}}))}
     const action=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.instanceId!==instance.current||value.sessionId!==context.sessionId)return
       if(value.action==='remove')remove()
       else if(value.action==='rename'&&typeof value.name==='string'&&value.name.trim().length<=512)context.editor.updateBlock(block.id,{props:{payload:JSON.stringify({...node,displayName:value.name.trim()||node.name})}})
@@ -108,12 +114,12 @@ function FileBlock({block}:any){
     }
     publish();document.addEventListener('sherlock:notes-files-sync-request',publish);document.addEventListener('sherlock:notes-file-action',action)
     return()=>{document.removeEventListener('sherlock:notes-files-sync-request',publish);document.removeEventListener('sherlock:notes-file-action',action)}
-  },[node,size.height,context.sessionId,context.dark,bound])
+  },[node,size.height,context.sessionId,context.dark,bound,inline])
   useEffect(()=>()=>{document.dispatchEvent(new CustomEvent('sherlock:notes-file-view',{detail:{instanceId:instance.current,remove:true}}))},[])
   if(node.importStatus)return <section className="en-research en-note-file en-file-import" contentEditable={false}><header className="en-research-header"><strong>{node.name}</strong><button aria-label="移除笔记中的文件" onClick={remove}>×</button></header><div className="en-component-empty" role={node.importStatus==='failed'?'alert':'status'}>{node.error||'正在导入文件…'}</div></section>
-  return <section className="en-research en-note-file" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-research-node-id={node.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
-    <div id={'en-file-header-'+instance.current} className="en-file-header" draggable={!!context.editor?.isEditable}><header className="en-research-header en-file-header-fallback"><strong>{node.displayName||node.name}</strong></header></div>
-    <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height:size.height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{fileError||'正在读取文件预览…'}</div>{!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中文件并操作预览" onClick={interaction.select}/>:null}</div>
+  return <section className={'en-research en-note-file'+(inline?' en-inline-file en-inline-document':'')} ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-research-block={block.id} data-note-session={context.sessionId} data-research-node-id={node.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
+    <div id={'en-file-header-'+instance.current} className="en-file-header" draggable={!!context.editor?.isEditable}><header className={inline?'en-inline-document-caption en-file-header-fallback':'en-research-header en-file-header-fallback'}><strong>{node.displayName||node.name}</strong></header></div>
+    <div ref={host} id={'en-file-'+instance.current} className="en-file-host" data-note-file={node.id} data-note-session={context.sessionId} style={{height:inline&&fileError?'auto':size.height}}><div className="en-file-fallback" role={fileError?'alert':'status'}>{fileError||'正在读取文件预览…'}</div>{!inline&&!interaction.selected?<button className="en-component-scroll-guard" aria-label="选中文件并操作预览" onClick={interaction.select}/>:null}</div>
     {fileError?<div className="en-component-error" role="alert">{fileError}</div>:null}
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
@@ -262,8 +268,8 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     const placement=target&&event.clientY<target.getBoundingClientRect().top+target.getBoundingClientRect().height/2?'before':'after'
     await importFiles(files,reference,placement)
   }
-  const importFiles=async(files:Array<{name:string;path?:string;relativePath?:string}>,reference:any,placement:'before'|'after')=>{
-    const reservations=files.map(file=>({id:'note-file-'+crypto.randomUUID(),type:'attachment',props:{payload:JSON.stringify({name:file.name,importStatus:'importing',source:'computer'})}}))
+  const importFiles=async(files:Array<{name:string;path?:string;relativePath?:string}>,reference:any,placement:'before'|'after',noteDisplay?:'inline')=>{
+    const reservations=files.map(file=>({id:'note-file-'+crypto.randomUUID(),type:'attachment',props:{payload:JSON.stringify({name:file.name,importStatus:'importing',source:'computer',...(noteDisplay?{noteDisplay}:{})})}}))
     for(const block of reservations)block.props.payload=JSON.stringify({...JSON.parse(block.props.payload),id:block.id})
     for(const block of reservations)importing.current.add(block.id)
     const undo=editor._tiptapEditor.state.plugins.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(editor._tiptapEditor.state)?.undoManager
@@ -274,8 +280,8 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       try{
         const node=await props.bridge.request('file-admit',{sessionId:props.sessionId,nodeId:block.id,...file})
         if(disposed.current||!editor.getBlock(block.id)){void props.bridge.request('file-revoke',{sessionId:props.sessionId,nodeId:block.id}).catch(()=>{});continue}
-        importing.current.delete(block.id);editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);editor.updateBlock(block.id,{props:{payload:JSON.stringify(node)}})})
-      }catch(e){if(!disposed.current&&editor.getBlock(block.id))editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);editor.updateBlock(block.id,{props:{payload:JSON.stringify({id:block.id,name:file.name,source:'computer',importStatus:'failed',error:(e as Error).message})}})})}
+        importing.current.delete(block.id);editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);editor.updateBlock(block.id,{props:{payload:JSON.stringify({...node,...(noteDisplay?{noteDisplay}:{})})}})})
+      }catch(e){if(!disposed.current&&editor.getBlock(block.id))editor.transact((tr:any)=>{tr.setMeta('addToHistory',false);editor.updateBlock(block.id,{props:{payload:JSON.stringify({id:block.id,name:file.name,source:'computer',importStatus:'failed',error:(e as Error).message,...(noteDisplay?{noteDisplay}:{})})}})})}
       finally{importing.current.delete(block.id)}
     }
   }
@@ -428,7 +434,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     const pick=async(kind:string)=>{
       const reference=editor.getTextCursorPosition().block
       try{const result=await props.bridge.request('file-pick',{sessionId:props.sessionId,kind});if(disposed.current||!editor.isEditable||!editor.getBlock(reference.id)||!result.files?.length)return
-        const current=editor.getBlock(reference.id);await importFiles(result.files,current,current.type==='paragraph'&&!noteText(current.content).trim()?'before':'after');editor.focus()
+        const current=editor.getBlock(reference.id);await importFiles(result.files,current,current.type==='paragraph'&&!noteText(current.content).trim()?'before':'after','inline');editor.focus()
       }catch(e){if(!disposed.current)setError((e as Error).message)}
     }
     const draft=(kind:'smart'|'link')=>{if(!editor.isEditable)return;const reference=editor.getTextCursorPosition().block

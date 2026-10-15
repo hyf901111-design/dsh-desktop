@@ -37,6 +37,7 @@ export function installNotesService(options: {
       case 'file-pick': return pickNoteFiles(input.kind,options.getWindow(),()=>options.owner()===owner&&options.canRead(session))
       case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
       case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
+      case 'file-media': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.media(owner,session,input)
       case 'file-revoke': return {ok:options.files?.revoke(owner,session,input.nodeId)??false}
       case 'file-reveal': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.reveal(owner,session,input)
       case 'menu-sync': if (!options.nativeMenu) throw Error('原生菜单不可用。'); options.nativeMenu.sync(input,owner); return {ok:true}

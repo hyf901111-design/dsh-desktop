@@ -35,11 +35,28 @@ export class NoteFiles {
       if(!descriptor)throw Error('文件暂时无法导入，请重试。')
       if(!valid()){this.options.registry.revokeNode(identity.sessionId,identity.nodeId);throw Error('文件导入已取消。')}
       this.options.registry.releaseCapability({...descriptor,sessionId:identity.sessionId,nodeId:identity.nodeId})
-      return {id:identity.nodeId,name:descriptor.name,path,source:'computer',authorizationId:descriptor.authorizationId,previewSessionId:identity.sessionId,contentType:descriptor.contentType,...descriptor.previewEligible===false?{previewEligible:false}: {}}
+      const media=await this.options.registry.restoreMedia({sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:descriptor.authorizationId},valid)
+      if(media)this.options.registry.releaseCapability({...media,sessionId:identity.sessionId,nodeId:identity.nodeId})
+      if(!valid()){this.options.registry.revokeNode(identity.sessionId,identity.nodeId);throw Error('文件导入已取消。')}
+      return {id:identity.nodeId,name:descriptor.name,path,source:'computer',authorizationId:descriptor.authorizationId,previewSessionId:identity.sessionId,contentType:media?.contentType??descriptor.contentType,...media?{mediaKind:media.kind}:{},...descriptor.previewEligible===false?{previewEligible:false}: {}}
     }finally{this.importing.delete(key)}
   }
   revoke(owner:string,sessionId:string,nodeId:string){const identity=this.identity(owner,sessionId,nodeId),pending=this.importing.get(identity.sessionId+':'+nodeId);if(pending)pending.cancelled=true;return this.options.registry.revokeNode(identity.sessionId,nodeId)}
   async bind(owner:string,sessionId:string,input:any){const identity=this.identity(owner,sessionId,input.nodeId),file=await this.options.registry.resolveExportSource({sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:input.authorizationId});if(!file||owner!==this.options.owner()||!this.options.canRead(sessionId))throw Error('此附件不属于当前笔记，请重新拖入文件。');return {previewSessionId:identity.sessionId}}
+  async media(owner:string,sessionId:string,input:any):Promise<any>{
+    const identity=this.identity(owner,sessionId,input.nodeId),current=()=>owner===this.options.owner()&&this.options.canRead(sessionId)
+    if(!current())throw Error('笔记媒体授权已变化，请重新打开笔记。')
+    const action=input.action??'acquire',request={sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:input.authorizationId}
+    if(!['acquire','renew','release'].includes(action))throw Error('媒体操作无效。')
+    if(action==='release')return {ok:this.options.registry.releaseCapability({...request,capabilityToken:input.releaseId})}
+    const lease=await this.options.registry.restoreMedia(request,current)
+    if(!lease||!current()){
+      if(lease)this.options.registry.releaseCapability({...request,capabilityToken:lease.capabilityToken})
+      throw Error('此附件没有可直接播放的受支持媒体，或当前授权已失效。')
+    }
+    if(action==='renew'&&input.releaseId)this.options.registry.releaseCapability({...request,capabilityToken:input.releaseId})
+    return {url:lease.url,releaseId:lease.capabilityToken,expiresAt:lease.expiresAt,kind:lease.kind,contentType:lease.contentType,name:lease.name}
+  }
   async reference(owner:string,sessionId:string,input:any){
     const identity=this.identity(owner,sessionId,input.nodeId)
     const file=await this.options.registry.resolveExportSource({sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:input.authorizationId})

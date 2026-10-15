@@ -24,5 +24,5 @@ export function useNoteComponentInteraction(){
   doc.addEventListener('pointerdown',down,true);doc.addEventListener('keydown',escape)
   return()=>{doc.removeEventListener('sherlock:notes-reference-state',reference);doc.removeEventListener('pointerdown',down,true);doc.removeEventListener('keydown',escape)}
  },[])
- return {root,selected,select:()=>select()}
+ return {root,selected,select:(append:unknown=false)=>select(append===true)}
 }
