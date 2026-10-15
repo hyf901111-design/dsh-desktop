@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
+import { createRequire } from 'node:module'
 import { createElement, Fragment } from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -11,6 +12,7 @@ import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDec
 import { patchFigmaFinalConversation } from '../scripts/lib/patch-figma-final-shell.mjs'
 
 let browser, page, script, Header, baseCss, installedCss, gridCss, panelCss
+const require = createRequire(import.meta.url)
 function clientFunctions(source) {
   const syntax = createSourceFile('client.js', source, ScriptTarget.Latest, false, ScriptKind.JS)
   const functions = new Map()
@@ -60,7 +62,7 @@ beforeAll(async () => {
       window.startHeader = () => { installBoardUiStyles(document); mountDesktopShellStyles(document); mountFigmaResponsiveHeader(document); };`, resolveDir: process.cwd(), loader: 'ts' },
     bundle: true, platform: 'browser', format: 'iife', write: false,
     plugins: [{ name: 'real-shell-css', setup(b) {
-      b.onResolve({ filter: /\?raw$/ }, a => ({ path: resolve(a.resolveDir, a.path.slice(0, -4)), namespace: 'raw' }))
+      b.onResolve({ filter: /\?raw$/ }, a => ({ path: a.path.startsWith('.') ? resolve(a.resolveDir, a.path.slice(0, -4)) : require.resolve(a.path.slice(0, -4)), namespace: 'raw' }))
       b.onLoad({ filter: /.*/, namespace: 'raw' }, async a => ({ contents: 'export default ' + JSON.stringify(await readFile(a.path, 'utf8')), loader: 'js' }))
     } }]
   })

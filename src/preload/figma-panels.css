@@ -27,6 +27,12 @@ body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) {
   margin:10px calc(var(--odyssey-panel-edge) + var(--odyssey-right-occupancy)) 10px 0;
   border-radius:16px;
 }
+/* The native narrow sidebar paints beyond its 80 px rail. Reserve that
+   extension in the shared pane so its header, notes and portaled toolbar all
+   follow the same visible bounds when the user explicitly reopens the sidebar. */
+#root [data-dsh-frame][data-odyssey-sidebar-overlay="true"]>[data-pane="conversation"] {
+  margin-left:var(--odyssey-left-overlay-inset,0px);
+}
 .wSkVaW_root[data-odyssey-page] {
   height:calc(100% - var(--dsh-sidebar-height, 0px));
 }

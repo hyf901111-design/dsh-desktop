@@ -168,6 +168,14 @@ export function patchFigmaFinalLayout(source) {
     source = exact(source, '\t\t\t\t\t\t\twidth: cols.sidebar', '\t\t\t\t\t\t\twidth: sidebarWidth')
     source = exact(source, '!sidebarCollapsed && (0, react_jsx_runtime.jsx)(DragHandle,', '!sidebarCollapsed && !sidebarOverlay && (0, react_jsx_runtime.jsx)(DragHandle,')
   }
+  // A manually expanded narrow sidebar must leave its actual visible width
+  // beside the resident header/canvas. Notes and the research toolbar are body
+  // portals: they follow the center pane's measured bounds, not its grid track.
+  // Retain the native overlay lifetime, focus and Escape handling while making
+  // every workspace surface use the same unobscured rectangle.
+  source = exact(source,
+    'style: { gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px` },',
+    'style: { gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px`, "--odyssey-left-overlay-inset": `${sidebarOverlay ? Math.max(0, sidebarWidth - cols.sidebar) : 0}px` }, /* ODYSSEY_LEFT_SIDEBAR_VISIBLE_PANE */')
   // Menu and Modal close on document keydown without preventing default, and
   // focus may still be on their trigger. Remember the layer before it unmounts.
   if (!source.includes('/* ODYSSEY_SIDEBAR_ESCAPE_LAYER */')) source = exact(source,
