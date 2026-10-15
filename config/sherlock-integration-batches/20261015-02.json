@@ -193,6 +193,37 @@
           "本地测试构建跳过公证，不对外发布；新批次尚待用户验收"
         ],
         "generatedAt": "2026-10-15T06:10:12.142534+00:00"
+      },
+      "merged": {
+        "mergeCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
+        "verificationCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
+            "completedAt": "2026-10-15T06:11:41.695Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "54ef21ffa494566f96a696250afb28dfa540f8b4",
+            "completedAt": "2026-10-15T06:11:41.695Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-10-15T06:11:41.695Z"
       }
     }
   ],
