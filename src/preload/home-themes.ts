@@ -3,9 +3,9 @@ import { createHomeThemeRenderer, type HomeShaderThemeId } from './home-theme-re
 import defaultLight from './home-theme-assets/default-light.png?inline'
 import defaultDark from './home-theme-assets/default-dark.png?inline'
 
-const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez'] as const
+const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'lotustech'] as const
 type Theme = typeof THEMES[number]
-const LABELS: Record<Theme, string> = { default: '默认', berber: 'Berber', vghodki: 'Vghodki', jarrick: 'Jarrick', lowfreez: 'Lowfreez' }
+const LABELS: Record<Theme, string> = { default: '默认', berber: 'Berber', vghodki: 'Vghodki', jarrick: 'Jarrick', lowfreez: 'Lowfreez', accelbia: 'Accelbia', boz: 'Boz', shashidhar: 'Shashidhar', lotustech: 'LotusTech' }
 const STORAGE_KEY = 'ework.home-background.v1'
 const mounted = new WeakMap<Document, () => void>()
 const validTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)
@@ -160,7 +160,7 @@ export function mountHomeThemes(doc: Document = document): () => void {
     const current = THEMES.indexOf(selected)
     for (const [id, button] of buttons) {
       let offset = (THEMES.indexOf(id) - current + THEMES.length) % THEMES.length
-      if (offset > 2) offset -= THEMES.length
+      if (offset > Math.floor(THEMES.length / 2)) offset -= THEMES.length
       const position = offset === -1 ? 'previous' : offset === 0 ? 'current' : offset === 1 ? 'next' : 'outside'
       button.dataset.homeThemePosition = position
       button.style.setProperty('--theme-offset', String(offset))
@@ -215,7 +215,7 @@ export function mountHomeThemes(doc: Document = document): () => void {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
         event.preventDefault(); event.stopPropagation()
         const index = THEMES.indexOf(selected)
-        select(THEMES[event.key === 'Home' ? 0 : event.key === 'End' ? 4 : (index + (event.key === 'ArrowRight' ? 1 : 4)) % 5]!)
+        select(THEMES[event.key === 'Home' ? 0 : event.key === 'End' ? THEMES.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : THEMES.length - 1)) % THEMES.length]!)
         buttons.get(selected)?.focus({ preventScroll: true })
       })
       buttons.set(id, button); strip.append(button)

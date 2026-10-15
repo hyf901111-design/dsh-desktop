@@ -125,16 +125,16 @@ describe('real homepage theme motion and interaction', () => {
     try {
       await pauseEntry(page, 745)
       const ids = []
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 9; i++) {
         await page.locator('[data-home-theme-position="next"]').click()
         await expect.poll(() => page.locator('[data-theme-freeze]').count()).toBe(0)
         const id = await current(page).getAttribute('data-home-theme-id'); ids.push(id)
         expect(await page.locator('[data-home-theme-canvas]').getAttribute('data-home-theme-canvas')).toBe(id)
         expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')).toBe(id)
       }
-      expect(ids).toEqual(['berber', 'vghodki', 'jarrick', 'lowfreez', 'default'])
+      expect(ids).toEqual(['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'lotustech', 'default'])
       const rapid = await page.evaluate(() => {
-        for (let i = 0; i < 7; i++) window.themeMotion.next()
+        for (let i = 0; i < 11; i++) window.themeMotion.next()
         const freeze = document.querySelector('[data-theme-freeze]'), bytes = freeze.getContext('2d').getImageData(0, 0, freeze.width, freeze.height).data
         let transparent = 0, chroma = 0
         for (let i = 0; i < bytes.length; i += 4) { if (bytes[i + 3] < 255) transparent++; chroma += Math.max(bytes[i], bytes[i + 1], bytes[i + 2]) - Math.min(bytes[i], bytes[i + 1], bytes[i + 2]) }
@@ -142,7 +142,7 @@ describe('real homepage theme motion and interaction', () => {
       })
       expect(rapid.current).toBe('vghodki'); expect(rapid.canvases).toBe(1)
       expect(rapid.transparent).toBe(0)
-      // All seven clicks happen before any new GL frame gains opacity. The
+      // All eleven clicks happen before any new GL frame gains opacity. The
       // frozen composite must therefore still show the original grayscale.
       expect(rapid.chroma).toBeLessThan(.1)
       await page.evaluate(() => {

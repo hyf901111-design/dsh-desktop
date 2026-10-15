@@ -8,9 +8,13 @@ import sharp from 'sharp'
 
 // Use the actual stylesheet order: empty-home glass must survive the reading
 // stylesheet while ordinary conversation and side-panel inputs stay opaque.
-let browser, shellRuntime
+let browser, shellRuntime, nativeControlsCss
 beforeAll(async () => {
   const require = createRequire(import.meta.url)
+  const native = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+  const inputCss = [...native.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1])).find(css => css.includes('.uV2eYG_add{'))
+  const filePlugin = await readFile('test/fixtures/dsh-file-drop-1.0.0-client.js', 'utf8')
+  nativeControlsCss = (await readFile(require.resolve('@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css'), 'utf8')) + inputCss + filePlugin.match(/const CSS = `([\s\S]*?)`/)[1]
   const result = await build({
     stdin: { contents: "import {mountDesktopShellStyles} from './src/preload/shell-style'; mountDesktopShellStyles(document)", resolveDir: process.cwd(), loader: 'ts' },
     bundle: true, platform: 'browser', format: 'iife', write: false,
@@ -60,6 +64,38 @@ it('research header keeps its vertical fade at both edges and covers the top-rig
 })
 
 for (const dark of [false, true]) {
+  it(`${dark ? 'dark' : 'light'} homepage command and attachment controls use translucent rest and hover fills`, async () => {
+    const page = await browser.newPage({ viewport: { width: 720, height: 700 } })
+    try {
+      await page.route('**/*', route => route.abort())
+      const buttons = prefix => `<button id="${prefix}-command" class="uV2eYG_add" style="width:32px;height:32px;border-radius:9px" aria-label="命令">/</button><button id="${prefix}-attachment" class="dsh-paperclip" aria-label="上传文件">附件</button>`
+      await setContent(page, `<style>${nativeControlsCss}</style><body ${dark ? 'data-ds-dark-theme' : ''}>
+        <main class="pI_x6G_centerCol" style="position:absolute;left:40px;top:20px;width:500px;height:220px;margin:0">
+          <div class="wSkVaW_root" data-odyssey-page="home"><div class="uV2eYG_card" style="display:flex;gap:16px">${buttons('home')}</div></div>
+          <section data-odyssey-subagent-panel><div class="wSkVaW_root" data-odyssey-page="home"><div class="uV2eYG_card">${buttons('child')}</div></div></section>
+        </main>
+        <aside class="sRp_composer" style="position:absolute;left:40px;top:400px"><div class="uV2eYG_card">${buttons('side')}</div></aside>
+      </body>`)
+      const fill = locator => locator.evaluate(node => getComputedStyle(node).backgroundColor)
+      const rest = dark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.04)'
+      const hover = dark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(0, 0, 0, 0.075)'
+      for (const type of ['command', 'attachment']) {
+        const button = page.locator('#home-' + type)
+        await expect.poll(() => fill(button)).toBe(rest)
+        await button.hover()
+        await expect.poll(() => fill(button)).toBe(hover)
+        const rect = await button.boundingBox()
+        expect(rect.width).toBe(type === 'command' ? 32 : 28)
+        expect(rect.height).toBe(type === 'command' ? 32 : 28)
+        expect(await button.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+        await page.mouse.move(700, 650)
+        await expect.poll(() => fill(button)).toBe(rest)
+        expect(await fill(page.locator('#side-' + type))).toMatch(/^rgb\(/)
+        expect(await fill(page.locator('#child-' + type))).toMatch(/^rgb\(/)
+      }
+    } finally { await page.close() }
+  })
+
   it(`${dark ? 'dark' : 'light'} research header overlays the canvas within the compact 44 px bar`, async () => {
     const page = await browser.newPage()
     try {

@@ -221,6 +221,15 @@ body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_card:not([
   --odyssey-composer-fill:var(--odyssey-home-input);
   --odyssey-composer-backdrop:blur(12px);
 }
+/* Keep native button states, using a translucent wash over the home glass. */
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_card:not([data-odyssey-subagent-panel] *, .sRp_composer *) :is(.uV2eYG_add,.dsh-paperclip) {
+  --dsw-specific-selector:rgb(0 0 0 / .04);
+  --dsw-alias-interactive-bg-hover-solid:rgb(0 0 0 / .075);
+}
+body[data-ds-dark-theme] .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_card:not([data-odyssey-subagent-panel] *, .sRp_composer *) :is(.uV2eYG_add,.dsh-paperclip) {
+  --dsw-specific-selector:rgb(255 255 255 / .09);
+  --dsw-alias-interactive-bg-hover-solid:rgb(255 255 255 / .14);
+}
 .wSkVaW_root[data-odyssey-page="home"] .uV2eYG_scroll { min-height:78px; }
 .wSkVaW_root[data-odyssey-page="home"] :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) {
   padding:15px 17px 0;
