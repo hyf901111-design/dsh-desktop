@@ -1,0 +1,44 @@
+/* Reading follows the host's native UI font: SF / PingFang on macOS. Keep
+   geometry, heading scales, code fonts and the composer's chip-cell metrics. */
+:root, body {
+  --odyssey-font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dsw-font-family: var(--odyssey-font-ui);
+  --odyssey-reading-size: 15px;
+  --odyssey-reading-leading: 1.7;
+}
+
+body :is(.sRp_messages, .wSkVaW_scrollBody, [data-odyssey-subagent-panel]) [class*="_markdown_"],
+body :is(.sRp_messages, .wSkVaW_scrollBody, [data-odyssey-subagent-panel]) .gdEzaW_bubble,
+body .gdEzaW_bubble {
+  font-family: var(--odyssey-font-ui) !important;
+  font-size: var(--odyssey-reading-size) !important;
+  font-weight: 400 !important;
+  line-height: var(--odyssey-reading-leading) !important;
+  letter-spacing: 0;
+}
+body :is(.sRp_messages, .wSkVaW_scrollBody, [data-odyssey-subagent-panel]) [class*="_markdown_"] > :is(p, ul, ol, blockquote),
+body .gdEzaW_bubble > p {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+/* This explicit family used to bypass the shared font token. The first
+   font only supplies U+FFFC, so referenced-file alignment stays intact. */
+body .sRp_composer :is(.uV2eYG_input, .uV2eYG_mirror, .uV2eYG_backdrop) {
+  font-family: "OdysseyChipCell", var(--odyssey-font-ui);
+}
+body .uV2eYG_root[data-figma-inline-ready] :is(.uV2eYG_input, .uV2eYG_mirror, .uV2eYG_backdrop) {
+  font-family: var(--sherlock-reference-font), var(--odyssey-font-ui) !important;
+}
+
+body :is(.en-root, .en-block-menu) { font-family: var(--odyssey-font-ui); }
+body .en-root .bn-container { --bn-font-family: var(--odyssey-font-ui); }
+body .en-root .bn-editor {
+  font-family: var(--odyssey-font-ui);
+  font-weight: 400;
+  line-height: var(--odyssey-reading-leading);
+  letter-spacing: 0;
+}
+body .en-root .bn-block-content:is([data-content-type=paragraph], [data-content-type=bulletListItem], [data-content-type=numberedListItem], [data-content-type=checkListItem], [data-content-type=quote]) {
+  line-height: var(--odyssey-reading-leading);
+}

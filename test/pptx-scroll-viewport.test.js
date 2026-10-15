@@ -25,7 +25,7 @@ beforeAll(async()=>{
  resizeScript=patchPptxResize(patchSherlockOfficePreviewClient(stripPptxResizePatch(raw)))
  // Exercise the installed v6 upgrade before running the actual renderer. Its
  // old implementation must be removed rather than preserved by a marker guard.
- const legacy=resizeScript.replace('/* sherlock:pptx-resize-settle:v7 */','/* sherlock:pptx-resize-settle:v6 */').replace(createPptxScrollWindow.toString(),'function createPptxScrollWindow(){throw Error("legacy scheduler was retained")}')
+ const legacy=resizeScript.replace('/* sherlock:pptx-resize-settle:v8 */','/* sherlock:pptx-resize-settle:v6 */').replace(createPptxScrollWindow.toString(),'function createPptxScrollWindow(){throw Error("legacy scheduler was retained")}')
  upgradedResizeScript=patchPptxResize(legacy)
  officeScript=patchPptxEditor(upgradedResizeScript)
   .replace('exports.officePreviewService = officePreviewService;','window.__initSafeXml=()=>init_aiden0z_pptx_renderer_es();exports.officePreviewService = officePreviewService;')

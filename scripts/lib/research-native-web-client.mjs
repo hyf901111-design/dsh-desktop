@@ -52,7 +52,7 @@ export function patchResearchNativeWeb(source) {
       let stopped=false,busy=false,last='',lastSent=0,held=false,space=false,timer,lastInspection='',lastImage='',imageRevision=0,loading=true,snapshotPending=false,motionEpoch=0,frame;
       const reload=()=>{motionEpoch++;setError('');reloadRef.current=Math.max(Date.now(),reloadRef.current+1);lastSent=0};
       const element=ref.current;if(element)element.__eworkReloadWeb=reload;
-      const canvas=element?.closest('[data-research-canvas]');
+      const canvas=element?.closest('[data-research-canvas],.en-document-scroll');
       const moving=()=>canvas?.hasAttribute('data-grid-operation')||canvas?.hasAttribute('data-research-operation');
       const schedule=()=>{lastSent=0;if(!frame)frame=requestAnimationFrame(()=>{frame=null;tick()})};
       const zoom=step=>{zoomRef.current=step===0?1:Math.max(.5,Math.min(2,Math.round((zoomRef.current+step)*10)/10));zoomModeRef.current=step===0?'auto':'manual';if(step===0)zoomResetRef.current++;element?.setAttribute('data-web-page-zoom',String(zoomRef.current));schedule();return zoomRef.current};
@@ -65,7 +65,7 @@ export function patchResearchNativeWeb(source) {
       document.addEventListener('pointerdown',down,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('lostpointercapture',up,true);document.addEventListener('wheel',wheel,true);document.addEventListener('keydown',keyDown,true);document.addEventListener('keyup',keyUp,true);window.addEventListener('blur',reset);
       const tick=async()=>{
         if(stopped||!ref.current||held||space||moving())return;
-        const el=ref.current,card=el.closest('[data-research-node-id]'),root=el.closest('[data-research-canvas]'),r=el.getBoundingClientRect(),c=inDialog?{left:0,top:0,right:window.innerWidth,bottom:window.innerHeight}:root?.getBoundingClientRect();
+        const el=ref.current,card=el.closest('[data-research-node-id]'),root=el.closest('[data-research-canvas],.en-document-scroll'),r=el.getBoundingClientRect(),c=inDialog?{left:0,top:0,right:window.innerWidth,bottom:window.innerHeight}:root?.getBoundingClientRect();
         if(!card||!c)return;
         const layoutSize={width:el.offsetWidth,height:el.offsetHeight};
         const scale=r.width/(layoutSize.width||r.width||1);

@@ -9,12 +9,12 @@ export function NativeComponentBlock({block,node,context}:any){
  const host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),interaction=useNoteComponentInteraction(),{root,selected}=interaction
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[refresh,setRefresh]=useState(0),[busy,setBusy]=useState(false)
  const [height,setHeight]=useState(Math.max(160,Math.min(2400,(node.height||362)-42)))
- const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height}),renderKey=JSON.stringify({...node,noteSize:undefined})
+ const size=useNoteComponentSize({block,node,editor:context.editor,root,naturalHeight:height}),renderKey=JSON.stringify({...node,noteSize:undefined,...node.kind==='web-link'?{sourceText:undefined}:{}})
  useEffect(()=>{
   let attempts=0,live=true,timer:ReturnType<typeof setTimeout>|undefined;setReady(false);setError('')
   const publish=()=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-view',{detail:{instanceId:instance.current,hostId:host.current?.id,headerId:instance.current+'-title',sessionId:context.sessionId,node,dark:context.dark,refresh}}))
   const load=async()=>{try{
-   await context.bridge.request(node.noteReply?'reply-render':'component-render',{sessionId:context.sessionId,...node.noteReply?{text:node.excerpt}:{spec:node.containerSpec}})
+   if(node.kind!=='web-link')await context.bridge.request(node.noteReply?'reply-render':'component-render',{sessionId:context.sessionId,...node.noteReply?{text:node.excerpt}:{spec:node.containerSpec}})
    if(!live)return
    if(node.containerSpec?.type==='calendar-tool'){
     const result=await context.bridge.request('component-ready',{sessionId:context.sessionId,nodeId:node.id})
@@ -25,6 +25,13 @@ export function NativeComponentBlock({block,node,context}:any){
   const sync=(e:Event)=>{if((e as CustomEvent).detail?.sessionId===context.sessionId)void load()}
   const action=(e:Event)=>{
    const value=(e as CustomEvent).detail;if(value?.instanceId!==instance.current||value.sessionId!==context.sessionId)return
+   if(value.action==='web-inspection'){
+    const current=context.editor?.getBlock(block.id);if(!context.editor?.isEditable||!current)return
+    const previous=JSON.parse(current.props.payload),inspection=value.inspection
+    if(previous.kind!=='web-link'||previous.url!==value.url||typeof inspection?.sourceText!=='string')return
+    const next={...previous,title:typeof inspection.title==='string'&&inspection.title.trim()?inspection.title.trim().slice(0,256):previous.title,sourceText:inspection.sourceText.slice(0,120000)}
+    if(JSON.stringify(previous)!==JSON.stringify(next))context.editor.updateBlock(block.id,{props:{payload:JSON.stringify(next)}})
+   }
    if(value.action==='size'&&Number.isFinite(value.height))setHeight(Math.max(160,Math.min(2400,value.height)))
    if(value.action==='spec'){
     const reply=(ok:boolean,message?:string)=>document.dispatchEvent(new CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:instance.current,sessionId:context.sessionId,requestId:value.requestId,ok,message}}))
@@ -42,8 +49,8 @@ export function NativeComponentBlock({block,node,context}:any){
  },[renderKey,context.bridge,context.sessionId,context.dark,refresh])
  const reload=async()=>{
   setBusy(true);setError('')
-  try{const control=host.current?.querySelector('[data-financial-widget],[data-calendar-tool]') as any
-   const fn=control?.__eworkRefreshFinancial||control?.__eworkRefreshCalendar
+  try{const control=host.current?.querySelector('[data-financial-widget],[data-calendar-tool],[data-research-native-web]') as any
+   const fn=control?.__eworkRefreshFinancial||control?.__eworkRefreshCalendar||control?.__eworkReloadWeb
    if(fn){const result=await fn();if(result?.error)setError(result.error)}else setRefresh(value=>value+1)
   }catch(e){setError((e as Error).message)}finally{setBusy(false)}
  }

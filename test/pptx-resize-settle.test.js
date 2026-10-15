@@ -146,3 +146,14 @@ it('uses actual vertical scrolling for diagonal wheel and scrollbar quiet period
   f.tick(64);expect(f.wrappers[1].textContent).toBe('Slide 1')
  }finally{f.scheduler.disconnect();f.win.happyDOM.abort()}
 })
+it('prepares only the current offscreen note viewport for a snapshot and restores its prior mount set without scrolling',async()=>{
+ const f=scrollFixture();f.outer.className='en-root'
+ try{
+  f.root.scrollTop=900;f.scroll();f.moveRoot(900);f.scroll();expect(f.viewer.mountedSlides.size).toBe(0)
+  const before=f.root.scrollTop
+  const lease=await f.root.__sherlockPrepareNoteSnapshot()
+  expect(f.viewer.mountedSlides.has(3)).toBe(true);expect(f.viewer.mountedSlides.size).toBe(1)
+  f.observers[0].callback([]);expect(f.viewer.mountedSlides.has(3)).toBe(true)
+  expect(f.root.scrollTop).toBe(before);lease.release();expect(f.viewer.mountedSlides.size).toBe(0);expect(f.root.scrollTop).toBe(before)
+ }finally{f.scheduler.disconnect();expect(f.root.__sherlockPrepareNoteSnapshot).toBeUndefined();f.win.happyDOM.abort()}
+})

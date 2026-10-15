@@ -19,7 +19,7 @@ afterAll(async()=>{await browser?.close()})
 for(const dark of [false,true])it(`starts pointer-opened library without a selected background and activates keyboard feedback (${dark?'dark':'light'})`,async()=>{
  const context=await browser.newContext({viewport:{width:900,height:850}}),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message))
  try{
-  await page.route('http://127.0.0.1/notes-menu-fixture',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root"><div class="en-editor-host"></div></section></body>`}));await page.goto('http://127.0.0.1/notes-menu-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor({timeout:3000})
+  await page.route('http://127.0.0.1/notes-menu-fixture',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root" style="inset:0"><div class="en-editor-host"></div></section></body>`}));await page.goto('http://127.0.0.1/notes-menu-fixture');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor({timeout:3000})
   await page.locator('.bn-editor').click();await page.keyboard.type('/')
   const latest=()=>page.evaluate(()=>window.noteRequests.filter(item=>item.method==='menu-sync').at(-1)?.input)
   await expect.poll(async()=>(await latest())?.items.some(item=>item.children?.length)).toBe(true)

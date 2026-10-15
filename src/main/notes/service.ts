@@ -9,6 +9,7 @@ import { renderCartesianChart } from '../../../packages/dsh-research-task-runtim
 import { renderMarketArtifact } from '../../../packages/dsh-research-task-runtime/market-artifact.js'
 import { readNoteGenerationStream } from './stream'
 import { saveNoteExport } from './export'
+import { captureNoteComponentSnapshots } from './component-snapshot'
 import { buildResearchHtmlPreview } from '../../../packages/dsh-research-task-runtime/html-artifact.js'
 import type { NotesNativeMenu } from '../../shared/notes-menu'
 import type { NoteFiles } from './files'
@@ -16,6 +17,7 @@ import type { ComponentLibraryStore } from '../state/component-library'
 import { findNoteComponent, noteLibraryItems, noteLibraryNode, noteLibrarySpec } from './component-library'
 import {prepareNoteReferences} from './reference-context'
 import type {ResearchContextSource} from '../state/research-context-bridge'
+import { pickNoteFiles } from './file-picker'
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string;
@@ -32,6 +34,7 @@ export function installNotesService(options: {
       case 'component-ready': return {ready:findNoteComponent(store.load(owner,session).saved.blocks,input.nodeId)?.containerSpec?.type==='calendar-tool'}
       case 'component-render': {if(!noteLibrarySpec(input.spec))throw Error('组件内容格式无效。');return {ok:true}}
       case 'reply-render': {if(typeof input.text!=='string'||!input.text.trim()||input.text.length>100000)throw Error('回复内容不可用。');return {ok:true}}
+      case 'file-pick': return pickNoteFiles(input.kind,options.getWindow(),()=>options.owner()===owner&&options.canRead(session))
       case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
       case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
       case 'file-revoke': return {ok:options.files?.revoke(owner,session,input.nodeId)??false}
@@ -42,6 +45,10 @@ export function installNotesService(options: {
       case 'save': return store.save(owner, session, input.revision, input.content, input.clientId)
       case 'draft': store.draft(owner, session, input.clientId, input.revision, input.content); return { ok: true }
       case 'discard': store.discardDraft(owner, session, input.clientId); return { ok: true }
+      case 'component-snapshots': {
+        const window=options.getWindow(),key='note-snapshot:'+randomUUID(),controller=new AbortController();active.set(key,controller)
+        try{return await captureNoteComponentSnapshots(window,input,()=>options.owner()===owner&&options.canRead(session)&&options.getWindow()===window,controller.signal)}finally{active.delete(key)}
+      }
       case 'export': return saveNoteExport(input,()=>options.owner()===owner&&options.canRead(session))
       case 'conversation-load':
       case 'conversation-state': {
