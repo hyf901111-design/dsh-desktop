@@ -44,6 +44,8 @@ beforeEach(async()=>{
   root=await mkdtemp(join(tmpdir(),'ework-local-update-test-'));userData=join(root,'user');appData=join(root,'app');await mkdir(userData);await mkdir(appData);fake.paths={userData,appData}
   artifact={mode:'success',delay:0,location:''};requests=[];response={code:200,body:metadata(),location:'',delay:0}
   server=createServer((req,res)=>{
+    // The fixture must not spend its test budget waiting for an idle keep-alive socket.
+    res.setHeader('connection','close')
     requests.push(req.url!)
     if(req.url!.startsWith('/latest')){res.writeHead(response.code,response.location?{location:response.location}:{'content-type':'text/yaml'});res.end(response.body);return}
     if(artifact.location){res.writeHead(302,{location:artifact.location});res.end();return}

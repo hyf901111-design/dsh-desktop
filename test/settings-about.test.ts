@@ -328,12 +328,12 @@ describe('EWork Odyssey About settings', () => {
     }
   })
 
-  it('uses one update control and follows real download and automatic verification state', async () => {
+  it('uses one control for download, preparation and the explicit prepared restart action', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/settings/about' })
     const restoreGlobals = installBrowserGlobals(browserWindow)
     let listener: ((status: UpdateStatus) => void) | undefined
     const available: UpdateStatus = { phase: 'available', currentVersion: '0.8.3', availableVersion: '0.8.4', manual: true }
-    const downloadUpdate = vi.fn(async () => ({ ...available, phase: 'downloaded' }))
+    const downloadUpdate = vi.fn(async () => ({ ...available, phase: 'preparing', installStage: 'preparing' }))
     const installUpdate = vi.fn(async () => {})
     const unsubscribe = vi.fn()
     const bundle = await loadSettingsBundle({ browserWindow, aboutBridge: {
@@ -367,8 +367,14 @@ describe('EWork Odyssey About settings', () => {
       await act(async () => host.querySelector<HappyButton>('[data-about-download-update]')!.click())
       expect(downloadUpdate).toHaveBeenCalledOnce()
       expect(installUpdate).not.toHaveBeenCalled()
-      expect(host.textContent).toContain('about.verifying')
-      for (const [installStage, label] of [['preparing', 'Preparing installation'], ['saving', 'Saving research state'], ['restarting', 'Restarting the app']] as const) {
+      expect(host.textContent).toContain('Verifying and extracting update files')
+      expect(host.querySelector<HappyButton>('.sherlock-about-check')?.disabled).toBe(true)
+      await act(async () => listener?.({ ...available, phase: 'downloaded' }))
+      expect(host.querySelector<HappyButton>('[data-about-install-update]')?.disabled).toBe(false)
+      expect(host.textContent).toContain('Restart and update')
+      await act(async () => host.querySelector<HappyButton>('[data-about-install-update]')!.click())
+      expect(installUpdate).toHaveBeenCalledOnce()
+      for (const [installStage, label] of [['saving', 'Saving research state'], ['restarting', 'Restarting the app']] as const) {
         await act(async () => listener?.({ ...available, phase: 'installing', installStage }))
         expect(host.textContent).toContain(label)
         expect(host.querySelector<HappyButton>('.sherlock-about-check')?.disabled).toBe(true)
@@ -377,7 +383,7 @@ describe('EWork Odyssey About settings', () => {
       expect(host.querySelector('[data-about-install-update]')).toBeNull()
       expect(host.querySelector<HappyButton>('.sherlock-about-check')?.disabled).toBe(true)
       expect(host.querySelector('.sherlock-about-action-icon[data-loading=true]')).not.toBeNull()
-      expect(installUpdate).not.toHaveBeenCalled()
+      expect(installUpdate).toHaveBeenCalledOnce()
     } finally {
       await act(async () => root.unmount())
       restoreGlobals()

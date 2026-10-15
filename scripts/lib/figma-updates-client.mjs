@@ -1,3 +1,4 @@
+import {patchPreparedAboutUpdates,PREPARED_UPDATE_UI_MARKER} from './prepared-update-ui.mjs'
 function exact(source, from, to) {
   if (source.includes(to)) return source
   if (source.split(from).length !== 2) throw Error('Figma updates anchor drifted: ' + from.slice(0, 100))
@@ -16,6 +17,7 @@ export function patchFigmaUpdateWorkspace(source) {
 }
 
 export function patchFigmaAboutUpdates(source) {
+  if(source.includes(PREPARED_UPDATE_UI_MARKER))return patchPreparedAboutUpdates(source)
   source = exact(source, 'const message = verifying ? t("about.verifying")', `const installCopy = { preparing: ["正在准备安装", "准备中…"], saving: ["正在保存研究状态", "保存中…"], restarting: ["正在重启应用", "重启中…"] };
             const installCopyEn = { preparing: ["Preparing installation", "Preparing…"], saving: ["Saving research state", "Saving…"], restarting: ["Restarting the app", "Restarting…"] };
             const stageCopy = (t("about.nav") === "关于" ? installCopy : installCopyEn)[update.installStage];
@@ -26,5 +28,5 @@ export function patchFigmaAboutUpdates(source) {
   // Figma 34 keeps the rotating update arrows; 37 uses the verification ring.
   source = exact(source, 'children: [downloading ? null : jsx("span", { className: "sherlock-about-action-icon"', 'children: [!active || downloading ? null : jsx("span", { className: "sherlock-about-action-icon"')
   source = exact(source, '"data-loading": active,', '"data-loading": verifying,')
-  return source
+  return patchPreparedAboutUpdates(source)
 }

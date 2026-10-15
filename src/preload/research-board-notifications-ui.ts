@@ -87,7 +87,7 @@ export function mountResearchBoardNotifications(
     }
   }
   function resume() {
-    if (doc.visibilityState === 'hidden' || hover || focused || !bubble || bubble.hasAttribute('data-notice-unpositioned') || countdown || ['downloading', 'downloaded', 'installing'].includes(liveUpdatePhase ?? '')) return
+    if (doc.visibilityState === 'hidden' || hover || focused || !bubble || bubble.hasAttribute('data-notice-unpositioned') || countdown || ['downloading', 'preparing', 'downloaded', 'installing'].includes(liveUpdatePhase ?? '')) return
     for (const item of activeNotification ? [activeNotification] : aggregate) shown.set(item.notificationId, item.eventVersion)
     persist()
     started = Date.now()
@@ -263,7 +263,7 @@ export function mountResearchBoardNotifications(
       closePanel()
       doc.dispatchEvent(new win.Event('ework-open-about'))
     }))
-    if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
+    if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'downloaded' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'downloaded' ? '重启更新' : latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'downloaded' ? 'install' : latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
     row.append(actions)
     if (updateUnread()) appendMarkRead(row, () => markRead([], latestUpdate?.availableVersion))
     return row
@@ -612,7 +612,7 @@ export function mountResearchBoardNotifications(
         liveUpdatePhase = 'up-to-date'
         saveUpdateNotification(win.localStorage, latestUpdate)
       }
-      if (['downloading', 'downloaded', 'installing'].includes(update?.phase ?? '')) pause()
+      if (['downloading', 'preparing', 'downloaded', 'installing'].includes(update?.phase ?? '')) pause()
       else resume()
       reconcile()
       renderPanel()

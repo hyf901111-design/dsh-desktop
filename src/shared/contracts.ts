@@ -18,6 +18,7 @@ export type UpdatePhase =
   | 'checking'
   | 'available'
   | 'downloading'
+  | 'preparing'
   | 'downloaded'
   | 'installing'
   | 'updated'

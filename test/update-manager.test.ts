@@ -1,7 +1,7 @@
-vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async (_updater: unknown, _timeout: unknown, beforeQuit: () => Promise<unknown>) => { await beforeQuit(); fakes.autoUpdater.quitAndInstall(false, true) } }))
+vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async () => {} }))
 vi.mock('../src/main/update/restart-receipt', () => ({ consumeUpdateRestartReceipt: () => undefined, writeUpdateRestartReceipt: vi.fn(), cancelUpdateRestartReceipt: vi.fn() }))
 vi.mock('../src/main/update/mac-update-recovery', () => ({ armMacRenameRecovery: async () => undefined, repairRenamedMacDock: async () => {} }))
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, describe, expect, it, vi } from 'vitest'
 
 const fakes = vi.hoisted(() => {
   class FakeAutoUpdater {
@@ -43,7 +43,7 @@ const fakes = vi.hoisted(() => {
 })
 
 vi.mock('electron', () => ({
-  autoUpdater: {},
+  autoUpdater: { quitAndInstall: () => fakes.autoUpdater.quitAndInstall(false, true) },
   app: {
     getVersion: () => '0.5.0',
     getPath: () => '/isolated-test',
@@ -75,7 +75,7 @@ import {
   stopUpdateManager
 } from '../src/main/update/update-manager'
 
-afterEach(() => stopUpdateManager())
+afterAll(() => stopUpdateManager())
 
 describe('desktop update manager', () => {
   it('rejects every update action from a child frame', async () => {
@@ -108,31 +108,15 @@ describe('desktop update manager', () => {
     expect(fakes.ipcHandle.mock.calls.map(([channel]) => channel)).toContain('updates:check')
   })
 
-  it('discovers without downloading and downloads only after the explicit action', async () => {
-    const download = vi.spyOn(fakes.autoUpdater, 'downloadUpdate')
-    const quitAndInstall = vi.spyOn(fakes.autoUpdater, 'quitAndInstall')
-    startUpdateManager()
-    setUpdateRestartPreparation(async () => {})
-
-    await checkForUpdates()
-    expect(getUpdateStatus()).toMatchObject({
-      phase: 'available',
-      availableVersion: '0.6.0'
-    })
-    expect(fakes.autoUpdater.autoDownload).toBe(false)
-    expect(download).not.toHaveBeenCalled()
-
-    await downloadAvailableUpdate()
-    expect(download).toHaveBeenCalledOnce()
-    expect(getUpdateStatus()).toMatchObject({
-      phase: 'installing',
-      installStage: 'restarting',
-      availableVersion: '0.6.0'
-    })
-    await installDownloadedUpdate()
-    expect(quitAndInstall).toHaveBeenCalledWith(false, true)
-    await installDownloadedUpdate()
-    expect(quitAndInstall).toHaveBeenCalledOnce()
+  it('discovers and downloads in the background, prepares first and only quits after the explicit install action', async () => {
+    const download=vi.spyOn(fakes.autoUpdater,'downloadUpdate'),quit=vi.spyOn(fakes.autoUpdater,'quitAndInstall')
+    startUpdateManager();setUpdateRestartPreparation(async()=>{})
+    await checkForUpdates();await vi.waitFor(()=>expect(getUpdateStatus().phase).toBe('downloaded'))
+    expect(fakes.autoUpdater.autoDownload).toBe(false);expect(fakes.autoUpdater.autoInstallOnAppQuit).toBe(false)
+    expect(download).toHaveBeenCalledOnce();expect(quit).not.toHaveBeenCalled()
+    await installDownloadedUpdate();await installDownloadedUpdate()
+    expect(getUpdateStatus()).toMatchObject({phase:'installing',installStage:'restarting',availableVersion:'0.6.0'})
+    expect(quit).toHaveBeenCalledOnce()
   })
   it('forwards actual downloaded and total bytes from updater events', () => {
     fakes.autoUpdater.emit('download-progress', {percent:44.4,transferred:44400000,total:100000000})
@@ -143,7 +127,8 @@ describe('desktop update manager', () => {
     const quitAndInstall = vi.spyOn(fakes.autoUpdater, 'quitAndInstall').mockClear()
     fakes.autoUpdater.emit('error', new Error('Installation authorization cancelled'))
     expect(getUpdateStatus()).toMatchObject({ phase: 'error', manual: true })
-    fakes.autoUpdater.emit('update-downloaded', { version: '0.6.0' })
+    await checkForUpdates(true)
+    await vi.waitFor(()=>expect(getUpdateStatus().phase).toBe('downloaded'))
     expect(quitAndInstall).not.toHaveBeenCalled()
     await installDownloadedUpdate()
     expect(quitAndInstall).toHaveBeenCalledOnce()

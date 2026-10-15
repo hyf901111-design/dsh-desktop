@@ -11,6 +11,7 @@ export type UpdateStateEvent =
       bytesPerSecond?: number
     }
   | { type: 'downloaded'; version: string }
+  | { type: 'prepare'; version: string }
   | { type: 'install'; stage?: UpdateStatus['installStage'] }
   | { type: 'not-available' }
   | { type: 'error'; message: string; errorStage?: UpdateStatus['errorStage'] }
@@ -46,6 +47,8 @@ export function reduceUpdateStatus(
       }
     case 'downloaded':
       return { ...base, phase: 'downloaded', availableVersion: event.version }
+    case 'prepare':
+      return { ...base, phase: 'preparing', availableVersion: event.version, installStage: 'preparing' }
     case 'install':
       return { ...base, availableVersion: current.availableVersion, phase: 'installing', installStage: event.stage }
     case 'not-available':
@@ -56,7 +59,7 @@ export function reduceUpdateStatus(
         errorStage: event.errorStage ?? (
           current.phase === 'checking' ? 'check'
             : current.phase === 'available' || current.phase === 'downloading' ? 'download'
-              : current.phase === 'downloaded' || current.phase === 'installing' ? 'install'
+              : current.phase === 'downloaded' || current.phase === 'preparing' || current.phase === 'installing' ? 'install'
                 : current.phase === 'error' ? current.errorStage ?? (current.availableVersion ? 'download' : 'check')
                   : 'check'
         )

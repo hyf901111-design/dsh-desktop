@@ -46,10 +46,17 @@ export class SidebarUpdateControl {
   private downloadRequested = false
   private observed = false
   private aboutChecks = 0
+  private settingsVisible = false
 
-  constructor(private readonly document: Document, private readonly locale: UpdateLocale, private readonly callbacks: SidebarUpdateCallbacks) {}
+  constructor(private readonly document: Document, private readonly fallbackLocale: UpdateLocale, private readonly callbacks: SidebarUpdateCallbacks) {}
+
+  private get locale(): UpdateLocale {
+    const value = this.document.documentElement.dataset.odysseyLocale
+    return value === 'en' || value === 'zh' ? value : this.fallbackLocale
+  }
 
   async checkFromAbout(check: () => Promise<UpdateStatus>): Promise<UpdateStatus> {
+    this.dismissed = ''
     this.aboutChecks++
     // Settings replaces the sidebar footer; hide the existing body-level
     // notice before render attempts to find that temporarily absent footer.
@@ -75,13 +82,20 @@ export class SidebarUpdateControl {
   mount(): boolean {
     const footer = this.document.querySelector<HTMLElement>(FOOTER_SELECTOR)
       ?? this.document.querySelector<HTMLElement>(SETTINGS_SLOT_SELECTOR)?.parentElement
-    if (!footer) return false
+    if (!footer || this.document.querySelector('.VOzbGW_overlay,.sherlock-about')) {
+      this.settingsVisible = true
+      if (this.panel) this.panel.hidden = true
+      if (this.button) { this.button.hidden = true; this.button.setAttribute('aria-expanded','false') }
+      return false
+    }
     if (this.button?.isConnected && this.button.parentElement === footer) {
+      if (this.settingsVisible) { this.settingsVisible = false; if (this.status) this.render(this.status) }
       if (this.panel && !this.panel.hidden) positionSidebarNotice(this.document, this.panel)
       return true
     }
     this.button?.remove()
     this.panel?.remove()
+    this.settingsVisible = false
     installSidebarNoticeStyles(this.document)
     footer.setAttribute('data-sherlock-update-footer', '')
     // Keep the entry available even while its detailed notice is open.
@@ -92,6 +106,7 @@ export class SidebarUpdateControl {
     button.addEventListener('click', () => {
       this.dismissed = ''
       if (this.status?.phase === 'available') void this.startDownload()
+      else if (this.status?.phase === 'downloaded') void this.startInstall()
       else if (this.status?.phase === 'error') void this.retryUpdate()
       else if (this.status) this.render(this.status)
     })
@@ -108,16 +123,18 @@ export class SidebarUpdateControl {
     if (!this.document.getElementById('sherlock-sidebar-update-style')) {
       const style = this.document.createElement('style')
       style.id = 'sherlock-sidebar-update-style'
-      style.textContent = `[data-sherlock-update-footer]{display:flex;align-items:center;gap:4px}[data-sidebar-collapsed=true] [data-sherlock-update-footer]{flex-direction:column-reverse}#${BUTTON_ID}{flex:none;appearance:none;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}#${BUTTON_ID}[hidden]{display:none!important}#${BUTTON_ID}:hover{background:var(--dsw-alias-interactive-bg-hover)}#${BUTTON_ID}:focus-visible{outline:none}[data-sherlock-update-footer]:has(#${BUTTON_ID}:not([hidden])) .srb-account-controls{width:calc(100% - 32px)}[data-sidebar-collapsed=true] .srb-account-controls .srb-bell{order:0}[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button{order:1}#${PANEL_ID}[data-collapsed=true]{z-index:1502}body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=downloaded]):not([data-phase=installing]){visibility:hidden}body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice{visibility:hidden}`
+      style.textContent = `[data-sherlock-update-footer]{display:flex;align-items:center;gap:4px}[data-sidebar-collapsed=true] [data-sherlock-update-footer]{flex-direction:column-reverse}#${BUTTON_ID}{flex:none;appearance:none;display:grid;place-items:center;width:28px;height:28px;padding:5px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}#${BUTTON_ID}[hidden]{display:none!important}#${BUTTON_ID}:hover{background:var(--dsw-alias-interactive-bg-hover)}#${BUTTON_ID}:focus-visible{outline:none}[data-sherlock-update-footer]:has(#${BUTTON_ID}:not([hidden])) .srb-account-controls{width:calc(100% - 32px)}[data-sidebar-collapsed=true] .srb-account-controls .srb-bell{order:0}[data-sidebar-collapsed=true] .srb-account-controls .sherlock-account-button{order:1}#${PANEL_ID}[data-collapsed=true]{z-index:1502}body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=preparing]):not([data-phase=downloaded]):not([data-phase=installing]){visibility:hidden}body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=preparing],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice{visibility:hidden}`
       this.document.head.append(style)
     }
     if (!this.observed) {
       this.observed = true
       const win = this.document.defaultView!
+      new win.MutationObserver(() => { if (this.status) this.render(this.status) }).observe(this.document.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
       win.addEventListener('resize', () => { if (this.panel) positionSidebarNotice(this.document, this.panel) })
       this.document.addEventListener('ework-update-action', (event) => {
         const action = (event as CustomEvent).detail
         if (action === 'download') void this.startDownload()
+        else if (action === 'install') void this.startInstall()
         else if (action === 'retry') void this.retryUpdate()
         else if (action === 'show') { this.dismissed = ''; if (this.status) this.render(this.status) }
       })
@@ -135,7 +152,8 @@ export class SidebarUpdateControl {
     const doc = this.document, panel = this.panel, button = this.button
     const action = updateAction(status), zh = this.locale === 'zh'
     const key = phaseKey(status)
-    const active = ['downloading', 'downloaded', 'installing'].includes(status.phase)
+    const active = ['downloading', 'preparing', 'installing'].includes(status.phase)
+    const quiet = !status.manual && ['available','downloading','preparing'].includes(status.phase)
     button.dataset.action = action.kind
     button.replaceChildren(status.phase === 'downloading'
       ? progressRing(doc, status.percent ?? 0, zh ? '下载进度' : 'Download progress')
@@ -144,21 +162,22 @@ export class SidebarUpdateControl {
     button.title = button.getAttribute('aria-label')!
     const collapsed = !!doc.querySelector('[data-sidebar-collapsed=true]') && !doc.querySelector('.VOzbGW_panel')
     // Completion has its own acknowledgement; it is no longer a download action.
-    button.hidden = action.kind === 'hidden' || action.kind === 'completed'
+    button.hidden = quiet || action.kind === 'hidden' || action.kind === 'completed'
     panel.dataset.phase = status.phase
     panel.dataset.installStage = status.installStage ?? ''
     panel.dataset.collapsed = String(collapsed)
-    panel.hidden = action.kind === 'hidden' || this.dismissed === key || this.aboutChecks > 0 && isCheckNotice(status)
+    panel.hidden = quiet || action.kind === 'hidden' || this.dismissed === key || this.aboutChecks > 0
     button.setAttribute('aria-expanded', String(!panel.hidden))
     if (action.kind === 'hidden') { this.broadcast(status); return }
     const header = doc.createElement('header')
     const title = doc.createElement('strong')
-    const checking = status.phase === 'downloaded' || status.phase === 'installing'
+    const checking = status.phase === 'preparing' || status.phase === 'installing'
+    const ready = status.phase === 'downloaded'
     const completed = status.phase === 'updated'
     const installCopy = updateInstallCopy(status, this.locale)
     const errorCopy = updateErrorCopy(status, this.locale)
     header.append(noticeIcon(doc, checking ? 'loading' : completed ? 'check' : status.phase === 'downloading' ? 'download' : status.phase === 'error' ? 'warning' : 'update'), title)
-    title.textContent = checking ? installCopy.title
+    title.textContent = ready ? (zh ? `更新 ${status.availableVersion} 已准备就绪` : `Update ${status.availableVersion} is ready`) : checking ? installCopy.title
       : completed ? (zh ? `已更新至 ${status.currentVersion}` : `Updated to ${status.currentVersion}`)
       : status.phase === 'downloading' ? (zh ? `正在下载更新 · ${Math.round(status.percent ?? 0)}%` : `Downloading update · ${Math.round(status.percent ?? 0)}%`)
       : status.phase === 'error' ? errorCopy.title
@@ -185,16 +204,21 @@ export class SidebarUpdateControl {
       progress.append(doc.createElement('span'))
       children.push(progress)
       description.textContent = updateTransferMessage(status)
-    } else description.textContent = checking ? installCopy.description
+    } else description.textContent = ready ? updateMessage(status,this.locale) : checking ? installCopy.description
       : completed ? (zh ? '更新完成，当前已是最新版本。' : 'Update complete. You are up to date.')
       : status.phase === 'error' ? errorCopy.description
       : (zh ? '优化研究体验，修复已知问题。' : 'Research improvements and fixes.')
     if (description.textContent) children.push(description)
-    if (status.phase === 'available' || status.phase === 'error' || completed) {
+    if (status.phase === 'available' || status.phase === 'error' || completed || ready) {
       const actions = doc.createElement('div')
       actions.className = 'ework-notice-actions'
       if (completed) {
         actions.append(this.action(zh ? '知道了' : 'Got it', () => { this.dismissed = key; this.render(status) }))
+      } else if (ready) {
+        const install = this.action(zh ? '重启更新' : 'Restart and update', () => this.startInstall())
+        install.dataset.updateInstall = ''
+        install.className = 'ework-notice-primary'
+        actions.append(install)
       } else if (status.phase === 'available') {
         const download = this.action(zh ? '更新' : 'Update', () => this.startDownload())
         download.dataset.updateDownload = ''
@@ -236,6 +260,10 @@ export class SidebarUpdateControl {
     this.render({ ...this.status, phase: 'downloading', percent: 0 })
     try { await this.invoke(this.callbacks.download, () => 'download') }
     finally { this.downloadRequested = false }
+  }
+
+  private async startInstall(): Promise<void> {
+    await this.invoke(this.callbacks.install, () => 'install')
   }
 
   private async retryUpdate(): Promise<void> {
