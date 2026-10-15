@@ -24,6 +24,7 @@ import {useNoteDragAndDrop} from './drag-and-drop'
 import {useNoteReplyInsertion} from './reply-insertion'
 import {withNoteIndentSpecs,changeNoteIndent} from './paragraph-indent'
 import {changeNoteList,type NoteListType} from './paragraph-style'
+import {useNoteReferenceContext,type NoteReferenceContext} from './reference-context'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -84,7 +85,8 @@ function ResearchSnapshotBlock({ block }: any) {
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
 }
-const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' } }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload}>研究组件</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')! } : undefined })()
+const componentAlignment={default:'left',values:['left','center','right'] as const}
+const researchSpec = createReactBlockSpec({ type: 'research', propSchema: { payload: { default: '' },textAlignment:componentAlignment }, content: 'none' }, { render: ResearchBlock, toExternalHTML: ({ block }: any) => <div data-ework-note-research={block.props.payload} data-text-alignment={block.props.textAlignment}>研究组件</div>, parse: (element: HTMLElement) => element.hasAttribute('data-ework-note-research') ? { payload: element.getAttribute('data-ework-note-research')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left' } : undefined })()
 function FileBlock({block}:any){
   const interaction=useNoteComponentInteraction()
   const context=useContext(Context)!,host=useRef<HTMLDivElement>(null),instance=useRef(crypto.randomUUID()),[height,setHeight]=useState(520),[bound,setBound]=useState<string>(),[fileError,setFileError]=useState('')
@@ -112,7 +114,7 @@ function FileBlock({block}:any){
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}
   </section>
 }
-const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''}},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload}>笔记文件</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!}:undefined})()
+const fileSpec=createReactBlockSpec({type:'attachment',propSchema:{payload:{default:''},textAlignment:componentAlignment},content:'none'},{render:FileBlock,toExternalHTML:({block}:any)=><div data-ework-note-file={block.props.payload} data-text-alignment={block.props.textAlignment}>笔记文件</div>,parse:(element:HTMLElement)=>element.hasAttribute('data-ework-note-file')?{payload:element.getAttribute('data-ework-note-file')!,textAlignment:element.getAttribute('data-text-alignment') as any||'left'}:undefined})()
 const schema = BlockNoteSchema.create({ blockSpecs: { ...withNoteIndentSpecs(defaultBlockSpecs), research: researchSpec,attachment:fileSpec } })
 function MarkdownPreview({ markdown, dark }: { markdown: string; dark: boolean }) {
   const editor = useCreateBlockNote({ dictionary: zh })
@@ -170,11 +172,16 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: '我', avatarUrl: '' }))), [])
   const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: zh, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: '我', color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
+  const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const importing=useRef(new Set<string>())
   const assistantHost=useMemo(()=>{const host=document.createElement('div');host.className='en-inline-assistant';host.contentEditable='false';return host},[])
   const paintSelection = (range: {from:number;to:number}) => {const version=++anchorVersion.current;setAssistantVisible(true);editor.getExtension(NoteAiSelection)?.highlight(range,assistantHost,()=>queueMicrotask(()=>{if(!disposed.current&&anchorVersion.current===version){setAssistantVisible(false);}}))}
-  const clearSelection = () => { if(!pinnedSelection.current&&!assistantVisible)return;anchorVersion.current++;pinnedSelection.current = undefined; selection.current={...selection.current,text:'',from:0,to:0};setAssistantVisible(false); editor.getExtension(NoteAiSelection)?.highlight() }
+  const clearSelection = () => { references.clear();if(!pinnedSelection.current&&!assistantVisible)return;anchorVersion.current++;pinnedSelection.current = undefined; selection.current={...selection.current,text:'',from:0,to:0};setAssistantVisible(false); editor.getExtension(NoteAiSelection)?.highlight() }
+  useEffect(()=>{
+    const componentSelected=(event:Event)=>{const value=(event as CustomEvent).detail;if(value?.sessionId!==props.sessionId||!value.references.some((item:any)=>item.type!=='text'))return;anchorVersion.current++;pinnedSelection.current=undefined;setAssistantVisible(false);if(editor.getExtension(NoteAiSelection)?.currentRange())editor.getExtension(NoteAiSelection).highlight()}
+    document.addEventListener('sherlock:notes-reference-state',componentSelected);return()=>document.removeEventListener('sherlock:notes-reference-state',componentSelected)
+  },[editor,props.sessionId])
   const engagement = useRef({started:false,target:'',sent:undefined as string|undefined,busy:false,timer:undefined as ReturnType<typeof setTimeout>|undefined})
   const persistEngagement = async () => {
     const state=engagement.current;if(!state.started||state.busy||state.sent===state.target)return;state.busy=true;const title=state.target
@@ -256,31 +263,42 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   const commitNativeDraft = (admission?:ComposerAdmission) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-commit',{detail:{sessionId:props.sessionId,admission}}))
   const rollbackNativeDraft = (admission?:ComposerAdmission) => document.dispatchEvent(new CustomEvent('sherlock:notes-composer-rollback',{detail:{sessionId:props.sessionId,admission}}))
   const publishTask = (requestId:string,phase:string,value:Record<string,unknown>={}) => {document.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:props.sessionId,requestId,phase,...value}}));if(['accepted','discarded'].includes(phase))void props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId,phase}).catch(()=>{})}
-  const lastRequest=useRef<{prompt:string;images:any[];admission?:ComposerAdmission;captured:typeof selection.current;fingerprint:string}>()
+  const lastRequest=useRef<{prompt:string;images:any[];admission?:ComposerAdmission;captured:typeof selection.current;fingerprint:string;context:NoteReferenceContext}>()
   const generatingBlock = useRef('')
   const generate = async (prompt: string, images: any[] = [], admission?:ComposerAdmission, retry?:typeof lastRequest.current) => {
     if ((!prompt.trim() && !images.length) || request.current || props.recovery) return
-    const attempt = ++epoch.current, captured = { ...(retry?.captured || pinnedSelection.current || selection.current) }, fingerprint = retry?.fingerprint || pinnedSelection.current?.fingerprint || JSON.stringify(editor.document), requestId = crypto.randomUUID()
-    if(!retry&&pinnedSelection.current){const range=editor.getExtension(NoteAiSelection)?.currentRange();Object.assign(captured,range?{...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n')}:{from:0,to:0,text:''})}
+    const context=retry?.context||references.capture()
+    const attempt = ++epoch.current, captured = { ...(retry?.captured || context.range || {...selection.current,text:'',from:0,to:0}) }, fingerprint = retry?.fingerprint || (context.range?pinnedSelection.current?.fingerprint:undefined) || JSON.stringify(editor.document), requestId = crypto.randomUUID()
+    if(!retry&&context.range&&pinnedSelection.current){const range=editor.getExtension(NoteAiSelection)?.currentRange();Object.assign(captured,range?{...range,text:editor._tiptapEditor.state.doc.textBetween(range.from,range.to,'\n')}:{from:0,to:0,text:''})}
+    const targetPayloads=new Map(context.components.map(item=>[item.blockId,editor.getBlock(item.blockId)?.props.payload]))
     const component = noteComponentRequest(prompt)
     engage()
-    lastRequest.current={prompt,images,admission,captured,fingerprint}
+    lastRequest.current={prompt,images,admission,captured,fingerprint,context}
     publishTask(requestId,'preparing',{prompt,operation:component?'component':captured.text?'rewrite':'write'})
     if(!component&&captured.text)paintSelection(captured)
     request.current = requestId;setWriting(true); publishComposer({running:true}); setError(''); setPreview(undefined)
     let pending = ''
     try {
-      const markdown = await editor.blocksToMarkdownLossy(editor.document)
-      if (component) {
+      const markdown = context.scope==='note'?await editor.blocksToMarkdownLossy(editor.document):''
+      if (component&&!(context.scope==='selection'&&context.components.some(item=>item.type==='research'))) {
         const reference = captured.cursor ? editor.getBlock(captured.cursor) : editor.getTextCursorPosition().block
         const created = editor.insertBlocks([{ type: 'research', props: { payload: JSON.stringify({ id: requestId, title: '正在创建研究组件', kind: 'generated-container', generationStatus: 'running', generationDetail: prompt, sourceText: '未绑定数据源 · 未刷新' }) } }], reference || editor.getTextCursorPosition().block, 'after')
         pending = created[0].id; generatingBlock.current = pending
         requestAnimationFrame(() => locate(pending))
       }
       publishTask(requestId,'generating')
-      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title, markdown, selection: captured.text, prompt, images, mode: component ? 'component' : 'write' })
+      const result: NoteAiResult = await props.bridge.request('generate', { sessionId: props.sessionId, requestId, title:context.scope==='note'?title:'', markdown, selection: captured.text, context:{scope:context.scope,components:context.components}, prompt, images, mode: component ? 'component' : 'write' })
       if (disposed.current || epoch.current !== attempt) return
-      if (component && result.kind === 'component' && editor.getBlock(pending)) {
+      if(result.kind==='component'&&result.targetBlockId){
+        const current=editor.getBlock(result.targetBlockId)
+        if(context.scope!=='selection'||!context.components.some(item=>item.blockId===result.targetBlockId&&item.type==='research'))throw Error('组件不在当前引用范围内，请重新选择。')
+        if(!current||current.props.payload!==targetPayloads.get(result.targetBlockId))throw Error('组件已变化，请重新选择后修改，较新内容已保留。')
+        const original=JSON.parse(current.props.payload)
+        if(pending&&editor.getBlock(pending))editor.removeBlocks([pending])
+        const updated={...original,...result.node,id:original.id,noteSize:original.noteSize};delete updated.noteReply;delete updated.excerpt
+        editor.updateBlock(current.id,{props:{payload:JSON.stringify(updated)}})
+        publishTask(requestId,'accepted',{result});changed();requestAnimationFrame(()=>locate(current.id))
+      }else if (component && result.kind === 'component' && editor.getBlock(pending)) {
         publishTask(requestId,'accepted',{result}); editor.updateBlock(pending, { props: { payload: JSON.stringify(result.node) } }); changed(); requestAnimationFrame(() => locate(pending))
       } else {
         if (pending && editor.getBlock(pending)) editor.removeBlocks([pending])
@@ -359,7 +377,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
       </SuggestionPanel> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
-    <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
+    <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant,.en-research')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document">
         {props.recovery ? <div className="en-recovery"><strong>发现未保存的本地草稿</strong><span>上次编辑内容已保留，可对比后恢复。</span><div><button onClick={() => setCompare(true)}>对比草稿</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? '正在保存…' : '恢复草稿'}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>保留已保存版本</button></div></div> : null}
         <input className="en-title" aria-label="笔记标题" placeholder="无标题文档" value={title} readOnly={!!props.recovery} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />

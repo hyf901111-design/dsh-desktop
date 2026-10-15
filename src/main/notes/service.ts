@@ -76,7 +76,7 @@ export function installNotesService(options: {
         const url = new URL('/sherlock/notes/generate', base), controller = new AbortController()
         active.set(input.requestId, controller)
         try {
-          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(125000)]), body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, prompt: input.prompt, images: input.images, mode: input.mode,stream:true }) })
+          const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(125000)]), body: JSON.stringify({ sessionId: session, requestId:input.requestId,title: input.title, markdown: input.markdown, selection: input.selection, context:input.context,prompt: input.prompt, images: input.images, mode: input.mode,stream:true }) })
           if (!response.ok) {const result=await response.json();throw Error(result.error || '笔记生成失败，请重试。')}
           const result = await readNoteGenerationStream(response,progress=>{
             if(options.owner()!==owner||!options.canRead(session)){controller.abort();return}

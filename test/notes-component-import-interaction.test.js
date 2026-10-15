@@ -26,6 +26,17 @@ async function admittedFile(){
 it('selects the header after a real NotesApp file drop transitions from importing to an admitted reader',async()=>{
  const {context,page}=await admittedFile();try{await page.getByText('导入后标题',{exact:true}).click();expect(await page.locator('.en-note-file').getAttribute('data-selected')).toBe('true');expect(await page.evaluate(()=>window.noteEditor.document.filter(x=>x.type==='attachment').length)).toBe(1)}finally{await context.close()}
 },15000)
+it('uses the paragraph alignment commands on an imported file frame while preserving the file authorization',async()=>{
+ const {context,page}=await admittedFile();try{
+  const frame=page.locator('.en-note-file');await frame.getByText('导入后标题',{exact:true}).click();await frame.getByRole('separator',{name:'调整组件宽度',exact:true}).press('Home')
+  const positions=[]
+  for(const [label,value] of [['左对齐','left'],['居中','center'],['右对齐','right']]){
+   await frame.locator('.en-file-header').hover();await page.getByRole('button',{name:'段落操作',exact:true}).click();await page.locator('.en-block-menu').getByRole('button',{name:label,exact:true}).click();positions.push((await frame.boundingBox()).x)
+   expect(await page.evaluate(()=>window.noteEditor.document.find(b=>b.type==='attachment').props.textAlignment)).toBe(value)
+  }
+  expect(positions[1]).toBeGreaterThan(positions[0]);expect(positions[2]).toBeGreaterThan(positions[1]);expect(await page.evaluate(()=>JSON.parse(window.noteEditor.document.find(b=>b.type==='attachment').props.payload).authorizationId)).toBe('synthetic-grant')
+ }finally{await context.close()}
+},15000)
 for(const overlap of [true,false])it(`keeps the outside note handle and inside PPT object handle independent after file admission (${overlap?'overlapping outside':'inside object'})`,async()=>{
  const {context,page}=await admittedFile();try{
   await page.getByRole('button',{name:'选中文件并操作预览',exact:true}).click()

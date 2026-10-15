@@ -39,6 +39,64 @@ async function fixture(dark=true){
  await page.route('http://127.0.0.1/notes-native-send',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root" data-dark="${dark}" style="left:10px;right:340px"><div id="notes" class="en-editor-host"></div></section><aside id="composer" data-ework-notes-composer-host style="position:fixed;right:10px;bottom:20px;width:320px"></aside></body>`}));await page.goto('http://127.0.0.1/notes-native-send');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();await page.locator('#composer textarea').waitFor();return {context,page,errors,input:page.locator('#composer textarea')}
 }
 async function send(page,text='请帮我改写正文。'){await page.locator('#composer textarea').fill(text);await page.locator('#composer textarea').press('Enter');await page.locator('.en-ai-loading').waitFor()}
+for(const dark of [false,true])it(`shows note sources, toggles actual context and keeps selected text when focusing the native composer (${dark?'dark':'light'})`,async()=>{
+ const {context,page,input,errors}=await fixture(dark);try{
+  await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'body',type:'paragraph',content:'仅针对这段验收文字。'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'source',title:'收入表',containerSpec:{version:1,type:'table',title:'收入表',columns:['项目','收入'],rows:[['甲',123]]}})}}]))
+  const badge=page.locator('[data-note-context-badge]');await expect.poll(()=>badge.textContent()).toContain('参考当前笔记内容')
+  await badge.click();await page.getByRole('region',{name:'当前笔记参考内容'}).getByText('笔记全文',{exact:true}).waitFor();await page.getByRole('region',{name:'当前笔记参考内容'}).getByText('收入表',{exact:true}).waitFor()
+  if(process.env.SHERLOCK_NOTES_QA_DIR)await page.screenshot({path:process.env.SHERLOCK_NOTES_QA_DIR+'/sources-'+(dark?'dark':'light')+'.png'})
+  await page.getByRole('button',{name:'不参考当前笔记内容',exact:true}).click();await send(page,'解释一下');let request=await page.evaluate(()=>window.noteRequests.findLast(row=>row.method==='generate').input);expect(request.markdown).toBe('');expect(request.selection).toBe('');expect(request.context.scope).toBe('none');expect(request.context.components).toEqual([])
+  await page.evaluate(()=>window.resolveGeneration({kind:'conversation',markdown:'不使用笔记的回复'}));await page.locator('.en-ai-loading').waitFor({state:'hidden'})
+  await page.evaluate(()=>{const editor=window.noteEditor;editor.setTextCursorPosition('body','start');const pos=editor._tiptapEditor.state.selection.from;editor._tiptapEditor.commands.setTextSelection({from:pos,to:pos+7});editor.focus()})
+  await page.locator('[data-note-reference-chip]').waitFor();await input.fill('精简这部分');expect(await page.locator('[data-note-reference-chip]').textContent()).toContain('仅针对这段验收')
+  if(process.env.SHERLOCK_NOTES_QA_DIR)await page.screenshot({path:process.env.SHERLOCK_NOTES_QA_DIR+'/text-'+(dark?'dark':'light')+'.png'})
+  await input.press('Enter');await page.locator('.en-ai-loading').waitFor();request=await page.evaluate(()=>window.noteRequests.findLast(row=>row.method==='generate').input);expect(request.selection).toBe('仅针对这段验收');expect(request.markdown).toBe('');expect(request.context.scope).toBe('selection');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('references a selected component in place of the full note and removes its chip explicitly',async()=>{
+ const {context,page,input,errors}=await fixture();try{
+  await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'body',type:'paragraph',content:'不该进入局部引用的正文'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'source',title:'收入表',containerSpec:{version:1,type:'table',title:'收入表',columns:['项目','收入'],rows:[['甲',123]]}})}}]))
+  await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await page.locator('[data-note-reference-chip]').waitFor();await input.fill('说明这份数据');expect(await page.locator('[data-note-reference-chip]').textContent()).toContain('收入表');await input.press('Enter');await page.locator('.en-ai-loading').waitFor();const request=await page.evaluate(()=>window.noteRequests.findLast(row=>row.method==='generate').input);expect(request.markdown).toBe('');expect(request.context.components[0]).toMatchObject({blockId:'chart',title:'收入表'});expect(request.context.components[0].content).toContain('123')
+  await page.evaluate(()=>window.resolveGeneration({kind:'conversation',markdown:'甲收入为123'}));await page.locator('.en-ai-loading').waitFor({state:'hidden'});await page.getByRole('button',{name:'移除引用：收入表',exact:true}).click();await page.locator('[data-note-context-badge]').waitFor();expect(await page.locator('[data-note-reference-chip]').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('lists nested and off-screen components, keeps long chips within a narrow composer and drops deleted references',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await page.setViewportSize({width:800,height:700});await page.evaluate(()=>{const nodes=Array.from({length:12},(_,i)=>({id:'chart-'+i,type:'research',props:{payload:JSON.stringify({id:'source-'+i,title:'嵌套组件'+i+'超长标题'.repeat(20),containerSpec:{version:1,type:'table',title:'数据',columns:['收入'],rows:[[i]]}})}}));window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'parent',type:'paragraph',content:'正文',children:nodes}])})
+  const badge=page.locator('[data-note-context-badge]');await expect.poll(()=>badge.textContent()).toContain('12个组件');await badge.click();expect(await page.locator('[data-note-context-directory] li').count()).toBe(13);expect(await page.locator('[data-note-context-directory] ul').evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);await badge.click()
+  await page.locator('[data-id="chart-0"] .en-research-header strong').click();await page.locator('[data-note-reference-chip]').waitFor();await page.locator('#composer textarea').focus();expect(await page.locator('[data-note-reference-chip]').evaluate(el=>el.getBoundingClientRect().right<=el.parentElement.getBoundingClientRect().right+1)).toBe(true)
+  await page.evaluate(()=>window.noteEditor.removeBlocks(['chart-0']));await expect.poll(()=>page.locator('[data-note-reference-chip]').count()).toBe(0);await expect.poll(()=>badge.textContent()).toContain('11个组件');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+for(const changed of [false,true])it(`updates only the referenced component and protects newer edits (${changed?'changed':'unchanged'})`,async()=>{
+ const {context,page,input,errors}=await fixture();try{
+  await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'body',type:'paragraph',content:'保留正文'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'source',title:'收入表',noteSize:{width:320},containerSpec:{version:1,type:'table',title:'收入表',columns:['收入'],rows:[[123]]}})}}]))
+  await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await send(page,'将收入改成456')
+  if(changed)await page.evaluate(()=>{const editor=window.noteEditor,node=JSON.parse(editor.getBlock('chart').props.payload);editor.updateBlock('chart',{props:{payload:JSON.stringify({...node,title:'较新修改'})}})})
+  await page.evaluate(()=>window.resolveGeneration({kind:'component',targetBlockId:'chart',node:{id:'new',title:'修改后收入表',containerSpec:{version:1,type:'table',title:'修改后收入表',columns:['收入'],rows:[[456]]}}}));await page.locator('.en-ai-loading').waitFor({state:'hidden'})
+  const state=await page.evaluate(()=>({blocks:window.noteEditor.document,node:JSON.parse(window.noteEditor.getBlock('chart').props.payload)}));expect(state.blocks.filter(b=>b.type==='research')).toHaveLength(1);expect(state.node.title).toBe(changed?'较新修改':'修改后收入表');expect(state.node.id).toBe('source');expect(state.node.noteSize.width).toBe(320);if(changed)expect(await page.getByRole('alert').textContent()).toContain('组件已变化');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('replaces the displayed content of a component inserted from a conversation reply',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'reply',type:'research',props:{payload:JSON.stringify({id:'reply-source',kind:'assistant-result',noteReply:true,noteLibrary:true,excerpt:'旧会话回复',title:'会话回复'})}}]))
+  // The native portalled renderer is tested separately; inspect its rendering discriminator here.
+  await page.locator('[data-id="reply"] .en-research-header strong').click();await send(page,'将回复整理成表格');await page.evaluate(()=>window.resolveGeneration({kind:'component',targetBlockId:'reply',node:{id:'new',kind:'generated-container',title:'新回复表格',containerSpec:{version:1,type:'table',title:'新回复表格',columns:['项目'],rows:[['新内容']]}}}));await page.locator('.en-ai-loading').waitFor({state:'hidden'});const node=await page.evaluate(()=>JSON.parse(window.noteEditor.getBlock('reply').props.payload));expect(node.noteReply).toBeUndefined();expect(node.excerpt).toBeUndefined();expect(node.containerSpec.rows).toEqual([['新内容']]);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('does not carry a pinned text rewrite into a later component-only reference',async()=>{
+ const {context,page,input,errors}=await fixture();try{
+  await page.evaluate(()=>{const editor=window.noteEditor;editor.replaceBlocks(editor.document,[{id:'body',type:'paragraph',content:'不该泄漏的旧选区'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'source',title:'新选组件',containerSpec:{version:1,type:'table',title:'新选组件',columns:['收入'],rows:[[123]]}})}}]);editor.setTextCursorPosition('body','start');const from=editor._tiptapEditor.state.selection.from;editor.focus();editor._tiptapEditor.commands.setTextSelection({from,to:from+8})})
+  await page.getByRole('button',{name:'AI 改写',exact:true}).click();await page.locator('[data-id="chart"] .en-research-header strong').click();await input.fill('解释这个组件');await input.press('Enter');await page.locator('.en-ai-loading').waitFor();const request=await page.evaluate(()=>window.noteRequests.findLast(row=>row.method==='generate').input);expect(request.selection).toBe('');expect(request.context.components.map(item=>item.blockId)).toEqual(['chart']);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+for(const outcome of ['stop','fail'])it(`leaves only the original component when regenerating a selected table is ${outcome}`,async()=>{
+ const {context,page,errors}=await fixture();try{
+  await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'chart',type:'research',props:{payload:JSON.stringify({id:'source',title:'收入表',containerSpec:{version:1,type:'table',title:'收入表',columns:['收入'],rows:[[123]]}})}}]));await page.locator('[data-id="chart"] .en-research-header strong').click();await send(page,'重新生成选中的表格，收入改为456');expect(await page.evaluate(()=>window.noteEditor.document.filter(block=>block.type==='research').length)).toBe(1)
+  if(outcome==='stop')await page.locator('.en-ai-loading').getByRole('button',{name:'停止',exact:true}).click();else await page.evaluate(()=>window.rejectGeneration('验证失败'))
+  await page.locator('.en-ai-loading').waitFor({state:'hidden'});expect(await page.evaluate(()=>window.noteEditor.document.filter(block=>block.type==='research').length)).toBe(1);expect(await page.evaluate(()=>JSON.parse(window.noteEditor.getBlock('chart').props.payload).containerSpec.rows)).toEqual([[123]]);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
 async function ready(page,markdown='改写后的正文。'){await page.evaluate(markdown=>window.resolveGeneration({kind:'text',markdown}),markdown);await page.locator('.en-preview').waitFor()}
 async function handleGeometry(handle){await expect.poll(()=>handle.evaluate(el=>el.getBoundingClientRect().height)).toBe(20);return handle.evaluate(el=>{const rect=el.getBoundingClientRect(),panel=el.closest('.en-preview').getBoundingClientRect(),thumb=getComputedStyle(el,'::after');return {gap:panel.top-(rect.top+parseFloat(thumb.top)+parseFloat(thumb.height)),hitHeight:rect.height,hit:document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)===el,top:rect.top}})}
 
