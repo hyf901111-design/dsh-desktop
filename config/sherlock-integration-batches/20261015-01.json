@@ -11,25 +11,32 @@
         "schemaVersion": 1,
         "featureName": "笔记引用标签与研究引用范围及底部面板布局",
         "branch": "codex/feat/notes-context-alignment-20261015",
-        "baseCommit": "6401ce677dc06e44b46841446d6be844f2cc02db",
-        "tipCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
+        "baseCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
+        "tipCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
         "commits": [
           {
-            "commit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
+            "commit": "2746e2d1c9f24a078bb42b8db4f6aed77e4bc3dd",
             "parents": [
-              "6401ce677dc06e44b46841446d6be844f2cc02db"
+              "2f75c25699d96c0cff88635e9841a734408fc3fa"
             ],
-            "subject": "修复：重复构建时兼容笔记引用气泡补丁"
+            "subject": "测试：覆盖笔记标签与研究气泡的组合渲染"
+          },
+          {
+            "commit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
+            "parents": [
+              "2746e2d1c9f24a078bb42b8db4f6aed77e4bc3dd"
+            ],
+            "subject": "修复：补齐笔记会话补丁的类型声明"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
+            "status": "A",
+            "path": "scripts/lib/notes-activity.d.mts"
           },
           {
             "status": "M",
-            "path": "test/notes-activity.test.js"
+            "path": "test/figma-final-shell-patch.test.ts"
           }
         ],
         "checks": [
@@ -38,26 +45,15 @@
               "./node_modules/.bin/vitest",
               "run",
               "test/notes-activity.test.js",
-              "test/figma-final-shell-patch.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "16项通过，生产shell与notes补丁可重复组合且产物逐字一致",
-            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
-            "completedAt": "2026-10-15T02:14:45.970536+00:00",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
+              "test/figma-final-shell-patch.test.ts",
               "test/notes-native-send-preview.test.js",
               "-t",
-              "quoted component labels|full tooltips"
+              "Figma shell patch installation|note task activity|quoted component labels|full tooltips|repeated|native note|notes activity"
             ],
             "outcome": "passed",
-            "summary": "原生气泡单多引用与明暗历史恢复3项通过",
-            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
-            "completedAt": "2026-10-15T02:14:45.970536+00:00",
+            "summary": "18项通过，覆盖笔记标签补丁组合后的研究消息与原生标签气泡",
+            "verifiedCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
+            "completedAt": "2026-10-15T02:22:37.111840+00:00",
             "timeoutMs": 180000
           },
           {
@@ -68,8 +64,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
-            "completedAt": "2026-10-15T02:14:45.970536+00:00",
+            "verifiedCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
+            "completedAt": "2026-10-15T02:22:37.111840+00:00",
             "timeoutMs": 180000
           },
           {
@@ -80,14 +76,14 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "2f75c25699d96c0cff88635e9841a734408fc3fa",
-            "completedAt": "2026-10-15T02:14:45.970536+00:00",
+            "verifiedCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
+            "completedAt": "2026-10-15T02:22:37.111840+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "本次仅缩小shell补丁匹配边界以容纳已有气泡前置标签；重建后代码逐字一致，原生引用气泡浏览器3项继续通过。前一交接已验证四项产品行为。"
+          "summary": "本次补齐组合补丁测试和类型声明，生产行为未改变；原生引用气泡浏览器3项继续通过。"
         },
         "acceptanceCriteria": [
           "笔记发送后用户气泡以原生样式显示当次单个或多个引用标签，标签随会话历史保留，不混入源正文或授权。",
@@ -98,38 +94,7 @@
         "risks": [
           "待刷新集成客户端后验证真实模型的所引热力图总结和真实主窗口布局。"
         ],
-        "generatedAt": "2026-10-15T02:14:45.970536+00:00"
-      },
-      "merged": {
-        "mergeCommit": "59c23f595dae50a0817557932025849d4352afb3",
-        "verificationCommit": "59c23f595dae50a0817557932025849d4352afb3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "59c23f595dae50a0817557932025849d4352afb3",
-            "completedAt": "2026-10-15T02:15:53.822Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "59c23f595dae50a0817557932025849d4352afb3",
-            "completedAt": "2026-10-15T02:15:53.822Z",
-            "timeoutMs": 10000
-          }
-        ],
-        "recordedAt": "2026-10-15T02:15:53.822Z"
+        "generatedAt": "2026-10-15T02:22:37.111840+00:00"
       }
     }
   ],
