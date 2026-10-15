@@ -30,6 +30,7 @@ import {noteMessageReferences} from '../../../packages/dsh-research-task-runtime
 import {exportNoteWithSnapshots} from './component-snapshots'
 import {createNoteComponentDataActions} from './component-data-actions'
 import {InlineNoteFileBlock,noteFilePresentation} from './file-inline'
+import {useInlineComponentGeneration} from './use-inline-component-generation'
 
 type Props = { sessionId: string; bridge: NotesBridge; dark: boolean; navigate(view: string): void }
 type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submissionId?:number;occurrences?:unknown[]}
@@ -62,7 +63,7 @@ function NoteListButtons(){
 }
 function ResearchBlock({block}:any){
  const context=useContext(Context)!,node=useMemo(()=>{try{return JSON.parse(block.props.payload)}catch{return {}}},[block.props.payload])
- return (context as any).generatingBlock?.current===block.id&&node.generationTaskId&&['queued','running','retrying'].includes(node.generationStatus)?<NoteGenerationBlock block={block} node={node} context={context}/>:node.noteDraft?<NoteCreationBlock block={block} node={node} context={context}/>:node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
+ return (context as any).isGeneratingComponent?.(block.id)&&node.generationTaskId&&['queued','running','retrying'].includes(node.generationStatus)?<NoteGenerationBlock block={block} node={node} context={context}/>:node.noteDraft?<NoteCreationBlock block={block} node={node} context={context}/>:node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
 }
 function ResearchSnapshotBlock({ block }: any) {
   const interaction=useNoteComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
@@ -387,6 +388,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     } finally { if (!disposed.current && epoch.current === attempt) {setWriting(false); publishComposer({running:false}); request.current = ''; generatingBlock.current = '';activeGeneration.current=undefined } }
   }
   const stop = () => { epoch.current++; const id = request.current; request.current = '';setWriting(false); publishComposer({running:false}); if (id) { rollbackNativeDraft(lastRequest.current?.admission); publishTask(id,'stopped') }; if (id) void props.bridge.request('stop', { sessionId: props.sessionId, requestId: id }); if (generatingBlock.current && currentGeneration()) editor.updateBlock(generatingBlock.current, { props: { payload: JSON.stringify({...JSON.parse(editor.getBlock(generatingBlock.current).props.payload),generationStatus:'interrupted',generationError:'生成已停止，可调整需求后重试。'}) } }); generatingBlock.current = '';activeGeneration.current=undefined; setError('生成已停止，笔记内容已保留。') }
+  const inlineComponents=useInlineComponentGeneration({sessionId:props.sessionId,bridge:props.bridge,editor,current:()=>!disposed.current&&!props.recovery,persist:async()=>{save();await saveQueue.current},changed,update:updateSystemComponent})
   const apply = async (replace: boolean) => {
     if (!preview) return
     editor.focus()
@@ -428,7 +430,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
     catch(e){if(!disposed.current)setError((e as Error).message)}
     finally{exportPending.current=false;if(!disposed.current)setExporting(false)}
   }
-  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,importing:importing.current,generatingBlock,generateComponent:(id:string,prompt:string)=>{if(request.current||props.recovery)return {ok:false};void commands.current.generate(prompt,[],undefined,undefined,id);return {ok:true}},stopGeneration:()=>commands.current.stop() }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing])
+  const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,importing:importing.current,isGeneratingComponent:(id:string)=>inlineComponents.isGenerating(id)||generatingBlock.current===id&&!!currentGeneration(),generateComponent:inlineComponents.start,stopGeneration:(id:string)=>{const local=inlineComponents.stop(id);if(local.ok)return local;if(generatingBlock.current!==id)return {ok:false};commands.current.stop();return {ok:true}} }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing,inlineComponents.version])
   const slashItems = useMemo(()=>async (query:string)=>{
     const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
     const pick=async(kind:string)=>{

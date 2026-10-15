@@ -34,11 +34,11 @@ export function NativeComponentBlock({block,node,context,mode='component'}:any){
      const latest=JSON.parse(current.props.payload)
      if(latest.id!==value.nodeId||latest.generationTaskId!==value.taskId)throw Error('组件任务已变化，请重试。')
      if(value.action==='generation-stop'){
-      if(!['queued','running','retrying'].includes(latest.generationStatus)||context.generatingBlock&&context.generatingBlock.current!==block.id||typeof context.stopGeneration!=='function')throw Error('当前组件没有正在运行的任务。')
-      const result=await context.stopGeneration();if(result===false||result?.ok===false)throw Error('停止请求未完成。')
+      const active=typeof context.isGeneratingComponent==='function'?context.isGeneratingComponent(block.id):!context.generatingBlock||context.generatingBlock.current===block.id
+      if(!['queued','running','retrying'].includes(latest.generationStatus)||!active||typeof context.stopGeneration!=='function')throw Error('当前组件没有正在运行的任务。')
+      const result=await context.stopGeneration(block.id);if(result===false||result?.ok===false)throw Error('停止请求未完成。')
      }else{
       if(!['failed','cancelled','interrupted'].includes(latest.generationStatus)||!latest.containerPrompt?.trim()||typeof context.generateComponent!=='function')throw Error('组件暂不能重新生成，请调整需求后重试。')
-      if(context.generatingBlock?.current&&context.generatingBlock.current!==block.id)throw Error('请等待当前组件任务完成后重试。')
       const result=await context.generateComponent(block.id,latest.containerPrompt.trim());if(result===false||result?.ok===false)throw Error('组件任务尚未开始，请重试。')
      }
      reply(true)

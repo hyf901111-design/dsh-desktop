@@ -73,6 +73,26 @@ it('starts a component child with only the authorized note evidence and records 
  expect(seen.at(-1)).toMatchObject({seq:seen[0].seq,startedAt:seen[0].startedAt,componentTask:{childSessionId:'note-component-child'}})
 })
 
+it('keeps a card-local component child out of parent session events while ordinary writing remains recorded',async()=>{
+ const {Session}=await import('@deepseek-ai/dsh-session'),{noteConversationRows}=await import('../packages/dsh-research-task-runtime/notes-session.js')
+ const session=Session.create('session'),before=structuredClone(session.events),ctx=context('{"kind":"component","artifact":{"version":1,"type":"markdown","title":"卡片","content":"独立组件内容"}}'),seen=[]
+ ctx.sessions={get:()=>session};ctx.sessionTitle={rename:vi.fn((s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}})}
+ await generateNoteSuggestion(ctx,{...input,requestId:'silent',mode:'component',entryPoint:'component',context:{scope:'none',components:[]}},undefined,state=>seen.push(state))
+ expect(ctx.subagents.start).toHaveBeenCalledOnce();expect(seen.some(state=>state.componentTask?.childSessionId)).toBe(true)
+ expect(session.events).toEqual(before);expect(noteConversationRows(session)).toEqual([]);expect(ctx.sessionTitle.rename).not.toHaveBeenCalled();expect(seen.every(state=>state.seq===undefined)).toBe(true)
+ ctx.llm.stream=async function*(){yield{type:'text-delta',text:'{"kind":"text","markdown":"普通正文"}'};yield{type:'finish',reason:{kind:'stop'}}}
+ await generateNoteSuggestion(ctx,{...input,requestId:'ordinary',entryPoint:'component'})
+ expect(noteConversationRows(session)).toMatchObject([{requestId:'ordinary',phase:'ready',result:{markdown:'普通正文'}}])
+})
+for(const outcome of ['failed','stopped'])it('does not append a parent conversation row when a silent child is '+outcome,async()=>{
+ const {Session}=await import('@deepseek-ai/dsh-session'),session=Session.create('session'),ctx=context(''),controller=new AbortController(),before=structuredClone(session.events)
+ ctx.sessions={get:()=>session};ctx.sessionTitle={rename:vi.fn((s,title)=>{s.append('session/title',{title,source:{kind:'user'}});return{title}})}
+ ctx.subagents.start.mockImplementation(async(_provider,request)=>({id:'silent-child',localAgent:{id:'silent-child',session:{id:'silent-child',events:[]}},result:outcome==='failed'?Promise.resolve({stopReason:'refusal',output:[]}):new Promise(resolve=>request.signal.addEventListener('abort',()=>resolve({stopReason:'aborted',output:[]}),{once:true})),dispose:async()=>{}}))
+ const pending=generateNoteSuggestion(ctx,{...input,requestId:'silent-'+outcome,mode:'component',entryPoint:'component',context:{scope:'none',components:[]}},controller.signal)
+ const rejected=expect(pending).rejects.toThrow();await vi.waitFor(()=>expect(ctx.subagents.start).toHaveBeenCalledOnce());if(outcome==='stopped')controller.abort();await rejected
+ expect(session.events).toEqual(before);expect(ctx.sessionTitle.rename).not.toHaveBeenCalled()
+})
+
 it('passes uploaded native image attachments to the actual component child',async()=>{
  const ctx=context('{"kind":"component","artifact":{"version":1,"type":"markdown","title":"图示","content":"图片中的说明"}}')
  ctx.attachments={imageLimits:{maxImagesPerMessage:1,maxImageBytes:16,maxMessageImageBytes:16,mediaTypes:['image/png']},saveImages:async()=>[{attachmentId:'owned-image',mediaType:'image/png',bytes:3,width:1,height:1}]}

@@ -7,6 +7,7 @@ import {noteMessageReferences} from './notes-message-references.js'
 
 export async function generateNoteSuggestion(ctx, input, requestedSignal, progress = () => {},sourceOptions={}) {
  const session=ctx.sessions?.get(input?.sessionId)
+ const cardLocal=input?.mode==='component'&&input?.entryPoint==='component'
  let started=false,latest={reasoning:'',outputChars:0}
  const emit=value=>{latest={...latest,...value};progress(latest)}
  try {
@@ -17,8 +18,8 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
   if(!['note','selection','none'].includes(references.scope)||!Array.isArray(references.components)||references.components.length>1000||references.components.some(item=>!item||typeof item.blockId!=='string'||item.blockId.length>256||typeof item.title!=='string'||item.title.length>1000||!['research','attachment'].includes(item.type)||typeof item.content!=='string'||item.content.length>30000)||JSON.stringify(references).length>300000)throw Error('笔记引用内容过长或格式无效。')
   const document=references.scope==='note'?input.markdown:'',selection=references.scope==='none'?'':input.selection,title=references.scope==='note'?input.title:''
   const selectedReferences=await loadNoteReferenceContent(input.sessionId,references,input.prompt,signal,sourceOptions)
-  const conversation=sharedNoteConversationContext(session)
-  if(session){engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title||''});setNoteConversationRunning(session,input.requestId,true);const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,references:noteMessageReferences(references,selection)});latest={...latest,...metadata};started=true}
+  const conversation=cardLocal?[]:sharedNoteConversationContext(session)
+  if(session&&!cardLocal){engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title||''});setNoteConversationRunning(session,input.requestId,true);const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,references:noteMessageReferences(references,selection)});latest={...latest,...metadata};started=true}
   emit({stage:'model',reasoning:'',outputChars:0})
   const response = await ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } })
   if (!response.result.ok || !response.result.value.current || !response.result.value.routable) throw Error('当前会话模型不可用，请选择模型后重试。')
@@ -72,7 +73,7 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
   }
   throw Error('生成结果格式不完整，请调整需求后重试。')
  }catch(error){if(started)recordNoteConversation(session,{requestId:input.requestId,phase:requestedSignal?.aborted?'stopped':'failed',reasoning:latest.reasoning,error:error.message||'生成失败',finishedAt:Date.now()});throw error}
- finally{if(session)setNoteConversationRunning(session,input.requestId,false)}
+ finally{if(started)setNoteConversationRunning(session,input.requestId,false)}
 }
 
 async function readNotesBody(req, ctx) {
@@ -85,22 +86,25 @@ async function readNotesBody(req, ctx) {
 }
 
 export function registerNotesAi(ctx, { isTrustedRequest,loadFileText }) {
-  let active = 0
+  let active = 0,cardJobs=0,ordinaryJobs=0
   return ctx.webServer.register({ kind: 'exact', path: '/sherlock/notes/generate', handler: async (req, res) => {
     const send = (status, value) => { if (!res.destroyed) { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value)) } }
     if (req.method !== 'POST' || !isTrustedRequest(req, true)) return send(403, { error: 'Request rejected' })
-    if (active >= 2) return send(429, { error: '笔记生成正在进行，请稍后重试。' })
+    if (active >= 4) return send(429, { error: '笔记生成正在进行，请稍后重试。' })
     const controller = new AbortController(), close = () => { if (!res.writableEnded) controller.abort() }
     req.once('aborted', () => controller.abort()); res.once('close', close); active++
-    let streaming=false
+    let streaming=false,slot
     const write=value=>{if(!res.destroyed)res.write(JSON.stringify(value)+'\n')}
     try {
-      const input=await readNotesBody(req,ctx);streaming=input.stream===true
+      const input=await readNotesBody(req,ctx),cardLocal=input?.mode==='component'&&input?.entryPoint==='component'
+      if(cardLocal?cardJobs>=3:ordinaryJobs>=1)return send(429,{error:'笔记生成正在进行，请稍后重试。'})
+      slot=cardLocal?'component':'ordinary';if(cardLocal)cardJobs++;else ordinaryJobs++
+      streaming=input.stream===true
       if(streaming)res.writeHead(200,{'content-type':'application/x-ndjson','cache-control':'no-store'})
       const result=await generateNoteSuggestion(ctx,input,controller.signal,streaming?value=>write({type:'progress',...value}):undefined,{loadFileText})
       if(streaming){write({type:'result',result});res.end()}else send(200,result)
     }
     catch (error) {const message=error instanceof Error ? error.message : '笔记生成失败，请重试。';if(streaming){write({type:'error',error:message});res.end()}else send(503,{error:message})}
-    finally { active--; res.off('close', close) }
+    finally { active--;if(slot==='component')cardJobs--;else if(slot==='ordinary')ordinaryJobs--;res.off('close', close) }
   } })
 }

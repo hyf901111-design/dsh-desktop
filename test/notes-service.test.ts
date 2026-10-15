@@ -108,3 +108,24 @@ it('forwards an explicit selected component target to the child generation bound
  await s.call('generate',{requestId:'target',mode:'component',targetBlockId:'selected',prompt:'重新生成所选图表',context:{scope:'selection',components:[{blockId:'selected',type:'research',title:'所选图表',content:'内容'}]}})
  expect(body.targetBlockId).toBe('selected');expect(body.context.components.map((item:any)=>item.blockId)).toEqual(['selected']);s.dispose()
 })
+
+it('admits three card-local jobs plus one ordinary job and scopes each stop to its owner, session and request',async()=>{
+ const s=service('http://127.0.0.1:9999'),jobs=new Map<string,{signal:AbortSignal;body:any;finish():void}>(),pending:Promise<any>[]=[]
+ vi.stubGlobal('fetch',(_url:any,options:any)=>new Promise<Response>((resolve,reject)=>{
+  const body=JSON.parse(options.body),signal=options.signal as AbortSignal
+  jobs.set(body.requestId,{signal,body,finish:()=>resolve(new Response(JSON.stringify({type:'result',result:{kind:'text',markdown:'完成'}})+'\n'))})
+  signal.addEventListener('abort',()=>reject(signal.reason),{once:true})
+ }))
+ const start=(requestId:string,local:boolean)=>s.call('generate',{requestId,prompt:'需求',markdown:'',selection:'',mode:local?'component':'write',...(local?{entryPoint:'component'}:{})})
+ try{
+  for(const id of ['card-1','card-2','card-3'])pending.push(start(id,true).then((result:any)=>({result}),(error:unknown)=>({error})))
+  await new Promise(resolve=>setImmediate(resolve));expect(jobs.size).toBe(3)
+  await expect(start('card-overflow',true)).rejects.toThrow('等待')
+  pending.push(start('right-1',false).then((result:any)=>({result}),(error:unknown)=>({error})));await new Promise(resolve=>setImmediate(resolve));expect(jobs.size).toBe(4)
+  expect(jobs.get('card-1')!.body.entryPoint).toBe('component');expect(jobs.get('right-1')!.body.entryPoint).toBeUndefined()
+  await s.call('stop',{requestId:'card-1',sessionId:'other-note'});expect(jobs.get('card-1')!.signal.aborted).toBe(false)
+  await s.call('stop',{requestId:'card-1'});expect(jobs.get('card-1')!.signal.aborted).toBe(true);expect(jobs.get('card-2')!.signal.aborted).toBe(false);expect(jobs.get('right-1')!.signal.aborted).toBe(false)
+  await pending[0];await expect(start('right-overflow',false)).rejects.toThrow('等待')
+  s.changeOwner();await s.call('stop',{requestId:'card-2'});expect(jobs.get('card-2')!.signal.aborted).toBe(false)
+ }finally{for(const job of jobs.values())job.finish();await Promise.all(pending);s.dispose()}
+})

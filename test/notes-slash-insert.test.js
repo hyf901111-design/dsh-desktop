@@ -13,7 +13,7 @@ beforeAll(async()=>{
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
  const {chromium}=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
-})
+},60000)
 afterAll(async()=>browser?.close())
 async function fixture(dark=false){
  const context=await browser.newContext({viewport:{width:1100,height:850}}),page=await context.newPage(),errors=[];page.setDefaultTimeout(2500);page.on('pageerror',e=>errors.push(e.message))
@@ -96,17 +96,17 @@ it('restores an interrupted smart draft as an editable requirement instead of a 
 for(const changed of ['stop','newer'])it(`does not replace a ${changed} smart draft with a late result`,async()=>{
  const {context,page}=await fixture();try{
   await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('待生成内容');await page.getByRole('button',{name:'创建',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.finishGenerate)).toBe('function')
-  if(changed==='stop')await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId:'slash-insert'}})))
+  if(changed==='stop')await page.evaluate(()=>{const view=window.noteComponentViews.filter(value=>value.mode==='generation').at(-1);document.dispatchEvent(new CustomEvent('sherlock:notes-component-action',{detail:{instanceId:view.instanceId,sessionId:'slash-insert',requestId:'stop-card',nodeId:view.node.id,taskId:view.node.generationTaskId,action:'generation-stop'}}))})
   else await page.evaluate(changed=>{const b=window.noteEditor.document.find(b=>b.type==='research'),node=JSON.parse(b.props.payload);window.noteEditor.updateBlock(b.id,{props:{payload:JSON.stringify(changed==='resize'?{...node,noteSize:{height:300}}:{...node,containerPrompt:'较新的需求',generationStatus:'draft'})}})},changed)
   await page.evaluate(()=>window.finishGenerate({kind:'component',node:{id:'late',title:'不应写入的结果',containerSpec:{version:1,type:'table',title:'晚到结果',columns:['值'],rows:[[1]]}}}))
   await expect.poll(()=>page.locator('.en-ai-loading').count()).toBe(0);expect(await page.locator('[data-note-creation-draft="smart"]').count()).toBe(1);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).inputValue()).toBe(changed==='newer'?'较新的需求':'待生成内容');expect(await page.evaluate(()=>window.noteEditor.document.filter(b=>b.type==='research').length)).toBe(1);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).isEnabled()).toBe(true)
  }finally{await context.close()}
 },15000)
 
-it('shows a model clarification in conversation and preserves the editable smart draft',async()=>{
+it('shows a model clarification only in the card and preserves the editable smart draft',async()=>{
  const {context,page}=await fixture();try{
   await slash(page,'智能组件');await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).fill('按我的数据做图');await page.getByRole('button',{name:'创建',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof window.finishGenerate)).toBe('function');await page.evaluate(()=>window.finishGenerate({kind:'conversation',markdown:'请补充月份和收入数据。'}))
-  await expect.poll(()=>page.evaluate(()=>window.noteTaskRows.find(row=>row.phase==='replied')?.result.markdown)).toBe('请补充月份和收入数据。');expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).isEnabled()).toBe(true);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).inputValue()).toBe('按我的数据做图');expect(await page.locator('.en-error').count()).toBe(0)
+  await expect.poll(()=>page.locator('.en-creation-feedback').textContent()).toBe('请补充月份和收入数据。');expect(await page.evaluate(()=>window.noteTaskRows)).toEqual([]);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).isEnabled()).toBe(true);expect(await page.getByRole('textbox',{name:'描述要创建的组件内容',exact:true}).inputValue()).toBe('按我的数据做图');expect(await page.locator('.en-error').count()).toBe(0)
  }finally{await context.close()}
 },15000)
 
