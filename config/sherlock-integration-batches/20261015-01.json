@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记斜杠文件及智能链接组件与字体阅读优化",
+        "featureName": "笔记导出组件快照及斜杠插入和字体优化",
         "branch": "codex/feat/notes-context-alignment-20261015",
         "baseCommit": "ff1e029038210dd4fb11bf126ead31a5fcfd4ccf",
-        "tipCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
+        "tipCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
         "commits": [
           {
             "commit": "5b07b8248ba48a4b3f1bbbd6bfe5ce88e8859db1",
@@ -27,9 +27,20 @@
               "5b07b8248ba48a4b3f1bbbd6bfe5ce88e8859db1"
             ],
             "subject": "优化：采用系统中文字体改善会话和笔记阅读"
+          },
+          {
+            "commit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+            "parents": [
+              "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab"
+            ],
+            "subject": "功能：笔记导出PDF和Word时嵌入组件快照"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/market-font.d.ts"
+          },
           {
             "status": "M",
             "path": "scripts/lib/notes-components.mjs"
@@ -40,7 +51,19 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/pptx-resize-settle.mjs"
+          },
+          {
+            "status": "M",
             "path": "scripts/lib/research-native-web-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/main/notes/component-snapshot.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/export.ts"
           },
           {
             "status": "A",
@@ -57,6 +80,10 @@
           {
             "status": "A",
             "path": "src/preload/client-typography.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/notes/component-snapshots.ts"
           },
           {
             "status": "A",
@@ -83,8 +110,24 @@
             "path": "src/preload/shell-style.ts"
           },
           {
+            "status": "A",
+            "path": "src/shared/note-component-snapshot.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-plugin-profile.test.ts"
+          },
+          {
             "status": "M",
             "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-component-snapshots.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-export-snapshots.test.ts"
           },
           {
             "status": "A",
@@ -101,12 +144,21 @@
           {
             "status": "A",
             "path": "test/notes-slash-insert.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-resize-settle.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pptx-scroll-viewport.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "./node_modules/.bin/vitest",
+              "npx",
+              "vitest",
               "run",
               "test/notes-slash-insert.test.js",
               "test/notes-native-web.test.js",
@@ -118,9 +170,43 @@
               "test/figma-final-shell-patch.test.ts"
             ],
             "outcome": "passed",
-            "summary": "8文件73项通过，含真实编辑器插入、生成停止及并发保护、原生网页加载和重复补丁",
-            "verifiedCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
-            "completedAt": "2026-10-15T03:07:11.587654+00:00",
+            "summary": "8文件73项斜杠、引用、网页和字体补丁回归通过",
+            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+            "completedAt": "2026-10-15T03:38:42.321960+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-export.test.ts",
+              "test/notes-export-snapshots.test.ts",
+              "test/notes-component-snapshots.test.ts",
+              "test/pptx-resize-settle.test.js",
+              "test/pptx-scroll-viewport.test.js",
+              "test/notes-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "6文件61项聚焦检查通过",
+            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+            "completedAt": "2026-10-15T03:37:12.830463+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/bundled-plugin-profile.test.ts",
+              "-t",
+              "upgrades versioned PPT layers",
+              "--testTimeout=30000"
+            ],
+            "outcome": "passed",
+            "summary": "PPT补丁升级和重复准备检查通过",
+            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+            "completedAt": "2026-10-15T03:37:12.830463+00:00",
             "timeoutMs": 180000
           },
           {
@@ -131,8 +217,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
-            "completedAt": "2026-10-15T03:07:11.587654+00:00",
+            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+            "completedAt": "2026-10-15T03:37:12.830463+00:00",
             "timeoutMs": 180000
           },
           {
@@ -143,25 +229,26 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "6828ac37c61c82d6aaca5e7960ec1cbe196f1eab",
-            "completedAt": "2026-10-15T03:07:11.587654+00:00",
+            "verifiedCommit": "2dc6c365fdd06c3112eb4811d46ba7f4f6a34f79",
+            "completedAt": "2026-10-15T03:37:12.830463+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实NotesApp浏览器验证四类斜杠文件选择及位置、取消、等宽智能框、生成和追问、失败及中断恢复、较新内容保护；原生研究网页在笔记viewport正确加载；系统字体8个宽窄明暗状态、实际PingFang、代码标题和引用输入框几何验证通过。"
+          "summary": "独立真实Electron验证离屏canvas、sandbox iframe、SVG、输入及内部滚动快照，原笔记状态未改变；实际PDF/Word经渲染检查正文顺序、中文、图像与长图分页；真实生产字体屏障3次首帧与稳定截图一致；两轮独立review问题已修。"
         },
         "acceptanceCriteria": [
-          "笔记图片、视频、音频、文件斜杠命令打开对应格式的原生文件选择器，所选文件直接插入当时光标处正文。",
-          "笔记斜杠菜单新增智能组件、链接，默认铺满正文宽度，框内输入后原位生成或加载并保留需求供重试。",
-          "智能组件追问在会话显示，取消和旧请求结果不覆盖较新内容。",
-          "会话与笔记采用系统中文字体和舒适行距，明暗及窄栏下引用、代码和标题正常。"
+          "PDF与Word在对应正文位置嵌入组件当前画面快照，保留标题、宽度和对齐，长图分页。",
+          "支持离屏PPT、图表、文件及网页画面，快照不修改笔记与组件持久内容。",
+          "大体积快照经私有临时HTML打印，PNG数据有格式、尺寸及容量校验。",
+          "此前斜杠文件选择、智能组件、链接和系统中文字体修改保持有效。"
         ],
         "risks": [
-          "待集成客户端构建后验收真实系统文件对话框、模型生成、网页加载及字体可见效果。"
+          "仍需集成客户端实际入口验收文件选择、智能生成、链接、PDF与Word导出。",
+          "受浏览器安全限制无法离线读取的跨源图像会明确报错，避免导出空白成功图。"
         ],
-        "generatedAt": "2026-10-15T03:07:11.587654+00:00"
+        "generatedAt": "2026-10-15T03:37:12.830463+00:00"
       }
     }
   ],
