@@ -22,7 +22,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       "date": "2026-10-15",
       "items": [
         "修复切换到笔记模式后顶栏消失的问题，恢复会话标题、模式切换与导出入口。",
-        "修复笔记任务进度和结果区域可能显示失败的问题，保持中英文界面正常显示。"
+        "修复笔记任务进度和结果区域可能显示失败的问题，保持中英文界面正常显示。",
+        "补齐插件、应用、MCP、技能管理及相关市场、表单、菜单和弹窗的英文界面，保留自定义名称、技能正文及输入内容。"
       ]
     },
     {
@@ -446,7 +447,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
       "date": "2026-10-15",
       "items": [
         "Fix the missing header in Notes mode, restoring the session title, mode tabs, and export menu.",
-        "Fix note task progress and results failing to display, with consistent Chinese and English interfaces."
+        "Fix note task progress and results failing to display, with consistent Chinese and English interfaces.",
+        "Complete English interfaces for plugin, app, MCP and skill management, including marketplaces, forms, menus and dialogs, while preserving custom names, skill content and input."
       ]
     },
     {

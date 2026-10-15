@@ -73,6 +73,6 @@ export function renderSkillMarkdown(content: string): string {
     const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
     const metadata = /^---\n([\s\S]*?)\n(?:---|\.\.\.)(?:\n|$)/.exec(normalized);
     const body = metadata ? normalized.slice(metadata[0].length) : normalized;
-    const html = blocks(body.split('\n'));
-    return `${html || '<p class="ig-note">此技能暂时没有正文。</p>'}${metadata ? `<details class="ig-skill-metadata"><summary>技能元信息</summary><pre>${esc(metadata[1])}</pre></details>` : ''}`;
+    const html = blocks(body.split('\n')).replace(/<(h[1-6]|p|ul|ol|pre|blockquote|table|details)(?=[\s>])/g,'<$1 data-ui-preserve');
+    return `${html || '<p class="ig-note">此技能暂时没有正文。</p>'}${metadata ? `<details class="ig-skill-metadata"><summary>技能元信息</summary><pre data-ui-preserve>${esc(metadata[1])}</pre></details>` : ''}`;
 }
