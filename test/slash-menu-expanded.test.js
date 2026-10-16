@@ -3,6 +3,7 @@ import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {patchSkillCommandLabels,patchSkillCommandPopup} from '../scripts/lib/skill-command-menu.mjs'
+import {derivedMenuCss} from '../scripts/lib/figma-derived-menu-client.mjs'
 
 let browser,script,trigger,popup
 beforeAll(async()=>{
@@ -83,12 +84,31 @@ for(const dark of [false,true])it(`matches workspace menu material even when nat
  const page=await browser.newPage({viewport:{width:1380,height:900}})
  try{
   const refinements=await readFile('src/preload/figma-refinements.css','utf8'),notes=await readFile('src/preload/notes/style.css','utf8')
-  const nativeCss=[trigger,popup].map(source=>JSON.parse(source.match(/const css = ("[^\n]+");/u)[1])).join('\n')
+  const nativeCss=[trigger,popup].map(source=>JSON.parse(source.match(/const css = ("[^\n]+");/u)[1])).join('\n')+derivedMenuCss
   await page.setContent(`<style>${refinements}${notes}${nativeCss}</style><body ${dark?'data-ds-dark-theme':''}><div role="menu" id="workspace"></div><div class="_3e4SsG_menu" data-ework-expanded-command id="slash"></div><div class="mufS8W_card" data-ework-expanded-command id="skills"></div><div class="srb-notifications" id="notifications"></div><div class="sherlock-account-menu" id="account"></div><div role="menu" id="model"></div><div role="menu" id="permission"></div><div class="st-menu" id="more"></div><div class="en-block-menu" id="note-block"></div><div class="en-export-menu" id="note-export"></div><div class="mantine-Menu-dropdown" id="note-format"></div><main id="document"></main></body>`)
+  await page.locator('body').evaluate((body,dark)=>{
+   const notes=document.createElement('section');notes.className='en-root';notes.dataset.dark=String(dark);notes.innerHTML='<div class="bn-suggestion-menu" id="note-suggestions"></div>';body.append(notes)
+   const derived=document.createElement('div');derived.className='rScV5Q_mindMapMenu odyssey-derived-detail-menu';derived.id='derived';body.append(derived)
+  },dark)
   const styles=await page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('[id]')].map(el=>{const s=getComputedStyle(el);return [el.id,{background:s.backgroundColor,blur:s.backdropFilter,shadow:s.boxShadow}]})))
   expect(styles.workspace.background).toBe(dark?'rgba(43, 43, 43, 0.82)':'rgba(255, 255, 255, 0.86)')
-  for(const id of ['slash','skills','notifications','account','model','permission','more','note-block','note-export','note-format'])expect(styles[id],id).toEqual(styles.workspace)
+  for(const id of ['slash','skills','notifications','account','model','permission','more','note-block','note-export','note-format','derived','note-suggestions'])expect(styles[id],id).toEqual(styles.workspace)
   expect(styles.workspace.blur).toBe('blur(24px)')
   expect(styles.document.background).toBe('rgba(0, 0, 0, 0)')
+ }finally{await page.close()}
+})
+
+for(const dark of [false,true])it(`does not paint opaque BlockNote rows or a second popover shell in ${dark?'dark':'light'} theme`,async()=>{
+ const page=await browser.newPage({viewport:{width:1380,height:900}})
+ try{
+  const refinements=await readFile('src/preload/figma-refinements.css','utf8'),notes=await readFile('src/preload/notes/style.css','utf8'),vendor=(await readFile('node_modules/@blocknote/mantine/src/blocknoteStyles.css','utf8')).replace(/^@import[^;]+;/m,'')
+  await page.setContent(`<style>${refinements}${notes}${vendor}</style><body ${dark?'data-ds-dark-theme':''}><section class="en-root" data-dark="${dark}"><div class="bn-container bn-mantine"><div class="mantine-Menu-dropdown"><div class="mantine-Menu-label" id="label">段落样式</div><button class="mantine-Menu-item" id="row">正文</button><button class="mantine-Menu-item" id="selected" aria-selected="true">标题</button></div><div class="mantine-Popover-dropdown bn-panel-popover" id="shell"><div class="bn-panel" id="panel">链接</div></div></div></section></body>`)
+  await page.mouse.move(1200,800)
+  for(const id of ['row','label','shell'])expect(await page.locator('#'+id).evaluate(el=>getComputedStyle(el).backgroundColor),id).toBe('rgba(0, 0, 0, 0)')
+  expect(await page.locator('#shell').evaluate(el=>getComputedStyle(el).boxShadow)).toBe('none')
+  expect(await page.locator('#panel').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(dark?'rgba(43, 43, 43, 0.82)':'rgba(255, 255, 255, 0.86)')
+  expect(await page.locator('#selected').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+  await page.locator('#row').hover()
+  expect(await page.locator('#row').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
  }finally{await page.close()}
 })
