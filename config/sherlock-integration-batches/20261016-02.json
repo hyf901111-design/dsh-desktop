@@ -9,31 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "客户端滚动条灰度统一、更新重试修复与差分归档优化",
+        "featureName": "滚动条可见度修正、主页主题与会话页签持久化",
         "branch": "codex/feat/scrollbar-update-polish-20261016",
-        "baseCommit": "9f7c5772b30fe5bcb0802a1bf444484cf44437f4",
-        "tipCommit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
+        "baseCommit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
+        "tipCommit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
         "commits": [
           {
-            "commit": "f9a336f376c0de35a3ef1302bf7965baa33d1a37",
+            "commit": "c036c6ad86f606a354e8dec492be6670219e197d",
             "parents": [
-              "9f7c5772b30fe5bcb0802a1bf444484cf44437f4"
+              "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7"
             ],
-            "subject": "调整：统一客户端深浅主题滚动条灰度"
+            "subject": "调整：保留浅色滚动条在灰底侧栏上的可见度"
           },
           {
-            "commit": "0b248ed2a28e53bd9d1ca793e95707700b4414db",
+            "commit": "eb552a5a635b49d21e745d4556f0d0029fcb9ab3",
             "parents": [
-              "f9a336f376c0de35a3ef1302bf7965baa33d1a37"
+              "c036c6ad86f606a354e8dec492be6670219e197d"
             ],
-            "subject": "修复：更新准备超时后重试复用原生安装任务"
+            "subject": "修复：主页背景主题跨端口重启后保持用户选择"
           },
           {
-            "commit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
+            "commit": "6bce2a26b3bcd08fd5b4a1497f221b49d7d36055",
             "parents": [
-              "0b248ed2a28e53bd9d1ca793e95707700b4414db"
+              "eb552a5a635b49d21e745d4556f0d0029fcb9ab3"
             ],
-            "subject": "优化：固定更新归档时间戳并重建双通道差分索引"
+            "subject": "修复：按会话持久保存并恢复最后访问的页签"
+          },
+          {
+            "commit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
+            "parents": [
+              "6bce2a26b3bcd08fd5b4a1497f221b49d7d36055"
+            ],
+            "subject": "修复：迁移会话页签清除标记时避免恢复旧记录"
           }
         ],
         "files": [
@@ -62,36 +69,32 @@
             "path": "scripts/lib/custom-component-library.css"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/normalize-zip-timestamps.d.mts"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/normalize-zip-timestamps.mjs"
-          },
-          {
             "status": "M",
             "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/session-view-preferences.mjs"
           },
           {
             "status": "M",
             "path": "scripts/lib/youtube-client.mjs"
           },
           {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
             "status": "A",
-            "path": "scripts/prepare-macos-dual-release.d.mts"
+            "path": "src/main/home-theme-preferences.ts"
           },
           {
             "status": "M",
-            "path": "scripts/prepare-macos-dual-release.mjs"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "src/main/update/native-install.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/update/update-manager.ts"
+            "path": "src/main/state/research-canvas-storage.ts"
           },
           {
             "status": "M",
@@ -103,6 +106,14 @@
           },
           {
             "status": "M",
+            "path": "src/preload/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/notes/style.css"
           },
           {
@@ -110,40 +121,36 @@
             "path": "src/preload/research-board-dialogs.ts"
           },
           {
+            "status": "A",
+            "path": "src/shared/home-themes.ts"
+          },
+          {
             "status": "M",
             "path": "test/figma-task-scrollbar.test.ts"
           },
           {
             "status": "M",
-            "path": "test/local-update-download.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/local-update-manager.test.ts"
+            "path": "test/home-theme-controller.test.ts"
           },
           {
             "status": "A",
-            "path": "test/macos-dual-release-archive.test.ts"
+            "path": "test/home-theme-preferences.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-storage.test.ts"
           },
           {
             "status": "M",
             "path": "test/research-grid-client.test.js"
           },
           {
-            "status": "M",
-            "path": "test/update-background-flow.test.ts"
+            "status": "A",
+            "path": "test/session-view-preferences.test.js"
           },
           {
             "status": "M",
-            "path": "test/update-freshness.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-install-lifecycle.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/update-manager.test.ts"
+            "path": "test/sidebar-new-session-actions.test.ts"
           }
         ],
         "checks": [
@@ -154,9 +161,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-0.log",
-            "verifiedCommit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
-            "completedAt": "2026-10-16T05:18:44.895417+00:00",
+            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-frozen-check-0.log",
+            "verifiedCommit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
+            "completedAt": "2026-10-16T05:44:43.899590+00:00",
             "timeoutMs": 180000
           },
           {
@@ -166,9 +173,9 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-1.log",
-            "verifiedCommit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
-            "completedAt": "2026-10-16T05:18:34.604962+00:00",
+            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-frozen-check-1.log",
+            "verifiedCommit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
+            "completedAt": "2026-10-16T05:44:29.265623+00:00",
             "timeoutMs": 30000
           },
           {
@@ -196,9 +203,9 @@
               "test/release.test.ts"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-2.log",
-            "verifiedCommit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
-            "completedAt": "2026-10-16T05:18:41.785048+00:00",
+            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-frozen-check-2.log",
+            "verifiedCommit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
+            "completedAt": "2026-10-16T05:44:39.251325+00:00",
             "timeoutMs": 240000
           },
           {
@@ -206,6 +213,8 @@
               "npm",
               "test",
               "--",
+              "--testTimeout=20000",
+              "--hookTimeout=45000",
               "--maxWorkers=2",
               "test/research-html-theme.test.js",
               "test/research-grid-client.test.js",
@@ -213,106 +222,66 @@
               "滚动条|滚动能力|滚动联动"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-3.log",
-            "verifiedCommit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
-            "completedAt": "2026-10-16T05:18:47.424659+00:00",
+            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-frozen-check-3.log",
+            "verifiedCommit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
+            "completedAt": "2026-10-16T05:44:54.768355+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=3",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-preferences.test.ts",
+              "test/session-view-preferences.test.js",
+              "test/research-canvas-storage.test.ts",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/sidebar-session-recency.test.ts",
+              "test/notes-header-runtime.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-frozen-check-4.log",
+            "verifiedCommit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
+            "completedAt": "2026-10-16T05:44:49.302092+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/figma-theme-cards.test.ts",
+              "-t",
+              "persisted selection"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-frozen-check-5.log",
+            "verifiedCommit": "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb",
+            "completedAt": "2026-10-16T05:44:50.114697+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际生产样式在Chromium核对深浅滚动条颜色，侧栏/任务/设置与研究表格滚动、拖动聚焦检查通过；本地集成客户端构建后继续检查真实主界面。"
+          "summary": "生产样式与组件滚动聚焦验证通过；首轮真实客户端主界面/深浅主题/侧栏滚动已检查，并据灰底可见度调整浅色透明灰。主题与原生会话store的跨端口/重启/新建/草稿和排序回归通过；后继集成构建继续完成真实重启和页签恢复验收。"
         },
         "acceptanceCriteria": [
-          "内部客户端滚动条统一为深色#333333、浅色#e1e1e1，保留悬停反馈及原滚动交互",
-          "原生更新准备超时后重试复用已有任务，迟到结果与错误可处理，新版本及退出隔离",
-          "双通道最终ZIP只规范化归档时间戳，保留载荷及签名，重建真实blockmap和SHA512，失败保留既有完整输出"
+          "滚动条保持深色克制灰、浅色透明灰在白底与灰底均可辨，原滚动交互保留",
+          "主页背景选择落盘到固定客户端配置，退出后及端口变化后保持选择；深浅外观原有持久化保留",
+          "每会话独立保存对话/研究/笔记/轨迹，返回会话恢复最后页签，显式新建研究仍进入研究",
+          "新建对话、新建研究和跨会话往返保留原会话页签、内容、草稿与排序",
+          "更新任务重试复用与双通道差分时间戳优化保持原已核验行为"
         ],
         "risks": [
           "未对外发布，不递增版本，不执行旧客户端全量升级/真实安装重启测试。",
           "同一1.3.1至1.3.2样本规范化两边后标准差分由140352977降至40342341字节；首次切换约140218960字节，未来体积依赖内容变化。",
-          "扩大HTML主题检查时发现4项原基线已存在失败，已在未修改main复现并保留/tmp/ework-html-baseline.log；本次相关滚动条检查通过。",
-          "legacy真实150464项归档规范化和CRC检查通过；尚未量化legacy相邻版本优化收益。"
+          "原main可复现4项HTML主题历史失败和1项preset selector历史失败，未改无关产品逻辑；直接相关289项检查通过。",
+          "legacy真实150464项归档规范化和CRC检查通过；尚未量化legacy相邻版本优化收益。",
+          "旧主页背景只在旧端口localStorage中时无法跨源自动读取；固定存储将保存今后的选择，实际验收会恢复已观察到的背景选择。"
         ],
-        "generatedAt": "2026-10-16T05:19:22.112962+00:00"
-      },
-      "merged": {
-        "mergeCommit": "92b687e1243edcb0a0554ff7602a5d514074a5b9",
-        "verificationCommit": "92b687e1243edcb0a0554ff7602a5d514074a5b9",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "92b687e1243edcb0a0554ff7602a5d514074a5b9",
-            "completedAt": "2026-10-16T05:20:36.835Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "92b687e1243edcb0a0554ff7602a5d514074a5b9",
-            "completedAt": "2026-10-16T05:20:36.835Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "test/update-manager.test.ts",
-              "test/update-freshness.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/update-background-flow.test.ts",
-              "test/local-update-manager.test.ts",
-              "test/local-update-download.test.ts",
-              "test/update-error-stage.test.ts",
-              "test/update-restart-preparation.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/figma-settings-scrollbar.test.js",
-              "test/workbench-style.test.js",
-              "test/research-grid-scroll-clearance.test.js",
-              "test/macos-dual-release-archive.test.ts",
-              "test/cloudflare-release.test.ts",
-              "test/update-differential.test.ts",
-              "test/release.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 test/update-manager.test.ts test/update-freshness.test.ts test/update-install-lifecycle.test.ts test/update-background-flow.test.ts test/local-update-manager.test.ts test/local-update-download.test.ts test/update-error-stage.test.ts test/update-restart-preparation.test.ts test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/figma-settings-scrollbar.test.js test/workbench-style.test.js test/research-grid-scroll-clearance.test.js test/macos-dual-release-archive.test.ts test/cloudflare-release.test.ts test/update-differential.test.ts test/release.test.ts",
-            "verifiedCommit": "92b687e1243edcb0a0554ff7602a5d514074a5b9",
-            "completedAt": "2026-10-16T05:20:36.835Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=2",
-              "test/research-html-theme.test.js",
-              "test/research-grid-client.test.js",
-              "-t",
-              "滚动条|滚动能力|滚动联动"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=2 test/research-html-theme.test.js test/research-grid-client.test.js -t 滚动条|滚动能力|滚动联动",
-            "verifiedCommit": "92b687e1243edcb0a0554ff7602a5d514074a5b9",
-            "completedAt": "2026-10-16T05:20:36.835Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-16T05:20:36.835Z"
+        "generatedAt": "2026-10-16T05:45:21.497552+00:00"
       }
     }
   ],
