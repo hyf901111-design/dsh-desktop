@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "统一所有菜单的半透明背景",
         "branch": "codex/feat/scrollbar-update-polish-20261016",
-        "baseCommit": "2bb9ff767388d3d6916444c9b972ebdee31d689f",
-        "tipCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+        "baseCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+        "tipCommit": "b11894893ca92f30ac8f016eb0b1968eb6d9b117",
         "commits": [
           {
-            "commit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+            "commit": "b11894893ca92f30ac8f016eb0b1968eb6d9b117",
             "parents": [
-              "2bb9ff767388d3d6916444c9b972ebdee31d689f"
+              "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39"
             ],
-            "subject": "统一：所有客户端菜单复用工作区半透明背景"
+            "subject": "修复：派生和笔记菜单旧底色覆盖统一背景"
           }
         ],
         "files": [
@@ -29,11 +29,7 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/expanded-command-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/native-menu.ts"
+            "path": "scripts/lib/figma-derived-menu-client.mjs"
           },
           {
             "status": "M",
@@ -45,7 +41,7 @@
           },
           {
             "status": "M",
-            "path": "test/menu-surface-theme.test.ts"
+            "path": "src/preload/notes/style.css"
           },
           {
             "status": "M",
@@ -60,9 +56,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "46项菜单/笔记/更新日志检查和typecheck通过；证据/tmp/ework-menu-material-focused.log与-type.log。",
-            "verifiedCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
-            "completedAt": "2026-10-16T07:43:11.714640+00:00",
+            "summary": "48项菜单/笔记/日志检查及typecheck通过，证据/tmp/ework-menu-material-final-confirmed.log与-final-type.log。",
+            "verifiedCommit": "b11894893ca92f30ac8f016eb0b1968eb6d9b117",
+            "completedAt": "2026-10-16T07:47:54.650337+00:00",
             "timeoutMs": 180000
           },
           {
@@ -72,9 +68,9 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "46项菜单/笔记/更新日志检查和typecheck通过；证据/tmp/ework-menu-material-focused.log与-type.log。",
-            "verifiedCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
-            "completedAt": "2026-10-16T07:43:11.714640+00:00",
+            "summary": "48项菜单/笔记/日志检查及typecheck通过，证据/tmp/ework-menu-material-final-confirmed.log与-final-type.log。",
+            "verifiedCommit": "b11894893ca92f30ac8f016eb0b1968eb6d9b117",
+            "completedAt": "2026-10-16T07:47:54.650337+00:00",
             "timeoutMs": 30000
           },
           {
@@ -89,15 +85,15 @@
               "test/update-release-notes.test.ts"
             ],
             "outcome": "passed",
-            "summary": "46项菜单/笔记/更新日志检查和typecheck通过；证据/tmp/ework-menu-material-focused.log与-type.log。",
-            "verifiedCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
-            "completedAt": "2026-10-16T07:43:11.714640+00:00",
+            "summary": "48项菜单/笔记/日志检查及typecheck通过，证据/tmp/ework-menu-material-final-confirmed.log与-final-type.log。",
+            "verifiedCommit": "b11894893ca92f30ac8f016eb0b1968eb6d9b117",
+            "completedAt": "2026-10-16T07:47:54.650337+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium深浅两主题检查后加载原生CSS也不能覆盖共享背景/blur/阴影，保留非菜单文档背景；原生Notes隔离HTML使用同一材料。最终签名客户端继续可见验收。"
+          "summary": "真实Chromium深浅主题验证后加载原生和派生CSS、BlockNote行/壳：共用背景blur阴影，非活动行透明，hover/selected保留；原生独立笔记窗口仅统一rgba底色，不宣称CSS可模糊父窗口。"
         },
         "acceptanceCriteria": [
           "所有菜单背景复用图1工作区的半透明底色/blur24/边框阴影",
@@ -105,57 +101,10 @@
           "与已授权1.3.3一起发布，上传前验收真实客户端"
         ],
         "risks": [
-          "正式包尚未重建和上传；必须从干净main重新签名打包"
+          "正式包尚未重建和上传；必须从干净main重新签名打包",
+          "research-derived-menu-final.test.ts在未修改main也因已打包代码锚点歧义不能启动；并非本次背景回归。真实derivedCSS后加载的Chromium检查已覆盖本次变更。"
         ],
-        "generatedAt": "2026-10-16T07:43:11.714640+00:00"
-      },
-      "merged": {
-        "mergeCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
-        "verificationCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
-            "completedAt": "2026-10-16T07:43:34.016Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
-            "completedAt": "2026-10-16T07:43:34.016Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/menu-surface-theme.test.ts",
-              "test/slash-menu-expanded.test.js",
-              "test/notes-native-menu.test.ts",
-              "test/skill-command-patch.test.js",
-              "test/update-release-notes.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/menu-surface-theme.test.ts test/slash-menu-expanded.test.js test/notes-native-menu.test.ts test/skill-command-patch.test.js test/update-release-notes.test.ts",
-            "verifiedCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
-            "completedAt": "2026-10-16T07:43:34.016Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-16T07:43:34.016Z"
+        "generatedAt": "2026-10-16T07:47:54.650337+00:00"
       }
     }
   ],
