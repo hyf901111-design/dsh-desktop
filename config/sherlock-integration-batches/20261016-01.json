@@ -1,0 +1,293 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261016-01",
+  "branch": "codex/integration/20261016-01",
+  "baseMainCommit": "81a60ca631eb3f545ba0abd795b32dc3ed2e8cda",
+  "expectedMainCommit": "81a60ca631eb3f545ba0abd795b32dc3ed2e8cda",
+  "createdAt": "2026-10-16T00:02:07.460Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "斜杠菜单完整展示、内置技能英文化与静默预备更新",
+        "branch": "codex/feat/slash-updater-20261016",
+        "baseCommit": "81a60ca631eb3f545ba0abd795b32dc3ed2e8cda",
+        "tipCommit": "3ce168b322323f1ffbecbb836adbc3595be84354",
+        "commits": [
+          {
+            "commit": "146ab3d1747befbbd52c27b55f4a99c18605a904",
+            "parents": [
+              "81a60ca631eb3f545ba0abd795b32dc3ed2e8cda"
+            ],
+            "subject": "修复：斜杠技能菜单随界面语言显示内置技能名称"
+          },
+          {
+            "commit": "f20cae426709bbe3aa6811fa442a1f46116cf711",
+            "parents": [
+              "146ab3d1747befbbd52c27b55f4a99c18605a904"
+            ],
+            "subject": "优化：斜杠和技能菜单完整展开并适配小窗口"
+          },
+          {
+            "commit": "9b302850af8cbf95464cf50f2b828398c1b651e8",
+            "parents": [
+              "f20cae426709bbe3aa6811fa442a1f46116cf711"
+            ],
+            "subject": "优化：后台静默准备更新并由用户一键重启安装"
+          },
+          {
+            "commit": "3ce168b322323f1ffbecbb836adbc3595be84354",
+            "parents": [
+              "9b302850af8cbf95464cf50f2b828398c1b651e8"
+            ],
+            "subject": "修复：取消延迟就绪的更新重启保护进程"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/expanded-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-updates-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/prepared-update-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/native-install.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-manager.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/update/update-state.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-command-bridge.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/skill-command.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-update-control.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-notification-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/update-view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/contracts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/local-update-download.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/settings-about.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-update-control.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/skill-command-menu.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/slash-menu-expanded.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/update-about-flow.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/update-background-flow.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/update-background-ui.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-check-error-routing.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-freshness.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-install-lifecycle.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-manager.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/update-ui.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "163项相关聚焦检查、类型检查及差异检查通过。",
+            "verifiedCommit": "3ce168b322323f1ffbecbb836adbc3595be84354",
+            "completedAt": "2026-10-16T00:01:01.428856+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "163项相关聚焦检查、类型检查及差异检查通过。",
+            "verifiedCommit": "3ce168b322323f1ffbecbb836adbc3595be84354",
+            "completedAt": "2026-10-16T00:01:01.428856+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=4",
+              "test/update-manager.test.ts",
+              "test/update-freshness.test.ts",
+              "test/update-install-lifecycle.test.ts",
+              "test/sidebar-update-control.test.ts",
+              "test/update-state.test.ts",
+              "test/update-ui.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/update-check-error-routing.test.ts",
+              "test/local-update-manager.test.ts",
+              "test/local-update-download.test.ts",
+              "test/settings-about.test.ts",
+              "test/figma-update-layout.test.ts",
+              "test/update-error-stage.test.ts",
+              "test/update-background-flow.test.ts",
+              "test/update-background-ui.test.ts",
+              "test/update-about-flow.test.js",
+              "test/figma-update-client.test.ts",
+              "test/update-page-preparation.test.ts",
+              "test/update-restart-preparation.test.ts",
+              "test/skill-command-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/slash-menu-expanded.test.js",
+              "test/skill-presentation.test.js",
+              "test/integration-english-ui.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "163项相关聚焦检查、类型检查及差异检查通过。",
+            "verifiedCommit": "3ce168b322323f1ffbecbb836adbc3595be84354",
+            "completedAt": "2026-10-16T00:01:01.428856+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium原生菜单与关于页组件验证通过，覆盖小窗口分列、所有条目可见、中英文和下载准备重启阶段。集成构建后继续核验真实客户端。"
+        },
+        "acceptanceCriteria": [
+          "斜杠命令和技能菜单全部直接展示，无内部滚动条，小窗口自动分列",
+          "英文界面内置技能名称和说明为英文，用户自定义技能名称不变",
+          "自动发现更新静默下载、校验和解压，准备完毕后才提示重启更新",
+          "关于页可手动检查并展示下载与准备进度，离开设置后侧栏承接手动进度或重启提示",
+          "点击重启先保存编辑，安装路径不再请求下载、网络或解压，并处理并发检查与延迟失败"
+        ],
+        "risks": [
+          "不触发真实安装重启或全量升级测试；本次仅本地测试，不修改公开更新源。"
+        ],
+        "generatedAt": "2026-10-16T00:01:01.428856+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "--maxWorkers=4",
+        "test/update-manager.test.ts",
+        "test/update-freshness.test.ts",
+        "test/update-install-lifecycle.test.ts",
+        "test/sidebar-update-control.test.ts",
+        "test/update-state.test.ts",
+        "test/update-ui.test.ts",
+        "test/update-notification-store.test.ts",
+        "test/update-check-error-routing.test.ts",
+        "test/local-update-manager.test.ts",
+        "test/local-update-download.test.ts",
+        "test/settings-about.test.ts",
+        "test/figma-update-layout.test.ts",
+        "test/update-error-stage.test.ts",
+        "test/update-background-flow.test.ts",
+        "test/update-background-ui.test.ts",
+        "test/update-about-flow.test.js",
+        "test/figma-update-client.test.ts",
+        "test/update-page-preparation.test.ts",
+        "test/update-restart-preparation.test.ts",
+        "test/skill-command-menu.test.ts",
+        "test/skill-command-patch.test.js",
+        "test/slash-menu-expanded.test.js",
+        "test/skill-presentation.test.js",
+        "test/integration-english-ui.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
