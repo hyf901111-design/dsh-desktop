@@ -12,6 +12,7 @@
 - 优化差分更新打包，减少未修改文件因归档时间戳变化而被重复下载；首次切换到新打包方式时更新包仍可能较大。
 - 修复收起侧栏后设置页按钮与主题预览被压窄，以及设置打开时仍能拖动底层侧栏的问题。
 - 优化首页工作区下拉箭头的颜色对比；输入 / 与按钮显示相同命令列表，具体技能统一从技能入口选择；菜单不再默认选中压缩历史，鼠标和键盘共用单一高亮状态。
+- 统一工作区、模型、权限、账户、消息中心、斜杠及笔记菜单的半透明背景、模糊、边框与阴影，并适配深浅外观。
 
 ## English
 
@@ -23,10 +24,11 @@
 - Optimize differential update archives to avoid downloading unchanged files again because of timestamp changes. The first update adopting the new format may still be large.
 - Fix compressed Settings buttons and theme previews with a collapsed sidebar, and prevent dragging the background sidebar while Settings is open.
 - Improve contrast for the home workspace dropdown arrow. Typing / and the command button show the same command list; individual skills open from Skills. Compact history is no longer preselected, and pointer and keyboard navigation share one highlight.
+- Unify translucent backgrounds, blur, borders and shadows across workspace, model, permission, account, notification, slash-command and Notes menus in light and dark appearance.
 
 ## 发布范围与验证
 
-- 本次已验收修改通过集成批次 20261016-02、20261016-03 和 20261016-04 晋升到本地 main。
+- 本次已验收修改通过集成批次 20261016-02、20261016-03、20261016-04、20261016-05 和 20261016-06 晋升到本地 main。
 - 应用内和两条更新通道使用一致的中英文日志，保留历史日志。
 - 按用户要求跳过 Apple 公证、stapling 和 Gatekeeper 公证检查，保留 Developer ID 与旧兼容证书签名及包完整性检查。
 - 仅运行发布及直接相关的聚焦检查；只做公开 blockmap、单段 Range/206 与 SHA-512 差分合成校验，不执行旧客户端全量升级或安装重启测试。

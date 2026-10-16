@@ -78,3 +78,17 @@ for(const dark of [false,true])it(`keeps a single slash-command highlight and ne
   expect(await page.evaluate(()=>window.selected)).toEqual([7,2])
  }finally{await page.close()}
 })
+
+for(const dark of [false,true])it(`matches workspace menu material even when native menu CSS loads last in ${dark?'dark':'light'} theme`,async()=>{
+ const page=await browser.newPage({viewport:{width:1380,height:900}})
+ try{
+  const refinements=await readFile('src/preload/figma-refinements.css','utf8'),notes=await readFile('src/preload/notes/style.css','utf8')
+  const nativeCss=[trigger,popup].map(source=>JSON.parse(source.match(/const css = ("[^\n]+");/u)[1])).join('\n')
+  await page.setContent(`<style>${refinements}${notes}${nativeCss}</style><body ${dark?'data-ds-dark-theme':''}><div role="menu" id="workspace"></div><div class="_3e4SsG_menu" data-ework-expanded-command id="slash"></div><div class="mufS8W_card" data-ework-expanded-command id="skills"></div><div class="srb-notifications" id="notifications"></div><div class="sherlock-account-menu" id="account"></div><div role="menu" id="model"></div><div role="menu" id="permission"></div><div class="st-menu" id="more"></div><div class="en-block-menu" id="note-block"></div><div class="en-export-menu" id="note-export"></div><div class="mantine-Menu-dropdown" id="note-format"></div><main id="document"></main></body>`)
+  const styles=await page.evaluate(()=>Object.fromEntries([...document.querySelectorAll('[id]')].map(el=>{const s=getComputedStyle(el);return [el.id,{background:s.backgroundColor,blur:s.backdropFilter,shadow:s.boxShadow}]})))
+  expect(styles.workspace.background).toBe(dark?'rgba(43, 43, 43, 0.82)':'rgba(255, 255, 255, 0.86)')
+  for(const id of ['slash','skills','notifications','account','model','permission','more','note-block','note-export','note-format'])expect(styles[id],id).toEqual(styles.workspace)
+  expect(styles.workspace.blur).toBe('blur(24px)')
+  expect(styles.document.background).toBe('rgba(0, 0, 0, 0)')
+ }finally{await page.close()}
+})
