@@ -23,6 +23,7 @@
   transform:translateY(-50%)!important; width:100%!important; pointer-events:auto!important;
 }
 .gdEzaW_refChip { width:164px!important; min-width:164px!important; max-width:164px!important; vertical-align:middle!important; }
+.gdEzaW_refChip:is([data-ref-chip=skill],[data-ref-chip=subagent]) { vertical-align:baseline!important; }
 .uV2eYG_root[data-figma-inline-ready] .uV2eYG_chipLabel > :is(svg,.uV2eYG_fileReferenceIcon,.uV2eYG_researchReferenceIcon),
 .gdEzaW_refChip > :is(svg,.uV2eYG_fileReferenceIcon,.uV2eYG_researchReferenceIcon) {
   width:18px!important; height:18px!important; flex:0 0 18px!important;
