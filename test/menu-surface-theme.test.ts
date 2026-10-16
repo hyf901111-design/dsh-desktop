@@ -18,8 +18,8 @@ it('shares a neutral translucent material across workspace, account, more, and i
       doc.querySelector('.st-menu')!.setAttribute('data-dark',String(dark))
       for (const id of ['workspace','account','more','plugin','overflow']) {
         const css=win.getComputedStyle(doc.getElementById(id)!)
-        expect(css.backgroundColor,id).toBe(dark ? 'rgba(43, 43, 43, 0.82)' : 'rgba(255, 255, 255, 0.86)')
-        expect(css.backdropFilter,id).toBe('blur(24px)')
+        expect(css.backgroundColor,id).toBe(dark ? 'rgba(43, 43, 43, 0.68)' : 'rgba(255, 255, 255, 0.78)')
+        expect(css.backdropFilter,id).toBe('blur(36px) saturate(1.2)')
       }
     }
   } finally { await win.happyDOM.close() }
@@ -40,11 +40,11 @@ it('keeps expanded slash and skill menus and Notes menus on the workspace materi
       for (const id of ['slash','skills','notifications','note-block','note-export','note-format']) {
         const css=win.getComputedStyle(doc.getElementById(id)!)
         expect(css.backgroundColor,id).toBe(workspace.backgroundColor)
-        expect(css.backdropFilter,id).toBe('blur(24px)')
+        expect(css.backdropFilter,id).toBe('blur(36px) saturate(1.2)')
         // Shadow variable fallbacks are verified in real Chromium; happy-dom
         // leaves nested rgba() fallbacks unresolved in computed box-shadow.
       }
-      expect(win.getComputedStyle(doc.getElementById('note-document')!).backdropFilter).not.toBe('blur(24px)')
+      expect(win.getComputedStyle(doc.getElementById('note-document')!).backdropFilter).not.toBe('blur(36px) saturate(1.2)')
     }
     const native = new Window()
     try {
@@ -53,8 +53,8 @@ it('keeps expanded slash and skill menus and Notes menus on the workspace materi
       for(const dark of [false,true]) {
         native.document.body.classList.toggle('dark',dark)
         const css=native.getComputedStyle(native.document.querySelector('.menu')!)
-        expect(css.backgroundColor).toBe(dark ? 'rgba(43, 43, 43, 0.82)' : 'rgba(255, 255, 255, 0.86)')
-        expect(css.backdropFilter).toBe('blur(24px)')
+        expect(css.backgroundColor).toBe(dark ? 'rgba(43, 43, 43, 0.68)' : 'rgba(255, 255, 255, 0.78)')
+        expect(css.backdropFilter).toBe('blur(36px) saturate(1.2)')
       }
     } finally { await native.happyDOM.close() }
   } finally { await win.happyDOM.close() }

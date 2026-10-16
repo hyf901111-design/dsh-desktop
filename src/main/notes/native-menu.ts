@@ -44,14 +44,15 @@ export function noteMenuBounds(anchor: NoteMenuState['anchor'], work: Electron.R
     y: Math.round(Math.max(work.y + margin, Math.min(y, work.y + work.height - height - margin))), width, height }
 }
 
-export function noteSubmenuBounds(pane:Electron.Rectangle,item:Electron.Rectangle,work:Electron.Rectangle,desiredHeight:number,desiredWidth:number,zoom=1):Electron.Rectangle {
-  const inset=MENU_SHADOW_INSET*zoom,margin=8,gap=4*zoom,width=Math.min(Math.ceil(desiredWidth*zoom),work.width-margin*2),height=Math.min(Math.ceil(desiredHeight*zoom),work.height-margin*2)
+export function noteSubmenuBounds(pane:Electron.Rectangle,item:Electron.Rectangle,work:Electron.Rectangle,desiredHeight:number,desiredWidth:number,zoom=1,shadowInset=MENU_SHADOW_INSET):Electron.Rectangle {
+  const inset=shadowInset*zoom,margin=8,gap=4*zoom,width=Math.min(Math.ceil(desiredWidth*zoom),work.width-margin*2),height=Math.min(Math.ceil(desiredHeight*zoom),work.height-margin*2)
   const right=pane.x+pane.width+gap-inset,left=pane.x-gap-(width-inset*2)-inset
   const x=right+width<=work.x+work.width-margin?right:left
   return {x:Math.round(Math.max(work.x+margin,Math.min(x,work.x+work.width-width-margin))),y:Math.round(Math.max(work.y+margin,Math.min(item.y-inset,work.y+work.height-height-margin))),width,height}
 }
 type MenuPane={html:string;height:number;width:number}
-export function noteMenuPresentation(state: NoteMenuState, ticket: string, limits: {height?:number;width?:number} = {}): MenuPane&{root:MenuPane;child?:MenuPane} {
+export function noteMenuPresentation(state: NoteMenuState, ticket: string, limits: {height?:number;width?:number;shadowInset?:number} = {}): MenuPane&{root:MenuPane;child?:MenuPane} {
+  const shadowInset=limits.shadowInset??MENU_SHADOW_INSET
   const t=(value:string)=>noteUiText(value,state.locale)
   const grid=state.items.some(item=>item.icon==='paragraph')&&state.items.some(item=>item.icon==='heading')&&state.items.some(item=>item.icon==='bullet_list')
   const basic=grid?state.items.filter(item=>BASIC_ICONS.includes(item.icon)):[],rest=grid?state.items.filter(item=>!BASIC_ICONS.includes(item.icon)):state.items
@@ -85,11 +86,12 @@ export function noteMenuPresentation(state: NoteMenuState, ticket: string, limit
   const childHtml=child?`<section class="menu child-menu" style="height:${child.height}px;width:${child.width}px"><div role="listbox" aria-label="${t('组件库')}">${child.html}</div></section>`:''
   const childTop=showRoot&&child?Math.max(0,Math.min(root.positions.get(parent!.id)||0,maxHeight-child.height)):0
   const html=(showRoot?rootHtml:'')+(child?childHtml.replace('style="height:','style="margin-top:'+childTop+'px;height:'):'')
-  return {html,height:Math.max(showRoot?root.height:0,(child?.height||0)+childTop)+MENU_SHADOW_INSET*2,width:(showRoot?root.width:0)+(child?(showRoot?4:0)+child.width:0)+MENU_SHADOW_INSET*2,root:{html:rootHtml,height:root.height+MENU_SHADOW_INSET*2,width:root.width+MENU_SHADOW_INSET*2},...(child?{child:{html:childHtml,height:child.height+MENU_SHADOW_INSET*2,width:child.width+MENU_SHADOW_INSET*2}}:{})}
+  return {html,height:Math.max(showRoot?root.height:0,(child?.height||0)+childTop)+shadowInset*2,width:(showRoot?root.width:0)+(child?(showRoot?4:0)+child.width:0)+shadowInset*2,root:{html:rootHtml,height:root.height+shadowInset*2,width:root.width+shadowInset*2},...(child?{child:{html:childHtml,height:child.height+shadowInset*2,width:child.width+shadowInset*2}}:{})}
 }
 export const noteMenuDocumentHtml = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'none'"><title>Note commands</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:rgba(255, 255, 255, 0.86);--hover:#e7e7e7;--muted:#777;--line:rgba(0,0,0,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.16)}body.dark{color:#eee;--bg:rgba(43, 43, 43, 0.82);--hover:#383838;--muted:#aaa;--line:rgba(255,255,255,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.32)}
-main{height:100%;display:flex;align-items:flex-start;gap:4px;padding:24px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);box-shadow:var(--shadow);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);overflow:hidden;padding:6px 5px}.menu>[role=listbox]{flex:1;min-height:0;overflow:hidden}.menu-columns{display:grid;gap:8px;align-items:start}.library-icon{width:16px;height:16px;color:#667085}body.dark .library-icon{color:#9da5b2}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px;cursor:pointer}a:hover,a[data-pointer-hover=true],a[aria-selected=true],a[aria-expanded=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}body{font:13px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#252525;user-select:none;--bg:rgba(255, 255, 255, 0.78);--hover:#e7e7e7;--muted:#777;--line:rgba(0,0,0,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.16)}body.dark{color:#eee;--bg:rgba(43, 43, 43, 0.68);--hover:#383838;--muted:#aaa;--line:rgba(255,255,255,.10);--shadow:0 8px 24px -4px rgba(0,0,0,.32)}
+main{height:100%;display:flex;align-items:flex-start;gap:4px;padding:24px}.menu{width:264px;max-height:100%;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;background:var(--bg);box-shadow:var(--shadow);backdrop-filter:blur(36px) saturate(1.2);-webkit-backdrop-filter:blur(36px) saturate(1.2);overflow:hidden;padding:6px 5px}.menu>[role=listbox]{flex:1;min-height:0;overflow:hidden}.menu-columns{display:grid;gap:8px;align-items:start}.library-icon{width:16px;height:16px;color:#667085}body.dark .library-icon{color:#9da5b2}h2{font-size:12px;font-weight:400;line-height:24px;margin:0;padding:0 8px;color:var(--muted)}a{height:32px;display:flex;align-items:center;gap:10px;padding:0 8px;text-decoration:none;color:inherit;border-radius:5px;cursor:pointer}a:hover,a[data-pointer-hover=true],a[aria-selected=true],a[aria-expanded=true]{background:var(--hover)}.icon{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted)}.icon svg{display:block}.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.basic-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0 2px 8px}.basic-item{justify-content:center;padding:0}.basic-item .icon{color:inherit}.basic-item[aria-selected=true]{color:#568ef7;background:rgb(65 117 226 / .18)}.gold{color:#d7a23d}.cyan{color:#33b4d6}.green{color:#42aa85}.blue{color:#7988f3}.empty{padding:8px;margin:0}.chevron{color:var(--muted)}.child-menu{width:260px}
+body.native-material main{padding:0}body.native-material .menu{box-shadow:none}
 </style><main></main>`
 
 /** Non-key macOS panels do not reliably deliver pointer moves to Chromium. */
@@ -98,14 +100,16 @@ export function noteMenuPointerScript(x:number,y:number):string {
 }
 type OpenMenu = { input: NoteMenuState; owner: string; ticket: string; parent: BrowserWindow; popup: BrowserWindow; childPopup?:BrowserWindow; childReady?:Promise<unknown>; ready: Promise<unknown>; pending: boolean; updating: boolean; pointerTimer?:ReturnType<typeof setInterval>; pointerPending?:boolean; pointerSignature?:string; pointerPoint?:string; unlisten(): void }
 export class NoteNativeMenu implements NotesNativeMenu {
+  private readonly nativeMaterial = process.platform === 'darwin'
+  private readonly shadowInset = this.nativeMaterial ? 0 : MENU_SHADOW_INSET
   private current?: OpenMenu
   private retired = new Set<string>()
   constructor(private options: { getWindow(): BrowserWindow | undefined; owner(): string; canRead(sessionId: string): boolean }) {}
   private createPopup(parent: BrowserWindow): BrowserWindow {
     return new BrowserWindow({ parent, title:'笔记斜杠菜单', width:312, height:98, show:false, frame:false, transparent:true,
-      ...(process.platform === 'darwin' ? {type:'panel' as const} : {}),
+      ...(this.nativeMaterial ? {type:'panel' as const,vibrancy:'menu' as const,visualEffectState:'active' as const,backgroundColor:'#00000000',roundedCorners:true} : {}),
       focusable:false, acceptFirstMouse:true, resizable:false, movable:false, minimizable:false, maximizable:false, fullscreenable:false,
-      skipTaskbar:true, hasShadow:false, webPreferences:{partition:'notes-menu',nodeIntegration:false,contextIsolation:true,sandbox:true,devTools:false} })
+      skipTaskbar:true, hasShadow:this.nativeMaterial, webPreferences:{partition:'notes-menu',nodeIntegration:false,contextIsolation:true,sandbox:true,devTools:false} })
   }
   private checkBlur(state: OpenMenu): void {
     // Activating a menu briefly blurs the editor. Decide after focus has settled.
@@ -207,12 +211,12 @@ export class NoteNativeMenu implements NotesNativeMenu {
         const input = state.input, content = state.parent.getContentBounds(), zoom = state.parent.webContents.getZoomFactor()
         const anchor = { x:content.x + input.anchor.x * zoom, y:content.y + input.anchor.y * zoom, width:input.anchor.width * zoom, height:input.anchor.height * zoom }
         const work = screen.getDisplayNearestPoint({x:Math.round(anchor.x),y:Math.round(anchor.y)}).workArea
-        const presentation=noteMenuPresentation(input,state.ticket,{height:(work.height-16)/zoom-MENU_SHADOW_INSET*2,width:(work.width-16)/zoom-MENU_SHADOW_INSET*2})
-        const bounds=noteMenuBounds(anchor,work,presentation.root.height,zoom,presentation.root.width,MENU_SHADOW_INSET)
+        const presentation=noteMenuPresentation(input,state.ticket,{height:(work.height-16)/zoom-this.shadowInset*2,width:(work.width-16)/zoom-this.shadowInset*2,shadowInset:this.shadowInset})
+        const bounds=noteMenuBounds(anchor,work,presentation.root.height,zoom,presentation.root.width,this.shadowInset)
         state.popup.setBounds(bounds)
         state.popup.webContents.setZoomFactor(zoom)
         const parentIndex=input.items.findIndex(item=>item.id===input.submenu?.parentId)
-        const geometry=await state.popup.webContents.executeJavaScript(`document.body.className=${JSON.stringify(input.dark?'dark':'')};document.querySelector('main').innerHTML=${JSON.stringify(presentation.root.html)};({pane:document.querySelector('.root-menu').getBoundingClientRect().toJSON(),item:document.getElementById('item-root-${parentIndex}')?.getBoundingClientRect().toJSON()});`) as {pane:Electron.Rectangle;item?:Electron.Rectangle}
+        const geometry=await state.popup.webContents.executeJavaScript(`document.body.className=${JSON.stringify((input.dark?'dark':'')+(this.nativeMaterial?' native-material':''))};document.querySelector('main').innerHTML=${JSON.stringify(presentation.root.html)};({pane:document.querySelector('.root-menu').getBoundingClientRect().toJSON(),item:document.getElementById('item-root-${parentIndex}')?.getBoundingClientRect().toJSON()});`) as {pane:Electron.Rectangle;item?:Electron.Rectangle}
         if (!this.currentInput(state,input)) { if(this.current===state&&state.input===input)this.close(); continue }
         state.popup.showInactive()
         if (presentation.child && geometry.item) {
@@ -220,9 +224,9 @@ export class NoteNativeMenu implements NotesNativeMenu {
           const child=state.childPopup;await state.childReady
           if (!this.currentInput(state,input) || child.isDestroyed()) continue
           const screenRect=(rect:Electron.Rectangle)=>({x:bounds.x+rect.x*zoom,y:bounds.y+rect.y*zoom,width:rect.width*zoom,height:rect.height*zoom})
-          child.setBounds(noteSubmenuBounds(screenRect(geometry.pane),screenRect(geometry.item),work,presentation.child.height,presentation.child.width,zoom))
+          child.setBounds(noteSubmenuBounds(screenRect(geometry.pane),screenRect(geometry.item),work,presentation.child.height,presentation.child.width,zoom,this.shadowInset))
           child.webContents.setZoomFactor(zoom)
-          await child.webContents.executeJavaScript(`document.body.className=${JSON.stringify(input.dark?'dark':'')};document.querySelector('main').innerHTML=${JSON.stringify(presentation.child.html)};`)
+          await child.webContents.executeJavaScript(`document.body.className=${JSON.stringify((input.dark?'dark':'')+(this.nativeMaterial?' native-material':''))};document.querySelector('main').innerHTML=${JSON.stringify(presentation.child.html)};`)
           if (this.currentInput(state,input) && !child.isDestroyed()) child.showInactive()
         } else this.closeChild(state)
         this.trackPointer(state)
