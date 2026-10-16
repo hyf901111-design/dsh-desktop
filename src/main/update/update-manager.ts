@@ -36,9 +36,18 @@ let resetTimer: NodeJS.Timeout | undefined
 let checkPromise: Promise<unknown> | undefined
 let lastCheckedAt = 0
 let downloadedVersion: string | undefined
+let preparedVersion: string | undefined
+let latestVersion: string | undefined
+let preparationPromise: Promise<UpdateStatus> | undefined
+let preparationController: AbortController | undefined
+let preparing = false
+let refreshing = false
+let stopped = false
+let updateErrorEpoch = 0
 let downloading = false
 let installRequested = false
 let installing = false
+let activeInstallCleanup: (() => void) | undefined
 let started = false
 let handlersRegistered = false
 let localDownloadUpdater: LocalDownloadUpdater | undefined
@@ -108,6 +117,7 @@ export function startUpdateManager(): void {
   if (updateAccess !== 'production') return
   if (started) return
   started = true
+  stopped = false
 
   if (!supportsUpdates()) {
     transition({
@@ -143,31 +153,76 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
     return getUpdateStatus()
   }
 
+  if (manual && (checkPromise || preparing || status.phase === 'downloading')) {
+    status = { ...status, manual: true }
+    broadcast()
+  }
+  if (installing || preparing || status.phase === 'downloading') return getUpdateStatus()
   if (checkPromise) {
     await checkPromise
     return getUpdateStatus()
   }
-  if (installing || status.phase === 'downloading') {
-    return getUpdateStatus()
-  }
-
-  transition({ type: 'check', manual })
+  // A periodic check must not briefly remove a prepared Restart action.
+  if (status.phase !== 'downloaded') transition({ type: 'check', manual })
+  else status = { ...status, manual }
   lastCheckedAt = Date.now()
-  checkPromise = Promise.resolve().then(() => autoUpdater.checkForUpdates()).catch((error) => {
-    transition({ type: 'error', message: errorMessage(error) })
+  checkPromise = queryLatestVersion().catch((error) => {
+    transition({ type: 'error', errorStage: 'check', message: errorMessage(error) })
     if (manual) scheduleReset()
   }).finally(() => {
     checkPromise = undefined
   })
   await checkPromise
-
+  if (updateAccess === 'production' && !installing && status.phase === 'available') void downloadAvailableUpdate()
   return getUpdateStatus()
 }
 
 export async function installDownloadedUpdate(): Promise<void> {
   assertUpdateAccess(true)
-  if (status.phase !== 'downloaded') return
-  await completeUpdate()
+  if (status.phase !== 'downloaded' || !preparedVersion || preparedVersion !== status.availableVersion || installing || installRequested) return
+  const target = preparedVersion
+  const epoch = updateErrorEpoch
+  const assertCurrent = () => {
+    if (stopped) throw Error('应用正在退出，已取消更新重启。')
+    if (epoch !== updateErrorEpoch) throw Error(status.message || '更新安装器状态已变化，请重试。')
+  }
+  installRequested = true
+  installing = true
+  let cancelRecovery: (() => void) | undefined
+  const cleanupInstall = () => {
+    const cancel = cancelRecovery
+    cancelRecovery = undefined
+    cancel?.()
+    cancelUpdateRestartReceipt(app.getPath('userData'))
+  }
+  activeInstallCleanup = cleanupInstall
+  try {
+    if (!prepareForRestart) throw Error('研究状态保存入口尚未就绪，应用尚未退出。')
+    transition({ type: 'install', stage: 'saving' }, true)
+    await prepareForRestart()
+    assertCurrent()
+    cancelRecovery = process.platform === 'darwin' ? await armMacRenameRecovery(target) : undefined
+    assertCurrent()
+    writeUpdateRestartReceipt(app.getPath('userData'), app.getVersion(), target)
+    transition({ type: 'install', stage: 'restarting' }, true)
+    // The native installer is already ready: no download, network check or
+    // extraction belongs on the explicit restart path.
+    if (process.platform === 'darwin') nativeUpdater.quitAndInstall()
+    else autoUpdater.quitAndInstall(false, true)
+  } catch (error) {
+    if (activeInstallCleanup === cleanupInstall) activeInstallCleanup = undefined
+    // Recovery may finish arming after an earlier error cleared the global
+    // cleanup handle. The attempt still owns that late-created guard.
+    cleanupInstall()
+    installing = false
+    if (!stopped) transition({ type: 'error', errorStage: 'install', message: errorMessage(error) }, true)
+  } finally { installRequested = false }
+}
+
+function cancelPendingInstall(): void {
+  const cleanup = activeInstallCleanup
+  activeInstallCleanup = undefined
+  cleanup?.()
 }
 
 export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
@@ -177,7 +232,7 @@ export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
     if (downloading || status.phase !== 'available') return getUpdateStatus()
     downloading = true
     try {
-      // Never enter completeUpdate: even its catch touches the restart receipt.
+      // Isolated download checks may never prepare a native installer or quit.
       const latest = await checkForUpdates(true)
       if (latest.phase === 'available') await autoUpdater.downloadUpdate()
     } catch {
@@ -186,59 +241,77 @@ export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
     } finally { downloading = false }
     return getUpdateStatus()
   }
+  if (preparationPromise) return preparationPromise
   if (status.phase !== 'available') return getUpdateStatus()
-  await completeUpdate()
-  return getUpdateStatus()
+  preparationPromise = prepareAvailableUpdate()
+  try { return await preparationPromise } finally { preparationPromise = undefined }
 }
 
-async function completeUpdate(): Promise<void> {
-  assertUpdateAccess(true)
-  if (installing || installRequested || downloading) return
-  installRequested = true
+async function queryLatestVersion(): Promise<string | undefined> {
+  refreshing = true
+  latestVersion = undefined
   try {
-    let downloads = 0
-    while (true) {
-      const latest = await checkForUpdates(true)
-      if (latest.phase === 'available') {
-        if (downloads++ >= 3) throw new Error('更新版本连续变化，请稍后重试。')
+    await autoUpdater.checkForUpdates()
+    return latestVersion
+  } finally { refreshing = false }
+}
+
+async function prepareAvailableUpdate(): Promise<UpdateStatus> {
+  preparing = true
+  const controller = new AbortController()
+  const epoch = updateErrorEpoch
+  const assertCurrent = () => {
+    controller.signal.throwIfAborted()
+    if (epoch !== updateErrorEpoch) throw Error(status.message || '更新准备失败，请重试。')
+  }
+  preparationController = controller
+  let target = status.availableVersion!
+  let errorStage: NonNullable<UpdateStatus['errorStage']> = 'download'
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      assertCurrent()
+      if (downloadedVersion !== target) {
+        preparedVersion = undefined
+        errorStage = 'download'
         downloading = true
+        transition({ type: 'progress', percent: 0 })
         try { await autoUpdater.downloadUpdate() } finally { downloading = false }
-        // Refresh again after download: a newer release may have appeared.
-        continue
       }
-      if (latest.phase !== 'downloaded') return
-      installing = true
-      transition({ type: 'install', stage: 'preparing' }, true)
-      const beforeQuit = async (signal?: AbortSignal) => {
-        if (!prepareForRestart) throw Error('研究状态保存入口尚未就绪，应用尚未退出。')
-        transition({ type: 'install', stage: 'saving' }, true)
-        await prepareForRestart()
-        signal?.throwIfAborted()
-        const cancelRecovery = process.platform === 'darwin' ? await armMacRenameRecovery(downloadedVersion!) : undefined
-        if (signal?.aborted) { cancelRecovery?.(); signal.throwIfAborted() }
-        try { writeUpdateRestartReceipt(app.getPath('userData'), app.getVersion(), downloadedVersion!) }
-        catch (error) { cancelRecovery?.(); throw error }
-        transition({ type: 'install', stage: 'restarting' }, true)
-        return () => { cancelRecovery?.(); cancelUpdateRestartReceipt(app.getPath('userData')) }
+      assertCurrent()
+      if (downloadedVersion !== target) throw Error('更新文件版本不匹配，请重新下载。')
+      transition({ type: 'prepare', version: target })
+      errorStage = 'check'
+      const before = await queryLatestVersion()
+      assertCurrent()
+      if (!before) { transition({ type: 'not-available' }); return getUpdateStatus() }
+      if (before !== target) { target = before; transition({ type: 'available', version: target }); continue }
+      errorStage = 'install'
+      if (preparedVersion !== target) {
+        if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater, 120_000, controller.signal)
+        assertCurrent()
+        preparedVersion = target
       }
-      if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater, 120_000, beforeQuit)
-      else {
-        const cancel = await beforeQuit()
-        try { autoUpdater.quitAndInstall(false, true) } catch (error) { cancel(); throw error }
-      }
-      return
+      errorStage = 'check'
+      const after = await queryLatestVersion()
+      assertCurrent()
+      if (!after) { preparedVersion = undefined; transition({ type: 'not-available' }); return getUpdateStatus() }
+      if (after !== target) { target = after; transition({ type: 'available', version: target }); continue }
+      transition({ type: 'downloaded', version: target })
+      return getUpdateStatus()
     }
+    throw Error('更新版本连续变化，请稍后重试。')
   } catch (error) {
-    installing = false
-    cancelUpdateRestartReceipt(app.getPath('userData'))
-    // Keep the actionable failure visible until the user retries.
-    transition({ type: 'error', message: errorMessage(error) }, true)
+    if (!controller.signal.aborted && !stopped) transition({ type: 'error', errorStage, message: errorMessage(error) })
+    return getUpdateStatus()
   } finally {
-    installRequested = false
+    preparing = false
+    if (preparationController === controller) preparationController = undefined
   }
 }
 
 export function stopUpdateManager(): Promise<void> {
+  stopped = true
+  preparationController?.abort(Error('Update manager stopped.'))
   if (startupTimer) clearTimeout(startupTimer)
   if (intervalTimer) clearInterval(intervalTimer)
   if (resetTimer) clearTimeout(resetTimer)
@@ -261,27 +334,34 @@ function configureUpdater(localCheckOnly = false): void {
     debug: (...args: unknown[]) => console.debug('[updater]', ...args)
   }
 
-  autoUpdater.on('checking-for-update', () =>
-    transition({ type: 'check', manual: status.manual })
-  )
-  autoUpdater.on('update-available', (info) =>
-    transition({ type: downloadedVersion === info.version ? 'downloaded' : 'available', version: info.version })
-  )
+  autoUpdater.on('checking-for-update', () => {
+    if (!preparing && !installing && status.phase !== 'downloaded') transition({ type: 'check', manual: status.manual })
+  })
+  autoUpdater.on('update-available', (info) => {
+    latestVersion = info.version
+    if (!preparing && !installing) transition({ type: preparedVersion === info.version ? 'downloaded' : 'available', version: info.version })
+  })
   autoUpdater.on('download-progress', (progress) =>
     transition({ type: 'progress', percent: progress.percent, transferredBytes: progress.transferred, totalBytes: progress.total, bytesPerSecond: progress.bytesPerSecond })
   )
   autoUpdater.on('update-not-available', () => {
+    latestVersion = undefined
+    if (preparing || installing) return
     transition({ type: 'not-available' })
     scheduleReset()
   })
   autoUpdater.on('update-downloaded', (info) => {
     downloadedVersion = info.version
-    transition({ type: 'downloaded', version: info.version })
+    transition({ type: updateAccess === 'production' ? 'prepare' : 'downloaded', version: info.version })
   })
   autoUpdater.on('error', (error) => {
+    if (stopped) return
+    updateErrorEpoch++
+    if (!refreshing && !downloading) preparedVersion = undefined
+    if (installing) cancelPendingInstall()
     installing = false
-    transition({ type: 'error', message: errorMessage(error) })
-    if (status.manual) scheduleReset()
+    transition({ type: 'error', errorStage: refreshing ? 'check' : downloading ? 'download' : 'install', message: errorMessage(error) })
+    if (status.manual && refreshing && !preparing) scheduleReset()
   })
 }
 

@@ -25,7 +25,7 @@ vi.mock('../src/main/update/restart-receipt',()=>({consumeUpdateRestartReceipt:(
 vi.mock('../src/main/update/mac-update-recovery',()=>({armMacRenameRecovery:vi.fn(),repairRenamedMacDock:async()=>{}}))
 import {checkForUpdates,downloadAvailableUpdate,getUpdateStatus,installDownloadedUpdate,startUpdateManager,stopUpdateManager} from '../src/main/update/update-manager'
 afterEach(()=>stopUpdateManager())
-it('routes the real manager event/reducer broadcasts through notice actions without turning a check retry into a transfer',async()=>{
+it('keeps check errors distinct and starts a background transfer once a retry discovers an update',async()=>{
   const win=new Window({url:'https://ework.local'}),doc=win.document as unknown as Document
   doc.body.innerHTML='<aside data-dsh-sidebar-root><footer data-dsh-sidebar-footer></footer></aside>'
   const control=new SidebarUpdateControl(doc,'zh',{retry:()=>checkForUpdates(true),download:downloadAvailableUpdate,install:installDownloadedUpdate})
@@ -39,12 +39,8 @@ it('routes the real manager event/reducer broadcasts through notice actions with
     expect(doc.querySelector('.ework-notice-primary')?.textContent).toBe('重新检查')
     fakes.checkFails=false
     ;doc.querySelector<HTMLButtonElement>('.ework-notice-primary')!.click()
-    await vi.waitFor(()=>expect(getUpdateStatus().phase).toBe('available'))
-    expect(fakes.updater.downloadUpdate).not.toHaveBeenCalled()
-    expect(doc.querySelector('[data-update-download]')).not.toBeNull()
-    // A separate user update action now enters the real download path. The
-    // fake transport fails before any progress event; available is sufficient.
-    doc.querySelector<HTMLButtonElement>('[data-update-download]')!.click()
+    // The successful check automatically starts the transfer; a transport
+    // failure before its first progress event must remain a download error.
     await vi.waitFor(()=>expect(getUpdateStatus()).toMatchObject({phase:'error',errorStage:'download'}))
     expect(fakes.updater.downloadUpdate).toHaveBeenCalledTimes(1)
     expect(doc.querySelector('.ework-notice-primary')?.textContent).toBe('重新下载')

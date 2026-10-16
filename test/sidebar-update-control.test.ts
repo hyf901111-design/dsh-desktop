@@ -15,7 +15,7 @@ const available:UpdateStatus = {phase:'available',currentVersion:'0.9.5',availab
 const panel = (d:Document) => d.querySelector<HTMLElement>('#sherlock-sidebar-update-panel')!
 
 describe('Figma sidebar update states', () => {
-  it.each([['preparing','更新文件下载完成'],['saving','正在保存研究状态'],['restarting','正在重启应用']] as const)('shows the real %s stage without another action or fake percent', (installStage, title) => {
+  it.each([['preparing','正在准备更新'],['saving','正在保存研究状态'],['restarting','正在重启应用']] as const)('shows the real %s stage without another action or fake percent', (installStage, title) => {
     const {document,control}=fixture(); control.render({...available,phase:'installing',installStage})
     expect(panel(document).textContent).toContain(title)
     expect(panel(document).querySelector('button')).toBeNull()
@@ -71,14 +71,10 @@ describe('Figma sidebar update states', () => {
     control.render({...available,phase:'downloading',percent:0})
     expect(panel(document).textContent).not.toContain('MB')
   })
-  it.each(['downloaded','installing'] as const)('shows indeterminate verification for %s without a second installation click', phase => {
-    const {document,control,callbacks}=fixture();control.render({...available,phase,percent:100})
-    expect(panel(document).hidden).toBe(false)
-    expect(panel(document).textContent).toContain('更新文件下载完成')
-    expect(panel(document).textContent).toContain('更新文件下载完成，正在校验解压，完成后将自动重启客户端。')
-    expect(panel(document).querySelector('[data-notice-icon=loading]')).not.toBeNull()
-    expect(panel(document).querySelector('button')).toBeNull()
-    expect(panel(document).querySelector('[aria-valuenow]')).toBeNull()
+  it.each(['preparing','installing'] as const)('shows preparation or restart progress for %s without a premature action',phase=>{
+    const {document,control,callbacks}=fixture();control.render({...available,phase,...(phase==='installing'?{installStage:'saving' as const}:{})})
+    expect(panel(document).hidden).toBe(false);expect(panel(document).textContent).toContain(phase==='preparing'?'正在校验并解压更新文件':'正在保存研究状态')
+    expect(panel(document).querySelector('[data-notice-icon=loading]')).not.toBeNull();expect(panel(document).querySelector('button')).toBeNull()
     expect(callbacks.install).not.toHaveBeenCalled()
   })
   it('preserves state when the real sidebar footer is replaced', () => {
@@ -97,17 +93,12 @@ describe('Figma sidebar update states', () => {
   })
 })
 
-it('retains the update entry after automatic discovery and starts downloading without navigating', () => {
-  const {document,control,callbacks}=fixture()
-  const about=vi.fn();document.addEventListener('ework-open-about',about)
-  control.render({...available,manual:false})
-  const button=document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!
-  expect(button.hidden).toBe(false)
-  panel(document).querySelector<HTMLButtonElement>('.ework-notice-close')!.click()
-  button.click()
-  expect(panel(document).hidden).toBe(false)
-  expect(about).not.toHaveBeenCalled()
-  expect(callbacks.download).toHaveBeenCalledOnce()
+it('keeps automatic discovery quiet and offers a restart only after preparation',()=>{
+  const {document,control,callbacks}=fixture();control.render({...available,manual:false})
+  expect(document.querySelector<HTMLButtonElement>('#sherlock-sidebar-update-button')!.hidden).toBe(true);expect(panel(document).hidden).toBe(true)
+  control.render({...available,phase:'downloaded',manual:false});expect(panel(document).hidden).toBe(false)
+  panel(document).querySelector<HTMLButtonElement>('[data-update-install]')!.click()
+  expect(callbacks.install).toHaveBeenCalledOnce();expect(callbacks.download).not.toHaveBeenCalled()
 })
 
 it('keeps a dismissed download bubble closed across progress ticks while the ring advances', () => {
@@ -158,7 +149,7 @@ it.each(['available','error'] as const)('keeps an About check and its %s result 
   expect(panel(document).hidden).toBe(true)
   control.render({...available,phase:'checking',manual:false})
   control.render({...available,manual:false})
-  expect(panel(document).hidden).toBe(false)
+  expect(panel(document).hidden).toBe(true)
 })
 
 it('releases About suppression after a rejected check and permits explicit footer download', async () => {
@@ -171,12 +162,12 @@ it('releases About suppression after a rejected check and permits explicit foote
   expect(panel(document).dataset.phase).toBe('downloading')
 })
 
-it('keeps actual download and installation progress visible when About joins a check', async () => {
+it('keeps download and installation progress inside About while its check is active', async () => {
   const {document,control}=fixture();control.render({...available,phase:'downloading',percent:30})
   await control.checkFromAbout(async()=>{
-    expect(panel(document).hidden).toBe(false)
+    expect(panel(document).hidden).toBe(true)
     control.render({...available,phase:'installing',installStage:'saving'})
-    expect(panel(document).hidden).toBe(false)
+    expect(panel(document).hidden).toBe(true)
     return {...available,phase:'installing',installStage:'saving'}
   })
   expect(panel(document).hidden).toBe(false)

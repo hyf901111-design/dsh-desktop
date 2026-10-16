@@ -1,7 +1,7 @@
 import type { UpdateStatus } from '../shared/contracts'
 
 const KEY = 'ework.update.latest.v1'
-const phases = new Set(['available', 'downloading', 'downloaded', 'installing', 'updated', 'error', 'up-to-date'])
+const phases = new Set(['available', 'downloading', 'preparing', 'downloaded', 'installing', 'updated', 'error', 'up-to-date'])
 const version = (value: unknown): value is string => typeof value === 'string' && value.length <= 96 && /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(value)
 
 /** Persist only the updater's small, plain-data status contract, never arbitrary DOM or HTML. */
