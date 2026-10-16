@@ -1,5 +1,5 @@
 /* The scroll viewport starts below the shared workspace header. */
-body [data-research-canvas][data-ework-grid]{margin-top:var(--odyssey-workspace-header-height,44px)!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:var(--ework-scroll-thumb,#e1e1e1) transparent}
+body [data-research-canvas][data-ework-grid]{margin-top:var(--odyssey-workspace-header-height,44px)!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:var(--ework-scroll-thumb,#0000001a) transparent}
 /* Keep the full canvas visible; reserve toolbar clearance in scrollable content. */
 body [data-research-canvas][data-ework-grid][data-workbench-toolbar-space]{flex:none!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;scroll-padding-bottom:80px}
 body [data-ework-toolbar][data-toolbar-overflow=true]{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
@@ -122,7 +122,7 @@ body [data-ework-grid]:is([data-grid-operation=move],[data-grid-operation=resize
 
 /* Scroll controls overlay content; selection never reserves a native gutter. */
 body [data-research-canvas][data-ework-grid] [data-research-node-id]{--grid-scroll-thumb:transparent;--grid-scroll-width:none;--grid-scroll-size:0px;--grid-scroll-display:none}
-body [data-research-canvas][data-ework-grid] [data-research-node-id]:is([data-selected=true],[open]){--grid-scroll-thumb:var(--ework-scroll-thumb,#e1e1e1)}
+body [data-research-canvas][data-ework-grid] [data-research-node-id]:is([data-selected=true],[open]){--grid-scroll-thumb:var(--ework-scroll-thumb,#0000001a)}
 body[data-ds-dark-theme] [data-research-canvas][data-ework-grid] [data-research-node-id]:is([data-selected=true],[open]){--grid-scroll-thumb:var(--ework-scroll-thumb,#333333)}
 @layer ework-workbench{
 body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-research-preview-body],.rScV5Q_previewBody,.rScV5Q_artifactBody,.odyssey-component-primary,.rScV5Q_containerTableScroll,.rScV5Q_containerMarkdown,.rScV5Q_mindMap,.odyssey-generation-records,.rScV5Q_textPreview,textarea){scrollbar-gutter:auto!important;scrollbar-width:none!important;scrollbar-color:var(--grid-scroll-thumb) transparent!important}

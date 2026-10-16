@@ -7,7 +7,7 @@ body [data-odyssey-task-scrollbar][hidden],
 body [inert] [data-odyssey-task-scrollbar],
 body [aria-hidden="true"] [data-odyssey-task-scrollbar],
 body [data-odyssey-task-collapsed="true"] [data-odyssey-task-scrollbar] { display:none!important; }
-body [data-odyssey-task-scrollbar] > div { position:absolute; right:4px; width:4px; border-radius:2px; background:var(--ework-scroll-thumb,#e1e1e1); }
+body [data-odyssey-task-scrollbar] > div { position:absolute; right:4px; width:4px; border-radius:2px; background:var(--ework-scroll-thumb,#0000001a); }
 body[data-ds-dark-theme] [data-odyssey-task-scrollbar] > div { background:var(--ework-scroll-thumb,#333333); }
 body [data-odyssey-task-scrollbar]:hover > div { background:var(--ework-scroll-hover,#c9c9c9); }
 body[data-ds-dark-theme] [data-odyssey-task-scrollbar]:hover > div { background:var(--ework-scroll-hover,#444444); }

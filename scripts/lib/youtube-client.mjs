@@ -1,6 +1,6 @@
 import {parseYoutubeSpec,youtubeVideo,youtubeSignInUrl} from '../../packages/dsh-research-task-runtime/youtube-template-contract.js'
 const css=`
-.ew-youtube-preset{--youtube-control:#e9ebef;position:relative;width:100%;height:100%;min-width:0;min-height:0;color:var(--grid-text,#252a33);font-size:12px;line-height:16px;overflow:auto;scrollbar-color:var(--ework-scroll-thumb,#e1e1e1) transparent;scrollbar-width:thin;}
+.ew-youtube-preset{--youtube-control:#e9ebef;position:relative;width:100%;height:100%;min-width:0;min-height:0;color:var(--grid-text,#252a33);font-size:12px;line-height:16px;overflow:auto;scrollbar-color:var(--ework-scroll-thumb,#0000001a) transparent;scrollbar-width:thin;}
 body[data-ds-dark-theme] .ew-youtube-preset{--youtube-control:#25242a;}
 body [data-ework-grid][data-workbench-style=dark] .ew-youtube-preset{--youtube-control:#25242a;}
 body [data-ework-grid][data-workbench-style=light] .ew-youtube-preset,body [data-ework-grid][data-workbench-style=enterprise] .ew-youtube-preset{--youtube-control:#e9ebef;}

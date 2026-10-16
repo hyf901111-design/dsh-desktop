@@ -2,7 +2,7 @@
  body .ew-financial-library{height:auto!important;min-height:0!important;scrollbar-width:auto!important;scrollbar-gutter:auto!important}
  body .ew-financial-library::-webkit-scrollbar{width:4px!important;height:4px!important}
  body .ew-financial-library::-webkit-scrollbar-track{background:transparent!important;margin-block:6px}
- body .ew-financial-library::-webkit-scrollbar-thumb{background:var(--ework-scroll-thumb,#e1e1e1)!important;border:0!important;border-radius:4px!important}
+ body .ew-financial-library::-webkit-scrollbar-thumb{background:var(--ework-scroll-thumb,#0000001a)!important;border:0!important;border-radius:4px!important}
  body .ew-financial-library::-webkit-scrollbar-thumb:hover{background:var(--ework-scroll-hover,#c9c9c9)!important}
  body [data-library-save-notice] .ew-financial-icon{color:inherit}
  body [data-library-save-notice][data-financial-theme=enterprise]{background:var(--fw-menu);color:var(--fw-text);border-color:var(--fw-border)}

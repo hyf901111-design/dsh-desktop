@@ -2097,7 +2097,7 @@ it('宿主原生滚动条一直不占位，选中仅改变覆盖层颜色并保�
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
  await act(async()=>f.workspace.updateSelection(['a'],'replace'))
- expect(thumb()).toBe('#e1e1e1')
+ expect(thumb()).toBe('#0000001a')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
  await act(async()=>f.workspace.updateSelection([],'replace'))
