@@ -235,6 +235,74 @@
           "不触发真实安装重启或全量升级测试；本次仅本地测试，不修改公开更新源。"
         ],
         "generatedAt": "2026-10-16T00:01:01.428856+00:00"
+      },
+      "merged": {
+        "mergeCommit": "66051a6860dbd1ee72a8653b6796b2a6c83006e7",
+        "verificationCommit": "66051a6860dbd1ee72a8653b6796b2a6c83006e7",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "66051a6860dbd1ee72a8653b6796b2a6c83006e7",
+            "completedAt": "2026-10-16T00:02:58.196Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "66051a6860dbd1ee72a8653b6796b2a6c83006e7",
+            "completedAt": "2026-10-16T00:02:58.196Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=4",
+              "test/update-manager.test.ts",
+              "test/update-freshness.test.ts",
+              "test/update-install-lifecycle.test.ts",
+              "test/sidebar-update-control.test.ts",
+              "test/update-state.test.ts",
+              "test/update-ui.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/update-check-error-routing.test.ts",
+              "test/local-update-manager.test.ts",
+              "test/local-update-download.test.ts",
+              "test/settings-about.test.ts",
+              "test/figma-update-layout.test.ts",
+              "test/update-error-stage.test.ts",
+              "test/update-background-flow.test.ts",
+              "test/update-background-ui.test.ts",
+              "test/update-about-flow.test.js",
+              "test/figma-update-client.test.ts",
+              "test/update-page-preparation.test.ts",
+              "test/update-restart-preparation.test.ts",
+              "test/skill-command-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/slash-menu-expanded.test.js",
+              "test/skill-presentation.test.js",
+              "test/integration-english-ui.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 test/update-manager.test.ts test/update-freshness.test.ts test/update-install-lifecycle.test.ts test/sidebar-update-control.test.ts test/update-state.test.ts test/update-ui.test.ts test/update-notification-store.test.ts test/update-check-error-routing.test.ts test/local-update-manager.test.ts test/local-update-download.test.ts test/settings-about.test.ts test/figma-update-layout.test.ts test/update-error-stage.test.ts test/update-background-flow.test.ts test/update-background-ui.test.ts test/update-about-flow.test.js test/figma-update-client.test.ts test/update-page-preparation.test.ts test/update-restart-preparation.test.ts test/skill-command-menu.test.ts test/skill-command-patch.test.js test/slash-menu-expanded.test.js test/skill-presentation.test.js test/integration-english-ui.test.ts",
+            "verifiedCommit": "66051a6860dbd1ee72a8653b6796b2a6c83006e7",
+            "completedAt": "2026-10-16T00:02:58.196Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T00:02:58.196Z"
       }
     }
   ],
