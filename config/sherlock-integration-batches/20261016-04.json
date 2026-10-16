@@ -141,6 +141,81 @@
           "正式发布前须重新生成两条签名通道的全部产物，不复用已中断旧构建压缩包"
         ],
         "generatedAt": "2026-10-16T07:20:30.344144+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8e27abf338bdb3f14c21b38ce32b83e0ef890568",
+        "verificationCommit": "8e27abf338bdb3f14c21b38ce32b83e0ef890568",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8e27abf338bdb3f14c21b38ce32b83e0ef890568",
+            "completedAt": "2026-10-16T07:20:54.793Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "8e27abf338bdb3f14c21b38ce32b83e0ef890568",
+            "completedAt": "2026-10-16T07:20:54.793Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/slash-menu-expanded.test.js",
+              "test/skill-command-patch.test.js",
+              "test/skill-command-menu.test.ts",
+              "test/slash-menu-locale.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/slash-menu-expanded.test.js test/skill-command-patch.test.js test/skill-command-menu.test.ts test/slash-menu-locale.test.ts",
+            "verifiedCommit": "8e27abf338bdb3f14c21b38ce32b83e0ef890568",
+            "completedAt": "2026-10-16T07:20:54.793Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-theme-motion-browser.test.js",
+              "-t",
+              "matches the workspace chevron"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/home-theme-motion-browser.test.js -t matches the workspace chevron",
+            "verifiedCommit": "8e27abf338bdb3f14c21b38ce32b83e0ef890568",
+            "completedAt": "2026-10-16T07:20:54.793Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/update-release-notes.test.ts",
+            "verifiedCommit": "8e27abf338bdb3f14c21b38ce32b83e0ef890568",
+            "completedAt": "2026-10-16T07:20:54.793Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T07:20:54.793Z"
       }
     }
   ],
