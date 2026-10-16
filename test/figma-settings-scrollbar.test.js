@@ -8,6 +8,7 @@ let browser, script
 const css = ['figma-settings.css', 'figma-refinements.css'].map(n => readFileSync(`src/preload/${n}`, 'utf8')).join('\n')
 const settingsBundle = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js', 'utf8')
 const nativeSettingsCss = JSON.parse(settingsBundle.match(/const css\$3 = ("(?:[^"\\]|\\.)*");/)[1])
+const accountCss = readFileSync('src/preload/research-board-dialogs.ts','utf8').match(/\[data-sidebar-collapsed=true\] \.srb-account-controls \.sherlock-account-button\{[^}]+\}/)[0]
 beforeAll(async () => {
   script = (await build({ stdin: { resolveDir: process.cwd(), contents: `import {mountFigmaScrollbars} from './src/preload/figma-scrollbars'; window.disposeBars=mountFigmaScrollbars(document,true);` }, bundle: true, platform: 'browser', format: 'iife', write: false })).outputFiles[0].text
   const mod = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -29,12 +30,12 @@ async function open(width, settings = true, collapsed = width <= 1025) {
     .t8lSSG_panel{position:fixed;right:10px;top:10px;width:340px;height:621px}
     .t8lSSG_panelBody{height:100%}#reader{position:absolute;left:16px;right:16px;top:56px;height:240px;overflow:auto}
     .sRp_messages{position:absolute;left:16px;right:16px;top:320px;height:240px}.Md3f7G_scroll{height:100%;overflow:auto}
-    .long{height:1400px} ${nativeSettingsCss} ${css} ${scheduledStyles}
+    .long{height:1400px} ${nativeSettingsCss} ${css} ${accountCss} ${scheduledStyles}
     </style><div class="pI_x6G_frame"><div class="pI_x6G_sidebarCol"><div>
-    <div data-dsh-sidebar-root data-dsh-sidebar-wide="${!collapsed}" class="hHd-Xa_root ${collapsed ? 'hHd-Xa_collapsed hHd-Xa_railIn' : ''}">
+    <div data-dsh-sidebar-root data-dsh-sidebar-wide="${!collapsed}" data-sidebar-collapsed="${collapsed}" class="hHd-Xa_root ${collapsed ? 'hHd-Xa_collapsed hHd-Xa_railIn' : ''}">
       <button class="hHd-Xa_iconButton" aria-label="侧栏搜索">⌕</button>
       <div class="hHd-Xa_regionArea"><div id="sidebar-list"><div class="long">会话列表</div></div></div>
-      <div class="hHd-Xa_footArea"><div class="hHd-Xa_settingsArea"><div>
+      <div class="hHd-Xa_footArea"><div class="srb-account-controls"><button class="sherlock-account-button">我</button></div><div class="hHd-Xa_settingsArea"><div>
       ${settings ? `<div class="VOzbGW_overlay"><div class="VOzbGW_mask"></div><div class="VOzbGW_panel"><nav class="VOzbGW_nav">
         <button class="sherlock-settings-back"><svg></svg><span>返回应用</span></button>
         <div class="VOzbGW_navList"><button class="VOzbGW_navCell"><svg class="VOzbGW_navIcon"></svg><span class="VOzbGW_navLabel">通用设置</span></button></div>
@@ -64,6 +65,7 @@ for (const width of [840,1025,1380]) for (const dark of [false,true]) it(`keeps 
         card:rect('._8HJdBW_themeCube').width,cardHeight:rect('._8HJdBW_themeCube').height,
         preview:rect('.sherlock-theme-preview').width,
         rail:rect('.hHd-Xa_iconButton').width,
+        account:rect('.sherlock-account-button').width,
       }
     })
     const collapsed=await measure()
@@ -76,6 +78,7 @@ for (const width of [840,1025,1380]) for (const dark of [false,true]) it(`keeps 
     expect(collapsed.cardHeight).toBe(188)
     expect(collapsed.preview).toBe(collapsed.card)
     expect(collapsed.rail).toBe(32)
+    expect(collapsed.account).toBe(36)
     await page.locator('[data-dsh-sidebar-root]').evaluate(el=>el.setAttribute('data-dsh-sidebar-wide','true'))
     const expanded=await measure()
     expect(expanded.back).toBe(collapsed.back)
