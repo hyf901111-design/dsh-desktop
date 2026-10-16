@@ -108,6 +108,54 @@
           "正式包尚未重建和上传；必须从干净main重新签名打包"
         ],
         "generatedAt": "2026-10-16T07:43:11.714640+00:00"
+      },
+      "merged": {
+        "mergeCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
+        "verificationCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
+            "completedAt": "2026-10-16T07:43:34.016Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
+            "completedAt": "2026-10-16T07:43:34.016Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/menu-surface-theme.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/menu-surface-theme.test.ts test/slash-menu-expanded.test.js test/notes-native-menu.test.ts test/skill-command-patch.test.js test/update-release-notes.test.ts",
+            "verifiedCommit": "cacd3f23be51e4f2d67693462ae72fbabb8b0a80",
+            "completedAt": "2026-10-16T07:43:34.016Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T07:43:34.016Z"
       }
     }
   ],
