@@ -65,3 +65,26 @@ it('retains Enter completion after the user types a slash-command search query',
  expect(controller.arbitrate('enter',false)).toBe('pick-highlighted')
  expect(controller.pick).toHaveBeenCalledExactlyOnceWith('command',0)
 })
+it('shows the same command-only roster for typed slash and the launcher, including query edits',async()=>{
+ const {InputTriggerController}=moduleOf(patchSkillCommandLabels(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8')))
+ const names=['compact','export','feedback','goal','permission','plan','model','skills']
+ const sources=[{name:'command',candidates:async(_session,{query})=>names.filter(name=>name.includes(query)).map(name=>({name}))},{name:'skill',candidates:async()=>[{name:'finance'},{name:'ppt'}]}]
+ const controller=new InputTriggerController({sessionId:'current',roster:{sources:()=>sources,all:()=>sources}})
+ const settle=async()=>{for(let i=0;i<5;i++)await Promise.resolve()}
+ const items=()=>controller.menu.getSnapshot().groups.flatMap(group=>group.items.map(item=>item.name))
+ controller.toggleSource('command',{trigger:'/',query:'',position:'leading',span:{start:0,end:0,draftRev:1}})
+ await settle();expect(items()).toEqual(names)
+ controller.track('/',1,{tier:'plain'},2)
+ await settle();expect(items()).toEqual(names)
+ expect(controller.menu.getSnapshot().groups.map(group=>group.source)).toEqual(['command'])
+ expect(controller.menu.getSnapshot().highlight).toBeNull()
+ controller.track('/mod',4,{tier:'plain'},3)
+ await settle();expect(items()).toEqual(['model'])
+ controller.track('/',1,{tier:'plain'},4)
+ await settle();expect(items()).toEqual(names)
+ controller.track('@',1,{tier:'plain'},5)
+ await settle();expect(items()).toEqual([...names,'finance','ppt'])
+ controller.track('text /',6,{tier:'plain'},6)
+ await settle();expect(items()).toEqual(names)
+ controller.dispose()
+})
