@@ -105,6 +105,54 @@
           "research-derived-menu-final.test.ts在未修改main也因已打包代码锚点歧义不能启动；并非本次背景回归。真实derivedCSS后加载的Chromium检查已覆盖本次变更。"
         ],
         "generatedAt": "2026-10-16T07:47:54.650337+00:00"
+      },
+      "merged": {
+        "mergeCommit": "13c4d4993e730dd3185e22b327491bd742e09b4f",
+        "verificationCommit": "13c4d4993e730dd3185e22b327491bd742e09b4f",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "13c4d4993e730dd3185e22b327491bd742e09b4f",
+            "completedAt": "2026-10-16T07:47:59.291Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "13c4d4993e730dd3185e22b327491bd742e09b4f",
+            "completedAt": "2026-10-16T07:47:59.291Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/menu-surface-theme.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/menu-surface-theme.test.ts test/slash-menu-expanded.test.js test/notes-native-menu.test.ts test/skill-command-patch.test.js test/update-release-notes.test.ts",
+            "verifiedCommit": "13c4d4993e730dd3185e22b327491bd742e09b4f",
+            "completedAt": "2026-10-16T07:47:59.291Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T07:47:59.291Z"
       }
     }
   ],
