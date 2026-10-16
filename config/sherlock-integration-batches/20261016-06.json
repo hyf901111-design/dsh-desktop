@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261016-06",
+  "branch": "codex/integration/20261016-06",
+  "baseMainCommit": "5a9e926e2a59d160a3a722814c9ff068d1b82fba",
+  "expectedMainCommit": "5a9e926e2a59d160a3a722814c9ff068d1b82fba",
+  "createdAt": "2026-10-16T07:43:13.419Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一所有菜单的半透明背景",
+        "branch": "codex/feat/scrollbar-update-polish-20261016",
+        "baseCommit": "2bb9ff767388d3d6916444c9b972ebdee31d689f",
+        "tipCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+        "commits": [
+          {
+            "commit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+            "parents": [
+              "2bb9ff767388d3d6916444c9b972ebdee31d689f"
+            ],
+            "subject": "统一：所有客户端菜单复用工作区半透明背景"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/releases/sherlock-1.3.3.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/expanded-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "test/menu-surface-theme.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/slash-menu-expanded.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "46项菜单/笔记/更新日志检查和typecheck通过；证据/tmp/ework-menu-material-focused.log与-type.log。",
+            "verifiedCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+            "completedAt": "2026-10-16T07:43:11.714640+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "46项菜单/笔记/更新日志检查和typecheck通过；证据/tmp/ework-menu-material-focused.log与-type.log。",
+            "verifiedCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+            "completedAt": "2026-10-16T07:43:11.714640+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/menu-surface-theme.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "46项菜单/笔记/更新日志检查和typecheck通过；证据/tmp/ework-menu-material-focused.log与-type.log。",
+            "verifiedCommit": "7e2f7a4f03ef0eda54cb73e5ecb3145f15b30c39",
+            "completedAt": "2026-10-16T07:43:11.714640+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium深浅两主题检查后加载原生CSS也不能覆盖共享背景/blur/阴影，保留非菜单文档背景；原生Notes隔离HTML使用同一材料。最终签名客户端继续可见验收。"
+        },
+        "acceptanceCriteria": [
+          "所有菜单背景复用图1工作区的半透明底色/blur24/边框阴影",
+          "保留现有布局、内容、操作和主题切换",
+          "与已授权1.3.3一起发布，上传前验收真实客户端"
+        ],
+        "risks": [
+          "正式包尚未重建和上传；必须从干净main重新签名打包"
+        ],
+        "generatedAt": "2026-10-16T07:43:11.714640+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/menu-surface-theme.test.ts",
+        "test/slash-menu-expanded.test.js",
+        "test/notes-native-menu.test.ts",
+        "test/skill-command-patch.test.js",
+        "test/update-release-notes.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
