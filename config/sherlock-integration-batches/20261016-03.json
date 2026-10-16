@@ -92,6 +92,54 @@
           "原main的notes-outline组合样式测试在插入图片阶段同样超时；评论入口与其余操作的独立组件验证深浅两主题通过，未修改此历史测试。"
         ],
         "generatedAt": "2026-10-16T06:49:41.423433+00:00"
+      },
+      "merged": {
+        "mergeCommit": "63065524ab88370e2c4f80885af5cfdfa9e0fad5",
+        "verificationCommit": "63065524ab88370e2c4f80885af5cfdfa9e0fad5",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "63065524ab88370e2c4f80885af5cfdfa9e0fad5",
+            "completedAt": "2026-10-16T06:50:39.791Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "63065524ab88370e2c4f80885af5cfdfa9e0fad5",
+            "completedAt": "2026-10-16T06:50:39.791Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/figma-settings-scrollbar.test.js",
+              "test/figma-settings-layout.test.ts",
+              "test/figma-settings-dismiss.test.ts",
+              "test/settings-background.test.ts",
+              "test/figma-resize-feedback.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/figma-settings-scrollbar.test.js test/figma-settings-layout.test.ts test/figma-settings-dismiss.test.ts test/settings-background.test.ts test/figma-resize-feedback.test.ts",
+            "verifiedCommit": "63065524ab88370e2c4f80885af5cfdfa9e0fad5",
+            "completedAt": "2026-10-16T06:50:39.791Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T06:50:39.791Z"
       }
     }
   ],
