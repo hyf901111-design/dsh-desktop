@@ -27,8 +27,8 @@ beforeAll(async () => {
       window.themeMotion={records,colors,captureAppearance:null,mount(){mountDesktopShellStyles(document);this.dispose=mountHomeThemes(document)},surface(value){if(value)document.body.dataset.workspaceSurface=value;else delete document.body.dataset.workspaceSurface;document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))},next(){document.querySelector('[data-home-theme-position="next"]').click()},current(){return document.querySelector('[aria-pressed="true"][data-home-theme-id]').dataset.homeThemeId}};
     ` }, bundle: true, format: 'iife', platform: 'browser', write: false,
     plugins: [{ name: 'inline-theme-images', setup(builder) {
-      builder.onResolve({ filter: /\.png\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'theme-inline' }))
-      builder.onLoad({ filter: /.*/, namespace: 'theme-inline' }, async args => ({ contents: 'export default ' + JSON.stringify('data:image/png;base64,' + (await readFile(args.path)).toString('base64')), loader: 'js' }))
+      builder.onResolve({ filter: /\.(?:png|jpg)\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'theme-inline' }))
+      builder.onLoad({ filter: /.*/, namespace: 'theme-inline' }, async args => ({ contents: 'export default ' + JSON.stringify('data:image/' + (args.path.endsWith('.jpg') ? 'jpeg' : 'png') + ';base64,' + (await readFile(args.path)).toString('base64')), loader: 'js' }))
       builder.onResolve({ filter: /\.css\?raw$/ }, args => ({ path: args.path.startsWith('.') ? resolve(args.resolveDir, args.path.slice(0, -4)) : require.resolve(args.path.slice(0, -4)), namespace: 'raw-css' }))
       builder.onLoad({ filter: /.*/, namespace: 'raw-css' }, async args => ({ contents: 'export default ' + JSON.stringify(await readFile(args.path, 'utf8')), loader: 'js' }))
     } }]
@@ -120,21 +120,21 @@ describe('real homepage theme motion and interaction', () => {
   }, 30000)
 
   it('cycles every theme, keeps rapid-switch visual and aria state aligned, and freezes the displayed blend', async () => {
-    const page = await fixture({ dark: true }), errors = []
+    const page = await fixture({ dark: true , width: 520, height: 440 }), errors = []
     page.on('pageerror', error => errors.push(error.message))
     try {
       await pauseEntry(page, 745)
       const ids = []
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < 19; i++) {
         await page.locator('[data-home-theme-position="next"]').click()
         await expect.poll(() => page.locator('[data-theme-freeze]').count()).toBe(0)
         const id = await current(page).getAttribute('data-home-theme-id'); ids.push(id)
         expect(await page.locator('[data-home-theme-canvas]').getAttribute('data-home-theme-canvas')).toBe(id)
         expect(await page.locator('[data-odyssey-home-theme-background]').getAttribute('data-home-theme-id')).toBe(id)
       }
-      expect(ids).toEqual(['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'emreturan', 'abramovdesign', 'default'])
+      expect(ids).toEqual(['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'abramovdesign', 'crt-warp', 'pattern-waves', 'gradient-ascii', 'dither', 'faulty-terminal', 'liquid-chrome', 'default'])
       const rapid = await page.evaluate(() => {
-        for (let i = 0; i < 16; i++) window.themeMotion.next()
+        for (let i = 0; i < 21; i++) window.themeMotion.next()
         const freeze = document.querySelector('[data-theme-freeze]'), bytes = freeze.getContext('2d').getImageData(0, 0, freeze.width, freeze.height).data
         let transparent = 0, chroma = 0
         for (let i = 0; i < bytes.length; i += 4) { if (bytes[i + 3] < 255) transparent++; chroma += Math.max(bytes[i], bytes[i + 1], bytes[i + 2]) - Math.min(bytes[i], bytes[i + 1], bytes[i + 2]) }
@@ -142,7 +142,7 @@ describe('real homepage theme motion and interaction', () => {
       })
       expect(rapid.current).toBe('vghodki'); expect(rapid.canvases).toBe(1)
       expect(rapid.transparent).toBe(0)
-      // All sixteen clicks happen before any new GL frame gains opacity. The
+      // All twenty-one clicks happen before any new GL frame gains opacity. The
       // frozen composite must therefore still show the original grayscale.
       expect(rapid.chroma).toBeLessThan(.1)
       await page.evaluate(() => {
@@ -238,10 +238,28 @@ describe('real homepage theme motion and interaction', () => {
     } finally { await page.close() }
   }, 30000)
 
+  it.each([[900, 700], [280, 400]])('centers every glass backing on its thumbnail at %ix%i', async (width, height) => {
+    const page = await fixture({ reduced: true, width, height })
+    try {
+      // Native styles may contribute line boxes and button sizing; compare the
+      // actually painted child bounds, including both neighboring cards.
+      const bounds = await page.evaluate(() => [...document.querySelectorAll('[data-odyssey-theme-dock] [aria-hidden="false"]')].map(button => {
+        const glass = button.querySelector('.odyssey-theme-glass').getBoundingClientRect()
+        const preview = button.querySelector('.odyssey-theme-preview').getBoundingClientRect()
+        return { top: preview.top - glass.top, bottom: glass.bottom - preview.bottom, left: preview.left - glass.left, right: glass.right - preview.right }
+      }))
+      for (const b of bounds) {
+        expect(b.top).toBeGreaterThan(0)
+        expect(Math.abs(b.top - b.bottom)).toBeLessThan(.1)
+        expect(Math.abs(b.left - b.right)).toBeLessThan(.1)
+      }
+    } finally { await page.close() }
+  })
+
   it.each([[900, 700], [1560, 900], [560, 700]])('centers the current card and both neighbors on the %ix%i background', async (width, height) => {
     const page = await fixture({ reduced: true, width, height })
     try {
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < 19; i++) {
         const bounds = await page.evaluate(() => {
           const bg = document.querySelector('[data-odyssey-home-theme-background]').getBoundingClientRect()
           const cards = [...document.querySelectorAll('[data-odyssey-theme-dock] [aria-hidden="false"]')].map(button => ({position:button.dataset.homeThemePosition,rect:button.getBoundingClientRect().toJSON()}))

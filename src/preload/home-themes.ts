@@ -1,12 +1,14 @@
 import {noteUiText} from '../../packages/dsh-research-task-runtime/notes-locale.js'
 import { createHomeFlowField } from './home-flow'
 import { createHomeThemeRenderer, type HomeShaderThemeId } from './home-theme-renderer'
+import { isReactBitsTheme } from './home-reactbits-renderer'
+import { REACT_BITS_PREVIEWS } from './home-reactbits-previews'
 import defaultLight from './home-theme-assets/default-light.png?inline'
 import defaultDark from './home-theme-assets/default-dark.png?inline'
 
-const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'emreturan', 'abramovdesign'] as const
+const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'abramovdesign', 'crt-warp', 'pattern-waves', 'gradient-ascii', 'dither', 'faulty-terminal', 'liquid-chrome'] as const
 type Theme = typeof THEMES[number]
-const LABELS: Record<Theme, string> = { default: '默认', berber: 'Berber', vghodki: 'Vghodki', jarrick: 'Jarrick', lowfreez: 'Lowfreez', accelbia: 'Accelbia', boz: 'Boz', shashidhar: 'Shashidhar', haseeb: 'Haseeb', kirian: 'Kirian', splines: 'Splines', antiquue: 'Antiquue', emreturan: 'EmreTuran', abramovdesign: 'AbramovDesign' }
+const LABELS: Record<Theme, string> = { default: '默认', berber: 'Berber', vghodki: 'Vghodki', jarrick: 'Jarrick', lowfreez: 'Lowfreez', accelbia: 'Accelbia', boz: 'Boz', shashidhar: 'Shashidhar', haseeb: 'Haseeb', kirian: 'Kirian', splines: 'Splines', antiquue: 'Antiquue', abramovdesign: 'AbramovDesign', 'crt-warp': 'CRT Warp', 'pattern-waves': 'Pattern Waves', 'gradient-ascii': 'Gradient ASCII', dither: 'Dither', 'faulty-terminal': 'Faulty Terminal', 'liquid-chrome': 'Liquid Chrome' }
 const STORAGE_KEY = 'ework.home-background.v1'
 const mounted = new WeakMap<Document, () => void>()
 const validTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)
@@ -20,7 +22,7 @@ export function mountHomeThemes(doc: Document = document): () => void {
   if (!win) return () => {}
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
   let selected: Theme = 'default'
-  try { const stored = win.localStorage.getItem(STORAGE_KEY); if (validTheme(stored)) selected = stored } catch { /* Private storage may be unavailable. */ }
+  try { const stored = win.localStorage.getItem(STORAGE_KEY); if (validTheme(stored)) selected = stored; else if (stored === 'emreturan') win.localStorage.setItem(STORAGE_KEY, 'default') } catch { /* Private storage may be unavailable. */ }
   let host: HTMLElement | null = null, background: HTMLElement | null = null, dock: HTMLElement | null = null
   let surface: Surface | null = null, visible = false, dark = doc.body.hasAttribute('data-ds-dark-theme')
   let disposed = false, frame = 0, previous = 0, elapsed = 0, generation = 0, cleanupTimer = 0
@@ -120,6 +122,10 @@ export function mountHomeThemes(doc: Document = document): () => void {
       const ctx = freeze.getContext('2d')
       try {
         if (ctx) {
+          // React Bits uses premultiplied transparency. Freeze the complete
+          // displayed surface before the next theme changes its paper color.
+          ctx.fillStyle = win.getComputedStyle(background).backgroundColor
+          ctx.fillRect(0, 0, freeze.width, freeze.height)
           const previousFreeze = background.querySelector<HTMLCanvasElement>('[data-theme-freeze]')
           if (previousFreeze) ctx.drawImage(previousFreeze, 0, 0, freeze.width, freeze.height)
           const opacity = Number.parseFloat(win.getComputedStyle(old.canvas).opacity)
@@ -141,10 +147,12 @@ export function mountHomeThemes(doc: Document = document): () => void {
       }
     }
     background.dataset.homeThemeId = selected
+    background.dataset.homeThemeFamily = isReactBitsTheme(selected) ? 'react-bits' : 'open-shaders'
     resume()
   }
   const thumbnail = (theme: Theme): string | null => {
     if (theme === 'default') return dark ? defaultDark : defaultLight
+    if (isReactBitsTheme(theme)) return REACT_BITS_PREVIEWS[theme][dark ? 'dark' : 'light']
     const key = theme + ':' + dark
     if (thumbs.has(key)) return thumbs.get(key)!
     const canvas = doc.createElement('canvas')
@@ -170,9 +178,13 @@ export function mountHomeThemes(doc: Document = document): () => void {
       button.tabIndex = Math.abs(offset) > 1 ? -1 : 0
       button.setAttribute('aria-label', doc.documentElement.dataset.odysseyLocale==='en' ? (offset===0?'Current background: ':'Switch background: ')+noteUiText(LABELS[id],'en') : offset === 0 ? '当前背景：' + LABELS[id] : '切换到 ' + LABELS[id] + ' 背景')
       button.title = noteUiText(LABELS[id],doc.documentElement.dataset.odysseyLocale)
-      const value = thumbnail(id)
-      if (value) button.style.setProperty('--theme-thumbnail', `url("${value}")`)
-      else button.style.removeProperty('--theme-thumbnail')
+      // Only the current card and its neighbors are painted. Avoid compiling
+      // every hidden OpenShaders thumbnail during startup or a mode change.
+      if (position !== 'outside') {
+        const value = thumbnail(id)
+        if (value) button.style.setProperty('--theme-thumbnail', `url("${value}")`)
+        else button.style.removeProperty('--theme-thumbnail')
+      }
     }
     if (dock) dock.dataset.currentTheme = selected
   }

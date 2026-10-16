@@ -1,8 +1,9 @@
-import { HOME_THEME_CONFIGS, type HomeShaderThemeId } from './home-theme-configs'
+import { HOME_THEME_CONFIGS, type HomeShaderThemeId as OpenShaderThemeId } from './home-theme-configs'
+import { createReactBitsRenderer, isReactBitsTheme, type ReactBitsThemeId } from './home-reactbits-renderer'
 import { HOME_THEME_FIELD_SHADER, HOME_THEME_POST_SHADERS, HOME_THEME_VERTEX_SHADER } from './home-theme-shaders'
 import glyphRuns from './home-theme-assets/boz-glyph-atlas.json'
 
-export type { HomeShaderThemeId } from './home-theme-configs'
+export type HomeShaderThemeId = OpenShaderThemeId | ReactBitsThemeId
 
 export interface HomeThemeRenderer {
   readonly backend: 'webgl2'
@@ -31,6 +32,7 @@ export function createHomeThemeRenderer(
   theme: HomeShaderThemeId,
   options: Options
 ): HomeThemeRenderer | null {
+  if (isReactBitsTheme(theme)) return createReactBitsRenderer(canvas, theme, options)
   const config = HOME_THEME_CONFIGS[theme]
   if (!config) return null
   let gl: WebGL2RenderingContext | null
