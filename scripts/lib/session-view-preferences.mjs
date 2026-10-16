@@ -2,6 +2,16 @@ export function isSessionViewId(value) {
   return ['chat', 'research', 'notes', 'trajectory'].includes(value)
 }
 
+export function hasSessionViewPreference(sessionId, view) {
+  if (!isSessionViewId(view)) return false
+  if (view !== 'chat') return true
+  // Old native snapshots also wrote the default Chat view. Only the separate
+  // preference records an explicit Chat choice over legacy canvas recovery.
+  const key = 'ework.session.view.v1:' + sessionId
+  try { if (isSessionViewId(window.dshDesktop?.researchCanvasStorage?.getItem(key))) return true } catch {}
+  try { return isSessionViewId(localStorage.getItem(key)) } catch { return false }
+}
+
 /** Keep the native per-session store/drafts; persist only the navigation preference. */
 export function withSessionViewPreferences(handle) {
   const pendingBySession = new Map()
@@ -49,8 +59,9 @@ export function withSessionViewPreferences(handle) {
       else if (saved === '') instance.actions.setView(null)
       if (retryPending) save(saved)
       else if (durable === null && (isSessionViewId(saved) || saved === '')) save(saved)
-      // Migrate an existing native session preference without changing its draft.
-      else if (saved !== '' && !isSessionViewId(saved) && isSessionViewId(instance.getSnapshot().view)) save(instance.getSnapshot().view)
+      // Non-default native views are explicit. A legacy Chat snapshot alone
+      // cannot distinguish a choice from the old default, so do not promote it.
+      else if (saved !== '' && !isSessionViewId(saved) && isSessionViewId(instance.getSnapshot().view) && instance.getSnapshot().view !== 'chat') save(instance.getSnapshot().view)
       return {
         ...instance,
         actions: {
@@ -69,7 +80,7 @@ export function withSessionViewPreferences(handle) {
 export function patchSessionViewPreferences(source) {
   const begin = '/* ework:session-view-preferences:v1 */'
   const end = '/* ework:session-view-preferences:end */'
-  const helpers = `${begin}\n${isSessionViewId.toString()}\n${withSessionViewPreferences.toString()}\nfunction createChatStore() { return withSessionViewPreferences(createNativeChatStore()); }\n${end}\n`
+  const helpers = `${begin}\n${isSessionViewId.toString()}\n${hasSessionViewPreference.toString()}\n${withSessionViewPreferences.toString()}\nfunction createChatStore() { return withSessionViewPreferences(createNativeChatStore()); }\n${end}\n`
   if (source.includes(begin)) {
     const first = source.indexOf(begin), last = source.indexOf(end, first)
     if (last < 0) throw Error('Session view preference helper boundary missing')
@@ -80,10 +91,13 @@ export function patchSessionViewPreferences(source) {
     source = source.replace(anchor, helpers + 'function createNativeChatStore() {')
   }
   const before = 'const persistedResearchRequested = blank && !explicitResearchViewSessions.has(sessionId) && isPersistedResearchSession(sessionId);'
-  const after = 'const persistedResearchRequested = blank && !isSessionViewId(storedView) && !explicitResearchViewSessions.has(sessionId) && isPersistedResearchSession(sessionId);'
-  if (source.includes(before)) {
-    if (source.split(before).length !== 3) throw Error('Session view recovery anchors drifted')
-    source = source.replaceAll(before, after)
-  } else if (source.split(after).length !== 3) throw Error('Session view recovery anchors missing')
+  const previous = 'const persistedResearchRequested = blank && !isSessionViewId(storedView) && !explicitResearchViewSessions.has(sessionId) && isPersistedResearchSession(sessionId);'
+  const after = 'const persistedResearchRequested = blank && !hasSessionViewPreference(sessionId, storedView) && !explicitResearchViewSessions.has(sessionId) && isPersistedResearchSession(sessionId);'
+  for (const anchor of [before, previous]) {
+    if (!source.includes(anchor)) continue
+    if (source.split(anchor).length !== 3) throw Error('Session view recovery anchors drifted')
+    source = source.replaceAll(anchor, after)
+  }
+  if (source.split(after).length !== 3) throw Error('Session view recovery anchors missing')
   return source
 }
