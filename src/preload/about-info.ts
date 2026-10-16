@@ -18,6 +18,19 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.3.3",
+      "date": "2026-10-16",
+      "items": [
+        "统一客户端滚动条颜色，深色外观使用低对比灰，浅色外观使用柔和浅灰。",
+        "记住外观与首页背景选择，退出并重新打开客户端后继续使用上次主题。",
+        "各会话独立记住最后使用的模式；切换会话或新建对话、研究后返回时，自动恢复原来的对话、研究、笔记或轨迹页签。",
+        "移除笔记评论的添加反应入口，保留编辑、删除和解决评论等操作。",
+        "修复更新准备超时后再次重试可能重复执行安装命令并提示 command disabled 的问题。",
+        "优化差分更新打包，减少未修改文件因归档时间戳变化而被重复下载；首次切换到新打包方式时更新包仍可能较大。",
+        "修复收起侧栏后设置页按钮与主题预览被压窄，以及设置打开时仍能拖动底层侧栏的问题。"
+      ]
+    },
+    {
       "version": "1.3.2",
       "date": "2026-10-15",
       "items": [
@@ -442,6 +455,19 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.3.3",
+      "date": "2026-10-16",
+      "items": [
+        "Unify scrollbar colors across the client with subtle gray in dark appearance and soft light gray in light appearance.",
+        "Remember appearance and home background choices after quitting and reopening the client.",
+        "Remember the last mode for each session. Returning after switching sessions or creating a chat or research session restores its Chat, Research, Notes or Trajectory tab.",
+        "Remove the Add reaction entry from note comments while preserving editing, deletion and resolution.",
+        "Fix update retries issuing a duplicate installation command after preparation times out, which could show a command disabled error.",
+        "Optimize differential update archives to avoid downloading unchanged files again because of timestamp changes. The first update adopting the new format may still be large.",
+        "Fix compressed Settings buttons and theme previews with a collapsed sidebar, and prevent dragging the background sidebar while Settings is open."
+      ]
+    },
     {
       "version": "1.3.2",
       "date": "2026-10-15",
