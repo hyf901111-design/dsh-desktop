@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261016-08",
+  "branch": "codex/integration/20261016-08",
+  "baseMainCommit": "3b8a610e60b62c487ee7a928128ded741d017173",
+  "expectedMainCommit": "3b8a610e60b62c487ee7a928128ded741d017173",
+  "createdAt": "2026-10-16T09:14:51.452Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复透明窗口菜单背景模糊与笔记描边",
+        "branch": "codex/feat/scrollbar-update-polish-20261016",
+        "baseCommit": "14ba6adb33110f912f4c4f3f9cdb111650e166c3",
+        "tipCommit": "9bd7e3c5d645fe3d315ff23eb7c0354b9ce776ee",
+        "commits": [
+          {
+            "commit": "9bd7e3c5d645fe3d315ff23eb7c0354b9ce776ee",
+            "parents": [
+              "14ba6adb33110f912f4c4f3f9cdb111650e166c3"
+            ],
+            "subject": "修复透明窗口菜单模糊并移除笔记菜单描边"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/releases/sherlock-1.3.3.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/menu-transparent-window.cjs"
+          },
+          {
+            "status": "M",
+            "path": "test/menu-surface-theme.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/menu-transparent-window.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "59项聚焦验证与typecheck通过；/tmp/ework-transparent-regression-green.log、/tmp/ework-transparent-typecheck.log；原生透明窗口回归已先观察失败。",
+            "verifiedCommit": "9bd7e3c5d645fe3d315ff23eb7c0354b9ce776ee",
+            "completedAt": "2026-10-16T09:13:48.053909+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "59项聚焦验证与typecheck通过；/tmp/ework-transparent-regression-green.log、/tmp/ework-transparent-typecheck.log；原生透明窗口回归已先观察失败。",
+            "verifiedCommit": "9bd7e3c5d645fe3d315ff23eb7c0354b9ce776ee",
+            "completedAt": "2026-10-16T09:13:48.053909+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/menu-transparent-window.test.js",
+              "test/menu-backdrop-pixels.test.js",
+              "test/menu-surface-theme.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/sidebar-session-search.test.ts",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "59项聚焦验证与typecheck通过；/tmp/ework-transparent-regression-green.log、/tmp/ework-transparent-typecheck.log；原生透明窗口回归已先观察失败。",
+            "verifiedCommit": "9bd7e3c5d645fe3d315ff23eb7c0354b9ce776ee",
+            "completedAt": "2026-10-16T09:13:48.053909+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实客户端body不透明底层对照后消息中心和更多菜单背后的文字不再清晰透出；/tmp/ework-release-1.3.3-20261016/candidate-more-frost.png。Electron body-only双主题矩阵相互印证。"
+        },
+        "acceptanceCriteria": [
+          "所有菜单实际背景文字被模糊，仍保留应用内背景透色",
+          "搜索会话与右键菜单纳入统一材质",
+          "笔记斜杠菜单移除描边，保留原生定位、非抢焦点和滚动",
+          "最终签名包再次视觉验收后发布已授权1.3.3"
+        ],
+        "risks": [
+          "主页面使用固定主题底色，不再透出macOS桌面颜色；native Notes独立窗口保留系统vibrancy",
+          "最终签名包仍须重新构建与实景验证；先前3b8a610e构建不得上传",
+          "旧research-derived-menu-final.test.ts存在已验证基线锚点歧义，本次真实CSS主题/像素测试覆盖。"
+        ],
+        "generatedAt": "2026-10-16T09:13:48.053909+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/menu-transparent-window.test.js",
+        "test/menu-backdrop-pixels.test.js",
+        "test/menu-surface-theme.test.ts",
+        "test/slash-menu-expanded.test.js",
+        "test/notes-native-menu.test.ts",
+        "test/skill-command-patch.test.js",
+        "test/sidebar-session-search.test.ts",
+        "test/update-release-notes.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
