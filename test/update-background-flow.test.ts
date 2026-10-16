@@ -15,9 +15,11 @@ beforeEach(async()=>{
  host.updater=Object.assign(new EventEmitter(),{autoDownload:true,autoInstallOnAppQuit:true,allowPrerelease:true,logger:undefined,
   checkForUpdates:vi.fn(async()=>{host.updater.emit('checking-for-update');host.updater.emit('update-available',{version:host.latest})}),
   downloadUpdate:vi.fn(async()=>{const version=host.latest;host.updater.emit('download-progress',{percent:50,transferred:500,total:1000});host.updater.emit('update-downloaded',{version});return ['/verified/update.zip']}),quitAndInstall:vi.fn()})
+ // MacUpdater forwards every native error through its own permanent listener.
+ host.native.on('error',(error:Error)=>host.updater.emit('error',error))
  manager=await import('../src/main/update/update-manager');manager.startUpdateManager();manager.setUpdateRestartPreparation(async()=>{})
 })
-afterEach(async()=>{await manager.stopUpdateManager();await rm(host.userData,{recursive:true,force:true})})
+afterEach(async()=>{await manager.stopUpdateManager();vi.useRealTimers();await rm(host.userData,{recursive:true,force:true})})
 async function preparing(manual=false){await manager.checkForUpdates(manual);await vi.waitFor(()=>{expect(manager.getUpdateStatus().phase).toBe('preparing');expect(host.native.checkForUpdates).toHaveBeenCalledOnce()})}
 async function ready(){await preparing();host.native.emit('update-downloaded');await vi.waitFor(()=>expect(manager.getUpdateStatus().phase).toBe('downloaded'))}
 
@@ -93,4 +95,61 @@ it('cancels a recovery guard that finishes arming after an asynchronous installe
  const install=manager.installDownloadedUpdate();await vi.waitFor(()=>expect(finishArm).toBeTypeOf('function'))
  host.updater.emit('error',Error('native installer unavailable'));finishArm(host.cancelRecovery);await install
  expect(host.cancelRecovery).toHaveBeenCalledOnce();expect(host.native.quitAndInstall).not.toHaveBeenCalled()
+})
+
+it('retries a timed-out preparation by waiting for the existing native command',async()=>{
+ vi.useFakeTimers()
+ const first=manager.checkForUpdates()
+ await vi.advanceTimersByTimeAsync(0);await first
+ expect(host.native.checkForUpdates).toHaveBeenCalledOnce()
+ await vi.advanceTimersByTimeAsync(120_000)
+ expect(manager.getUpdateStatus()).toMatchObject({phase:'error',errorStage:'install'})
+ await manager.checkForUpdates(true);await vi.advanceTimersByTimeAsync(0)
+ expect(host.native.checkForUpdates).toHaveBeenCalledOnce()
+ host.native.emit('update-downloaded');await vi.advanceTimersByTimeAsync(0)
+ expect(manager.getUpdateStatus().phase).toBe('downloaded')
+ expect(host.native.quitAndInstall).not.toHaveBeenCalled()
+})
+it('waits for an old timed-out native command before replacing its feed with a newer archive',async()=>{
+ vi.useFakeTimers()
+ await manager.checkForUpdates();await vi.advanceTimersByTimeAsync(0)
+ await vi.advanceTimersByTimeAsync(120_000)
+ host.latest='1.3.4'
+ await manager.checkForUpdates(true);await vi.advanceTimersByTimeAsync(0)
+ expect(host.updater.downloadUpdate).toHaveBeenCalledOnce()
+ // Repeated wait timeouts must not discard the original pending operation.
+ await vi.advanceTimersByTimeAsync(120_000)
+ await manager.checkForUpdates(true);await vi.advanceTimersByTimeAsync(0)
+ expect(host.updater.downloadUpdate).toHaveBeenCalledOnce()
+ expect(host.native.checkForUpdates).toHaveBeenCalledOnce()
+ host.native.emit('update-downloaded');await vi.advanceTimersByTimeAsync(0)
+ expect(host.updater.downloadUpdate).toHaveBeenCalledTimes(2)
+ expect(host.native.checkForUpdates).toHaveBeenCalledTimes(2)
+ expect(manager.getUpdateStatus()).toMatchObject({phase:'preparing',availableVersion:'1.3.4'})
+ host.native.emit('update-downloaded');await vi.advanceTimersByTimeAsync(0)
+ expect(manager.getUpdateStatus()).toMatchObject({phase:'downloaded',availableVersion:'1.3.4'})
+ expect(host.native.quitAndInstall).not.toHaveBeenCalled()
+})
+it('invalidates remembered readiness after a native install error before retrying',async()=>{
+ await ready()
+ host.native.emit('error',Error('native installer unavailable'))
+ expect(manager.getUpdateStatus()).toMatchObject({phase:'error',errorStage:'install'})
+ await manager.checkForUpdates(true)
+ await vi.waitFor(()=>expect(host.native.checkForUpdates).toHaveBeenCalledTimes(2))
+ expect(manager.getUpdateStatus().phase).toBe('preparing')
+ host.native.emit('update-downloaded')
+ await vi.waitFor(()=>expect(manager.getUpdateStatus().phase).toBe('downloaded'))
+ expect(host.native.quitAndInstall).not.toHaveBeenCalled()
+})
+it('disposes a timed-out native preparation on shutdown and ignores late native events',async()=>{
+ vi.useFakeTimers()
+ await manager.checkForUpdates();await vi.advanceTimersByTimeAsync(0)
+ await vi.advanceTimersByTimeAsync(120_000)
+ await manager.stopUpdateManager()
+ const stopped=manager.getUpdateStatus()
+ expect(host.native.listenerCount('update-downloaded')).toBe(0)
+ expect(()=>host.native.emit('error',Error('late native error'))).not.toThrow()
+ host.native.emit('update-downloaded');await vi.advanceTimersByTimeAsync(0)
+ expect(manager.getUpdateStatus()).toEqual(stopped)
+ expect(host.native.quitAndInstall).not.toHaveBeenCalled()
 })

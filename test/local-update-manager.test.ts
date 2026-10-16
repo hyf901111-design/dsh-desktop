@@ -24,7 +24,7 @@ vi.mock('electron-updater', async importOriginal => {
 })
 vi.mock('../src/main/update/restart-receipt',()=>({consumeUpdateRestartReceipt:fake.receipt,writeUpdateRestartReceipt:fake.receipt,cancelUpdateRestartReceipt:fake.receipt}))
 vi.mock('../src/main/update/mac-update-recovery',()=>({armMacRenameRecovery:fake.recovery,repairRenamedMacDock:fake.recovery}))
-vi.mock('../src/main/update/native-install',()=>({prepareNativeMacInstall:fake.quit}))
+vi.mock('../src/main/update/native-install',async importOriginal=>({...await importOriginal<typeof import('../src/main/update/native-install')>(),prepareNativeMacInstall:fake.quit}))
 
 let root:string, userData:string, appData:string, origin:string, server:Server
 let response= { code:200, body:'', location:'', delay:0 }, requests:string[]=[]

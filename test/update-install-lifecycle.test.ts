@@ -29,6 +29,50 @@ it('times out without leaving a callback that quits later and allows retry', asy
   await retry
   expect(updater.quitAndInstall).not.toHaveBeenCalled()
 })
+it('joins a native command still running after the first wait times out', async () => {
+  vi.useFakeTimers()
+  const updater = native()
+  let executing = false
+  updater.checkForUpdates.mockImplementation(() => {
+    if (executing) updater.emit('error', Error('The command is disabled and cannot be executed'))
+    executing = true
+  })
+  const first = expect(prepareNativeMacInstall(updater, 100)).rejects.toThrow('超时')
+  await vi.advanceTimersByTimeAsync(100)
+  await first
+  const retry = prepareNativeMacInstall(updater).then(() => 'ready', error => error.message)
+  executing = false
+  updater.emit('update-downloaded')
+  expect(await retry).toBe('ready')
+  expect(updater.checkForUpdates).toHaveBeenCalledOnce()
+  expect(updater.quitAndInstall).not.toHaveBeenCalled()
+})
+it('remembers a native completion that arrives between a timeout and its retry', async () => {
+  vi.useFakeTimers()
+  const updater = native()
+  const first = expect(prepareNativeMacInstall(updater, 100)).rejects.toThrow('超时')
+  await vi.advanceTimersByTimeAsync(100)
+  await first
+  updater.emit('update-downloaded')
+  const retry = prepareNativeMacInstall(updater, 100).then(() => 'ready', error => error.message)
+  await vi.advanceTimersByTimeAsync(100)
+  expect(await retry).toBe('ready')
+  expect(updater.checkForUpdates).toHaveBeenCalledOnce()
+  expect(updater.quitAndInstall).not.toHaveBeenCalled()
+})
+it('handles a native failure after all callers timed out and allows a fresh preparation', async () => {
+  vi.useFakeTimers()
+  const updater = native()
+  const first = expect(prepareNativeMacInstall(updater, 100)).rejects.toThrow('超时')
+  await vi.advanceTimersByTimeAsync(100)
+  await first
+  expect(() => updater.emit('error', Error('archive invalid'))).not.toThrow()
+  const retry = prepareNativeMacInstall(updater)
+  updater.emit('update-downloaded')
+  await retry
+  expect(updater.checkForUpdates).toHaveBeenCalledTimes(2)
+  expect(updater.quitAndInstall).not.toHaveBeenCalled()
+})
 it('cleans up on native failure and synchronous failure', async () => {
   const updater = native()
   const result = expect(prepareNativeMacInstall(updater)).rejects.toThrow('denied')
