@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { patchSessionViewPreferences } from '../scripts/lib/session-view-preferences.mjs'
 
 type ClientBundle = Record<string, unknown>
 type BundleDescriptor = {
@@ -60,6 +61,7 @@ async function loadClientBundle(
   expose: string[] = []
 ): Promise<ClientBundle> {
   let source = await readFile(`node_modules/@deepseek-ai/${packageName}/lib/client.js`, 'utf8')
+  if (packageName === 'dsh-client-ui-conversation') source = patchSessionViewPreferences(source)
   if (expose.length > 0) {
     source = source.replace(
       '\t\texports.apply = apply;',

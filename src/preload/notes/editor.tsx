@@ -39,6 +39,9 @@ type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submiss
 const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: boolean; navigate(view: string): void; editor?: any; importing?:Set<string> } | null>(null)
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
 const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.map(b => noteText(b.content) || (b.type === 'research' ? t('研究组件') : '')).join('\n\n')
+class NoteThreadStoreAuth extends DefaultThreadStoreAuth {
+  override canAddReaction(): boolean { return false }
+}
 
 function AiRewriteButton({onRewrite}:{onRewrite():void}){
  const editor:any=useBlockNoteEditor(),valid=useEditorState({editor,selector:({editor}:any)=>editor.isEditable&&noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor._tiptapEditor.state.selection)})
@@ -184,7 +187,7 @@ function NotesEditor(props: Props & { initial: NoteContent & { revision: number 
   titleRef.current = title
   const doc = useMemo(() => { const value = new Y.Doc(); if (props.initial.yjs) Y.applyUpdate(value, Uint8Array.from(atob(props.initial.yjs), c => c.charCodeAt(0))); return value }, [])
   const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: t('我'), avatarUrl: '' }))), [])
-  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: t('我'), color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new DefaultThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
+  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: t('我'), color: '#94b2ff' } }, extensions: [NoteAiSelection(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new NoteThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
   editor.dictionary = document.documentElement.dataset.odysseyLocale==='en'?en:zh
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery)

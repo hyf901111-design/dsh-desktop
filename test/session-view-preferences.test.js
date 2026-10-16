@@ -92,8 +92,9 @@ it.each(['chat', 'research', 'notes', 'trajectory'])('restores %s for A after B,
   } finally { await f.close() }
 })
 
-it.each(['chat', 'notes', 'trajectory'])('does not overwrite the saved %s tab with a blank Research recovery default', async tab => {
+it.each(['chat', 'notes', 'trajectory'])('does not overwrite the explicit saved %s tab with a blank Research recovery default', async tab => {
   const f = await fixture({ local: {
+    'ework.session.view.v1:A': tab,
     'dsh.conversation.chat.A': JSON.stringify({ view: tab, draft: 'preserved', selection: null }),
     'sherlock.research.session-engaged.v1:A': '1'
   } })
@@ -102,6 +103,23 @@ it.each(['chat', 'notes', 'trajectory'])('does not overwrite the saved %s tab wi
     expect(f.active()).toBe(tab)
     expect(f.get('A').getSnapshot().view).toBe(tab)
     expect(f.get('A').getSnapshot().draft).toBe('preserved')
+  } finally { await f.close() }
+})
+
+it('recovers a legacy Research canvas when chat was only the old native default', async () => {
+  const { storage } = desktopStorage()
+  storage.setItem('sherlock.research.session-engaged.v1:A', '1')
+  const f = await fixture({ storage, local: {
+    'dsh.conversation.chat.A': JSON.stringify({ view: 'chat', draft: 'untouched draft', selection: null })
+  } })
+  try {
+    expect(f.get('A').getSnapshot().view).toBe('chat')
+    expect(storage.getItem('ework.session.view.v1:A')).toBeNull()
+    await f.open('A'); expect(f.active()).toBe('research')
+    expect(f.get('A').getSnapshot().draft).toBe('untouched draft')
+    await f.select('chat'); await f.open('B'); await f.open('A')
+    expect(f.active()).toBe('chat')
+    expect(storage.getItem('ework.session.view.v1:A')).toBe('chat')
   } finally { await f.close() }
 })
 
