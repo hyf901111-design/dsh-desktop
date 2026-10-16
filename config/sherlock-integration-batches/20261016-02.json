@@ -12,7 +12,7 @@
         "featureName": "滚动条可见度修正、主页主题与会话页签持久化",
         "branch": "codex/feat/scrollbar-update-polish-20261016",
         "baseCommit": "ce6d7e5a7269fe51c1ff2c4f407119116201f3d7",
-        "tipCommit": "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1",
+        "tipCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
         "commits": [
           {
             "commit": "c036c6ad86f606a354e8dec492be6670219e197d",
@@ -48,6 +48,13 @@
               "c0d3c88b1f9ba75e0b45a519b0eb6aa2b8db90fb"
             ],
             "subject": "测试：研究画布夹具加载当前客户端共享样式"
+          },
+          {
+            "commit": "8bf64f90c75f7a10657e71712033e1565943eeba",
+            "parents": [
+              "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1"
+            ],
+            "subject": "测试：按客户端级联顺序覆盖旧构建的共享样式"
           }
         ],
         "files": [
@@ -169,8 +176,8 @@
             ],
             "outcome": "passed",
             "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-0.log",
-            "verifiedCommit": "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1",
-            "completedAt": "2026-10-16T05:52:02.510482+00:00",
+            "verifiedCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
+            "completedAt": "2026-10-16T05:54:48.171817+00:00",
             "timeoutMs": 180000
           },
           {
@@ -181,8 +188,8 @@
             ],
             "outcome": "passed",
             "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-1.log",
-            "verifiedCommit": "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1",
-            "completedAt": "2026-10-16T05:51:46.533707+00:00",
+            "verifiedCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
+            "completedAt": "2026-10-16T05:54:33.294724+00:00",
             "timeoutMs": 30000
           },
           {
@@ -211,8 +218,8 @@
             ],
             "outcome": "passed",
             "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-2.log",
-            "verifiedCommit": "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1",
-            "completedAt": "2026-10-16T05:51:55.873424+00:00",
+            "verifiedCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
+            "completedAt": "2026-10-16T05:54:41.600241+00:00",
             "timeoutMs": 240000
           },
           {
@@ -230,8 +237,8 @@
             ],
             "outcome": "passed",
             "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-3.log",
-            "verifiedCommit": "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1",
-            "completedAt": "2026-10-16T05:52:12.197879+00:00",
+            "verifiedCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
+            "completedAt": "2026-10-16T05:54:57.626500+00:00",
             "timeoutMs": 180000
           },
           {
@@ -250,8 +257,8 @@
             ],
             "outcome": "passed",
             "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-4.log",
-            "verifiedCommit": "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1",
-            "completedAt": "2026-10-16T05:52:08.439672+00:00",
+            "verifiedCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
+            "completedAt": "2026-10-16T05:54:53.119286+00:00",
             "timeoutMs": 180000
           },
           {
@@ -265,8 +272,8 @@
             ],
             "outcome": "passed",
             "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-final-check-5.log",
-            "verifiedCommit": "f4fb93b5dc0941f46d2a1dd88b53953c3bc7eee1",
-            "completedAt": "2026-10-16T05:52:09.342183+00:00",
+            "verifiedCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
+            "completedAt": "2026-10-16T05:54:53.951058+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -288,7 +295,7 @@
           "legacy真实150464项归档规范化和CRC检查通过；尚未量化legacy相邻版本优化收益。",
           "旧主页背景只在旧端口localStorage中时无法跨源自动读取；固定存储将保存今后的选择，实际验收会恢复已观察到的背景选择。"
         ],
-        "generatedAt": "2026-10-16T05:52:12.198154+00:00"
+        "generatedAt": "2026-10-16T05:54:57.626714+00:00"
       }
     }
   ],
