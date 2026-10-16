@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { BrowserWindow, screen } from 'electron'
-import { NoteNativeMenu, noteMenuBounds, noteMenuPresentation, noteSubmenuBounds, validateNoteMenu } from '../src/main/notes/native-menu'
+import { NoteNativeMenu, noteMenuBounds, noteMenuPresentation, noteSubmenuBounds, validateNoteMenu, noteMenuDocumentHtml } from '../src/main/notes/native-menu'
 import type { NoteMenuState } from '../src/shared/notes-menu'
 import { readFileSync } from 'node:fs'
 import React from 'react'
@@ -24,6 +24,23 @@ const input = (overrides:Partial<NoteMenuState>={}):NoteMenuState => ({sessionId
 const instances=()=> (BrowserWindow as any).instances as any[]
 afterEach(()=>{for(const win of instances())if(!win.isDestroyed())win.destroy();instances().length=0;(screen.getCursorScreenPoint as any).mockReturnValue({x:0,y:0})})
 function fixture(){const parent=new BrowserWindow({}),owner={value:'alice'},allowed={value:true},menu=new NoteNativeMenu({getWindow:()=>parent,owner:()=>owner.value,canRead:()=>allowed.value});return{parent:parent as any,owner,allowed,menu}}
+
+it('uses macOS native glass without blurring a transparent shadow gutter',async()=>{
+ if(process.platform!=='darwin')return
+ const {menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1)
+ await vi.waitFor(()=>expect(popup.showInactive).toHaveBeenCalled())
+ expect(popup.options).toMatchObject({vibrancy:'menu',visualEffectState:'active',backgroundColor:'#00000000',hasShadow:true,roundedCorners:true})
+ const presentation=noteMenuPresentation(input(),'ticket',{shadowInset:0})
+ expect(presentation.root.width).toBe(264);expect(presentation.root.height).toBe(398)
+ expect(popup.setBounds.mock.calls[0][0]).toMatchObject({width:264,height:398})
+ const html=new Window()
+ try{
+  html.document.write(noteMenuDocumentHtml);html.document.body.className='dark native-material'
+  html.document.querySelector('main')!.innerHTML=presentation.root.html
+  expect(html.getComputedStyle(html.document.querySelector('main')!).padding).toBe('0px')
+  expect(html.getComputedStyle(html.document.querySelector('.menu')!).boxShadow).toBe('none')
+ }finally{await html.happyDOM.close()}
+})
 
 it('extends beyond the parent but fits the selected screen including negative origins',()=>{
  const bounds=noteMenuBounds({x:600,y:250,width:1,height:20},{x:0,y:25,width:1440,height:1000},720)
@@ -140,7 +157,7 @@ it('opens the second level without closing the native menu and validates child s
  const rootBounds=popup.setBounds.mock.calls[0][0]
  await vi.waitFor(()=>expect(instances()).toHaveLength(3));const childPopup=instances().at(-1)
  await vi.waitFor(()=>expect(childPopup.showInactive).toHaveBeenCalled())
- expect(popup.setBounds.mock.calls.at(-1)[0]).toEqual(rootBounds);expect(childPopup.setBounds.mock.calls.at(-1)[0].width).toBe(308)
+ expect(popup.setBounds.mock.calls.at(-1)[0]).toEqual(rootBounds);expect(childPopup.setBounds.mock.calls.at(-1)[0].width).toBe(process.platform==='darwin'?260:308)
  childPopup.focus();expect(parent.isFocused()).toBe(true);expect(childPopup.isFocused()).toBe(false)
  expect(noteMenuPresentation(input({items:[library],submenu:{parentId:'library',selectedIndex:0}}),'ticket').html).toContain('组件一')
  childPopup.webContents.emit('will-navigate',event,`ework-note-menu://${ticket}/select/library-one?revision=1&parent=library`)
