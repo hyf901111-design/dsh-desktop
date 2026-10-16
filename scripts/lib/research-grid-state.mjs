@@ -114,7 +114,7 @@ export function createWorkbenchGridState(storage,sessionId) {
     }
     for(const n of fresh)if(!known.has(n.id)){
       const min=grid.minimum(n,m)
-      cells.push(grid.append(cells,n.id,Math.min(40,Math.max(min.w,Math.round((n.width+m.gap)/m.step))),Math.max(min.h,Math.ceil((n.height+m.gap)/m.rowStep))))
+      cells.push(grid.append(visibleCells(),n.id,Math.min(40,Math.max(min.w,Math.round((n.width+m.gap)/m.step))),Math.max(min.h,Math.ceil((n.height+m.gap)/m.rowStep)),min.w))
     }
     const projected=grid.project(nodes,visibleCells(),width),byId=new Map(projected.map(n=>[n.id,n]))
     previous=new Map(projected.map(n=>[n.id,geometry(n)]));forced=false

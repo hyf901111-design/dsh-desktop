@@ -198,7 +198,9 @@ export class ScheduledTaskView {
   }
   private mountMore() {
     const group = this.document.querySelector('.hHd-Xa_newSessionGroup')
-    if (!group || group.querySelector('.st-more-zone')) return
+    if (!group) return
+    const current = this.more?.closest<HTMLElement>('.st-more-zone')
+    if (current?.isConnected) { this.placeMore(group, current); return }
     const zone = this.document.createElement('span')
     zone.className = 'st-more-zone'
     const more = this.document.createElement('button')
@@ -218,8 +220,15 @@ export class ScheduledTaskView {
             { label: '定时任务', icon: 'clock', run: () => void this.open() },
           ])
     zone.append(more)
-    group.append(zone)
+    this.placeMore(group, zone)
     this.more = more
+  }
+  private placeMore(group: Element, zone: HTMLElement) {
+    const sidebar = group.closest('[data-dsh-sidebar-root]')
+    const navigation = sidebar?.querySelector('[data-srb-navigation-scroll]')
+    if (sidebar?.getAttribute('data-dsh-sidebar-wide') === 'false' && navigation) {
+      if (navigation.nextElementSibling !== zone) navigation.after(zone)
+    } else if (zone.parentElement !== group) group.append(zone)
   }
   private position = () => {
     if (!this.root && !this.componentMode) return

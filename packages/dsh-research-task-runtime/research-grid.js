@@ -317,7 +317,22 @@ export function createResearchGrid() {
     }
     return next
   }
-  function append(items,id,w=20,h=7){return bounded({id,x:0,y:Math.max(0,...items.map(n=>n.y+n.h)),w,h})}
+  function append(items,id,w=20,h=7,minWidth=w){
+    const frame=bounded({id,x:0,y:0,w,h}),existing=items.map(bounded)
+    w=frame.w;h=frame.h;minWidth=clamp(Math.round(minWidth)||w,4,w)
+    // Scan complete horizontal slots from the top. The full new height must be
+    // clear, so a lower card cannot be covered while filling an earlier row.
+    const rows=[...new Set([0,...existing.flatMap(c=>[c.y,c.y+c.h])])].sort((a,b)=>a-b)
+    for(const y of rows){
+      const occupied=existing.filter(c=>c.y<y+h&&c.y+c.h>y).sort((a,b)=>a.x-b.x),gaps=[]
+      let edge=0
+      for(const cell of occupied){if(cell.x>edge)gaps.push({x:edge,w:cell.x-edge});edge=Math.max(edge,cell.x+cell.w)}
+      if(edge<columns)gaps.push({x:edge,w:columns-edge})
+      const gap=gaps.find(g=>g.w>=w)??gaps.find(g=>g.w>=minWidth)
+      if(gap)return bounded({id,x:gap.x,y,w:Math.min(w,gap.w),h})
+    }
+    return bounded({id,x:0,y:Math.max(0,...existing.map(c=>c.y+c.h)),w,h})
+  }
   function draw(a,b,m){
     // A pointer inside a painted square selects that square. In a gutter,
     // choose the nearer square; both drag directions use the same bounds.

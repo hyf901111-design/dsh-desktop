@@ -111,7 +111,7 @@ export function patchNotesComposer(source) {
     const marker=source.indexOf('/* ework:notes-native-composer:v1 */'),start=source.indexOf('\n',marker)+1,footer=source.indexOf("document.addEventListener('sherlock:notes-reset',",start),end=source.indexOf('\n',footer);
     if(start<0||footer<0||end<0)throw Error('笔记原生输入框适配器不完整。');
     source=source.slice(0,start)+notesComposerSource.trim()+source.slice(end);
-    return patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source))));
+    return patchNotesInputRoutingScope(patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source)))));
   }
   const replace = (from,to) => { if(source.split(from).length!==2)throw Error('笔记无法定位共用输入框：'+from.slice(0,55));source=source.replace(from,to) };
   replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n eworkNotes:activeView === "notes",');
@@ -126,7 +126,20 @@ react.useEffect(()=>{const ready=event=>{if(event.detail?.sessionId===sessionId)
   replace('function InputBar({ subagentPanel=false,','function InputBar({ eworkNotes=false, subagentPanel=false,');
   source=source.replaceAll('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);','if(!eworkNotes)odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);');
   replace("const canvasRunning=canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));","const canvasRunning=!eworkNotes&&canvasExecution.tasks.some(task=>['running','waiting'].includes(task.state));");
-  return patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source))));
+  return patchNotesInputRoutingScope(patchNotesSidebar(patchNotesCommands(patchNotesSlots(patchNotesAdmission(source)))));
+}
+
+function patchNotesInputRoutingScope(source) {
+  // InputHub is a module sibling of plugin apply. Its command handlers and the
+  // nested note adapter must resolve the same registry, including in chat mode.
+  const registry='const eworkNotesInputs = new Map();';
+  const resolver='function eworkActiveInput(sessionId,ordinary){const record=eworkNotesInputs.get(sessionId);return record?.active?record.shell:ordinary}';
+  const marker='/* ework:notes-input-routing-scope:v1 */';
+  source=source.replaceAll(marker+'\n'+registry+'\n'+resolver+'\n','');
+  for(const line of [registry,resolver])source=source.replaceAll('\n'+line+'\n','\n');
+  const anchor='var InputHub = class {';
+  if(source.split(anchor).length!==2)throw Error('笔记无法定位原生命令输入路由作用域。');
+  return source.replace(anchor,marker+'\n'+registry+'\n'+resolver+'\n'+anchor);
 }
 
 function patchNotesNativeDrop(source){

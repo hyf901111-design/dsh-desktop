@@ -293,7 +293,7 @@ export function patchFinancialWidgetClient(source){
  once('(0,react_jsx_runtime.jsx)(ResearchCanvasDotGrid,{viewport,canvasSize:snapshot.canvasSize})','(0,react_jsx_runtime.jsx)(FinancialConnections,{rootRef,workspace,sessionId,snapshot,readOnly:sharedReadOnly}),(0,react_jsx_runtime.jsx)(ResearchCanvasDotGrid,{viewport,canvasSize:snapshot.canvasSize})')
  once('createContainerDraft(placement = null, draftKind = "container") {',`createFinancialWidget(widget){
  if(!collaborationCanWrite())return null;const spec=financialWidgetDefaults(widget);if(!spec)return null;
- const dimensions=financialWidgetDimensions(spec),id=createResearchCanvasArtifactId(),point=researchCanvasViewportPlacement(snapshot,'generated-container',0);if(!point)return null;
+ const dimensions=financialWidgetDimensions(spec,true),id=createResearchCanvasArtifactId(),point=researchCanvasViewportPlacement(snapshot,'generated-container',0);if(!point)return null;
  const width=Math.min(dimensions.width,Math.max(240,(snapshot.canvasSize.availableWidth||snapshot.canvasSize.width||1000)-24));
  const node=canonicalResearchCanvasArtifactNode({id,messageId:id,kind:'generated-container',title:spec.title,excerpt:spec.title,containerPrompt:'固定金融组件',containerSpec:spec,generationStatus:'completed',generationLastSeq:0,refreshMinutes:0,sizeMode:'manual',...point,width,height:dimensions.height});if(!node)return null;
  const artifacts=boundedResearchCanvasArtifactNodes([...snapshot.artifacts,node]);if(!artifacts.some(n=>n.id===id))return null;commitUpdate({artifacts,selection:{selectedNodeIds:[id],orderedFileIds:[]}},true);return snapshot.artifacts.find(n=>n.id===id);

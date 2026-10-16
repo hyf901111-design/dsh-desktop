@@ -439,3 +439,19 @@ it('retains bindings when snapshot fails and prevents selecting a connection out
   expect(doc.querySelector('.st-integration-wrap')!.textContent).toContain('已保存的授权不会自动变更')
   view.close()
 })
+
+it('places the existing More control after workspace creation in the collapsed rail and restores it on expansion', async () => {
+  const w = new Window(); windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver); vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<div data-dsh-sidebar-root data-dsh-sidebar-wide="true"><div class="hHd-Xa_newSessionGroup"><button>New chat</button><button>New research</button></div><div data-srb-navigation-scroll><button id="add-workspace">Add workspace</button></div><div class="hHd-Xa_footArea"></div></div>'
+  const add = vi.fn(); doc.querySelector<HTMLButtonElement>('#add-workspace')!.onclick = add
+  new ScheduledTaskView(doc, {list:vi.fn(async()=>[]),workspaces:vi.fn(async()=>[]),save:vi.fn(),action:vi.fn()}).mount()
+  const zone = doc.querySelector('.st-more-zone')!, root = doc.querySelector('[data-dsh-sidebar-root]')!
+  root.setAttribute('data-dsh-sidebar-wide','false')
+  await vi.waitFor(()=>expect(zone.previousElementSibling).toBe(doc.querySelector('[data-srb-navigation-scroll]')))
+  doc.querySelector<HTMLButtonElement>('#add-workspace')!.click(); expect(add).toHaveBeenCalledOnce()
+  root.setAttribute('data-dsh-sidebar-wide','true')
+  await vi.waitFor(()=>expect(zone.parentElement).toBe(doc.querySelector('.hHd-Xa_newSessionGroup')))
+  expect(doc.querySelectorAll('.st-more')).toHaveLength(1)
+})
