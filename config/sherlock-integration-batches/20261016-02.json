@@ -9,46 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复历史研究会话恢复并移除笔记评论反应入口",
+        "featureName": "修复收起侧栏后的设置页布局",
         "branch": "codex/feat/scrollbar-update-polish-20261016",
-        "baseCommit": "8bf64f90c75f7a10657e71712033e1565943eeba",
-        "tipCommit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
+        "baseCommit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
+        "tipCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
         "commits": [
           {
-            "commit": "73e84f1e926f03a8eeddcbe9031db2d71e5df13c",
+            "commit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
             "parents": [
-              "8bf64f90c75f7a10657e71712033e1565943eeba"
+              "5ae18c0b1ad9626815e782d727cdb18484bf9ec4"
             ],
-            "subject": "调整：移除笔记评论的添加反应入口"
-          },
-          {
-            "commit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
-            "parents": [
-              "73e84f1e926f03a8eeddcbe9031db2d71e5df13c"
-            ],
-            "subject": "修复：区分默认对话页签与明确选择以恢复历史研究画布"
+            "subject": "修复：收起侧栏后设置页按钮与主题卡片被压窄"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "scripts/lib/session-view-preferences.d.mts"
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/session-view-preferences.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/session-view-preferences.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-session-actions.test.ts"
+            "path": "test/figma-settings-scrollbar.test.js"
           }
         ],
         "checks": [
@@ -59,9 +40,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-last-check-0.log",
-            "verifiedCommit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
-            "completedAt": "2026-10-16T06:07:39.071000+00:00",
+            "summary": "类型检查通过",
+            "verifiedCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
+            "completedAt": "2026-10-16T06:28:16.884776+00:00",
             "timeoutMs": 180000
           },
           {
@@ -71,29 +52,9 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-last-check-1.log",
-            "verifiedCommit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
-            "completedAt": "2026-10-16T06:07:23.186006+00:00",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=3",
-              "test/home-theme-controller.test.ts",
-              "test/home-theme-preferences.test.ts",
-              "test/session-view-preferences.test.js",
-              "test/research-canvas-storage.test.ts",
-              "test/sidebar-new-session-actions.test.ts",
-              "test/sidebar-session-recency.test.ts",
-              "test/notes-header-runtime.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-last-check-2.log",
-            "verifiedCommit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
-            "completedAt": "2026-10-16T06:07:29.589175+00:00",
+            "summary": "差异检查通过",
+            "verifiedCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
+            "completedAt": "2026-10-16T06:28:16.884776+00:00",
             "timeoutMs": 180000
           },
           {
@@ -101,20 +62,21 @@
               "npm",
               "test",
               "--",
-              "test/figma-theme-cards.test.ts",
-              "-t",
-              "persisted selection"
+              "test/figma-settings-scrollbar.test.js",
+              "test/figma-settings-layout.test.ts",
+              "test/figma-settings-dismiss.test.ts",
+              "test/settings-background.test.ts"
             ],
             "outcome": "passed",
-            "summary": "聚焦检查退出码0；完整输出 /tmp/ework-polish-last-check-3.log",
-            "verifiedCommit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
-            "completedAt": "2026-10-16T06:07:30.526504+00:00",
+            "summary": "15项聚焦测试通过，含真实Chromium三宽度深浅主题收起侧栏回归；修复前新增6项均以32px失败。/tmp/ework-settings-collapse-green.log",
+            "verifiedCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
+            "completedAt": "2026-10-16T06:28:16.884776+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium组件深浅两主题评论验证通过（/tmp/ework-note-comment-focused.log）；集成完整bundle会话恢复51项通过且依赖校验值未变。最终集成本地客户端继续验证重启和导航。"
+          "summary": "真实Chromium15项设置相关检查通过；最终打包客户端仍需重检。当前客户端重启后已观察到Jarrick背景保持。"
         },
         "acceptanceCriteria": [
           "滚动条保持深色克制灰、浅色透明灰在白底与灰底均可辨，原滚动交互保留",
@@ -122,7 +84,8 @@
           "每会话独立保存对话/研究/笔记/轨迹，返回会话恢复最后页签，显式新建研究仍进入研究",
           "新建对话、新建研究和跨会话往返保留原会话页签、内容、草稿与排序",
           "更新任务重试复用与双通道差分时间戳优化保持原已核验行为",
-          "笔记评论不再显示添加反应按钮与表情选择入口，编辑、删除、解决保留"
+          "笔记评论不再显示添加反应按钮与表情选择入口，编辑、删除、解决保留",
+          "设置页按钮、导航文字和主题预览不受底层侧栏收起影响，深浅主题与840/1025/1380宽度验证"
         ],
         "risks": [
           "未对外发布，不递增版本，不执行旧客户端全量升级/真实安装重启测试。",
@@ -132,85 +95,7 @@
           "旧主页背景只在旧端口localStorage中时无法跨源自动读取；固定存储将保存今后的选择，实际验收会恢复已观察到的背景选择。",
           "原main的notes-outline组合样式测试在插入图片阶段同样超时；评论入口与其余操作的独立组件验证深浅两主题通过，未修改此历史测试。"
         ],
-        "generatedAt": "2026-10-16T06:07:39.071354+00:00"
-      },
-      "merged": {
-        "mergeCommit": "0fa4d803070a1a33e9fa9eff118c5badb431e50e",
-        "verificationCommit": "0fa4d803070a1a33e9fa9eff118c5badb431e50e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0fa4d803070a1a33e9fa9eff118c5badb431e50e",
-            "completedAt": "2026-10-16T06:08:14.529Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "0fa4d803070a1a33e9fa9eff118c5badb431e50e",
-            "completedAt": "2026-10-16T06:08:14.529Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "test/update-manager.test.ts",
-              "test/update-freshness.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/update-background-flow.test.ts",
-              "test/local-update-manager.test.ts",
-              "test/local-update-download.test.ts",
-              "test/update-error-stage.test.ts",
-              "test/update-restart-preparation.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/figma-settings-scrollbar.test.js",
-              "test/workbench-style.test.js",
-              "test/research-grid-scroll-clearance.test.js",
-              "test/macos-dual-release-archive.test.ts",
-              "test/cloudflare-release.test.ts",
-              "test/update-differential.test.ts",
-              "test/release.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 test/update-manager.test.ts test/update-freshness.test.ts test/update-install-lifecycle.test.ts test/update-background-flow.test.ts test/local-update-manager.test.ts test/local-update-download.test.ts test/update-error-stage.test.ts test/update-restart-preparation.test.ts test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/figma-settings-scrollbar.test.js test/workbench-style.test.js test/research-grid-scroll-clearance.test.js test/macos-dual-release-archive.test.ts test/cloudflare-release.test.ts test/update-differential.test.ts test/release.test.ts",
-            "verifiedCommit": "0fa4d803070a1a33e9fa9eff118c5badb431e50e",
-            "completedAt": "2026-10-16T06:08:14.529Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=2",
-              "test/research-html-theme.test.js",
-              "test/research-grid-client.test.js",
-              "-t",
-              "滚动条|滚动能力|滚动联动"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=2 test/research-html-theme.test.js test/research-grid-client.test.js -t 滚动条|滚动能力|滚动联动",
-            "verifiedCommit": "0fa4d803070a1a33e9fa9eff118c5badb431e50e",
-            "completedAt": "2026-10-16T06:08:14.529Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-16T06:08:14.529Z"
+        "generatedAt": "2026-10-16T06:28:16.884776+00:00"
       }
     }
   ],
