@@ -5,6 +5,10 @@ const replaceOnce = (source, anchor, replacement) => {
 
 /** Keep pointer and keyboard selection in the native controller's one store. */
 export function patchCommandMenuSelection(source) {
+  const rosterMarker = '/* ework:typed-slash-command-roster:v1 */'
+  if (!source.includes(rosterMarker)) source = replaceOnce(source,
+    'const roster = this.deps.roster.sources(hit.trigger);',
+    `${rosterMarker}\nconst roster = this.deps.roster.sources(hit.trigger).filter(source => hit.trigger !== "/" || source.name === "command");`)
   const marker = '/* ework:command-menu-selection:v1 */'
   if (source.includes(marker)) return source
   const initial = 'const highlight = validHighlight(state.highlight, groups) ?? firstHighlight(groups);'

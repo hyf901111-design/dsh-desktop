@@ -28,7 +28,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         "修复更新准备超时后再次重试可能重复执行安装命令并提示 command disabled 的问题。",
         "优化差分更新打包，减少未修改文件因归档时间戳变化而被重复下载；首次切换到新打包方式时更新包仍可能较大。",
         "修复收起侧栏后设置页按钮与主题预览被压窄，以及设置打开时仍能拖动底层侧栏的问题。",
-        "优化首页工作区下拉箭头的颜色对比；斜杠菜单不再默认选中压缩历史，鼠标悬停和键盘导航共用单一高亮状态。"
+        "优化首页工作区下拉箭头的颜色对比；输入 / 与按钮显示相同命令列表，具体技能统一从技能入口选择；菜单不再默认选中压缩历史，鼠标和键盘共用单一高亮状态。"
       ]
     },
     {
@@ -467,7 +467,7 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         "Fix update retries issuing a duplicate installation command after preparation times out, which could show a command disabled error.",
         "Optimize differential update archives to avoid downloading unchanged files again because of timestamp changes. The first update adopting the new format may still be large.",
         "Fix compressed Settings buttons and theme previews with a collapsed sidebar, and prevent dragging the background sidebar while Settings is open.",
-        "Improve contrast for the home workspace dropdown arrow. Slash commands no longer preselect Compact history; pointer hover and keyboard navigation share one highlight."
+        "Improve contrast for the home workspace dropdown arrow. Typing / and the command button show the same command list; individual skills open from Skills. Compact history is no longer preselected, and pointer and keyboard navigation share one highlight."
       ]
     },
     {
