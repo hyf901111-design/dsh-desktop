@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261016-03",
+  "branch": "codex/integration/20261016-03",
+  "baseMainCommit": "1d89fca3c3acd829f14e6404c5cf9712c45dcb7a",
+  "expectedMainCommit": "1d89fca3c3acd829f14e6404c5cf9712c45dcb7a",
+  "createdAt": "2026-10-16T06:49:42.451Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复设置页穿透底层侧栏拖动手柄",
+        "branch": "codex/feat/scrollbar-update-polish-20261016",
+        "baseCommit": "1d89fca3c3acd829f14e6404c5cf9712c45dcb7a",
+        "tipCommit": "c7a832f9b8b9641004f2a5cc385bf4dc13528adb",
+        "commits": [
+          {
+            "commit": "c7a832f9b8b9641004f2a5cc385bf4dc13528adb",
+            "parents": [
+              "1d89fca3c3acd829f14e6404c5cf9712c45dcb7a"
+            ],
+            "subject": "修复：设置页打开时禁用底层侧栏拖动手柄"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/figma-settings.css"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-settings-scrollbar.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查通过；20项设置/拖动检查，包含两主题真实鼠标拖动、命中与关闭后恢复。",
+            "verifiedCommit": "c7a832f9b8b9641004f2a5cc385bf4dc13528adb",
+            "completedAt": "2026-10-16T06:49:41.423433+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查通过；20项设置/拖动检查，包含两主题真实鼠标拖动、命中与关闭后恢复。",
+            "verifiedCommit": "c7a832f9b8b9641004f2a5cc385bf4dc13528adb",
+            "completedAt": "2026-10-16T06:49:41.423433+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/figma-settings-scrollbar.test.js",
+              "test/figma-settings-layout.test.ts",
+              "test/figma-settings-dismiss.test.ts",
+              "test/settings-background.test.ts",
+              "test/figma-resize-feedback.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦检查通过；20项设置/拖动检查，包含两主题真实鼠标拖动、命中与关闭后恢复。",
+            "verifiedCommit": "c7a832f9b8b9641004f2a5cc385bf4dc13528adb",
+            "completedAt": "2026-10-16T06:49:41.423433+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium深浅两主题复现red并验证green；最终本地客户端待重建。"
+        },
+        "acceptanceCriteria": [
+          "设置页打开时禁止底层侧栏和右面板拖动手柄响应，且无蓝色反馈线",
+          "设置本身的滚动、按钮和菜单仍可用，关闭设置恢复原侧栏尺寸调整能力"
+        ],
+        "risks": [
+          "未对外发布，不递增版本，不执行旧客户端全量升级/真实安装重启测试。",
+          "同一1.3.1至1.3.2样本规范化两边后标准差分由140352977降至40342341字节；首次切换约140218960字节，未来体积依赖内容变化。",
+          "原main可复现4项HTML主题历史失败和1项preset selector历史失败，未改无关产品逻辑；直接相关289项检查通过。",
+          "legacy真实150464项归档规范化和CRC检查通过；尚未量化legacy相邻版本优化收益。",
+          "旧主页背景只在旧端口localStorage中时无法跨源自动读取；固定存储将保存今后的选择，实际验收会恢复已观察到的背景选择。",
+          "原main的notes-outline组合样式测试在插入图片阶段同样超时；评论入口与其余操作的独立组件验证深浅两主题通过，未修改此历史测试。"
+        ],
+        "generatedAt": "2026-10-16T06:49:41.423433+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/figma-settings-scrollbar.test.js",
+        "test/figma-settings-layout.test.ts",
+        "test/figma-settings-dismiss.test.ts",
+        "test/settings-background.test.ts",
+        "test/figma-resize-feedback.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
