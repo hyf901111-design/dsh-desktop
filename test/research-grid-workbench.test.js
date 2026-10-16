@@ -216,10 +216,10 @@ describe('研究工作台网格事务',()=>{
   expect(a).toEqual(b);expect(a.x+a.w).toBeLessThanOrEqual(40)
   expect(a.w).toBeGreaterThanOrEqual(4);expect(a.h).toBeGreaterThanOrEqual(3)
  })
- it('链接和语音在所有组件之后追加，即使前排有空格',()=>{
+ it('链接和语音优先补齐能容纳完整高度的行',()=>{
   const grid=createResearchGrid(), before=[item('a',0,0,20,6),item('b',0,6,40,8)]
   expect(grid.append(before,'link')).toMatchObject({x:0,y:14,w:20,h:7})
-  expect(grid.append([...before,grid.append(before,'link')],'voice').y).toBe(21)
+  expect(grid.append([...before,grid.append(before,'link')],'voice')).toMatchObject({x:20,y:14})
  })
  it('迁移保留内容标识、阅读顺序、不等大尺寸，宽度变化仅重排几何',()=>{
   const grid=createResearchGrid(), nodes=[{id:'a',x:300,y:200,width:560,height:320,title:'真实数据'}, {id:'b',x:920,y:200,width:560,height:520}]
