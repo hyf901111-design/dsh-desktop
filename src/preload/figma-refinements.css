@@ -5,6 +5,11 @@ body .cubgiG_seat,body [data-settings-item="agent-preset"] { display:none!import
 /* A translucent light thumb remains visible on both white and grey sidebars. */
 body { --odyssey-menu:rgba(255, 255, 255, 0.78); --odyssey-menu-border:rgba(0, 0, 0, 0.10); --odyssey-menu-row:rgba(0, 0, 0, 0.055); --odyssey-menu-muted:#7d7d7d; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.16); --odyssey-menu-blur:blur(36px) saturate(1.2); --odyssey-scroll-ink:0 0 0; --ework-scroll-thumb:#0000001a; --ework-scroll-hover:#c9c9c9; --ework-scroll-active:#b5b5b5; }
 body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-menu:rgba(43, 43, 43, 0.68); --odyssey-menu-border:rgba(255, 255, 255, 0.10); --odyssey-menu-row:rgba(255, 255, 255, 0.075); --odyssey-menu-muted:#999; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.32); --odyssey-scroll-ink:255 255 255; --ework-scroll-thumb:#333333; --ework-scroll-hover:#444444; --ework-scroll-active:#555555; }
+/* macOS transparent-window compositing otherwise retains sharp background
+   text behind CSS backdrop filters. Keep an opaque page canvas underneath
+   the translucent shell and menus; the native window still owns its corners. */
+body { background-color:#f2f2f2!important; }
+body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { background-color:#1f1f1f!important; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:var(--odyssey-workspace-header-height,44px)!important; min-height:var(--odyssey-workspace-header-height,44px)!important; flex:0 0 var(--odyssey-workspace-header-height,44px)!important;
@@ -639,7 +644,7 @@ body .srb-notifications .srb-notification{backdrop-filter:none;-webkit-backdrop-
 
 /* One neutral frosted material for every expanded menu, including portal menus.
    Deliberately leave layout, content, action colors and dialog surfaces to their owners. */
-body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],.sherlock-account-menu,.st-menu,.ig-menu,.srb-notifications,.srb-avatar-info,.srb-members-popover,.odyssey-subagent-composer-popover,.rScV5Q_mindMapMenu,.en-block-menu,.en-export-menu,.en-file-menu,.en-toc-popover,.bn-suggestion-menu,.bn-formatting-toolbar,.mantine-Menu-dropdown,.bn-menu-dropdown,.bn-panel,.mantine-Popover-dropdown:not(.bn-panel-popover):not(.bn-emoji-picker-popover)) {
+body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],.sherlock-account-menu,.st-menu,.ig-menu,.srb-notifications,.srb-session-search,.srb-avatar-info,.srb-members-popover,.odyssey-subagent-composer-popover,.rScV5Q_mindMapMenu,.rScV5Q_contextMenu,.en-block-menu,.en-export-menu,.en-file-menu,.en-toc-popover,.bn-suggestion-menu,.bn-formatting-toolbar,.mantine-Menu-dropdown,.bn-menu-dropdown,.bn-panel,.mantine-Popover-dropdown:not(.bn-panel-popover):not(.bn-emoji-picker-popover)) {
   background:var(--odyssey-menu)!important;
   border-color:var(--odyssey-menu-border)!important;
   outline-color:var(--odyssey-menu-border)!important;

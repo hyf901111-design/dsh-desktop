@@ -39,6 +39,7 @@ it('uses macOS native glass without blurring a transparent shadow gutter',async(
   html.document.querySelector('main')!.innerHTML=presentation.root.html
   expect(html.getComputedStyle(html.document.querySelector('main')!).padding).toBe('0px')
   expect(html.getComputedStyle(html.document.querySelector('.menu')!).boxShadow).toBe('none')
+  expect(html.getComputedStyle(html.document.querySelector('.menu')!).borderWidth).toBe('0px')
  }finally{await html.happyDOM.close()}
 })
 
