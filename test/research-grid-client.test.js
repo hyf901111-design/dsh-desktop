@@ -166,7 +166,8 @@ async function fixture(mount=false,desktop={}){
  keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}))
  let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
- const source=patchDerivedPresetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ // Load the serializer through Node so Vitest does not rewrite the functions it embeds.
+ const source=require('../scripts/lib/research-grid-workbench.mjs').patchResearchGridWorkbench(patchDerivedPresetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake)
@@ -2096,7 +2097,7 @@ it('宿主原生滚动条一直不占位，选中仅改变覆盖层颜色并保�
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
  await act(async()=>f.workspace.updateSelection(['a'],'replace'))
- expect(thumb()).toBe('#74778055')
+ expect(thumb()).toBe('#e1e1e1')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-width')).toBe('none')
  expect(f.win.getComputedStyle(card).getPropertyValue('--grid-scroll-size')).toBe('0px')
  await act(async()=>f.workspace.updateSelection([],'replace'))
