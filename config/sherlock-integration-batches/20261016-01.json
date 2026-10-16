@@ -11,110 +11,80 @@
         "schemaVersion": 1,
         "featureName": "斜杠菜单完整展示、内置技能英文化与静默预备更新",
         "branch": "codex/feat/slash-updater-20261016",
-        "baseCommit": "45867e516898d04099d8f5939822ca4e58822f7f",
-        "tipCommit": "c62acea4e654436001631dd4d7cc147217ce366b",
+        "baseCommit": "c62acea4e654436001631dd4d7cc147217ce366b",
+        "tipCommit": "65f9ce038d3a98eccb9dea7173808019475f2730",
         "commits": [
           {
-            "commit": "c62acea4e654436001631dd4d7cc147217ce366b",
+            "commit": "b5a0ddbf47426c2c885cd28feef25bb16c7def96",
             "parents": [
-              "45867e516898d04099d8f5939822ca4e58822f7f"
+              "c62acea4e654436001631dd4d7cc147217ce366b"
             ],
-            "subject": "优化：新增六款动态主题并修正预览托底居中"
+            "subject": "调整：首页移除五款主题并迁移旧选择"
+          },
+          {
+            "commit": "65f9ce038d3a98eccb9dea7173808019475f2730",
+            "parents": [
+              "b5a0ddbf47426c2c885cd28feef25bb16c7def96"
+            ],
+            "subject": "修复：笔记自选股市场筛选文字与箭头挤压"
           }
         ],
         "files": [
           {
-            "status": "C100",
-            "path": "docs/licenses/react-bits.txt",
-            "previousPath": "build/figma-generation/LICENSE-react-bits.md"
-          },
-          {
             "status": "M",
-            "path": "src/preload/assets.d.ts"
+            "path": "scripts/lib/financial-widget.css"
           },
           {
-            "status": "M",
-            "path": "src/preload/figma-home.css"
-          },
-          {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-reactbits-ascii-terminal-shaders.ts"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-reactbits-ascii-terminal.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/home-reactbits-crt-pattern.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-reactbits-dither-chrome.ts"
-          },
-          {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/home-reactbits-previews.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/home-reactbits-renderer.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/home-theme-assets/react-bits/crt-warp-dark.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-assets/react-bits/crt-warp-light.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-assets/react-bits/dither-dark.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/home-theme-assets/react-bits/dither-light.jpg"
-          },
-          {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/faulty-terminal-dark.jpg"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/faulty-terminal-light.jpg"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/gradient-ascii-dark.jpg"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/gradient-ascii-light.jpg"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/liquid-chrome-dark.jpg"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/liquid-chrome-light.jpg"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/pattern-waves-dark.jpg"
           },
           {
-            "status": "A",
+            "status": "D",
             "path": "src/preload/home-theme-assets/react-bits/pattern-waves-light.jpg"
           },
           {
             "status": "M",
             "path": "src/preload/home-theme-configs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-theme-renderer.ts"
           },
           {
             "status": "M",
@@ -131,6 +101,10 @@
           {
             "status": "M",
             "path": "test/home-theme-renderer-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/notes-financial-controls-browser.test.js"
           }
         ],
         "checks": [
@@ -141,9 +115,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "六主题原始WebGL渲染、动态帧、深浅色、19主题循环、缩略图与居中聚焦验证通过，独立复核无阻塞。",
-            "verifiedCommit": "c62acea4e654436001631dd4d7cc147217ce366b",
-            "completedAt": "2026-10-16T02:45:49.435048+00:00",
+            "summary": "主题移除、十四项循环与旧选择迁移24项检查，以及笔记市场控件布局和交互9项检查通过；独立复核无阻塞。",
+            "verifiedCommit": "65f9ce038d3a98eccb9dea7173808019475f2730",
+            "completedAt": "2026-10-16T03:31:29.798123+00:00",
             "timeoutMs": 180000
           },
           {
@@ -153,9 +127,9 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "六主题原始WebGL渲染、动态帧、深浅色、19主题循环、缩略图与居中聚焦验证通过，独立复核无阻塞。",
-            "verifiedCommit": "c62acea4e654436001631dd4d7cc147217ce366b",
-            "completedAt": "2026-10-16T02:45:49.435048+00:00",
+            "summary": "主题移除、十四项循环与旧选择迁移24项检查，以及笔记市场控件布局和交互9项检查通过；独立复核无阻塞。",
+            "verifiedCommit": "65f9ce038d3a98eccb9dea7173808019475f2730",
+            "completedAt": "2026-10-16T03:31:29.798123+00:00",
             "timeoutMs": 30000
           },
           {
@@ -167,34 +141,38 @@
               "--testTimeout=20000",
               "--hookTimeout=45000",
               "test/home-theme-controller.test.ts",
-              "test/home-theme-motion-browser.test.js"
+              "test/home-theme-motion-browser.test.js",
+              "-t",
+              "home background theme controller|cycles every theme|centers every glass"
             ],
             "outcome": "passed",
-            "summary": "六主题原始WebGL渲染、动态帧、深浅色、19主题循环、缩略图与居中聚焦验证通过，独立复核无阻塞。",
-            "verifiedCommit": "c62acea4e654436001631dd4d7cc147217ce366b",
-            "completedAt": "2026-10-16T02:45:49.435048+00:00",
-            "timeoutMs": 300000
+            "summary": "主题移除、十四项循环与旧选择迁移24项检查，以及笔记市场控件布局和交互9项检查通过；独立复核无阻塞。",
+            "verifiedCommit": "65f9ce038d3a98eccb9dea7173808019475f2730",
+            "completedAt": "2026-10-16T03:31:29.798123+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
               "npm",
               "test",
               "--",
-              "--maxWorkers=1",
+              "--maxWorkers=2",
               "--testTimeout=20000",
               "--hookTimeout=45000",
-              "test/home-theme-renderer-browser.test.js"
+              "test/notes-financial-controls-browser.test.js",
+              "test/notes-native-components.test.js",
+              "test/financial-widget-layout.test.js"
             ],
             "outcome": "passed",
-            "summary": "六主题原始WebGL渲染、动态帧、深浅色、19主题循环、缩略图与居中聚焦验证通过，独立复核无阻塞。",
-            "verifiedCommit": "c62acea4e654436001631dd4d7cc147217ce366b",
-            "completedAt": "2026-10-16T02:45:49.435048+00:00",
+            "summary": "主题移除、十四项循环与旧选择迁移24项检查，以及笔记市场控件布局和交互9项检查通过；独立复核无阻塞。",
+            "verifiedCommit": "65f9ce038d3a98eccb9dea7173808019475f2730",
+            "completedAt": "2026-10-16T03:31:29.798123+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium实测六款深浅背景与动画、窄尺寸、GPU释放、19主题切换及托底对称；12张图片与Figma原始imageHash一致。真实客户端已验证命令完整置顶、强磨砂与技能选择自动完成；六主题待集成重建后实机复核。"
+          "summary": "Chromium验证移除五主题后列表循环、回退与卡片对称，实际笔记原生portal覆盖深浅/中英文/856至160px宽度的市场下拉和添加搜索。待集成重建后复核安装版。"
         },
         "acceptanceCriteria": [
           "斜杠命令和技能菜单全部直接展示，无内部滚动条，小窗口自动分列",
@@ -206,83 +184,14 @@
           "收起侧栏时添加工作区位于更多之前，按钮悬停均为圆形",
           "技能选择可正常结束并回到草稿，用户消息标签与文字基线对齐",
           "自选股初始高度560，新增组件优先填补可容纳完整高度的行，保留已有显示几何",
-          "移除EmreTuran，原选择回退默认；保留其余已验收主题",
-          "新增CRT Warp、Pattern Waves、Gradient ASCII、Dither、Faulty Terminal、Liquid Chrome，使用原始算法与指定参数",
-          "六主题深浅色预览使用Figma原图，托底与缩略图上下左右居中，当前96×56相邻84×48",
-          "仅准备当前和相邻缩略图，页面隐藏或减少动态效果时暂停动画"
+          "移除EmreTuran、AbramovDesign、Pattern Waves、Gradient ASCII、Faulty Terminal、Liquid Chrome，旧选择回默认；最终保留十四主题",
+          "新增保留CRT Warp和Dither动态背景与Figma原始深浅预览图；托底与缩略图居中，当前96×56相邻84×48",
+          "笔记自选股市场文字、箭头和加号分离，深浅/中英文/窄宽度均可用，保留筛选和添加交互"
         ],
         "risks": [
           "不触发真实安装重启或全量升级测试；本次仅本地测试，不修改公开更新源。"
         ],
-        "generatedAt": "2026-10-16T02:45:49.435048+00:00"
-      },
-      "merged": {
-        "mergeCommit": "eab2018259f99034e4287c9c718027569d57a74b",
-        "verificationCommit": "eab2018259f99034e4287c9c718027569d57a74b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "eab2018259f99034e4287c9c718027569d57a74b",
-            "completedAt": "2026-10-16T02:54:01.618Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "eab2018259f99034e4287c9c718027569d57a74b",
-            "completedAt": "2026-10-16T02:54:01.618Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "test/update-manager.test.ts",
-              "test/update-freshness.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/sidebar-update-control.test.ts",
-              "test/update-state.test.ts",
-              "test/update-ui.test.ts",
-              "test/update-notification-store.test.ts",
-              "test/update-check-error-routing.test.ts",
-              "test/local-update-manager.test.ts",
-              "test/local-update-download.test.ts",
-              "test/settings-about.test.ts",
-              "test/figma-update-layout.test.ts",
-              "test/update-error-stage.test.ts",
-              "test/update-background-flow.test.ts",
-              "test/update-background-ui.test.ts",
-              "test/update-about-flow.test.js",
-              "test/figma-update-client.test.ts",
-              "test/update-page-preparation.test.ts",
-              "test/update-restart-preparation.test.ts",
-              "test/skill-command-menu.test.ts",
-              "test/skill-command-patch.test.js",
-              "test/slash-menu-expanded.test.js",
-              "test/skill-presentation.test.js",
-              "test/integration-english-ui.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 test/update-manager.test.ts test/update-freshness.test.ts test/update-install-lifecycle.test.ts test/sidebar-update-control.test.ts test/update-state.test.ts test/update-ui.test.ts test/update-notification-store.test.ts test/update-check-error-routing.test.ts test/local-update-manager.test.ts test/local-update-download.test.ts test/settings-about.test.ts test/figma-update-layout.test.ts test/update-error-stage.test.ts test/update-background-flow.test.ts test/update-background-ui.test.ts test/update-about-flow.test.js test/figma-update-client.test.ts test/update-page-preparation.test.ts test/update-restart-preparation.test.ts test/skill-command-menu.test.ts test/skill-command-patch.test.js test/slash-menu-expanded.test.js test/skill-presentation.test.js test/integration-english-ui.test.ts",
-            "verifiedCommit": "eab2018259f99034e4287c9c718027569d57a74b",
-            "completedAt": "2026-10-16T02:54:01.618Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-16T02:54:01.618Z"
+        "generatedAt": "2026-10-16T03:31:29.798123+00:00"
       }
     }
   ],
