@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { mountHomeThemes } from '../src/preload/home-themes'
 
 const STORAGE_KEY = 'ework.home-background.v1'
-const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'abramovdesign', 'crt-warp', 'pattern-waves', 'gradient-ascii', 'dither', 'faulty-terminal', 'liquid-chrome']
+const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither']
 const fixtures: Array<{ dispose(): void; win: Window }> = []
 
 function fixture({ reducedMotion = false, initial = undefined as string | undefined, storageBlocked = false } = {}) {
@@ -99,13 +99,13 @@ afterEach(async () => {
 })
 
 describe('home background theme controller', () => {
-  it('migrates the removed EmreTuran selection and includes all six approved React Bits themes', () => {
-    const f = fixture({ initial: 'emreturan' })
+  it.each(['emreturan', 'abramovdesign', 'pattern-waves', 'gradient-ascii', 'faulty-terminal', 'liquid-chrome'])('migrates removed theme %s and retains the approved choices', removed => {
+    const f = fixture({ initial: removed })
     f.mount()
     expect(f.current()!.dataset.homeThemeId).toBe('default')
-    expect(f.cards().some(card => card.dataset.homeThemeId === 'emreturan')).toBe(false)
+    expect(f.cards().some(card => card.dataset.homeThemeId === removed)).toBe(false)
     expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('default')
-    for (const id of ['crt-warp', 'pattern-waves', 'gradient-ascii', 'dither', 'faulty-terminal', 'liquid-chrome']) {
+    for (const id of ['crt-warp', 'dither']) {
       const card = f.cards().find(card => card.dataset.homeThemeId === id)!
       expect(card).toBeDefined()
     }
@@ -127,19 +127,15 @@ describe('home background theme controller', () => {
   })
 
   it('loads thumbnails only when cards enter the visible strip, using the current color mode', async () => {
-    const f = fixture({ initial: 'dither' })
+    const f = fixture({ initial: 'default' })
     f.mount()
     const image = (id: string) => f.cards().find(card => card.dataset.homeThemeId === id)!.style.getPropertyValue('--theme-thumbnail')
-    expect(image('dither')).toContain('data:image/jpeg')
     const lightDither = image('dither')
+    expect(lightDither).toContain('data:image/jpeg')
     expect(image('crt-warp')).toBe('')
     f.win.document.body.setAttribute('data-ds-dark-theme', '')
     await f.settle()
     expect(image('dither')).not.toBe(lightDither)
-    f.current()!.dispatchEvent(new f.win.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }) as unknown as Event)
-    await f.settle()
-    expect(image('pattern-waves')).toContain('data:image/jpeg')
-    expect(image('crt-warp')).toBe('')
     f.current()!.dispatchEvent(new f.win.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }) as unknown as Event)
     await f.settle()
     expect(image('crt-warp')).toContain('data:image/jpeg')
@@ -189,13 +185,13 @@ describe('home background theme controller', () => {
     }
     f.click('previous')
     await f.settle()
-    check('liquid-chrome')
+    check('dither')
     f.click('current')
     await f.settle()
-    check('liquid-chrome')
+    check('dither')
   })
 
-  it('navigates and restores all nineteen themes with keyboard wrap and Home/End', async () => {
+  it('navigates and restores all fourteen themes with keyboard wrap and Home/End', async () => {
     const f = fixture({ initial: 'boz' })
     f.mount()
     expect(f.current()!.dataset.homeThemeId).toBe('boz')
@@ -204,11 +200,11 @@ describe('home background theme controller', () => {
       await f.settle()
     }
     await key('End')
-    expect(f.current()!.dataset.homeThemeId).toBe('liquid-chrome')
+    expect(f.current()!.dataset.homeThemeId).toBe('dither')
     await key('ArrowRight')
     expect(f.current()!.dataset.homeThemeId).toBe('default')
     await key('ArrowLeft')
-    expect(f.current()!.dataset.homeThemeId).toBe('liquid-chrome')
+    expect(f.current()!.dataset.homeThemeId).toBe('dither')
     await key('Home')
     expect(f.current()!.dataset.homeThemeId).toBe('default')
     for (const id of THEME_IDS.slice(1)) {

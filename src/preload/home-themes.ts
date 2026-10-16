@@ -6,9 +6,9 @@ import { REACT_BITS_PREVIEWS } from './home-reactbits-previews'
 import defaultLight from './home-theme-assets/default-light.png?inline'
 import defaultDark from './home-theme-assets/default-dark.png?inline'
 
-const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'abramovdesign', 'crt-warp', 'pattern-waves', 'gradient-ascii', 'dither', 'faulty-terminal', 'liquid-chrome'] as const
+const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither'] as const
 type Theme = typeof THEMES[number]
-const LABELS: Record<Theme, string> = { default: '默认', berber: 'Berber', vghodki: 'Vghodki', jarrick: 'Jarrick', lowfreez: 'Lowfreez', accelbia: 'Accelbia', boz: 'Boz', shashidhar: 'Shashidhar', haseeb: 'Haseeb', kirian: 'Kirian', splines: 'Splines', antiquue: 'Antiquue', abramovdesign: 'AbramovDesign', 'crt-warp': 'CRT Warp', 'pattern-waves': 'Pattern Waves', 'gradient-ascii': 'Gradient ASCII', dither: 'Dither', 'faulty-terminal': 'Faulty Terminal', 'liquid-chrome': 'Liquid Chrome' }
+const LABELS: Record<Theme, string> = { 'default': '默认', 'berber': 'Berber', 'vghodki': 'Vghodki', 'jarrick': 'Jarrick', 'lowfreez': 'Lowfreez', 'accelbia': 'Accelbia', 'boz': 'Boz', 'shashidhar': 'Shashidhar', 'haseeb': 'Haseeb', 'kirian': 'Kirian', 'splines': 'Splines', 'antiquue': 'Antiquue', 'crt-warp': 'CRT Warp', 'dither': 'Dither' }
 const STORAGE_KEY = 'ework.home-background.v1'
 const mounted = new WeakMap<Document, () => void>()
 const validTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)
@@ -22,7 +22,7 @@ export function mountHomeThemes(doc: Document = document): () => void {
   if (!win) return () => {}
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
   let selected: Theme = 'default'
-  try { const stored = win.localStorage.getItem(STORAGE_KEY); if (validTheme(stored)) selected = stored; else if (stored === 'emreturan') win.localStorage.setItem(STORAGE_KEY, 'default') } catch { /* Private storage may be unavailable. */ }
+  try { const stored = win.localStorage.getItem(STORAGE_KEY); if (validTheme(stored)) selected = stored; else if (['emreturan', 'abramovdesign', 'pattern-waves', 'gradient-ascii', 'faulty-terminal', 'liquid-chrome'].includes(stored ?? '')) win.localStorage.setItem(STORAGE_KEY, 'default') } catch { /* Private storage may be unavailable. */ }
   let host: HTMLElement | null = null, background: HTMLElement | null = null, dock: HTMLElement | null = null
   let surface: Surface | null = null, visible = false, dark = doc.body.hasAttribute('data-ds-dark-theme')
   let disposed = false, frame = 0, previous = 0, elapsed = 0, generation = 0, cleanupTimer = 0
