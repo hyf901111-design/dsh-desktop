@@ -204,7 +204,7 @@ body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_composerHe
   transform:translateY(-2px);
 }
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_folder { width:16px; height:16px; }
-.wSkVaW_root[data-odyssey-page="home"] .pXSMma_chevron { width:12px; height:12px; margin-left:-1px; }
+.wSkVaW_root[data-odyssey-page="home"] .pXSMma_chevron { width:12px; height:12px; margin-left:-1px; color:inherit; }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroWorkspaceRow .cubgiG_seat {
   box-sizing:border-box;
   height:24px;

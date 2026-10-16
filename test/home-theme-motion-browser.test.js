@@ -12,7 +12,8 @@ beforeAll(async () => {
   const native = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
   const base = [...native.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1])).join('\n')
   const composer = [...native.matchAll(/tag\.textContent (?:\+?=) ("(?:[^"\\]|\\.)*")/g)].map(match => JSON.parse(match[1])).filter(value => value.includes('[data-center-composer-host]')).join('\n')
-  css = base + '\n' + composer
+  const palette = await readFile('node_modules/@deepseek-ai/dsh-client-ui-theme/lib/styles/design-platform.css', 'utf8')
+  css = palette + '\n' + base + '\n' + composer
   const require = createRequire(import.meta.url)
   const output = await build({
     stdin: { resolveDir: process.cwd(), loader: 'ts', contents: `
@@ -55,7 +56,7 @@ async function fixture({ dark = false, reduced = false, theme = 'default', width
       <header class="wSkVaW_header"><span>新对话</span><button>对话</button><button>研究</button><button>笔记</button></header>
       <div class="wSkVaW_scrollBody"></div><div data-center-composer-host><div data-composer-portal-host><div class="wSkVaW_composerStack wSkVaW_composerSeat wSkVaW_composerHero">
         <div class="pXSMma_root"><div class="pXSMma_stack"><div class="pXSMma_headline">你想做什么？</div></div></div>
-        <div class="wSkVaW_heroWorkspaceRow"><button class="pXSMma_workspace">选择工作区</button><button class="cubgiG_seat">标准模式</button></div>
+        <div class="wSkVaW_heroWorkspaceRow"><button class="pXSMma_workspace" aria-label="选择工作区" aria-haspopup="menu" aria-expanded="false"><svg class="pXSMma_folder" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h4l1.5 2H14l-2 7H2V4Z" stroke="currentColor" stroke-linejoin="round"/></svg><span class="pXSMma_workspaceLabel">test06</span><svg class="pXSMma_chevron" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="m4 5.5 3 3 3-3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="cubgiG_seat">标准模式</button></div>
         <div class="uV2eYG_root uV2eYG_hero"><div class="uV2eYG_card"><div class="uV2eYG_scroll"><div class="uV2eYG_grow"><textarea class="uV2eYG_input" aria-label="发送消息" placeholder="向智能体发送消息"></textarea><div class="uV2eYG_mirror"></div></div></div><div class="uV2eYG_row"><div class="uV2eYG_tools"><button class="uV2eYG_add">+</button><button>工具</button></div><button class="uV2eYG_primary" aria-label="发送">↑</button></div></div></div>
       </div></div></div>
     </section></main></div></div></body>` }))
@@ -81,6 +82,25 @@ const summary = buffer => {
 }
 
 describe('real homepage theme motion and interaction', () => {
+  for (const theme of ['default', 'jarrick']) for (const dark of [false, true]) it(`matches the workspace chevron to its label and folder in ${theme} ${dark ? 'dark' : 'light'}`, async () => {
+    const page = await fixture({ theme, dark, reduced: true })
+    try {
+      const appearance = await page.locator('.pXSMma_workspace').evaluate(button => {
+        const arrow = button.querySelector('.pXSMma_chevron'), bounds = arrow.getBoundingClientRect()
+        return {
+          arrow: getComputedStyle(arrow).color,
+          label: getComputedStyle(button.querySelector('.pXSMma_workspaceLabel')).color,
+          folder: getComputedStyle(button.querySelector('.pXSMma_folder')).color,
+          width: bounds.width, height: bounds.height,
+        }
+      })
+      expect(appearance.arrow).toBe(appearance.label)
+      expect(appearance.arrow).toBe(appearance.folder)
+      expect(appearance.width).toBe(12)
+      expect(appearance.height).toBe(12)
+    } finally { await page.close() }
+  })
+
   it('stagger-pops three cards, re-enters from notes/settings, and leaves ordinary DOM edits alone', async () => {
     const page = await fixture()
     try {
