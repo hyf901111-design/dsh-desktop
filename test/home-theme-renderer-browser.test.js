@@ -32,14 +32,14 @@ async function fixture() {
 }
 
 describe('original theme shaders in real WebGL2', () => {
-  it('renders all twelve OpenShaders designs in light and dark with distinct textures and moving fields', async () => {
+  it('renders all eleven OpenShaders designs in light and dark with distinct textures and moving fields', async () => {
     const page = await fixture(), errors = []
     page.on('pageerror', error => errors.push(error.message))
     try {
       const result = await page.evaluate(() => {
         document.body.style.cssText = 'margin:0;background:#888;font:15px system-ui'
         document.querySelector('main').style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px'
-        const names = ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'abramovdesign'], result = []
+        const names = ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue'], result = []
         const stats = (gl, canvas) => {
           const bytes = new Uint8Array(canvas.width * canvas.height * 4)
           gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, bytes)
@@ -74,31 +74,31 @@ describe('original theme shaders in real WebGL2', () => {
         return result
       })
       expect(errors).toEqual([])
-      expect(result).toHaveLength(24)
+      expect(result).toHaveLength(22)
       for (const entry of result) {
         expect(entry.max - entry.min).toBeGreaterThan(25)
         expect(entry.changedFraction).toBeGreaterThan(.04)
         expect(entry.afterDispose).toBe(false)
       }
-      for (const name of ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'abramovdesign']) {
+      for (const name of ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue']) {
         const dark = result.find(entry => entry.name === name && entry.dark), light = result.find(entry => entry.name === name && !entry.dark)
         expect(light.luminance - dark.luminance).toBeGreaterThan(50)
       }
-      expect(new Set(result.filter(entry => entry.dark).map(entry => entry.hash)).size).toBe(12)
+      expect(new Set(result.filter(entry => entry.dark).map(entry => entry.hash)).size).toBe(11)
       await page.screenshot({ path: join(evidence, 'all-themes.png'), fullPage: true })
       await writeFile(join(evidence, 'render-results.json'), JSON.stringify(result, null, 2))
       console.log('Theme render evidence:', evidence)
     } finally { await page.close() }
   }, 90000)
 
-  it('renders the six original React Bits effects in both modes with real motion', async () => {
+  it('renders the retained original React Bits effects in both modes with real motion', async () => {
     const page = await fixture(), errors = []
     page.on('pageerror', error => errors.push(error.message))
     try {
       const result = await page.evaluate(() => {
         document.body.style.cssText = 'margin:0;background:#888;font:15px system-ui'
         document.querySelector('main').style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px'
-        const names = ['crt-warp', 'pattern-waves', 'gradient-ascii', 'dither', 'faulty-terminal', 'liquid-chrome'], results = []
+        const names = ['crt-warp', 'dither'], results = []
         const sample = (gl, canvas) => {
           const bytes = new Uint8Array(canvas.width * canvas.height * 4)
           gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, bytes)
@@ -131,7 +131,7 @@ describe('original theme shaders in real WebGL2', () => {
         }
         return results
       })
-      expect(result).toHaveLength(12)
+      expect(result).toHaveLength(4)
       expect(errors).toEqual([])
       for (const item of result) {
         expect(item.spread, item.name).toBeGreaterThan(15)
@@ -140,7 +140,7 @@ describe('original theme shaders in real WebGL2', () => {
         expect(item.afterDispose).toBe(false)
         expect(item.released).toBe(true)
       }
-      expect(new Set(result.filter(item => item.dark).map(item => item.hash)).size).toBe(6)
+      expect(new Set(result.filter(item => item.dark).map(item => item.hash)).size).toBe(2)
       await page.screenshot({ path: join(evidence, 'react-bits-themes.png'), fullPage: true })
       await writeFile(join(evidence, 'react-bits-results.json'), JSON.stringify(result, null, 2))
       console.log('React Bits render evidence:', evidence)
@@ -230,7 +230,7 @@ describe('original theme shaders in real WebGL2', () => {
         const first = active.render(0), losses = []
         for (let i = 0; i < 25; i++) {
           const canvas = document.createElement('canvas')
-          const renderer = window.createTheme(canvas, ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'abramovdesign'][i % 12], { dark: i % 2 === 0 })
+          const renderer = window.createTheme(canvas, ['berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue'][i % 11], { dark: i % 2 === 0 })
           if (!renderer) throw new Error('Renderer creation failed at switch ' + i)
           renderer.resize(80, 48)
           if (!renderer.render(i / 24)) throw new Error('Renderer failed at switch ' + i)

@@ -61,17 +61,18 @@ body [data-ework-grid][data-workbench-style=light], [data-financial-theme=light]
  body [data-ework-grid] [data-research-node-id]:has([data-financial-widget]) :is(.rScV5Q_containerContent,.rScV5Q_generatedContainer){height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;gap:0!important}
  body [data-ework-grid] [data-research-node-id]:has([data-financial-widget]) .ew-grid-header{background:var(--fw-card)!important;color:var(--fw-text)!important;font:700 12px/16px 'Noto Sans SC',Inter,system-ui!important}
  body .ew-financial-widget{position:relative;display:flex!important;flex-direction:column!important;height:100%;min-height:0;min-width:0;box-sizing:border-box;padding:0 10px!important;color:var(--fw-text)!important;background:var(--fw-card)!important;font:400 12px/16px Inter,'Noto Sans SC',system-ui!important;container-type:size;container-name:financial-widget}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget :is(button,input,select),body [data-ework-grid] .ew-financial-header-selector :is(button,input){font:400 12px/16px Inter,'Noto Sans SC',system-ui!important;box-sizing:border-box!important;min-width:0!important;color:var(--fw-text)!important;height:24px!important;min-height:24px!important;border-radius:4px!important;box-shadow:none!important}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget button{border:0!important;background:transparent!important;padding:3px 6px!important;cursor:pointer;color:var(--fw-muted)!important}
+ /* The same FinancialWidget is portalled into note blocks outside the grid. */
+ body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget :is(button,input,select),body [data-ework-grid] .ew-financial-header-selector :is(button,input){font:400 12px/16px Inter,'Noto Sans SC',system-ui!important;box-sizing:border-box!important;min-width:0!important;color:var(--fw-text)!important;height:24px!important;min-height:24px!important;border-radius:4px!important;box-shadow:none!important}
+ body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget button{border:0!important;background:transparent!important;padding:3px 6px!important;cursor:pointer;color:var(--fw-muted)!important}
  body .ew-financial-widget button:hover{background:var(--fw-control)!important}
  body .ew-financial-widget :is(button,input,select):focus-visible,body .ew-financial-header-selector :is(input,button):focus-visible{outline:1px solid var(--fw-accent)!important;outline-offset:-1px!important}
  body .ew-financial-widget button:disabled{opacity:.4;cursor:default}
- body [data-ework-grid] [data-research-node-id] .ew-financial-widget select{appearance:none!important;border:0!important;background:transparent!important;color:var(--fw-muted)!important;padding:0 16px 0 4px!important;cursor:pointer;background-image:var(--fw-chevron)!important;background-repeat:no-repeat!important;background-position:right center!important}
+ body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget select{appearance:none!important;border:0!important;background:transparent!important;color:var(--fw-muted)!important;padding:0 16px 0 4px!important;cursor:pointer;background-image:var(--fw-chevron)!important;background-repeat:no-repeat!important;background-size:12px 12px!important;background-position:right center!important}
  body .ew-watch-meta{display:flex;align-items:center;gap:12px;height:40px;flex:none;padding:0 6px}
  body .ew-watch-meta>span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- body .ew-watch-meta select{width:74px!important;flex:none;font:400 12px/16px 'Noto Sans SC',Inter,system-ui!important}
- html[data-odyssey-locale=en] body .ew-watch-meta select{width:96px!important}
- body .ew-watch-meta>button{display:grid;place-items:center;width:24px!important;height:24px!important;padding:0!important;flex:none}
+ body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-watch-meta select{padding:0 24px 0 6px!important;background-position:right 4px center!important;width:84px!important;flex:none;font:400 12px/16px 'Noto Sans SC',Inter,system-ui!important}
+ html[data-odyssey-locale=en] body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-watch-meta select{width:104px!important}
+ body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-watch-meta>button{display:grid;place-items:center;width:24px!important;height:24px!important;padding:0!important;flex:none}
  body .ew-watch-table{display:flex;flex-direction:column;flex:1;min-height:0;overflow-x:auto;overscroll-behavior:contain;scrollbar-width:thin}
  body .ew-watch-table>:is(.ew-watch-columns,.ew-watch-rows){min-width:0}
  body .ew-watch-columns,body .ew-watch-row{display:grid;grid-template-columns:minmax(110px,1fr) 78px 78px;align-items:center;column-gap:0;padding:0}
@@ -292,6 +293,11 @@ body .ew-financial-port[aria-pressed=true]>span{background:var(--fw-accent)}
   body .ew-watch-meta{height:40px;gap:12px}
   body .ew-watch-columns{height:32px;font-size:12px}
   body .ew-financial-watchlist .ew-financial-footer{height:24px;font-size:11px!important}
+ }
+ @container financial-widget (max-width:200px){
+  body .ew-watch-meta{gap:8px;padding-inline:0}
+  body .ew-watch-meta>span{display:none}
+  body .ew-watch-meta select{margin-left:auto}
  }
 }
 /* Keep the overlay out of canvas flex layout and shared card button rules. */
