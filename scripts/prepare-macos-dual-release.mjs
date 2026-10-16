@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
-import { access, copyFile, mkdir, readFile, rm } from 'node:fs/promises'
+import { copyFile, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, rmdir, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parse } from 'yaml'
+import { parse, stringify } from 'yaml'
+import { normalizeZipTimestamps } from './lib/normalize-zip-timestamps.mjs'
 
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const require = createRequire(import.meta.url)
+const { buildBlockMap } = require('app-builder-lib/out/targets/blockmap/blockmap')
 
 export async function prepareMacosDualRelease(options) {
   const architecture = options.architecture ?? 'arm64'
@@ -27,26 +30,6 @@ export async function prepareMacosDualRelease(options) {
   const legacyZip = `sherlock-mac-${architecture}-legacy.zip`
   const notarizedZip = `sherlock-mac-${architecture}.zip`
   const notarizedDmg = `sherlock-mac-${architecture}.dmg`
-  const copies = [
-    [path.join(legacyDirectory, legacyZip), path.join(outputDirectory, legacyZip)],
-    [
-      path.join(legacyDirectory, `${legacyZip}.blockmap`),
-      path.join(outputDirectory, `${legacyZip}.blockmap`)
-    ],
-    [path.join(notarizedDirectory, notarizedZip), path.join(outputDirectory, notarizedZip)],
-    [
-      path.join(notarizedDirectory, `${notarizedZip}.blockmap`),
-      path.join(outputDirectory, `${notarizedZip}.blockmap`)
-    ],
-    [path.join(notarizedDirectory, notarizedDmg), path.join(outputDirectory, notarizedDmg)],
-    [path.join(legacyDirectory, 'latest-mac.yml'), path.join(outputDirectory, 'latest-mac.yml')],
-    [
-      path.join(notarizedDirectory, 'latest-mac.yml'),
-      path.join(outputDirectory, 'latest-mac-notarized.yml')
-    ]
-  ]
-
-  await Promise.all(copies.map(([source]) => access(source)))
   const [legacyMetadata, notarizedMetadata] = await Promise.all([
     readFile(path.join(legacyDirectory, 'latest-mac.yml'), 'utf8').then(parse),
     readFile(path.join(notarizedDirectory, 'latest-mac.yml'), 'utf8').then(parse)
@@ -54,10 +37,65 @@ export async function prepareMacosDualRelease(options) {
   validateMetadata(legacyMetadata, version, legacyZip, 'legacy')
   validateMetadata(notarizedMetadata, version, notarizedZip, 'notarized')
 
-  await rm(outputDirectory, { recursive: true, force: true })
-  await mkdir(outputDirectory, { recursive: true })
-  await Promise.all(copies.map(([source, destination]) => copyFile(source, destination)))
-  return copies.map(([, destination]) => destination)
+  const parent = path.dirname(outputDirectory)
+  await mkdir(parent, { recursive: true })
+  const resolvedOutput = path.join(await realpath(parent), 'dist-release')
+  for (const directory of [legacyDirectory, notarizedDirectory]) {
+    const source = await realpath(directory)
+    if (source === resolvedOutput || source.startsWith(`${resolvedOutput}${path.sep}`)) {
+      throw new Error('Release output must not contain its source artifacts.')
+    }
+  }
+  const existing = await lstat(outputDirectory).catch(error => {
+    if (error.code !== 'ENOENT') throw error
+    return null
+  })
+  if (existing && (!existing.isDirectory() || existing.isSymbolicLink())) {
+    throw new Error('Release output must be a real directory.')
+  }
+  const stage = await mkdtemp(path.join(parent, '.dist-release-stage-'))
+  let backup
+  try {
+    await copyFile(path.join(notarizedDirectory, notarizedDmg), path.join(stage, notarizedDmg))
+    for (const [directory, archive, metadata, metadataName] of [
+      [legacyDirectory, legacyZip, legacyMetadata, 'latest-mac.yml'],
+      [notarizedDirectory, notarizedZip, notarizedMetadata, 'latest-mac-notarized.yml']
+    ]) {
+      const zip = path.join(stage, archive)
+      await copyFile(path.join(directory, archive), zip)
+      await normalizeZipTimestamps(zip)
+      // Hash and blockmap must describe the final bytes, not builder's original ZIP.
+      const updateInfo = await buildBlockMap(zip, 'gzip', `${zip}.blockmap`)
+      const entry = metadata.files.find(file => file.url === archive)
+      entry.size = updateInfo.size
+      entry.sha512 = updateInfo.sha512
+      // macOS ZIP uses an external blockmap, never an embedded map size.
+      delete entry.blockMapSize
+      metadata.path = archive
+      metadata.sha512 = updateInfo.sha512
+      delete metadata.blockMapSize
+      await writeFile(path.join(stage, metadataName), stringify(metadata), 'utf8')
+    }
+    // Stage both channels completely before exposing any new release metadata.
+    // An existing complete release stays available if normalization/hashing fails.
+    if (existing) {
+      backup = await mkdtemp(path.join(parent, '.dist-release-backup-'))
+      await rename(outputDirectory, path.join(backup, 'previous'))
+    }
+    try {
+      await rename(stage, outputDirectory)
+    } catch (error) {
+      if (backup) await rename(path.join(backup, 'previous'), outputDirectory)
+      throw error
+    }
+    if (backup) await rm(backup, { recursive: true, force: true })
+    return [legacyZip, `${legacyZip}.blockmap`, notarizedZip, `${notarizedZip}.blockmap`, notarizedDmg, 'latest-mac.yml', 'latest-mac-notarized.yml']
+      .map(name => path.join(outputDirectory, name))
+  } finally {
+    await rm(stage, { recursive: true, force: true })
+    // Remove an empty backup after rollback; never discard a failed restore.
+    if (backup) await rmdir(backup).catch(() => {})
+  }
 }
 
 function validateMetadata(metadata, version, expectedZip, channel) {
