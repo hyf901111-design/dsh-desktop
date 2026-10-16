@@ -121,6 +121,9 @@ body:has(.VOzbGW_overlay:not([hidden])) .pI_x6G_frame,
 body:has(.VOzbGW_overlay:not([hidden])) .pI_x6G_frame :not(.VOzbGW_overlay,.VOzbGW_overlay *){visibility:hidden!important}
 .VOzbGW_overlay{visibility:visible}
 [data-settings-background-portal]{visibility:hidden!important;pointer-events:none!important}
+/* Native sidebar handles and resize feedback are body portals outside the
+   concealed frame. They must not receive gestures above the Settings surface. */
+body:has(.VOzbGW_overlay:not([hidden])) :is(.pI_x6G_handle,.t8lSSG_panelResize,[data-odyssey-resize-feedback]){display:none!important;pointer-events:none!important}
 /* Research toolbars and their menus are portaled outside the background frame. */
 body:has(.VOzbGW_overlay:not([hidden])) [data-ework-toolbar-owner],
 body:has(.VOzbGW_overlay:not([hidden])) [data-ework-toolbar-owner] *{visibility:hidden!important;pointer-events:none!important}

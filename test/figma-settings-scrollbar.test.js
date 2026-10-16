@@ -9,10 +9,60 @@ const css = ['figma-settings.css', 'figma-refinements.css'].map(n => readFileSyn
 const settingsBundle = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js', 'utf8')
 const nativeSettingsCss = JSON.parse(settingsBundle.match(/const css\$3 = ("(?:[^"\\]|\\.)*");/)[1])
 const accountCss = readFileSync('src/preload/research-board-dialogs.ts','utf8').match(/\[data-sidebar-collapsed=true\] \.srb-account-controls \.sherlock-account-button\{[^}]+\}/)[0]
+const shellCss = ['figma-final-shell.css','figma-panels.css'].map(n=>readFileSync(`src/preload/${n}`,'utf8')).join('\n')
 beforeAll(async () => {
   script = (await build({ stdin: { resolveDir: process.cwd(), contents: `import {mountFigmaScrollbars} from './src/preload/figma-scrollbars'; window.disposeBars=mountFigmaScrollbars(document,true);` }, bundle: true, platform: 'browser', format: 'iife', write: false })).outputFiles[0].text
   const mod = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
   browser = await (mod.default ?? mod).chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
+})
+for (const dark of [false,true]) it(`blocks portaled resize handles and feedback while Settings is open in ${dark?'dark':'light'} theme, then restores resizing`,async()=>{
+  const page=await browser.newPage({viewport:{width:1380,height:900}})
+  try {
+    await page.setContent(`<style>
+      body{margin:0}*{box-sizing:border-box}[hidden]{display:none!important}
+      .pI_x6G_frame{position:relative;height:100vh}
+      .pI_x6G_sidebarCol{width:280px;height:100%}
+      .VOzbGW_overlay{position:fixed;inset:0;display:flex}.VOzbGW_panel{display:flex}
+      .VOzbGW_nav{display:flex;flex-direction:column}.VOzbGW_content{flex:1}
+      .pI_x6G_handle{position:fixed;left:280px;top:0;bottom:0}
+      .t8lSSG_panelResize{position:fixed;left:960px;top:0;bottom:0;width:12px;z-index:89}
+      ${shellCss} ${css} ${scheduledStyles}
+    </style><body ${dark?'data-ds-dark-theme':''}>
+      <div class="pI_x6G_frame"><aside class="pI_x6G_sidebarCol"><footer><div class="VOzbGW_overlay">
+        <section class="VOzbGW_panel"><nav class="VOzbGW_nav"><button class="sherlock-settings-back">返回应用</button></nav>
+        <main class="VOzbGW_content"><div class="VOzbGW_options" style="height:100%;overflow:auto"><h1>通用设置</h1><div style="height:1600px">界面设置</div></div></main></section>
+      </div></footer></aside></div>
+      <div class="pI_x6G_handle" data-side="sidebar"></div><div class="t8lSSG_panelResize"></div>
+      <div data-odyssey-resize-feedback="sidebar" style="left:280px;height:900px"><div data-odyssey-resize-grip></div></div>
+    </body>`)
+    await page.evaluate(()=>{
+      window.resizeStarts=0
+      const handle=document.querySelector('.pI_x6G_handle'),sidebar=document.querySelector('.pI_x6G_sidebarCol')
+      let origin,width
+      handle.addEventListener('pointerdown',e=>{window.resizeStarts++;origin=e.clientX;width=sidebar.getBoundingClientRect().width;handle.setPointerCapture(e.pointerId)})
+      handle.addEventListener('pointermove',e=>{if(e.buttons&&handle.hasPointerCapture(e.pointerId))sidebar.style.width=`${width+e.clientX-origin}px`})
+    })
+    // The handle lives outside the frame that Settings already conceals.
+    // Hit-testing and a real mouse drag must belong to Settings instead.
+    expect(await page.locator('.pI_x6G_handle').isVisible()).toBe(false)
+    expect(await page.locator('.t8lSSG_panelResize').isVisible()).toBe(false)
+    expect(await page.locator('[data-odyssey-resize-feedback]').isVisible()).toBe(false)
+    expect(await page.evaluate(()=>!!document.elementFromPoint(280,450)?.closest('.VOzbGW_overlay'))).toBe(true)
+    await page.mouse.move(280,450);await page.mouse.down();await page.mouse.move(360,450,{steps:5});await page.mouse.up()
+    expect(await page.evaluate(()=>window.resizeStarts)).toBe(0)
+    expect(await page.locator('.pI_x6G_sidebarCol').evaluate(el=>el.getBoundingClientRect().width)).toBe(280)
+    await page.mouse.move(600,450);await page.mouse.wheel(0,400)
+    await expect.poll(()=>page.locator('.VOzbGW_options').evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
+    await page.locator('.VOzbGW_overlay').evaluate(el=>el.hidden=true)
+    expect(await page.locator('.pI_x6G_handle').isVisible()).toBe(true)
+    await page.mouse.move(280,450);await page.mouse.down();await page.mouse.move(340,450,{steps:5});await page.mouse.up()
+    expect(await page.evaluate(()=>window.resizeStarts)).toBe(1)
+    expect(await page.locator('.pI_x6G_sidebarCol').evaluate(el=>el.getBoundingClientRect().width)).toBe(340)
+    await page.locator('.VOzbGW_overlay').evaluate(el=>el.hidden=false)
+    expect(await page.locator('.pI_x6G_handle').isVisible()).toBe(false)
+    await page.locator('.VOzbGW_overlay').evaluate(el=>el.remove())
+    expect(await page.locator('.pI_x6G_handle').isVisible()).toBe(true)
+  } finally {await page.close()}
 })
 afterAll(async () => { await browser?.close() })
 async function open(width, settings = true, collapsed = width <= 1025) {
