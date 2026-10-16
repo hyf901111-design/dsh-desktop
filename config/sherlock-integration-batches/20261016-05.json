@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261016-05",
+  "branch": "codex/integration/20261016-05",
+  "baseMainCommit": "b0537d1e7b356de297bf254740feacf0b0111dca",
+  "expectedMainCommit": "b0537d1e7b356de297bf254740feacf0b0111dca",
+  "createdAt": "2026-10-16T07:36:33.350Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "统一输入斜杠与按钮命令列表",
+        "branch": "codex/feat/scrollbar-update-polish-20261016",
+        "baseCommit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+        "tipCommit": "2bb9ff767388d3d6916444c9b972ebdee31d689f",
+        "commits": [
+          {
+            "commit": "2bb9ff767388d3d6916444c9b972ebdee31d689f",
+            "parents": [
+              "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b"
+            ],
+            "subject": "修复：输入斜杠与命令按钮共用列表并收起具体技能"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/releases/sherlock-1.3.3.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/command-menu-selection.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/skill-command-patch.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查、23项菜单及2项日志检查通过；先红后绿证明直接输入/不再平铺技能。证据/tmp/ework-typed-slash-*.log。",
+            "verifiedCommit": "2bb9ff767388d3d6916444c9b972ebdee31d689f",
+            "completedAt": "2026-10-16T07:36:22.619200+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查、23项菜单及2项日志检查通过；先红后绿证明直接输入/不再平铺技能。证据/tmp/ework-typed-slash-*.log。",
+            "verifiedCommit": "2bb9ff767388d3d6916444c9b972ebdee31d689f",
+            "completedAt": "2026-10-16T07:36:22.619200+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/slash-menu-expanded.test.js",
+              "test/skill-command-patch.test.js",
+              "test/skill-command-menu.test.ts",
+              "test/slash-menu-locale.test.ts",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查、23项菜单及2项日志检查通过；先红后绿证明直接输入/不再平铺技能。证据/tmp/ework-typed-slash-*.log。",
+            "verifiedCommit": "2bb9ff767388d3d6916444c9b972ebdee31d689f",
+            "completedAt": "2026-10-16T07:36:22.619200+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原生控制器验证按钮和输入/的命令列表一致、query编辑与@保持可用；真实Chromium菜单交互聚焦检查通过。最终签名包继续客户端可见验收。"
+        },
+        "acceptanceCriteria": [
+          "输入/和命令按钮只显示同一命令列表，不平铺具体技能",
+          "保留技能入口独立选择及@引用",
+          "1.3.3最终包可见验证后继续已授权发布"
+        ],
+        "risks": [
+          "1.3.3尚未对外发布，必须重建全部产物后上传"
+        ],
+        "generatedAt": "2026-10-16T07:36:22.619200+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/slash-menu-expanded.test.js",
+        "test/skill-command-patch.test.js",
+        "test/skill-command-menu.test.ts",
+        "test/slash-menu-locale.test.ts",
+        "test/update-release-notes.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
