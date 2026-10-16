@@ -169,6 +169,9 @@ async function fixture(mount=false,desktop={}){
  // Load the serializer through Node so Vitest does not rewrite the functions it embeds.
  const source=require('../scripts/lib/research-grid-workbench.mjs').patchResearchGridWorkbench(patchDerivedPresetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
+ // Desktop preload supplies this stylesheet from the current checkout; the
+ // dependency bundle can still embed a previous build's shared color tokens.
+ const refinementStyle=document.createElement('style');refinementStyle.textContent=await readFile('src/preload/figma-refinements.css','utf8');document.head.append(refinementStyle)
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
  const bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake)
  const registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('grid-test'),host=document.createElement('div');document.body.append(host)
