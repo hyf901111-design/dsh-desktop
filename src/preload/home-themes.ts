@@ -5,24 +5,49 @@ import { isReactBitsTheme } from './home-reactbits-renderer'
 import { REACT_BITS_PREVIEWS } from './home-reactbits-previews'
 import defaultLight from './home-theme-assets/default-light.png?inline'
 import defaultDark from './home-theme-assets/default-dark.png?inline'
+import { HOME_THEMES as THEMES, HOME_THEME_STORAGE_KEY as STORAGE_KEY, isHomeTheme as validTheme, normalizeHomeTheme, type HomeTheme as Theme, type HomeThemePreferences } from '../shared/home-themes'
 
-const THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither'] as const
-type Theme = typeof THEMES[number]
 const LABELS: Record<Theme, string> = { 'default': '默认', 'berber': 'Berber', 'vghodki': 'Vghodki', 'jarrick': 'Jarrick', 'lowfreez': 'Lowfreez', 'accelbia': 'Accelbia', 'boz': 'Boz', 'shashidhar': 'Shashidhar', 'haseeb': 'Haseeb', 'kirian': 'Kirian', 'splines': 'Splines', 'antiquue': 'Antiquue', 'crt-warp': 'CRT Warp', 'dither': 'Dither' }
-const STORAGE_KEY = 'ework.home-background.v1'
+const PENDING_STORAGE_KEY = `${STORAGE_KEY}.pending-native`
 const mounted = new WeakMap<Document, () => void>()
-const validTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme)
 type Surface = { canvas: HTMLCanvasElement; render(seconds: number, dark: boolean): boolean; resize(width: number, height: number): void; dispose(): void }
 
 /** One owner for homepage decoration; the native composer and appearance store stay native. */
-export function mountHomeThemes(doc: Document = document): () => void {
+export function mountHomeThemes(doc: Document = document, preferences?: HomeThemePreferences): () => void {
   const existing = mounted.get(doc)
   if (existing) return existing
   const win = doc.defaultView
   if (!win) return () => {}
   const reduced = win.matchMedia('(prefers-reduced-motion: reduce)')
-  let selected: Theme = 'default'
-  try { const stored = win.localStorage.getItem(STORAGE_KEY); if (validTheme(stored)) selected = stored; else if (['emreturan', 'abramovdesign', 'pattern-waves', 'gradient-ascii', 'faulty-terminal', 'liquid-chrome'].includes(stored ?? '')) win.localStorage.setItem(STORAGE_KEY, 'default') } catch { /* Private storage may be unavailable. */ }
+  let durable: Theme | null = null, legacy: Theme | null = null
+  try { durable = normalizeHomeTheme(preferences?.get()) } catch { /* Preview or unavailable desktop bridge. */ }
+  try { legacy = normalizeHomeTheme(win.localStorage.getItem(STORAGE_KEY)) } catch { /* Private storage may be unavailable. */ }
+  let pending: { theme: Theme; previous: Theme | null } | undefined
+  try {
+    const raw = win.localStorage.getItem(PENDING_STORAGE_KEY)
+    const value = raw && raw.length <= 256 ? JSON.parse(raw) : null
+    if (value && validTheme(value.theme) && (value.previous === null || validTheme(value.previous))) pending = value
+  } catch {}
+  const savePreference = (theme: Theme) => {
+    const previous = durable
+    let saved = false
+    try { saved = preferences?.set(theme) === true } catch {}
+    if (saved) durable = theme
+    try {
+      win.localStorage.setItem(STORAGE_KEY, theme)
+      if (preferences && !saved) win.localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify({ theme, previous }))
+      else win.localStorage.removeItem(PENDING_STORAGE_KEY)
+    } catch { /* Keep the visible choice when browser storage is unavailable. */ }
+  }
+  // An explicit failed write is newer than its original durable value, but an
+  // old page must not overwrite a choice successfully saved by another page.
+  const recoverPending = !!preferences && !!pending && (durable === null || durable === pending.previous)
+  let selected: Theme = recoverPending ? pending!.theme : durable ?? legacy ?? 'default'
+  if (recoverPending || (durable === null && legacy !== null)) savePreference(selected)
+  else if (durable !== null || legacy !== null) try {
+    win.localStorage.setItem(STORAGE_KEY, selected)
+    win.localStorage.removeItem(PENDING_STORAGE_KEY)
+  } catch {}
   let host: HTMLElement | null = null, background: HTMLElement | null = null, dock: HTMLElement | null = null
   let surface: Surface | null = null, visible = false, dark = doc.body.hasAttribute('data-ds-dark-theme')
   let disposed = false, frame = 0, previous = 0, elapsed = 0, generation = 0, cleanupTimer = 0
@@ -191,7 +216,7 @@ export function mountHomeThemes(doc: Document = document): () => void {
   const select = (id: Theme, persist = true) => {
     if (id === selected) return
     selected = id
-    if (persist) try { win.localStorage.setItem(STORAGE_KEY, id) } catch { /* Keep the in-memory selection. */ }
+    if (persist) savePreference(id)
     if (visible) { updateCards(); replaceSurface(true) }
   }
   const enter = () => {

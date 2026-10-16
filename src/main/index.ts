@@ -122,6 +122,7 @@ import {
   type LocalSearchRuntime
 } from './search/local-search-runtime'
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { registerHomeThemePreferences } from './home-theme-preferences'
 import { ResearchVoiceController, registerResearchVoiceHandlers } from './state/research-voice'
 import { ResearchCanvasClipboard, registerResearchClipboardHandlers } from './state/research-canvas-clipboard'
 import { CanvasActionBridge, registerCanvasActionHandlers } from './state/canvas-action-bridge'
@@ -735,6 +736,7 @@ let scheduledRunner: TaskRunner | undefined
 
 let flushResearchNativeWeb:(()=>Promise<void>)|undefined
 function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): void {
+  registerHomeThemePreferences(ipcMain, () => mainWindow, app.getPath('userData'))
   ipcMain.removeHandler('harness:restart')
   ipcMain.handle('harness:restart', async (event) => {
     assertTrustedMainWindowEvent(event, mainWindow)
