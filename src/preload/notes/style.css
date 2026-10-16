@@ -49,7 +49,7 @@ body:has(.VOzbGW_overlay:not([hidden])) [data-ework-notes-session]{visibility:hi
 
 .en-preview{background:var(--en-input)}
 
-.en-root,.en-root[data-dark=true]{--en-popup:var(--en-input)}.en-toc-popover,.en-root .bn-suggestion-menu{background:var(--en-input)!important}
+.en-root,.en-root[data-dark=true]{--en-popup:var(--en-input)}.en-toc-popover,.en-root .bn-suggestion-menu{background:var(--odyssey-menu,var(--en-input))!important}
 .en-block-menu{width:244px}.en-block-menu>button{display:flex;align-items:center;gap:9px}.en-block-types button{display:flex;align-items:center;gap:3px;padding:5px 4px}.en-menu-icon{flex:none;opacity:.75}
 .en-research{border:1px solid var(--en-border);border-radius:0;overflow:hidden;background:var(--en-component-bg,#fff)}.en-root[data-dark=true] .en-research{--en-component-bg:#131317}.en-research-header{height:48px;display:flex;align-items:center;gap:8px;padding:0 18px;color:var(--en-ink);font-size:13px}.en-research-header>svg{color:#c9833d}.en-research-header strong{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.en-research-header button{font-size:20px;width:26px;height:26px;padding:0;line-height:26px;border-radius:4px}.en-research iframe{background:var(--en-component-bg)}.en-research .en-source{min-height:32px;margin:0;padding:6px 12px;border-top:1px solid var(--en-border);font-size:11px}
 
@@ -205,3 +205,6 @@ body .en-root .en-research .ew-financial-search-line>button{display:grid;place-i
 .en-root .en-creation-draft .rScV5Q_containerDraftFooter button{flex:none;width:104px;height:32px;padding:0 8px;border-radius:4px;background:var(--en-ink);color:var(--en-bg);font-size:13px}
 
 .en-root .en-creation-feedback{max-height:90px;overflow:auto;white-space:pre-wrap;color:var(--en-muted);font-size:12px;line-height:18px}
+
+/* Menu rows reveal the shared material; hover and selection keep native feedback. */
+body .bn-mantine .mantine-Menu-label,body .bn-mantine .mantine-Menu-item:not(:hover):not(:focus-visible):not([aria-selected=true]):not([aria-checked=true]):not([data-hovered]):not([data-active]){background-color:transparent!important}
