@@ -152,6 +152,15 @@ it('does not resurrect a cleared preference from another origin stale native sna
   } finally { await f.close() }
 })
 
+it('migrates an origin-only clearing marker before a later port can restore an old tab', async () => {
+  const { directory, storage } = desktopStorage(), key = 'ework.session.view.v1:A'
+  const first = await fixture({ storage, local: { [key]: '' } })
+  try { first.get('A'); expect(storage.getItem(key)).toBe('') } finally { await first.close() }
+  const restarted = await fixture({ storage: new ResearchCanvasStorage(directory), port: 5500,
+    local: { 'dsh.conversation.chat.A': JSON.stringify({ view: 'notes', draft: 'keep draft' }) } })
+  try { expect(restarted.get('A').getSnapshot()).toEqual({ view: null, draft: 'keep draft' }) } finally { await restarted.close() }
+})
+
 it('keeps navigation available on storage failure and clears only the removed session preference', async () => {
   const failure = () => { throw Error('disk unavailable') }
   const f = await fixture({ storage: { getItem: failure, setItem: failure } })

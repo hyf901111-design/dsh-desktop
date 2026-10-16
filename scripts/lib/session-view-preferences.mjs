@@ -48,7 +48,7 @@ export function withSessionViewPreferences(handle) {
       if (isSessionViewId(saved)) instance.actions.setView(saved)
       else if (saved === '') instance.actions.setView(null)
       if (retryPending) save(saved)
-      else if (durable === null && isSessionViewId(saved)) save(saved)
+      else if (durable === null && (isSessionViewId(saved) || saved === '')) save(saved)
       // Migrate an existing native session preference without changing its draft.
       else if (saved !== '' && !isSessionViewId(saved) && isSessionViewId(instance.getSnapshot().view)) save(instance.getSnapshot().view)
       return {
