@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261016-04",
+  "branch": "codex/integration/20261016-04",
+  "baseMainCommit": "9bfc1dc4831c591f33a2b8b00835167166f97be7",
+  "expectedMainCommit": "9bfc1dc4831c591f33a2b8b00835167166f97be7",
+  "createdAt": "2026-10-16T07:20:32.012Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "优化首页下拉箭头与斜杠菜单选择",
+        "branch": "codex/feat/scrollbar-update-polish-20261016",
+        "baseCommit": "9bfc1dc4831c591f33a2b8b00835167166f97be7",
+        "tipCommit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+        "commits": [
+          {
+            "commit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+            "parents": [
+              "9bfc1dc4831c591f33a2b8b00835167166f97be7"
+            ],
+            "subject": "优化：首页工作区箭头颜色与斜杠菜单高亮状态"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/releases/sherlock-1.3.3.md"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/command-menu-selection.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/skill-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-home.css"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-motion-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/skill-command-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/slash-menu-expanded.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "定向检查通过，日志位于/tmp/ework-command-selection-focused.log、/tmp/ework-home-chevron-focused.log、/tmp/ework-command-polish-type.log。",
+            "verifiedCommit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+            "completedAt": "2026-10-16T07:20:30.344144+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "定向检查通过，日志位于/tmp/ework-command-selection-focused.log、/tmp/ework-home-chevron-focused.log、/tmp/ework-command-polish-type.log。",
+            "verifiedCommit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+            "completedAt": "2026-10-16T07:20:30.344144+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/slash-menu-expanded.test.js",
+              "test/skill-command-patch.test.js",
+              "test/skill-command-menu.test.ts",
+              "test/slash-menu-locale.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "定向检查通过，日志位于/tmp/ework-command-selection-focused.log、/tmp/ework-home-chevron-focused.log、/tmp/ework-command-polish-type.log。",
+            "verifiedCommit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+            "completedAt": "2026-10-16T07:20:30.344144+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-theme-motion-browser.test.js",
+              "-t",
+              "matches the workspace chevron"
+            ],
+            "outcome": "passed",
+            "summary": "定向检查通过，日志位于/tmp/ework-command-selection-focused.log、/tmp/ework-home-chevron-focused.log、/tmp/ework-command-polish-type.log。",
+            "verifiedCommit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+            "completedAt": "2026-10-16T07:20:30.344144+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "定向检查通过，日志位于/tmp/ework-command-selection-focused.log、/tmp/ework-home-chevron-focused.log、/tmp/ework-command-polish-type.log。",
+            "verifiedCommit": "1c3d1d16f741eaf2feba7b115b0f7f72665bbc0b",
+            "completedAt": "2026-10-16T07:20:30.344144+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实Chromium深浅主题4项箭头颜色、2项真实原生slash控制器交互检查通过；完整定向菜单22项、日志2项通过，独立审查关闭两项回归风险。正式包构建后继续原生客户端检查。"
+        },
+        "acceptanceCriteria": [
+          "首页工作区下拉箭头继承文字颜色且尺寸不变，默认/Jarrick深浅均清晰",
+          "空query斜杠菜单打开时不预选压缩历史，鼠标/键盘只保留一项视觉和语义高亮",
+          "非空query的回车补全及@建议默认行为保持可用，补丁重复执行幂等",
+          "纳入用户已授权发布的1.3.3，并在最终客户端检查后上传"
+        ],
+        "risks": [
+          "尚未上传或提升1.3.3公开更新源",
+          "正式发布前须重新生成两条签名通道的全部产物，不复用已中断旧构建压缩包"
+        ],
+        "generatedAt": "2026-10-16T07:20:30.344144+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/slash-menu-expanded.test.js",
+        "test/skill-command-patch.test.js",
+        "test/skill-command-menu.test.ts",
+        "test/slash-menu-locale.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/home-theme-motion-browser.test.js",
+        "-t",
+        "matches the workspace chevron"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/update-release-notes.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
