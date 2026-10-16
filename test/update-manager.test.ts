@@ -1,4 +1,4 @@
-vi.mock('../src/main/update/native-install', () => ({ prepareNativeMacInstall: async () => {} }))
+vi.mock('../src/main/update/native-install', async importOriginal => ({ ...await importOriginal<typeof import('../src/main/update/native-install')>(), prepareNativeMacInstall: async () => {} }))
 vi.mock('../src/main/update/restart-receipt', () => ({ consumeUpdateRestartReceipt: () => undefined, writeUpdateRestartReceipt: vi.fn(), cancelUpdateRestartReceipt: vi.fn() }))
 vi.mock('../src/main/update/mac-update-recovery', () => ({ armMacRenameRecovery: async () => undefined, repairRenamedMacDock: async () => {} }))
 import { afterAll, describe, expect, it, vi } from 'vitest'

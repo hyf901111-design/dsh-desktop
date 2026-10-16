@@ -1,5 +1,5 @@
 import { app, autoUpdater as nativeUpdater, BrowserWindow, ipcMain, powerMonitor } from 'electron'
-import { prepareNativeMacInstall } from './native-install'
+import { disposeNativeMacPreparation, prepareNativeMacInstall, resetNativeMacPreparation } from './native-install'
 import { cancelUpdateRestartReceipt, consumeUpdateRestartReceipt, writeUpdateRestartReceipt } from './restart-receipt'
 import { armMacRenameRecovery, repairRenamedMacDock } from './mac-update-recovery'
 import electronUpdater from 'electron-updater'
@@ -272,6 +272,11 @@ async function prepareAvailableUpdate(): Promise<UpdateStatus> {
       assertCurrent()
       if (downloadedVersion !== target) {
         preparedVersion = undefined
+        // A timed-out wait may still own a running Squirrel command. Do not
+        // replace its feed or let its late completion prepare a different ZIP.
+        errorStage = 'install'
+        if (process.platform === 'darwin') await resetNativeMacPreparation(nativeUpdater, 120_000, controller.signal)
+        assertCurrent()
         errorStage = 'download'
         downloading = true
         transition({ type: 'progress', percent: 0 })
@@ -312,6 +317,7 @@ async function prepareAvailableUpdate(): Promise<UpdateStatus> {
 export function stopUpdateManager(): Promise<void> {
   stopped = true
   preparationController?.abort(Error('Update manager stopped.'))
+  if (process.platform === 'darwin') disposeNativeMacPreparation(nativeUpdater)
   if (startupTimer) clearTimeout(startupTimer)
   if (intervalTimer) clearInterval(intervalTimer)
   if (resetTimer) clearTimeout(resetTimer)
@@ -357,7 +363,10 @@ function configureUpdater(localCheckOnly = false): void {
   autoUpdater.on('error', (error) => {
     if (stopped) return
     updateErrorEpoch++
-    if (!refreshing && !downloading) preparedVersion = undefined
+    if (!refreshing && !downloading) {
+      preparedVersion = undefined
+      if (process.platform === 'darwin') disposeNativeMacPreparation(nativeUpdater, error)
+    }
     if (installing) cancelPendingInstall()
     installing = false
     transition({ type: 'error', errorStage: refreshing ? 'check' : downloading ? 'download' : 'install', message: errorMessage(error) })

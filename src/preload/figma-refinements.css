@@ -2,8 +2,8 @@
    Supersedes the two/three-row header in the earlier 64/66 boards. */
 /* Preset switching is temporarily hidden across all native pages/settings. */
 body .cubgiG_seat,body [data-settings-item="agent-preset"] { display:none!important; }
-body { --odyssey-menu:rgba(255, 255, 255, 0.86); --odyssey-menu-border:rgba(0, 0, 0, 0.10); --odyssey-menu-row:rgba(0, 0, 0, 0.055); --odyssey-menu-muted:#7d7d7d; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.16); --odyssey-menu-blur:blur(24px); --odyssey-scroll-ink:0 0 0; }
-body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-menu:rgba(43, 43, 43, 0.82); --odyssey-menu-border:rgba(255, 255, 255, 0.10); --odyssey-menu-row:rgba(255, 255, 255, 0.075); --odyssey-menu-muted:#999; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.32); --odyssey-scroll-ink:255 255 255; }
+body { --odyssey-menu:rgba(255, 255, 255, 0.86); --odyssey-menu-border:rgba(0, 0, 0, 0.10); --odyssey-menu-row:rgba(0, 0, 0, 0.055); --odyssey-menu-muted:#7d7d7d; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.16); --odyssey-menu-blur:blur(24px); --odyssey-scroll-ink:0 0 0; --ework-scroll-thumb:#e1e1e1; --ework-scroll-hover:#c9c9c9; --ework-scroll-active:#b5b5b5; }
+body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-menu:rgba(43, 43, 43, 0.82); --odyssey-menu-border:rgba(255, 255, 255, 0.10); --odyssey-menu-row:rgba(255, 255, 255, 0.075); --odyssey-menu-muted:#999; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.32); --odyssey-scroll-ink:255 255 255; --ework-scroll-thumb:#333333; --ework-scroll-hover:#444444; --ework-scroll-active:#555555; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:var(--odyssey-workspace-header-height,44px)!important; min-height:var(--odyssey-workspace-header-height,44px)!important; flex:0 0 var(--odyssey-workspace-header-height,44px)!important;
@@ -239,9 +239,9 @@ body[data-ds-dark-theme] :is(.h8S2Va_summary,.h8S2Va_metrics,.odyssey-subagent-m
 .odyssey-scroll-track { position:fixed; z-index:80; width:12px; opacity:0; transition:opacity 180ms; pointer-events:none; background:transparent; }
 .odyssey-scroll-track[data-visible=true] { opacity:1; pointer-events:auto; }
 @media(prefers-reduced-motion:no-preference) { .odyssey-scroll-track[data-visible=true] { transition-duration:100ms; } }
-.odyssey-scroll-thumb { position:absolute; right:4px; width:4px; min-height:32px; border-radius:4px; background:rgb(var(--odyssey-scroll-ink) / .24); transition:width 100ms,background 100ms; touch-action:none; }
-.odyssey-scroll-track:is(:hover,[data-dragging=true]) .odyssey-scroll-thumb { width:6px; background:rgb(var(--odyssey-scroll-ink) / .4); }
-.odyssey-scroll-track[data-dragging=true] .odyssey-scroll-thumb { background:rgb(var(--odyssey-scroll-ink) / .56); }
+.odyssey-scroll-thumb { position:absolute; right:4px; width:4px; min-height:32px; border-radius:4px; background:var(--ework-scroll-thumb); transition:width 100ms,background 100ms; touch-action:none; }
+.odyssey-scroll-track:is(:hover,[data-dragging=true]) .odyssey-scroll-thumb { width:6px; background:var(--ework-scroll-hover); }
+.odyssey-scroll-track[data-dragging=true] .odyssey-scroll-thumb { background:var(--ework-scroll-active); }
 @media(prefers-reduced-motion:reduce) { .odyssey-scroll-track,.odyssey-scroll-thumb { transition:none; } }
 
 body { --odyssey-board-add-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.25%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M8.5%2014H3a1%201%200%200%201-1-1V3a1%201%200%200%201%201-1h10a1%201%200%200%201%201%201v5.5M6%202v12M10%202v6M10%2012h5M12.5%209.5v5%22%2F%3E%3C%2Fsvg%3E"); }
@@ -671,3 +671,12 @@ body .JObwrW_trigger:is(:hover,[aria-expanded=true]){background:var(--odyssey-me
 .en-note-conversation-flow{height:100%;overflow:auto;min-height:0}.en-note-conversation-flow :is(.wSkVaW_scrollBody,.Md3f7G_scroll){height:auto;overflow:visible;flex:none}.en-note-conversation-flow .en-task-history{padding-top:16px}
 
 .en-export-menu{position:fixed;width:160px;padding:5px;z-index:150;border:1px solid var(--odyssey-menu-border,#ddd);border-radius:9px;background:#fff;color:#252525;box-shadow:var(--odyssey-menu-shadow,0 8px 24px #0002);font:13px/22px system-ui;animation:en-export-enter 120ms ease-out;-webkit-app-region:no-drag}.en-export-menu button{display:block;width:100%;padding:5px 9px;border:0;border-radius:5px;text-align:left;background:transparent;color:inherit;font:inherit;cursor:pointer}.en-export-menu button:is(:hover,:focus-visible){background:var(--odyssey-menu-row,#0000000c);outline:none}body[data-ds-dark-theme] .en-export-menu{background:#282828;color:#e5e5e5}@keyframes en-export-enter{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.en-export-menu{animation:none}}
+
+/* Shared neutral scrollbar palette: native surfaces and overlay thumbs keep
+   their existing geometry, visibility and hit targets. Do not set a global
+   scrollbar-color: Chromium would ignore existing WebKit widths/hover rules. */
+body { --dsh-scrollbar-thumb:var(--ework-scroll-thumb); --dsh-scrollbar-thumb-hover:var(--ework-scroll-hover); }
+body::-webkit-scrollbar-thumb, body *::-webkit-scrollbar-thumb { background-color:var(--ework-scroll-thumb,#e1e1e1)!important; }
+body::-webkit-scrollbar-thumb:hover, body *::-webkit-scrollbar-thumb:hover { background-color:var(--ework-scroll-hover,#c9c9c9)!important; }
+body::-webkit-scrollbar-thumb:active, body *::-webkit-scrollbar-thumb:active { background-color:var(--ework-scroll-active,#b5b5b5)!important; }
+body::-webkit-scrollbar-track, body *::-webkit-scrollbar-track, body::-webkit-scrollbar-corner, body *::-webkit-scrollbar-corner { background-color:transparent!important; }
