@@ -118,6 +118,55 @@
           "research-derived-menu-final.test.ts在未修改main也因已打包锚点歧义不能启动；本次后加载CSS由浏览器像素与主题检查覆盖。"
         ],
         "generatedAt": "2026-10-16T08:19:56.749063+00:00"
+      },
+      "merged": {
+        "mergeCommit": "43ca22446fc30f4b892cf55b7f627340dd91d01a",
+        "verificationCommit": "43ca22446fc30f4b892cf55b7f627340dd91d01a",
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "43ca22446fc30f4b892cf55b7f627340dd91d01a",
+            "completedAt": "2026-10-16T08:20:24.947Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "43ca22446fc30f4b892cf55b7f627340dd91d01a",
+            "completedAt": "2026-10-16T08:20:24.947Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/menu-backdrop-pixels.test.js",
+              "test/menu-surface-theme.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/menu-backdrop-pixels.test.js test/menu-surface-theme.test.ts test/slash-menu-expanded.test.js test/notes-native-menu.test.ts test/skill-command-patch.test.js test/update-release-notes.test.ts",
+            "verifiedCommit": "43ca22446fc30f4b892cf55b7f627340dd91d01a",
+            "completedAt": "2026-10-16T08:20:24.947Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T08:20:24.947Z"
       }
     }
   ],
