@@ -36,3 +36,32 @@ it('keeps both locales and the native source syntactically valid',()=>{
  expect(()=>new Script(source)).not.toThrow();expect(patchSkillCommandLabels(source)).toBe(source)
  expect(source).toContain('"command.skills.name":"技能"');expect(source).toContain('"command.skills.name":"Skills"')
 })
+it('does not reselect a slash command as catalogs settle, while retaining @ suggestion defaults',()=>{
+ const source=patchSkillCommandLabels(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8'))
+ const {InputTriggerController}=moduleOf(source)
+ for(const trigger of ['/','@']){
+  let state={open:true,hit:{trigger},generation:1,groups:[{source:'command',status:'pending',items:[]},{source:'skill',status:'pending',items:[]}],highlight:null}
+  const controller=Object.create(InputTriggerController.prototype)
+  controller.menu={getSnapshot:()=>state,set:next=>{state=next}};controller.launcher={getSnapshot:()=>null}
+  controller.reduce({type:'source-settled',source:'command',generation:1,items:[{name:'compact'},{name:'model'}]})
+  expect(state.highlight).toEqual(trigger==='/'?null:{source:'command',index:0})
+  controller.reduce({type:'point',highlight:{source:'command',index:1}})
+  expect(state.highlight).toEqual({source:'command',index:trigger==='/'?1:0})
+  controller.reduce({type:'point',highlight:null})
+  controller.reduce({type:'source-settled',source:'skill',generation:1,items:[{name:'finance'}]})
+  expect(state.highlight).toEqual(trigger==='/'?null:{source:'command',index:0})
+  controller.reduce({type:'source-failed',source:'skill',generation:1})
+  expect(state.highlight).toEqual(trigger==='/'?null:{source:'command',index:0})
+ }
+})
+it('retains Enter completion after the user types a slash-command search query',()=>{
+ const source=patchSkillCommandLabels(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8'))
+ const {InputTriggerController}=moduleOf(source)
+ let state={open:true,hit:{trigger:'/',query:'mod'},generation:1,groups:[{source:'command',status:'pending',items:[]}],highlight:null}
+ const controller=Object.create(InputTriggerController.prototype)
+ controller.menu={getSnapshot:()=>state,set:next=>{state=next}};controller.launcher={getSnapshot:()=>null};controller.pick=vi.fn()
+ controller.reduce({type:'source-settled',source:'command',generation:1,items:[{name:'model'}]})
+ expect(state.highlight).toEqual({source:'command',index:0})
+ expect(controller.arbitrate('enter',false)).toBe('pick-highlighted')
+ expect(controller.pick).toHaveBeenCalledExactlyOnceWith('command',0)
+})

@@ -27,7 +27,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         "移除笔记评论的添加反应入口，保留编辑、删除和解决评论等操作。",
         "修复更新准备超时后再次重试可能重复执行安装命令并提示 command disabled 的问题。",
         "优化差分更新打包，减少未修改文件因归档时间戳变化而被重复下载；首次切换到新打包方式时更新包仍可能较大。",
-        "修复收起侧栏后设置页按钮与主题预览被压窄，以及设置打开时仍能拖动底层侧栏的问题。"
+        "修复收起侧栏后设置页按钮与主题预览被压窄，以及设置打开时仍能拖动底层侧栏的问题。",
+        "优化首页工作区下拉箭头的颜色对比；斜杠菜单不再默认选中压缩历史，鼠标悬停和键盘导航共用单一高亮状态。"
       ]
     },
     {
@@ -465,7 +466,8 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
         "Remove the Add reaction entry from note comments while preserving editing, deletion and resolution.",
         "Fix update retries issuing a duplicate installation command after preparation times out, which could show a command disabled error.",
         "Optimize differential update archives to avoid downloading unchanged files again because of timestamp changes. The first update adopting the new format may still be large.",
-        "Fix compressed Settings buttons and theme previews with a collapsed sidebar, and prevent dragging the background sidebar while Settings is open."
+        "Fix compressed Settings buttons and theme previews with a collapsed sidebar, and prevent dragging the background sidebar while Settings is open.",
+        "Improve contrast for the home workspace dropdown arrow. Slash commands no longer preselect Compact history; pointer hover and keyboard navigation share one highlight."
       ]
     },
     {

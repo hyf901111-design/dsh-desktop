@@ -1,5 +1,6 @@
 export const SKILL_COMMAND_MENU_CSS = '.mufS8W_card[data-ework-command=skills]{width:min(360px,100%)}.mufS8W_card[data-ework-command=skills] .mufS8W_row{flex-direction:column;align-items:stretch;gap:2px;padding:7px 9px}.mufS8W_card[data-ework-command=skills] .mufS8W_label{flex:none;line-height:20px}.mufS8W_card[data-ework-command=skills] .mufS8W_detail{display:block;min-width:0;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mufS8W_card[data-ework-command=skills] .mufS8W_viewport::-webkit-scrollbar{width:4px}'
 import {patchExpandedCommandMenu} from './expanded-command-menu.mjs'
+import {patchCommandMenuSelection} from './command-menu-selection.mjs'
 const replace=(source,anchor,next)=>{
  if(source.split(anchor).length!==2)throw Error('Skill command menu anchor missing or ambiguous: '+anchor.slice(0,65))
  return source.replace(anchor,next)
@@ -18,7 +19,7 @@ export function patchSkillCommandPopup(source){
 }
 export function patchSkillCommandLabels(source){
  const marker='/* ework:skill-command-labels:v1 */'
- if(source.includes(marker))return patchExpandedCommandMenu(source,'commands')
+ if(source.includes(marker))return patchCommandMenuSelection(patchExpandedCommandMenu(source,'commands'))
  source=replace(source,'"command.model.name": "模型",',`${marker}\n"command.skills.name":"技能",\n"command.skills.description":"选择在对话中使用的技能",\n"command.model.name": "模型",`)
- return patchExpandedCommandMenu(replace(source,'"command.model.name": "model",','"command.skills.name":"Skills",\n"command.skills.description":"Choose a skill for this conversation",\n"command.model.name": "model",'),'commands')
+ return patchCommandMenuSelection(patchExpandedCommandMenu(replace(source,'"command.model.name": "model",','"command.skills.name":"Skills",\n"command.skills.description":"Choose a skill for this conversation",\n"command.model.name": "model",'),'commands'))
 }
