@@ -118,6 +118,57 @@
           "旧research-derived-menu-final.test.ts存在已验证基线锚点歧义，本次真实CSS主题/像素测试覆盖。"
         ],
         "generatedAt": "2026-10-16T09:13:48.053909+00:00"
+      },
+      "merged": {
+        "mergeCommit": "ea2513372f0ab0595329a3e4277747c3963b2a09",
+        "verificationCommit": "ea2513372f0ab0595329a3e4277747c3963b2a09",
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "ea2513372f0ab0595329a3e4277747c3963b2a09",
+            "completedAt": "2026-10-16T09:15:27.843Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ea2513372f0ab0595329a3e4277747c3963b2a09",
+            "completedAt": "2026-10-16T09:15:27.843Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/menu-transparent-window.test.js",
+              "test/menu-backdrop-pixels.test.js",
+              "test/menu-surface-theme.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/sidebar-session-search.test.ts",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/menu-transparent-window.test.js test/menu-backdrop-pixels.test.js test/menu-surface-theme.test.ts test/slash-menu-expanded.test.js test/notes-native-menu.test.ts test/skill-command-patch.test.js test/sidebar-session-search.test.ts test/update-release-notes.test.ts",
+            "verifiedCommit": "ea2513372f0ab0595329a3e4277747c3963b2a09",
+            "completedAt": "2026-10-16T09:15:27.843Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T09:15:27.843Z"
       }
     }
   ],
