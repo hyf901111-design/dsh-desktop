@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261016-07",
+  "branch": "codex/integration/20261016-07",
+  "baseMainCommit": "e61780169f87e5644c0a99aeb26c81f87c95e7f3",
+  "expectedMainCommit": "e61780169f87e5644c0a99aeb26c81f87c95e7f3",
+  "createdAt": "2026-10-16T08:20:12.442Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复菜单毛玻璃效果与笔记系统模糊",
+        "branch": "codex/feat/scrollbar-update-polish-20261016",
+        "baseCommit": "b11894893ca92f30ac8f016eb0b1968eb6d9b117",
+        "tipCommit": "14ba6adb33110f912f4c4f3f9cdb111650e166c3",
+        "commits": [
+          {
+            "commit": "14ba6adb33110f912f4c4f3f9cdb111650e166c3",
+            "parents": [
+              "b11894893ca92f30ac8f016eb0b1968eb6d9b117"
+            ],
+            "subject": "修复菜单毛玻璃通透感并启用笔记原生模糊"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/releases/sherlock-1.3.3.md"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/expanded-command-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/about-info.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "A",
+            "path": "test/menu-backdrop-pixels.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/menu-surface-theme.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/slash-menu-expanded.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "51项聚焦检查及typecheck通过；/tmp/ework-frost-focused.log、/tmp/ework-frost-type.log。",
+            "verifiedCommit": "14ba6adb33110f912f4c4f3f9cdb111650e166c3",
+            "completedAt": "2026-10-16T08:19:56.749063+00:00",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "51项聚焦检查及typecheck通过；/tmp/ework-frost-focused.log、/tmp/ework-frost-type.log。",
+            "verifiedCommit": "14ba6adb33110f912f4c4f3f9cdb111650e166c3",
+            "completedAt": "2026-10-16T08:19:56.749063+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/menu-backdrop-pixels.test.js",
+              "test/menu-surface-theme.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/skill-command-patch.test.js",
+              "test/update-release-notes.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "51项聚焦检查及typecheck通过；/tmp/ework-frost-focused.log、/tmp/ework-frost-type.log。",
+            "verifiedCommit": "14ba6adb33110f912f4c4f3f9cdb111650e166c3",
+            "completedAt": "2026-10-16T08:19:56.749063+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Electron 43.4.0新材质传色差浅色18→29、深色24→42，细棋盘std<0.5；真实首页背景对照可见蓝色透出，证据/tmp/ework-menu-material-evidence-20261016。"
+        },
+        "acceptanceCriteria": [
+          "所有网页菜单共用36px背景模糊及通透底色，深浅外观适配",
+          "笔记原生菜单使用macOS vibrancy，无模糊外边距，保留定位与非抢焦点行为",
+          "与已授权1.3.3一起发布，正式上传前在客户端验收实际菜单"
+        ],
+        "risks": [
+          "原生跨窗口NSVisualEffectView仍须最终签名客户端实景验收",
+          "research-derived-menu-final.test.ts在未修改main也因已打包锚点歧义不能启动；本次后加载CSS由浏览器像素与主题检查覆盖。"
+        ],
+        "generatedAt": "2026-10-16T08:19:56.749063+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/menu-backdrop-pixels.test.js",
+        "test/menu-surface-theme.test.ts",
+        "test/slash-menu-expanded.test.js",
+        "test/notes-native-menu.test.ts",
+        "test/skill-command-patch.test.js",
+        "test/update-release-notes.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
