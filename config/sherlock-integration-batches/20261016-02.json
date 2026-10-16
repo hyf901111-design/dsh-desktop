@@ -96,6 +96,84 @@
           "原main的notes-outline组合样式测试在插入图片阶段同样超时；评论入口与其余操作的独立组件验证深浅两主题通过，未修改此历史测试。"
         ],
         "generatedAt": "2026-10-16T06:30:30.739716+00:00"
+      },
+      "merged": {
+        "mergeCommit": "396958402c335e1187a79478d938cfb3331ca053",
+        "verificationCommit": "396958402c335e1187a79478d938cfb3331ca053",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "396958402c335e1187a79478d938cfb3331ca053",
+            "completedAt": "2026-10-16T06:30:36.060Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "396958402c335e1187a79478d938cfb3331ca053",
+            "completedAt": "2026-10-16T06:30:36.060Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=4",
+              "test/update-manager.test.ts",
+              "test/update-freshness.test.ts",
+              "test/update-install-lifecycle.test.ts",
+              "test/update-background-flow.test.ts",
+              "test/local-update-manager.test.ts",
+              "test/local-update-download.test.ts",
+              "test/update-error-stage.test.ts",
+              "test/update-restart-preparation.test.ts",
+              "test/figma-scrollbars.test.ts",
+              "test/figma-task-scrollbar.test.ts",
+              "test/figma-settings-scrollbar.test.js",
+              "test/workbench-style.test.js",
+              "test/research-grid-scroll-clearance.test.js",
+              "test/macos-dual-release-archive.test.ts",
+              "test/cloudflare-release.test.ts",
+              "test/update-differential.test.ts",
+              "test/release.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 test/update-manager.test.ts test/update-freshness.test.ts test/update-install-lifecycle.test.ts test/update-background-flow.test.ts test/local-update-manager.test.ts test/local-update-download.test.ts test/update-error-stage.test.ts test/update-restart-preparation.test.ts test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/figma-settings-scrollbar.test.js test/workbench-style.test.js test/research-grid-scroll-clearance.test.js test/macos-dual-release-archive.test.ts test/cloudflare-release.test.ts test/update-differential.test.ts test/release.test.ts",
+            "verifiedCommit": "396958402c335e1187a79478d938cfb3331ca053",
+            "completedAt": "2026-10-16T06:30:36.060Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=2",
+              "test/research-html-theme.test.js",
+              "test/research-grid-client.test.js",
+              "-t",
+              "滚动条|滚动能力|滚动联动"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=2 test/research-html-theme.test.js test/research-grid-client.test.js -t 滚动条|滚动能力|滚动联动",
+            "verifiedCommit": "396958402c335e1187a79478d938cfb3331ca053",
+            "completedAt": "2026-10-16T06:30:36.060Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-10-16T06:30:36.060Z"
       }
     }
   ],
