@@ -9,6 +9,11 @@ export const scheduledStyles = `
 [data-dsh-sidebar-root] .hHd-Xa_newSession:nth-child(2)::before{mask-image:url('${icons.research}')}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup{flex-direction:column!important}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup .hHd-Xa_newSession{flex:none!important;width:32px!important}
+[data-dsh-sidebar-wide=false] [data-srb-navigation-scroll]{flex:0 0 auto!important;overflow:visible!important;min-height:0}
+[data-dsh-sidebar-wide=false] :is(.hHd-Xa_regionArea,.qDHVXG_rail){flex:none!important;height:auto!important;min-height:0}
+[data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margin-top:auto}
+[data-dsh-sidebar-wide=false] button:not([role=menuitem]){box-sizing:border-box!important;flex:none!important;width:32px!important;height:32px!important;border-radius:50%!important}
+[data-dsh-sidebar-wide=false]>.st-more-zone{align-self:center;margin-top:4px}
 .st-more-zone{display:flex;align-items:center;gap:11px;flex:none}.st-more-zone:before{content:'';height:14px;width:1px;background:currentColor;opacity:.25}
 [data-dsh-sidebar-wide=false] .st-more-zone:before{display:none}
 .st-more,:is(.st-root,.st-detail) button,.st-menu button,.st-dialog button{font:inherit;color:inherit;border:0;background:transparent;cursor:pointer}
