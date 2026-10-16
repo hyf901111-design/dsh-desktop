@@ -2,23 +2,26 @@ import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
 import { afterAll, beforeAll, expect, it } from 'vitest'
+import { scheduledStyles } from '../src/preload/scheduled/style'
 
 let browser, script
 const css = ['figma-settings.css', 'figma-refinements.css'].map(n => readFileSync(`src/preload/${n}`, 'utf8')).join('\n')
+const settingsBundle = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js', 'utf8')
+const nativeSettingsCss = JSON.parse(settingsBundle.match(/const css\$3 = ("(?:[^"\\]|\\.)*");/)[1])
 beforeAll(async () => {
   script = (await build({ stdin: { resolveDir: process.cwd(), contents: `import {mountFigmaScrollbars} from './src/preload/figma-scrollbars'; window.disposeBars=mountFigmaScrollbars(document,true);` }, bundle: true, platform: 'browser', format: 'iife', write: false })).outputFiles[0].text
   const mod = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
   browser = await (mod.default ?? mod).chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
 })
 afterAll(async () => { await browser?.close() })
-async function open(width, settings = true) {
+async function open(width, settings = true, collapsed = width <= 1025) {
   const page = await browser.newPage({ viewport: { width, height: 641 } })
   await page.route('**/*', route => route.abort())
   // Settings is a fixed surface mounted inside the live sidebar footer, not a
   // body portal. The collapsed main/sidebar stay mounted behind it, as in v16.
   await page.setContent(`<style>
     *{box-sizing:border-box}body{margin:0;--odyssey-scroll-ink:0 0 0}
-    [data-dsh-sidebar-root]{position:fixed;left:0;top:0;width:${width <= 1025 ? 80 : 280}px;height:100vh}
+    [data-dsh-sidebar-root]{position:fixed;left:0;top:0;width:${collapsed ? 80 : 280}px;height:100vh}
     #sidebar-list{height:200px;margin-top:100px;overflow-y:auto;padding-right:16px}
     .VOzbGW_overlay{position:fixed;inset:0;display:flex}.VOzbGW_panel{display:flex}.VOzbGW_content{flex:1}.VOzbGW_options{height:100%}
     .VOzbGW_nav{display:flex;flex-direction:column}.settings-fixture-content{height:1000px}
@@ -26,12 +29,19 @@ async function open(width, settings = true) {
     .t8lSSG_panel{position:fixed;right:10px;top:10px;width:340px;height:621px}
     .t8lSSG_panelBody{height:100%}#reader{position:absolute;left:16px;right:16px;top:56px;height:240px;overflow:auto}
     .sRp_messages{position:absolute;left:16px;right:16px;top:320px;height:240px}.Md3f7G_scroll{height:100%;overflow:auto}
-    .long{height:1400px} ${css}
+    .long{height:1400px} ${nativeSettingsCss} ${css} ${scheduledStyles}
     </style><div class="pI_x6G_frame"><div class="pI_x6G_sidebarCol"><div>
-    <div data-dsh-sidebar-root class="hHd-Xa_root ${width <= 1025 ? 'hHd-Xa_collapsed hHd-Xa_railIn' : ''}">
+    <div data-dsh-sidebar-root data-dsh-sidebar-wide="${!collapsed}" class="hHd-Xa_root ${collapsed ? 'hHd-Xa_collapsed hHd-Xa_railIn' : ''}">
+      <button class="hHd-Xa_iconButton" aria-label="侧栏搜索">⌕</button>
       <div class="hHd-Xa_regionArea"><div id="sidebar-list"><div class="long">会话列表</div></div></div>
       <div class="hHd-Xa_footArea"><div class="hHd-Xa_settingsArea"><div>
-      ${settings ? `<div class="VOzbGW_overlay"><div class="VOzbGW_mask"></div><div class="VOzbGW_panel"><nav class="VOzbGW_nav"><button>返回应用</button><button>通用设置</button></nav><main class="VOzbGW_content"><div class="VOzbGW_options"><div class="settings-fixture-content"><h1>通用设置</h1><button>主题</button></div></div></main></div></div>` : ''}
+      ${settings ? `<div class="VOzbGW_overlay"><div class="VOzbGW_mask"></div><div class="VOzbGW_panel"><nav class="VOzbGW_nav">
+        <button class="sherlock-settings-back"><svg></svg><span>返回应用</span></button>
+        <div class="VOzbGW_navList"><button class="VOzbGW_navCell"><svg class="VOzbGW_navIcon"></svg><span class="VOzbGW_navLabel">通用设置</span></button></div>
+        </nav><main class="VOzbGW_content"><div class="VOzbGW_options"><div class="settings-fixture-content"><h1>通用设置</h1>
+        <div class="sherlock-settings-item" data-settings-item="appearance"><div class="_8HJdBW_group"><div class="_8HJdBW_cubeRow">
+        ${['跟随系统','伊萨卡晨雾','伊萨卡午夜'].map(label=>`<button class="_8HJdBW_themeCube"><span class="sherlock-theme-preview"></span><span class="sherlock-theme-label">${label}</span></button>`).join('')}
+        </div></div></div></div></div></main></div></div>` : ''}
       </div></div></div></div></div></div>
       <main id="main-conversation"><div class="long">普通主会话</div></main>
       <aside class="t8lSSG_panel"><section class="t8lSSG_panelBody"><article id="reader"><div class="long">文件预览</div></article><div class="sRp_messages"><div class="Md3f7G_scroll"><div class="long">右侧对话</div></div></div></section></aside>
@@ -39,6 +49,40 @@ async function open(width, settings = true) {
   await page.addScriptTag({ content: script })
   return page
 }
+for (const width of [840,1025,1380]) for (const dark of [false,true]) it(`keeps Settings controls full width inside a collapsed sidebar at ${width}px in ${dark ? 'dark' : 'light'} theme`, async () => {
+  const page=await open(width,true,true)
+  try {
+    if (dark) await page.locator('body').evaluate(el=>el.setAttribute('data-ds-dark-theme',''))
+    const measure=()=>page.evaluate(()=>{
+      const rect=s=>document.querySelector(s).getBoundingClientRect()
+      const label=document.querySelector('.VOzbGW_navLabel')
+      return {
+        back:rect('.sherlock-settings-back').width,
+        backLabelHeight:rect('.sherlock-settings-back span').height,
+        navigation:rect('.VOzbGW_navCell').width,
+        labelWidth:label.clientWidth,labelContent:label.scrollWidth,
+        card:rect('._8HJdBW_themeCube').width,cardHeight:rect('._8HJdBW_themeCube').height,
+        preview:rect('.sherlock-theme-preview').width,
+        rail:rect('.hHd-Xa_iconButton').width,
+      }
+    })
+    const collapsed=await measure()
+    expect(collapsed.back).toBe(width <= 900 ? 168 : 208)
+    expect(collapsed.backLabelHeight).toBe(20)
+    expect(collapsed.navigation).toBe(collapsed.back)
+    expect(collapsed.labelWidth).toBeGreaterThan(100)
+    expect(collapsed.labelContent).toBe(collapsed.labelWidth)
+    expect(collapsed.card).toBeGreaterThan(170)
+    expect(collapsed.cardHeight).toBe(188)
+    expect(collapsed.preview).toBe(collapsed.card)
+    expect(collapsed.rail).toBe(32)
+    await page.locator('[data-dsh-sidebar-root]').evaluate(el=>el.setAttribute('data-dsh-sidebar-wide','true'))
+    const expanded=await measure()
+    expect(expanded.back).toBe(collapsed.back)
+    expect(expanded.navigation).toBe(collapsed.navigation)
+    expect(expanded.card).toBe(collapsed.card)
+  } finally { await page.close() }
+})
 async function geometry(page, selector) {
   return page.locator(selector).evaluate(port => {
     const r=port.getBoundingClientRect()
