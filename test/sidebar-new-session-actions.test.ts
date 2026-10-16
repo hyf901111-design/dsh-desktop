@@ -84,6 +84,8 @@ async function loadClientBundle(
     localStorage: browserWindow?.localStorage,
     sessionStorage: browserWindow?.sessionStorage,
     CustomEvent: browserWindow?.CustomEvent,
+    Event: browserWindow?.Event,
+    MutationObserver: browserWindow?.MutationObserver,
     HTMLElement: browserWindow?.HTMLElement,
     requestAnimationFrame: browserWindow?.requestAnimationFrame.bind(browserWindow),
     cancelAnimationFrame: browserWindow?.cancelAnimationFrame.bind(browserWindow),
