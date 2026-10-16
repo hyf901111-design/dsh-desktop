@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复收起侧栏后的设置页布局",
+        "featureName": "修复设置样式隔离并保留侧栏账号尺寸",
         "branch": "codex/feat/scrollbar-update-polish-20261016",
-        "baseCommit": "5ae18c0b1ad9626815e782d727cdb18484bf9ec4",
-        "tipCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
+        "baseCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
+        "tipCommit": "56be4d0f451dc738d7f20b4eba5be9df83936a6f",
         "commits": [
           {
-            "commit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
+            "commit": "56be4d0f451dc738d7f20b4eba5be9df83936a6f",
             "parents": [
-              "5ae18c0b1ad9626815e782d727cdb18484bf9ec4"
+              "13a52a70b27f6a81597bfb2a80ca8c6206495ad8"
             ],
-            "subject": "修复：收起侧栏后设置页按钮与主题卡片被压窄"
+            "subject": "修复：隔离设置样式时保留侧栏账号按钮原有尺寸"
           }
         ],
         "files": [
@@ -41,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
-            "completedAt": "2026-10-16T06:28:16.884776+00:00",
+            "verifiedCommit": "56be4d0f451dc738d7f20b4eba5be9df83936a6f",
+            "completedAt": "2026-10-16T06:30:30.739716+00:00",
             "timeoutMs": 180000
           },
           {
@@ -53,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
-            "completedAt": "2026-10-16T06:28:16.884776+00:00",
+            "verifiedCommit": "56be4d0f451dc738d7f20b4eba5be9df83936a6f",
+            "completedAt": "2026-10-16T06:30:30.739716+00:00",
             "timeoutMs": 180000
           },
           {
@@ -69,14 +69,14 @@
             ],
             "outcome": "passed",
             "summary": "15项聚焦测试通过，含真实Chromium三宽度深浅主题收起侧栏回归；修复前新增6项均以32px失败。/tmp/ework-settings-collapse-green.log",
-            "verifiedCommit": "13a52a70b27f6a81597bfb2a80ca8c6206495ad8",
-            "completedAt": "2026-10-16T06:28:16.884776+00:00",
+            "verifiedCommit": "56be4d0f451dc738d7f20b4eba5be9df83936a6f",
+            "completedAt": "2026-10-16T06:30:30.739716+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实Chromium15项设置相关检查通过；最终打包客户端仍需重检。当前客户端重启后已观察到Jarrick背景保持。"
+          "summary": "真实Chromium15项设置检查通过，额外复核账号按钮保留36px；实际客户端已验证重启后Jarrick背景、浅色外观与会话笔记页签保持。新设置修复待打包实测。"
         },
         "acceptanceCriteria": [
           "滚动条保持深色克制灰、浅色透明灰在白底与灰底均可辨，原滚动交互保留",
@@ -95,85 +95,7 @@
           "旧主页背景只在旧端口localStorage中时无法跨源自动读取；固定存储将保存今后的选择，实际验收会恢复已观察到的背景选择。",
           "原main的notes-outline组合样式测试在插入图片阶段同样超时；评论入口与其余操作的独立组件验证深浅两主题通过，未修改此历史测试。"
         ],
-        "generatedAt": "2026-10-16T06:28:16.884776+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e477d1d8f6ac60c73a6a19714d78d8b15ad3eaf2",
-        "verificationCommit": "e477d1d8f6ac60c73a6a19714d78d8b15ad3eaf2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e477d1d8f6ac60c73a6a19714d78d8b15ad3eaf2",
-            "completedAt": "2026-10-16T06:28:36.409Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e477d1d8f6ac60c73a6a19714d78d8b15ad3eaf2",
-            "completedAt": "2026-10-16T06:28:36.409Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=4",
-              "test/update-manager.test.ts",
-              "test/update-freshness.test.ts",
-              "test/update-install-lifecycle.test.ts",
-              "test/update-background-flow.test.ts",
-              "test/local-update-manager.test.ts",
-              "test/local-update-download.test.ts",
-              "test/update-error-stage.test.ts",
-              "test/update-restart-preparation.test.ts",
-              "test/figma-scrollbars.test.ts",
-              "test/figma-task-scrollbar.test.ts",
-              "test/figma-settings-scrollbar.test.js",
-              "test/workbench-style.test.js",
-              "test/research-grid-scroll-clearance.test.js",
-              "test/macos-dual-release-archive.test.ts",
-              "test/cloudflare-release.test.ts",
-              "test/update-differential.test.ts",
-              "test/release.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=4 test/update-manager.test.ts test/update-freshness.test.ts test/update-install-lifecycle.test.ts test/update-background-flow.test.ts test/local-update-manager.test.ts test/local-update-download.test.ts test/update-error-stage.test.ts test/update-restart-preparation.test.ts test/figma-scrollbars.test.ts test/figma-task-scrollbar.test.ts test/figma-settings-scrollbar.test.js test/workbench-style.test.js test/research-grid-scroll-clearance.test.js test/macos-dual-release-archive.test.ts test/cloudflare-release.test.ts test/update-differential.test.ts test/release.test.ts",
-            "verifiedCommit": "e477d1d8f6ac60c73a6a19714d78d8b15ad3eaf2",
-            "completedAt": "2026-10-16T06:28:36.409Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=2",
-              "test/research-html-theme.test.js",
-              "test/research-grid-client.test.js",
-              "-t",
-              "滚动条|滚动能力|滚动联动"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- --maxWorkers=2 test/research-html-theme.test.js test/research-grid-client.test.js -t 滚动条|滚动能力|滚动联动",
-            "verifiedCommit": "e477d1d8f6ac60c73a6a19714d78d8b15ad3eaf2",
-            "completedAt": "2026-10-16T06:28:36.409Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-10-16T06:28:36.409Z"
+        "generatedAt": "2026-10-16T06:30:30.739716+00:00"
       }
     }
   ],
