@@ -19,7 +19,8 @@ const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'ework.research.presentation.v1:',
   'ework.research.table-columns.v1:',
   'sherlock.research.canvas.preview-revocations.v1:',
-  'sherlock.research.session-engaged.v1:'
+  'sherlock.research.session-engaged.v1:',
+  'ework.session.view.v1:'
 ] as const
 const RESEARCH_CANVAS_STORAGE_MAX_KEY_LENGTH = 1_024
 const RESEARCH_CANVAS_STORAGE_MAX_FILE_BYTES = 48 * 1024 * 1024
@@ -74,6 +75,7 @@ export class ResearchCanvasStorage {
       return false
     }
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
+    if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(value)) return false
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
     if (key.startsWith('ework.research.presentation.v1:')) {
       try {
@@ -115,6 +117,7 @@ export class ResearchCanvasStorage {
       const record = parsed as { key?: unknown; value?: unknown }
       if (record.key !== key || !validResearchCanvasStorageValue(record.value) ||
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
+          (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(record.value)) ||
           (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value))) return null
       return record.value
     } catch {

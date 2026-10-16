@@ -1,13 +1,18 @@
 import { Window } from 'happy-dom'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { mountHomeThemes } from '../src/preload/home-themes'
+import { HomeThemePreferenceStore } from '../src/main/home-theme-preferences'
 
 const STORAGE_KEY = 'ework.home-background.v1'
 const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither']
 const fixtures: Array<{ dispose(): void; win: Window }> = []
+const userDataDirectories: string[] = []
 
-function fixture({ reducedMotion = false, initial = undefined as string | undefined, storageBlocked = false } = {}) {
-  const win = new Window({ url: 'https://odyssey.test/' })
+function fixture({ reducedMotion = false, initial = undefined as string | undefined, storageBlocked = false, url = 'https://odyssey.test/' } = {}) {
+  const win = new Window({ url })
   const frames = new Map<number, FrameRequestCallback>()
   let nextFrame = 0
   const animations: unknown[] = []
@@ -51,7 +56,7 @@ function fixture({ reducedMotion = false, initial = undefined as string | undefi
   let dispose: (() => void) | undefined
   const result = {
     win, doc, frames, animations,
-    mount() { return (dispose = mountHomeThemes(doc)) },
+    mount(preferences?: { get(): unknown; set(theme: string): boolean }) { return (dispose = mountHomeThemes(doc, preferences)) },
     dispose() { dispose?.() },
     async settle() {
       await Promise.resolve()
@@ -96,9 +101,72 @@ afterEach(async () => {
     entry.dispose()
     await entry.win.happyDOM.close()
   }
+  for (const directory of userDataDirectories.splice(0)) rmSync(directory, { recursive: true, force: true })
 })
 
 describe('home background theme controller', () => {
+  it('migrates the current legacy choice and restores subsequent changes after a new client origin', () => {
+    const userData = mkdtempSync(join(tmpdir(), 'ework-home-theme-restart-'))
+    userDataDirectories.push(userData)
+    const preferences = new HomeThemePreferenceStore(userData)
+    const first = fixture({ initial: 'jarrick', url: 'http://127.0.0.1:49195/' })
+    first.mount(preferences)
+    expect(new HomeThemePreferenceStore(userData).get()).toBe('jarrick')
+    first.click('next')
+    expect(first.current()!.dataset.homeThemeId).toBe('lowfreez')
+    first.dispose()
+    const restarted = fixture({ url: 'http://127.0.0.1:53584/' })
+    restarted.mount(new HomeThemePreferenceStore(userData))
+    expect(restarted.current()!.dataset.homeThemeId).toBe('lowfreez')
+  })
+
+  it('migrates a removed legacy theme to the durable default', () => {
+    let saved: unknown = null
+    const f = fixture({ initial: 'liquid-chrome' })
+    f.mount({ get: () => saved, set: theme => { saved = theme; return true } })
+    expect(saved).toBe('default')
+    expect(f.current()!.dataset.homeThemeId).toBe('default')
+  })
+
+  it('prefers the durable choice over stale local storage and works when local storage is blocked', () => {
+    const preferences = { get: () => 'jarrick', set: () => true }
+    const stale = fixture({ initial: 'default' })
+    stale.mount(preferences)
+    expect(stale.current()!.dataset.homeThemeId).toBe('jarrick')
+    const blocked = fixture({ storageBlocked: true })
+    blocked.mount(preferences)
+    expect(blocked.current()!.dataset.homeThemeId).toBe('jarrick')
+  })
+
+  it.each(['false', 'throw'])('preserves an unsaved selection when the native write returns %s and retries after remount', failure => {
+    let saved = 'jarrick', writable = false
+    const preferences = { get: () => saved, set: (theme: string) => {
+      if (!writable) { if (failure === 'throw') throw Error('disk unavailable'); return false }
+      saved = theme; return true
+    } }
+    const f = fixture()
+    f.mount(preferences); f.click('next')
+    expect(f.current()!.dataset.homeThemeId).toBe('lowfreez')
+    f.dispose(); f.mount(preferences)
+    expect(f.current()!.dataset.homeThemeId).toBe('lowfreez')
+    expect(f.win.localStorage.getItem(STORAGE_KEY)).toBe('lowfreez')
+    writable = true
+    f.dispose(); f.mount(preferences)
+    expect(saved).toBe('lowfreez')
+  })
+
+  it('does not overwrite a newer native choice with a failed write from an older page', () => {
+    let saved = 'jarrick', writable = false
+    const preferences = { get: () => saved, set: (theme: string) => { if (!writable) return false; saved = theme; return true } }
+    const f = fixture()
+    f.mount(preferences); f.click('next')
+    f.dispose()
+    saved = 'boz'; writable = true
+    f.mount(preferences)
+    expect(f.current()!.dataset.homeThemeId).toBe('boz')
+    expect(saved).toBe('boz')
+  })
+
   it.each(['emreturan', 'abramovdesign', 'pattern-waves', 'gradient-ascii', 'faulty-terminal', 'liquid-chrome'])('migrates removed theme %s and retains the approved choices', removed => {
     const f = fixture({ initial: removed })
     f.mount()

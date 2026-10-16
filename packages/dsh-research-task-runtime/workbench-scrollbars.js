@@ -68,7 +68,7 @@ export function installWorkbenchScrollbars(container, viewport, selected, scroll
       if(!part){
         const track=doc.createElement('div'),thumb=doc.createElement('span')
         track.dataset.workbenchScrollbar=axis;track.setAttribute('data-research-preview-interactive','');track.setAttribute('role','scrollbar');track.setAttribute('aria-label',horizontal?'水平滚动':'垂直滚动');track.setAttribute('aria-orientation',horizontal?'horizontal':'vertical');track.tabIndex=0
-        track.style.cssText='position:absolute;pointer-events:auto;touch-action:none;background:transparent;outline:none';thumb.style.cssText='display:block;position:absolute;border-radius:4px;background:var(--grid-scroll-thumb,var(--sherlock-scroll-thumb,var(--ework-scroll-thumb,#e1e1e1)));pointer-events:none'
+        track.style.cssText='position:absolute;pointer-events:auto;touch-action:none;background:transparent;outline:none';thumb.style.cssText='display:block;position:absolute;border-radius:4px;background:var(--grid-scroll-thumb,var(--sherlock-scroll-thumb,var(--ework-scroll-thumb,#0000001a)));pointer-events:none'
         track.append(thumb);layer.append(track);part={track,thumb};parts.set(axis,part)
         track.addEventListener('pointerdown',event=>{
           event.preventDefault();event.stopPropagation();track.setPointerCapture?.(event.pointerId)

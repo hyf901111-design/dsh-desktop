@@ -46,7 +46,7 @@ it.each([false, true])('uses a dedicated 4 by 112 thumb without registering shee
     expect(f.doc.querySelector('#odyssey-task-scrollbar-style')!.textContent).toContain('width:4px')
     expect(f.win.getComputedStyle(track.firstElementChild!).width).toBe('4px')
     expect(f.win.getComputedStyle(track.firstElementChild!).borderRadius).toBe('2px')
-    expect(f.win.getComputedStyle(track.firstElementChild!).backgroundColor).toBe(dark ? '#333333' : '#e1e1e1')
+    expect(f.win.getComputedStyle(track.firstElementChild!).backgroundColor).toBe(dark ? '#333333' : '#0000001a')
   } finally { f.dispose(); await f.win.happyDOM.close() }
 })
 

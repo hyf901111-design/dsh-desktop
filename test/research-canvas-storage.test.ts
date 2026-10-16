@@ -24,6 +24,21 @@ afterEach(() => {
 })
 
 describe('desktop Research canvas storage', () => {
+  it('persists only supported per-session tabs and clears a deleted session preference', () => {
+    const directory = temporaryUserData(), key = 'ework.session.view.v1:session-tab'
+    const storage = new ResearchCanvasStorage(directory)
+    for (const view of ['chat', 'research', 'notes', 'trajectory']) {
+      expect(storage.setItem(key, view)).toBe(true)
+      expect(new ResearchCanvasStorage(directory).getItem(key)).toBe(view)
+    }
+    for (const value of ['unknown', '{}', 'notes '.repeat(100)]) expect(storage.setItem(key, value)).toBe(false)
+    expect(storage.getItem(key)).toBe('trajectory')
+    expect(storage.setItem(key, '')).toBe(true)
+    expect(new ResearchCanvasStorage(directory).getItem(key)).toBe('')
+    const file = researchCanvasStoragePath(directory, key)
+    writeFileSync(file, JSON.stringify({ key, value: 'unsupported' }))
+    expect(new ResearchCanvasStorage(directory).getItem(key)).toBeNull()
+  })
   it('persists user table widths across client ports and rejects invalid column preferences', () => {
     const userData = temporaryUserData(), key = 'ework.research.table-columns.v1:board:node:0:schema'
     const state = JSON.stringify({ widths: [180, 120, 90], manual: [true, false, false] })

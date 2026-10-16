@@ -2,7 +2,8 @@
    Supersedes the two/three-row header in the earlier 64/66 boards. */
 /* Preset switching is temporarily hidden across all native pages/settings. */
 body .cubgiG_seat,body [data-settings-item="agent-preset"] { display:none!important; }
-body { --odyssey-menu:rgba(255, 255, 255, 0.86); --odyssey-menu-border:rgba(0, 0, 0, 0.10); --odyssey-menu-row:rgba(0, 0, 0, 0.055); --odyssey-menu-muted:#7d7d7d; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.16); --odyssey-menu-blur:blur(24px); --odyssey-scroll-ink:0 0 0; --ework-scroll-thumb:#e1e1e1; --ework-scroll-hover:#c9c9c9; --ework-scroll-active:#b5b5b5; }
+/* A translucent light thumb remains visible on both white and grey sidebars. */
+body { --odyssey-menu:rgba(255, 255, 255, 0.86); --odyssey-menu-border:rgba(0, 0, 0, 0.10); --odyssey-menu-row:rgba(0, 0, 0, 0.055); --odyssey-menu-muted:#7d7d7d; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.16); --odyssey-menu-blur:blur(24px); --odyssey-scroll-ink:0 0 0; --ework-scroll-thumb:#0000001a; --ework-scroll-hover:#c9c9c9; --ework-scroll-active:#b5b5b5; }
 body[data-ds-dark-theme],html[data-theme=dark] body,html.dark body { --odyssey-menu:rgba(43, 43, 43, 0.82); --odyssey-menu-border:rgba(255, 255, 255, 0.10); --odyssey-menu-row:rgba(255, 255, 255, 0.075); --odyssey-menu-muted:#999; --odyssey-menu-shadow:0 8px 24px -4px rgba(0,0,0,.32); --odyssey-scroll-ink:255 255 255; --ework-scroll-thumb:#333333; --ework-scroll-hover:#444444; --ework-scroll-active:#555555; }
 body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
@@ -676,7 +677,7 @@ body .JObwrW_trigger:is(:hover,[aria-expanded=true]){background:var(--odyssey-me
    their existing geometry, visibility and hit targets. Do not set a global
    scrollbar-color: Chromium would ignore existing WebKit widths/hover rules. */
 body { --dsh-scrollbar-thumb:var(--ework-scroll-thumb); --dsh-scrollbar-thumb-hover:var(--ework-scroll-hover); }
-body::-webkit-scrollbar-thumb, body *::-webkit-scrollbar-thumb { background-color:var(--ework-scroll-thumb,#e1e1e1)!important; }
+body::-webkit-scrollbar-thumb, body *::-webkit-scrollbar-thumb { background-color:var(--ework-scroll-thumb,#0000001a)!important; }
 body::-webkit-scrollbar-thumb:hover, body *::-webkit-scrollbar-thumb:hover { background-color:var(--ework-scroll-hover,#c9c9c9)!important; }
 body::-webkit-scrollbar-thumb:active, body *::-webkit-scrollbar-thumb:active { background-color:var(--ework-scroll-active,#b5b5b5)!important; }
 body::-webkit-scrollbar-track, body *::-webkit-scrollbar-track, body::-webkit-scrollbar-corner, body *::-webkit-scrollbar-corner { background-color:transparent!important; }
