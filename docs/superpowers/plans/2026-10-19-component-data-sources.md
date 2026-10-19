@@ -29,9 +29,9 @@
 ### Task 2: 固定来源适配器与组件配置
 **Files:** financial-widget-contract.js/.d.ts; new financial-widget-sources.js; src/main/financial/public-widget-data.ts; new backup-widget-data.ts; new focused provider tests; existing financial-widget-public/announcements tests.
 **Interfaces:** spec.dataSource(default/backup)、refreshMinutes、refreshEnabled；IPC query.source(default/backup)；financialWidgetSources(spec) 返回来源选项/说明。
-- [ ] 写失败用例：备用新浪价格/K线、巨潮公告证券与日期校验、新闻备用来源、参数拒绝、缓存来源隔离、账户切换取消。
-- [ ] 实现固定来源读取/解析，复用主进程字节和时间限制；按验证过的字段生成统一结果；旧默认查询行为保持兼容。
-- [ ] 运行适配器/契约聚焦测试及只读在线探针，通过后中文提交。
+- [x] 写失败用例：备用新浪价格/K线、巨潮公告证券与日期校验、新闻备用来源、参数拒绝、缓存来源隔离、账户切换取消。
+- [x] 实现固定来源读取/解析，复用主进程字节和时间限制；按验证过的字段生成统一结果；旧默认查询行为保持兼容。
+- [x] 运行适配器/契约聚焦测试及只读在线探针，通过后中文提交。
 
 ### Task 3: 统一面板、页脚入口与调度
 **Files:** scripts/lib/component-data-refresh.mjs; component-data-status.mjs; financial-widget-client.mjs/.css; settings/refresh/client/browser focused tests.
