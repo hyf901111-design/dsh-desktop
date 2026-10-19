@@ -34,6 +34,8 @@ it('四组件预设直接生成专用布局，保留显著模拟标注和原始�
   expect(workbenchDesignTemplate(p).provenance).toContain('OpenTerminal')
  }
  const layout=layoutWorkbench(plan.panels)
+ expect(layout[0].height).toBe(400)
+ expect(workbenchDesignTemplate(plan.panels[1]).provenance).not.toContain('ChartWidget')
  expect(layout[1].x).toBe(layout[0].width+16)
  expect(layout[2].width).toBe(layout[0].width)
  expect(layout[3].width).toBe(layout[1].width)

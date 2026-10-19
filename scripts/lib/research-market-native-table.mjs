@@ -4,6 +4,9 @@
 export function parseResearchMarketNativeTable(html, doc) {
   const variant = typeof html === 'string' && html.match(/<body\b[^>]*data-sherlock-market="(table|fund-holdings)"[^>]*data-sherlock-design="21m-20260923-v1"/)?.[1];
   if (!variant) return null;
+  // Explicit layouts carry context, complete notes and their own interaction.
+  // The cell-only native optimization must not flatten that host composition.
+  if (/<body\b[^>]*\bdata-layout-profile="openterminal"/.test(html)) return null;
   const fragment = html.match(/<table\b[\s\S]*?<\/table>/i)?.[0];
   const Parser = doc?.defaultView?.DOMParser;
   if (!fragment || typeof Parser !== 'function') return null;

@@ -25,6 +25,15 @@ describe('host market table text rendering', () => {
     win.happyDOM.abort();
   });
 
+  it('preserves the complete OpenTerminal table instead of extracting only its cells', () => {
+    const win = new Window();
+    const artifact = renderMarketArtifact({version:1,type:'market',variant:'table',title:'模拟观察池',asOf:'模拟',layoutProfile:'openterminal',columns:['名称','价格（元）'],rows:[['示例','0']],note:'来源口径完整保留'});
+    expect(artifact.html).toContain('ot-table-context');
+    expect(artifact.html).toContain('来源口径完整保留');
+    expect(parseResearchMarketNativeTable(artifact.html,win.document)).toBeNull();
+    win.happyDOM.abort();
+  });
+
   it('leaves arbitrary HTML and other market variants inside their sandbox', () => {
     const win = new Window();
     expect(parseResearchMarketNativeTable('<table><tr><td>not contracted</td></tr></table>', win.document)).toBeNull();

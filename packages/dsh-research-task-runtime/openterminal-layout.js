@@ -8,8 +8,8 @@ export function validOpenTerminalLayout(s){
 export function openTerminalDimensions(s){
  if(s?.layoutProfile!=='openterminal'||!validOpenTerminalLayout(s))return null
  return {width:s.type==='news'||s.variant==='ticker-information'||s.variant==='table'&&s.columns?.length<=4?448:832,
-  height:s.type==='news'||s.variant==='table'?400:340,
-  minWidth:280,minHeight:220,provenance:'OpenTerminal · QuoteWidget / ChartWidget / data-table / NewsWidget',
+  height:s.type==='news'||s.variant==='table'||s.variant==='ticker-information'?400:340,
+  minWidth:280,minHeight:220,provenance:'OpenTerminal · QuoteWidget / data-table / NewsWidget; EWork price-volume',
   layoutProfile:'openterminal',version:'openterminal-layout-20261019'}
 }
 export function openTerminalQuote(s,spark){
