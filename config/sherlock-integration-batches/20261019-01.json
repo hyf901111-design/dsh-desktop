@@ -97,6 +97,52 @@
           "当前仅完成独立浏览器聚焦验证，尚未构建或在共享 EWork Odyssey 客户端验收；功能分支尚未合并 main。"
         ],
         "generatedAt": "2026-10-19T00:45:41.688787Z"
+      },
+      "merged": {
+        "mergeCommit": "3fdd8c2f12d9d643b896056eb89b41ee4d8b4e14",
+        "verificationCommit": "3fdd8c2f12d9d643b896056eb89b41ee4d8b4e14",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-motion-browser.test.js",
+              "test/home-theme-preferences.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/home-theme-controller.test.ts test/home-theme-motion-browser.test.js test/home-theme-preferences.test.ts",
+            "verifiedCommit": "3fdd8c2f12d9d643b896056eb89b41ee4d8b4e14",
+            "completedAt": "2026-10-19T00:48:04.734Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3fdd8c2f12d9d643b896056eb89b41ee4d8b4e14",
+            "completedAt": "2026-10-19T00:48:04.734Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "3fdd8c2f12d9d643b896056eb89b41ee4d8b4e14",
+            "completedAt": "2026-10-19T00:48:04.734Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-10-19T00:48:04.734Z"
       }
     }
   ],
