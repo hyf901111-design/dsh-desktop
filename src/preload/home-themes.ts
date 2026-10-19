@@ -51,6 +51,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
   let host: HTMLElement | null = null, background: HTMLElement | null = null, dock: HTMLElement | null = null
   let surface: Surface | null = null, visible = false, dark = doc.body.hasAttribute('data-ds-dark-theme')
   let disposed = false, frame = 0, previous = 0, elapsed = 0, generation = 0, cleanupTimer = 0
+  let collapseTimer = 0, dockHovered = false
   const buttons = new Map<Theme, HTMLButtonElement>(), thumbs = new Map<string, string>()
   const entries = new Set<Animation>(), transitions = new Set<Animation>()
   const field = createHomeFlowField({ speed: 1.5, strength: 1.3 })
@@ -67,6 +68,24 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     const animation = element.animate(keyframes, options)
     set.add(animation)
     void animation.finished.then(() => { set.delete(animation) }, () => { set.delete(animation) })
+  }
+  const cancelDockCollapse = () => {
+    if (collapseTimer) win.clearTimeout(collapseTimer)
+    collapseTimer = 0
+  }
+  const expandDock = () => {
+    cancelDockCollapse()
+    if (dock) dock.dataset.dockState = 'expanded'
+  }
+  // A mouse click leaves focus behind; only keyboard focus should pin the dock.
+  const hasDockKeyboardFocus = () => !!dock?.contains(doc.activeElement) && doc.activeElement?.matches(':focus-visible') === true
+  const scheduleDockCollapse = () => {
+    cancelDockCollapse()
+    if (!visible || doc.hidden || dockHovered || hasDockKeyboardFocus()) return
+    collapseTimer = win.setTimeout(() => {
+      collapseTimer = 0
+      if (visible && !doc.hidden && !dockHovered && dock && !hasDockKeyboardFocus()) dock.dataset.dockState = 'collapsed'
+    }, 3000)
   }
   const stop = () => {
     if (frame) win.cancelAnimationFrame(frame)
@@ -222,6 +241,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
   const enter = () => {
     cancelAnimations(entries)
     if (!dock) return
+    expandDock(); scheduleDockCollapse()
     dock.dataset.entryGeneration = String(++generation)
     for (const button of buttons.values()) {
       const position = button.dataset.homeThemePosition
@@ -232,7 +252,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     }
   }
   const teardown = () => {
-    stop(); clearTransition(); cancelAnimations(entries)
+    stop(); clearTransition(); cancelAnimations(entries); cancelDockCollapse(); dockHovered = false
     observer.disconnect(); surface?.dispose(); surface = null
     background?.remove(); dock?.remove(); background = dock = null; buttons.clear()
   }
@@ -240,6 +260,10 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     teardown(); host = next
     background = doc.createElement('div'); background.dataset.odysseyHomeThemeBackground = ''; background.setAttribute('aria-hidden', 'true')
     dock = doc.createElement('div'); dock.dataset.odysseyThemeDock = ''; dock.setAttribute('role', 'group'); dock.setAttribute('aria-label', '首页背景主题')
+    dock.addEventListener('pointerenter', () => { dockHovered = true; expandDock() })
+    dock.addEventListener('pointerleave', () => { dockHovered = false; scheduleDockCollapse() })
+    dock.addEventListener('focusin', expandDock)
+    dock.addEventListener('focusout', scheduleDockCollapse)
     const strip = doc.createElement('div'); strip.className = 'odyssey-theme-strip'
     for (const id of THEMES) {
       const button = doc.createElement('button'); button.type = 'button'; button.dataset.homeThemeId = id
@@ -250,6 +274,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
       preview.append(blur); body.append(glass, preview); button.append(body)
       button.addEventListener('click', () => { if (button.getAttribute('aria-hidden') !== 'true') select(id) })
       button.addEventListener('keydown', event => {
+        expandDock()
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
         event.preventDefault(); event.stopPropagation()
         const index = THEMES.indexOf(selected)
@@ -278,12 +303,12 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     visible = nextVisible
     if (dock && dock.hidden === visible) dock.hidden = !visible
     if (background && background.hidden === visible) background.hidden = !visible
-    if (!visible) { stop(); clearTransition(); cancelAnimations(entries); return }
+    if (!visible) { stop(); clearTransition(); cancelAnimations(entries); cancelDockCollapse(); dockHovered = false; return }
     if (background?.dataset.homeThemeId !== selected) { updateCards(); replaceSurface(false) }
     else if (themeChanged || !wasVisible) { updateCards(); if (themeChanged && (doc.hidden || reduced.matches)) render() }
     if (!wasVisible || !surface) { if (!surface) replaceSurface(false); enter(); resume() }
   }
-  const onVisibility = () => { if (doc.hidden) { stop(); cancelAnimations(entries); clearTransition() } else { sync(); resume() } }
+  const onVisibility = () => { if (doc.hidden) { stop(); cancelAnimations(entries); clearTransition(); cancelDockCollapse() } else { sync(); resume(); scheduleDockCollapse() } }
   const onReduced = () => { clearTransition(); cancelAnimations(entries); resume() }
   const onStorage = (event: StorageEvent) => { if (event.key !== STORAGE_KEY) return; const value = event.newValue === null ? 'default' : event.newValue; if (validTheme(value)) select(value, false) }
   const changes = new win.MutationObserver(sync)
