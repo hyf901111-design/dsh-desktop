@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261019-02",
+  "branch": "codex/integration/20261019-02",
+  "baseMainCommit": "4fd27baf5a54f85922a637aac5885c1e63aba287",
+  "expectedMainCommit": "4fd27baf5a54f85922a637aac5885c1e63aba287",
+  "createdAt": "2026-10-19T03:37:12.887Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "组件底栏数据源入口、备用来源与自动更新设置",
+        "branch": "codex/feat/component-data-sources-20261019",
+        "baseCommit": "4fd27baf5a54f85922a637aac5885c1e63aba287",
+        "tipCommit": "11d227045ffc4e597d5a751c292dc0df634f1655",
+        "commits": [
+          {
+            "commit": "c9d160d72da4bc88b2f63c1d58d5c365b50793c6",
+            "parents": [
+              "4fd27baf5a54f85922a637aac5885c1e63aba287"
+            ],
+            "subject": "规划：明确组件数据源切换与统一更新设置方案"
+          },
+          {
+            "commit": "0b8a0bd752ccefbb2d3b632e4cd9130226779eeb",
+            "parents": [
+              "c9d160d72da4bc88b2f63c1d58d5c365b50793c6"
+            ],
+            "subject": "功能：支持组件完整数据源方案切换并保留刷新与恢复配置"
+          },
+          {
+            "commit": "a45c3986ada9dfe6e120dd280805a75d32394b8e",
+            "parents": [
+              "0b8a0bd752ccefbb2d3b632e4cd9130226779eeb"
+            ],
+            "subject": "功能：为金融组件增加可切换的真实备用数据源"
+          },
+          {
+            "commit": "f86ff31caba52f11ffed78769f51136133f05c91",
+            "parents": [
+              "a45c3986ada9dfe6e120dd280805a75d32394b8e"
+            ],
+            "subject": "功能：统一组件来源设置并支持来源和刷新周期切换"
+          },
+          {
+            "commit": "22902e3446f81af267c793197de3f7ec5303132b",
+            "parents": [
+              "f86ff31caba52f11ffed78769f51136133f05c91"
+            ],
+            "subject": "修复：指数备用报价部分成功时保留原走势及来源"
+          },
+          {
+            "commit": "11d227045ffc4e597d5a751c292dc0df634f1655",
+            "parents": [
+              "22902e3446f81af267c793197de3f7ec5303132b"
+            ],
+            "subject": "文档：记录组件数据源验收证据与集成步骤"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-19-component-data-sources.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-19-component-data-sources-design.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-19-component-data-sources-verification.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/financial-widget-sources.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/financial-widget-sources.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-refresh.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/component-data-settings-panel.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "A",
+            "path": "src/main/financial/backup-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/financial/public-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/component-library.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/financial-ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/ui-localization.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/component-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-refresh.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/component-data-settings-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-ui.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-library-store.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-widget-backup.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-localization.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-financial-controls-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/component-data-settings-client.test.js",
+              "test/financial-widget-backup.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "22项来源、设置、暂停、部分失败与提供商测试通过",
+            "verifiedCommit": "11d227045ffc4e597d5a751c292dc0df634f1655",
+            "completedAt": "2026-10-19T03:00:25Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-financial-controls-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "4项真实Chromium笔记及研究组件浏览器验证通过",
+            "verifiedCommit": "11d227045ffc4e597d5a751c292dc0df634f1655",
+            "completedAt": "2026-10-19T03:00:25Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript类型检查通过",
+            "verifiedCommit": "11d227045ffc4e597d5a751c292dc0df634f1655",
+            "completedAt": "2026-10-19T03:00:25Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "补丁空白检查通过",
+            "verifiedCommit": "11d227045ffc4e597d5a751c292dc0df634f1655",
+            "completedAt": "2026-10-19T03:00:25Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际patched React bundle在Chromium通过笔记portal与研究生成组件入口、完整来源切换、频率保存、深浅主题、360px窄窗口、Tab/Escape及焦点恢复验证。UI使用明确测试数据；在线提供商探针独立验证。共享客户端尚未构建。"
+        },
+        "acceptanceCriteria": [
+          "点击生成组件或原生金融组件左下角来源打开正确组件的数据与自动更新面板",
+          "完整已登记来源可下拉切换，切换后立即取数，来源与刷新频率和暂停状态持久保存",
+          "除日历外五类内置金融组件具备真实备用方案",
+          "来源切换及部分取数失败保留有效旧数据、图表、成交量单位和实际来源",
+          "隐藏暂停且恢复遵守暂停状态，旧账户和旧revision响应不能覆盖当前数据"
+        ],
+        "risks": [
+          "公开提供商接口存在时效与可用性变化；不声明无限额度或实时行情",
+          "备用K线不提供所选复权时会报出明确限制并保留旧图；巨潮备用公告不支持美股",
+          "生成组件仅能切换已登记且重新授权通过的完整兼容来源方案",
+          "须按项目手册先创建集成批次再构建共享客户端，用户尚未进行本次客户端验收"
+        ],
+        "generatedAt": "2026-10-19T03:00:25Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/component-data-settings-client.test.js",
+        "test/financial-widget-backup.test.ts",
+        "test/component-data-refresh.test.js",
+        "test/component-data-service.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/notes-financial-controls-browser.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
