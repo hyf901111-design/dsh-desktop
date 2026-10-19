@@ -14,7 +14,8 @@ export const PUBLIC_DATA_PROFILES = Object.freeze({
 const object = v => v && typeof v === 'object' && !Array.isArray(v)
 export function validatePublicDataPanel(value, type) {
   const profile = object(value) && PUBLIC_DATA_PROFILES[value.profile]
-  if (!profile || profile.type !== type || Object.keys(value).some(k => !['profile', 'requests', 'intervalMinutes'].includes(k))) throw Error('免费源组件类型或参数无效')
+  if (!profile || profile.type !== type || Object.keys(value).some(k => !['profile', 'requests', 'intervalMinutes', 'layoutProfile'].includes(k))) throw Error('免费源组件类型或参数无效')
+  if (value.layoutProfile !== undefined && (value.layoutProfile !== 'openterminal' || !['quotes-table', 'price-volume', 'news'].includes(value.profile))) throw Error('当前免费源模板不支持此专用布局')
   const intervalMinutes = value.intervalMinutes ?? 1
   if (!Number.isInteger(intervalMinutes) || intervalMinutes < 0 || intervalMinutes > 10080) throw Error('免费源组件刷新频率无效')
   if (!Array.isArray(value.requests) || !value.requests.length || value.requests.length > (value.profile === 'crypto-metrics' ? 2 : 1)) throw Error('免费源组件请求数量无效')
@@ -26,7 +27,7 @@ export function validatePublicDataPanel(value, type) {
     return { source: request.source, parameters_json: request.parameters_json }
   })
   if (new Set(requests.map(r => JSON.stringify(r))).size !== requests.length) throw Error('免费源组件请求重复')
-  return { profile: value.profile, requests, intervalMinutes }
+  return { profile: value.profile, requests, intervalMinutes, ...(value.layoutProfile ? { layoutProfile: value.layoutProfile } : {}) }
 }
 
 // Live single-security K lines use the actual library renderer. Keep explicit
@@ -49,7 +50,7 @@ const number = (field, digits = 2, suffix = '') => ({ $path: field, $as: 'string
 const provenance = responses => responses.map(response => ({ label: response.source ?? response.sourceId, ...(response.documentation ? { url: response.documentation } : {}) }))
 function mappingFor(panel, responses) {
   const profile = PUBLIC_DATA_PROFILES[panel.publicData.profile]
-  const first = responses[0], base = { version: 1, type: profile.type, title: panel.title, ...(profile.variant ? { variant: profile.variant } : {}), sources: provenance(responses) }
+  const first = responses[0], base = { version: 1, type: profile.type, title: panel.title, ...(profile.variant ? { variant: profile.variant } : {}), ...(panel.publicData.layoutProfile ? { layoutProfile: panel.publicData.layoutProfile } : {}), sources: provenance(responses) }
   if (panel.publicData.profile === 'news') return { ...base,
     asOf: path('q0', 'dataTime', { $default: '发布时间未提供', $prefix: '新浪财经 · 资讯 ' }),
     items: array('q0', { title: { $path: 'title' }, date: { $path: 'time', $optional: true }, category: { $path: 'publisher', $default: '媒体未提供' }, summary: { $default: '来源未提供摘要' }, url: { $path: 'url', $optional: true } }, { $sortBy: 'time', $order: 'desc' })

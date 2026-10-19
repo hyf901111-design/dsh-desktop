@@ -15,6 +15,8 @@ import {FINANCIAL_PROFILE_VARIANTS,FINANCIAL_PROFILE_FIELDS,financialProfileData
 import { acceptArtifactOutput, workbenchMarketRecencyIssue } from './artifact-output.js';
 import { marketVariant, workbenchDesignTemplate } from './workbench-design-contract.js';
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
+import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
+import { isDeepStrictEqual } from 'node:util';
 import { validatePublicDataPanel, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
@@ -287,7 +289,7 @@ export function prepareSimulatedArtifact(panel) {
     return artifact;
 }
 export function validateWorkbench(value) {
-    value = expandSimulatedWorkbenchPreset(value);
+    value = expandSimulatedWorkbenchPreset(expandLiveWorkbenchPreset(value));
     if (value && value.panels === undefined)
         throw Error('缺少工作台内容参数：不能只传 title。标准模拟工作台请完整提交 {"title":"工作台标题","dataMode":"simulated","preset":"medical-21h"}（另有 market-overview-21h、research-operations-21m）；其他需求必须提供 1–10 个 panels，每项包含 title、prompt、type、size。preset 是工具参数，不是文件路径。请按用户需求补齐参数后重试，不要重复原调用。');
     if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 1 || value.panels.length > 10)
@@ -305,6 +307,15 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
+        // Recover the observed flattened spelling before dispatch. Keep the
+        // canonical publicData object and reject conflicting duplicate inputs.
+        if (p.profile !== undefined || p.requests !== undefined) {
+            if (p.profile === undefined || p.requests === undefined) throw Error('免费源面板请同时提供 publicData.profile 与 publicData.requests。');
+            if (p.publicData !== undefined && (p.publicData?.profile !== p.profile || !isDeepStrictEqual(p.publicData?.requests, p.requests)))
+                throw Error('面板与 publicData 的来源配置冲突，请只保留一个一致的配置。');
+            const { profile, requests, ...rest } = p;
+            p = { ...rest, publicData: p.publicData ?? { profile, requests } };
+        }
         if(p.type==='financial-widget'){
             if(isSimulated)throw Error('内置金融组件读取真实行情，不能用于模拟数据；请使用market/chart模拟模板。');
             if(!p.artifact||p.artifact.type!=='financial-widget')throw Error('内置金融组件必须同时提供artifact标的配置。'+FINANCIAL_WIDGET_GUIDANCE);

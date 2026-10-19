@@ -1,3 +1,5 @@
+import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
+
 // Refresh intent comes from task instructions or a direct human request. Quoted
 // examples and fetched documents must not silently change the saved frequency.
 const instructions = text => typeof text === 'string'
@@ -15,6 +17,7 @@ export function requestedComponentRefreshInterval(text) {
 }
 
 export function preserveWorkbenchRefreshPreference(args, humanText) {
+  args = expandLiveWorkbenchPreset(args);
   if (!args || args.dataMode === 'simulated' || !Array.isArray(args.panels)) return args;
   const interval = requestedComponentRefreshInterval(humanText);
   if (interval !== 0) return args;
@@ -25,6 +28,8 @@ export function preserveWorkbenchRefreshPreference(args, humanText) {
       && !/(?:全部|所有|每张|每个|整个工作台|所有组件).{0,16}(?:仅|只|不要|不用|关闭|禁用)/u.test(request)) return args;
   return { ...args, panels: args.panels.map(panel => ({ ...panel,
     ...(panel.publicData ? { publicData: { ...panel.publicData, intervalMinutes: 0 }, ...(Object.hasOwn(panel, 'intervalMinutes') ? { intervalMinutes: 0 } : {}) } : {}),
+    ...(panel.profile !== undefined && panel.requests !== undefined ? { intervalMinutes: 0 } : {}),
+    ...(panel.artifact?.type === 'financial-widget' ? { artifact: { ...panel.artifact, refreshMinutes: 0, refreshEnabled: false } } : {}),
     prompt: `${panel.prompt}\n${manualDirective}`
   })) };
 }

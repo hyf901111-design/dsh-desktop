@@ -1,5 +1,5 @@
 import {mkdir,readFile,writeFile,rename} from 'node:fs/promises'
-import {dirname} from 'node:path'
+import {dirname,isAbsolute} from 'node:path'
 import {randomUUID} from 'node:crypto'
 import Ajv from 'ajv'
 import {ComponentDataRefresh,evaluateMapping} from '../../../packages/dsh-research-task-runtime/component-data-refresh.js'
@@ -22,19 +22,33 @@ export function componentRefreshBindings(requests:Array<{connectionId:string;con
  return [...groups.values()]
 }
 
-export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean;skillDirectory?:string;publicData?:{validate:(args:any)=>Promise<{sourceId:string;sourceName:string}>;query:(args:any,signal:AbortSignal)=>Promise<any>};onStatusChange?:(sessionId:string,rows:unknown[])=>void}){
+export async function createComponentDataService(options:{file:string;integrations:IntegrationService;canvas:CanvasActionBridge;rpc:(method:string,args:any)=>Promise<any>;owner:()=>string|undefined;isShared:(id:string)=>boolean;personalBoard?:(id:string)=>{sessionId:string;cwd?:string;dedicated?:boolean}|undefined;skillDirectory?:string;publicData?:{validate:(args:any)=>Promise<{sourceId:string;sourceName:string}>;query:(args:any,signal:AbortSignal)=>Promise<any>};onStatusChange?:(sessionId:string,rows:unknown[])=>void}){
  const ajv=new Ajv({strict:false,allErrors:false,validateFormats:false})
  const publicData=options.publicData??createPublicDataClient({root:options.skillDirectory})
- async function sessionIdentity(sessionId:string){
+ // The desktop's dedicated personal-board registry is authoritative for these
+ // sessions. Builtin public sources do not need an MCP workspace grant, and
+ // scanning every historical session/workspace can time out during a batch.
+ function personalIdentity(sessionId:string){
   if(options.isShared(sessionId))throw Error('当前数据刷新仅支持个人工作台')
+  const board=options.personalBoard?.(sessionId)
+  if(!board?.dedicated||board.sessionId!==sessionId||!board.cwd||!isAbsolute(board.cwd))return
+  return {session:{sessionId,cwd:board.cwd},workspace:{workspaceId:'builtin-personal-board:'+sessionId,path:board.cwd}}
+ }
+ async function sessionIdentity(sessionId:string,allowPersonalBoard=false){
+  if(options.isShared(sessionId))throw Error('当前数据刷新仅支持个人工作台')
+  const personal=allowPersonalBoard&&personalIdentity(sessionId)
+  if(personal)return personal.session
   const sessions=await options.rpc('session.list',{})
   const session=sessions.items.find((s:any)=>s.sessionId===sessionId)
   if(!session)throw Error('组件所属会话不可用，请重新打开看板后重试')
   return session
  }
- async function identity(sessionId:string){
-  const session=await sessionIdentity(sessionId)
-  const workspaces=await options.rpc('workspace.list',{})
+ async function identity(sessionId:string,allowPersonalBoard=false){
+  const owner=options.owner(),checkOwner=()=>{if(options.owner()!==owner)throw Error('账号已变化，请重新打开后重试。')}
+  const personal=allowPersonalBoard&&personalIdentity(sessionId)
+  checkOwner();if(personal)return personal
+  const session=await sessionIdentity(sessionId);checkOwner()
+  const workspaces=await options.rpc('workspace.list',{});checkOwner()
   const workspace=workspaces.items.find((w:any)=>session.cwd?w.path===session.cwd:w.sessionIds?.includes(sessionId))
   if(!workspace)throw Error('组件所属工作区未连接，请重新连接原工作区后再绑定或刷新数据；现有内容已保留')
   return {session,workspace}
@@ -53,7 +67,7 @@ export async function createComponentDataService(options:{file:string;integratio
   inspect:async(target:any)=>{const result=await canvas(target,'inspect',{ids:[target.nodeId]});const node=result.nodes.find((n:any)=>n.id===target.nodeId);return {revision:result.revision,spec:node?.content?.containerSpec,writable:result.writable&&Boolean(node?.capabilities?.fields?.containerSpec)}},
   apply:async(target:any,revision:string,spec:any,signal:AbortSignal)=>canvas(target,'apply',{requestId:randomUUID(),revision,changes:[{op:'update',id:target.nodeId,fields:{containerSpec:spec}}]},signal),
   validateRequest:async(request:any,target:any)=>{
-   const {workspace}=await identity(target.sessionId)
+   const {workspace}=await identity(target.sessionId,request.toolId==='public_data_query')
    if(request.toolId==='public_data_query'){
     const source=await publicData.validate(evaluateMapping(request.args,{}))
     return {...request,connectionId:PUBLIC_DATA_CONNECTION,connectionRevision:1,schemaDigest:PUBLIC_DATA_SCHEMA,sourceName:source.sourceName}
@@ -67,6 +81,8 @@ export async function createComponentDataService(options:{file:string;integratio
   execute:async(binding:any,request:any,args:any,signal:AbortSignal)=>{
    if(request.toolId==='public_data_query'){
     if(request.connectionId!==PUBLIC_DATA_CONNECTION||request.connectionRevision!==1||request.schemaDigest!==PUBLIC_DATA_SCHEMA)throw Error('内置数据源版本已变化，请重新绑定')
+    const owner=options.owner();await identity(binding.sessionId,true)
+    if(options.owner()!==owner||binding.ownerAccountId!==owner)throw Error('账号已变化，请重新打开后重试。')
     return publicData.query(args,signal)
    }
    const live=options.integrations.runtimeSnapshot(),tool=live.tools.find(t=>t.id===request.toolId),connection=live.connections.find(c=>c.id===request.connectionId)
@@ -83,12 +99,14 @@ export async function createComponentDataService(options:{file:string;integratio
   const owner=options.owner(),checkOwner=()=>{if(options.owner()!==owner)throw Error('账号已变化，请重新打开后重试。')}
   // Reading saved state does not execute tools and must remain available for
   // static boards whose original workspace was removed from the sidebar.
-  if(args.action==='list'){await sessionIdentity(sessionId);checkOwner();return engine.list(sessionId)}
-  await identity(sessionId);checkOwner()
+  if(args.action==='list'){await sessionIdentity(sessionId,true);checkOwner();return engine.list(sessionId)}
   const rows=engine.list(sessionId),binding=rows.find((b:any)=>b.nodeId===args.nodeId)
+  const bindingAction=args.action==='bind'||args.action==='bind-generated'
+  const recipe=bindingAction?(typeof args.recipe==='string'?JSON.parse(args.recipe):args.recipe):undefined
+  const requests=bindingAction?recipe?.requests:binding?.requests
+  const builtinOnly=Array.isArray(requests)&&requests.length>0&&requests.every((r:any)=>r?.toolId==='public_data_query')
+  const {workspace}=await identity(sessionId,builtinOnly);checkOwner()
   if(args.action==='bind'||args.action==='bind-generated'){
-   const {workspace}=await identity(sessionId);checkOwner()
-   const recipe=typeof args.recipe==='string'?JSON.parse(args.recipe):args.recipe
    return engine.bind({...recipe,sessionId,nodeId:args.nodeId,workspaceId:workspace.workspaceId},args.action==='bind-generated'?args.initialSpec:undefined,{preserveSettings:args.action==='bind-generated'})
   }
   if(!binding)throw Error('组件尚未绑定数据接口。请让助手用已调用成功的接口和字段映射设置数据源。')

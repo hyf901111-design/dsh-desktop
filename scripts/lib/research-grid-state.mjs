@@ -20,7 +20,7 @@ export function createWorkbenchGridState(storage,sessionId) {
   const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&(!n.workbenchId||n.preserveGenerationSize)&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
   function visibleCells(){
     const m=grid.metrics(width||1000),limits=c=>{
-      const node=nodesById.get(c.id),min=grid.minimum(node,m),value=contentHeights.get(c.id)
+      const node=nodesById.get(c.id),min=grid.minimum(node,m,node?.kind==='planning-card'&&!contentOverrides.has(c.id)),value=contentHeights.get(c.id)
       // Explicit columns keep their saved spans consistently for all components.
       if([1,2,3].includes(c.arrangeColumns))min.w=Math.min(min.w,c.w)
       // A narrow viewport can expand a saved half-column to the template's

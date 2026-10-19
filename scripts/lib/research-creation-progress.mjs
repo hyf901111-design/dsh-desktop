@@ -179,7 +179,7 @@ const css = `
 .odyssey-creation-planning-card:active{cursor:grabbing}
 .odyssey-planning-dismiss{position:absolute;right:10px;top:10px;z-index:2;width:24px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:4px;color:var(--generation-phase);background:transparent;cursor:pointer}
 .odyssey-planning-dismiss:hover,.odyssey-planning-dismiss:focus-visible{background:var(--sherlock-hover,rgba(128,128,128,.16))}
-.odyssey-creation-planning-card[data-planning-grid][data-grid-active]{left:var(--grid-float-left)!important;top:var(--grid-float-top)!important}
+[data-ework-grid][data-grid-operation=move] .odyssey-creation-planning-card[data-planning-grid][data-grid-active]{left:var(--grid-float-left)!important;top:var(--grid-float-top)!important}
 .odyssey-creation-planning-card[data-research-creation-planning=dealing]{pointer-events:none;animation:odyssey-planning-deal .42s cubic-bezier(.22,1,.36,1) both}
 .odyssey-creation-planning-card[data-planning-grid][data-research-creation-planning=dealing]{animation-name:odyssey-planning-grid-deal}
 @keyframes odyssey-planning-deal{to{opacity:0;transform:scale(.72)}}
