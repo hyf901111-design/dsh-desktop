@@ -5,6 +5,7 @@ import { patchSessionViewPreferences } from './lib/session-view-preferences.mjs'
 import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
+import { patchWorkbenchPlanningSessionCatalog, patchWorkbenchPlanningSessionAppend } from './lib/workbench-planning-session.mjs'
 import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standard-mode-only.mjs'
 import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
@@ -269,5 +270,9 @@ const noteFeedbackPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-message
 writeFileSync(noteFeedbackPath,patchNoteFeedbackHost(readFileSync(noteFeedbackPath,'utf8')))
 for (const catalog of ['lib/index.js', 'lib/types/known-event-types.js']) {
   const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-session', catalog)
-  writeFileSync(path, patchNoteSessionCatalog(readFileSync(path, 'utf8')))
+  writeFileSync(path, patchWorkbenchPlanningSessionCatalog(patchNoteSessionCatalog(readFileSync(path, 'utf8'))))
+}
+for (const runtime of ['lib/index.js', 'lib/types/index.js']) {
+  const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-session', runtime)
+  writeFileSync(path, patchWorkbenchPlanningSessionAppend(readFileSync(path, 'utf8')))
 }
