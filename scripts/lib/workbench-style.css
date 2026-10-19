@@ -77,7 +77,8 @@ body [data-ework-toolbar]:has(.ew-workbench-mode-slot [data-workbench-style-opti
 body [data-ework-toolbar]:has([data-financial-library]):has(.ew-workbench-mode-slot [data-workbench-style-option=openterminal]){width:407px!important}
 body .ew-workbench-modes>button[data-workbench-style-option=openterminal][aria-checked=true]{color:#ff9900!important}
 
-body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-financial-widget,body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-financial-widget :is(button,input,select,table,th,td){font-family:var(--sherlock-font-sans)!important;border-radius:0!important}
+/* Connection ports keep their native hit target and circle presentation. */
+body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-financial-widget,body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-financial-widget :is(button,input,select,table,th,td):not(.ew-financial-port){font-family:var(--sherlock-font-sans)!important;border-radius:0!important}
 
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] :is(.ew-youtube-preset,.ew-iframe-preset){--youtube-control:var(--grid-control)!important;--iframe-control:var(--grid-control)!important}
 
