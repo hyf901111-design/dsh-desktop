@@ -4,7 +4,16 @@ const finite=value=>typeof value==='number'&&Number.isFinite(value)
 const json=value=>JSON.stringify(value).replace(/</g,'\\u003c')
 
 export function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit,viewport,observe) {
- const svg=document.querySelector('.price-volume svg'),readout=document.querySelector('.price-volume-readout'),buttons=[...document.querySelectorAll('[data-price-volume-range]')]
+ // Saved cards receive this runtime during preview refinement. Keep their
+ // control ancestry and all records so stored interaction routes stay valid.
+ const legacy=document.querySelector('body[data-layout-profile="openterminal"] .price-volume:not(.ot-price-volume)')
+ if(legacy){
+  legacy.classList.add('ot-price-volume-legacy')
+  const details=legacy.querySelector(':scope>details');if(details)details.open=true
+  legacy.querySelectorAll('tbody tr').forEach((row,index)=>{row.dataset.priceVolumeIndex=String(index);row.tabIndex=0})
+  legacy.querySelectorAll('[data-price-volume-range]').forEach(button=>{if(Number(button.dataset.priceVolumeRange)===labels.length)button.hidden=true})
+ }
+ const svg=document.querySelector('.price-volume svg'),readout=document.querySelector('.price-volume-readout'),buttons=[...document.querySelectorAll('[data-price-volume-range]')],rows=[...document.querySelectorAll('[data-price-volume-index]')]
  if(!svg||!readout)return
  const ns='http://www.w3.org/2000/svg',add=(name,attributes,parent=svg)=>{const el=document.createElementNS(ns,name);for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));parent.appendChild(el);return el}
  let count=labels.length,selected=labels.length-1,locked=null,layout
@@ -32,10 +41,13 @@ export function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit,vi
   readout.textContent=`${labels[selected]}  ·  价格 ${prices[selected]} ${priceUnit}  ·  成交量 ${volumes[selected]??'—'} ${volumes[selected]===null?'':volumeUnit}`
   svg.setAttribute('aria-label',readout.textContent+'；方向键切换时点')
   svg.dataset.selectedIndex=String(selected)
+  for(const row of rows){const index=Number(row.dataset.priceVolumeIndex);row.hidden=index<start||index>=start+length;row.setAttribute('aria-selected',String(index===selected))}
+  const counter=document.querySelector('[data-price-volume-count]');if(counter)counter.textContent=length+' / '+labels.length
  }
  svg.addEventListener('pointermove',event=>{const rect=svg.getBoundingClientRect();if(!rect.width)return;const chartX=(event.clientX-rect.left)/rect.width*layout.width;const {start,length}=visible();selected=start+Math.round((chartX-layout.left)/(layout.right-layout.left)*(length-1));draw()})
  svg.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const {start}=visible();selected=event.key==='Home'?start:event.key==='End'?labels.length-1:selected+(event.key==='ArrowLeft'?-1:1);draw()})
  buttons.forEach(button=>button.addEventListener('click',()=>{locked=null;count=button.dataset.priceVolumeRange==='all'?labels.length:Number(button.dataset.priceVolumeRange);selected=labels.length-1;buttons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));draw()}))
+ rows.forEach(row=>{const select=()=>{selected=Number(row.dataset.priceVolumeIndex);draw()};row.addEventListener('click',select);row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();select()}})})
  svg.addEventListener('sherlock-chart-restore',event=>{const v=event.detail;if(!v||![v.min,v.max].every(Number.isFinite)||v.max<=v.min||typeof v.start!=='string'||typeof v.end!=='string'||labels.indexOf(v.start)<0||labels.indexOf(v.end)<labels.indexOf(v.start))return;locked=v;draw()})
  draw();observe(svg,draw)
 }
@@ -59,9 +71,12 @@ export function renderPriceVolume(spec) {
   !Array.isArray(prices)||prices.length!==labels.length||prices.some(value=>!finite(value)||value<=0)||
   !Array.isArray(volumes)||volumes.length!==labels.length||volumes.some(value=>value!==null&&(!finite(value)||value<0))||!volumes.some(finite)||
   typeof priceUnit!=='string'||!priceUnit.trim()||priceUnit.length>20||typeof volumeUnit!=='string'||!volumeUnit.trim()||volumeUnit.length>20)return null
- const controls=`<div class="price-volume-controls" role="group" aria-label="时间范围">${priceVolumeRanges(labels).map(([count,label])=>`<button type="button" data-price-volume-range="${count}" aria-pressed="${count==='all'}">${label}</button>`).join('')}</div>`
+ const terminal=spec.layoutProfile==='openterminal',ranges=priceVolumeRanges(labels).filter(([count])=>!terminal||count==='all'||Number(count)<labels.length)
+ const controls=`<div class="price-volume-controls" role="group" aria-label="时间范围">${ranges.map(([count,label])=>`<button type="button" data-price-volume-range="${count}" aria-pressed="${count==='all'}">${label}</button>`).join('')}</div>`
  const table=`<details><summary>完整量价数据</summary><table><thead><tr><th>时点</th><th>价格 (${esc(priceUnit)})</th><th>成交量 (${esc(volumeUnit)})</th></tr></thead><tbody>${labels.map((label,i)=>`<tr><td>${esc(label)}</td><td>${prices[i]}</td><td>${volumes[i]??'—'}</td></tr>`).join('')}</tbody></table></details>`
  const last=labels.length-1
- const body=`<div class="price-volume">${controls}<div class="price-volume-readout" role="status">${esc(labels[last])} · 价格 ${prices[last]} ${esc(priceUnit)} · 成交量 ${volumes[last]??'—'} ${volumes[last]===null?'':esc(volumeUnit)}</div><svg viewBox="0 0 506 164" preserveAspectRatio="xMidYMid meet" data-series-viewport="v2" role="img" tabindex="0" aria-label="价格与成交量；方向键切换时点"></svg><div class="price-volume-legend"><span>● 价格 · ${esc(priceUnit)}</span><span>▮ 成交量 · ${esc(volumeUnit)}</span></div>${table}</div>`
+ const chart=`<div class="price-volume-readout" role="status">${esc(labels[last])} · 价格 ${prices[last]} ${esc(priceUnit)} · 成交量 ${volumes[last]??'—'} ${volumes[last]===null?'':esc(volumeUnit)}</div><svg viewBox="0 0 506 164" preserveAspectRatio="xMidYMid meet" data-series-viewport="v2" role="img" tabindex="0" aria-label="价格与成交量；方向键切换时点"></svg><div class="price-volume-legend"><span>● 价格 · ${esc(priceUnit)}</span><span>▮ 成交量 · ${esc(volumeUnit)}</span></div>`
+ const records=terminal?`<section class="ot-price-volume-records" aria-label="完整量价记录"><header><strong>逐期明细</strong><span data-price-volume-count>${labels.length} / ${labels.length}</span></header><p>价格 / ${esc(priceUnit)} · 成交量 / ${esc(volumeUnit)}</p><div class="ot-record-scroll"><table><thead><tr><th>时点</th><th>价格</th><th>成交量</th></tr></thead><tbody>${labels.map((label,i)=>({label,i})).reverse().map(({label,i})=>`<tr tabindex="0" data-price-volume-index="${i}" aria-selected="${i===last}"><td>${esc(label)}</td><td>${prices[i]}</td><td>${volumes[i]===null?'—':volumes[i].toLocaleString('en-US')}</td></tr>`).join('')}</tbody></table></div></section>`:''
+ const body=terminal?`<div class="price-volume ot-price-volume"><div class="ot-price-volume-toolbar">${controls}<span>${esc(labels[0])} — ${esc(labels[last])}</span></div><div class="ot-price-volume-layout"><div class="ot-price-volume-chart">${chart}</div>${records}</div></div>`:`<div class="price-volume">${controls}${chart}${table}</div>`
  return {body,css:PRICE_VOLUME_CSS,script:`(${priceVolumeRuntime.toString()})(${json(labels)},${json(prices)},${json(volumes)},${json(priceUnit)},${json(volumeUnit)},${marketSeriesViewport.toString()},${observeMarketSeries.toString()});`}
 }
