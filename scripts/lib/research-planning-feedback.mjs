@@ -52,7 +52,7 @@ export function researchPlanningRequest(order,nodeStore,turn,classify,readText) 
   const location=node.location,number=node.data?.turn??location?.turn?.turn??location?.turn
   if(number!==turn)continue
   const request=classify(readText(node.data?.content||[]))
-  return request?.kind==='workbench'?request:null
+  return request?.kind==='workbench'||request?.kind==='component'?request:null
  }
  return null
 }
@@ -69,7 +69,7 @@ function ResearchPlanningFeedback({meta,startedAt,now,running}) {
 }
 export function patchResearchPlanningFeedback(source,classify) {
  const marker='/* ework:planning-feedback:v1 */'
- if(source.includes(marker))return source
+ if(source.includes(marker))return source.replace("\n  return request?.kind==='workbench'?request:null", "\n  return request?.kind==='workbench'||request?.kind==='component'?request:null")
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Planning feedback anchor missing or ambiguous: '+before.slice(0,75));source=source.replace(before,after)}
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {'
  const helpers=marker+'\n'+[planningResponseMetadata,advancePlanningHeartbeat,planningFeedbackState,researchPlanningRequest,ResearchPlanningFeedback].map(fn=>fn.toString()).join('\n')+'\n'

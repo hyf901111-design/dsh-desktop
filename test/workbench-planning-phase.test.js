@@ -6,15 +6,34 @@ const accepted = (s, isError = false) => s.events.push(
   { type: 'tool/call', data: { name: 'research_workbench_create', callId: 'create', arguments: { panels: [] } } },
   { type: 'tool/result', data: { message: { source: { callId: 'create' }, content: [{ type: 'tool-result', isError, content: [{ type: 'text', text: JSON.stringify({ planId: 'plan', status: 'accepted' }) }] }] } } }
 )
-function harness(efforts = ['low', 'high', 'max']) {
+function harness(efforts = ['low', 'high', 'max'], toolSchemas = []) {
   const hooks = new Map(), resolveModelInfo = vi.fn(async () => ({ reasoning: { efforts: efforts.map(id => ({ id })) }, defaultMaxTokens: 16384 }))
   let prompt, selections = []
-  registerWorkbenchExecutionPolicy({ get: name => name === 'settings' ? { get: () => ({ selections }) } : undefined, llm: { resolveModelInfo }, tools: { schemas: () => [] }, on: (name, fn) => { hooks.set(name, fn); return () => {} }, systemPrompt: { context: value => { prompt = value; return () => {} } } })
+  registerWorkbenchExecutionPolicy({ get: name => name === 'settings' ? { get: () => ({ selections }) } : undefined, llm: { resolveModelInfo }, tools: { schemas: () => toolSchemas }, on: (name, fn) => { hooks.set(name, fn); return () => {} }, systemPrompt: { context: value => { prompt = value; return () => {} } } })
   return { hooks, resolveModelInfo, select: value => { selections = [value] }, text: agent => prompt.text({ agent }), request: (agent, config, signal) => hooks.get('agent/request')({ agent, signal }, async () => config) }
 }
 const config = Object.freeze({ provider: 'zai', model: 'GLM-5.3-Flash', reasoningEffort: 'max', maxTokens: 16384 })
 
 describe('工作台首次规划阶段预算', () => {
+  it('gives explicit new single-component requests the same bounded planning phase and restores Max after acceptance', async () => {
+    for (const text of ['创建一个装置撤展交接组件，用8条模拟记录，点击查看完整说明', '请生成一张古籍修复流转卡片，用虚构记录']) {
+      const h = harness(), agent = { session: session(text) }
+      expect(workbenchCreationRequest(agent.session)?.text).toBe(text)
+      const planned = await h.request(agent, config)
+      expect(planned).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
+      expect(h.text(agent)).toContain('立即调用 research_workbench_create')
+      accepted(agent.session)
+      expect(await h.request(agent, planned)).toEqual(config)
+    }
+  })
+
+  it('does not expand a single popular ETF quote component into the eight-panel workbench preset', () => {
+    const h = harness(undefined, [{ name: 'public_data_query' }])
+    const text = h.text({ session: session('创建一个国内热门基金报价组件') })
+    expect(text).toContain('panel.publicData')
+    expect(text).not.toContain('"preset":"cn-hot-etf-live"')
+  })
+
   it('limits only unaccepted creation and restores the explicit Max and output cap after acceptance', async () => {
     const h = harness(), agent = { session: session('创建活动筹备工作台，使用自洽模拟数据') }
     const planned = await h.request(agent, config)
@@ -41,7 +60,7 @@ describe('工作台首次规划阶段预算', () => {
 
   it('leaves ordinary chat, existing-board edits, child sessions and unsupported effort declarations unchanged', async () => {
     const h = harness()
-    for (const text of ['解释预算应该如何分配', '修改当前工作台的预算表', '在现有看板创建一个预算组件']) {
+    for (const text of ['解释预算应该如何分配', '修改当前工作台的预算表', '在现有看板创建一个预算组件', '修复组件生成逻辑', '为什么生成组件这么慢', '不要生成组件', '创建一个React组件，写入src/Card.tsx']) {
       const agent = { session: session(text) }
       expect(workbenchCreationRequest(agent.session)).toBeNull()
       expect(await h.request(agent, config)).toBe(config)
