@@ -6,13 +6,35 @@ import {workbenchStylePalette,validWorkbenchStyleMessage,installWorkbenchStyleMe
 import {createResearchGrid} from '../packages/dsh-research-task-runtime/research-grid.js'
 import {installWorkbenchPointer} from '../scripts/lib/research-grid-ui.mjs'
 
-it('试用样式按看板保存并能切回原样式，不改变其他看板的默认偏好',()=>{
+it('全看板试用覆盖已有及新看板，退出后恢复每个看板原有偏好',()=>{
  const saved=new Map(),storage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}
- const a=createWorkbenchStyleState(storage,'trial')
- expect(a.get()).toBeNull();expect(a.set('openterminal')).toBe(true)
- expect(createWorkbenchStyleState(storage,'trial').get()).toBe('openterminal')
- expect(createWorkbenchStyleState(storage,'existing-board').get()).toBeNull()
- expect(a.set('dark')).toBe(true);expect(createWorkbenchStyleState(storage,'trial').get()).toBe('dark')
+ const a=createWorkbenchStyleState(storage,'trial'),b=createWorkbenchStyleState(storage,'existing')
+ a.set('dark');b.set('enterprise')
+ const originalA=saved.get('ework.research.presentation.v1:trial'),originalB=saved.get('ework.research.presentation.v1:existing')
+ expect(a.set('openterminal')).toBe(true)
+ expect(a.get()).toBe('openterminal');expect(b.get()).toBe('openterminal')
+ expect(createWorkbenchStyleState(storage,'new-board').get()).toBe('openterminal')
+ expect(saved.get('ework.research.presentation.v1:trial')).toBe(originalA)
+ expect(saved.get('ework.research.presentation.v1:existing')).toBe(originalB)
+ expect(a.set('dark')).toBe(true);expect(a.get()).toBe('dark');expect(b.get()).toBe('enterprise')
+ expect(createWorkbenchStyleState(storage,'new-board').get()).toBeNull()
+})
+
+it('存储写入失败时全看板仍能同时进入和退出试用',()=>{
+ const saved=new Map(),storage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}
+ const a=createWorkbenchStyleState(storage,'a'),b=createWorkbenchStyleState(storage,'b')
+ a.set('dark');b.set('enterprise')
+ storage.setItem=()=>{throw new Error('QuotaExceededError')}
+ expect(a.set('openterminal')).toBe(true)
+ expect(a.get()).toBe('openterminal');expect(b.get()).toBe('openterminal')
+ expect(a.set('dark')).toBe(true)
+ expect(a.get()).toBe('dark');expect(b.get()).toBe('enterprise')
+ saved.set('ework.research.openterminal-trial.v1','enabled')
+ const c=createWorkbenchStyleState(storage,'c')
+ expect(a.set('openterminal')).toBe(true)
+ expect(c.get()).toBe('openterminal')
+ expect(a.set('light')).toBe(true)
+ expect(a.get()).toBe('light');expect(b.get()).toBe('enterprise');expect(c.get()).toBeNull()
 })
 
 it('生成组件的父子展示桥接收试用模板并使用深色，不接收任意外部样式',()=>{
