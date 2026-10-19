@@ -68,24 +68,31 @@ it('opens a verified news source once for its rendered session without an extra 
   expect(f.host.textContent).not.toContain('打开来源：')
   expect(f.win.open).not.toHaveBeenCalled()
   expect(patchConversationBrowser(f.source)).toBe(f.source)
+  const { restoreResearchGridWorkbench, patchResearchGridWorkbench } = require('../scripts/lib/research-grid-workbench.mjs')
+  const modern = restoreResearchGridWorkbench(f.source)
+  const newsOnly = String.raw`      if(!/<body\b[^>]*\bdata-research-kind\s*=\s*["']news["']/iu.test(spec.html)){setRequestedSource(source);return;}` + '\n'
+  const prior = modern.replace('/* odyssey:component-source-browser:v2 */','/* odyssey:news-source-browser:v1 */').replace('if (source) {\n      const context=', 'if (source) {\n'+newsOnly+'      const context=')
+  expect(prior).not.toBe(modern)
+  expect(restoreResearchGridWorkbench(patchConversationBrowser(patchResearchGridWorkbench(prior)))).toBe(modern)
 })
 
-it('keeps ordinary source links on their existing host confirmation path', async () => {
+it('opens ordinary component source links directly in the same right-side browser', async () => {
   const f = await fixture(), { ownWindow } = await f.render('source-session', false)
   await f.send('https://example.org/news?original=1&lang=zh', ownWindow)
-  expect(f.openSource).not.toHaveBeenCalled()
-  expect(f.host.textContent).toContain('打开来源：原始新闻标题')
+  expect(f.openSource).toHaveBeenCalledExactlyOnceWith({ sessionId: 'source-session', url: 'https://example.org/news?original=1&lang=zh' })
+  expect(f.host.textContent).not.toContain('打开来源：')
+  expect(f.win.open).not.toHaveBeenCalled()
 })
 
-it('rejects undeclared URLs, foreign frames, forged session fields and a frame from an earlier conversation', async () => {
-  const f = await fixture(), first = await f.render()
+it.each([true,false])('rejects undeclared URLs, foreign frames, forged session fields and stale frames (news=%s)', async news => {
+  const f = await fixture(), first = await f.render('source-session',news)
   const url = 'https://example.org/news?original=1&lang=zh'
   await f.send('https://attacker.invalid', first.ownWindow)
   await f.send('javascript:alert(1)', first.ownWindow)
   await f.send(url, f.win)
   await f.send(url, first.ownWindow, { sessionId: 'attacker-session' })
   expect(f.openSource).not.toHaveBeenCalled()
-  const next = await f.render('next-session')
+  const next = await f.render('next-session',news)
   await f.send(url, first.ownWindow)
   expect(f.openSource).not.toHaveBeenCalled()
   await f.send(url, next.ownWindow)

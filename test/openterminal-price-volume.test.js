@@ -27,6 +27,7 @@ it('keeps existing non-profile price-volume components and their complete expand
  const r=renderPriceVolume({...sample,layoutProfile:undefined}),dom=new JSDOM(r.body)
  expect(dom.window.document.querySelector('.ot-price-volume-layout')).toBeNull()
  expect(dom.window.document.querySelectorAll('details tbody tr')).toHaveLength(20)
+ expect(dom.window.document.querySelector('details').open).toBe(true)
  dom.window.close()
 })
 

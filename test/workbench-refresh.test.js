@@ -25,6 +25,22 @@ it('does not highlight unchanged values or apply malformed sandbox view states',
  const f=fixture(),state=f.surface.snapshot();f.surface.apply(state,true);expect(f.body.querySelector('[data-workbench-value-changed]')).toBeNull()
  for(const bad of [{...state,controls:[null]},{...state,controls:[{path:['constructor'],tag:'INPUT',value:'x',checked:false}]},{...state,scroll:[{path:[],x:Infinity,y:0}]},{...state,values:[['x',123]]}])expect(isWorkbenchViewState(bad)).toBe(false)
 })
+it('migrates the old collapsed price-volume default once and preserves later user disclosure choices',()=>{
+ const f=fixture(),details=f.body.querySelector('details')
+ details.dataset.workbenchDefaultOpen='price-volume-v1'
+ const old=f.surface.snapshot();delete old.controls.find(c=>c.tag==='DETAILS').defaultOpen
+ old.controls.find(c=>c.tag==='DETAILS').open=false
+ f.surface.apply(old)
+ expect(details.open).toBe(true)
+ details.open=false
+ const chosen=f.surface.snapshot()
+ expect(chosen.controls.find(c=>c.tag==='DETAILS').defaultOpen).toBe('price-volume-v1')
+ expect(isWorkbenchViewState(chosen)).toBe(true)
+ details.open=true;f.surface.apply(chosen)
+ expect(details.open).toBe(false)
+ const malformed={...chosen,controls:chosen.controls.map(c=>c.tag==='DETAILS'?{...c,defaultOpen:'arbitrary'}:c)}
+ expect(isWorkbenchViewState(malformed)).toBe(false)
+})
 it('pushes refreshing immediately, rejects a stale list and unsubscribes once',async()=>{
  let resolve,send;const off=vi.fn(),store=createComponentDataStatusStore()
  const bridge={setVisible:vi.fn(),request:vi.fn(()=>new Promise(r=>resolve=r)),subscribe:fn=>{send=fn;return off}}

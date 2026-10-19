@@ -1,9 +1,16 @@
 import { restoreResearchGridWorkbench, patchResearchGridWorkbench } from './research-grid-workbench.mjs'
 
-function patchResearchNewsSourceBrowser(source) {
-  const marker='/* odyssey:news-source-browser:v1 */'
+function patchResearchComponentSourceBrowser(source) {
+  const marker='/* odyssey:component-source-browser:v2 */'
+  const legacy='/* odyssey:news-source-browser:v1 */'
+  const newsOnly=String.raw`      if(!/<body\b[^>]*\bdata-research-kind\s*=\s*["']news["']/iu.test(spec.html)){setRequestedSource(source);return;}
+`
+  if(source.includes(legacy)){
+    if(source.split(newsOnly).length!==2)throw Error('Component source browser migration anchor missing or ambiguous');
+    return source.replace(newsOnly,'').replace(legacy,marker)
+  }
   if(source.includes(marker)||!source.includes('function ResearchHtmlArtifact({ spec, node, onSize }) {'))return source
-  const exact=(from,to)=>{if(source.split(from).length!==2)throw Error('News source browser anchor missing or ambiguous: '+from.slice(0,80));source=source.replace(from,to)}
+  const exact=(from,to)=>{if(source.split(from).length!==2)throw Error('Component source browser anchor missing or ambiguous: '+from.slice(0,80));source=source.replace(from,to)}
   exact('const [requestedSource, setRequestedSource] = (0, react.useState)(null);',`const [requestedSource, setRequestedSource] = (0, react.useState)(null);
     ${marker}
     const sourceSessionId=arguments[0].sessionId;
@@ -12,7 +19,6 @@ function patchResearchNewsSourceBrowser(source) {
     sourceContextRef.current={sessionId:sourceSessionId,node,html:spec.html};
     react.useEffect(()=>{setSourceOpenError('');sourceOpenRequest.current++;},[sourceSessionId,spec.html]);`)
   exact('if (source) setRequestedSource(source);',`if (source) {
-      if(!/<body\\b[^>]*\\bdata-research-kind\\s*=\\s*["']news["']/iu.test(spec.html)){setRequestedSource(source);return;}
       const context=sourceContextRef.current;
       if(!frame.isConnected||typeof context.sessionId!=='string'||!context.sessionId||context.sessionId.length>256||context.sessionId!==sourceSessionId||context.node!==current.node||context.html!==spec.html)return;
       const open=window.dshDesktop?.conversationBrowser?.openSource,request=++sourceOpenRequest.current;
@@ -32,7 +38,7 @@ export function patchConversationBrowser(source) {
   // component, then regenerate its journal so repeated builds remain reversible.
   const grid=source.includes('/* EWORK_GRID_WORKBENCH_BEGIN */')
   if(grid)source=restoreResearchGridWorkbench(source)
-  source=patchResearchNewsSourceBrowser(source)
+  source=patchResearchComponentSourceBrowser(source)
   const marker='/* odyssey:conversation-browser:v2 */'
   if(source.includes(marker))return grid?patchResearchGridWorkbench(source):source
   if(source.includes('/* odyssey:conversation-browser:v1 */')){
