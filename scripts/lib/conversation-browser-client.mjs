@@ -1,6 +1,40 @@
+import { restoreResearchGridWorkbench, patchResearchGridWorkbench } from './research-grid-workbench.mjs'
+
+function patchResearchNewsSourceBrowser(source) {
+  const marker='/* odyssey:news-source-browser:v1 */'
+  if(source.includes(marker)||!source.includes('function ResearchHtmlArtifact({ spec, node, onSize }) {'))return source
+  const exact=(from,to)=>{if(source.split(from).length!==2)throw Error('News source browser anchor missing or ambiguous: '+from.slice(0,80));source=source.replace(from,to)}
+  exact('const [requestedSource, setRequestedSource] = (0, react.useState)(null);',`const [requestedSource, setRequestedSource] = (0, react.useState)(null);
+    ${marker}
+    const sourceSessionId=arguments[0].sessionId;
+    const [sourceOpenError,setSourceOpenError]=react.useState('');
+    const sourceContextRef=react.useRef(null),sourceOpenRequest=react.useRef(0);
+    sourceContextRef.current={sessionId:sourceSessionId,node,html:spec.html};
+    react.useEffect(()=>{setSourceOpenError('');sourceOpenRequest.current++;},[sourceSessionId,spec.html]);`)
+  exact('if (source) setRequestedSource(source);',`if (source) {
+      if(!/<body\\b[^>]*\\bdata-research-kind\\s*=\\s*["']news["']/iu.test(spec.html)){setRequestedSource(source);return;}
+      const context=sourceContextRef.current;
+      if(!frame.isConnected||typeof context.sessionId!=='string'||!context.sessionId||context.sessionId.length>256||context.sessionId!==sourceSessionId||context.node!==current.node||context.html!==spec.html)return;
+      const open=window.dshDesktop?.conversationBrowser?.openSource,request=++sourceOpenRequest.current;
+      setRequestedSource(null);setSourceOpenError('');
+      const failed=()=>{const latest=sourceContextRef.current;if(request===sourceOpenRequest.current&&latest.sessionId===context.sessionId&&latest.node.id===context.node.id&&latest.html===context.html)setSourceOpenError('来源页面打开失败，请稍后重试。');};
+      if(typeof open!=='function'){failed();return;}
+      try{Promise.resolve(open({sessionId:context.sessionId,url:source.href})).catch(failed)}catch{failed()}
+    }`)
+  exact('}, [srcDoc, readable]);','}, [srcDoc, readable, sourceSessionId]);')
+  exact('requestedSource ? (0, react_jsx_runtime.jsxs)("div",',`sourceOpenError ? react_jsx_runtime.jsx('div',{'data-research-source-error':'',role:'alert',style:{padding:'8px 12px',fontSize:12},children:sourceOpenError}) : null,
+    requestedSource ? (0, react_jsx_runtime.jsxs)("div",`)
+  return source
+}
+
 export function patchConversationBrowser(source) {
+  // The grid restore journal stores this whole component. Amend the restored
+  // component, then regenerate its journal so repeated builds remain reversible.
+  const grid=source.includes('/* EWORK_GRID_WORKBENCH_BEGIN */')
+  if(grid)source=restoreResearchGridWorkbench(source)
+  source=patchResearchNewsSourceBrowser(source)
   const marker='/* odyssey:conversation-browser:v2 */'
-  if(source.includes(marker))return source
+  if(source.includes(marker))return grid?patchResearchGridWorkbench(source):source
   if(source.includes('/* odyssey:conversation-browser:v1 */')){
     const start=source.indexOf('/* odyssey:conversation-browser:v1 */'),end=source.indexOf('class ResearchSidebarCoordinator {',start);
     if(end<0)throw Error('Conversation browser v1 migration missing class');
@@ -62,5 +96,5 @@ class ResearchSidebarCoordinator {`)
     });
     const unregisterGenerated=service.registerTab(`)
   exact('unregisterGenerated?.();','unregisterGenerated?.();unregisterBrowser?.();unsubscribeBrowser?.();unsubscribeBrowserActivity?.();for(const watch of browserSessions.values()){watch.unsubscribe();watch.release()}')
-  return source
+  return grid?patchResearchGridWorkbench(source):source
 }
