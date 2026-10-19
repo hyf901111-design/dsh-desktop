@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {Window} from 'happy-dom';
 import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
 import {operationsDataIssue,operationsTemplateSchema,requestedOperationsType} from '../packages/dsh-research-task-runtime/operations-template-contract.js';
 import {renderOperationsArtifact} from '../packages/dsh-research-task-runtime/operations-artifact.js';
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js';
@@ -8,6 +9,7 @@ import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runti
 import {validateWorkbench,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js';
 import {workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
 import {buildResearchTaskPrompt} from '../packages/dsh-research-task-runtime/index.js';
+const bundledSkillVersion=JSON.parse(readFileSync(new URL('../skills/ework-workbench-components/_meta.json',import.meta.url),'utf8')).version;
 
 const samples={
  approval:{version:1,type:'approval',title:'审批记录',subject:'研究报告发布申请',asOf:'2026-09-30 · 用户提供',status:'pending',applicant:'张晓',submittedAt:'2026-09-30 10:24',items:[{id:'a',reviewer:'李明',stage:'数据核验',status:'approved',comment:'确认来源与披露日期'},{id:'b',reviewer:'王悦',stage:'研究负责人',status:'pending',comment:'核验结论与风险提示'}]},
@@ -43,7 +45,7 @@ describe('Figma 21Z workflow templates',()=>{
   expect(plan.panels[0].artifact).toEqual(artifact);expect(readTemplateModel(render(artifact)).data).toEqual(artifact);
   expect(templateFor(artifact).schema).toBe(operationsTemplateSchema(type));expect(workbenchDesignTemplate(panel).figma).toBe(type==='approval'?'1918:346911':'1918:354877');
   const prompt=buildResearchTaskPrompt({parentSessionId:'session',canvasNodeId:'panel',kind:'container',prompt:workbenchPanelPrompt({title:'运营'},panel)});
-  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('v1.21.0');
+  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('ework-workbench-components '+bundledSkillVersion);
   expect(renderOperationsArtifact(artifact)).toBeNull();
  });
  it('resolves explicit workflow types and familiar user requests',()=>{
