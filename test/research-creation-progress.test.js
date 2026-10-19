@@ -4,6 +4,22 @@ import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosit
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {Window} from 'happy-dom'
 
+it('主会话结束推断仅显示结果待同步，明确错误和停止文案保持原样',()=>{
+  const source=patchResearchCreationProgress(restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+  expect(source).toContain("intent.state === 'stopping' ? 'stopped' : 'ended'); }, 3000);")
+  const extract=name=>{const at=source.indexOf('function '+name+'(');return source.slice(at,source.indexOf('\n}',at)+2)}
+  const intents=new Map([['s',{id:'intent',kind:'component',types:[],state:'planning',startedAt:1,sawRunning:true}]])
+  const finish=new Function('odysseyCreationIntents','odysseyCreationEmit','return '+extract('odysseyCreationFinish'))(intents,()=>{})
+  const react={useState:value=>[typeof value==='function'?value():value,()=>{}],useRef:value=>({current:value}),useEffect(){},useLayoutEffect(){}}
+  const jsx={jsx:(_type,props)=>props,jsxs:(_type,props)=>props}
+  const Card=new Function('react','react_jsx_runtime','ResearchGenerationProcess',planningCardPosition.toString()+';return '+extract('ResearchCreationPlanningCard'))(react,jsx,'process')
+  const render=()=>Card({intent:intents.get('s'),sessionId:'s',viewport:{x:0,y:0,scale:1},canvasSize:{width:800,height:600}}).children[1]
+  finish('s','ended')
+  expect(render()).toMatchObject({phaseOverride:'本轮执行已结束，组件暂未显示',detailOverride:'可查看右侧对话，生成结果会继续同步'})
+  finish('s',true);expect(render().phaseOverride).toBe('生成失败 · 未形成组件计划')
+  finish('s','stopped');expect(render().phaseOverride).toBe('已停止生成')
+})
+
 it('规划卡片缩放时沿用网格坐标，仅移动时采用浮动坐标',async()=>{
   const source=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
   const patched=patchResearchCreationProgress(source),styleScript=patched.match(/\/\* ODYSSEY_CREATION_PROGRESS_CSS \*\/\n([^\n]+)/)[1]
