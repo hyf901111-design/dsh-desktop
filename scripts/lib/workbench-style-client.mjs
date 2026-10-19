@@ -1,8 +1,8 @@
 export function createWorkbenchStyleState(storage,sessionId) {
  const key='ework.research.presentation.v1:'+sessionId
  let mode=null
- try{const saved=JSON.parse(storage?.getItem(key)||'null');if(saved?.version===1&&['light','dark','enterprise'].includes(saved.mode))mode=saved.mode}catch{}
- return {get:()=>mode,set(value){if(!['light','dark','enterprise'].includes(value)||value===mode)return false;mode=value;try{storage?.setItem(key,JSON.stringify({version:1,mode}))}catch{}return true}}
+ try{const saved=JSON.parse(storage?.getItem(key)||'null');if(saved?.version===1&&['light','dark','enterprise','openterminal'].includes(saved.mode))mode=saved.mode}catch{}
+ return {get:()=>mode,set(value){if(!['light','dark','enterprise','openterminal'].includes(value)||value===mode)return false;mode=value;try{storage?.setItem(key,JSON.stringify({version:1,mode}))}catch{}return true}}
 }
 export function workbenchFramePresentation(frame) {
  const root=frame?.closest('[data-ework-grid]'),controlTheme=frame?.ownerDocument?.body?.hasAttribute('data-ds-dark-theme')?'dark':'light'
@@ -13,7 +13,7 @@ export function sendWorkbenchFramePresentation(frame) {
  const message=workbenchFramePresentation(frame)
  frame.contentWindow.postMessage(message,'*')
  frame.contentWindow.postMessage({type:'sherlock-workbench-locale',locale:frame.ownerDocument.documentElement.dataset.odysseyLocale==='en'?'en':'zh'},'*')
- frame.contentWindow.postMessage({type:'sherlock-theme',colorScheme:message.mode==='dark'?'dark':'light'},'*')
+ frame.contentWindow.postMessage({type:'sherlock-theme',colorScheme:['dark','openterminal'].includes(message.mode)?'dark':'light'},'*')
 }
 export function animateWorkbenchStyle(root,mode) {
  const doc=root.ownerDocument,view=doc.defaultView,motion=view.matchMedia?.('(prefers-reduced-motion: reduce)')
@@ -63,6 +63,6 @@ export function WorkbenchStylePicker({workspace}) {
  const snapshot=react.useSyncExternalStore(workspace.subscribe,workspace.getSnapshot)
  const [globalDark,setGlobalDark]=react.useState(()=>document.body.hasAttribute('data-ds-dark-theme'))
  react.useEffect(()=>{const observer=new MutationObserver(()=>setGlobalDark(document.body.hasAttribute('data-ds-dark-theme')));observer.observe(document.body,{attributes:true,attributeFilter:['data-ds-dark-theme']});return()=>observer.disconnect()},[])
- const current=workspace.getWorkbenchStyle?.()||(globalDark?'dark':'light'),labels={light:'浅色模式',dark:'深色模式',enterprise:'易方达模式'}
- return react_jsx_runtime.jsxs('div',{className:'ew-workbench-mode-slot',children:[react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-divider','aria-hidden':true}),react_jsx_runtime.jsx('div',{className:'ew-workbench-modes',role:'radiogroup','aria-label':workbenchText('看板样式'),children:['light','dark','enterprise'].map(mode=>react_jsx_runtime.jsx('button',{type:'button',role:'radio','aria-checked':current===mode,'aria-label':workbenchText(labels[mode]),'data-workbench-style-option':mode,'data-tool-tooltip':workbenchText(labels[mode]),tabIndex:current===mode?0:-1,onClick:()=>workspace.setWorkbenchStyle(mode),onKeyDown:e=>{const order=['light','dark','enterprise'],i=order.indexOf(mode),next=e.key==='Home'?0:e.key==='End'?2:e.key==='ArrowRight'||e.key==='ArrowDown'?(i+1)%3:e.key==='ArrowLeft'||e.key==='ArrowUp'?(i+2)%3:null;if(next!==null){e.preventDefault();workspace.setWorkbenchStyle(order[next]);e.currentTarget.parentElement.querySelector('[data-workbench-style-option="'+order[next]+'"]')?.focus()}},children:react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-icon ew-workbench-mode-'+mode,'aria-hidden':true})},mode))})]})
+ const current=workspace.getWorkbenchStyle?.()||(globalDark?'dark':'light'),labels={light:'浅色模式',dark:'深色模式',enterprise:'易方达模式',openterminal:'OpenTerminal（试用）'}
+ return react_jsx_runtime.jsxs('div',{className:'ew-workbench-mode-slot',children:[react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-divider','aria-hidden':true}),react_jsx_runtime.jsx('div',{className:'ew-workbench-modes',role:'radiogroup','aria-label':workbenchText('看板样式'),children:['light','dark','enterprise','openterminal'].map(mode=>react_jsx_runtime.jsx('button',{type:'button',role:'radio','aria-checked':current===mode,'aria-label':workbenchText(labels[mode]),'data-workbench-style-option':mode,'data-tool-tooltip':workbenchText(labels[mode]),tabIndex:current===mode?0:-1,onClick:()=>workspace.setWorkbenchStyle(mode),onKeyDown:e=>{const order=['light','dark','enterprise','openterminal'],i=order.indexOf(mode),next=e.key==='Home'?0:e.key==='End'?order.length-1:e.key==='ArrowRight'||e.key==='ArrowDown'?(i+1)%order.length:e.key==='ArrowLeft'||e.key==='ArrowUp'?(i+order.length-1)%order.length:null;if(next!==null){e.preventDefault();workspace.setWorkbenchStyle(order[next]);e.currentTarget.parentElement.querySelector('[data-workbench-style-option="'+order[next]+'"]')?.focus()}},children:react_jsx_runtime.jsx('span',{className:'ew-workbench-mode-icon ew-workbench-mode-'+mode,'aria-hidden':true})},mode))})]})
 }
