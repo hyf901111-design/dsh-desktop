@@ -1,3 +1,4 @@
+import {OPEN_TERMINAL_LAYOUT_CSS} from './openterminal-layout.js'
 import {TIMELINE_PRESENTATION_CSS} from './timeline-presentation.js';
 import {KPI_PRESENTATION_CSS} from './kpi-presentation.js';
 import {WORKBENCH_MODE_CSS} from './workbench-style.js'
@@ -87,6 +88,7 @@ ${TIMELINE_PRESENTATION_CSS}
 ${CALENDAR_PRESENTATION_CSS}
 ${WORKBENCH_TABLE_COLUMNS_CSS}
 ${WORKBENCH_MODE_CSS}
+${OPEN_TERMINAL_LAYOUT_CSS}
 }`
 
 export function applyWorkbenchPresentation(html) {

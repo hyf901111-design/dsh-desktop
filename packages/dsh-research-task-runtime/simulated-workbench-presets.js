@@ -1,3 +1,4 @@
+import {OPEN_TERMINAL_RESEARCH_PRESET} from './openterminal-workbench-preset.js';
 // Host-owned examples keep standard demo workbenches fast and internally
 // consistent. Every value below is fictional; no source or live quote is implied.
 const asOf = '2026-06-30 15:00 · 模拟数据';
@@ -144,7 +145,7 @@ const researchOperations21m = [
     ]})
 ];
 
-const presets = { 'medical-21h': medical21h, 'market-overview-21h': marketOverview21h, 'research-operations-21m': researchOperations21m };
+const presets = { 'openterminal-research': OPEN_TERMINAL_RESEARCH_PRESET, 'medical-21h': medical21h, 'market-overview-21h': marketOverview21h, 'research-operations-21m': researchOperations21m };
 export const SIMULATED_WORKBENCH_PRESETS = Object.keys(presets);
 export function expandSimulatedWorkbenchPreset(value) {
     if (value?.preset === undefined) return value;

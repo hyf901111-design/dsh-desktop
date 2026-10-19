@@ -1,3 +1,4 @@
+import {openTerminalDimensions} from './openterminal-layout.js';
 import {ATTACHMENT_TEMPLATES} from './attachment-template-contract.js';
 import {financialWidgetDimensions} from './financial-widget-contract.js';
 import {DERIVED_TEMPLATES} from './derived-template-contract.js';
@@ -178,6 +179,8 @@ export function marketVariant(panel = {}) {
 }
 
 export function workbenchDesignTemplate(panel = {}) {
+  const ot=openTerminalDimensions(panel.artifact);
+  if(ot)return {id:panel.type==='market'?'market.'+panel.artifact.variant:panel.type,size:'large',figma:'OpenTerminal aed097c',variant:panel.artifact.variant,...ot};
   if(panel.type==='financial-widget')return {id:'financial-widget.'+panel.artifact?.widget,version:WORKBENCH_DESIGN_VERSION,size:'large',figma:'内置金融组件',...financialWidgetDimensions(panel.artifact)};
   if(['files','gallery'].includes(panel.type))return {...ATTACHMENT_TEMPLATES.find(t=>t.type===panel.type),id:'research.'+panel.type,size:'medium'};
   if(panel.type==='audio')return {...AUDIO_TEMPLATES[0],id:'research.audio',size:'medium'};
