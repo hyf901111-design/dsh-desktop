@@ -50,6 +50,17 @@ it('retains valid chart bars, units and provenance when the new source returns o
  expect(card.querySelector('.ew-financial-provenance').title).toContain('图表来源：腾讯财经')
  expect(dialog.textContent).toContain('备用K线暂不可用')
 })
+it('retains an index sparkline and its original source when backup prices succeed but trend data fails',async()=>{
+ const bridge=service();bridge.request.mockImplementation(async q=>({quotes:q.symbols.map(s=>({...s,price:100,series:[98,99,100],source:'腾讯财经'})),source:'腾讯财经'}))
+ f=await financialClientFixture({financialWidget:bridge});await f.act(async()=>f.workspace.createFinancialWidget('indices'))
+ const card=f.host.querySelector('[data-financial-widget=indices]'),dialog=await open(card),chart=card.querySelector('.ew-indices-grid svg')
+ bridge.request.mockImplementation(async q=>({quotes:q.symbols.map(s=>({...s,price:110,series:[],source:'东方财富',seriesError:'备用走势暂不可用'})),source:'东方财富',errors:[{code:q.symbols[0].code,error:'备用走势暂不可用'}]}))
+ await f.event('change',Object.assign(dialog.querySelector('select[aria-label="数据源"]'),{value:'backup'}))
+ expect(card.querySelector('.ew-indices-grid svg')).toBe(chart)
+ expect(card.querySelector('.ew-indices-grid strong').textContent).toBe('110.00')
+ expect(dialog.textContent).toContain('备用走势暂不可用')
+ expect(card.querySelector('.ew-financial-provenance').title).toContain('走势来源：腾讯财经')
+})
 it('ignores a late primary response after switching to the backup',async()=>{
  const {card,bridge}=await setup('watchlist');let release,pending
  bridge.request.mockImplementationOnce(()=>new Promise(resolve=>release=resolve))

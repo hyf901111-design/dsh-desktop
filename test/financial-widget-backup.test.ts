@@ -84,6 +84,7 @@ it('keeps the Nasdaq Composite and Nasdaq 100 separate in the backup catalogue',
  const f=fixture();f.fetch.mockImplementation(async u=>new URL(u).hostname==='push2.eastmoney.com'?Response.json({data:{diff:[{f12:'NDX',f13:100,f2:23000,f3:1.2,f4:272,f124:1792195200},{f12:'NDX100',f13:100,f2:25000,f3:1.5,f4:369,f124:1792195200}]}}):Promise.reject(Error('走势不可用')))
  const r=await f.service.query({action:'quotes',asset:'index',source:'backup',symbols:[{code:'^IXIC',market:'INDEX',name:'纳斯达克'},{code:'^NDX',market:'INDEX',name:'纳斯达克100'}]})
  expect(r.quotes.map((p:any)=>[p.code,p.price,p.source,p.timeZone])).toEqual([['^IXIC',23000,'东方财富','America/New_York'],['^NDX',25000,'东方财富','America/New_York']])
+ expect(r.errors).toHaveLength(2);expect(r.errors[0].error).toContain('走势')
 })
 it('uses validated Yahoo identity and exchange timestamps for the alternate HK quote and history',async()=>{
  const f=fixture(),symbol={code:'00700',market:'HK',name:'腾讯控股'}
