@@ -198,6 +198,64 @@
           "共享预算与日期逐卡传递但没有新增跨卡数值自动验算器"
         ],
         "generatedAt": "2026-10-19T10:11:30.026498Z"
+      },
+      "merged": {
+        "mergeCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
+        "verificationCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
+            "verifiedCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
+            "completedAt": "2026-10-19T10:12:08.147Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
+            "completedAt": "2026-10-19T10:12:08.147Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
+            "completedAt": "2026-10-19T10:12:08.147Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-19T10:12:08.147Z"
       }
     }
   ],
