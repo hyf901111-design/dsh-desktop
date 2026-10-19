@@ -1,14 +1,3 @@
-import {FINANCIAL_SNAPSHOT_GUIDANCE} from './financial-snapshot.js'
-import {FINANCIAL_SERIES_GUIDANCE} from './financial-series.js'
-import {FINANCIAL_CHARTING_GUIDANCE} from './financial-charting.js'
-import {FINANCIAL_RECORDS_GUIDANCE} from './financial-records.js'
-import {FINANCIAL_OWNERSHIP_GUIDANCE} from './financial-ownership.js'
-import {FINANCIAL_ACTION_GUIDANCE} from './financial-actions.js'
-import {FINANCIAL_REVENUE_GUIDANCE} from './financial-revenue.js'
-import {FINANCIAL_FUNDAMENTAL_GUIDANCE} from './financial-fundamentals.js'
-import {advancedChartSchema} from './advanced-chart-contract.js'
-import {specialChartSchema} from './special-chart-contract.js'
-import {operationsTemplateSchema} from './operations-template-contract.js'
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 
@@ -31,11 +20,13 @@ export function workbenchCreationRequest(session) {
   if (session?.header?.parentSession || session?.header?.origin === 'subagent') return null
   const human = planningHumanRequest(session)
   const text = human?.text?.replace(/```[\s\S]*?```/g, '').replace(/^>.*$/gm, '')
-  if (!text || /(?:不要|无需|不需要|别|禁止)(?:再)?(?:创建|生成|搭建|制作|添加)|(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|搭建|制作|构建)/u.test(text)) return null
-  return /(?:创建|生成|搭建|制作|构建|做一个)|\b(?:create|build|generate)\b/iu.test(text) && /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text) ? human : null
+  if (!text || /(?:不要|无需|不需要|别|禁止|不再|停止|取消)(?:再)?(?:创建|生成|搭建|制作|添加|规划)|(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|搭建|制作|构建|规划)/u.test(text)) return null
+  if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|看板|仪表盘))/u.test(text)) return null
+  return /(?:创建|生成|搭建|制作|构建|做一个|重新规划)|\b(?:create|build|generate)\b/iu.test(text) && /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text) ? human : null
 }
 
-export const WORKBENCH_EARLY_PLAN = FINANCIAL_WIDGET_GUIDANCE+'工作台工具有两种互斥入口：完整预设或自定义面板，不能只传 title。用户明确要标准医药行业六卡模拟工作台时直接提交 {"title":"用户要求的标题","dataMode":"simulated","preset":"medical-21h","panels":[]}。preset 是工具参数中的字符串枚举，不是文件路径；无需读取预设文件。其他模拟需求提交 dataMode=simulated 与完整 panels，prompt 明确模板类型，管线为 market.pipeline、事件为 market.events。自定义模拟图表 type=chart 还必须在这一次调用中附 panel.artifact：version:1、type:chart、title、variant、unit、asOf和该图表的数据字段；坐标图用labels、series:[{name,values}]。按用户要求的季度、产品、系列名、单位一次生成明确虚构的数据；百分比图和原值图复用同一组原值及原始 unit（如百万元），unit 不填 % 或说明文字；哑铃图提供前后两组，同单位组合图可指定 series.kind。仅有图名和 prompt 不能确定数据语义，宿主不会替换为通用样例。不得只传标题后重复相同调用。工作台交付顺序：确定标的和面板类型后立即调用 research_workbench_create 提交完整面板清单，让各面板并行取数并套用固定模板。真实数据首轮仅规划标题、类型、内容边界、数据源和尺寸，不先取齐所有数据、逐点复算历史序列或手写整套 artifact。真实数据模式下没有本轮成功业务取数结果或用户提供的真实记录时，panel 必须只提交 title、prompt、type、size，完全省略 artifact，不能用记忆、示例日期、猜测数值或占位数据补齐。真实数据面板只有已取得完整真实记录才可附 artifact；没有数据的面板写明用户指定的来源（如通联 MCP）及字段、日期范围。若已经在主对话取得数据，直接带入对应 artifact 或 prompt，禁止重复查询。不要为了猜数据契约搜索应用源码；必要时用 research_component_data action=templates 查真实契约。首屏默认近20个交易日和最近4个报告期，用户明确指定范围时遵从用户。无需手算未请求的技术指标或扩展更多面板。缺失的可选数据如实标记，不能阻塞已有数据的展示。按用户指定图形选择模板：通用图表 type=chart，prompt 明确 chart.line/area/stackedArea/step/combo/bar/groupedBar/stackedBar/percentBar/horizontal/lollipop/dumbbell/pie/donut/treemap/sunburst/radar/histogram/box/bullet/gauge/waterfall/funnel/sankey/scatter/bubble/heatmap/calendar/candlestick/ohlc；这些已有宿主模板，不生成自定义 HTML。百分比图提交非负原值；哑铃图提交两组配对值；组合图同单位且可指定 series.kind。金融图表 type=market，prompt 声明对应 variant：metrics 仅行情指标、trend 多曲线趋势、table 明细、candlestick K线、scatter 散点、heatmap 热力图、price-volume 量价、allocation-donut 环形占比、fund-kpi 基金指标、fund-holdings 持仓、fund-industry 行业配置。不要把散点或柱状图映射为 metrics。趋势同轴仅放同单位序列，日期正序；不扩展用户未要求的同比指标。证券交易所后缀必须由来源确认，未确认时保留用户给出的六位代码，不猜 SH/SZ。直方图与箱线图共用同一批样本时，必须只在箱线图groups填写样本；直方图panel设置samplesFromPanel为箱线图完整标题，artifact省略samples和bins且unit一致，宿主合并全部样本。不要重复抄写第二份样本或手写未经计数核对的样本量。同一时点同一指标按地区/产品等不同维度拆分时，各图合计须一致。'+specialChartSchema()+'；'+advancedChartSchema()+'\n设备时钟和固定时刻换算优先 type=clock，live和snapshot均在首次调用附完整artifact.locations配置，不猜城市。可编辑Markdown笔记优先 type=note，content保留完整原文且asOf注明材料来源；摘要阅读不改成编辑笔记。结构化输入表单优先 type=form、代码或JSON阅读优先 type=code；表单保存本画布输入记录，不启动智能体或假称外部提交。目标与分项进度优先使用 type=progress，任务清单优先 type=tasks，审批记录优先 type=approval，工作台提醒优先 type=alerts；已有运营模板，不另写HTML。自定义模拟记录必须在panel.artifact中一次提供，保持用户原始任务及计数。'+operationsTemplateSchema()+' 金融简介使用market.ticker-information（symbol/name/price/priceUnit/dayChange/dayChangePercent/info/sparkline，缺历史提供sparklineMissing）；逐项核心指标使用market.key-metrics（symbol/items的label/value/period）；管理团队使用market.management-team（symbol/period/members的name/role/compensation/currency）。这三类自定义模拟模板首次调用必须同时附完整artifact，不能填通用金融样本；未知数字保留null并说明missing，不合计不同币种报酬。'+FINANCIAL_SNAPSHOT_GUIDANCE+FINANCIAL_SERIES_GUIDANCE+FINANCIAL_FUNDAMENTAL_GUIDANCE+FINANCIAL_REVENUE_GUIDANCE+FINANCIAL_ACTION_GUIDANCE+FINANCIAL_OWNERSHIP_GUIDANCE+FINANCIAL_RECORDS_GUIDANCE+FINANCIAL_CHARTING_GUIDANCE
+export const WORKBENCH_EARLY_PLAN = '【工作台首次规划】先确定用户领域的问题、信息结构和1–10个面板，立即调用 research_workbench_create；不要先写报告、读取skill/源码/完整模板规范或填整套数据。只规划用户要求的数量，不追加无关金融/KPI卡。用户允许自洽模拟数据时，优先 dataMode:"simulated"、generationMode:"deferred"，panels每项仅含title/prompt/type/size，完全省略artifact。sharedContext只写跨卡共用的事实、日期、容量、单位与必要合计分配；使用同一份紧凑预算/时间轴，不写逐行明细或序列。宿主会把原始用户需求和sharedContext送给受限并行子卡，由子卡生成完整且显著标注模拟的数据，不能偷换成固定行业样例。每项prompt只写该卡问题、字段、范围与必要交互。按内容选择类型：排期用gantt/calendar/timeline，人员/物资/预算明细用table，执行用tasks/progress，风险用alerts或table，审批用approval，录入用form，正文用note，代码配置用code，指标仅用于真正的汇总读数，图表用chart并在prompt写chart变体；不为凑模板改写用户领域。现有模板不能表达的业务保留原有自定义HTML或原artifact路径，不使用deferred，不删改业务来凑模板。已有完整数据可沿原artifact路径直接提交；标准确定性preset仍按原规则单独提交，不能混用deferred。真实数据未取得时省略artifact，按来源声明待取字段，不捏造记录；已有真实记录可直接artifact，不重复查询。工具返回accepted只表示规划已受理、面板生成中，prepared才表示内容已准备好，然后结束主会话本轮；不再逐卡检查、重复建卡或制作报告。'
+export const WORKBENCH_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，不替换已有卡；编辑当前看板用已有编辑工具。先一次提交title与完整panels规划，不读skill/源码/全量规范、不先填所有数据。用户允许模拟时用dataMode:"simulated",generationMode:"deferred",panels:[{title,prompt,type,size}]，省略artifact；sharedContext仅保存跨卡共同事实与紧凑的预算/日期/容量分配，宿主保留原始用户需求，受限子卡再生成各自完整数据。按领域任务选择gantt/calendar/timeline/table/tasks/progress/alerts/approval/form/note/chart等注册模板，不套固定金融或KPI样例。模板无法表达的业务保留原有自定义HTML/原artifact路径，不使用deferred，不删改业务来凑模板。已有完整数据沿artifact路径、标准preset沿原路径，均不混用deferred。真实来源用source或省略模式，未取数据只规划、不可补模拟值；内置免费源支持publicData直通，证券报价每请求最多12个。用户指定数量、数据、来源和范围必须保留。requestId重试保持一致。accepted是受理并生成中，prepared才是已准备好。'
 
 export const WORKBENCH_PLAN_SUBMITTED = 'research_workbench_create 已成功受理本次工作台。取数和模板填充由已启动的面板任务负责，主会话不要再重复接口发现、取数、重新创建或检查同一批面板。现在只向用户简要说明工具返回的真实状态：accepted 表示生成中，prepared 表示内容已准备好，然后结束本轮。面板各自完成后会自动更新画布；不要再生成一份重复报告。'
 export const WORKBENCH_LIVE_ETF_PLAN = '【实时ETF工作台预设】本轮已匹配国内热门基金/ETF综合行情需求，立即且仅调用一次 research_workbench_create：\n{"title":"国内热门基金ETF行情研究工作台","dataMode":"source","preset":"cn-hot-etf-live","panels":[]}\n此预设不是文件路径。宿主固定生成8卡：沪深300ETF内置行情、10只代表性ETF明细、4只核心ETF报价、4个国内指数内置组件、沪深300/创业板/黄金3张近20交易日量价、财经资讯。代表性名单不等于当前热度排名；用户指定标题时保留标题。所有数值由真实来源首次取数并按每分钟刷新保存，原生金融组件保留原有布局；用户要求全部只手动刷新时宿主会保留。不要先 public_data_query、搜索代码、逐卡规划、抄写行情数组或生成模拟样例；不启动逐卡模型。工具返回accepted只表示受理并生成中，prepared才表示内容已准备好；失败须如实说明。'
@@ -69,6 +60,29 @@ function hasAcceptedPlan(session, messageId) {
   return false
 }
 
+const BUDGET_EVENT = 'sherlock/workbench-planning-budget'
+const MODEL_SELECTION_NAMESPACE = 'session-model-selection'
+function explicitSessionSelection(ctx, sessionId) {
+  // selectModel durably saves these safe fields before applying its live
+  // selection. Never infer user intent by comparing our last limited effort.
+  const selections = ctx.get?.('settings')?.get(MODEL_SELECTION_NAMESPACE)?.selections
+  return Array.isArray(selections) ? selections.find(value => value?.sessionId === sessionId && typeof value.provider === 'string' && typeof value.model === 'string') : undefined
+}
+const controls = config => ({ ...(config.reasoningEffort !== undefined ? { reasoningEffort: config.reasoningEffort } : {}), ...(config.maxTokens !== undefined ? { maxTokens: config.maxTokens } : {}) })
+function savedPlanningBudget(session) {
+  const data = session?.events?.findLast(event => event.type === BUDGET_EVENT)?.data
+  const validControls = value => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => ['reasoningEffort','maxTokens'].includes(key)) &&
+    (value.reasoningEffort === undefined || typeof value.reasoningEffort === 'string' && value.reasoningEffort.length <= 64) &&
+    (value.maxTokens === undefined || Number.isSafeInteger(value.maxTokens) && value.maxTokens > 0)
+  if (data?.version !== 1 || data.phase !== 'planning' || typeof data.messageId !== 'string' || typeof data.provider !== 'string' || typeof data.model !== 'string' || !validControls(data.original) || !validControls(data.limited) || !['minimal','low'].includes(data.limited.reasoningEffort) || data.limited.maxTokens > 4096) return null
+  return data
+}
+function savePlanningBudget(session, state, phase) {
+  // Execution headers remain untouched. This bounded event contains only
+  // request controls, so a resumed session can undo an interrupted phase cap.
+  session?.append?.(BUDGET_EVENT, { version: 1, messageId: state.messageId, provider: state.provider, model: state.model, original: controls(state.original), limited: controls(state.limited), phase })
+}
+
 export function registerWorkbenchExecutionPolicy(ctx) {
   const applied = new WeakMap()
   const disposePrompt = ctx.systemPrompt.context({ name: 'sherlock:workbench-execution', order: 150,
@@ -88,21 +102,47 @@ export function registerWorkbenchExecutionPolicy(ctx) {
         ? WORKBENCH_INLINE_BINDING : WORKBENCH_PLAN_SUBMITTED
     } })
   const disposeRequest = ctx.on('agent/request', async ({ agent, signal }, next) => {
+    signal?.throwIfAborted()
     const config = await next()
-    const previous = applied.get(agent)
-    const inherited = previous && previous.provider === config.provider && previous.model === config.model && previous.effort === config.reasoningEffort
-    const base = inherited ? (({ reasoningEffort, ...rest }) => rest)(config) : config
-    if (!workbenchCreationRequest(agent?.session)) { applied.delete(agent); return base }
-    // Respect explicit model/effort choices; choose only an adapter-declared level.
-    if (base.reasoningEffort !== undefined) return config
+    const previous = applied.get(agent) ?? savedPlanningBudget(agent?.session)
+    const selected = previous ? explicitSessionSelection(ctx, agent?.session?.id) : undefined
+    let base = config
+    if (previous && previous.provider === config.provider && previous.model === config.model) {
+      for (const key of ['reasoningEffort', 'maxTokens']) {
+        const original = key === 'reasoningEffort' && selected?.provider === config.provider && selected.model === config.model ? selected.reasoningEffort : previous.original[key]
+        if (config[key] !== previous.limited[key] || config[key] === original) continue
+        if (base === config) base = { ...config }
+        if (original === undefined) delete base[key]
+        else base[key] = original
+      }
+    }
+    const human = workbenchCreationRequest(agent?.session)
+    if (!human || hasAcceptedPlan(agent.session, human.messageId)) {
+      if (previous) savePlanningBudget(agent?.session, previous, 'restored')
+      applied.delete(agent); return base
+    }
     let model
-    try { model = await ctx.llm.resolveModelInfo(config.provider, config.model, signal) }
-    catch (error) { if (signal?.aborted) throw error; return config }
+    try { model = await ctx.llm.resolveModelInfo(base.provider, base.model, signal) }
+    catch (error) { applied.delete(agent); if (signal?.aborted) throw error; return base }
+    signal?.throwIfAborted()
     const levels = model.reasoning?.efforts ?? []
-    const effort = ['low', 'minimal'].find(id => levels.some(level => level.id === id))
-    if (!effort) return config
-    applied.set(agent, { provider: config.provider, model: config.model, effort })
-    return { ...base, reasoningEffort: effort }
+    const effort = ['minimal', 'low'].find(id => levels.some(level => level.id === id))
+    if (!effort) { applied.delete(agent); return base }
+    // This is a bounded planning call, not a user model-selection change.
+    // Restore the original request controls once the host accepts the plan.
+    const maxTokens = Math.min(4096, base.maxTokens ?? model.defaultMaxTokens ?? 4096)
+    const limited = { ...base, reasoningEffort: effort, maxTokens }
+    const state = { messageId: human.messageId, provider: base.provider, model: base.model, original: base, limited }
+    if (!previous || previous.messageId !== human.messageId || previous.provider !== base.provider || previous.model !== base.model || JSON.stringify(controls(previous.original)) !== JSON.stringify(controls(base)) || JSON.stringify(controls(previous.limited)) !== JSON.stringify(controls(limited))) savePlanningBudget(agent?.session, state, 'planning')
+    applied.set(agent, state)
+    return limited
   })
-  return () => { disposePrompt(); disposeRequest() }
+  const disposeContext = ctx.on('agent/request-context', async ({ agent }, next) => {
+    const request = await next(), human = workbenchCreationRequest(agent?.session)
+    if (!human || hasAcceptedPlan(agent.session, human.messageId) || !request.tools?.some(tool => tool.name === 'research_workbench_create')) return request
+    // The prepared route/effort is immutable here. Narrow only the planning
+    // tool's instructions; all parameter validation and other tools stay intact.
+    return { ...request, tools: request.tools.map(tool => tool.name === 'research_workbench_create' ? { ...tool, description: WORKBENCH_PLANNING_TOOL_GUIDANCE } : tool) }
+  })
+  return () => { disposePrompt(); disposeRequest(); disposeContext() }
 }

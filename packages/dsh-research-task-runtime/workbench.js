@@ -36,6 +36,7 @@ const publicDataRequestsSchema = { type: 'array', items: { type: 'object', addit
     source: { type: 'string', required: true, enum: ['tencent-quotes','tencent-history','kraken-ticker','kraken-candles','sina-news'] },
     parameters_json: { type: 'string', required: true, description: '原来源参数JSON字符串。腾讯报价symbols数组每请求1–12个，超限分面板；例如 {"symbols":["sh510300"]}。Kraken pair:XBTUSD或ETHUSD，分钟图interval:1,limit:60；腾讯历史symbol:sh510300,limit:20（日线）；新浪limit:12。证券交易所必须确认，不猜后缀。' }
 } } };
+const preparedWorkbench = input => input.dataMode === 'simulated' && input.generationMode !== 'deferred' || input.panels.every(p => p.artifact);
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 const templateIds = panels => panels.map(panel => panel.type==='financial-widget'?'financial-widget.'+panel.artifact?.widget:panel.type === 'market'
     ? `market.${panel.artifact?.variant ?? marketVariant(panel) ?? 'unspecified'}`
@@ -86,6 +87,10 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         await rename(tmp, filePath);
     };
     const create = (args, exec) => {
+        if (args?.generationMode === 'deferred') {
+            const originalRequest = canvasHumanRequest(exec.agent?.session)?.text;
+            if (originalRequest) args = { ...args, originalRequest };
+        }
         args = preserveWorkbenchRefreshPreference(args, canvasHumanRequest(exec.agent?.session)?.text);
         if (args?.requestId === undefined) {
             const messageId = canvasHumanRequest(exec.agent?.session)?.messageId;
@@ -112,11 +117,23 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 /禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(canvasHumanRequest(exec.agent?.session)?.text ?? '')))
                 throw Error('当前任务未授权内置免费来源取数；请使用已有资料或正常面板流程。');
             if (direct.length && typeof runtime.startPublicDataBatch !== 'function') throw Error('免费源组件直通服务不可用。');
+            if (input.generationMode === 'deferred' && typeof runtime.startBatch !== 'function') throw Error('延后模拟面板生成服务不可用。');
+            const startDeferred = async plan => {
+                const pending = plan.panels.filter(p => !p.taskId);
+                try {
+                    const receipts = await runtime.startBatch({ parentSessionId, panels: pending.map(p => ({ canvasNodeId: p.nodeId, kind: 'container', prompt: workbenchPanelPrompt(input, p) })) });
+                    pending.forEach((p, i) => { p.taskId = receipts[i].taskId; delete p.error; });
+                } catch (error) {
+                    for (const p of pending) p.error = '面板任务未能启动，请重试。';
+                    plan.ready = true; await persist(); throw error;
+                }
+            };
             const old = plans.find(p => p.parentSessionId === parentSessionId && p.requestId === input.requestId);
             if (old) {
                 if (JSON.stringify(validateWorkbench(old.input ?? old)) !== JSON.stringify(input))
                     throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
-                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? input.dataMode === 'simulated' || input.panels.every(p=>p.artifact) ? 'prepared' : 'accepted' : 'preparing' };
+                if (input.generationMode === 'deferred' && old.ready && old.panels.some(p => !p.taskId)) { await startDeferred(old); await persist(); }
+                return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) ? 'prepared' : 'accepted' : 'preparing' };
             }
             const id = randomUUID();
             const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
@@ -138,7 +155,13 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             // preparation starts. The bounded fallback also supports headless
             // sessions without an open renderer.
             await waitForCanvas(id);
-            if (input.dataMode === 'simulated') {
+            if (input.generationMode === 'deferred') {
+                if (exec.signal?.aborted) {
+                    for (const panel of plan.panels) panel.error = '面板生成已取消，尚未启动。';
+                    plan.ready = true; await persist(); exec.signal.throwIfAborted();
+                }
+                await startDeferred(plan);
+            } else if (input.dataMode === 'simulated') {
                 try {
                     if (input.panels.some(p => !p.artifact)) {
                         const content = validateWorkbench({ ...input, generationMode: undefined,
@@ -182,7 +205,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             plan.ready = true;
             mountedPlans.delete(id);
             await persist();
-            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: input.dataMode === 'simulated' || input.panels.every(p=>p.artifact) ? 'prepared' : 'accepted' };
+            return { planId: id, panels: plan.panels.map(p => p.title), templateIds: templateIds(plan.panels), status: preparedWorkbench(input) ? 'prepared' : 'accepted' };
         };
         const pending = chain.then(run);
         chain = pending.catch(() => { });
@@ -195,7 +218,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             requestId: { type: 'string', description: '可选。本轮需求的稳定标识，重试保持一致；省略时宿主根据当前用户消息生成，重复调用不会重复建卡。' },
             title: { type: 'string', required: true, description: '工作台标题。必须同时提供panels完整清单；不能仅提交title。使用preset时panels填空数组。' },
             dataMode: { type: 'string', enum: ['simulated', 'source'], description: '真实来源使用source（也可省略）；用户允许演示数据且个人看板时使用simulated。实时预设cn-hot-etf-live不可使用simulated。' },
-            generationMode: { type: 'string', enum: ['parallel'], description: '兼容旧调用；模拟数据即使传 parallel 也由宿主本地生成，不启动面板模型。新调用可省略。' },
+            generationMode: { type: 'string', enum: ['parallel','deferred'], description: '用户允许模拟且未提供完整数据时优先deferred：首轮只提交面板规划和sharedContext，受理后由受限子卡生成完整记录；不混用artifact/preset。parallel保留旧本地固定样例行为。真实来源省略。' },
+            sharedContext: { type: 'string', description: '仅deferred。最多3000字符，跨卡共用的事实、总额及紧凑分配、日期、容量、单位和口径；不填逐行明细或完整图表序列。原始用户需求由宿主自动保留，用户明确约束优先。' },
             preset: { type: 'string', enum: [...LIVE_WORKBENCH_PRESETS, ...SIMULATED_WORKBENCH_PRESETS], description: 'cn-hot-etf-live为国内代表性基金ETF真实行情8卡，dataMode:source、panels:[]，无需先query或抄写数据，由宿主取数并自动刷新。其余为模拟预设，须dataMode:simulated。预设不能混用自定义面板。' },
             panels: { type: 'array', required: true, description: '必填。自定义工作台提交1–10个含title/prompt/type/size的完整面板；已提供内容必须附对应artifact。仅内置preset使用空数组[]。', items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题与内容边界；主对话已有的数据必须完整带入实际记录、日期、单位与来源，子任务看不到主对话工具返回。以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },

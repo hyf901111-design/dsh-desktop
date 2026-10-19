@@ -5,6 +5,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
   let applying = false, disposed = false, timer = 0, cleanupTimer = 0
   const route = el => { const path = []; while (el && el !== root) { const p = el.parentElement; if (!p) return null; path.unshift([...p.children].indexOf(el)); el = p } return path }
   const resolve = path => Array.isArray(path) && path.length < 40 ? path.reduce((el, index) => Number.isInteger(index) && index >= 0 && index < 10000 ? el?.children[index] : null, root) : null
+  const disclosureDefault = el => el.tagName === 'DETAILS' && el.getAttribute('data-workbench-default-open') === 'price-volume-v1' ? 'price-volume-v1' : null
   const entries = () => {
     const out = new Map()
     for (const el of root.querySelectorAll('td,strong,[data-refresh-key],.metric-value,.market-metric-value,.research-metric-value,.fund-value')) {
@@ -25,7 +26,7 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
     const controls = [], scroll = []
     for (const el of root.querySelectorAll('input,select,textarea,details')) {
       if (controls.length >= 200 || el.closest('[data-workbench-state-owned]') || el.type === 'password' || el.type === 'file') continue
-      controls.push({ path: route(el), tag: el.tagName, ...(el.tagName === 'DETAILS' ? { open: el.open } : { value: String(el.value).slice(0, 8192), checked: Boolean(el.checked) }) })
+      controls.push({ path: route(el), tag: el.tagName, ...(el.tagName === 'DETAILS' ? { open: el.open, ...(disclosureDefault(el) ? { defaultOpen: disclosureDefault(el) } : {}) } : { value: String(el.value).slice(0, 8192), checked: Boolean(el.checked) }) })
     }
     for (const el of [root, ...root.querySelectorAll('*')]) {
       if (scroll.length >= 200) break
@@ -44,7 +45,8 @@ export function createWorkbenchRefreshSurface(root, onState = () => {}) {
     for (const control of state.controls || []) {
       const el = resolve(control.path)
       if (!el || el.tagName !== control.tag || el.closest('[data-workbench-state-owned]')) continue
-      if (el.tagName === 'DETAILS') el.open = control.open === true
+      // Migrate the former collapsed price-volume default, then honor new user choices.
+      if (el.tagName === 'DETAILS') el.open = disclosureDefault(el) && control.defaultOpen !== disclosureDefault(el) || control.open === true
       else if (typeof control.value === 'string' && el.type !== 'password' && el.type !== 'file' && el.value !== control.value) {
         el.value = control.value; if ('checked' in el) el.checked = control.checked === true
         el.dispatchEvent(new win.Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }))
@@ -78,7 +80,7 @@ svg [data-workbench-value-changed]{filter:drop-shadow(0 0 3px rgba(45,153,255,.6
 
 export function isWorkbenchViewState(state) {
   const path = value => Array.isArray(value) && value.length < 40 && value.every(n => Number.isInteger(n) && n >= 0 && n < 10000)
-  try { return Boolean(state && Object.keys(state).length === 3 && Array.isArray(state.values) && state.values.length <= 5000 && state.values.every(row => Array.isArray(row) && row.length === 2 && typeof row[0] === 'string' && row[0].length <= 512 && typeof row[1] === 'string' && row[1].length <= (row[0]==='chart-view-key:technical-controls'?65536:512)) && Array.isArray(state.controls) && state.controls.length <= 200 && state.controls.every(c => c && path(c.path) && ['INPUT','SELECT','TEXTAREA','DETAILS'].includes(c.tag) && (c.tag === 'DETAILS' ? typeof c.open === 'boolean' : typeof c.value === 'string' && c.value.length <= 8192 && typeof c.checked === 'boolean')) && Array.isArray(state.scroll) && state.scroll.length <= 200 && state.scroll.every(s => s && path(s.path) && [s.x,s.y].every(n => Number.isFinite(n) && n >= 0 && n <= 12000)) && JSON.stringify(state).length <= 256000) } catch { return false }
+  try { return Boolean(state && Object.keys(state).length === 3 && Array.isArray(state.values) && state.values.length <= 5000 && state.values.every(row => Array.isArray(row) && row.length === 2 && typeof row[0] === 'string' && row[0].length <= 512 && typeof row[1] === 'string' && row[1].length <= (row[0]==='chart-view-key:technical-controls'?65536:512)) && Array.isArray(state.controls) && state.controls.length <= 200 && state.controls.every(c => c && path(c.path) && ['INPUT','SELECT','TEXTAREA','DETAILS'].includes(c.tag) && (c.tag === 'DETAILS' ? typeof c.open === 'boolean' && (c.defaultOpen === undefined || c.defaultOpen === 'price-volume-v1') : typeof c.value === 'string' && c.value.length <= 8192 && typeof c.checked === 'boolean')) && Array.isArray(state.scroll) && state.scroll.length <= 200 && state.scroll.every(s => s && path(s.path) && [s.x,s.y].every(n => Number.isFinite(n) && n >= 0 && n <= 12000)) && JSON.stringify(state).length <= 256000) } catch { return false }
 }
 
 export function workbenchContentRevision(html) {

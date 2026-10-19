@@ -1,3 +1,4 @@
+import {patchResearchPlanningFeedback} from './research-planning-feedback.mjs'
 // The planner may spend minutes before calling research_workbench_create. Keep
 // this first, deliberately provisional card in the renderer; only the accepted
 // tool plan is allowed to create persistent, named canvas components.
@@ -177,7 +178,8 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
 const css = `
 .odyssey-creation-planning-card{--generation-bg:#fafafa;--generation-border:rgba(0,0,0,.12);--generation-phase:#575757;--generation-title:#262626;position:absolute;top:0;left:0;z-index:42;box-sizing:border-box;width:320px;height:220px;container-type:size;border-radius:8px;background:var(--generation-bg);pointer-events:auto;overflow:hidden;touch-action:none;cursor:grab}
 .odyssey-creation-planning-card:active{cursor:grabbing}
-.odyssey-planning-dismiss{position:absolute;right:10px;top:10px;z-index:2;width:24px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:4px;color:var(--generation-phase);background:transparent;cursor:pointer}
+.odyssey-planning-dismiss{position:absolute;right:12px;top:12px;z-index:2;width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;border-radius:4px;color:var(--generation-phase);background:transparent;cursor:pointer}
+.odyssey-creation-planning-card:is([data-research-creation-planning=failed],[data-research-creation-planning=stopped]) .odyssey-generation-actions{right:52px;opacity:1;pointer-events:auto}
 .odyssey-planning-dismiss:hover,.odyssey-planning-dismiss:focus-visible{background:var(--sherlock-hover,rgba(128,128,128,.16))}
 [data-ework-grid][data-grid-operation=move] .odyssey-creation-planning-card[data-planning-grid][data-grid-active]{left:var(--grid-float-left)!important;top:var(--grid-float-top)!important}
 .odyssey-creation-planning-card[data-research-creation-planning=dealing]{pointer-events:none;animation:odyssey-planning-deal .42s cubic-bezier(.22,1,.36,1) both}
@@ -187,6 +189,7 @@ const css = `
 @media(prefers-reduced-motion:reduce){.odyssey-creation-planning-card[data-research-creation-planning=dealing]{animation:none}}
 body [data-research-compact-chrome].odyssey-creation-planning-card>.odyssey-generation-surface{width:100%;height:100%;background:var(--generation-bg)!important}
 `
+export {css as researchPlanningCss}
 const themeCss = `
 body[data-ds-dark-theme] .odyssey-creation-planning-card{--generation-bg:#030303;--generation-border:#696969;--generation-phase:#dbdbdb;--generation-title:#f5f5f5}
 `
@@ -305,6 +308,10 @@ export function patchResearchCreationProgress(source) {
         window.addEventListener('odyssey:creation-retry', onRetry);
         return () => { window.removeEventListener('odyssey:creation-stop', onStop); window.removeEventListener('odyssey:creation-retry', onRetry); };
       }, [sessionId, stop, running, canvasRunning, keyboard, inputActions, machineBusy, locked, empty, resolveSubmitMode, subagent]);`)
+  // The conversation Stop action owns the same planning lifecycle as the card.
+  if(!source.includes('/* ODYSSEY_PLANNING_COMPOSER_STOP */'))source=replaceOnce(source,
+    'stop=()=>{if(canvasRunning)',
+    "stop=()=>{/* ODYSSEY_PLANNING_COMPOSER_STOP */ const intent=odysseyCreationIntents.get(sessionId);if(intent?.state==='planning'){odysseyCreationIntents.set(sessionId,{...intent,state:'stopping'});odysseyCreationEmit(sessionId);}if(canvasRunning)")
   if (!source.includes('/* ODYSSEY_WORKBENCH_MOUNT_ACK */')) {
     source = replaceOnce(source, 'const acknowledged = [];\n                        for (const plan of plans ?? []) {',
       'const acknowledged = [], mounted = [];\n                        for (const plan of plans ?? []) {')
@@ -386,5 +393,5 @@ export function patchResearchCreationProgress(source) {
     const pattern = new RegExp('/\\* ' + marker + ' \\*/\\n[^\\n]+')
     source = pattern.test(source) ? source.replace(pattern, style) : source + '\n' + style + '\n'
   }
-  return source
+  return patchResearchPlanningFeedback(source,classifyResearchCreationRequest)
 }

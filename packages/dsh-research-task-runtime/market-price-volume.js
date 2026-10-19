@@ -6,10 +6,11 @@ const json=value=>JSON.stringify(value).replace(/</g,'\\u003c')
 export function priceVolumeRuntime(labels,prices,volumes,priceUnit,volumeUnit,viewport,observe) {
  // Saved cards receive this runtime during preview refinement. Keep their
  // control ancestry and all records so stored interaction routes stay valid.
+ const records=document.querySelector('.price-volume>details')
+ if(records){records.open=true;records.dataset.workbenchDefaultOpen='price-volume-v1'}
  const legacy=document.querySelector('body[data-layout-profile="openterminal"] .price-volume:not(.ot-price-volume)')
  if(legacy){
   legacy.classList.add('ot-price-volume-legacy')
-  const details=legacy.querySelector(':scope>details');if(details)details.open=true
   legacy.querySelectorAll('tbody tr').forEach((row,index)=>{row.dataset.priceVolumeIndex=String(index);row.tabIndex=0})
   legacy.querySelectorAll('[data-price-volume-range]').forEach(button=>{if(Number(button.dataset.priceVolumeRange)===labels.length)button.hidden=true})
  }
@@ -73,7 +74,7 @@ export function renderPriceVolume(spec) {
   typeof priceUnit!=='string'||!priceUnit.trim()||priceUnit.length>20||typeof volumeUnit!=='string'||!volumeUnit.trim()||volumeUnit.length>20)return null
  const terminal=spec.layoutProfile==='openterminal',ranges=priceVolumeRanges(labels).filter(([count])=>!terminal||count==='all'||Number(count)<labels.length)
  const controls=`<div class="price-volume-controls" role="group" aria-label="时间范围">${ranges.map(([count,label])=>`<button type="button" data-price-volume-range="${count}" aria-pressed="${count==='all'}">${label}</button>`).join('')}</div>`
- const table=`<details><summary>完整量价数据</summary><table><thead><tr><th>时点</th><th>价格 (${esc(priceUnit)})</th><th>成交量 (${esc(volumeUnit)})</th></tr></thead><tbody>${labels.map((label,i)=>`<tr><td>${esc(label)}</td><td>${prices[i]}</td><td>${volumes[i]??'—'}</td></tr>`).join('')}</tbody></table></details>`
+ const table=`<details open data-workbench-default-open="price-volume-v1"><summary>完整量价数据</summary><table><thead><tr><th>时点</th><th>价格 (${esc(priceUnit)})</th><th>成交量 (${esc(volumeUnit)})</th></tr></thead><tbody>${labels.map((label,i)=>`<tr><td>${esc(label)}</td><td>${prices[i]}</td><td>${volumes[i]??'—'}</td></tr>`).join('')}</tbody></table></details>`
  const last=labels.length-1
  const chart=`<div class="price-volume-readout" role="status">${esc(labels[last])} · 价格 ${prices[last]} ${esc(priceUnit)} · 成交量 ${volumes[last]??'—'} ${volumes[last]===null?'':esc(volumeUnit)}</div><svg viewBox="0 0 506 164" preserveAspectRatio="xMidYMid meet" data-series-viewport="v2" role="img" tabindex="0" aria-label="价格与成交量；方向键切换时点"></svg><div class="price-volume-legend"><span>● 价格 · ${esc(priceUnit)}</span><span>▮ 成交量 · ${esc(volumeUnit)}</span></div>`
  const records=terminal?`<section class="ot-price-volume-records" aria-label="完整量价记录"><header><strong>逐期明细</strong><span data-price-volume-count>${labels.length} / ${labels.length}</span></header><p>价格 / ${esc(priceUnit)} · 成交量 / ${esc(volumeUnit)}</p><div class="ot-record-scroll"><table><thead><tr><th>时点</th><th>价格</th><th>成交量</th></tr></thead><tbody>${labels.map((label,i)=>({label,i})).reverse().map(({label,i})=>`<tr tabindex="0" data-price-volume-index="${i}" aria-selected="${i===last}"><td>${esc(label)}</td><td>${prices[i]}</td><td>${volumes[i]===null?'—':volumes[i].toLocaleString('en-US')}</td></tr>`).join('')}</tbody></table></div></section>`:''

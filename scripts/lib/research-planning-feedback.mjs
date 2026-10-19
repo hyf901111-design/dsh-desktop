@@ -1,0 +1,95 @@
+// Only transport activity and verified host receipts are projected here.
+// Never display or summarize reasoning, tool arguments or source payloads.
+export function planningResponseMetadata(nodes) {
+ const parts=[],calls=[];let responding=false,accepted=false,prepared=false,count=0,lastActivityAt=0
+ for(const node of nodes||[]){
+  if(Number.isFinite(node?.data?.lastActivityAt))lastActivityAt=Math.max(lastActivityAt,node.data.lastActivityAt)
+  if(node?.kind==='assistant-step'){
+   const blocks=Array.isArray(node.data?.blocks)?node.data.blocks:[]
+   for(const block of blocks){
+    if(['text','reasoning'].includes(block?.kind)&&typeof block.text==='string'&&block.text.length){responding=true;parts.push([node.key,block.kind,block.text.length])}
+    if(block?.kind==='tool-call'){responding=true;parts.push([node.key,'tool',String(block.name||'').length,String(block.argsRaw||'').length])}
+   }
+  }
+  if(node?.kind!=='tool-call')continue
+  const pending=[node.data?.root],visited=new Set()
+  while(pending.length&&visited.size<128){
+   const root=pending.pop();if(!root||typeof root!=='object'||visited.has(root))continue;visited.add(root)
+   if(Number.isFinite(root.time))lastActivityAt=Math.max(lastActivityAt,root.time)
+   const call=root.kind?root.call:root
+   if(call){
+    const settled=!!root.kind,failed=root.isError===true||root.error!=null
+    calls.push({settled,failed});parts.push([node.key,'call',visited.size,settled,failed])
+    if(call.name==='research_workbench_create'&&settled&&!failed)for(const block of root.content||[]){
+     if(block?.type!=='text'||typeof block.text!=='string'||block.text.length>500000)continue
+     try{const value=JSON.parse(block.text);if(typeof value.planId==='string'&&['accepted','prepared'].includes(value.status)){accepted=true;prepared=value.status==='prepared';count=Array.isArray(value.panels)?value.panels.length:Number.isSafeInteger(value.panelCount)?value.panelCount:0}}catch{}
+    }
+   }
+   if(Array.isArray(root.subCalls))pending.push(...root.subCalls)
+  }
+ }
+ return {signature:JSON.stringify(parts),lastActivityAt,responding,toolCount:calls.length,failedTools:calls.filter(c=>c.failed).length,accepted,prepared,count}
+}
+export function advancePlanningHeartbeat(previous,meta,now) {
+ if(!meta.responding&&!meta.toolCount)return previous
+ const eventAt=meta.lastActivityAt>0?Math.min(now,meta.lastActivityAt):now
+ if(previous?.signature===meta.signature&&(meta.lastActivityAt<=0||previous.lastAt>=eventAt))return previous
+ return {signature:meta.signature,firstAt:previous?.firstAt??eventAt,lastAt:eventAt}
+}
+export function planningFeedbackState(meta,heartbeat,startedAt,now,running,english=false) {
+ const elapsed=Math.max(0,now-startedAt),since=heartbeat?Math.max(0,Math.floor((now-heartbeat.lastAt)/1000)):null
+ const say=(zh,en)=>english?en:zh
+ const title=!running?say('本轮规划已结束','Planning run ended'):meta.prepared?say('组件内容已准备好','Component content prepared'):meta.accepted?say('规划已受理，正在生成组件','Plan accepted; generating components'):meta.toolCount?say('正在执行规划工具','Running planning tools'):meta.responding?say('已收到模型响应，正在形成组件清单','Model responding; preparing component list'):say('任务已提交，等待模型响应','Request sent; awaiting model response')
+ const activity=heartbeat?say('最近响应：'+since+' 秒前','Last activity: '+since+'s ago'):say('尚未收到模型输出','No model output received yet')
+ const detail=!running?say(meta.accepted?'本轮已提交组件计划，最终状态以各组件为准。':'本轮未提交组件计划。',meta.accepted?'A component plan was submitted; see each component for its final status.':'No component plan was submitted in this run.'):meta.accepted?(meta.count?say('已受理 '+meta.count+' 个组件；各组件会分别显示生成状态。',meta.count+' components accepted; each reports its own generation status.'):say('组件计划已受理；受理不等于全部生成完成。','Plan accepted; component generation is still in progress.')):meta.toolCount?say('已开始 '+meta.toolCount+' 次工具调用'+(meta.failedTools?'，其中 '+meta.failedTools+' 次未成功。':'。'),'Started '+meta.toolCount+' tool calls'+(meta.failedTools?'; '+meta.failedTools+' failed.':'.')):say('正在确定内容分工；尚未提交组件计划，内容生成还未开始。','Determining content responsibilities; no component plan has been submitted yet.')
+ const warning=running&&!meta.accepted&&elapsed>=120000?say('规划已超过 2 分钟。'+(since!==null&&since<30?'模型仍在响应。':'暂未收到新的进展。')+'可以继续等待或停止后重试。','Planning has exceeded 2 minutes. '+(since!==null&&since<30?'The model is still responding. ':'No recent progress received. ')+'You can keep waiting or stop and retry.'):''
+ return {title,activity,detail,warning,phase:!running?'ended':meta.prepared?'prepared':meta.accepted?'accepted':meta.toolCount?'tools':meta.responding?'responding':'waiting'}
+}
+export function researchPlanningRequest(order,nodeStore,turn,classify,readText) {
+ if(turn===null||turn===undefined)return null
+ for(let i=order.length-1;i>=0;i--){
+  const node=nodeStore.get(order[i]);if(node?.kind!=='user')continue
+  const location=node.location,number=node.data?.turn??location?.turn?.turn??location?.turn
+  if(number!==turn)continue
+  const request=classify(readText(node.data?.content||[]))
+  return request?.kind==='workbench'?request:null
+ }
+ return null
+}
+function ResearchPlanningFeedback({meta,startedAt,now,running}) {
+ const heartbeat=react.useRef(null)
+ heartbeat.current=advancePlanningHeartbeat(heartbeat.current,meta,now)
+ const english=document.documentElement.dataset.odysseyLocale==='en',state=planningFeedbackState(meta,heartbeat.current,startedAt,now,running,english)
+ return react_jsx_runtime.jsxs('div',{'data-research-planning-feedback':state.phase,style:{margin:'4px 0 8px 20px',padding:'8px 10px',borderLeft:'2px solid var(--dsw-alias-border-l2)',fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:[
+  react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{fontWeight:500},children:state.title}),
+  react_jsx_runtime.jsx('div',{'data-planning-heartbeat':'',children:state.activity}),
+  react_jsx_runtime.jsx('div',{children:state.detail}),
+  state.warning?react_jsx_runtime.jsx('div',{role:'status',style:{marginTop:5},children:state.warning}):null
+ ]})
+}
+export function patchResearchPlanningFeedback(source,classify) {
+ const marker='/* ework:planning-feedback:v1 */'
+ if(source.includes(marker))return source
+ const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Planning feedback anchor missing or ambiguous: '+before.slice(0,75));source=source.replace(before,after)}
+ const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {'
+ const helpers=marker+'\n'+[planningResponseMetadata,advancePlanningHeartbeat,planningFeedbackState,researchPlanningRequest,ResearchPlanningFeedback].map(fn=>fn.toString()).join('\n')+'\n'
+ exact(anchor,helpers+anchor.replace('seatProps, t','seatProps, t, planningRequest'))
+ const timing='const time = settled?.time ?? state.firstVisibleTime ?? context.matches[0]?.event.time ?? 0;'
+ exact(timing,timing+'\n            const lastActivityAt=context.matches.at(-1)?.event.time??time;')
+ const projectStart=source.indexOf('function projectAssistant('),projectEnd=source.indexOf('/** Per-step Assistant',projectStart)
+ let projection=source.slice(projectStart,projectEnd)
+ if(projection.split('\t\t\t\t\ttime,').length!==2)throw Error('Planning feedback activity timestamp anchor drifted')
+ projection=projection.replace('\t\t\t\t\ttime,','\t\t\t\t\ttime, lastActivityAt,')
+ source=source.slice(0,projectStart)+projection+source.slice(projectEnd)
+ exact('const elapsedMs = endTime !== null && startTime !== null ?', 'const planningMeta=planningRequest && entry.running ? planningResponseMetadata(activityNodes) : null;\n            const elapsedMs = endTime !== null && startTime !== null ?')
+ exact('open && progressSurface.detailGroups.length > 0 &&', "planningMeta ? react_jsx_runtime.jsx(ResearchPlanningFeedback,{meta:planningMeta,startedAt:anchor,now:entry.running?now:(endTime??now),running:entry.running},String(anchor)) : null, open && progressSurface.detailGroups.length > 0 &&")
+ const start=source.indexOf('const ExecutionStatusGroup ='),end=source.indexOf('//#endregion',start)
+ let component=source.slice(start,end)
+ component=component.replace('children: status', "children: planningMeta && entry.running ? planningFeedbackState(planningMeta,null,anchor,now,true,document.documentElement.dataset.odysseyLocale==='en').title : status")
+ source=source.slice(0,start)+component+source.slice(end)
+ const call='const activityNodes = entry.nodeKeys.map((key) => nodeStore.get(key)).filter((node) => node !== void 0);'
+ exact(call,call+`\n                                const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,${classify.toString()},parts=>parseResearchPrompt(contentParts(parts).text).text) : null;`)
+ const props='\t\t\t\t\t\t\t\t\tstartTime: turn?.start?.time ?? (entry.running ? runningTurn?.startTime ?? null : null),'
+ exact(props,'\t\t\t\t\t\t\t\t\tplanningRequest,\n'+props)
+ return source
+}

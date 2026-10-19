@@ -1,0 +1,111 @@
+import {expect,it} from 'vitest'
+import {readFileSync} from 'node:fs'
+import {runInNewContext} from 'node:vm'
+import {planningResponseMetadata,advancePlanningHeartbeat,planningFeedbackState,researchPlanningRequest,patchResearchPlanningFeedback} from '../scripts/lib/research-planning-feedback.mjs'
+import {classifyResearchCreationRequest,patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
+import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+const model=(text='private reasoning')=>({key:'m',kind:'assistant-step',data:{blocks:[{kind:'reasoning',text}]}})
+it('projects actual response metadata without retaining private reasoning or tool payloads',()=>{
+ const meta=planningResponseMetadata([model(),{key:'t',kind:'tool-call',data:{root:{name:'read',argsRaw:'private/path'}}}])
+ expect(meta.responding).toBe(true);expect(meta.toolCount).toBe(1);expect(meta.accepted).toBe(false)
+ expect(JSON.stringify(meta)).not.toMatch(/private|reasoning.*text|\/path/)
+ const first=advancePlanningHeartbeat(null,meta,1000)
+ expect(advancePlanningHeartbeat(first,meta,4000)).toBe(first)
+ expect(advancePlanningHeartbeat(first,planningResponseMetadata([model('longer private reasoning')]),5000)).toMatchObject({firstAt:1000,lastAt:5000})
+})
+it('distinguishes waiting, active streaming, a stalled response and an actual accepted receipt',()=>{
+ const empty=planningResponseMetadata([])
+ expect(planningFeedbackState(empty,null,0,20000,true)).toMatchObject({phase:'waiting',warning:''})
+ const meta=planningResponseMetadata([model()]),beat=advancePlanningHeartbeat(null,meta,120000)
+ const active=planningFeedbackState(meta,beat,0,125000,true)
+ expect(active.phase).toBe('responding');expect(active.warning).toContain('模型仍在响应')
+ expect(active.warning).not.toContain('%');expect(active.detail).toContain('内容生成还未开始')
+ expect(planningFeedbackState(meta,beat,0,170000,true).warning).toContain('暂未收到新的进展')
+ expect(planningFeedbackState(meta,beat,0,170000,false)).toMatchObject({phase:'ended',warning:''})
+ const accepted=planningResponseMetadata([{key:'create',kind:'tool-call',data:{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify({planId:'plan',status:'accepted',panels:[{},{}]})}]}}}])
+ expect(planningFeedbackState(accepted,null,0,180000,true)).toMatchObject({phase:'accepted',warning:''})
+ expect(planningFeedbackState(accepted,null,0,180000,true).detail).toContain('2 个组件')
+ expect(accepted.prepared).toBe(false)
+ expect(planningFeedbackState(empty,null,0,130000,true,true).warning).toContain('exceeded 2 minutes')
+})
+it('limits the feedback to the matching user creation turn, excluding ordinary chats and stale turns',()=>{
+ const nodes=new Map([['old',{kind:'user',location:{kind:'turn',turn:{turn:1}},data:{content:[{text:'生成金融工作台'}]}}],['current',{kind:'user',location:{kind:'turn',turn:{turn:2}},data:{content:[{text:'做一个艺术节筹备工作台，用模拟记录'}]}}],['qa',{kind:'user',location:{kind:'turn',turn:{turn:3}},data:{content:[{text:'为什么生成工作台这么慢'}]}}]])
+ const read=parts=>parts.map(p=>p.text).join('')
+ expect(researchPlanningRequest([...nodes.keys()],nodes,2,classifyResearchCreationRequest,read)).toMatchObject({kind:'workbench'})
+ expect(researchPlanningRequest([...nodes.keys()],nodes,3,classifyResearchCreationRequest,read)).toBeNull()
+ expect(researchPlanningRequest([...nodes.keys()],nodes,4,classifyResearchCreationRequest,read)).toBeNull()
+})
+it('patches the real progress component and its owning turn without duplicating the report on reinstall',()=>{
+ const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const patched=patchResearchCreationProgress(original)
+ expect(patchResearchCreationProgress(patched)).toBe(patched)
+ expect(patched).toContain('data-research-planning-feedback')
+ expect(patched).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,')
+ expect(patched).toContain('planningRequest,\n\t\t\t\t\t\t\t\t\tstartTime:')
+ const start=patched.indexOf('/* ework:planning-feedback:v1 */'),end=patched.indexOf('const ExecutionStatusGroup =',start)
+ const statuses=[]
+ const react={useRef:()=>({current:null})},jsx=(type,props)=>({type,props})
+ const Feedback=runInNewContext(patched.slice(start,end)+';ResearchPlanningFeedback',{react,react_jsx_runtime:{jsx,jsxs:jsx},document:{documentElement:{dataset:{}}}})
+ const view=Feedback({meta:planningResponseMetadata([model('SECRET_REASONS')]),startedAt:0,now:20000,running:true})
+ expect(JSON.stringify(view)).not.toContain('SECRET_REASONS')
+ expect(view.props['data-research-planning-feedback']).toBe('responding')
+ expect(view.props.children[0].props.children).toContain('已收到模型响应')
+})
+it('recognizes code-mode nested host receipts without interpreting arguments or unrelated result text',()=>{
+ const receipt={kind:'tool-result',call:{name:'research_workbench_create',argsRaw:'PRIVATE'},content:[{type:'text',text:'{"planId":"p","status":"accepted","panels":[{}]}'}]}
+ const meta=planningResponseMetadata([{key:'code',kind:'tool-call',data:{root:{kind:'tool-result',call:{name:'code'},subCalls:[receipt],content:[{type:'text',text:'PRIVATE'}]}}}])
+ expect(meta).toMatchObject({accepted:true,prepared:false,count:1,toolCount:2})
+ expect(JSON.stringify(meta)).not.toContain('PRIVATE')
+ receipt.isError=true
+ expect(planningResponseMetadata([{key:'code',kind:'tool-call',data:{root:receipt}}])).toMatchObject({accepted:false,failedTools:1})
+})
+it('marks ordinary composer cancellation as stopping before the actual session stops',()=>{
+ const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const patched=patchResearchCreationProgress(original),start=patched.indexOf('stop=()=>{/* ODYSSEY_PLANNING_COMPOSER_STOP */'),end=patched.indexOf(';',patched.indexOf('ordinaryStop?.()',start))+1
+ expect(start).toBeGreaterThan(-1)
+ const intents=new Map([['s',{id:'intent',state:'planning'}]]),events=[]
+ const stop=runInNewContext(patched.slice(start,end)+';stop',{odysseyCreationIntents:intents,sessionId:'s',odysseyCreationEmit:id=>events.push(id),canvasRunning:false,ordinaryStop:()=>events.push('stop')})
+ stop();expect(intents.get('s')).toMatchObject({id:'intent',state:'stopping'});expect(events).toEqual(['s','stop'])
+})
+it('uses the event timestamp when reopening a running conversation instead of inventing a fresh response',()=>{
+ const meta={...planningResponseMetadata([model()]),lastActivityAt:1000}
+ const beat=advancePlanningHeartbeat(null,meta,90000)
+ expect(beat.lastAt).toBe(1000)
+ expect(planningFeedbackState(meta,beat,0,130000,true).activity).toContain('129 秒前')
+ expect(advancePlanningHeartbeat(beat,meta,140000)).toBe(beat)
+ expect(advancePlanningHeartbeat(beat,{...meta,lastActivityAt:145000},150000).lastAt).toBe(145000)
+})
+it('also installs on an older client without the planning-card action hook',()=>{
+ const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const prior=original.replace(/\/\* ODYSSEY_CREATION_CARD_ACTIONS \*\/[\s\S]*?resolveSubmitMode, subagent\]\);/u,'')
+ expect(prior).not.toContain('/* ODYSSEY_CREATION_CARD_ACTIONS */')
+ const patched=patchResearchCreationProgress(prior)
+ expect(patched).toContain('/* ODYSSEY_CREATION_CARD_ACTIONS */')
+ expect(patched).toContain('/* ODYSSEY_PLANNING_COMPOSER_STOP */')
+ expect(patchResearchCreationProgress(patched)).toBe(patched)
+})
+it('projects the latest actual assistant event time, including after transcript hydration',()=>{
+ const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const patched=patchResearchCreationProgress(original),start=patched.indexOf('function projectAssistant('),end=patched.indexOf('/** Per-step Assistant',start)
+ const project=runInNewContext(patched.slice(start,end)+';projectAssistant',{finalNode:()=>undefined,compactBlocks:x=>x,hasVisibleContent:()=>true})
+ const state={turn:2,step:1,blocks:[{kind:'reasoning',text:'PRIVATE'}],firstVisibleTime:100,firstVisibleSeq:2}
+ const projection=project({state,matches:[{event:{time:100,seq:2}},{event:{time:4500,seq:5}}]})
+ expect(projection.data.time).toBe(100)
+ expect(projection.data.lastActivityAt).toBe(4500)
+ expect(planningResponseMetadata([{key:'assistant',kind:'assistant-step',data:projection.data}]).lastActivityAt).toBe(4500)
+})
+
+it('never presents an ended accepted plan as currently generating',()=>{
+ const meta={...planningResponseMetadata([]),accepted:true,count:10}
+ const ended=planningFeedbackState(meta,null,0,400000,false)
+ expect(ended.phase).toBe('ended')
+ expect(ended.title).not.toContain('正在')
+ expect(ended.detail).not.toContain('正在')
+ const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const patched=patchResearchCreationProgress(original)
+ const at=patched.indexOf('const planningRequest=entry.running'),line=patched.slice(at,patched.indexOf('return (0, react_jsx_runtime.jsx)(ExecutionStatusGroup',at))
+ for(const [running,turn,active] of [[false,1,2],[true,1,2],[false,2,2]]){
+  const request=runInNewContext(line+';planningRequest',{entry:{running,turn},runningTurnNumber:active,researchPlanningRequest:()=>{throw Error('historical turn must not be projected')}})
+  expect(request).toBeNull()
+ }
+})

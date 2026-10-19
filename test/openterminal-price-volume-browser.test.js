@@ -2,6 +2,7 @@ import {beforeAll,afterAll,it,expect} from 'vitest'
 import {pathToFileURL} from 'node:url'
 import {renderMarketArtifact} from '../packages/dsh-research-task-runtime/market-artifact.js'
 import {WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/workbench-presentation.js'
+import {createWorkbenchRefreshSurface} from '../packages/dsh-research-task-runtime/workbench-refresh.js'
 let browser
 beforeAll(async()=>{
  const pw=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -39,5 +40,14 @@ it('also compacts saved markup through the upgraded runtime without moving its o
   expect(view.chartHeight).toBeLessThanOrEqual(257);expect(view.detailsLeft).toBeGreaterThan(view.chartRight)
   expect(view.detailsHeight).toBeLessThanOrEqual(295);expect(view.footerTop).toBeLessThan(500);expect(view.rows).toBe(20)
   expect(view.controls).toEqual(['DIV','DIV','svg','DIV','DETAILS'])
+  // Real saved view restoration used to collapse the upgraded default again.
+  const choices=await page.evaluate(create=>{
+   const surface=(0,eval)('('+create+')')(document.body),details=document.querySelector('.price-volume>details'),old=surface.snapshot()
+   const control=old.controls.find(c=>c.tag==='DETAILS');control.open=false;delete control.defaultOpen
+   surface.apply(old);const migrated=details.open
+   details.open=false;const collapsed=surface.snapshot();details.open=true;surface.apply(collapsed)
+   const chosen=details.open;surface.dispose();return {migrated,chosen}
+  },createWorkbenchRefreshSurface.toString())
+  expect(choices).toEqual({migrated:true,chosen:false})
  }finally{await page.close()}
 },20000)
