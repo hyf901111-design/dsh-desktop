@@ -9,24 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "量价紧凑排版、新闻右屏原文与易方达冻结列表头",
+        "featureName": "规划提速、真实进度反馈与规划卡按钮修复",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "106c92d2419e642515757969b862cce7276f9881",
-        "tipCommit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
+        "baseCommit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
+        "tipCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
         "commits": [
           {
-            "commit": "d6fd51814c7fec7beca12527e93cad3594e90270",
+            "commit": "bf0c54434b6a936b22b5476f0dc3d5cf77473ffc",
             "parents": [
-              "106c92d2419e642515757969b862cce7276f9881"
+              "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4"
             ],
-            "subject": "修复：新闻标题直接在当前会话右侧浏览器打开原文"
+            "subject": "修复：量价明细默认展开并统一组件链接右屏直达"
           },
           {
-            "commit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
+            "commit": "8b24fd06927fd209ac578d7cc5dcc2cff2307e60",
             "parents": [
-              "d6fd51814c7fec7beca12527e93cad3594e90270"
+              "bf0c54434b6a936b22b5476f0dc3d5cf77473ffc"
             ],
-            "subject": "优化：收紧量价图布局并修复易方达冻结首列表头"
+            "subject": "修复：分离规划卡重试关闭按钮并补充实时执行反馈"
+          },
+          {
+            "commit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
+            "parents": [
+              "8b24fd06927fd209ac578d7cc5dcc2cff2307e60"
+            ],
+            "subject": "优化工作台首次规划预算并延后生成领域面板"
           }
         ],
         "files": [
@@ -36,11 +43,27 @@
           },
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/market-price-volume.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/openterminal-layout.js"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
           },
           {
             "status": "M",
@@ -48,80 +71,89 @@
           },
           {
             "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/research-planning-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
             "path": "skills/ework-workbench-components/references/openterminal-layouts.md"
           },
           {
             "status": "M",
-            "path": "src/main/search/conversation-browser.ts"
+            "path": "test/compact-execution-status.test.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
             "path": "test/openterminal-price-volume-browser.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/openterminal-price-volume.test.js"
           },
           {
             "status": "A",
-            "path": "test/openterminal-table-header-browser.test.js"
+            "path": "test/research-planning-controls-browser.test.js"
           },
           {
             "status": "A",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/research-source-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-deferred.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-planning-phase.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-refresh.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-price-volume-browser.test.js",
-              "test/openterminal-price-volume.test.js",
-              "test/market-price-volume-minute.test.js",
-              "test/openterminal-layout.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/openterminal-table-header-browser.test.js",
-              "test/workbench-table-columns.test.js",
-              "test/research-source-browser.test.ts",
-              "test/conversation-browser.test.ts",
+              "npx",
+              "vitest",
+              "run",
+              "test/research-planning-feedback.test.js",
+              "test/research-planning-controls-browser.test.js",
+              "test/research-creation-progress.test.js",
+              "test/compact-execution-status.test.ts",
+              "test/workbench-deferred.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-execution-policy.test.js",
               "test/workbench-public-data.test.js",
               "test/workbench-live-presets.test.js",
-              "test/research-canvas-storage.test.ts",
-              "test/component-data-service.test.ts",
-              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-price-volume-browser.test.js",
+              "test/openterminal-price-volume.test.js",
+              "test/workbench-refresh.test.js",
+              "test/research-source-browser.test.ts",
               "test/bundled-component-skill.test.js",
               "test/integration-bundled-skill.test.js",
-              "test/research-creation-progress.test.js",
-              "test/research-planning-occupancy.test.js",
-              "--reporter=dot",
               "--testTimeout=20000"
             ],
             "outcome": "passed",
-            "summary": "18文件115项直接相关检查通过",
-            "verifiedCommit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
-            "completedAt": "2026-10-19T09:16:20.222Z",
+            "summary": "15个相关文件147项通过",
+            "verifiedCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
+            "completedAt": "2026-10-19T10:11:30.026498Z",
             "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-price-volume-browser.test.js",
-              "--reporter=dot",
-              "--testTimeout=20000"
-            ],
-            "outcome": "passed",
-            "summary": "新增旧量价HTML的浏览器回归2项通过",
-            "verifiedCommit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
-            "completedAt": "2026-10-19T09:16:20.222Z",
-            "timeoutMs": 60000
           },
           {
             "argv": [
@@ -131,8 +163,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
-            "completedAt": "2026-10-19T09:16:20.222Z",
+            "verifiedCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
+            "completedAt": "2026-10-19T10:11:30.026498Z",
             "timeoutMs": 180000
           },
           {
@@ -143,85 +175,29 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
-            "completedAt": "2026-10-19T09:16:20.222Z",
+            "verifiedCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
+            "completedAt": "2026-10-19T10:11:30.026498Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端同一需求生成8组件全部成功，主任务约52秒，六个公开源任务取数绑定约2.6秒，连续4次成功刷新；新排版真实Chromium宽窄及旧HTML路径通过，新闻与冻结表头待本轮原生验收。"
+          "summary": "生产CSS下四模式三种宽度的重试关闭独立点击通过；真实客户端旧艺术节任务12分25秒仍未受理已停止，保留需求待本次集成包复测；尚不声称达到1至2分钟。"
         },
         "acceptanceCriteria": [
-          "量价图不随卡片高度拉长，宽屏明细并排，窄屏堆叠且完整记录可读",
-          "新旧量价组件明细点击与图表读数联动，不丢0或缺失值",
-          "新闻标题安全直开当前会话右侧浏览器，普通来源行为不变",
-          "易方达模式冻结首列表头蓝底白字，与相邻表头一致且保留冻结与列宽交互",
-          "保留之前规划定位、任务重试和模式持久化修复"
+          "规划卡重试和关闭独立且无重叠",
+          "未受理规划显示真实响应及工具状态，历史结束任务不假报进行中",
+          "自定义模拟工作台首轮只提交简短计划，原需求与共享约束传递到真实独立生成任务",
+          "同模型新选择优先且阶段预算不修改持久用户偏好",
+          "自动和手动尺寸重试保留未编辑的完整模拟合同，业务修改不误继承",
+          "量价明细默认展开且来源链接点击直接进入右侧浏览器"
         ],
         "risks": [
-          "仅本地可撤回试用，未授权接受晋升或公开发布",
-          "原生旧失败组件恢复与重启记忆主题仍待最后验收"
+          "仅本地可撤回实验，不接受晋升、不公开发布",
+          "真实模型规划时间和领域生成效果待集成包现场验收",
+          "共享预算与日期逐卡传递但没有新增跨卡数值自动验算器"
         ],
-        "generatedAt": "2026-10-19T09:16:20.222Z"
-      },
-      "merged": {
-        "mergeCommit": "d7e8a4e3e2749c2507be592fca1735d3c4e38e46",
-        "verificationCommit": "d7e8a4e3e2749c2507be592fca1735d3c4e38e46",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "d7e8a4e3e2749c2507be592fca1735d3c4e38e46",
-            "completedAt": "2026-10-19T09:17:56.219Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d7e8a4e3e2749c2507be592fca1735d3c4e38e46",
-            "completedAt": "2026-10-19T09:17:56.219Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "d7e8a4e3e2749c2507be592fca1735d3c4e38e46",
-            "completedAt": "2026-10-19T09:17:56.219Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-19T09:17:56.219Z"
+        "generatedAt": "2026-10-19T10:11:30.026498Z"
       }
     }
   ],
