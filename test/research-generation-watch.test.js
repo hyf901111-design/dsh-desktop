@@ -1,0 +1,88 @@
+import { describe, expect, it, vi, afterEach } from 'vitest'
+import { installResearchGenerationWatch, patchResearchGenerationWatch } from '../scripts/lib/research-generation-watch.mjs'
+import { readFile } from 'node:fs/promises'
+import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isMethodDeclaration } from 'typescript'
+import { restoreResearchGridWorkbench, patchResearchGridWorkbench } from '../scripts/lib/research-grid-workbench.mjs'
+import { parseResearchContainerSpec } from '../packages/dsh-research-task-runtime/artifact-validator.js'
+afterEach(() => vi.useRealTimers())
+const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
+function setup(inspect, extra = {}) {
+  const events = new EventTarget(), listeners = new Set()
+  const snapshot = { artifacts: [{ id: 'card', generationTaskId: 'task', generationStatus: 'running', generationLastSeq: 9, containerPrompt: '保留当前业务', x: 40, width: 720 }] }
+  const workspace = { getSnapshot: () => snapshot, subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) }, applyGenerationInspection: vi.fn((id, result) => {
+    const node = snapshot.artifacts.find(n => n.id === id)
+    if (node.generationTaskId !== result.taskId || !['queued','running','retrying'].includes(node.generationStatus)) return false
+    Object.assign(node, { generationStatus: result.state, generationLastSeq: result.lastSeq, containerSpec: result.finalOutput }); listeners.forEach(fn => fn()); return true
+  }) }
+  const dispose = installResearchGenerationWatch({ workspace, sessionId: 'festival', inspect, eventTarget: events, documentTarget: { visibilityState: 'visible', addEventListener() {}, removeEventListener() {} }, ...extra })
+  return { snapshot, workspace, events, dispose }
+}
+const completed = { taskId: 'task', canvasNodeId: 'card', state: 'completed', lastSeq: 20, events: [], finalOutput: { type: 'html', html: '<p>全部完整结果</p>' } }
+function nativeApply(source, node) {
+  const tree = createSourceFile('client.js', source, ScriptTarget.Latest, false, ScriptKind.JS); let method
+  const visit = n => { if (!method && isMethodDeclaration(n) && n.name.getText(tree) === 'applyGenerationInspection') method = n; forEachChild(n, visit) }; visit(tree)
+  const snapshot = { artifacts: [node] }
+  const apply = new Function('snapshot', 'parseResearchContainerSpec', `
+const RESEARCH_CANVAS_TEXT_LIMIT=20000,RESEARCH_ACTIVE_GENERATION_STATUSES=new Set(['queued','running','retrying']);
+const boundedResearchArtifactString=v=>typeof v==='string'?v:null,researchGenerationStatus=v=>v,researchGenerationInspectionEvents=()=>[];
+const researchContainerPlainText=s=>s.html,researchContainerFinalGeometry=()=>({}),researchGenerationSizedNode=n=>n,researchResolvedGenerationSources=()=>({}),researchCanvasReflowGrowth=(_a,b)=>b;
+const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree)}}).applyGenerationInspection;`)(snapshot, parseResearchContainerSpec)
+  return { apply, snapshot }
+}
+describe('任务检查切板恢复', () => {
+  it('patches the actual native inspection binding in production restore/patch/repatch order', async () => {
+    const source = restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+    const patched = patchResearchGenerationWatch(source)
+    expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
+    expect(patchResearchGenerationWatch(patched)).toBe(patched)
+    expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
+    expect(patched).toContain('return sherlockBoardsAdapter.inspectShared(session.sessionId,request)')
+    expect(patched).toContain('this.deps.generationInspectSink(request, options)')
+    expect(patched).toContain('postResearchTask(RESEARCH_TASK_INSPECT_PATH, request, options?.signal)')
+    expect(restoreResearchGridWorkbench(patchResearchGridWorkbench(patched))).toBe(patched)
+    expect(() => patchResearchGenerationWatch('unknown native lifecycle')).toThrow('无法定位')
+  })
+  it('applies a full same-watermark completion through the actual native transition, while rejecting older tasks and drafts', async () => {
+    const source = patchResearchGenerationWatch(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))
+    const node = { id: 'card', kind: 'generated-container', generationTaskId: 'task', generationStatus: 'running', generationLastSeq: 20, sizeMode: 'manual', width: 720 }
+    const finalOutput = JSON.stringify({ version: 1, type: 'html', title: '完整排期', html: '<p>全部完整结果</p>' }), receipt = { ...completed, finalOutput }
+    const f = nativeApply(source, { ...node })
+    expect(f.apply('card', receipt)).toBe(true)
+    expect(f.snapshot.artifacts[0]).toMatchObject({ generationStatus: 'completed', generationLastSeq: 20, width: 720, containerSpec: { html: '<p>全部完整结果</p>' } })
+    expect(f.apply('card', receipt)).toBe(false)
+    for (const changed of [{ generationStatus: 'draft' }, { generationTaskId: 'new-task' }, { generationLastSeq: 21 }]) expect(nativeApply(source, { ...node, ...changed }).apply('card', receipt)).toBe(false)
+  })
+  it('replaces an old pending inspection with a full inspection when the same board is reopened', async () => {
+    vi.useFakeTimers(); const old = deferred(), inspect = vi.fn().mockReturnValueOnce(old.promise).mockResolvedValue(completed), f = setup(inspect)
+    f.events.dispatchEvent(new CustomEvent('sherlock:conversation-initial-research', { detail: { sessionId: 'festival' } }))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(inspect).toHaveBeenCalledTimes(2)
+    expect(inspect.mock.calls[1][0]).toMatchObject({ parentSessionId: 'festival', afterSeq: 0 })
+    expect(f.snapshot.artifacts[0]).toMatchObject({ generationStatus: 'completed', containerSpec: completed.finalOutput, containerPrompt: '保留当前业务', width: 720 })
+    old.resolve({ ...completed, state: 'running', lastSeq: 10 }); await vi.advanceTimersByTimeAsync(0)
+    expect(f.workspace.applyGenerationInspection).toHaveBeenCalledTimes(1)
+    f.dispose()
+  })
+  it('bounds a hung local inspection and resumes polling without needing a view reload', async () => {
+    vi.useFakeTimers(); const inspect = vi.fn().mockReturnValueOnce(new Promise(() => {})).mockResolvedValue(completed), f = setup(inspect, { timeoutMs: 100 })
+    await vi.advanceTimersByTimeAsync(450)
+    expect(f.snapshot.artifacts[0].generationStatus).toBe('completed')
+    expect(inspect.mock.calls[0][1].aborted).toBe(true)
+    expect(inspect.mock.calls[1][0].afterSeq).toBe(0)
+    f.dispose()
+  })
+  it('does not overwrite a draft, removed node, or a newer retry with an old response', async () => {
+    vi.useFakeTimers()
+    for (const edit of [node => { node.generationStatus = 'draft'; node.containerPrompt = '刚编辑的需求' }, node => { node.generationTaskId = 'new-task' }, (_node, list) => { list.splice(0) }]) {
+      const old = deferred(), f = setup(vi.fn(() => old.promise)); edit(f.snapshot.artifacts[0], f.snapshot.artifacts)
+      old.resolve(completed); await vi.advanceTimersByTimeAsync(0)
+      expect(f.workspace.applyGenerationInspection).not.toHaveBeenCalled(); f.dispose()
+    }
+  })
+  it('ignores other-board wakes and ignores every completion after disposal', async () => {
+    vi.useFakeTimers(); const old = deferred(), inspect = vi.fn(() => old.promise), f = setup(inspect)
+    f.events.dispatchEvent(new CustomEvent('sherlock:conversation-initial-research', { detail: { sessionId: 'finance' } })); await vi.advanceTimersByTimeAsync(0)
+    expect(inspect).toHaveBeenCalledTimes(1); f.dispose(); old.resolve(completed); await vi.advanceTimersByTimeAsync(1000)
+    expect(f.workspace.applyGenerationInspection).not.toHaveBeenCalled()
+  })
+})

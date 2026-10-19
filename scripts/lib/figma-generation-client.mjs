@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { patchResearchGenerationWatch } from './research-generation-watch.mjs'
 
 const asset = name => 'data:image/svg+xml;base64,' + readFileSync(new URL(`../../build/figma-generation/${name}.svg`, import.meta.url)).toString('base64')
 const icons = Object.fromEntries(['stop', 'retry', 'restart', 'resume', 'process', 'running', 'waiting', 'error', 'stopped'].map(name => [name, asset(name)]))
@@ -298,7 +299,7 @@ export function patchGenerationLifecycle(source) {
     if (start < 0 || end < start || end - start > 6000) throw Error('Missing terminal generation presentation')
     source = source.slice(0, start) + `: ['failed', 'cancelled', 'interrupted'].includes(node.generationStatus) ? /* ODYSSEY_GENERATION_TERMINAL */ (0,react_jsx_runtime.jsx)(ResearchGenerationProcess,{node,sessionId,onRetry:onRetryGeneration,retryDisabled,retryLabel:(sherlockShared(sessionId)&&sherlockBoardsAdapter?.hasRetainedResult(sessionId,node.id))?'应用保留的研究结果':undefined` + source.slice(end)
   }
-  return source
+  return patchResearchGenerationWatch(source)
 }
 
 export const generationCss = `
