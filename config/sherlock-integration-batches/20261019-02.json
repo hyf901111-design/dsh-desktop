@@ -120,6 +120,66 @@
           "集成批次20261019-02尚未接受，本次验收反馈需更新本地测试客户端复验"
         ],
         "generatedAt": "2026-10-19T03:59:11.304646+00:00"
+      },
+      "merged": {
+        "mergeCommit": "9fea76c6ead88fd5c679cb60d4fd7877b3f1584c",
+        "verificationCommit": "9fea76c6ead88fd5c679cb60d4fd7877b3f1584c",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/component-data-settings-client.test.js",
+              "test/financial-widget-backup.test.ts",
+              "test/component-data-refresh.test.js",
+              "test/component-data-service.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/component-data-settings-client.test.js test/financial-widget-backup.test.ts test/component-data-refresh.test.js test/component-data-service.test.ts",
+            "verifiedCommit": "9fea76c6ead88fd5c679cb60d4fd7877b3f1584c",
+            "completedAt": "2026-10-19T03:59:56.330Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/notes-financial-controls-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/notes-financial-controls-browser.test.js",
+            "verifiedCommit": "9fea76c6ead88fd5c679cb60d4fd7877b3f1584c",
+            "completedAt": "2026-10-19T03:59:56.330Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "9fea76c6ead88fd5c679cb60d4fd7877b3f1584c",
+            "completedAt": "2026-10-19T03:59:56.330Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "9fea76c6ead88fd5c679cb60d4fd7877b3f1584c",
+            "completedAt": "2026-10-19T03:59:56.330Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-10-19T03:59:56.330Z"
       }
     }
   ],
