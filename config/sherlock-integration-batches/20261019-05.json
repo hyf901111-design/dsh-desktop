@@ -12,7 +12,7 @@
         "featureName": "补齐小时排期与完整预警并修复旧量价开合迁移",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
-        "tipCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
+        "tipCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
         "commits": [
           {
             "commit": "3a7d9498af74563d9e4a7ecc0ec280b1a9235878",
@@ -34,6 +34,13 @@
               "55435b2bcd2991f09a596b627d5b0e0d9f77f201"
             ],
             "subject": "测试：按当前组件规范版本校验预警与审批生成提示"
+          },
+          {
+            "commit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
+            "parents": [
+              "086638526a93280bf14c9d41b5da61261929e5dd"
+            ],
+            "subject": "测试：按完整构建补丁链验证生成等待计时"
           }
         ],
         "files": [
@@ -91,6 +98,10 @@
           },
           {
             "status": "M",
+            "path": "test/research-generation-controls.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/workbench-planning-phase.test.js"
           },
           {
@@ -116,12 +127,13 @@
               "test/research-planning-controls-browser.test.js",
               "test/bundled-component-skill.test.js",
               "test/integration-bundled-skill.test.js",
+              "test/research-generation-controls.test.ts",
               "--testTimeout=20000"
             ],
             "outcome": "passed",
-            "summary": "12个相关文件121项通过",
-            "verifiedCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
-            "completedAt": "2026-10-19T10:34:19.105062Z",
+            "summary": "13个相关文件138项通过；完整构建补丁链覆盖排队计时",
+            "verifiedCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
+            "completedAt": "2026-10-19T10:37:50.951843Z",
             "timeoutMs": 120000
           },
           {
@@ -132,8 +144,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
-            "completedAt": "2026-10-19T10:34:19.105062Z",
+            "verifiedCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
+            "completedAt": "2026-10-19T10:37:50.951843Z",
             "timeoutMs": 180000
           },
           {
@@ -144,8 +156,8 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
-            "completedAt": "2026-10-19T10:34:19.105062Z",
+            "verifiedCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
+            "completedAt": "2026-10-19T10:37:50.951843Z",
             "timeoutMs": 120000
           }
         ],
@@ -164,7 +176,7 @@
           "新原生包两张失败卡原位重试与旧量价状态迁移待验收",
           "旧场景中明确标注的2025年模拟日期保持，新增计划才使用宿主日期锚"
         ],
-        "generatedAt": "2026-10-19T10:34:19.105062Z"
+        "generatedAt": "2026-10-19T10:37:50.951843Z"
       }
     }
   ],
