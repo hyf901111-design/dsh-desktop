@@ -1,7 +1,7 @@
 import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
  ...NOTE_ENGLISH,
- 'OpenTerminal（全看板试用）':'OpenTerminal (All boards preview)',
+ '彭博模式':'Bloomberg mode',
  '同时调整组件宽高':'Resize component width and height','拖动右下角调整宽高':'Drag corner to resize width and height',
  '日K':'Daily','周K':'Weekly','月K':'Monthly','年K':'Yearly','显示交易日数量':'Visible bars','K线标的':'Chart instrument','数据来源':'Data source','条':'records','日期':'Date','开盘':'Open','最高':'High','最低':'Low','收盘':'Close','成交量':'Volume','开 ':'O ','高 ':'H ','低 ':'L ','收 ':'C ',
 '标准整理':'Standard arrange','三排整理':'Three columns','双排整理':'Two columns','单排整理':'One column','展开整理选项':'Choose arrangement','一键整理画布':'Arrange canvas','窄画布已适配':'Adapted to narrow canvas',

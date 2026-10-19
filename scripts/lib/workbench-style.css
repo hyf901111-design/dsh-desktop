@@ -75,7 +75,6 @@ body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] 
 .ew-workbench-modes:has([data-workbench-style-option=openterminal]){width:130px!important}
 body [data-ework-toolbar]:has(.ew-workbench-mode-slot [data-workbench-style-option=openterminal]){width:352px!important}
 body [data-ework-toolbar]:has([data-financial-library]):has(.ew-workbench-mode-slot [data-workbench-style-option=openterminal]){width:407px!important}
-body .ew-workbench-mode-openterminal{mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='white' stroke-width='1.5'%3E%3Cpath d='M2 3h16v14H2zM2 7h16M5 10l3 2-3 2m5 0h5'/%3E%3C/g%3E%3C/svg%3E")!important}
 body .ew-workbench-modes>button[data-workbench-style-option=openterminal][aria-checked=true]{color:#ff9900!important}
 
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-financial-widget,body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-financial-widget :is(button,input,select,table,th,td){font-family:var(--sherlock-font-sans)!important;border-radius:0!important}
