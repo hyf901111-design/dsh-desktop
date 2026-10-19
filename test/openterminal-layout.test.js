@@ -12,6 +12,15 @@ import {registerCanvasTools} from '../packages/dsh-research-task-runtime/canvas-
 const planned=()=>validateWorkbench({requestId:'ot-layout',title:'OpenTerminal 组件布局试用',dataMode:'simulated',preset:'openterminal-research',panels:[]})
 const doc=html=>{const w=new Window();w.document.write(html);return w.document}
 
+it.each(['openterminal-portfolio','openterminal-briefing'])('生成新的 %s 试用工作台并保持同列宽度和完整数据',preset=>{
+ const plan=validateWorkbench({requestId:preset,title:preset+' 模拟试用',dataMode:'simulated',preset,panels:[]})
+ expect(plan.panels).toHaveLength(4)
+ const layout=layoutWorkbench(plan.panels)
+ expect(layout[0].width).toBe(layout[2].width)
+ expect(layout[1].width).toBe(layout[3].width)
+ for(const p of plan.panels)expect(readTemplateModel(JSON.parse(acceptArtifactOutput(JSON.stringify(p.artifact)))).data.layoutProfile).toBe('openterminal')
+})
+
 it('四组件预设直接生成专用布局，保留显著模拟标注和原始结构化数据',()=>{
  const plan=planned()
  expect(plan.panels).toHaveLength(4)

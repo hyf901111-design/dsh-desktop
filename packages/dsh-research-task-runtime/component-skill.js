@@ -7,7 +7,8 @@ const DEV_SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../s
 const REFERENCES = [
   'references/figma-21m.md',
   'references/adaptation-and-acceptance.md',
-  'references/runtime-v1.md'
+  'references/runtime-v1.md',
+  'references/openterminal-layouts.md'
 ]
 
 // The host loads the trusted bundled instructions for every component task.
@@ -20,10 +21,15 @@ export function loadBundledComponentSkill(root = process.env.DSH_BUNDLED_SKILL_D
     if (metadata.slug !== SLUG || metadata.source !== 'eSkill' || !/^v\d+\.\d+\.\d+$/.test(metadata.version)) {
       throw new Error('invalid metadata')
     }
-    const names = profile === 'panel' ? ['references/panel-runtime.md']
-      : profile === 'selection' ? ['references/selection-runtime.md'] : ['SKILL.md', ...REFERENCES]
+    const names = profile === 'panel' ? ['references/panel-runtime.md','references/openterminal-layouts.md']
+      : profile === 'selection' ? ['references/selection-runtime.md','references/openterminal-layouts.md'] : ['SKILL.md', ...REFERENCES]
     const content = names.map(name => {
       let body=readFileSync(join(directory, name), 'utf8')
+      if(profile !== 'full' && name === 'references/openterminal-layouts.md') {
+        const compact = body.match(/<!-- runtime:begin -->([\s\S]*?)<!-- runtime:end -->/)
+        if (!compact) throw new Error('missing OpenTerminal runtime guidance')
+        body = compact[1].trim()
+      }
       if(profile==='panel'&&templateType)body=body.split(/\n\n+/).filter(section=>
         !section.startsWith('YouTube视频用panel.type=youtube')||templateType==='youtube').filter(section=>
         !section.startsWith('音频使用 panel.type=audio')||templateType==='audio').filter(section=>

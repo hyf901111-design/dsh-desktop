@@ -1,3 +1,3 @@
 interface:
   display_name: "EWork 工作台组件生成"
-  short_description: "按 21M Figma 规范生成内容充实、可自适应的工作台组件"
+  short_description: "保留三类原生金融组件，其余优先复用 OpenTerminal 布局规范生成内容充实的组件"

@@ -13,9 +13,9 @@ description: 按 21M Figma 组件规范，根据用户需求和可信数据生�
 
 股票、ETF 的实时单标的K线使用内置 financial-widget.quote，不能使用旧 market.candlestick 简化图；内置免费源单证券日K路径会由宿主直接转换为该组件。历史快照、模拟记录、加密资产和多标的比较保留原始结构化记录，并复用内置行情的专业绘图控件展示，不自造另一套K线样式。标准数据图表必须复用宿主专业模板，交付结构化数据，由宿主按实际绘图区宽高动态重绘；不要自行复制模板的SVG坐标或canvas样式。确实超出模板能力的自定义图形才使用HTML，并监听ResizeObserver更新实际几何；轴文字、图例、标记大小保持CSS像素字号。禁止用preserveAspectRatio="none"、scaleX/scaleY或整页缩放将含文字图表压窄/拉宽。窄图减少刻度与缩短时间标签，完整原日期、数值和单位保留在读数/明细中；不以挤压文字、裁切轴标题、删除来源数据来适配尺寸。至少检验280–320px窄框和900px宽框，再检验高度变化及交互/刷新后状态。
 
-## OpenTerminal 布局试用
+## OpenTerminal 优先布局与保留组件
 
-用户要求 OpenTerminal 的**组件内布局**时，读取 [OpenTerminal 布局规范](references/openterminal-layouts.md)。它是独立的宿主布局 profile，不是将 21M/Figma 原模板换成橙黑配色。保留 EWork 原顶栏、底栏和功能；只选择已实现的结构，不让模型伪造控件。
+新生成组件先按下述优先级选型，读取 [OpenTerminal 布局规范](references/openterminal-layouts.md)。优先级：先保留组件库中的市场指数、自选股、个股行情三种原生组件；其余匹配的任务优先复用目录内 13 类 OpenTerminal 布局；目录不覆盖的类型继续既有规范。明确不采用 ChartWidget 和 WatchlistWidget，不能用其替换原生专业图表与自选股。OpenTerminal 是组件内部布局规范，不是将 21M/Figma 原模板换成橙黑配色。保留 EWork 原顶栏、底栏和功能；只选择已实现的结构，不让模型伪造控件。
 
 四类型效果看板直接调用 `research_workbench_create`，传 `dataMode:"simulated"`、`preset:"openterminal-research"`、`panels:[]`。宿主一次生成同一组虚构模拟记录的行情、量价图、新闻与明细，输出可交互的独立模板；不启动逐卡模型，不先用原布局生成后换色。仅用于视觉试用，不能声称真实行情或真实新闻。
 

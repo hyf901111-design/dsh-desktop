@@ -11,6 +11,14 @@ const bundledSkillRoot = path.join(projectRoot, 'skills')
 const slug = 'ework-workbench-components'
 
 describe('EWork bundled component skill', () => {
+  it.each(['full','panel','selection'])('injects OpenTerminal layout priorities into the %s generation path',profile=>{
+    const prompt=loadBundledComponentSkill(bundledSkillRoot,{profile})
+    expect(prompt).toContain('【references/openterminal-layouts.md】')
+    expect(prompt).toContain('市场指数、自选股、个股行情')
+    expect(prompt).toContain('QuoteWidget')
+    expect(prompt).toContain('RecapWidget')
+    expect(prompt).toContain('不采用 ChartWidget 和 WatchlistWidget')
+  })
   it('is an always available bundled skill with current version 1.37.0', async () => {
     const provider = new FileSystemSkillProvider(
       { get: () => undefined, logger: { warn: vi.fn() } },

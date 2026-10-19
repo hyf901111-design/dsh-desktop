@@ -33,3 +33,46 @@ export const OPEN_TERMINAL_RESEARCH_PRESET=[
   note:'所有证券及记录均为虚构；零值与负值按原记录保留。'
  })
 ]
+
+export const OPEN_TERMINAL_PORTFOLIO_PRESET=[
+ market('模拟组合 · 持仓与盈亏','table',{
+  columns:['代码','名称','数量（股）','成本（元）','最新价（元）','市值（元）','浮动盈亏（元）'],
+  rows:[['MOCK01','星河科技','1,000','120.00','128.64','128,640','+8,640'],['MOCK02','远山能源','2,000','44.00','42.18','84,360','-3,640'],['MOCK03','青禾医疗','800','70.00','76.90','61,520','+5,520'],['MOCK05','晨光制造','1,200','58.73','58.73','70,476','0'],['MOCK06','明远材料','3,000','21.00','23.54','70,620','+7,620'],['MOCK08','启星通信','600','67.00','64.32','38,592','-1,608']],
+  tones:[['neutral','neutral','neutral','neutral','neutral','neutral','positive'],['neutral','neutral','neutral','neutral','neutral','neutral','negative'],['neutral','neutral','neutral','neutral','neutral','neutral','positive'],['neutral','neutral','neutral','neutral','neutral','neutral','neutral'],['neutral','neutral','neutral','neutral','neutral','neutral','positive'],['neutral','neutral','neutral','neutral','neutral','neutral','negative']],
+  note:'虚构组合；数量×价格与成本差额按原币计算，不包含费用。'
+ }),
+ market('模拟宏观 · 指标速览','table',{
+  columns:['指标','最新值','口径'],rows:[['政策利率','2.50%','模拟年化'],['10年期收益率','2.86%','模拟到期收益率'],['制造业景气度','51.2','模拟指数'],['工业增加值','+5.4%','模拟同比'],['通胀','+1.8%','模拟同比'],['信用增速','+7.6%','模拟同比']],note:'不同指标分别标注单位与周期，不合计。'
+ }),
+ market('模拟披露 · 内部人交易','table',{
+  columns:['披露日','公司','交易人','职务','方向','数量（股）','价格（元）','金额（元）'],
+  rows:[['2026-10-19','星河科技','模拟董事甲','董事','公开市场买入','2,000','128.64','257,280'],['2026-10-18','远山能源','模拟高管乙','财务负责人','公开市场卖出','3,000','42.18','126,540'],['2026-10-17','青禾医疗','模拟股东丙','持股股东','公开市场卖出','1,500','76.90','115,350'],['2026-10-16','晨光制造','模拟董事丁','独立董事','公开市场买入','1,000','58.73','58,730']],
+  note:'人物、公司与交易均为虚构披露；方向不代表投资判断。'
+ }),
+ market('模拟财报 · 事件窗口','table',{
+  columns:['日期','公司','事件','状态'],rows:[['2026-10-21','星河科技','季度业绩会','模拟待召开'],['2026-10-22','远山能源','经营交流','模拟待确认'],['2026-10-23','青禾医疗','研发更新','模拟待公布'],['2026-10-26','晨光制造','季度披露','模拟待公布'],['2026-10-28','明远材料','投资者交流','模拟待召开']],note:'虚构日期，仅供布局演示。'
+ })
+]
+
+// Reuse the same layout grammar with a distinct, internally consistent subject.
+export const OPEN_TERMINAL_BRIEFING_PRESET=structuredClone(OPEN_TERMINAL_RESEARCH_PRESET)
+const energyPrices=prices.map(v=>Number((v*42.18/128.64).toFixed(2)))
+energyPrices[energyPrices.length-2]=41.23;energyPrices[energyPrices.length-1]=42.18
+const energyVolumes=volumes.map(v=>Math.round(v*.53))
+const [energyQuote,energyChart,energyNews,energyTable]=OPEN_TERMINAL_BRIEFING_PRESET
+energyQuote.title=energyQuote.artifact.title='模拟行情 · 远山能源'
+Object.assign(energyQuote.artifact,{symbol:'MOCK02',name:'远山能源 · 虚构证券',price:42.18,dayChange:.95,dayChangePercent:2.30,
+ info:[{label:'开盘',value:'41.05 元'},{label:'前收',value:'41.23 元'},{label:'最高',value:'42.64 元'},{label:'最低',value:'40.76 元'},{label:'成交量',value:'25.758 万股'},{label:'成交额',value:'1,080 万元'},{label:'总市值',value:'168.7 亿元'},{label:'PE · TTM',value:'16.8 倍'}],sparkline:{labels,values:energyPrices}})
+energyChart.title=energyChart.artifact.title='模拟能源 · 量价走势'
+Object.assign(energyChart.artifact,{prices:energyPrices,volumes:energyVolumes})
+energyNews.title=energyNews.artifact.title='模拟能源 · 行业简报'
+energyNews.artifact.items=[
+ {title:'模拟｜远山能源披露新型储能项目进度',summary:'虚构企业记录：按投产阶段跟踪设备交付与项目回款，比较计划和实际节奏；不对应任何真实公告。',date:'2026-10-19',time:'14:20',category:'公司',publisher:'模拟能源台'},
+ {title:'模拟｜设备制造环节进入季度交付窗口',summary:'虚构行业简报：需求、产能利用率与库存分别观察，不将单项变化直接推断为行业趋势。',date:'2026-10-19',time:'12:10',category:'行业',publisher:'模拟行业观察'},
+ {title:'模拟｜新能源材料价格出现分化',summary:'虚构研究摘要：本条用于比较新闻标题、时间、来源与长摘要的排列；示例中没有真实价格或研究结论。',date:'2026-10-19',time:'10:35',category:'研究',publisher:'模拟研究台'},
+ {title:'模拟｜本周能源研究事件整理',summary:'虚构事件记录：对项目会、交流会与季度披露按日期分类。完整内容可阅读或折叠，不以省略号隐藏主要信息。',date:'2026-10-19',time:'08:50',category:'研究',publisher:'模拟研究台'}
+]
+energyTable.title=energyTable.artifact.title='模拟能源 · 覆盖标的'
+energyTable.artifact.rows=energyTable.artifact.rows.filter((_,i)=>[1,4,5,7].includes(i))
+energyTable.artifact.rows[0][3]='+2.30%'
+energyTable.artifact.tones=energyTable.artifact.rows.map(r=>r.map((_,i)=>i!==3?'neutral':r[3].startsWith('-')?'negative':'positive'))

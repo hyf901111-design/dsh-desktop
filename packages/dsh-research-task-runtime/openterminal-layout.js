@@ -1,4 +1,4 @@
-// OpenTerminal QuoteWidget, NewsWidget, ChartWidget and data-table composition.
+// OpenTerminal QuoteWidget, NewsWidget and data-table composition; EWork chart engine.
 // Explicit artifact profile: layout survives refresh; changing colors alone never opts in.
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 export function validOpenTerminalLayout(s){
@@ -7,7 +7,7 @@ export function validOpenTerminalLayout(s){
 }
 export function openTerminalDimensions(s){
  if(s?.layoutProfile!=='openterminal'||!validOpenTerminalLayout(s))return null
- return {width:s.type==='news'||s.variant==='ticker-information'?448:832,
+ return {width:s.type==='news'||s.variant==='ticker-information'||s.variant==='table'&&s.columns?.length<=4?448:832,
   height:s.type==='news'||s.variant==='table'?400:340,
   minWidth:280,minHeight:220,provenance:'OpenTerminal · QuoteWidget / ChartWidget / data-table / NewsWidget',
   layoutProfile:'openterminal',version:'openterminal-layout-20261019'}
@@ -16,6 +16,7 @@ export function openTerminalQuote(s,spark){
  const signed=v=>v===null?'—':(v>0?'+':'')+v,tone=(s.dayChangePercent??s.dayChange)>0?'positive':(s.dayChangePercent??s.dayChange)<0?'negative':'neutral'
  return `<section class="financial-profile ot-quote"><div class="ot-identity"><strong>${esc(s.symbol)}</strong><span>${esc(s.name)}</span></div><div class="ot-quote-hero"><strong data-refresh-key="ticker:price" data-refresh-value="${esc(s.price)}">${s.price===null?'—':esc(s.price)}<small>${esc(s.priceUnit)}</small></strong><div data-tone="${tone}">${esc(signed(s.dayChange))} ${s.dayChange===null?'':esc(s.priceUnit)}<br>${esc(signed(s.dayChangePercent))}${s.dayChangePercent===null?'':'%'}</div></div><dl class="ot-quote-facts">${s.info.map(i=>`<div><dt>${esc(i.label)}</dt><dd>${esc(i.value)}</dd></div>`).join('')}</dl><div class="ot-quote-history"><span class="ot-section-label">历史报价 / ${esc(s.priceUnit)}</span>${spark}</div>${s.missing?`<p class="ticker-missing">${esc(s.missing)}</p>`:''}</section>`
 }
+export function openTerminalColumnLabel(value){return String(value).replace(/（([^（）]+)）$/u,' / $1')}
 export function openTerminalMarketBody(s,body){
  if(s.layoutProfile!=='openterminal')return body
  if(s.variant==='table')return `<div class="ot-table-context"><strong>${s.rows.length}<small> 条完整记录</small></strong><span>数值单位见列名 · 单击表头排序</span></div>${body}`
