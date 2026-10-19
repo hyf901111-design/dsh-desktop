@@ -769,9 +769,21 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
   const pending=new Set();
   const pathOf=el=>{const p=[];while(el&&el!==document.body){const parent=el.parentElement;if(!parent)return null;p.unshift([...parent.children].indexOf(el));el=parent;}return p;};
   const resolve=p=>p.reduce((el,n)=>el?.children[n],document.body);
+  const defaultDisclosure=el=>{
+    const summary=el.closest('summary'),details=summary?.parentElement;
+    return details?.tagName==='DETAILS' && details.getAttribute('data-workbench-default-open')==='price-volume-v1' ? details : null;
+  };
   const post=(type,extra={})=>parent.postMessage({type,...extra},'*');
   function apply(e){
     const el=resolve(e.targetRoute); if(!el || el.tagName.toUpperCase()!==e.tag) return;
+    const disclosure=defaultDisclosure(el);
+    if(disclosure && (e.type==='click'||e.type==='keydown')){
+      // Older journals toggled the former closed default. Do not invert the
+      // new open default; later choices carry an absolute boolean in the
+      // existing bounded checked field, including clicks on summary children.
+      if(e.type==='click'&&typeof e.checked==='boolean')disclosure.open=e.checked;
+      return;
+    }
     if(e.type==='click'){
       if(typeof e.x==='number' && typeof e.y==='number'){
         const r=el.getBoundingClientRect();
@@ -815,11 +827,15 @@ const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInteractio
     // Label activation forwards a second click to its input; record only that control click.
     if(type==='click' && el.closest('label') && !el.matches('input,select,textarea,button'))return;
     if(!el || el.closest('a') || el.matches('input[type=password],input[type=file],input[type=hidden]'))return;
+    const disclosure=defaultDisclosure(el);
+    // Native Enter/Space activation produces its own click. Journal it once.
+    if(disclosure&&type==='keydown')return;
     if(type==='keydown'&&!['Enter','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key))return;
     // Check/radio click already invokes its input/change events during replay.
     if(type!=='click'&&el.matches('input[type=checkbox],input[type=radio]'))return;
     const path=pathOf(el); if(!path?.length)return;
     const e={id:crypto.randomUUID(),clock:++clock,targetRoute:path,tag:el.tagName.toUpperCase(),type};
+    if(disclosure&&type==='click')e.checked=!disclosure.open;
     if(type==='input'||type==='change'){if('value'in el)e.value=String(el.value).slice(0,8192);if('checked'in el)e.checked=el.checked;}
     if(type==='click'){const r=el.getBoundingClientRect();if(r.width>0&&r.height>0){e.x=Math.max(0,Math.min(1,(event.clientX-r.left)/r.width));e.y=Math.max(0,Math.min(1,(event.clientY-r.top)/r.height));}}
     if(type==='keydown')e.key=event.key;
