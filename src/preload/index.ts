@@ -287,6 +287,7 @@ contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
     conversationBrowser: Object.freeze({
+      openSource: (value: unknown) => ipcRenderer.invoke('conversation:browser:open-source',value),
       activity: (value: unknown) => ipcRenderer.invoke('conversation:browser:activity',value),
       layout: (value: unknown) => ipcRenderer.invoke('conversation:browser:layout',value),
       subscribe: (callback: (value: unknown) => void) => {

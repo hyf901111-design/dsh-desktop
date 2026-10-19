@@ -164,6 +164,24 @@ export function registerConversationBrowser(options: { ipcMain: IpcMain; getMain
     }
     const pending=e.tail.then(operation,operation);e.tail=pending.catch(()=>{});return pending
   }
+  registerTrustedMainWindowHandler(options.ipcMain,channel+':open-source',options.getMainWindow,async (_event,value:any)=>{
+    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==2||!Object.keys(value).every(k=>['sessionId','url'].includes(k)))throw Error('来源浏览器需要当前会话与原始网址。')
+    const v=browserRequest({...value,op:'open'}),url=readablePageUrl(v.url),e=ensure(v.sessionId)
+    const navigate=async()=>{
+      await e.ready
+      const wc=e.view.webContents
+      if(wc.isDestroyed())throw Error('网页已关闭，请重新打开。')
+      e.snapshot=null;e.active=false
+      main().webContents.send(channel,{sessionId:v.sessionId,url,title:'浏览器',open:true})
+      let timer:ReturnType<typeof setTimeout>|undefined
+      try{
+        await Promise.race([wc.loadURL(url),new Promise((_,reject)=>{timer=setTimeout(()=>{if(!wc.isDestroyed())wc.stop();reject(Error('来源网页响应超时，请稍后重试。'))},30000)})])
+        publish(v.sessionId,e)
+        return {sessionId:v.sessionId,url,status:'opened'}
+      }finally{clearTimeout(timer)}
+    }
+    const pending=e.tail.then(navigate,navigate);e.tail=pending.catch(()=>{});return pending
+  })
   registerTrustedMainWindowHandler(options.ipcMain,channel+':layout',options.getMainWindow,(_event,v:any)=>{
     const e=entries.get(v?.sessionId);if(!e)return false
     if(!v.bounds){e.view.setVisible(false);e.visible=false;return true}
