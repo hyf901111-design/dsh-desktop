@@ -9,31 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "恢复规划元数据事件的会话重启兼容",
+        "featureName": "修复看板切回后的生成状态恢复",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
-        "tipCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
+        "baseCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
+        "tipCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
         "commits": [
           {
-            "commit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
+            "commit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
             "parents": [
-              "c270d17c45fd0a7478c1583a2cdde29f98eaacf9"
+              "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf"
             ],
-            "subject": "注册工作台规划元数据事件并恢复旧会话加载"
+            "subject": "修复切回看板后任务状态陈旧与检查挂起"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "scripts/lib/workbench-planning-session.mjs"
-          },
-          {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "A",
-            "path": "test/workbench-planning-session.test.js"
+            "path": "scripts/lib/research-generation-watch.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/research-generation-watch.test.js"
           }
         ],
         "checks": [
@@ -42,14 +42,13 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-planning-session.test.js",
-              "test/workbench-planning-phase.test.js",
-              "test/workbench-execution-policy.test.js"
+              "test/research-generation-watch.test.js",
+              "test/research-generation-controls.test.ts"
             ],
             "outcome": "passed",
-            "summary": "3文件20项通过，含真实持久化加载器、预算恢复与严格未知事件校验",
-            "verifiedCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
-            "completedAt": "2026-10-19T10:50:16.004602Z",
+            "summary": "2文件23项通过，含pending唤醒、超时、等水位终态和旧回执保护",
+            "verifiedCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
+            "completedAt": "2026-10-19T11:15:30.905213+00:00",
             "timeoutMs": 120000
           },
           {
@@ -60,8 +59,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
-            "completedAt": "2026-10-19T10:50:16.004602Z",
+            "verifiedCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
+            "completedAt": "2026-10-19T11:15:30.905213+00:00",
             "timeoutMs": 180000
           },
           {
@@ -72,84 +71,26 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
-            "completedAt": "2026-10-19T10:50:16.004602Z",
+            "verifiedCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
+            "completedAt": "2026-10-19T11:15:30.905213+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生重启捕获预算事件未识别错误；出错原始会话只读原生Zstd解码与PersistenceCoordinator恢复579事件，文件SHA256未变。新包仍需现场重新加载并原位恢复两卡。"
+          "summary": "原生客户端确认10卡完成；切板出现完成状态陈旧，Cmd+R恢复。确定性回归复现轮询挂起和等水位终态拒绝；最新包待实测切板自动恢复。"
         },
         "acceptanceCriteria": [
-          "旧未标记的规划预算元数据事件可被正式识别且历史完整保留",
-          "新轻量预算事件可忽略，其他未知必需事件继续拒绝",
-          "bundled与unbundled注册和append兼容一致且补丁幂等",
-          "保留全部此前组件与规划修复"
+          "挂起inspect有界超时并可在切回唤醒",
+          "同task/node且当前active的等水位终态可落地",
+          "旧回执、新重试、用户草稿和手动尺寸继续受原生守卫保护",
+          "保留全部此前组件样式和任务历史修复"
         ],
         "risks": [
           "仅本地实验，不晋升或公开发布",
-          "等待真实客户端重启历史恢复和两卡重试验收"
+          "现场失活具体属于挂起还是等水位边界无法追溯，修复分别由确定性回归覆盖"
         ],
-        "generatedAt": "2026-10-19T10:50:16.004602Z"
-      },
-      "merged": {
-        "mergeCommit": "c0826cb054af3bec9565abfe0d291c50590841b3",
-        "verificationCommit": "c0826cb054af3bec9565abfe0d291c50590841b3",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "c0826cb054af3bec9565abfe0d291c50590841b3",
-            "completedAt": "2026-10-19T10:50:50.994Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c0826cb054af3bec9565abfe0d291c50590841b3",
-            "completedAt": "2026-10-19T10:50:50.994Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c0826cb054af3bec9565abfe0d291c50590841b3",
-            "completedAt": "2026-10-19T10:50:50.994Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-19T10:50:50.994Z"
+        "generatedAt": "2026-10-19T11:15:30.905213+00:00"
       }
     }
   ],
