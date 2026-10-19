@@ -22,6 +22,21 @@ function runtime(data){
  return window;
 }
 describe('Figma 21Z workflow templates',()=>{
+ it('retains complete alert contingency detail inside the existing disclosure without changing summary or read state',()=>{
+  const detail='完整预案：暂停高空装置；使用已批准备用金；撤场后保留原记录。';
+  const data={...samples.alerts,items:[{...samples.alerts.items[0],detail}]};
+  expect(operationsDataIssue(data)).toBeNull();
+  const rendered=render(data);expect(readTemplateModel(rendered).data).toEqual(data);
+  const window=runtime(data),entry=window.document.querySelector('.alert-entry');
+  expect(entry.querySelector('details').textContent).toContain(detail);
+  expect(entry.querySelector('details').textContent).toContain(data.items[0].summary);
+  expect(entry.querySelector('input').disabled).toBe(true);
+  expect(operationsTemplateSchema('alerts')).toContain('detail');
+  expect(operationsDataIssue({...data,items:[{...data.items[0],unknown:'保留但不接受未知字段'}]})).toContain('unknown');
+  for(const invalid of ['x'.repeat(4001),{text:'不能猜造字段'}])expect(operationsDataIssue({...data,items:[{...data.items[0],detail:invalid}]})).toContain('items[0].detail');
+  const unsafe={...data,items:[{...data.items[0],detail:'<img src=x onerror=alert(1)>'}]};
+  expect(render(unsafe).html).not.toContain('<img src=x');expect(readTemplateModel(render(unsafe)).data).toEqual(unsafe);
+ });
  it.each(['approval','alerts'])('routes %s through its selected template and retains source data',type=>{
   const artifact=samples[type],panel={title:artifact.title,type,prompt:'按提供记录展示',size:'large',artifact};
   const plan=validateWorkbench({requestId:type,title:'研究运营',dataMode:'source',panels:[panel]});

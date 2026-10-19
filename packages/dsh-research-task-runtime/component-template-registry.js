@@ -6,6 +6,7 @@ import {IFRAME_TEMPLATES,IFRAME_GUIDANCE} from './iframe-template-contract.js'
 import {TIMELINE_TEMPLATES,TIMELINE_GUIDANCE} from './timeline-template-contract.js'
 import {KPI_TEMPLATES,KPI_GUIDANCE} from './kpi-template-contract.js'
 import {CALENDAR_TEMPLATES,CALENDAR_GUIDANCE} from './calendar-template-contract.js'
+import {GANTT_GUIDANCE} from './gantt-template-contract.js'
 import {CHART_TEMPLATES,chartTemplateSchema} from './chart-template-contract.js'
 import {MARKET_DESIGN_TEMPLATES,TERMINAL_GENERIC_TEMPLATES,WORKBENCH_DESIGN_VERSION} from './workbench-design-contract.js'
 import {applyTerminalPresentation} from './terminal-presentation.js'
@@ -27,7 +28,7 @@ const interactions = {
 }
 const generic=[
  ['table','明细表',['搜索','排序','完整表格'],656,352],['dashboard','概览',['指标详情'],656,238],['news','资讯',['搜索','分类','展开','来源'],656,352],
- ['reports','研报',['搜索','分类','展开','来源'],656,352],['gantt','甘特图',['筛选','日期','任务详情'],656,352]
+ ['reports','研报',['搜索','分类','展开','来源'],656,352],['gantt','甘特图',['日期及日内时间轴','任务详情','键盘导航'],656,352]
 ]
 export const COMPONENT_TEMPLATES=Object.freeze([
  ...ATTACHMENT_TEMPLATES.map(t=>({...t,schema:ATTACHMENT_GUIDANCE})),
@@ -41,7 +42,7 @@ export const COMPONENT_TEMPLATES=Object.freeze([
  ...OPERATIONS_TEMPLATES.map(t=>({...t,schema:operationsTemplateSchema(t.id)})),
  ...CHART_TEMPLATES.map(t=>({...t,id:`chart.${t.variant}`,type:'chart',schema:chartTemplateSchema(t.variant),interactions:t.interactions??['系列切换','逐点数值','完整数据'],version:'22a-20260930'})),
  ...Object.entries(MARKET_DESIGN_TEMPLATES).map(([variant,t])=>({id:`market.${variant}`,type:'market',variant,title:t.id,width:t.width,height:t.height,minWidth:t.minWidth,minHeight:t.minHeight,figma:t.figma,interactions:interactions[variant]})),
- ...generic.map(([id,title,interactions,width,height])=>({id,type:id.split('.')[0],...(id.startsWith('chart.')?{variant:id.split('.')[1]}:{}),title,interactions,width,height,figma:TERMINAL_GENERIC_TEMPLATES[id].figma}))
+ ...generic.map(([id,title,interactions,width,height])=>({id,type:id.split('.')[0],...(id.startsWith('chart.')?{variant:id.split('.')[1]}:{}),...(id==='gantt'?{schema:GANTT_GUIDANCE}:{}),title,interactions,width,height,figma:TERMINAL_GENERIC_TEMPLATES[id].figma}))
 ].map(t=>Object.freeze({...t,version:t.version??WORKBENCH_DESIGN_VERSION,minWidth:t.minWidth??280,minHeight:t.minHeight??180,responsive:'控件换行；内容按可用宽度布局；长列表内部滚动；不缩小正文',maxDataBytes:256000})))
 const templates=new Map(COMPONENT_TEMPLATES.map(t=>[t.id,t]))
 export function templateFor(data){return templates.get(data?.type==='market'||data?.type==='chart'?`${data.type}.${data.variant}`:data?.type)??null}

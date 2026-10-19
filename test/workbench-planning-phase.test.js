@@ -114,6 +114,19 @@ describe('工作台首次规划阶段预算', () => {
     }
   })
 
+  it('anchors relative dates to the host date while preserving explicitly requested fictional dates and actual interaction limits', () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-19T12:00:00+08:00'))
+    try {
+      const text = harness().text({ session: session('创建三天活动工作台，允许模拟数据') })
+      expect(text).toContain('2026-10-19')
+      expect(text).toContain('用户明确指定')
+      expect(text).toContain('跨卡自动执行')
+      expect(text).toContain('冲突校验')
+      expect(text).toContain('撤销')
+      expect(text).not.toContain('2025-')
+    } finally { vi.useRealTimers() }
+  })
+
   it('shortens only the planning tool schema at the final request boundary without changing the prepared model config', async () => {
     const h = harness(), agent = { session: session('创建巡展工作台，用模拟数据') }
     const originalTool = Object.freeze({ name: 'research_workbench_create', description: '旧完整规范'.repeat(1000), parameters: { type: 'object', properties: { generationMode: { enum: ['parallel', 'deferred'] } } } })
