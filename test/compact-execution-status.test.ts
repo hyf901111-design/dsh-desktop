@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { Window } from 'happy-dom'
+const executionWindows: Window[]=[]
+afterEach(async()=>{for(const win of executionWindows.splice(0))await win.happyDOM.abort()})
 // @ts-expect-error Runtime bundle patcher is a JavaScript build script.
 import {patchCanvasUseClient} from '../scripts/lib/canvas-use-client.mjs'
 
@@ -32,29 +35,17 @@ async function loadConversationBundle(styleTexts?: string[]): Promise<ClientBund
   const jsxRuntime = requireModule('react/jsx-runtime')
   let descriptor: BundleDescriptor | undefined
 
-  const document = {
-        querySelector: () => null,
-        getElementById: () => null,
-        createElement: () => ({ dataset: {}, textContent: '', setAttribute() {} }),
-        documentElement: { appendChild(tag: {textContent?: string}) { styleTexts?.push(tag.textContent ?? '') } },
-        head: {
-          append(tag: {textContent?: string}) { styleTexts?.push(tag.textContent ?? '') },
-          appendChild(tag: { textContent?: string }) {
-            styleTexts?.push(tag.textContent ?? '')
-          }
-        }
-      }
+  const win = new Window(), document = win.document
+  executionWindows.push(win)
+  const append = document.head.appendChild.bind(document.head)
+  document.head.appendChild = ((tag: any) => { styleTexts?.push(tag.textContent ?? ''); return append(tag) }) as typeof document.head.appendChild
+  const prepend = document.head.prepend.bind(document.head)
+  document.head.prepend = ((...tags: any[]) => { for(const tag of tags)styleTexts?.push(tag.textContent ?? ''); return prepend(...tags) }) as typeof document.head.prepend
 
-  runInNewContext(source, {
-    ...(document === undefined ? {} : { document }),
-    window: {
-      __ModuleLoader__: {
-        load(value: BundleDescriptor) {
-          descriptor = value
-        }
-      }
-    }
-  })
+
+  ;(win as any).__ModuleLoader__ = { load(value: BundleDescriptor) { descriptor = value } }
+  runInNewContext(source, { document, window:win, CSS:win.CSS, HTMLElement:win.HTMLElement, localStorage:win.localStorage })
+
   if (descriptor === undefined) throw new Error('conversation bundle did not register')
 
   return descriptor.factory((id) => {
