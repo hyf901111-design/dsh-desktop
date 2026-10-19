@@ -12,7 +12,7 @@
         "featureName": "补齐小时排期与完整预警并修复旧量价开合迁移",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
-        "tipCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
+        "tipCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
         "commits": [
           {
             "commit": "3a7d9498af74563d9e4a7ecc0ec280b1a9235878",
@@ -41,6 +41,13 @@
               "086638526a93280bf14c9d41b5da61261929e5dd"
             ],
             "subject": "测试：按完整构建补丁链验证生成等待计时"
+          },
+          {
+            "commit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
+            "parents": [
+              "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef"
+            ],
+            "subject": "测试：标注生成进度脚本的类型边界"
           }
         ],
         "files": [
@@ -132,8 +139,8 @@
             ],
             "outcome": "passed",
             "summary": "13个相关文件138项通过；完整构建补丁链覆盖排队计时",
-            "verifiedCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
-            "completedAt": "2026-10-19T10:37:50.951843Z",
+            "verifiedCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
+            "completedAt": "2026-10-19T10:39:26.744202Z",
             "timeoutMs": 120000
           },
           {
@@ -144,8 +151,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
-            "completedAt": "2026-10-19T10:37:50.951843Z",
+            "verifiedCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
+            "completedAt": "2026-10-19T10:39:26.744202Z",
             "timeoutMs": 180000
           },
           {
@@ -156,8 +163,8 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
-            "completedAt": "2026-10-19T10:37:50.951843Z",
+            "verifiedCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
+            "completedAt": "2026-10-19T10:39:26.744202Z",
             "timeoutMs": 120000
           }
         ],
@@ -176,7 +183,7 @@
           "新原生包两张失败卡原位重试与旧量价状态迁移待验收",
           "旧场景中明确标注的2025年模拟日期保持，新增计划才使用宿主日期锚"
         ],
-        "generatedAt": "2026-10-19T10:37:50.951843Z"
+        "generatedAt": "2026-10-19T10:39:26.744202Z"
       }
     }
   ],
