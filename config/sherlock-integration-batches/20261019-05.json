@@ -9,31 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复看板切回后的生成状态恢复",
+        "featureName": "准确显示主会话结束后的组件同步状态",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
-        "tipCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
+        "baseCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
+        "tipCommit": "9702b90879316026237bc9cd0d682a2da22dd037",
         "commits": [
           {
-            "commit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
+            "commit": "9702b90879316026237bc9cd0d682a2da22dd037",
             "parents": [
-              "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf"
+              "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c"
             ],
-            "subject": "修复切回看板后任务状态陈旧与检查挂起"
+            "subject": "修正主会话结束后的规划结果同步提示"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-generation-client.mjs"
+            "path": "scripts/lib/research-creation-progress.mjs"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/research-generation-watch.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/research-generation-watch.test.js"
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
           }
         ],
         "checks": [
@@ -42,13 +38,13 @@
               "npx",
               "vitest",
               "run",
-              "test/research-generation-watch.test.js",
+              "test/research-creation-progress.test.js",
               "test/research-generation-controls.test.ts"
             ],
             "outcome": "passed",
-            "summary": "2文件23项通过，含pending唤醒、超时、等水位终态和旧回执保护",
-            "verifiedCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
-            "completedAt": "2026-10-19T11:15:30.905213+00:00",
+            "summary": "2文件23项通过，含结束推断文案和真实错误区分及布局回归",
+            "verifiedCommit": "9702b90879316026237bc9cd0d682a2da22dd037",
+            "completedAt": "2026-10-19T11:33:10.203830+00:00",
             "timeoutMs": 120000
           },
           {
@@ -59,8 +55,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
-            "completedAt": "2026-10-19T11:15:30.905213+00:00",
+            "verifiedCommit": "9702b90879316026237bc9cd0d682a2da22dd037",
+            "completedAt": "2026-10-19T11:33:10.203830+00:00",
             "timeoutMs": 180000
           },
           {
@@ -71,84 +67,25 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "ff9b1d36a6db1cdda5e9803fd0bcfb9c98a2942c",
-            "completedAt": "2026-10-19T11:15:30.905213+00:00",
+            "verifiedCommit": "9702b90879316026237bc9cd0d682a2da22dd037",
+            "completedAt": "2026-10-19T11:33:10.203830+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生客户端确认10卡完成；切板出现完成状态陈旧，Cmd+R恢复。确定性回归复现轮询挂起和等水位终态拒绝；最新包待实测切板自动恢复。"
+          "summary": "新包原生实测规划前切板，8条交接时间线在切回后自动恢复，无刷新或重试；过渡时曾显示未形成计划，现仅将无明确错误的结束推断改为事实文案。"
         },
         "acceptanceCriteria": [
-          "挂起inspect有界超时并可在切回唤醒",
-          "同task/node且当前active的等水位终态可落地",
-          "旧回执、新重试、用户草稿和手动尺寸继续受原生守卫保护",
-          "保留全部此前组件样式和任务历史修复"
+          "推断的主会话结束不误报明确生成失败",
+          "真正错误与停止保持原有提示和操作",
+          "保留生成同步、旧回执保护和所有此前样式修复"
         ],
         "risks": [
           "仅本地实验，不晋升或公开发布",
-          "现场失活具体属于挂起还是等水位边界无法追溯，修复分别由确定性回归覆盖"
+          "结束提示准确化不改变真实模型速度"
         ],
-        "generatedAt": "2026-10-19T11:15:30.905213+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b813eba3bbff13467780ad38590a1b68cadd4e8d",
-        "verificationCommit": "b813eba3bbff13467780ad38590a1b68cadd4e8d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "b813eba3bbff13467780ad38590a1b68cadd4e8d",
-            "completedAt": "2026-10-19T11:15:54.732Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b813eba3bbff13467780ad38590a1b68cadd4e8d",
-            "completedAt": "2026-10-19T11:15:54.732Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "b813eba3bbff13467780ad38590a1b68cadd4e8d",
-            "completedAt": "2026-10-19T11:15:54.732Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-19T11:15:54.732Z"
+        "generatedAt": "2026-10-19T11:33:10.203830+00:00"
       }
     }
   ],
