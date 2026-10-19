@@ -1,4 +1,4 @@
-import {COMPONENT_TEMPLATES,templateSummary,templateFor} from './component-template-registry.js'
+import {COMPONENT_TEMPLATES,templateSummary,templateFor,readTemplateModel} from './component-template-registry.js'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { acceptArtifactOutput } from './artifact-output.js'
 import { marketPanelSchema } from './market-artifact.js'
@@ -81,10 +81,14 @@ export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThi
       if(!args||Object.keys(args).some(key=>!['requestId','revision','id','market'].includes(key))||
         ![args.requestId,args.revision,args.id].every(value=>typeof value==='string'&&value.trim()&&value.length<=256)||
         args.market?.type!=='market')throw Error('金融组件更新参数无效。')
-      const changes=normalizeCanvasChanges([{op:'update',id:args.id,fields:{title:args.market.title,containerSpec:args.market}}])
+      let changes=normalizeCanvasChanges([{op:'update',id:args.id,fields:{title:args.market.title,containerSpec:args.market}}])
       await guardCanvas(exec,'apply',{requestId:args.requestId,revision:args.revision,changes})
       const sessionId=canvasSession(exec)
       if(typeof sessionId!=='string'||!sessionId)throw Error('当前执行未绑定画板。')
+      const previous=await callCanvas(sessionId,'inspect',{ids:[args.id]},exec.signal,{env,fetch:request})
+      const profile=readTemplateModel(previous.nodes?.find(n=>n.id===args.id)?.content?.containerSpec)?.data.layoutProfile
+      if(profile!==undefined&&args.market.layoutProfile===undefined)
+        changes=normalizeCanvasChanges([{op:'update',id:args.id,fields:{title:args.market.title,containerSpec:{...args.market,layoutProfile:profile}}}])
       return JSON.stringify(await callCanvas(sessionId,'apply',{requestId:args.requestId,revision:args.revision,changes},exec.signal,{env,fetch:request}))
     }
   })))

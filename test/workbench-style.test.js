@@ -8,7 +8,7 @@ import {WORKBENCH_PRESENTATION_CSS} from '../packages/dsh-research-task-runtime/
 import {WORKBENCH_ENGLISH} from '../packages/dsh-research-task-runtime/workbench-locale.js'
 import {createWorkbenchStyleState} from '../scripts/lib/workbench-style-client.mjs'
 import {workbenchText} from '../scripts/lib/workbench-localization.mjs'
-it('展示桥只接受父页面的三种已知模式，任意颜色和外来消息不能改写组件',()=>{
+it('展示桥只接受父页面的已知模式，任意颜色和外来消息不能改写组件',()=>{
  const w=new Window(),doc=w.document;runInNewContext('('+installWorkbenchStyleMessages.toString()+')()',{addEventListener:w.addEventListener.bind(w),dispatchEvent:w.dispatchEvent.bind(w),document:doc,parent:w.parent,CustomEvent:w.CustomEvent,validWorkbenchStyleMessage})
  const message={type:'sherlock-workbench-style',mode:'enterprise',controlTheme:'dark'}
  w.dispatchEvent(new w.MessageEvent('message',{source:{},data:message}));expect(doc.documentElement.dataset.workbenchStyle).toBeUndefined()

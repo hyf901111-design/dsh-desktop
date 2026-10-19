@@ -314,6 +314,8 @@ export class ComponentDataRefresh {
    const results=await Promise.all(b.requests.map(async r=>[r.key,await this.request(b,r,signal)]));signal.throwIfAborted()
    const data=materializeComponentMapping(b.mapping,Object.fromEntries(results),new Date(startedAt))
    data.title=model.data.title
+   // A source recipe updates data; it cannot silently discard the chosen layout.
+   if(model.data.layoutProfile!==undefined)data.layoutProfile=model.data.layoutProfile
    if(templateFor(data)?.id!==b.templateId)throw Error('新数据与当前组件类型不匹配')
    if(data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)){
     const issue=templateDataIssue(data);if(issue)throw Error(issue+'；已保留上次内容')

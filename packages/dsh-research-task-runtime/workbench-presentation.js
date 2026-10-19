@@ -1,3 +1,4 @@
+import {OPEN_TERMINAL_LAYOUT_CSS} from './openterminal-layout.js'
 import {TIMELINE_PRESENTATION_CSS} from './timeline-presentation.js';
 import {KPI_PRESENTATION_CSS} from './kpi-presentation.js';
 import {WORKBENCH_MODE_CSS} from './workbench-style.js'
@@ -87,6 +88,8 @@ ${TIMELINE_PRESENTATION_CSS}
 ${CALENDAR_PRESENTATION_CSS}
 ${WORKBENCH_TABLE_COLUMNS_CSS}
 ${WORKBENCH_MODE_CSS}
+body .terminal-table-toolbar{display:flex!important;align-items:center!important;gap:12px!important;margin-bottom:6px!important}body .terminal-table-toolbar input{flex:1 1 160px!important;min-width:80px!important}body .terminal-table-toolbar [data-market-count]{flex:none!important;white-space:nowrap!important}
+${OPEN_TERMINAL_LAYOUT_CSS}
 }`
 
 export function applyWorkbenchPresentation(html) {
