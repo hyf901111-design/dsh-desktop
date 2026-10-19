@@ -40,6 +40,15 @@ it('原配置的刷新间隔和映射被保存，只允许相同账户恢复绑�
     expect(store.read(item.id, 'owner-one').recipe).toEqual(recipe);
     expect(store.read(item.id, 'owner-two').recipe).toBeUndefined();
 });
+it('自定义组件重启恢复时保留完整来源方案与选择，移除旧连接授权元数据', async () => {
+    const {file,store}=await fixture(),request={key:'q',toolId:'price',args:{code:'600519'},connectionId:'private-connection',connectionRevision:9,schemaDigest:'old'},mapping={title:'收入'};
+    const saved={templateId:'table',templateVersion:'1',intervalMinutes:5,enabled:true,requests:[request],mapping,sourceId:'backup',sources:[{id:'default',name:'主来源',requests:[{...request,toolId:'primary'}],mapping},{id:'backup',name:'备用来源',requests:[request],mapping}]};
+    const entry=await store.add(node(),saved,'owner'),restarted=new ComponentLibraryStore(file);await restarted.load();
+    const restored=restarted.read(entry.id,'owner').recipe as any;
+    expect(restored.sourceId).toBe('backup');expect(restored.sources.map((s:any)=>s.id)).toEqual(['default','backup']);
+    expect(restored.sources[1].requests[0]).toEqual({key:'q',toolId:'price',args:{code:'600519'}});
+    expect(restarted.read(entry.id,'other').recipe).toBeUndefined();
+});
 it('损坏的持久文件保留原文件，失败写入不发布内存更新', async () => {
     const { file, store } = await fixture(), item = await store.add(node());
     await writeFile(file, 'bad json');

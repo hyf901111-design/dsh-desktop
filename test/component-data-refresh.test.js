@@ -2,6 +2,7 @@ import {describe,it,expect,vi} from 'vitest'
 import {ComponentDataRefresh, evaluateMapping, materializeComponentMapping, decodeDataResponse} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {createCanvasActionController} from '../packages/dsh-research-task-runtime/canvas-actions.js'
+import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 const data={version:1,type:'market',variant:'metrics',title:'指标',asOf:'2026-09-25',items:[{label:'指数',value:'100'}]}
 function setup(){
  let now=100000,stored=[],spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),revision='r1'
@@ -12,6 +13,50 @@ function setup(){
  return {service,input,execute,apply,now:n=>{now=n},spec:()=>spec,store:()=>stored,edit:()=>{spec={...spec,title:'用户编辑'}}}
 }
 describe('data refresh without generation',()=>{
+ it('switches a complete verified source recipe and persists its distinct field mapping',async()=>{
+  const f=setup();await f.service.load()
+  const backup={id:'backup',name:'备用行情',requests:[{key:'prices',toolId:'backup-prices',args:{}},{key:'date',toolId:'backup-date',args:{}}],mapping:{...data,asOf:{$from:'date',$path:'day'},items:{$from:'prices',$each:'values',$map:{label:{$path:'label'},value:{$path:'last',$as:'string'}}}}}
+  const b=await f.service.bind({...f.input,sources:[backup]})
+  await f.service.refresh(b.id)
+  expect(readTemplateModel(f.spec()).data.items[0].value).toBe('101')
+  const oldSuccess=f.service.list()[0].lastSuccess
+  const switched=await f.service.configure(b.id,{sourceId:'backup',intervalMinutes:5})
+  expect(switched).toMatchObject({sourceId:'backup',intervalMinutes:5,lastSuccess:oldSuccess,requests:[{toolId:'backup-prices'},{toolId:'backup-date'}]})
+  expect(f.store()[0].sources).toHaveLength(2)
+  f.execute.mockImplementation(async(_binding,r)=>r.key==='prices'?{values:[{label:'指数',last:202}]}:{day:'2026-09-27'})
+  await f.service.refresh(b.id)
+  expect(readTemplateModel(f.spec()).data).toMatchObject({asOf:'2026-09-27',items:[{label:'指数',value:'202'}]})
+  const restarted=new ComponentDataRefresh({...f.service.options,load:async()=>f.store()});await restarted.load()
+  expect(restarted.list()[0].sourceId).toBe('backup')
+  await restarted.configure(b.id,{sourceId:'default'})
+  expect(restarted.list()[0].requests[0].toolId).toBe('t')
+ })
+ it('revalidates a selected source before cancelling or changing the live binding',async()=>{
+  const f=setup();await f.service.load()
+  const b=await f.service.bind({...f.input,sources:[{id:'backup',name:'备用',requests:[{key:'quote',toolId:'backup',args:{}}],mapping:f.input.mapping}]})
+  const before=f.service.list()[0]
+  f.service.options.validateRequest=async()=>{throw Error('所选数据工具未连接')}
+  await expect(f.service.configure(b.id,{sourceId:'backup'})).rejects.toThrow('未连接')
+  expect(f.service.list()[0]).toEqual(before)
+  await expect(f.service.configure(b.id,{sourceId:'missing'})).rejects.toThrow(/来源|数据源/)
+ })
+ it('cancels an old source response when the source selection advances its revision',async()=>{
+  const f=setup();await f.service.load()
+  const b=await f.service.bind({...f.input,sources:[{id:'backup',name:'备用',requests:[{key:'quote',toolId:'backup',args:{}}],mapping:f.input.mapping}]})
+  let release;f.execute.mockImplementationOnce(()=>new Promise(resolve=>{release=resolve}))
+  const pending=f.service.refresh(b.id);while(!release)await new Promise(resolve=>setTimeout(resolve,0))
+  await f.service.configure(b.id,{sourceId:'backup'})
+  release({items:[{name:'指数',price:999}],date:'2026-09-26'});await pending
+  expect(f.apply).not.toHaveBeenCalled()
+  expect(f.service.list()[0]).toMatchObject({sourceId:'backup',status:'idle'})
+ })
+ it('rejects duplicate source ids and mappings that change the component template',async()=>{
+  const f=setup();await f.service.load()
+  const s={id:'backup',name:'备用',requests:f.input.requests,mapping:f.input.mapping}
+  await expect(f.service.bind({...f.input,sources:[s,s]})).rejects.toThrow(/数据源|来源/)
+  await expect(f.service.bind({...f.input,sources:[{...s,mapping:{version:1,type:'news',title:'其他',items:[]}}]})).rejects.toThrow(/模板/)
+  expect(f.service.list()).toEqual([])
+ })
  it('keeps the existing quote and pinpoints a malformed metric value on refresh',async()=>{
   const f=setup();await f.service.load();const b=await f.service.bind(f.input),before=structuredClone(f.spec())
   f.execute.mockResolvedValue({items:[{name:'指数',price:null}],date:'2026-09-26'})

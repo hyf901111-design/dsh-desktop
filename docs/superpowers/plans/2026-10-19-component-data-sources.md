@@ -22,9 +22,9 @@
 ### Task 1: 生成组件完整来源方案
 **Files:** src/shared/component-data.ts; packages/dsh-research-task-runtime/component-data-refresh.js/.d.ts; canvas-tools.js; test/component-data-refresh.test.js; component-data-service.test.ts.
 **Interfaces:** bind input.sources 保存额外完整 {id,name,requests,mapping}；configure(sourceId) 切换方案，list 返回当前 sourceId 与 sources。
-- [ ] 写并运行失败用例：两个方案使用不同响应字段，切换后实际应用新值；权限失败不改变原方案；旧请求迟到不得覆盖；多请求方案保持完整。
-- [ ] 实现兼容验证、持久化、重新授权、revision 与取消逻辑，并更新工具契约。
-- [ ] 运行引擎/服务相关测试，通过后中文提交。
+- [x] 写并运行失败用例：两个方案使用不同响应字段，切换后实际应用新值；权限失败不改变原方案；旧请求迟到不得覆盖；多请求方案保持完整。
+- [x] 实现兼容验证、持久化、重新授权、revision 与取消逻辑，并更新工具契约。
+- [x] 运行引擎/服务相关测试，通过后中文提交。
 
 ### Task 2: 固定来源适配器与组件配置
 **Files:** financial-widget-contract.js/.d.ts; new financial-widget-sources.js; src/main/financial/public-widget-data.ts; new backup-widget-data.ts; new focused provider tests; existing financial-widget-public/announcements tests.

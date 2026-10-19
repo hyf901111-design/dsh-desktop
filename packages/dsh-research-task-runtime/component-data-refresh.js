@@ -8,6 +8,8 @@ const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map'
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
+const sourceId=v=>typeof v==='string'&&/^[a-zA-Z0-9][\w.-]{0,63}$/.test(v)
+const sourceRecipe=(s,templateId)=>record(s)&&sourceId(s.id)&&typeof s.name==='string'&&s.name.trim().length>0&&s.name.length<=128&&!/[\u0000-\u001f]/.test(s.name)&&Array.isArray(s.requests)&&s.requests.length>0&&s.requests.length<=8&&record(s.mapping)&&templateFor(s.mapping)?.id===templateId
 function bounded(value,limit=256000){const text=JSON.stringify(value);if(!text||Buffer.byteLength(text)>limit)throw Error('数据超过组件容量');return JSON.parse(text)}
 function path(root,path){
  if(typeof path!=='string'||path.length>512)throw Error('字段路径无效')
@@ -209,7 +211,7 @@ export class ComponentDataRefresh {
   if(active)this.visible.set(sessionId,{owner:this.options.owner(),until:this.now()+20000});else this.visible.delete(sessionId)
   for(const [key,run]of this.active)if(run.automatic&&this.records.find(b=>b.id===key)?.sessionId===sessionId&&!active)run.controller.abort()
  }
- async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>8||!record(b.mapping)))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
+ async load(){const rows=await this.options.load();if(!Array.isArray(rows)||rows.length>1000||rows.some(b=>!b||![b.id,b.sessionId,b.nodeId,b.workspaceId,b.ownerAccountId,b.templateId,b.templateVersion].every(id)||!interval(b.intervalMinutes)||!Array.isArray(b.requests)||!b.requests.length||b.requests.length>8||!record(b.mapping)||b.sources!==undefined&&(!Array.isArray(b.sources)||!b.sources.length||b.sources.length>5||b.sources.some(s=>!sourceRecipe(s,b.templateId))||new Set(b.sources.map(s=>s.id)).size!==b.sources.length||!b.sources.some(s=>s.id===b.sourceId))||b.sourceId!==undefined&&!b.sources))throw Error('组件数据配置无效');this.records=rows.map(b=>({...b,status:b.status==='refreshing'?'idle':b.status,nextRun:b.enabled?Math.max(this.now()+5000,b.nextRun??0):null}));}
  list(sessionId){return structuredClone(this.records.filter(b=>b.ownerAccountId===this.options.owner()&&(!sessionId||b.sessionId===sessionId)).map(b=>({...b,viewPaused:b.enabled&&!this.isVisible(b.sessionId)})))}
  persist(){const snapshot=structuredClone(this.records);try{this.options.onChange?.(snapshot)}catch{};const pending=this.chain.then(()=>this.options.save(snapshot));this.chain=pending.catch(()=>{});return pending}
  async bind(input,initialSpec,{preserveSettings=false}={}){
@@ -225,21 +227,45 @@ export class ComponentDataRefresh {
   const model=readTemplateModel(target.spec)
   if(!target.writable||!model)throw Error('该组件尚未保存模板数据，请先使用结构化模板创建或更新一次')
   if(templateFor(input.mapping)?.id!==model.templateId)throw Error('字段映射必须保留当前模板类型')
-  const requests=[]
-  for(const r of input.requests){if(!id(r.key)||!id(r.toolId)||!record(r.args)||requests.some(x=>x.key===r.key))throw Error('数据请求无效');requests.push(await this.options.validateRequest({...r,toolId:/^ework__t_[a-f\d]+$/i.test(r.toolId)?r.toolId.slice('ework__'.length):r.toolId},input));checkOwner()}
+  const verify=async rows=>{
+   const requests=[]
+   for(const r of rows){if(!r||!id(r.key)||!id(r.toolId)||!record(r.args)||requests.some(x=>x.key===r.key))throw Error('数据请求无效');requests.push(await this.options.validateRequest({key:r.key,args:r.args,toolId:/^ework__t_[a-f\d]+$/i.test(r.toolId)?r.toolId.slice('ework__'.length):r.toolId},input));checkOwner()}
+   return requests
+  }
+  let requests=await verify(input.requests),mapping=input.mapping,sources,selectedSource
+  if(input.sources!==undefined){
+   if(!Array.isArray(input.sources)||!input.sources.length||input.sources.length>5||new Set(input.sources.map(s=>s?.id)).size!==input.sources.length)throw Error('数据源方案无效或重复')
+   sources=input.sources.some(s=>s.id==='default')?[]:[{id:'default',name:[...new Set(requests.map(r=>r.sourceName||r.toolId))].join(' + ').slice(0,128),requests,mapping}]
+   for(const s of input.sources){
+    if(!record(s)||!record(s.mapping)||templateFor(s.mapping)?.id!==model.templateId)throw Error('数据源字段映射必须保留当前模板类型')
+    if(!sourceRecipe(s,model.templateId))throw Error('数据源方案无效')
+    sources.push({id:s.id,name:s.name.trim(),requests:await verify(s.requests),mapping:s.mapping})
+   }
+   if(sources.length>5)throw Error('数据源方案最多五个')
+   selectedSource=input.sourceId??'default'
+   const active=sources.find(s=>s.id===selectedSource);if(!active)throw Error('所选数据源不存在')
+   requests=active.requests;mapping=active.mapping
+  }else if(input.sourceId!==undefined)throw Error('所选数据源不存在')
   const previous=this.records.find(b=>b.ownerAccountId===owner&&b.sessionId===input.sessionId&&b.nodeId===input.nodeId)
   const intervalMinutes=preserveSettings&&previous?previous.intervalMinutes:input.intervalMinutes
   const enabled=intervalMinutes>0&&(preserveSettings&&previous?previous.enabled:true)
-  const binding={id:previous?.id??randomUUID(),revision:(previous?.revision??0)+1,ownerAccountId:owner,sessionId:input.sessionId,nodeId:input.nodeId,workspaceId:input.workspaceId,templateId:model.templateId,templateVersion:model.version,requests,mapping:input.mapping,intervalMinutes,enabled,status:enabled?'idle':'paused',failures:0,nextRun:enabled?this.now()+intervalMinutes*60000:null}
+  const binding={id:previous?.id??randomUUID(),revision:(previous?.revision??0)+1,ownerAccountId:owner,sessionId:input.sessionId,nodeId:input.nodeId,workspaceId:input.workspaceId,templateId:model.templateId,templateVersion:model.version,requests,mapping,...(sources?{sources,sourceId:selectedSource}:{}),intervalMinutes,enabled,status:enabled?'idle':'paused',failures:0,nextRun:enabled?this.now()+intervalMinutes*60000:null}
   this.active.get(binding.id)?.controller.abort()
   this.records=this.records.filter(b=>b.id!==binding.id);this.records.push(binding);await this.persist();return structuredClone(binding)
  }
  async configure(id,patch){
   const b=this.records.find(b=>b.id===id&&b.ownerAccountId===this.options.owner());if(!b)throw Error('组件数据绑定不存在')
-  if(Object.keys(patch).some(k=>!['enabled','intervalMinutes','deleted'].includes(k))||patch.intervalMinutes!==undefined&&!interval(patch.intervalMinutes)||patch.enabled!==undefined&&typeof patch.enabled!=='boolean')throw Error('刷新设置无效')
+  if(!record(patch)||Object.keys(patch).some(k=>!['enabled','intervalMinutes','deleted','sourceId'].includes(k))||patch.intervalMinutes!==undefined&&!interval(patch.intervalMinutes)||patch.enabled!==undefined&&typeof patch.enabled!=='boolean'||patch.sourceId!==undefined&&!sourceId(patch.sourceId))throw Error('刷新设置无效')
+  let selected,requests,sources
+  if(patch.sourceId!==undefined){
+   sources=b.sources??[{id:'default',name:[...new Set(b.requests.map(r=>r.sourceName||r.toolId))].join(' + ').slice(0,128),requests:b.requests,mapping:b.mapping}]
+   selected=sources.find(s=>s.id===patch.sourceId);if(!selected)throw Error('所选数据源不存在')
+   const revision=b.revision,owner=this.options.owner();requests=[]
+   for(const r of selected.requests){requests.push(await this.options.validateRequest({key:r.key,toolId:r.toolId,args:r.args},b));if(this.options.owner()!==owner||!this.records.includes(b)||b.revision!==revision)throw Error('数据配置已变化，请重试')}
+  }
   this.active.get(id)?.controller.abort()
   if(patch.deleted===true)this.records=this.records.filter(row=>row!==b)
-  else{Object.assign(b,patch);b.revision++;if(b.intervalMinutes===0)b.enabled=false;b.status=b.enabled?'idle':'paused';b.nextRun=b.enabled?this.now()+b.intervalMinutes*60000:null}
+  else{Object.assign(b,patch);if(selected){b.sources=sources.map(s=>s.id===selected.id?{...s,requests}:s);b.requests=requests;b.mapping=selected.mapping;b.error=undefined;b.failures=0}b.revision++;if(b.intervalMinutes===0)b.enabled=false;b.status=b.enabled?'idle':'paused';b.nextRun=b.enabled?this.now()+b.intervalMinutes*60000:null}
   await this.persist();return structuredClone(b)
  }
  async tick(){if(this.stopped)return;for(const [key,run]of this.active)if(run.automatic&&!this.isVisible(this.records.find(b=>b.id===key)?.sessionId))run.controller.abort();const due=this.records.filter(b=>b.ownerAccountId===this.options.owner()&&b.enabled&&this.isVisible(b.sessionId)&&b.nextRun<=this.now());await Promise.allSettled(due.slice(0,4).map(b=>this.refresh(b.id,true)))}

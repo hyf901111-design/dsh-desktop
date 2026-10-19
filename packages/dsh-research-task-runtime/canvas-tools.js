@@ -91,14 +91,14 @@ export function registerCanvasTools(ctx,{env=process.env,fetch:request=globalThi
   disposers.push(ctx.tools.register(defineTool({
     name:'research_component_data',
     description:'查看当前已注册的固定组件模板及数据契约、配置已有组件的数据接口或立即取数刷新。用户要求持续更新时，在首次取数成功后保存请求和字段映射，后续由宿主直接取数，不启动模型、不重写样式。先 inspect 获取 nodeId；使用已配置插件的真实 toolId 或内置免费 public_data_query。后者 args 原样保留成功 query 的 operation、source、parameters_json 字符串，不填 URL 或凭据。recipe.requests 使用 toolId，节点 ID 必须是 inspect 返回的实际 nodeId，不能填模板名。内联 panel.artifact 是快照，不会自动绑定；要实际 bind 后 list 核实并 refresh 成功。recipe JSON: {requests:[{key:"quote",toolId:"t_...",args:{接口参数}}],mapping:{version:1,type:"market",variant:"metrics",title:"指标",asOf:{$from:"quote",$path:"data.date"},items:{$from:"quote",$each:"data.rows",$map:{label:{$path:"name"},value:{$path:"price",$as:"string"}}}},intervalMinutes:5}。路径为点分字段或数组下标；$each/$map 映射数组，$as 为 number/string，$scale 做单位换算，$digits:2 控制小数位（0–8，不使用 $round 或脚本），$prefix/$suffix 加单位；请求日期可填 {$date:{format:"yyyyMMdd|yyyy-MM-dd|yyyyMMdd000000",timezone:"Asia/Shanghai",offsetDays:-30}}。必须按真实响应字段映射，不能猜。intervalMinutes:0 仅手动；1–10080 为客户端运行时周期。失败保留旧数据。',
-    parameters:{action:{type:'string',required:true,enum:['templates','list','bind','refresh','configure']},nodeId:{type:'string'},recipe:{type:'string',description:'bind 使用的 JSON 对象字符串，记录请求和 mapping，无脚本或凭据。'},intervalMinutes:{type:'number'},enabled:{type:'boolean'}},
+    parameters:{action:{type:'string',required:true,enum:['templates','list','bind','refresh','configure']},nodeId:{type:'string'},recipe:{type:'string',description:'bind 使用的 JSON 对象字符串，记录请求和 mapping，无脚本或凭据。可选 sources:[{id,name,requests,mapping}] 保存兼容的完整备用方案；sourceId 选择方案。'},intervalMinutes:{type:'number'},enabled:{type:'boolean'},sourceId:{type:'string',description:'configure 切换 list 中已登记的完整来源方案 ID，切换后 refresh 确认成功。'}},
     output:{schema:{type:'string'},render:(_args,result)=>[{type:'text',text:result}]},
     execute:async(args,exec)=>{
       if(args.action==='templates')return JSON.stringify(COMPONENT_TEMPLATES.map(t=>({...t,...(t.type==='market'?{schema:marketPanelSchema(t.variant)}:{})})))
       await guardCanvas(exec,'inspect',{})
       const sessionId=canvasSession(exec)
       if(typeof sessionId!=='string'||!sessionId)throw Error('当前执行未绑定画板。')
-      const input={action:args.action,nodeId:args.nodeId,...(args.action==='bind'?{recipe:args.recipe}:{}),...(args.action==='configure'?{settings:{...(args.intervalMinutes!==undefined?{intervalMinutes:args.intervalMinutes}:{}),...(args.enabled!==undefined?{enabled:args.enabled}:{})}}:{})}
+      const input={action:args.action,nodeId:args.nodeId,...(args.action==='bind'?{recipe:args.recipe}:{}),...(args.action==='configure'?{settings:{...(args.intervalMinutes!==undefined?{intervalMinutes:args.intervalMinutes}:{}),...(args.enabled!==undefined?{enabled:args.enabled}:{}),...(args.sourceId!==undefined?{sourceId:args.sourceId}:{})}}:{})}
       return JSON.stringify(await callCanvas(sessionId,'data',input,exec.signal,{env,fetch:request}))
     }
   })))
