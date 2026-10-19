@@ -10,6 +10,7 @@
 - 组件底栏同时显示数据源名称与刷新频率或当前状态，更新失败、暂停时也保留来源，悬停显示完整说明并使用小手光标。
 - 切换来源或刷新时保留组件布局和交互状态；部分取数失败时继续显示上次有效数据及图表，并保留原有来源和成交量单位。
 - 优化数据设置中下拉箭头的间距与深浅主题显示，来源选项只显示来源名称，保留键盘操作和关闭后的焦点恢复。
+- 修复启动页被主界面样式覆盖导致白色标志出现在浅色背景上的问题，深浅外观均保持清晰对比并保留启动动效。
 
 ## English
 
@@ -19,6 +20,7 @@
 - Component footers show the source alongside the refresh interval or current status, retain source names on errors and pauses, and provide full details on hover with a pointer cursor.
 - Preserve component layout and interaction state while switching sources or refreshing. Partial fetch failures retain valid previous data and charts, including their source and volume units.
 - Refine dropdown arrow spacing and light and dark appearances in data settings. Source options show source names, with keyboard operation and focus restoration preserved.
+- Fix desktop shell styles overriding the startup background, keeping the logo readable in light and dark appearances while preserving the startup animation.
 
 ## 发布范围与校验边界
 

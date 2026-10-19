@@ -27,6 +27,9 @@ const desktopShellStyles = `
 `
 
 export function mountDesktopShellStyles(document: Document): void {
+  // The packaged startup page owns its media-query theme before Harness loads.
+  // Shell body overrides otherwise put a white logo on a light background.
+  if (document.documentElement.hasAttribute('data-ework-splash')) return
   if (document.getElementById(DESKTOP_SHELL_STYLE_ID)) return
 
   const style = document.createElement('style')
