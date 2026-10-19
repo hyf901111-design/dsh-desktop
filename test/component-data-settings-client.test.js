@@ -20,6 +20,7 @@ it('opens the owning quote settings from its source, switches provider and persi
  expect(dialog.querySelector('dl').textContent).toContain('2026/10/19')
  const source=dialog.querySelector('select[aria-label="数据源"]'),frequency=dialog.querySelector('select[aria-label="更新频率"]')
  expect([...source.options].map(o=>o.value)).toEqual(['default','backup'])
+ expect(source.textContent).not.toContain('备用')
  await f.event('change',Object.assign(source,{value:'backup'}))
  expect(spec().dataSource).toBe('backup');expect(bridge.request.mock.calls.at(-1)[0].source).toBe('backup')
  const count=bridge.request.mock.calls.length
