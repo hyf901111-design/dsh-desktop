@@ -2,10 +2,11 @@ import {networkFetch} from '../integrations/adapters/network-policy'
 import {normalizeFinancialBars} from './widget-data'
 import {financialIndexCatalog} from '../../../packages/dsh-research-task-runtime/financial-index-catalog.js'
 import {parsePublicIndexChart} from './index-data'
+import {queryBackupFinancialWidget} from './backup-widget-data'
 
 type Row=Record<string,any>
 type SymbolRef={code:string;market:string;name:string}
-const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com','https://query1.finance.yahoo.com']
+const origins=['https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com','https://query1.finance.yahoo.com','https://query2.finance.yahoo.com','https://quotes.sina.cn','https://push2.eastmoney.com','https://www.cninfo.com.cn']
 const number=(value:unknown):number|null=>typeof value==='number'&&Number.isFinite(value)?value:typeof value==='string'&&value.trim()&&Number.isFinite(Number(value))?Number(value):null
 const unavailable=()=>Error('公开数据源暂不可用，请稍后重试')
 const tradingDate=(value:string)=>{
@@ -17,7 +18,7 @@ const quoteCode=(code:string)=>code.replace(/\.(?:OQ|N)$/,'')
 const symbolId=(s:SymbolRef)=>s.market.toLowerCase()+(s.market==='US'?quoteCode(s.code):s.code)
 const validSymbol=(s:any)=>s&&typeof s.code==='string'&&(s.market==='INDEX'?financialIndexCatalog().some(e=>e.symbol.market==='INDEX'&&e.symbol.code===s.code):['SH','SZ','BJ','HK','US'].includes(s.market)&&(s.market==='US'?/^[A-Z][A-Z0-9.^-]{0,19}$/.test(s.code):new RegExp('^\\d{'+(s.market==='HK'?5:6)+'}$').test(s.code)))
 const validQuery=(q:any)=>{
- if(!q||!['search','quotes','history','news','announcements'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh'].includes(k))||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
+ if(!q||!['search','quotes','history','news','announcements'].includes(q.action)||Object.keys(q).some(k=>!['action','query','symbols','period','adjustment','asset','refresh','source'].includes(k))||q.source!==undefined&&!['default','backup'].includes(q.source)||q.refresh!==undefined&&typeof q.refresh!=='boolean'||q.asset!==undefined&&!['index','stock'].includes(q.asset)||q.query!==undefined&&(typeof q.query!=='string'||q.query.length>100||/[\u0000-\u001f]/.test(q.query)))throw Error('金融组件请求参数无效')
  if(['quotes','history','announcements'].includes(q.action)&&(!Array.isArray(q.symbols)||q.symbols.length>200||q.symbols.some((s:any)=>!validSymbol(s))))throw Error('证券参数无效')
  if(q.symbols?.some((s:any)=>s.market==='INDEX')&&(q.action!=='quotes'||q.asset!=='index'))throw Error('指数请求参数无效')
  if(q.action==='announcements'&&q.symbols.length!==1)throw Error('公告证券参数无效')
@@ -53,10 +54,10 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
   if(pending.has(key)){const value=await pending.get(key)!;check();return structuredClone(value)}
   const work=(async()=>{
    const signal=AbortSignal.timeout(25000)
-   const get=async(url:URL|string,gbk=false)=>{
+   const get=async(url:URL|string,gbk=false,body?:URLSearchParams)=>{
     check();signal.throwIfAborted()
     let response:Response
-    try{response=await fetcher(url,{method:'GET',redirect:'error',headers:{accept:'application/json, text/plain, */*','user-agent':'EWork Odyssey','referer':new URL(url).hostname.includes('gtimg')?'https://gu.qq.com/':new URL(url).hostname.includes('eastmoney.com')?'https://data.eastmoney.com/':'https://finance.sina.com.cn/'},signal})}catch{check();throw unavailable()}
+    try{response=await fetcher(url,{method:body?'POST':'GET',...(body?{body,headers:{accept:'application/json, text/plain, */*','content-type':'application/x-www-form-urlencoded','user-agent':'EWork Odyssey','referer':'https://www.cninfo.com.cn/'}}:{headers:{accept:'application/json, text/plain, */*','user-agent':'EWork Odyssey','referer':new URL(url).hostname.includes('gtimg')?'https://gu.qq.com/':new URL(url).hostname.includes('eastmoney.com')?'https://data.eastmoney.com/':'https://finance.sina.com.cn/'}}),redirect:'error',signal})}catch{check();throw unavailable()}
     check();if(!response.ok){await response.body?.cancel();throw unavailable()}
     const reader=response.body?.getReader();if(!reader)throw unavailable()
     const chunks:Uint8Array[]=[];let size=0
@@ -64,7 +65,7 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
     check();const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length}
     return new TextDecoder(gbk&&!/charset\s*=\s*utf-?8/i.test(response.headers.get('content-type')??'')?'gb18030':'utf-8').decode(bytes)
    }
-   const json=async(url:URL|string)=>{try{return JSON.parse(await get(url))}catch(error){check();if(error instanceof Error&&/暂不可用|数据过多/.test(error.message))throw error;throw Error('公开数据格式暂不可用，请稍后重试')}}
+   const json=async(url:URL|string,body?:URLSearchParams)=>{try{return JSON.parse(await get(url,false,body))}catch(error){check();if(error instanceof Error&&/暂不可用|数据过多/.test(error.message))throw error;throw Error('公开数据格式暂不可用，请稍后重试')}}
    const rawQuotes=async(symbols:SymbolRef[])=>{
     const rows=new Map<string,string[]>();let failure:unknown
     for(let i=0;i<symbols.length;i+=50){
@@ -125,7 +126,8 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
     return {symbol:s,bars,source:'腾讯财经',basis:({none:'不复权',forward:'前复权',backward:'后复权'} as Row)[adjustment],volumeUnit:['HK','US'].includes(s.market)?'股':'手',nativePeriod:period!=='1y'}
    }
    let result:Row
-   if(q.action==='quotes'){
+   if(q.source==='backup'&&['quotes','history','announcements'].includes(q.action))result=await queryBackupFinancialWidget(q,{text:get,json,check,sinaQuotes,parseSinaQuote})
+   else if(q.action==='quotes'){
     const values=new Map<string,Row>(),missing=new Map<string,Row>();let rows=new Map<string,string[]>(),primaryError:Error|undefined
     const domestic=q.symbols.filter((s:SymbolRef)=>s.market!=='INDEX'),global=q.symbols.filter((s:SymbolRef)=>s.market==='INDEX')
     try{if(domestic.length)rows=await rawQuotes(domestic)}catch(error){check();primaryError=error as Error}
@@ -174,8 +176,8 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
      if(!/^AN\d{14,24}$/.test(id)||!title||!day||seen.has(id))return [];seen.add(id)
      return [{id,title:title.slice(0,1000),date:day,category:Array.isArray(r.columns)?r.columns.map((c:Row)=>plain(c.column_name)).filter(Boolean).join(' · ').slice(0,120):'',url:'https://data.eastmoney.com/notices/detail/'+code+'/'+id+'.html'}]
     }).sort((a:Row,b:Row)=>b.date.localeCompare(a.date)).slice(0,30)}
-   }else if(q.query?.trim()){
-    const url=new URL('https://search-api-web.eastmoney.com/search/jsonp');url.searchParams.set('cb','ework');url.searchParams.set('param',JSON.stringify({uid:'',keyword:q.query.trim(),type:['cmsArticle'],client:'web',clientType:'web',clientVersion:'curr',param:{cmsArticle:{searchScope:'default',sort:'latest',pageIndex:1,pageSize:20,preTag:'',postTag:''}}}))
+   }else if(q.source==='backup'?!q.query?.trim():q.query?.trim()){
+    const url=new URL('https://search-api-web.eastmoney.com/search/jsonp');url.searchParams.set('cb','ework');url.searchParams.set('param',JSON.stringify({uid:'',keyword:q.query?.trim()||'财经',type:['cmsArticle'],client:'web',clientType:'web',clientVersion:'curr',param:{cmsArticle:{searchScope:'default',sort:'latest',pageIndex:1,pageSize:20,preTag:'',postTag:''}}}))
     const text=(await get(url)).trim(),match=text.match(/^ework\(([\s\S]*)\);?$/);let value:Row
     try{value=JSON.parse(match?.[1]??'')}catch{throw Error('新闻搜索数据暂不可用')}
     if(value.code!==0||!Array.isArray(value.result?.cmsArticle))throw unavailable()
@@ -188,7 +190,8 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
     const value=await json(url);if(value.result?.status?.code!==0||!Array.isArray(value.result.data))throw unavailable()
     result={source:'新浪财经',news:value.result.data.flatMap((r:Row)=>{
      const title=plain(r.title),seconds=number(r.ctime),url=safeLink(r.url)
-     return title&&seconds!==null&&seconds>=946656000&&seconds<4102416000&&url?[{id:String(r.docid??url),title:title.slice(0,1000),source:plain(r.media_name)||'新浪财经',time:new Date(seconds*1000).toISOString(),url,summary:plain(r.summary).slice(0,1000)}]:[]
+     const terms=q.source==='backup'?q.query?.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean):null,matched=!terms?.length||terms.some((term:string)=>(title+' '+plain(r.summary)).toLocaleLowerCase().includes(term))
+     return matched&&title&&seconds!==null&&seconds>=946656000&&seconds<4102416000&&url?[{id:String(r.docid??url),title:title.slice(0,1000),source:plain(r.media_name)||'新浪财经',time:new Date(seconds*1000).toISOString(),url,summary:plain(r.summary).slice(0,1000)}]:[]
     })}
    }
    if(result.news){const seen=new Set<string>();result.news=result.news.sort((a:Row,b:Row)=>Date.parse(b.time)-Date.parse(a.time)).filter((n:Row)=>{if(seen.has(n.id))return false;seen.add(n.id);return true}).slice(0,20)}

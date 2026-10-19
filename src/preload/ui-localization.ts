@@ -3,12 +3,13 @@ import { integrationUiCopy } from './integration-ui-copy'
 
 // Preload UI and portaled plugin controls share the application's selected locale,
 // rather than navigator.language. Never replace elements or translate user content.
-const surfaces = '.ig-root,.ig-overlay,.st-root,.st-detail,.st-dialog,.st-menu,.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description],.ew-financial-widget,.ew-financial-connections,.ew-grid-menu,.ew-financial-suggestions,[data-ui-system-title]'
+const surfaces = '.odyssey-data-settings,.ig-root,.ig-overlay,.st-root,.st-detail,.st-dialog,.st-menu,.srb-bubble,.srb-notification,.dsh-paperclip-tip,.rScV5Q_previewPlaceholder,.odyssey-subagent-panel-error,button,[role="tab"],[role="menu"],[role="tooltip"],.sherlock-account-page,.sherlock-account-menu,.sherlock-auth-signature,.srb-dialog,.srb-popover,.srb-notifications,.srb-section,[data-research-empty-state],.sRp_emptyState,.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_voiceFeedback,[data-research-global-toolbar],[data-research-create-popover],[data-research-generation-description],.ew-financial-widget,.ew-financial-connections,.ew-grid-menu,.ew-financial-suggestions,[data-ui-system-title]'
 const financialContent = '.ew-watch-name,.ew-news-title,.ew-news-summary,.ew-news-source,.ew-financial-suggestions [role="option"]'
 const preserved = '.ig-market-card h2,.ig-market-card>p,.ig-detail-identity h2,.ig-capability strong,.ig-capability span,.ig-preview,.ig-skill-preview>h2,.ig-skill-preview>p,.ig-skill-preview li,.ig-api-tool strong,.ig-api-tool p,.rScV5Q_voiceAccessible,script,style,textarea,input,[contenteditable],[data-ui-preserve],.odyssey-nav-title,.wSkVaW_crumb,.rScV5Q_nodeTitleText,.srb-member-identity strong,.srb-member-avatar,.srb-board-name,.sherlock-account-profile strong,.sherlock-account-menu-identity strong,.sherlock-account-label,[data-research-artifact-content]:not(:has(.rScV5Q_containerDraft,.rScV5Q_generationFailure,.rScV5Q_previewPlaceholder,.ew-financial-widget)),'+financialContent
 export function translateUiCopy(value: string, context?: Element): string {
  const key=value.trim(), translated=(context?.closest('.ig-root,.ig-overlay')?integrationUiCopy[key]:undefined)??englishUiCopy[key]
  if(translated)return value.replace(key,translated)
+ if(key.endsWith(' · 备用'))return value.replace(key,translateUiCopy(key.slice(0,-' · 备用'.length),context)+' · Backup')
  if(key.includes(' / ')&&/(?:腾讯财经|新浪财经|东方财富)/.test(key))return value.replace(key,key.split(' / ').map(part=>translateUiCopy(part,context)).join(' / '))
  if(key.includes('\n'))return value.replace(key,key.split('\n').map(part=>translateUiCopy(part,context)).join('\n'))
  if(key.includes(' · ')&&/(?:行情|资讯|公告|来源：|时刻|每60秒刷新)/.test(key))return value.replace(key,key.split(' · ').map(part=>translateUiCopy(part,context)).join(' · '))
@@ -61,7 +62,7 @@ export function translateUiCopy(value: string, context?: Element): string {
   [/^已整理 (\d+) 个组件$/,(_m,n)=>`Arranged ${n} ${n==='1'?'component':'components'}`],
   [/^(\d+) (秒|分钟|小时|天)前$/,(_m,n,u)=>`${n} ${{秒:'second',分钟:'minute',小时:'hour',天:'day'}[u]}${n==='1'?'':'s'} ago`],
   [/^展开其余 (\d+) 个看板$/,(_m,n)=>`Show ${n} more ${n==='1'?'board':'boards'}`],
-  [/^每 (\d+) 分钟$/,(_m,n)=>`Every ${n} ${n==='1'?'minute':'minutes'}`],
+  [/^每 (\d+) (分钟|小时)(刷新)?$/,(_m,n,u,refresh)=>`${refresh?'Refresh every':'Every'} ${n} ${u==='分钟'?'minute':'hour'}${n==='1'?'':'s'}`],
   [/^(每天|工作日) (\d{1,2}:\d{2})$/,(_m,f,t)=>`${f==='每天'?'Daily':'Weekdays'} ${t}`],
   [/^每周([日一二三四五六]) (\d{1,2}:\d{2})$/,(_m,d,t)=>`Every ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']['日一二三四五六'.indexOf(d)]} ${t}`],
   [/^星期([日一二三四五六])$/,(_m,d)=>['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']['日一二三四五六'.indexOf(d)]!],
