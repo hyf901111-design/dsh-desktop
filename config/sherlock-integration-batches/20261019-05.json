@@ -9,45 +9,53 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "规划提速、真实进度反馈与规划卡按钮修复",
+        "featureName": "补齐小时排期与完整预警并修复旧量价开合迁移",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4",
-        "tipCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
+        "baseCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
+        "tipCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
         "commits": [
           {
-            "commit": "bf0c54434b6a936b22b5476f0dc3d5cf77473ffc",
+            "commit": "3a7d9498af74563d9e4a7ecc0ec280b1a9235878",
             "parents": [
-              "77025c4341d1cd9f152cd5aefb4e5acc302aa7b4"
+              "cd8f301457987ff59f3869f8fd5edf8c92eb0576"
             ],
-            "subject": "修复：量价明细默认展开并统一组件链接右屏直达"
+            "subject": "修复：量价默认展开兼容旧交互记录并保留后续开合选择"
           },
           {
-            "commit": "8b24fd06927fd209ac578d7cc5dcc2cff2307e60",
+            "commit": "55435b2bcd2991f09a596b627d5b0e0d9f77f201",
             "parents": [
-              "bf0c54434b6a936b22b5476f0dc3d5cf77473ffc"
+              "3a7d9498af74563d9e4a7ecc0ec280b1a9235878"
             ],
-            "subject": "修复：分离规划卡重试关闭按钮并补充实时执行反馈"
+            "subject": "补齐日内跨夜甘特排期并保留预警完整预案"
           },
           {
-            "commit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
+            "commit": "086638526a93280bf14c9d41b5da61261929e5dd",
             "parents": [
-              "8b24fd06927fd209ac578d7cc5dcc2cff2307e60"
+              "55435b2bcd2991f09a596b627d5b0e0d9f77f201"
             ],
-            "subject": "优化工作台首次规划预算并延后生成领域面板"
+            "subject": "测试：按当前组件规范版本校验预警与审批生成提示"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/design/openterminal-style-trial.md"
+            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/gantt-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/gantt-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
           },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/market-price-volume.js"
           },
           {
             "status": "M",
@@ -58,24 +66,16 @@
             "path": "packages/dsh-research-task-runtime/workbench-plan.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/conversation-browser-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
             "status": "A",
-            "path": "scripts/lib/research-planning-feedback.mjs"
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workflow-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workflow-template-contract.js"
           },
           {
             "status": "M",
@@ -83,47 +83,19 @@
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/references/openterminal-layouts.md"
-          },
-          {
-            "status": "M",
-            "path": "test/compact-execution-status.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/openterminal-price-volume-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/openterminal-price-volume.test.js"
+            "path": "test/component-interaction-state.test.js"
           },
           {
             "status": "A",
-            "path": "test/research-planning-controls-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-planning-feedback.test.js"
+            "path": "test/gantt-intraday.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-source-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-deferred.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-execution-policy.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/workbench-planning-phase.test.js"
           },
           {
             "status": "M",
-            "path": "test/workbench-refresh.test.js"
+            "path": "test/workflow-template.test.js"
           }
         ],
         "checks": [
@@ -132,27 +104,24 @@
               "npx",
               "vitest",
               "run",
-              "test/research-planning-feedback.test.js",
-              "test/research-planning-controls-browser.test.js",
-              "test/research-creation-progress.test.js",
-              "test/compact-execution-status.test.ts",
+              "test/gantt-intraday.test.js",
+              "test/workflow-template.test.js",
               "test/workbench-deferred.test.js",
               "test/workbench-planning-phase.test.js",
               "test/workbench-execution-policy.test.js",
-              "test/workbench-public-data.test.js",
-              "test/workbench-live-presets.test.js",
+              "test/component-interaction-state.test.js",
               "test/openterminal-price-volume-browser.test.js",
-              "test/openterminal-price-volume.test.js",
               "test/workbench-refresh.test.js",
-              "test/research-source-browser.test.ts",
+              "test/research-planning-feedback.test.js",
+              "test/research-planning-controls-browser.test.js",
               "test/bundled-component-skill.test.js",
               "test/integration-bundled-skill.test.js",
               "--testTimeout=20000"
             ],
             "outcome": "passed",
-            "summary": "15个相关文件147项通过",
-            "verifiedCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
-            "completedAt": "2026-10-19T10:11:30.026498Z",
+            "summary": "12个相关文件121项通过",
+            "verifiedCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
+            "completedAt": "2026-10-19T10:34:19.105062Z",
             "timeoutMs": 120000
           },
           {
@@ -163,8 +132,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
-            "completedAt": "2026-10-19T10:11:30.026498Z",
+            "verifiedCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
+            "completedAt": "2026-10-19T10:34:19.105062Z",
             "timeoutMs": 180000
           },
           {
@@ -175,87 +144,27 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
-            "completedAt": "2026-10-19T10:11:30.026498Z",
+            "verifiedCommit": "086638526a93280bf14c9d41b5da61261929e5dd",
+            "completedAt": "2026-10-19T10:34:19.105062Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "生产CSS下四模式三种宽度的重试关闭独立点击通过；真实客户端旧艺术节任务12分25秒仍未受理已停止，保留需求待本次集成包复测；尚不声称达到1至2分钟。"
+          "summary": "真实客户端规划54秒受理10卡，停止与重试按钮独立、原Max保留，来源一次点击右屏访问已验；抓到Gantt26行容量与alerts详情拒绝两个缺口，两份原始业务数据已在新校验下深相等重放通过；本次包待原位重试验收。"
         },
         "acceptanceCriteria": [
-          "规划卡重试和关闭独立且无重叠",
-          "未受理规划显示真实响应及工具状态，历史结束任务不假报进行中",
-          "自定义模拟工作台首轮只提交简短计划，原需求与共享约束传递到真实独立生成任务",
-          "同模型新选择优先且阶段预算不修改持久用户偏好",
-          "自动和手动尺寸重试保留未编辑的完整模拟合同，业务修改不误继承",
-          "量价明细默认展开且来源链接点击直接进入右侧浏览器"
+          "Gantt合法小时与跨午夜按连续时间轴显示，完整保留有界120条和日期旧语义",
+          "alerts完整预案可展开且未知字段报错准确",
+          "量价旧toggle日志不反转新展开默认，后续用户选择跨重开保持",
+          "保留已验证的规划提速、元数据进度与重试关闭布局"
         ],
         "risks": [
           "仅本地可撤回实验，不接受晋升、不公开发布",
-          "真实模型规划时间和领域生成效果待集成包现场验收",
-          "共享预算与日期逐卡传递但没有新增跨卡数值自动验算器"
+          "新原生包两张失败卡原位重试与旧量价状态迁移待验收",
+          "旧场景中明确标注的2025年模拟日期保持，新增计划才使用宿主日期锚"
         ],
-        "generatedAt": "2026-10-19T10:11:30.026498Z"
-      },
-      "merged": {
-        "mergeCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
-        "verificationCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
-            "completedAt": "2026-10-19T10:12:08.147Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
-            "completedAt": "2026-10-19T10:12:08.147Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "7021e9902e93b21b15bd080f21ac8f897016a14b",
-            "completedAt": "2026-10-19T10:12:08.147Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-19T10:12:08.147Z"
+        "generatedAt": "2026-10-19T10:34:19.105062Z"
       }
     }
   ],
