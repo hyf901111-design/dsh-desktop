@@ -102,6 +102,21 @@ describe('desktop Research canvas storage', () => {
     }
   })
 
+  it('persists the global Bloomberg trial across restarts without rewriting each board style', () => {
+    const userData = temporaryUserData(), key = 'ework.research.openterminal-trial.v1'
+    const original = new ResearchCanvasStorage(userData), boardKey = 'ework.research.presentation.v1:trial-board'
+    const dark = JSON.stringify({ version: 1, mode: 'dark' })
+    expect(original.setItem(boardKey, dark)).toBe(true)
+    expect(original.setItem(key, 'enabled')).toBe(true)
+    const restarted = new ResearchCanvasStorage(userData)
+    expect(restarted.getItem(key)).toBe('enabled'); expect(restarted.getItem(boardKey)).toBe(dark)
+    for (const value of ['true', 'false', '', 'enabled-extra', '{}']) expect(restarted.setItem(key, value)).toBe(false)
+    expect(restarted.setItem(key + ':other', 'enabled')).toBe(false)
+    expect(restarted.getItem(key)).toBe('enabled')
+    expect(restarted.setItem(key, 'disabled')).toBe(true)
+    expect(new ResearchCanvasStorage(userData).getItem(key)).toBe('disabled')
+  })
+
   it('persists the bounded canvas viewport across a desktop storage restart', () => {
     const userData = temporaryUserData()
     const key = 'sherlock.research.canvas.viewport.v1:fund-board'
