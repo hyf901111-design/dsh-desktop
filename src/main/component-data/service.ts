@@ -43,7 +43,10 @@ export async function createComponentDataService(options:{file:string;integratio
  const engine=new ComponentDataRefresh({owner:options.owner,
   onChange:(records)=>{
    const rows=records.filter(row=>row.ownerAccountId===options.owner()),sessions=new Set(rows.map(row=>row.sessionId))
-   for(const sessionId of sessions)options.onStatusChange?.(sessionId,rows.filter(row=>row.sessionId===sessionId).map(row=>({nodeId:row.nodeId,status:row.status,lastSuccess:row.lastSuccess,successSequence:row.successSequence,dataAsOf:row.dataAsOf,enabled:row.enabled,intervalMinutes:row.intervalMinutes,viewPaused:row.enabled&&!engine.isVisible(sessionId)})))
+   for(const sessionId of sessions)options.onStatusChange?.(sessionId,rows.filter(row=>row.sessionId===sessionId).map(row=>{
+    const names=[...new Set(row.requests.map(request=>request.sourceName?.trim()).filter((name):name is string=>Boolean(name)))],selected=row.sources?.find(source=>source.id===row.sourceId)?.name?.trim()
+    return {nodeId:row.nodeId,status:row.status,lastSuccess:row.lastSuccess,successSequence:row.successSequence,dataAsOf:row.dataAsOf,enabled:row.enabled,intervalMinutes:row.intervalMinutes,sourceNames:names.length?names:selected?[selected]:[],viewPaused:row.enabled&&!engine.isVisible(sessionId)}
+   }))
   },
   load:async()=>{try{return JSON.parse(await readFile(options.file,'utf8'))}catch(error:any){if(error.code==='ENOENT')return [];throw error}},
   save:async(value:any)=>{await mkdir(dirname(options.file),{recursive:true});const tmp=options.file+'.'+randomUUID()+'.tmp';await writeFile(tmp,JSON.stringify(value),{encoding:'utf8',mode:0o600});await rename(tmp,options.file)},

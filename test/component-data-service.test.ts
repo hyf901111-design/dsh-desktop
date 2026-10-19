@@ -56,7 +56,8 @@ it('refreshes a builtin source every minute without MCP grants, pauses outside t
  const data={version:1,type:'kpi',title:'BTC',asOf:'Kraken · 报价时点未提供',items:[{label:'BTC/USD',value:'100'}]}
  let spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))!)
  const canvasExecute=vi.fn(async(call:any)=>{if(call.method==='apply'){spec=call.args.changes[0].fields.containerSpec;return {}}return {revision:'r',writable:true,nodes:[{id:'n',content:{containerSpec:spec},capabilities:{fields:{containerSpec:true}}}]}})
- const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,publicData:{validate,query},integrations:{} as any,
+ const onStatusChange=vi.fn()
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,publicData:{validate,query},integrations:{} as any,onStatusChange,
   rpc:async(method:string)=>({items:method==='session.list'?[{sessionId:'s',cwd:'/workspace'}]:[{workspaceId:'w',path:'/workspace'}]}),canvas:{bind:()=>{},execute:canvasExecute} as any})
  ;(service.engine as any).options.now=()=>at
  try{
@@ -70,6 +71,9 @@ it('refreshes a builtin source every minute without MCP grants, pauses outside t
   expect(service.engine.list('s')[0]!.status).toBe('unchanged')
   query.mockRejectedValueOnce(Error('来源暂不可用'));at+=60000;service.engine.setVisible('s',true);await service.engine.tick()
   expect(service.engine.list('s')[0]!.status).toBe('error');expect(spec).toEqual(first)
+  const pushed=onStatusChange.mock.calls.at(-1)![1][0]
+  expect(pushed).toMatchObject({nodeId:'n',status:'error',sourceNames:['Kraken']})
+  expect(pushed).not.toHaveProperty('requests');expect(pushed).not.toHaveProperty('mapping')
   expect(componentRefreshBindings(service.engine.list('s')[0]!.requests)).toEqual([])
  }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
 })
