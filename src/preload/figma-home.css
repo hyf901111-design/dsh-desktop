@@ -48,10 +48,15 @@ body:has([data-odyssey-panel-right="open"]) #root [data-dsh-frame] > [data-pane=
 [data-odyssey-home-theme-background] canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 [data-odyssey-home-theme-background][hidden], [data-odyssey-theme-dock][hidden] { display:none !important; }
 [data-odyssey-theme-dock] {
+  --theme-dock-bottom:24px;
+  --theme-dock-scale:1;
+  --theme-strip-scale:clamp(.25, calc((100cqw - 24px) / 292px), 1);
   position:absolute;
   left:50%;
-  bottom:24px;
-  transform:translateX(-50%);
+  bottom:var(--theme-dock-bottom);
+  transform:translateX(-50%) scale(var(--theme-dock-scale));
+  transform-origin:center bottom;
+  transition:bottom 520ms cubic-bezier(.16,1.15,.3,1);
   width:min(368px, calc(100% - 24px));
   height:64px;
   display:flex;
@@ -61,11 +66,23 @@ body:has([data-odyssey-panel-right="open"]) #root [data-dsh-frame] > [data-pane=
   -webkit-app-region:no-drag;
   user-select:none;
 }
+[data-odyssey-theme-dock][data-dock-state="collapsed"] {
+  /* Place the current card's upper third above the pane edge at every scale. */
+  bottom:calc(var(--theme-dock-scale) * (-32px - (28px - 56px / 3) * var(--theme-strip-scale)));
+  transition-timing-function:cubic-bezier(.22,.8,.25,1);
+}
+[data-odyssey-theme-dock]::after {
+  /* Keep the revealed edge hovered as the cards lift away from the pointer. */
+  content:"";
+  position:absolute;
+  left:0; right:0; top:100%;
+  height:calc(var(--theme-dock-bottom) / var(--theme-dock-scale));
+}
 .odyssey-theme-strip {
   position:relative;
   width:284px; height:56px;
   /* Include the glass overhang when both sidebars leave a narrow home pane. */
-  transform:scale(clamp(.25, calc((100cqw - 24px) / 292px), 1));
+  transform:scale(var(--theme-strip-scale));
 }
 [data-odyssey-theme-dock] button {
   position:absolute;
@@ -96,14 +113,14 @@ body:has([data-odyssey-panel-right="open"]) #root [data-dsh-frame] > [data-pane=
 [data-home-theme-position="next"] .odyssey-theme-edge-blur { opacity:1; mask-image:linear-gradient(to left,#000 8%,transparent 92%); -webkit-mask-image:linear-gradient(to left,#000 8%,transparent 92%); }
 [data-odyssey-theme-dock] button:focus-visible { outline:2px solid var(--ds-focus-ring,#578cf5); outline-offset:7px; }
 @container (height < 520px) {
-  [data-odyssey-theme-dock] { bottom:12px; transform:translateX(-50%) scale(.88); transform-origin:center bottom; }
+  [data-odyssey-theme-dock] { --theme-dock-bottom:12px; --theme-dock-scale:.88; }
 }
 @container (height < 420px) {
-  [data-odyssey-theme-dock] { bottom:8px; transform:translateX(-50%) scale(.78); }
+  [data-odyssey-theme-dock] { --theme-dock-bottom:8px; --theme-dock-scale:.78; }
   .wSkVaW_root[data-odyssey-page="home"] > [data-center-composer-host] { padding-bottom:72px; }
 }
 @media (prefers-reduced-motion:reduce) {
-  [data-odyssey-theme-dock] button, .odyssey-theme-card-body, .odyssey-theme-edge-blur { transition:none; }
+  [data-odyssey-theme-dock], [data-odyssey-theme-dock] button, .odyssey-theme-card-body, .odyssey-theme-edge-blur { transition:none; }
 }
 /* A stable tab-like backing keeps the panel entry legible over every shader. */
 body:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odyssey-subagent-panel] *)) [data-dsh-panel-host][data-odyssey-panel-right="closed"] .t8lSSG_toggleButton {

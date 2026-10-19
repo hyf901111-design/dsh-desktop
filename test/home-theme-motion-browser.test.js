@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url'
 import { PNG } from 'pngjs'
 
 let browser, script, css
-const evidence = '/tmp/ework-home-theme-motion-20261015'
+const evidence = '/tmp/ework-home-theme-motion-20261019'
 beforeAll(async () => {
   const native = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
   const base = [...native.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match => JSON.parse(match[1])).join('\n')
@@ -41,8 +41,12 @@ beforeAll(async () => {
 }, 30000)
 afterAll(async () => browser?.close())
 
-async function fixture({ dark = false, reduced = false, theme = 'default', width = 900, height = 700 } = {}) {
+async function fixture({ dark = false, reduced = false, theme = 'default', width = 900, height = 700, clock = false } = {}) {
   const page = await browser.newPage({ viewport: { width: Math.max(1000, width + 100), height: Math.max(800, height + 60) }, reducedMotion: reduced ? 'reduce' : 'no-preference' })
+  if (clock) {
+    const time = new Date('2026-10-19T00:00:00Z')
+    await page.clock.install({ time }); await page.clock.pauseAt(time)
+  }
   await page.route('**/*', route => route.abort())
   await page.route('http://odyssey.test/', route => route.fulfill({ contentType: 'text/html; charset=utf-8', body: `<!doctype html><meta charset="utf-8"><style>${css}</style><style>
     html,body{margin:0;height:100%;font-family:system-ui}body{background:#c8cdcf}body[data-ds-dark-theme]{background:#242729}
@@ -82,6 +86,59 @@ const summary = buffer => {
 }
 
 describe('real homepage theme motion and interaction', () => {
+  it.each([[900, 700, false, false], [280, 400, true, false], [680, 500, true, true]])('auto-hides to one third and rebounds on hover at %ix%i (dark: %s, reduced: %s)', async (width, height, dark, reduced) => {
+    const page = await fixture({ width, height, dark, reduced, clock: true })
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    const bounds = () => page.evaluate(() => {
+      const pane = document.querySelector('.pI_x6G_centerCol').getBoundingClientRect()
+      const card = document.querySelector('[data-home-theme-position="current"]').getBoundingClientRect()
+      return { pane: pane.toJSON(), card: card.toJSON(), visible: (pane.bottom - card.top) / card.height }
+    })
+    try {
+      await page.clock.runFor(2999)
+      const expanded = await bounds()
+      expect(expanded.card.bottom).toBeLessThan(expanded.pane.bottom)
+      await page.screenshot({ path: `${evidence}/dock-${width}-expanded.png` })
+      await page.clock.runFor(601)
+      // The clock controls the idle timer; CSS transitions use compositor time.
+      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
+      const collapsed = await bounds()
+      expect(collapsed.visible).toBeCloseTo(1 / 3, 2)
+      await page.screenshot({ path: `${evidence}/dock-${width}-collapsed.png` })
+      // Keep the pointer at the exposed bottom edge while the cards move up.
+      // The hover area must continue down to that edge to avoid bouncing shut.
+      await page.mouse.move(collapsed.card.x + collapsed.card.width / 2, collapsed.pane.bottom - 3)
+      await page.clock.runFor(600)
+      await expect.poll(async () => (await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
+      await page.clock.runFor(4000)
+      expect((await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
+      await page.screenshot({ path: `${evidence}/dock-${width}-hover.png` })
+      await page.mouse.move(5, 5)
+      await page.clock.runFor(3600)
+      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
+      await current(page).focus()
+      await page.clock.runFor(4600)
+      await expect.poll(async () => (await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
+      await current(page).press('ArrowRight')
+      expect(await current(page).getAttribute('data-home-theme-id')).toBe('berber')
+      await page.locator('textarea').focus()
+      await page.clock.runFor(3600)
+      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
+      const entry = Number(await dock(page).getAttribute('data-entry-generation'))
+      await page.evaluate(() => window.themeMotion.surface('notes'))
+      await page.clock.runFor(4000)
+      expect(await dock(page).isVisible()).toBe(false)
+      await page.evaluate(() => window.themeMotion.surface())
+      await page.clock.runFor(2999)
+      expect(Number(await dock(page).getAttribute('data-entry-generation'))).toBe(entry + 1)
+      await expect.poll(async () => (await bounds()).card.top).toBeCloseTo(expanded.card.top, 1)
+      await page.clock.runFor(601)
+      await expect.poll(async () => (await bounds()).visible).toBeCloseTo(1 / 3, 2)
+      expect(errors).toEqual([])
+    } finally { await page.close() }
+  }, 30000)
+
   for (const theme of ['default', 'jarrick']) for (const dark of [false, true]) it(`matches the workspace chevron to its label and folder in ${theme} ${dark ? 'dark' : 'light'}`, async () => {
     const page = await fixture({ theme, dark, reduced: true })
     try {
