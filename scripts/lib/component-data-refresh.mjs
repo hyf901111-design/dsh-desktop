@@ -1,8 +1,9 @@
 import {ComponentDataSettingsPanel,componentDataSettingsCss} from './component-data-settings-panel.mjs';
 import {componentDataStatusDefinitions,componentDataStatusCss,patchComponentDataStatus} from './component-data-status.mjs';
 const begin='/* ODYSSEY_COMPONENT_DATA_START */',end='/* ODYSSEY_COMPONENT_DATA_END */';
-function openComponentData(sessionId,node,action='settings',trigger=null) {
-  window.dispatchEvent(new CustomEvent('sherlock:component-data-open',{detail:{sessionId,nodeId:node.id,title:node.title||node.containerSpec?.title||'组件',action,kind:node.containerSpec?.type,trigger,theme:trigger?.closest?.('[data-ework-grid]')?.dataset.workbenchStyle||trigger?.closest?.('[data-financial-theme]')?.dataset.financialTheme}}));
+export function openComponentData(sessionId,node,action='settings',trigger=null) {
+  const owner=trigger||document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');
+  window.dispatchEvent(new CustomEvent('sherlock:component-data-open',{detail:{sessionId,nodeId:node.id,title:node.title||node.containerSpec?.title||'组件',action,kind:node.containerSpec?.type,trigger,theme:owner?.closest?.('[data-ework-grid]')?.dataset.workbenchStyle||owner?.closest?.('[data-financial-theme]')?.dataset.financialTheme}}));
 }
 function ComponentDataSettings({sessionId,canvasRoot}) {
  const [target,setTarget]=react.useState(null),[binding,setBinding]=react.useState(null),[error,setError]=react.useState(''),[busy,setBusy]=react.useState(false),[loading,setLoading]=react.useState(false);

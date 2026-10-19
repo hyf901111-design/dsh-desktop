@@ -134,7 +134,7 @@ function ResearchGenerationGrid({ moving }) {
       if (!width || !height) return
       scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
       canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale)
-      const mode=canvas.closest('[data-ework-grid]')?.dataset.workbenchStyle;dark=mode?mode==='dark':document.body.hasAttribute('data-ds-dark-theme');draw()
+      const mode=canvas.closest('[data-ework-grid]')?.dataset.workbenchStyle;dark=mode?['dark','openterminal'].includes(mode):document.body.hasAttribute('data-ds-dark-theme');draw()
     }
     const stop = () => { if (frame) cancelAnimationFrame(frame); frame = 0; last = 0 }
     const tick = time => {

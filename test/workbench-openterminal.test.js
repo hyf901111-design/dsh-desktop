@@ -41,7 +41,7 @@ it('生成组件的父子展示桥接收试用模板并使用深色，不接收�
  const w=new Window(),doc=w.document
  doc.body.innerHTML='<main data-ework-grid data-workbench-style="openterminal"><iframe></iframe></main>'
  const message=workbenchFramePresentation(doc.querySelector('iframe'))
- expect(message).toMatchObject({mode:'openterminal',controlTheme:'light'})
+ expect(message).toMatchObject({mode:'openterminal',controlTheme:'dark'})
  expect(validWorkbenchStyleMessage(message)).toBe(true)
  runInNewContext('('+installWorkbenchStyleMessages.toString()+')()',{
   addEventListener:w.addEventListener.bind(w),dispatchEvent:w.dispatchEvent.bind(w),document:doc,parent:w.parent,CustomEvent:w.CustomEvent,validWorkbenchStyleMessage,

@@ -17,7 +17,7 @@ async function mount(status:string,callbacks:any={}) {
   const win=new Window({url:'https://sherlock.local/'});vi.stubGlobal('window',win);vi.stubGlobal('document',win.document);vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true)
   const host=win.document.createElement('div');host.setAttribute('data-research-compact-chrome','');win.document.body.append(host)
   const style=win.document.createElement('style');style.textContent=canvasCss;win.document.head.append(style)
-  const root=createRoot(host),node={id:'manual',kind:'generated-container',title:'基金筛选与比较',containerPrompt:'筛选基金',width:240,height:620,x:120,y:310,sizeMode:'manual',generationStatus:status,generationTaskId:'task',generationEvents:[],generationStartedAt:Date.now()-18000}
+  const root=createRoot(host),node={id:'manual',kind:'generated-container',title:'基金筛选与比较',containerPrompt:'筛选基金',width:240,height:620,x:120,y:310,sizeMode:'manual',generationStatus:status,generationTaskId:'task',generationChildSessionId:'child-task',generationEvents:[],generationStartedAt:Date.now()-18000}
   const render=async(generationStatus=status)=>{await React.act(async()=>root.render(React.createElement(Process,{node:{...node,generationStatus},...callbacks})))}
   cleanups.push(async()=>{await React.act(async()=>root.unmount());await win.happyDOM.abort()})
   await render()

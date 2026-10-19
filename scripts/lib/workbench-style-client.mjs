@@ -26,8 +26,9 @@ export function createWorkbenchStyleState(storage,sessionId) {
 }
 
 export function workbenchFramePresentation(frame) {
- const root=frame?.closest('[data-ework-grid]'),controlTheme=frame?.ownerDocument?.body?.hasAttribute('data-ds-dark-theme')?'dark':'light'
- return {type:'sherlock-workbench-style',mode:root?.dataset.workbenchStyle||controlTheme,controlTheme}
+ const root=frame?.closest('[data-ework-grid]'),globalTheme=frame?.ownerDocument?.body?.hasAttribute('data-ds-dark-theme')?'dark':'light'
+ const mode=root?.dataset.workbenchStyle||globalTheme,controlTheme=mode==='openterminal'?'dark':globalTheme
+ return {type:'sherlock-workbench-style',mode,controlTheme}
 }
 export function sendWorkbenchFramePresentation(frame) {
  if(!frame?.contentWindow)return
@@ -60,7 +61,7 @@ export function useWorkbenchStyle({rootRef,workspace}) {
   let hydrated=false,stopTransition=()=>{}
   const sync=()=>{
    const globalDark=doc.body.hasAttribute('data-ds-dark-theme'),mode=workspace.getWorkbenchStyle?.()||(globalDark?'dark':'light')
-   const controlTheme=globalDark?'dark':'light'
+   const controlTheme=mode==='openterminal'||globalDark?'dark':'light'
    if(hydrated&&root.dataset.workbenchStyle!==mode){stopTransition();stopTransition=animateWorkbenchStyle(root,mode)}
    if(root.dataset.workbenchStyle!==mode||root.dataset.workbenchControlTheme!==controlTheme){
     root.dataset.workbenchStyle=mode;root.dataset.workbenchControlTheme=controlTheme
