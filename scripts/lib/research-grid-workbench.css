@@ -98,6 +98,7 @@ body [data-ework-grid] [data-research-preview-body]{border:0!important;border-ra
 body [data-ework-grid] [data-research-preview-body]:has(iframe[data-research-html-artifact]){padding:0!important}
 body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]:not([data-selected=true])::after{display:none!important}
 body [data-ework-grid] .odyssey-data-stamp{border:0!important;background:var(--grid-card)!important;color:var(--grid-muted)!important;font:400 11px/16px Inter,"Noto Sans SC",system-ui!important;padding:3px 10px!important;min-height:20px!important;cursor:default!important}
+body [data-ework-grid] button.odyssey-data-stamp:not(:disabled),body [data-ework-grid] button.odyssey-data-stamp:not(:disabled) *{cursor:pointer!important}
 /* The outline is outside the card's bounds: native WebContentsView surfaces
    paint above renderer overlays, but cannot cover this external edge. */
 @layer ework-workbench{

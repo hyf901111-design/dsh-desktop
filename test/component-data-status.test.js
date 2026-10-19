@@ -11,6 +11,22 @@ import {createRoot} from 'react-dom/client'
 
 const row=(nodeId,lastSuccess=1000,extra={})=>({nodeId,status:'success',lastSuccess,enabled:true,intervalMinutes:1,...extra})
 describe('component refresh status',()=>{
+ it('keeps active provider names through list and compact status pushes, including failures and pauses',()=>{
+  const store=createComponentDataStatusStore(),changed=vi.fn()
+  store.subscribe('s','a',changed)
+  store.publish('s',[row('a',1000,{intervalMinutes:1440,requests:[{sourceName:'通联 DataYes MCP / call_api'},{sourceName:'通联 DataYes MCP / fund_holdings'}]})])
+  const view=()=>componentDataStatusView(store.read('s','a'))
+  expect(view()).toMatchObject({source:'通联 DataYes',detail:'每 1440 分钟'})
+  expect(view().title).toContain('数据源：通联 DataYes MCP / call_api')
+  changed.mockClear()
+  store.publish('s',[row('a',1000,{intervalMinutes:1440,sourceNames:['通联 DataYes MCP / call_api','通联 DataYes MCP / fund_holdings']})])
+  expect(changed).not.toHaveBeenCalled()
+  store.publish('s',[row('a',1000,{intervalMinutes:1440,status:'error',sourceNames:['通联 DataYes MCP / call_api']})])
+  expect(view()).toMatchObject({source:'通联 DataYes',detail:'更新失败 · 保留上次数据'})
+  store.publish('s',[row('a',1000,{intervalMinutes:1440,enabled:false,sourceNames:['新浪财经 / quote']})])
+  expect(view()).toMatchObject({source:'新浪财经',detail:'已暂停'})
+  expect(view().title).not.toContain('DataYes')
+ })
  it('persists only the owning technical chart semantic state, preserving geometry and source while refusing stale or shared writes',()=>{
   const html='<script id="sherlock-template-data" type="application/json">{"templateId":"market.charting","version":"1"}</script>',revision=workbenchContentRevision(html)
   let nodes=[{id:'a',x:100,y:200,width:480,height:620,containerSpec:{type:'html',html},config:{interactionState:{version:'v',events:{}}}}],writable=true

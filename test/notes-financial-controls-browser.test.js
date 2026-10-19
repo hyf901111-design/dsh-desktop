@@ -119,6 +119,7 @@ it('opens shared source settings in notes, saves provider and timing, and stays 
  try{
   await page.evaluate(()=>{window.sourceRequests=[];const original=window.dshDesktop.financialWidget.request;window.dshDesktop.financialWidget.request=q=>{window.sourceRequests.push(q);return original(q)}})
   const entry=page.locator('button.ew-financial-provenance')
+  expect(await entry.evaluate(el=>[el,...el.querySelectorAll('span')].every(n=>getComputedStyle(n).cursor==='pointer'))).toBe(true)
   await entry.click();const dialog=page.getByRole('dialog',{name:'组件数据与自动更新'})
   await dialog.waitFor();expect(await dialog.getByRole('combobox',{name:'数据源',exact:true}).locator('option').count()).toBe(2)
   await dialog.getByRole('combobox',{name:'数据源',exact:true}).selectOption('backup')
@@ -138,6 +139,10 @@ it('opens shared source settings in notes, saves provider and timing, and stays 
    await page.evaluate(dark=>document.querySelector('.en-research').dataset.financialTheme=dark?'dark':'light',dark)
    await entry.click();await dialog.waitFor()
    const m=await dialog.evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,width:innerWidth,background:getComputedStyle(el).backgroundColor,overflow:el.scrollWidth-el.clientWidth,source:el.querySelector('[aria-label="数据源"]').value}})
+   const selects=await dialog.locator('select').evaluateAll(els=>els.map(el=>{const s=getComputedStyle(el);return {appearance:s.appearance,right:s.backgroundPositionX,paddingRight:parseFloat(s.paddingRight),image:s.backgroundImage}}))
+   expect(selects).toHaveLength(2)
+   for(const select of selects){expect(select.appearance).toBe('none');expect(select.right).toContain('14px');expect(select.paddingRight).toBeGreaterThanOrEqual(40);expect(select.image).toContain('data:image/svg+xml')}
+   expect(selects[0].right).toBe(selects[1].right)
    expect(m.left).toBeGreaterThanOrEqual(15);expect(m.right).toBeLessThanOrEqual(m.width-15);expect(m.bottom).toBeLessThanOrEqual(645);expect(m.overflow).toBeLessThanOrEqual(1);expect(m.source).toBe('backup');expect(m.background).toBe(dark?'rgb(36, 36, 36)':'rgb(255, 255, 255)')
    metrics.push({dark,width,...m});await page.screenshot({path:join(evidence,`data-settings-${dark?'dark':'light'}-${width}.png`)})
    await page.keyboard.press('Escape')
@@ -158,16 +163,21 @@ it('opens the corresponding generated workbench source panel and refreshes after
    const registry=new bundle.ResearchWorkspaceRegistry(storage),workspace=registry.for('source-browser'),node=workspace.createContainerDraft()
    workspace.setArtifacts([{...node,title:'沪深300行业配置',generationStatus:'completed',containerSpec:{version:1,type:'html',title:'沪深300行业配置',html:'<h2>沪深300行业配置</h2><p>来自已绑定接口</p><script id="sherlock-template-data" type="application/json">{"templateId":"market.metrics","version":"1"}</script>'}}])
    window.generatedSourceCalls=[];window.generatedBinding={nodeId:node.id,sourceId:'default',status:'error',error:'接口暂不可用',intervalMinutes:1,enabled:true,requests:[{sourceName:'通联 DataYes MCP / call_api'}],sources:[{id:'default',name:'通联 DataYes MCP'},{id:'backup',name:'已登记备用来源'}]}
-   window.dshDesktop.componentData={setVisible:async()=>{},request:async(sessionId,q)=>{window.generatedSourceCalls.push({sessionId,...q});if(q.action==='list')return [window.generatedBinding];if(q.action==='configure')Object.assign(window.generatedBinding,q.settings);if(q.action==='refresh')Object.assign(window.generatedBinding,{status:'success',error:'',lastSuccess:Date.now()});return {...window.generatedBinding}}}
+   window.dshDesktop.componentData={setVisible:async()=>{},request:async(sessionId,q)=>{window.generatedSourceCalls.push({sessionId,...q});if(q.action==='list')return [window.generatedBinding];if(q.action==='configure'){Object.assign(window.generatedBinding,q.settings);if(q.settings.sourceId)window.generatedBinding.requests=[{sourceName:q.settings.sourceId==='backup'?'新浪财经 / quote':'通联 DataYes MCP / call_api'}]}if(q.action==='refresh')Object.assign(window.generatedBinding,{status:'success',error:'',lastSuccess:Date.now()});return {...window.generatedBinding}}}
    const host=document.createElement('div');host.id='source-canvas';host.style.cssText='position:fixed;inset:0;z-index:10;background:#151518';document.body.append(host)
    createRoot(host).render(React.createElement(bundle.ResearchCanvas,{sessionId:'source-browser',t:x=>x,researchWorkspaces:registry,selectionGeneration:{disabled:false,generate:async()=>({ok:true})},actions:{setResearchRightTab(){}}}))
   })
-  const status=page.locator('#source-canvas button[data-component-data-status]');await status.waitFor();await status.click()
+  const status=page.locator('#source-canvas button[data-component-data-status]');await status.waitFor()
+  await expect.poll(()=>status.textContent()).toContain('通联 DataYes · 更新失败')
+  expect(await status.getAttribute('title')).toContain('数据源：通联 DataYes MCP / call_api')
+  const cursors=await status.evaluate(el=>[el,...el.querySelectorAll('*')].map(n=>getComputedStyle(n).cursor));expect(cursors.every(c=>c==='pointer')).toBe(true)
+  await status.click()
   const dialog=page.getByRole('dialog',{name:'组件数据与自动更新'});await dialog.waitFor();expect(await dialog.textContent()).toContain('沪深300行业配置')
   await dialog.getByRole('combobox',{name:'数据源',exact:true}).selectOption('backup')
   await expect.poll(()=>page.evaluate(()=>window.generatedSourceCalls.some(q=>q.action==='refresh'&&q.nodeId===window.generatedBinding.nodeId))).toBe(true)
   expect(await page.evaluate(()=>window.generatedBinding.sourceId)).toBe('backup')
   await dialog.getByRole('combobox',{name:'更新频率'}).selectOption('15');expect(await page.evaluate(()=>window.generatedBinding.intervalMinutes)).toBe(15)
+  await expect.poll(()=>status.textContent(),{timeout:6000}).toContain('新浪财经 · 每 15 分钟')
   await page.screenshot({path:join(evidence,'generated-component-source-settings.png')})
   await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'});expect(await status.evaluate(el=>document.activeElement===el)).toBe(true);expect(errors).toEqual([])
  }finally{await page.close()}

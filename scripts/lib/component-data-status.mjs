@@ -1,5 +1,11 @@
 import * as workbenchRefresh from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 const {createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,workbenchRefreshCss}=workbenchRefresh
+export function componentDataSourceNames(binding){
+ const names=Array.isArray(binding?.sourceNames)?binding.sourceNames:Array.isArray(binding?.requests)?binding.requests.map(request=>request.sourceName):[]
+ const sources=[...new Set(names.filter(name=>typeof name==='string'&&name.trim()).map(name=>name.trim()))]
+ const selected=binding?.sources?.find(source=>source.id===binding.sourceId)?.name
+ return sources.length?sources:typeof selected==='string'&&selected.trim()?[selected.trim()]:[]
+}
 // One canvas subscription; publishing status never updates the canvas model or
 // replaces an iframe. Only the affected footer subscribes to its own snapshot.
 export function createComponentDataStatusStore(){
@@ -15,7 +21,7 @@ export function createComponentDataStatusStore(){
    for(const row of rows){
     const old=previous.rows.get(row.nodeId)
     const advanced=Number.isInteger(row.successSequence)?row.successSequence>(old?.successSequence||0):row.lastSuccess>old?.lastSuccess
-    const snapshot={successSequence:row.successSequence||0,nodeId:row.nodeId,status:row.status,lastSuccess:row.lastSuccess||null,dataAsOf:row.dataAsOf||'',enabled:row.enabled,viewPaused:row.viewPaused,intervalMinutes:row.intervalMinutes,
+    const snapshot={successSequence:row.successSequence||0,nodeId:row.nodeId,status:row.status,lastSuccess:row.lastSuccess||null,dataAsOf:row.dataAsOf||'',enabled:row.enabled,viewPaused:row.viewPaused,intervalMinutes:row.intervalMinutes,sourceNames:componentDataSourceNames(row),
      refreshSequence:(old?.refreshSequence||0)+(previous.ready&&old&&advanced&&row.status==='success'?1:0),
      completionSequence:(old?.completionSequence||0)+(previous.ready&&old&&advanced&&['success','unchanged'].includes(row.status)?1:0)}
     next.set(row.nodeId,JSON.stringify(old)===JSON.stringify(snapshot)?old:snapshot)
@@ -45,12 +51,13 @@ export function createComponentDataStatusMonitor({sessionId,bridge,store,isVisib
 }
 
 export function componentDataStatusView(binding,completion=null){
+ const sourceNames=componentDataSourceNames(binding),source=[...new Set(sourceNames.map(name=>name.split(/\s+\/\s+/)[0].replace(/\s+MCP$/i,'').trim()))].join(' / ')
  const valid=binding?.lastSuccess&&Number.isFinite(new Date(binding.lastSuccess).getTime())
  const time=valid?'刷新 '+new Date(binding.lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未刷新'
  const frequency=binding?.intervalMinutes===1?'每分钟':binding?.intervalMinutes>0?'每 '+binding.intervalMinutes+' 分钟':'仅手动'
  const phase=binding?.status==='refreshing'?'refreshing':binding?.status==='error'?'error':completion===binding?.status&&['success','unchanged'].includes(completion)?completion:null
  const detail=!binding?'未绑定数据源':phase==='refreshing'?'正在更新数据…':phase==='error'?'更新失败 · 保留上次数据':phase==='success'?'已更新':phase==='unchanged'?'已检查 · 数据无变化':binding.viewPaused?'离开看板已暂停':!binding.enabled&&binding.intervalMinutes>0?'已暂停':frequency
- return {time,detail,phase,title:(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(binding?.dataAsOf?'\n数据时点：'+binding.dataAsOf:'')+'\n点击设置数据源与刷新频率'}
+ return {time,detail,source,phase,title:(sourceNames.length?'数据源：'+sourceNames.join('；')+'\n':'')+(valid?'上次成功取数：'+new Date(binding.lastSuccess).toLocaleString('zh-CN'):'尚无成功刷新记录')+(binding?.dataAsOf?'\n数据时点：'+binding.dataAsOf:'')+'\n点击设置数据源与刷新频率'}
 }
 
 // Personal technical annotations survive a card unmount. Persist only its
@@ -164,8 +171,9 @@ export function ComponentDataStatusBar({sessionId,node,workbench=false}){
  react.useLayoutEffect(()=>{const card=ref.current?.closest('[data-research-node-id]');if(workbench&&card){feedback.current=createComponentRefreshFeedback(card,{initialState:readPersonalChartView(node),onState:(state,revision)=>{if(typeof researchPersonalChartViewSinks!=='undefined')researchPersonalChartViewSinks.get(sessionId)?.(node.id,revision,state)}});feedback.current.update(binding,content,identity)}return()=>{feedback.current?.dispose();feedback.current=null}},[sessionId,node.id,workbench,node.containerSpec?.type==='html'])
  react.useLayoutEffect(()=>{feedback.current?.update(binding,content,identity)},[binding,content,identity])
  const rss=componentRssStatusView(node),view=rss||componentDataStatusView(binding,notice?.key===key?notice.status:null),shared=sherlockShared(sessionId),plain=Boolean(rss),lastSuccess=rss?rss.lastSuccess:binding?.lastSuccess
+ const label=shared?'静态组件':(view.source?view.source+' · ':'')+view.detail
  if(['iframe','youtube'].includes(node.containerSpec?.type))return null;
- return react_jsx_runtime.jsxs(plain?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':rss?(rss.phase||'manual'):binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':view.detail+'，'+view.time+(plain||shared?'':'，设置刷新频率'),...(!plain?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node,'settings',e.currentTarget)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:shared?'静态组件':view.detail})]}),react_jsx_runtime.jsx('time',{dateTime:lastSuccess?new Date(lastSuccess).toISOString():undefined,children:view.time})]})
+ return react_jsx_runtime.jsxs(plain?'div':'button',{ref,className:'odyssey-data-stamp','data-component-data-status':rss?(rss.phase||'manual'):binding?.status||'unbound','data-refresh-feedback':shared?undefined:view.phase||undefined,'aria-label':label+'，'+view.time+(plain||shared?'':'，设置数据源与刷新频率'),...(!plain?{type:'button',title:shared?'共享组件尚不支持自动取数':view.title,disabled:shared,onPointerDown:e=>e.stopPropagation(),onDoubleClick:e=>e.stopPropagation(),onKeyDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();openComponentData(sessionId,node,'settings',e.currentTarget)}}:{}),children:[react_jsx_runtime.jsxs('span',{className:'odyssey-data-frequency',role:'status','aria-live':'polite','aria-atomic':true,children:[!shared&&view.phase?react_jsx_runtime.jsx('i',{className:'odyssey-refresh-indicator','aria-hidden':true}):null,react_jsx_runtime.jsx('span',{children:label})]}),react_jsx_runtime.jsx('time',{dateTime:lastSuccess?new Date(lastSuccess).toISOString():undefined,children:view.time})]})
 }
 
 export const componentDataStatusCss=workbenchRefreshCss+`
@@ -192,7 +200,7 @@ export const componentDataStatusCss=workbenchRefreshCss+`
 
 `
 
-export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentRssStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
+export function componentDataStatusDefinitions(){return [createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,personalChartViewState,readPersonalChartView,createPersonalChartViewSink,createComponentRefreshFeedback,componentDataSourceNames,createComponentDataStatusStore,createComponentDataStatusMonitor,componentDataStatusView,componentRssStatusView,ComponentDataStatusBar].map(fn=>fn.toString()).join('\n')+'\nconst componentDataStatusStore=createComponentDataStatusStore();\n'}
 
 export function patchComponentDataStatus(source){
  const replace=(a,b)=>{if(source.split(a).length!==2)throw Error('Component status anchor drifted: '+a.slice(0,80));source=source.replace(a,b)}
