@@ -77,12 +77,14 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
     cancelDockCollapse()
     if (dock) dock.dataset.dockState = 'expanded'
   }
+  // A mouse click leaves focus behind; only keyboard focus should pin the dock.
+  const hasDockKeyboardFocus = () => !!dock?.contains(doc.activeElement) && doc.activeElement?.matches(':focus-visible') === true
   const scheduleDockCollapse = () => {
     cancelDockCollapse()
-    if (!visible || doc.hidden || dockHovered || dock?.contains(doc.activeElement)) return
+    if (!visible || doc.hidden || dockHovered || hasDockKeyboardFocus()) return
     collapseTimer = win.setTimeout(() => {
       collapseTimer = 0
-      if (visible && !doc.hidden && !dockHovered && dock && !dock.contains(doc.activeElement)) dock.dataset.dockState = 'collapsed'
+      if (visible && !doc.hidden && !dockHovered && dock && !hasDockKeyboardFocus()) dock.dataset.dockState = 'collapsed'
     }, 3000)
   }
   const stop = () => {
@@ -272,6 +274,7 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
       preview.append(blur); body.append(glass, preview); button.append(body)
       button.addEventListener('click', () => { if (button.getAttribute('aria-hidden') !== 'true') select(id) })
       button.addEventListener('keydown', event => {
+        expandDock()
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
         event.preventDefault(); event.stopPropagation()
         const index = THEMES.indexOf(selected)
