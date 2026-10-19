@@ -20,6 +20,8 @@ it('translates financial controls, timestamps, chart units and connection help',
   ['开 1,255.42  高 1,282.00  低 1,255.42  收 1,263.00','O 1,255.42  H 1,282.00  L 1,255.42  C 1,263.00'],
   ['成交量 3.51 万手','Volume 35.10K lots'],['VOL(5,10)  3.51 万手','VOL(5,10)  35.10K lots'],
   ['3 个标的未取得行情','Quotes unavailable for 3 symbols'],
+  ['数据与自动更新','Data and auto-refresh'],['每 5 分钟刷新','Refresh every 5 minutes'],['每 1 小时','Every 1 hour'],
+  ['新浪财经 / Yahoo Finance · 备用','Sina Finance / Yahoo Finance · Backup'],['巨潮资讯 · 备用','CNInfo · Backup'],
   ['拖到右侧节点改接 · 拖到空白处断开','Drag to a right port to reconnect · Drag to empty space to disconnect'],
   ['上移沪深300','Move CSI 300 up']
  ])expect(translateUiCopy(source)).toBe(english)

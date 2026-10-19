@@ -57,6 +57,17 @@ describe('data refresh without generation',()=>{
   await expect(f.service.bind({...f.input,sources:[{...s,mapping:{version:1,type:'news',title:'其他',items:[]}}]})).rejects.toThrow(/模板/)
   expect(f.service.list()).toEqual([])
  })
+ it('can immediately refresh the new source while the aborted old transport is still pending',async()=>{
+  const f=setup();await f.service.load()
+  const b=await f.service.bind({...f.input,sources:[{id:'backup',name:'备用',requests:[{key:'quote',toolId:'backup',args:{}}],mapping:f.input.mapping}]})
+  let release;f.execute.mockImplementationOnce(()=>new Promise(resolve=>release=resolve))
+  const old=f.service.refresh(b.id);await vi.waitFor(()=>expect(release).toBeTruthy())
+  await f.service.configure(b.id,{sourceId:'backup'})
+  f.execute.mockResolvedValue({items:[{name:'指数',price:202}],date:'2026-09-27'})
+  await f.service.refresh(b.id);expect(readTemplateModel(f.spec()).data.items[0].value).toBe('202')
+  release({items:[{name:'指数',price:999}],date:'2026-09-26'});await old
+  expect(readTemplateModel(f.spec()).data.items[0].value).toBe('202')
+ })
  it('keeps the existing quote and pinpoints a malformed metric value on refresh',async()=>{
   const f=setup();await f.service.load();const b=await f.service.bind(f.input),before=structuredClone(f.spec())
   f.execute.mockResolvedValue({items:[{name:'指数',price:null}],date:'2026-09-26'})

@@ -263,7 +263,7 @@ export class ComponentDataRefresh {
    const revision=b.revision,owner=this.options.owner();requests=[]
    for(const r of selected.requests){requests.push(await this.options.validateRequest({key:r.key,toolId:r.toolId,args:r.args},b));if(this.options.owner()!==owner||!this.records.includes(b)||b.revision!==revision)throw Error('数据配置已变化，请重试')}
   }
-  this.active.get(id)?.controller.abort()
+  this.active.get(id)?.controller.abort();this.active.delete(id)
   if(patch.deleted===true)this.records=this.records.filter(row=>row!==b)
   else{Object.assign(b,patch);if(selected){b.sources=sources.map(s=>s.id===selected.id?{...s,requests}:s);b.requests=requests;b.mapping=selected.mapping;b.error=undefined;b.failures=0}b.revision++;if(b.intervalMinutes===0)b.enabled=false;b.status=b.enabled?'idle':'paused';b.nextRun=b.enabled?this.now()+b.intervalMinutes*60000:null}
   await this.persist();return structuredClone(b)
@@ -273,7 +273,7 @@ export class ComponentDataRefresh {
   if(this.active.has(id))return this.active.get(id).promise
   const b=this.records.find(b=>b.id===id&&b.ownerAccountId===this.options.owner());if(!b||this.stopped)return Promise.reject(Error('组件数据绑定不存在'))
   if(automatic&&!this.isVisible(b.sessionId))return Promise.resolve()
-  const controller=new AbortController();const promise=this.run(structuredClone(b),controller.signal,automatic).finally(()=>this.active.delete(id))
+  const controller=new AbortController();const promise=this.run(structuredClone(b),controller.signal,automatic).finally(()=>{if(this.active.get(id)?.promise===promise)this.active.delete(id)})
   this.active.set(id,{promise,controller,automatic});return promise
  }
  async request(b,request,signal){
@@ -281,6 +281,7 @@ export class ComponentDataRefresh {
   const key=hash([b.ownerAccountId,b.workspaceId,request.toolId,request.connectionRevision,request.schemaDigest,args])
   // Coalesce only simultaneous requests; never hide a later manual refresh in a cache.
   let pending=this.requests.get(key)
+  if(pending?.controller.signal.aborted){this.requests.delete(key);pending=null}
   if(!pending){
    const controller=new AbortController()
    const promise=Promise.resolve().then(()=>this.options.execute(b,request,args,AbortSignal.any([controller.signal,AbortSignal.timeout(60000)]))).then(decodeDataResponse)

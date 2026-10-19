@@ -36,9 +36,9 @@
 ### Task 3: 统一面板、页脚入口与调度
 **Files:** scripts/lib/component-data-refresh.mjs; component-data-status.mjs; financial-widget-client.mjs/.css; settings/refresh/client/browser focused tests.
 **Interfaces:** ComponentDataSettingsPanel 共用视图；生成包装使用 bridge，内置包装使用 spec sink 与现有 refresh ref。
-- [ ] 写失败交互用例：点击生成/金融页脚打开正确面板；切换来源与频率后序列化仍保留；暂停无周期请求；部分失败仍显示上次有效图表；键盘关闭不触发画布快捷键。
-- [ ] 实现公共视图、来源下拉、可点击页脚、内置配置与独立周期调度，并保留部分结果的实际来源。
-- [ ] 在隔离 node_modules 重打运行时补丁，执行受影响测试/typecheck；浏览器验证深浅色与窄尺寸，中文提交。
+- [x] 写失败交互用例：点击生成/金融页脚打开正确面板；切换来源与频率后序列化仍保留；暂停无周期请求；部分失败仍显示上次有效图表；键盘关闭不触发画布快捷键。
+- [x] 实现公共视图、来源下拉、可点击页脚、内置配置与独立周期调度，并保留部分结果的实际来源。
+- [x] 在隔离 node_modules 重打运行时补丁，执行受影响测试/typecheck；浏览器验证深浅色与窄尺寸，中文提交。
 
 ### Task 4: 审查与交接
 - [ ] 对最终 immutable range 进行独立只读审查并处理实际问题。
