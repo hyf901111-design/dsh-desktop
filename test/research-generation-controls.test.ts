@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { patchFigmaFinalCanvas, canvasCss } from '../scripts/lib/figma-canvas-client.mjs'
+// @ts-expect-error Runtime bundle patcher is a JavaScript build script.
 import { patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
 
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
