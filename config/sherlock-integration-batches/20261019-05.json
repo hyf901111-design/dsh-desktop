@@ -9,38 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "彭博模式规划定位与基金工作台生成修复",
+        "featureName": "彭博模式尺寸重试匹配与试用开关持久化",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "4214be3eeb7121681f2a4f1e99711be0b1572073",
-        "tipCommit": "d4b075465c57beadb8e32d41681b02566f29ad13",
+        "baseCommit": "d4b075465c57beadb8e32d41681b02566f29ad13",
+        "tipCommit": "106c92d2419e642515757969b862cce7276f9881",
         "commits": [
           {
-            "commit": "7030c639fd7417f3ae7603059e5a6c7439e02629",
+            "commit": "b43488b98b4a67afcd9fa24745457f44c65d500f",
             "parents": [
-              "4214be3eeb7121681f2a4f1e99711be0b1572073"
+              "d4b075465c57beadb8e32d41681b02566f29ad13"
             ],
-            "subject": "修复：规划卡片缩放时保持正确位置与可读尺寸"
+            "subject": "修复：组件尺寸说明不再使公开数据重试误走模型生成"
           },
           {
-            "commit": "f3b31ceca1cad386e4245521d68df8add3c7ed96",
+            "commit": "106c92d2419e642515757969b862cce7276f9881",
             "parents": [
-              "7030c639fd7417f3ae7603059e5a6c7439e02629"
+              "b43488b98b4a67afcd9fa24745457f44c65d500f"
             ],
-            "subject": "修复：保留金融组件底栏节点的原生圆角与居中样式"
-          },
-          {
-            "commit": "edd5f7825267db645e1e9b2ef8edffd0643ecefb",
-            "parents": [
-              "f3b31ceca1cad386e4245521d68df8add3c7ed96"
-            ],
-            "subject": "修复：新建个人看板内置行情刷新绑定超时与工作区误判"
-          },
-          {
-            "commit": "d4b075465c57beadb8e32d41681b02566f29ad13",
-            "parents": [
-              "edd5f7825267db645e1e9b2ef8edffd0643ecefb"
-            ],
-            "subject": "优化：通过真实来源预设减少基金工作台规划与参数重试"
+            "subject": "修复：重启客户端后保留彭博模式试用开关"
           }
         ],
         "files": [
@@ -50,63 +36,19 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-refresh-policy.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/live-workbench-presets.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+            "path": "src/main/state/research-canvas-storage.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "test/research-canvas-storage.test.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/workbench-style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/main/component-data/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-service.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/financial-port-openterminal-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-creation-progress.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-live-presets.test.js"
+            "path": "test/workbench-public-data.test.js"
           }
         ],
         "checks": [
@@ -115,36 +57,18 @@
               "npm",
               "test",
               "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/research-creation-progress.test.js",
-              "test/research-planning-occupancy.test.js",
-              "test/component-data-service.test.ts",
-              "test/financial-port-openterminal-browser.test.js",
-              "test/financial-widget-link.test.js",
-              "test/workbench-live-presets.test.js",
+              "test/research-canvas-storage.test.ts",
               "test/workbench-public-data.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/component-refresh-policy.test.js",
+              "test/workbench-live-presets.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/workbench-style.test.js",
               "--reporter=dot",
               "--testTimeout=20000"
             ],
             "outcome": "passed",
-            "summary": "23文件247项直接相关检查通过",
-            "verifiedCommit": "d4b075465c57beadb8e32d41681b02566f29ad13",
-            "completedAt": "2026-10-19T08:35:42.678Z",
+            "summary": "5文件55项直接相关检查通过",
+            "verifiedCommit": "106c92d2419e642515757969b862cce7276f9881",
+            "completedAt": "2026-10-19T08:52:20.821Z",
             "timeoutMs": 120000
           },
           {
@@ -155,8 +79,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "d4b075465c57beadb8e32d41681b02566f29ad13",
-            "completedAt": "2026-10-19T08:35:42.678Z",
+            "verifiedCommit": "106c92d2419e642515757969b862cce7276f9881",
+            "completedAt": "2026-10-19T08:52:20.821Z",
             "timeoutMs": 180000
           },
           {
@@ -167,86 +91,25 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "d4b075465c57beadb8e32d41681b02566f29ad13",
-            "completedAt": "2026-10-19T08:35:42.678Z",
+            "verifiedCommit": "106c92d2419e642515757969b862cce7276f9881",
+            "completedAt": "2026-10-19T08:52:20.821Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际 Chromium 验证规划卡缩放不再回到(0,0)，移动坐标仍有效；金融节点四主题/DPR1与2保持圆形居中。原生本轮构建与失败组件恢复待本地验收。"
+          "summary": "上一构建原生缩放规划卡已验证无左上角跳位；实际重试暴露尺寸尾部使来源匹配失效，新回归用实际客户端包装函数验证保存/恢复及自动和手动尺寸。重启开关的本轮原生验收待构建。"
         },
         "acceptanceCriteria": [
-          "规划卡缩放无左上角跳位，保留自动规划可读尺寸",
-          "专用个人看板内置公开来源可直接绑定刷新，插件/MCP与账号权限边界保持有效",
-          "真实ETF预设一次受理八卡，不使用模拟数值，保留Max与手动刷新选择",
-          "表格、量价和资讯保存OpenTerminal内布局，原生金融组件不被替换",
-          "金融底栏节点保留原生圆角，原生客户端复查连接展示"
+          "未改业务需求的公开源卡片在自动/手动尺寸下重试不启动模型",
+          "业务内容编辑仍走正常生成，不复用旧查询",
+          "全局试用开关精确持久化并能关闭，单看板原偏好不被覆盖"
         ],
         "risks": [
-          "仅本地可撤回试用，未授权接受晋升或公开发布",
-          "尚未复现原截图可见节点压扁，最小防护不等于根因确认",
-          "Max模型首次规划时长仍取决于模型，不承诺固定耗时"
+          "仅本地试用，未授权接受晋升或公开发布",
+          "原生失败卡恢复和新增真实工作台仍在验收中"
         ],
-        "generatedAt": "2026-10-19T08:35:42.678Z"
-      },
-      "merged": {
-        "mergeCommit": "94321cc4908ec2b561da75f3525b47f456e4670b",
-        "verificationCommit": "94321cc4908ec2b561da75f3525b47f456e4670b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "94321cc4908ec2b561da75f3525b47f456e4670b",
-            "completedAt": "2026-10-19T08:36:42.607Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "94321cc4908ec2b561da75f3525b47f456e4670b",
-            "completedAt": "2026-10-19T08:36:42.607Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "94321cc4908ec2b561da75f3525b47f456e4670b",
-            "completedAt": "2026-10-19T08:36:42.607Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-19T08:36:42.607Z"
+        "generatedAt": "2026-10-19T08:52:20.821Z"
       }
     }
   ],
