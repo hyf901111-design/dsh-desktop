@@ -9,111 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "补齐小时排期与完整预警并修复旧量价开合迁移",
+        "featureName": "恢复规划元数据事件的会话重启兼容",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "cd8f301457987ff59f3869f8fd5edf8c92eb0576",
-        "tipCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
+        "baseCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
+        "tipCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
         "commits": [
           {
-            "commit": "3a7d9498af74563d9e4a7ecc0ec280b1a9235878",
+            "commit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
             "parents": [
-              "cd8f301457987ff59f3869f8fd5edf8c92eb0576"
+              "c270d17c45fd0a7478c1583a2cdde29f98eaacf9"
             ],
-            "subject": "修复：量价默认展开兼容旧交互记录并保留后续开合选择"
-          },
-          {
-            "commit": "55435b2bcd2991f09a596b627d5b0e0d9f77f201",
-            "parents": [
-              "3a7d9498af74563d9e4a7ecc0ec280b1a9235878"
-            ],
-            "subject": "补齐日内跨夜甘特排期并保留预警完整预案"
-          },
-          {
-            "commit": "086638526a93280bf14c9d41b5da61261929e5dd",
-            "parents": [
-              "55435b2bcd2991f09a596b627d5b0e0d9f77f201"
-            ],
-            "subject": "测试：按当前组件规范版本校验预警与审批生成提示"
-          },
-          {
-            "commit": "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef",
-            "parents": [
-              "086638526a93280bf14c9d41b5da61261929e5dd"
-            ],
-            "subject": "测试：按完整构建补丁链验证生成等待计时"
-          },
-          {
-            "commit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
-            "parents": [
-              "cd1399e1f6d5df2cc613ee7ca46bd5955c11a4ef"
-            ],
-            "subject": "测试：标注生成进度脚本的类型边界"
+            "subject": "注册工作台规划元数据事件并恢复旧会话加载"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
+            "status": "A",
+            "path": "scripts/lib/workbench-planning-session.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/gantt-artifact.js"
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/gantt-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workflow-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workflow-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "test/component-interaction-state.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/gantt-intraday.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-generation-controls.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workflow-template.test.js"
+            "path": "test/workbench-planning-session.test.js"
           }
         ],
         "checks": [
@@ -122,25 +42,14 @@
               "npx",
               "vitest",
               "run",
-              "test/gantt-intraday.test.js",
-              "test/workflow-template.test.js",
-              "test/workbench-deferred.test.js",
+              "test/workbench-planning-session.test.js",
               "test/workbench-planning-phase.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/component-interaction-state.test.js",
-              "test/openterminal-price-volume-browser.test.js",
-              "test/workbench-refresh.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/research-planning-controls-browser.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/research-generation-controls.test.ts",
-              "--testTimeout=20000"
+              "test/workbench-execution-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "13个相关文件138项通过；完整构建补丁链覆盖排队计时",
-            "verifiedCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
-            "completedAt": "2026-10-19T10:39:26.744202Z",
+            "summary": "3文件20项通过，含真实持久化加载器、预算恢复与严格未知事件校验",
+            "verifiedCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
+            "completedAt": "2026-10-19T10:50:16.004602Z",
             "timeoutMs": 120000
           },
           {
@@ -151,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
-            "completedAt": "2026-10-19T10:39:26.744202Z",
+            "verifiedCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
+            "completedAt": "2026-10-19T10:50:16.004602Z",
             "timeoutMs": 180000
           },
           {
@@ -163,85 +72,26 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "c270d17c45fd0a7478c1583a2cdde29f98eaacf9",
-            "completedAt": "2026-10-19T10:39:26.744202Z",
+            "verifiedCommit": "be8b8d37b4f488ffe0ccf12cfab11d4ffe60b3bf",
+            "completedAt": "2026-10-19T10:50:16.004602Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端规划54秒受理10卡，停止与重试按钮独立、原Max保留，来源一次点击右屏访问已验；抓到Gantt26行容量与alerts详情拒绝两个缺口，两份原始业务数据已在新校验下深相等重放通过；本次包待原位重试验收。"
+          "summary": "原生重启捕获预算事件未识别错误；出错原始会话只读原生Zstd解码与PersistenceCoordinator恢复579事件，文件SHA256未变。新包仍需现场重新加载并原位恢复两卡。"
         },
         "acceptanceCriteria": [
-          "Gantt合法小时与跨午夜按连续时间轴显示，完整保留有界120条和日期旧语义",
-          "alerts完整预案可展开且未知字段报错准确",
-          "量价旧toggle日志不反转新展开默认，后续用户选择跨重开保持",
-          "保留已验证的规划提速、元数据进度与重试关闭布局"
+          "旧未标记的规划预算元数据事件可被正式识别且历史完整保留",
+          "新轻量预算事件可忽略，其他未知必需事件继续拒绝",
+          "bundled与unbundled注册和append兼容一致且补丁幂等",
+          "保留全部此前组件与规划修复"
         ],
         "risks": [
-          "仅本地可撤回实验，不接受晋升、不公开发布",
-          "新原生包两张失败卡原位重试与旧量价状态迁移待验收",
-          "旧场景中明确标注的2025年模拟日期保持，新增计划才使用宿主日期锚"
+          "仅本地实验，不晋升或公开发布",
+          "等待真实客户端重启历史恢复和两卡重试验收"
         ],
-        "generatedAt": "2026-10-19T10:39:26.744202Z"
-      },
-      "merged": {
-        "mergeCommit": "b6f25a6caf93ab7343f2c6a009e1d6145496642c",
-        "verificationCommit": "b6f25a6caf93ab7343f2c6a009e1d6145496642c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "b6f25a6caf93ab7343f2c6a009e1d6145496642c",
-            "completedAt": "2026-10-19T10:39:49.628Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b6f25a6caf93ab7343f2c6a009e1d6145496642c",
-            "completedAt": "2026-10-19T10:39:49.628Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "b6f25a6caf93ab7343f2c6a009e1d6145496642c",
-            "completedAt": "2026-10-19T10:39:49.628Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-19T10:39:49.628Z"
+        "generatedAt": "2026-10-19T10:50:16.004602Z"
       }
     }
   ],
