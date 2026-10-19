@@ -68,15 +68,18 @@ describe('workbench execution policy', () => {
     const injected = session('创建工作台'); injected.events[0].data.source.kind = 'tool'
     expect(workbenchCreationRequest(injected)).toBeNull()
   })
-  it('selects low for default creation, keeps explicit effort, and restores ordinary requests', async () => {
+  it('limits the planning phase and restores the original controls for ordinary requests', async () => {
     let handler, prompt
     const resolveModelInfo = vi.fn().mockResolvedValue({ reasoning: { efforts: ['low', 'high', 'max'].map(id => ({ id })) } })
-    registerWorkbenchExecutionPolicy({ llm: { resolveModelInfo }, systemPrompt: { context: v => { prompt = v; return () => {} } }, on: (_, fn) => { handler = fn; return () => {} } })
+    registerWorkbenchExecutionPolicy({ llm: { resolveModelInfo }, systemPrompt: { context: v => { prompt = v; return () => {} } }, on: (name, fn) => { if (name === 'agent/request') handler = fn; return () => {} } })
     const agent = { session: session('创建股票工作台') }, config = { provider: 'zai', model: 'GLM-5.3-Flash' }
     expect(prompt.text({ agent })).toContain('立即调用 research_workbench_create')
     const automatic = await handler({ agent }, async () => config)
     expect(automatic.reasoningEffort).toBe('low')
-    expect(await handler({ agent }, async () => ({ ...config, reasoningEffort: 'max' }))).toEqual({ ...config, reasoningEffort: 'max' })
+    expect(await handler({ agent }, async () => ({ ...config, reasoningEffort: 'max' }))).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
+    // A new default request has its own original controls, independent of the
+    // preceding explicit selection.
+    await handler({ agent }, async () => config)
     agent.session = session('解释一下这段代码')
     expect(await handler({ agent }, async () => automatic)).toEqual(config)
     expect(prompt.text({ agent })).toBe('')
@@ -88,7 +91,7 @@ describe('workbench execution policy', () => {
     const explicit = { ...original, reasoningEfforts: false }
     expect(glmReasoningEntry(explicit, 'zai', 'https://api.z.ai/')).toBe(explicit)
   })
-  it('sends low to the real adapter wire with thinking enabled, without changing provider or token budget', async () => {
+  it('sends the temporary supported planning controls to the adapter and restores Max after acceptance', async () => {
     const filename = resolve('node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/countdown-policy-test.mjs')
     const source = patchGlmReasoningCapabilities(readFileSync(resolve('node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js'), 'utf8'))
     expect(patchGlmReasoningCapabilities(source)).toBe(source)
@@ -100,21 +103,30 @@ describe('workbench execution policy', () => {
       const info = await adapter.resolveModel('zai', 'GLM-5.3-Flash')
       expect(info.reasoning.efforts.map(e => e.id)).toEqual(['low', 'high', 'max'])
       expect(info.reasoning.defaultEffort).toBe('max')
+      let handler
+      registerWorkbenchExecutionPolicy({ llm: { resolveModelInfo: (...args) => adapter.resolveModel(...args) }, systemPrompt: { context: () => () => {} }, on: (name, fn) => { if (name === 'agent/request') handler = fn; return () => {} } })
+      const agent = { session: session('创建工作台') }, original = { provider: 'zai', model: 'GLM-5.3-Flash', reasoningEffort: 'max', maxTokens: 16384 }
+      const planned = await handler({ agent }, async () => original)
       let body
       vi.stubGlobal('fetch', vi.fn(async (_, init) => {
         body = JSON.parse(init.body)
         return new Response('data: {"id":"test","choices":[{"index":0,"delta":{"content":"完成"},"finish_reason":null}]}\n\ndata: {"id":"test","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":2,"total_tokens":12}}\n\ndata: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } })
       }))
       const chunks = []
-      for await (const chunk of adapter.stream({ provider: 'zai', model: 'GLM-5.3-Flash', reasoningEffort: 'low', maxTokens: 16384, messages: [{ role: 'user', content: [{ type: 'text', text: '创建工作台' }] }] })) chunks.push(chunk)
+      for await (const chunk of adapter.stream({ ...planned, messages: [{ role: 'user', content: [{ type: 'text', text: '创建工作台' }] }] })) chunks.push(chunk)
       expect(body.model).toBe('GLM-5.3-Flash')
       expect(body.thinking.type).toBe('enabled')
       expect(body.reasoning_effort).toBe('low')
-      expect(body.max_completion_tokens ?? body.max_tokens).toBe(16384)
+      expect(body.max_completion_tokens ?? body.max_tokens).toBe(4096)
       expect(chunks.at(-1).type).toBe('finish')
-      for await (const chunk of adapter.stream({ provider: 'zai', model: 'GLM-5.3-Flash', messages: [{ role: 'user', content: [{ type: 'text', text: '普通聊天' }] }] })) { /* drain the ordinary default request */ }
+      agent.session.events.push({ type: 'tool/call', data: { name: 'research_workbench_create', callId: 'accepted' } },
+        { type: 'tool/result', data: { message: { source: { callId: 'accepted' }, content: [{ type: 'tool-result', content: [{ type: 'text', text: JSON.stringify({ planId: 'p', status: 'accepted' }) }] }] } } })
+      const restored = await handler({ agent }, async () => ({ ...planned }))
+      expect(restored).toEqual(original)
+      for await (const chunk of adapter.stream({ ...restored, messages: [{ role: 'user', content: [{ type: 'text', text: '普通聊天' }] }] })) { /* drain the restored request */ }
       expect(body.thinking.type).toBe('enabled')
       expect(body.reasoning_effort).toBe('max')
+      expect(body.max_completion_tokens ?? body.max_tokens).toBe(16384)
     } finally { unlinkSync(filename) }
   })
 })
