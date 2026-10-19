@@ -6,6 +6,45 @@ import {componentRefreshBindings,createComponentDataService} from '../src/main/c
 import {validateIntegrationBindings} from '../src/shared/scheduled-tasks'
 const {acceptArtifactOutput}=await import(new URL('../packages/dsh-research-task-runtime/artifact-output.js',import.meta.url).href)
 
+it('新建个人看板直接绑定内置公开数据，不依赖工作区列表扫描，移除看板后停止取数',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'personal-board-data-'))
+ const data={version:1,type:'kpi',title:'公开报价',asOf:'来源时点',items:[{label:'报价',value:'100'}]}
+ let spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data))!),at=Date.now(),available=true
+ const rpc=vi.fn(async()=>{throw Error('不应扫描全部会话与工作区')})
+ const query=vi.fn(async()=>({records:[{price:101}]}))
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,rpc,
+  personalBoard:(id:string)=>available&&id==='personal-board'?{sessionId:id,cwd:'/private/app/boards/new-board',dedicated:true}:undefined,
+  publicData:{validate:async()=>({sourceId:'tencent-quotes',sourceName:'腾讯财经'}),query},integrations:{} as any,
+  canvas:{bind:()=>{},execute:async(call:any)=>{
+   if(call.method==='apply'){spec=call.args.changes[0].fields.containerSpec;return {}}
+   return {revision:'r',writable:true,nodes:[{id:'n',content:{containerSpec:spec},capabilities:{fields:{containerSpec:true}}}]}
+  }}} as any)
+ ;(service.engine as any).options.now=()=>at
+ try{
+  const args={operation:'query',source:'tencent-quotes',parameters_json:'{"symbols":["sh510300"]}'}
+  await expect(service.request('personal-board',{action:'bind-generated',nodeId:'n',initialSpec:spec,recipe:{intervalMinutes:1,requests:[{key:'q',toolId:'public_data_query',args}],mapping:{...data,items:[{label:'报价',value:{$from:'q',$path:'records.0.price',$as:'string'}}]}}})).resolves.toMatchObject({workspaceId:'builtin-personal-board:personal-board',enabled:true})
+  await expect(service.request('personal-board',{action:'list'})).resolves.toHaveLength(1)
+  at+=60000;service.engine.setVisible('personal-board',true);await service.engine.tick()
+  expect(query).toHaveBeenCalledOnce();expect(rpc).not.toHaveBeenCalled();expect(service.engine.list('personal-board')[0]).toMatchObject({status:'success',successSequence:1})
+  const previous=spec;available=false;at+=60000;service.engine.setVisible('personal-board',true);await service.engine.tick()
+  expect(query).toHaveBeenCalledOnce();expect(spec).toEqual(previous);expect(service.engine.list('personal-board')[0]!.status).toBe('error')
+ }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
+})
+
+it('个人看板的内置来源身份不能为插件工具或其他会话授予工作区权限',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'personal-board-grants-'))
+ const rpc=vi.fn(async(method:string)=>({items:method==='session.list'?[{sessionId:'personal-board',cwd:'/private/app/boards/new-board'}]:[]}))
+ const validate=vi.fn(),query=vi.fn()
+ const service=await createComponentDataService({file:join(directory,'bindings.json'),owner:()=> 'o',isShared:()=>false,rpc,
+  personalBoard:(id:string)=>id==='personal-board'?{sessionId:id,cwd:'/private/app/boards/new-board',dedicated:true}:undefined,
+  publicData:{validate,query},integrations:{} as any,canvas:{} as any} as any)
+ try{
+  await expect(service.request('personal-board',{action:'bind',nodeId:'n',recipe:{requests:[{key:'q',toolId:'plugin-tool',args:{}}]}})).rejects.toThrow(/工作区/)
+  await expect(service.request('other-session',{action:'bind',nodeId:'n',recipe:{requests:[{key:'q',toolId:'public_data_query',args:{}}]}})).rejects.toThrow(/会话/)
+  expect(validate).not.toHaveBeenCalled();expect(query).not.toHaveBeenCalled();expect(service.engine.list()).toEqual([])
+ }finally{await service.dispose();await rm(directory,{recursive:true,force:true})}
+})
+
 it.each([
  {action:'list',pauseAt:1},
  {action:'bind-generated',pauseAt:2},
