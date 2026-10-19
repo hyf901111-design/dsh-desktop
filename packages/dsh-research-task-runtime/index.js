@@ -951,6 +951,26 @@ function timestamp(value, fallback) {
   return Number.isFinite(value) && value >= 0 ? value : fallback
 }
 
+// The client appends this presentation-only line to both automatic and manual
+// frames. Remove only that complete known wrapper when matching an unchanged
+// source recipe; changed business instructions must still use the normal path.
+function sourceRetryPrompt(prompt) {
+  const suffix = '按给定边界重排完整可视化内容，必要时允许内部滚动；不得缩小字形或隐藏有效内容。遵循已有设计合同：业务标题13px/20px、指标23px/26px、内容内边距12px，数字英文DINPro、中文Noto Sans SC。组件交互控件使用黑白灰，保留图表与业务状态色。'
+  if (!prompt.endsWith(suffix)) return prompt
+  const newline = prompt.lastIndexOf('\n'), bounds = prompt.slice(newline + 1, -suffix.length)
+  if (newline < 0) return prompt
+  const auto = bounds.match(/^组件初始尺寸 ([\d.]+)×([\d.]+)px；自动布局按内容密度选择规格。$/u)
+  if (auto && auto.slice(1).every(value => Number.isFinite(Number(value)) && Number(value) > 0)) return prompt.slice(0, newline)
+  const manual = bounds.match(/^用户手动框 frameBounds (\{[^\n]+\})px 是唯一尺寸依据；生成、重试、停止与完成均不得修改边界。$/u)
+  if (manual) {
+    try {
+      const frame = JSON.parse(manual[1])
+      if (Object.keys(frame).length === 4 && ['x', 'y', 'width', 'height'].every(key => Number.isFinite(frame[key])) && frame.width > 0 && frame.height > 0) return prompt.slice(0, newline)
+    } catch {}
+  }
+  return prompt
+}
+
 function restoredTask(raw, now) {
   const stored = record(raw, 'INVALID_STORAGE', '任务存储无效')
   const request = validateResearchTaskStart({
@@ -1124,7 +1144,7 @@ export class ResearchTaskRuntime {
     if (request.kind === 'container') {
       const original = [...this.tasks.values()].reverse().find(task => task.publicData && terminalState(task.state) &&
         task.parentSessionId === request.parentSessionId && task.canvasNodeId === request.canvasNodeId &&
-        [task.prompt, task.publicDataPrompt].includes(request.prompt))
+        [task.prompt, task.publicDataPrompt].includes(sourceRetryPrompt(request.prompt)))
       if (original) return (await this.startPublicDataBatch({ parentSessionId: request.parentSessionId, panels: [{
         canvasNodeId: request.canvasNodeId, prompt: original.prompt, publicDataPrompt: original.publicDataPrompt,
         title: original.title, type: original.type, publicData: original.publicData

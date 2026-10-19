@@ -10,6 +10,7 @@ import {
 import path from 'node:path'
 
 const RESEARCH_CANVAS_STORAGE_DIRECTORY = 'research-canvas'
+const WORKBENCH_TRIAL_KEY = 'ework.research.openterminal-trial.v1'
 const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   'sherlock.research.canvas.files.v1:',
   'sherlock.research.canvas.artifacts.v1:',
@@ -30,9 +31,9 @@ export const RESEARCH_CANVAS_STORAGE_MAX_VALUE_LENGTH = 8 * 1024 * 1024
 function validResearchCanvasStorageKey(value: unknown): value is string {
   return typeof value === 'string' &&
     value.length <= RESEARCH_CANVAS_STORAGE_MAX_KEY_LENGTH &&
-    RESEARCH_CANVAS_STORAGE_PREFIXES.some(
+    (value === WORKBENCH_TRIAL_KEY || RESEARCH_CANVAS_STORAGE_PREFIXES.some(
       (prefix) => value.startsWith(prefix) && value.length > prefix.length
-    )
+    ))
 }
 
 function validResearchCanvasStorageValue(value: unknown): value is string {
@@ -74,6 +75,7 @@ export class ResearchCanvasStorage {
     if (!validResearchCanvasStorageKey(key) || !validResearchCanvasStorageValue(value)) {
       return false
     }
+    if (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(value)) return false
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
     if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(value)) return false
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
@@ -116,6 +118,7 @@ export class ResearchCanvasStorage {
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
       const record = parsed as { key?: unknown; value?: unknown }
       if (record.key !== key || !validResearchCanvasStorageValue(record.value) ||
+          (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(record.value)) ||
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
           (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory'].includes(record.value)) ||
           (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value))) return null

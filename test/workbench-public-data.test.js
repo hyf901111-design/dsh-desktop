@@ -7,6 +7,8 @@ import { preserveWorkbenchRefreshPreference } from '../packages/dsh-research-tas
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { runInNewContext } from 'node:vm'
+import { componentPromptSource } from '../scripts/lib/figma-generation-client.mjs'
 
 const spec = (profile, source, parameters = {}, type = 'market') => ({
   title: profile, type, size: 'large', prompt: '真实免费来源，每分钟自动刷新',
@@ -159,6 +161,30 @@ describe('宿主免费源工作台直通', () => {
     expect(adapter.start).toHaveBeenCalled()
     expect(query).toHaveBeenCalledTimes(2)
     await r.dispose()
+  })
+
+  it('restores and retries source cards through the actual client size wrapper without launching a model', async () => {
+    const original = runtime()
+    original.query.mockRejectedValueOnce(Error('SOURCE_UNAVAILABLE'))
+    const p = spec('quotes-table', 'tencent-quotes', { symbols: ['sh600519'] })
+    await settled(original.r, await original.r.startPublicDataBatch({ parentSessionId: 'p', panels: [{ ...p, canvasNodeId: 'sized', publicDataPrompt: p.prompt, prompt: '完整模板契约：' + p.prompt }] }))
+    const document = original.save.mock.calls.at(-1)[0]
+    await original.r.dispose()
+    const adapter = { start: vi.fn(), bindData: vi.fn(async () => {}) }, query = vi.fn(async () => quote)
+    const restored = new ResearchTaskRuntime({ adapter, storage: { load: async () => document, save: async () => {} }, publicDataClient: { query } })
+    const wrap = runInNewContext('(' + componentPromptSource + ')', { researchComponentSize: () => 'large', RESEARCH_BENTO_SIZES: { large: { width: 656, height: 456 } } })
+    try {
+      await restored.restore()
+      for (const node of [{ sizeMode: 'auto' }, { sizeMode: 'manual', x: 803.05, y: 171.7, width: 484.1, height: 319.4 }]) {
+        const retry = await restored.start({ parentSessionId: 'p', canvasNodeId: 'sized', kind: 'container', prompt: wrap(node, p.prompt) })
+        expect((await settled(restored, [retry]))[0].state).toBe('completed')
+      }
+      expect(adapter.start).not.toHaveBeenCalled(); expect(query).toHaveBeenCalledTimes(2)
+      adapter.start.mockResolvedValue({ childSessionId: 'edited', result: Promise.resolve({ output: [{ type: 'text', text: '新需求结果' }] }), dispose: async () => {} })
+      const edited = await restored.start({ parentSessionId: 'p', canvasNodeId: 'sized', kind: 'container', prompt: wrap({ sizeMode: 'auto' }, p.prompt + '\n不再联网，只用上传记录') })
+      await settled(restored, [edited])
+      expect(adapter.start).toHaveBeenCalledOnce(); expect(query).toHaveBeenCalledTimes(2)
+    } finally { await restored.dispose() }
   })
 
   it('dispatches native source tasks once, rejects unavailable tools and no-network requests before creating a plan', async () => {
