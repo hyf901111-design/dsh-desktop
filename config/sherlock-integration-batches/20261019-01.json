@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261019-01",
+  "branch": "codex/integration/20261019-01",
+  "baseMainCommit": "ee7ae7df862b46db0b6a7165c8933523ca2d043d",
+  "expectedMainCommit": "ee7ae7df862b46db0b6a7165c8933523ca2d043d",
+  "createdAt": "2026-10-19T00:48:02.291Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对话首页主题卡片自动收起与悬停回弹",
+        "branch": "codex/feat/home-theme-dock-autohide-20261019",
+        "baseCommit": "ee7ae7df862b46db0b6a7165c8933523ca2d043d",
+        "tipCommit": "33e8470efdd7c3ed7d39d2260fd3951093ac9bfb",
+        "commits": [
+          {
+            "commit": "a9ef72e1fe6e1863a9faac6575649c17f75482f8",
+            "parents": [
+              "ee7ae7df862b46db0b6a7165c8933523ca2d043d"
+            ],
+            "subject": "优化：首页主题卡片闲置三秒收起并支持悬停回弹"
+          },
+          {
+            "commit": "33e8470efdd7c3ed7d39d2260fd3951093ac9bfb",
+            "parents": [
+              "a9ef72e1fe6e1863a9faac6575649c17f75482f8"
+            ],
+            "subject": "修复：区分主题卡片鼠标点击与键盘焦点的展开状态"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/figma-home.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-themes.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-motion-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-motion-browser.test.js",
+              "test/home-theme-preferences.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "3 个相关测试文件全部通过，共 58 项；含 Chromium 中的计时、悬停、键盘、返回首页、窄窗口和减少动态效果验证。",
+            "verifiedCommit": "33e8470efdd7c3ed7d39d2260fd3951093ac9bfb",
+            "completedAt": "2026-10-19T00:45:41.688787Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "33e8470efdd7c3ed7d39d2260fd3951093ac9bfb",
+            "completedAt": "2026-10-19T00:45:41.688787Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "补丁格式检查通过。",
+            "verifiedCommit": "33e8470efdd7c3ed7d39d2260fd3951093ac9bfb",
+            "completedAt": "2026-10-19T00:45:41.688787Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "通过复用原生首页 CSS 与主题控制器的独立 Chromium 页面验证；900×700 浅色、280×400 深色及680×500 深色减少动态效果。露出当前卡片约三分之一，底部悬停持续展开，键盘导航可用。截图位于同目录 dock-*-expanded/collapsed/hover.png；未替换共享客户端。 鼠标点击主题后移出仍会计时收起；同一按钮直接按空格可展开并保持键盘操作。独立审查发现的焦点模态问题已修复并复审通过。Browser 插件不可用，使用仓库现有 Playwright 验证。"
+        },
+        "acceptanceCriteria": [
+          "进入对话首页保留现有错峰弹出动画，3秒闲置后收至页面底部，仅露出约三分之一。",
+          "悬停底部露出的卡片区域可回弹到原位，悬停或键盘操作时保持展开；鼠标移出后（包括点击切换主题后）重新计时3秒。",
+          "从笔记或设置返回首页重新弹出；主题选择及持久化不受影响，窄窗口与减少动态效果均可用。"
+        ],
+        "risks": [
+          "当前仅完成独立浏览器聚焦验证，尚未构建或在共享 EWork Odyssey 客户端验收；功能分支尚未合并 main。"
+        ],
+        "generatedAt": "2026-10-19T00:45:41.688787Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/home-theme-controller.test.ts",
+        "test/home-theme-motion-browser.test.js",
+        "test/home-theme-preferences.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 30000
+    }
+  ],
+  "mainSynchronizations": []
+}
