@@ -13,6 +13,11 @@
     {
       "branch": "codex/feat/harness-fusion-20261005",
       "tip": "10e16d1eed2b1efab19b8dd1760184894b634b57"
+    },
+    {
+      "branch": "codex/feat/openterminal-style-20261019",
+      "tip": "bdc7ab3482733c30056d4c33de6945624d28c42d",
+      "decision": "docs/superpowers/parked/2026-10-19-openterminal-style.md"
     }
   ]
 }

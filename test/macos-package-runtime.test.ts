@@ -113,6 +113,7 @@ describe('macOS package runtime verification', () => {
         rmSync(temporaryRoot, { recursive: true, force: true })
       }
     },
-    15_000
+    // This fixture prepares three native resources before checking the package.
+    60_000
   )
 })

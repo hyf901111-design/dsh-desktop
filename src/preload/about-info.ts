@@ -18,6 +18,18 @@ type ManualUpdateChecker = () => Promise<UpdateStatus>
 const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
   zh: [
     {
+      "version": "1.3.4",
+      "date": "2026-10-19",
+      "items": [
+        "对话首页的主题卡片保留入场动效，停留 3 秒后自动收至底部并露出三分之一，鼠标悬停时回弹展开。",
+        "点击组件底栏的数据来源或更新状态，可直接打开对应组件的“数据与自动更新”设置；已登记多个兼容来源的组件支持下拉切换。",
+        "自选股、个股行情、市场指数、新闻和公司公告新增可切换的数据来源，支持保存刷新频率和暂停状态。",
+        "组件底栏同时显示数据源名称与刷新频率或当前状态，更新失败、暂停时也保留来源，悬停显示完整说明并使用小手光标。",
+        "切换来源或刷新时保留组件布局和交互状态；部分取数失败时继续显示上次有效数据及图表，并保留原有来源和成交量单位。",
+        "优化数据设置中下拉箭头的间距与深浅主题显示，来源选项只显示来源名称，保留键盘操作和关闭后的焦点恢复。"
+      ]
+    },
+    {
       "version": "1.3.3",
       "date": "2026-10-16",
       "items": [
@@ -457,6 +469,18 @@ const releaseNotes: Record<SherlockAboutLocale, SherlockReleaseNote[]> = {
     }
   ],
   en: [
+    {
+      "version": "1.3.4",
+      "date": "2026-10-19",
+      "items": [
+        "Home theme cards keep their entrance animation, retract to one-third visibility after three seconds, and expand again on hover.",
+        "Click a component footer source or update status to open its Data and Auto-update settings. Components with multiple registered compatible sources can switch between them.",
+        "Add selectable data sources for watchlists, individual stock quotes, market indices, news and company announcements, with saved refresh intervals and pause settings.",
+        "Component footers show the source alongside the refresh interval or current status, retain source names on errors and pauses, and provide full details on hover with a pointer cursor.",
+        "Preserve component layout and interaction state while switching sources or refreshing. Partial fetch failures retain valid previous data and charts, including their source and volume units.",
+        "Refine dropdown arrow spacing and light and dark appearances in data settings. Source options show source names, with keyboard operation and focus restoration preserved."
+      ]
+    },
     {
       "version": "1.3.3",
       "date": "2026-10-16",
