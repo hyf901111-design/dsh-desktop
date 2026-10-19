@@ -31,6 +31,7 @@ import { createPublicDataClient } from './public-data-client.js'
 import { preparePublicDataPanel, validatePublicDataPanel } from './workbench-public-data.js'
 import { loadBundledComponentSkill } from './component-skill.js'
 import { deferredWorkbenchPanel, prepareSimulatedArtifact } from './workbench-plan.js'
+import { GANTT_GUIDANCE } from './gantt-template-contract.js'
 import { TIMELINE_GUIDANCE } from './timeline-template-contract.js'
 import { applyBundledSkillPreferences, bundledSkillEnabled } from './bundled-skill-preferences.js'
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
@@ -479,7 +480,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     progress: operationsTemplateSchema('progress'),
     tasks: operationsTemplateSchema('tasks'),
     timeline: TIMELINE_GUIDANCE,
-    gantt: '{"version":1,"type":"gantt","title":"标题","asOf":"模拟数据与共同日期口径","items":[{"label":"阶段或任务","start":"YYYY-MM-DD","end":"YYYY-MM-DD","progress":0,"owner":"负责人"}]}；保留共同时间轴，end不得早于start，progress为0–100。',
+    gantt: GANTT_GUIDANCE,
     kpi: '{"version":1,"type":"kpi","title":"标题","asOf":"原数据来源及时点","items":[{"label":"指标","value":"原数值及单位"}]}\n' + KPI_GUIDANCE,
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}',
     chart: chartTemplateSchema(requestedChartVariant(templatePrompt)),

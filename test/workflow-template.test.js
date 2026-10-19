@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {Window} from 'happy-dom';
 import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
 import {operationsDataIssue,operationsTemplateSchema,requestedOperationsType} from '../packages/dsh-research-task-runtime/operations-template-contract.js';
 import {renderOperationsArtifact} from '../packages/dsh-research-task-runtime/operations-artifact.js';
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js';
@@ -8,6 +9,7 @@ import {readTemplateModel,templateFor} from '../packages/dsh-research-task-runti
 import {validateWorkbench,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js';
 import {workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
 import {buildResearchTaskPrompt} from '../packages/dsh-research-task-runtime/index.js';
+const bundledSkillVersion=JSON.parse(readFileSync(new URL('../skills/ework-workbench-components/_meta.json',import.meta.url),'utf8')).version;
 
 const samples={
  approval:{version:1,type:'approval',title:'审批记录',subject:'研究报告发布申请',asOf:'2026-09-30 · 用户提供',status:'pending',applicant:'张晓',submittedAt:'2026-09-30 10:24',items:[{id:'a',reviewer:'李明',stage:'数据核验',status:'approved',comment:'确认来源与披露日期'},{id:'b',reviewer:'王悦',stage:'研究负责人',status:'pending',comment:'核验结论与风险提示'}]},
@@ -22,13 +24,28 @@ function runtime(data){
  return window;
 }
 describe('Figma 21Z workflow templates',()=>{
+ it('retains complete alert contingency detail inside the existing disclosure without changing summary or read state',()=>{
+  const detail='完整预案：暂停高空装置；使用已批准备用金；撤场后保留原记录。';
+  const data={...samples.alerts,items:[{...samples.alerts.items[0],detail}]};
+  expect(operationsDataIssue(data)).toBeNull();
+  const rendered=render(data);expect(readTemplateModel(rendered).data).toEqual(data);
+  const window=runtime(data),entry=window.document.querySelector('.alert-entry');
+  expect(entry.querySelector('details').textContent).toContain(detail);
+  expect(entry.querySelector('details').textContent).toContain(data.items[0].summary);
+  expect(entry.querySelector('input').disabled).toBe(true);
+  expect(operationsTemplateSchema('alerts')).toContain('detail');
+  expect(operationsDataIssue({...data,items:[{...data.items[0],unknown:'保留但不接受未知字段'}]})).toContain('unknown');
+  for(const invalid of ['x'.repeat(4001),{text:'不能猜造字段'}])expect(operationsDataIssue({...data,items:[{...data.items[0],detail:invalid}]})).toContain('items[0].detail');
+  const unsafe={...data,items:[{...data.items[0],detail:'<img src=x onerror=alert(1)>'}]};
+  expect(render(unsafe).html).not.toContain('<img src=x');expect(readTemplateModel(render(unsafe)).data).toEqual(unsafe);
+ });
  it.each(['approval','alerts'])('routes %s through its selected template and retains source data',type=>{
   const artifact=samples[type],panel={title:artifact.title,type,prompt:'按提供记录展示',size:'large',artifact};
   const plan=validateWorkbench({requestId:type,title:'研究运营',dataMode:'source',panels:[panel]});
   expect(plan.panels[0].artifact).toEqual(artifact);expect(readTemplateModel(render(artifact)).data).toEqual(artifact);
   expect(templateFor(artifact).schema).toBe(operationsTemplateSchema(type));expect(workbenchDesignTemplate(panel).figma).toBe(type==='approval'?'1918:346911':'1918:354877');
   const prompt=buildResearchTaskPrompt({parentSessionId:'session',canvasNodeId:'panel',kind:'container',prompt:workbenchPanelPrompt({title:'运营'},panel)});
-  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('v1.21.0');
+  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toContain('ework-workbench-components '+bundledSkillVersion);
   expect(renderOperationsArtifact(artifact)).toBeNull();
  });
  it('resolves explicit workflow types and familiar user requests',()=>{

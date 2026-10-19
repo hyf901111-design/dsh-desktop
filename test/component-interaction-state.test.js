@@ -6,6 +6,40 @@ import {validResearchInteractionState,validResearchInteractionEvent,researchInte
 import {patchComponentInteractionState} from '../scripts/lib/component-interaction-state.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 const e=(id,clock)=>({id,clock,targetRoute:[1],tag:'BUTTON',type:'click'})
+function priceVolumeJournalClient(){
+ const w=new Window({settings:{disableJavaScriptEvaluation:true}}),out=[],allowed=new WeakSet();let serial=0
+ w.document.body.innerHTML='<section><details open data-workbench-default-open="price-volume-v1"><summary><span>完整量价数据</span></summary><p>所有记录</p></details></section><button>筛选</button><details><summary>其他详情</summary><p>内容</p></details><input>'
+ const parent={postMessage:m=>out.push(m)},runtime=readFileSync('packages/dsh-research-task-runtime/html-artifact.js','utf8').match(/const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`([\s\S]*?)`;/)[1]
+ vm.runInNewContext('('+runtime+')(allowed)',{document:w.document,parent,allowed,addEventListener:w.addEventListener.bind(w),Element:w.Element,Event:w.Event,MouseEvent:w.MouseEvent,KeyboardEvent:w.KeyboardEvent,HTMLInputElement:w.HTMLInputElement,HTMLSelectElement:w.HTMLSelectElement,HTMLTextAreaElement:w.HTMLTextAreaElement,crypto:{randomUUID:()=> 'disclosure-'+(++serial)}})
+ const receive=events=>w.dispatchEvent(new w.MessageEvent('message',{source:parent,data:{type:'sherlock-interaction-state',state:{events},readOnly:false}}))
+ receive({})
+ return {w,out,receive,details:w.document.querySelector('details'),click:()=>{const event=new w.MouseEvent('click',{bubbles:true,cancelable:true});allowed.add(event);try{w.document.querySelector('summary span').dispatchEvent(event)}finally{allowed.delete(event)}}}
+}
+it('旧量价折叠点击日志不反转新的展开默认值，其他交互仍恢复',()=>{
+ const c=priceVolumeJournalClient();let filters=0;c.w.document.querySelector('button').onclick=()=>filters++
+ const events={a:{...e('a',1),targetRoute:[0,0,0],tag:'SUMMARY'},b:{...e('b',2),targetRoute:[0,0,0],tag:'SUMMARY'},c:{...e('c',3),targetRoute:[0,0,0],tag:'SUMMARY'},filter:e('filter',4),other:{...e('other',5),targetRoute:[2,0],tag:'SUMMARY'},input:{...e('input',6),targetRoute:[3],tag:'INPUT',type:'input',value:'原筛选'}}
+ try{
+  c.receive(events)
+  expect(c.details.open).toBe(true)
+  expect(filters).toBe(1)
+  expect(c.w.document.querySelectorAll('details')[1].open).toBe(true)
+  expect(c.w.document.querySelector('input').value).toBe('原筛选')
+  c.receive(events);expect(c.details.open).toBe(true);expect(filters).toBe(1)
+ }finally{c.w.happyDOM.abort()}
+})
+it('新量价开合保存明确状态，重新打开和远端重放均尊重后续选择',()=>{
+ const a=priceVolumeJournalClient(),b=priceVolumeJournalClient()
+ try{
+  a.click();const close=a.out.at(-1).event
+  expect(close).toMatchObject({tag:'SPAN',type:'click',checked:false})
+  expect(validResearchInteractionEvent(close)).toBe(true)
+  b.receive({[close.id]:close});expect(b.details.open).toBe(false)
+  a.details.open=false;a.click();const open=a.out.at(-1).event
+  expect(open.checked).toBe(true)
+  b.receive({[close.id]:close,[open.id]:open});expect(b.details.open).toBe(true)
+  expect(b.out).toHaveLength(0)
+ }finally{a.w.happyDOM.abort();b.w.happyDOM.abort()}
+})
 it('bounds journal data and ties it to component source',()=>{
  expect(validResearchInteractionState({version:'v',events:{a:e('a',1)}})).toBe(true)
  expect(validResearchInteractionEvent({...e('a',1),targetRoute:[-1]})).toBe(false)

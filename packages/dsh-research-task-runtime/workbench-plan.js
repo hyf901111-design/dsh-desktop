@@ -4,6 +4,8 @@ import {DERIVED_GUIDANCE} from './derived-template-contract.js';
 import {YOUTUBE_GUIDANCE} from './youtube-template-contract.js';
 import {IFRAME_GUIDANCE} from './iframe-template-contract.js';
 import {TIMELINE_GUIDANCE,timelineDataIssue} from './timeline-template-contract.js';
+import {GANTT_GUIDANCE,ganttDataIssue} from './gantt-template-contract.js';
+import { workbenchPlanningContext } from './workbench-planning-context.js';
 import {KPI_GUIDANCE,kpiDataIssue} from './kpi-template-contract.js';
 import {CALENDAR_GUIDANCE} from './calendar-template-contract.js';
 import { researchBentoSize } from './bento-layout.js';
@@ -56,7 +58,7 @@ const schemaHints = {
     news: 'news 应包含 items:[{title,summary,date?,category?}]。',
     reports: 'reports 应包含 items:[{title,summary,date?,category?}]。',
     calendar: CALENDAR_GUIDANCE,
-    gantt: 'gantt 应包含 asOf 和 items:[{label,start:"YYYY-MM-DD",end:"YYYY-MM-DD",progress?:0–100,owner?}]。'
+    gantt: GANTT_GUIDANCE
 };
 const metricValue = metric => {
     if (!metric || (typeof metric.value !== 'string' && !(typeof metric.value === 'number' && Number.isFinite(metric.value)))) return metric?.value;
@@ -243,6 +245,7 @@ function simulatedArtifactProblem(artifact) {
         const index = artifact.items.findIndex(item => item && !item.summary && !item.url);
         if (index !== -1) return `日历第${index + 1}项缺少可显示的摘要；请补 summary 或对象与观察重点。`;
     }
+    if (artifact.type === 'gantt') return ganttDataIssue(artifact) ?? GANTT_GUIDANCE;
     return schemaHints[artifact.type] ?? '需提交已注册模板的结构化数据对象。';
 }
 export function prepareSimulatedArtifact(panel) {
@@ -432,6 +435,6 @@ export function workbenchPanelPrompt(input, p) {
     const presentation = p.type === 'html'
         ? '交付自包含 HTML 与实际业务交互；使用宿主颜色、字体变量和 window.sherlockShared.register 共享状态接口，事件通过返回句柄 dispatch，不实现独立同步定时器。正文13px/20px，辅助说明至少11px/17px，随尺寸重排而不缩字。表格的表头和所有内容默认单行，超宽横向滚动，用户手动调整列宽后才允许该列换行；用标准 table/thead/tbody，宿主提供拖动列宽。组合图表用自然内容高度，标准数据图表必须使用宿主market/chart模板。必要的自定义图形监听ResizeObserver按容器宽高重绘，文字保持CSS像素字号；禁止preserveAspectRatio="none"或scaleX/scaleY拉伸文字。静态SVG保留自身宽高比，图表及竖向容器不用height:100%、100vh或flex:1撑出空白。'
         : '组件样式、深浅主题、字体和几何由宿主模板负责；仅提交数据，不自造视觉样式。';
-    const shared = input.generationMode === 'deferred' ? `\n${DEFERRED_WORKBENCH_MARKER}\n只生成上方声明的一个模板；下方是共同事实，不能改变本卡类型或另造面板。原始用户明确数值/范围优先；sharedContext中的共同预算分配、日期、容量、单位和口径必须逐项一致，不重新分配总额或另造矛盾假设。只有用户允许的部分可补充虚构记录；显著标注模拟，禁止联网、外部链接与真实来源声明。\n原始用户需求：\n${input.originalRequest ?? '见下方共同场景约束'}\n共同场景约束：\n${input.sharedContext ?? '遵从原始用户需求，不新增共同口径。'}` : '';
+    const shared = input.generationMode === 'deferred' ? `\n${DEFERRED_WORKBENCH_MARKER}\n${workbenchPlanningContext()}\n只生成上方声明的一个模板；下方是共同事实，不能改变本卡类型或另造面板。原始用户明确数值/范围优先；sharedContext中的共同预算分配、日期、容量、单位和口径必须逐项一致，不重新分配总额或另造矛盾假设。只有用户允许的部分可补充虚构记录；显著标注模拟，禁止联网、外部链接与真实来源声明。\n原始用户需求：\n${input.originalRequest ?? '见下方共同场景约束'}\n共同场景约束：\n${input.sharedContext ?? '遵从原始用户需求，不新增共同口径。'}` : '';
     return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线单标的用 candles，多标的用 datasets，成交量缺失填 null，均不得用通用 chart 或自写 HTML 替代。` : ''}${p.type === 'chart' ? `必须输出 ${'chart.'+(p.artifact?.variant??requestedChartVariant(p.title+' '+p.prompt)??'line')} 的结构化数据。按对应图表契约填写；坐标图的labels与series.values等长，层级/分布/目标图用各自字段。` : ''}${presentation}用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。${shared}`;
 }

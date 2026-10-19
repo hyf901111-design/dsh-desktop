@@ -1,5 +1,6 @@
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
+import { workbenchPlanningContext } from './workbench-planning-context.js'
 
 // Prompt assembly runs before the first claimed message is committed as
 // user/message. Include the authored inbox entry so the first model call sees
@@ -96,7 +97,7 @@ export function registerWorkbenchExecutionPolicy(ctx) {
           ctx.tools?.schemas?.(agent)?.some(tool => tool.name === 'public_data_query')
         const genericDomesticEtf = direct && /国内|中国|A股/iu.test(human.text) && /热门|主流|代表性/iu.test(human.text) && /基金|ETF/iu.test(human.text) &&
           !/(?:[一二三四五六七八九十\d]+\s*(?:张(?:卡片?)?|卡|(?:个)?(?:面板|组件)|只(?:基金|ETF))|\d{5,6}|\d+\s*(?:天|日|周|月|年)|每.{0,6}(?:分|小时|天)|只要|只需|仅|不含|不要.{0,8}(?:新闻|资讯|指数)|指定|上传|附件|资料|记录|收益|回撤|规模|费率|经理|对比|沪深|上证|创业|科创|行业|主题|黄金|医药|半导体)/iu.test(human.text)
-        return genericDomesticEtf ? WORKBENCH_LIVE_ETF_PLAN : direct ? WORKBENCH_FREE_DATA_PLAN : WORKBENCH_EARLY_PLAN
+        return workbenchPlanningContext() + '\n' + (genericDomesticEtf ? WORKBENCH_LIVE_ETF_PLAN : direct ? WORKBENCH_FREE_DATA_PLAN : WORKBENCH_EARLY_PLAN)
       }
       return accepted.inlineArtifacts && /自动(?:刷新|更新)|每.{0,12}分钟|定时(?:刷新|更新)|持续(?:刷新|更新)/u.test(human.text)
         ? WORKBENCH_INLINE_BINDING : WORKBENCH_PLAN_SUBMITTED
