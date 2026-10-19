@@ -1,0 +1,396 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261019-05",
+  "branch": "codex/integration/20261019-05",
+  "baseMainCommit": "8d3a95a694da3011c7f9b108f71df9d0496ebaeb",
+  "expectedMainCommit": "8d3a95a694da3011c7f9b108f71df9d0496ebaeb",
+  "createdAt": "2026-10-19T07:54:46.619Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "彭博模式深色配套与三套模拟工作台本地试用",
+        "branch": "codex/feat/openterminal-style-20261019",
+        "baseCommit": "8d3a95a694da3011c7f9b108f71df9d0496ebaeb",
+        "tipCommit": "4214be3eeb7121681f2a4f1e99711be0b1572073",
+        "commits": [
+          {
+            "commit": "7662a7c08e31ad1e80865ffe3b92034e9170ed6d",
+            "parents": [
+              "3d2ea4ab7b8031e99e6dfdb041f76a94aa529d39"
+            ],
+            "subject": "新增：接入可随时切回的OpenTerminal组件试用样式"
+          },
+          {
+            "commit": "bdc7ab3482733c30056d4c33de6945624d28c42d",
+            "parents": [
+              "7662a7c08e31ad1e80865ffe3b92034e9170ed6d"
+            ],
+            "subject": "优化：支持全看板统一试用并保留原样式偏好"
+          },
+          {
+            "commit": "dd1a8e73112383405eb67aa58a9127e0bb440890",
+            "parents": [
+              "bdc7ab3482733c30056d4c33de6945624d28c42d"
+            ],
+            "subject": "新增：提供OpenTerminal组件内部布局与四组件生成预设"
+          },
+          {
+            "commit": "a68bfdec60c502d40836a59cd3964e4f1b6622d3",
+            "parents": [
+              "dd1a8e73112383405eb67aa58a9127e0bb440890",
+              "e53e0902904c6a4eee2fd27cb369ee5902e62448"
+            ],
+            "subject": "同步：基于当前主干继续OpenTerminal本地布局试用"
+          },
+          {
+            "commit": "266f625ffd1357d19af15faaf5e16cae7f311869",
+            "parents": [
+              "a68bfdec60c502d40836a59cd3964e4f1b6622d3"
+            ],
+            "subject": "记录：按用户要求恢复OpenTerminal内部布局本地试用"
+          },
+          {
+            "commit": "95a390e4967789faedc8600a529c1698edc5828e",
+            "parents": [
+              "266f625ffd1357d19af15faaf5e16cae7f311869"
+            ],
+            "subject": "优化：沉淀OpenTerminal布局规范并完善三套试用工作台"
+          },
+          {
+            "commit": "f9f4c12b440c0880e51b59540ce16e8161623ea1",
+            "parents": [
+              "95a390e4967789faedc8600a529c1698edc5828e"
+            ],
+            "subject": "修复：保留OpenTerminal完整表格布局并增大报价展示高度"
+          },
+          {
+            "commit": "2dc58811d15810802155fcf621ade46c3dde36a3",
+            "parents": [
+              "f9f4c12b440c0880e51b59540ce16e8161623ea1"
+            ],
+            "subject": "暂存：保存未验收的OpenTerminal控件样式试用改动"
+          },
+          {
+            "commit": "a36657014c99702f51b8a9f5cf284b4aad4e9aa4",
+            "parents": [
+              "2dc58811d15810802155fcf621ade46c3dde36a3"
+            ],
+            "subject": "优化：调整彭博模式实色图标与中英文切换入口"
+          },
+          {
+            "commit": "4214be3eeb7121681f2a4f1e99711be0b1572073",
+            "parents": [
+              "a36657014c99702f51b8a9f5cf284b4aad4e9aa4",
+              "8d3a95a694da3011c7f9b108f71df9d0496ebaeb"
+            ],
+            "subject": "同步：基于当前主干继续彭博模式本地试用"
+          }
+        ],
+        "boundaryParents": [
+          "3d2ea4ab7b8031e99e6dfdb041f76a94aa529d39",
+          "e53e0902904c6a4eee2fd27cb369ee5902e62448"
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/figma-canvas-icons/mode-openterminal.svg"
+          },
+          {
+            "status": "C095",
+            "path": "build/openterminal/LICENSE",
+            "previousPath": "LICENSE"
+          },
+          {
+            "status": "M",
+            "path": "config/sherlock-parked-experiments.json"
+          },
+          {
+            "status": "A",
+            "path": "docs/design/openterminal-style-trial.md"
+          },
+          {
+            "status": "M",
+            "path": "docs/superpowers/parked/2026-10-19-openterminal-style.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/calendar-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-skill.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/note-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/openterminal-layout.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/openterminal-workbench-preset.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/rss-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/simulated-workbench-presets.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-refresh.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-settings-panel.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-market-native-table.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/agents/openai.yaml"
+          },
+          {
+            "status": "A",
+            "path": "skills/ework-workbench-components/references/openterminal-layouts.md"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-component-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/macos-package-runtime.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/openterminal-dark-controls.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/openterminal-layout.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-canvas-tools.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-controls.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-native-table.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-openterminal.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-style.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "14文件177项聚焦检查通过，覆盖深色弹窗和生成状态、入口中英文、顺序与键盘切换及既有组件布局",
+            "verifiedCommit": "4214be3eeb7121681f2a4f1e99711be0b1572073",
+            "completedAt": "2026-10-19T07:54:37.778917+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过",
+            "verifiedCommit": "4214be3eeb7121681f2a4f1e99711be0b1572073",
+            "completedAt": "2026-10-19T07:54:37.778917+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "空白检查通过",
+            "verifiedCommit": "4214be3eeb7121681f2a4f1e99711be0b1572073",
+            "completedAt": "2026-10-19T07:54:37.778917+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "上一集成原生客户端已实际创建并保存三套模拟工作台共12组件，表格列对齐、搜索和完整内容已验证；实际Chromium确认全局浅色时弹窗、菜单和生成卡配套深色且退出恢复。最新彭博入口待新批次原生构建后验证。"
+        },
+        "acceptanceCriteria": [
+          "保留原生市场指数、自选股、个股行情，排除OpenTerminal ChartWidget与WatchlistWidget",
+          "其余13类布局选型写入并自动注入完整/单卡/选中内容生成流程",
+          "四类明确layoutProfile布局保留顶底栏功能及数据完整性，刷新不丢profile",
+          "客户端生成综合研究、组合与事件、行业简报三个新工作台且保留原有看板",
+          "彭博模式/Bloomberg mode使用实色图标，位于深色与易方达之间，键盘同序",
+          "菜单、数据设置载入和完成态、生成卡各状态统一现有深色配套"
+        ],
+        "risks": [
+          "仅本地可撤回试用，尚未授权接受晋升或公开发布",
+          "13类为复用规范目录，已有四类独立内布局；不支持能力明确使用完整宿主回退"
+        ],
+        "generatedAt": "2026-10-19T07:54:37.778917+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/openterminal-dark-controls.test.js",
+        "test/openterminal-layout.test.js",
+        "test/workbench-openterminal.test.js",
+        "test/workbench-style.test.js",
+        "test/workbench-component-presentation.test.js",
+        "test/research-grid-workbench.test.js",
+        "test/financial-widget-layout.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/integration-bundled-skill.test.js",
+        "test/component-data-refresh.test.js",
+        "test/research-canvas-tools.test.js",
+        "test/research-market-native-table.test.js",
+        "test/research-fund-workbench.test.js",
+        "test/research-generation-controls.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
