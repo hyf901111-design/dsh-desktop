@@ -12,7 +12,7 @@
         "featureName": "组件底栏数据源入口、备用来源与自动更新设置",
         "branch": "codex/feat/component-data-sources-20261019",
         "baseCommit": "11d227045ffc4e597d5a751c292dc0df634f1655",
-        "tipCommit": "4193b116bc178cd503b1917d73e0c7fdfb3dff81",
+        "tipCommit": "0aa2804decb91c5702071dc49846789386a2ad64",
         "commits": [
           {
             "commit": "4193b116bc178cd503b1917d73e0c7fdfb3dff81",
@@ -20,12 +20,23 @@
               "11d227045ffc4e597d5a751c292dc0df634f1655"
             ],
             "subject": "优化：调整数据设置箭头与悬停指针并显示组件数据源"
+          },
+          {
+            "commit": "0aa2804decb91c5702071dc49846789386a2ad64",
+            "parents": [
+              "4193b116bc178cd503b1917d73e0c7fdfb3dff81"
+            ],
+            "subject": "优化：数据源选项只显示来源名称"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/superpowers/specs/2026-10-19-component-data-sources-verification.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-sources.js"
           },
           {
             "status": "M",
@@ -49,6 +60,10 @@
           },
           {
             "status": "M",
+            "path": "test/component-data-settings-client.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/component-data-status.test.js"
           },
           {
@@ -62,28 +77,13 @@
               "npm",
               "test",
               "--",
-              "test/component-data-status.test.js",
-              "test/component-data-service.test.ts",
               "test/component-data-settings-client.test.js",
-              "test/component-data-refresh.test.js",
               "test/notes-financial-controls-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "69项来源状态、服务推送、设置及浏览器聚焦检查通过",
-            "verifiedCommit": "4193b116bc178cd503b1917d73e0c7fdfb3dff81",
-            "completedAt": "2026-10-19T03:57:15.487564+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "4193b116bc178cd503b1917d73e0c7fdfb3dff81",
-            "completedAt": "2026-10-19T03:57:15.487564+00:00",
+            "summary": "11项来源设置及实际Chromium验证通过",
+            "verifiedCommit": "0aa2804decb91c5702071dc49846789386a2ad64",
+            "completedAt": "2026-10-19T03:59:11.304646+00:00",
             "timeoutMs": 120000
           },
           {
@@ -94,14 +94,14 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "4193b116bc178cd503b1917d73e0c7fdfb3dff81",
-            "completedAt": "2026-10-19T03:57:15.487564+00:00",
-            "timeoutMs": 60000
+            "verifiedCommit": "0aa2804decb91c5702071dc49846789386a2ad64",
+            "completedAt": "2026-10-19T03:59:11.304646+00:00",
+            "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际patched React bundle在Chromium通过深浅主题、360px窄窗口、两类入口手形指针、下拉箭头内距及活动来源在错误与切换后的展示；固定测试数据与真实提供商取数验证分开。"
+          "summary": "实际patched React bundle在Chromium通过深浅主题、360px窄窗口、两类入口手形指针、下拉箭头内距及活动来源在错误与切换后的展示；固定测试数据与真实提供商取数验证分开。 来源选项已去除备用字样；前一提交的69项聚焦验证及类型检查均通过。"
         },
         "acceptanceCriteria": [
           "点击生成组件或原生金融组件左下角来源打开正确组件的数据与自动更新面板",
@@ -110,7 +110,8 @@
           "来源切换及部分取数失败保留有效旧数据、图表、成交量单位和实际来源",
           "隐藏暂停且恢复遵守暂停状态，旧账户和旧revision响应不能覆盖当前数据",
           "下拉箭头统一内缩，底栏及子元素悬停显示小手",
-          "生成组件底栏显示活动数据源与频率或当前状态，失败和暂停保留来源，悬停可见完整工具名称"
+          "生成组件底栏显示活动数据源与频率或当前状态，失败和暂停保留来源，悬停可见完整工具名称",
+          "数据源选项只显示来源名称，不附加备用字样"
         ],
         "risks": [
           "公开提供商接口存在时效与可用性变化；不声明无限额度或实时行情",
@@ -118,7 +119,7 @@
           "生成组件仅能切换已登记且重新授权通过的完整兼容来源方案",
           "集成批次20261019-02尚未接受，本次验收反馈需更新本地测试客户端复验"
         ],
-        "generatedAt": "2026-10-19T03:57:15.487564+00:00"
+        "generatedAt": "2026-10-19T03:59:11.304646+00:00"
       }
     }
   ],
