@@ -3,11 +3,12 @@ import { createRequire } from 'node:module'
 import { Window } from 'happy-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { patchFigmaFinalCanvas, canvasCss } from '../scripts/lib/figma-canvas-client.mjs'
+import { patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
 
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 
 const require=createRequire(import.meta.url), React=require('react'),{createRoot}=require('react-dom/client')
-const source=patchFigmaFinalCanvas(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+const source=patchResearchCreationProgress(patchFigmaFinalCanvas(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
 const start=source.indexOf('function researchGenerationPresentation('),end=source.indexOf('function isResearchWechatArticleUrl(',start)
 const derivedStart=source.indexOf('function researchIsDerivedNode('),derivedEnd=source.indexOf('function researchDerivedTitle(',derivedStart)
 const Process=new Function('react','react_jsx_runtime',source.slice(derivedStart,derivedEnd)+source.slice(start,end)+'\nreturn ResearchGenerationProcess')(React,require('react/jsx-runtime'))
