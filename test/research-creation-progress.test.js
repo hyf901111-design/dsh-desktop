@@ -2,6 +2,33 @@ import { expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition, patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {Window} from 'happy-dom'
+
+it('规划卡片缩放时沿用网格坐标，仅移动时采用浮动坐标',async()=>{
+  const source=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+  const patched=patchResearchCreationProgress(source),styleScript=patched.match(/\/\* ODYSSEY_CREATION_PROGRESS_CSS \*\/\n([^\n]+)/)[1]
+  const win=new Window(),doc=win.document
+  try{
+    new Function('document',styleScript)(doc)
+    doc.body.innerHTML='<main data-ework-grid data-grid-operation="resize"><section class="odyssey-creation-planning-card" data-planning-grid data-grid-active></section></main>'
+    const root=doc.querySelector('main'),card=root.firstElementChild
+    // Resize must ignore floating coordinates, including any inherited or stale values.
+    // Happy DOM falls back to inline left/top for unresolved variables, unlike Chromium.
+    card.style.setProperty('--grid-float-left','0px');card.style.setProperty('--grid-float-top','0px')
+    for(const mode of ['light','dark','openterminal','enterprise']){
+      root.dataset.workbenchStyle=mode
+      for(const [x,y,width,height] of [[640,360,320,220],[720,430,480,360]]){
+        Object.assign(card.style,{left:x+'px',top:y+'px',width:width+'px',height:height+'px',transform:'translate(-50%, -50%)'})
+        const style=win.getComputedStyle(card)
+        expect([style.left,style.top,style.width,style.height]).toEqual([x+'px',y+'px',width+'px',height+'px'])
+      }
+    }
+    root.dataset.gridOperation='move';card.style.setProperty('--grid-float-left','810px');card.style.setProperty('--grid-float-top','510px')
+    expect([win.getComputedStyle(card).left,win.getComputedStyle(card).top]).toEqual(['810px','510px'])
+    root.removeAttribute('data-grid-operation');card.removeAttribute('data-grid-active');card.style.removeProperty('--grid-float-left');card.style.removeProperty('--grid-float-top')
+    expect([win.getComputedStyle(card).left,win.getComputedStyle(card).top]).toEqual(['720px','430px'])
+  }finally{await win.happyDOM.abort()}
+})
 
 it('shows early progress for explicit workbench and component creation, not product questions', () => {
   expect(classifyResearchCreationRequest('请用模拟数据创建金融行情工作台，包含K线、热力图和新闻列表')).toMatchObject({
