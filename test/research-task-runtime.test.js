@@ -1864,6 +1864,29 @@ describe('Research task Subagent adapter', () => {
     expect(lift).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps a bounded separate allowance for verified interface discovery so it can finish the requested companies before synthesis',async()=>{
+    const fixture=containerAdapterFixture();fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>()=>{})}};
+    fixture.ctx.tools={schemas:()=>[{name:'ework__definition',description:'读取官网 MCP 接口参数定义；不是业务数据'},{name:'ework__business',description:'返回实际财务业务记录'}]};
+    const handle=await fixture.start('工作台：三公司研究\n本面板：财务与经营差异\n查询三家公司收入、利润、同比与经营字段。\n仅生成本面板，优先使用 table 类型。');
+    let seq=0;
+    const call=(name,id,isError=false)=>{
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'tool/call',data:{name,callId:id,arguments:'{}'}});
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',isError,toolCallId:id,content:[{type:'text',text:isError?'服务器工具已变化，请重试当前请求':name==='ework__definition'?'接口字段与日期参数定义':'{"records":[{"ticker":"600011","profit":3.2}]}'}]}]}}});
+    };
+    try{
+      for(let i=0;i<4;i++)call('ework__definition','definition-'+i,i===0);
+      // Three companies can need separate statement, growth and operating
+      // requests. Interface discovery must not cut off the ninth business read.
+      for(let i=0;i<9;i++)call('ework__business','business-'+i);
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'step/end',data:{}});
+      expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
+      for(let i=9;i<12;i++)call('ework__business','business-'+i);
+      fixture.ctx.emit(fixture.ctx.child,{seq:++seq,type:'step/end',data:{}});
+      expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledOnce();
+      expect(new Set(fixture.ctx.child.ctx.tools.restrict.mock.calls[0][0].deny)).toEqual(new Set(['ework__definition','ework__business']));
+    }finally{await handle.dispose()}
+  });
+
   it.each(['calls','time','financial'])('hands verified native-template data to synthesis at the %s boundary without waiting for the 180-second deadline',async boundary=>{
     const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
     const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}},steer:vi.fn()},result=Promise.withResolvers();
@@ -1967,6 +1990,16 @@ describe('Research task Subagent adapter', () => {
     fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'ework__read_a',description:'已授权的业务读取接口'}]};
     const {createSubagentAdapter}=await runtimeModule();const handle=await createSubagentAdapter(fixture.ctx).start({parentSessionId:'parent-1',kind,query:'读取已有资料',prompt:'读取已有资料',signal:new AbortController().signal,onSessionEvent:()=>{}});
     try{for(let i=0;i<8;i++)fixture.ctx.emit(fixture.ctx.child.session,{seq:i+1,type:'tool/call',data:{name:'ework__read_a',arguments:'{}'}});fixture.ctx.emit(fixture.ctx.child.session,{seq:10,type:'step/end',data:{}});expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled()}finally{await handle.dispose()}
+  });
+  it.each(['qa','board'])('keeps the original metadata-call limit outside component tasks (%s)',async kind=>{
+    const fixture=containerAdapterFixture();fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>()=>{})}};
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'}]};
+    const {createSubagentAdapter}=await runtimeModule(),handle=await createSubagentAdapter(fixture.ctx).start({parentSessionId:'parent-1',kind,query:'读取已有资料',prompt:'读取已有资料',signal:new AbortController().signal,onSessionEvent:()=>{}});
+    try{
+      for(let i=0;i<8;i++)fixture.ctx.emit(fixture.ctx.child,{seq:i+1,type:'tool/call',data:{name:'public_data_query',callId:'catalog-'+i,arguments:'{"operation":"catalog"}'}});
+      fixture.ctx.emit(fixture.ctx.child,{seq:10,type:'step/end',data:{}});
+      expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledOnce();
+    }finally{await handle.dispose()}
   });
   it.each(['calls','time'])('makes the component synthesis-only at the %s boundary instead of leaving a read-image escape path',async boundary=>{
     vi.useFakeTimers();const fixture=containerAdapterFixture(),lift=vi.fn();fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>lift)}};

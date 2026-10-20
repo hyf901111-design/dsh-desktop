@@ -9,11 +9,15 @@ import {observedMarketHistory} from './observed-market-history.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
-export function componentSourceCollector(allowed,schemas=[]) {
-  const discovery=new Set(schemas.filter(schema=>{
+export function componentDiscoveryToolNames(schemas=[]) {
+  return new Set((Array.isArray(schemas)?schemas:[]).filter(schema=>{
     const introduction=(schema.description??'').slice(0,300)
     return /导航接口|搜的是【数据接口】，不是数据本身|接口发现|不是业务数据|仅返回接口目录/u.test(introduction)||/(?:获取|读取).{0,60}(?:API|接口|参数).{0,16}(?:完整定义|参数定义|定义)/iu.test(introduction)
   }).map(schema=>schema.name))
+}
+
+export function componentSourceCollector(allowed,schemas=[]) {
+  const discovery=componentDiscoveryToolNames(schemas)
   const calls=new Map(), records=[]
   return {
     records,

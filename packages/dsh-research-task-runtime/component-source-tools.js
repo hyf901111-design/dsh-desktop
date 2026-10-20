@@ -2,6 +2,7 @@ import { freeDataInstruction } from './free-data-skill.js'
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { workbenchCreationRequest } from './workbench-execution-policy.js'
 import { bundledSkillEnabled } from './bundled-skill-preferences.js'
+import {latestStatementRequest} from './statement-evidence.js'
 
 const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
 const datayesSource = /通联|datayes|萝卜投研|官网\s*MCP/iu
@@ -79,6 +80,10 @@ export function componentSourceInstruction(tools, request = '', now = new Date()
   const knownApi = statementHint?'':/沪深300(?!\s*(?:ETF|基金))/iu.test(request) ? '沪深300指数日行情已核验接口 getMktIdxd；先用接口定义工具读取 getMktIdxd，定义失败再搜索，省去重复的接口发现。' : /申万/u.test(request) ? '申万行业指数日行情已核验接口 getMktIdxdSw；先读取该接口定义，定义失败再搜索，省去重复的接口发现。' : ''
   const holdingsQuery = /(?:基金|ETF|fund).*(?:持仓|重仓|holdings)|(?:前十|持仓|重仓).*(?:基金|ETF|fund)/iu.test(request) ? '基金前十大持仓已核验精简接口 fund_hold_share_analysis；先读取其当前定义，按定义关闭额外指标并只取前十大（withExtra/withAllStock），定义不适用再搜索其他接口。不要为十行持仓查询多个年度的全部股票明细。业务响应明确提示 JSON 截断时，改用字段筛选、分页或精简接口取得完整响应，不能把截断响应当成可刷新来源。' : ''
   const dailySeries = /K\s*线|日线|日行情|交易日|candlestick/iu.test(request)
+  const statementWindow=statementHint&&latestStatementRequest(request)?(()=>{
+    const {end}=chinaMarketWindow(now),start=`${Number(end.slice(0,4))-1}0101`
+    return `最新财报的第一次业务查询应按当前定义限定报告期：若支持beginDate/endDate，先取 ${start} 至 ${end} 的会计截止日期范围，覆盖当前年度、上一完整年度和必要同比基期；其他日期/年度参数按实际定义表达相同范围，不复制接口示例日期，不先取全部历史。需要收入或利润绝对值及同比时，先用利润表取得各公司实际报告期及必要比较期。已取得同公司、同币种、同合并口径、同报告跨度的上年同期值时，可据明确公式计算并标注计算值和基期，不为已可计算的同比重复查询宽指标表；基期为零、负数或口径不可比时保留原值与说明，不强行给普通同比。确需指标接口时按已取得的具体会计截止日查询，避免将全历史塞入上下文；不凭日历猜报告截止日。先取覆盖所需字段的最少接口并复用各公司同口径记录；有用的同比字段、经营字段和来源不能省略。业务响应若明确截断，按已核验报告期收窄窗口或使用定义支持的分页/字段筛选重取，不读取内部溢出文件来替代取数。仅当该范围无可用披露或缺必要同比基期时再有针对性扩窗。核对分页、实际报告期及披露日期，未证实覆盖最新报告时标为本次返回记录的最近报告。`
+  })():''
   const quoteWindow=dailySeries||/行情|报价|股价|指数概览|最新指数|指数最新|净值/iu.test(request)
   const count = dailySeries ? Number(request.match(/(?:最近|近)\s*(\d{1,3})\s*(?:个)?\s*交易日/u)?.[1] ?? 0) : 0
   const explicitWindow = /\d{4}[-/]?\d{2}[-/]?\d{2}\s*(?:至|到|~|～|—|–)\s*\d{4}[-/]?\d{2}[-/]?\d{2}/u.test(request)
@@ -87,5 +92,5 @@ export function componentSourceInstruction(tools, request = '', now = new Date()
     const coverage = count > 0 ? `该窗口含周末和假期的自然日缓冲，不代表精确交易日历；取齐分页后按日期排序，展示最后 ${count} 个实际交易日。若记录不足，先扩展日期范围补齐，来源仍缺失才注明实际数量，不把10个自然日当作20个交易日。` : ''
     return `当前中国市场日期为 ${end.slice(0, 4)}-${end.slice(4, 6)}-${end.slice(6)}（北京时间）。查询最新日行情的第一次业务调用若支持 beginDate/endDate，直接用 ${start} 至 ${end} 的日期窗口并设足够大的 pagesize；${coverage}若接口使用锚点日期和方向（如 dateString/flag），先按定义选择向过去取历史的方向，不能照抄示例方向；结果为空时核对 startTime/endTime 是否落入未来，修正方向后再取数。接口定义里的示例日期只是示例，不得复制为本次日期。不要先发无日期请求或查询旧年份。未返回某日的数据只写“本次来源未返回”，不可推断原因是尚未收盘、停牌或尚未发布。`
   })() : ''
-  return `${statementHint}按数据类别独立选择来源：宏观指标先用关键词发现指标 ID，再把实际返回的 ID 用于取数，不猜测 ID。单个宏观指标无数据不代表其他数据类别不可用；股票、ETF 行情与估值仍先发现对应已授权金融 API，不因宏观查询失败直接切换 financial_query。同一请求失败后不重复相同参数；根据错误修正参数或切换已确认可用的路径。共享一份行情结果给表格与热力图，不重复取数。${knownApi}${holdingsQuery}${recentWindow}当前会话可见的专业金融数据工具：${tools.map(tool => `${tool.name}（${tool.description}）`).join('；')}。先实际调用与面板字段最匹配的金融工具取可溯源数据：行情、历史序列和估值在没有已核验接口时先找数据 API，再读取定义并实际调用；研报、公告、会议资料使用对应检索工具。接口发现的结果不是数据本身。financial_query 的 research 和 profile 是公募基金研究与资料能力，不支持A股公司财务报表或公告，不能将股票代码作为基金代码查询；这类字段使用上列实际可见的专业业务接口或已授权网页来源。若 API 搜索超时或失败，不要重试同一搜索；最多调用一次已授权的目录工具，从实际展示的条目选接口，再用接口定义工具读取参数后调用业务接口。目录若只展示首行、其余条目被截断，或看不到目标接口，立即视为此发现路径不可用；不要猜目录名称、ID 或循环枚举。此时使用当前会话可见的 financial_query 或 web_search/web_fetch 查找可核验来源；已有证据直接填写宿主模板。查询最新行情时，先看接口定义中的排序、分页和日期参数；调用 call_api 时严格遵守工具及业务接口的参数类型，不把字符串或数值类型写死；优先查询截至目标日期的短窗口并设置足以覆盖该窗口的页大小，空结果再扩窗。若响应仍分页，读取总量并取齐末端记录或翻到末页，再比较返回记录的最大交易日期；升序第一页的末条不是整个区间的最新值。无法证实已覆盖最新日期时，只能标为“本次返回记录的最近日期”，不可写“最近可得交易日”。只使用当前已授权工具，无需重复请求逐次调用确认；每个来源失败后改走下一条可用路径，不循环无效调用。`
+  return `${statementHint}${statementWindow}按数据类别独立选择来源：宏观指标先用关键词发现指标 ID，再把实际返回的 ID 用于取数，不猜测 ID。单个宏观指标无数据不代表其他数据类别不可用；股票、ETF 行情与估值仍先发现对应已授权金融 API，不因宏观查询失败直接切换 financial_query。同一请求失败后不重复相同参数；根据错误修正参数或切换已确认可用的路径。共享一份行情结果给表格与热力图，不重复取数。${knownApi}${holdingsQuery}${recentWindow}当前会话可见的专业金融数据工具：${tools.map(tool => `${tool.name}（${tool.description}）`).join('；')}。先实际调用与面板字段最匹配的金融工具取可溯源数据：行情、历史序列和估值在没有已核验接口时先找数据 API，再读取定义并实际调用；研报、公告、会议资料使用对应检索工具。接口发现的结果不是数据本身。financial_query 的 research 和 profile 是公募基金研究与资料能力，不支持A股公司财务报表或公告，不能将股票代码作为基金代码查询；这类字段使用上列实际可见的专业业务接口或已授权网页来源。若 API 搜索超时或失败，不要重试同一搜索；最多调用一次已授权的目录工具，从实际展示的条目选接口，再用接口定义工具读取参数后调用业务接口。目录若只展示首行、其余条目被截断，或看不到目标接口，立即视为此发现路径不可用；不要猜目录名称、ID 或循环枚举。此时使用当前会话可见的 financial_query 或 web_search/web_fetch 查找可核验来源；已有证据直接填写宿主模板。查询最新行情时，先看接口定义中的排序、分页和日期参数；调用 call_api 时严格遵守工具及业务接口的参数类型，不把字符串或数值类型写死；优先查询截至目标日期的短窗口并设置足以覆盖该窗口的页大小，空结果再扩窗。若响应仍分页，读取总量并取齐末端记录或翻到末页，再比较返回记录的最大交易日期；升序第一页的末条不是整个区间的最新值。无法证实已覆盖最新日期时，只能标为“本次返回记录的最近日期”，不可写“最近可得交易日”。只使用当前已授权工具，无需重复请求逐次调用确认；每个来源失败后改走下一条可用路径，不循环无效调用。`
 }
