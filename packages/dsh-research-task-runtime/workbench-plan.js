@@ -19,7 +19,7 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
-import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataHistoryTaskRequirement, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
+import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataHistoryTaskRequirement, publicDataQuoteTaskRequirement, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
@@ -346,9 +346,9 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
-        // A deferred plan carries no artifact yet. Some model gateways spell
-        // an omitted optional object as null; normalize only that empty slot.
-        if (deferred && p.artifact === null) {
+        // Gateways sometimes spell absent source content as null or {}. Only
+        // those empty slots can be omitted; supplied records/metadata stay strict.
+        if ((deferred && p.artifact === null) || (!isSimulated && (p.artifact === null || p.artifact && Object.getPrototypeOf(p.artifact) === Object.prototype && Object.keys(p.artifact).length === 0))) {
             const { artifact, ...metadata } = p;
             p = metadata;
         }
@@ -387,17 +387,19 @@ export function validateWorkbench(value) {
             if (p.intervalMinutes !== undefined && p.publicData?.intervalMinutes !== undefined && p.intervalMinutes !== p.publicData.intervalMinutes)
                 throw Error('面板与免费源刷新频率冲突，请只填写一个一致的值。');
             const candidate=p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes };
-            const sourceTaskRequirement=publicDataNewsTaskRequirement(candidate,p.type,p.title+'\n'+p.prompt)??publicDataHistoryTaskRequirement(candidate,p.type);
+            const sourceType=p.type==='table'&&candidate?.profile==='quotes-table'?'market':p.type;
+            const quoteTask=publicDataQuoteTaskRequirement(candidate,sourceType,p.title+'\n'+p.prompt);
+            const sourceTaskRequirement=quoteTask?.requirement??publicDataNewsTaskRequirement(candidate,p.type,p.title+'\n'+p.prompt)??publicDataHistoryTaskRequirement(candidate,p.type);
             if(sourceTaskRequirement){
                 const {publicData:source,intervalMinutes,...planned}=p;
-                const prompt=p.prompt+'\n'+sourceTaskRequirement;
+                const prompt=(quoteTask?.promptPrefix??'')+p.prompt+'\n'+sourceTaskRequirement;
                 if(prompt.length>5000)throw Error('面板需求与来源约束超过内容上限，请精简需求文字。');
-                p={...planned,prompt};
+                p={...planned,...(quoteTask?{type:quoteTask.type}:{}),prompt};
             }else{
-                const publicData = validatePublicDataPanel(candidate, p.type,{strictParameters:true});
+                const publicData = validatePublicDataPanel(candidate, sourceType,{strictParameters:true});
                 const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
                 const prefix = variant ? `variant: ${variant}；` : '';
-                p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
+                p = { ...p, type:sourceType, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
                 const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
                 if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
             }

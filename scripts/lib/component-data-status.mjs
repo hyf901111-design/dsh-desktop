@@ -197,11 +197,10 @@ export const componentDataStatusCss=workbenchRefreshCss+`
 [data-refresh-feedback=unchanged] .odyssey-refresh-indicator::after{content:"";position:absolute;left:2px;top:3px;width:3px;border-top:1px solid currentColor}
 [data-refresh-feedback=error] .odyssey-refresh-indicator::after{content:"!";position:absolute;inset:-1px 0 0;text-align:center;font:700 8px/9px system-ui}
 .odyssey-data-stamp[data-component-data-status=error] .odyssey-data-frequency{color:var(--research-completed-text,inherit)}
-[data-component-refreshing] [data-workbench-refresh] .ew-grid-icon{animation:ew-grid-spin 1s linear infinite}
 [data-component-refreshing] [data-workbench-refresh]{pointer-events:none}
 [data-component-updating]>[data-research-preview-body]::after{content:"";position:absolute;z-index:2;top:0;left:0;width:30%;height:2px;background:#258bea;pointer-events:none;animation:ework-refresh-progress 1300ms ease-in-out infinite}
 @keyframes ework-refresh-progress{from{transform:translateX(-100%)}to{transform:translateX(334%)}}
-@media(prefers-reduced-motion:reduce){[data-component-refreshing] [data-workbench-refresh] .ew-grid-icon,.odyssey-refresh-indicator{animation:none!important}[data-component-updating]>[data-research-preview-body]::after{animation:none;transform:none;width:100%;opacity:.65}}
+@media(prefers-reduced-motion:reduce){.odyssey-refresh-indicator{animation:none!important}[data-component-updating]>[data-research-preview-body]::after{animation:none;transform:none;width:100%;opacity:.65}}
 
 `
 

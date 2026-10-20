@@ -4,6 +4,52 @@ import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosit
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {Window} from 'happy-dom'
 
+function paintAckFixture(painted = false) {
+  const installed = restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+  const source = patchResearchCreationProgress(installed)
+  const start = source.indexOf('const odysseyPlannedCardsPainted = plan => new Promise(resolve => {')
+  const helper = source.slice(start, source.indexOf('const acknowledged = [], mounted = [];', start))
+  const frames = new Map(), timers = new Map()
+  let nextId = 0, scans = 0
+  const document = { querySelectorAll: () => {
+    scans++
+    return painted ? [{ querySelector: () => ({}), getAttribute: () => 'card' }] : []
+  } }
+  const schedule = queue => callback => { const id = ++nextId; queue.set(id, callback); return id }
+  const runNext = queue => {
+    const [id, callback] = queue.entries().next().value
+    queue.delete(id); callback()
+  }
+  const api = new Function('document', 'requestAnimationFrame', 'setTimeout', 'clearTimeout', `
+    let active = true;
+    ${helper}
+    return { paint: odysseyPlannedCardsPainted, deactivate: () => { active = false; } };
+  `)(document, schedule(frames), schedule(timers), id => timers.delete(id))
+  return { ...api, source, scans: () => scans, frames, timers, frame: () => runNext(frames), timeout: () => runNext(timers) }
+}
+
+it('stops the installed paint-ack RAF loop after its bounded wait expires', async () => {
+  const f = paintAckFixture(), result = f.paint({ panels: [{ nodeId: 'card' }] })
+  f.frame(); expect(f.scans()).toBe(1)
+  f.timeout(); expect(await result).toBe(false)
+  f.frame()
+  expect(f.scans()).toBe(1)
+  expect(f.frames.size).toBe(0)
+  expect(f.timers.size).toBe(0)
+  expect(patchResearchCreationProgress(f.source)).toBe(f.source)
+})
+
+it('acknowledges a normal painted frame once and stops after effect cleanup', async () => {
+  const success = paintAckFixture(true), painted = success.paint({ panels: [{ nodeId: 'card' }] })
+  success.frame(); expect(success.scans()).toBe(1)
+  success.frame(); expect(await painted).toBe(true)
+  expect(success.frames.size).toBe(0); expect(success.timers.size).toBe(0)
+  const cleanup = paintAckFixture(), pending = cleanup.paint({ panels: [{ nodeId: 'card' }] })
+  cleanup.deactivate(); cleanup.frame(); expect(await pending).toBe(false)
+  expect(cleanup.scans()).toBe(0)
+  expect(cleanup.frames.size).toBe(0); expect(cleanup.timers.size).toBe(0)
+})
+
 it('主会话结束推断仅显示结果待同步，明确错误和停止文案保持原样',()=>{
   const source=patchResearchCreationProgress(restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
   expect(source).toContain("intent.state === 'stopping' ? 'stopped' : 'ended'); }, 3000);")

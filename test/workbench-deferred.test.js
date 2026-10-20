@@ -101,8 +101,10 @@ describe('领域自适应模拟工作台延后生成', () => {
     } finally { await f.close() }
   })
 
-  it('does not reinterpret null as supplied source data or weaken the prohibition on mixed deferred artifacts', () => {
-    for (const mode of [{ dataMode: 'source', generationMode: undefined }, { generationMode: 'parallel' }, { generationMode: undefined }]) {
+  it('treats a source null slot as absent while keeping simulated artifact validation strict', () => {
+    const source = validateWorkbench({ ...input(), dataMode: 'source', generationMode: undefined, sharedContext: undefined, panels: [{ ...panels[4], artifact: null }] })
+    expect(source.panels[0].artifact).toBeUndefined()
+    for (const mode of [{ generationMode: 'parallel' }, { generationMode: undefined }]) {
       expect(() => validateWorkbench({ ...input(), ...mode, sharedContext: undefined, panels: [{ ...panels[4], artifact: null }] })).toThrow()
     }
     for (const artifact of [{}, false, '']) expect(() => validateWorkbench({ ...input(), panels: [{ ...panels[4], artifact }] })).toThrow()

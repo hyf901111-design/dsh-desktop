@@ -42,12 +42,17 @@ body :is([data-ework-grid],.en-note-file) .ew-grid-header button{position:relati
 body :is([data-ework-grid],.en-note-file) .ew-grid-header button:hover{background:#8c8d9b22}
 body :is([data-ework-grid],.en-note-file) .ew-grid-header button:focus-visible{outline:1px solid #249bfa}
 body :is([data-ework-grid],.en-note-file) .ew-grid-header button:disabled{opacity:.4;cursor:default}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh{display:flex;position:relative}
+body :is([data-ework-grid],.en-note-file) .ew-grid-refresh{display:flex;position:relative;flex:0 0 20px;min-width:20px;align-items:center;justify-content:center}
 .ew-grid-icon{display:block;flex:none;width:16px;height:16px;background:currentColor;mask-position:center;mask-repeat:no-repeat}
+body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-workbench-refresh]{min-width:20px;min-height:24px}
+body :is([data-ework-grid],.en-note-file) .ew-grid-refresh .ew-grid-icon{width:16px;height:16px;min-width:16px;min-height:16px;aspect-ratio:1;mask-size:16px 16px}
 body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-refresh-state=scheduled]{color:#22a06b!important}
 body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-refresh-state=error]{color:#c5804f!important}
 body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-refresh-state=manual]{color:#858b95!important}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-busy=true] .ew-grid-icon{animation:ew-grid-spin 1s linear infinite}
+.ew-grid-refresh [data-busy=true] .ew-grid-icon,[data-component-refreshing] [data-workbench-refresh] .ew-grid-icon{visibility:hidden;animation:none}
+.ew-grid-refresh [data-busy=true],[data-component-refreshing] [data-workbench-refresh]{opacity:1!important}
+.ew-grid-refresh [data-busy=true]::after,[data-component-refreshing] [data-workbench-refresh]::after{content:"";position:absolute;box-sizing:border-box;width:14px;height:14px;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;background:none;pointer-events:none;animation:ew-grid-spin 850ms linear infinite}
+@media(prefers-reduced-motion:reduce){.ew-grid-refresh [data-busy=true]::after,[data-component-refreshing] [data-workbench-refresh]::after{animation:none}}
 .ew-grid-tooltip{position:fixed;z-index:2000;display:none;pointer-events:none;flex-direction:column;padding:7px 8px;border-radius:3px;background:#24242b;color:#e9e9ef;box-shadow:0 3px 14px #0003;font:400 12px/17px Inter,"Noto Sans SC",system-ui;white-space:nowrap}
 .ew-grid-tooltip time{color:#a4adbe}
 .ew-grid-refresh:hover>.ew-grid-tooltip,.ew-grid-refresh:focus-within>.ew-grid-tooltip{display:flex}

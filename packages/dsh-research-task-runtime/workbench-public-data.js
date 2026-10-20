@@ -26,6 +26,10 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
     if (!object(parameters)) throw Error('parameters_json必须为JSON对象字符串')
     // New plans check adapter capabilities before acceptance. Persisted tasks
     // retain their shape contract so old failed recipes remain recoverable.
+    if(strictParameters&&request.source==='tencent-quotes'){
+      if(Object.keys(parameters).some(key=>key!=='symbols'))throw Error('腾讯报价只支持symbols，不接受任意URL、密钥或请求头')
+      if(!Array.isArray(parameters.symbols)||!parameters.symbols.length||parameters.symbols.length>12||parameters.symbols.some(symbol=>typeof symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(symbol)))throw Error('腾讯报价symbols必须为1–12个合规交易代码')
+    }
     if(strictParameters&&request.source==='tencent-history'){
       if(Object.keys(parameters).some(key=>!['symbol','limit'].includes(key)))throw Error('腾讯历史行情只支持symbol与limit，不接受任意URL、密钥或请求头')
       if(typeof parameters.symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5})$/u.test(parameters.symbol))throw Error('腾讯历史行情symbol必须为已确认的合规交易代码')
@@ -41,6 +45,29 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
   return { profile: value.profile, requests, intervalMinutes, ...(value.layoutProfile ? { layoutProfile: value.layoutProfile } : {}) }
 }
 
+// A valid quote request does not imply that the fixed renderer covers every
+// business field. Keep the observed unsupported requirements in a source task.
+const quoteExtraField=String.raw`(?:成交量|成交额|市盈率(?:\s*[(（]TTM[)）])?|市净率|(?:总)?市值|(?:昨收|前收盘)(?:价)?|涨跌额|\b(?:PE(?:[-_ ]?TTM)?|PB|volume|amount|market[ _-]?cap|previousClose|previous[ _-]close|change)\b)`
+const metricsExtraField=String.raw`(?:开盘(?:价)?|最高(?:价)?|最低(?:价)?|\b(?:open|high|low)(?:Price)?\b)`
+function requiredQuoteFields(requirement,profile){
+  const field=profile==='quotes-metrics'?`(?:${quoteExtraField}|${metricsExtraField})`:quoteExtraField
+  // Erase only complete exclusion lists ending at punctuation or the end.
+  // Unknown trailing text may affirm the last field; retain the whole match.
+  const exclusion=String.raw`(?:(?:不要|不需要|无需|不必|不用)(?:展示|显示|提供|包含|包括)?|不(?:展示|显示|包含|包括)|排除|\b(?:do\s+not|don't)\s+(?:need(?:\s+to)?\s+)?(?:show|display|include|provide)?|\bno\b(?:\s+need\s+(?:for|to(?:\s+(?:show|display|include))?))?|\b(?:without|exclude|omit)\b)`
+  const separator=String.raw`(?:[、，,/](?:\s*\b(?:and|or)\b)?|和|与|以及|及|或者|或|\b(?:and|or)\b)`
+  return requirement.replace(new RegExp(`${exclusion}\\s*${field}(?:\\s*${separator}\\s*${field})*`,'giu'),(match,offset)=>
+    /^\s*(?:[，,。.;；!！?？：:\n]|$)/u.test(requirement.slice(offset+match.length))?'':match)
+}
+export function publicDataQuoteTaskRequirement(value,type,requirement=''){
+  if(!['quotes-table','quotes-metrics'].includes(value?.profile))return null
+  const supported=validatePublicDataPanel(value,type,{strictParameters:true})
+  const required=requiredQuoteFields(requirement,value.profile)
+  const missing=new RegExp(quoteExtraField,'iu').test(required)||value.profile==='quotes-metrics'&&new RegExp(metricsExtraField,'iu').test(required)
+  if(!missing)return null
+  const layout=supported.layoutProfile?'最终使用market的variant: table，顶层保留已校验的 "layoutProfile":"openterminal"（artifact.layoutProfile）。':'最终使用table的columns/rows，原规划的market/metrics仅是路由提示，不能替代本卡字段。'
+  return {type:supported.layoutProfile?'market':'table',promptPrefix:supported.layoutProfile?'market.table；variant: table；\n':'',requirement:`宿主来源能力校正：${value.profile}直通仅展示固定报价字段，不能完整表达本卡要求；改由独立表格取数任务完成。${layout}保留原面板全部标的、字段、单位、时间及交互要求，复用已校验来源参数：${JSON.stringify(supported)}。继续遵从显式来源限制，不猜接口或改请求参数；来源未提供的字段逐项标注「来源未提供」，不能删列或用股价/涨跌幅替代估值、成交量等指标，不补模拟值或声称已开启刷新。`}
+}
+
 // Sina's bundled feed cannot filter securities. Preserve a narrowly recognized
 // planner intent as a normal source task, rather than deleting symbols and
 // silently replacing company news with an unrelated market-wide feed.
@@ -52,7 +79,7 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
   try{parameters=JSON.parse(request?.parameters_json)}catch{return null}
   if(!object(parameters))return null
   const hasSymbols=Object.hasOwn(parameters,'symbols')
-  const themed=/关于.{1,180}(?:新闻|资讯|报道)|(?:公司|行业|产业链|专题|证券|个股|板块).{0,40}(?:新闻|资讯|报道|公告)|(?:相关|有关)(?:的)?(?:新闻|资讯|报道)|按(?:公司|主题|关键词)(?:筛选|检索)|\b(?:about|related to|company-specific|industry-specific)\b/iu.test(requirement)
+  const themed=/关于.{1,180}(?:新闻|资讯|报道)|(?:公司|行业|产业链|专题|证券|个股|板块).{0,40}(?:新闻|资讯|报道|公告)|(?:相关|有关)(?:的|最新|近期|真实|重要|\s){0,6}(?:新闻|资讯|报道|公告)|按(?:公司|主题|关键词)(?:筛选|检索)|\b(?:about|related to|company-specific|industry-specific)\b/iu.test(requirement)
   if(!hasSymbols&&!themed)return null
   const {symbols,...supportedParameters}=parameters
   if(hasSymbols&&(!Array.isArray(symbols)||!symbols.length||symbols.length>12||new Set(symbols).size!==symbols.length||symbols.some(symbol=>typeof symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(symbol))))throw Error('证券新闻symbols必须为1–12个唯一合规交易代码，不接受网址或其他指令')
