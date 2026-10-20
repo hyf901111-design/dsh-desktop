@@ -50,6 +50,22 @@ it('shows transport feedback for a single-component creation without exposing pr
  const installed=runInNewContext(reinstalled.slice(start,end)+';researchPlanningRequest',{})
  expect(installed(['single'],nodes,7,classifyResearchCreationRequest,parts=>parts.map(p=>p.text).join(''))).toMatchObject({kind:'component'})
 })
+it('excludes coding requests from fresh and previously installed planning feedback',()=>{
+ const nodes=new Map([['coding',{kind:'user',data:{turn:3,content:[{text:'创建一个React组件，写入src/Card.tsx'}]}}],['single',{kind:'user',data:{turn:4,content:[{text:'创建一个装置撤展交接组件，用8条模拟记录'}]}}]])
+ const read=parts=>parts.map(p=>p.text).join('')
+ expect(researchPlanningRequest([...nodes.keys()],nodes,3,classifyResearchCreationRequest,read)).toBeNull()
+ const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const fresh=patchResearchCreationProgress(original)
+ const oldHelper="function researchPlanningRequest(order,nodeStore,turn,classify,readText) {\n if(turn===null||turn===undefined)return null\n for(let i=order.length-1;i>=0;i--){\n  const node=nodeStore.get(order[i]);if(node?.kind!=='user')continue\n  const location=node.location,number=node.data?.turn??location?.turn?.turn??location?.turn\n  if(number!==turn)continue\n  const request=classify(readText(node.data?.content||[]))\n  return request?.kind==='workbench'||request?.kind==='component'?request:null\n }\n return null\n}"
+ const legacy=fresh.replace(researchPlanningRequest.toString(),oldHelper)
+ for(const source of [fresh,patchResearchCreationProgress(legacy)]){
+  const start=source.indexOf('/* ework:planning-feedback:v1 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+  const installed=runInNewContext(source.slice(start,end)+';researchPlanningRequest',{})
+  expect(installed([...nodes.keys()],nodes,3,classifyResearchCreationRequest,read)).toBeNull()
+  expect(installed([...nodes.keys()],nodes,4,classifyResearchCreationRequest,read)).toMatchObject({kind:'component'})
+  expect(patchResearchCreationProgress(source)).toBe(source)
+ }
+})
 it('patches the real progress component and its owning turn without duplicating the report on reinstall',()=>{
  const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const patched=patchResearchCreationProgress(original)

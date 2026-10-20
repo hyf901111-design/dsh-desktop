@@ -51,7 +51,10 @@ export function researchPlanningRequest(order,nodeStore,turn,classify,readText) 
   const node=nodeStore.get(order[i]);if(node?.kind!=='user')continue
   const location=node.location,number=node.data?.turn??location?.turn?.turn??location?.turn
   if(number!==turn)continue
-  const request=classify(readText(node.data?.content||[]))
+  const text=readText(node.data?.content||[])
+  // Match the runtime's coding boundary even when an older classifier is installed.
+  if(!/工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text)&&/\b(?:React|Vue|Svelte|SwiftUI|Angular|TSX|JSX)\b|\.[cm]?[jt]sx?\b|(?:组件|卡片).{0,12}(?:源码|源代码)/iu.test(text))return null
+  const request=classify(text)
   return request?.kind==='workbench'||request?.kind==='component'?request:null
  }
  return null
@@ -69,7 +72,11 @@ function ResearchPlanningFeedback({meta,startedAt,now,running}) {
 }
 export function patchResearchPlanningFeedback(source,classify) {
  const marker='/* ework:planning-feedback:v1 */'
- if(source.includes(marker))return source.replace("\n  return request?.kind==='workbench'?request:null", "\n  return request?.kind==='workbench'||request?.kind==='component'?request:null")
+ if(source.includes(marker)){
+  const start=source.indexOf('function researchPlanningRequest('),end=source.indexOf('\nfunction ResearchPlanningFeedback(',start)
+  if(start<0||end<0)throw Error('Planning feedback request helper missing on reinstall')
+  return source.slice(0,start)+researchPlanningRequest.toString()+source.slice(end)
+ }
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Planning feedback anchor missing or ambiguous: '+before.slice(0,75));source=source.replace(before,after)}
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {'
  const helpers=marker+'\n'+[planningResponseMetadata,advancePlanningHeartbeat,planningFeedbackState,researchPlanningRequest,ResearchPlanningFeedback].map(fn=>fn.toString()).join('\n')+'\n'
