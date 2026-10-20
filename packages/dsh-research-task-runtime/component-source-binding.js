@@ -15,7 +15,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
   return {
     records,
     accept(event) {
-      if(event?.type==='tool/call'&&allowed.includes(event.data?.name)) {
+      if(event?.type==='tool/call'&&typeof event.data?.callId==='string'&&event.data.callId&&allowed.includes(event.data?.name)) {
         try { const args=typeof event.data.arguments==='string'?JSON.parse(event.data.arguments):event.data.arguments;calls.set(event.data.callId,{tool:event.data.name,args}) } catch {}
       }
       if(event?.type!=='tool/result')return
@@ -64,6 +64,57 @@ export function componentSnapshotEvidence(text,records) {
     return Object.entries(value).some(([key,v])=>['url','link','sourceUrl'].includes(key)&&typeof v==='string'&&urls.has(snapshotUrl(v))||v&&typeof v==='object'&&(Array.isArray(v)?v.some(referenced):referenced(v)))
   }
   return extractArtifactObjects(text).some(referenced)
+}
+
+// A request for real observations does not imply a recurring refresh recipe.
+// Ignore quoted examples and negative status/prohibitions in the task contract.
+export function componentBindingRequested(text) {
+  const request=typeof text==='string'?text.split('\n仅生成本面板，')[0].replace(/```[\s\S]*?```/gu,'').replace(/^\s*>.*$/gmu,'').replace(/[“「][^”」]*[”」]/gu,''):''
+  return request.split(/[。；;\n]/u).some(part=>
+    !/(?:不要|不用|不需要|禁止|关闭|禁用|未绑定|不绑定|不得声称).{0,20}(?:自动|定时|持续|周期|刷新|更新|绑定)|(?:仅|只).{0,8}(?:静态|快照)/u.test(part)&&
+    /自动(?:刷新|更新|绑定)|(?:定时|持续|周期)(?:刷新|更新)|(?:仅|只)?\s*手动(?:刷新|更新)|每\s*(?:\d+|[一二三四五六七八九十]+)?\s*(?:分(?:钟)?|小时|天).{0,16}(?:刷新|更新)|\b(?:auto(?:matic)?\s*(?:refresh|update)|refresh\s+every|every\s+\d+\s+(?:minutes?|hours?))\b/iu.test(part))
+}
+
+export function componentSnapshotData(data) {
+  const status='静态快照，自动更新未绑定'
+  return {...data,asOf:typeof data.asOf==='string'&&data.asOf.trim()?data.asOf+(data.asOf.includes(status)?'':' · '+status):status}
+}
+
+// Recover only source-backed mappings. An unused bad request may invalidate the
+// refresh recipe, but cannot erase fields mapped from other exact observed calls.
+// Missing referenced requests/fields still fail; no guessed arguments or literals
+// are substituted for the source data.
+export function resolveComponentSnapshot(text,records,now=new Date()) {
+  const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
+  if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(candidate.mapping))return null
+  const responses={}
+  try {
+    const keys=new Set()
+    for(const request of candidate.requests){
+      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(request.tool==='public_data_query'||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
+      keys.add(request.key)
+      const args=evaluateMapping(normalizeRequestDates(request.args),{},now)
+      const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&!['discovery','snapshot'].includes(record.purpose))
+      if(source)responses[request.key]=source.response
+    }
+    if(!Object.keys(responses).length)return null
+    let paths=0
+    const measured=/^(?:value|values|price|weight|change|open|high|low|close|volume|x|y|size|current|previous|changePercent|marketValue|rate|targetPrice|compensation|totalShares|floatShares)$/u
+    const sourceBacked=(value,key='')=>{
+      if(Array.isArray(value))return value.every(v=>sourceBacked(v,key))
+      if(!value||typeof value!=='object')return !(typeof value==='number'&&key!=='version'||typeof value==='string'&&(measured.test(key)||key==='rows'&&/^[+-]?(?:\d[\d,.]*|\.\d)/u.test(value))&&!/^(?:—|--|N\/A|本次未取得|来源未提供)/iu.test(value))
+      if((Object.hasOwn(value,'$path')||Object.hasOwn(value,'$each'))&&!['asOf','title','sources'].includes(key))paths++
+      // Only the source selector can produce values; literals inside $map are
+      // checked as usual, while formatting and missing-value text are metadata.
+      return Object.entries(value).every(([k,v])=>k==='$default'?typeof v==='string'&&/未取得|未提供|缺失|暂无/u.test(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
+    }
+    if(!sourceBacked(candidate.mapping)||!paths)return null
+    const mapping=singleSourceMapping(candidate.mapping,responses)
+    const data=materializeComponentMapping(mapping,responses,now)
+    if(templateSourceDataIssue(data)||templateDataIssue(data))return null
+    const snapshot=componentSnapshotData(data),output=acceptArtifactOutput(JSON.stringify(snapshot))
+    return output?{data:snapshot,output}:null
+  }catch{return null}
 }
 
 export const COMPONENT_BOUND_DATA_PROMPT = `

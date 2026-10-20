@@ -1241,7 +1241,7 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
-  it('uses free data in an online child with native refresh mapping and no plugin requirement', async () => {
+  it('uses free data in an online child without imposing a refresh recipe on a data request', async () => {
     const fixture = containerAdapterFixture();
     fixture.ctx.tools = { schemas: () => [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }] };
     const handle = await fixture.start('工作台：宏观观察\n本面板：GDP\n联网取真实数据，优先使用 chart 类型。');
@@ -1249,7 +1249,8 @@ describe('Research task Subagent adapter', () => {
     expect(child.toolFilter.allow).toContain('public_data_query');
     expect(fixture.ctx.web.search).not.toHaveBeenCalled();
     expect(child.prompt[0].text).toContain('先用当前可见 public_data_query');
-    expect(child.prompt[0].text).toContain('最终必须交付一个 data-bound');
+    expect(child.prompt[0].text).not.toContain('最终必须交付一个 data-bound');
+    expect(child.prompt[0].text).toContain('唯一交付格式：');
     expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件');
     await handle.dispose();
   });
@@ -1264,6 +1265,23 @@ describe('Research task Subagent adapter', () => {
       await handle.dispose();
     }
   });
+
+  it.each([
+    '工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。',
+    '使用通联更新三大指数行情概览。variant: metrics。',
+    '使用通联真实数据，仅静态快照，未绑定自动刷新。variant: metrics。'
+  ])('does not inject the refresh protocol into a static connected-source request: %s',async query=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'ework__datayes_call',description:'调用通联 DataYes 金融数据 API'}]}
+    const handle=await fixture.start(query)
+    try{
+      const prompt=fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+      expect(prompt).toContain('唯一交付格式：')
+      expect(prompt).toContain('直接交付真实静态数据、来源和数据时点')
+      expect(prompt).not.toContain('自动绑定数据交付协议')
+      expect(prompt).not.toContain('mapping 的模板结构')
+    }finally{await handle.dispose()}
+  })
 
   it('preserves MCP retrieval for a planned custom page that forbids simulated data', async () => {
     const query = '工作台：真实研究\n本面板：投资论点证据对照\n用当前已连接的通联 DataYes/萝卜投研 MCP 工具取真实资料：用公告检索工具查 688256 最近公告。禁止模拟数据、禁止向外部写入。\n仅生成本面板，优先使用 html 类型。'
@@ -1293,9 +1311,9 @@ describe('Research task Subagent adapter', () => {
   })
 
   it.each([
-    '工作台：ETF研究\n本面板：最新ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。',
-    '使用通联更新三大指数行情概览。variant: metrics。共9个指标。',
-    '使用通联更新三大指数行情概览。variant: metrics。共9个指标。\n组件初始尺寸 656×456px；自动布局按内容密度选择规格。',
+    '工作台：ETF研究\n本面板：最新ETF行情\n使用通联真实数据，每分钟自动更新，优先使用 market 类型，variant: metrics。',
+    '使用通联更新三大指数行情概览并每分钟自动更新。variant: metrics。共9个指标。',
+    '使用通联更新三大指数行情概览并每分钟自动更新。variant: metrics。共9个指标。\n组件初始尺寸 656×456px；自动布局按内容密度选择规格。',
     '展示三大指数行情概览，使用通联数据并自动绑定。\n组件初始尺寸 656×456px；自动布局按内容密度选择规格。'
   ])('uses one binding contract for planned and edited plugin-backed panels: %s', async (query) => {
     const fixture=containerAdapterFixture()
