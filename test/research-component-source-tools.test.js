@@ -21,6 +21,30 @@ it('recognizes company financial operating comparisons and does not invent acqui
  expect(preferredComponentSourceTools(schemas,'财务预算：跟踪艺术节场租、人员与物资支出')).toEqual([])
 })
 
+it('starts an A-share filed-statement comparison from verified statement definitions and keeps operating fields separate',()=>{
+ const tools=[{name:'ework__data',description:'通联 DataYes 金融数据 API'}]
+ const request='华能国际600011.SH、华电国际600027.SH、国电电力600795.SH最新已披露财务与经营差异，营业收入、归母净利润、同比和发电量。'
+ const text=componentSourceInstruction(tools,request)
+ expect(text).toContain('getFdmtISLT2018')
+ expect(text).toContain('getFdmtMainDataLt')
+ expect(text).toContain('先读取当前接口定义')
+ expect(text).toContain('不能代替正式财报')
+ expect(text).toContain('经营字段')
+ expect(text).toContain('实际报告期、披露日期和单位')
+ expect(componentSourceInstruction(tools,request,new Date(),{planning:true})).not.toContain('getFdmtISLT2018')
+})
+
+it.each(['600011.SH业绩预告与盈利预测对比','AAPL最新已披露财报','只查询600011.SH近期股价，不取财报'])('does not route a different financial task through the A-share filed-statement path: %s',request=>{
+ const text=componentSourceInstruction([{name:'ework__data',description:'通联 DataYes 金融数据 API'}],request)
+ expect(text).not.toContain('getFdmtISLT2018')
+ expect(text).not.toContain('getFdmtMainDataLt')
+})
+
+it.each(['AAPL最新已披露财报','最新GDP季度数据','600011.SH最新业绩预告'])('does not apply a ten-day quote window to a different reporting cadence: %s',request=>{
+ const text=componentSourceInstruction([{name:'ework__data',description:'通联 DataYes 金融数据 API'}],request)
+ expect(text).not.toContain('最新日行情的第一次业务调用')
+})
+
 it('keeps date windows local to the panel and does not route ETF names to index quotes', () => {
   const tools=[{name:'ework__data',description:'通联 DataYes API'}], now=new Date('2026-09-26T01:00:00Z')
   const plan=componentSourceInstruction(tools,'创建沪深300ETF工作台：最新行情、大盘概览、近20个交易日K线',now,{planning:true})
