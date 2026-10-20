@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "由宿主计算金融趋势分支的基期100曲线及来源事实",
+        "featureName": "保留真实金融趋势的宿主区间计算和基准排序",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "59723d03f5451f91cac1a73418d3a19ab94f76d6",
-        "tipCommit": "7486bbcc9fee6ac0d104ba617921ad2df2b38b80",
+        "baseCommit": "7486bbcc9fee6ac0d104ba617921ad2df2b38b80",
+        "tipCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
         "commits": [
           {
-            "commit": "7486bbcc9fee6ac0d104ba617921ad2df2b38b80",
+            "commit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
             "parents": [
-              "59723d03f5451f91cac1a73418d3a19ab94f76d6"
+              "7486bbcc9fee6ac0d104ba617921ad2df2b38b80"
             ],
-            "subject": "由宿主按真实日线计算金融趋势并保留来源日期口径"
+            "subject": "按原始价格保留金融趋势的区间涨跌幅及基准排序"
           }
         ],
         "files": [
@@ -32,16 +32,12 @@
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/observed-market-history.js"
           },
           {
-            "status": "A",
-            "path": "test/observed-market-history.test.js"
-          },
-          {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/observed-market-history.test.js"
           }
         ],
         "checks": [
@@ -51,14 +47,13 @@
               "run",
               "test/observed-market-history.test.js",
               "test/component-source-binding.test.js",
-              "test/component-announcement-provenance.test.js",
               "test/research-task-runtime.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "325项来源、趋势映射、真实计算与运行时检查通过；/tmp/observed-market-history-commit-focused-20261021.log",
-            "verifiedCommit": "7486bbcc9fee6ac0d104ba617921ad2df2b38b80",
-            "completedAt": "2026-10-20T17:57:19.450319+00:00",
+            "summary": "317项检查通过；/tmp/observed-market-rankings-focused-20261021.log",
+            "verifiedCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
+            "completedAt": "2026-10-20T18:02:18.397444+00:00",
             "timeoutMs": 180000
           },
           {
@@ -68,9 +63,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/observed-market-history-commit-typecheck-20261021.log",
-            "verifiedCommit": "7486bbcc9fee6ac0d104ba617921ad2df2b38b80",
-            "completedAt": "2026-10-20T17:57:19.450319+00:00",
+            "summary": "类型检查通过；/tmp/observed-market-rankings-typecheck-20261021.log",
+            "verifiedCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
+            "completedAt": "2026-10-20T18:02:18.397444+00:00",
             "timeoutMs": 180000
           },
           {
@@ -78,117 +73,28 @@
               "git",
               "diff",
               "--check",
-              "59723d03f5451f91cac1a73418d3a19ab94f76d6..HEAD"
+              "7486bbcc9fee6ac0d104ba617921ad2df2b38b80..HEAD"
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "7486bbcc9fee6ac0d104ba617921ad2df2b38b80",
-            "completedAt": "2026-10-20T17:57:19.450319+00:00",
+            "verifiedCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
+            "completedAt": "2026-10-20T18:02:18.397444+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "实机第四轮4/4完成，但80个金融趋势点有1点手算偏差；使用实际任务1073c60a数据回放已纠正为96.98，保留4条20点序列与ISO日期。新构建仍需单卡真实再生验证。"
+          "summary": "已验证当前真实金融需求明确要求相对沪深300的超额排序；宿主计算后保留该字段，使用原始价格最后取两位小数。仍须集成构建并原位重生成确认。"
         },
         "acceptanceCriteria": [
-          "market.trend明确基期100且每条序列与实际成功金融日线响应唯一对应时，由宿主计算，替换手写日期计数及推导说明。",
-          "来源不明确、日期跨年冲突、证券不符、原始价格需求均不猜测对应。",
-          "静态金融trend可直接交付来源映射，映射及原生数据输出均保留宿主计算口径。"
+          "区间涨跌幅由源价格计算；用户明确以沪深300为参考时保留超额差与排序，不因移除模型手算说明丢失需求。",
+          "直接原生输出及字段映射输出均经过同一计算。"
         ],
         "risks": [
-          "本地测试，不晋升main，不发布。",
-          "目前只针对financial-1日线及显式金融基期100；其他数据仍按已有验证。",
-          "来源说明密度与图例布局仍待优化；政策取数仍待下一轮处理。"
+          "仅本地测试，不发布、不晋升main。",
+          "其他基准尚未自动识别，保留区间涨跌幅和源价格，不猜基准。"
         ],
-        "generatedAt": "2026-10-20T17:57:19.450319+00:00"
-      },
-      "merged": {
-        "mergeCommit": "b6a8da674718ac237c520170aae226835d36a20b",
-        "verificationCommit": "b6a8da674718ac237c520170aae226835d36a20b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "b6a8da674718ac237c520170aae226835d36a20b",
-            "completedAt": "2026-10-20T17:59:44.859Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b6a8da674718ac237c520170aae226835d36a20b",
-            "completedAt": "2026-10-20T17:59:44.859Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "b6a8da674718ac237c520170aae226835d36a20b",
-            "completedAt": "2026-10-20T17:59:44.859Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "b6a8da674718ac237c520170aae226835d36a20b",
-            "completedAt": "2026-10-20T17:59:44.859Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b6a8da674718ac237c520170aae226835d36a20b",
-            "completedAt": "2026-10-20T17:59:44.859Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T17:59:44.859Z"
+        "generatedAt": "2026-10-20T18:02:18.397444+00:00"
       }
     },
     {
