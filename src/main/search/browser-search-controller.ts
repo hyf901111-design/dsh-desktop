@@ -4,6 +4,7 @@ import {
   isAllowedSearchLocation,
   isSearchChallenge,
   normalizeSearchResults,
+  hasSearchQueryOverlap,
   orderedSearchEngines,
   searchSnapshotScript,
   type SearchEngineId,
@@ -49,6 +50,7 @@ interface SearchPageState {
 }
 
 class SearchVerificationError extends Error {}
+class SearchQueryMismatchError extends Error {}
 
 export function browserSearchWindowOptions(): BrowserWindowConstructorOptions {
   return {
@@ -158,6 +160,7 @@ export class BrowserSearchController {
     let connectionFailed = false
     let unreadablePage = false
     let verificationFailed = false
+    let queryMismatch = false
     for (const engine of orderedSearchEngines(query)) {
       // The global Bing entry can stall before its regional redirect. Retry only
       // the existing allowed regional host, once, with the exact same query.
@@ -202,6 +205,7 @@ export class BrowserSearchController {
             }
             const candidates = Array.isArray(snapshot?.candidates) ? (snapshot.candidates as SearchResultCandidate[]) : []
             const sources = normalizeSearchResults(candidates, maxResults)
+            if (sources.length > 0 && !hasSearchQueryOverlap(query, sources)) throw new SearchQueryMismatchError('结果条目与查询缺少直接对应。')
             if (sources.length > 0) return { sources, truncated: false, provenance: { engine, requestedQuery: query, documentQuery, pageTitle: typeof snapshot?.title === 'string' ? snapshot.title.slice(0, 512) : '' } }
             if (snapshot?.noResults === true) {
               noResults = true
@@ -220,6 +224,7 @@ export class BrowserSearchController {
             verificationFailed = true
             break
           }
+          if (error instanceof SearchQueryMismatchError) { queryMismatch = true; continue }
           unreadablePage = true
         }
       }
@@ -227,12 +232,13 @@ export class BrowserSearchController {
     if (noResults) {
       return {
         status: 'no_results', sources: [], truncated: false,
-        content: connectionFailed || unreadablePage || verificationFailed
+        content: queryMismatch ? '可用入口未找到匹配来源，其他入口返回的条目与查询缺少直接对应，未采用这些来源；不能据此推断数据或政策不存在。' : connectionFailed || unreadablePage || verificationFailed
           ? '可用搜索页面未找到匹配来源，另有搜索引擎暂不可用。请调整关键词或稍后重试；不能据此推断实时价格或数据不存在。'
           : '未找到与当前关键词匹配的可引用来源。请调整关键词；不能据此推断实时价格或数据不存在。'
       }
     }
     if (verificationFailed) throw new Error('可用搜索入口需要验证，已在后台跳过。请稍后重试；当前尚未取得可引用来源。')
+    if (queryMismatch) throw new Error('搜索结果与当前查询缺少直接对应，已尝试备用入口，未采用这些来源。请调整关键词或稍后重试。')
     if (unreadablePage) throw new Error('暂时未能读取搜索结果，页面可能尚未加载完成或结构已变化。请稍后重试或调整关键词。')
     throw new Error('搜索引擎暂时无法连接，可能是网络超时或安全证书验证失败。请检查网络或稍后重试。')
   }

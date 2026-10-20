@@ -532,3 +532,27 @@ it('waits for the current document query to hydrate without issuing another navi
  await expect(controller.search('煤电政策',5)).resolves.toMatchObject({sources:[{url:'https://example.org/policy'}],provenance:{documentQuery:'煤电政策'}})
  expect(window.loaded).toHaveLength(1);expect(probes).toBe(2);expect(waits).toBe(1)
 })
+
+it.each([
+ ['2026 煤电 容量电价 政策 国家发改委 电价 煤炭保供稳价','CNKI Off-Campus Access for Colleges/Universities/Institutions','Partners: Tsinghua University Library CARSI'],
+ ['"容量电价" 煤电 2026 政策 news','容量（物体或空间容纳物质的数量）_百度百科','容量是描述物体或空间容纳物质多少的物理量']
+])('falls back with the identical query when the real page has unrelated result rows: %s',async(query,title,snippet)=>{
+ const window=new FakeSearchWindow()
+ window.webContents.executeJavaScript=async script=>script.includes('document.body?.innerText')?{url:window.currentUrl,title:query+' - 搜索',text:'ordinary results'}:{url:window.currentUrl,title:query+' - 搜索',documentQuery:query,candidates:window.currentUrl.startsWith('https://cn.bing.com/')?[{title:'关于完善发电侧容量电价机制的通知',snippet:'2026年煤电容量电价政策',url:'https://example.org/official-capacity-policy'}]:[{title,snippet,url:'https://example.org/unrelated'}]}
+ const controller=new BrowserSearchController({createWindow:()=>window,sleep:async()=>{}})
+ const result=await controller.search(query,5)
+ expect(result.sources).toEqual([{title:'关于完善发电侧容量电价机制的通知',snippet:'2026年煤电容量电价政策',url:'https://example.org/official-capacity-policy'}])
+ expect(window.loaded).toHaveLength(2)
+ expect(window.loaded.every(url=>new URL(url).searchParams.get('q')===query)).toBe(true)
+ expect(result.provenance?.documentQuery).toBe(query)
+})
+
+it('does not adopt unrelated rows even when every page echoes the full query, and exhausts only existing engine entries',async()=>{
+ const window=new FakeSearchWindow(),query='煤电 容量电价 政策 2026'
+ window.webContents.executeJavaScript=async script=>script.includes('document.body?.innerText')?{url:window.currentUrl,title:query,text:'ordinary results'}:{url:window.currentUrl,title:query,documentQuery:query,candidates:[{title:'CNKI Off-Campus Access',snippet:'University Library',url:'https://example.org/cnki'}]}
+ const controller=new BrowserSearchController({createWindow:()=>window,sleep:async()=>{}})
+ await expect(controller.search(query,5)).rejects.toThrow('与当前查询缺少直接对应')
+ expect(window.loaded).toHaveLength(3)
+ expect(window.loaded.every(url=>new URL(url).searchParams.get('q')===query)).toBe(true)
+ expect(window.destroyed).toBe(true)
+})
