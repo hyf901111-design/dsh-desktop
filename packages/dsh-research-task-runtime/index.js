@@ -28,7 +28,7 @@ import { registerCanvasUseTasks } from './canvas-use-tasks.js'
 import { freeDataInstruction } from './free-data-skill.js'
 import { registerPublicDataTool } from './public-data-tool.js'
 import { createPublicDataClient } from './public-data-client.js'
-import { preparePublicDataPanel, validatePublicDataPanel } from './workbench-public-data.js'
+import { preparePublicDataPanel, validatePublicDataPanel, publicDataNewsTaskRequirement } from './workbench-public-data.js'
 import { loadBundledComponentSkill } from './component-skill.js'
 import { deferredWorkbenchPanel, prepareSimulatedArtifact } from './workbench-plan.js'
 import { GANTT_GUIDANCE } from './gantt-template-contract.js'
@@ -1154,10 +1154,14 @@ export class ResearchTaskRuntime {
       const original = [...this.tasks.values()].reverse().find(task => task.publicData && terminalState(task.state) &&
         task.parentSessionId === request.parentSessionId && task.canvasNodeId === request.canvasNodeId &&
         [task.prompt, task.publicDataPrompt].includes(sourceRetryPrompt(request.prompt)))
-      if (original) return (await this.startPublicDataBatch({ parentSessionId: request.parentSessionId, panels: [{
-        canvasNodeId: request.canvasNodeId, prompt: original.prompt, publicDataPrompt: original.publicDataPrompt,
-        title: original.title, type: original.type, publicData: original.publicData
-      }] }))[0]
+      if (original) {
+        const requirement = publicDataNewsTaskRequirement(original.publicData, original.type)
+        if (requirement) request = Object.freeze({ ...request, prompt: `${original.prompt}\n${requirement}` })
+        else return (await this.startPublicDataBatch({ parentSessionId: request.parentSessionId, panels: [{
+          canvasNodeId: request.canvasNodeId, prompt: original.prompt, publicDataPrompt: original.publicDataPrompt,
+          title: original.title, type: original.type, publicData: original.publicData
+        }] }))[0]
+      }
     }
     // Deferred cards save a short requirement in the canvas. Recover the full
     // host contract only for that exact same-node requirement, stripping only

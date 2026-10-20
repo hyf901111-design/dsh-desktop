@@ -1229,6 +1229,25 @@ function requestStream(body, options = {}) {
 }
 
 describe('Research task Subagent adapter', () => {
+  it('retries legacy security-filtered news as a normal task without repeating an unsupported direct query',async()=>{
+    const {ResearchTaskRuntime}=await runtimeModule()
+    let sequence=0
+    const query=vi.fn(async()=>{throw Error('存在不支持的参数')})
+    const start=vi.fn(async()=>({childSessionId:'filtered-news',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'news',title:'公司新闻',asOf:'2026-10-20',items:[{title:'中际旭创公告',date:'2026-10-19',category:'公告',summary:'仅与指定公司相关的已核实资料',url:'https://example.com/company-announcement'}]})}]}),dispose:async()=>{}}))
+    const runtime=new ResearchTaskRuntime({adapter:{start},publicDataClient:{query},storage:memoryTaskStorage(),createId:()=>`legacy-news-${++sequence}`})
+    const prompt='本面板：公司新闻\n仅展示中际旭创、新易盛、工业富联的真实新闻，优先使用 news 类型，保留原文链接。'
+    try{
+      const [first]=await runtime.startPublicDataBatch({parentSessionId:'parent-1',panels:[{canvasNodeId:'news-node',title:'公司新闻',type:'news',prompt,publicData:{profile:'news',requests:[{source:'sina-news',parameters_json:JSON.stringify({symbols:['sz300308','sz300502','sh601138'],limit:12})}],intervalMinutes:5}}]})
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:first.taskId}).state).toBe('failed'))
+      const retry=await runtime.start({...containerRequest('news-node'),prompt})
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:retry.taskId}).state).toBe('completed'))
+      expect(query).toHaveBeenCalledTimes(1)
+      expect(start).toHaveBeenCalledTimes(1)
+      expect(start.mock.calls[0][0].query).toContain(prompt)
+      expect(start.mock.calls[0][0].query).toContain('"symbols":["sz300308","sz300502","sh601138"]')
+      expect(start.mock.calls[0][0].query).toContain('不得删除证券筛选')
+    }finally{await runtime.dispose()}
+  })
   const containerAdapterFixture = () => {
     const parent = { id: 'parent-1', session: { events: [] } }
     const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
