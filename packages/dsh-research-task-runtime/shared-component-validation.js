@@ -55,11 +55,12 @@ export function sharedComponentIssue(html, { required = false } = {}) {
     // a known repair hint, never the raw exception or generated source line.
     return `组件脚本语法无效，无法验证共享状态接入。${location}${stringHint}`
   }
-  const registrations = [], calls = [], bindings = new Map()
+  const registrations = [], calls = [], assignments = [], bindings = new Map()
   let hasBusinessInteraction = hasInteractiveControl || inlineHandlers.length > 0
   for (const program of programs) walk(program, node => {
     if (node.type === 'FunctionDeclaration' && node.id) bindings.set(node.id.name, node)
     if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier') bindings.set(node.id.name, node.init)
+    if (node.type === 'AssignmentExpression' && node.operator === '=' && node.left.type === 'Identifier') assignments.push(node)
     if (node.type === 'AssignmentExpression' && member(node.left) && /^on[a-z]+$/.test(key(node.left.property) || '') && !localPresentationEvents.has(key(node.left.property).slice(2))) hasBusinessInteraction = true
     if (node.type !== 'CallExpression' && node.type !== 'OptionalCallExpression') return
     calls.push(node)
@@ -79,6 +80,9 @@ export function sharedComponentIssue(html, { required = false } = {}) {
   const fn = p => p?.type === 'ObjectMethod' || ['FunctionExpression','ArrowFunctionExpression','FunctionDeclaration'].includes(p?.value?.type) || (p?.value?.type === 'Identifier' && ['FunctionExpression','ArrowFunctionExpression','FunctionDeclaration'].includes(bindings.get(p.value.name)?.type))
   if (!props.has('initialState') || !fn(props.get('reduce')) || !fn(props.get('render'))) return '共享状态配置缺少可验证的 initialState、reduce 或 render。'
   const handles = new Set([...bindings].filter(([,v]) => v === registrations[0]).map(([name]) => name))
+  // A guarded registration commonly declares the handle first and assigns it
+  // inside try. A later catch fallback must not erase that association.
+  for (const assignment of assignments) if (assignment.right === registrations[0]) handles.add(assignment.left.name)
   const dispatched = calls.some(c => member(c.callee) && key(c.callee.property) === 'dispatch' && handles.has(path(c.callee.object)))
   if (!dispatched && !fn(props.get('tick'))) return '注册后没有通过共享句柄 dispatch 提交操作，也没有共享 tick，不能把空注册当作同步。'
   if (calls.some(c => ['setInterval','window.setInterval','globalThis.setInterval'].includes(path(c.callee)))) return '组件仍使用独立 setInterval；持续业务状态必须改由共享 tick 推进。'
