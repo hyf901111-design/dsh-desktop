@@ -1250,6 +1250,21 @@ function requestStream(body, options = {}) {
 }
 
 describe('Research task Subagent adapter', () => {
+  it('returns public operating-query failures separately from successful source evidence across the real adapter boundary',async()=>{
+    const {createSubagentAdapter}=await runtimeModule(),parent={id:'parent'},child={id:'child',session:{events:[]}},result=Promise.withResolvers();
+    const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);
+    ctx.tools={schemas:()=>[{name:'ework__business',description:'返回实际财务业务记录'}]};
+    const handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'工作台：研究\n本面板：财务与经营差异\n取得真实营业收入和发电量。\n仅生成本面板，优先使用 table 类型。',prompt:'生成组件',signal:new AbortController().signal,onSessionEvent:()=>{}});
+    try{
+      ctx.emit(child,{seq:1,type:'tool/call',data:{name:'ework__business',callId:'denied',arguments:JSON.stringify({http_method:'GET',nameEn:'getEquOperData',url_params:{ticker:'600011'}})}});
+      ctx.emit(child,{seq:2,type:'tool/result',data:{message:{source:{callId:'denied'},content:[{type:'tool-result',isError:true,content:[{type:'text',text:JSON.stringify({error:'private response must not become evidence',code:'PERMISSION_DENIED'})}]}]}}});
+      result.resolve({stopReason:'completed',output:[{type:'text',text:'完成'}]});
+      const finished=await handle.result;
+      expect(finished.sourceRecords).toEqual([]);
+      expect(finished.sourceAttempts).toEqual([{tool:'ework__business',api:'getEquOperData',entities:['600011'],status:'unavailable',code:'PERMISSION_DENIED'}]);
+      expect(JSON.stringify(finished.sourceAttempts)).not.toContain('private response');
+    }finally{await handle.dispose()}
+  });
   it('retries legacy security-filtered news as a normal task without repeating an unsupported direct query',async()=>{
     const {ResearchTaskRuntime}=await runtimeModule()
     let sequence=0

@@ -8,6 +8,7 @@ import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {observedMarketHistory} from './observed-market-history.js'
 import {observedStatementGrowth} from './observed-statement-growth.js'
 import {expandBusinessEvidence} from './component-source-projection.js'
+import {operatingSourceAttempt} from './statement-operating-coverage.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -20,9 +21,9 @@ export function componentDiscoveryToolNames(schemas=[]) {
 
 export function componentSourceCollector(allowed,schemas=[]) {
   const discovery=componentDiscoveryToolNames(schemas)
-  const calls=new Map(), records=[]
+  const calls=new Map(), records=[], attempts=[]
   return {
-    records,
+    records, attempts,
     accept(event) {
       if(event?.type==='tool/call'&&typeof event.data?.callId==='string'&&event.data.callId&&allowed.includes(event.data?.name)) {
         try { const args=typeof event.data.arguments==='string'?JSON.parse(event.data.arguments):event.data.arguments;calls.set(event.data.callId,{tool:event.data.name,args}) } catch {}
@@ -32,12 +33,15 @@ export function componentSourceCollector(allowed,schemas=[]) {
       if(!call)return
       calls.delete(message.source.callId)
       const result=message.content?.find(b=>b.type==='tool-result')
-      if(!result||result.isError||result.error)return
+      if(!result)return
       const snapshotTool=['web_fetch','financial_query'].includes(call.tool)
       const purpose=discovery.has(call.tool)||call.tool==='public_data_query'&&call.args?.operation!=='query'||call.tool==='financial_query'&&['resolve','search','catalog'].includes(call.args?.intent)?'discovery':snapshotTool?'snapshot':undefined
-      let response,snapshotRows
+      let response,snapshotRows,decodeFailed=false
       try { response=expandBusinessEvidence(decodeDataResponse(result)) }
-      catch { if(!purpose)return;response=null }
+      catch {decodeFailed=true;response=null}
+      const attempt=operatingSourceAttempt(call,result,response,purpose)
+      if(attempt){attempts.push(attempt);if(attempts.length>64)attempts.shift()}
+      if(result.isError||result.error||decodeFailed&&!purpose)return
       if(call.tool==='web_fetch') {
         const text=(result.content??[]).filter(b=>b?.type==='text'&&typeof b.text==='string').map(b=>b.text).join('\n')
         if(!text.trim()||!snapshotUrl(call.args?.url))return
@@ -96,7 +100,7 @@ function webSnapshotRows(text,sourceUrl) {
     value=decodeDataResponse(JSON.parse(rendered?rendered[1]:body.replace(/^\s*\[网页读取状态：[^\]]+\]\s*/u,'')))
     if(rendered&&(!Array.isArray(value?.links)||value.links.length>200||Object.keys(value).some(key=>key!=='links')))return []
   }catch{value=null}
-  const rows=articles.map(article=>({title:snapshotTitle(article.title),sourceTitle:article.title,date:snapshotDate(article.date),dates:[snapshotDate(article.date)],ids:[],urls:[snapshotUrl(article.url)]})),ignored=/^(?:examples?|samples?|schemas?|properties|parameters|definitions|documentation|docs?|request|responseSchema)$/iu
+  const rows=articles.map(article=>({title:snapshotTitle(article.title),sourceTitle:article.title,date:snapshotDate(article.date),dates:[snapshotDate(article.date)],ids:[],urls:[snapshotUrl(article.url)],primary:true})),ignored=/^(?:examples?|samples?|schemas?|properties|parameters|definitions|documentation|docs?|request|responseSchema)$/iu
   const heading=/^(?:title|title_ch|headline|name)$/iu,identity=/^(?:title|title_ch|headline|name|id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu
   const marked=entries=>entries.some(([key,v])=>/^(?:documentation|docs?|examples?|samples?)$/iu.test(key)&&v===true)
   const visit=(value,depth=0,inList=false)=>{
