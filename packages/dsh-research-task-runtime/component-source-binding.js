@@ -5,6 +5,7 @@ import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.
 import { templateFor } from './component-template-registry.js'
 import {normalizeChartMetadata,CHART_VARIANTS} from './chart-template-contract.js'
 import {normalizeAnnouncementFeed} from './announcement-provenance.js'
+import {observedMarketHistory} from './observed-market-history.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -135,6 +136,12 @@ function snapshotRecordMatches(value,record) {
 // exact original text from an unambiguous fetched record, never weaken the
 // evidence comparison to accept altered amounts or negations. The source link
 // and one observed date must already match; summaries and gaps stay untouched.
+export function restoreSnapshotMarketHistory(text,records) {
+ const candidates=extractArtifactObjects(text)
+ if(candidates.length!==1)return
+ const restored=observedMarketHistory(candidates[0],records)
+ if(restored)return JSON.stringify(restored)
+}
 export function restoreSnapshotFeedHeadlines(text,records) {
   const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null
   if(!['news','reports'].includes(data?.type)||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>40)return
@@ -224,7 +231,7 @@ function financialValueSelectors(value,sources,depth=0) {
 // A model-authored note must not invent counts, rankings or unavailable controls
 // beside host-calculated curves. Other charts and custom data keep their notes.
 function normalizedHistoryMetadata(data,mapping,sources,now) {
- if(data.type!=='chart'||!Array.isArray(mapping.series)||!data.labels?.length||
+ if(!(data.type==='chart'||data.type==='market'&&data.variant==='trend')||!Array.isArray(mapping.series)||!data.labels?.length||
     !data.labels.every((date,i)=>snapshotDate(date)===date&&(i===0||date>data.labels[i-1])))return data
  const facts=[],limitations=new Set(),providers=new Set(),received=new Set()
  for(const series of mapping.series){
@@ -258,7 +265,7 @@ function normalizedHistoryMetadata(data,mapping,sources,now) {
   received.size?`获取时间（非报价时间）：${[...received].join('、')}`:'获取时间：来源未提供',
   ...limitations].join('\n')
  if(note.length>2000)throw Error('历史来源说明超过当前图表容量，不能省略来源限制')
- return {...data,unit:'基期100',subtitle:`${range} · ${count} · 各自首值=100`,asOf:`历史日线 · 数据截至 ${data.labels.at(-1)}`,note}
+ return {...data,...(data.type==='chart'?{unit:'基期100',subtitle:`${range} · ${count} · 各自首值=100`}:{}),asOf:`历史日线 · 数据截至 ${data.labels.at(-1)}`,note}
 }
 export function resolveComponentSnapshot(text,records,now=new Date(),options={}) {
   const candidate=dataBoundCandidate(text)
@@ -295,12 +302,12 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
 }
 
 export const COMPONENT_STATIC_CHART_PROMPT = `
-本卡仅生成本次静态图表，不保存自动刷新设置。取得可映射的结构化列表时，优先交付一个 data-bound JSON，由宿主直接读取完整响应和计算曲线，不逐点抄写或手算数组：{"version":1,"type":"data-bound","requests":[{"key":"q0","tool":"实际成功调用的 public_data_query、financial_query 或 ework__ 工具名","args":原成功请求参数}],"mapping":上文chart模板及字段映射}。requests 必须与本卡实际成功调用完全一致；financial_query 仅支持本次静态映射，不能登记自动刷新。网页纯文本不能伪造为这些接口。
-mapping 必须保留上文具体 variant，不得只写 type:chart 而省略变体。每条 values 都要选择数值字段，例如 financial-1 收盘价的完整表达式：{"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"value"},"$normalize":"base100","$digits":2}。不要漏掉 $map；其他来源使用其实际数值字段。
+本卡仅生成本次静态图表，不保存自动刷新设置。取得可映射的结构化列表时，优先交付一个 data-bound JSON，由宿主直接读取完整响应和计算曲线，不逐点抄写或手算数组：{"version":1,"type":"data-bound","requests":[{"key":"q0","tool":"实际成功调用的 public_data_query、financial_query 或 ework__ 工具名","args":原成功请求参数}],"mapping":上文当前模板及字段映射}。requests 必须与本卡实际成功调用完全一致；financial_query 仅支持本次静态映射，不能登记自动刷新。网页纯文本不能伪造为这些接口。
+mapping 必须保留上文指定的 type 与 variant：原生图表为 type:chart 及其变体，金融趋势为 type:market、variant:trend；不得换模板或省略变体。每条 values 都要选择数值字段，例如 financial-1 收盘价的完整表达式：{"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"value"},"$normalize":"base100","$digits":2}。不要漏掉 $map；其他来源使用其实际数值字段。
 $from 引 requests.key，$each 指真实列表路径，$map 指每行字段，$filter:{"实际字段":"实际值"} 为标量等值筛选（多个条件同时满足）；$sortBy:"真实日期字段"/$order:"asc" 排序，$take:-20 取末20条，$as:"number" 转数值，$digits:2 控制显示精度。例如 financial_query 的响应明确含 records/metric/as_of/value 时，labels 使用 {"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"as_of"}}；series.values 使用同一筛选排序，$map 改为 {"$path":"value"}。路径与筛选值以本轮真实响应为准，其他来源不套用这些字段。
 需求要求共同基期100比较时，在每条 values 的 $each 同层加 "$normalize":"base100" 和 "$digits":2，由宿主按筛选排序后的首值执行 值/首值×100；不手算数组，不写死 $scale=100/起点。归一化只用于所需的比较；原始价格需求保留原单位。每条序列都必须使用同一组实际日期，不能将不同日期按条数硬对齐；缺失值不填0。各标的、来源、复权口径、日期和计算说明保留在 note，asOf 仅放简短来源与时点（最多256字）。样本只说明字段路径，不代表完整数据条数；原响应中存在的标的不得因上下文样本省略而标为未取得。
 note 保留真实来源、日期、原单位和复权口径；不要凭样本、记忆或心算添加交易日数、区间涨跌幅、首尾值及强弱排名等额外数值断言。映射后的完整曲线由宿主计算，不能用未经计算核对的文字结论与曲线互相矛盾。已识别的日线基期100映射由宿主从实际选中记录生成副标题、时点和来源说明，不采用手写计数、排名或控件操作说明；当前图表只支持图例显隐、数据点查看和完整数据展开，不承诺原始价格切换。
-仅有非结构化资料或映射无法表达必要内容时，按上文原生chart JSON交付可核查内容，不伪造映射。`
+仅有非结构化资料或映射无法表达必要内容时，按上文当前原生模板 JSON 交付可核查内容，不伪造映射。`
 
 export const COMPONENT_BOUND_DATA_PROMPT = `
 自动绑定数据交付协议：通过已配置插件或 public_data_query 取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并保存刷新设置；未指定时默认一分钟，用户或宿主明确要求仅手动时 intervalMinutes=0。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：

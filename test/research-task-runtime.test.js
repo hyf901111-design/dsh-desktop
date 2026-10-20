@@ -1417,6 +1417,13 @@ describe('Research task Subagent adapter', () => {
       expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的金融工具')
     }finally{await handle.dispose()}
   })
+  it('lets a static market trend use the host source mapping instead of hand-calculated point arrays',async()=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'financial_query'}]}
+    const handle=await fixture.start('工作台：火电股价\n本面板：真实相对走势\n优先使用 market 类型；variant: trend。读取真实日线按共同首值100比较，不保存刷新绑定。')
+    try{expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toContain('"$normalize":"base100"')}
+    finally{await handle.dispose()}
+  })
   it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
     const fixture=containerAdapterFixture()
     fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'}]}
