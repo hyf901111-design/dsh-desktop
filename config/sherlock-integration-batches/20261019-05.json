@@ -12,7 +12,7 @@
         "featureName": "修复实际报价与公告补齐失败并支持结构化画布写入",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "457bd70eb193f8bdc24182ecaa44d1def4fe6311",
-        "tipCommit": "8332baf9c69caf21ef565c7c1eef047670322bea",
+        "tipCommit": "34e6b8a7e15ee9f019021584330d6d3803d4f80d",
         "commits": [
           {
             "commit": "1d7e56ca71feb9f39f146e67edb4fccca0b912d9",
@@ -34,6 +34,20 @@
               "064414a26776f6e4fb5a044281820e50aeab3106"
             ],
             "subject": "为画布批量修改提供结构化操作参数"
+          },
+          {
+            "commit": "235661470e631e9733f623cfd848f604beb6c7cb",
+            "parents": [
+              "8332baf9c69caf21ef565c7c1eef047670322bea"
+            ],
+            "subject": "精简工作台提示文字恢复组件预算"
+          },
+          {
+            "commit": "34e6b8a7e15ee9f019021584330d6d3803d4f80d",
+            "parents": [
+              "235661470e631e9733f623cfd848f604beb6c7cb"
+            ],
+            "subject": "保留空状态提示语义并遵守工作台预算"
           }
         ],
         "files": [
@@ -89,13 +103,14 @@
               "test/research-canvas-actions.test.js",
               "test/research-canvas-actions-client.test.js",
               "test/research-canvas-structured-apply.test.js",
+              "test/bundled-component-skill.test.js",
               "--maxWorkers=1",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "14文件432项直接相关检查通过；日志 /tmp/workbench-structured-delivery-confirmed-focused-20261020.log",
-            "verifiedCommit": "8332baf9c69caf21ef565c7c1eef047670322bea",
-            "completedAt": "2026-10-20T07:03:02.968477+00:00",
+            "summary": "15文件441项直接相关检查通过（含5000字符提示预算）；日志 /tmp/workbench-structured-budget-fixed-focused-20261020.log",
+            "verifiedCommit": "34e6b8a7e15ee9f019021584330d6d3803d4f80d",
+            "completedAt": "2026-10-20T07:10:38.592167+00:00",
             "timeoutMs": 300000
           },
           {
@@ -105,9 +120,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；日志 /tmp/workbench-structured-delivery-final-typecheck-20261020.log",
-            "verifiedCommit": "8332baf9c69caf21ef565c7c1eef047670322bea",
-            "completedAt": "2026-10-20T07:03:02.968477+00:00",
+            "summary": "类型检查通过；日志 /tmp/workbench-structured-budget-fixed-typecheck-20261020.log",
+            "verifiedCommit": "34e6b8a7e15ee9f019021584330d6d3803d4f80d",
+            "completedAt": "2026-10-20T07:10:38.592167+00:00",
             "timeoutMs": 180000
           },
           {
@@ -118,8 +133,8 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "8332baf9c69caf21ef565c7c1eef047670322bea",
-            "completedAt": "2026-10-20T07:03:02.968477+00:00",
+            "verifiedCommit": "34e6b8a7e15ee9f019021584330d6d3803d4f80d",
+            "completedAt": "2026-10-20T07:10:38.592167+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -140,7 +155,7 @@
           "观察到延迟但真实8回执watcher重放35ms无故障；缺少现场可见性trace，不以此改省电或盲加定时器。",
           "真实源不含所有财务字段和详情链接时仍需明确缺失，不填模拟值；既有看板、会话、配置、记忆不重置。"
         ],
-        "generatedAt": "2026-10-20T07:03:02.968477+00:00"
+        "generatedAt": "2026-10-20T07:10:38.592167+00:00"
       }
     },
     {
