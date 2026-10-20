@@ -6,6 +6,7 @@ import { templateFor } from './component-template-registry.js'
 import {normalizeChartMetadata,CHART_VARIANTS} from './chart-template-contract.js'
 import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {observedMarketHistory} from './observed-market-history.js'
+import {observedStatementGrowth} from './observed-statement-growth.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -144,6 +145,12 @@ export function restoreSnapshotMarketHistory(text,records,options={}) {
  const candidates=extractArtifactObjects(text)
  if(candidates.length!==1)return
  const restored=observedMarketHistory(candidates[0],records,options)
+ if(restored)return JSON.stringify(restored)
+}
+export function restoreSnapshotStatementGrowth(text,records) {
+ const candidates=extractArtifactObjects(text)
+ if(candidates.length!==1)return
+ const restored=observedStatementGrowth(candidates[0],records)
  if(restored)return JSON.stringify(restored)
 }
 export function restoreSnapshotFeedHeadlines(text,records) {
