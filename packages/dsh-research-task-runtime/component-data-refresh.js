@@ -198,7 +198,11 @@ export function decodeDataResponse(value){
  }
  const result=bounded(value,2_000_000)
  for(let envelope=result,depth=0;record(envelope)&&depth<4;envelope=envelope.data,depth++){
-  if(envelope.success===false||envelope.retCode!==undefined&&Number(envelope.retCode)!==1&&Number(envelope.retCode)!==0||typeof envelope.code==='number'&&envelope.code<0)throw Error('数据接口业务请求失败')
+  const error=envelope.error
+  // MCP transport success does not mean the provider accepted its parameters.
+  // Inspect envelopes only; an error/missing-data field in a business row is
+  // still source data, never a reason to erase the complete response.
+  if(envelope.success===false||error===true||typeof error==='string'&&error.trim()||error&&typeof error==='object'||envelope.retCode!==undefined&&Number(envelope.retCode)!==1&&Number(envelope.retCode)!==0||typeof envelope.code==='number'&&envelope.code<0)throw Error('数据接口业务请求失败')
  }
  return result
 }

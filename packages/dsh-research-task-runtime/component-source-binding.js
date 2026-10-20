@@ -66,10 +66,15 @@ function snapshotTitle(value) {
 }
 function webSnapshotRows(text) {
   // The JSON decoder also accepts examples inside prose. Only a complete JSON
-  // body, after the fetcher's known transport notices, establishes list data.
-  const body=text.replace(/^Fetched [^\n]+ \(HTTP 2\d\d\)[\r\n]+/u,'').replace(/^\s*\[网页读取状态：[^\]]+\]\s*/u,'').trim()
+  // body or the reader's bounded, prefixed DOM link records establishes a list.
+  // Do not search arbitrary prose for JSON or borrow dates from the whole page.
+  const body=text.replace(/^Fetched [^\n]+ \(HTTP 2\d\d\)[\r\n]+/u,'').trim()
+  const rendered=body.match(/^(?:[^\r\n]{1,512}\r?\n\r?\n)?\[网页读取状态：[^\]\r\n]+\]\r?\n\r?\n\[网页内链接记录\]\r?\n([^\r\n]{1,50000})\r?\n\[\/网页内链接记录\](?:\r?\n|$)/u)
   let value
-  try{value=decodeDataResponse(JSON.parse(body))}catch{return []}
+  try{
+    value=decodeDataResponse(JSON.parse(rendered?rendered[1]:body.replace(/^\s*\[网页读取状态：[^\]]+\]\s*/u,'')))
+    if(rendered&&(!Array.isArray(value?.links)||value.links.length>200||Object.keys(value).some(key=>key!=='links')))return []
+  }catch{return []}
   const rows=[],ignored=/^(?:examples?|samples?|schemas?|properties|parameters|definitions|documentation|docs?|request|responseSchema)$/iu
   const heading=/^(?:title|title_ch|headline|name)$/iu,identity=/^(?:title|title_ch|headline|name|id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu
   const marked=entries=>entries.some(([key,v])=>/^(?:documentation|docs?|examples?|samples?)$/iu.test(key)&&v===true)

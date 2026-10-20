@@ -72,6 +72,23 @@ export function publicDataQuoteTaskRequirement(value,type,requirement=''){
 // planner intent as a normal source task, rather than deleting symbols and
 // silently replacing company news with an unrelated market-wide feed.
 export function publicDataNewsTaskRequirement(value,type,requirement=''){
+  // A planner may spell each company filter as symbol in separate requests.
+  // These are source intents, not executable parameters for Sina's total feed.
+  if(value?.profile==='news'&&Array.isArray(value.requests)&&value.requests.some(r=>{
+    try{return Object.hasOwn(JSON.parse(r.parameters_json),'symbol')}catch{return false}
+  })){
+    if(type!=='news'||!value.requests.length||value.requests.length>8)throw Error('证券新闻面板需要1–8个已校验来源请求')
+    const requests=value.requests.map(request=>{
+      let parameters;try{parameters=JSON.parse(request.parameters_json)}catch{throw Error('证券新闻参数无效')}
+      if(!object(parameters)||typeof parameters.symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(parameters.symbol)||Object.keys(parameters).some(k=>!['symbol','limit'].includes(k)))throw Error('证券新闻只保留合规symbol与limit，不支持其他参数')
+      const {symbol,...supportedParameters}=parameters
+      const checked=validatePublicDataPanel({...value,requests:[{...request,parameters_json:JSON.stringify(supportedParameters)}]},type,{strictParameters:true})
+      return {source:checked.requests[0].source,symbol,limit:parameters.limit??20}
+    })
+    if(new Set(requests.map(r=>r.symbol)).size!==requests.length)throw Error('免费源组件请求重复')
+    const scope=JSON.stringify({requests,intervalMinutes:value.intervalMinutes??1,...(value.layoutProfile?{layoutProfile:value.layoutProfile}:{})})
+    return `宿主来源能力校正：内置sina-news不支持symbol证券筛选，本卡改由一个独立news取数任务；不要把这些筛选参数再次提交给sina-news。保留原面板全部主题、字段与证券筛选元信息：${scope}。不得扩大为全市场新闻；仅使用原需求允许且能按标的检索的来源中实际取得的相关报道、原始标题、时间和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`
+  }
   // Observed planners group company keyword searches in one news panel. The
   // adapter cannot execute them; retain their validated scope for a worker.
   if(value?.profile==='news'&&Array.isArray(value.requests)&&value.requests.some(r=>{

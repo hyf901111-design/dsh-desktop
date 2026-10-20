@@ -81,6 +81,49 @@ function collect(calls=observed.calls,{failed=false,prefix=''}={}){
 }
 const proof=(artifact,records)=>componentSnapshotEvidence(JSON.stringify(artifact),records)
 
+const renderedNews={title:'华能国际(600011.SH)：完成30亿元超短期融资券发行',date:'2026-10-20',url:'https://finance.sina.com.cn/stock/bxjj/2026-10-20/doc-inivwitp6520843.shtml'}
+function collectRenderedNews({links=[renderedNews],body='列表正文',failed=false}={}){
+ const url='https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllNewsStock/symbol/sh600011.phtml'
+ const text=`Fetched ${url} (HTTP 200)\n\n华能国际个股资讯\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页内链接记录]\n${JSON.stringify({links})}\n[/网页内链接记录]\n\n${body}`
+ const collector=componentSourceCollector(['public_data_query','web_fetch'])
+ collector.accept({type:'tool/call',data:{callId:'catalog',name:'public_data_query',arguments:'{"operation":"catalog"}'}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'catalog'},content:[{type:'tool-result',content:[{type:'text',text:'{"sources":["news"]}'}]}]}}})
+ collector.accept({type:'tool/call',data:{callId:'page',name:'web_fetch',arguments:JSON.stringify({url})}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'page'},content:[{type:'tool-result',isError:failed,content:[{type:'text',text}]}]}}})
+ return collector.records
+}
+
+it('uses dated links actually collected from a rendered HTML news list without fetching every article',()=>{
+ const records=collectRenderedNews({body:'Do not retain the full rendered page body'})
+ expect(records[1].snapshotRows).toHaveLength(1)
+ expect(records[1].response).toBeNull()
+ expect(JSON.stringify(records)).not.toContain('Do not retain the full rendered page body')
+ expect(proof({version:1,type:'news',items:[renderedNews]},records)).toBe(true)
+ const revised={version:1,type:'news',items:[{...renderedNews,title:'华能国际完成一亿元融资'}]}
+ expect(JSON.parse(restoreSnapshotFeedHeadlines(JSON.stringify(revised),records)).items[0].title).toBe(renderedNews.title)
+})
+
+it.each(['missing-date','wrong-date','wrong-title','wrong-url','failed-page','unrelated-date-in-body'])('rejects %s when matching a rendered news record',mode=>{
+ const links=[{...renderedNews}],item={...renderedNews}
+ if(mode==='missing-date'||mode==='unrelated-date-in-body')delete links[0].date
+ if(mode==='wrong-date')item.date='2026-10-19'
+ if(mode==='wrong-title')item.title='华能国际(600011.SH)：完成10亿元超短期融资券发行'
+ if(mode==='wrong-url')item.url='https://finance.sina.com.cn/unobserved.shtml'
+ expect(proof({version:1,type:'news',items:[item]},collectRenderedNews({links,failed:mode==='failed-page',body:'其他记录日期：2026-10-20'}))).toBe(false)
+})
+
+it('synthesizes a rendered news list in one worker with a directly usable original link',async()=>{
+ const feed={version:1,type:'news',title:'公司新闻',items:[{...renderedNews,summary:'原始标题披露完成30亿元超短期融资券发行；未取得利率，不能据此判断财务费用变化。'}]}
+ const start=vi.fn(async()=>({childSessionId:'rendered-news',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(feed)}],sourceRecords:collectRenderedNews()}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'rendered-news'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'news',kind:'container',prompt:'工作台：火电利润观察\n本面板：近期公告与煤电政策动态\n优先使用 news 类型；只用本次取得的真实原始标题、日期和原文链接，静态快照。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'rendered-news'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledOnce()
+  expect(readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'rendered-news'}).finalOutput)).data.items[0]).toMatchObject(renderedNews)
+ }finally{await runtime.dispose()}
+})
+
 it('recognizes observed announcement list records behind their different detail URLs',()=>{
  const records=collect()
  expect(proof(observed.artifact,records)).toBe(true)
