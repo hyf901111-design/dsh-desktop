@@ -30,7 +30,7 @@ import { registerPublicDataTool } from './public-data-tool.js'
 import { createPublicDataClient } from './public-data-client.js'
 import { preparePublicDataPanel, validatePublicDataPanel, publicDataNewsTaskRequirement } from './workbench-public-data.js'
 import { loadBundledComponentSkill } from './component-skill.js'
-import { deferredWorkbenchPanel, prepareSimulatedArtifact } from './workbench-plan.js'
+import { deferredWorkbenchPanel, prepareSimulatedArtifact, workbenchPanelScope } from './workbench-plan.js'
 import { GANTT_GUIDANCE } from './gantt-template-contract.js'
 import { TIMELINE_GUIDANCE } from './timeline-template-contract.js'
 import { applyBundledSkillPreferences, bundledSkillEnabled } from './bundled-skill-preferences.js'
@@ -206,7 +206,7 @@ export function validateResearchTaskStart(value) {
       parentSessionId,
       canvasNodeId,
       kind: 'container',
-      prompt: requiredString(request.prompt, deferredWorkbenchPanel(request.prompt) ? 18000 : MAX_CONTAINER_PROMPT, '容器内容提示无效')
+      prompt: requiredString(request.prompt, deferredWorkbenchPanel(request.prompt) || workbenchPanelScope(request.prompt) ? 18000 : MAX_CONTAINER_PROMPT, '容器内容提示无效')
     })
   }
   if (request.kind !== 'create' && Object.hasOwn(request, 'prompt')) {
@@ -426,6 +426,7 @@ function requestedSinglePanelType(prompt) {
 }
 
 function workbenchPanelFormat(prompt) {
+  prompt = workbenchPanelScope(prompt)?.contract ?? prompt
   const deferred = deferredWorkbenchPanel(prompt)
   if (deferred) return deferred.type
   if (!/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(prompt)) {
@@ -466,13 +467,14 @@ function containerSchedulingCost(task) {
   const type = task.kind === 'container' ? workbenchPanelFormat(task.prompt ?? '') : null
   // Use the same parsed delivery contract as prompt assembly. Manual pages,
   // custom HTML and unknown formats keep the original heavy-task capacity.
-  return type && type !== 'html' && (type !== 'market' || requestedMarketVariant(deferredWorkbenchPanel(task.prompt)?.contract ?? task.prompt)) ? 1 : 2
+  return type && type !== 'html' && (type !== 'market' || requestedMarketVariant(deferredWorkbenchPanel(task.prompt)?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt)) ? 1 : 2
 }
 
 function workbenchPanelPrompt(prompt, boundData = false) {
   const type = workbenchPanelFormat(prompt)
   if (!type) return null
-  const templatePrompt = deferredWorkbenchPanel(prompt)?.contract ?? prompt
+  const scope = workbenchPanelScope(prompt)
+  const templatePrompt = deferredWorkbenchPanel(prompt)?.contract ?? scope?.contract ?? prompt
   const selectedMarketVariant = type === 'market' ? requestedMarketVariant(templatePrompt) : undefined
   const schemas = {
     rss: operationsTemplateSchema('rss'),
@@ -503,7 +505,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     `mapping 的模板结构：${schemas[type]}`,
     '数值、日期、单位与来源必须来自实际响应；保留主要字段，缺失就标注。取得足够数据后立即输出，不搜索应用代码，不启动子任务。请求参数和日期照抄实际成功调用，由宿主维护后续滚动日期。记录的日期、来源、正文和数值使用路径引用，静态标题与单位可以直接写文字。',
     '行情快照使用单次响应已有的核心字段，不为补充未提供的52周高低等可选字段额外拉取长历史。响应被截断时缩小范围；不能绑定不完整的JSON。只交付当前已有足够证据的内容。',
-    `本面板需求：\n${prompt.split('\n仅生成本面板，')[0]}`
+    `本面板需求：\n${templatePrompt.split('\n仅生成本面板，')[0]}${scope?.scope ?? ''}`
   ].join('\n')
   const htmlRule = type === 'market'
     ? '金融面板只提交 market 数据对象，由宿主按 Figma 金融模板渲染深浅主题。K线必须包含真实或明确标注模拟的 OHLC 与成交量，不能改成折线，也不能因原生 chart 不支持蜡烛图而要求用户再确认。'

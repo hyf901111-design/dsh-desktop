@@ -1291,6 +1291,22 @@ describe('Research task Subagent adapter', () => {
     const handle=await fixture.start('工作台：交接\n本面板：详情记录\n搜索记录；点击每行展开详情与完整说明。\n仅生成本面板，优先使用 table 类型。')
     try{expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toMatch(/"type"\s*:\s*"html"/)}finally{await handle.dispose()}
   })
+  it.each([false,true])('keeps the original workbench scope and current schema in real child prompts (binding=%s)',async binding=>{
+    const {validateWorkbench,workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    const original='创建中际旭创(sz300308)、新易盛(sz300502)、工业富联(sh601138)真实研究工作台，近20个交易日；禁止模拟。其他卡绘制chart.bar和K线，不能替换本卡。'
+    const plan=validateWorkbench({requestId:'scope',title:'研究',dataMode:'source',originalRequest:original,panels:[{title:'经营差异',type:'table',size:'large',prompt:'比较三家公司的财报，使用真实数据。'+(binding?'每分钟自动更新。':'')}]})
+    const query=workbenchPanelPrompt(plan,plan.panels[0]),fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'}]}
+    const handle=await fixture.start(query)
+    try{
+      const prompt=fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+      expect(prompt).toContain(original)
+      expect(prompt).toContain('"type":"table"')
+      expect(prompt).not.toContain('"type":"chart"')
+      expect(prompt).toContain('只完成本面板')
+      expect(prompt.includes('mapping 的模板结构')).toBe(binding)
+    }finally{await handle.dispose()}
+  })
   it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
     const fixture=containerAdapterFixture()
     fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'}]}

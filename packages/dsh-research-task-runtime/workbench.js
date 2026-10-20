@@ -17,6 +17,7 @@ import {FINANCIAL_FUNDAMENTAL_GUIDANCE} from './financial-fundamentals.js'
 import {assertPrivateResearchSession} from './board-runtime.js'
 import { createHash, randomUUID } from 'node:crypto';
 import { canvasHumanRequest } from './canvas-task-routing.js';
+import { workbenchCreationRequest } from './workbench-execution-policy.js';
 import { preserveWorkbenchRefreshPreference } from './component-refresh-policy.js';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -87,9 +88,13 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         await rename(tmp, filePath);
     };
     const create = (args, exec) => {
-        if (args?.generationMode === 'deferred') {
-            const originalRequest = canvasHumanRequest(exec.agent?.session)?.text;
-            if (originalRequest) args = { ...args, originalRequest };
+        // Snapshot the current authored creation before queueing or canvas mounting.
+        // A later status question and unrelated chat memory cannot replace this scope.
+        const originalRequest = workbenchCreationRequest(exec.agent?.session)?.text;
+        if (originalRequest) args = { ...args, originalRequest };
+        else if (args?.generationMode !== 'deferred' && args?.originalRequest !== undefined) {
+            const { originalRequest, ...plan } = args;
+            args = plan;
         }
         args = preserveWorkbenchRefreshPreference(args, canvasHumanRequest(exec.agent?.session)?.text);
         if (args?.requestId === undefined) {
@@ -130,7 +135,10 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             };
             const old = plans.find(p => p.parentSessionId === parentSessionId && p.requestId === input.requestId);
             if (old) {
-                if (JSON.stringify(validateWorkbench(old.input ?? old)) !== JSON.stringify(input))
+                const previous = validateWorkbench(old.input ?? old);
+                const withoutScope = ({ originalRequest, ...plan }) => plan;
+                if (JSON.stringify(withoutScope(previous)) !== JSON.stringify(withoutScope(input)) ||
+                    previous.originalRequest && input.originalRequest && previous.originalRequest !== input.originalRequest)
                     throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
                 if (input.generationMode === 'deferred' && old.ready && old.panels.some(p => !p.taskId)) { await startDeferred(old); await persist(); }
                 return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) ? 'prepared' : 'accepted' : 'preparing' };
