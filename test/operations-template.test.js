@@ -64,6 +64,25 @@ describe('Figma 21Z operations data templates',()=>{
   input.value='30';input.dispatchEvent(new window.Event('input'));expect(document.getElementById('operation-count').textContent).toBe('已完成 82 / 100 项');
   input.value='-1';input.dispatchEvent(new window.Event('input'));expect(document.getElementById('operation-count').textContent).toBe('已完成 82 / 100 项');expect(document.getElementById('operation-error').textContent).toContain('非负');
  });
+ it('preserves source task statuses and combines status and owner filters with local completion',()=>{
+  const data={...samples.tasks,mode:'local',items:[
+   {id:'a',title:'潜器试航',completed:false,status:'进行中',owner:'郑海峰',detail:'保留试航记录'},
+   {id:'b',title:'仪器校准',completed:false,status:'进行中',owner:'林晓岚'},
+   {id:'c',title:'物资装载',completed:false,status:'未开始',owner:'郑海峰'}
+  ]};
+  expect(operationsDataIssue(data)).toBeNull();expect(readTemplateModel(render(data)).data).toEqual(data);
+  const window=runtime(data),d=window.document,filter=d.getElementById('task-filter'),owner=d.getElementById('task-owner');
+  const shown=()=>[...d.querySelectorAll('.task-entry:not([hidden])')].map(row=>row.querySelector('strong').textContent);
+  expect(d.body.textContent).toContain('来源状态：进行中');
+  filter.value='status:进行中';filter.dispatchEvent(new window.Event('change'));expect(shown()).toEqual(['潜器试航','仪器校准']);
+  owner.value='郑海峰';owner.dispatchEvent(new window.Event('change'));expect(shown()).toEqual(['潜器试航']);
+  const check=d.getElementById('task-0');check.checked=true;check.dispatchEvent(new window.Event('change',{bubbles:true}));
+  expect(shown()).toEqual(['潜器试航']);expect(d.querySelector('.task-entry').dataset.status).toBe('进行中');
+  filter.value='done';filter.dispatchEvent(new window.Event('change'));expect(shown()).toEqual(['潜器试航']);
+  check.checked=false;check.dispatchEvent(new window.Event('change',{bubbles:true}));expect(shown()).toEqual([]);
+  expect(d.getElementById('task-empty').hidden).toBe(false);
+  expect(operationsDataIssue({...data,items:[{...data.items[0],status:{name:'进行中'}}]})).toMatch(/status/);
+ });
  it.each([
   {...samples.progress,items:[{label:'无目标',current:0,target:0}]},
   {...samples.tasks,items:[{id:'a',title:'一',completed:false},{id:'a',title:'二',completed:false}]},
@@ -74,7 +93,7 @@ describe('Figma 21Z operations data templates',()=>{
   expect(()=>validateWorkbench({requestId:'custom',title:'模拟计划',dataMode:'simulated',panels:[{title:'运营清单',type:'tasks',prompt:'本周客服任务',size:'large'}]})).toThrow('无关清单');
  });
  it('keeps source text inert, including script-shaped titles and notes',()=>{
-  const data={...samples.tasks,note:'</script><img src=x onerror=alert(1)>',items:[{id:'safe',title:'<script>alert(1)</script>',completed:false}]},spec=render(data);
+  const data={...samples.tasks,note:'</script><img src=x onerror=alert(1)>',items:[{id:'safe',title:'<script>alert(1)</script>',completed:false,status:'<img src=x onerror=alert(1)>',owner:'"><script>alert(1)</script>'}]},spec=render(data);
   expect(spec.html).not.toContain('<img src=x');expect(spec.html).not.toContain('<script>alert(1)');expect(readTemplateModel(spec).data).toEqual(data);
  });
 });

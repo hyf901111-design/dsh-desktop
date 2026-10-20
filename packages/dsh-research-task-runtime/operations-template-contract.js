@@ -15,7 +15,7 @@ export const OPERATIONS_TEMPLATES = Object.freeze([
 ].map(t=>Object.freeze({...t,type:t.id,version:['note','rss'].includes(t.id)?t.version:'21z-20260930',minWidth:t.minWidth??400,minHeight:t.minHeight??320})));
 const shapes = {
  progress:'items:[{label:"资料收集",current:24,target:24},{label:"数据核验",current:20,target:30}]；1–20项，current/target为有限非负原值，target必须大于0，宿主从合计计算总进度；可选unit、deadline、status。',
- tasks:'items:[{id:"a",title:"核对财务来源",completed:false,owner:"研究组",due:"2026-10-15",priority:"高",detail:"逐项核验披露日期"}]；1–100条不同id，completed是布尔值，owner/due/priority/detail可选。'
+ tasks:'items:[{id:"a",title:"核对财务来源",completed:false,status:"进行中",owner:"研究组",due:"2026-10-15",priority:"高",detail:"逐项核验披露日期"}]；1–100条不同id，completed是布尔值，status/owner/due/priority/detail可选。status保留来源业务状态，支持按状态和负责人筛选；本地勾选仅改变个人完成记录，不改写来源status。'
 };
 export function operationsTemplateSchema(type){
  const common='公共字段 version:1,type,title,asOf（来源及数据时点）；可选 subject（正文业务标题）、note、mode:"snapshot"或"local"。默认snapshot仅展示来源记录；local支持保存到本画布的个人进度、清单、审阅意见和已读标记，不向外部业务系统写入，也不声称已更新原始数据源。';
@@ -46,9 +46,9 @@ export function operationsDataIssue(s){
   if(s.type==='progress'){
    if(!object(item,['label','current','target','detail'])||!text(item.label)||!number(item.current)||!number(item.target)||item.target===0)return `进度第${index+1}项需 label、非负 current 和大于0的 target`;
   }else{
-   if(!object(item,['id','title','completed','owner','due','priority','detail'])||!text(item.id,64)||seen.has(item.id)||!text(item.title)||typeof item.completed!=='boolean')return `任务第${index+1}项需唯一 id、title 和布尔 completed`;
+   if(!object(item,['id','title','completed','status','owner','due','priority','detail'])||!text(item.id,64)||seen.has(item.id)||!text(item.title)||typeof item.completed!=='boolean')return `任务第${index+1}项需唯一 id、title 和布尔 completed，且仅使用约定字段`;
    seen.add(item.id);
-   for(const key of ['owner','due','priority'])if(item[key]!==undefined&&!text(item[key]))return `任务第${index+1}项 ${key} 无效`;
+   for(const key of ['status','owner','due','priority'])if(item[key]!==undefined&&!text(item[key]))return `任务第${index+1}项 ${key} 无效`;
   }
   if(item.detail!==undefined&&!text(item.detail,2000))return `第${index+1}项 detail 无效`;
  }
