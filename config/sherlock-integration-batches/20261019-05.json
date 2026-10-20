@@ -9,53 +9,96 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留多证券趋势展示并缩短取数结束后的静默等待",
+        "featureName": "适配浅色锦鲤水面和四模式组件底栏滚动条",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "619c2c4e14df21c39d449667655c32a4d923f5b9",
-        "tipCommit": "ec4a4db6260bb0b0d4ca512e044e61b510c83c63",
+        "baseCommit": "ec4a4db6260bb0b0d4ca512e044e61b510c83c63",
+        "tipCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
         "commits": [
           {
-            "commit": "72630e2fa87e94c855d294b7a9f07ebe5c056860",
+            "commit": "cb54a0b86839835e050c3b9ca432a3e4d1424df8",
             "parents": [
-              "619c2c4e14df21c39d449667655c32a4d923f5b9"
+              "ec4a4db6260bb0b0d4ca512e044e61b510c83c63"
             ],
-            "subject": "保留多标的走势意图避免被行情列表规则覆盖"
+            "subject": "识别新版金融MCP入口并区分接口目录与业务数据"
           },
           {
-            "commit": "57eaae382d23c21baa9fcf538da8ba9eadb02294",
+            "commit": "e0cfe4818a7e8b4d11f16e85bc89e7c25e1db697",
             "parents": [
-              "72630e2fa87e94c855d294b7a9f07ebe5c056860"
+              "cb54a0b86839835e050c3b9ca432a3e4d1424df8"
             ],
-            "subject": "保留明确要求的行情明细表避免误转趋势图"
+            "subject": "将浅色锦鲤水面改为青白色并同步主题卡片"
           },
           {
-            "commit": "ec4a4db6260bb0b0d4ca512e044e61b510c83c63",
+            "commit": "2a169d40547a82f448ddcdf7b77d51ce1b37b178",
             "parents": [
-              "57eaae382d23c21baa9fcf538da8ba9eadb02294"
+              "e0cfe4818a7e8b4d11f16e85bc89e7c25e1db697"
             ],
-            "subject": "在取数结束后及时移交静默组件并复用已验证资料"
+            "subject": "对齐彭博模式底栏节点并移除缩放手柄悬停方框"
+          },
+          {
+            "commit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "parents": [
+              "2a169d40547a82f448ddcdf7b77d51ce1b37b178"
+            ],
+            "subject": "让组件横纵滚动条跟随看板明暗主题切换"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
           },
           {
             "status": "M",
-            "path": "test/component-web-snapshot-evidence.test.js"
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-koi-renderer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-koi/README.md"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-koi/shaders.js"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-theme-assets/koi-pond-light.png"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-port-openterminal-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/official-mcp-source-schemas.json"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-renderer-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-component-source-tools.test.js"
           },
           {
             "status": "M",
             "path": "test/research-task-runtime.test.js"
           },
           {
-            "status": "M",
-            "path": "test/workbench-design-contract.test.js"
+            "status": "A",
+            "path": "test/workbench-scrollbar-theme-browser.test.js"
           }
         ],
         "checks": [
@@ -63,19 +106,77 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-task-runtime.test.js",
-              "test/component-web-snapshot-evidence.test.js",
               "test/component-source-binding.test.js",
-              "test/workbench-design-contract.test.js",
-              "test/workbench-source-capability.test.js",
-              "test/component-generation-real-shapes.test.js",
-              "test/workbench-source-context.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/research-task-runtime.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "422项直接相关检查通过；/tmp/trend-phase-final-focused-20261020.log",
-            "verifiedCommit": "ec4a4db6260bb0b0d4ca512e044e61b510c83c63",
-            "completedAt": "2026-10-20T13:37:52.155982+00:00",
+            "summary": "340项来源识别和组件执行检查；/tmp/koi-footer-final-source-20261020.log",
+            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/home-theme-renderer-browser.test.js",
+              "test/home-theme-motion-browser.test.js",
+              "-t",
+              "Koi Pond",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "3项真实WebGL明暗/游动/输入/释放检查；/tmp/koi-footer-final-koi-20261020.log",
+            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-preferences.test.ts",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "39项首页主题交互与偏好检查；/tmp/koi-footer-final-home-20261020.log",
+            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-scrollbar-theme-browser.test.js",
+              "test/financial-port-openterminal-browser.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "16项四模式节点/手柄/横纵滚动条检查；/tmp/bloomberg-footer-scrollbar-verified-20261020.log",
+            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "工作台.*滚动|沙箱工作台滚动|跨沙盒滚动",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "4项沙箱滚动协议与布局检查；/tmp/workbench-scrollbar-sandbox-focused-20261020.log",
+            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "completedAt": "2026-10-20T14:13:36.734986+00:00",
             "timeoutMs": 120000
           },
           {
@@ -85,9 +186,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/trend-phase-typecheck-20261020.log",
-            "verifiedCommit": "ec4a4db6260bb0b0d4ca512e044e61b510c83c63",
-            "completedAt": "2026-10-20T13:37:52.155982+00:00",
+            "summary": "类型检查；/tmp/koi-footer-scrollbar-final-typecheck-20261020.log",
+            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "completedAt": "2026-10-20T14:13:36.734986+00:00",
             "timeoutMs": 180000
           },
           {
@@ -95,119 +196,31 @@
               "git",
               "diff",
               "--check",
-              "619c2c4e14df21c39d449667655c32a4d923f5b9..HEAD"
+              "ec4a4db6260bb0b0d4ca512e044e61b510c83c63..HEAD"
             ],
             "outcome": "passed",
-            "summary": "差异检查通过",
-            "verifiedCommit": "ec4a4db6260bb0b0d4ca512e044e61b510c83c63",
-            "completedAt": "2026-10-20T13:37:52.155982+00:00",
+            "summary": "提交范围差异检查",
+            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+            "completedAt": "2026-10-20T14:13:36.734986+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；集成后新建真实金融工作台测量。上次真实公告重试已成功24条，三家公司均覆盖，耗时253.432秒为本次优化前基线。"
+          "outcome": "passed",
+          "summary": "真实Chromium WebGL验证浅色水面青白、鱼色和深色保留、主题卡片同步；DPR1/2四模式节点对齐，手柄仅高亮，滚动主题与app主题独立。真实共享客户端待集成构建后复验。"
         },
         "acceptanceCriteria": [
-          "绘制多证券对比走势不再因多只股票被覆盖成行情表，明确明细表继续保留。",
-          "检索到达既有8次/90秒边界且有已验证资料时，允许短暂最终输出；静默则直接进入一次无工具内容整理，复用来源和验证。",
-          "已开始输出或已完成的有效组件不重启，真实模型排队时间不算输出静默。",
-          "API文档不能冒充业务记录，不放宽真实数据校验，不改父会话模型。",
-          "客户端新建工作台验证实际展示、多样性、耗时和成功率。"
+          "浅色锦鲤水面为青白色，主题卡片一致，保留红白锦鲤和深色水面。",
+          "彭博底栏连接节点与其他模式保持相同右边距，悬停/键盘聚焦仅手柄变橙，不显示方框。",
+          "横纵组件滚动条随看板主题切换，浅色/易方达使用浅色，深色/彭博使用深色，保留滚动位置。",
+          "新版官网金融MCP入口能识别，接口目录和定义不作为业务数据；不使用股票代码查询基金资料。"
         ],
         "risks": [
           "仅本地测试，不晋升main、不发布。",
-          "资料取回速度和模型输出速度仍依赖上游；阶段交接的实际提速需以新生成结果测量。",
-          "前次公告卡含24条记录，但范围与默认排序仍需在完整工作台复测中继续检查。"
+          "真实金融复测为3成功1失败；财务缺失和历史覆盖不足仍需继续优化，不能宣称已完全解决。",
+          "research-html-theme历史完整测试有4项既有失败：大小阈值和HappyDOM默认层夹具未适配既有sherlock-terminal前缀；本次未改该生产HTML实现。直接相关4项滚动检查通过，日志保留/tmp/bloomberg-footer-scrollbar-focused-20261020.log。"
         ],
-        "generatedAt": "2026-10-20T13:37:52.155982+00:00"
-      },
-      "merged": {
-        "mergeCommit": "996395579d8b80d9c726228aa70b60c07e9d2f4a",
-        "verificationCommit": "996395579d8b80d9c726228aa70b60c07e9d2f4a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "996395579d8b80d9c726228aa70b60c07e9d2f4a",
-            "completedAt": "2026-10-20T13:38:31.203Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "996395579d8b80d9c726228aa70b60c07e9d2f4a",
-            "completedAt": "2026-10-20T13:38:31.203Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "996395579d8b80d9c726228aa70b60c07e9d2f4a",
-            "completedAt": "2026-10-20T13:38:31.203Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "996395579d8b80d9c726228aa70b60c07e9d2f4a",
-            "completedAt": "2026-10-20T13:38:31.203Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "996395579d8b80d9c726228aa70b60c07e9d2f4a",
-            "completedAt": "2026-10-20T13:38:31.203Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T13:38:31.203Z"
+        "generatedAt": "2026-10-20T14:13:36.734986+00:00"
       }
     },
     {
