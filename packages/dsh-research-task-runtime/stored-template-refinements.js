@@ -10,6 +10,11 @@ import {valuationBandRuntime} from './market-valuation-band.js';
 import {equityDrawdownRuntime} from './market-equity-drawdown.js';
 import {trendRuntime} from './market-trend-runtime.js';
 import {marketSeriesViewport,observeMarketSeries} from './market-series-viewport.js';
+import {FEED_CONTEXT_CSS as FEED_CONTEXT_STYLE} from './feed-context.js';
+import {cartesianChartRuntime,cartesianChartSvg} from './cartesian-chart-artifact.js';
+export const FEED_CONTEXT_CSS=FEED_CONTEXT_STYLE;
+export const CARTESIAN_RUNTIME=cartesianChartRuntime.toString();
+export const CARTESIAN_GEOMETRY=cartesianChartSvg.toString();
 
 export const MARKET_SERIES_RUNTIME={'price-volume':priceVolumeRuntime.toString(),trend:trendRuntime.toString(),'valuation-band':valuationBandRuntime.toString(),'equity-drawdown':equityDrawdownRuntime.toString()};
 export const MARKET_SERIES_VIEWPORT_RUNTIME=marketSeriesViewport.toString();
@@ -29,14 +34,40 @@ export function refineStoredTemplateHtml(html){
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
- if(['news','reports'].includes(model.templateId)&&model.data.type===model.templateId&&html.includes('data-research-kind="'+model.data.type+'"')&&html.includes('class="feed-copy"')){
+ if(['news','reports'].includes(model.templateId)&&model.data.type===model.templateId&&model.version==='21m-20260923-v1'&&model.data.version===1&&html.includes('data-research-kind="'+model.data.type+'"')&&(html.includes('class="feed-copy"')||html.includes('class="ot-news-copy"'))){
   // Saved host feeds already contain a vetted source anchor inside details.
   // Reuse that exact destination for the title; never invent a missing URL.
-  return html.replace(/<article class="research-feed-item"[^>]*>[\s\S]*?<\/article>/g,article=>{
+  const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const text=value=>typeof value==='string'&&value.trim()&&value.length<=2000;
+  const context=[model.data.asOf,model.data.note].filter(text);
+  let index=0,publisherAdded=false;
+  html=html.replace(/<article class="research-feed-item"[^>]*>[\s\S]*?<\/article>/g,article=>{
+   const publisher=model.data.items?.[index++]?.publisher;
+   if(text(publisher)&&!article.includes('class="feed-publisher"')){
+    publisherAdded=true;
+    article=article.replace('</div>',`<span class="feed-publisher">${escape(publisher)}</span></div>`);
+   }
    const source=article.match(/<a href="https?:\/\/[^"<>]+" target="_blank" rel="noopener noreferrer">/);
    if(!source)return article;
    return article.replace(/<h2>([^<]*)<\/h2>/,(_match,title)=>'<h2>'+source[0]+title+'</a></h2>');
   });
+  if((context.length&&!html.includes('class="feed-context"')||publisherAdded)&&!html.includes('data-feed-provenance="v1"')){
+   // Append after existing controls to preserve their persisted DOM routes.
+   // Flex order only moves the explanation visually, not in the DOM journal.
+   const aside=context.length&&!html.includes('class="feed-context"')?`<aside class="feed-context" aria-label="数据来源与范围说明">${context.map(value=>`<p>${escape(value)}</p>`).join('')}</aside>`:'';
+   const style=`<style data-feed-provenance="v1">${FEED_CONTEXT_CSS}body[data-research-kind="${model.data.type}"]{display:flex;flex-direction:column}body>.feed-context{order:-1;flex:none}body>.research-feed{flex:none}</style>`;
+   html=html.replace('</body>',aside+style+'</body>');
+  }
+  return html;
+ }
+ const cartesianBody=html.match(/<body data-research-kind="chart" data-chart-template="(line|step|dumbbell)">/);
+ if(cartesianBody&&model.version==='22a-20260930'&&model.templateId==='chart.'+cartesianBody[1]&&model.data.type==='chart'&&model.data.version===1&&model.data.variant===cartesianBody[1]){
+  const {labels,series}=model.data;
+  if(!Array.isArray(labels)||!labels.length||labels.length>366||labels.some(v=>typeof v!=='string'||!v.trim()||v.length>128)||!Array.isArray(series)||!series.length||series.length>12||labels.length*series.length>600||series.some(s=>typeof s?.name!=='string'||!s.name.trim()||s.name.length>128||!Array.isArray(s.values)||s.values.length!==labels.length||s.values.some(v=>typeof v!=='number'||!Number.isFinite(v)||Math.abs(v)>1e12)))return html;
+  const script=/<script>\(function cartesianChartRuntime\(spec, geometry\)[^]*?<\/script>/;
+  if(!script.test(html)||!html.includes('class="template-chart"'))return html;
+  const data=JSON.stringify(model.data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+  return html.replace(script,()=>`<script>(${CARTESIAN_RUNTIME})(${data},${CARTESIAN_GEOMETRY});</script>`).replace(cartesianBody[0],cartesianBody[0].slice(0,-1)+' data-chart-domain="observed-v1">');
  }
  const seriesVariant=model.data.variant;
  if(['price-volume','trend','valuation-band','equity-drawdown'].includes(seriesVariant)&&model.templateId==='market.'+seriesVariant&&model.data.type==='market'&&html.includes('data-sherlock-market="'+seriesVariant+'"')&&html.includes('data-sherlock-design=')){

@@ -1,0 +1,2 @@
+// Source scope and gaps remain readable even when no feed item covers them.
+export const FEED_CONTEXT_CSS='.feed-context{margin:0 0 7px;padding:0 0 6px;border-bottom:1px solid var(--sherlock-border);font-size:11px;line-height:16px;color:var(--sherlock-muted);white-space:pre-wrap;overflow-wrap:anywhere}.feed-context p{margin:0}.feed-context p+p{margin-top:3px}.feed-publisher{white-space:normal;overflow-wrap:anywhere}';

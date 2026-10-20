@@ -37,6 +37,26 @@ describe('Figma cartesian templates',()=>{
    expect(compact.height).toBe(180);expect(compact.markup).toContain('y="170"');
    expect(compact.markup).toContain('80');expect(full.markup).toContain('80');
  });
+ it.each(['line','step','dumbbell'])('%s shows the observed range instead of flattening near-base comparisons against zero',variant=>{
+   const spec=data(variant,{labels:['A','B','C'],series:[{name:'航空',values:[90,100,103]},{name:'基准',values:[100,101,102]}]});
+   const svg=cartesianChartSvg(spec),hidden=cartesianChartSvg(spec,620,[false,true]);
+   const axes=chart=>chart.elements.filter(el=>el.tag==='text').slice(0,5).map(el=>el.children[0]);
+   expect(axes(svg)[0]).toBe('89.35');
+   expect(axes(svg)[4]).toBe('103.65');
+   expect(axes(hidden)).toEqual(axes(svg));
+   expect(svg.markup).not.toMatch(/NaN|Infinity/);
+ });
+ it('pads constant and negative trend domains without inventing zero observations',()=>{
+   const ticks=values=>cartesianChartSvg(data('line',{labels:['A','B','C'],series:[{name:'A',values}]})).elements.filter(el=>el.tag==='text').slice(0,5).map(el=>el.children[0]);
+   expect(ticks([100,100,100])).toEqual(['95','97.5','100','102.5','105']);
+   expect(ticks([-103,-100,-90])).toEqual(['-103.65','-100.08','-96.5','-92.925','-89.35']);
+   expect(ticks([0,0,0])).toEqual(['-1','-0.5','0','0.5','1']);
+ });
+ it.each(['area','stackedArea','bar','groupedBar','stackedBar','horizontal','lollipop','combo'])('%s keeps its zero baseline for magnitude comparison',variant=>{
+   const svg=cartesianChartSvg(data(variant,{series:[{name:'A',values:[90,100,103]}]}));
+   const ticks=svg.elements.filter(el=>el.tag==='text').slice(0,5).map(el=>el.children[0]);
+   expect(ticks[0]).toBe('0');expect(ticks[4]).toBe('103');
+ });
  it('rejects malformed and semantically impossible charts without fabricating replacement values',()=>{
    for(const broken of [data('percentBar',{series:[{name:'A',values:[1,-1,0]}]}),data('dumbbell',{series:[{name:'A',values:[1,2,3]}]}),data('area',{series:[{name:'A',values:[1,null,2]}]}),data('combo',{series:[{name:'A',values:[1,2,3],kind:'pie'}]})]){
      expect(chartDataIssue(broken)).toBeTruthy();expect(acceptArtifactOutput(JSON.stringify(broken))).toBeUndefined();

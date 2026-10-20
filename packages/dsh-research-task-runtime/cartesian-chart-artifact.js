@@ -26,6 +26,14 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   const fullPositive=spec.labels.map((_,i)=>spec.series.reduce((sum,s)=>sum+Math.max(0,s.values[i]),0)),fullNegative=spec.labels.map((_,i)=>spec.series.reduce((sum,s)=>sum+Math.min(0,s.values[i]),0));
   const all = stacked ? [...fullPositive,...fullNegative] : values.flat();
   let low = Math.min(0,...all), high = Math.max(0,...all);
+  // Lines and paired dots compare positions, so fit the observed range. Bars,
+  // stems and filled areas measure distance from zero and retain that baseline.
+  // Include every series even when hidden so legend toggles cannot rescale it.
+  if (['line','step','dumbbell'].includes(kind)) {
+    low = Math.min(...all); high = Math.max(...all);
+    const padding = high === low ? Math.abs(low)*.05 || 1 : (high-low)*.05;
+    low -= padding; high += padding;
+  }
   if (percent) {low=0;high=100;}
   if (high===low) high=low+1;
   const pos = value => horizontal ? left+(value-low)/(high-low)*pw : top+(high-value)/(high-low)*ph;
@@ -87,7 +95,7 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   return {markup:elements.map(serialize).join(''),elements,width:w,height:h,horizontal,categoryStart:horizontal?top:left,categorySize:(horizontal?ph:pw)/n};
 }
 
-function cartesianChartRuntime(spec, geometry) {
+export function cartesianChartRuntime(spec, geometry) {
   const svg=document.querySelector('.template-chart'),readout=document.querySelector('.chart-readout');
   const legend=[...document.querySelectorAll('[data-chart-series]')], visible=spec.series.map(()=>true);
   let selected=0, size=null, frame=0;
