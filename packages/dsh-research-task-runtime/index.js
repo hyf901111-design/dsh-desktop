@@ -875,7 +875,11 @@ export function publicEventFromSessionEvent(event) {
     return { type: 'tool-started', tool, ...(detail ? { detail } : {}) }
   }
   if (event?.type === 'tool/result') {
-    return { type: 'tool-finished', failed: event.data?.error !== undefined }
+    const message = event.data?.message
+    const failed = event.data?.error !== undefined || message?.isError === true ||
+      (Array.isArray(message?.content) && message.content.some(block =>
+        block?.type === 'tool-result' && (block.isError === true || block.error != null)))
+    return { type: 'tool-finished', failed }
   }
   return null
 }

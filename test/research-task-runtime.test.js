@@ -759,6 +759,19 @@ describe('Research task contract and prompt', () => {
 })
 
 describe('Research task public event sanitization', () => {
+  it('reports failed tool-result blocks and message errors without exposing their bodies', async () => {
+    const { publicEventFromSessionEvent } = await runtimeModule()
+    for (const data of [
+      { message: { content: [{ type: 'tool-result', isError: true, content: [{ type: 'text', text: 'private connection failure' }] }] } },
+      { message: { isError: true, content: [{ type: 'text', text: 'private connection failure' }] } },
+      { message: { content: [{ type: 'tool-result', error: 'private connection failure' }] } },
+      { error: 'private connection failure' }
+    ]) expect(publicEventFromSessionEvent({type:'tool/result', data})).toEqual({type:'tool-finished',failed:true})
+    // Failure-like words in successful source data are still ordinary content.
+    expect(publicEventFromSessionEvent({type:'tool/result',data:{message:{content:[{type:'tool-result',isError:false,content:[{type:'text',text:'{"isError":true,"error":"business observation"}'}]}]}}}))
+      .toEqual({type:'tool-finished',failed:false})
+  })
+
   it('emits assistant text deltas without private reasoning', async () => {
     const { publicEventFromSessionEvent } = await runtimeModule()
 
