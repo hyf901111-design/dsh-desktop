@@ -1,0 +1,119 @@
+{
+  "dataMode": "source",
+  "panels": [
+    {
+      "prompt": "实时行情快照（variant: table）：通过 tencent-quotes 获取中际旭创 sz300308、新易盛 sz300502、工业富联 sh601138、沪深300指数 sh000300 的最新价、涨跌幅、成交量、成交额。单位：元（指数为点）、%、手/亿元。来源标注：腾讯行情，刷新时间以宿主刷新为准。支持排序与搜索；数据缺失时显示'缺失'而非估算。",
+      "size": "medium",
+      "title": "最新行情对比（3只成分股+沪深300）",
+      "type": "market",
+      "publicData": {
+        "profile": "quotes-table",
+        "intervalMinutes": 1,
+        "requests": [
+          {
+            "source": "tencent-quotes",
+            "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\",\"sh000300\"]}"
+          }
+        ]
+      }
+    },
+    {
+      "prompt": "近一个月日线走势（variant: price-volume）：通过 tencent-history 取 sz300308、sz300502、sh601138 近20个交易日的日线收盘价与成交量，以沪深300（sh000300）同期数据为基准。单位：元、手。每个数据点标注日期；来源：腾讯历史行情。支持区间选择与缩放交互。",
+      "size": "large",
+      "title": "近一个月收盘价走势（对比沪深300）",
+      "type": "chart",
+      "publicData": {
+        "profile": "price-volume",
+        "intervalMinutes": 5,
+        "requests": [
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sz300308\",\"limit\":20}"
+          },
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sz300502\",\"limit\":20}"
+          },
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sh601138\",\"limit\":20}"
+          },
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sh000300\",\"limit\":20}"
+          }
+        ]
+      }
+    },
+    {
+      "prompt": "相对强弱分析（variant: line）：用 tencent-history 取 sz300308、sz300502、sh601138 与基准 sh000300 近20个交易日收盘价，归一化为区间起始=100 的相对表现曲线，并给出区间相对沪深300超额收益（%）。标注起止日期、来源（腾讯历史行情）、单位（归一化指数、%）。若某只标的数据缺失，明确标注缺失，不补值。用户可交互查看各线数值。",
+      "size": "large",
+      "title": "相对强弱：个股近月超额收益 vs 沪深300",
+      "type": "chart",
+      "publicData": {
+        "profile": "price-volume",
+        "intervalMinutes": 5,
+        "requests": [
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sz300308\",\"limit\":20}"
+          },
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sz300502\",\"limit\":20}"
+          },
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sh601138\",\"limit\":20}"
+          },
+          {
+            "source": "tencent-history",
+            "parameters_json": "{\"symbol\":\"sh000300\",\"limit\":20}"
+          }
+        ]
+      }
+    },
+    {
+      "prompt": "估值对比（variant: metrics）：通过金融数据接口（financial_query，asset=stock）获取 sz300308、sz300502、sh601138 最新市盈率PE(TTM)、市净率PB、总市值。单位：倍、亿元。每组数据标注来源与净值/行情日期；无法取得的估值字段明确标注'缺失'，不用通用样例填充。",
+      "size": "medium",
+      "title": "估值水平对比（PE / PB / 市值）",
+      "type": "financial-widget"
+    },
+    {
+      "prompt": "经营与财务差异：通过 financial_query（task=compare / holdings_style）获取三家公司最近披露报告期的营业收入、归母净利润、同比增速、毛利率。单位：亿元、%。每项标注报告期与数据来源；未取得或未披露的指标明确标注'缺失'及原因。以表格呈现，支持排序，可展开查看原始来源说明。",
+      "size": "large",
+      "title": "经营差异：财务指标对比表",
+      "type": "table"
+    },
+    {
+      "prompt": "近期公告列表：通过 news/disclosures 类真实来源获取 sz300308、sz300502、sh601138 近30天公司公告，保留标题、发布日期与可点击的原文链接。按日期倒序；无结果的标的明确标注'未取得'。来源与日期随条目标注，不用样例公告填充。",
+      "size": "large",
+      "title": "近期公告（可点击原文）",
+      "type": "reports"
+    },
+    {
+      "prompt": "通过 sina-news 真实新闻源获取关于中际旭创、新易盛、工业富联及光模块/AI算力产业链的近期新闻，limit=12，保留标题、时间与原文链接，按时间倒序。缺失时明确标注。来源标注：新浪财经。",
+      "size": "medium",
+      "title": "产业链相关新闻流",
+      "type": "news",
+      "publicData": {
+        "profile": "news",
+        "intervalMinutes": 5,
+        "requests": [
+          {
+            "source": "sina-news",
+            "parameters_json": "{\"limit\":12}"
+          }
+        ]
+      }
+    },
+    {
+      "prompt": "后续重要事件日历：整理三家公司已知的下一个重要时间节点（财报披露预约日、除权除息日、股东大会等），通过 financial_query profile/disclosures 或公开披露渠道核实，标注事件日期、公司、事件类型与信息来源。未能核实具体日期的事件明确标注'日期未确认'，不编造日期。支持月历视图切换。",
+      "size": "medium",
+      "title": "后续重要事件日历",
+      "type": "calendar"
+    }
+  ],
+  "requestId": "source-route-mismatch-regression",
+  "title": "A股算力产业链金融分析·优化验证"
+}

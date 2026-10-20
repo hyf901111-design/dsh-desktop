@@ -19,7 +19,7 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
-import { validatePublicDataPanel, publicDataNewsTaskRequirement, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
+import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataHistoryTaskRequirement, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
@@ -370,10 +370,16 @@ export function validateWorkbench(value) {
         }
         if(p.type==='financial-widget'){
             if(isSimulated)throw Error('内置金融组件读取真实行情，不能用于模拟数据；请使用market/chart模拟模板。');
-            if(!p.artifact||p.artifact.type!=='financial-widget')throw Error('内置金融组件必须同时提供artifact标的配置。'+FINANCIAL_WIDGET_GUIDANCE);
-            const spec=financialWidgetSpec({...financialWidgetDefaults(p.artifact.widget),...p.artifact});
-            if(!spec)throw Error('内置金融组件的标的配置无效。'+FINANCIAL_WIDGET_GUIDANCE);
-            p={...p,artifact:spec};
+            if(p.artifact===undefined&&p.publicData===undefined&&/市盈率|市净率|\bPE\b|\bPB\b/iu.test(p.title+' '+p.prompt)){
+                const prompt=p.prompt+'\n宿主能力校正：内置行情组件不覆盖本卡PE/PB等估值字段；使用table真实数据对比模板，由独立单卡按原需求取数。保留原标的、字段、单位、数据时点及显式来源限制，缺失明确标注，不猜行情组件配置或使用样例。';
+                if(prompt.length>5000)throw Error('估值需求与来源约束超过面板内容上限，请精简需求文字。');
+                p={...p,type:'table',prompt};
+            }else{
+                if(!p.artifact||p.artifact.type!=='financial-widget')throw Error('内置金融组件必须同时提供artifact标的配置。'+FINANCIAL_WIDGET_GUIDANCE);
+                const spec=financialWidgetSpec({...financialWidgetDefaults(p.artifact.widget),...p.artifact});
+                if(!spec)throw Error('内置金融组件的标的配置无效。'+FINANCIAL_WIDGET_GUIDANCE);
+                p={...p,artifact:spec};
+            }
         }
         if (p.intervalMinutes !== undefined && p.publicData === undefined) throw Error('面板刷新频率仅支持免费源publicData配置。');
         if (p.publicData !== undefined) {
@@ -381,11 +387,11 @@ export function validateWorkbench(value) {
             if (p.intervalMinutes !== undefined && p.publicData?.intervalMinutes !== undefined && p.intervalMinutes !== p.publicData.intervalMinutes)
                 throw Error('面板与免费源刷新频率冲突，请只填写一个一致的值。');
             const candidate=p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes };
-            const sourceTaskRequirement=publicDataNewsTaskRequirement(candidate,p.type);
+            const sourceTaskRequirement=publicDataNewsTaskRequirement(candidate,p.type,p.title+'\n'+p.prompt)??publicDataHistoryTaskRequirement(candidate,p.type);
             if(sourceTaskRequirement){
                 const {publicData:source,intervalMinutes,...planned}=p;
                 const prompt=p.prompt+'\n'+sourceTaskRequirement;
-                if(prompt.length>5000)throw Error('证券新闻需求与来源约束超过面板内容上限，请精简需求文字。');
+                if(prompt.length>5000)throw Error('面板需求与来源约束超过内容上限，请精简需求文字。');
                 p={...planned,prompt};
             }else{
                 const publicData = validatePublicDataPanel(candidate, p.type,{strictParameters:true});

@@ -26,6 +26,11 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
     if (!object(parameters)) throw Error('parameters_json必须为JSON对象字符串')
     // New plans check adapter capabilities before acceptance. Persisted tasks
     // retain their shape contract so old failed recipes remain recoverable.
+    if(strictParameters&&request.source==='tencent-history'){
+      if(Object.keys(parameters).some(key=>!['symbol','limit'].includes(key)))throw Error('腾讯历史行情只支持symbol与limit，不接受任意URL、密钥或请求头')
+      if(typeof parameters.symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5})$/u.test(parameters.symbol))throw Error('腾讯历史行情symbol必须为已确认的合规交易代码')
+      if(parameters.limit!==undefined&&(!Number.isInteger(parameters.limit)||parameters.limit<1||parameters.limit>100))throw Error('腾讯历史行情limit必须为1–100的整数')
+    }
     if(strictParameters&&value.profile==='news'){
       if(Object.keys(parameters).some(key=>key!=='limit'))throw Error('新浪新闻直通只支持limit，不支持证券筛选、任意URL、密钥或请求头；证券新闻请使用普通面板取数。')
       if(parameters.limit!==undefined&&(!Number.isInteger(parameters.limit)||parameters.limit<1||parameters.limit>100))throw Error('新浪新闻limit必须为1–100的整数')
@@ -39,19 +44,35 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
 // Sina's bundled feed cannot filter securities. Preserve a narrowly recognized
 // planner intent as a normal source task, rather than deleting symbols and
 // silently replacing company news with an unrelated market-wide feed.
-export function publicDataNewsTaskRequirement(value,type){
+export function publicDataNewsTaskRequirement(value,type,requirement=''){
   if(value?.profile!=='news'||!Array.isArray(value.requests)||value.requests.length!==1)return null
   const request=value.requests[0]
   if(typeof request?.parameters_json!=='string'||request.parameters_json.length>5000)return null
   let parameters
   try{parameters=JSON.parse(request?.parameters_json)}catch{return null}
-  if(!object(parameters)||!Object.hasOwn(parameters,'symbols'))return null
+  if(!object(parameters))return null
+  const hasSymbols=Object.hasOwn(parameters,'symbols')
+  const themed=/关于.{1,180}(?:新闻|资讯|报道)|(?:公司|行业|产业链|专题|证券|个股|板块).{0,40}(?:新闻|资讯|报道|公告)|(?:相关|有关)(?:的)?(?:新闻|资讯|报道)|按(?:公司|主题|关键词)(?:筛选|检索)|\b(?:about|related to|company-specific|industry-specific)\b/iu.test(requirement)
+  if(!hasSymbols&&!themed)return null
   const {symbols,...supportedParameters}=parameters
-  if(!Array.isArray(symbols)||!symbols.length||symbols.length>12||new Set(symbols).size!==symbols.length||symbols.some(symbol=>typeof symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(symbol)))throw Error('证券新闻symbols必须为1–12个唯一合规交易代码，不接受网址或其他指令')
+  if(hasSymbols&&(!Array.isArray(symbols)||!symbols.length||symbols.length>12||new Set(symbols).size!==symbols.length||symbols.some(symbol=>typeof symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(symbol))))throw Error('证券新闻symbols必须为1–12个唯一合规交易代码，不接受网址或其他指令')
   const supported=validatePublicDataPanel({...value,requests:[{...request,parameters_json:JSON.stringify(supportedParameters)}]},type,{strictParameters:true})
-  const scope=JSON.stringify({source:request.source,symbols,limit:parameters.limit??20,intervalMinutes:supported.intervalMinutes,...(supported.layoutProfile?{layoutProfile:supported.layoutProfile}:{})})
+  const scope=JSON.stringify({source:request.source,...(hasSymbols?{symbols}:{}),limit:parameters.limit??20,intervalMinutes:supported.intervalMinutes,...(supported.layoutProfile?{layoutProfile:supported.layoutProfile}:{})})
   const layout=supported.layoutProfile?'最终news数据对象顶层必须保留已校验的 "layoutProfile":"openterminal"（即artifact.layoutProfile），沿用该内部布局。':''
-  return `宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券symbols筛选；本卡改由独立取数任务完成。保留原面板全部需求及筛选元信息：${scope}。${layout}不得删除证券筛选后交付全市场新闻；只保留与上述证券及原主题匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`
+  return `宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券或公司/行业主题筛选；本卡改由独立取数任务完成。保留原面板全部需求及筛选元信息：${scope}。${layout}${hasSymbols?'不得删除证券筛选后交付全市场新闻；':''}不得扩大为全市场新闻；只保留与原面板公司/行业主题及已声明证券匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`
+}
+
+// A comparison chart may need several valid history requests, while the
+// direct price/volume renderer only accepts one security. Preserve the exact
+// requests for an ordinary chart worker; never squeeze them into one series.
+export function publicDataHistoryTaskRequirement(value,type){
+  if(type!=='chart'||value?.profile!=='price-volume'||!Array.isArray(value.requests)||value.requests.some(r=>r?.source!=='tencent-history'))return null
+  if(!value.requests.length||value.requests.length>8)throw Error('历史对比面板需要1–8个已校验来源请求')
+  const supported=value.requests.map(request=>validatePublicDataPanel({...value,requests:[request]},'market',{strictParameters:true}))
+  if(new Set(value.requests.map(r=>JSON.stringify(r))).size!==value.requests.length)throw Error('免费源组件请求重复')
+  if(value.layoutProfile!==undefined)throw Error('当前chart对比模板不支持该专用布局，不能静默移除layoutProfile')
+  const scope=JSON.stringify({profile:value.profile,requests:supported.map(v=>v.requests[0]),intervalMinutes:supported[0].intervalMinutes})
+  return `宿主来源能力校正：price-volume直通仅支持单标的量价，不能表达本卡的对比分析；改由一个独立chart取数任务完成，保留原面板全部问题与以下已校验来源参数：${scope}。复用这些来源与原参数读取真实记录，不猜接口、交易所或字段；仅按原需求计算归一化、相对强弱与基准对比，不压成单标的量价，也不混用元和点。保留真实日期、原单位、来源与缺失说明；不得将尚未取数写成已取得，或声称已开启刷新。`
 }
 
 // Live single-security K lines use the actual library renderer. Keep explicit

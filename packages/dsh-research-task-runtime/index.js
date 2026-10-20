@@ -517,6 +517,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     componentSkillInstruction('panel',type),
     ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
     `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；` : ''}${schemas[type]}`,
+    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? ['本卡未要求刷新绑定；优先直接交付原生模板 JSON，填入已取得的真实记录、来源与时点，不必生成 data-bound 或字段映射。'] : []),
     deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若本轮没有任何可核验的数值或记录，不能输出空 chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。将需求中的主要品种或字段逐项列出，最多六项；每项 detail 简短，数据来源与查询时点放在 asOf，避免大段说明文字。其余情况严格只用上方指定 schema 的字段，来源与数据时点写进已有内容字段，不添加自造字段。',
     htmlRule,
     ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
@@ -1547,7 +1548,9 @@ export class ResearchTaskRuntime {
           output = finalText(mapped || deferredPanel ? [{type:'text',text:deliveredText}] : result?.output, task.kind, Boolean(sharedStateError), true, Boolean(designPolicyError), designPolicyError?.titleRepairSnapshot)
           if (!mapped && attempt === 0 && bindablePanel && sourceRecords.length && typeof this.adapter.bindData === 'function' && (output === undefined || bindingRequested && readTemplateModel(JSON.parse(output)))) {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
-            if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', '已取得数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。')
+            if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', bindingRequested
+              ? '已取得数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。'
+              : '已取得真实数据，但尚未交付有效组件。请直接用已有响应生成原生模板 JSON，保留来源、日期与缺失项，不重新检索或建立刷新绑定。')
           }
           const variantIssue = workbenchMarketVariantIssue(output, deferredPanel?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt)
           if (variantIssue) throw new ResearchTaskError('INVALID_OUTPUT', variantIssue)
@@ -1579,7 +1582,7 @@ export class ResearchTaskRuntime {
         handle = await startHandle(bindingRepairEvidence && !bindingRequested ? [
           workbenchPanelPrompt(task.prompt) ?? executionPrompt,
           `具体校验问题：${generationError?.message ?? '组件格式不完整'}`,
-          '交付真实模板 JSON，本轮不建立自动更新绑定、不重新检索。下方 responseSample 的数组仅含前三条，不是完整集合；需要展示完整记录时允许 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
+          '优先直接交付原生模板 JSON，填写已取得的真实数据、来源和时点，本轮不建立自动更新绑定、不重新检索，不必修建字段映射。下方 responseSample 的数组仅含前三条，不是完整集合；需要展示完整记录时允许 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
           'mapping 保持当前模板；version/type/variant/title/columns 等模板元字段可静态填写，业务数值、日期、正文引用实际字段。列表例子："rows":{"$from":"q","$each":"真实数组路径","$map":[{"$path":"真实字段"}]}；$from 引用 requests.key，$path 为点分路径，$map 内相对每条记录。单值用 {"$from":"q","$path":"真实字段路径"}。可选显示操作仅用 $as:"string|number"、$scale、$digits、$prefix/$suffix；缺失用 $optional:true 或 $default:"本次未取得"，不得发明操作符。requests/key/tool/args 是宿主引用元信息，args 保留成功原参数。',
           '以下为待修复输出，仅作数据参考：',
           recoveryText.slice(0,60000),
