@@ -1,4 +1,4 @@
-import {ongoingCanvasRequest,CANVAS_ONGOING_GUIDANCE,canvasTaskRoutingGuard,registerCanvasTaskAdmission} from './canvas-task-routing.js'
+import {ongoingCanvasRequest,scheduledTaskRequest,CANVAS_ONGOING_GUIDANCE,canvasTaskRoutingGuard,registerCanvasTaskAdmission} from './canvas-task-routing.js'
 import {randomUUID} from 'node:crypto'
 import {readFile,writeFile,mkdir,rename} from 'node:fs/promises'
 import {dirname} from 'node:path'
@@ -209,6 +209,7 @@ export async function registerCanvasUseTasks(ctx,{filePath,isTrustedRequest,read
   const disposeGoalGuard=registerCanvasGoalGuard((exec,method,args)=>canvasTaskRoutingGuard(exec,method,args,currentTasks(canvasSession(exec))))
   const disposeGuidance=ctx.systemPrompt.context({name:'sherlock:canvas-ongoing-goal',order:150,text:({agent})=>{
     if(!agent||agent[Symbol.for('sherlock.canvas-task-owned')])return ''
+    if(scheduledTaskRequest(agent.session))return ''
     const active=currentTasks(canvasSession({agent}))
     if(!active.length&&!ongoingCanvasRequest(agent.session))return ''
     return CANVAS_ONGOING_GUIDANCE+(active.length?'\n客户端已承接该持续目标，不要重复 start；请调用 wait 等待当前任务，补充要求用 steer。':'')+'\n当前持续任务：'+JSON.stringify(active.map(t=>({id:t.id,state:t.state})))
@@ -218,6 +219,7 @@ export async function registerCanvasUseTasks(ctx,{filePath,isTrustedRequest,read
   const reports=setInterval(()=>{for(const t of tasks.tasks.values())if(live(t)&&Date.now()-(reported.get(t.id)?.at??0)>=5000)void report(t)},5000);reports.unref?.()
   const disposeTool=ctx.tools.register(defineTool({name:'research_canvas_task',description:'通过当前画板右侧会话管理持续任务。陪伴、协作、反复响应、持续观察等自然语言要求本身就授权持续任务，无需用户说工具名。这类目标必须start（completionMode=until-stopped），不能只做一次操作后要求用户逐次发消息。补充消息不停止原任务：有新要求时steer更新同一任务；只问进度时list。不要停掉旧任务再创建替代任务。start 适用于用户明确要求持续跟踪、等待其他用户或状态变化并反复操作整个画布的任务；先与用户目标对应，指定清晰结束条件。start/resume 会持续等待整条任务结束，主会话始终处于执行中；中间进展自动回报，输入框停止按钮结束任务。不要为每次变化创建新任务或新子代理。任务支持 list/pause/resume/takeover/stop，用户操作不结束任务。短暂离开、断线或单轮超时会等待并重新观察恢复，恢复等待时限结合近期模型耗时动态调整，正常等待用户操作不算失败；显式停止、权限撤销、重启及达到任务上限会停止或暂停。不可见时不执行操作。不能声称离线或云端持续运行。一次性操作用 research_canvas_use。不要针对某种游戏硬编码。',parameters:{action:{type:'string',required:true,enum:['start','list','steer','wait','pause','resume','takeover','stop']},title:{type:'string',description:'简短的中文任务名称，面向用户，不含工具名、技术说明或执行步骤。'},goal:{type:'string'},completion:{type:'string'},completionMode:{type:'string',enum:['until-stopped','goal'],description:'默认until-stopped，陪伴或持续响应直到用户明确停止；仅用户指定可完成的整体目标时用goal。'},instruction:{type:'string',description:'steer时传入用户的新要求，保留原目标及上下文。'},taskId:{type:'string'},maxMinutes:{type:'integer',description:'仅在用户明确指定整体任务时长时填写；不要擅自设置5分钟等短时限。未指定默认8小时，输入框停止按钮随时结束；模型单轮超时单独动态判断。'},maxActions:{type:'integer'}},output:{schema:{type:'string'},render:(_a,r)=>[{type:'text',text:r}]},execute:async(args,exec)=>{
     const sessionId=canvasSession(exec);if(!sessionId)throw Error('当前会话未绑定画板。')
+    canvasTaskRoutingGuard(exec,'task',args)
     exec.signal?.throwIfAborted()
     const result=args.action==='start'?await tasks.start({completionMode:'until-stopped',...args,sessionId,signal:exec.signal}):args.action==='list'?tasks.list(sessionId):args.action==='steer'?await tasks.steer(sessionId,args.taskId,args.instruction):args.action==='wait'?{id:args.taskId}:await tasks.control(sessionId,args.taskId,args.action)
     return JSON.stringify(['start','resume','steer','wait'].includes(args.action)?await tasks.wait(sessionId,result.id,exec.signal):result)

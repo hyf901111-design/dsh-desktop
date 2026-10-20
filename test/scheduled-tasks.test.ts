@@ -38,6 +38,11 @@ afterEach(async () => {
   )
 })
 describe('calendar scheduling', () => {
+  it('schedules interval checks from now without replaying missed intervals', () => {
+    const schedule = { ...input.schedule, frequency: 'interval' as const, intervalMinutes: 5 }
+    expect(nextRun(schedule, now)).toBe(Date.parse('2026-09-18T02:05:00Z'))
+    expect(() => nextRun({ ...schedule, intervalMinutes: 0 }, now)).toThrow()
+  })
   it('skips weekends in the selected zone', () =>
     expect(nextRun(input.schedule, now)).toBe(
       Date.parse('2026-09-21T01:00:00Z'),

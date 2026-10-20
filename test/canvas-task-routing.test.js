@@ -1,10 +1,17 @@
 import {it,expect} from 'vitest'
-import {ongoingCanvasRequest,canvasTaskRoutingGuard} from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
+import {ongoingCanvasRequest,canvasTaskRoutingGuard,registerCanvasTaskAdmission} from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
+import {CanvasUseTasks} from '../packages/dsh-research-task-runtime/canvas-use-tasks.js'
 const event=(text,kind='user')=>({type:'user/message',data:{id:'m',source:{kind},content:[{type:'text',text}]}})
 const agent=text=>({session:{events:[event(text)]}})
 it('recognizes ongoing human intent across components rather than game-specific rules',()=>{
  for(const text of ['陪我下棋，我用黑子','陪我填写这些表格','帮我持续监控这个面板','每次我修改数字就自动填写对应内容','keep monitoring this canvas'])expect(ongoingCanvasRequest(agent(text).session)).not.toBeNull()
  for(const text of ['只帮我下一步','不要持续监控','解释这张图','“陪我下棋”是什么意思','> 持续监控这里'])expect(ongoingCanvasRequest(agent(text).session)).toBeNull()
+})
+it('keeps explicit scheduled alerts out of foreground canvas tasks',()=>{
+ const exec={agent:agent('帮我设置一个定时任务，如果单日涨跌幅超过3%提醒我')}
+ expect(()=>canvasTaskRoutingGuard(exec,'task',{action:'start'})).toThrow(/research_scheduled_task/)
+ expect(ongoingCanvasRequest(agent('帮我持续监控这个面板，设置后台定时任务超过3%提醒').session)).toBeNull()
+ expect(()=>canvasTaskRoutingGuard({agent:agent('陪我填写表格')},'task',{action:'start'})).not.toThrow()
 })
 it('ignores tool and document context and respects the latest human request',()=>{
  expect(ongoingCanvasRequest({events:[event('陪我下棋','plugin')]})).toBeNull()
@@ -28,8 +35,6 @@ it('separates attached research content from the actual human request',()=>{
 })
 
 it('admits a real continuous goal without waiting for the parent model to choose a task tool',async()=>{
- const {registerCanvasTaskAdmission}=await import('../packages/dsh-research-task-runtime/canvas-task-routing.js')
- const {CanvasUseTasks}=await import('../packages/dsh-research-task-runtime/canvas-use-tasks.js')
  let handler,unbound=false
  const ctx={on:(_name,fn)=>{handler=fn;return()=>unbound=true}}
  const tasks=new CanvasUseTasks({observe:async()=>({writable:true,fingerprint:'a'}),execute:async()=>({status:'wait',reason:'等待操作'})})
@@ -51,8 +56,6 @@ it('admits a real continuous goal without waiting for the parent model to choose
 })
 
 it('human inbox steering releases only the parent wait and preserves the durable executor',async()=>{
- const {registerCanvasTaskAdmission}=await import('../packages/dsh-research-task-runtime/canvas-task-routing.js')
- const {CanvasUseTasks}=await import('../packages/dsh-research-task-runtime/canvas-use-tasks.js')
  let handler
  const tasks=new CanvasUseTasks({observe:async()=>({writable:true,fingerprint:'a'}),execute:async()=>({status:'wait',reason:'等待变化'})})
  registerCanvasTaskAdmission({on:(_name,fn)=>{handler=fn;return()=>{}}},tasks)

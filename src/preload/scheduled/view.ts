@@ -36,6 +36,8 @@ const stateLabel = (t: ScheduledTask) =>
         ? '已完成'
         : t.runs[0]?.status === 'failed'
           ? '需要处理'
+          : t.runs[0]?.watchResult?.waitingForQuote
+            ? '等待新报价'
           : t.runs[0]?.status === 'blocked'
             ? '等待恢复连接'
             : '已开启'
@@ -645,11 +647,11 @@ export class ScheduledTaskView {
     const detail = this.document.createElement('aside')
     detail.className = 'st-detail'
     detail.setAttribute('aria-label', '任务详情')
-    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">${d.component ? '组件任务' : '全局任务'}</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作" aria-haspopup="menu"><svg class="st-detail-more-icon" width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/></svg></button>` : ''}</div><h2 class="st-detail-title" ${t ? 'data-ui-preserve' : ''} title="${escape(t ? d.title : '新建任务')}">${escape(t ? d.title : '新建任务')}</h2><div class="st-prompt-wrap"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><div class="st-prompt-resize" role="separator" tabindex="0" aria-label="调整任务描述高度" aria-orientation="horizontal" title="拖动调整高度，或使用上下方向键">${resizeIcon()}</div></div>${d.component ? `<div class="st-setting st-component-target"><span>执行于</span><span data-ui-preserve title="${escape(d.component.boardTitle + ' · ' + d.component.title)}">${escape(d.component.boardTitle)} · ${escape(d.component.title)}</span></div>` : `<label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label>`}<button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${[
+    detail.innerHTML = `<div class="st-detail-top"><div class="st-status-group"><span class="st-task-kind">${d.component ? '组件任务' : '全局任务'}</span><span class="st-status" role="status"><i class="st-status-indicator" aria-hidden="true"></i><span class="st-status-label"></span></span></div>${t ? `<button class="st-icon-button st-detail-more" aria-label="任务更多操作" aria-haspopup="menu"><svg class="st-detail-more-icon" width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/></svg></button>` : ''}</div><h2 class="st-detail-title" ${t ? 'data-ui-preserve' : ''} title="${escape(t ? d.title : '新建任务')}">${escape(t ? d.title : '新建任务')}</h2><div class="st-prompt-wrap"><textarea class="st-prompt" aria-label="执行指令" placeholder="描述要定期执行的任务，以及期望的结果…" maxlength="20000">${escape(d.prompt)}</textarea><div class="st-prompt-resize" role="separator" tabindex="0" aria-label="调整任务描述高度" aria-orientation="horizontal" title="拖动调整高度，或使用上下方向键">${resizeIcon()}</div></div>${d.watch ? `<div class="st-setting st-component-target"><span>监控标的</span><span>${escape(d.watch.symbols.join("、"))} · |单日涨跌幅| &gt; ${d.watch.thresholdPercent}%</span></div>` : d.component ? `<div class="st-setting st-component-target"><span>执行于</span><span data-ui-preserve title="${escape(d.component.boardTitle + ' · ' + d.component.title)}">${escape(d.component.boardTitle)} · ${escape(d.component.title)}</span></div>` : `<label class="st-setting"><span>执行于</span><select class="st-workspace" aria-label="执行工作区">${this.workspaces.length ? '' : '<option value="">请先创建工作区</option>'}${this.workspaces.map((w) => `<option value="${escape(w.workspaceId)}" ${w.workspaceId === d.workspaceId ? 'selected' : ''}>${escape(w.title || w.path)} · 专属对话</option>`).join('')}</select></label>`}<button class="st-setting st-repeat"><span>重复</span><span class="st-plan-label">${escape(scheduleLabel(d.schedule))}</span><span class="st-chevron" aria-hidden="true"></span></button><div class="st-next" title="应用运行时执行；休眠或退出后错过的计划，会在恢复运行后补跑一次。"></div><label class="st-setting"><span>通知</span><select class="st-notification" aria-label="通知方式">${(d.watch ? [['changes', '阈值触发时'], ['never', '不通知']] : [
       ['always', '每次完成'],
       ['changes', '重要变化'],
       ['never', '不通知'],
-    ]
+    ])
       .map(
         ([v, l]) =>
           `<option value="${v}" ${d.notification === v ? 'selected' : ''}>${l}</option>`,
@@ -661,6 +663,7 @@ export class ScheduledTaskView {
     detail.dataset.dark = String(this.dark())
     this.attachDetail()
     const promptField = detail.querySelector<HTMLTextAreaElement>('.st-prompt')!
+    promptField.readOnly = Boolean(d.watch)
     const promptWrap = detail.querySelector<HTMLElement>('.st-prompt-wrap')!
     const resizeHandle = detail.querySelector<HTMLElement>('.st-prompt-resize')!
     let manualHeight = false
@@ -741,7 +744,7 @@ export class ScheduledTaskView {
     status.querySelector('.st-status-label')!.textContent = label
     let next: number | null = null
     try {
-      next = nextRun(this.draft.schedule)
+      next = t && JSON.stringify(t.schedule) === JSON.stringify(this.draft.schedule) ? t.nextRun : nextRun(this.draft.schedule)
     } catch {}
     detail.querySelector('.st-next')!.textContent =
       `${timezoneLabel(this.draft.schedule.timezone)} · ${t?.state === 'paused' ? '已暂停' : '下次运行 ' + this.time(next, this.draft.schedule)}`
@@ -749,7 +752,7 @@ export class ScheduledTaskView {
     const wasOpen = history.querySelector('details')?.open
     const runSignature = JSON.stringify(t?.runs)
     if (t?.runs.length && this.historySignature !== runSignature)
-      history.innerHTML = `<details class="st-history" ${wasOpen ? 'open' : ''}><summary><span class="st-chevron" aria-hidden="true"></span>运行记录（${t.runs.length}）</summary>${t.runs.map((r) => `<div class="st-run"><strong>${r.status === 'running' ? '运行中' : r.status === 'success' ? '已完成' : r.status === 'blocked' ? '未执行：能力不可用' : '执行失败'}</strong> · ${this.time(r.startedAt, t.schedule)}${r.error ? `<p class="st-error">${escape(r.error)}</p>` : ''}</div>`).join('')}</details>`
+      history.innerHTML = `<details class="st-history" ${wasOpen ? 'open' : ''}><summary><span class="st-chevron" aria-hidden="true"></span>运行记录（${t.runs.length}）</summary>${t.runs.map((r) => `<div class="st-run"><strong>${r.watchResult?.waitingForQuote ? '等待新报价' : r.status === 'running' ? '运行中' : r.status === 'success' ? '已完成' : r.status === 'blocked' ? '未执行：能力不可用' : '执行失败'}</strong> · ${this.time(r.startedAt, t.schedule)}${r.error ? `<p class="st-error">${escape(r.error)}</p>` : ''}${r.watchResult ? `<p>${escape(r.watchResult.summary)}</p><p>获取时间 ${escape(this.time(r.watchResult.fetchedAt, t.schedule))} · 腾讯公开行情</p>${r.watchResult.quotes.map(q => `<p>${escape(q.symbol)} · ${q.changePercent}% · 报价 ${escape(q.time)}</p>`).join('')}` : ''}</div>`).join('')}</details>`
     this.historySignature = runSignature
     if (t?.sessionId && !detail.querySelector('.st-open-result')) {
       const b = this.document.createElement('button')
@@ -925,6 +928,7 @@ export class ScheduledTaskView {
     const s = { ...this.draft.schedule }
     const d = this.dialog(
       `<button type="button" class="st-icon-button st-dialog-close" aria-label="关闭时间编辑器" title="关闭"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg></button><h2>编辑执行时间</h2><p>选择重复频率、时间和时区</p><div class="st-dialog-fields"><label>重复<select name="frequency">${[
+        ['interval', '按间隔'],
         ['daily', '每天'],
         ['weekdays', '工作日'],
         ['weekly', '每周'],
@@ -936,7 +940,7 @@ export class ScheduledTaskView {
         )
         .join(
           '',
-        )}</select></label><label>时间<input name="time" type="time" value="${s.time}"></label><label>时区<select name="timezone">${[...new Set(['Asia/Shanghai', s.timezone, 'UTC', 'Asia/Hong_Kong', 'Asia/Tokyo', 'America/New_York', 'Europe/London'])].map((v) => `<option value="${escape(v)}" ${s.timezone === v ? 'selected' : ''}>${timezoneLabel(v)}</option>`).join('')}</select></label><label data-weekday>星期<select name="weekday">${[1, 2, 3, 4, 5, 6, 0].map((v) => `<option value="${v}" ${s.weekday === v ? 'selected' : ''}>星期${'日一二三四五六'[v]}</option>`).join('')}</select></label><label data-date>日期<input name="date" type="date" value="${escape(s.date)}"></label></div><footer><div class="st-schedule-preview"></div><div class="st-error" role="alert"></div><div class="st-dialog-actions"><button class="st-secondary" data-cancel>取消</button><button class="st-primary" data-save>保存</button></div></footer>`,
+        )}</select></label><label data-interval>间隔（分钟）<input name="intervalMinutes" type="number" min="1" max="1440" value="${s.intervalMinutes ?? 5}"></label><label data-time>时间<input name="time" type="time" value="${s.time}"></label><label>时区<select name="timezone">${[...new Set(['Asia/Shanghai', s.timezone, 'UTC', 'Asia/Hong_Kong', 'Asia/Tokyo', 'America/New_York', 'Europe/London'])].map((v) => `<option value="${escape(v)}" ${s.timezone === v ? 'selected' : ''}>${timezoneLabel(v)}</option>`).join('')}</select></label><label data-weekday>星期<select name="weekday">${[1, 2, 3, 4, 5, 6, 0].map((v) => `<option value="${v}" ${s.weekday === v ? 'selected' : ''}>星期${'日一二三四五六'[v]}</option>`).join('')}</select></label><label data-date>日期<input name="date" type="date" value="${escape(s.date)}"></label></div><footer><div class="st-schedule-preview"></div><div class="st-error" role="alert"></div><div class="st-dialog-actions"><button class="st-secondary" data-cancel>取消</button><button class="st-primary" data-save>保存</button></div></footer>`,
     )
     d.querySelector<HTMLButtonElement>('.st-dialog-close')!.onclick = () => d.close()
     const update = () => {
@@ -948,6 +952,9 @@ export class ScheduledTaskView {
         d.querySelector<HTMLSelectElement>('[name=weekday]')!.value,
       )
       s.date = d.querySelector<HTMLInputElement>('[name=date]')!.value
+      s.intervalMinutes = Number(d.querySelector<HTMLInputElement>('[name=intervalMinutes]')!.value)
+      d.querySelector<HTMLElement>('[data-interval]')!.style.display = s.frequency === 'interval' ? 'flex' : 'none'
+      d.querySelector<HTMLElement>('[data-time]')!.style.display = s.frequency === 'interval' ? 'none' : 'flex'
       d.querySelector<HTMLElement>('[data-weekday]')!.style.display =
         s.frequency === 'weekly' ? 'flex' : 'none'
       d.querySelector<HTMLElement>('[data-date]')!.style.display =

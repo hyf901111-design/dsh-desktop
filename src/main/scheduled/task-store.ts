@@ -64,13 +64,18 @@ export class TaskStore {
   async save(value: unknown, id?: string): Promise<ScheduledTask> {
     const input = validateTask(value)
     const previous = id ? this.tasks.find(task => task.id === id && !task.deletedAt) : undefined
-    const needsTitle = !!this.summarizeTitle && (!previous || previous.prompt !== input.prompt || previous.title === previous.prompt)
+    const needsTitle = !input.watch && !!this.summarizeTitle && (!previous || previous.prompt !== input.prompt || previous.title === previous.prompt)
     if (needsTitle) input.title = fallbackTaskTitle(input.prompt)
     else if (previous && this.summarizeTitle) input.title = previous.title
     const saved = await this.change((tasks) => {
+      if(input.watch&&!id){
+        const replay=tasks.find(t=>t.watch?.ownerAccountId===input.watch!.ownerAccountId&&t.watch.originSessionId===input.watch!.originSessionId&&t.watch.requestId===input.watch!.requestId)
+        if(replay){if(replay.watch!.requestDigest!==input.watch.requestDigest)throw Error('相同创建请求不能以不同参数重放');if(replay.deletedAt)throw Error('该创建请求对应任务已删除，请重新发起设置');return replay}
+      }
       let task = id ? tasks.find((t) => t.id === id && !t.deletedAt) : undefined
       if (id && !task) throw new Error('任务不存在')
       if (task && (task.component?.sessionId !== input.component?.sessionId || task.component?.nodeId !== input.component?.nodeId)) throw new Error('不能更改任务的组件绑定')
+      if(task&&JSON.stringify(task.watch??null)!==JSON.stringify(input.watch??null))throw Error('不能在任务编辑中更改行情提醒规则，请通过原会话重新设置')
       if (input.component && tasks.some(t => !t.deletedAt && t.id !== id && t.component?.sessionId === input.component!.sessionId && t.component?.nodeId === input.component!.nodeId)) throw new Error('该组件已设有定时任务，请编辑已有任务')
       if (task?.runs.some((r) => r.status === 'running'))
         throw new Error('任务运行中，请完成后再编辑')
@@ -144,11 +149,15 @@ export class TaskStore {
         (t.state !== 'enabled' || t.nextRun === null || t.nextRun > this.now())
       )
         return null
+      // An explicit one-off retry owns one new attempt, including recovery
+      // after transport failures. Recurring paused plans stay paused.
+      if(!automatic&&t.watch&&t.schedule.frequency==='once'&&t.state==='paused')t.state='enabled'
       t.runs.unshift({
         id: randomUUID(),
         startedAt: this.now(),
         status: 'running',
       })
+      if(t.watch)t.runs=t.runs.slice(0,1000)
       // Advance before dispatch so wake-up catches up only once, never a burst.
       if (automatic)
         t.nextRun =
@@ -169,6 +178,7 @@ export class TaskStore {
       const r = t?.runs.find((r) => r.id === runId)
       if (!t || !r) return
       Object.assign(r, patch)
+      if(patch.status==='success'&&patch.watchResult&&t.state!=='paused'&&!t.deletedAt)t.watchAlertKeys=[...new Set([...(t.watchAlertKeys??[]),...patch.watchResult.alertKeys])].slice(-100)
       if (sessionId) t.sessionId = sessionId
       // A blocked manual attempt also consumes an already-due instant. Recovery
       // waits for the next future plan instead of producing another block on tick.

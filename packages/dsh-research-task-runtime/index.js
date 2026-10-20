@@ -14,6 +14,7 @@ import { requestedComponentRefreshInterval } from './component-refresh-policy.js
 import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
 import { registerScheduledTitle } from './scheduled-title.js'
+import {registerScheduledTaskTool,SCHEDULED_TASK_TOOL} from './scheduled-task-tools.js'
 import { registerNotesAi } from './notes-ai.js'
 import { registerNoteSessions } from './notes-session.js'
 import { registerComputerUseTool } from './computer-use-tools.js'
@@ -2022,10 +2023,12 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       // A Q&A child may inspect the canvas but cannot mutate it or launch a
       // second canvas task; an offline component retains local parent tools.
       const qaExcludedTools = new Set([
+        SCHEDULED_TASK_TOOL,
         'research_workbench_create', 'research_canvas_use', 'research_canvas_task',
         'research_canvas_apply', 'research_canvas_update_market', 'research_canvas_undo'
       ])
       const containerExcludedTools = new Set([
+        SCHEDULED_TASK_TOOL,
         'run_code', 'research_workbench_create', 'research_canvas_use',
         'research_canvas_task', ...CANVAS_TOOL_NAMES
       ])
@@ -2577,6 +2580,7 @@ export async function apply(ctx) {
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
+    const disposeScheduledTaskTool = registerScheduledTaskTool(ctx)
     const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
@@ -2591,6 +2595,7 @@ export async function apply(ctx) {
       disposeCanvasTools()
       disposeRoutes()
       disposeScheduledTitle()
+      disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNoteSessions()
       throw error
@@ -2610,6 +2615,7 @@ export async function apply(ctx) {
       await context.dispose()
       disposeRoutes()
       disposeScheduledTitle()
+      disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNoteSessions()
       await runtime.dispose()

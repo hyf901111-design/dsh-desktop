@@ -1,14 +1,26 @@
 export type Schedule = {
-  frequency: 'once' | 'daily' | 'weekdays' | 'weekly'
+  frequency: 'once' | 'daily' | 'weekdays' | 'weekly' | 'interval'
+  intervalMinutes?: number
   time: string
   timezone: string
   weekday: number
   date: string
 }
 export type ComponentTarget = { sessionId: string; nodeId: string; title: string; boardTitle: string }
+export type MarketWatch = {
+  source: 'tencent-quotes'; symbols: string[]; thresholdPercent: number
+  ownerAccountId: string; originSessionId: string; requestId: string; requestDigest: string
+}
+export type MarketWatchResult = {
+  fetchedAt: number; source: 'tencent-quotes'; summary: string
+  quotes: Array<{symbol: string; changePercent: number; time: string}>
+  alertKeys: string[]; noChange: boolean
+  waitingForQuote?: boolean
+}
 export type TaskInput = {
   integrationBindings?: IntegrationBinding[]
   component?: ComponentTarget
+  watch?: MarketWatch
   title: string
   prompt: string
   workspaceId: string
@@ -25,6 +37,7 @@ export type TaskRun = {
   rpcId?: string
   componentBaseline?: string
   dataRefreshResult?: {status:'success'|'failed';error?:string;noChange?:boolean}
+  watchResult?: MarketWatchResult
 }
 export type ScheduledTask = TaskInput & {
   id: string
@@ -34,6 +47,7 @@ export type ScheduledTask = TaskInput & {
   sessionId?: string
   deletedAt?: number
   runs: TaskRun[]
+  watchAlertKeys?: string[]
 }
 export type WorkspaceChoice = {
   workspaceId: string
@@ -66,7 +80,7 @@ export function validateTask(value: unknown): TaskInput {
     throw new Error('请输入执行指令（最多 20000 字）')
   if (
     typeof v.workspaceId !== 'string' ||
-    (!v.workspaceId && !v.component) ||
+    (!v.workspaceId && !v.component && !v.watch) ||
     v.workspaceId.length > 512
   )
     throw new Error('请选择工作区')
@@ -74,6 +88,14 @@ export function validateTask(value: unknown): TaskInput {
     throw new Error('通知方式无效')
   if (v.component !== undefined && (!v.component || ['sessionId', 'nodeId', 'title', 'boardTitle'].some(k => typeof (v.component as any)[k] !== 'string' || !(v.component as any)[k].trim() || (v.component as any)[k].length > 256)))
     throw new Error('组件绑定无效')
+  if (v.watch !== undefined) {
+    const w = v.watch
+    if (!w || v.component || w.source !== 'tencent-quotes' || !Array.isArray(w.symbols) || !w.symbols.length || w.symbols.length > 12
+      || w.symbols.some(s => typeof s !== 'string' || !/^(?:sh|sz)\d{6}$/.test(s)) || new Set(w.symbols).size !== w.symbols.length
+      || typeof w.thresholdPercent !== 'number' || !Number.isFinite(w.thresholdPercent) || w.thresholdPercent <= 0 || w.thresholdPercent > 100
+      || [w.ownerAccountId, w.originSessionId, w.requestId].some(s => typeof s !== 'string' || !s.trim() || s.length > 256)
+      || typeof w.requestDigest !== 'string' || !/^[a-f0-9]{64}$/.test(w.requestDigest)) throw Error('行情提醒规则无效（支持 1–12 个沪深标的）')
+  }
   validateSchedule(v.schedule)
   return {
     integrationBindings: validateIntegrationBindings(v.integrationBindings),
@@ -83,6 +105,7 @@ export function validateTask(value: unknown): TaskInput {
     schedule: { ...v.schedule },
     notification: v.notification,
     ...(v.component ? { component: { sessionId: v.component.sessionId, nodeId: v.component.nodeId, title: v.component.title, boardTitle: v.component.boardTitle } } : {}),
+    ...(v.watch ? { watch: structuredClone(v.watch) } : {}),
   }
 }
 
@@ -118,10 +141,11 @@ export function validateIntegrationBindings(value: unknown): IntegrationBinding[
 export function validateSchedule(s: Schedule): void {
   if (
     !s ||
-    !['once', 'daily', 'weekdays', 'weekly'].includes(s.frequency) ||
+    !['once', 'daily', 'weekdays', 'weekly', 'interval'].includes(s.frequency) ||
     !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.time)
   )
     throw new Error('执行时间无效')
+  if (s.frequency === 'interval' && (!Number.isInteger(s.intervalMinutes) || s.intervalMinutes! < 1 || s.intervalMinutes! > 1440)) throw Error('检查间隔需为 1–1440 分钟')
   if (!Number.isInteger(s.weekday) || s.weekday < 0 || s.weekday > 6)
     throw new Error('请选择星期')
   if (typeof s.timezone !== 'string' || !s.timezone)
@@ -142,6 +166,7 @@ export function validateSchedule(s: Schedule): void {
 // and chooses the first future occurrence during a repeated hour.
 export function nextRun(s: Schedule, after = Date.now()): number | null {
   validateSchedule(s)
+  if (s.frequency === 'interval') return after + s.intervalMinutes! * 60000
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: s.timezone,
     year: 'numeric',
@@ -201,6 +226,7 @@ export function nextRun(s: Schedule, after = Date.now()): number | null {
   return null
 }
 export function scheduleLabel(s: Schedule): string {
+  if (s.frequency === 'interval') return `每 ${s.intervalMinutes} 分钟`
   return `${s.frequency === 'once' ? s.date : s.frequency === 'weekly' ? '每周' + '日一二三四五六'[s.weekday] : s.frequency === 'weekdays' ? '工作日' : '每天'} ${s.time}`
 }
 

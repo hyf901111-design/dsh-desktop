@@ -16,6 +16,7 @@ export function canvasHumanRequest(session) {
 
 export function ongoingCanvasRequest(session) {
   const human=canvasHumanRequest(session);if(!human)return null
+  if(scheduledTaskRequest(session))return null
   const {text}=human
   const request=text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'').replace(/[“「][^”」]*[”」]/g,'')
   if(/(?:不要|不用|不需要|停止|结束)(?:再)?(?:持续|一直|陪|监控|跟踪)|(?:只|仅).{0,10}(?:一次|一步)|\b(?:stop|don't|do not)\b/i.test(request))return null
@@ -23,9 +24,17 @@ export function ongoingCanvasRequest(session) {
   return null
 }
 
+export function scheduledTaskRequest(session) {
+  const human=canvasHumanRequest(session);if(!human)return null
+  const request=human.text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'').replace(/[“「][^”」]*[”」]/g,'')
+  if(/(?:不要|不用|不需要|取消|停止|删除).{0,8}(?:定时|后台|提醒|通知)/u.test(request))return null
+  return /(?:设置|设定|创建|安排|新增|添加|开启|启动|做个).{0,16}(?:定时|后台|周期|定期)|(?:如果|当).{0,100}(?:超过|低于|到达|涨跌幅).{0,40}(?:提醒我|通知我)|(?:每隔|每天|每周|工作日).{0,60}(?:检查|提醒我|通知我)/u.test(request)?human:null
+}
+
 export const CANVAS_ONGOING_GUIDANCE='画布持续任务约定：用户要求陪伴、持续观察或反复响应时，这本身就是持续执行授权。必须调用 research_canvas_task start，completionMode=until-stopped；只做一次操作然后回复完成不满足目标。旧消息中要求用户每次发消息、声称补充消息会终止任务的说法已过时，不得沿用。任务运行中用户补充要求用 steer，询问进度用 list，继续等待用 wait，不要停止并重建。短暂操作失败先重新观察再继续。只有明确停止、权限或无法恢复的阻碍才结束或暂停。不要编写专用游戏脚本替代通用画布持续任务。'
 
 export function canvasTaskRoutingGuard(exec,method,args,activeTasks=[]) {
+  if((method==='task'&&args.action==='start'||method==='use'&&args.op!=='observe')&&scheduledTaskRequest(exec.agent?.session))throw Error('[SCHEDULED_TASK_REQUIRED] 设置定时或阈值提醒请使用 research_scheduled_task，保存后立即返回；不能启动画板观察循环等待触发。')
   if(method!=='use'||args.op==='observe'||exec.agent?.[Symbol.for('sherlock.canvas-task-owned')])return
   if(!ongoingCanvasRequest(exec.agent?.session)&&!activeTasks.length)return
   throw Error(activeTasks.length
