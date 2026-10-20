@@ -1,7 +1,8 @@
 import {expect,it,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
-import {publishResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,patchResearchWorkbenchFeedback} from '../scripts/lib/research-workbench-feedback.mjs'
+import {publishResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,patchResearchWorkbenchFeedback,researchWorkbenchReceiptPlans} from '../scripts/lib/research-workbench-feedback.mjs'
+import {planningResponseMetadata} from '../scripts/lib/research-planning-feedback.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 
@@ -61,21 +62,42 @@ it('deduplicates actual plan receipts, rejects unrelated nodes, and translates r
  expect(state.title).not.toContain('generating')
 })
 
+it('keeps successful creation receipts for a visible footer after a long final answer without reading prose as a receipt',()=>{
+ const tool=id=>({kind:'tool-call',data:{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify({planId:id,status:'accepted',panels:['a','b']})}]}}})
+ const nodes=new Map([['first',tool('first-plan')],['again',tool('first-plan')],['second',tool('second-plan')],['long-reply',{kind:'assistant-step',data:{blocks:[{kind:'text',text:'PRIVATE LONG ANSWER'.repeat(1000)}]}}]])
+ expect(researchWorkbenchReceiptPlans([...nodes.keys()],nodes,planningResponseMetadata)).toEqual([{id:'first-plan',count:2},{id:'second-plan',count:2}])
+})
+
 it('installs a live status for settled creation turns while preserving the existing planning-only feedback',()=>{
  const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const source=patchResearchCreationProgress(original)
  expect(source).toContain('data-research-workbench-progress')
  expect(source).toContain('const workbenchMeta=planningResponseMetadata(activityNodes)')
  expect(source).toContain('sessionId, plans:workbenchMeta.plans')
+ expect(source.indexOf('footer:true')).toBeGreaterThan(source.indexOf('function ChatView('))
+ expect(source).toContain('researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata)')
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v1 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v2 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
- const snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
+ let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
  const Component=runInNewContext(source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[snapshot,()=>{}],useEffect:()=>{}},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
  const view=Component({sessionId:'s',plans})
  expect(view.props['data-research-workbench-progress']).toBe('completed')
  expect(JSON.stringify(view)).toContain('4/4')
  expect(JSON.stringify(view)).not.toContain('PRIVATE')
+ const footer=Component({sessionId:'s',plans,footer:true})
+ expect(footer.props['data-research-workbench-footer']).toBe(true)
+ expect(footer.props.children[1]).toBeNull()
+ snapshot={...snapshot,active:false}
+ expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
+ snapshot={...snapshot,nodes:[{id:'pending',planId:'plan',status:'running'}]}
+ expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
+ snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
+ expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
+ const legacy=source.replace('/* ework:workbench-feedback:v2 */','/* ework:workbench-feedback:v1 */')
+  .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
+  .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
+ expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
 })
