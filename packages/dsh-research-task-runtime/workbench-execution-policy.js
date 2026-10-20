@@ -1,6 +1,7 @@
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import { workbenchPlanningContext } from './workbench-planning-context.js'
+import { LIVE_WORKBENCH_PRESETS } from './live-workbench-presets.js'
 
 // Prompt assembly runs before the first claimed message is committed as
 // user/message. Include the authored inbox entry so the first model call sees
@@ -35,7 +36,7 @@ export function workbenchCreationRequest(session) {
   return /(?:创建|生成|搭建|制作|构建|做一个|重新规划)|\b(?:create|build|generate)\b/iu.test(text) && (board || component) ? human : null
 }
 
-export const WORKBENCH_EARLY_PLAN = '【工作台首次规划】先确定用户领域的问题、信息结构和1–10个面板，立即调用 research_workbench_create；不要先写报告、读取skill/源码/完整模板规范或填整套数据。只规划用户要求的数量，不追加无关金融/KPI卡。用户允许自洽模拟数据时，优先 dataMode:"simulated"、generationMode:"deferred"，panels每项仅含title/prompt/type/size，完全省略artifact。sharedContext只写跨卡共用的事实、日期、容量、单位与必要合计分配；使用同一份紧凑预算/时间轴，不写逐行明细或序列。宿主会把原始用户需求和sharedContext送给受限并行子卡，由子卡生成完整且显著标注模拟的数据，不能偷换成固定行业样例。每项prompt只写该卡问题、字段、范围与必要交互。按内容选择类型：排期用gantt/calendar/timeline，人员/物资/预算明细用table，执行用tasks/progress，风险用alerts或table，审批用approval，录入用form，正文用note，代码配置用code，指标仅用于真正的汇总读数，图表用chart并在prompt写chart变体；不为凑模板改写用户领域。普通table仅支持平面行、排序和搜索，不能逐行展开详情；有详情的时序记录可用timeline/calendar等支持说明的模板，用户明确要求可筛选展开的表格走普通HTML生成。仅原请求为模拟数据时，省略dataMode/generationMode/sharedContext/originalRequest，各panel.prompt保留模拟数据、禁止联网及共同约束，标题标注模拟；真实记录保持原数据性质、来源与取数约束，不能改称模拟。现有模板不能表达的业务保留原有自定义HTML或原artifact路径，不使用deferred，不删改业务来凑模板。已有完整数据可沿原artifact路径直接提交；标准确定性preset仍按原规则单独提交，不能混用deferred。真实数据未取得时省略artifact，按来源声明待取字段，不捏造记录；已有真实记录可直接artifact，不重复查询。工具返回accepted只表示规划已受理、面板生成中，prepared才表示内容已准备好，然后结束主会话本轮；不再逐卡检查、重复建卡或制作报告。'
+export const WORKBENCH_EARLY_PLAN = '【工作台首次规划】先确定用户领域的问题、信息结构和1–10个面板，立即调用 research_workbench_create；不要先写报告、读取skill/源码/完整模板规范或填整套数据。只规划用户要求的数量，不追加无关金融/KPI卡。用户允许自洽模拟数据时，优先 dataMode:"simulated"、generationMode:"deferred"，panels每项仅含title/prompt/type/size，完全省略artifact。sharedContext只写跨卡共用的事实、日期、容量、单位与必要合计分配；使用同一份紧凑预算/时间轴，不写逐行明细或序列。宿主会把原始用户需求和sharedContext送给受限并行子卡，由子卡生成完整且显著标注模拟的数据，不能偷换成固定行业样例。每项prompt只写该卡问题、字段、范围与必要交互。按内容选择类型：排期用gantt/calendar/timeline，人员/物资/预算明细用table，执行用tasks/progress，风险用alerts或table，审批用approval，录入用form，正文用note，代码配置用code，指标仅用于真正的汇总读数，图表用chart并在prompt写chart变体；不为凑模板改写用户领域。普通table仅支持平面行、排序和搜索，不能逐行展开详情；有详情的时序记录可用timeline/calendar等支持说明的模板，用户明确要求可筛选展开的表格走普通HTML生成。仅在上述普通自定义HTML回退且原请求允许模拟数据时，省略dataMode/generationMode/sharedContext/originalRequest，各panel.prompt保留模拟数据、禁止联网及共同约束，标题标注模拟；可匹配注册模板的模拟工作台仍走前述deferred路径；真实记录保持原数据性质、来源与取数约束，不能改称模拟。现有模板不能表达的业务保留原有自定义HTML或原artifact路径，不使用deferred，不删改业务来凑模板。已有完整数据可沿原artifact路径直接提交；标准确定性preset仍按原规则单独提交，不能混用deferred。真实数据未取得时省略artifact，按来源声明待取字段，不捏造记录；已有真实记录可直接artifact，不重复查询。工具返回accepted只表示规划已受理、面板生成中，prepared才表示内容已准备好，然后结束主会话本轮；不再逐卡检查、重复建卡或制作报告。'
 export const WORKBENCH_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，不替换已有卡；编辑当前看板用已有编辑工具。先一次提交title与完整panels规划，不读skill/源码/全量规范、不先填所有数据。用户允许模拟时用dataMode:"simulated",generationMode:"deferred",panels:[{title,prompt,type,size}]，省略artifact；sharedContext仅保存跨卡共同事实与紧凑的预算/日期/容量分配，宿主保留原始用户需求，受限子卡再生成各自完整数据。按领域任务选择gantt/calendar/timeline/table/tasks/progress/alerts/approval/form/note/chart等注册模板，不套固定金融或KPI样例。模板无法表达的业务保留原有自定义HTML/原artifact路径，不使用deferred，不删改业务来凑模板。已有完整数据沿artifact路径、标准preset沿原路径，均不混用deferred。真实来源用source或省略模式，未取数据只规划、不可补模拟值；内置免费源支持publicData直通，证券报价每请求最多12个。用户指定数量、数据、来源和范围必须保留。requestId重试保持一致。accepted是受理并生成中，prepared才是已准备好。'
 
 export const WORKBENCH_PLAN_SUBMITTED = 'research_workbench_create 已成功受理本次工作台。取数和模板填充由已启动的面板任务负责，主会话不要再重复接口发现、取数、重新创建或检查同一批面板。现在只向用户简要说明工具返回的真实状态：accepted 表示生成中，prepared 表示内容已准备好，然后结束本轮。面板各自完成后会自动更新画布；不要再生成一份重复报告。'
@@ -95,8 +96,31 @@ function savePlanningBudget(session, state, phase) {
 
 const CREATE_TOOL = 'research_workbench_create'
 const MAX_PLANNING_DISCOVERIES = 2
+const SOURCE_MODE_GUIDANCE = '真实数据模式使用 dataMode:"source"（也可省略），必须省略 generationMode、sharedContext、originalRequest，这三项仅适用于模拟。已有真实记录直接保留完整 artifact 及来源、日期、单位；未取到的面板省略 artifact，把待取字段、来源和缺失处理写入 panel.prompt，由独立面板取数，不补模拟值。'
+const SOURCE_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，保留用户指定的数量、领域、来源和范围；先理解需求、拆解每卡内容和可视化，立即一次提交 title 与完整 panels，不先取整套数据、写报告或读取 skill/源码。'+SOURCE_MODE_GUIDANCE+'按内容选择 table/chart/news/reports/calendar/timeline/gantt/tasks/alerts/note 等模板，复杂交互保留 html，不能套固定金融样例。publicData 可交给宿主取真实来源；preset 仅在用户需求匹配真实预设时使用。requestId 重试保持一致。accepted 表示已受理并生成中，prepared 才表示已准备好，随后简短交付并结束本轮。'
 const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前只理解需求、拆解组件、明确每卡内容与可视化，再调用 research_workbench_create。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
 const PLAN_FIRST_DENIAL = '首次规划阶段只允许有限来源发现和 research_workbench_create；请把待取字段与真实来源约束写进各 panel.prompt，省略未取得的 artifact，立即提交规划。'
+function planningDataIntent(text) {
+  // Negated simulation is a source requirement, not permission to simulate.
+  // Keep other affirmative mentions so explicit mixed plans retain their route.
+  const affirmative = text.replace(/(?:不要|不用|不(?:再)?(?:使用|允许|接受|采用|需要)|无需|禁止|不得|不能|拒绝)(?:再|使用|用|采用|生成|补充|添加|填充|任何|全部|一切|的)*(?:模拟|虚构|伪造|合成)(?:数据|记录|值|内容)?/gu, '')
+    .replace(/\b(?:no|without|do not use|don't use|never use)\s+(?:any\s+)?(?:simulated|synthetic|fictional|mock|fake)(?:\s+(?:data|records|values))?/giu, '')
+  const simulation = /模拟|虚构|伪造|合成数据|假数据|\b(?:simulated|synthetic|fictional|mock|fake)\b/iu.test(affirmative)
+  const source = /真实(?:的)?(?:数据|来源|记录|资料|行情)|实际(?:取得|获取|采集|提供|测得|记录)|\b(?:real|actual|verified|authentic)\s+(?:data|sources?|records?|quotes?)\b/iu.test(text)
+  return { simulation, sourceOnly: !simulation && (source || affirmative !== text) }
+}
+function sourceCreationParameters(parameters) {
+  if (!parameters?.properties) return parameters
+  const omitted = new Set(['generationMode', 'sharedContext', 'originalRequest'])
+  const properties = Object.fromEntries(Object.entries(parameters.properties).filter(([name]) => !omitted.has(name)))
+  properties.dataMode = { ...(properties.dataMode ?? { type: 'string' }), enum: ['source'], description: '仅真实来源，可省略。未取得的数据由独立面板取数，保留缺失，不使用模拟模式。' }
+  if (Array.isArray(properties.preset?.enum)) {
+    const presets = properties.preset.enum.filter(value => LIVE_WORKBENCH_PRESETS.includes(value))
+    if (presets.length) properties.preset = { ...properties.preset, enum: presets, description: '仅需求匹配时使用真实来源预设；其余按用户内容提交 panels。' }
+    else delete properties.preset
+  }
+  return { ...parameters, additionalProperties: false, properties, ...(parameters.required ? { required: parameters.required.filter(name => !omitted.has(name)) } : {}) }
+}
 function planningDiscovery(name, args) {
   return (name === 'public_data_query' && args?.operation === 'catalog') ||
     (name === 'financial_query' && ['resolve', 'catalog'].includes(args?.intent))
@@ -183,12 +207,13 @@ export function registerWorkbenchExecutionPolicy(ctx) {
       if (!human) return ''
       const accepted = hasAcceptedPlan(agent.session, human.messageId)
       if (!accepted) {
+        const { sourceOnly } = planningDataIntent(human.text)
         const direct = /行情|自选|指数|资讯|新闻|基金|ETF|加密|Kraken|腾讯|BTC|ETH/iu.test(human.text) &&
           !/模拟|虚构|演示|通联|DataYes|MCP|插件|财报|研报|宏观|持仓|基金净值|禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/iu.test(human.text) &&
           ctx.tools?.schemas?.(agent)?.some(tool => tool.name === 'public_data_query')
         const genericDomesticEtf = direct && /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(human.text) && /国内|中国|A股/iu.test(human.text) && /热门|主流|代表性/iu.test(human.text) && /基金|ETF/iu.test(human.text) &&
           !/(?:[一二三四五六七八九十\d]+\s*(?:张(?:卡片?)?|卡|(?:个)?(?:面板|组件)|只(?:基金|ETF))|\d{5,6}|\d+\s*(?:天|日|周|月|年)|每.{0,6}(?:分|小时|天)|只要|只需|仅|不含|不要.{0,8}(?:新闻|资讯|指数)|指定|上传|附件|资料|记录|收益|回撤|规模|费率|经理|对比|沪深|上证|创业|科创|行业|主题|黄金|医药|半导体)/iu.test(human.text)
-        return workbenchPlanningContext() + '\n' + (genericDomesticEtf ? WORKBENCH_LIVE_ETF_PLAN : direct ? WORKBENCH_FREE_DATA_PLAN : WORKBENCH_EARLY_PLAN)
+        return workbenchPlanningContext() + '\n' + (genericDomesticEtf ? WORKBENCH_LIVE_ETF_PLAN : direct ? WORKBENCH_FREE_DATA_PLAN : sourceOnly ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_EARLY_PLAN) + (sourceOnly && (genericDomesticEtf || direct) ? '\n' + SOURCE_MODE_GUIDANCE : '')
       }
       return accepted.inlineArtifacts && /自动(?:刷新|更新)|每.{0,12}分钟|定时(?:刷新|更新)|持续(?:刷新|更新)/u.test(human.text)
         ? WORKBENCH_INLINE_BINDING : WORKBENCH_PLAN_SUBMITTED
@@ -238,16 +263,18 @@ export function registerWorkbenchExecutionPolicy(ctx) {
       releasePlanning(agent); return request
     }
     const state = enterPlanning(agent, human, signal ?? request.signal)
-    const discoveryAllowed = state.calls.size < MAX_PLANNING_DISCOVERIES && !/模拟|虚构|禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(human.text)
+    const { simulation, sourceOnly } = planningDataIntent(human.text)
+    const discoveryAllowed = state.calls.size < MAX_PLANNING_DISCOVERIES && !simulation && !/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(human.text)
     const tools = request.tools.flatMap(tool => {
-      if (tool.name === CREATE_TOOL) return [{ ...tool, description: WORKBENCH_PLANNING_TOOL_GUIDANCE }]
+      if (tool.name === CREATE_TOOL) return [{ ...tool, description: sourceOnly ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE,
+        ...(sourceOnly ? { parameters: sourceCreationParameters(tool.parameters) } : {}) }]
       const discovery = discoveryAllowed && discoverySchema(tool)
       return discovery ? [discovery] : []
     })
     state.discoveryTools = new Set(tools.filter(tool => tool.name !== CREATE_TOOL).map(tool => tool.name))
     // Model route, effort, signal and the shared registry stay unchanged. The
     // low-cost plan has no complete-data prerequisite in any user domain.
-    return { ...request, system: [request.system, PLAN_FIRST_GUIDANCE].filter(Boolean).join('\n'), tools }
+    return { ...request, system: [request.system, PLAN_FIRST_GUIDANCE, sourceOnly ? SOURCE_MODE_GUIDANCE : ''].filter(Boolean).join('\n'), tools }
   })
   return () => {
     for (const state of activeScopes) releasePlanning(state.agent)

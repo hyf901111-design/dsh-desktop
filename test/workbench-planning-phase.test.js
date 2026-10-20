@@ -5,8 +5,14 @@ import AgentRegistry from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import LlmRuntime, { LlmAdapter } from '@deepseek-ai/dsh-llm'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
+import { validateJsonSchemaValue } from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
+import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 
 const session = (text, id = 'u') => ({ header: {}, events: [{ type: 'user/message', data: { id, source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 const accepted = (s, isError = false) => s.events.push(
@@ -30,6 +36,13 @@ const planningTools = Object.freeze([
 ])
 const wireRequest = () => Object.freeze({ ...config, system: '原系统要求', messages: [], tools: planningTools })
 const invocation = (agent, name, args = {}, callId = name) => ({ agent, name, arguments: args, callId })
+async function registeredCreationSchema() {
+  let tool
+  const dispose = await registerWorkbench({ tools: { register: value => { tool = value; return () => {} } }, webServer: { register: () => () => {} } }, {},
+    { filePath: join(tmpdir(), `planning-schema-${randomUUID()}`, 'plans.json') })
+  await dispose()
+  return tool
+}
 
 describe('工作台首次规划阶段预算', () => {
   it('keeps model controls unchanged for failed-component repairs and no-add instructions',async()=>{
@@ -304,6 +317,50 @@ describe('工作台首次规划阶段预算', () => {
       expect(h.guard(invocation(agent, 'financial_query', { intent: 'resolve' }))).toContain('research_workbench_create')
       expect(h.guard(invocation(agent, 'public_data_query', { operation: 'catalog' }))).toContain('research_workbench_create')
     }
+  })
+
+  it('offers only valid source creation parameters on the real first wire schema when simulation is explicitly forbidden', async () => {
+    const originalTool = await registeredCreationSchema(), before = structuredClone(originalTool.parameters)
+    const h = harness(), request = { ...wireRequest(), tools: [originalTool, ...planningTools.slice(1)] }
+    for (const text of ['创建宁德时代真实数据研究工作台，只使用实际取得的真实数据；不用模拟数据。', '创建农业监测工作台，使用真实来源。', 'Create a research dashboard with real data only; no simulated data.']) {
+      const agent = { session: { header: {}, events: [{ type: 'agent/inbox/spliced', data: { inserted: session(text).events.map(event => event.data) } }] } }
+      const planned = await h.context(agent, request), schema = planned.tools[0].parameters
+      expect(schema.properties.dataMode.enum).toEqual(['source'])
+      expect(schema.additionalProperties).toBe(false)
+      expect(schema.properties.preset.enum).not.toContain('openterminal-research')
+      for (const key of ['generationMode', 'sharedContext', 'originalRequest']) expect(schema.properties).not.toHaveProperty(key)
+      expect(schema.properties.panels).toBe(originalTool.parameters.properties.panels)
+      const input = { requestId: 'actual-source', title: '真实记录', dataMode: 'source', panels: [{ title: '观察记录', prompt: '实际来源，缺失字段明确标注', type: 'table', size: 'large' }] }
+      expect(validateJsonSchemaValue(schema, input)).toEqual([])
+      expect(validateJsonSchemaValue(schema, { ...input, dataMode: 'simulated' }).length).toBeGreaterThan(0)
+      expect(validateJsonSchemaValue(schema, { ...input, generationMode: 'deferred', sharedContext: '真实数据的公共约束' }).length).toBeGreaterThan(0)
+      const snapshot = { ...input, panels: [{ ...input.panels[0], artifact: { version: 1, type: 'table', title: '已有真实记录', columns: ['字段', '记录'], rows: [['实测数量', '3']] } }] }
+      expect(validateJsonSchemaValue(schema, snapshot)).toEqual([])
+      expect(validateWorkbench(snapshot).panels[0].artifact.rows).toEqual([['实测数量', '3']])
+      expect(() => validateWorkbench({ ...input, generationMode: 'deferred', sharedContext: '真实数据的公共约束' })).toThrow('仅适用于模拟数据')
+      expect(planned.tools[0].description).toContain('省略 generationMode、sharedContext、originalRequest')
+      expect(planned.tools[0].description).toContain('已有真实记录')
+      expect(planned.tools[0].description).toContain('artifact')
+      expect(planned.system).toContain('省略 generationMode、sharedContext、originalRequest')
+      expect(h.text(agent)).not.toContain('generationMode:"deferred"')
+      expect(planned.tools.map(tool => tool.name)).toContain('financial_query')
+    }
+    expect(originalTool.parameters).toEqual(before)
+  })
+
+  it('preserves generic, simulated and mixed-source schema routes, including ordinary custom HTML fallback', async () => {
+    const originalTool = await registeredCreationSchema(), request = { ...wireRequest(), tools: [originalTool] }, h = harness()
+    for (const text of ['创建巡展工作台', '创建巡展工作台，使用自洽模拟数据', '创建工作台，真实营收使用已有数据，未来排期允许模拟数据', '创建工作台，不使用真实数据，只使用模拟数据', '创建工作台，真实行情，其他部分允许虚构记录']) {
+      const planned = await h.context({ session: session(text) }, request)
+      expect(planned.tools[0].parameters).toBe(originalTool.parameters)
+      expect(planned.tools[0].parameters.properties.dataMode.enum).toEqual(['simulated', 'source'])
+      expect(planned.tools[0].parameters.properties.generationMode.enum).toContain('deferred')
+      expect(planned.tools[0].parameters.properties.panels.items.properties.type.enum).toContain('html')
+    }
+    const text = h.text({ session: session('创建古籍交接工作台，允许模拟，点击行展开详情') })
+    expect(text).toContain('普通自定义HTML回退')
+    expect(text).toContain('dataMode:"simulated"、generationMode:"deferred"')
+    expect(text).not.toContain('仅原请求为模拟数据时，省略dataMode')
   })
 
   it('enforces plan-first through the real agent loop and tool scheduler while workers retain every parent source', async () => {
