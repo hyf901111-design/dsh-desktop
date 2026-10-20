@@ -1344,6 +1344,28 @@ describe('Research task Subagent adapter', () => {
       }finally{await handle.dispose()}
     }
   })
+  it.each(['财报估值研究工作台','DataYes财报与新闻研究工作台'])('does not route a news child from the global board title: %s',async title=>{
+    const {validateWorkbench,workbenchPanelPrompt,workbenchPanelIntent}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    const {preferredComponentSourceTools}=await import('../packages/dsh-research-task-runtime/component-source-tools.js')
+    const original='创建中际旭创、新易盛、工业富联真实研究工作台，含财报估值和新闻。'
+    const plan=validateWorkbench({requestId:'title-scope',title,dataMode:'source',originalRequest:original,panels:[{title:'近期新闻',type:'news',size:'large',prompt:'检索三家公司最新新闻，只取本次真实快照。'}]})
+    const query=workbenchPanelPrompt(plan,plan.panels[0]),fixture=containerAdapterFixture()
+    const names=['public_data_query','financial_query','web_search','web_fetch','ework__datayes']
+    const schemas=names.map(name=>({name,...(name.startsWith('ework__')?{description:'通联 DataYes API'}:{})}))
+    fixture.ctx.tools={schemas:()=>schemas}
+    expect(preferredComponentSourceTools(schemas,workbenchPanelIntent(query))).toEqual([])
+    const valuation=workbenchPanelPrompt(plan,{...plan.panels[0],title:'财报估值',type:'table',prompt:'查询三家公司财报、净利润与市盈率。'})
+    expect(preferredComponentSourceTools(schemas,workbenchPanelIntent(valuation)).map(tool=>tool.name)).toEqual(['ework__datayes'])
+    const handle=await fixture.start(query)
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow).toEqual(names)
+      expect(child.prompt[0].text).toContain('工作台：'+title)
+      expect(child.prompt[0].text).toContain(original)
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的通联工具')
+    }finally{await handle.dispose()}
+  })
   it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
     const fixture=containerAdapterFixture()
     fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'}]}
