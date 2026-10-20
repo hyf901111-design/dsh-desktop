@@ -1,0 +1,186 @@
+{
+  "firstText": "{\"version\":1,\"type\":\"data-bound\",\"requests\":[{\"key\":\"q\",\"tool\":\"public_data_query\",\"args\":{\"operation\":\"query\",\"source\":\"tencent-quotes\",\"parameters_json\":\"{\\\"symbols\\\":[\\\"sz300308\\\",\\\"sz300502\\\",\\\"sh601138\\\",\\\"sh000300\\\"]}\"}}],\"mapping\":{\"version\":1,\"type\":\"table\",\"variant\":\"table\",\"title\":\"最新行情对比：中际旭创 / 新易盛 / 工业富联 / 沪深300\",\"asOf\":{\"$from\":\"q\",\"$path\":\"dataTime\",\"$suffix\":\" · 腾讯财经公开报价 · 各行为最后报价时间\"},\"columns\":[\"名称(交易所)\",\"最新价\",\"涨跌幅\",\"涨跌额\",\"今开\",\"昨收\",\"成交量/成交额\",\"货币/单位\"],\"rows\":{\"$from\":\"q\",\"$each\":\"records\",\"$map\":[{\"$path\":\"name\",\"$suffix\":\"(sz300308 · 深交所)\"},{\"$path\":\"price\",\"$as\":\"number\",\"$digits\":2},{\"$path\":\"changePercent\",\"$as\":\"number\",\"$digits\":2,\"$suffix\":\"%\"},{\"$path\":\"change\",\"$as\":\"number\",\"$digits\":2},{\"$path\":\"open\",\"$as\":\"number\",\"$digits\":2},{\"$path\":\"previousClose\",\"$as\":\"number\",\"$digits\":2},{\"$default\":\"本次未取得（来源未提供成交量/成交额字段）\"},{\"$path\":\"priceUnit\"}]},\"notes\":[\"交易所标注：sz300308/sz300502 为深交所，sh601138 为上交所，sh000300 为中证指数（沪深300基准）；前三者货币单位为元(CNY)，沪深300为指数点(points)\",\"来源：腾讯财经公开报价(tencent-quotes)，尽力而为公开接口，不能承诺交易级实时；dataTime 为最后报价时间而非获取时间\",\"来源响应未提供成交量/成交额字段，该列本次未取得，未用模拟值填补；四只代码均取数成功（missingSymbols 为空），无失败行\",\"涨跌幅与涨跌额均来自来源原始字段，未做二次计算\"]}",
+  "repair": {
+    "version": 1,
+    "type": "data-bound",
+    "requests": [
+      {
+        "key": "q",
+        "tool": "public_data_query",
+        "args": {
+          "operation": "query",
+          "source": "tencent-quotes",
+          "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\",\"sh000300\"]}"
+        }
+      }
+    ],
+    "mapping": {
+      "version": 1,
+      "type": "table",
+      "variant": "table",
+      "title": "最新行情对比：中际旭创 / 新易盛 / 工业富联 / 沪深300",
+      "asOf": {
+        "$from": "q",
+        "$path": "dataTime",
+        "$suffix": " · 腾讯财经公开报价 · 各行时间为该证券最后报价时间"
+      },
+      "columns": [
+        "证券代码(交易所)",
+        "名称",
+        "最新价",
+        "涨跌幅",
+        "涨跌额",
+        "今开",
+        "昨收",
+        "最后报价时间",
+        "货币/单位"
+      ],
+      "rows": {
+        "$from": "q",
+        "$each": "records",
+        "$map": [
+          {
+            "$path": "symbol"
+          },
+          {
+            "$path": "name"
+          },
+          {
+            "$path": "price",
+            "$as": "number",
+            "$digits": 2
+          },
+          {
+            "$path": "changePercent",
+            "$as": "number",
+            "$digits": 2,
+            "$suffix": "%"
+          },
+          {
+            "$path": "change",
+            "$as": "number",
+            "$digits": 2
+          },
+          {
+            "$path": "open",
+            "$as": "number",
+            "$digits": 2
+          },
+          {
+            "$path": "previousClose",
+            "$as": "number",
+            "$digits": 2
+          },
+          {
+            "$path": "time"
+          },
+          {
+            "$path": "priceUnit"
+          }
+        ]
+      },
+      "notes": [
+        "交易所标注：sz300308/sz300502 为深交所，sh601138 为上交所，sh000300 为中证指数（沪深300基准）；证券货币单位为元(CNY)，沪深300为指数点(points)",
+        "来源：腾讯财经公开报价(tencent-quotes)，尽力而为公开接口，不能承诺交易级实时；各行 time 为该证券最后报价时间，dataTime 为响应数据时点，非获取时间",
+        "来源本次响应样本未包含 sh000300 的记录（missingSymbols 为空但样本仅3条），沪深300行本次未取得，未用模拟值填补；若刷新后返回该记录，将自动出现在表格中",
+        "来源响应未提供成交量/成交额字段，该列本次未取得，未用模拟值填补",
+        "涨跌幅与涨跌额均来自来源原始字段，未做二次计算"
+      ]
+    }
+  },
+  "sourceRecord": {
+    "tool": "public_data_query",
+    "args": {
+      "operation": "query",
+      "parameters_json": "{\"symbols\":[\"sz300308\",\"sz300502\",\"sh601138\",\"sh000300\"]}",
+      "source": "tencent-quotes"
+    },
+    "response": {
+      "version": 1,
+      "source": "腾讯财经公开报价",
+      "sourceId": "tencent-quotes",
+      "sourceUrl": "https://qt.gtimg.cn/?q=sz300308%2Csz300502%2Csh601138%2Csh000300",
+      "documentation": "https://gu.qq.com/",
+      "records": [
+        {
+          "symbol": "sz300308",
+          "name": "中际旭创",
+          "code": "300308",
+          "price": 644.99,
+          "previousClose": 660.7,
+          "open": 650.7,
+          "change": -15.71,
+          "changePercent": -2.38,
+          "high": 673.1,
+          "low": 637,
+          "time": "2026-10-20 14:31:48",
+          "timezone": "Asia/Shanghai",
+          "priceUnit": "CNY",
+          "currency": "CNY"
+        },
+        {
+          "symbol": "sz300502",
+          "name": "新易盛",
+          "code": "300502",
+          "price": 298.3,
+          "previousClose": 308,
+          "open": 302.75,
+          "change": -9.7,
+          "changePercent": -3.15,
+          "high": 311.88,
+          "low": 294.66,
+          "time": "2026-10-20 14:31:48",
+          "timezone": "Asia/Shanghai",
+          "priceUnit": "CNY",
+          "currency": "CNY"
+        },
+        {
+          "symbol": "sh601138",
+          "name": "工业富联",
+          "code": "601138",
+          "price": 48.51,
+          "previousClose": 47.71,
+          "open": 47.24,
+          "change": 0.8,
+          "changePercent": 1.68,
+          "high": 49.29,
+          "low": 47,
+          "time": "2026-10-20 14:31:50",
+          "timezone": "Asia/Shanghai",
+          "priceUnit": "CNY",
+          "currency": "CNY"
+        },
+        {
+          "symbol": "sh000300",
+          "name": "沪深300",
+          "code": "000300",
+          "price": 4132.92,
+          "previousClose": 4174.53,
+          "open": 4157.93,
+          "change": -41.61,
+          "changePercent": -1,
+          "high": 4175.21,
+          "low": 4113.14,
+          "time": "2026-10-20 14:31:48",
+          "timezone": "Asia/Shanghai",
+          "priceUnit": "points",
+          "currency": null
+        }
+      ],
+      "units": {
+        "price": "各记录priceUnit；指数为points，证券为报价币种",
+        "changePercent": "%"
+      },
+      "dataTime": "2026-10-20 14:31:50",
+      "missingSymbols": [],
+      "timeMeaning": "各证券最后报价时间；不把获取时间当交易时间，不同市场不能共用时区",
+      "receivedAt": "2026-10-20T06:31:53.775Z",
+      "cacheHit": false,
+      "nextRefreshSeconds": 60,
+      "limitations": "无稳定官方API文档；尽力而为，可能延迟/停用/地区受限，不能承诺交易级实时",
+      "rights": "公开网页可访问不等于商业再分发授权；按腾讯及交易所条款核实",
+      "quality": "source-response",
+      "delivery": "snapshot; no automatic component refresh binding"
+    }
+  }
+}
