@@ -1198,6 +1198,8 @@ describe('Research task cancellation and terminal cleanup', () => {
     const delivered = runtime.inspect({ parentSessionId: 'parent-1', taskId: receipt.taskId, afterSeq: 0 }).finalOutput
     expect(readTemplateModel(JSON.parse(delivered))?.data).toEqual(JSON.parse(finalJson))
     expect(start).toHaveBeenCalledTimes(2)
+    expect(start.mock.calls[0][0].preservePrompt).toBe(false)
+    expect(start.mock.calls[1][0].preservePrompt).toBe(true)
   })
 })
 
@@ -1254,6 +1256,18 @@ describe('Research task Subagent adapter', () => {
     expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件');
     await handle.dispose();
   });
+  it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'}]}
+    const {createSubagentAdapter}=await runtimeModule()
+    const correction='具体校验问题：labels 与 series.values 必须等长。\n上一轮已取得20条记录，请复用已有响应，不重做接口目录查询。\n来源样本：source-marker-20-records'
+    const handle=await createSubagentAdapter(fixture.ctx).start({parentSessionId:'parent-1',kind:'container',query:'工作台：比较\n本面板：真实走势\n优先使用 market 类型；variant: trend。',prompt:correction,preservePrompt:true,signal:new AbortController().signal,onSessionEvent:vi.fn()})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.prompt[0].text).toContain(correction)
+      expect(child.toolFilter.allow).toContain('public_data_query')
+    }finally{await handle.dispose()}
+  })
   it('does not grant the free data tool to offline or explicitly plugin-bound children', async () => {
     const schemas = [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }, { name: 'read' }];
     for (const query of ['不要联网，只用已有资料制作图表', '工作台：投资\n本面板：行情\n使用通联MCP取最新股票行情，优先使用 market 类型。']) {
