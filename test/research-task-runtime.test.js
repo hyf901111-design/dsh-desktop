@@ -1854,7 +1854,7 @@ describe('Research task Subagent adapter', () => {
     }finally{await handle?.dispose();vi.useRealTimers()}
   });
 
-  it.each(['snapshot','documentation','streaming','late-stream','completed','quick-final'])('respects %s evidence or output at the native retrieval handoff',async state=>{
+  it.each(['snapshot','documentation','streaming','late-stream','completed','quick-final','progress-prose','late-prose'])('respects %s evidence or output at the native retrieval handoff',async state=>{
     const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
     const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}}},result=Promise.withResolvers();
     const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);
@@ -1867,13 +1867,19 @@ describe('Research task Subagent adapter', () => {
       const records=JSON.stringify({records:[{id:'announcement-20261020',title:'公司已经披露的真实季度报告公告',date:'2026-10-20',url:'https://example.org/announcement-20261020'}]});
       ctx.emit(child,{type:'tool/result',seq:11,data:{message:{source:{callId:'page'},content:[{type:'tool-result',content:[{type:'text',text:state==='documentation'?'API documentation. Example response: '+records:records}]}]}}});
       if(state==='streaming')ctx.emit(child,{type:'assistant/chunk',seq:12,data:{chunk:{type:'text-delta',text:'{"version":1,"type":"news",'}}});
+      if(state==='progress-prose')ctx.emit(child,{type:'assistant/chunk',seq:12,data:{chunk:{type:'text-delta',text:'公告记录已取得，接下来整理展示。'}}});
       if(state==='completed')ctx.emit(child,{type:'assistant/message',seq:12,data:{message:{content:[{type:'text',text:output}]}}});
       let done=false;void handle.result.then(()=>{done=true});ctx.emit(child,{type:'step/end',seq:13,data:{}});
       await vi.advanceTimersByTimeAsync(1);expect(done).toBe(false);
       if(state==='quick-final')result.resolve({stopReason:'completed',output:[{type:'text',text:output}]});
       if(state==='late-stream')ctx.emit(child,{type:'assistant/chunk',seq:14,data:{chunk:{type:'text-delta',text:'{"version":1,"type":"news",'}}});
-      await vi.advanceTimersByTimeAsync(15000);expect(done).toBe(['snapshot','quick-final'].includes(state));
-      if(state==='snapshot')expect(await handle.result).toMatchObject({researchPhaseComplete:true,sourceRecords:[{tool:'web_fetch',snapshotRows:expect.any(Array)}]});
+      if(state==='late-prose'){
+        await vi.advanceTimersByTimeAsync(10000)
+        ctx.emit(child,{type:'assistant/chunk',seq:14,data:{chunk:{type:'text-delta',text:'正在整理最后的来源说明。'}}})
+        await vi.advanceTimersByTimeAsync(5000);expect(done).toBe(false)
+      }
+      await vi.advanceTimersByTimeAsync(state==='late-prose'?10000:15000);expect(done).toBe(['snapshot','quick-final','progress-prose','late-prose'].includes(state));
+      if(['snapshot','progress-prose','late-prose'].includes(state))expect(await handle.result).toMatchObject({researchPhaseComplete:true,sourceRecords:[{tool:'web_fetch',snapshotRows:expect.any(Array)}]});
       else{result.resolve({stopReason:'completed',output:[{type:'text',text:output}]});expect(await handle.result).toMatchObject({stopReason:'completed'});}
     }finally{await handle?.dispose();vi.useRealTimers()}
   });

@@ -2131,17 +2131,19 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         // research is closed with usable business records, hand those records
         // over at this safe step boundary instead of spending another 100s
         // privately rethinking them before the 180s timeout starts that pass.
-        // Never interrupt public output or a previously completed artifact.
+        // Preserve an artifact stream or a completed artifact. Earlier progress
+        // prose must not disable the handoff for the rest of the attempt.
         const businessData=componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&(record.snapshotRows?.length||record.tool==='financial_query'&&record.response&&Object.keys(record.response).length))
-        if(boundTemplate&&!synthesisOnly&&businessData&&!completedArtifact&&!streamedText.trim()){
+        if(boundTemplate&&!synthesisOnly&&businessData&&!completedArtifact){
           // A quick final response should keep its existing model call. Only
           // prolonged silence after retrieval warrants a separate synthesis.
           // Provider queue time is not a failure to produce public output.
           const due=executionElapsed()+15000
           const handoff=()=>{
-            const remaining=due-executionElapsed()
+            if(signal.aborted||completedArtifact||streamedText.includes('{'))return
+            const remaining=Math.max(due-executionElapsed(),lastOutputAt?15000-(Date.now()-lastOutputAt):0)
             if(remaining>0){handoffTimer=setTimeout(handoff,remaining);return}
-            if(!signal.aborted&&!completedArtifact&&!streamedText.trim())finishResearch({stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[]})
+            finishResearch({stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[]})
           }
           handoffTimer=setTimeout(handoff,15000)
         }
