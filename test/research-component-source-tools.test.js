@@ -44,6 +44,15 @@ it('prefers visible DataYes tools for a financial component without naming unava
   expect(preferredComponentSourceTools(schemas, '整理会议待办')).toEqual([])
 })
 
+it('routes uncovered fundamentals to visible professional sources without probing basic quote tools first',()=>{
+  const schemas=[{name:'public_data_query'},{name:'financial_query'},{name:'ework__datayes',description:'通联 DataYes 金融数据 API'}]
+  expect(preferredComponentSourceTools(schemas,'三家公司最新财报的营业收入、净利润和同比增速').map(t=>t.name)).toEqual(['ework__datayes'])
+  expect(preferredComponentSourceTools(schemas,'三只股票估值对比：市盈率TTM与市净率').map(t=>t.name)).toEqual(['ework__datayes'])
+  expect(preferredComponentSourceTools(schemas,'三只股票最新行情和近一月日线')).toEqual([])
+  expect(preferredComponentSourceTools(schemas,'只使用腾讯行情做股票估值，未提供的市盈率明确缺失')).toEqual([])
+  expect(preferredComponentSourceTools(schemas,'股票估值；数据源：腾讯财经，市净率缺失不补造')).toEqual([])
+})
+
 it('starts a latest-index query in the current China-market window instead of an unbounded first page', () => {
   const instruction = componentSourceInstruction(
     [{ name: 'ework__t_get_api_info', description: '读取通联 DataYes 接口定义' }],
