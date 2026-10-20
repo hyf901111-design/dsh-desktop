@@ -313,6 +313,93 @@
           "真实客户端通知与完整工作台交付速度尚待集成包验收；不以离线测试代替实际生成成功。"
         ],
         "generatedAt": "2026-10-20T09:51:12.449606+00:00"
+      },
+      "merged": {
+        "mergeCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
+        "verificationCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
+            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
+            "completedAt": "2026-10-20T09:52:04.250Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
+            "completedAt": "2026-10-20T09:52:04.250Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
+            "completedAt": "2026-10-20T09:52:04.250Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
+            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
+            "completedAt": "2026-10-20T09:52:04.250Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
+            "completedAt": "2026-10-20T09:52:04.250Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-20T09:52:04.250Z"
       }
     },
     {
