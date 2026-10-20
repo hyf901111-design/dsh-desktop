@@ -86,6 +86,21 @@ it('returns primary article metadata from its own H1 and publication metadata, n
  expect(result.links[0].date).toBe('2026-10-20')
 })
 
+it.each(['matched','linked-heading','different-heading','hidden-heading','conflicting-titles'])('matches explicit ArticleTitle metadata to its visible H2 without borrowing related articles: %s',async mode=>{
+ window=new Window({url:'https://example.org/policy/main'})
+ const title='国家发展改革委、国家能源局完善发电侧容量电价机制'
+ window.document.head.innerHTML=`<meta name="ArticleTitle" content="${title}"><meta name="PubDate" content="2026-01-30 11:23:28">`
+ let heading=`<h2>${title}</h2>`
+ if(mode==='linked-heading')heading=`<h2><a href="/related">${title}</a></h2>`
+ if(mode==='different-heading')heading='<h2>另一篇不同标题的原文</h2>'
+ if(mode==='hidden-heading')heading=`<div hidden>${heading}</div>`
+ if(mode==='conflicting-titles')window.document.head.innerHTML+='<meta name="ArticleTitle" content="另一篇不同标题的原文">'
+ window.document.body.innerHTML=`<div>${heading}<div><div>发布时间：2026/01/30</div><div>来源：价格司</div></div><p>正文引用2023-11-10，不能当作发布日期。</p></div><aside><h2><a href="/related">另一条推荐新闻</a></h2><p>2026-10-16</p></aside>`
+ const result=await window.eval(renderedPageContentScript(400))
+ if(mode==='matched')expect(result.article).toEqual({title,date:'2026-01-30'})
+ else expect(result.article).toBeUndefined()
+})
+
 it.each(['body-only-date','conflicting-published','recommended-jsonld','multiple-h1'])('does not invent main article identity from %s',async mode=>{
  window=new Window({url:'https://example.org/policy/main'})
  window.document.head.innerHTML='<title>页面标题 - 网站</title>'
