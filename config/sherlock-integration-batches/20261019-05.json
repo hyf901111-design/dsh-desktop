@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "用来源记录生成图表事实说明并修正公告与可选插件取数路径",
+        "featureName": "图表事实说明与证券公告来源及可选插件路由优化",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "f717c3665130e818747801f31e6e9027b358d68a",
-        "tipCommit": "bed722c9a5e5575396746395623a2258f0753cc3",
+        "tipCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
         "commits": [
           {
             "commit": "f52aa3bb84cd9941bee6fd4a505ba2c047ecb029",
@@ -34,6 +34,13 @@
               "eb9b4134ddba91515ea63a2768d48010be791b85"
             ],
             "subject": "区分可选与强制插件来源并保留可用取数入口"
+          },
+          {
+            "commit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
+            "parents": [
+              "bed722c9a5e5575396746395623a2258f0753cc3"
+            ],
+            "subject": "压缩共享数据源指引避免增加组件生成上下文开销"
           }
         ],
         "files": [
@@ -111,23 +118,17 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/component-source-snapshot-chart.test.js",
-              "test/research-task-runtime.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-data-refresh.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/component-web-snapshot-evidence.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/component-source-intent.test.js",
               "test/announcement-source.test.js",
               "test/free-data-sources.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/macos-package-runtime.test.ts",
-              "test/component-source-intent.test.js",
+              "test/research-task-runtime.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "510项直接相关检查通过；/tmp/component-source-quality-final-focused-20261021.log",
-            "verifiedCommit": "bed722c9a5e5575396746395623a2258f0753cc3",
-            "completedAt": "2026-10-20T16:33:57.236342+00:00",
+            "summary": "287项相关检查通过，含组件提示词容量门禁；/tmp/component-source-prompt-budget-focused-20261021.log",
+            "verifiedCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
+            "completedAt": "2026-10-20T16:37:07.026210+00:00",
             "timeoutMs": 120000
           },
           {
@@ -137,9 +138,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/component-source-quality-typecheck-20261021.log",
-            "verifiedCommit": "bed722c9a5e5575396746395623a2258f0753cc3",
-            "completedAt": "2026-10-20T16:33:57.236342+00:00",
+            "summary": "类型检查通过；/tmp/component-source-quality-budget-typecheck-20261021.log",
+            "verifiedCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
+            "completedAt": "2026-10-20T16:37:07.026210+00:00",
             "timeoutMs": 180000
           },
           {
@@ -150,9 +151,9 @@
               "f717c3665130e818747801f31e6e9027b358d68a..HEAD"
             ],
             "outcome": "passed",
-            "summary": "本批次差异检查通过",
-            "verifiedCommit": "bed722c9a5e5575396746395623a2258f0753cc3",
-            "completedAt": "2026-10-20T16:33:57.236342+00:00",
+            "summary": "本轮完整后继差异检查通过",
+            "verifiedCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
+            "completedAt": "2026-10-20T16:37:07.026210+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -170,7 +171,7 @@
           "公告接口为尽力而为网页首页，不代表全部披露或原文摘要。",
           "政策与公告的实际新生成、父会话最终进度汇总仍需原生验收，整体目标未完成。"
         ],
-        "generatedAt": "2026-10-20T16:33:57.236342+00:00"
+        "generatedAt": "2026-10-20T16:37:07.026210+00:00"
       }
     },
     {
