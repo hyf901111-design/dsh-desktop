@@ -21,7 +21,8 @@ export function workbenchCreationRequest(session) {
   if (session?.header?.parentSession || session?.header?.origin === 'subagent') return null
   const human = planningHumanRequest(session)
   const text = human?.text?.replace(/```[\s\S]*?```/g, '').replace(/^>.*$/gm, '')
-  if (!text || /(?:不要|无需|不需要|别|禁止|不再|停止|取消)(?:再)?(?:创建|生成|搭建|制作|添加|规划)|(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|搭建|制作|构建|规划)/u.test(text)) return null
+  if (!text || /(?:不要|不用|无需|不需要|别|禁止|不再|停止|取消)(?:再|重新)?(?:创建|新建|新增|生成|搭建|制作|添加|规划)|(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|搭建|制作|构建|规划)/u.test(text)) return null
+  if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(text) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|搭建|制作)/u.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
   if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|看板|仪表盘))/u.test(text)) return null
   const board = /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text)

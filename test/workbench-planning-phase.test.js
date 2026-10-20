@@ -15,6 +15,18 @@ function harness(efforts = ['low', 'high', 'max'], toolSchemas = []) {
 const config = Object.freeze({ provider: 'zai', model: 'GLM-5.3-Flash', reasoningEffort: 'max', maxTokens: 16384 })
 
 describe('工作台首次规划阶段预算', () => {
+  it('keeps model controls unchanged for failed-component repairs and no-add instructions',async()=>{
+    for(const text of [
+      '继续修复当前这个工作台，估值组件生成失败，请先做静态展示。不要新增工作台和重复组件。',
+      '修复现有工作台的图表生成失败问题，保留原组件和数据。',
+      '补充：不要新增组件，只修复已有图表。'
+    ]){
+      const h=harness(),agent={session:session(text)}
+      expect(workbenchCreationRequest(agent.session)).toBeNull()
+      expect(await h.request(agent,config)).toEqual(config)
+    }
+    expect(workbenchCreationRequest(session('修复现有工作台的图表，另外创建一个新的行业研究工作台。'))).not.toBeNull()
+  })
   it('gives explicit new single-component requests the same bounded planning phase and restores Max after acceptance', async () => {
     for (const text of ['创建一个装置撤展交接组件，用8条模拟记录，点击查看完整说明', '请生成一张古籍修复流转卡片，用虚构记录']) {
       const h = harness(), agent = { session: session(text) }

@@ -56,6 +56,15 @@ it('shows early progress for explicit workbench and component creation, not prod
   }
 })
 
+it('does not show a new planning card when repairing failed existing components',()=>{
+  for(const text of [
+    '继续修复当前这个工作台，估值组件生成失败，请先做静态展示。不要新增工作台和重复组件。',
+    '修复现有工作台的图表生成失败问题，保留原组件和数据。',
+    '补充：不要新增组件，只修复已有图表。'
+  ])expect(classifyResearchCreationRequest(text)).toBeNull()
+  expect(classifyResearchCreationRequest('修复现有工作台的图表，另外创建一个新的行业研究工作台。')).toMatchObject({kind:'workbench'})
+})
+
 it('deals new cards outward from the planning card at the current canvas zoom', () => {
   const [start, end] = workbenchDealMotion(
     {left:100,top:100,width:160,height:110},
