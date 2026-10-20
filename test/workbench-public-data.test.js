@@ -4,6 +4,7 @@ import { ResearchTaskRuntime } from '../packages/dsh-research-task-runtime/index
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
 import { preserveWorkbenchRefreshPreference } from '../packages/dsh-research-task-runtime/component-refresh-policy.js'
+import { publicDataNewsTaskRequirement } from '../packages/dsh-research-task-runtime/workbench-public-data.js'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -54,6 +55,28 @@ describe('宿主免费源工作台直通', () => {
     expect(validateWorkbench(validated)).toEqual(validated)
     expect(original.publicData.requests[0].parameters_json).toContain('"symbols"')
     expect(validateWorkbench({...input,panels:[spec('news','sina-news',{limit:12},'news')]}).panels[0].publicData).toBeDefined()
+  })
+
+  it('preserves the validated OpenTerminal news layout in both a new plan and a legacy recipe requirement',()=>{
+    const original=filteredNews();original.publicData.layoutProfile='openterminal'
+    const legacyRequirement=publicDataNewsTaskRequirement(original.publicData,original.type)
+    const validated=validateWorkbench({requestId:'filtered-news-layout',title:'算力研究',panels:[original]})
+    const panel=validated.panels[0]
+    expect(panel.publicData).toBeUndefined()
+    expect(panel.prompt).toContain(original.prompt)
+    for(const requirement of [legacyRequirement,panel.prompt]){
+      expect(requirement).toContain('"layoutProfile":"openterminal"')
+      expect(requirement).toContain('artifact.layoutProfile')
+    }
+    expect(validateWorkbench(validated)).toEqual(validated)
+    expect(original.publicData.layoutProfile).toBe('openterminal')
+    expect(publicDataNewsTaskRequirement(filteredNews().publicData,'news')).not.toContain('layoutProfile')
+  })
+
+  it('does not forward an unsupported layout as a filtered news requirement',()=>{
+    const original=filteredNews();original.publicData.layoutProfile='unvalidated-layout'
+    expect(()=>publicDataNewsTaskRequirement(original.publicData,'news')).toThrow('不支持')
+    expect(()=>validateWorkbench({requestId:'filtered-news-bad-layout',title:'新闻',panels:[original]})).toThrow('不支持')
   })
 
   it.each([

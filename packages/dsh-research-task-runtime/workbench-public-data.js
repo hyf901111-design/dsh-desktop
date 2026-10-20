@@ -49,8 +49,9 @@ export function publicDataNewsTaskRequirement(value,type){
   const {symbols,...supportedParameters}=parameters
   if(!Array.isArray(symbols)||!symbols.length||symbols.length>12||new Set(symbols).size!==symbols.length||symbols.some(symbol=>typeof symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(symbol)))throw Error('证券新闻symbols必须为1–12个唯一合规交易代码，不接受网址或其他指令')
   const supported=validatePublicDataPanel({...value,requests:[{...request,parameters_json:JSON.stringify(supportedParameters)}]},type,{strictParameters:true})
-  const scope=JSON.stringify({source:request.source,symbols,limit:parameters.limit??20,intervalMinutes:supported.intervalMinutes})
-  return `宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券symbols筛选；本卡改由独立取数任务完成。保留原面板全部需求及筛选元信息：${scope}。不得删除证券筛选后交付全市场新闻；只保留与上述证券及原主题匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`
+  const scope=JSON.stringify({source:request.source,symbols,limit:parameters.limit??20,intervalMinutes:supported.intervalMinutes,...(supported.layoutProfile?{layoutProfile:supported.layoutProfile}:{})})
+  const layout=supported.layoutProfile?'最终news数据对象顶层必须保留已校验的 "layoutProfile":"openterminal"（即artifact.layoutProfile），沿用该内部布局。':''
+  return `宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券symbols筛选；本卡改由独立取数任务完成。保留原面板全部需求及筛选元信息：${scope}。${layout}不得删除证券筛选后交付全市场新闻；只保留与上述证券及原主题匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`
 }
 
 // Live single-security K lines use the actual library renderer. Keep explicit
