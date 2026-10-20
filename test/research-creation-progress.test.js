@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition, patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
+import { AFFIRMATIVE_WORKBENCH_REQUESTS, NON_CREATION_WORKBENCH_REQUESTS } from './fixtures/workbench-creation-requests.js'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {Window} from 'happy-dom'
 
@@ -90,6 +91,16 @@ it('规划卡片缩放时沿用网格坐标，仅移动时采用浮动坐标',as
     root.removeAttribute('data-grid-operation');card.removeAttribute('data-grid-active');card.style.removeProperty('--grid-float-left');card.style.removeProperty('--grid-float-top')
     expect([win.getComputedStyle(card).left,win.getComputedStyle(card).top]).toEqual(['720px','430px'])
   }finally{await win.happyDOM.abort()}
+})
+
+it.each(AFFIRMATIVE_WORKBENCH_REQUESTS)('recognizes natural-language creation in the installed planning-card classifier: %s', text => {
+  const installed = new Function('return ' + classifyResearchCreationRequest.toString())()
+  for (const classify of [classifyResearchCreationRequest, installed]) expect(classify(text)?.request).toBe(text)
+})
+
+it.each(NON_CREATION_WORKBENCH_REQUESTS)('does not announce creation for existing-board requests: %s', text => {
+  const installed = new Function('return ' + classifyResearchCreationRequest.toString())()
+  for (const classify of [classifyResearchCreationRequest, installed]) expect(classify(text)).toBeNull()
 })
 
 it('shows early progress for explicit workbench and component creation, not product questions', () => {
