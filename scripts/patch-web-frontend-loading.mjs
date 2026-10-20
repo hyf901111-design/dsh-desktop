@@ -5,6 +5,7 @@ import { patchSessionViewPreferences } from './lib/session-view-preferences.mjs'
 import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
+import { patchSessionListStreamPerformance } from './lib/session-list-stream-performance.mjs'
 import { patchWorkbenchPlanningSessionCatalog, patchWorkbenchPlanningSessionAppend } from './lib/workbench-planning-session.mjs'
 import { patchStandardModeClient, patchStandardModeRuntime } from './lib/standard-mode-only.mjs'
 import {patchFinancialWidgetClient} from './lib/financial-widget-client.mjs'
@@ -189,7 +190,7 @@ for (const [name, patch] of [
 }
 
 for (const [relative, patch] of [
-  ['dsh-client-runtime/lib/client.js', patchSubagentPanelRuntime],
+  ['dsh-client-runtime/lib/client.js', source=>patchSessionListStreamPerformance(patchSubagentPanelRuntime(source))],
   ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
   ['dsh-client-ui-conversation/lib/client.js', source => patchResearchResidentConversation(patchSubagentPanelConversation(source))],
   ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]
