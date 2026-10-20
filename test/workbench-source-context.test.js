@@ -87,3 +87,35 @@ it('restores a persisted failed card with its original scope when retrying the u
   expect(adapter.start.mock.calls[0][0].query).toBe(prompt)
   expect(adapter.start.mock.calls[0][0].prompt).toContain(original)
 })
+
+it.each([
+  ['每分钟自动更新，查询最新真实记录。','另一张公告卡仅手动刷新。',1,true],
+  ['仅手动刷新，查询最新真实记录。','另一张价格卡每分钟自动更新。',0,true],
+  ['每分钟自动更新，查询最新真实记录。','另一张回测卡固定日期截至2025-01-01。',1,true]
+])('keeps refresh recipe settings on the current card: %s',async(own,other,interval,rolling)=>{
+  const now=Date.parse('2026-10-20T04:00:00Z'),args={endDate:'20261020'},records=[{tool:'ework__t_abc123',args,response:{date:'2026-10-20',value:12}}]
+  const mapped={version:1,type:'data-bound',requests:[{key:'q',tool:'ework__t_abc123',args}],mapping:{version:1,type:'table',title:'真实记录',columns:['数值'],rows:{$from:'q',$map:[{$path:'value',$as:'string'}],$single:true}}}
+  mapped.mapping.rows=[mapped.mapping.rows]
+  const bindData=vi.fn(async()=>{}),start=vi.fn(async()=>({childSessionId:'child',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(mapped)}],sourceRecords:records}),dispose:async()=>{}}))
+  const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{save:async()=>{}},now:()=>now})
+  cleanup.push(()=>runtime.dispose())
+  const plan=validateWorkbench({requestId:'recipe-scope',title:'真实研究',dataMode:'source',originalRequest:'创建真实记录工作台。'+other,panels:[{title:'真实记录',type:'table',size:'large',prompt:own}]})
+  const task=await runtime.start({kind:'container',parentSessionId:'p',canvasNodeId:'recipe',prompt:workbenchPanelPrompt(plan,plan.panels[0])})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'p',taskId:task.taskId}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(1)
+  expect(bindData).toHaveBeenCalledOnce()
+  const recipe=bindData.mock.calls[0][1]
+  expect(recipe.intervalMinutes).toBe(interval)
+  expect(typeof recipe.requests[0].args.endDate==='object').toBe(rolling)
+})
+
+it("does not require another card's named source when accepting this card's observed news snapshot",async()=>{
+  const output={version:1,type:'news',title:'近期新闻',asOf:'2026-10-20 · 新浪财经',items:[{title:'已取得的公司新闻',summary:'本次真实来源正文',date:'2026-10-20',category:'公司',url:'https://example.com/company-news'}]}
+  const start=vi.fn(async()=>({childSessionId:'news',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(output)}],sourceRecords:[{tool:'public_data_query',args:{operation:'query',source:'sina-news',parameters_json:'{"limit":12}'},response:{records:output.items}}]}),dispose:async()=>{}}))
+  const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}}})
+  cleanup.push(()=>runtime.dispose())
+  const plan=validateWorkbench({requestId:'news-accept',title:'公司研究',dataMode:'source',originalRequest:'创建中际旭创、新易盛、工业富联研究工作台。估值卡使用通联DataYes。',panels:[{title:'近期新闻',type:'news',size:'large',prompt:'实际检索三家公司新闻，只取本次快照，保留原文链接。'}]})
+  const task=await runtime.start({kind:'container',parentSessionId:'p',canvasNodeId:'news',prompt:workbenchPanelPrompt(plan,plan.panels[0])})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'p',taskId:task.taskId}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(1)
+})

@@ -1307,6 +1307,43 @@ describe('Research task Subagent adapter', () => {
       expect(prompt.includes('mapping 的模板结构')).toBe(binding)
     }finally{await handle.dispose()}
   })
+  it.each([
+    '估值和财报面板使用通联DataYes，查询市盈率和净利润。',
+    '估值面板只用已有资料，不要联网。'
+  ])('keeps unrelated board scope out of the actual news child routing: %s',async otherCard=>{
+    const {validateWorkbench,workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    const original='创建中际旭创、新易盛、工业富联真实研究工作台。新闻卡检索近期新闻。'+otherCard
+    const plan=validateWorkbench({requestId:'routing-scope',title:'公司研究',dataMode:'source',originalRequest:original,panels:[{title:'近期新闻',type:'news',size:'large',prompt:'检索三家公司最新新闻，只取本次真实快照。'}]})
+    const fixture=containerAdapterFixture()
+    const names=['public_data_query','financial_query','web_search','web_fetch','ework__datayes']
+    fixture.ctx.tools={schemas:()=>names.map(name=>({name,...(name.startsWith('ework__')?{description:'通联 DataYes API'}:{})}))}
+    const handle=await fixture.start(workbenchPanelPrompt(plan,plan.panels[0]))
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow).toEqual(names)
+      expect(child.prompt[0].text).toContain(original)
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的通联工具')
+      expect(child.prompt[0].text).not.toContain('自动绑定数据交付协议')
+    }finally{await handle.dispose()}
+  })
+  it('keeps a current-card named source authoritative while retaining a whole-board source restriction verbatim',async()=>{
+    const {validateWorkbench,workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    for(const ownSource of ['', '数据源：通联 DataYes。']){
+      const original='创建三个公司的研究工作台，所有卡只使用通联DataYes，禁止其他来源。'
+      const plan=validateWorkbench({requestId:'named-scope',title:'公司研究',dataMode:'source',originalRequest:original,panels:[{title:'近期新闻',type:'news',size:'large',prompt:ownSource+'检索三家公司真实新闻。'}]})
+      const fixture=containerAdapterFixture()
+      fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_fetch'},{name:'ework__datayes',description:'通联 DataYes API'}]}
+      const handle=await fixture.start(workbenchPanelPrompt(plan,plan.panels[0]))
+      try{
+        const child=fixture.ctx.subagents.start.mock.calls[0][1]
+        expect(child.prompt[0].text).toContain(original)
+        expect(child.toolFilter.allow).toContain('ework__datayes')
+        if(ownSource)expect(child.toolFilter.allow).not.toContain('public_data_query')
+        expect(child.prompt[0].text).toContain(ownSource?'本面板已指定使用配置的插件':'用户指定来源优先')
+      }finally{await handle.dispose()}
+    }
+  })
   it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
     const fixture=containerAdapterFixture()
     fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'}]}

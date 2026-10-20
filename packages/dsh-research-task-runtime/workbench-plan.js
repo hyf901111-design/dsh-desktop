@@ -36,6 +36,14 @@ export function workbenchPanelScope(prompt) {
     const type = contract.match(/\n仅生成本面板，优先使用 ([a-z-]+) 类型/u)?.[1];
     return WORKBENCH_PANEL_TYPES.includes(type) ? { contract, scope: prompt.slice(index) } : null;
 }
+// Machine routing reads the current card's authored request, not other cards
+// in the shared scope or the host's appended display/interaction boilerplate.
+// The complete original scope still goes to the model unchanged.
+export function workbenchPanelIntent(prompt) {
+    const contract = workbenchPanelScope(prompt)?.contract ?? prompt;
+    return typeof contract === 'string' && /^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(contract)
+        ? contract.split('\n仅生成本面板，')[0] : contract;
+}
 export function deferredWorkbenchPanel(prompt) {
     if (typeof prompt !== 'string') return null;
     const header = prompt.match(/^工作台：[^\n]+\n本面板：([^\n]+)\n/u);

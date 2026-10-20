@@ -30,7 +30,7 @@ import { registerPublicDataTool } from './public-data-tool.js'
 import { createPublicDataClient } from './public-data-client.js'
 import { preparePublicDataPanel, validatePublicDataPanel, publicDataNewsTaskRequirement } from './workbench-public-data.js'
 import { loadBundledComponentSkill } from './component-skill.js'
-import { deferredWorkbenchPanel, prepareSimulatedArtifact, workbenchPanelScope } from './workbench-plan.js'
+import { deferredWorkbenchPanel, prepareSimulatedArtifact, workbenchPanelScope, workbenchPanelIntent } from './workbench-plan.js'
 import { GANTT_GUIDANCE } from './gantt-template-contract.js'
 import { TIMELINE_GUIDANCE } from './timeline-template-contract.js'
 import { applyBundledSkillPreferences, bundledSkillEnabled } from './bundled-skill-preferences.js'
@@ -263,12 +263,12 @@ function mindMapDetailInstruction(detail) {
 }
 
 function containerPromptHasExplicitWebUrl(prompt) {
-  return /https?:\/\/[^\s<>"'`]+/iu.test(prompt)
+  return /https?:\/\/[^\s<>"'`]+/iu.test(workbenchPanelIntent(prompt))
 }
 
 function containerAllowsWebSearch(prompt) {
   if (deferredWorkbenchPanel(prompt)) return false
-  const value = String(prompt ?? '')
+  const value = String(workbenchPanelIntent(prompt) ?? '')
   if (/(?:不需要|无需|不用|不要|不必|禁止)(?:再|去|进行|额外|任何)?(?:联网|上网|搜索|检索|查找|查询|获取外部数据)|不联网|\b(?:do not|don't|no need to|without)\s+(?:search|searching|browse|browsing|internet|network)\b/iu.test(value)) return false
   if (/(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用).{0,12}(?:web_search|financial_query|public_data_query|网页搜索|金融数据|免费数据)/iu.test(value)) return false
   if (/(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用|通过|接入).{0,12}(?:通联|DataYes|MCP)/iu.test(value)) return false
@@ -297,7 +297,7 @@ function containerNeedsWebData(prompt) {
   // Freshness of shared UI state is not a request for external research.
   // Remove only qualified interaction phrases, retaining real data requests
   // elsewhere in the same prompt (for example a collaborative weather board).
-  const value = String(prompt ?? '')
+  const value = String(workbenchPanelIntent(prompt) ?? '')
     .replace(/(?:实时|即时)(?:的)?(?:联机|协作|同步|共享|交互|模拟)|(?:当前|最新)(?:的)?(?:局面|状态|输入|位置|进度|画面)|动态(?:交互|布局|效果)/gu, '')
     .replace(/\b(?:real[ -]?time|live)\s+(?:collaboration|multiplayer|synchronization|sync|interaction|simulation)|\b(?:current|latest)\s+(?:state|input|position|progress)\b/giu, '')
   return /最近|近期|近况|近[几数一二三四五六七八九十\d]+(?:天|周|月|年)|本周|本月|今年|recent(?:ly)?|up.to.date|实时|即时|最新|当前|今日|今天|监控|追踪|跟踪|动态|推特|微博|社交媒体|社媒|行情|报价|价格|净值|点位|涨跌|成交|市值|汇率|利率|天气|新闻|热度|排名|\b(?:live|latest|current|today|now|price|quote|market|twitter|tweet|social|monitor)\b/iu.test(value)
@@ -1484,7 +1484,8 @@ export class ResearchTaskRuntime {
       const plannedFormat = task.kind === 'container' ? workbenchPanelFormat(task.prompt) : null
       const deferredPanel = task.kind === 'container' ? deferredWorkbenchPanel(task.prompt) : null
       const bindablePanel = Boolean(plannedFormat && plannedFormat !== 'html')
-      const bindingRequested = componentBindingRequested(task.prompt)
+      const panelRequest = workbenchPanelIntent(task.prompt)
+      const bindingRequested = componentBindingRequested(panelRequest)
       let output, binding, verifiedSnapshot, bindingRepairEvidence = '', recoveryText = '', recoveryEvidence = '', generationError, sharedStateError, designPolicyError
       // At most one repair generation, within the same task/concurrency slot.
       // Completed malformed output and truncated output follow the same acceptance gate.
@@ -1504,7 +1505,7 @@ export class ResearchTaskRuntime {
           // previous response was empty or a provider retry already ran.
           if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords))throw new ResearchTaskError('GENERATION_FAILED','当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。')
           let mapped
-          try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{intervalMinutes:requestedComponentRefreshInterval(task.prompt),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(task.prompt)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(task.prompt)}) }
+          try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{intervalMinutes:requestedComponentRefreshInterval(panelRequest),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(panelRequest)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(panelRequest)}) }
           catch(error){
             const snapshot=resolveComponentSnapshot(deliveredText,sourceRecords,new Date(this.now()))
             if(snapshot)verifiedSnapshot=snapshot
@@ -1532,7 +1533,7 @@ export class ResearchTaskRuntime {
           // quotes from a different website cannot satisfy it, even if the
           // model writes the unavailable-source disclaimer into metadata.
           if(plannedFormat&&
-            /(?:数据源\s*[:：]\s*|使用\s*|通过\s*|调用\s*|接入\s*|用\s*)(?:当前\s*)?(?:已连接的\s*)?(?:通联|DataYes)/iu.test(task.prompt)){
+            /(?:数据源\s*[:：]\s*|使用\s*|通过\s*|调用\s*|接入\s*|用\s*)(?:当前\s*)?(?:已连接的\s*)?(?:通联|DataYes)/iu.test(panelRequest)){
             const observedBusiness = componentBindingEvidence(sourceRecords.filter(record=>record.tool?.startsWith('ework__')))
             // Custom pages are snapshots, not registered native mapping
             // templates. They still require an actual business response.
@@ -1548,9 +1549,9 @@ export class ResearchTaskRuntime {
             bindingRepairEvidence = componentBindingEvidence(sourceRecords)
             if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT', '已取得数据，但当前交付缺少自动更新映射。请用 data-bound 包装当前模板，直接引用下方真实响应字段。')
           }
-          const variantIssue = workbenchMarketVariantIssue(output, deferredPanel?.contract ?? task.prompt)
+          const variantIssue = workbenchMarketVariantIssue(output, deferredPanel?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt)
           if (variantIssue) throw new ResearchTaskError('INVALID_OUTPUT', variantIssue)
-          const recencyIssue = workbenchMarketRecencyIssue(deliveredText, deferredPanel?.contract ?? task.prompt, new Date(this.now()))
+          const recencyIssue = workbenchMarketRecencyIssue(deliveredText, deferredPanel?.contract ?? workbenchPanelScope(task.prompt)?.contract ?? task.prompt, new Date(this.now()))
           if (recencyIssue) throw new ResearchTaskError('GENERATION_FAILED', recencyIssue)
           if(!binding&&!bindingRequested&&bindablePanel&&componentBindingEvidence(sourceRecords)){
             const model=output&&readTemplateModel(JSON.parse(output))
@@ -1924,14 +1925,15 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       const scopedSchemas = surface === 'note'
         ? (Array.isArray(visibleSchemas) ? visibleSchemas.filter(tool => ['public_data_query','financial_query','web_search','web_fetch'].includes(tool.name) || readPluginTools.has(tool.name)) : [])
         : visibleSchemas
-      const preferredSources = (kind === 'container' || kind === 'board') && permitsTools ? preferredComponentSourceTools(scopedSchemas, query) : []
+      const sourceRequest = workbenchPanelIntent(query)
+      const preferredSources = (kind === 'container' || kind === 'board') && permitsTools ? preferredComponentSourceTools(scopedSchemas, sourceRequest) : []
       const preferredSourceNames = preferredSources.map(tool => tool.name)
-      const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(query ?? '')
-      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(query ?? '') && (surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_search'))
+      const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(sourceRequest ?? '')
+      const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(sourceRequest ?? '') && (surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_search'))
       if (signal.aborted) throw signal.reason
       const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__') || tool.name === 'public_data_query')
-      const pluginRequired = boundTemplate && /通联|datayes|\bmcp\b|插件/iu.test(query ?? '')
-      const bindingRequested = componentBindingRequested(query)
+      const pluginRequired = boundTemplate && /通联|datayes|\bmcp\b|插件/iu.test(sourceRequest ?? '')
+      const bindingRequested = componentBindingRequested(sourceRequest)
       // Compact the initial typed task, but retain a recovery's concrete error,
       // prior response and evidence instead of restarting the original request.
       let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested) : prompt, bundledSkills)
@@ -1943,7 +1945,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       if (synthesisOnly) effectivePrompt += '\n当前是无工具的最终内容生成阶段。只能使用已附资料直接输出正文或组件 JSON；没有可调用的搜索或其他工具，不再制定检索计划。缺失信息明确标注，不编造事实。'
       if (bundledSkills.data && permitsTools && scopedSchemas?.some(tool => tool.name === 'public_data_query')) effectivePrompt += '\n' + freeDataInstruction()
       if (permitsTools) effectivePrompt += preferredSources.length
-        ? `\n${componentSourceInstruction(preferredSources, query)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
+        ? `\n${componentSourceInstruction(preferredSources, sourceRequest)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
         : '\n用户指定来源优先；未指定来源时先用当前可见 public_data_query 读取适用免费源。股票、指数、ETF、基金的行情、净值、历史日线或对比研究在免费源未覆盖时优先调用 financial_query，使用返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
@@ -1953,7 +1955,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         let timer
         try {
           const evidence = await Promise.race([
-            collectContainerEvidence(parent, containerSearchPlan(query), lookup.signal, (event) => !lookup.signal.aborted && onProgress?.(event), surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_fetch')),
+            collectContainerEvidence(parent, containerSearchPlan(sourceRequest), lookup.signal, (event) => !lookup.signal.aborted && onProgress?.(event), surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_fetch')),
             new Promise((_, reject) => { timer = setTimeout(() => { lookup.abort(); reject(unavailableContainerData()) }, 5000) })
           ])
           hostEvidence = evidence
