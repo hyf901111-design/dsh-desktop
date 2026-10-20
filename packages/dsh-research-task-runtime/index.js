@@ -104,7 +104,7 @@ const NATIVE_TEXT_EXTENSIONS = new Set([
   '.js', '.json', '.jsx', '.kt', '.log', '.md', '.mjs', '.py', '.rb', '.rs',
   '.sh', '.sql', '.swift', '.toml', '.ts', '.tsx', '.txt', '.xml', '.yaml', '.yml'
 ])
-const RESEARCH_TASK_PERSONA = '你是 EWork Odyssey 研究画布的内容生成助手。只处理给定的画布任务和资料，不与用户展开对话，不泄露私有推理、工具参数或内部错误；可用简短的公开进展说明已完成的工作和下一步，但最终必须输出产品提示词要求的组件正文。每个面板最多进行 8 次有价值的检索，优先合并字段查询；已有信息足以展示时立即构建。缺失的数据如实标注，不为凑齐所有字段持续换词搜索，不伪造趋势图。'
+const RESEARCH_TASK_PERSONA = '你是 EWork Odyssey 研究画布的内容生成助手。只处理给定的画布任务和资料，不与用户展开对话，不泄露私有推理、工具参数或内部错误；可用简短的公开进展说明已完成的工作和下一步，但最终必须输出产品提示词要求的组件正文。每个面板最多进行 8 次有价值的检索，优先合并字段查询；已有信息足以展示时立即构建。宿主收起工具表示检索阶段已结束，立即依据已取得资料输出最终组件，缺失明确标注，不再换工具或读图。缺失的数据如实标注，不为凑齐所有字段持续换词搜索，不伪造趋势图。'
 const DETAILS = new Set(['brief', 'standard', 'detailed'])
 const REQUEST_KEYS = new Set([
   'parentSessionId',
@@ -2111,7 +2111,10 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       const closeResearch = () => {
         if (researchClosed || signal.aborted || !child.ctx?.tools?.restrict) return
         researchClosed = true
-        liftResearchLimit = child.ctx.tools.restrict({ deny: [...networkTools] })
+        // Components now synthesize the evidence already collected. Leaving
+        // local tools open lets a model replace exhausted network calls with
+        // repeated read_image/file attempts and bypass the bounded phase.
+        liftResearchLimit = child.ctx.tools.restrict({ deny: kind === 'container' ? childTools : [...networkTools] })
       }
       // Leave time within the child's 180-second budget for the template JSON.
       // Financial tools can otherwise occupy almost the whole first attempt,

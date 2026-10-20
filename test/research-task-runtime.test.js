@@ -1831,6 +1831,12 @@ describe('Research task Subagent adapter', () => {
     const {createSubagentAdapter}=await runtimeModule();const handle=await createSubagentAdapter(fixture.ctx).start({parentSessionId:'parent-1',kind,query:'读取已有资料',prompt:'读取已有资料',signal:new AbortController().signal,onSessionEvent:()=>{}});
     try{for(let i=0;i<8;i++)fixture.ctx.emit(fixture.ctx.child.session,{seq:i+1,type:'tool/call',data:{name:'ework__read_a',arguments:'{}'}});fixture.ctx.emit(fixture.ctx.child.session,{seq:10,type:'step/end',data:{}});expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled()}finally{await handle.dispose()}
   });
+  it.each(['calls','time'])('makes the component synthesis-only at the %s boundary instead of leaving a read-image escape path',async boundary=>{
+    vi.useFakeTimers();const fixture=containerAdapterFixture(),lift=vi.fn();fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>lift)}};
+    const names=['web_search','web_fetch','financial_query','read_image'];fixture.ctx.tools={schemas:()=>names.map(name=>({name}))};let handle;
+    try{handle=await fixture.start('查询三家航空公司的真实公告并制作展示组件，保留来源与日期。');expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(names);expect(fixture.ctx.subagents.start.mock.calls[0][1].persona).toContain('宿主收起工具表示检索阶段已结束');if(boundary==='calls')for(let i=0;i<8;i++)fixture.ctx.emit(fixture.ctx.child.session,{seq:i+1,type:'tool/call',data:{name:'web_search',arguments:'{}'}});else await vi.advanceTimersByTimeAsync(90001);expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();fixture.ctx.emit(fixture.ctx.child.session,{seq:20,type:'step/end',data:{}});expect(new Set(fixture.ctx.child.ctx.tools.restrict.mock.calls[0]?.[0].deny)).toEqual(new Set(names))}finally{await handle?.dispose();vi.useRealTimers()}
+    expect(lift).toHaveBeenCalledOnce();
+  });
 
   it('does not remove search merely because a request has no freshness keyword', async () => {
     const fixture = containerAdapterFixture()
