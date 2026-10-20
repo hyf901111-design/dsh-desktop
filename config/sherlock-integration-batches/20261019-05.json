@@ -9,84 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "适配浅色锦鲤水面和四模式组件底栏滚动条",
+        "featureName": "保留组件重试原生合同并修正规划财务来源与时间范围",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "ec4a4db6260bb0b0d4ca512e044e61b510c83c63",
-        "tipCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+        "baseCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
+        "tipCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
         "commits": [
           {
-            "commit": "cb54a0b86839835e050c3b9ca432a3e4d1424df8",
+            "commit": "646e8896d37e0ec2ab120819369628a93e5a1f75",
             "parents": [
-              "ec4a4db6260bb0b0d4ca512e044e61b510c83c63"
+              "438b02adcc67455d76499d2f34c9e68fc33f6751"
             ],
-            "subject": "识别新版金融MCP入口并区分接口目录与业务数据"
+            "subject": "重试组件时恢复原生类型合同并保留最新尺寸约束"
           },
           {
-            "commit": "e0cfe4818a7e8b4d11f16e85bc89e7c25e1db697",
+            "commit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
             "parents": [
-              "cb54a0b86839835e050c3b9ca432a3e4d1424df8"
+              "646e8896d37e0ec2ab120819369628a93e5a1f75"
             ],
-            "subject": "将浅色锦鲤水面改为青白色并同步主题卡片"
-          },
-          {
-            "commit": "2a169d40547a82f448ddcdf7b77d51ce1b37b178",
-            "parents": [
-              "e0cfe4818a7e8b4d11f16e85bc89e7c25e1db697"
-            ],
-            "subject": "对齐彭博模式底栏节点并移除缩放手柄悬停方框"
-          },
-          {
-            "commit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "parents": [
-              "2a169d40547a82f448ddcdf7b77d51ce1b37b178"
-            ],
-            "subject": "让组件横纵滚动条跟随看板明暗主题切换"
+            "subject": "规划公司财务组件时匹配专业来源并保留原始时间范围"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-source-tools.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/workbench-style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-koi-renderer.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-koi/README.md"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-koi/shaders.js"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-theme-assets/koi-pond-light.png"
-          },
-          {
-            "status": "M",
-            "path": "test/component-source-binding.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-port-openterminal-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/official-mcp-source-schemas.json"
-          },
-          {
-            "status": "M",
-            "path": "test/home-theme-renderer-browser.test.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
@@ -95,10 +45,6 @@
           {
             "status": "M",
             "path": "test/research-task-runtime.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-scrollbar-theme-browser.test.js"
           }
         ],
         "checks": [
@@ -106,77 +52,30 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/component-source-binding.test.js",
-              "test/research-component-source-tools.test.js",
-              "test/component-web-snapshot-evidence.test.js",
               "test/research-task-runtime.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/workbench-source-context.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "340项来源识别和组件执行检查；/tmp/koi-footer-final-source-20261020.log",
-            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "summary": "255项任务重试、生成控制和来源范围检查；/tmp/retry-native-contract-focused-20261020.log",
+            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
+            "completedAt": "2026-10-20T14:38:58.620947+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/home-theme-renderer-browser.test.js",
-              "test/home-theme-motion-browser.test.js",
-              "-t",
-              "Koi Pond",
+              "test/research-component-source-tools.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-source-capability.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "3项真实WebGL明暗/游动/输入/释放检查；/tmp/koi-footer-final-koi-20261020.log",
-            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "completedAt": "2026-10-20T14:13:36.734986+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/home-theme-controller.test.ts",
-              "test/home-theme-preferences.test.ts",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "39项首页主题交互与偏好检查；/tmp/koi-footer-final-home-20261020.log",
-            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "completedAt": "2026-10-20T14:13:36.734986+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/workbench-scrollbar-theme-browser.test.js",
-              "test/financial-port-openterminal-browser.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "16项四模式节点/手柄/横纵滚动条检查；/tmp/bloomberg-footer-scrollbar-verified-20261020.log",
-            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "completedAt": "2026-10-20T14:13:36.734986+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-html-theme.test.js",
-              "-t",
-              "工作台.*滚动|沙箱工作台滚动|跨沙盒滚动",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "4项沙箱滚动协议与布局检查；/tmp/workbench-scrollbar-sandbox-focused-20261020.log",
-            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "summary": "144项规划来源能力和阶段预算检查；/tmp/planning-source-scope-focused-20261020.log",
+            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
+            "completedAt": "2026-10-20T14:38:58.620947+00:00",
             "timeoutMs": 120000
           },
           {
@@ -186,9 +85,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查；/tmp/koi-footer-scrollbar-final-typecheck-20261020.log",
-            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "summary": "类型检查；/tmp/native-retry-planning-typecheck-20261020.log",
+            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
+            "completedAt": "2026-10-20T14:38:58.620947+00:00",
             "timeoutMs": 180000
           },
           {
@@ -196,118 +95,31 @@
               "git",
               "diff",
               "--check",
-              "ec4a4db6260bb0b0d4ca512e044e61b510c83c63..HEAD"
+              "438b02adcc67455d76499d2f34c9e68fc33f6751..HEAD"
             ],
             "outcome": "passed",
-            "summary": "提交范围差异检查",
-            "verifiedCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-            "completedAt": "2026-10-20T14:13:36.734986+00:00",
+            "summary": "提交差异检查",
+            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
+            "completedAt": "2026-10-20T14:38:58.620947+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实Chromium WebGL验证浅色水面青白、鱼色和深色保留、主题卡片同步；DPR1/2四模式节点对齐，手柄仅高亮，滚动主题与app主题独立。真实共享客户端待集成构建后复验。"
+          "outcome": "not-applicable",
+          "summary": "当前共享客户端财务重试已用MCP取回三家报表并成功，198.911秒但降级为HTML。定位到附加几何包装阻止原合同恢复，修复后需集成复测结构化类型和耗时。"
         },
         "acceptanceCriteria": [
-          "浅色锦鲤水面为青白色，主题卡片一致，保留红白锦鲤和深色水面。",
-          "彭博底栏连接节点与其他模式保持相同右边距，悬停/键盘聚焦仅手柄变橙，不显示方框。",
-          "横纵组件滚动条随看板主题切换，浅色/易方达使用浅色，深色/彭博使用深色，保留滚动位置。",
-          "新版官网金融MCP入口能识别，接口目录和定义不作为业务数据；不使用股票代码查询基金资料。"
+          "同一父会话同一组件且完整需求未变时，剥离已知尺寸包装后恢复原生合同，保留新的手动或自动尺寸约束和原始用户范围。",
+          "修改业务需求时不恢复旧要求；显式格式保持优先。",
+          "识别财务与经营差异为公司专业数据任务，规划不编造取数调用流程、不将近期擅自扩大为一年。",
+          "真实工作台复测应保留全部三家标的、真实金额、同比口径、日期和来源，不能以模板成功替代完整性。"
         ],
         "risks": [
-          "仅本地测试，不晋升main、不发布。",
-          "真实金融复测为3成功1失败；财务缺失和历史覆盖不足仍需继续优化，不能宣称已完全解决。",
-          "research-html-theme历史完整测试有4项既有失败：大小阈值和HappyDOM默认层夹具未适配既有sherlock-terminal前缀；本次未改该生产HTML实现。直接相关4项滚动检查通过，日志保留/tmp/bloomberg-footer-scrollbar-focused-20261020.log。"
+          "只作本地试验，不晋升main、不发布。",
+          "三家公司财务数字已与本次业务响应逐项核对；来源原文链接完整性和上一轮走势缺标的仍待继续优化。",
+          "实际模型与来源延迟仍需通过新版客户端新生成测量，不预报提速幅度。"
         ],
-        "generatedAt": "2026-10-20T14:13:36.734986+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e512167ea8b6bbdb624501eb5b4bca6c2b461acb",
-        "verificationCommit": "e512167ea8b6bbdb624501eb5b4bca6c2b461acb",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "e512167ea8b6bbdb624501eb5b4bca6c2b461acb",
-            "completedAt": "2026-10-20T14:15:13.185Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e512167ea8b6bbdb624501eb5b4bca6c2b461acb",
-            "completedAt": "2026-10-20T14:15:13.185Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e512167ea8b6bbdb624501eb5b4bca6c2b461acb",
-            "completedAt": "2026-10-20T14:15:13.185Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "e512167ea8b6bbdb624501eb5b4bca6c2b461acb",
-            "completedAt": "2026-10-20T14:15:13.185Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e512167ea8b6bbdb624501eb5b4bca6c2b461acb",
-            "completedAt": "2026-10-20T14:15:13.185Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T14:15:13.185Z"
+        "generatedAt": "2026-10-20T14:38:58.620947+00:00"
       }
     },
     {
