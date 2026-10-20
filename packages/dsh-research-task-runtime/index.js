@@ -1210,13 +1210,17 @@ export class ResearchTaskRuntime {
     // Older workbench cards saved the panel content prompt, while their first
     // task carried the full format and visual contract. Restore only a complete
     // unchanged saved requirement; matching its first line would discard edits.
-    if (request.kind === 'container' && !deferredHistory && !workbenchPanelFormat(request.prompt)) {
-      const firstLine = request.prompt.split('\n')[0].trim()
+    if (request.kind === 'container' && !deferredHistory && !workbenchPanelFormat(sourceRetryPrompt(request.prompt))) {
+      const requirement = sourceRetryPrompt(request.prompt)
+      const firstLine = requirement.split('\n')[0].trim()
       if (firstLine.length >= 16) {
         const original = [...this.tasks.values()].find(task => task.kind === 'container' &&
           task.parentSessionId === request.parentSessionId && task.canvasNodeId === request.canvasNodeId &&
-          workbenchPanelFormat(task.prompt) && task.prompt.includes(request.prompt.trim()))
-        if (original) request = Object.freeze({ ...request, prompt: original.prompt })
+          workbenchPanelFormat(task.prompt) && task.prompt.includes(requirement.trim()))
+        if (original) {
+          const geometry = request.prompt.slice(requirement.length), scoped = workbenchPanelScope(original.prompt)
+          request = Object.freeze({ ...request, prompt: scoped ? scoped.contract + geometry + scoped.scope : original.prompt + geometry })
+        }
       }
     }
     const taskId = requiredString(this.createId(), MAX_ID_LENGTH, '任务标识无效')
