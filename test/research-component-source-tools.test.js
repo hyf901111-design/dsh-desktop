@@ -51,6 +51,9 @@ it('routes uncovered fundamentals to visible professional sources without probin
   expect(preferredComponentSourceTools(schemas,'三只股票最新行情和近一月日线')).toEqual([])
   expect(preferredComponentSourceTools(schemas,'只使用腾讯行情做股票估值，未提供的市盈率明确缺失')).toEqual([])
   expect(preferredComponentSourceTools(schemas,'股票估值；数据源：腾讯财经，市净率缺失不补造')).toEqual([])
+  expect(preferredComponentSourceTools(schemas,'三只股票估值，数据来源腾讯财经，缺失不补造')).toEqual([])
+  expect(preferredComponentSourceTools(schemas,'三只股票估值，来源为腾讯财经，缺失不补造')).toEqual([])
+  expect(preferredComponentSourceTools(schemas,'三只股票估值，数据源是万得，缺失不补造')).toEqual([])
 })
 
 it('starts a latest-index query in the current China-market window instead of an unbounded first page', () => {

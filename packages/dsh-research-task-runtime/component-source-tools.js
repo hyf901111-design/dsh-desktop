@@ -44,11 +44,11 @@ export function preferredComponentSourceTools(schemas, request) {
   if (!financialTopic.test(request ?? '') || !Array.isArray(schemas)) return []
   const text = request ?? ''
   const professionalFields = /估值|市盈率|市净率|财报|财务报表|营业收入|净利润|基金净值|持仓|研报|\b(?:valuation|fundamentals|earnings)\b/iu.test(text)
-  const explicitBasicSource = /(?:仅|只)(?:使用|用).{0,16}(?:腾讯|新浪|tencent|sina|public_data_query)|(?:数据源|来源)\s*[:：]\s*(?:腾讯|新浪|tencent|sina)/iu.test(text)
+  const explicitSource = /(?:仅|只)(?:使用|用).{0,16}(?:腾讯|新浪|tencent|sina|public_data_query)|(?:数据来源|数据源|来源)\s*(?:(?:[:：]|为|是|于|采用|使用)\s*[^，。；;\n]+|(?:腾讯|新浪|tencent|sina))/iu.test(text)
   // Basic quotes/history cannot supply financial statements or valuation
   // fields. Skip that discovery detour when an authorized professional source
-  // is visible, while preserving a user's explicit basic-source restriction.
-  if (schemas.some(tool => tool.name === 'public_data_query') && !/通联|datayes|萝卜投研|mcp|插件/iu.test(text) && (!professionalFields || explicitBasicSource)) return []
+  // is visible, while preserving a user's explicit source restriction.
+  if (schemas.some(tool => tool.name === 'public_data_query') && !/通联|datayes|萝卜投研|mcp|插件/iu.test(text) && (!professionalFields || explicitSource)) return []
   return schemas.filter(tool => typeof tool?.name === 'string' && tool.name.startsWith('ework__') &&
     typeof tool.description === 'string' && datayesSource.test(tool.description))
     .map(tool => ({ name: tool.name, description: tool.description.replace(/\s+/gu, ' ').slice(0, 120) }))
