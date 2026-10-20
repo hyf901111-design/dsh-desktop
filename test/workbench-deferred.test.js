@@ -40,6 +40,25 @@ async function setup(start) {
 }
 
 describe('领域自适应模拟工作台延后生成', () => {
+  it('does not silently drop per-record detail interactions into a flat deferred table', () => {
+    const panel = { ...panels[0], title: '古籍修复交接', prompt: '8册模拟古籍，含病害、修复阶段、负责人和预计交接时间；点击任一行展开查看病害详情、修复方案与交接注意事项。' }
+    expect(() => validateWorkbench({ ...input(), panels: [panel] })).toThrow(/table.*详情/u)
+    for (const prompt of ['8册古籍的平面交接表，按负责人搜索，按日期排序。', '无需点击行展开详情；全部说明直接展示在列中。']) {
+      expect(validateWorkbench({ ...input(), panels: [{ ...panel, prompt }] }).panels[0].type).toBe('table')
+    }
+    expect(validateWorkbench({ ...input(), panels: [{ ...panel, type: 'timeline' }] }).panels[0].type).toBe('timeline')
+  })
+
+  it('rejects the unsupported interaction before accepting a plan or launching any child', async () => {
+    const f = await setup(() => { throw Error('unsupported table must not start') })
+    try {
+      await expect(f.tool.execute({ ...input(), panels: [{ ...panels[0], prompt: '点击每行展开详情和完整交接说明。' }] }, f.exec)).rejects.toThrow(/table.*详情/u)
+      expect(f.adapter.start).not.toHaveBeenCalled()
+      expect(f.runtime.tasks.size).toBe(0)
+      await expect(readFile(f.filePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
+    } finally { await f.close() }
+  })
+
   it('accepts the observed null optional artifact at the real tool boundary without inventing data or duplicating a retry', async () => {
     const f = await setup(async request => ({ childSessionId: request.taskId, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify(artifact(request.query)) }] }), dispose: async () => {} }))
     const payload = { ...input(), panels: [{ ...panels[4], artifact: null }] }, before = structuredClone(payload)
