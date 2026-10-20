@@ -131,6 +131,15 @@ function webSnapshotRows(text,sourceUrl) {
   }
   visit(value);return rows
 }
+
+// The caller must supply a completed, successful host web.fetch response.
+// These fingerprints have the same provenance gate as model-issued web_fetch;
+// they are snapshots, never a refresh recipe or authority for another URL.
+export function fetchedWebPageRecord(url,content) {
+  const address=snapshotUrl(url)
+  if(!address||typeof content!=='string'||!content.trim())return
+  return {tool:'web_fetch',args:{url:address},response:null,purpose:'snapshot',snapshotRows:webSnapshotRows(content,address)}
+}
 function snapshotLinkMatches(url,record,row) {
   if(row.urls.includes(url))return true
   const sourceUrl=snapshotUrl(record.args?.url)

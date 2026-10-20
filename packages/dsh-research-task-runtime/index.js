@@ -12,6 +12,7 @@ import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbench
 import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import {compactStatementEvidence,truncatedStatementEvidence} from './statement-evidence.js'
 import {statementOperatingCoverageIssue} from './statement-operating-coverage.js'
+import {acquireFeedSourceEvidence,observedFeedSearchUrls} from './component-feed-acquisition.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
@@ -1523,6 +1524,8 @@ export class ResearchTaskRuntime {
       const panelRequest = workbenchPanelIntent(task.prompt)
       const bindingRequested = componentBindingRequested(panelRequest)
       const historyOptions=/(?:相对\s*沪深300|沪深300.{0,8}(?:基准|参考))/u.test(panelRequest)?{benchmarkSymbol:'000300.SH'}:{}
+      const acquireFeedEvidence = result.acquireFeedEvidence
+      let feedAcquired = false
       let output, binding, verifiedSnapshot, bindingRepairEvidence = '', recoveryText = '', recoveryEvidence = '', generationError, sharedStateError, designPolicyError, operatingIssue
       // At most one repair generation, within the same task/concurrency slot.
       // Completed malformed output and truncated output follow the same acceptance gate.
@@ -1534,6 +1537,13 @@ export class ResearchTaskRuntime {
         }
         if (typeof result?.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
         let deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
+        if (!feedAcquired && task.kind === 'container' && typeof acquireFeedEvidence === 'function' && componentFeedEvidenceIssue(deliveredText,sourceRecords)) {
+          feedAcquired = true
+          const supplement = await acquireFeedEvidence(deliveredText,sourceRecords)
+          if (task.cancelRequested || terminalState(task.state)) return
+          sourceRecords.push(...(supplement?.records ?? []))
+          if (supplement?.evidence) recoveryEvidence = truncateUtf8([supplement.evidence,recoveryEvidence].filter(Boolean).join('\n\n'),MAX_CONTAINER_EVIDENCE_BYTES)
+        }
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         const restoredSnapshot=task.kind==='container'&&(restoreSnapshotMarketHistory(deliveredText,sourceRecords,historyOptions)||(!bindingRequested&&restoreSnapshotStatementGrowth(deliveredText,sourceRecords))||restoreSnapshotFeedHeadlines(deliveredText,sourceRecords))
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
@@ -2152,6 +2162,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       // Keep actual fetched pages ahead of large catalogs or unrelated feeds.
       // This is attempt-local context only, never persisted source authority.
       const webEvidenceCalls = new Map(), webEvidenceParts = new Map()
+      const feedSearchCalls = new Set(), feedSearchUrls = new Set()
       let webEvidenceTruncated = false
       let evidenceBytes = Buffer.byteLength(hostEvidence, 'utf8')
       const collectedEvidence = () => {
@@ -2226,6 +2237,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
           if(knownDiscovery)knownDiscoveryUsed=true
           if(discovery)discoveryCallCount++
           if (typeof event.data.callId === 'string') {
+            if(event.data.name==='web_search')feedSearchCalls.add(event.data.callId)
             if(discovery)discoveryEvidenceCalls.add(event.data.callId)
             if(event.data.name==='web_fetch'){
               try{
@@ -2237,6 +2249,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
           }
         }
         if(event?.type==='tool/result'){
+          for(const url of observedFeedSearchUrls(researchSearchEvidence(event,feedSearchCalls)))if(feedSearchUrls.size<128)feedSearchUrls.add(url)
           const callId=event.data?.message?.source?.callId??event.data?.message?.content?.find(block=>webEvidenceCalls.has(block.toolCallId))?.toolCallId
           const url=webEvidenceCalls.get(callId)
           if(url){
@@ -2340,7 +2353,15 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         childSessionId: child.id,
         result: Promise.resolve(boundedResult).then(result => {
           const researchEvidence=collectedEvidence()
-          return { ...result, sourceRecords:sourceCollector.records, sourceAttempts:sourceCollector.attempts, ...(researchEvidence ? { researchEvidence } : {}) }
+          const acquireFeedEvidence = kind==='container' && childTools.includes('web_fetch') && typeof ctx.web?.fetch === 'function' ? (text,records) => acquireFeedSourceEvidence({
+            text,records,observedUrls:[...feedSearchUrls],signal,onProgress,
+            readPage:async(url,readSignal)=>{
+              const page=await withParentInitiator(parent,()=>ctx.web.fetch({url},readSignal))
+              if(!Number.isInteger(page?.statusCode)||page.statusCode<200||page.statusCode>=300||!['html','text'].includes(page?.body?.kind)||typeof page.body.content!=='string')return
+              return {url,content:page.body.content}
+            }
+          }) : undefined
+          return { ...result, sourceRecords:sourceCollector.records, sourceAttempts:sourceCollector.attempts, ...(researchEvidence ? { researchEvidence } : {}), ...(acquireFeedEvidence?{acquireFeedEvidence}:{}) }
         }).finally(() => { stopSourceProjection(); clearTimeout(completionTimer); clearTimeout(handoffTimer) }),
         async dispose() {
           if (disposed) return
