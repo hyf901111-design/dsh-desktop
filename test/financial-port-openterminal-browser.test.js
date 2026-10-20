@@ -75,6 +75,7 @@ it('keeps native connection targets and their circular dots/rings intact in ever
  for(const dpr of [1,2]){
   const page=await fixture(dpr)
   try{
+   let nativeRightInset
    for(const style of ['light','dark','enterprise','openterminal']){
     await page.locator('[data-ework-grid]').evaluate((root,style)=>root.dataset.workbenchStyle=style,style)
     for(const state of ['idle','hover','focus','connected','drop-target']){
@@ -85,6 +86,9 @@ it('keeps native connection targets and their circular dots/rings intact in ever
      if(state==='connected')await page.locator('.ew-financial-port').evaluateAll(ports=>ports.forEach(port=>port.dataset.connected='true'))
      if(state==='drop-target')await page.locator('[data-financial-port=input]').evaluate(port=>{port.setAttribute('data-drop-target','');port.setAttribute('aria-pressed','true')})
      const values=await metrics(page)
+     const rightInset=values.find(value=>value.side==='output').clearance.right
+     if(nativeRightInset===undefined)nativeRightInset=rightInset
+     expect(rightInset,JSON.stringify({dpr,style,state})).toBeCloseTo(nativeRightInset,2)
      expect(values.map(value=>value.side)).toEqual(['input','output'])
      for(const value of values){
       const label=JSON.stringify({dpr,style,state,side:value.side})
@@ -100,3 +104,22 @@ it('keeps native connection targets and their circular dots/rings intact in ever
   }finally{await page.close()}
  }
 },20000)
+
+it('highlights only the Bloomberg resize grip on hover and keyboard focus, without a square frame',async()=>{
+ const page=await fixture(2)
+ try{
+  await page.locator('[data-ework-grid]').evaluate(root=>{
+   root.dataset.workbenchStyle='openterminal'
+   const layer=document.createElement('div');layer.className='ew-grid-resize-layer'
+   layer.innerHTML='<button class="ew-grid-resize ew-grid-resize-corner" aria-label="同时调整组件宽高" style="left:930px;top:200px;width:20px;height:20px"><span></span></button>'
+   root.append(layer)
+  })
+  const handle=page.locator('.ew-grid-resize-corner')
+  const style=()=>handle.evaluate(button=>{const s=getComputedStyle(button),grip=getComputedStyle(button.firstElementChild);return{outline:s.outlineStyle,background:s.backgroundColor,shadow:s.boxShadow,right:grip.borderRightColor,bottom:grip.borderBottomColor}})
+  expect((await style()).right).toBe('rgb(128, 128, 128)')
+  for(const action of ['hover','focus']){
+   if(action==='hover')await handle.hover();else{await page.mouse.move(0,0);await handle.focus()}
+   expect(await style()).toEqual({outline:'none',background:'rgba(0, 0, 0, 0)',shadow:'none',right:'rgb(255, 153, 0)',bottom:'rgb(255, 153, 0)'})
+  }
+ }finally{await page.close()}
+})
