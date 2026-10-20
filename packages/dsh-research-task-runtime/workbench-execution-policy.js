@@ -121,10 +121,11 @@ const SOURCE_MODE_GUIDANCE = '真实数据模式使用 dataMode:"source"（也�
 const SOURCE_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，保留用户指定的数量、领域、来源和范围；先理解需求、拆解每卡内容和可视化，立即一次提交 title 与完整 panels，不先取整套数据、写报告或读取 skill/源码。'+SOURCE_MODE_GUIDANCE+'按内容选择 table/chart/news/reports/calendar/timeline/gantt/tasks/alerts/note 等模板，复杂交互保留 html，不能套固定金融样例。publicData 可交给宿主取真实来源；preset 仅在用户需求匹配真实预设时使用。requestId 重试保持一致。accepted 表示已受理并生成中，prepared 才表示已准备好，随后简短交付并结束本轮。'
 const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前只理解需求、拆解组件、明确每卡内容与可视化，再调用 research_workbench_create。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
 const PLAN_FIRST_DENIAL = '首次规划阶段只允许有限来源发现和 research_workbench_create；请把待取字段与真实来源约束写进各 panel.prompt，省略未取得的 artifact，立即提交规划。'
-function planningDataIntent(text) {
+export function planningDataIntent(text) {
   // Negated simulation is a source requirement, not permission to simulate.
   // Keep other affirmative mentions so explicit mixed plans retain their route.
-  const affirmative = text.replace(/(?:不要|不用|不(?:再)?(?:使用|允许|接受|采用|需要)|无需|禁止|不得|不能|拒绝)(?:再|使用|用|采用|生成|补充|添加|填充|任何|全部|一切|的)*(?:模拟|虚构|伪造|合成)(?:数据|记录|值|内容)?/gu, '')
+  const affirmative = text.replace(/(?:模拟|虚构|伪造|合成)(?:数据|记录|值|内容|数字)?(?:一律|全部|均|也|都|绝对)?(?:禁止|不允许|不可|不接受|不得使用)/gu, '')
+    .replace(/(?:不要|不用|不(?:可(?:以)?|能|得)?(?:再)?(?:使用|用|允许|接受|采用|需要)|无需|禁止|不得|不能|拒绝)(?:再|使用|用|采用|生成|补充|添加|填充|任何|全部|一切|的)*(?:模拟|虚构|伪造|合成)(?:数据|记录|值|内容)?/gu, '')
     .replace(/\b(?:no|without|do not use|don't use|never use)\s+(?:any\s+)?(?:simulated|synthetic|fictional|mock|fake)(?:\s+(?:data|records|values))?/giu, '')
   const simulation = /模拟|虚构|伪造|合成数据|假数据|\b(?:simulated|synthetic|fictional|mock|fake)\b/iu.test(affirmative)
   const source = /真实(?:的)?(?:数据|来源|记录|资料|行情)|实际(?:取得|获取|采集|提供|测得|记录)|\b(?:real|actual|verified|authentic)\s+(?:data|sources?|records?|quotes?)\b/iu.test(text)

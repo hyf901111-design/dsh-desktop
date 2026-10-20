@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { validateWorkbench, workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import { ResearchTaskRuntime } from '../packages/dsh-research-task-runtime/index.js'
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
@@ -40,6 +40,49 @@ async function settled(r, receipts) {
 }
 
 describe('宿主免费源工作台直通', () => {
+  it('recovers a metadata-only financial-widget spelling when the explicit quote-table recipe already defines its layout',()=>{
+    const original={...spec('quotes-table','tencent-quotes',{symbols:['sh600029','sh601111','sh601021']}),type:'financial-widget',prompt:'三家公司最新价和涨跌幅对比'}
+    const panel=validateWorkbench({requestId:'quote-layout-alias',title:'航空观察',dataMode:'source',panels:[original]}).panels[0]
+    expect(panel.type).toBe('market')
+    expect(panel.publicData.requests).toEqual(original.publicData.requests)
+    expect(panel.artifact).toBeUndefined()
+    expect(original.type).toBe('financial-widget')
+  })
+
+  it('routes a multi-security market history comparison once without collapsing the series',()=>{
+    const requests=['sh600029','sh601111','sh601021','sh000300'].map(symbol=>({source:'tencent-history',parameters_json:JSON.stringify({symbol,limit:22})}))
+    const original={title:'三家航司量价对比',type:'market',size:'large',prompt:'同一基期100归一化比较三家公司与沪深300，仅真实数据，缺失保留',publicData:{profile:'price-volume',requests,intervalMinutes:0}}
+    const panel=validateWorkbench({requestId:'airline-history',title:'航空观察',dataMode:'source',panels:[original]}).panels[0]
+    expect(panel.type).toBe('chart')
+    expect(panel.publicData).toBeUndefined()
+    for(const symbol of ['sh600029','sh601111','sh601021','sh000300'])expect(panel.prompt).toContain(symbol)
+    expect(workbenchPanelPrompt({title:'航空观察'},panel)).toContain('必须输出 chart.line')
+    expect(workbenchPanelPrompt({title:'航空观察'},panel)).not.toContain('必须输出 market.price-volume')
+    expect(validateWorkbench({requestId:'again',title:'航空观察',panels:[panel]}).panels[0]).toEqual(panel)
+  })
+
+  it('preserves several company queries as a normal news task instead of broadening them to the general feed',()=>{
+    const original={...spec('news','sina-news',{limit:12},'news'),title:'三家公司近期新闻',prompt:'仅南方航空、中国国航、春秋航空相关新闻，不用全市场新闻替代'}
+    original.publicData.requests=['南方航空','中国国航','春秋航空'].map(query=>({source:'sina-news',parameters_json:JSON.stringify({query,limit:12})}))
+    const panel=validateWorkbench({requestId:'airline-news',title:'航空观察',dataMode:'source',panels:[original]}).panels[0]
+    expect(panel.type).toBe('news')
+    expect(panel.publicData).toBeUndefined()
+    expect(panel.prompt).toContain(original.prompt)
+    for(const query of ['南方航空','中国国航','春秋航空'])expect(panel.prompt).toContain(JSON.stringify(query))
+    expect(panel.prompt).toContain('不得扩大为全市场新闻')
+    for(const parameters of [{query:'南方航空',url:'http://private.test'},{query:'南方航空',limit:101},{query:'南方航空',symbols:['sh600029']}]){
+      expect(()=>validateWorkbench({requestId:'invalid-topic',title:'新闻',panels:[{...original,publicData:{...original.publicData,requests:[{source:'sina-news',parameters_json:JSON.stringify(parameters)}]}}]})).toThrow()
+    }
+  })
+
+  it('keeps an existing history comparison chart variant requested by the user',()=>{
+    const original={title:'航司近一月收益比较',type:'chart',size:'large',prompt:'chart.bar；用户明确要求柱状图比较南方航空、中国国航的月收益率，使用实际取得的记录。',publicData:{profile:'price-volume',requests:['sh600029','sh601111'].map(symbol=>({source:'tencent-history',parameters_json:JSON.stringify({symbol,limit:22})})),intervalMinutes:0}}
+    const panel=validateWorkbench({requestId:'history-bar',title:'航空观察',panels:[original]}).panels[0]
+    const prompt=workbenchPanelPrompt({title:'航空观察'},panel)
+    expect(prompt).toContain('必须输出 chart.bar')
+    expect(prompt).not.toContain('必须输出 chart.line')
+  })
+
   it('routes unsupported security-filtered news to a normal task without losing the original scope',()=>{
     const original=filteredNews()
     const input={requestId:'filtered-news',title:'算力研究',panels:[original]}

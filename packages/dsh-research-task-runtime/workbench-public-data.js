@@ -72,6 +72,23 @@ export function publicDataQuoteTaskRequirement(value,type,requirement=''){
 // planner intent as a normal source task, rather than deleting symbols and
 // silently replacing company news with an unrelated market-wide feed.
 export function publicDataNewsTaskRequirement(value,type,requirement=''){
+  // Observed planners group company keyword searches in one news panel. The
+  // adapter cannot execute them; retain their validated scope for a worker.
+  if(value?.profile==='news'&&Array.isArray(value.requests)&&value.requests.some(r=>{
+    try{return Object.hasOwn(JSON.parse(r.parameters_json),'query')}catch{return false}
+  })){
+    if(type!=='news'||!value.requests.length||value.requests.length>8)throw Error('公司新闻面板需要1–8个已校验来源请求')
+    const queries=value.requests.map(request=>{
+      let parameters;try{parameters=JSON.parse(request.parameters_json)}catch{throw Error('公司新闻参数无效')}
+      if(!object(parameters)||typeof parameters.query!=='string'||!parameters.query.trim()||parameters.query.length>100||Object.keys(parameters).some(k=>!['query','limit'].includes(k)))throw Error('公司新闻只保留query与limit，不支持其他参数')
+      const {query,...supportedParameters}=parameters
+      const checked=validatePublicDataPanel({...value,requests:[{...request,parameters_json:JSON.stringify(supportedParameters)}]},type,{strictParameters:true})
+      return {query:query.trim(),limit:parameters.limit??20,source:checked.requests[0].source}
+    })
+    if(new Set(queries.map(v=>JSON.stringify(v))).size!==queries.length)throw Error('免费源组件请求重复')
+    const scope=JSON.stringify({queries,intervalMinutes:value.intervalMinutes??1,...(value.layoutProfile?{layoutProfile:value.layoutProfile}:{})})
+    return `宿主来源能力校正：内置sina-news不支持公司关键词查询，本卡改由一个独立news取数任务。保留原面板全部主题、字段与筛选元信息：${scope}。不得扩大为全市场新闻；仅使用原需求允许的来源中实际取得的相关报道、时间、摘要和原文链接，无法取得时明确缺失，不编造新闻或声称已开启刷新。${value.layoutProfile?'最终artifact.layoutProfile保留已校验的 "layoutProfile":"openterminal"。':''}`
+  }
   if(value?.profile!=='news'||!Array.isArray(value.requests)||value.requests.length!==1)return null
   const request=value.requests[0]
   if(typeof request?.parameters_json!=='string'||request.parameters_json.length>5000)return null
@@ -93,7 +110,7 @@ export function publicDataNewsTaskRequirement(value,type,requirement=''){
 // direct price/volume renderer only accepts one security. Preserve the exact
 // requests for an ordinary chart worker; never squeeze them into one series.
 export function publicDataHistoryTaskRequirement(value,type){
-  if(type!=='chart'||value?.profile!=='price-volume'||!Array.isArray(value.requests)||value.requests.some(r=>r?.source!=='tencent-history'))return null
+  if(!['chart','market'].includes(type)||value?.profile!=='price-volume'||!Array.isArray(value.requests)||type==='market'&&value.requests.length===1||value.requests.some(r=>r?.source!=='tencent-history'))return null
   if(!value.requests.length||value.requests.length>8)throw Error('历史对比面板需要1–8个已校验来源请求')
   const supported=value.requests.map(request=>validatePublicDataPanel({...value,requests:[request]},'market',{strictParameters:true}))
   if(new Set(value.requests.map(r=>JSON.stringify(r))).size!==value.requests.length)throw Error('免费源组件请求重复')
