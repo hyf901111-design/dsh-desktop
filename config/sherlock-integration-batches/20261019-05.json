@@ -9,95 +9,65 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "完善来源规划兼容并修复刷新图标和绘制等待",
+        "featureName": "减少组件进度重复持久化并记录交付链路耗时",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "ed5067bbd21b9c3f30267bb018ba97892924809a",
-        "tipCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
+        "baseCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
+        "tipCommit": "25669c8fc8338ffb173eccbf035abd97531020b6",
         "commits": [
           {
-            "commit": "a22b0252498466b139d63fdff869b87f52072e40",
+            "commit": "0150990631dde7c646852ed99b54df299ce38f46",
             "parents": [
-              "ed5067bbd21b9c3f30267bb018ba97892924809a"
+              "ddb29ad2c8b65f0552a0703adf4cff053a89cc54"
             ],
-            "subject": "修复来源规划空占位并按字段能力保留取数需求"
+            "subject": "避免组件生成进度重复保存整张画布"
           },
           {
-            "commit": "64f83012ccad93f51536297c897b7d59bb20b04a",
+            "commit": "b1c6f25b6a30a9625ce002ff620046fa129bb533",
             "parents": [
-              "a22b0252498466b139d63fdff869b87f52072e40"
+              "0150990631dde7c646852ed99b54df299ce38f46"
             ],
-            "subject": "修正表格回退合同并保留明确排除字段的行情直通"
+            "subject": "记录组件生成回执各阶段耗时用于定位交付延迟"
           },
           {
-            "commit": "2f2897d8a4bc46d16fcfc5c72c2e6fd416bb3f11",
+            "commit": "25669c8fc8338ffb173eccbf035abd97531020b6",
             "parents": [
-              "64f83012ccad93f51536297c897b7d59bb20b04a"
+              "b1c6f25b6a30a9625ce002ff620046fa129bb533"
             ],
-            "subject": "修复工作台绘制确认超时后的动画帧漏停"
-          },
-          {
-            "commit": "1713f8bcb1941684b2102df197ea568744d6f423",
-            "parents": [
-              "2f2897d8a4bc46d16fcfc5c72c2e6fd416bb3f11"
-            ],
-            "subject": "收紧排除字段列表边界避免吞掉必需指标"
-          },
-          {
-            "commit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
-            "parents": [
-              "1713f8bcb1941684b2102df197ea568744d6f423"
-            ],
-            "subject": "固定组件刷新图标比例并改用独立圆环加载动画"
+            "subject": "补齐非终态组件回执应用缓慢的耗时记录"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "status": "A",
+            "path": "scripts/lib/generation-progress-persistence.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
+            "path": "scripts/lib/research-generation-watch.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/component-data-status.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
+            "path": "src/main/index.ts"
           },
           {
             "status": "A",
-            "path": "test/fixtures/workbench-fourth-source-plans.json"
-          },
-          {
-            "status": "M",
-            "path": "test/research-creation-progress.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-deferred.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-refresh-state.test.js"
+            "path": "src/main/state/generation-delivery-log.ts"
           },
           {
             "status": "A",
-            "path": "test/workbench-source-capability.test.js"
+            "path": "test/generation-delivery-log.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/generation-progress-persistence.test.js"
           },
           {
             "status": "M",
-            "path": "test/workbench-source-route-fallback.test.js"
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-watch.test.js"
           }
         ],
         "checks": [
@@ -105,26 +75,20 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/workbench-source-capability.test.js",
-              "test/workbench-source-route-fallback.test.js",
-              "test/workbench-public-data.test.js",
-              "test/workbench-deferred.test.js",
-              "test/workbench-source-context.test.js",
-              "test/research-creation-progress.test.js",
               "test/research-generation-watch.test.js",
-              "test/research-planning-controls-browser.test.js",
-              "test/workbench-refresh-state.test.js",
-              "test/component-data-status.test.js",
-              "test/component-data-ui.test.js",
+              "test/generation-delivery-log.test.ts",
+              "test/generation-progress-persistence.test.js",
+              "test/research-creation-progress.test.js",
               "test/research-grid-workbench.test.js",
+              "test/research-canvas-storage.test.ts",
               "--maxWorkers=1",
               "--testTimeout=15000",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "12文件198项通过；日志 /tmp/workbench-source-ring-final-focused-15s-20261020.log",
-            "verifiedCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
-            "completedAt": "2026-10-20T08:16:23.037132+00:00",
+            "summary": "6文件90项通过；/tmp/generation-delivery-reviewed-focused-20261020.log",
+            "verifiedCommit": "25669c8fc8338ffb173eccbf035abd97531020b6",
+            "completedAt": "2026-10-20T08:58:30.554768+00:00",
             "timeoutMs": 180000
           },
           {
@@ -134,9 +98,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/workbench-source-ring-final-typecheck-20261020.log",
-            "verifiedCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
-            "completedAt": "2026-10-20T08:16:23.037132+00:00",
+            "summary": "类型检查通过；/tmp/generation-delivery-reviewed-typecheck-20261020.log",
+            "verifiedCommit": "25669c8fc8338ffb173eccbf035abd97531020b6",
+            "completedAt": "2026-10-20T08:58:30.554768+00:00",
             "timeoutMs": 180000
           },
           {
@@ -144,119 +108,31 @@
               "git",
               "diff",
               "--check",
-              "ed5067bb..HEAD"
+              "ddb29ad2..HEAD"
             ],
             "outcome": "passed",
-            "summary": "所有本批提交空白检查通过",
-            "verifiedCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
-            "completedAt": "2026-10-20T08:16:23.037132+00:00",
+            "summary": "本批提交空白检查",
+            "verifiedCommit": "25669c8fc8338ffb173eccbf035abd97531020b6",
+            "completedAt": "2026-10-20T08:58:30.554768+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端。来源实参完整回放与独立审查通过；Chromium四主题与180px窄顶栏验证16x16和独立圆环。实际客户端待集成包验收。"
+          "summary": "功能worktree禁止构建共享客户端；实际工作区与隔离存储回归通过；用户已授权重启客户端，集成包原生验收待进行。"
         },
         "acceptanceCriteria": [
-          "真实source空占位可归一，非空artifact/模拟/URL/来源/权限仍校验；三批实测create均可回放接受。",
-          "报价缺字段保留需求取数，标准完整排除需求保留直通；公司新闻不转全市场。",
-          "规划等待超时后停止逐帧检查；未宣称修复分钟级交付延迟。",
-          "刷新图标固定正方形，busy时独立圆环无指针箭头，结束恢复四状态，支持自动/手动/notes/降低动态效果。"
+          "仅同一活跃状态的seq/events/partialText改变不触发持久化与sidebar recency；UI快照通知继续。",
+          "任务绑定/开始时间/来源/尺寸/终态/用户修改立即持久化，重开可恢复task ID与持久水位。",
+          "V1轮询升级V2且反复patch幂等，接受/取消/重开语义保留。",
+          "本地内容无关诊断通过主窗口frame校验、1024字符白名单、64队列、两份512KiB异步日志；故障不影响生成。"
         ],
         "risks": [
-          "仅本地测试实验，不接受晋升main、发布或推送。",
-          "当前机器默认5秒的完整客户端AST解析用例出现超时；未改变源码断言或产品时限，以单用例15秒等待重跑12文件198项全部通过。",
-          "第四轮真实数据生成后端8/8耗时416.152秒，但估值与新闻内容失配促成本批修复；不能把此次回放当成新版完整金融生成实测。",
-          "renderer消息消费积压与分钟级画布交付延迟同现，具体JS根因仍未知；只修复已经确定的RAF漏停。"
+          "实验仅本地集成，不接受、晋升、发布、推送。",
+          "此项实测减少80次纯进度18-32MB重复写盘；并未证明或宣称解决分钟级交付延迟。",
+          "真实新版多组件工作台实测仍待进行；现有8卡的内容错误不被本次静默改写。"
         ],
-        "generatedAt": "2026-10-20T08:16:23.037132+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e1aeba6c2ccc5972fed8dcbdbe1a9af4a720e3e6",
-        "verificationCommit": "e1aeba6c2ccc5972fed8dcbdbe1a9af4a720e3e6",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "e1aeba6c2ccc5972fed8dcbdbe1a9af4a720e3e6",
-            "completedAt": "2026-10-20T08:17:02.244Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e1aeba6c2ccc5972fed8dcbdbe1a9af4a720e3e6",
-            "completedAt": "2026-10-20T08:17:02.244Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e1aeba6c2ccc5972fed8dcbdbe1a9af4a720e3e6",
-            "completedAt": "2026-10-20T08:17:02.244Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "e1aeba6c2ccc5972fed8dcbdbe1a9af4a720e3e6",
-            "completedAt": "2026-10-20T08:17:02.244Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e1aeba6c2ccc5972fed8dcbdbe1a9af4a720e3e6",
-            "completedAt": "2026-10-20T08:17:02.244Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T08:17:02.244Z"
+        "generatedAt": "2026-10-20T08:58:30.554768+00:00"
       }
     },
     {
