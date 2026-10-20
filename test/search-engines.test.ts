@@ -7,7 +7,8 @@ import {
   isSearchChallenge,
   normalizeSearchResults,
   orderedSearchEngines,
-  searchExtractionScript
+  searchExtractionScript,
+  searchSnapshotScript
 } from '../src/main/search/search-engines'
 
 describe('local browser search engines', () => {
@@ -143,4 +144,13 @@ describe('local browser search engines', () => {
       { title: 'Result C', url: 'https://example.net/c', snippet: 'Summary C' }
     ])
   })
+})
+
+
+it('captures the current query, document URL and result rows together without using hidden query fields',()=>{
+ const window=new Window({url:'https://cn.bing.com/search?q=%E7%85%A4%E7%94%B5%E6%94%BF%E7%AD%96'})
+ window.document.title='煤电政策 - 搜索';window.document.body.innerHTML='<input id="sb_form_q" value="煤电政策"><ol id="b_results"><li class="b_algo"><h2><a href="https://example.org/policy">煤电容量电价政策</a></h2></li></ol>'
+ expect(window.eval(searchSnapshotScript('bing'))).toEqual({url:window.location.href,title:'煤电政策 - 搜索',documentQuery:'煤电政策',noResults:false,candidates:[{title:'煤电容量电价政策',url:'https://example.org/policy'}]})
+ window.document.body.innerHTML='<input name="q" type="hidden" value="旧查询"><input name="q" value="current policy"><div class="result"><a class="result__a" href="https://example.org/new">Current result</a></div>'
+ expect(window.eval(searchSnapshotScript('duckduckgo')).documentQuery).toBe('current policy')
 })

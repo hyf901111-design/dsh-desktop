@@ -144,3 +144,24 @@ export function searchExtractionScript(engine: SearchEngineId): string {
     })
   })()`
 }
+
+
+/** Read the result rows and their real document query in one DOM evaluation. */
+export function searchSnapshotScript(engine: SearchEngineId): string {
+  const selector = engine === 'bing' ? '#sb_form_q' : 'input[name="q"]:not([type="hidden"]),textarea[name="q"]'
+  return `(() => {
+    const candidates = ${searchExtractionScript(engine)}
+    const queries = [...new Set(Array.from(document.querySelectorAll(${JSON.stringify(selector)}))
+      .filter(input => !input.closest('[hidden],[aria-hidden="true"]') && getComputedStyle(input).display !== 'none' && getComputedStyle(input).visibility !== 'hidden')
+      .map(input => input.value).filter(value => typeof value === 'string' && value.trim()))]
+    return {
+      url: location.href,
+      title: document.title,
+      documentQuery: queries.length === 1 ? queries[0] : null,
+      noResults: Array.from(document.querySelectorAll('#b_results .b_no, .no-results, .result--no-result')).some(node =>
+        !node.closest('[hidden]') && getComputedStyle(node).display !== 'none' &&
+        /no results|did not match|没有(?:找到|与)|未找到|找不到|无结果/iu.test(node.textContent ?? '')),
+      candidates
+    }
+  })()`
+}

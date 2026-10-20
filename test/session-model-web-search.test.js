@@ -438,3 +438,24 @@ it('fetches rendered page content through the authenticated desktop route', asyn
   expect(seen).toEqual({path:'/fetch',token:'Bearer test-token'})
   expect(result.body.content).toBe('文档正文')
 })
+
+
+it('preserves a verified local query and engine as readable provenance without losing the actual sources',async()=>{
+ const query='煤电容量电价 国家发改委 2026',provenance={engine:'bing',requestedQuery:query,documentQuery:query,pageTitle:query+' - 搜索'}
+ const localURL=await listen((_request,response)=>{response.writeHead(200,{'content-type':'application/json'});response.end(JSON.stringify({sources:[{url:'https://example.org/policy',title:'容量电价政策'}],truncated:false,provenance}))})
+ const result=await searchLocalBrowser({query,maxResults:5},undefined,{url:localURL,token:'test-token'})
+ expect(result.sources).toEqual([{url:'https://example.org/policy',title:'容量电价政策'}])
+ expect(result.content).toContain('Bing')
+ expect(result.content).toContain(query)
+})
+
+it('does not claim verified query provenance for a local result carrying another document query',async()=>{
+ const query='煤电容量电价',localURL=await listen((_request,response)=>{response.writeHead(200,{'content-type':'application/json'});response.end(JSON.stringify({sources:[{url:'https://example.org/coal'}],truncated:false,provenance:{engine:'bing',requestedQuery:query,documentQuery:'煤',pageTitle:'煤 - 搜索'}}))})
+ await expect(searchLocalBrowser({query,maxResults:5},undefined,{url:localURL,token:'test-token'})).rejects.toMatchObject({code:'WEB_LOCAL_SEARCH_FAILED'})
+})
+
+
+it('does not turn query provenance alone into a successful search with no sources or evidence',async()=>{
+ const query='煤电政策',localURL=await listen((_request,response)=>{response.writeHead(200,{'content-type':'application/json'});response.end(JSON.stringify({sources:[],truncated:false,provenance:{engine:'bing',requestedQuery:query,documentQuery:query,pageTitle:query+' - 搜索'}}))})
+ await expect(searchLocalBrowser({query,maxResults:5},undefined,{url:localURL,token:'test-token'})).rejects.toMatchObject({code:'WEB_LOCAL_SEARCH_FAILED'})
+})
