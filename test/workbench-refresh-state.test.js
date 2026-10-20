@@ -105,6 +105,31 @@ it('publishes real builtin quote/news/announcement outcomes to their headers and
  }
 },20000)
 
+it('keeps a completed builtin failure orange through visibility changes until a new request really succeeds',async()=>{
+ const article={id:'actual-news',title:'已经实际取得的新闻',source:'真实接口',time:'2026-10-20T10:00:00+08:00',url:'https://example.com/news'}
+ const service={request:vi.fn(async()=>({news:[article],source:'真实接口',receivedAt:Date.now()}))}
+ const f=await financialClientFixture({financialWidget:service},{refreshState:true});cleanups.push(f.dispose)
+ let n;await f.act(async()=>{n=f.workspace.createFinancialWidget('news')})
+ const card=f.host.querySelector('[data-research-node-id="'+n.id+'"]'),button=()=>card.querySelector('[data-workbench-refresh]'),body=card.querySelector('[data-financial-widget]')
+ expect(button().dataset.refreshState).toBe('scheduled');expect(body.textContent).toContain(article.title)
+ service.request.mockRejectedValueOnce(Error('最近一次刷新失败'))
+ await f.act(async()=>await body.__eworkRefreshFinancial())
+ expect(button().dataset.refreshState).toBe('error');expect(body.textContent).toContain(article.title)
+ const states=[],observer=new f.win.MutationObserver(()=>states.push(button().dataset.refreshState))
+ observer.observe(card,{subtree:true,attributes:true,attributeFilter:['data-refresh-state']});cleanups.push(()=>observer.disconnect())
+ Object.defineProperty(f.document,'visibilityState',{configurable:true,value:'hidden'});await f.event('visibilitychange',f.document)
+ expect(button().dataset.refreshState).toBe('error')
+ let resolve
+ service.request.mockImplementationOnce(()=>new Promise(done=>{resolve=done}))
+ const before=service.request.mock.calls.length
+ Object.defineProperty(f.document,'visibilityState',{configurable:true,value:'visible'});await f.event('visibilitychange',f.document)
+ expect(service.request.mock.calls.length).toBe(before+1)
+ expect(button().dataset.refreshState).toBe('error');expect(body.textContent).toContain(article.title)
+ expect(states).not.toContain('scheduled')
+ await f.act(async()=>{resolve({news:[{...article,title:'本次真实刷新取得的新闻'}],source:'真实接口',receivedAt:Date.now()})})
+ expect(button().dataset.refreshState).toBe('scheduled');expect(body.textContent).toContain('本次真实刷新取得的新闻')
+},20000)
+
 it('keeps semantic icon colors across all four themes, hover and selection, and reclaims the hidden slot width',async()=>{
  // Browser plugin not available; use the existing bundled Chromium for a local CSS-only document.
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
