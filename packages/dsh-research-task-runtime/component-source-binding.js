@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from './component-data-refresh.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
+import {normalizeChartMetadata} from './chart-template-contract.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -153,7 +154,7 @@ export function restoreSnapshotFeedHeadlines(text,records) {
   if(changed)return JSON.stringify({...data,items})
 }
 export function componentSnapshotEvidence(text,records) {
-  if(records.some(r=>r.tool==='financial_query'&&r.purpose==='snapshot'&&r.response&&typeof r.response==='object'&&Object.keys(r.response).length))return true
+  if(records.some(r=>r.tool==='financial_query'&&r.purpose==='snapshot'&&componentMappableSource(r)))return true
   const urls=new Set(records.filter(r=>r.tool==='web_fetch'&&r.purpose==='snapshot').map(r=>snapshotUrl(r.args?.url)).filter(Boolean))
   if(!urls.size)return false
   const referenced=value=>{
@@ -177,6 +178,14 @@ export function componentSnapshotData(data) {
   return {...data,asOf:typeof data.asOf==='string'&&data.asOf.trim()?data.asOf+(data.asOf.includes(status)?'':' · '+status):status}
 }
 
+// financial_query has no host refresh recipe. Its observed structured records
+// can still be mapped once without asking a model to retranscribe every value.
+export function componentMappableSource(record) {
+ if(record?.purpose==='discovery'||!record?.response||typeof record.response!=='object')return false
+ if(record.purpose!=='snapshot')return true
+ return record.tool==='financial_query'&&Array.isArray(record.response.records)&&record.response.records.length>0&&(record.response.status===undefined||['complete','partial'].includes(record.response.status))
+}
+
 // Recover only source-backed mappings. An unused bad request may invalidate the
 // refresh recipe, but cannot erase fields mapped from other exact observed calls.
 // Missing referenced requests/fields still fail; no guessed arguments or literals
@@ -188,10 +197,10 @@ export function resolveComponentSnapshot(text,records,now=new Date()) {
   try {
     const keys=new Set()
     for(const request of candidate.requests){
-      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(request.tool==='public_data_query'||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
+      if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||keys.has(request.key)||!(['public_data_query','financial_query'].includes(request.tool)||/^ework__t_[a-f\d]+$/iu.test(request.tool??'')))return null
       keys.add(request.key)
       const args=evaluateMapping(normalizeRequestDates(request.args),{},now)
-      const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&!['discovery','snapshot'].includes(record.purpose))
+      const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&componentMappableSource(record))
       if(source)responses[request.key]=source.response
     }
     if(!Object.keys(responses).length)return null
@@ -209,10 +218,16 @@ export function resolveComponentSnapshot(text,records,now=new Date()) {
     const mapping=singleSourceMapping(candidate.mapping,responses)
     const data=materializeComponentMapping(mapping,responses,now)
     if(templateSourceDataIssue(data)||templateDataIssue(data))return null
-    const snapshot=componentSnapshotData(data),output=acceptArtifactOutput(JSON.stringify(snapshot))
+    const snapshot=normalizeChartMetadata(componentSnapshotData(data)),output=acceptArtifactOutput(JSON.stringify(snapshot))
     return output?{data:snapshot,output}:null
   }catch{return null}
 }
+
+export const COMPONENT_STATIC_CHART_PROMPT = `
+本卡仅生成本次静态图表，不保存自动刷新设置。取得可映射的结构化列表时，优先交付一个 data-bound JSON，由宿主直接读取完整响应和计算曲线，不逐点抄写或手算数组：{"version":1,"type":"data-bound","requests":[{"key":"q0","tool":"实际成功调用的 public_data_query、financial_query 或 ework__ 工具名","args":原成功请求参数}],"mapping":上文chart模板及字段映射}。requests 必须与本卡实际成功调用完全一致；financial_query 仅支持本次静态映射，不能登记自动刷新。网页纯文本不能伪造为这些接口。
+$from 引 requests.key，$each 指真实列表路径，$map 指每行字段，$filter:{"实际字段":"实际值"} 为标量等值筛选（多个条件同时满足）；$sortBy:"真实日期字段"/$order:"asc" 排序，$take:-20 取末20条，$as:"number" 转数值，$digits:2 控制显示精度。例如 financial_query 的响应明确含 records/metric/as_of/value 时，labels 使用 {"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"as_of"}}；series.values 使用同一筛选排序，$map 改为 {"$path":"value"}。路径与筛选值以本轮真实响应为准，其他来源不套用这些字段。
+需求要求共同基期100比较时，在每条 values 的 $each 同层加 "$normalize":"base100" 和 "$digits":2，由宿主按筛选排序后的首值执行 值/首值×100；不手算数组，不写死 $scale=100/起点。归一化只用于所需的比较；原始价格需求保留原单位。每条序列都必须使用同一组实际日期，不能将不同日期按条数硬对齐；缺失值不填0。各标的、来源、复权口径、日期和计算说明保留在 note，asOf 仅放简短来源与时点（最多256字）。样本只说明字段路径，不代表完整数据条数；原响应中存在的标的不得因上下文样本省略而标为未取得。
+仅有非结构化资料或映射无法表达必要内容时，按上文原生chart JSON交付可核查内容，不伪造映射。`
 
 export const COMPONENT_BOUND_DATA_PROMPT = `
 自动绑定数据交付协议：通过已配置插件或 public_data_query 取得可映射的结构化数据后，最终必须交付一个 data-bound 对象。此协议替代上文直接提交静态模板 JSON 的输出要求；mapping 仍使用上文模板 schema。由宿主映射真实响应、渲染当前固定模板并保存刷新设置；未指定时默认一分钟，用户或宿主明确要求仅手动时 intervalMinutes=0。无需抄写数百行数值，也不调用额外工具设置刷新。行情、K线、表格、资讯、研报均适用。保留可复用的原始字段和摘要，不为改写摘要退回静态输出。格式：
@@ -220,7 +235,7 @@ export const COMPONENT_BOUND_DATA_PROMPT = `
 public_data_query 请求必须保留 operation:"query"、source 和 parameters_json 原字符串；catalog 只是目录不能绑定。内置返回 records 为数组、source 为来源、dataTime 为数据时点（可为 null）、receivedAt 仅为获取时间；未知报价时点写“报价时点未提供”，不可用获取时间冒充交易时间。
 data-bound 的验证依据是当前面板任务实际成功调用的工具响应，父任务附在 prompt 的记录只供参考，不能替代该凭证。当前已获联网授权且工具可见时，即使父任务写“已有记录、不要重复取数”，也须用相同的真实参数调用一次来源工具来建立绑定凭证（免费工具可命中共享缓存，不重新搜索接口）。用户或宿主禁止联网、工具不可见时只交付快照并明确未绑定，不伪造调用。
 mapping 内的整体结构必须符合上文当前模板 schema；例子里的 items 仅演示指标映射，K线须用 candles，表格须用 columns/rows。$from 指 requests.key，$path 是点分路径或数组下标，$each/$map 映射原始数组，数组可加 $sortBy:"实际日期字段"、$order:"asc|desc" 排序，$take:5 取前5条、$take:-20 取最后20条；$single:true 要求恰好一条并返回单值，用于最新行情或数据日期，避免写死随分页变化的数组下标。$as 为 string/number；放在 $each 同层时逐项转换标量列表，放在 $map 字段内时转换该字段；$single:true 后转换单值。表格的 $map 必须是单元格数组，例如 [{"$path":"name"},{"$path":"weight","$as":"number"}]。$scale 换算单位，$digits:2 在换算后控制小数位（0–8）；百分比与亿元通常保留2位，价格按精度保留2–3位，避免显示浮点长尾。$prefix/$suffix 加文字，$optional:true 将来源缺失值保留为 null；文本字段可用 $default:"来源未提供摘要" 为缺失、null 或空字符串提供明确的缺失说明，不能用假数值填补。列表中存在 url 时将其映射到条目 url，保留来源链接。无脚本。请求 args 必须原样复制本轮成功业务调用，包括日期值和所有参数类型；无需创建日期表达式。宿主会为最新数据自动推导滚动窗口，固定历史需求保持原日期。不要把日期写成表达式字符串。通联 ai_search 的 SOURCES/EVIDENCE 文本由宿主按实际来源规范化为 {sources:[{id,category,source,date,title,url,summary,excerpts}]}；summary 是第一条证据原句，excerpts 为全部原句，可直接绑定 news.items。除此之外只引用实际 JSON 结构，不猜字段。
-批量多证券列表先使用 $filter:{"ticker":"实际证券代码"} 按行字段等值筛选，再排序和截取；$filter 只支持 1–16 个标量条件，多个条件同时成立，不支持表达式。近20日曲线的 labels 和每条 series.values 必须使用相同的日期排序及 $take:-20，保证日期和值对齐。单对象接口响应使用 {"$from":"q","$map":{"label":{"$path":"data.data.name"},"weight":{"$path":"data.data.marketValue","$scale":1e-8}}}，路径相对该请求响应根对象，无需 $each；$single:true 可省略。
+批量多证券列表先使用 $filter:{"ticker":"实际证券代码"} 按行字段等值筛选，再排序和截取；$filter 只支持 1–16 个标量条件，多个条件同时成立，不支持表达式。近20日曲线的 labels 和每条 series.values 必须使用相同的日期排序及 $take:-20，保证日期和值对齐。共同基期100比较可在 values 的 $each 同层添加 $normalize:"base100"，宿主在筛选、排序、截取后执行 值/首值×100，再按 $digits 控制精度；起点不能为0、不能填补缺失值，原始值需求不归一化。单对象接口响应使用 {"$from":"q","$map":{"label":{"$path":"data.data.name"},"weight":{"$path":"data.data.marketValue","$scale":1e-8}}}，路径相对该请求响应根对象，无需 $each；$single:true 可省略。
 最新单值的完整例子：{"$from":"q","$each":"真实列表路径","$sortBy":"真实日期字段","$order":"desc","$take":1,"$single":true,"$map":{"$path":"真实数值字段"},"$as":"number","$scale":100,"$digits":2,"$suffix":"%"}。数据日期使用同一结构，$map 改为 {"$path":"真实日期字段"}，删除 $as:number、$scale、$digits。$path 读取字段，$each 选择列表，$map 在行内读取；只能用上述运算符，禁止发明 $path2、$field 或把整条记录格式化成文字。
 来源完全未提供的字段直接写文字“本次未取得”，或使用 {"$default":"本次未取得"}；独立 $default 仅接受非空文字，不与数值换算混用。不要为缺失字段猜造路径。表格逐行保留真实日期与数值；扩展查询窗口的记录必须明确说明在原需求区间之外。
 来源只有非结构化文本或映射不能表达必要内容时，保留正常模板 JSON 和可核查来源，不伪造可刷新绑定。`
@@ -228,15 +243,18 @@ mapping 内的整体结构必须符合上文当前模板 schema；例子里的 i
 // A bounded sample teaches paths without resending long datasets or fetching
 // them again. Validation still evaluates against the complete observed result.
 export function componentBindingEvidence(records) {
- const sample=(value,depth=0)=>{
+ const sample=(value,depth=0,metrics=false)=>{
   if(depth>12)return null
-  if(Array.isArray(value))return value.slice(0,3).map(v=>sample(v,depth+1))
-  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).slice(0,80).map(([k,v])=>[k,sample(v,depth+1)]))
+  if(Array.isArray(value)){
+   const selected=metrics&&value.some(v=>typeof v?.metric==='string')?[...new Map(value.filter(v=>typeof v?.metric==='string').map(v=>[v.metric,v])).values()].slice(0,12):value.slice(0,3)
+   return selected.map(v=>sample(v,depth+1,metrics))
+  }
+  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).slice(0,80).map(([k,v])=>[k,sample(v,depth+1,metrics)]))
   return typeof value==='string'?value.slice(0,3000):value
  }
  let used=0
- return records.filter(record=>!['discovery','snapshot'].includes(record.purpose)).slice(-8).flatMap(record=>{
-  const text=JSON.stringify({tool:record.tool,args:record.args,responseSample:sample(record.response)})
+ return records.filter(componentMappableSource).slice(-8).flatMap(record=>{
+  const text=JSON.stringify({tool:record.tool,args:record.args,...(record.purpose==='snapshot'?{snapshotOnly:true}:{}),responseSample:sample(record.response,0,record.tool==='financial_query')})
   if(used+Buffer.byteLength(text)>100000)return []
   used+=Buffer.byteLength(text);return [text]
  }).join('\n')

@@ -1,0 +1,3608 @@
+{
+  "description": "Captured public Tencent history responses from the third native thermal benchmark; identifiers and transport hashes removed, observed values and dates unchanged.",
+  "records": [
+    {
+      "tool": "public_data_query",
+      "args": {
+        "operation": "query",
+        "parameters_json": "{\"limit\": 30, \"symbol\": \"sh000300\"}",
+        "source": "tencent-history"
+      },
+      "response": {
+        "version": 1,
+        "source": "腾讯财经公开日K",
+        "sourceId": "tencent-history",
+        "sourceUrl": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000300%2Cday%2C%2C%2C30%2C",
+        "documentation": "https://gu.qq.com/",
+        "records": [
+          {
+            "time": "2026-09-01",
+            "open": 4618.73,
+            "close": 4611.44,
+            "high": 4640.08,
+            "low": 4604.77,
+            "volume": 214869581,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-02",
+            "open": 4581.51,
+            "close": 4547.96,
+            "high": 4583.27,
+            "low": 4534.39,
+            "volume": 186991888,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-03",
+            "open": 4570.91,
+            "close": 4552.58,
+            "high": 4585.99,
+            "low": 4536.92,
+            "volume": 182244060,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-04",
+            "open": 4575.32,
+            "close": 4548.05,
+            "high": 4602.2,
+            "low": 4530.76,
+            "volume": 196997428,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-07",
+            "open": 4567.89,
+            "close": 4575.02,
+            "high": 4580.7,
+            "low": 4545.41,
+            "volume": 183218470,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-08",
+            "open": 4575.99,
+            "close": 4558.74,
+            "high": 4587.73,
+            "low": 4546.31,
+            "volume": 173566694,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-09",
+            "open": 4578.51,
+            "close": 4572.6,
+            "high": 4581.9,
+            "low": 4548.36,
+            "volume": 158004433,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-10",
+            "open": 4550.19,
+            "close": 4548.39,
+            "high": 4569.83,
+            "low": 4533.66,
+            "volume": 146922552,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-11",
+            "open": 4514.3,
+            "close": 4510.16,
+            "high": 4520.17,
+            "low": 4461.57,
+            "volume": 204230027,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-14",
+            "open": 4474.95,
+            "close": 4480.08,
+            "high": 4504.49,
+            "low": 4473.27,
+            "volume": 149488418,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-15",
+            "open": 4473.81,
+            "close": 4450.04,
+            "high": 4496.96,
+            "low": 4444.63,
+            "volume": 142718095,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-16",
+            "open": 4449.88,
+            "close": 4480.27,
+            "high": 4483.36,
+            "low": 4417.6,
+            "volume": 163494523,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-17",
+            "open": 4463.62,
+            "close": 4460.16,
+            "high": 4495.83,
+            "low": 4453.92,
+            "volume": 170025642,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-18",
+            "open": 4492.32,
+            "close": 4507.39,
+            "high": 4523.09,
+            "low": 4480.59,
+            "volume": 189924166,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-21",
+            "open": 4524.34,
+            "close": 4539.57,
+            "high": 4540.55,
+            "low": 4512.15,
+            "volume": 186361542,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-22",
+            "open": 4569.87,
+            "close": 4544.59,
+            "high": 4583.38,
+            "low": 4537.04,
+            "volume": 177863876,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-23",
+            "open": 4547.61,
+            "close": 4517.28,
+            "high": 4547.69,
+            "low": 4513.45,
+            "volume": 157143829,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-24",
+            "open": 4499.86,
+            "close": 4439.14,
+            "high": 4500.2,
+            "low": 4439.14,
+            "volume": 151965787,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-28",
+            "open": 4423.82,
+            "close": 4340.76,
+            "high": 4423.82,
+            "low": 4323.57,
+            "volume": 171277373,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-29",
+            "open": 4335.81,
+            "close": 4345.21,
+            "high": 4359.3,
+            "low": 4324.53,
+            "volume": 148129466,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-09-30",
+            "open": 4356.8,
+            "close": 4357.62,
+            "high": 4368.61,
+            "low": 4341.88,
+            "volume": 162949626,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-08",
+            "open": 4354.93,
+            "close": 4310.28,
+            "high": 4383.57,
+            "low": 4289.79,
+            "volume": 191552711,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-09",
+            "open": 4297.25,
+            "close": 4317.25,
+            "high": 4330.74,
+            "low": 4239.74,
+            "volume": 199187416,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-12",
+            "open": 4305.91,
+            "close": 4287.98,
+            "high": 4334.29,
+            "low": 4279.71,
+            "volume": 180717331,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-13",
+            "open": 4236.95,
+            "close": 4275.68,
+            "high": 4310.33,
+            "low": 4216.86,
+            "volume": 180434103,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-14",
+            "open": 4259.33,
+            "close": 4217.68,
+            "high": 4281.46,
+            "low": 4214.01,
+            "volume": 169219777,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-15",
+            "open": 4145.95,
+            "close": 4166.01,
+            "high": 4176.09,
+            "low": 4115.07,
+            "volume": 212776323,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-16",
+            "open": 4189.26,
+            "close": 4170.61,
+            "high": 4206.89,
+            "low": 4127.94,
+            "volume": 184705168,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-19",
+            "open": 4148.35,
+            "close": 4174.53,
+            "high": 4192.02,
+            "low": 4143.66,
+            "volume": 151084956,
+            "symbol": "sh000300"
+          },
+          {
+            "time": "2026-10-20",
+            "open": 4157.93,
+            "close": 4152.11,
+            "high": 4175.21,
+            "low": 4113.14,
+            "volume": 166956113,
+            "symbol": "sh000300"
+          }
+        ],
+        "units": {
+          "price": "points",
+          "volume": "来源原始单位，未核实"
+        },
+        "dataTime": "2026-10-20",
+        "adjustment": "不复权",
+        "receivedAt": "2026-10-20T15:24:04.301Z",
+        "cacheHit": false,
+        "nextRefreshSeconds": 300,
+        "limitations": "无稳定官方API文档；未复权，不提供分钟线，成交量原始单位未核实时不得写万手",
+        "rights": "公开网页可访问不等于商业再分发授权",
+        "quality": "source-response",
+        "delivery": "snapshot; no automatic component refresh binding"
+      }
+    },
+    {
+      "tool": "financial_query",
+      "args": {
+        "adjustment": "forward",
+        "asset": "stock",
+        "end": "2026-10-20",
+        "intent": "history",
+        "interval": "1d",
+        "start": "2026-09-01",
+        "symbols": [
+          "600011.SH"
+        ]
+      },
+      "purpose": "snapshot",
+      "response": {
+        "schema_version": "financial-1",
+        "status": "complete",
+        "records": [
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.68,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.82,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.68,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.8,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.78,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.82,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.75,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.78,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.77,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.91,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.77,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.87,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.88,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.92,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.84,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.86,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.86,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.88,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.78,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.84,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.84,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.9,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.81,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.9,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.91,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.05,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.87,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.04,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.03,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.05,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.93,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.95,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.95,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.99,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.82,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.95,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.94,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.05,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.92,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.97,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.96,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.88,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.95,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.92,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.99,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.84,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.86,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.84,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.85,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.73,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.77,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.77,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.86,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.75,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.8,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.8,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.82,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.75,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.79,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.78,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.82,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.72,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.8,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.78,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.79,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.74,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.76,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.76,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.79,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.73,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.74,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.75,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 6.96,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.73,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.94,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.91,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.89,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 6.95,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 6.95,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.06,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 6.94,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.04,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.05,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.3,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.02,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.24,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.23,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.38,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.22,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.33,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.31,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.38,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.25,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.26,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.26,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.35,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.22,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.27,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.3,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.62,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.28,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.59,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.52,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.58,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.39,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.52,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.52,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.61,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.44,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.51,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.52,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.73,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.49,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.66,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "开盘价",
+            "value": 7.66,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最高价",
+            "value": 7.68,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "最低价",
+            "value": 7.45,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600011.SH",
+            "metric": "收盘价",
+            "value": 7.48,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "financial_query",
+      "args": {
+        "adjustment": "forward",
+        "asset": "stock",
+        "end": "2026-10-20",
+        "intent": "history",
+        "interval": "1d",
+        "start": "2026-09-01",
+        "symbols": [
+          "600027.SH"
+        ]
+      },
+      "purpose": "snapshot",
+      "response": {
+        "schema_version": "financial-1",
+        "status": "complete",
+        "records": [
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.59,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.67,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.58,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.66,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.65,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.69,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.62,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.67,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.66,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.83,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.66,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.79,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.78,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.87,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.78,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.84,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.83,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.86,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.76,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.82,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.82,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.88,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.79,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.84,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.84,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.91,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.81,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.9,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.89,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.91,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.85,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.88,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.87,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.9,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.79,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.88,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.88,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.95,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.86,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.93,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.93,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.96,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.85,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.87,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.87,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.91,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.84,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.89,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.86,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.86,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.76,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.78,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.78,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.87,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.76,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.81,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.79,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.82,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.74,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.79,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.78,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.83,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.71,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.8,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.79,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.82,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.77,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.8,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.81,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.87,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.76,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.83,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.82,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.9,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.82,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.89,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.85,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 4.92,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.84,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.86,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.87,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.01,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.85,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 4.95,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 4.95,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 4.95,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.16,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.17,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.14,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.19,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.19,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.14,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.15,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.14,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.17,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.07,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.08,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.08,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.22,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.08,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.15,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.19,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.06,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.14,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.17,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.21,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.1,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.16,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.24,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.13,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.21,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "开盘价",
+            "value": 5.2,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最高价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "最低价",
+            "value": 5.15,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600027.SH",
+            "metric": "收盘价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "financial_query",
+      "args": {
+        "adjustment": "forward",
+        "asset": "stock",
+        "end": "2026-10-20",
+        "intent": "history",
+        "interval": "1d",
+        "start": "2026-09-01",
+        "symbols": [
+          "600795.SH"
+        ]
+      },
+      "purpose": "snapshot",
+      "response": {
+        "schema_version": "financial-1",
+        "status": "complete",
+        "records": [
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.16,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.23,
+            "unit": "CNY",
+            "as_of": "2026-09-01",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.24,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.23,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-09-02",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.48,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.35,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-09-03",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.45,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.35,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-09-04",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.39,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.28,
+            "unit": "CNY",
+            "as_of": "2026-09-07",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.28,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.32,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.21,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.33,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.23,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.31,
+            "unit": "CNY",
+            "as_of": "2026-09-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.31,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.33,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.27,
+            "unit": "CNY",
+            "as_of": "2026-09-10",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.33,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.32,
+            "unit": "CNY",
+            "as_of": "2026-09-11",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.3,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.38,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.28,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.31,
+            "unit": "CNY",
+            "as_of": "2026-09-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.29,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.35,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.33,
+            "unit": "CNY",
+            "as_of": "2026-09-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.31,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.27,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.32,
+            "unit": "CNY",
+            "as_of": "2026-09-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.3,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.32,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.24,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-17",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.35,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.23,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-18",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.24,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.31,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.17,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-09-21",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.19,
+            "unit": "CNY",
+            "as_of": "2026-09-22",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.18,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.19,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.11,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.12,
+            "unit": "CNY",
+            "as_of": "2026-09-23",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.11,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.09,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.24,
+            "unit": "CNY",
+            "as_of": "2026-09-24",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.25,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.42,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.23,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-09-28",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.41,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.31,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.36,
+            "unit": "CNY",
+            "as_of": "2026-09-29",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.35,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.31,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.34,
+            "unit": "CNY",
+            "as_of": "2026-09-30",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.32,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.46,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.3,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.45,
+            "unit": "CNY",
+            "as_of": "2026-10-08",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.45,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.49,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.44,
+            "unit": "CNY",
+            "as_of": "2026-10-09",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.45,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.52,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.43,
+            "unit": "CNY",
+            "as_of": "2026-10-12",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.42,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.46,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.35,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-10-13",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.38,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.49,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.41,
+            "unit": "CNY",
+            "as_of": "2026-10-14",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.41,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.45,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.26,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-10-15",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.48,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.33,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.39,
+            "unit": "CNY",
+            "as_of": "2026-10-16",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.39,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.48,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.36,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.38,
+            "unit": "CNY",
+            "as_of": "2026-10-19",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "开盘价",
+            "value": 5.37,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最高价",
+            "value": 5.4,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "最低价",
+            "value": 5.24,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          },
+          {
+            "instrument": "600795.SH",
+            "metric": "收盘价",
+            "value": 5.27,
+            "unit": "CNY",
+            "as_of": "2026-10-20",
+            "price_basis": "1d 前复权",
+            "quality_state": "dated"
+          }
+        ]
+      }
+    }
+  ]
+}

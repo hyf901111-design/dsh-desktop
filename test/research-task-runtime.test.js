@@ -1303,7 +1303,8 @@ describe('Research task Subagent adapter', () => {
     try {
       const prompt = fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
       expect(prompt).toContain(`"type":"${type}"`)
-      expect(prompt).toContain('优先直接交付原生模板 JSON')
+      expect(prompt).toContain(type==='chart'?'本卡仅生成本次静态图表，不保存自动刷新设置':'优先直接交付原生模板 JSON')
+      if(type==='chart')expect(prompt).toContain('$normalize')
       expect(prompt).not.toContain('自动绑定数据交付协议')
       expect(prompt).not.toContain('mapping 的模板结构')
     } finally { await handle.dispose() }
@@ -1422,6 +1423,18 @@ describe('Research task Subagent adapter', () => {
       await handle.dispose();
     }
   });
+  it('anchors relative source queries to the real China date while retaining an explicit historical range',async()=>{
+    vi.useFakeTimers();vi.setSystemTime(new Date('2026-10-20T18:30:00Z'))
+    const fixture=containerAdapterFixture();fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'},{name:'web_search'},{name:'web_fetch'}]}
+    let handle
+    try{
+      handle=await fixture.start('工作台：历史与近期研究\n本面板：价格比较\n查询近期走势；另保留用户指定的2025-01-01至2025-02-01历史区间。\n仅生成本面板，优先使用 chart 类型。')
+      const prompt=fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+      expect(prompt).toContain('当前运行时日期：2026-10-21（Asia/Shanghai）')
+      expect(prompt).toContain('2025-01-01至2025-02-01')
+      expect(prompt).toContain('用户明确指定的历史日期、区间或虚构场景仍按原需求')
+    }finally{await handle?.dispose();vi.useRealTimers()}
+  })
 
   it.each([
     '工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据，优先使用 market 类型，variant: metrics。',

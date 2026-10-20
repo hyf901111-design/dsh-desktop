@@ -12,6 +12,17 @@ export const CARTESIAN_CHART_TEMPLATES = Object.freeze([
 ].map(([variant, title, figma]) => Object.freeze({variant, title, figma, width:656, height:412})));
 export const CHART_TEMPLATES=Object.freeze([...CARTESIAN_CHART_TEMPLATES,...SPECIAL_CHART_TEMPLATES,...ADVANCED_CHART_TEMPLATES]);
 export const CHART_VARIANTS = Object.freeze(CHART_TEMPLATES.map(t => t.variant));
+
+// Source explanations belong in the full note, not a short chart caption.
+// Preserve every character and the native renderer; never trim business data.
+export function normalizeChartMetadata(data) {
+  if(data?.type!=='chart'||!CARTESIAN_CHART_TEMPLATES.some(t=>t.variant===data.variant)||typeof data.asOf!=='string'||data.asOf.length<=256||data.asOf.length>2000)return data;
+  if(data.note!==undefined&&(typeof data.note!=='string'||!data.note.trim()))return data;
+  const note=['数据时点与来源：'+data.asOf,data.note].filter(Boolean).join('\n');
+  if(note.length>2000)return data;
+  const first=data.asOf.split(/[；;。\n]/u)[0].trim();
+  return {...data,asOf:first&&first.length<=256?first:'数据时点与来源详见完整说明',note};
+}
 export function requestedChartVariant(text = '') {
   const explicit = text.match(/\bchart\.([a-zA-Z]+)\b/u)?.[1];
   if (CHART_VARIANTS.includes(explicit)) return explicit;
@@ -26,7 +37,7 @@ export function chartTemplateSchema(variant) {
   if(SPECIAL_CHART_VARIANTS.includes(variant))return specialChartSchema(variant);
   return JSON.stringify({version:1,type:'chart',title:'标题',variant:variant ?? CARTESIAN_CHART_TEMPLATES.map(t=>t.variant).join('|'),
     labels:['标签1','标签2'],series:[{name:'系列',values:[12,18]}],unit:'相同数值单位',asOf:'来源及数据时点'}) +
-    '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。' +
+    '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。asOf、subtitle、unit 各最多256字，完整来源和计算说明放 note（最多2000字），不要把长篇解读写进 asOf。' +
     'percentBar 仅非负原值，由宿主计算各分类百分比；unit 必须是原值单位（如百万元、件），不能把金额原值标为 %，不要在 unit 中填写说明文字；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。可选 subtitle、note，原始单位和来源保留。'+(variant?'':'；其他已实现图表：'+specialChartSchema()+'；'+advancedChartSchema());
 }
 export function requireSimulatedChartData(panel) {

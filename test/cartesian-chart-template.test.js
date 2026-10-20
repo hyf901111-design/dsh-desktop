@@ -9,6 +9,19 @@ import {generateSimulatedPanel} from '../packages/dsh-research-task-runtime/simu
 
 const data=(variant,more={})=>({version:1,type:'chart',title:'经营分析',variant,labels:['一季度','二季度','三季度'],series:[{name:'产品',values:[20,35,50]},{name:'服务',values:[10,25,30]}],asOf:'2026-09-30 · 模拟数据',unit:'万元',...more});
 describe('Figma cartesian templates',()=>{
+ it('keeps a long source/date explanation in the native chart note instead of rejecting or truncating the chart',()=>{
+   const asOf='腾讯财经公开日K，数据日期2026-09-01至2026-10-20；'+('各公司保留原始证券代码、日期、前复权口径、价格单位和区间首尾收盘价。').repeat(9)
+   const input=data('line',{asOf,note:'原有解读说明：统一基期100，不能将元与点直接同轴比较。'}),before=JSON.stringify(input)
+   const output=acceptArtifactOutput(before)
+   expect(output).toBeDefined()
+   const model=readTemplateModel(JSON.parse(output))
+   expect(model.templateId).toBe('chart.line')
+   expect(model.data.asOf.length).toBeLessThanOrEqual(256)
+   expect(model.data.note).toContain(asOf)
+   expect(model.data.note).toContain(input.note)
+   expect(model.data.series).toEqual(input.series);expect(model.data.labels).toEqual(input.labels)
+   expect(chartDataIssue(model.data)).toBeNull();expect(JSON.stringify(input)).toBe(before)
+ })
  it.each(CARTESIAN_CHART_TEMPLATES.map(t=>t.variant))('%s flows through the real artifact and workbench contract without losing data',variant=>{
    const input=data(variant), output=JSON.parse(acceptArtifactOutput(JSON.stringify(input)));
    expect(output.type).toBe('html');

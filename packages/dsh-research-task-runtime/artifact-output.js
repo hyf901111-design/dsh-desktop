@@ -8,6 +8,7 @@ import {renderAdvancedChart} from './advanced-chart-artifact.js';
 import {renderSpecialChart} from './special-chart-artifact.js';
 import { renderCartesianChart } from './cartesian-chart-artifact.js';
 import { normalizeIndexedTableRows } from './template-data-contract.js';
+import { normalizeChartMetadata } from './chart-template-contract.js';
 import {retainTemplateModel,readTemplateModel} from './component-template-registry.js';
 import { renderMarketArtifact } from './market-artifact.js';
 import { requiredMarketVariant } from './workbench-design-contract.js';
@@ -35,7 +36,7 @@ export function extractArtifactObjects(text) {
 export function acceptArtifactOutput(text) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {
-  const candidate=normalizeTemplateAliases(normalizeIndexedTableRows(original));
+  const candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(original)));
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=renderAdvancedChart(candidate) ?? renderSpecialChart(candidate) ?? renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);
