@@ -9,7 +9,7 @@ import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
-import { componentSourceCollector, componentSnapshotEvidence, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
+import { componentSourceCollector, componentSnapshotEvidence, restoreSnapshotMarketHistory, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
@@ -530,7 +530,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     `本面板需求：\n${templatePrompt.split('\n仅生成本面板，')[0]}${scope?.scope ?? ''}`
   ].join('\n')
   const htmlRule = type === 'market'
-    ? '金融面板只提交 market 数据对象，由宿主按 Figma 金融模板渲染深浅主题。K线必须包含真实或明确标注模拟的 OHLC 与成交量，不能改成折线，也不能因原生 chart 不支持蜡烛图而要求用户再确认。'
+    ? '金融面板提交 market 数据对象；静态trend也可用上述data-bound包裹market映射，由宿主读取原响应和计算曲线。宿主按金融模板渲染深浅主题。K线必须包含真实或明确标注模拟的 OHLC 与成交量，不能改成折线，也不能因原生 chart 不支持蜡烛图而要求用户再确认。'
     : type === 'html'
     ? '内容从数据/操作开始并自然展开，不截断行列；窄框重排，手动框保持原尺寸。'
     : '使用宿主原生渲染和交互；不要写 HTML/CSS。指标详情放 detail，列表日期/链接只填写有依据的信息。'
@@ -539,7 +539,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     componentSkillInstruction('panel',type),
     ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
     `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；直接输出这个数据对象，items等字段放在根对象，不再包裹panel或artifact；` : ''}${schemas[type]}`,
-    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? [type==='chart'&&containerAllowsWebSearch(prompt)?COMPONENT_STATIC_CHART_PROMPT:'本卡未要求刷新绑定；优先直接交付原生模板 JSON：真实记录、来源及时点；无需data-bound或映射。'] : []),
+    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? [(type==='chart'||type==='market'&&selectedMarketVariant==='trend')&&containerAllowsWebSearch(prompt)?COMPONENT_STATIC_CHART_PROMPT:'本卡未要求刷新绑定；优先直接交付原生模板 JSON：真实记录、来源及时点；无需data-bound或映射。'] : []),
     deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若没有任何可核验的数值或记录，不能交付空chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。主要品种/字段逐项列出，最多六项，detail简短，来源和查询时点放asOf。其余严格用指定schema字段，来源及时点放已有字段，不自造字段。',
     htmlRule,
     ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
@@ -1525,7 +1525,7 @@ export class ResearchTaskRuntime {
         if (typeof result?.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
         let deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
-        const restoredSnapshot=task.kind==='container'&&restoreSnapshotFeedHeadlines(deliveredText,sourceRecords)
+        const restoredSnapshot=task.kind==='container'&&(restoreSnapshotMarketHistory(deliveredText,sourceRecords)||restoreSnapshotFeedHeadlines(deliveredText,sourceRecords))
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
