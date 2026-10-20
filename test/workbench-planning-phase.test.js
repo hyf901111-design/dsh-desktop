@@ -57,6 +57,35 @@ describe('工作台首次规划阶段预算', () => {
     }
     expect(workbenchCreationRequest(session('修复现有工作台的图表，另外创建一个新的行业研究工作台。'))).not.toBeNull()
   })
+  it('keeps read-only state checks out of creation and immediately restores canvas inspection for inbox steering', async () => {
+    for (const text of [
+      '请检查当前工作台各组件的生成状态与数据日期，说明仍需处理的缺失和错误，暂不修改或新建组件。',
+      '查看当前工作台组件生成状态和数据日期。',
+      '只读检查已有工作台中生成的组件，不做修改。',
+      '请检查当前工作台生成的图表，并列出缺失。',
+      '请检查当前工作台，暂不新建组件。',
+      '请检查当前工作台，先不生成新卡片。',
+      '本轮不创建工作台，只检查组件生成情况。'
+    ]) {
+      const h = harness(), agent = { session: session('创建研究工作台') }, request = wireRequest()
+      const limited = await h.request(agent, config)
+      await h.context(agent, request)
+      agent.session.events.push({ type: 'agent/inbox/spliced', data: { inserted: session(text, 'read-state').events.map(event => event.data) } })
+      expect(workbenchCreationRequest(agent.session), text).toBeNull()
+      expect(h.guard(invocation(agent, 'research_canvas_inspect'))).toBeUndefined()
+      expect(await h.context(agent, request)).toBe(request)
+      expect(await h.request(agent, limited)).toEqual(config)
+      expect(h.text(agent)).toBe('')
+    }
+    for (const text of [
+      '请检查当前工作台组件生成状态，另外新建一个预算组件。',
+      '暂不修改或新建组件，但另外创建一个独立的行业工作台。',
+      '暂不新建工作台；另外创建一张排期卡片。',
+      '本轮不新建工作台\n请创建一张排期卡片。',
+      '本轮不修改当前工作台，同时新建一个独立行业研究工作台。',
+      '请检查当前已有工作台，并创建一张折线图组件。'
+    ]) expect(workbenchCreationRequest(session(text)), text).not.toBeNull()
+  })
   it('gives explicit new single-component requests the same bounded planning phase and restores Max after acceptance', async () => {
     for (const text of ['创建一个装置撤展交接组件，用8条模拟记录，点击查看完整说明', '请生成一张古籍修复流转卡片，用虚构记录']) {
       const h = harness(), agent = { session: session(text) }
