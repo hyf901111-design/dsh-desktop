@@ -59,6 +59,27 @@ describe('领域自适应模拟工作台延后生成', () => {
     } finally { await f.close() }
   })
 
+  it('dispatches the suggested custom HTML correction through the ordinary model path while retaining simulation and offline constraints', async () => {
+    const f = await setup(async request => ({ childSessionId: request.taskId, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify({ version: 1, type: 'html', title: '古籍交接（模拟）', html: '<main><p>模拟记录8册</p><details><summary>查看详情</summary><p>模拟病害与修复方案完整说明</p></details></main>' }) }] }), dispose: async () => {} }))
+    const prompt = '8册古籍的模拟交接记录，禁止联网，不引用真实来源；点击记录展开完整说明。共同约束：2026-11交接，负责人均为虚构。'
+    try {
+      const receipt = await f.tool.execute({ title: '古籍交接（模拟）', panels: [{ ...panels[0], title: '古籍交接（模拟）', type: 'html', prompt }] }, f.exec)
+      expect(receipt.status).toBe('accepted')
+      await vi.waitFor(() => expect(f.adapter.start).toHaveBeenCalledTimes(1))
+      expect(f.adapter.start.mock.calls[0][0].query).toContain(prompt)
+      const plan = JSON.parse(await readFile(f.filePath, 'utf8'))[0]
+      expect(plan.input).not.toHaveProperty('dataMode')
+      expect(plan.input).not.toHaveProperty('generationMode')
+      expect(plan.input).not.toHaveProperty('sharedContext')
+      expect(plan.input).not.toHaveProperty('originalRequest')
+      await vi.waitFor(() => expect([...f.runtime.tasks.values()][0].state).toBe('completed'))
+      const output = [...f.runtime.tasks.values()][0].finalOutput
+      expect(output).toContain('查看详情')
+      expect(output).toContain('模拟病害与修复方案完整说明')
+      expect(buildResearchTaskPrompt({ kind: 'container', parentSessionId: 'p', canvasNodeId: 'n', prompt: plan.panels[0].prompt })).toContain('禁止联网')
+    } finally { await f.close() }
+  })
+
   it('accepts the observed null optional artifact at the real tool boundary without inventing data or duplicating a retry', async () => {
     const f = await setup(async request => ({ childSessionId: request.taskId, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify(artifact(request.query)) }] }), dispose: async () => {} }))
     const payload = { ...input(), panels: [{ ...panels[4], artifact: null }] }, before = structuredClone(payload)

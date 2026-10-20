@@ -339,7 +339,7 @@ export function validateWorkbench(value) {
         if (deferred && p.type === 'table') {
             const instruction = p.prompt.replace(/(?:无需|不要|不必|不需要|禁止)[^。；;\n]{0,24}(?:详情|详细说明|完整说明|详细信息)/gu, '');
             if (/(?:点击|点选|逐行|每行|每条).{0,16}(?:展开|查看|打开).{0,16}(?:详情|详细说明|完整说明|详细信息)|(?:click|select|expand).{0,40}(?:row|record|item).{0,40}(?:details|full description)/iu.test(instruction))
-                throw Error('普通 table 仅支持平面行、排序和搜索，不能实现逐条详情展开。请保留交互需求并选择可展开说明的合适模板；用户明确要求可展开的表格时改用自定义HTML并省略generationMode:deferred。不要删去详情要求。');
+                throw Error('普通 table 仅支持平面行、排序和搜索，不能实现逐条详情展开。请保留交互需求并选择可展开说明的合适模板；用户明确要求可展开的表格时走普通HTML生成：省略dataMode、generationMode、sharedContext、originalRequest，将模拟数据、禁止联网及全部共同约束写进各panel.prompt，标题标注模拟。不要删去详情要求或改称真实数据。');
         }
         // Recover the observed flattened spelling before dispatch. Keep the
         // canonical publicData object and reject conflicting duplicate inputs.
