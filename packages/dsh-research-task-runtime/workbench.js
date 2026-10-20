@@ -17,7 +17,7 @@ import {FINANCIAL_FUNDAMENTAL_GUIDANCE} from './financial-fundamentals.js'
 import {assertPrivateResearchSession} from './board-runtime.js'
 import { createHash, randomUUID } from 'node:crypto';
 import { canvasHumanRequest } from './canvas-task-routing.js';
-import { workbenchCreationRequest } from './workbench-execution-policy.js';
+import { workbenchCreationRequest, planningDataIntent } from './workbench-execution-policy.js';
 import { preserveWorkbenchRefreshPreference } from './component-refresh-policy.js';
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -91,6 +91,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         // Snapshot the current authored creation before queueing or canvas mounting.
         // A later status question and unrelated chat memory cannot replace this scope.
         const originalRequest = workbenchCreationRequest(exec.agent?.session)?.text;
+        if (originalRequest && planningDataIntent(originalRequest).sourceOnly && args?.dataMode === 'simulated')
+            throw Error('用户要求真实数据，不能降级为模拟模式。保持dataMode:"source"；省略未取得的artifact及不匹配的publicData，只提交原需求的title/prompt/type/size，由独立面板真实取数，缺失如实标注。');
         if (originalRequest) args = { ...args, originalRequest };
         else if (args?.generationMode !== 'deferred' && args?.originalRequest !== undefined) {
             const { originalRequest, ...plan } = args;

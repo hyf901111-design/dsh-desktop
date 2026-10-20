@@ -368,6 +368,9 @@ export function validateWorkbench(value) {
             const { profile, requests, ...rest } = p;
             p = { ...rest, publicData: p.publicData ?? { profile, requests } };
         }
+        // A declarative recipe already states its renderer. Recover only an
+        // absent artifact's metadata alias; never discard supplied records.
+        if(!isSimulated&&p.type==='financial-widget'&&p.artifact===undefined&&p.publicData?.profile==='quotes-table')p={...p,type:'market'};
         if(p.type==='financial-widget'){
             if(isSimulated)throw Error('内置金融组件读取真实行情，不能用于模拟数据；请使用market/chart模拟模板。');
             if(p.artifact===undefined&&p.publicData===undefined&&/市盈率|市净率|\bPE\b|\bPB\b/iu.test(p.title+' '+p.prompt)){
@@ -389,12 +392,13 @@ export function validateWorkbench(value) {
             const candidate=p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes };
             const sourceType=p.type==='table'&&candidate?.profile==='quotes-table'?'market':p.type;
             const quoteTask=publicDataQuoteTaskRequirement(candidate,sourceType,p.title+'\n'+p.prompt);
-            const sourceTaskRequirement=quoteTask?.requirement??publicDataNewsTaskRequirement(candidate,p.type,p.title+'\n'+p.prompt)??publicDataHistoryTaskRequirement(candidate,p.type);
+            const historyTask=publicDataHistoryTaskRequirement(candidate,p.type);
+            const sourceTaskRequirement=quoteTask?.requirement??publicDataNewsTaskRequirement(candidate,p.type,p.title+'\n'+p.prompt)??historyTask;
             if(sourceTaskRequirement){
                 const {publicData:source,intervalMinutes,...planned}=p;
-                const prompt=(quoteTask?.promptPrefix??'')+p.prompt+'\n'+sourceTaskRequirement;
+                const prompt=(quoteTask?.promptPrefix??(historyTask&&p.type==='market'?'chart.line；':''))+p.prompt+'\n'+sourceTaskRequirement;
                 if(prompt.length>5000)throw Error('面板需求与来源约束超过内容上限，请精简需求文字。');
-                p={...planned,...(quoteTask?{type:quoteTask.type}:{}),prompt};
+                p={...planned,...(quoteTask?{type:quoteTask.type}:historyTask?{type:'chart'}:{}),prompt};
             }else{
                 const publicData = validatePublicDataPanel(candidate, sourceType,{strictParameters:true});
                 const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;

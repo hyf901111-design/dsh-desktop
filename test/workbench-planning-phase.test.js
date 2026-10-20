@@ -46,6 +46,15 @@ async function registeredCreationSchema() {
 }
 
 describe('工作台首次规划阶段预算', () => {
+  it('rejects simulated output at the actual creation boundary for an authored real-data request', async()=>{
+    const tool=await registeredCreationSchema()
+    const args={requestId:'wrong-simulation',title:'航空观察',dataMode:'simulated',panels:[{title:'行情',prompt:'模拟行情记录',type:'market',size:'medium'}]}
+    for(const text of [AIRLINE_REAL_WORKBENCH_REQUEST,'请创建只用实际取得数据的金融工作台，不要用模拟数字补齐。','请建立一个真实数据工作台，模拟数据一律禁止。','请建立一个真实数据工作台，不可以使用模拟数据。','Create a dashboard using real data, no simulated values.']){
+      const exec={agent:{session:session(text)}}
+      await expect(Promise.resolve().then(()=>tool.execute(args,exec))).rejects.toThrow('用户要求真实数据，不能降级为模拟模式')
+    }
+  })
+
   it.each(AFFIRMATIVE_WORKBENCH_REQUESTS)('bounds explicit natural-language creation before research: %s', async text => {
     for (const inbox of [false, true]) {
       const s = session(text)
