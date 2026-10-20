@@ -9,237 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "优化自然需求规划与后台行情提醒并统一客户端网页入口",
+        "featureName": "修复滚动条观察器自循环阻塞组件交付",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "25669c8fc8338ffb173eccbf035abd97531020b6",
-        "tipCommit": "cc55bc5528592abda11df5d48ad978147d0b7113",
+        "baseCommit": "cc55bc5528592abda11df5d48ad978147d0b7113",
+        "tipCommit": "d129c63452f422428eb9dc7cb76c40bec45c08ae",
         "commits": [
           {
-            "commit": "d82fd21f67a08eb9b21964466d06ee6d9fd0ca33",
+            "commit": "d129c63452f422428eb9dc7cb76c40bec45c08ae",
             "parents": [
-              "25669c8fc8338ffb173eccbf035abd97531020b6"
+              "cc55bc5528592abda11df5d48ad978147d0b7113"
             ],
-            "subject": "网页链接默认在右侧浏览器打开并提供桌面浏览器菜单"
-          },
-          {
-            "commit": "77a293eb1290c8931e2237e06932a425277c4e6c",
-            "parents": [
-              "d82fd21f67a08eb9b21964466d06ee6d9fd0ca33"
-            ],
-            "subject": "修复自然语言新建工作台未触发规划限制"
-          },
-          {
-            "commit": "cde6b7e8075e27e737bba53bbea8a81b5fb9f210",
-            "parents": [
-              "77a293eb1290c8931e2237e06932a425277c4e6c"
-            ],
-            "subject": "修复行情阈值提醒误入前台画板等待循环"
-          },
-          {
-            "commit": "55c9161bb72ed2e5a36ca809c3eda9864a6097da",
-            "parents": [
-              "cde6b7e8075e27e737bba53bbea8a81b5fb9f210"
-            ],
-            "subject": "接通后台行情提醒入口并隔离账户访问"
-          },
-          {
-            "commit": "02a0b2bf6c7633d3e64da09ed5e1933ece8777e8",
-            "parents": [
-              "55c9161bb72ed2e5a36ca809c3eda9864a6097da"
-            ],
-            "subject": "统一原生网页菜单打开路径并显示失败反馈"
-          },
-          {
-            "commit": "08dcbc0bddd12e06a0147d7a9f5e4db898b1e371",
-            "parents": [
-              "02a0b2bf6c7633d3e64da09ed5e1933ece8777e8"
-            ],
-            "subject": "将金融组件名称调整为行情面板和自选"
-          },
-          {
-            "commit": "cc55bc5528592abda11df5d48ad978147d0b7113",
-            "parents": [
-              "08dcbc0bddd12e06a0147d7a9f5e4db898b1e371"
-            ],
-            "subject": "收紧工作台新建意图并保留领域名称与自然请求"
+            "subject": "修复滚动条观察器自循环造成的界面阻塞"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
+            "path": "src/preload/figma-scrollbars.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-use-tasks.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-locale.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/scheduled-task-tools.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/conversation-browser-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/default-web-links-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-settings-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/context-menu-template.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/context-menu.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/scheduled/market-watch-executor.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/scheduled/task-runner.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/scheduled/task-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/scheduled/task-store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/search/conversation-browser.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/search/open-client-link.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/security.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-context-bridge.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-native-web.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/financial-ui-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/scheduled-tasks.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/canvas-task-routing.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/context-menu.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/default-web-links-client.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-settings-dismiss.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/financial-widget-localization.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-creation-requests.js"
-          },
-          {
-            "status": "A",
-            "path": "test/open-client-link.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-context-bridge.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-creation-progress.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-source-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/scheduled-market-watch.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/scheduled-task-tool.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-tasks.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/security.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/web-page-context-menu.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
+            "path": "test/figma-scrollbars.test.ts"
           }
         ],
         "checks": [
@@ -247,29 +37,15 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/workbench-planning-phase.test.js",
-              "test/canvas-task-routing.test.js",
-              "test/scheduled-market-watch.test.ts",
-              "test/scheduled-task-tool.test.js",
-              "test/scheduled-task-view.test.ts",
-              "test/scheduled-tasks.test.ts",
-              "test/component-scheduled-tasks.test.ts",
-              "test/research-context-bridge.test.ts",
-              "test/context-menu.test.ts",
-              "test/web-page-context-menu.test.ts",
-              "test/default-web-links-client.test.js",
-              "test/open-client-link.test.ts",
-              "test/security.test.ts",
-              "test/conversation-browser.test.ts",
-              "test/financial-widget-contract.test.js",
-              "--maxWorkers=1",
-              "--testTimeout=15000"
+              "test/figma-scrollbars.test.ts",
+              "test/figma-task-scrollbar.test.ts",
+              "test/figma-settings-scrollbar.test.js"
             ],
             "outcome": "passed",
-            "summary": "15文件199项通过；/tmp/client-routing-planning-final-focused-20261020.log",
-            "verifiedCommit": "cc55bc5528592abda11df5d48ad978147d0b7113",
-            "completedAt": "2026-10-20T09:51:12.449606+00:00",
-            "timeoutMs": 180000
+            "summary": "3文件26项通过；/tmp/renderer-scroll-loop-focused-20261020.log",
+            "verifiedCommit": "d129c63452f422428eb9dc7cb76c40bec45c08ae",
+            "completedAt": "2026-10-20T10:25:48.755924+00:00",
+            "timeoutMs": 120000
           },
           {
             "argv": [
@@ -278,9 +54,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/client-routing-planning-final-typecheck-20261020.log",
-            "verifiedCommit": "cc55bc5528592abda11df5d48ad978147d0b7113",
-            "completedAt": "2026-10-20T09:51:12.449606+00:00",
+            "summary": "类型检查通过；/tmp/renderer-scroll-loop-typecheck-20261020.log",
+            "verifiedCommit": "d129c63452f422428eb9dc7cb76c40bec45c08ae",
+            "completedAt": "2026-10-20T10:25:48.755924+00:00",
             "timeoutMs": 180000
           },
           {
@@ -288,118 +64,29 @@
               "git",
               "diff",
               "--check",
-              "25669c8fc8338ffb173eccbf035abd97531020b6..HEAD"
+              "cc55bc5528592abda11df5d48ad978147d0b7113..HEAD"
             ],
             "outcome": "passed",
-            "summary": "本批差异检查通过；独立审查关闭全部Important",
-            "verifiedCommit": "cc55bc5528592abda11df5d48ad978147d0b7113",
-            "completedAt": "2026-10-20T09:51:12.449606+00:00",
+            "summary": "差异检查通过；独立审查无Important",
+            "verifiedCommit": "d129c63452f422428eb9dc7cb76c40bec45c08ae",
+            "completedAt": "2026-10-20T10:25:48.755924+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；原客户端已复现航空原句352秒未规划并停止。集成后重启真实客户端验收。"
+          "summary": "功能worktree禁止构建共享客户端；原生后台inspect88ms而renderer20至24秒，超时timer晚12至16秒。静态DOM已复现并修复循环，集成后原生复测。"
         },
         "acceptanceCriteria": [
-          "网页链接默认经当前会话的右侧浏览器打开；中英文链接菜单保留显式桌面浏览器入口；失败显示可见提示。",
-          "新建工作台自然表达在首轮进入有限规划；历史查询、数据绑定、否定与子会话边界保持。",
-          "阈值提醒复用持久任务服务，保存立即返回，后台固定行情查询不依赖可见画板或持续模型；保护账户、幂等、暂停删除及报价日去重。",
-          "组件库默认名称为行情面板与自选；中文与英文产品标签对应，不改已保存的用户自定义标题。"
+          "静态滚动条完成布局后停止自身观察循环。",
+          "真实面板隐藏、移除、滚动及尺寸变化仍刷新。",
+          "真实看板能接收后台已完成组件，不以离线检查代替客户端验收。"
         ],
         "risks": [
-          "仅本地集成测试，不接受或晋升到正式main，不发布或推送。",
-          "后台行情提醒限腾讯公开沪深证券1至12个标的，默认5分钟；应用运行且同账户才执行，不是云端任务。",
-          "真实客户端通知与完整工作台交付速度尚待集成包验收；不以离线测试代替实际生成成功。"
+          "仅本地测试，不接受晋升正式main或发布。",
+          "此次仅修复有确凿复现证据的滚动条自激，实际整体生成性能仍需验收。"
         ],
-        "generatedAt": "2026-10-20T09:51:12.449606+00:00"
-      },
-      "merged": {
-        "mergeCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
-        "verificationCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
-            "completedAt": "2026-10-20T09:52:04.250Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
-            "completedAt": "2026-10-20T09:52:04.250Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
-            "completedAt": "2026-10-20T09:52:04.250Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
-            "completedAt": "2026-10-20T09:52:04.250Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "55d513b7ea5d16c63e7e310a3f89b515088d86ce",
-            "completedAt": "2026-10-20T09:52:04.250Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T09:52:04.250Z"
+        "generatedAt": "2026-10-20T10:25:48.755924+00:00"
       }
     },
     {
