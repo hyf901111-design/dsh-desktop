@@ -72,7 +72,7 @@ export function publicDataHistoryTaskRequirement(value,type){
   if(new Set(value.requests.map(r=>JSON.stringify(r))).size!==value.requests.length)throw Error('免费源组件请求重复')
   if(value.layoutProfile!==undefined)throw Error('当前chart对比模板不支持该专用布局，不能静默移除layoutProfile')
   const scope=JSON.stringify({profile:value.profile,requests:supported.map(v=>v.requests[0]),intervalMinutes:supported[0].intervalMinutes})
-  return `宿主来源能力校正：price-volume直通仅支持单标的量价，不能表达本卡的对比分析；改由一个独立chart取数任务完成，保留原面板全部问题与以下已校验来源参数：${scope}。复用这些来源与原参数读取真实记录，不猜接口、交易所或字段；仅按原需求计算归一化、相对强弱与基准对比，不压成单标的量价，也不混用元和点。保留真实日期、原单位、来源与缺失说明；不得将尚未取数写成已取得，或声称已开启刷新。`
+  return `宿主来源能力校正：price-volume直通仅支持单标的量价，不能表达本卡的对比分析；改由一个独立chart取数任务完成，保留原面板全部问题与以下已校验来源参数：${scope}。复用这些来源与原参数读取真实记录，不猜接口、交易所或字段；仅按原需求计算归一化、相对强弱与基准对比，不压成单标的量价。同轴比较需同单位和可比尺度；混合价格单位时采用共同基期100（值/共同起点值×100）或分面或单系列，说明公式和基期；用户明确要求原始值时用分面或单系列保留原值，禁止元与点直接同轴。需求包含超额收益时，按对齐日期的个股区间涨幅减基准区间涨幅计算并以%标注，不能仅用基期100曲线替代；缺失共同日期或起点值时明确缺失，不补值。保留真实日期、原单位、来源与缺失说明；不得将尚未取数写成已取得，或声称已开启刷新。`
 }
 
 // Live single-security K lines use the actual library renderer. Keep explicit

@@ -32,6 +32,10 @@ it('accepts the observed first plan without another full planning turn or changi
     }
     expect(plan.panels[index].prompt).toContain('"intervalMinutes":5')
     expect(plan.panels[index].prompt).toContain('归一化')
+    expect(plan.panels[index].prompt).toContain('共同基期100')
+    expect(plan.panels[index].prompt).toContain('起点值×100')
+    expect(plan.panels[index].prompt).toContain('分面或单系列')
+    expect(plan.panels[index].prompt).toContain('禁止元与点直接同轴')
   }
   expect(plan.panels[3].prompt).toContain('table')
   expect(plan.panels[6].prompt).toContain('不得扩大为全市场新闻')
