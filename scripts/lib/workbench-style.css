@@ -63,7 +63,8 @@ body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] 
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id][data-selected=true]{border-color:#b36b00!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-grid-active]{border-color:#ff9900!important;box-shadow:0 4px 16px #0008!important;transition:none!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header{border-bottom:1px solid #303030!important;border-radius:0!important;background:#111!important;color:#ff9900!important;font-family:var(--sherlock-font-sans)!important}
-body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header button:hover{background:#272015!important;color:#ffb64a!important}
+body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header button:hover{background:#272015!important}
+body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] [data-research-node-id] .ew-grid-header button:not([data-workbench-refresh]):hover{color:#ffb64a!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] .odyssey-data-stamp{background:#111!important;border-top:1px solid #303030!important;color:#808080!important;padding-right:24px!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] .ew-grid-placeholder{border:1px solid #ff9900!important;background:#ff99001a!important;border-radius:0!important}
 body [data-research-canvas][data-ework-grid][data-workbench-style=openterminal] .ew-grid-placeholder::after{background:none!important}
