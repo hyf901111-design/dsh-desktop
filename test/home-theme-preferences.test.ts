@@ -32,6 +32,12 @@ it('rejects invalid choices without changing the existing valid record', () => {
   }
 })
 
+it('persists Koi Pond as a native theme across application restarts', () => {
+  const userData = directory(), store = new HomeThemePreferenceStore(userData)
+  expect(store.set('koi-pond')).toBe(true)
+  expect(new HomeThemePreferenceStore(userData).get()).toBe('koi-pond')
+})
+
 it.each(['{broken', 'null', '[]', '{"version":2,"theme":"jarrick"}', '{"version":1,"theme":"unknown"}', 'x'.repeat(513)])('ignores malformed preference data without rewriting the file (%#)', value => {
   const userData = directory(), file = join(userData, 'home-theme.json')
   writeFileSync(file, value)

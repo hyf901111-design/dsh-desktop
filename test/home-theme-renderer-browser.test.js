@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { build } from 'esbuild'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 let browser, script, evidence
@@ -11,7 +11,11 @@ beforeAll(async () => {
     stdin: { resolveDir: process.cwd(), loader: 'ts', contents: `
       import {createHomeThemeRenderer} from './src/preload/home-theme-renderer';
       window.createTheme=createHomeThemeRenderer;
-    ` }, bundle: true, platform: 'browser', format: 'iife', write: false
+    ` }, bundle: true, platform: 'browser', format: 'iife', write: false,
+    plugins: [{ name: 'inline-theme-images', setup(builder) {
+      builder.onResolve({ filter: /\.png\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -7)), namespace: 'theme-inline' }))
+      builder.onLoad({ filter: /.*/, namespace: 'theme-inline' }, async args => ({ contents: 'export default ' + JSON.stringify('data:image/png;base64,' + (await readFile(args.path)).toString('base64')), loader: 'js' }))
+    } }]
   })
   script = output.outputFiles[0].text
   const { chromium } = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT || '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -30,6 +34,69 @@ async function fixture() {
   await page.addScriptTag({ content: script })
   return page
 }
+
+it('renders the Koi Pond assets offline, moves fish and water, changes appearance, and releases pending and active contexts', async () => {
+  const page = await fixture(), errors = [], requests = []
+  page.on('pageerror', error => errors.push(error.message))
+  page.on('request', request => requests.push(request.url()))
+  try {
+    await page.evaluate(() => {
+      const canvas = document.createElement('canvas')
+      document.querySelector('main').append(canvas)
+      window.koiCanvas = canvas
+      window.koiRenderer = window.createTheme(canvas, 'koi-pond', { dark: false })
+      if (!window.koiRenderer) throw new Error('Koi Pond renderer unavailable')
+      window.koiRenderer.resize(920, 600)
+      window.koiRenderer.render(0, false)
+    })
+    await page.waitForFunction(() => window.koiCanvas.dataset.homeKoiState === 'ready')
+    const result = await page.evaluate(() => {
+      const renderer = window.koiRenderer, canvas = window.koiCanvas, gl = canvas.getContext('webgl')
+      const stats = () => {
+        const bytes = new Uint8Array(canvas.width * canvas.height * 4)
+        gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, bytes)
+        let luma = 0, blue = 0, red = 0, hash = 2166136261
+        for (let i = 0; i < bytes.length; i += 4) {
+          luma += .2126 * bytes[i] + .7152 * bytes[i + 1] + .0722 * bytes[i + 2]
+          blue += bytes[i + 2] > bytes[i] * 1.3 ? 1 : 0
+          red += bytes[i] > bytes[i + 2] * 1.2 && bytes[i] > 90 ? 1 : 0
+          hash = Math.imul(hash ^ bytes[i], 16777619)
+        }
+        return { luma: luma / (bytes.length / 4), blue, red, hash }
+      }
+      renderer.render(0, false)
+      const first = stats()
+      for (let frame = 1; frame <= 36; frame++) renderer.render(frame / 24, false)
+      const moving = stats()
+      renderer.render(1.5, true)
+      const dark = stats()
+      renderer.resize(1600, 1000)
+      renderer.render(1.5, true)
+      const pixels = canvas.width * canvas.height
+      const backend = renderer.backend
+      renderer.dispose(); renderer.dispose()
+      const disposed = renderer.render(2, true), released = gl.isContextLost()
+      const pendingCanvas = document.createElement('canvas')
+      const pending = window.createTheme(pendingCanvas, 'koi-pond', { dark: true })
+      pending.resize(920, 600); pending.dispose()
+      return { first, moving, dark, pixels, backend, disposed, released, pendingState: pendingCanvas.dataset.homeKoiState }
+    })
+    expect(result.backend).toBe('webgl')
+    expect(result.first.luma).toBeGreaterThan(35)
+    expect(result.first.blue).toBeGreaterThan(100_000)
+    expect(result.first.red).toBeGreaterThan(1_000)
+    expect(result.moving.hash).not.toBe(result.first.hash)
+    expect(result.dark.luma).toBeLessThan(result.moving.luma * .65)
+    expect(result.dark.red).toBeGreaterThan(1_000)
+    expect(result.pixels).toBeLessThanOrEqual(2_400_000)
+    expect(result.disposed).toBe(false)
+    expect(result.released).toBe(true)
+    expect(result.pendingState).toBe('disposed')
+    expect(errors).toEqual([])
+    expect(requests.filter(url => /^https?:/.test(url))).toEqual([])
+    await writeFile(join(evidence, 'koi-renderer.json'), JSON.stringify(result, null, 2))
+  } finally { await page.close() }
+}, 30000)
 
 describe('original theme shaders in real WebGL2', () => {
   it('renders all eleven OpenShaders designs in light and dark with distinct textures and moving fields', async () => {

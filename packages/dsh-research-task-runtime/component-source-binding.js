@@ -78,8 +78,11 @@ function webSnapshotRows(text) {
     if(Array.isArray(value)){for(const row of value.slice(0,2000))visit(row,depth+1,true);return}
     const entries=Object.entries(value)
     if(marked(entries))return
-    const title=snapshotTitle(entries.find(([key,v])=>heading.test(key)&&typeof v==='string')?.[1])
-    const date=entries.filter(([key])=>/date|time|published|released/iu.test(key)).map(([,v])=>snapshotDate(v)).find(Boolean)
+    const sourceTitle=entries.find(([key,v])=>heading.test(key)&&typeof v==='string')?.[1],title=snapshotTitle(sourceTitle)
+    // Announcement lists can expose both a display time and a disclosure date.
+    // Retain their observed dates instead of treating the first key as the only
+    // possible publication date. Never derive a date from an article identifier.
+    const dates=[...new Set(entries.filter(([key])=>/date|time|published|released/iu.test(key)).map(([,v])=>snapshotDate(v)).filter(Boolean))].slice(0,8),date=dates[0]
     if(inList&&title.length>=10&&date){
       const ids=entries.filter(([key,v])=>/^(?:id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu.test(key)&&typeof v==='string'&&/^[\w-]{8,128}$/u.test(v)).map(([,v])=>v).slice(0,8),urls=[]
       const links=(object,level=0)=>{
@@ -91,11 +94,23 @@ function webSnapshotRows(text) {
         for(const [key,v]of entries){if(/^(?:url|link|href|sourceUrl)$/iu.test(key)&&typeof v==='string'){const url=snapshotUrl(v);if(url&&url.length<=2048&&urls.length<8)urls.push(url)}else if(v&&typeof v==='object'&&!ignored.test(key))links(v,level+1)}
       }
       links(value)
-      if(ids.length||urls.length)rows.push({title,date,ids,urls})
+      const subjects=Array.isArray(value.codes)?value.codes.slice(0,12).flatMap(code=>typeof code?.short_name==='string'&&code.short_name.trim()&&code.short_name.length<=128&&typeof code.stock_code==='string'&&/^[\w.-]{1,32}$/u.test(code.stock_code)?[`${code.short_name}（${code.stock_code}）`]:[]):[]
+      if(ids.length||urls.length)rows.push({title,sourceTitle,date,dates,ids,urls,...(subjects.length?{subjects}:{})})
     }
     for(const [key,v]of entries)if(!ignored.test(key))visit(v,depth+1,Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).some(key=>heading.test(key))))
   }
   visit(value);return rows
+}
+function snapshotLinkMatches(url,record,row) {
+  if(row.urls.includes(url))return true
+  const sourceUrl=snapshotUrl(record.args?.url)
+  if(!sourceUrl)return false
+  const source=new URL(sourceUrl),target=new URL(url)
+  // No suffix-based host trust. Only the observed provider pair is admitted.
+  const sameSite=source.hostname===target.hostname||source.hostname==='np-anotice-stock.eastmoney.com'&&target.hostname==='data.eastmoney.com'
+  if(!sameSite)return false
+  const parts=[...target.pathname.split(/[/.]/u),...target.searchParams.values()].map(part=>{try{return decodeURIComponent(part)}catch{return ''}})
+  return row.ids.some(id=>parts.includes(id))
 }
 function snapshotRecordMatches(value,record) {
   if(!value||typeof value!=='object'||!Array.isArray(record.snapshotRows))return false
@@ -104,16 +119,33 @@ function snapshotRecordMatches(value,record) {
   return record.snapshotRows.some(row=>{
     // Formatting can change width/whitespace, never business wording, signs
     // or decimals. A matching ID cannot justify deleting a negation or amount.
-    if(row.date!==date||row.title!==title)return false
-    if(row.urls.includes(url))return true
-    const source=new URL(record.args.url),target=new URL(url)
-    // Sibling domains cannot be inferred from their final two labels (com.cn,
-    // private hosting, etc.). Only this observed provider pair is admitted.
-    const sameSite=source.hostname===target.hostname||source.hostname==='np-anotice-stock.eastmoney.com'&&target.hostname==='data.eastmoney.com'
-    if(!sameSite)return false
-    const parts=[...target.pathname.split(/[/.]/u),...target.searchParams.values()].map(part=>{try{return decodeURIComponent(part)}catch{return ''}})
-    return row.ids.some(id=>parts.includes(id))
+    if(!(row.dates??[row.date]).includes(date)||row.title!==title)return false
+    return snapshotLinkMatches(url,record,row)
   })
+}
+
+// A model may decorate or paraphrase a headline. For native feeds, prefer the
+// exact original text from an unambiguous fetched record, never weaken the
+// evidence comparison to accept altered amounts or negations. The source link
+// and one observed date must already match; summaries and gaps stay untouched.
+export function restoreSnapshotFeedHeadlines(text,records) {
+  const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null
+  if(!['news','reports'].includes(data?.type)||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>40)return
+  let changed=false
+  const items=data.items.map(item=>{
+    const url=snapshotUrl(item?.url),date=snapshotDate(item?.date)
+    if(!url||!date)return item
+    const matches=records.filter(record=>record.tool==='web_fetch'&&record.purpose==='snapshot').flatMap(record=>(record.snapshotRows??[]).filter(row=>(row.dates??[row.date]).includes(date)&&typeof row.sourceTitle==='string'&&row.sourceTitle.trim()&&row.sourceTitle.length<=256&&snapshotLinkMatches(url,record,row)))
+    if(!matches.length||new Set(matches.map(row=>row.sourceTitle)).size!==1)return item
+    const title=matches[0].sourceTitle,subjects=[...new Set(matches.flatMap(row=>row.subjects??[]))]
+    const previous=typeof item.publisher==='string'?item.publisher:''
+    const publisher=[previous,...subjects.filter(subject=>!previous.includes(subject))].filter(Boolean).join(' · ')
+    const addPublisher=publisher&&publisher.length<=2000&&publisher!==item.publisher
+    if(title===item.title&&!addPublisher)return item
+    changed=true
+    return {...item,title,...(addPublisher?{publisher}:{})}
+  })
+  if(changed)return JSON.stringify({...data,items})
 }
 export function componentSnapshotEvidence(text,records) {
   if(records.some(r=>r.tool==='financial_query'&&r.purpose==='snapshot'&&r.response&&typeof r.response==='object'&&Object.keys(r.response).length))return true

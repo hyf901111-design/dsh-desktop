@@ -86,6 +86,34 @@ const summary = buffer => {
 }
 
 describe('real homepage theme motion and interaction', () => {
+  it.each([false, true])('keeps Koi Pond behind the usable composer and pauses away from home (reduced: %s)', async reduced => {
+    const page = await fixture({ theme: 'koi-pond', dark: true, reduced })
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    try {
+      const canvas = page.locator('canvas[data-home-theme-canvas="koi-pond"]')
+      await expect.poll(() => canvas.getAttribute('data-home-koi-state')).toBe('ready')
+      await page.locator('textarea').fill('检查锦鲤主题下的输入与切换')
+      expect(await page.locator('textarea').inputValue()).toBe('检查锦鲤主题下的输入与切换')
+      expect(await current(page).getAttribute('aria-label')).toBe('当前背景：锦鲤水面')
+      await page.screenshot({ path: `${evidence}/koi-home-dark-${reduced}.png` })
+      await page.evaluate(() => { window.koiSurface = document.querySelector('canvas[data-home-theme-canvas="koi-pond"]'); document.body.removeAttribute('data-ds-dark-theme') })
+      await expect.poll(() => page.evaluate(() => window.koiSurface === document.querySelector('canvas[data-home-theme-canvas="koi-pond"]'))).toBe(true)
+      await page.screenshot({ path: `${evidence}/koi-home-light-${reduced}.png` })
+      await page.evaluate(() => window.themeMotion.surface('settings'))
+      await expect.poll(() => page.locator('[data-odyssey-home-theme-background]').getAttribute('data-render-state')).toBe('paused')
+      await page.evaluate(() => window.themeMotion.surface())
+      await expect.poll(() => page.locator('[data-odyssey-home-theme-background]').getAttribute('data-render-state')).toBe(reduced ? 'paused' : 'running')
+      await current(page).press('ArrowRight')
+      expect(await current(page).getAttribute('data-home-theme-id')).toBe('default')
+      expect(await page.evaluate(() => window.koiSurface.dataset.homeKoiState)).toBe('disposed')
+      await current(page).press('ArrowLeft')
+      await expect.poll(() => canvas.getAttribute('data-home-koi-state')).toBe('ready')
+      expect(await page.evaluate(() => localStorage.getItem('ework.home-background.v1'))).toBe('koi-pond')
+      expect(errors).toEqual([])
+    } finally { await page.close() }
+  }, 20000)
+
   it.each([[900, 700, false, false], [280, 400, true, false], [680, 500, true, true]])('auto-hides to one third and rebounds on hover at %ix%i (dark: %s, reduced: %s)', async (width, height, dark, reduced) => {
     const page = await fixture({ width, height, dark, reduced, clock: true })
     const errors = []

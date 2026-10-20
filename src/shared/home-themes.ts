@@ -1,4 +1,4 @@
-export const HOME_THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither'] as const
+export const HOME_THEMES = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither', 'koi-pond'] as const
 export type HomeTheme = typeof HOME_THEMES[number]
 export const HOME_THEME_STORAGE_KEY = 'ework.home-background.v1'
 

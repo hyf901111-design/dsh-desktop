@@ -211,6 +211,7 @@ export const NOTE_ENGLISH = {
   "记忆保存未完成，原内容仍会保留。请稍后重试。": "Could not save memory. Existing content is preserved. Try again later.",
   "首页背景主题": "Home background themes",
   "默认": "Default",
+  "锦鲤水面": "Koi Pond",
   "笔记暂不可编辑，请重新打开后重试。": "This note is currently read-only. Reopen it and try again.",
   "生成已停止": "Generation stopped",
   "自选": "Watchlist",

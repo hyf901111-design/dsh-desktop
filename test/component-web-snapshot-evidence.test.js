@@ -1,7 +1,55 @@
 import {readFileSync} from 'node:fs'
 import {expect,it,vi} from 'vitest'
-import {componentSourceCollector,componentSnapshotEvidence} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {componentSourceCollector,componentSnapshotEvidence,restoreSnapshotFeedHeadlines} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
+import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
+
+const multiDateCall={url:'https://np-anotice-stock.eastmoney.com/api/security/ann?stock_list=600011',data:{data:{list:[{
+ art_code:'AN202610201830720785',display_time:'2026-10-20 17:02:00',notice_date:'2026-10-21 00:00:00',
+ title:'华能国际:华能国际关于第十四期超短期融资券发行的公告',codes:[{short_name:'华能国际',stock_code:'600011'}]
+}]}}};
+const multiDateFeed={version:1,type:'news',title:'公告跟踪',note:'本次取得的公开公告快照',items:[{
+ title:'华能国际(600011)：关于第十四期超短期融资券发行的公告',summary:'已取得公告，保留原披露日期。',date:'2026-10-21',url:'https://data.eastmoney.com/notices/detail/600011/AN202610201830720785.html'
+}]};
+
+it('retains distinct observed announcement dates and restores the original headline from its verified record',()=>{
+ const records=collect([multiDateCall]),original=JSON.stringify(multiDateFeed),restored=JSON.parse(restoreSnapshotFeedHeadlines(original,records));
+ expect(restored.items[0].title).toBe('华能国际:华能国际关于第十四期超短期融资券发行的公告');
+ expect(restored.items[0].date).toBe('2026-10-21');
+ expect(restored.items[0].publisher).toBe('华能国际（600011）');
+ expect(restored.items[0].summary).toBe(multiDateFeed.items[0].summary);
+ expect(restored.note).toBe(multiDateFeed.note);expect(JSON.stringify(multiDateFeed)).toBe(original);
+ expect(proof(restored,records)).toBe(true);
+ expect(proof({...restored,items:[{...restored.items[0],date:'2026-10-20'}]},records)).toBe(true);
+});
+
+it.each(['unobserved-date','unobserved-id','other-host','failed-fetch','ambiguous-record'])('does not restore a headline from %s evidence',mode=>{
+ const feed=structuredClone(multiDateFeed),calls=structuredClone([multiDateCall]);
+ if(mode==='unobserved-date')feed.items[0].date='2026-10-22';
+ if(mode==='unobserved-id')feed.items[0].url=feed.items[0].url.replace('AN202610201830720785','AN199901019999999999');
+ if(mode==='other-host')feed.items[0].url=feed.items[0].url.replace('data.eastmoney.com','unobserved.example');
+ if(mode==='ambiguous-record')calls[0].data.data.list.push({...calls[0].data.data.list[0],title:'同一编号对应完全不同的另一条公告内容'});
+ expect(restoreSnapshotFeedHeadlines(JSON.stringify(feed),collect(calls,{failed:mode==='failed-fetch'}))).toBeUndefined();
+});
+
+it('uses the actual source headline rather than publishing an altered financial amount',()=>{
+ const feed=structuredClone(multiDateFeed);feed.items[0].title='华能国际：发行1亿元融资券';
+ const restored=JSON.parse(restoreSnapshotFeedHeadlines(JSON.stringify(feed),collect([multiDateCall])));
+ expect(restored.items[0].title).toBe(multiDateCall.data.data.list[0].title);
+ expect(restored.items[0].title).not.toContain('1亿元');
+});
+
+it('completes a verified multi-date feed in one worker without regenerating its records',async()=>{
+ const records=collect([multiDateCall]),start=vi.fn(async()=>({childSessionId:'multi-date',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(multiDateFeed)}],sourceRecords:records}),dispose:async()=>{}}));
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'multi-date'});
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'feed',kind:'container',prompt:'工作台：真实公司研究\n本面板：公告\n优先使用 news 类型；保留真实公告标题、披露日期和原文链接。只取快照。'});
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'multi-date'}).state).toBe('completed'));
+  expect(start).toHaveBeenCalledOnce();
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'multi-date'}).finalOutput)).data;
+  expect(data.items[0]).toMatchObject({title:multiDateCall.data.data.list[0].title,date:'2026-10-21',publisher:'华能国际（600011）'});
+ }finally{await runtime.dispose()}
+});
 
 const observed=JSON.parse(readFileSync(new URL('./fixtures/component-web-fetch-announcements.json',import.meta.url),'utf8'))
 function collect(calls=observed.calls,{failed=false,prefix=''}={}){

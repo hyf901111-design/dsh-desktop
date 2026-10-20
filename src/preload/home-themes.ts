@@ -5,9 +5,11 @@ import { isReactBitsTheme } from './home-reactbits-renderer'
 import { REACT_BITS_PREVIEWS } from './home-reactbits-previews'
 import defaultLight from './home-theme-assets/default-light.png?inline'
 import defaultDark from './home-theme-assets/default-dark.png?inline'
+import koiLight from './home-theme-assets/koi-pond-light.png?inline'
+import koiDark from './home-theme-assets/koi-pond-dark.png?inline'
 import { HOME_THEMES as THEMES, HOME_THEME_STORAGE_KEY as STORAGE_KEY, isHomeTheme as validTheme, normalizeHomeTheme, type HomeTheme as Theme, type HomeThemePreferences } from '../shared/home-themes'
 
-const LABELS: Record<Theme, string> = { 'default': '默认', 'berber': 'Berber', 'vghodki': 'Vghodki', 'jarrick': 'Jarrick', 'lowfreez': 'Lowfreez', 'accelbia': 'Accelbia', 'boz': 'Boz', 'shashidhar': 'Shashidhar', 'haseeb': 'Haseeb', 'kirian': 'Kirian', 'splines': 'Splines', 'antiquue': 'Antiquue', 'crt-warp': 'CRT Warp', 'dither': 'Dither' }
+const LABELS: Record<Theme, string> = { 'default': '默认', 'berber': 'Berber', 'vghodki': 'Vghodki', 'jarrick': 'Jarrick', 'lowfreez': 'Lowfreez', 'accelbia': 'Accelbia', 'boz': 'Boz', 'shashidhar': 'Shashidhar', 'haseeb': 'Haseeb', 'kirian': 'Kirian', 'splines': 'Splines', 'antiquue': 'Antiquue', 'crt-warp': 'CRT Warp', 'dither': 'Dither', 'koi-pond': '锦鲤水面' }
 const PENDING_STORAGE_KEY = `${STORAGE_KEY}.pending-native`
 const mounted = new WeakMap<Document, () => void>()
 type Surface = { canvas: HTMLCanvasElement; render(seconds: number, dark: boolean): boolean; resize(width: number, height: number): void; dispose(): void }
@@ -191,11 +193,12 @@ export function mountHomeThemes(doc: Document = document, preferences?: HomeThem
       }
     }
     background.dataset.homeThemeId = selected
-    background.dataset.homeThemeFamily = isReactBitsTheme(selected) ? 'react-bits' : 'open-shaders'
+    background.dataset.homeThemeFamily = selected === 'koi-pond' ? 'koi' : isReactBitsTheme(selected) ? 'react-bits' : 'open-shaders'
     resume()
   }
   const thumbnail = (theme: Theme): string | null => {
     if (theme === 'default') return dark ? defaultDark : defaultLight
+    if (theme === 'koi-pond') return dark ? koiDark : koiLight
     if (isReactBitsTheme(theme)) return REACT_BITS_PREVIEWS[theme][dark ? 'dark' : 'light']
     const key = theme + ':' + dark
     if (thumbs.has(key)) return thumbs.get(key)!
