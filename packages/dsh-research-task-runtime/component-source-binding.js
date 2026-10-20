@@ -4,6 +4,7 @@ import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
 import {normalizeChartMetadata,CHART_VARIANTS} from './chart-template-contract.js'
+import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -151,7 +152,8 @@ export function restoreSnapshotFeedHeadlines(text,records) {
     changed=true
     return {...item,title,...(addPublisher?{publisher}:{})}
   })
-  if(changed)return JSON.stringify({...data,items})
+  const restored=normalizeAnnouncementFeed(changed?{...data,items}:data,records)
+  if(changed||restored!==data)return JSON.stringify(restored)
 }
 export function componentSnapshotEvidence(text,records) {
   if(records.some(r=>r.tool==='financial_query'&&r.purpose==='snapshot'&&componentMappableSource(r)))return true
@@ -285,7 +287,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
     }
     if(!sourceBacked(contract)||!paths)return null
     const mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
-    const data=materializeComponentMapping(mapping,responses,now)
+    const data=materializeComponentMapping(mapping,responses,now,Object.values(sources))
     if(templateSourceDataIssue(data)||templateDataIssue(data))return null
     const snapshot=normalizeChartMetadata(componentSnapshotData(normalizedHistoryMetadata(data,mapping,sources,now))),output=acceptArtifactOutput(JSON.stringify(snapshot))
     return output?{data:snapshot,output}:null
@@ -406,7 +408,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const contract=mappingContract(candidate.mapping,options)
   if(contract?.type==='chart'&&contract.variant===undefined)throw Error('chart.variant 缺失：mapping 必须保留本卡设计合同中的具体图表变体。')
   if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))throw Error('数据映射需要已成功调用的接口及当前模板字段，核对 mapping.version/type/variant。')
-  const requests=[],responses={}
+  const requests=[],responses={},observed=[]
   for(const request of candidate.requests) {
     if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||Object.hasOwn(responses,request.key)||!(request.tool==='public_data_query'||/^ework__t_[a-f\d]+$/i.test(request.tool??'')))throw Error('自动更新的数据引用无效。')
     const requestArgs=normalizeRequestDates(request.args)
@@ -415,10 +417,11 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     if(source?.purpose==='discovery'){const error=Error('接口目录和参数定义不是业务数据；必须继续调用已确认的业务接口取得真实数值，再生成映射。');error.code='SOURCE_DATA_REQUIRED';throw error}
     if(!source)throw Error('自动更新只能绑定本轮已成功取数且参数一致的数据接口，请保留原请求及真实字段。')
     responses[request.key]=source.response
+    observed.push(source)
     requests.push({key:request.key,toolId:request.tool==='public_data_query'?request.tool:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(requestArgs,now):requestArgs})
   }
   const mapping=singleSourceMapping(contract,responses)
-  const data=materializeComponentMapping(mapping,responses,now)
+  const data=materializeComponentMapping(mapping,responses,now,observed)
   const sourceIssue=templateSourceDataIssue(data)
   if(sourceIssue)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
   const issue=templateDataIssue(data)

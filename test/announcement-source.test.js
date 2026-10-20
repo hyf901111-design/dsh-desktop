@@ -7,6 +7,7 @@ const body=list=>({success:1,error:'',data:{list,total_hits:list.length}})
 it('exposes a fixed security-announcement source with one confirmed company per query',()=>{
  const source=catalog('news').sources.find(s=>s.id==='eastmoney-announcements')
  expect(source).toMatchObject({queryable:true,defaultEligible:true,access:'public-web-best-effort'})
+ expect(catalog('disclosures').sources.some(s=>s.id===source.id)).toBe(true)
  const request=prepareRequest(source.id,{symbol:'sh600011',limit:12}),url=new URL(request.endpoint)
  expect(url.origin+url.pathname).toBe('https://np-anotice-stock.eastmoney.com/api/security/ann')
  expect(url.searchParams.get('stock_list')).toBe('600011')
