@@ -44,6 +44,10 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
   // Keep private drafts outside the DOM so notifications and settings reopen cannot erase typing.
   const drafts = new Map<string, Draft>()
   const deleting = new Set<string>()
+  const changing = new Set<string>()
+  let deleteDialog: HTMLDialogElement | undefined,
+    deleteTarget: MemoryRecord | undefined,
+    renderDeleteDialog: (() => void) | undefined
   const navs = new Set<HTMLElement>()
   const currentSession = () =>
     explicitSession
@@ -211,7 +215,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     }
   }
   async function saveDraft(id: string, draft: Draft) {
-    if (draft.pending || !data) return
+    if (draft.pending || deleting.has(id) || changing.has(id) || !data) return
     const title = draft.title.trim(), content = draft.content.trim()
     if (!title || !content || title.length > 120 || content.length > 600) {
       draft.error = '标题需为 1–120 字，内容需为 1–600 字。'
@@ -249,6 +253,85 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       if (current(epoch)) render()
     }
   }
+  async function changeRowStatus(row: MemoryRecord) {
+    const action = row.status === 'active' ? 'disable' : row.status === 'disabled' ? 'enable' : row.status === 'candidate' ? 'accept' : undefined
+    if (!action || !data || changing.has(row.id) || deleting.has(row.id) || drafts.get(row.id)?.pending || row.status === 'candidate' && row.scope === 'project' && !row.projectId) return
+    const epoch = identityEpoch, owner = data.owner, draft = drafts.get(row.id)
+    changing.add(row.id)
+    setNotice()
+    render()
+    try {
+      const next = await bridge.request({ type: 'action', ids: [row.id], action, expectedRevisions: { [row.id]: row.revision } })
+      if (!current(epoch)) return
+      if (next.owner !== owner) { resetIdentity(); return }
+      if (accept(next, epoch)) {
+        const saved = next.rows.find(value => value.id === row.id)
+        // A local status-only change advances the revision without replacing
+        // typed text or hiding a conflict from an earlier background update.
+        if (saved && draft && drafts.get(row.id) === draft && draft.base.revision === row.revision) draft.base = saved
+        if (next.document?.error) setNotice(t('记忆.md 暂未写入，原内容仍会保留。请稍后重试。'), true)
+      }
+    } catch {
+      if (current(epoch)) {
+        await load()
+        if (current(epoch)) setNotice(t('修改未完成，记忆和草稿已保留。请刷新后重试。'), true)
+      }
+    } finally {
+      if (current(epoch)) { changing.delete(row.id); render() }
+    }
+  }
+  function closeDeleteDialog(restoreFocus = true) {
+    const dialog = deleteDialog, id = deleteTarget?.id
+    deleteDialog = undefined
+    deleteTarget = undefined
+    renderDeleteDialog = undefined
+    dialog?.close()
+    dialog?.remove()
+    if (restoreFocus) [...page?.querySelectorAll<HTMLElement>('[data-memory-row]') ?? []].find(row => row.dataset.memoryRow === id)?.querySelector<HTMLButtonElement>('[data-memory-delete]')?.focus({ preventScroll: true })
+  }
+  function requestDelete(row: MemoryRecord) {
+    if (!data || deleting.has(row.id) || changing.has(row.id) || drafts.get(row.id)?.pending) return
+    closeDeleteDialog(false)
+    const epoch = identityEpoch, owner = data.owner
+    const dialog = node('dialog', undefined, 'ew-memory-delete-dialog')
+    dialog.dataset.memoryDeleteDialog = ''
+    dialog.setAttribute('aria-modal', 'true')
+    dialog.setAttribute('aria-labelledby', 'ew-memory-delete-title')
+    dialog.setAttribute('aria-describedby', 'ew-memory-delete-description')
+    deleteDialog = dialog
+    deleteTarget = row
+    renderDeleteDialog = () => {
+      const heading = node('header'), title = node('h2', t('删除这条记忆？'))
+      title.id = 'ew-memory-delete-title'
+      const close = button('×', () => closeDeleteDialog(), 'ew-memory-dialog-close')
+      close.setAttribute('aria-label', t('关闭'))
+      heading.append(title, close)
+      const description = node('div')
+      description.id = 'ew-memory-delete-description'
+      description.append(node('strong', row.title), node('p', t('删除后，这条记忆将不再用于后续对话。')))
+      const draft = drafts.get(row.id)
+      if (draft && (draft.title !== draft.base.title || draft.content !== draft.base.content)) description.append(node('p', t('这条记忆有未保存的修改。确认删除后，这些修改也会丢弃。'), 'ew-memory-conflict'))
+      const actions = node('footer', undefined, 'ew-memory-actions')
+      const cancel = button(t('取消'), () => closeDeleteDialog())
+      cancel.setAttribute('aria-label', t('取消删除'))
+      cancel.setAttribute('autofocus', '')
+      const confirm = button(t('确认删除'), () => {
+        if (deleteDialog !== dialog || !current(epoch) || data?.owner !== owner) return
+        closeDeleteDialog(false)
+        void deleteRow(row)
+      }, 'ew-memory-confirm-delete')
+      actions.append(cancel, confirm)
+      dialog.replaceChildren(heading, description, actions)
+      if (dialog.open) cancel.focus()
+    }
+    dialog.addEventListener('cancel', event => { event.preventDefault(); event.stopPropagation(); closeDeleteDialog() })
+    dialog.addEventListener('close', () => { if (deleteDialog === dialog) closeDeleteDialog() })
+    dialog.addEventListener('keydown', event => { if (event.key === 'Escape') event.stopPropagation() })
+    renderDeleteDialog()
+    document.body.append(dialog)
+    dialog.showModal()
+    dialog.querySelector<HTMLButtonElement>('[autofocus]')?.focus()
+  }
   async function deleteRow(row: MemoryRecord) {
     if (deleting.has(row.id) || !data) return
     const epoch = identityEpoch, owner = data.owner
@@ -258,7 +341,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       const next = await bridge.request({ type: 'action', ids: [row.id], action: 'delete', expectedRevisions: { [row.id]: row.revision } })
       if (!current(epoch)) return
       if (next.owner !== owner) { resetIdentity(); return }
-      if (accept(next, epoch)) setNotice()
+      if (accept(next, epoch)) { drafts.delete(row.id); setNotice() }
     } catch {
       if (current(epoch)) setNotice(t('删除未完成，原有记忆会保留。请刷新后重试。'), true)
     } finally {
@@ -270,6 +353,19 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     item.dataset.memoryRow = row.id
     item.setAttribute('aria-label', row.title)
     const draft = drafts.get(row.id)
+    const heading = node('header', undefined, 'ew-memory-record-heading')
+    const title = node('h3', row.title), label = node('label', undefined, 'ew-memory-record-switch')
+    const toggle = node('input')
+    toggle.type = 'checkbox'; toggle.role = 'switch'; toggle.dataset.memoryToggle = row.id
+    toggle.setAttribute('aria-label', t('启用此记忆'))
+    toggle.checked = row.status === 'active'
+    toggle.disabled = !latest || row.status === 'superseded' || row.status === 'candidate' && row.scope === 'project' && !row.projectId || changing.has(row.id) || deleting.has(row.id) || draft?.pending === true
+    label.title = t(row.status === 'superseded' ? '已被替代的记忆不能重新启用。' : row.status === 'candidate' && row.scope === 'project' && !row.projectId ? '此记忆尚未关联项目，暂不能启用。' : row.status === 'candidate' ? '启用后将确认这条记忆。' : '启用此记忆')
+    toggle.onchange = () => void changeRowStatus(row)
+    label.append(toggle); heading.append(title, label); item.append(heading)
+    const remove = button(t('删除'), () => requestDelete(row), 'ew-memory-delete')
+    remove.dataset.memoryDelete = row.id
+    remove.disabled = !latest || deleting.has(row.id) || changing.has(row.id) || draft?.pending === true
     const meta = node('p', undefined, 'ew-memory-meta')
     const scope = row.scope === 'global' ? t('全局') : data?.projects.find(project => project.id === row.projectId)?.name || t('项目')
     const state = t({ active: '已启用', candidate: '待确认', disabled: '已停用', superseded: '已被替代' }[row.status])
@@ -286,12 +382,13 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       content.dataset.memoryField = 'content'; content.setAttribute('aria-label', t('记忆内容'))
       const actions = node('div', undefined, 'ew-memory-actions')
       const save = button(draft.pending ? t('正在保存…') : t('保存'), () => void saveDraft(row.id, draft), 'ew-memory-save')
-      save.disabled = draft.pending
+      save.disabled = draft.pending || deleting.has(row.id) || changing.has(row.id)
       const cancel = button(t('取消'), () => { drafts.delete(row.id); render() })
-      cancel.disabled = draft.pending
+      cancel.disabled = draft.pending || deleting.has(row.id) || changing.has(row.id)
+      title.disabled = content.disabled = deleting.has(row.id)
       const changed = () => {
         draft.title = title.value; draft.content = content.value
-        save.disabled = draft.pending || !title.value.trim() || !content.value.trim() || title.value.length > 120 || content.value.length > 600
+        save.disabled = draft.pending || deleting.has(row.id) || changing.has(row.id) || !title.value.trim() || !content.value.trim() || title.value.length > 120 || content.value.length > 600
       }
       title.oninput = content.oninput = changed
       changed()
@@ -302,19 +399,18 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
         conflict.role = 'status'; item.append(conflict)
       }
       if (draft.error) { const error = node('p', t(draft.error), 'ew-memory-conflict'); error.role = 'alert'; item.append(error) }
-      actions.append(save, cancel); item.append(actions)
+      actions.append(remove, save, cancel); item.append(actions)
     } else {
-      const heading = node('h3', row.title), text = node('p', row.content, 'ew-memory-record-text')
+      const text = node('p', row.content, 'ew-memory-record-text')
       const actions = node('div', undefined, 'ew-memory-actions')
       const edit = button(t('编辑'), () => {
         drafts.set(row.id, { base: row, title: row.title, content: row.content, pending: false })
         render()
         const editor = [...page!.querySelectorAll<HTMLElement>('[data-memory-editor]')].find(element => element.dataset.memoryEditor === row.id)
-        editor?.querySelector('input')?.focus()
+        editor?.querySelector<HTMLInputElement>('[data-memory-field=title]')?.focus()
       })
-      const remove = button(t('删除'), () => void deleteRow(row), 'ew-memory-delete')
-      edit.disabled = remove.disabled = deleting.has(row.id)
-      actions.append(edit, remove); item.append(heading, meta, text, actions)
+      edit.disabled = deleting.has(row.id) || changing.has(row.id)
+      actions.append(edit, remove); item.append(meta, text, actions)
     }
     return item
   }
@@ -322,6 +418,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     if (!page?.isConnected) return
     const active = page.contains(document.activeElement) ? document.activeElement as HTMLInputElement | HTMLTextAreaElement : undefined
     const focused = active?.getAttribute('aria-label')
+    const focusedRowId = active?.closest<HTMLElement>('[data-memory-row]')?.dataset.memoryRow
     const editorId = active?.closest<HTMLElement>('[data-memory-editor]')?.dataset.memoryEditor
     const field = active?.dataset.memoryField
     const selection = field ? [active?.selectionStart ?? 0, active?.selectionEnd ?? 0] as const : undefined
@@ -416,12 +513,13 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
       if (selection) restored?.setSelectionRange(selection[0], selection[1])
     } else if (focused)
       [...page.querySelectorAll<HTMLElement>('[aria-label]')]
-        .find((element) => element.getAttribute('aria-label') === focused)
+        .find((element) => element.getAttribute('aria-label') === focused && (!focusedRowId || element.closest<HTMLElement>('[data-memory-row]')?.dataset.memoryRow === focusedRowId))
         ?.focus({ preventScroll: true })
     page.scrollTop = scrollTop
   }
 
   function hide() {
+    closeDeleteDialog(false)
     root?.removeAttribute('data-memory-active')
     root?.querySelector('[data-memory-nav]')?.removeAttribute('aria-current')
     page?.remove()
@@ -460,7 +558,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     if (renderedLocale !== document.documentElement.dataset.odysseyLocale) {
       renderedLocale = document.documentElement.dataset.odysseyLocale
       for (const nav of navs) { nav.setAttribute('aria-label', t('记忆')); nav.querySelector('span')!.textContent=t('记忆') }
-      if (page) {page.setAttribute('aria-label',t('记忆设置'));render()}
+      if (page) {page.setAttribute('aria-label',t('记忆设置'));render();renderDeleteDialog?.()}
     }
     if (disposed) return
     for (const nav of navs) if (!nav.isConnected) navs.delete(nav)
@@ -495,6 +593,8 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     data = undefined
     drafts.clear()
     deleting.clear()
+    changing.clear()
+    closeDeleteDialog(false)
     settingPending = undefined
     directoryPending = false
     refreshPending = false
@@ -619,6 +719,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     data = undefined
     drafts.clear()
     deleting.clear()
+    changing.clear()
     for (const nav of navs) nav.remove()
     navs.clear()
     document.removeEventListener('click', onNavClick, true)

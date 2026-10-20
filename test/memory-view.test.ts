@@ -112,7 +112,8 @@ describe('simple ordinary memory settings', () => {
     const state = snapshot({ rows: [{ ...record, content: '<img src=x onerror=alert(1)>原始正文' }] })
     const { doc, toggle, open } = setup({ request: async () => state, openDirectory: async () => {} })
     await open()
-    expect(doc.querySelectorAll('input[type=checkbox]')).toHaveLength(1)
+    expect(doc.querySelectorAll('input[aria-label="启用记忆"]')).toHaveLength(1)
+    expect(doc.querySelectorAll('[data-memory-row] input[role=switch]')).toHaveLength(1)
     expect(toggle().checked).toBe(true)
     expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain('/actual/memory/local')
     expect(doc.querySelector('[data-memory-row]')?.textContent).toContain(state.rows[0]!.content)
@@ -121,6 +122,154 @@ describe('simple ordinary memory settings', () => {
     expect(doc.querySelector('[data-memory-summary],[data-memory-editor]')).toBeNull()
     expect(doc.body.textContent).not.toContain(state.summary.text)
     expect(doc.body.textContent).not.toContain('AI 概括')
+  })
+  it('uses per-record state actions and keeps the upper-right switch consistent while editing a dirty draft', async () => {
+    let state = snapshot({ rows: [record, { ...record, id: 'disabled', status: 'disabled' }, { ...record, id: 'candidate', status: 'candidate' }, { ...record, id: 'superseded', status: 'superseded' }, { ...record, id: 'unbound', status: 'candidate', scope: 'project' }] })
+    const commands: MemoryCommand[] = []
+    const { doc, window, button, toggle, open } = setup({ request: async command => {
+      commands.push(command)
+      if (command.type === 'action') state = { ...state, revision: state.revision + 1, rows: state.rows.map(row => command.ids.includes(row.id) ? { ...row, status: command.action === 'disable' ? 'disabled' : 'active', revision: row.revision + 1 } : row) }
+      return state
+    } })
+    await open()
+    const rowSwitch = (id: string) => doc.querySelector<HTMLInputElement>(`[data-memory-row="${id}"] [data-memory-toggle]`)!
+    expect(rowSwitch(record.id)?.checked).toBe(true)
+    expect(rowSwitch('candidate').checked).toBe(false)
+    expect(rowSwitch('superseded').disabled).toBe(true)
+    expect(rowSwitch('unbound').disabled).toBe(true)
+    expect(rowSwitch('unbound').parentElement?.title).toBe('此记忆尚未关联项目，暂不能启用。')
+    expect(rowSwitch(record.id).closest('.ew-memory-record-heading')).not.toBeNull()
+    rowSwitch(record.id).click(); await tick()
+    rowSwitch('disabled').click(); await tick()
+    rowSwitch('candidate').click(); await tick()
+    rowSwitch('superseded').click(); rowSwitch('unbound').click(); await tick()
+    expect(commands.filter(command => command.type === 'action')).toEqual([
+      { type: 'action', ids: [record.id], action: 'disable', expectedRevisions: { [record.id]: 1 } },
+      { type: 'action', ids: ['disabled'], action: 'enable', expectedRevisions: { disabled: 1 } },
+      { type: 'action', ids: ['candidate'], action: 'accept', expectedRevisions: { candidate: 1 } }
+    ])
+    expect(toggle().checked).toBe(true)
+    button('编辑').click()
+    expect(doc.activeElement?.getAttribute('data-memory-field')).toBe('title')
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '开关切换仍需保留的草稿'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    expect(rowSwitch(record.id).checked).toBe(false)
+    rowSwitch(record.id).click(); await tick()
+    expect(rowSwitch(record.id).checked).toBe(true)
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('开关切换仍需保留的草稿')
+    expect(doc.querySelector('[data-memory-editor]')?.textContent).not.toContain('已在其他位置更新')
+    button('保存').click(); await tick()
+    expect(commands.find(command => command.type === 'save')).toMatchObject({ expectedRevision: 3, input: { content: '开关切换仍需保留的草稿' } })
+    doc.documentElement.dataset.odysseyLocale = 'en'; await tick()
+    expect(rowSwitch('unbound').parentElement?.title).toBe('This memory is not linked to a project and cannot be enabled yet.')
+  })
+  it('requires an accessible delete confirmation and leaves memory untouched on cancel, close or Escape', async () => {
+    const commands: MemoryCommand[] = []
+    const { doc, window, button, open } = setup({ request: async command => { commands.push(command); return snapshot() } })
+    await open(); button('删除').click(); await tick()
+    const dialog = () => doc.querySelector<HTMLDialogElement>('[data-memory-delete-dialog]')!
+    expect(dialog()?.open).toBe(true)
+    expect(dialog().getAttribute('aria-modal')).toBe('true')
+    expect(dialog().textContent).toContain(record.title)
+    expect(doc.activeElement?.getAttribute('aria-label')).toBe('取消删除')
+    expect(commands.filter(command => command.type === 'action')).toHaveLength(0)
+    button('取消删除').click(); await tick()
+    expect(dialog()).toBeNull(); expect(doc.querySelector('[data-memory-row]')).not.toBeNull()
+    button('删除').click(); button('关闭').click(); await tick()
+    expect(dialog()).toBeNull()
+    button('删除').click(); dialog().dispatchEvent(new window.Event('cancel', { cancelable: true }) as unknown as Event); await tick()
+    expect(dialog()).toBeNull()
+    expect(commands.filter(command => command.type === 'action')).toHaveLength(0)
+  })
+  it('warns before discarding an unsaved draft and deletes it only after explicit confirmation', async () => {
+    let state = snapshot()
+    const commands: MemoryCommand[] = []
+    const { doc, window, button, open } = setup({ request: async command => {
+      commands.push(command)
+      if (command.type === 'action') state = snapshot({ revision: 2, rows: [] })
+      return state
+    } })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '未保存的删除草稿'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('删除').click()
+    expect(doc.querySelector('[data-memory-delete-dialog]')?.textContent).toContain('未保存的修改')
+    button('取消删除').click()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('未保存的删除草稿')
+    button('删除').click(); button('确认删除').click(); await tick()
+    expect(commands.filter(command => command.type === 'action')).toEqual([{ type: 'action', ids: [record.id], action: 'delete', expectedRevisions: { [record.id]: 1 } }])
+    expect(doc.querySelector('[data-memory-editor],[data-memory-row],[data-memory-delete-dialog]')).toBeNull()
+  })
+  it('preserves a dirty draft and shows a failed row change after refreshing the conflicting revision', async () => {
+    let state = snapshot(), fail: (error: Error) => void = () => {}, notify = () => {}
+    const commands: MemoryCommand[] = []
+    const { doc, window, button, open } = setup({ request: command => {
+      commands.push(command)
+      return command.type === 'action' ? new Promise((_resolve, reject) => { fail = reject }) : Promise.resolve(state)
+    }, subscribe: listener => { notify = listener; return () => {} } })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '版本冲突时仍保留'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    doc.querySelector<HTMLInputElement>('[data-memory-toggle]')!.click()
+    expect(doc.querySelector<HTMLInputElement>('[data-memory-toggle]')?.disabled).toBe(true)
+    expect(button('保存').disabled).toBe(true)
+    state = snapshot({ revision: 2, rows: [{ ...record, revision: 2, content: '其他位置的新内容' }] }); notify(); await tick()
+    fail(Error('revision conflict')); await tick()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('版本冲突时仍保留')
+    expect(doc.querySelector('[data-memory-editor]')?.textContent).toContain('已在其他位置更新')
+    expect(doc.querySelector('[data-memory-notice][role=alert]')?.textContent).toContain('修改未完成')
+    button('保存').click(); await tick()
+    expect(commands.find(command => command.type === 'save')).toMatchObject({ expectedRevision: 1 })
+  })
+  it('keeps a delete confirmation on its captured revision and retains the draft when deletion conflicts', async () => {
+    let state = snapshot(), notify = () => {}
+    const commands: MemoryCommand[] = []
+    const { doc, window, button, open } = setup({ request: async command => {
+      commands.push(command)
+      if (command.type === 'action') throw Error('revision conflict')
+      return state
+    }, subscribe: listener => { notify = listener; return () => {} } })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '删除冲突仍保留的草稿'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('删除').click()
+    state = snapshot({ revision: 2, rows: [{ ...record, revision: 2, content: '他处修订' }] }); notify(); await tick()
+    button('确认删除').click(); await tick()
+    expect(commands.find(command => command.type === 'action')).toMatchObject({ action: 'delete', expectedRevisions: { [record.id]: 1 } })
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('删除冲突仍保留的草稿')
+    expect(doc.querySelector('[data-memory-notice][role=alert]')?.textContent).toContain('删除未完成')
+  })
+  it('closes private confirmations on identity rotation and ignores old row-action completions', async () => {
+    let owner = 'old', finish: (value: Snapshot) => void = () => {}
+    const commands: MemoryCommand[] = []
+    const { doc, ui, button, open } = setup({ request: command => {
+      commands.push(command)
+      return command.type === 'action' ? new Promise(resolve => { finish = resolve }) : Promise.resolve(snapshot({ owner, rows: owner === 'old' ? [record] : [] }))
+    } })
+    await open(); button('删除').click()
+    const oldConfirm = button('确认删除')
+    owner = 'new'; ui.resetIdentity(); await tick(); oldConfirm.click(); await tick()
+    expect(commands.filter(command => command.type === 'action')).toHaveLength(0)
+    expect(doc.querySelector('[data-memory-delete-dialog]')).toBeNull()
+    owner = 'old'; ui.resetIdentity(); await tick()
+    doc.querySelector<HTMLInputElement>('[data-memory-toggle]')!.click()
+    owner = 'new'; ui.resetIdentity(); await tick()
+    finish(snapshot({ owner: 'old', revision: 2, rows: [{ ...record, content: '旧身份迟到结果', status: 'disabled', revision: 2 }] })); await tick()
+    expect(doc.body.textContent).not.toContain('旧身份迟到结果')
+    expect(doc.querySelector('[data-memory-row]')).toBeNull()
+  })
+  it('localizes per-record controls and an open dirty-draft confirmation in both languages', async () => {
+    const { doc, window, button, open } = setup({ request: async () => snapshot() })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '尚未保存'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('删除').click()
+    doc.documentElement.dataset.odysseyLocale = 'en'; await tick()
+    expect(doc.querySelector('[data-memory-toggle]')?.getAttribute('aria-label')).toBe('Enable this memory')
+    expect(doc.querySelector('[data-memory-delete-dialog]')?.textContent).toContain('Delete this memory?')
+    expect(doc.querySelector('[data-memory-delete-dialog]')?.textContent).toContain('unsaved changes')
+    button('Cancel deletion').click()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('尚未保存')
   })
   it('turns use and auto on together when the stored switches disagree, then turns both off', async () => {
     let state = snapshot({ settings: { use: true, auto: false } })
@@ -215,7 +364,7 @@ describe('simple ordinary memory settings', () => {
     button('取消').click()
     expect(doc.querySelector('[data-memory-row]')?.textContent).not.toContain('取消的草稿')
     expect(commands.filter(c => c.type === 'save')).toHaveLength(1)
-    button('删除').click(); await tick()
+    button('删除').click(); button('确认删除').click(); await tick()
     expect(commands.at(-1)).toEqual({ type: 'action', ids: [record.id], action: 'delete', expectedRevisions: { [record.id]: 2 } })
     expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(0)
   })
@@ -300,7 +449,7 @@ describe('simple ordinary memory settings', () => {
   it('keeps the original record visible on a failed delete and validates blank drafts before IPC', async () => {
     const writes: MemoryCommand[] = []
     const { doc, window, button, open } = setup({ request: async command => { if (command.type !== 'snapshot') { writes.push(command); throw Error('write failed') }; return snapshot() } })
-    await open(); button('删除').click(); await tick()
+    await open(); button('删除').click(); button('确认删除').click(); await tick()
     expect(doc.querySelector('[data-memory-row]')?.textContent).toContain(record.content)
     expect(doc.querySelector('[role=alert]')?.textContent).toContain('删除未完成')
     button('编辑').click()

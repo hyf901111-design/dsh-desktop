@@ -25,6 +25,23 @@ afterEach(async()=>{for(const s of stores.splice(0))await s.close();for(const r 
 
 describe('长期记忆真实行为',()=>{
 
+  it('only enables disabled records and accepts candidates without reviving superseded memories',async()=>{
+    const {service}=await setup()
+    const original=(await service.request({type:'save',input:preference()})).rows[0]!
+    await expect(service.request({type:'action',ids:[original.id],action:'accept',expectedRevisions:{[original.id]:original.revision}})).rejects.toThrow(/状态/)
+    const disabled=(await service.request({type:'action',ids:[original.id],action:'disable',expectedRevisions:{[original.id]:original.revision}})).rows[0]!
+    expect((await service.request({type:'action',ids:[disabled.id],action:'enable',expectedRevisions:{[disabled.id]:disabled.revision}})).rows[0]?.status).toBe('active')
+    const cap=await authorizedCapture(service,{sessionId:'a',turnId:'state-transition',events:[{seq:1,role:'user',text:'以后默认用英文回答'}]})
+    await service.commitExtraction({captureId:cap.captureId,candidates:[{title:'回答语言',content:'默认用英文回答',kind:'preference',scope:'global',sourceSeq:1,evidence:'以后默认用英文回答',explicit:true}]})
+    const candidate=(await service.request({type:'snapshot'})).rows.find(row=>row.status==='candidate')!
+    await expect(service.request({type:'action',ids:[candidate.id],action:'enable',expectedRevisions:{[candidate.id]:candidate.revision}})).rejects.toThrow(/状态/)
+    const accepted=await service.request({type:'action',ids:[candidate.id],action:'accept',expectedRevisions:{[candidate.id]:candidate.revision}})
+    const superseded=accepted.rows.find(row=>row.id===original.id)!
+    expect(superseded.status).toBe('superseded')
+    for(const action of ['enable','accept','disable'] as const)await expect(service.request({type:'action',ids:[superseded.id],action,expectedRevisions:{[superseded.id]:superseded.revision}})).rejects.toThrow(/状态/)
+    expect((await service.recall({sessionId:'b',query:'报告'})).entries.map(row=>row.id)).toEqual([candidate.id])
+  })
+
   it('preserves a disabled record and its metadata when manually editing with a matching revision',async()=>{
     const {service}=await setup()
     const saved=await service.request({type:'save',input:{...preference(),pinned:true,expiresAt:1_900_000_000_000}})
