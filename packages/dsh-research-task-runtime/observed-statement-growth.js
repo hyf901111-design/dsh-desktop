@@ -52,7 +52,7 @@ export function observedStatementGrowth(data,records){
  const find=re=>{const found=data.columns.flatMap((c,i)=>re.test(c)?[i]:[]);return found.length===1?found[0]:-1}
  const codeColumn=find(/^(?:证券代码|股票代码|代码)(?:\s*\/\s*(?:简称|名称))?$/u),periodColumn=find(/^报告期(?:[（(][^）)]*[）)])?$/u)
  if(codeColumn<0||periodColumn<0)return
- const metrics=[{names:['营业收入','收入'],field:'revenue'},{names:['归母净利润','归母'],field:'nIncomeAttrP'}],facts=[]
+ const metrics=[{names:['营业收入','营收','收入'],field:'revenue'},{names:['归母净利润','归母净利','归母'],field:'nIncomeAttrP'}],facts=[]
  let changed=false
  const rows=data.rows.map(row=>{
   if(!Array.isArray(row)||row.length!==data.columns.length||typeof row[codeColumn]!=='string'||typeof row[periodColumn]!=='string')return row
@@ -61,9 +61,13 @@ export function observedStatementGrowth(data,records){
   const pair=matchingPairs(records,codes[0],dates[0]);if(!pair)return row
   const output=[...row]
   for(const metric of metrics){
-   const growth=find(new RegExp(`^(?:${metric.names.join('|')})同比(?:增速|增长率)?[（(]计算值[）)]$`,'u'))
+   const growth=find(new RegExp(`^(?:${metric.names.join('|')})同比(?:增速|增长率)?(?:[（(]计算值[）)])?$`,'u'))
    const amountColumns=data.columns.flatMap((c,i)=>metric.names.includes(metricName(c))&&/[（(](亿元|万元|元)[）)]$/u.test(c)?[i]:[])
    if(growth<0||amountColumns.length!==1)continue
+   // A generated layout may put the explicit calculation marker in the cell
+   // instead of its header. The metric meaning and source checks stay equal.
+   const computed=/[（(]计算值[）)]$/u.test(data.columns[growth])||typeof row[growth]==='string'&&/[（(]\s*计算值(?:[，,；;：:\s）)]|$)/u.test(row[growth])
+   if(!computed||/披露值|非计算值|未计算/u.test(data.columns[growth]+row[growth]))continue
    const amount=amountColumns[0],unit=data.columns[amount].match(/[（(](亿元|万元|元)[）)]$/u)[1],{current,prior}=pair
    if(!displayedAmountMatches(row[amount],current[metric.field],unit)||typeof row[growth]!=='string')continue
    const original=row[growth].match(/^[+-]?\d+(?:\.\d+)?%/u),value=percent(current[metric.field],prior[metric.field])

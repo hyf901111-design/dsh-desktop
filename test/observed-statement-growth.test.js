@@ -85,6 +85,28 @@ it.each(['duplicate-id','duplicate-period','unsafe','missing-standard','missing-
  expect(restore(input,sources)).toBeUndefined()
 })
 
+it('recognizes the actual native layout with computed markers in each growth cell and unmarked metric aliases in the headers',()=>{
+ const input=structuredClone(model)
+ input.columns=['证券代码 / 简称','报告期（合并口径）','营业收入（亿元）','营收同比','归母净利润（亿元）','归母净利同比']
+ input.rows[0][3]='-4.57%（计算值，基期2025H1营收1,120.32亿元）'
+ input.rows[0][5]='-28.90%（计算值，基期2025H1归母92.62亿元）'
+ const text=restore(input);expect(text).toBeTypeOf('string')
+ expect(JSON.parse(text).rows[0][5]).toBe('-28.89%（计算值，基期2025H1归母92.62亿元）')
+ input.rows[0][3]='-4.57%（披露值）';input.rows[0][5]='-28.90%（披露值）'
+ expect(restore(input)).toBeUndefined()
+})
+
+it('uses raw decimal amounts for the third native company rather than its displayed rounded base',()=>{
+ const input=structuredClone(model),source=structuredClone(record)
+ source.response.data.forEach(row=>{row.secID='600795.XSHG';row.ticker='600795';row.publishDate='2026-08-18'})
+ Object.assign(source.response.data[0],{revenue:79029113601.09,nIncomeAttrP:3013976240.14})
+ Object.assign(source.response.data[1],{revenue:77654698561.51,nIncomeAttrP:3686597723.51})
+ input.columns=['证券代码 / 简称','报告期（合并口径）','营业收入（亿元）','营收同比','归母净利润（亿元）','归母净利同比']
+ input.rows[0]=['600795.SH 国电电力','2026年半年报（截至2026-06-30）','790.29','+1.77%（计算值）','30.14','-18.24%（计算值，基期2025H1归母36.87亿元）']
+ const text=restore(input,[source]);expect(text).toBeTypeOf('string')
+ expect(JSON.parse(text).rows[0][5]).toBe('-18.25%（计算值，基期2025H1归母36.87亿元）')
+})
+
 it('normalizes the runtime output without a second model generation and still renders the original component kind',async()=>{
  const start=vi.fn(async()=>({childSessionId:'child',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(model)}],sourceRecords:[record]})}))
  const runtime=new ResearchTaskRuntime({adapter:{start,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'statement-task'})

@@ -11,6 +11,7 @@ import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.j
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
 import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import {compactStatementEvidence,truncatedStatementEvidence} from './statement-evidence.js'
+import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
@@ -1804,8 +1805,9 @@ export function researchSearchEvidence(event, searchCallIds, {request} = {}) {
 function compactResearchEvidence(text,request) {
   let data
   try { data = JSON.parse(text) } catch { return truncatedStatementEvidence(text,request)??text }
+  try{data=expandBusinessEvidence(data)}catch{return '业务响应的无损传输内容未通过完整性校验，不能据其生成数值。请重新取得当前来源；未取得的字段保留缺失说明。'}
   const statement=compactStatementEvidence(data,request)
-  if(statement)return JSON.stringify(statement)
+  if(statement)return JSON.stringify(compactBusinessEvidence(statement)??statement)
   if (data?.schema_version !== 'financial-1' || !Array.isArray(data.records)) return text
   const rows = [], sources = new Set()
   for (const r of data.records) {
@@ -1822,6 +1824,7 @@ function canSynthesizeResult(result) {
 
 export function createSubagentAdapter(ctx, { surface } = {}) {
   let disposed = false
+  const sourceProjectionStops=new Set()
 
   const resolveParent = async (parentSessionId) => {
     const live = ctx.agents.get(parentSessionId)
@@ -2265,10 +2268,14 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       const off = ctx.on('session/event', (session, event) => {
         if (session?.id === child.id) deliver(event)
       })
+      const releaseSourceProjection=kind==='container'&&!synthesisOnly?registerComponentSourceProjection(ctx,{child,allowed:childTools,discoveryTools,signal}):()=>{}
+      const stopSourceProjection=()=>{sourceProjectionStops.delete(stopSourceProjection);releaseSourceProjection()}
+      sourceProjectionStops.add(stopSourceProjection)
       try {
         for (const event of [...child.session.events]) deliver(event)
       } catch (error) {
         off()
+        stopSourceProjection()
         clearTimeout(researchTimer)
         liftResearchLimit?.()
         releaseWorkbench?.()
@@ -2305,11 +2312,12 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         result: Promise.resolve(boundedResult).then(result => {
           const researchEvidence=collectedEvidence()
           return { ...result, sourceRecords:sourceCollector.records, ...(researchEvidence ? { researchEvidence } : {}) }
-        }).finally(() => { clearTimeout(completionTimer); clearTimeout(handoffTimer) }),
+        }).finally(() => { stopSourceProjection(); clearTimeout(completionTimer); clearTimeout(handoffTimer) }),
         async dispose() {
           if (disposed) return
           disposed = true
           off()
+          stopSourceProjection()
           clearTimeout(researchTimer)
           clearTimeout(completionTimer)
           clearTimeout(handoffTimer)
@@ -2324,6 +2332,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
     async dispose() {
       if (disposed) return
       disposed = true
+      for(const stop of [...sourceProjectionStops])stop()
     }
   }
 }
