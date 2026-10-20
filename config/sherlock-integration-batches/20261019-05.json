@@ -9,72 +9,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图表事实说明与证券公告来源及可选插件路由优化",
+        "featureName": "保留公告来源事实并持续显示工作台当前生成状态",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "f717c3665130e818747801f31e6e9027b358d68a",
-        "tipCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
+        "baseCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
+        "tipCommit": "b656394943d7c661affa30497bf1c03f28a0359c",
         "commits": [
           {
-            "commit": "f52aa3bb84cd9941bee6fd4a505ba2c047ecb029",
+            "commit": "5a55dc20b6ef7397723670b4d6b9e8261eb5e7b3",
             "parents": [
-              "f717c3665130e818747801f31e6e9027b358d68a"
+              "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d"
             ],
-            "subject": "从真实日线记录生成归一化图表说明与样本数量"
+            "subject": "保留公告原始标题及双日期并直达披露来源目录"
           },
           {
-            "commit": "eb9b4134ddba91515ea63a2768d48010be791b85",
+            "commit": "b656394943d7c661affa30497bf1c03f28a0359c",
             "parents": [
-              "f52aa3bb84cd9941bee6fd4a505ba2c047ecb029"
+              "5a55dc20b6ef7397723670b4d6b9e8261eb5e7b3"
             ],
-            "subject": "增加按公司读取的真实证券公告来源并区分披露日期"
-          },
-          {
-            "commit": "bed722c9a5e5575396746395623a2258f0753cc3",
-            "parents": [
-              "eb9b4134ddba91515ea63a2768d48010be791b85"
-            ],
-            "subject": "区分可选与强制插件来源并保留可用取数入口"
-          },
-          {
-            "commit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
-            "parents": [
-              "bed722c9a5e5575396746395623a2258f0753cc3"
-            ],
-            "subject": "压缩共享数据源指引避免增加组件生成上下文开销"
+            "subject": "在主会话结束后持续显示当前工作台组件的真实生成状态"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/announcement-provenance.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
+            "path": "scripts/lib/research-generation-watch.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/free-data-skill.js"
+            "path": "scripts/lib/research-planning-feedback.mjs"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/public-data-tool.js"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-free-data-sources/SKILL.md"
+            "status": "A",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
           },
           {
             "status": "M",
             "path": "skills/ework-free-data-sources/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-free-data-sources/references/source-guide.md"
           },
           {
             "status": "M",
@@ -85,16 +67,12 @@
             "path": "skills/ework-free-data-sources/scripts/query.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/announcement-source.test.js"
           },
           {
             "status": "A",
-            "path": "test/component-source-intent.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-source-snapshot-chart.test.js"
+            "path": "test/component-announcement-provenance.test.js"
           },
           {
             "status": "M",
@@ -110,7 +88,15 @@
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "test/research-generation-watch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-workbench-feedback.test.js"
           }
         ],
         "checks": [
@@ -118,17 +104,38 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/bundled-component-skill.test.js",
-              "test/component-source-intent.test.js",
               "test/announcement-source.test.js",
+              "test/component-announcement-provenance.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
               "test/free-data-sources.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/macos-package-runtime.test.ts",
               "test/research-task-runtime.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "287项相关检查通过，含组件提示词容量门禁；/tmp/component-source-prompt-budget-focused-20261021.log",
-            "verifiedCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
-            "completedAt": "2026-10-20T16:37:07.026210+00:00",
+            "summary": "447项来源及生成检查通过；/tmp/announcement-feedback-final-source-focused-20261021.log",
+            "verifiedCommit": "b656394943d7c661affa30497bf1c03f28a0359c",
+            "completedAt": "2026-10-20T17:18:58.111780+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-workbench-feedback.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/research-generation-watch.test.js",
+              "test/generation-progress-persistence.test.js",
+              "test/research-creation-progress.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "99项实时进度、重试、删除、恢复及隔离检查通过；/tmp/workbench-feedback-final-focused-20261021.log",
+            "verifiedCommit": "b656394943d7c661affa30497bf1c03f28a0359c",
+            "completedAt": "2026-10-20T17:18:58.111780+00:00",
             "timeoutMs": 120000
           },
           {
@@ -138,9 +145,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/component-source-quality-budget-typecheck-20261021.log",
-            "verifiedCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
-            "completedAt": "2026-10-20T16:37:07.026210+00:00",
+            "summary": "类型检查通过；/tmp/announcement-feedback-final-typecheck-20261021.log",
+            "verifiedCommit": "b656394943d7c661affa30497bf1c03f28a0359c",
+            "completedAt": "2026-10-20T17:18:58.111780+00:00",
             "timeoutMs": 180000
           },
           {
@@ -148,117 +155,33 @@
               "git",
               "diff",
               "--check",
-              "f717c3665130e818747801f31e6e9027b358d68a..HEAD"
+              "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d..HEAD"
             ],
             "outcome": "passed",
-            "summary": "本轮完整后继差异检查通过",
-            "verifiedCommit": "6a94cbe811e052cb8bfdda5be3d6acd4af93f54d",
-            "completedAt": "2026-10-20T16:37:07.026210+00:00",
+            "summary": "本轮完整差异检查通过",
+            "verifiedCommit": "b656394943d7c661affa30497bf1c03f28a0359c",
+            "completedAt": "2026-10-20T17:18:58.111780+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "前版本真实走势图37.532秒完成，104个值与源日期全部一致；新版本回放已纠正26日说明，三家公司新公告通道实测2.2秒取得30条；仍需集成客户端原位重试确认，不以回放代替原生验收。"
+          "summary": "当前旧客户端仍显示静态accepted；从实际65.901秒生成的40条公告回放已恢复40条原始标题、双日期及三家公司筛选。新进度已以真实13MB客户端脚本和当前卡片回执验证，仍须集成客户端启动后实机验收。"
         },
         "acceptanceCriteria": [
-          "已识别的基期100日线图表说明仅来自实际选中记录，保留单位、复权、获取时点与来源限制，不手写计数或虚构控件。",
-          "公告来源仅固定只读域名、白名单参数，单公司分别读取，保留列表展示时点、公告日期和原文链接，不扩大或缩小公司范围。",
-          "可选插件来源不关闭免费数据入口；明确指定或禁止来源仍得到遵守；保留已有离线约束。"
+          "公告同时在news与disclosures目录可发现，保留单公司请求范围与原文链接。",
+          "仅精确匹配实际成功固定适配器响应的公告链接时恢复原始标题、公司、公告日、列表展示时点及原始分类；不补造摘要或转载出处，未知时点明确。",
+          "首次静态输出、数据映射及后续刷新均使用同一来源事实规则。",
+          "右侧以真实工作台工具回执与当前画布workbenchId/当前任务状态汇总；主会话结束后继续显示，覆盖屏外、重试、删除、失败、未知及切换会话。",
+          "进度投影只包含卡片标识与状态，不复制正文、提示词、工具参数、原始错误或模型推理；位置变化不重复发布。"
         ],
         "risks": [
-          "仍为本地实验，不晋升main、不发布。",
-          "公告接口为尽力而为网页首页，不代表全部披露或原文摘要。",
-          "政策与公告的实际新生成、父会话最终进度汇总仍需原生验收，整体目标未完成。"
+          "本地实验，不晋升main、不发布。",
+          "离开研究画布时明确标为上次状态；当前改动不声称画布关闭后仍提供后台实时汇总。",
+          "政策取数在8次调用后关闭原文读取、限流后重复调用及近期材料质量仍待进一步优化。",
+          "旧静态图表仍需通过新的真实生成验证源生事实说明，不把单纯回放当作native完成。"
         ],
-        "generatedAt": "2026-10-20T16:37:07.026210+00:00"
-      },
-      "merged": {
-        "mergeCommit": "da3f95be7b40410e68e952dfc232e4151013a1eb",
-        "verificationCommit": "da3f95be7b40410e68e952dfc232e4151013a1eb",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "da3f95be7b40410e68e952dfc232e4151013a1eb",
-            "completedAt": "2026-10-20T16:38:31.204Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "da3f95be7b40410e68e952dfc232e4151013a1eb",
-            "completedAt": "2026-10-20T16:38:31.204Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "da3f95be7b40410e68e952dfc232e4151013a1eb",
-            "completedAt": "2026-10-20T16:38:31.204Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "da3f95be7b40410e68e952dfc232e4151013a1eb",
-            "completedAt": "2026-10-20T16:38:31.204Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "da3f95be7b40410e68e952dfc232e4151013a1eb",
-            "completedAt": "2026-10-20T16:38:31.204Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T16:38:31.204Z"
+        "generatedAt": "2026-10-20T17:18:58.111780+00:00"
       }
     },
     {
