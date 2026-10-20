@@ -31,6 +31,12 @@ const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree
   return { apply, snapshot }
 }
 describe('任务检查切板恢复', () => {
+  it('records slow application of an otherwise fast nonterminal response',async()=>{
+    vi.useFakeTimers();const trace=vi.fn(),f=setup(async()=>({...completed,state:'running'}),{trace,apply(){vi.setSystemTime(Date.now()+5000);return true}})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(trace.mock.calls.map(([value])=>value).find(v=>v.type==='inspection')).toMatchObject({state:'running',requestMs:0,applyMs:5000,accepted:true})
+    f.dispose()
+  })
   it('reports response/apply/delivery timing without business text and tolerates a broken diagnostic sink', async()=>{
     vi.useFakeTimers();const trace=vi.fn(),old=deferred(),f=setup(()=>old.promise,{trace});
     await vi.advanceTimersByTimeAsync(1800)
