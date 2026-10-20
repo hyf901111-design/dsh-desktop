@@ -223,6 +223,27 @@ it.each([false, true])('preserves edited workbench requirements while restoring 
   } finally { await runtime.dispose() }
 })
 
+it.each(['manual','auto','scoped'])('restores the exact native table contract on a %s retry while retaining the new frame geometry',async mode=>{
+ const {ResearchTaskRuntime,buildResearchTaskPrompt}=await runtimeModule()
+ const saved='汇总华能国际、华电国际、国电电力最新财务与经营差异，保留报告期、单位和来源；未取得的字段逐项说明。'
+ const original=workbenchPanelPrompt({title:'火电利润弹性观察',...(mode==='scoped'?{originalRequest:'保留全部三家公司，只使用真实数据，不跨报告期误导比较。'}:{})}, {title:'财务与经营差异',type:'table',size:'large',prompt:saved})
+ const suffix='按给定边界重排完整可视化内容，必要时允许内部滚动；不得缩小字形或隐藏有效内容。遵循已有设计合同：业务标题13px/20px、指标23px/26px、内容内边距12px，数字英文DINPro、中文Noto Sans SC。组件交互控件使用黑白灰，保留图表与业务状态色。'
+ const geometry='\n'+(mode!=='auto'?'用户手动框 frameBounds {"x":461.326,"y":143.298,"width":292.884,"height":262.596}px 是唯一尺寸依据；生成、重试、停止与完成均不得修改边界。':'组件初始尺寸 656×456px；自动布局按内容密度选择规格。')+suffix
+ const adapter=deferredTaskAdapter(),storage=memoryTaskStorage({version:1,tasks:[{...containerRequest('native-table'),prompt:original,taskId:'original',state:'failed',createdAt:1,completedAt:2,lastSeq:0,error:'数据不足'}]})
+ const runtime=new ResearchTaskRuntime({adapter:adapter.adapter,storage,createId:sequentialTaskIds()})
+ try{
+  await runtime.restore()
+  const task=await runtime.start({...containerRequest('native-table'),prompt:saved+geometry})
+  await adapter.waitForStarts(1)
+  const restored=storage.snapshot().tasks.find(t=>t.taskId===task.taskId).prompt
+  expect(restored).toContain('仅生成本面板，优先使用 table 类型')
+  expect(restored).toContain(saved)
+  expect(restored).toContain(geometry)
+  if(mode==='scoped')expect(restored.indexOf(geometry)).toBeLessThan(restored.indexOf('【原始工作台需求】'))
+  expect(buildResearchTaskPrompt({...containerRequest('native-table'),prompt:restored})).toContain('唯一交付格式：')
+ }finally{await runtime.dispose()}
+})
+
 it('reserves a five-panel source workbench with one durable write and separate task identities', async () => {
   const { ResearchTaskRuntime } = await runtimeModule()
   const adapter = deferredTaskAdapter(), storage = memoryTaskStorage()

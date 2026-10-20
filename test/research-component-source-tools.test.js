@@ -9,6 +9,18 @@ it('recognizes the current official financial MCP tools even when descriptions n
  expect(preferredComponentSourceTools(schemas,'整理演出人员和设备排期')).toEqual([]);
 });
 
+it('recognizes company financial operating comparisons and does not invent acquisition workflows or a longer history during planning',()=>{
+ const schemas=[{name:'public_data_query'},{name:'financial_query'},...officialSchemas]
+ const request='研究华能国际600011、华电国际600027、国电电力600795，以沪深300为参考，判断最近股价表现与最新已披露财务与经营差异。'
+ const preferred=preferredComponentSourceTools(schemas,request)
+ expect(preferred.map(tool=>tool.name)).toEqual(officialSchemas.map(tool=>tool.name))
+ const guidance=componentSourceInstruction(preferred,request,new Date(),{planning:true})
+ expect(guidance).toContain('不替子任务编写工具调用流程')
+ expect(guidance).toContain('research/profile仅支持公募基金')
+ expect(guidance).toContain('不自行扩大到一年或多年度')
+ expect(preferredComponentSourceTools(schemas,'财务预算：跟踪艺术节场租、人员与物资支出')).toEqual([])
+})
+
 it('keeps date windows local to the panel and does not route ETF names to index quotes', () => {
   const tools=[{name:'ework__data',description:'通联 DataYes API'}], now=new Date('2026-09-26T01:00:00Z')
   const plan=componentSourceInstruction(tools,'创建沪深300ETF工作台：最新行情、大盘概览、近20个交易日K线',now,{planning:true})
