@@ -118,3 +118,77 @@ it('normalizes the runtime output without a second model generation and still re
   expect(start).toHaveBeenCalledOnce()
  }finally{await runtime.dispose()}
 })
+
+
+it('anchors free-form presentation columns to the observed security, report date and original amounts, and corrects a duplicated calculated narrative',()=>{
+ const input=structuredClone(model),source=structuredClone(record)
+ source.response.data.forEach(row=>{row.secID='600795.XSHG';row.ticker='600795';row.publishDate='2026-08-18'})
+ Object.assign(source.response.data[0],{revenue:79029113601.09,nIncomeAttrP:3013976240.14})
+ Object.assign(source.response.data[1],{revenue:77654698561.51,nIncomeAttrP:3686597723.51})
+ input.columns=['公司（代码）','最新报告期','披露日期','营业收入（亿元）','营收同比','归母净利润（亿元）','归母净利同比','经营数据']
+ input.rows=[['国电电力（600795.SH）','2026年半年报（截至2026-06-30）','2026-08-18','790.29','+1.8%（计算值，基期2025H1营收776.55亿元）','30.14','-18.3%（计算值，基期2025H1归母净利36.87亿元）','未取得装机数据']]
+ input.note='单位：亿元，原始来源保留。营收同比：国电+1.8%；归母净利同比：国电-18.3%。装机数据缺失，未使用模拟值。行业2025年净利下滑18.3%，这不是该公司同期基数。'
+ const text=restore(input,[source]);expect(text).toBeTypeOf('string')
+ const data=JSON.parse(text)
+ expect(data.rows[0][4]).toBe('+1.77%（计算值，基期2025H1营收776.55亿元）')
+ expect(data.rows[0][6]).toBe('-18.25%（计算值，基期2025H1归母净利36.87亿元）')
+ expect(data.rows[0][7]).toBe('未取得装机数据')
+ expect(data.note).not.toContain('国电-18.3%')
+ expect(data.note).toContain('600795.SH -18.25%')
+ expect(data.note).toContain('装机数据缺失，未使用模拟值。')
+ expect(data.note).toContain('行业2025年净利下滑18.3%，这不是该公司同期基数。')
+ expect(restore(data,[source])).toBeUndefined()
+})
+
+it.each(['wrong-publication','second-security-cell','unknown-date','second-matching-period'])('does not resolve ambiguous free-form row identity by choosing a convenient column: %s',mode=>{
+ const input=structuredClone(model)
+ input.columns=['标的','本期','附加内容',...input.columns.slice(2)]
+ input.rows[0]=[input.rows[0][0],input.rows[0][1],'2026-08-19',...input.rows[0].slice(2)]
+ if(mode==='wrong-publication')input.rows[0][2]='2026-08-20'
+ if(mode==='second-security-cell')input.rows[0][2]='对照 600027.SH'
+ if(mode==='unknown-date')input.rows[0][2]='2026-07-01'
+ if(mode==='second-matching-period')input.rows[0][2]='2025-06-30'
+ expect(restore(input)).toBeUndefined()
+})
+
+it('keeps reported narrative percentages and unrelated or ambiguous calculation clauses untouched',()=>{
+ const input=structuredClone(model)
+ input.note='归母同比（披露值）：华能-28.90%；归母同比：华能-99.99%；营收同比：行业-4.57%；归母同比：华-28.90%；报告2026-08-19，原始单位元。'
+ const data=JSON.parse(restore(input))
+ expect(data.note).toContain(input.note)
+ expect(data.rows[0][5]).toContain('-28.89%')
+})
+
+it('repairs duplicated calculated summaries for every observed company without changing directly reported growth',()=>{
+ const source=structuredClone(record),other=structuredClone(record),input=structuredClone(model)
+ other.response.data.forEach(row=>{row.secID='600027.XSHG';row.ticker='600027';row.publishDate='2026-08-28'})
+ Object.assign(other.response.data[0],{revenue:54264438000,nIncomeAttrP:3104884000})
+ Object.assign(other.response.data[1],{revenue:59952634000,nIncomeAttrP:3903877000})
+ input.rows.push(['华电国际 600027.SH','2026-06-30','542.64','-9.49%','31.05','-20.46%'])
+ input.note='归母同比：华能-28.90%、华电-20.46%；营收同比：华能-4.57%、华电-9.49%。来源、日期和单位元保留。'
+ const data=JSON.parse(restore(input,[source,other]))
+ expect(data.note).not.toContain('华能-28.90%');expect(data.note).not.toContain('华电-20.46%')
+ expect(data.note).toContain('600011.SH -28.89%');expect(data.note).toContain('600027.SH -20.47%')
+ expect(data.note).toContain('来源、日期和单位元保留。')
+ expect(restore(data,[source,other])).toBeUndefined()
+})
+
+
+it('applies the source-anchored correction through normal runtime acceptance for freely named columns, with one model call',async()=>{
+ const input=structuredClone(model)
+ input.columns=['标的（含交易所）','期间','营业收入（亿元）','营收同比','归母净利润（亿元）','归母净利同比']
+ input.rows[0][5]='-28.90%（计算值）'
+ input.note='归母净利同比：华能-28.90%。原始披露来源与装机缺失说明保留。'
+ const start=vi.fn(async()=>({childSessionId:'free-layout-child',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(input)}],sourceRecords:[record]})}))
+ const runtime=new ResearchTaskRuntime({adapter:{start,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'free-layout-task'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'table',kind:'container',prompt:'工作台：火电分析\n本面板：财务差异\n优先使用 market 类型；variant: table。最新已披露财务指标及同比，仅静态快照。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'free-layout-task'}).state).toBe('completed'))
+  const output=JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'free-layout-task'}).finalOutput),data=readTemplateModel(output).data
+  expect(data.rows[0][5]).toBe('-28.89%（计算值）')
+  expect(data.note).toContain('600011.SH -28.89%')
+  expect(data.note).not.toContain('华能-28.90%')
+  expect(data.note).toContain('原始披露来源与装机缺失说明保留。')
+  expect(start).toHaveBeenCalledOnce()
+ }finally{await runtime.dispose()}
+})
