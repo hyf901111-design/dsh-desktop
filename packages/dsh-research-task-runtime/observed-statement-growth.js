@@ -29,6 +29,15 @@ function displayedAmountMatches(value,raw,unit){
  const shown=BigInt(clean.replace('.','').replace(/^\+/,'')),scale=unit==='亿元'?8:unit==='万元'?4:0
  return rounded(a.n*pow(digits),pow(a.scale+scale))===shown
 }
+function financialAmountMatches(value,raw,header){
+ const headerUnit=header.match(/[（(](亿元|万元|元)[）)]$/u)?.[1]
+ if(headerUnit&&displayedAmountMatches(value,raw,headerUnit))return true
+ if(typeof value!=='string'||value.length>120)return false
+ const amount='([-+]?\\d+(?:,\\d{3})*(?:\\.\\d{1,6})?)'
+ const inline=value.trim().match(new RegExp(`^${amount}\\s*(亿元|万元|元)(?:\\s*[（(]\\s*${amount}\\s*(亿元|万元|元)\\s*[）)])?$`,'u'))
+ if(!inline||headerUnit&&headerUnit!==inline[2]||!displayedAmountMatches(inline[1],raw,inline[2]))return false
+ return inline[3]===undefined||displayedAmountMatches(inline[3],raw,inline[4])
+}
 const metricName=header=>header.replaceAll(/\s/gu,'').replace(/[（(](?:亿元|万元|元)[）)]$/u,'')
 const metrics=[{names:['营业收入','营收','收入'],field:'revenue'},{names:['归母净利润','归母净利','归母'],field:'nIncomeAttrP'}]
 const securityCodes=value=>typeof value==='string'?value.match(/(?<![A-Z0-9])\d{6}\.(?:SH|SZ|BJ)(?![A-Z0-9])/gu)??[]:[]
@@ -53,13 +62,26 @@ function matchingPairs(records,code,date){
 // and source report date across the row, then reject any other displayed date
 // except that same disclosure's publication date. Two dates in one cell remain
 // ambiguous (a range or a different comparative period), never first-date wins.
-function rowCorrespondence(row,records){
- const codes=row.flatMap(securityCodes),dateCells=row.map(value=>typeof value==='string'?value.match(/\d{4}-\d{2}-\d{2}/gu)??[]:[])
+function rowCorrespondence(row,records,columns){
+ const codes=row.flatMap(securityCodes)
+ // Financial and operating disclosures can legitimately have different dates.
+ // Prefer an explicit report-period field, while keeping the old all-row
+ // ambiguity check when presentation columns do not identify that field.
+ const periodColumns=columns.flatMap((column,i)=>!/经营|来源/u.test(column)&&/报告期|会计期间|财报期间|^期间$/u.test(column)?[i]:[])
+ const timingColumns=periodColumns.length?[...new Set([...periodColumns,...columns.flatMap((column,i)=>/^(?:财报|报告)?(?:披露日期|披露日|发布日期)$/u.test(column)?[i]:[])])]:row.map((_,i)=>i)
+ const dateCells=timingColumns.map(i=>typeof row[i]==='string'?row[i].match(/\d{4}-\d{2}-\d{2}/gu)??[]:[]),declared=[]
+ for(const i of periodColumns){
+  if(typeof row[i]!=='string')continue
+  // A stated calendar reporting period is exact evidence, never an inference
+  // from "latest", the publication date, or an operating-period caption.
+  for(const match of row[i].matchAll(/(20\d{2})\s*年?\s*(?:上半年|半年报|半年度(?:报告)?|中报|H1)(?![A-Z0-9])/giu))declared.push({date:match[1]+'-06-30',span:6,type:'S1'})
+  for(const match of row[i].matchAll(/(20\d{2})\s*年?\s*(?:年度报告|年报)(?![A-Z0-9])/giu))declared.push({date:match[1]+'-12-31',span:12,type:'A'})
+ }
  if(codes.length!==1||dateCells.some(dates=>dates.length>1))return
  const dates=[...new Set(dateCells.flat())]
- if(!dates.length||dates.some(date=>!iso(date)))return
- const pairs=dates.map(date=>matchingPairs(records,codes[0],date)).filter(Boolean)
- if(pairs.length!==1||dates.some(date=>date!==pairs[0].current.endDate&&date!==pairs[0].current.publishDate))return
+ if(!dates.length&&!declared.length||dates.some(date=>!iso(date)))return
+ const candidates=[...new Set([...dates,...declared.map(period=>period.date)])],pairs=candidates.map(date=>matchingPairs(records,codes[0],date)).filter(Boolean)
+ if(pairs.length!==1||dates.some(date=>date!==pairs[0].current.endDate&&date!==pairs[0].current.publishDate)||declared.some(period=>period.date!==pairs[0].current.endDate||period.span!==pairs[0].current.fiscalPeriod||period.type!==pairs[0].current.reportType))return
  const identity=row.find(value=>securityCodes(value).length),name=identity.replace(codes[0],'').replace(/[\s()（）/·]/gu,'')
  return {code:codes[0],name,...pairs[0]}
 }
@@ -92,16 +114,16 @@ export function observedStatementGrowth(data,records){
  let changed=false
  const rows=data.rows.map(row=>{
   if(!Array.isArray(row)||row.length!==data.columns.length)return row
-  const pair=rowCorrespondence(row,records);if(!pair)return row
+  const pair=rowCorrespondence(row,records,data.columns);if(!pair)return row
   const output=[...row]
   for(const metric of metrics){
    const growth=find(new RegExp(`^(?:${metric.names.join('|')})同比(?:增速|增长率)?(?:[（(]计算值[）)])?$`,'u'))
-   const amountColumns=data.columns.flatMap((c,i)=>metric.names.includes(metricName(c))&&/[（(](亿元|万元|元)[）)]$/u.test(c)?[i]:[])
+   const amountColumns=data.columns.flatMap((c,i)=>metric.names.includes(metricName(c))&&financialAmountMatches(row[i],pair.current[metric.field],c)?[i]:[])
    if(growth<0||amountColumns.length!==1)continue
    const computed=/[（(]计算值[）)]$/u.test(data.columns[growth])||typeof row[growth]==='string'&&/[（(]\s*计算值(?:[，,；;：:\s）)]|$)/u.test(row[growth])
    if(!computed||/披露值|非计算值|未计算/u.test(data.columns[growth]+row[growth]))continue
-   const amount=amountColumns[0],unit=data.columns[amount].match(/[（(](亿元|万元|元)[）)]$/u)[1],{current,prior,code,name}=pair
-   if(!displayedAmountMatches(row[amount],current[metric.field],unit)||typeof row[growth]!=='string')continue
+   const {current,prior,code,name}=pair
+   if(typeof row[growth]!=='string')continue
    const original=row[growth].match(/^[+-]?\d+(?:\.\d+)?%/u),value=percent(current[metric.field],prior[metric.field])
    if(!original||!value)continue
    const cell=value.startsWith('不适用')?value:value+row[growth].slice(original[0].length)
