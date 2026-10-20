@@ -33,6 +33,7 @@ import { ResearchWebNavigationStore } from './state/research-web-navigation'
 import { ResearchWebSessionPersistence } from './state/research-web-session'
 import { registerResearchYoutubeNative } from './state/research-youtube-native'
 import { registerCanvasUseWeb } from './state/canvas-use-web'
+import {createGenerationDeliveryLog,GENERATION_DELIVERY_PREFIX} from './state/generation-delivery-log'
 import { copyResearchFile } from './state/research-owned-files'
 import {randomUUID} from 'node:crypto'
 import { ResearchBoardIntegration } from './research-board-integration'
@@ -44,7 +45,7 @@ import {
   ResearchBoardsService,
   registerResearchBoardsHandlers
 } from './research-boards-service'
-import { registerTrustedMainWindowHandler } from './ipc-trust'
+import { isTrustedMainWindowEvent, registerTrustedMainWindowHandler } from './ipc-trust'
 import { spawn } from 'node:child_process'
 import { homedir, tmpdir } from 'node:os'
 import { localAcceptanceOrigin } from './local-acceptance-services'
@@ -621,7 +622,9 @@ function createWindow(): BrowserWindow {
     event.preventDefault()
     window.setTitle('')
   })
+  const generationDeliveryLog=createGenerationDeliveryLog(app.getPath('logs'))
   window.webContents.on('console-message', (details) => {
+    if(details.level==='info'&&details.message.startsWith(GENERATION_DELIVERY_PREFIX)&&isTrustedMainWindowEvent({sender:window.webContents,senderFrame:details.frame},window))generationDeliveryLog.write(details.message)
     if (details.level !== 'error') return
     const sourceUrl = details.sourceId || window.webContents.getURL()
     if (!sourceUrl.startsWith('http://127.0.0.1:')) return
