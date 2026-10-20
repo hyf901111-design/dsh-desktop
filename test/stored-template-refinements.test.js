@@ -9,6 +9,52 @@ import {patchLegacyDashboardPreview} from '../scripts/lib/patch-research-board-c
 import {researchInteractionVersion,compactHostDashboardHtml} from '../packages/dsh-research-task-runtime/html-artifact.js';
 import {advancedChartSamples as samples} from './fixtures/advanced-chart-samples.js';
 import vm from 'node:vm';
+function savedFeed(type='news',layout={}){
+ const data={version:1,type,title:'原公告',asOf:'2026-10-20快照',note:'中国国航与春秋航空本次未取得。<b>保留缺失</b>',...layout,items:[{title:'已取得公告',summary:'原摘要',publisher:'南方航空',url:'https://example.com/notice'}]};
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)));
+ return spec.html.replace(/<aside class="feed-context"[^]*?<\/aside>/,'').replace(/<span class="feed-publisher">[^]*?<\/span>/,'');
+}
+function savedTrend(){
+ const data={version:1,type:'chart',variant:'line',title:'归一化走势',unit:'基期=100',labels:['A','B'],series:[{name:'公司',values:[90,103]},{name:'基准',values:[100,101]}]};
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)));
+ return spec.html.replace(' data-chart-domain="observed-v1"','').replace(/<script>\(function cartesianChartRuntime[^]*?<\/script>/,'<script>(function cartesianChartRuntime(spec, geometry){throw Error("Legacy runtime must not execute")})({},()=>{});</script>');
+}
+it('restores saved feed source notes without shifting existing interaction replay targets',()=>{
+ for(const [type,layout] of [['news',{}],['news',{layoutProfile:'openterminal'}],['reports',{}]]){
+ const old=savedFeed(type,layout),next=compactHostDashboardHtml(old),w=new Window();w.document.write(next);
+ expect(w.document.querySelector('.feed-context')?.textContent).toBe('2026-10-20快照中国国航与春秋航空本次未取得。<b>保留缺失</b>');
+ expect(w.document.querySelector('article').textContent).toContain('南方航空');
+ expect(w.document.querySelector('.feed-context b')).toBeNull();
+ expect(embeddedRoutes(next)).toEqual(embeddedRoutes(old));expect(routes(next)).toEqual(routes(old));
+ expect(readTemplateModel({type:'html',html:next})).toEqual(readTemplateModel({type:'html',html:old}));
+ expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));
+ expect(compactHostDashboardHtml(next)).toBe(next);w.close();
+ }
+});
+it('restores the observed domain for saved trend charts and preserves legend, cursor and data records',()=>{
+ const old=savedTrend(),next=compactHostDashboardHtml(old),w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.write(next);
+ const ticks=[...w.document.querySelectorAll('.template-chart text')].slice(0,5).map(el=>el.textContent);
+ expect(ticks[0]).toBe('89.35');expect(ticks[4]).toBe('103.65');
+ w.document.querySelector('[data-chart-series="0"]').click();
+ expect(w.document.querySelectorAll('g[data-series]')).toHaveLength(1);
+ expect(w.document.querySelector('.chart-readout').textContent).toContain('基准 100');
+ expect(embeddedRoutes(next)).toEqual(embeddedRoutes(old));expect(routes(next)).toEqual(routes(old));
+ expect(readTemplateModel({type:'html',html:next})).toEqual(readTemplateModel({type:'html',html:old}));
+ expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));
+ expect(compactHostDashboardHtml(next)).toBe(next);w.close();
+});
+it('ships saved feed and trend refinements through the serialized client factory',()=>{
+ const shipped=patchLegacyDashboardPreview(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+ const start=shipped.indexOf('const MARKET_PRESENTATION_CSS = '),end=shipped.indexOf('const TERMINAL_PRESENTATION_CSS = ',start);
+ const serialized=vm.runInNewContext(shipped.slice(start,end)+'\nrefineStoredTemplateHtml');
+ for(const old of [savedFeed(),savedTrend()])expect(serialized(old)).toBe(refineStoredTemplateHtml(old));
+});
+it('leaves unknown feed versions and invalid saved trend data untouched',()=>{
+ const feed=savedFeed().replace('"version":"21m-20260923-v1"','"version":"future"');
+ expect(refineStoredTemplateHtml(feed)).toBe(feed);
+ const chart=savedTrend();
+ for(const old of [chart.replace('"version":"22a-20260930"','"version":"future"'),chart.replace('"templateId":"chart.line"','"templateId":"chart.step"'),chart.replace('"values":[90,103]','"values":[90,null]')])expect(refineStoredTemplateHtml(old)).toBe(old);
+});
 it('upgrades saved source-backed feed titles while preserving records and disclosure paths',()=>{
  const data={version:1,type:'news',title:'保存的真实资讯',items:[{title:'原文 <核对>',summary:'已取得内容',url:'https://example.com/source?a=1&b=2'},{title:'缺失来源',summary:'原始缺失说明'}]};
  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)));

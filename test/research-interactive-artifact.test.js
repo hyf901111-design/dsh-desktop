@@ -6,6 +6,33 @@ import { renderInteractiveArtifact } from '../packages/dsh-research-task-runtime
 import { compactHostDashboardHtml } from '../packages/dsh-research-task-runtime/html-artifact.js';
 import { CALENDAR_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/calendar-presentation.js';
 import { WORKBENCH_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/workbench-presentation.js';
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js';
+import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js';
+
+it('keeps feed provenance and missing-company explanations visible through host rendering',()=>{
+ const note='仅取得南方航空公告。中国国航（601111）与春秋航空（601021）本次未取得，暂缺。<img src=x onerror=alert(1)>';
+ for(const [type,layout] of [['news',{}],['news',{layoutProfile:'openterminal'}],['reports',{}]]){
+  const data={version:1,type,title:'航空公告',asOf:'2026-10-20 · 来源快照',note,...layout,items:[
+   {title:'运营数据公告',summary:'本次已取得记录',date:'2026-10-16',publisher:'南方航空（600029）',url:'https://example.com/notice'}
+  ]};
+  const output=JSON.parse(acceptArtifactOutput(JSON.stringify(data))),w=new Window();w.document.write(output.html);
+  expect(w.document.body.textContent).toContain(note);
+  expect(w.document.querySelector('.feed-context').textContent).toContain(data.asOf);
+  expect(w.document.querySelector('.feed-context').closest('details')).toBeNull();
+  expect(w.document.querySelector('article').textContent).toContain('南方航空（600029）');
+  expect(w.document.querySelector('img')).toBeNull();
+  expect(readTemplateModel(output).data).toEqual(data);
+  w.close();
+ }
+});
+
+it('rejects malformed feed provenance instead of hiding or coercing it',()=>{
+ const data={version:1,type:'news',title:'来源快照',items:[{title:'公告',summary:'已取得'}]};
+ for(const fields of [{note:[]},{note:''},{note:'x'.repeat(2001)},{asOf:{date:'2026-10-20'}},{asOf:' '}]){
+  expect(renderInteractiveArtifact({...data,...fields})).toBeNull();
+  expect(acceptArtifactOutput(JSON.stringify({...data,...fields}))).toBeUndefined();
+ }
+});
 
 it('opens source-backed news and report titles without first expanding their summaries',()=>{
  for(const type of ['news','reports']){
