@@ -31,6 +31,37 @@ it('materializes all 120 observed values deterministically without transcribing 
  expect(()=>resolveBoundComponent(JSON.stringify(input),records,now)).toThrow('数据引用无效')
 })
 
+it('recovers an omitted chart variant from its explicit host contract and the fixed financial value selector',()=>{
+ const input=draft(),before=structuredClone(input)
+ delete input.mapping.variant
+ for(const [i,source]of records.entries())if(source.tool==='financial_query')delete input.mapping.series[i].values.$map
+ expect(resolveComponentSnapshot(JSON.stringify(input),records,now)).toBeNull()
+ const recovered=resolveComponentSnapshot(JSON.stringify(input),records,now,{chartVariant:'line'})
+ expect(recovered).not.toBeNull()
+ expect(recovered.data.variant).toBe('line')
+ expect(recovered.data.series).toEqual(resolveComponentSnapshot(JSON.stringify(before),records,now).data.series)
+ expect(input.mapping.variant).toBeUndefined()
+ expect(input.mapping.series[1].values.$map).toBeUndefined()
+})
+
+it('recovers only a missing outer data-bound brace after the complete mapping has already closed',()=>{
+ const input=draft(),text=JSON.stringify(input),result=resolveComponentSnapshot(text.slice(0,-1),records,now)
+ expect(result).not.toBeNull()
+ expect(result.data.series).toEqual(resolveComponentSnapshot(text,records,now).data.series)
+ for(const broken of [text.slice(0,-2),text.slice(0,text.indexOf('"series"')+15),JSON.stringify({...input,extra:true}).slice(0,-1),JSON.stringify(input.mapping).slice(0,-1)])expect(resolveComponentSnapshot(broken,records,now)).toBeNull()
+})
+
+it('does not guess a missing numeric selector for an unregistered response shape or an arbitrary public source',()=>{
+ for(const mode of ['unknown-financial-schema','public-data']){
+  const input=draft(),sources=structuredClone(records)
+  delete input.mapping.series[mode==='public-data'?0:1].values.$map
+  if(mode==='unknown-financial-schema')sources[1].response.schema_version='unrecognized-provider'
+  expect(resolveComponentSnapshot(JSON.stringify(input),sources,now,{chartVariant:'line'})).toBeNull()
+ }
+ const input=draft();input.mapping.variant='bar'
+ expect(resolveComponentSnapshot(JSON.stringify(input),records,now,{chartVariant:'line'}).data.variant).toBe('bar')
+})
+
 it('retains metric field examples and complete collection sizes for all snapshot securities during recovery',()=>{
  const evidence=componentBindingEvidence(records),samples=evidence.split('\n').map(line=>JSON.parse(line))
  expect(samples).toHaveLength(4)
@@ -70,7 +101,9 @@ it('does not put values from a different observed date under an equal-length dat
 })
 
 it('completes the actual multi-source static chart in one worker without a refresh recipe',async()=>{
- const start=vi.fn(async()=>({childSessionId:'source-chart',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft())}],sourceRecords:records}),dispose:async()=>{}})),bindData=vi.fn()
+ const input=draft();delete input.mapping.variant
+ for(const [i,source]of records.entries())if(source.tool==='financial_query')delete input.mapping.series[i].values.$map
+ const start=vi.fn(async()=>({childSessionId:'source-chart',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(input)}],sourceRecords:records}),dispose:async()=>{}})),bindData=vi.fn()
  const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{save:async()=>{}},createId:()=> 'source-chart',now:()=>now.getTime()})
  try{
   await runtime.start({parentSessionId:'parent',canvasNodeId:'chart',kind:'container',prompt:'工作台：火电利润弹性\n本面板：三家火电与沪深300的近期相对表现\n仅生成本面板，优先使用 chart 类型；必须输出 chart.line。仅本次静态快照，不要求刷新绑定。'})
