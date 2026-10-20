@@ -5,7 +5,7 @@ export const financialUiCopy: Record<string,string> = {
  '已添加至组件库':'Added to component library',
  '自定义组件更多操作':'More custom component actions',
  '添加至组件库':'Add to component library','保存中…':'Saving…','自定义':'Custom','自定义组件操作':'Custom component actions','组件名称':'Component name','保存名称':'Save name','取消重命名':'Cancel rename',
- '自选股':'Watchlist','个股行情':'Stock quote','市场指数':'Market indices','新闻列表':'News','公告列表':'Announcements',
+ '自选':'Watchlist','行情面板':'Market panel','自选股':'Watchlist','个股行情':'Stock quote','市场指数':'Market indices','新闻列表':'News','公告列表':'Announcements',
  '配置指数':'Configure indices','关闭指数配置':'Close index settings','搜索指数名称或代码':'Search index name or code',
  '搜索指数':'Search indices','指数市场':'Index markets','可选指数':'Available indices','已选':'Selected',
  'A股':'A-shares','港股':'Hong Kong','美股':'US','亚太':'Asia Pacific','欧洲':'Europe','其他':'Other',

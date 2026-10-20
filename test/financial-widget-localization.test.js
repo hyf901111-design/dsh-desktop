@@ -32,7 +32,7 @@ it('localizes actual built-in widgets and new menus live without changing source
   if(q.action==='news')return {news:[{id:'news',title:'重试',summary:'市场指数',source:'研究'}],source:'腾讯财经',receivedAt:'2026-10-11T12:00:00Z'}
   if(q.action==='history')return {bars:[{date:'2026-10-09',open:10,high:12,low:9,close:11,volume:35100}],volumeUnit:'手'}
   return {quotes:q.symbols.map(s=>({...s,price:11,changePercent:1,series:[10,11],asOf:'2026-10-09'})),source:'腾讯财经',receivedAt:'2026-10-11T12:00:00Z'}
- }}});current=f
+ }}},{refreshState:true});current=f
  let watch,quote,indices,news
  await f.act(async()=>{
   news=f.workspace.createFinancialWidget('news');watch=f.workspace.createFinancialWidget('watchlist');quote=f.workspace.createFinancialWidget('quote');indices=f.workspace.createFinancialWidget('indices')
@@ -71,7 +71,7 @@ it('localizes actual built-in widgets and new menus live without changing source
  await f.event('keydown',f.document.body,{key:'Escape'})
  await f.event('click',f.document.querySelector('[data-financial-library]'))
  await f.act(async()=>{await vi.waitFor(()=>expect(f.document.querySelector('.ew-financial-library').textContent).toContain('Announcements'))})
- expect(f.document.querySelector('.ew-financial-library').textContent).toContain('Stock quote')
+ expect(f.document.querySelector('.ew-financial-library').textContent).toContain('Market panel')
  expect(f.document.querySelector('.ew-financial-library [aria-label="Close component library"]')).not.toBeNull()
  await f.event('pointerdown',f.host)
  await f.act(async()=>f.workspace.renameNode(watch.id,'研究'))
