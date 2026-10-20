@@ -146,7 +146,7 @@ export class MemoryService {
     }else if(command.type==='save'){
       const old=command.id?state.rows[identifier(command.id)]:undefined
       if(command.id&&(!old||old.revision!==command.expectedRevision))throw Error('记忆已更新，请重新读取最新版本后保存。')
-      const row=this.save(state,command.input,old)
+      const row=this.save(state,command.input,old,old?.status??'active')
       state.suppression=state.suppression.filter(s=>s.key!==this.hash(state,row.semanticKey)&&s.content!==this.hash(state,row.content));state.scopeEpoch++;changed=true
     }else if(command.type==='action'){
       if(!Array.isArray(command.ids)||command.ids.length>500||!['delete','disable','enable','accept','ignore'].includes(command.action))throw Error('记忆操作无效。')
