@@ -9,62 +9,39 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留真实数据请求并消除流式会话列表阻塞",
+        "featureName": "修复实际模拟组件数据合同误拒绝",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "d129c63452f422428eb9dc7cb76c40bec45c08ae",
-        "tipCommit": "964651f6a17a7e9fdcdeec29e6d9d443897f5bef",
+        "baseCommit": "964651f6a17a7e9fdcdeec29e6d9d443897f5bef",
+        "tipCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
         "commits": [
           {
-            "commit": "1dfeb57a5e310265149f3be84507c3832545dccd",
+            "commit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
             "parents": [
-              "d129c63452f422428eb9dc7cb76c40bec45c08ae"
+              "964651f6a17a7e9fdcdeec29e6d9d443897f5bef"
             ],
-            "subject": "保留真实数据要求并恢复多标的规划参数"
-          },
-          {
-            "commit": "964651f6a17a7e9fdcdeec29e6d9d443897f5bef",
-            "parents": [
-              "1dfeb57a5e310265149f3be84507c3832545dccd"
-            ],
-            "subject": "合并流式会话列表更新并消除重复全量扫描"
+            "subject": "保留任务业务状态并接收无损模拟数据封套"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "packages/dsh-research-task-runtime/operations-artifact.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
+            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/session-list-stream-performance.mjs"
+            "path": "test/operations-template.test.js"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/session-list-stream-performance.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-public-data.test.js"
+            "path": "test/workbench-deferred.test.js"
           }
         ],
         "checks": [
@@ -72,17 +49,15 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/workbench-public-data.test.js",
+              "test/operations-template.test.js",
+              "test/workbench-deferred.test.js",
               "test/workbench-planning-phase.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/financial-widget-contract.test.js",
-              "test/session-list-stream-performance.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "5文件122项通过；/tmp/source-and-stream-focused-20261020.log",
-            "verifiedCommit": "964651f6a17a7e9fdcdeec29e6d9d443897f5bef",
-            "completedAt": "2026-10-20T11:08:56.868077+00:00",
+            "summary": "3文件109项通过；/tmp/deferred-contract-committed-focused-20261020.log。实际失败输出回放12条tasks与10条timeline均完整通过，无二次生成。",
+            "verifiedCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
+            "completedAt": "2026-10-20T11:17:17.428013+00:00",
             "timeoutMs": 120000
           },
           {
@@ -92,9 +67,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/source-and-stream-typecheck-20261020.log",
-            "verifiedCommit": "964651f6a17a7e9fdcdeec29e6d9d443897f5bef",
-            "completedAt": "2026-10-20T11:08:56.868077+00:00",
+            "summary": "类型检查通过；/tmp/deferred-contract-committed-typecheck-20261020.log",
+            "verifiedCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
+            "completedAt": "2026-10-20T11:17:17.428013+00:00",
             "timeoutMs": 180000
           },
           {
@@ -102,117 +77,30 @@
               "git",
               "diff",
               "--check",
-              "d129c63452f422428eb9dc7cb76c40bec45c08ae..HEAD"
+              "964651f6a17a7e9fdcdeec29e6d9d443897f5bef..HEAD"
             ],
             "outcome": "passed",
-            "summary": "差异检查及独立源数据和性能审查通过",
-            "verifiedCommit": "964651f6a17a7e9fdcdeec29e6d9d443897f5bef",
-            "completedAt": "2026-10-20T11:08:56.868077+00:00",
+            "summary": "差异检查及五文件独立审查通过，无Important；交互日志重放保留筛选与勾选。",
+            "verifiedCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
+            "completedAt": "2026-10-20T11:17:17.428013+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端。真实原生性能记录已定位会话全量重建与二次扫描，集成后再做原生生成复测。"
+          "summary": "功能worktree不构建共享客户端；集成后原生验证失败卡重试及新生成。"
         },
         "acceptanceCriteria": [
-          "真实数据需求禁止静默降级为模拟。",
-          "多标的量价与公司新闻能进入正确生成路径。",
-          "流式列表更新合并到帧，紧急交互仍立即发布。",
-          "真实客户端显示组件结果并测量交付耗时。"
+          "tasks保留可选来源status，按状态和负责人组合筛选。",
+          "本地勾选仅改变个人完成记录，不修改来源status。",
+          "deferred同型同标题纯artifact信封无损接收，额外字段/来源/类型冲突仍拒绝。",
+          "客户端实际生成并保留完整记录。"
         ],
         "risks": [
-          "仅本地测试，未授权晋升main或发布。",
-          "后端内容生成仍依赖模型和上游数据，不宣称所有任务无失败。"
+          "仅本地测试，不晋升main或发布。",
+          "本次只修复已经实际复现的两条格式失败，不将所有错误吞掉或补造数据。"
         ],
-        "generatedAt": "2026-10-20T11:08:56.868077+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8c4330f49b6e073dac3ae20e0b93138d10b0f2d6",
-        "verificationCommit": "8c4330f49b6e073dac3ae20e0b93138d10b0f2d6",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "8c4330f49b6e073dac3ae20e0b93138d10b0f2d6",
-            "completedAt": "2026-10-20T11:09:46.425Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8c4330f49b6e073dac3ae20e0b93138d10b0f2d6",
-            "completedAt": "2026-10-20T11:09:46.425Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "8c4330f49b6e073dac3ae20e0b93138d10b0f2d6",
-            "completedAt": "2026-10-20T11:09:46.425Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "8c4330f49b6e073dac3ae20e0b93138d10b0f2d6",
-            "completedAt": "2026-10-20T11:09:46.425Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8c4330f49b6e073dac3ae20e0b93138d10b0f2d6",
-            "completedAt": "2026-10-20T11:09:46.425Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T11:09:46.425Z"
+        "generatedAt": "2026-10-20T11:17:17.428013+00:00"
       }
     },
     {
