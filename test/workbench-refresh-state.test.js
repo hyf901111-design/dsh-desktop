@@ -7,7 +7,7 @@ import * as React from 'react'
 import * as jsx from 'react/jsx-runtime'
 import {createRoot} from 'react-dom/client'
 import * as ui from '../scripts/lib/research-grid-ui.mjs'
-import {createComponentDataStatusStore,componentRssStatusView} from '../scripts/lib/component-data-status.mjs'
+import {createComponentDataStatusStore,componentRssStatusView,componentDataStatusCss} from '../scripts/lib/component-data-status.mjs'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 
 const cleanups=[]
@@ -96,8 +96,10 @@ it('publishes real builtin quote/news/announcement outcomes to their headers and
   expect(button().dataset.refreshState).toBe('error')
   service.request.mockImplementationOnce(()=>new Promise(done=>{resolve=done}));let pending
   await f.act(async()=>{pending=body.__eworkRefreshFinancial()});expect(button().dataset.refreshState).toBe('error')
+  expect(button().getAttribute('aria-busy')).toBe('true')
   await f.act(async()=>{resolve(widget==='quote'?{quotes:[{code:'600519',market:'SH',price:101}],source:'真实接口'}:widget==='news'?{news:[],source:'真实接口'}:{announcements:[],source:'真实接口'});await pending})
   expect(button().dataset.refreshState).toBe('scheduled')
+  expect(button().hasAttribute('aria-busy')).toBe(false)
   await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(value=>value.id===n.id?{...value,containerSpec:{...value.containerSpec,refreshMinutes:0,refreshEnabled:false}}:value)))
   expect(button().dataset.refreshState).toBe('manual')
   service.request.mockRejectedValueOnce(Error('手动取数失败'));await f.act(async()=>await body.__eworkRefreshFinancial())
@@ -134,7 +136,7 @@ it('keeps semantic icon colors across all four themes, hover and selection, and 
  // Browser plugin not available; use the existing bundled Chromium for a local CSS-only document.
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  const browser=await playwright.chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
- const css=(await Promise.all(['research-grid-workbench.css','workbench-style.css','financial-widget.css'].map(name=>readFile(new URL('../scripts/lib/'+name,import.meta.url),'utf8')))).join('\n')
+ const css=(await Promise.all(['research-grid-workbench.css','workbench-style.css','financial-widget.css'].map(name=>readFile(new URL('../scripts/lib/'+name,import.meta.url),'utf8')))).join('\n')+'\n'+componentDataStatusCss
  const [clockIcon,manualIcon]=await Promise.all(['refresh','refresh-manual'].map(name=>readFile(new URL('../build/figma-workbench-icons/'+name+'.svg',import.meta.url),'utf8')))
  expect(clockIcon).toContain('M8 4.33337V8.00004L10 9.33337');expect(manualIcon).not.toContain('M8 4.33337')
  try{
@@ -147,11 +149,27 @@ it('keeps semantic icon colors across all four themes, hover and selection, and 
     expect(await button.evaluate(el=>getComputedStyle(el).color)).toBe(color)
     await button.evaluate(el=>el.dataset.busy='true')
     expect(await button.evaluate(el=>getComputedStyle(el).color)).toBe(color)
+    expect(await button.locator('.ew-grid-icon').evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden')
+    const ring=await button.evaluate(el=>{const s=getComputedStyle(el,'::after');return{content:s.content,width:s.width,height:s.height,radius:s.borderRadius,mask:s.maskImage,animation:s.animationName}})
+    expect(ring).toMatchObject({content:'""',width:'14px',height:'14px',radius:'50%',mask:'none',animation:'ew-grid-spin'})
+    expect(await button.locator('.ew-grid-icon').evaluate(el=>getComputedStyle(el).animationName)).toBe('none')
+    await button.evaluate(el=>delete el.dataset.busy)
+    expect(await button.locator('.ew-grid-icon').evaluate(el=>getComputedStyle(el).visibility)).toBe('visible')
+    // Native/automatic refresh feedback can arrive before the React binding poll.
+    await button.evaluate(el=>el.closest('[data-research-node-id]').setAttribute('data-component-refreshing',''))
+    expect(await button.locator('.ew-grid-icon').evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden')
+    expect(await button.evaluate(el=>getComputedStyle(el,'::after').animationName)).toBe('ew-grid-spin')
+    await button.evaluate(el=>el.closest('[data-research-node-id]').removeAttribute('data-component-refreshing'))
    }
    const x=await page.locator('.ew-grid-title').evaluateAll(elements=>elements.map(el=>el.getBoundingClientRect().left))
    expect(x[0]-x[3]).toBe(26)
-   await page.locator('[data-research-node-id="scheduled"] .ew-grid-header').evaluate(header=>{header.style.width='300px';const selector=document.createElement('span');selector.className='ew-financial-header-selector';selector.textContent='测试行情 · 600519';header.append(selector)})
+   await page.locator('[data-research-node-id="scheduled"] .ew-grid-header').evaluate(header=>{header.style.width='180px';const selector=document.createElement('span');selector.className='ew-financial-header-selector';selector.textContent='测试行情 · 600519';header.append(selector)})
    expect(await page.locator('[data-workbench-refresh="scheduled"]').isVisible()).toBe(true)
+   expect(await page.locator('[data-workbench-refresh="scheduled"] .ew-grid-icon').evaluate(el=>{const r=el.getBoundingClientRect();return[r.width,r.height]})).toEqual([16,16])
+   expect(await page.locator('[data-research-node-id="scheduled"] .ew-grid-refresh').evaluate(el=>getComputedStyle(el).flexShrink)).toBe('0')
   }
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await page.locator('[data-workbench-refresh="scheduled"]').evaluate(el=>el.dataset.busy='true')
+  expect(await page.locator('[data-workbench-refresh="scheduled"]').evaluate(el=>getComputedStyle(el,'::after').animationName)).toBe('none')
  }finally{await browser.close()}
 },30000)
