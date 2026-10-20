@@ -2,6 +2,39 @@ import { Window, DOMRect, type HTMLElement as HappyHTMLElement } from 'happy-dom
 import { expect, it } from 'vitest'
 import { mountFigmaScrollbars } from '../src/preload/figma-scrollbars'
 
+it('settles after initial layout instead of observing its own overlay visibility forever', async () => {
+  const win = new Window(), doc = win.document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><nav style="overflow-y:auto"></nav></aside><section class="t8lSSG_panelBody" style="overflow-y:auto"></section>'
+  let measurements = 0
+  for (const port of doc.querySelectorAll('nav,section')) {
+    port.getBoundingClientRect = () => { measurements++; return new DOMRect(0, 50, 280, 500) }
+    Object.defineProperties(port, { scrollHeight: { value: 500 }, clientHeight: { value: 500 } })
+  }
+  Object.defineProperty(win, 'ResizeObserver', { value: class { observe() {} unobserve() {} disconnect() {} } })
+  const frames = new Map<number, FrameRequestCallback>()
+  let nextFrame = 0
+  Object.defineProperty(win, 'requestAnimationFrame', { value: (callback: FrameRequestCallback) => { frames.set(++nextFrame, callback); return nextFrame } })
+  Object.defineProperty(win, 'cancelAnimationFrame', { value: (id: number) => { frames.delete(id) } })
+  const flush = async () => {
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const pending = [...frames.values()]; frames.clear()
+    pending.forEach(callback => callback(0))
+    await new Promise(resolve => setTimeout(resolve, 0))
+  }
+  const dispose = mountFigmaScrollbars(doc as unknown as Document)
+  try {
+    for (let i = 0; i < 4; i++) await flush()
+    const settled = measurements
+    for (let i = 0; i < 4; i++) await flush()
+    expect(measurements).toBe(settled)
+    expect(frames.size).toBe(0)
+    // A real panel visibility change must still schedule a geometry refresh.
+    doc.querySelector('section')!.setAttribute('aria-hidden', 'true')
+    await flush()
+    expect(measurements).toBeGreaterThan(settled)
+  } finally { dispose(); await win.happyDOM.close() }
+})
+
 it('reserves the left width strip only beside sidebar navigation and restores the rail edge', async () => {
   const win = new Window(), doc = win.document
   doc.body.innerHTML = '<aside data-dsh-sidebar-root><nav data-srb-navigation-scroll style="overflow-y:auto"></nav><div class="VOzbGW_overlay"><nav id="settings" style="overflow-y:auto"></nav></div></aside><div class="pI_x6G_handle" data-side="sidebar"></div><section class="t8lSSG_panelBody" style="overflow-y:auto"></section><section class="en-root"><div id="component" style="overflow-y:auto"></div></section>'
