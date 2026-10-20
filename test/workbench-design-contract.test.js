@@ -29,6 +29,7 @@ describe('research workbench Figma design contract', () => {
   it.each([
     ['热门股票行情明细','三只股票最新行情，按涨跌幅排序'],
     ['自选报价','展示多只股票的价格和涨跌幅，不要绘制趋势图。'],
+    ['多只股票走势明细表','三只股票逐日数据，保留日期与收盘价。'],
     ['股票对比','variant: table；三只股票的报价；趋势另在其他组件展示。']
   ])('preserves a quote table when no trend display is requested: %s',(title,prompt)=>{
     expect(marketVariant({title,type:'market',prompt})).toBe('table');
