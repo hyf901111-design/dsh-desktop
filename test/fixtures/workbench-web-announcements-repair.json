@@ -1,0 +1,293 @@
+{
+  "events": [
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_3e7d42701aad41bcaaf07f5b",
+        "name": "public_data_query",
+        "arguments": "{\"operation\":\"catalog\"}"
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_3e7d42701aad41bcaaf07f5b"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_3e7d42701aad41bcaaf07f5b",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"version\":1,\"reviewedOn\":\"2026-10-10\",\"sources\":[{\"id\":\"world-bank\",\"name\":\"世界银行 Indicators\",\"category\":\"macro\",\"documentation\":\"https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation\",\"coverage\":\"全球国家宏观年度指标\",\"parameters\":{\"country\":\"ISO三字国家代码，或WLD\",\"indicator\":\"指标代码，如NY.GDP.MKTP.CD/SP.POP.TOTL/FP.CPI.TOTL.ZG\",\"start\":\"起始年，1900–当前年\",\"end\":\"结束年，最长30年\"},\"example\":{\"country\":\"CHN\",\"indicator\":\"NY.GDP.MKTP.CD\",\"start\":2020,\"end\":2025},\"cacheSeconds\":86400,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"年度数据可能缺失或修订；不是实时指标\",\"rights\":\"世界银行数据通常CC BY 4.0，按具体数据集例外核实：https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"ecb-fx\",\"name\":\"欧洲央行日参考汇率\",\"category\":\"fx\",\"documentation\":\"https://data.ecb.europa.eu/help/api/data-examples\",\"coverage\":\"相对1 EUR的日参考汇率\",\"parameters\":{\"currency\":\"三字货币代码，如USD/CNY/JPY\",\"limit\":\"1–100条\"},\"example\":{\"currency\":\"USD\",\"limit\":10},\"cacheSeconds\":3600,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"工作日发布的参考汇率，不是可交易的实时外汇报价\",\"rights\":\"ECB统计数据使用及署名：https://www.ecb.europa.eu/services/disclaimer/html/index.en.html\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"kraken-ticker\",\"name\":\"Kraken 公开报价\",\"category\":\"crypto\",\"documentation\":\"https://docs.kraken.com/api-reference/market-data/get-ticker-information\",\"coverage\":\"交易所指定交易对快照\",\"parameters\":{\"pair\":\"XBTUSD/ETHUSD等交易对\"},\"example\":{\"pair\":\"XBTUSD\"},\"cacheSeconds\":60,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"交易所快照不是全市场价格；ticker无报价时点，不能以获取时间代替。K线末项可能尚未收盘。\",\"rights\":\"按Kraken及地区使用条款核实，公开API不等于不限再分发授权\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"kraken-candles\",\"name\":\"Kraken 公开K线\",\"category\":\"crypto\",\"documentation\":\"https://docs.kraken.com/api-reference/market-data/get-ohlc-data\",\"coverage\":\"指定交易对OHLC与基础资产成交量\",\"parameters\":{\"pair\":\"XBTUSD/ETHUSD\",\"interval\":\"1/5/15/30/60/240/1440/10080/21600分钟\",\"limit\":\"1–100，默认30\"},\"example\":{\"pair\":\"XBTUSD\",\"interval\":1440,\"limit\":30},\"cacheSeconds\":60,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"交易所快照不是全市场价格；ticker无报价时点，不能以获取时间代替。K线末项可能尚未收盘。\",\"rights\":\"按Kraken及地区使用条款核实，公开API不等于不限再分发授权\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"coinbase-ticker\",\"name\":\"Coinbase Exchange 报价\",\"category\":\"crypto\",\"documentation\":\"https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-ticker\",\"coverage\":\"指定交易对的交易所快照\",\"parameters\":{\"product\":\"交易对，如BTC-USD/ETH-USD\"},\"example\":{\"product\":\"BTC-USD\"},\"cacheSeconds\":60,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"仅该交易所报价；网络/地区可用性和交易所条款适用\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"coinbase-candles\",\"name\":\"Coinbase Exchange K线\",\"category\":\"crypto\",\"documentation\":\"https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-candles\",\"coverage\":\"交易对OHLC与基础资产成交量\",\"parameters\":{\"product\":\"如BTC-USD\",\"granularity\":\"60/300/900/3600/21600/86400秒\",\"limit\":\"1–100，默认30\"},\"example\":{\"product\":\"BTC-USD\",\"granularity\":86400,\"limit\":30},\"cacheSeconds\":60,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"接口不保证无成交时间段完整；成交量单位为基础资产，不是USD\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"met-weather\",\"name\":\"MET Norway 天气预报\",\"category\":\"weather\",\"documentation\":\"https://docs.api.met.no/doc/TermsOfService.html\",\"coverage\":\"全球坐标点预报\",\"parameters\":{\"lat\":\"-90至90\",\"lon\":\"-180至180\",\"limit\":\"1–100，默认24\"},\"example\":{\"lat\":31.23,\"lon\":121.47,\"limit\":24},\"cacheSeconds\":600,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"为模式预报，非实测；标明发布时间和有效时间。识别应用User-Agent，遵守缓存\",\"rights\":\"CC BY 4.0，署名MET Norway：https://docs.api.met.no/doc/License.html\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"usgs-earthquakes\",\"name\":\"USGS 地震目录\",\"category\":\"geography\",\"documentation\":\"https://earthquake.usgs.gov/fdsnws/event/1/\",\"coverage\":\"全球最近24小时地震\",\"parameters\":{\"minMagnitude\":\"-2至10，默认2.5\",\"limit\":\"1–100，默认20\"},\"example\":{\"minMagnitude\":4,\"limit\":20},\"cacheSeconds\":60,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"初步事件会修订；深度km，震级非能量。统计只覆盖本次查询返回项\",\"rights\":\"美国政府公开数据；第三方例外遵守USGS说明\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"crossref\",\"name\":\"Crossref 论文元数据\",\"category\":\"research\",\"documentation\":\"https://www.crossref.org/documentation/retrieve-metadata/rest-api/access-and-authentication/\",\"coverage\":\"DOI论文/出版物元数据\",\"parameters\":{\"query\":\"最多200字符\",\"limit\":\"1–100，默认10\"},\"example\":{\"query\":\"climate risk\",\"limit\":10},\"cacheSeconds\":3600,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"无密钥公共池5请求/秒且并发1；本客户端串行。元数据不是全文，缺失作者/摘要不补造\",\"rights\":\"元数据及摘要许可不同；不下载全文，不声称摘要开放许可\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"github-repo\",\"name\":\"GitHub 公开仓库\",\"category\":\"software\",\"documentation\":\"https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api\",\"coverage\":\"公开仓库元数据和计数\",\"parameters\":{\"repo\":\"owner/repository\"},\"example\":{\"repo\":\"microsoft/vscode\"},\"cacheSeconds\":300,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"匿名60次/小时；星标不是用户数，fork不是活跃开发者\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"npm-downloads\",\"name\":\"npm 下载统计\",\"category\":\"software\",\"documentation\":\"https://github.com/npm/registry/blob/main/docs/download-counts.md\",\"coverage\":\"公开软件包下载次数\",\"parameters\":{\"package\":\"包名，可带@scope\",\"period\":\"last-day/last-week/last-month\"},\"example\":{\"package\":\"react\",\"period\":\"last-week\"},\"cacheSeconds\":3600,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"下载次数不是独立用户；统计覆盖区间见start/end\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"gdelt-news\",\"name\":\"GDELT 新闻发现\",\"category\":\"news\",\"documentation\":\"https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/\",\"coverage\":\"全球新闻标题与原文链接\",\"parameters\":{\"query\":\"2–200字符检索\",\"limit\":\"1–100，默认10\"},\"example\":{\"query\":\"climate\",\"limit\":10},\"cacheSeconds\":900,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"seendate是索引发现时间，不等于报道发布时间；不复制全文，新闻版权归原媒体\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"tencent-quotes\",\"name\":\"腾讯财经公开报价\",\"category\":\"market\",\"documentation\":\"https://gu.qq.com/\",\"coverage\":\"A股/港股/部分美股及指数\",\"parameters\":{\"symbols\":\"1–12个代码数组，sh600519/sz000858/hk00700/usAAPL\"},\"example\":{\"symbols\":[\"sh600519\",\"sz000858\",\"sh000300\"]},\"cacheSeconds\":60,\"access\":\"public-web-best-effort\",\"authentication\":\"none\",\"limitations\":\"无稳定官方API文档；尽力而为，可能延迟/停用/地区受限，不能承诺交易级实时\",\"rights\":\"公开网页可访问不等于商业再分发授权；按腾讯及交易所条款核实\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"tencent-history\",\"name\":\"腾讯财经公开日K\",\"category\":\"market\",\"documentation\":\"https://gu.qq.com/\",\"coverage\":\"A股及港股未复权日OHLC\",\"parameters\":{\"symbol\":\"sh600519/sz000858/hk00700\",\"limit\":\"1–100，默认30\"},\"example\":{\"symbol\":\"sh600519\",\"limit\":30},\"cacheSeconds\":300,\"access\":\"public-web-best-effort\",\"authentication\":\"none\",\"limitations\":\"无稳定官方API文档；未复权，不提供分钟线，成交量原始单位未核实时不得写万手\",\"rights\":\"公开网页可访问不等于商业再分发授权\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"sina-news\",\"name\":\"新浪财经滚动资讯\",\"category\":\"news\",\"documentation\":\"https://finance.sina.com.cn/roll/\",\"coverage\":\"财经新闻标题、来源与链接\",\"parameters\":{\"limit\":\"1–100，默认20\"},\"example\":{\"limit\":20},\"cacheSeconds\":60,\"access\":\"public-web-best-effort\",\"authentication\":\"none\",\"limitations\":\"无稳定官方API文档，尽力而为；保留原文链接，不复制全文\",\"rights\":\"标题与正文权利按原媒体及新浪条款\",\"queryable\":true,\"defaultEligible\":true,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"eurostat\",\"name\":\"Eurostat\",\"category\":\"macro\",\"documentation\":\"https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-introduction\",\"coverage\":\"欧盟统计，JSON-stat/SDMX\",\"parameters\":{},\"example\":{},\"cacheSeconds\":86400,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"官方免费接口；数据集更新不等于每项统计更新，保留维度和单位\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"sec-edgar\",\"name\":\"SEC EDGAR\",\"category\":\"disclosures\",\"documentation\":\"https://www.sec.gov/search-filings/edgar-application-programming-interfaces\",\"coverage\":\"美国上市公司申报与XBRL facts\",\"parameters\":{},\"example\":{},\"cacheSeconds\":3600,\"access\":\"official-open\",\"authentication\":\"contact-user-agent\",\"limitations\":\"配置真实可联系的User-Agent并遵守fair access，通常不超过10请求/秒；不虚构联系邮箱\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"nasa-power\",\"name\":\"NASA POWER\",\"category\":\"energy\",\"documentation\":\"https://power.larc.nasa.gov/docs/services/api/\",\"coverage\":\"太阳辐射、气象、能源历史分析\",\"parameters\":{},\"example\":{},\"cacheSeconds\":86400,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"官方免密钥；历史/再分析不是实时观测，按参数区分单位并保留缺失哨兵\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"nws\",\"name\":\"NOAA NWS\",\"category\":\"weather\",\"documentation\":\"https://www.weather.gov/documentation/services-web-api\",\"coverage\":\"美国预报、观测、警报\",\"parameters\":{},\"example\":{},\"cacheSeconds\":600,\"access\":\"official-open\",\"authentication\":\"none\",\"limitations\":\"免费，需识别应用User-Agent；美国范围，坐标转grid可能变更\",\"rights\":\"官方说明免费可用于任何目的，第三方资料例外\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"fred\",\"name\":\"FRED\",\"category\":\"macro\",\"documentation\":\"https://fred.stlouisfed.org/docs/api/api_key.html\",\"coverage\":\"宏观、利率、物价、经济历史\",\"parameters\":{},\"example\":{},\"cacheSeconds\":3600,\"access\":\"free-key\",\"authentication\":\"user-key\",\"limitations\":\"API需免费注册个人密钥，所有用户用自己的密钥；数据序列可能有第三方许可\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"eia\",\"name\":\"美国EIA\",\"category\":\"energy\",\"documentation\":\"https://www.eia.gov/opendata/documentation.php\",\"coverage\":\"能源产量、库存、价格、电力\",\"parameters\":{},\"example\":{},\"cacheSeconds\":3600,\"access\":\"free-key\",\"authentication\":\"user-key\",\"limitations\":\"API v2需免费密钥；频率按路由定义，字符串数值显式转换\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"bea\",\"name\":\"美国BEA\",\"category\":\"macro\",\"documentation\":\"https://www.bea.gov/resources/for-developers\",\"coverage\":\"GDP、产业、国际收支\",\"parameters\":{},\"example\":{},\"cacheSeconds\":86400,\"access\":\"free-key\",\"authentication\":\"user-key\",\"limitations\":\"注册API key；按数据集定义和发布期查询\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"bls\",\"name\":\"美国BLS\",\"category\":\"macro\",\"documentation\":\"https://www.bls.gov/developers/api_signature_v2.htm\",\"coverage\":\"就业、物价、工资\",\"parameters\":{},\"example\":{},\"cacheSeconds\":86400,\"access\":\"conditional\",\"authentication\":\"optional-registration\",\"limitations\":\"v1匿名有限额度，v2注册额度；频率/年度/序列限制需按当前文档\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"census\",\"name\":\"美国Census\",\"category\":\"demographics\",\"documentation\":\"https://api.census.gov/data.html\",\"coverage\":\"人口、区域、经济普查\",\"parameters\":{},\"example\":{},\"cacheSeconds\":86400,\"access\":\"conditional\",\"authentication\":\"optional-key\",\"limitations\":\"公开数据集目录；免费key及匿名额度以当前条款为准，不能向查询提交个人数据\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"openaq\",\"name\":\"OpenAQ v3\",\"category\":\"environment\",\"documentation\":\"https://docs.openaq.org/using-the-api/api-key\",\"coverage\":\"全球空气质量监测\",\"parameters\":{},\"example\":{},\"cacheSeconds\":600,\"access\":\"free-key\",\"authentication\":\"user-key\",\"limitations\":\"v3需API key；传感器单位/时区/采样不同；按各数据贡献者许可\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"open-meteo\",\"name\":\"Open-Meteo\",\"category\":\"weather\",\"documentation\":\"https://open-meteo.com/en/terms\",\"coverage\":\"气象预报、历史气象\",\"parameters\":{},\"example\":{},\"cacheSeconds\":600,\"access\":\"conditional\",\"authentication\":\"none\",\"limitations\":\"免费托管API仅非商业；商业场景用付费服务或选择MET Norway，不能把开源许可等同免费服务条款\",\"rights\":\"按官方条款署名；第三方资料另核许可\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"},{\"id\":\"nominatim-public\",\"name\":\"Nominatim 公共服务（不自动使用）\",\"category\":\"geography\",\"documentation\":\"https://operations.osmfoundation.org/policies/nominatim/\",\"coverage\":\"地址/地点地理编码\",\"parameters\":{},\"example\":{},\"cacheSeconds\":86400,\"access\":\"restricted\",\"authentication\":\"none\",\"limitations\":\"明确禁止no-code/low-code/vibe-coding平台作为通用地理编码服务；本产品不自动查询。需自托管或适合的授权服务；也禁止自动补全和批量周期查询\",\"rights\":\"ODbL并署名OpenStreetMap，服务条款额外适用\",\"queryable\":false,\"defaultEligible\":false,\"reviewedOn\":\"2026-10-10\"}]}"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "51dc932a-226b-4f05-9c29-1b030920f0c4"
+        }
+      }
+    },
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_999321a30fce41f1a4954593",
+        "name": "public_data_query",
+        "arguments": "{\"operation\":\"query\",\"parameters_json\":\"{\\\"limit\\\": 100}\",\"source\":\"sina-news\"}"
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_999321a30fce41f1a4954593"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_999321a30fce41f1a4954593",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"version\":1,\"source\":\"新浪财经滚动资讯\",\"sourceId\":\"sina-news\",\"sourceUrl\":\"https://feed.mix.sina.com.cn/api/roll/get?pageid=384&lid=2519&num=50&page=1\",\"documentation\":\"https://finance.sina.com.cn/roll/\",\"records\":[{\"title\":\"OpenAI首席执行官奥特曼提出AI三大终局：从IAEA式全球监管，到单一巨头“废掉对手GPU”\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivwcmp5776569.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T06:32:33.000Z\"},{\"title\":\"Evercore ISI重申IBM跑赢大盘评级：三季度业绩有望超预期，软件订单恢复成关键\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivwcmm7630641.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T06:32:30.000Z\"},{\"title\":\"StoneX重申Coinbase买入评级，目标价230美元：比特币现货交易收入占比降至12%，业务结构明显转型\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivwcmr6506113.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T06:29:52.000Z\"},{\"title\":\"StoneX重申德州仪器买入评级，目标价360美元：四季度业绩指引将成为股价上涨关键\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivwcmm7626687.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T06:28:25.000Z\"},{\"title\":\"俄罗斯称袭击乌克兰敖德萨地区四艘货船及雷尼港设施\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivwcmm7625246.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T06:26:46.000Z\"},{\"title\":\"屠光绍：中国可持续、高质量发展是全球发展的重要的推动力\",\"url\":\"https://finance.sina.com.cn/2026-10-20/doc-inivwcmk0858164.shtml\",\"publisher\":\"新浪财经\",\"time\":\"2026-10-20T06:26:12.000Z\"},{\"title\":\"美国第70任财政部长Robert RUBIN：美国面临的财政问题是可以应对的，未来可能主要通过税收政策解决\",\"url\":\"https://finance.sina.com.cn/jryx/bank/2026-10-20/doc-inivwcmp5771331.shtml\",\"publisher\":\"金融一线\",\"time\":\"2026-10-20T06:25:08.000Z\"},{\"title\":\"新浪财经总编辑李兀：未来不是被动预测出来的，而是共同创造出来的\",\"url\":\"https://finance.sina.com.cn/headline/2026-10-20/doc-inivwcmp5768198.shtml\",\"publisher\":\"睿见Economy\",\"time\":\"2026-10-20T06:20:48.000Z\"},{\"title\":\"屠光绍：东方力量是中国力量，五大特征支撑高质量发展\",\"url\":\"https://finance.sina.com.cn/2026-10-20/doc-inivwcmm7624268.shtml\",\"publisher\":\"新浪财经\",\"time\":\"2026-10-20T06:20:14.000Z\"},{\"title\":\"StoneX重申Meta持有评级：2026年费用指引或上调至少100亿美元，AI投资持续推高资本开支\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivwcmp5764853.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T06:16:03.000Z\"},{\"title\":\"为什么不能让ChatGPT当医生？\",\"url\":\"https://finance.sina.com.cn/hy/hyjz/2026-10-20/doc-inivwcmm7614855.shtml\",\"publisher\":\"新浪科技\",\"time\":\"2026-10-20T06:15:53.000Z\"},{\"title\":\"上海交大高金与东方证券战略合作签约仪式举行\",\"url\":\"https://finance.sina.com.cn/2026-10-20/doc-inivwcmr6498699.shtml\",\"publisher\":\"新浪财经\",\"time\":\"2026-10-20T06:12:26.000Z\"},{\"title\":\"光伏的账还没算清 星帅尔又掏4.3亿现金去“造刀” 会计师进场后突击下调标的今明两年业绩承诺\",\"url\":\"https://finance.sina.com.cn/stock/observe/2026-10-20/doc-inivwcmr6492705.shtml\",\"publisher\":\"新浪证券\",\"time\":\"2026-10-20T06:10:53.000Z\"},{\"title\":\"科技股怎么选？多只AI基金最新持仓揭晓\",\"url\":\"https://finance.sina.com.cn/money/fund/jjgsgd/2026-10-20/doc-inivwcmm7608115.shtml\",\"publisher\":\"中证网\",\"time\":\"2026-10-20T06:09:58.000Z\"},{\"title\":\"消息称日本央行10月会议将维持利率不变，并小幅上调下财年通胀预期\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivwcmk0833836.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T06:08:44.000Z\"},{\"title\":\"对冲基金以十年来最快速度减持美股科技股！AI拥挤交易松动了吗\",\"url\":\"https://finance.sina.com.cn/stock/bxjj/2026-10-20/doc-inivwcmr6490265.shtml\",\"publisher\":\"市场资讯\",\"time\":\"2026-10-20T06:06:08.000Z\"},{\"title\":\"海天股份筹划重大事项“一日游”：停牌当天即终止 跨界光伏的“虚胖”底色待解\",\"url\":\"https://finance.sina.com.cn/stock/aigcy/2026-10-20/doc-inivwcmk0828639.shtml\",\"publisher\":\"新浪证券\",\"time\":\"2026-10-20T06:03:55.000Z\"},{\"title\":\"金融监管总局发声：持续提升保险业的适应性和竞争力\",\"url\":\"https://finance.sina.com.cn/roll/2026-10-20/doc-inivwcmm7607095.shtml\",\"publisher\":\"证券时报\",\"time\":\"2026-10-20T06:02:34.000Z\"},{\"title\":\"G30首席运营官Ceyla PAZARBASIOGLU：防范财政主导风险关键在于出台中期财政方案\",\"url\":\"https://finance.sina.com.cn/jryx/bank/2026-10-20/doc-inivwcmk0829797.shtml\",\"publisher\":\"金融一线\",\"time\":\"2026-10-20T05:59:51.000Z\"},{\"title\":\"姚汝林：上海国资国企深度布局可持续发展赛道\",\"url\":\"https://finance.sina.com.cn/2026-10-20/doc-inivwcmp5761316.shtml\",\"publisher\":\"新浪财经\",\"time\":\"2026-10-20T05:59:22.000Z\"},{\"title\":\"徐惠丽：黄浦打造超大城市中心城区可持续发展样板\",\"url\":\"https://finance.sina.com.cn/2026-10-20/doc-inivwcmm7595556.shtml\",\"publisher\":\"新浪财经\",\"time\":\"2026-10-20T05:58:42.000Z\"},{\"title\":\"多省份用户访问异常跳转至博彩网站 最新调查报告公布\",\"url\":\"https://finance.sina.com.cn/jjxw/2026-10-20/doc-inivwcmm7588285.shtml\",\"publisher\":\"央视\",\"time\":\"2026-10-20T05:51:14.000Z\"},{\"title\":\"宁德时代午后大跌，成交额A股第一\",\"url\":\"https://finance.sina.com.cn/wm/2026-10-20/doc-inivwcmm7590965.shtml\",\"publisher\":\"一财网\",\"time\":\"2026-10-20T05:49:38.000Z\"},{\"title\":\"图灵奖得主呼吁建立全球AI监管标准，这是人类共同的责任\",\"url\":\"https://finance.sina.com.cn/hy/hyjz/2026-10-20/doc-inivwcmm7613395.shtml\",\"publisher\":\"新浪科技\",\"time\":\"2026-10-20T05:48:34.000Z\"},{\"title\":\"长期主义者的家，一定藏着几个德国牌子\",\"url\":\"https://finance.sina.com.cn/roll/2026-10-20/doc-inivwcmm7584889.shtml\",\"publisher\":\"新浪财经\",\"time\":\"2026-10-20T05:47:32.000Z\"},{\"title\":\"欧洲今冬将有点冷：天然气价格重回四年新高  欧央行行长拉响警报\",\"url\":\"https://finance.sina.com.cn/roll/2026-10-20/doc-inivwcmk0811042.shtml\",\"publisher\":\"市场资讯\",\"time\":\"2026-10-20T05:39:15.000Z\"},{\"title\":\"星环科技午后涨逾6% 星环科技入选IDC中国Data Agent报告主要厂商代表\",\"url\":\"https://finance.sina.com.cn/stock/hkstock/marketalerts/2026-10-20/doc-inivvxct6597304.shtml\",\"publisher\":\"新浪港股\",\"time\":\"2026-10-20T05:33:45.000Z\"},{\"title\":\"伊利集团董事长潘刚：ESG不是业务之外的成本，而是企业可持续发展的内生动力\",\"url\":\"https://finance.sina.com.cn/hy/hyjz/2026-10-20/doc-inivvxcn0929023.shtml\",\"publisher\":\"睿见Economy\",\"time\":\"2026-10-20T05:33:18.000Z\"},{\"title\":\"美元兑日元承压于100日均线，静候周五日本9月CPI指明方向\",\"url\":\"https://finance.sina.com.cn/money/forex/hbfx/2026-10-20/doc-inivvxcp7703967.shtml\",\"publisher\":\"滚动播报\",\"time\":\"2026-10-20T05:33:00.000Z\"},{\"title\":\"领益智造午后涨逾5% 公司物理AI进入发展快车道\",\"url\":\"https://finance.sina.com.cn/stock/hkstock/marketalerts/2026-10-20/doc-inivvxcp7700387.shtml\",\"publisher\":\"新浪港股\",\"time\":\"2026-10-20T05:32:01.000Z\"},{\"title\":\"中国利郎第三季度“LILANZ”产品的零售金额同比取得高单位数升幅\",\"url\":\"https://finance.sina.com.cn/stock/hkstock/ggscyd/2026-10-20/doc-inivvxcp7697855.shtml\",\"publisher\":\"新浪港股\",\"time\":\"2026-10-20T05:28:12.000Z\"},{\"title\":\"广发证券：阅文集团维持“买入”评级 合理价值25.59港元\",\"url\":\"https://finance.sina.com.cn/stock/hkstock/hkgg/2026-10-20/doc-inivvxcr5860490.shtml\",\"publisher\":\"新浪港股\",\"time\":\"2026-10-20T05:24:05.000Z\"},{\"title\":\"广发证券：优然牧业首予“买入”评级 合理价值5.87港元\",\"url\":\"https://finance.sina.com.cn/stock/hkstock/hkgg/2026-10-20/doc-inivvxct6590955.shtml\",\"publisher\":\"新浪港股\",\"time\":\"2026-10-20T05:22:14.000Z\"},{\"title\":\"花旗：中广核电力上升至“买入”评级 目标价上调55%至3.80港元\",\"url\":\"https://finance.sina.com.cn/stock/hkstock/hkgg/2026-10-20/doc-inivvxcr5859544.shtml\",\"publisher\":\"新浪港股\",\"time\":\"2026-10-20T05:22:12.000Z\"},{\"title\":\"韩国央行与欧洲央行扩大代币化项目合作\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivvxcn0918592.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T05:19:26.000Z\"},{\"title\":\"送股份、设基金，马斯克与Anthropic的AI财富分配路线有何不同\",\"url\":\"https://finance.sina.com.cn/jjxw/2026-10-20/doc-inivvxct6589339.shtml\",\"publisher\":\"澎湃新闻\",\"time\":\"2026-10-20T05:18:33.000Z\"},{\"title\":\"马斯克考核未达标！特斯拉：其去年薪酬超1万亿元，实际到手为0\",\"url\":\"https://finance.sina.com.cn/roll/2026-10-20/doc-inivvxcp7690627.shtml\",\"publisher\":\"每日经济新闻\",\"time\":\"2026-10-20T05:12:19.000Z\"},{\"title\":\"首只发行、提前结募！创业板电池ETF华宝（158078）填补20CM电池类ETF空白\",\"url\":\"https://finance.sina.com.cn/money/fund/etf/2026-10-20/doc-inivvxcn0913551.shtml\",\"publisher\":\"新浪基金\",\"time\":\"2026-10-20T05:12:07.000Z\"},{\"title\":\"新加坡冬海集团拟将金融服务部门分拆上市，并推出AI企业平台业务\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivvxcp7683260.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T05:07:51.000Z\"},{\"title\":\"日本20年期国债招标需求创纪录 高收益率吸引国内买盘回归\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivvxcr5851762.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T05:07:45.000Z\"},{\"title\":\"韩国2万亿韩元加码半导体材料设备，科创半导体设备ETF华泰柏瑞（588710）交投升温\",\"url\":\"https://finance.sina.com.cn/money/fund/jjh/2026-10-20/doc-inivvxcr5850877.shtml\",\"publisher\":\"新浪基金\",\"time\":\"2026-10-20T05:06:22.000Z\"},{\"title\":\"资金连续14个交易日逆势涌入宽基ETF，沪深300ETF华泰柏瑞（510300）成重要配置抓手\",\"url\":\"https://finance.sina.com.cn/money/fund/jjh/2026-10-20/doc-inivvxcp7681629.shtml\",\"publisher\":\"新浪基金\",\"time\":\"2026-10-20T05:06:09.000Z\"},{\"title\":\"长端日债收益率已超3% 日本央行的任何基调转变都会被放大？\",\"url\":\"https://finance.sina.com.cn/money/forex/hbfx/2026-10-20/doc-inivvxcp7683089.shtml\",\"publisher\":\"滚动播报\",\"time\":\"2026-10-20T05:06:00.000Z\"},{\"title\":\"美银：理想汽车芯片附属公司MHX融资16.25亿元 理想自投10亿元维持其控股地位\",\"url\":\"https://finance.sina.com.cn/stock/hkstock/hkyx/2026-10-20/doc-inivvxcn0908151.shtml\",\"publisher\":\"港股一线\",\"time\":\"2026-10-20T05:05:19.000Z\"},{\"title\":\"三星将于下周在韩国推出首款开放式耳机\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivvxcp7673625.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T04:59:20.000Z\"},{\"title\":\"智利央行董事会成员Claudio SOTO：拉美地区应对冲击需要财政整顿的同时收紧货币政策\",\"url\":\"https://finance.sina.com.cn/jryx/bank/2026-10-20/doc-inivvxct6566548.shtml\",\"publisher\":\"金融一线\",\"time\":\"2026-10-20T04:45:03.000Z\"},{\"title\":\"诺奖得主支招：有闲钱可以投资这个事儿\",\"url\":\"https://finance.sina.com.cn/hy/hyjz/2026-10-20/doc-inivvxcp7660703.shtml\",\"publisher\":\"新浪科技\",\"time\":\"2026-10-20T04:43:47.000Z\"},{\"title\":\"诺奖得主：单层石墨烯性能卓越，相关研究15年内一定能走入百姓生活\",\"url\":\"https://finance.sina.com.cn/hy/hyjz/2026-10-20/doc-inivvxcp7660195.shtml\",\"publisher\":\"新浪科技\",\"time\":\"2026-10-20T04:42:41.000Z\"},{\"title\":\"688608、300115，“20cm”涨停\",\"url\":\"https://finance.sina.com.cn/wm/2026-10-20/doc-inivvxct6578502.shtml\",\"publisher\":\"上海证券报\",\"time\":\"2026-10-20T04:40:15.000Z\"},{\"title\":\"巴厘岛延长加油站错峰加油政策\",\"url\":\"https://finance.sina.com.cn/stock/usstock/c/2026-10-20/doc-inivvxcp7655999.shtml\",\"publisher\":\"环球市场播报\",\"time\":\"2026-10-20T04:39:40.000Z\"}],\"units\":{},\"dataTime\":\"2026-10-20T06:32:33.000Z\",\"receivedAt\":\"2026-10-20T06:34:35.633Z\",\"cacheHit\":false,\"nextRefreshSeconds\":60,\"limitations\":\"无稳定官方API文档，尽力而为；保留原文链接，不复制全文\",\"rights\":\"标题与正文权利按原媒体及新浪条款\",\"quality\":\"source-response\",\"delivery\":\"snapshot; no automatic component refresh binding\"}"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "4e3f1cc7-9466-46de-b286-5cedcee474fe"
+        }
+      }
+    },
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_aa7a9d848b4f435cadae82e4",
+        "name": "web_search",
+        "arguments": "{\"query\":\"中际旭创 300308 公告 最近 巨潮资讯网 2026年10月\"}"
+      }
+    },
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_756603317ef845fabb4279c0",
+        "name": "web_search",
+        "arguments": "{\"query\":\"新易盛 300502 公告 最近 巨潮资讯网 2026年10月\"}"
+      }
+    },
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_e25bd8b64c9641e2a497f2e5",
+        "name": "web_search",
+        "arguments": "{\"query\":\"工业富联 601138 公告 最近 巨潮资讯网 2026年10月\"}"
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_aa7a9d848b4f435cadae82e4"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_aa7a9d848b4f435cadae82e4",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Sources:\n- [中（汉语汉字）_百度百科](https://baike.baidu.com/item/%E4%B8%AD/977204) — 其形体像竖立的一面旗帜，上下各两条旗斿向左飘动，方口表示中间。 金文旗斿向右。 小篆省掉旗斿，隶变后楷书写作“中”。 原意指 …\n- [中 zhōng、zhòng - 汉典](https://www.zdic.net/hans/%E4%B8%AD) — 例如 人中 (人嘴上唇当中处);华中;中浣 (农历每月中旬);中土 (中原地区。 古以冀州为中土，汉以来以河南为中土;中国);中天 (天空的中 …\n- [中字笔画、笔顺、笔划 - 中字怎么写?](https://www.hanzipi.com/%E4%B8%AD.html) — 2026年8月4日 · 查询汉字《中》的笔画顺序和规范笔划，通过《中》的笔顺动画学习正确的写法。\n- [< 中 : ㄓㄨㄥ >辭典檢視 - 教育部《重編國語辭典修訂本》2021](https://dict.revised.moe.edu.tw/dictView.jsp?ID=8151&la=0&powerMode=0) — 2021年7月22日 · 字詞:中,注音:ㄓㄨㄥ,丨部+3畫 共4畫 (常用字),釋義: [名] 1.距離四方或兩端相等的部位。 如：「居中」、「中央」、 …\n- [中（河南方言代表性词语之一）_百度百科](https://baike.baidu.com/item/%E4%B8%AD/17677482) — “中”可受“不”、“真”等词修饰，如“不中听”、“真中”，并可采用正反重叠形式表示疑问，如“这枣中不中吃？ ” [4-5]。 表示肯定和赞同的“ …\n- [中的意思,中的解释,中的拼音,中的部首,中的笔顺-汉语国学](https://www.hanyuguoxue.com/zidian/zi-20013) — 中是多音字，拼音是zhōng、zhòng，中字共4画，部首是丨部，本页介绍中字的意思，中的详细解释，中的读音、笔顺，还包括中的翻 …\n- [首頁 | 中華語文知識庫](https://www.chinese-linguipedia.org/) — 2026年6月4日 · 隸書 隸書為秦書八體之一，是漢字中常見的一種莊重的字體風格，書寫效果略微寬扁，橫畫長而直畫短，呈長方形 …\n- [中 - 维基词典，自由的多语言词典](https://zh.wiktionary.org/wiki/%E4%B8%AD) — 2026年9月29日 · 與“ 外 ”相對。 在一定范围之 内。 常用用法：在……中。 例：在 生活 中。 位置 、 性质 、 等级 在两端之 间。 适 …\n\nCite the relevant URLs above as markdown links in your answer."
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "3d9576e3-af8b-4f2e-867d-8322d19ead85"
+        }
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_756603317ef845fabb4279c0"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_756603317ef845fabb4279c0",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Sources:\n- [巨潮资讯网](https://www.cninfo.com.cn/new/disclosure/stock?orgId=9900026455&stockCode=300502) — 1 天前 · 巨潮资讯网是中国证监会指定的上市公司信息披露网站，平台提供上市公司公告、公司资讯、公司互动、股东大会网络投票等 …\n- [新易盛 (300502)_重大事项提醒与新闻公告_投资提醒_新浪 ...](https://money.finance.sina.com.cn/corp/view/vCB_AllMemordDetail.php?stockid=300502) — 2026年10月1日 · 新浪财经新易盛 (300502)行情中心,为您提供新易盛 (300502)重大事项投资提醒与最新最全新闻公告提醒与查询.\n- [新易盛 (300502)_重大事项提醒与新闻公告_投资提醒_新浪 ...](https://vip.stock.finance.sina.com.cn/corp/view/vCB_AllMemordDetail.php?stockid=300502) — 2026年10月1日 · 新浪财经新易盛 (300502)行情中心,为您提供新易盛 (300502)重大事项投资提醒与最新最全新闻公告提醒与查询.\n- [新易盛 (300502)公告 (全部) - 理杏仁](https://www.lixinger.com/equity/company/detail/sz/300502/300502/announcement) — 2026年9月12日 · 新易盛 (300502) 最新公告（300502新易盛投资者关系管理信息20260911）发布于2026-09-12。\n- [新易盛 (300502)_公司公告_新易盛：2026年半年度报告新浪 ...](https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?stockid=300502&id=12528568) — 2025年12月31日 · 成都新易盛通信技术股份有限公司 2026年半年度报告 2026-044 2026年8月 第一节重要提示、目录和释义 公司董事 …\n- [成都新易盛通信技术股份有限公司 关于 2026 年半 ... - 巨潮 ...](https://static.cninfo.com.cn/finalpage/2026-08-25/1225499412.PDF) — 2026 年 8 月 24 日,成都新易盛通信技术股份有限公司(以下简称“公司”)召开了第五届董事会第十六次会议,审议通过了公司 2026 年半年 …\n- [新易盛 (300502)-公告大事](https://basic.10jqka.com.cn/mobile/300502/pubn.html) — 《新易盛：关于收到控股股东、实际控制人、董事长提议回购公司股份的公告》 [查看公告] 《新易盛：300502新易盛投资者关系管理 …\n- [新易盛 (300502.SZ)资讯公告-PC_HSF10资料](https://emweb.securities.eastmoney.com/NewsBulletin/Index?type=soft&code=SZ300502) — 据证券时报·数据宝统计，今日（9月17日）沪深两市主力资金净流出95.88亿元，其中创业板净流出54.13亿元，沪深300成份股净流 …\n\nCite the relevant URLs above as markdown links in your answer."
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "825a1704-055f-41b2-851e-1fc249215edc"
+        }
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_e25bd8b64c9641e2a497f2e5"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_e25bd8b64c9641e2a497f2e5",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Sources:\n- [工业富联（601138）公告列表 _ 数据中心 _ 东方财富网](https://data.eastmoney.com/notices/stock/601138.html) — 相关信息并未经过本网站证实，不对您构成任何投资建议，据此操作，风险自担。\n- [巨潮资讯网](http://www.cninfo.com.cn/new/disclosure/stock?orgId=9900036731&stockCode=601138) — 巨潮资讯网是中国证监会指定的上市公司信息披露网站，平台提供上市公司公告、公司资讯、公司互动、股东大会网络投票等内容功 …\n- [工业富联 (601138)新闻公告_个股行情_同花顺财经](https://f10.10jqka.com.cn/601138/news/) — 2026年10月10日 · 提供工业富联 (601138)五档盘口、逐笔交易等实时行情数据；汇总工业富联 (601138)基本资料及重大新闻、研究报 …\n- [工业富联 (601138)_重大事项提醒与新闻公告_投资提醒_新浪 ...](https://vip.stock.finance.sina.com.cn/corp/view/vCB_AllMemordDetail.php?stockid=601138) — 2026年9月24日 · 富士康工业互联网股份有限公司关于美国国际贸易委员会对公司及控股子公司开展337调查的公告 . 仅供参考，请查 …\n- [工业富联 (601138)公司公告_新浪财经_新浪网](https://money.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/601138.phtml) — 2026年10月12日 · 新浪财经工业富联 (601138)行情中心,为您提供工业富联 (601138)公司公告信息数据查询.\n- [工业富联 (601138)_公司公告_工业富联：2026年半年度业绩 ...](https://money.finance.sina.com.cn/corp/view/vCB_AllBulletinDetail.php?stockid=601138&id=12438274) — 2026年7月10日 · 经富士康工业互联网股份有限公司 (以下简称“公司”)财务部门初步 核算,预计公司2026 年第二季度实现归属于母公司 …\n- [工业富联（601138）上市公告 _工业富联:富士康工业互联网 ...](https://pilu.tianyancha.com/announcement/0aafe9eae2805aeac3c5992afaeb48d0) — 2026年8月12日 · 关于本公司所面临主要风险见“第三节管理层讨论与分析”中“可能面对的风险”部分的描述。 在虚假记载、误导性陈述 …\n- [工业富联 (601138)公告 (全部) - 理杏仁](https://www.lixinger.com/equity/company/detail/sh/601138/601138/announcement?type=all) — 2026年10月12日 · 工业富联 (601138) 最新公告（富士康工业互联网股份有限公司关于美国国际贸易委员会对公司及控股子公司开 …\n\nCite the relevant URLs above as markdown links in your answer."
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "d0b96b9b-62fd-4335-904c-a10d850f2baa"
+        }
+      }
+    },
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_4ce0e6b9fb114f36b041e7d7",
+        "name": "web_fetch",
+        "arguments": "{\"url\":\"https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/300308.phtml\"}"
+      }
+    },
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_bb6a2d4dd38e4216a5a7f908",
+        "name": "web_fetch",
+        "arguments": "{\"url\":\"https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/300502.phtml\"}"
+      }
+    },
+    {
+      "type": "tool/call",
+      "data": {
+        "callId": "call_69ecf579352f45a2b755a15d",
+        "name": "web_fetch",
+        "arguments": "{\"url\":\"https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/601138.phtml\"}"
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_4ce0e6b9fb114f36b041e7d7"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_4ce0e6b9fb114f36b041e7d7",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Fetched https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/300308.phtml (HTTP 200)\n\n中际旭创 644.20(-2.50%)_公司公告_新浪财经_新浪网\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n财经首页 | 新浪首页 | 新浪导航\n行情中心 意见反馈\n精选股票池\n财经首页股票基金港股美股期货外汇贵金属债券大盘个股新股数据博客股吧自选股\n投资助手：\n资金流向\n业绩报表\n业绩预告\n限售解禁\n新股申购\n实时大单\n基金重仓\n融资融券\n龙虎榜\n大宗交易\n内部交易\n涨幅排行\n千股千评\n业绩预测\n券商评级\n条件选股\n阶段统计\n环球股指\n沪深300\n财务对比\n下一组\n新浪财经 > 新浪股票 > 中际旭创 > 公司公告\n实时热点：\n三峡能源\n京东方A\nTCL科技\n中远海控\n最近访问股\n自选股\n名称\t价格(元)\t涨跌幅\n贵州茅台\t1326.36\t0.10%\n以下为热门股票\n三峡能源\t3.36\t-2.33%\n京东方Ａ\t5.03\t-0.59%\nTCL科技\t4.39\t-2.23%\n中远海控\t16.55\t-1.08%\n格力电器\t38.45\t-3.66%\n比亚迪\t82.17\t-1.59%\n*ST美谷\t3.11\t1.30%\n中国平安\t50.61\t-2.05%\n上海贝岭\t20.87\t4.14%\n立讯精密\t47.11\t1.97%\n东方财富\t17.85\t-1.27%\n科蓝软件\t7.34\t1.94%\n三一重工\t18.09\t1.52%\n热点栏目\n交易提示\n操盘必读\n大市评论\n个股点评\n公司公告\n研究报告\n新股申购\n千股千评\n资金流向\n证券报\n展开全部\n收起全部\n投资工具\n数据中心\n财务对比\n行情走势\n大单追踪\n成交明细\n分价统计\n持仓分析\n融资融券\n大宗交易\n内部交易\n龙虎榜\n公司资料\n公司简介\n公司高管\n所属行业\n所属概念\n公司章程\n相关证券\n所属指数\n所属系别\n发行分配\n分红送配\n新股发行\n限售解禁\n增发\n招股说明书\n上市公告\n股本股东\n股本结构\n主要股东\n流通股东\n基金持股\n公司公告\n最新公告\n年报\n半年报\n一季报\n三季报\n财务数据\n财务摘要\n财务指标\n资产负债表\n利润表\n现金流量表\n业绩预告\n杜邦分析\n股东权益增减\n重大事项\n股东大会\n关联交易\n诉讼仲裁\n违规记录\n对外担保\n加入自选股\n桌面快捷方式\n客户端\n中际旭创(300308.SZ)\n-16.50\n-2.50%\n644.20\n涨停：792.84\n跌停：528.56\n2026-10-20 14:35:09\n今  开：\t650.70\t成交量：\t19.83万手\t振  幅：\t5.46%\n最  高：\t673.10\t成交额：\t129.89亿元\t换手率：\t1.79%\n最  低：\t637.00\t总市值：\t7588.09亿\t市净率：\t18.02\n昨  收：\t660.70\t流通市值：\t7150.21亿\t市盈率TTM：\t37.10\n资讯与公告\n个股资讯\n行业资讯\n公司公告\n年度报告\n中期报告\n一季度报告\n三季度报告\n理财师解读\n公司号\n全文类型 \n--全部--\n更正或补充\n公司章程\n股权分置改革说明书\n回访报告\n临时公告\n年度报告\n年度报告（摘要）\n配股说明书\n权证上市公告书\n权证说明书\n三季度报告\n三季度报告（摘要）\n上市公告书\n一季度报告\n一季度报告（摘要）\n招股说明书（申报稿）\n招股说明书/意向书\n中期报告\n中期报告（摘要）\n \n查看信息地雷>>\n快速通道:\t\n2026-10-15 中际旭创：H股公告(董事会会议日期)\n2026-10-08 中际旭创：H股公告(截至2026年9月30日止股份发行人的证券变动月报表)\n2026-10-01 中际旭创：关于协议受让北京中石伟业科技股份有限公司部分股权完成过户登记的公告\n2026-09-28 中际旭创：关于控股股东部分股票解除质押的公告\n2026-09-28 中际旭创：2026年半年度A股权益分派实施公告\n2026-09-25 中际旭创：关于股份回购结果暨股份变动公告\n2026-09-23 中际旭创：H股公告(翌日披露报表)\n2026-09-21 中际旭创：H股公告(翌日披露报表)\n2026-09-17 中际旭创：H股公告(翌日披露报表)\n2026-09-16 中际旭创：H股公告(翌日披露报表)\n2026-09-15 中际旭创：H股公告(翌日披露报表)\n2026-09-14 中际旭创：H股公告(翌日披露报表)\n2026-09-11 中际旭创：H股公告(翌日披露报表)\n2026-09-11 中际旭创：H股公告(中期报告)\n2026-09-10 中际旭创：H股公告(翌日披露报表)\n2026-09-09 中际旭创：H股公告(翌日披露报表)\n2026-09-08 中际旭创：H股公告(翌日披露报表)\n2026-09-08 中际旭创：关于特定股东部分股票进行质押交易及解除质押的公告\n2026-09-08 中际旭创：关于控股股东部分股票解除质押的公告\n2026-09-04 中际旭创：H股公告(截至2026年8月31日止股份发行人的证券变动月报表)\n2026-09-04 中际旭创：H股公告(翌日披露报表)\n2026-09-04 中际旭创：关于向控股子公司提供财务资助的公告\n2026-09-04 中际旭创：关于实际控制人部分股票解除质押的公告\n2026-09-03 中际旭创：H股公告(翌日披露报表)\n2026-09-02 中际旭创：H股公告(翌日披露报表)\n2026-09-02 中际旭创：关于实际控制人部分股票进行质押交易的公告\n2026-09-02 中际旭创：关于回购股份事项前十名股东和前十名无限售条件股东持股情况的公告\n2026-09-01 中际旭创：H股公告(翌日披露报表)2\n2026-09-01 中际旭创：回购报告书\n2026-09-01 中际旭创：关于首次回购公司股份的公告\n\n         第1页    下一页\n客户服务热线：4001102288 　欢迎批评指正\n常见问题解答 互联网违法和不良信息举报 新浪财经意见反馈留言板\n新浪简介 | About Sina | 广告服务 | 联系我们 | 招聘信息 | 网站律师 | SINA English | 通行证注册 | 产品答疑\nCopyright © 1996-2013 SINA Corporation, All Rights Reserved\n新浪公司　版权所有\n新浪财经免费提供股票、基金、债券、外汇等行情数据以及其他资料均来自相关合作方，仅作为用户获取信息之目的，并不构成投资建议。\n新浪财经以及其合作机构不为本页面提供信息的错误、残缺、延迟或因依靠此信息所采取的任何行动负责。市场有风险，投资需谨慎。"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "676b65bb-541d-4e90-8c4b-dfb33d2040ef"
+        }
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_bb6a2d4dd38e4216a5a7f908"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_bb6a2d4dd38e4216a5a7f908",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Fetched https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/300502.phtml (HTTP 200)\n\n新易盛 297.61(-3.37%)_公司公告_新浪财经_新浪网\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n财经首页 | 新浪首页 | 新浪导航\n行情中心 意见反馈\n精选股票池\n财经首页股票基金港股美股期货外汇贵金属债券大盘个股新股数据博客股吧自选股\n投资助手：\n资金流向\n业绩报表\n业绩预告\n限售解禁\n新股申购\n实时大单\n基金重仓\n融资融券\n龙虎榜\n大宗交易\n内部交易\n涨幅排行\n千股千评\n业绩预测\n券商评级\n条件选股\n阶段统计\n环球股指\n沪深300\n财务对比\n下一组\n新浪财经 > 新浪股票 > 新易盛 > 公司公告\n实时热点：\n三峡能源\n京东方A\nTCL科技\n中远海控\n最近访问股\n自选股\n名称\t价格(元)\t涨跌幅\n贵州茅台\t1326.36\t0.10%\n以下为热门股票\n三峡能源\t3.36\t-2.33%\n京东方Ａ\t5.03\t-0.59%\nTCL科技\t4.39\t-2.23%\n中远海控\t16.55\t-1.08%\n格力电器\t38.45\t-3.66%\n比亚迪\t82.17\t-1.59%\n*ST美谷\t3.11\t1.30%\n中国平安\t50.61\t-2.05%\n上海贝岭\t20.87\t4.14%\n立讯精密\t47.11\t1.97%\n东方财富\t17.85\t-1.27%\n科蓝软件\t7.34\t1.94%\n三一重工\t18.09\t1.52%\n热点栏目\n交易提示\n操盘必读\n大市评论\n个股点评\n公司公告\n研究报告\n新股申购\n千股千评\n资金流向\n证券报\n展开全部\n收起全部\n投资工具\n数据中心\n财务对比\n行情走势\n大单追踪\n成交明细\n分价统计\n持仓分析\n融资融券\n大宗交易\n内部交易\n龙虎榜\n公司资料\n公司简介\n公司高管\n所属行业\n所属概念\n公司章程\n相关证券\n所属指数\n所属系别\n发行分配\n分红送配\n新股发行\n限售解禁\n增发\n招股说明书\n上市公告\n股本股东\n股本结构\n主要股东\n流通股东\n基金持股\n公司公告\n最新公告\n年报\n半年报\n一季报\n三季报\n财务数据\n财务摘要\n财务指标\n资产负债表\n利润表\n现金流量表\n业绩预告\n杜邦分析\n股东权益增减\n重大事项\n股东大会\n关联交易\n诉讼仲裁\n违规记录\n对外担保\n加入自选股\n桌面快捷方式\n客户端\n新易盛(300502.SZ)\n-10.39\n-3.37%\n297.61\n涨停：369.60\n跌停：246.40\n2026-10-20 14:35:09\n今  开：\t302.75\t成交量：\t33.24万手\t振  幅：\t5.59%\n最  高：\t311.88\t成交额：\t100.35亿元\t换手率：\t2.65%\n最  低：\t294.66\t总市值：\t4150.88亿\t市净率：\t17.08\n昨  收：\t308.00\t流通市值：\t3734.18亿\t市盈率TTM：\t31.64\n资讯与公告\n个股资讯\n行业资讯\n公司公告\n年度报告\n中期报告\n一季度报告\n三季度报告\n理财师解读\n公司号\n全文类型 \n--全部--\n更正或补充\n公司章程\n股权分置改革说明书\n回访报告\n临时公告\n年度报告\n年度报告（摘要）\n配股说明书\n权证上市公告书\n权证说明书\n三季度报告\n三季度报告（摘要）\n上市公告书\n一季度报告\n一季度报告（摘要）\n招股说明书（申报稿）\n招股说明书/意向书\n中期报告\n中期报告（摘要）\n \n查看信息地雷>>\n快速通道:\t\n2026-10-15 新易盛：关于收到控股股东、实际控制人、董事长提议回购公司股份的公告\n2026-09-12 新易盛：投资者关系管理信息20260911\n2026-09-11 新易盛：关于2024年限制性股票激励计划预留授予第二期归属结果暨股份上市的公告\n2026-09-09 新易盛：关于参加举办四川辖区2026年投资者网上集体接待日及半年度报告业绩说明会的公告\n2026-09-07 新易盛：关于向2026年限制性股票激励计划激励对象首次授予限制性股票的公告\n2026-09-07 新易盛：北京国枫律师事务所关于公司2026年第三次临时股东会的法律意见书\n2026-09-07 新易盛：关于调整2026年限制性股票激励计划首次授予激励对象名单的公告\n2026-09-07 新易盛：关于2026年限制性股票激励计划内幕信息知情人买卖公司股票情况的自查报告\n2026-09-07 新易盛：董事会薪酬与考核委员会关于公司2026年限制性股票激励计划调整及首次授予相关事项的核查意见\n2026-09-07 新易盛：第五届董事会第十七次会议决议公告\n2026-09-07 新易盛：2026年第三次临时股东会决议公告\n2026-09-07 新易盛：北京国枫律师事务所关于公司2026年限制性股票激励计划调整及首次授予事项的法律意见书\n2026-09-01 新易盛：董事会薪酬与考核委员会关于2026年限制性股票激励计划首次授予激励对象名单的核查意见及公示情况说明\n2026-08-25 新易盛：2026年半年度非经营性资金占用及其他关联资金往来情况汇总表\n2026-08-25 新易盛：2026年半年度报告\n2026-08-25 新易盛：第五届董事会第十六次会议决议公告\n2026-08-25 新易盛：2024年限制性股票激励计划授予价格及权益数量调整、预留授予第二期归属条件成就相关事项的法律意见书\n2026-08-25 新易盛：关于2024年限制性股票激励计划预留授予第二期归属条件成就的公告\n2026-08-25 新易盛：关于2026年半年度报告披露的提示性公告\n2026-08-25 新易盛：董事会薪酬与考核委员会关于2024年限制性股票激励计划预留授予第二期可归属激励对象名单的核查意见\n2026-08-25 新易盛：关于调整2024年限制性股票激励计划首次及预留授予限制性股票授予价格及权益数量的公告\n2026-08-25 新易盛：2026年半年度报告摘要\n2026-08-21 新易盛：2026年限制性股票激励计划(草案)\n2026-08-21 新易盛：董事会薪酬与考核委员会关于公司2026年限制性股票激励计划相关事项的核查意见\n2026-08-21 新易盛：2026年限制性股票激励计划自查表\n2026-08-21 新易盛：2026年限制性股票激励计划(草案)法律意见书\n2026-08-21 新易盛：2026年限制性股票激励计划(草案)摘要\n2026-08-21 新易盛：2026年限制性股票激励计划实施考核管理办法\n2026-08-21 新易盛：关于拟续聘2026年度会计师事务所的公告\n2026-08-21 新易盛：关于召开2026年第三次临时股东会的通知\n\n         第1页    下一页\n客户服务热线：4001102288 　欢迎批评指正\n常见问题解答 互联网违法和不良信息举报 新浪财经意见反馈留言板\n新浪简介 | About Sina | 广告服务 | 联系我们 | 招聘信息 | 网站律师 | SINA English | 通行证注册 | 产品答疑\nCopyright © 1996-2013 SINA Corporation, All Rights Reserved\n新浪公司　版权所有\n新浪财经免费提供股票、基金、债券、外汇等行情数据以及其他资料均来自相关合作方，仅作为用户获取信息之目的，并不构成投资建议。\n新浪财经以及其合作机构不为本页面提供信息的错误、残缺、延迟或因依靠此信息所采取的任何行动负责。市场有风险，投资需谨慎。"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "0c044a2c-182d-4bb4-a1ff-f0169358c7f6"
+        }
+      }
+    },
+    {
+      "type": "tool/result",
+      "data": {
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_69ecf579352f45a2b755a15d"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_69ecf579352f45a2b755a15d",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Fetched https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/601138.phtml (HTTP 200)\n\n工业富联 48.53(1.72%)_公司公告_新浪财经_新浪网\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n财经首页 | 新浪首页 | 新浪导航\n行情中心 意见反馈\n精选股票池\n财经首页股票基金港股美股期货外汇贵金属债券大盘个股新股数据博客股吧自选股\n投资助手：\n资金流向\n业绩报表\n业绩预告\n限售解禁\n新股申购\n实时大单\n基金重仓\n融资融券\n龙虎榜\n大宗交易\n内部交易\n涨幅排行\n千股千评\n业绩预测\n券商评级\n条件选股\n阶段统计\n环球股指\n沪深300\n财务对比\n下一组\n新浪财经 > 新浪股票 > 工业富联 > 公司公告\n实时热点：\n三峡能源\n京东方A\nTCL科技\n中远海控\n最近访问股\n自选股\n名称\t价格(元)\t涨跌幅\n贵州茅台\t1326.36\t0.10%\n以下为热门股票\n三峡能源\t3.36\t-2.33%\n京东方Ａ\t5.03\t-0.59%\nTCL科技\t4.39\t-2.23%\n中远海控\t16.55\t-1.08%\n格力电器\t38.45\t-3.66%\n比亚迪\t82.17\t-1.59%\n*ST美谷\t3.11\t1.30%\n中国平安\t50.61\t-2.05%\n上海贝岭\t20.87\t4.14%\n立讯精密\t47.11\t1.97%\n东方财富\t17.85\t-1.27%\n科蓝软件\t7.34\t1.94%\n三一重工\t18.09\t1.52%\n热点栏目\n交易提示\n操盘必读\n大市评论\n个股点评\n公司公告\n研究报告\n新股申购\n千股千评\n资金流向\n证券报\n展开全部\n收起全部\n投资工具\n数据中心\n财务对比\n行情走势\n大单追踪\n成交明细\n分价统计\n持仓分析\n融资融券\n大宗交易\n内部交易\n龙虎榜\n公司资料\n公司简介\n公司高管\n所属行业\n所属概念\n公司章程\n相关证券\n所属指数\n所属系别\n发行分配\n分红送配\n新股发行\n限售解禁\n增发\n招股说明书\n上市公告\n股本股东\n股本结构\n主要股东\n流通股东\n基金持股\n公司公告\n最新公告\n年报\n半年报\n一季报\n三季报\n财务数据\n财务摘要\n财务指标\n资产负债表\n利润表\n现金流量表\n业绩预告\n杜邦分析\n股东权益增减\n重大事项\n股东大会\n关联交易\n诉讼仲裁\n违规记录\n对外担保\n加入自选股\n桌面快捷方式\n客户端\n工业富联(601138.SH)\n0.82\n+1.72%\n48.53\n涨停：52.48\n跌停：42.94\n2026-10-20 14:35:08\n今  开：\t47.24\t成交量：\t80.40万手\t振  幅：\t4.80%\n最  高：\t49.29\t成交额：\t38.86亿元\t换手率：\t0.41%\n最  低：\t47.00\t总市值：\t9630.34亿\t市净率：\t5.48\n昨  收：\t47.71\t流通市值：\t9630.34亿\t市盈率TTM：\t20.53\n资讯与公告\n个股资讯\n行业资讯\n公司公告\n年度报告\n中期报告\n一季度报告\n三季度报告\n理财师解读\n公司号\n全文类型 \n--全部--\n更正或补充\n公司章程\n股权分置改革说明书\n回访报告\n临时公告\n年度报告\n年度报告（摘要）\n配股说明书\n权证上市公告书\n权证说明书\n三季度报告\n三季度报告（摘要）\n上市公告书\n一季度报告\n一季度报告（摘要）\n招股说明书（申报稿）\n招股说明书/意向书\n中期报告\n中期报告（摘要）\n \n查看信息地雷>>\n快速通道:\t\n2026-10-12 工业富联：关于美国国际贸易委员会对公司及控股子公司开展337调查的公告\n2026-09-19 工业富联：关于股份回购实施结果暨股份变动的公告\n2026-09-03 工业富联：关于股份回购进展公告\n2026-08-26 工业富联：投资者关系活动记录表20260825\n2026-08-20 工业富联：关于以集中竞价交易方式首次回购股份的公告\n2026-08-19 工业富联：关于召开2026年半年度业绩说明会的公告\n2026-08-12 工业富联：第四届董事会第三次会议决议公告\n2026-08-12 工业富联：2026年半年度募集资金存放、管理与实际使用情况的专项报告\n2026-08-12 工业富联：2026年半年度报告\n2026-08-12 工业富联：2026年半年度报告摘要\n2026-08-05 工业富联：关于股份回购进展公告\n2026-07-31 工业富联：关于回购股份事项前十名股东和前十名无限售条件股东持股情况的公告\n2026-07-28 工业富联：关于以集中竞价交易方式回购股份的回购报告书\n2026-07-28 工业富联：第四届董事会第二次会议决议公告\n2026-07-24 工业富联：2025年年度权益分派实施公告\n2026-07-10 工业富联：2026年半年度业绩预增公告\n2026-07-08 工业富联：北京市金杜律师事务所关于富士康工业互联网股份有限公司2026年第一次临时股东会之法律意见书\n2026-07-08 工业富联：2026年第一次临时股东会决议公告\n2026-07-08 工业富联：第四届董事会第一次会议决议公告\n2026-07-08 工业富联：关于董事会完成换届选举及聘任高级管理人员、证券事务代表的公告\n2026-07-01 工业富联：2026年第一次临时股东会会议资料\n2026-06-19 工业富联：独立董事候选人声明与承诺(李昕)\n2026-06-19 工业富联：独立董事候选人声明与承诺(廖翠萍)\n2026-06-19 工业富联：独立董事候选人声明与承诺(李丹)\n2026-06-19 工业富联：独立董事提名人声明与承诺\n2026-06-19 工业富联：关于召开2026年第一次临时股东会的通知\n2026-06-19 工业富联：董事、高级管理人员薪酬管理制度\n2026-06-19 工业富联：第三届董事会第三十四次会议决议公告\n2026-06-16 工业富联：关于选举职工代表董事的公告\n2026-06-11 工业富联：关于2022年员工持股计划第三个锁定期届满暨解锁条件成就的公告\n\n         第1页    下一页\n客户服务热线：4001102288 　欢迎批评指正\n常见问题解答 互联网违法和不良信息举报 新浪财经意见反馈留言板\n新浪简介 | About Sina | 广告服务 | 联系我们 | 招聘信息 | 网站律师 | SINA English | 通行证注册 | 产品答疑\nCopyright © 1996-2013 SINA Corporation, All Rights Reserved\n新浪公司　版权所有\n新浪财经免费提供股票、基金、债券、外汇等行情数据以及其他资料均来自相关合作方，仅作为用户获取信息之目的，并不构成投资建议。\n新浪财经以及其合作机构不为本页面提供信息的错误、残缺、延迟或因依靠此信息所采取的任何行动负责。市场有风险，投资需谨慎。"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "29121813-fa10-4759-b800-d3e6019d3233"
+        }
+      }
+    }
+  ],
+  "pages": [
+    {
+      "url": "https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/300308.phtml",
+      "date": "2026-10-15",
+      "title": "中际旭创：H股公告(董事会会议日期)"
+    },
+    {
+      "url": "https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/300502.phtml",
+      "date": "2026-10-15",
+      "title": "新易盛：关于收到控股股东、实际控制人、董事长提议回购公司股份的公告"
+    },
+    {
+      "url": "https://vip.stock.finance.sina.com.cn/corp/go.php/vCB_AllBulletin/stockid/601138.phtml",
+      "date": "2026-10-12",
+      "title": "工业富联：关于美国国际贸易委员会对公司及控股子公司开展337调查的公告"
+    }
+  ]
+}
