@@ -160,6 +160,7 @@ export class MemoryService {
           for(const usage of state.usages)usage.entries=usage.entries.filter(e=>e.id!==id)
           purge=true
         }else{
+          if(command.action==='disable'&&row.status!=='active'||command.action==='enable'&&row.status!=='disabled'||command.action==='accept'&&row.status!=='candidate')throw Error('记忆状态已更新，请刷新后重试。')
           if(command.action==='accept'&&row.scope==='project'&&!row.projectId)throw Error('请先编辑并选择记忆所属项目。')
           row.status=command.action==='disable'?'disabled':'active';row.revision++;row.updatedAt=this.now()
           if(command.action==='accept'){
