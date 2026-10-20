@@ -48,7 +48,7 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
     function update() {
       const r = port.getBoundingClientRect(), max = port.scrollHeight - port.clientHeight
       const visible = max > 1 && r.height > 0 && r.width > 0 && !port.closest('[aria-hidden=true],[inert]') && win.getComputedStyle(port).visibility !== 'hidden'
-      track.hidden = !visible
+      if (track.hidden !== !visible) track.hidden = !visible
       if (!visible) return
       const height = Math.max(32, r.height * port.clientHeight / port.scrollHeight)
       ratio = max / Math.max(1, r.height - height)
@@ -89,6 +89,8 @@ export function mountFigmaScrollbars(doc: Document, alwaysShow = false): () => v
   const pendingRoots = new Set<HTMLElement>()
   const mutations = new win.MutationObserver(records => {
     for (const record of records) {
+      // Overlay visibility is our output, never a reason to rescan every panel.
+      if ((record.target as Element).closest?.('.odyssey-scroll-track')) continue
       if (record.type === 'attributes') for (const root of doc.querySelectorAll<HTMLElement>(scope)) pendingRoots.add(root)
       for (const node of record.addedNodes) {
         if (node.nodeType !== 1) continue
