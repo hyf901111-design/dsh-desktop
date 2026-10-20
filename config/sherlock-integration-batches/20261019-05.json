@@ -305,6 +305,111 @@
         ],
         "recordedAt": "2026-10-20T04:31:53.366Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "记忆设置直接编辑与移除AI概括",
+        "branch": "codex/feat/memory-editor-20261020",
+        "baseCommit": "23e02a4ac318d7404d048c7389de4780d2f034f6",
+        "tipCommit": "7d1f388105367888c2ad23fdcd58789586319262",
+        "commits": [
+          {
+            "commit": "7d1f388105367888c2ad23fdcd58789586319262",
+            "parents": [
+              "23e02a4ac318d7404d048c7389de4780d2f034f6"
+            ],
+            "subject": "支持逐条编辑记忆并移除设置中的AI概括"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/README.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/memory/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-view.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "4个记忆聚焦测试文件78条通过；日志 /tmp/memory-editor-focused-20261020.log；覆盖直接编辑保存/取消/删除、revision与状态保持、草稿刷新重开及账号隔离、加密与Markdown存储保护、移除summary调度且保留自动提取。",
+            "verifiedCommit": "7d1f388105367888c2ad23fdcd58789586319262",
+            "completedAt": "2026-10-20T05:09:03.632896+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript检查通过；日志 /tmp/memory-editor-typecheck-20261020.log。",
+            "verifiedCommit": "7d1f388105367888c2ad23fdcd58789586319262",
+            "completedAt": "2026-10-20T05:09:03.633132+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "按授权仅在隔离feature中完成聚焦行为测试，不构建或替换共享客户端。真实中英文设置UI验收由pending集成批次05完成，当前未声称客户端验收通过。"
+        },
+        "acceptanceCriteria": [
+          "记忆设置直接展示真实条目，可逐条编辑标题与内容并保存、取消或删除。",
+          "保留已有记忆、状态、来源、项目范围、固定标记及有效期；陈旧revision不得覆盖新版本。",
+          "未保存草稿跨后台刷新、设置关闭重开及语言切换保留；切换账号后清空私密草稿，旧响应不得污染新账号。",
+          "移除设置AI概括展示、runtime summary生成和轮询，保留自动记忆提取/召回及旧加密数据兼容。",
+          "中英文按钮与错误提示配套，账号隔离、0600/0700、加密存储及Markdown冲突副本不放宽。"
+        ],
+        "risks": [
+          "真实客户端视觉及点击验收尚待集成批次05；本分支未构建共享客户端。",
+          "草稿仅保留在当前preload内存，应用完全退出或重新加载后不持久化；不额外将私密草稿写入磁盘。",
+          "外部版本冲突时保留草稿并拒绝覆盖，用户可复制草稿或取消查看最新内容。",
+          "后端旧summary接口与缓存兼容保留，但当前runtime和设置UI不再触发或显示。"
+        ],
+        "generatedAt": "2026-10-20T05:09:03.633137+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -344,6 +449,27 @@
         "git",
         "diff",
         "--check"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/memory-view.test.ts",
+        "test/memory-service.test.ts",
+        "test/memory-document.test.ts",
+        "test/memory-runtime.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
       ],
       "timeoutMs": 120000
     }
