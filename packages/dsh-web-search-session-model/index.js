@@ -404,9 +404,21 @@ export async function searchLocalBrowser(
     throw new WebError('本地搜索服务返回的结果格式无法读取，请稍后重试。', 'WEB_LOCAL_SEARCH_FAILED')
   }
   const sources = localSources(parsed)
-  const content = nonEmptyString(parsed.content)
+  let provenance = ''
+  if (parsed.provenance !== undefined) {
+    const value = parsed.provenance, normalize = text => text.trim().replace(/\s+/gu, ' ')
+    if (!isRecord(value) || !['bing','duckduckgo'].includes(value.engine) || typeof value.requestedQuery !== 'string' || value.requestedQuery.length > 512 || normalize(value.requestedQuery) !== normalize(request.query) || typeof value.documentQuery !== 'string' || value.documentQuery.length > 512 || normalize(value.documentQuery) !== normalize(request.query) || typeof value.pageTitle !== 'string' || value.pageTitle.length > 512) {
+      throw new WebError('本地搜索结果的页面查询与请求不一致，未采用这些来源。', 'WEB_LOCAL_SEARCH_FAILED')
+    }
+    // Keep observed provider/query metadata with the public tool result. This
+    // makes a native relevance failure diagnosable without logging credentials,
+    // session cookies, private model reasoning or full search-page HTML.
+    provenance = `检索入口：${value.engine === 'bing' ? 'Bing' : 'DuckDuckGo'}；页面查询：${JSON.stringify(value.documentQuery)}；页面标题：${JSON.stringify(value.pageTitle)}。`
+  }
+  const summary = nonEmptyString(parsed.content)
+  const content = [provenance, summary].filter(Boolean).join('\n') || undefined
   const noResults = parsed.status === 'no_results' && parsed.sources.length === 0
-  if (sources.length === 0 && !content && !noResults) {
+  if (sources.length === 0 && !summary && !noResults) {
     throw new WebError(
       '本地搜索暂未返回可引用来源，请调整关键词或稍后重试。',
       'WEB_LOCAL_SEARCH_FAILED'

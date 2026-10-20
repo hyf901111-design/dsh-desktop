@@ -7,7 +7,7 @@ import {
   type BrowserSearchWindow
 } from '../src/main/search/browser-search-controller'
 
-type PageState = { url: string; title: string; text: string }
+type PageState = { url: string; title: string; text: string; noResults?: boolean }
 
 class FakeSearchWindow implements BrowserSearchWindow {
   readonly loaded: string[] = []
@@ -20,6 +20,7 @@ class FakeSearchWindow implements BrowserSearchWindow {
   maxActiveLoads = 0
   currentUrl = ''
   pageStates: PageState[] = []
+  lastPageState?: PageState
   results = new Map<string, unknown[]>()
   loadBarrier?: Promise<void>
 
@@ -27,16 +28,12 @@ class FakeSearchWindow implements BrowserSearchWindow {
     this.webContents = {
       executeJavaScript: async (script) => {
         if (script.includes('document.body?.innerText')) {
-          return (
-            this.pageStates.shift() ?? {
-              url: this.currentUrl,
-              title: 'Search results',
-              text: 'ordinary results'
-            }
-          )
+          this.lastPageState = this.pageStates.shift() ?? { url: this.currentUrl, title: 'Search results', text: 'ordinary results' }
+          return this.lastPageState
         }
         const engine = this.currentUrl.includes('bing.com') ? 'bing' : 'duckduckgo'
-        return this.results.get(engine) ?? []
+        const candidates = this.results.get(engine) ?? []
+        return script.includes('documentQuery:') ? { url: this.currentUrl, title: this.lastPageState?.title ?? '', documentQuery: new URL(this.currentUrl).searchParams.get('q'), candidates, noResults: this.lastPageState?.noResults ?? false } : candidates
       },
       getURL: () => this.currentUrl,
       stop: () => {
@@ -147,7 +144,7 @@ describe('BrowserSearchController', () => {
     ])
     const controller = new BrowserSearchController({ createWindow: () => window })
 
-    await expect(controller.search('latest earnings', 5)).resolves.toEqual({
+    await expect(controller.search('latest earnings', 5)).resolves.toMatchObject({
       sources: [
         { title: 'Bing result', url: 'https://example.com/result', snippet: 'summary' }
       ],
@@ -180,7 +177,7 @@ describe('BrowserSearchController', () => {
       navigationTimeoutMs: 5
     })
 
-    await expect(controller.search('stalled first engine', 5)).resolves.toEqual({
+    await expect(controller.search('stalled first engine', 5)).resolves.toMatchObject({
       sources: [
         {
           title: 'Fallback result',
@@ -240,7 +237,7 @@ describe('BrowserSearchController', () => {
     const execute = window.webContents.executeJavaScript
     window.webContents.executeJavaScript = async (script) => script.includes('document.body?.innerText')
       ? { url: window.currentUrl, title: '搜索', text: '没有找到相关结果', noResults: true }
-      : execute(script)
+      : script.includes('documentQuery:') ? {url:window.currentUrl,title:'搜索',documentQuery:new URL(window.currentUrl).searchParams.get('q'),candidates:[],noResults:true} : execute(script)
     const controller = new BrowserSearchController({ createWindow: () => window })
 
     await expect(controller.search('不存在的搜索词', 5)).resolves.toMatchObject({
@@ -257,9 +254,11 @@ describe('BrowserSearchController', () => {
       const load = window.loadURL.bind(window)
       window.loadURL = async (url) => {
         await load(url)
+        page.happyDOM.setURL(url)
         page.document.body.innerHTML = noResults
           ? '<ol id="b_results"><li class="b_no">没有找到相关结果</li></ol>'
           : '<ol id="b_results"><li class="b_algo"><h2><a href="https://example.com/report">报告</a></h2><div class="b_caption"><p>No results is the reported status.</p></div></li></ol>'
+        const input=page.document.createElement('input');input.id='sb_form_q';input.name='q';input.value=new URL(url).searchParams.get('q')??'';page.document.body.prepend(input)
       }
       window.webContents.executeJavaScript = async (script) => page.eval(script)
       return window
@@ -501,4 +500,35 @@ describe('BrowserSearchController', () => {
       'https://html.duckduckgo.com/html/?q=second'
     ])
   })
+})
+
+
+it('rejects results whose document query differs from the requested query even when webContents already shows the new URL',async()=>{
+ const window=new FakeSearchWindow()
+ window.webContents.executeJavaScript=async script=>script.includes('document.body?.innerText')?{url:window.currentUrl,title:'煤电政策 - 搜索',text:'ordinary results'}:
+  script.includes('documentQuery:')?{url:window.currentUrl,title:'煤 - 搜索',documentQuery:'煤',candidates:[{title:'煤的百科',url:'https://example.org/old-query'}]}:
+  [{title:'煤的百科',url:'https://example.org/old-query'}]
+ const controller=new BrowserSearchController({createWindow:()=>window,sleep:async()=>{}})
+ await expect(controller.search('煤电政策',5)).rejects.toThrow('未能读取搜索结果')
+})
+
+it('keeps the search engine and actual page query beside valid results for native provenance diagnosis',async()=>{
+ const window=new FakeSearchWindow(),query='煤电容量电价 国家发改委 2026'
+ window.webContents.executeJavaScript=async script=>script.includes('document.body?.innerText')?{url:window.currentUrl,title:query+' - 搜索',text:'ordinary results'}:
+  script.includes('documentQuery:')?{url:window.currentUrl,title:query+' - 搜索',documentQuery:query,candidates:[{title:'容量电价政策',url:'https://example.org/policy'}]}:
+  [{title:'容量电价政策',url:'https://example.org/policy'}]
+ const controller=new BrowserSearchController({createWindow:()=>window})
+ const result=await controller.search(query,5)
+ expect(result.sources).toEqual([{title:'容量电价政策',url:'https://example.org/policy'}])
+ expect(result).toMatchObject({provenance:{engine:'bing',requestedQuery:query,documentQuery:query,pageTitle:query+' - 搜索'}})
+})
+
+
+it('waits for the current document query to hydrate without issuing another navigation or widening its probe limit',async()=>{
+ const window=new FakeSearchWindow();let probes=0,waits=0
+ window.webContents.executeJavaScript=async script=>script.includes('document.body?.innerText')?{url:window.currentUrl,title:'煤电政策 - 搜索',text:'ordinary results'}:
+ {url:window.currentUrl,title:'煤电政策 - 搜索',documentQuery:++probes===1?'煤':'煤电政策',candidates:[{title:'已匹配政策',url:'https://example.org/policy'}]}
+ const controller=new BrowserSearchController({createWindow:()=>window,sleep:async()=>{waits++}})
+ await expect(controller.search('煤电政策',5)).resolves.toMatchObject({sources:[{url:'https://example.org/policy'}],provenance:{documentQuery:'煤电政策'}})
+ expect(window.loaded).toHaveLength(1);expect(probes).toBe(2);expect(waits).toBe(1)
 })

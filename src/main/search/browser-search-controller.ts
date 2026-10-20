@@ -5,7 +5,8 @@ import {
   isSearchChallenge,
   normalizeSearchResults,
   orderedSearchEngines,
-  searchExtractionScript,
+  searchSnapshotScript,
+  type SearchEngineId,
   type SearchResultCandidate,
   type SearchSource
 } from './search-engines'
@@ -37,6 +38,7 @@ export interface BrowserSearchResult {
   truncated: false
   status?: 'no_results'
   content?: string
+  provenance?: { engine: SearchEngineId; requestedQuery: string; documentQuery: string; pageTitle: string }
 }
 
 interface SearchPageState {
@@ -180,16 +182,28 @@ export class BrowserSearchController {
           // ready. Four probes add at most 750 ms of waiting per loaded page.
           for (let attempt = 0; attempt < 4; attempt += 1) {
             this.throwIfUnavailable(signal)
-            const state = await this.completeVerification(window, signal)
+            await this.completeVerification(window, signal)
             const location = window.webContents.getURL()
             if (!isAllowedSearchLocation(engine, location) || new URL(location).searchParams.get('q') !== query) {
               throw new Error('搜索页面已离开当前查询。')
             }
-            const extracted = await this.executePageScript(window, searchExtractionScript(engine), signal)
-            const candidates = Array.isArray(extracted) ? (extracted as SearchResultCandidate[]) : []
+            const extracted = await this.executePageScript(window, searchSnapshotScript(engine), signal)
+            const snapshot = extracted && typeof extracted === 'object' && !Array.isArray(extracted) ? extracted as Record<string, unknown> : null
+            const documentUrl = typeof snapshot?.url === 'string' ? snapshot.url : ''
+            const documentQuery = typeof snapshot?.documentQuery === 'string' ? snapshot.documentQuery : ''
+            const sameQuery = (value: string) => value.trim().replace(/\s+/gu, ' ')
+            // webContents can advertise a new location before its DOM has the
+            // matching query/results. Never pair an address-bar query with a
+            // previous document's rows. A hydration probe reuses the existing
+            // four-probe budget; it neither navigates nor expands the deadline.
+            if (!isAllowedSearchLocation(engine, documentUrl) || new URL(documentUrl).searchParams.get('q') !== query || sameQuery(documentQuery) !== sameQuery(query)) {
+              if (attempt < 3) { await this.abortable(this.sleep(250), signal, window); continue }
+              throw new Error('搜索结果文档尚未对应当前查询。')
+            }
+            const candidates = Array.isArray(snapshot?.candidates) ? (snapshot.candidates as SearchResultCandidate[]) : []
             const sources = normalizeSearchResults(candidates, maxResults)
-            if (sources.length > 0) return { sources, truncated: false }
-            if (state.noResults) {
+            if (sources.length > 0) return { sources, truncated: false, provenance: { engine, requestedQuery: query, documentQuery, pageTitle: typeof snapshot?.title === 'string' ? snapshot.title.slice(0, 512) : '' } }
+            if (snapshot?.noResults === true) {
               noResults = true
               engineHasNoResults = true
               break

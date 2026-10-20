@@ -113,3 +113,23 @@ it('supports a short primary headline and an article with explicit OpenGraph ide
  const result=await window.eval(renderedPageContentScript(400))
  expect(result.article).toEqual({title:'煤价上涨',date:'2026-10-20'})
 })
+
+
+it('reads a legacy publication caption from the primary H1 adjacent metadata block without borrowing the page clock or article-body dates',async()=>{
+ window=new Window({url:'https://www.cctd.com.cn/show-176-257515-1.html'})
+ window.document.head.innerHTML='<title>国家发展改革委、国家能源局等部门在山西召开加快煤矿复产增产保供工作推进会 - 煤炭产业综合 - CCTD中国煤炭市场网</title>'
+ window.document.body.innerHTML='<header>2026-10-21 05:59 星期三</header><div class="news_show"><h1>国家发展改革委、国家能源局等部门在山西召开加快煤矿复产增产保供工作推进会</h1><div class="news_tool"><ul><li>来源：国家能源局</li><li>发布时间：2026-10-16 15:42:32</li><li><a href="#font">字号</a></li></ul></div><script>/* no execution needed */</script><div id="zoom"><p>文件正文提到2026-07-06和2023-11-10，这些不是网页发布时间。</p></div></div><aside><h2>相关阅读</h2>发布时间：2026-10-20</aside>'
+ const result=await window.eval(renderedPageContentScript(400))
+ expect(result.article).toEqual({title:'国家发展改革委、国家能源局等部门在山西召开加快煤矿复产增产保供工作推进会',date:'2026-10-16'})
+})
+
+it.each(['body-paragraph','related-heading','hidden-metadata','conflicting-captions'])('does not take a legacy primary publication date from %s',async mode=>{
+ window=new Window({url:'https://example.org/main'})
+ let sibling='<p>发布时间：2026-10-16 是正文中的引用。</p>'
+ if(mode==='related-heading')sibling='<div><h2>推荐文章</h2>发布时间：2026-10-16</div>'
+ if(mode==='hidden-metadata')sibling='<div hidden>发布时间：2026-10-16</div>'
+ if(mode==='conflicting-captions')sibling='<div>发布时间：2026-10-16<br>发布日期：2026-10-17</div>'
+ window.document.body.innerHTML='<h1>这是一篇主文的实际完整标题</h1>'+sibling+'<main>主文正文2026-08-10</main>'
+ const result=await window.eval(renderedPageContentScript(400))
+ expect(result.article).toBeUndefined()
+})

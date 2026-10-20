@@ -30,8 +30,13 @@ it('starts an A-share filed-statement comparison from verified statement definit
  expect(text).toContain('先读取当前接口定义')
  expect(text).toContain('不能代替正式财报')
  expect(text).toContain('经营字段')
+ expect(text).toContain('getEquOperData')
+ expect(text).toContain('读取一次当前接口定义并在各公司间复用')
+ expect(text).toContain('核对分页和原始单位')
  expect(text).toContain('实际报告期、披露日期和单位')
  expect(componentSourceInstruction(tools,request,new Date(),{planning:true})).not.toContain('getFdmtISLT2018')
+ expect(componentSourceInstruction(tools,request,new Date(),{planning:true})).not.toContain('getEquOperData')
+ expect(componentSourceInstruction(tools,'600011.SH营业收入对比。不要查询装机和发电量等经营数据。')).not.toContain('getEquOperData')
 })
 
 it.each(['600011.SH','002026.SZ','601985.SH'])('bounds the first latest-statement query by reporting dates without treating stock digits as a historical year: %s',symbol=>{
