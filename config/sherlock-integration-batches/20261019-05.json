@@ -9,31 +9,95 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "提高顶栏未选中页签的可读性",
+        "featureName": "完善来源规划兼容并修复刷新图标和绘制等待",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "34e6b8a7e15ee9f019021584330d6d3803d4f80d",
-        "tipCommit": "ed5067bbd21b9c3f30267bb018ba97892924809a",
+        "baseCommit": "ed5067bbd21b9c3f30267bb018ba97892924809a",
+        "tipCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
         "commits": [
           {
-            "commit": "ed5067bbd21b9c3f30267bb018ba97892924809a",
+            "commit": "a22b0252498466b139d63fdff869b87f52072e40",
             "parents": [
-              "34e6b8a7e15ee9f019021584330d6d3803d4f80d"
+              "ed5067bbd21b9c3f30267bb018ba97892924809a"
             ],
-            "subject": "提高顶栏未选中页签的文字对比度"
+            "subject": "修复来源规划空占位并按字段能力保留取数需求"
+          },
+          {
+            "commit": "64f83012ccad93f51536297c897b7d59bb20b04a",
+            "parents": [
+              "a22b0252498466b139d63fdff869b87f52072e40"
+            ],
+            "subject": "修正表格回退合同并保留明确排除字段的行情直通"
+          },
+          {
+            "commit": "2f2897d8a4bc46d16fcfc5c72c2e6fd416bb3f11",
+            "parents": [
+              "64f83012ccad93f51536297c897b7d59bb20b04a"
+            ],
+            "subject": "修复工作台绘制确认超时后的动画帧漏停"
+          },
+          {
+            "commit": "1713f8bcb1941684b2102df197ea568744d6f423",
+            "parents": [
+              "2f2897d8a4bc46d16fcfc5c72c2e6fd416bb3f11"
+            ],
+            "subject": "收紧排除字段列表边界避免吞掉必需指标"
+          },
+          {
+            "commit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
+            "parents": [
+              "1713f8bcb1941684b2102df197ea568744d6f423"
+            ],
+            "subject": "固定组件刷新图标比例并改用独立圆环加载动画"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/figma-final-shell.css"
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
           },
           {
             "status": "M",
-            "path": "src/preload/figma-refinements.css"
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
           },
           {
             "status": "M",
-            "path": "test/figma-header-layout.test.js"
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-fourth-source-plans.json"
+          },
+          {
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-deferred.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-refresh-state.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-source-capability.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-source-route-fallback.test.js"
           }
         ],
         "checks": [
@@ -41,15 +105,26 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/figma-header-layout.test.js",
-              "test/figma-responsive-header.test.ts",
+              "test/workbench-source-capability.test.js",
+              "test/workbench-source-route-fallback.test.js",
+              "test/workbench-public-data.test.js",
+              "test/workbench-deferred.test.js",
+              "test/workbench-source-context.test.js",
+              "test/research-creation-progress.test.js",
+              "test/research-generation-watch.test.js",
+              "test/research-planning-controls-browser.test.js",
+              "test/workbench-refresh-state.test.js",
+              "test/component-data-status.test.js",
+              "test/component-data-ui.test.js",
+              "test/research-grid-workbench.test.js",
               "--maxWorkers=1",
+              "--testTimeout=15000",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "2文件15项顶栏布局与响应式检查通过；日志 /tmp/header-tab-contrast-final-focused-20261020.log",
-            "verifiedCommit": "ed5067bbd21b9c3f30267bb018ba97892924809a",
-            "completedAt": "2026-10-20T07:27:19.555787+00:00",
+            "summary": "12文件198项通过；日志 /tmp/workbench-source-ring-final-focused-15s-20261020.log",
+            "verifiedCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
+            "completedAt": "2026-10-20T08:16:23.037132+00:00",
             "timeoutMs": 180000
           },
           {
@@ -59,126 +134,42 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；日志 /tmp/header-tab-contrast-typecheck-20261020.log",
-            "verifiedCommit": "ed5067bbd21b9c3f30267bb018ba97892924809a",
-            "completedAt": "2026-10-20T07:27:19.555787+00:00",
+            "summary": "类型检查通过；/tmp/workbench-source-ring-final-typecheck-20261020.log",
+            "verifiedCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
+            "completedAt": "2026-10-20T08:16:23.037132+00:00",
             "timeoutMs": 180000
           },
           {
             "argv": [
               "git",
               "diff",
-              "--check"
+              "--check",
+              "ed5067bb..HEAD"
             ],
             "outcome": "passed",
-            "summary": "空白检查通过",
-            "verifiedCommit": "ed5067bbd21b9c3f30267bb018ba97892924809a",
-            "completedAt": "2026-10-20T07:27:19.555787+00:00",
+            "summary": "所有本批提交空白检查通过",
+            "verifiedCommit": "ddb29ad2c8b65f0552a0703adf4cff053a89cc54",
+            "completedAt": "2026-10-20T08:16:23.037132+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端；已用实际顶栏树和宿主CSS检查深浅主题、首页/研究/笔记/轨迹及宽窄布局。真实客户端可读性待本批打包后验收。"
+          "summary": "功能worktree禁止构建共享客户端。来源实参完整回放与独立审查通过；Chromium四主题与180px窄顶栏验证16x16和独立圆环。实际客户端待集成包验收。"
         },
         "acceptanceCriteria": [
-          "深色未选中页签从#A0A0A0提亮为#D2D2D2，浅色通过#595959提高对比；只作用顶栏模式页签。",
-          "普通、紧凑、窄布局沿用同一颜色角色，hover/focus保持可见。",
-          "选中页签背景与颜色、布局尺寸和点击区域保留。"
+          "真实source空占位可归一，非空artifact/模拟/URL/来源/权限仍校验；三批实测create均可回放接受。",
+          "报价缺字段保留需求取数，标准完整排除需求保留直通；公司新闻不转全市场。",
+          "规划等待超时后停止逐帧检查；未宣称修复分钟级交付延迟。",
+          "刷新图标固定正方形，busy时独立圆环无指针箭头，结束恢复四状态，支持自动/手动/notes/降低动态效果。"
         ],
         "risks": [
           "仅本地测试实验，不接受晋升main、发布或推送。",
-          "初次相邻旧glass用例仍有既存clip-path断言差异，本次不改其裁切机制；相关实际顶栏布局15项通过。",
-          "真实背景图可读性需打包原生验证，现有会话、看板、记忆均保留。"
+          "当前机器默认5秒的完整客户端AST解析用例出现超时；未改变源码断言或产品时限，以单用例15秒等待重跑12文件198项全部通过。",
+          "第四轮真实数据生成后端8/8耗时416.152秒，但估值与新闻内容失配促成本批修复；不能把此次回放当成新版完整金融生成实测。",
+          "renderer消息消费积压与分钟级画布交付延迟同现，具体JS根因仍未知；只修复已经确定的RAF漏停。"
         ],
-        "generatedAt": "2026-10-20T07:27:19.555787+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d56c5d65534c107abf2590d2c58cabd3a0eefd3f",
-        "verificationCommit": "d56c5d65534c107abf2590d2c58cabd3a0eefd3f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "d56c5d65534c107abf2590d2c58cabd3a0eefd3f",
-            "completedAt": "2026-10-20T07:31:56.348Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d56c5d65534c107abf2590d2c58cabd3a0eefd3f",
-            "completedAt": "2026-10-20T07:31:56.348Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "d56c5d65534c107abf2590d2c58cabd3a0eefd3f",
-            "completedAt": "2026-10-20T07:31:56.348Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "d56c5d65534c107abf2590d2c58cabd3a0eefd3f",
-            "completedAt": "2026-10-20T07:31:56.348Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d56c5d65534c107abf2590d2c58cabd3a0eefd3f",
-            "completedAt": "2026-10-20T07:31:56.348Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T07:31:56.348Z"
+        "generatedAt": "2026-10-20T08:16:23.037132+00:00"
       }
     },
     {
