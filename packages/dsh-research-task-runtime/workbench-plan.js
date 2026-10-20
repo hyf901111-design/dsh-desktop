@@ -328,6 +328,12 @@ export function validateWorkbench(value) {
         if (!p || !str(p.title, 80) || !str(p.prompt, 5000) || !WORKBENCH_PANEL_TYPES.includes(p.type) || (!Object.hasOwn(PANEL_SIZES, p.size) && (!Number.isInteger(p.height) || p.height < 220 || p.height > 1200)) || seen.has(p.title.trim()))
             throw Error('面板标题、内容类型或规划尺寸无效。');
         seen.add(p.title.trim());
+        // A deferred plan carries no artifact yet. Some model gateways spell
+        // an omitted optional object as null; normalize only that empty slot.
+        if (deferred && p.artifact === null) {
+            const { artifact, ...metadata } = p;
+            p = metadata;
+        }
         if (deferred && (!DEFERRED_WORKBENCH_TYPES.includes(p.type) || p.artifact !== undefined || p.publicData !== undefined || p.title.length > 76))
             throw Error('延后模拟生成仅接受已注册数据模板的title/prompt/type/size规划，不能混用artifact、免费源或自定义HTML；面板标题最多76字符。');
         // Recover the observed flattened spelling before dispatch. Keep the
