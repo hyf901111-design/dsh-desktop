@@ -450,7 +450,12 @@ function workbenchPanelFormat(prompt) {
   const type = prompt.match(/优先使用 ([a-z-]+) 类型/u)?.[1]
   if (!WORKBENCH_PANEL_TYPES.has(type)) return null
   if (type === 'kpi' && /(?:每个指标|计算口径|指标口径|定义)/u.test(prompt)) return 'dashboard'
-  if (type === 'table' && /(?:筛选|过滤|搜索)/u.test(prompt)) return 'html'
+  if (type === 'table') {
+    // Native tables already search, filter their rows and sort columns. Only
+    // interactions beyond that renderer need model-authored page code.
+    const interaction = prompt.replace(/(?:无需|不要|不必|不需要|禁止)[^。；;\n]{0,24}(?:详情|详细说明|完整说明|详细信息)/gu, '')
+    if (/(?:点击|点选|逐行|每行|每条).{0,16}(?:展开|查看|打开).{0,16}(?:详情|详细说明|完整说明|详细信息)|(?:click|select|expand).{0,40}(?:row|record|item).{0,40}(?:details|full description)|行内编辑|编辑单元格|增删行|拖拽行|拖动行|勾选.{0,8}批量|多条件筛选|下拉.{0,8}筛选/iu.test(interaction)) return 'html'
+  }
   if (type === 'chart' && /K线|蜡烛图|candlestick/iu.test(prompt)) return 'market'
   if (type === 'chart' && /(?:叠加|双轴|区间筛选|月份区间)/u.test(prompt)) return 'html'
   return type

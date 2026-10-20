@@ -1275,6 +1275,22 @@ describe('Research task Subagent adapter', () => {
     expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件');
     await handle.dispose();
   });
+  it('keeps searchable sortable business tables on the native data path while preserving custom record details',async()=>{
+    for(const interaction of ['交互：排序与搜索。','支持按公司筛选、过滤记录、单击表头排序。']){
+      const fixture=containerAdapterFixture()
+      fixture.ctx.tools={schemas:()=>[{name:'public_data_query'}]}
+      const handle=await fixture.start(`工作台：经营差异\n本面板：经营基本面\n取得三家公司真实财报、来源与单位，${interaction}\n仅生成本面板，优先使用 table 类型。`)
+      try{
+        const prompt=fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+        expect(prompt).toContain('"type":"table"')
+        expect(prompt).toContain('不要写 HTML/CSS')
+        expect(prompt).not.toContain('"type":"html"')
+      }finally{await handle.dispose()}
+    }
+    const fixture=containerAdapterFixture()
+    const handle=await fixture.start('工作台：交接\n本面板：详情记录\n搜索记录；点击每行展开详情与完整说明。\n仅生成本面板，优先使用 table 类型。')
+    try{expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toMatch(/"type"\s*:\s*"html"/)}finally{await handle.dispose()}
+  })
   it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
     const fixture=containerAdapterFixture()
     fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'}]}
