@@ -51,6 +51,23 @@ it('completes a verified multi-date feed in one worker without regenerating its 
  }finally{await runtime.dispose()}
 });
 
+it('synthesizes a retrieved announcement snapshot immediately without reopening discovery or losing source authority',async()=>{
+ const records=collect([multiDateCall]),dispose=vi.fn(async()=>{}),start=vi.fn(async input=>({childSessionId:'phase-'+start.mock.calls.length,dispose,result:Promise.resolve(start.mock.calls.length===1?
+  {stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[],sourceRecords:records,researchEvidence:'已取得实际公告列表：'+JSON.stringify(multiDateCall)}:
+  {stopReason:'completed',output:[{type:'text',text:JSON.stringify(multiDateFeed)}],sourceRecords:[]})}));
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'phase-feed'});
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'feed',kind:'container',prompt:'工作台：真实公司研究\n本面板：公告\n优先使用 news 类型；保留真实标题、日期和原文链接。只取快照。'});
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'phase-feed'}).state).toBe('completed'));
+  expect(start).toHaveBeenCalledTimes(2);expect(dispose).toHaveBeenCalledTimes(2);
+  expect(start.mock.calls[1][0].synthesisOnly).toBe(true);
+  expect(start.mock.calls[1][0].prompt).toContain(multiDateCall.url);
+  expect(start.mock.calls[1][0].prompt).toContain(multiDateCall.data.data.list[0].title);
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'phase-feed'}).finalOutput)).data;
+  expect(data.items[0]).toMatchObject({title:multiDateCall.data.data.list[0].title,date:'2026-10-21',publisher:'华能国际（600011）'});
+ }finally{await runtime.dispose()}
+});
+
 const observed=JSON.parse(readFileSync(new URL('./fixtures/component-web-fetch-announcements.json',import.meta.url),'utf8'))
 function collect(calls=observed.calls,{failed=false,prefix=''}={}){
  const collector=componentSourceCollector(['public_data_query','web_fetch'])

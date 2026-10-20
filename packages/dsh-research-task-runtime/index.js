@@ -1526,6 +1526,10 @@ export class ResearchTaskRuntime {
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
+          // A retrieval handoff is not a failed model artifact. Preserve its
+          // evidence and enter the existing single synthesis attempt directly;
+          // running source validation on an absent draft would reopen research.
+          if(result.researchPhaseComplete&&!deliveredText.trim())throw new ResearchTaskError('INVALID_OUTPUT','资料检索阶段已完成，请直接用已取得资料生成当前组件JSON。')
           // A valid-looking static card can contain values copied from an API
           // example. Discovery-only evidence requires retrieval even when the
           // previous response was empty or a provider retry already ran.
@@ -1616,7 +1620,7 @@ export class ResearchTaskRuntime {
         }
         const emptyWorkbenchDeadline = task.kind === 'container' && result.localDeadlineExceeded && !recoveryText && !recoveryEvidence && workbenchPanelFormat(task.prompt)
         if (output !== undefined || !structured || attempt === 1 || !canSynthesizeResult(result) || result.localDeadlineExceeded && !recoveryText && !recoveryEvidence && !emptyWorkbenchDeadline) break
-        this.appendEvent(task, { type: 'assistant-delta', text: '正在校验并自动修复组件内容…' })
+        this.appendEvent(task, { type: 'assistant-delta', text: result.researchPhaseComplete ? '已保留取得的来源资料，正在生成组件内容…' : '正在校验并自动修复组件内容…' })
         await handle?.dispose()
         handle = undefined
         if (task.cancelRequested || terminalState(task.state)) return
@@ -2098,6 +2102,8 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       // Let in-flight reads and final output finish without injecting a new turn.
       let searchCalls = 0, researchClosed = false, researchLimitDue = false, liftResearchLimit
       let lastOutputAt = 0, streamedText = '', completedArtifact
+      let finishResearch, handoffTimer
+      const researchPhase = new Promise(resolve => { finishResearch = resolve })
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
       // Keep actual fetched pages ahead of large catalogs or unrelated feeds.
       // This is attempt-local context only, never persisted source authority.
@@ -2117,6 +2123,24 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         // local tools open lets a model replace exhausted network calls with
         // repeated read_image/file attempts and bypass the bounded phase.
         liftResearchLimit = child.ctx.tools.restrict({ deny: kind === 'container' ? childTools : [...networkTools] })
+        // Native data templates have one bounded synthesis pass already. Once
+        // research is closed with usable business records, hand those records
+        // over at this safe step boundary instead of spending another 100s
+        // privately rethinking them before the 180s timeout starts that pass.
+        // Never interrupt public output or a previously completed artifact.
+        const businessData=componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&(record.snapshotRows?.length||record.tool==='financial_query'&&record.response&&Object.keys(record.response).length))
+        if(boundTemplate&&!synthesisOnly&&businessData&&!completedArtifact&&!streamedText.trim()){
+          // A quick final response should keep its existing model call. Only
+          // prolonged silence after retrieval warrants a separate synthesis.
+          // Provider queue time is not a failure to produce public output.
+          const due=executionElapsed()+15000
+          const handoff=()=>{
+            const remaining=due-executionElapsed()
+            if(remaining>0){handoffTimer=setTimeout(handoff,remaining);return}
+            if(!signal.aborted&&!completedArtifact&&!streamedText.trim())finishResearch({stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[]})
+          }
+          handoffTimer=setTimeout(handoff,15000)
+        }
       }
       // Leave time within the child's 180-second budget for the template JSON.
       // Financial tools can otherwise occupy almost the whole first attempt,
@@ -2208,6 +2232,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       let disposed = false, completionTimer
       const boundedResult = kind === 'container' || synthesisOnly ? Promise.race([
         run.result,
+        researchPhase,
         new Promise(resolve => {
           const budget = synthesisOnly ? 90000 : 180000
           const finish = () => {
@@ -2233,13 +2258,14 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         result: Promise.resolve(boundedResult).then(result => {
           const researchEvidence=collectedEvidence()
           return { ...result, sourceRecords:sourceCollector.records, ...(researchEvidence ? { researchEvidence } : {}) }
-        }).finally(() => clearTimeout(completionTimer)),
+        }).finally(() => { clearTimeout(completionTimer); clearTimeout(handoffTimer) }),
         async dispose() {
           if (disposed) return
           disposed = true
           off()
           clearTimeout(researchTimer)
           clearTimeout(completionTimer)
+          clearTimeout(handoffTimer)
           liftResearchLimit?.()
           releaseWorkbench?.()
           releaseCanvas?.()
