@@ -10,6 +10,7 @@ export async function financialClientFixture(desktop={},options={}){
  const win=new Window({url:'https://ework.local'}),document=win.document,keys=['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'],original=keys.map(k=>Object.getOwnPropertyDescriptor(globalThis,k));keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}));let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  let source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
+ if(options.generationProgress)source=require('../../scripts/lib/generation-progress-persistence.mjs').patchGenerationProgressPersistence(source)
  if(options.refreshState){
   // Exercise the production serializers without Vite's SSR import rewrites in toString().
   const [financial,data,grid]=['financial-widget-client.mjs','component-data-refresh.mjs','research-grid-workbench.mjs'].map(name=>require('../../scripts/lib/'+name))

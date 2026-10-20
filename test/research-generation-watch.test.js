@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isMethodDeclaration } from 'typescript'
 import { restoreResearchGridWorkbench, patchResearchGridWorkbench } from '../scripts/lib/research-grid-workbench.mjs'
 import { parseResearchContainerSpec } from '../packages/dsh-research-task-runtime/artifact-validator.js'
+import { generationProgressOnly } from '../scripts/lib/generation-progress-persistence.mjs'
 afterEach(() => vi.useRealTimers())
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 function setup(inspect, extra = {}) {
@@ -22,19 +23,40 @@ function nativeApply(source, node) {
   const tree = createSourceFile('client.js', source, ScriptTarget.Latest, false, ScriptKind.JS); let method
   const visit = n => { if (!method && isMethodDeclaration(n) && n.name.getText(tree) === 'applyGenerationInspection') method = n; forEachChild(n, visit) }; visit(tree)
   const snapshot = { artifacts: [node] }
-  const apply = new Function('snapshot', 'parseResearchContainerSpec', `
+  const apply = new Function('snapshot', 'parseResearchContainerSpec', 'generationProgressOnly', `
 const RESEARCH_CANVAS_TEXT_LIMIT=20000,RESEARCH_ACTIVE_GENERATION_STATUSES=new Set(['queued','running','retrying']);
 const boundedResearchArtifactString=v=>typeof v==='string'?v:null,researchGenerationStatus=v=>v,researchGenerationInspectionEvents=()=>[];
 const researchContainerPlainText=s=>s.html,researchContainerFinalGeometry=()=>({}),researchGenerationSizedNode=n=>n,researchResolvedGenerationSources=()=>({}),researchCanvasReflowGrowth=(_a,b)=>b;
-const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree)}}).applyGenerationInspection;`)(snapshot, parseResearchContainerSpec)
+const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree)}}).applyGenerationInspection;`)(snapshot, parseResearchContainerSpec, generationProgressOnly)
   return { apply, snapshot }
 }
 describe('任务检查切板恢复', () => {
+  it('records slow application of an otherwise fast nonterminal response',async()=>{
+    vi.useFakeTimers();const trace=vi.fn(),f=setup(async()=>({...completed,state:'running'}),{trace,apply(){vi.setSystemTime(Date.now()+5000);return true}})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(trace.mock.calls.map(([value])=>value).find(v=>v.type==='inspection')).toMatchObject({state:'running',requestMs:0,applyMs:5000,accepted:true})
+    f.dispose()
+  })
+  it('reports response/apply/delivery timing without business text and tolerates a broken diagnostic sink', async()=>{
+    vi.useFakeTimers();const trace=vi.fn(),old=deferred(),f=setup(()=>old.promise,{trace});
+    await vi.advanceTimersByTimeAsync(1800)
+    old.resolve({...completed,completedAt:Date.now()-1500,finalOutput:'private business body',error:'private failure',prompt:'private request'})
+    await vi.advanceTimersByTimeAsync(0)
+    const receipt=trace.mock.calls.map(([value])=>value).find(v=>v.type==='inspection')
+    expect(receipt).toMatchObject({state:'completed',requestMs:1800,completedAgoMs:1500,accepted:true})
+    expect(JSON.stringify(trace.mock.calls)).not.toMatch(/private|festival|:"task"|:"card"/)
+    f.dispose()
+    const broken=setup(async()=>completed,{trace(){throw Error('unavailable log')}})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(broken.snapshot.artifacts[0].generationStatus).toBe('completed');broken.dispose()
+  })
   it('patches the actual native inspection binding in production restore/patch/repatch order', async () => {
     const source = restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
     const patched = patchResearchGenerationWatch(source)
     expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     expect(patchResearchGenerationWatch(patched)).toBe(patched)
+    const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V2 */','/* SHERLOCK_GENERATION_WATCH_RECOVERY_V1 */')
+    expect(patchResearchGenerationWatch(previous)).toBe(patched)
     expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
     expect(patched).toContain('return sherlockBoardsAdapter.inspectShared(session.sessionId,request)')
     expect(patched).toContain('this.deps.generationInspectSink(request, options)')
