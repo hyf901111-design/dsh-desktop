@@ -70,7 +70,7 @@ it('uses the verified Shenwan endpoint and does not copy example dates or force 
   expect(instruction).not.toContain('pagesize、pagenum 等参数也必须是字符串')
 })
 
-it('guides the main conversation using its current request and live scoped sources', () => {
+it('keeps initial planning source guidance short and delegates collection to each panel', () => {
   let guidance
   let visible = [{name:'ework__macro',description:'通联 DataYes 宏观指标查询'}]
   const dispose=()=>{}
@@ -79,13 +79,35 @@ it('guides the main conversation using its current request and live scoped sourc
   const agent={session:{header:{},events:[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'用通联生成白酒行业工作台，含行情和宏观指标'}]}}]}}
   const text=guidance.text({agent})
   expect(text).toContain('ework__macro')
-  expect(text).toContain('宏观指标先用关键词发现指标 ID')
-  expect(text).toContain('不代表其他数据类别不可用')
-  expect(text).toContain('不重复相同参数')
+  expect(text).toContain('立即提交组件计划')
+  expect(text).toContain('各组件任务独立取数')
+  expect(text).not.toContain('先实际调用')
+  expect(text).not.toContain('宏观指标先用关键词发现指标 ID')
+  expect(text.length).toBeLessThan(700)
+  agent.session.events[0].data.content[0].text='通过通联查询白酒行业行情和宏观指标'
+  expect(guidance.text({agent})).toContain('宏观指标先用关键词发现指标 ID')
+  agent.session.events[0].data.content[0].text='用通联生成白酒行业工作台，含行情和宏观指标'
   visible=[]
   expect(guidance.text({agent})).toBe('')
   visible=[{name:'ework__macro',description:'通联 DataYes 宏观指标查询'}]
   agent.session.header.parentSession='parent'
+  expect(guidance.text({agent})).toBe('')
+})
+
+it('does not inject the full basic-source acquisition protocol during planning',()=>{
+  let guidance,enabled=true
+  const ctx={get:()=>({get snapshot(){return {skills:[{id:'builtin:ework-free-data-sources',enabled}]}}}),systemPrompt:{context:entry=>{guidance=entry}},tools:{schemas:()=>[{name:'public_data_query'}]}}
+  registerComponentSourceGuidance(ctx)
+  const agent={session:{header:{},events:[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'创建ETF金融研究工作台，展示真实行情和新闻'}]}}]}}
+  const text=guidance.text({agent})
+  expect(text).toContain('public_data_query')
+  expect(text).toContain('立即提交组件计划')
+  expect(text).toContain('来源、日期与单位')
+  expect(text.length).toBeLessThan(700)
+  enabled=false
+  expect(guidance.text({agent})).toBe('')
+  enabled=true
+  agent.session.events[0].data.content[0].text='创建ETF金融研究工作台，只用已有记录，不要联网'
   expect(guidance.text({agent})).toBe('')
 })
 

@@ -7,8 +7,10 @@ const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡�
 const datayesSource = /通联|datayes|萝卜投研/iu
 const recentMarketRequest = /最近|最新|今日|当前|实时|日行情/iu
 
-// The main conversation can collect evidence before it creates any panel.
-// Give it the same scoped routing guidance as the component workers.
+const planningSourceInstruction = sources => `工作台首次规划只需理解需求、拆分组件并立即提交组件计划。在各 panel.prompt 中保留用户指定的来源、所需字段和来源、日期与单位要求，由各组件任务独立取数并展示；父会话不要提前查询整套业务数据、编写页面或配置刷新。按内容选择适合的可视化，不强制套用固定组件组合。当前会话实际可见的来源入口：${sources.join('；')}。这些入口用于记录来源路线；接口发现和目录结果不是真实业务数据，不能填成已取得的记录。`
+
+// Initial planning records source intent. Workers receive the detailed
+// acquisition guidance after the parent has submitted its component plan.
 export function registerComponentSourceGuidance(ctx) {
   return ctx.systemPrompt.context({
     name: 'sherlock:component-sources', order: 145,
@@ -17,11 +19,12 @@ export function registerComponentSourceGuidance(ctx) {
       const planning = workbenchCreationRequest(agent.session)
       const request = planning?.text ?? canvasHumanRequest(agent.session)?.text
       if (!request || /全部?使用模拟数据|全部.{0,5}模拟|(?:只|仅)(?:用|使用)模拟数据/u.test(request)) return ''
+      if (/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(request)) return ''
       const schemas = ctx.tools.schemas(agent)
       const guidance = componentSourceInstruction(preferredComponentSourceTools(schemas, request), request, new Date(), { planning: Boolean(planning) })
       if (guidance) return guidance
-      if (/禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(request)) return ''
-      return schemas?.some(tool => tool.name === 'public_data_query') && bundledSkillEnabled(ctx, 'ework-free-data-sources') ? freeDataInstruction() : ''
+      if (!schemas?.some(tool => tool.name === 'public_data_query') || !bundledSkillEnabled(ctx, 'ework-free-data-sources')) return ''
+      return planning ? planningSourceInstruction(['public_data_query（EWork 内置基础数据源）']) : freeDataInstruction()
     }
   })
 }
@@ -48,8 +51,7 @@ export function preferredComponentSourceTools(schemas, request) {
 
 export function componentSourceInstruction(tools, request = '', now = new Date(), { planning = false } = {}) {
   if (!tools?.length) return ''
-  // A multi-panel plan must not stamp its longest K-line window onto snapshots.
-  if (planning) request = ''
+  if (planning) return planningSourceInstruction(tools.map(tool => `${tool.name}（${tool.description}）`))
   const knownApi = /沪深300(?!\s*(?:ETF|基金))/iu.test(request) ? '沪深300指数日行情已核验接口 getMktIdxd；先用接口定义工具读取 getMktIdxd，定义失败再搜索，省去重复的接口发现。' : /申万/u.test(request) ? '申万行业指数日行情已核验接口 getMktIdxdSw；先读取该接口定义，定义失败再搜索，省去重复的接口发现。' : ''
   const holdingsQuery = /(?:基金|ETF|fund).*(?:持仓|重仓|holdings)|(?:前十|持仓|重仓).*(?:基金|ETF|fund)/iu.test(request) ? '基金前十大持仓已核验精简接口 fund_hold_share_analysis；先读取其当前定义，按定义关闭额外指标并只取前十大（withExtra/withAllStock），定义不适用再搜索其他接口。不要为十行持仓查询多个年度的全部股票明细。业务响应明确提示 JSON 截断时，改用字段筛选、分页或精简接口取得完整响应，不能把截断响应当成可刷新来源。' : ''
   const dailySeries = /K\s*线|日线|日行情|交易日|candlestick/iu.test(request)

@@ -14,6 +14,13 @@ describe('generated shared-state acceptance', () => {
    expect(sharedComponentIssue(page(valid))).toBeUndefined()
    expect(sharedComponentIssue(page(`function reduce(s,a){return s}function render(s){}const config={initialState:{},reduce,render};const shared=window['sherlockShared']['register'](config);document.onclick=()=>shared['dispatch']({type:'click'});`))).toBeUndefined()
  })
+ it('accepts a declared handle assigned during registration, including a guarded fallback',()=>{
+   const assigned=valid.replace('const shared=','let shared=null;shared=')
+   expect(sharedComponentIssue(page(assigned))).toBeUndefined()
+   const guarded=valid.replace('const shared=window.sherlockShared.register(', 'let shared=null;try{shared=window.sherlockShared.register(').replace('});document.querySelector', '});}catch(error){shared=null;}document.querySelector')
+   expect(sharedComponentIssue(page(guarded))).toBeUndefined()
+   expect(sharedComponentIssue(page(guarded.replace('shared.dispatch','unrelated.dispatch')))).toContain('空注册')
+ })
  it('rejects empty registrations, malformed configuration and independent intervals', () => {
    expect(sharedComponentIssue(page(valid.replace(/;document.querySelector\('button'\).*$/,'')))).toContain('空注册')
    expect(sharedComponentIssue(page(valid.replace('reduce:(s,a)=>({...s,count:s.count+1}),','')))).toContain('缺少')

@@ -1,5 +1,5 @@
 import {it,expect,vi} from 'vitest'
-import {componentSourceCollector,resolveBoundComponent} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {componentSourceCollector,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {ComponentDataRefresh} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
@@ -8,6 +8,36 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it.each([
+ ['使用通联真实数据，优先使用 market 类型；variant: metrics。',false],
+ ['更新当前卡片的真实行情。',false],
+ ['每分钟自动更新，失败保留已有数据。',true],
+ ['仅手动刷新。',true],
+ ['不要自动更新，但需要手动刷新。',true],
+ ['不需要自动刷新，只手动刷新。',true],
+ ['不要自动更新但需要手动刷新。',true],
+ ['不要手动刷新，只要本次数据。',false],
+ ['无需自动刷新，只取本次真实数据。',false],
+ ['不要求自动刷新。',false],
+ ['no automatic refresh',false],
+ ['do not auto refresh',false],
+ ["don't auto refresh",false],
+ ['no automatic refresh, manual refresh only',true],
+ ['不要自动更新，只要真实静态快照。',false],
+ ['仅静态快照，明确未绑定自动刷新。',false],
+ ['引用示例：“每分钟自动更新”。只取本次数据。',false]
+])('detects requested refresh separately from real-data retrieval: %s',(prompt,required)=>{
+ expect(componentBindingRequested(prompt)).toBe(required)
+})
+it.each(['literal','missing-path','missing-source','numeric-default'])('does not salvage %s into a verified mapped snapshot',mode=>{
+ const invalid=structuredClone(draft)
+ invalid.requests.push({key:'unused',tool,args:{...args,url_params:{...args.url_params,ticker:'600519'}}})
+ if(mode==='literal')invalid.mapping.items=[{label:'价格',value:'100 元'}]
+ if(mode==='missing-path')invalid.mapping.items.$each='missing'
+ if(mode==='missing-source')invalid.mapping.items.$from='unused'
+ if(mode==='numeric-default')invalid.mapping.items.$map.value={$path:'missing',$default:100,$as:'string'}
+ expect(resolveComponentSnapshot(JSON.stringify(invalid),records,now)).toBeNull()
+})
 // Real failed LOF quote: the model put the security name in a label-only item.
 const oilArgs={operation:'query',source:'tencent-quotes',parameters_json:'{"symbols":["sh501018"]}'}
 const oilRecords=[{tool:'public_data_query',args:oilArgs,response:{source:'腾讯财经公开报价',dataTime:'2026-10-12 16:14:05',records:[{name:'南方原油LOF',price:2.059,changePercent:.78}]}}]
@@ -23,7 +53,7 @@ it('repairs a label-only metric using the exact field diagnostic and full templa
  const bindData=vi.fn(async()=>{})
  const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try{
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'油价风向标（南方原油LOF）\n优先使用 market 类型；variant: metrics。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'油价风向标（南方原油LOF）\n优先使用 market 类型；variant: metrics。每分钟自动更新。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   const repair=start.mock.calls[1][0]
   expect(repair.synthesisOnly).toBe(true)
@@ -95,7 +125,7 @@ it('repairs an invalid binding with its observed response instead of reverting t
  const bindData=vi.fn(async()=>{})
  const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try {
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联，优先使用 market 类型，variant: metrics。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联，优先使用 market 类型，variant: metrics。每分钟自动更新。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   const repair=start.mock.calls[1][0]
   expect(repair.synthesisOnly).toBe(true)
@@ -112,7 +142,7 @@ it('recovers verified data after the retrieval deadline even when the first outp
  const bindData=vi.fn(async()=>{})
  const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try{
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n优先使用 market 类型；必须输出 market.metrics 的结构化数据。使用通联真实数据。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n优先使用 market 类型；必须输出 market.metrics 的结构化数据。使用通联真实数据，每分钟自动更新。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   expect(start).toHaveBeenCalledTimes(2)
   expect(start.mock.calls[1][0]).toMatchObject({synthesisOnly:true})
@@ -128,7 +158,7 @@ it('uses verified response samples to recover a bound card when the model only r
  const bindData=vi.fn(async()=>{})
  const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try{
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n优先使用 market 类型；必须输出 market.metrics 的结构化数据。使用通联真实数据。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n优先使用 market 类型；必须输出 market.metrics 的结构化数据。使用通联真实数据，每分钟自动更新。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   expect(start).toHaveBeenCalledTimes(2)
   const repair=start.mock.calls[1][0]
@@ -140,13 +170,13 @@ it('uses verified response samples to recover a bound card when the model only r
   expect(bindData.mock.calls[0][1].intervalMinutes).toBe(1)
  }finally{await runtime.dispose()}
 })
-it('repairs a static plugin-backed card once using observed data without fetching again',async()=>{
+it('repairs a static plugin-backed card once when periodic updates were requested without fetching again',async()=>{
  const staticData={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'4.515 元'}]}
  const start=vi.fn(async input=>({childSessionId:'child-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(start.mock.calls.length===1?staticData:draft)}],sourceRecords:start.mock.calls.length===1?records:[]}),dispose:async()=>{}}))
  const bindData=vi.fn(async()=>{})
  const runtime=new ResearchTaskRuntime({adapter:{start,bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try {
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情指标\n优先使用 market 类型；variant: metrics。使用通联真实数据。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情指标\n优先使用 market 类型；variant: metrics。使用通联真实数据，每分钟自动更新。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   expect(start).toHaveBeenCalledTimes(2)
   expect(start.mock.calls[1][0].synthesisOnly).toBe(true)
@@ -155,12 +185,158 @@ it('repairs a static plugin-backed card once using observed data without fetchin
   expect(bindData).toHaveBeenCalledOnce()
  } finally {await runtime.dispose()}
 })
+it('delivers a verified static quote without a mapping repair when only real data was requested',async()=>{
+ const snapshot={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'4.515 元'},{label:'可选指标',value:'—',detail:'本次未取得'}]}
+ const start=vi.fn(async()=>({childSessionId:'snapshot',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(snapshot)}],sourceRecords:records})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据。优先使用 market 类型；variant: metrics。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.items).toEqual(snapshot.items)
+  expect(data.asOf).toContain('2026-09-25')
+  expect(data.asOf).toContain('静态快照')
+  expect(start).toHaveBeenCalledOnce()
+  expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+it('repairs ordinary retrieved content into a static card without adding a refresh protocol or querying again',async()=>{
+ const snapshot={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'4.515 元'}]}
+ const start=vi.fn(async()=>({childSessionId:'snapshot-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:start.mock.calls.length===1?'已取得真实行情，准备展示。':JSON.stringify(snapshot)}],sourceRecords:start.mock.calls.length===1?records:[]})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据。优先使用 market 类型；variant: metrics。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  const repair=start.mock.calls[1][0]
+  expect(repair.synthesisOnly).toBe(true)
+  expect(repair.prompt).not.toContain('自动绑定数据交付协议')
+  expect(repair.prompt).toContain('"price":4.515')
+  expect(bindData).not.toHaveBeenCalled()
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.items[0].value).toBe('4.515 元')
+ }finally{await runtime.dispose()}
+})
+it('repairs a static data task through a mapping of all twenty observed rows despite a three-row evidence sample',async()=>{
+ const fullResponse={data:{date:'2026-09-25',rows:Array.from({length:20},(_,i)=>({day:'2026-09-'+String(i+1).padStart(2,'0'),price:i+1}))}}
+ const mapped={version:1,type:'data-bound',requests:[{key:'quote',tool,args}],mapping:{version:1,type:'table',title:'已核验历史数据',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},columns:['日期','价格'],rows:{$from:'quote',$each:'data.rows',$map:[{$path:'day'},{$path:'price',$as:'string'}]}}}
+ const start=vi.fn(async()=>({childSessionId:'snapshot-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:start.mock.calls.length===1?'已取得20条真实记录，准备展示。':JSON.stringify(mapped)}],sourceRecords:start.mock.calls.length===1?[{tool,args,response:fullResponse}]:[]})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：历史记录\n使用通联真实数据，完整展示20条记录。优先使用 table 类型。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  const repair=start.mock.calls[1][0]
+  expect(repair.synthesisOnly).toBe(true)
+  expect(repair.prompt).not.toContain('不输出 data-bound')
+  const sampled=repair.prompt.split('\n').find(line=>line.startsWith('{"tool":'))
+  expect(JSON.parse(sampled).responseSample.data.rows).toHaveLength(3)
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.rows).toHaveLength(20)
+  expect(data.rows[19]).toEqual(['2026-09-20','20'])
+  expect(data.asOf).toContain('静态快照')
+  expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+it('materializes a legacy bound draft without enabling automatic refresh when it was not requested',async()=>{
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start:async()=>({childSessionId:'snapshot',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records})}),bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据。优先使用 market 类型；variant: metrics。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.items[0].value).toBe('4.515 元')
+  expect(data.asOf).toContain('静态快照')
+  expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+it('keeps a mapped snapshot when an unused refresh request has no successful source record',async()=>{
+ const invalid=structuredClone(draft)
+ invalid.requests.push({key:'optional',tool,args:{...args,url_params:{...args.url_params,ticker:'600519'}}})
+ const start=vi.fn(async()=>({childSessionId:'snapshot',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(invalid)}],sourceRecords:records})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据。优先使用 market 类型；variant: metrics。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.items).toEqual([{label:'沪深300ETF',value:'4.515 元'}])
+  expect(data.asOf).toContain('自动更新未绑定')
+  expect(start).toHaveBeenCalledOnce()
+  expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+it('keeps a verified snapshot after one failed refresh repair without retrieving it again',async()=>{
+ const invalid=structuredClone(draft)
+ invalid.requests.push({key:'unused',tool,args:{...args,url_params:{...args.url_params,ticker:'600519'}}})
+ const start=vi.fn(async()=>({childSessionId:'repair-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(invalid)}],sourceRecords:start.mock.calls.length===1?records:[]})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据，每分钟自动更新。优先使用 market 类型；variant: metrics。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  expect(start.mock.calls[1][0].synthesisOnly).toBe(true)
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.items[0].value).toBe('4.515 元')
+  expect(data.asOf).toContain('自动更新未绑定')
+  expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+it('does not publish or bind a recovered snapshot when cancellation arrives during its repair',async()=>{
+ const invalid=structuredClone(draft)
+ invalid.requests.push({key:'unused',tool,args:{...args,url_params:{...args.url_params,ticker:'600519'}}})
+ let finishRepair
+ const start=vi.fn(async()=>({childSessionId:'repair-'+start.mock.calls.length,dispose:async()=>{},result:start.mock.calls.length===1?Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(invalid)}],sourceRecords:records}):new Promise(resolve=>{finishRepair=resolve})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n使用通联真实数据，每分钟自动更新。优先使用 market 类型；variant: metrics。'})
+  await vi.waitFor(()=>expect(start).toHaveBeenCalledTimes(2))
+  await runtime.cancel({parentSessionId:'parent',taskId:'task'})
+  finishRepair({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}]})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('cancelled'))
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toBeUndefined()
+  expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+it.each(['literal','unobserved-reference','wrong-source'])('rejects an unverified %s snapshot even after a real business query',async mode=>{
+ const invalid=structuredClone(draft)
+ invalid.requests[0].args={...args,url_params:{...args.url_params,ticker:'600519'}}
+ if(mode==='literal')invalid.mapping={version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'100 元'}]}
+ const sourceRecords=mode==='wrong-source'?[{tool:'public_data_query',args:{operation:'query',source:'tencent-quotes',parameters_json:'{}'},response}]:records
+ const output=mode==='wrong-source'?{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:'2026-09-25 · 通联 DataYes',items:[{label:'沪深300ETF',value:'4.515 元'}]}:invalid
+ const start=vi.fn(async()=>({childSessionId:'invalid-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(output)}],sourceRecords})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：ETF行情\n数据源：通联 DataYes。优先使用 market 类型；variant: metrics。禁止模拟数据。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('failed'))
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput).toBeUndefined()
+  expect(bindData).not.toHaveBeenCalled()
+ }finally{await runtime.dispose()}
+})
+it('preserves verified data and persists the unbound status when saving refresh settings fails',async()=>{
+ const bindData=vi.fn(async()=>{throw Error('刷新服务暂不可用')})
+ const runtime=new ResearchTaskRuntime({adapter:{start:async()=>({childSessionId:'child',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records})}),bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'使用通联生成ETF行情指标面板，variant: metrics。每分钟自动更新。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.items[0].value).toBe('4.515 元')
+  expect(data.asOf).toContain('自动更新未绑定')
+  expect(bindData).toHaveBeenCalledOnce()
+ }finally{await runtime.dispose()}
+})
 it('publishes the normal rendered card and binds it to the same task node before completion',async()=>{
  const bindData=vi.fn(async()=>{})
  const adapter={start:async()=>({childSessionId:'child',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records}),dispose:async()=>{}}),bindData,dispose:async()=>{}}
  const runtime=new ResearchTaskRuntime({adapter,storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try {
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'使用通联生成ETF行情指标面板，variant: metrics'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'使用通联生成ETF行情指标面板，variant: metrics。每分钟自动更新。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   expect(bindData).toHaveBeenCalledOnce()
   expect(bindData.mock.calls[0][0]).toMatchObject({parentSessionId:'parent',canvasNodeId:'node'})
@@ -179,11 +355,11 @@ it('materializes observed data and saves the same mapping for model-free updates
  expect(readTemplateModel(saved[0]).data.items).toEqual([{label:'沪深300ETF',value:'4.6 元'}])
  expect(b.intervalMinutes).toBe(1)
 })
-it('binds manual-only source data with automatic scheduling disabled while allowing a manual refresh',async()=>{
+it.each(['设置仅手动刷新','不要自动更新，但需要手动刷新','不需要自动刷新，只手动刷新'])('binds manual-only source data with automatic scheduling disabled while allowing a manual refresh: %s',async setting=>{
  const bindData=vi.fn(async()=>{})
  const runtime=new ResearchTaskRuntime({adapter:{start:async()=>({childSessionId:'child',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records}),dispose:async()=>{}}),bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try {
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'使用通联生成ETF行情指标面板，variant: metrics。设置仅手动刷新，失败保留旧数据。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:`使用通联生成ETF行情指标面板，variant: metrics。${setting}，失败保留旧数据。`})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   expect(bindData.mock.calls[0][1].intervalMinutes).toBe(0)
   const result=resolveBoundComponent(JSON.stringify(draft),records,now,{intervalMinutes:0})

@@ -75,7 +75,14 @@ export function patchResearchPlanningFeedback(source,classify) {
  if(source.includes(marker)){
   const start=source.indexOf('function researchPlanningRequest('),end=source.indexOf('\nfunction ResearchPlanningFeedback(',start)
   if(start<0||end<0)throw Error('Planning feedback request helper missing on reinstall')
-  return source.slice(0,start)+researchPlanningRequest.toString()+source.slice(end)
+  source=source.slice(0,start)+researchPlanningRequest.toString()+source.slice(end)
+  // The classifier is an inlined argument in older installed bundles. Refresh
+  // that argument as well, so reinstalls adopt the current creation boundary.
+  const prefix='const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,'
+  const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text) : null;'
+  const callStart=source.indexOf(prefix),callEnd=source.indexOf(suffix,callStart)
+  if(callStart<0||callEnd<0)throw Error('Planning feedback classifier missing on reinstall')
+  return source.slice(0,callStart+prefix.length)+classify.toString()+source.slice(callEnd)
  }
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Planning feedback anchor missing or ambiguous: '+before.slice(0,75));source=source.replace(before,after)}
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {'

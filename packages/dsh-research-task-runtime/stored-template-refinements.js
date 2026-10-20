@@ -29,6 +29,15 @@ export function refineStoredTemplateHtml(html){
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
+ if(['news','reports'].includes(model.templateId)&&model.data.type===model.templateId&&html.includes('data-research-kind="'+model.data.type+'"')&&html.includes('class="feed-copy"')){
+  // Saved host feeds already contain a vetted source anchor inside details.
+  // Reuse that exact destination for the title; never invent a missing URL.
+  return html.replace(/<article class="research-feed-item"[^>]*>[\s\S]*?<\/article>/g,article=>{
+   const source=article.match(/<a href="https?:\/\/[^"<>]+" target="_blank" rel="noopener noreferrer">/);
+   if(!source)return article;
+   return article.replace(/<h2>([^<]*)<\/h2>/,(_match,title)=>'<h2>'+source[0]+title+'</a></h2>');
+  });
+ }
  const seriesVariant=model.data.variant;
  if(['price-volume','trend','valuation-band','equity-drawdown'].includes(seriesVariant)&&model.templateId==='market.'+seriesVariant&&model.data.type==='market'&&html.includes('data-sherlock-market="'+seriesVariant+'"')&&html.includes('data-sherlock-design=')){
   const runtimeName={'price-volume':'priceVolumeRuntime',trend:'trendRuntime','valuation-band':'valuationBandRuntime','equity-drawdown':'equityDrawdownRuntime'}[seriesVariant];

@@ -1,11 +1,13 @@
 import {patchResearchPlanningFeedback} from './research-planning-feedback.mjs'
+import {patchComposerSubmitPolicy} from './composer-submit-policy.mjs'
 // The planner may spend minutes before calling research_workbench_create. Keep
 // this first, deliberately provisional card in the renderer; only the accepted
 // tool plan is allowed to create persistent, named canvas components.
 export function classifyResearchCreationRequest(raw) {
   if (typeof raw !== 'string') return null
   const text = raw.trim().replace(/\s+/g, ' ')
-  if (!text || text.length > 4000 || /(?:不要|不用|无需|不需要|别|禁止|不)(?:再|重新)?(?:创建|新建|生成|搭建|制作|添加)/.test(text)) return null
+  if (!text || text.length > 4000 || /(?:不要|不用|无需|不需要|别|禁止|不)(?:再|重新)?(?:创建|新建|新增|生成|搭建|制作|添加)/.test(text)) return null
+  if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/.test(text) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|搭建|制作)/.test(text)) return null
   if (/(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|搭建|制作|构建)/.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计)(?:.{0,20})(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/.test(text)) return null
   if (!/(?:创建|生成|搭建|制作|构建|添加|做(?:一个|些|个)?|要(?:一个|些|个)?)/.test(text)) return null
@@ -239,7 +241,7 @@ export function patchResearchCreationProgress(source) {
     const submit = source.includes(queuedSubmit) ? queuedSubmit : plainSubmit;
     source = replaceOnce(source, submit, 'odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\t' + submit);
   }
-  if (!source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit();')) source = replaceOnce(source,
+  if (!source.includes('/* EWORK_PRIMARY_SUBMIT_POLICY_V1 */') && !source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit();')) source = replaceOnce(source,
     'if (!empty && !disabled && !machineBusy) inputActions.submit();',
     'if (!empty && !disabled && !machineBusy) { odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit(); }')
   const workspaceAnchor = 'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'
@@ -394,5 +396,5 @@ export function patchResearchCreationProgress(source) {
     const pattern = new RegExp('/\\* ' + marker + ' \\*/\\n[^\\n]+')
     source = pattern.test(source) ? source.replace(pattern, style) : source + '\n' + style + '\n'
   }
-  return patchResearchPlanningFeedback(source,classifyResearchCreationRequest)
+  return patchComposerSubmitPolicy(patchResearchPlanningFeedback(source,classifyResearchCreationRequest))
 }

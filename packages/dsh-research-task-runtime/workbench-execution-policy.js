@@ -21,14 +21,17 @@ export function workbenchCreationRequest(session) {
   if (session?.header?.parentSession || session?.header?.origin === 'subagent') return null
   const human = planningHumanRequest(session)
   const text = human?.text?.replace(/```[\s\S]*?```/g, '').replace(/^>.*$/gm, '')
-  if (!text || /(?:不要|无需|不需要|别|禁止|不再|停止|取消)(?:再)?(?:创建|生成|搭建|制作|添加|规划)|(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|搭建|制作|构建|规划)/u.test(text)) return null
+  if (!text || /(?:不要|不用|无需|不需要|别|禁止|不再|停止|取消)(?:再|重新)?(?:创建|新建|新增|生成|搭建|制作|添加|规划)|(?:为什么|为何|如何|怎样|怎么).{0,24}(?:创建|生成|搭建|制作|构建|规划)/u.test(text)) return null
+  if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(text) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|搭建|制作)/u.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
   if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|看板|仪表盘))/u.test(text)) return null
   const board = /工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text)
   const component = /组件|卡片|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图/iu.test(text)
   // New canvas cards use the same host planning tool. Coding requests and
   // existing-board edits retain their original model controls and workflow.
-  if (!board && /\b(?:React|Vue|Svelte|SwiftUI|Angular|TSX|JSX)\b|\.[cm]?[jt]sx?\b|(?:组件|卡片).{0,12}(?:源码|源代码)/iu.test(text)) return null
+  const framework = /\b(?:React|Vue|Svelte|SwiftUI|Angular|TSX|JSX)\b/iu.test(text)
+  const sourceFile = /\.[cm]?[jt]sx?\b/iu.test(text)
+  if ((framework && sourceFile) || /(?:组件|卡片).{0,12}(?:源码|源代码)/iu.test(text) || (!board && (framework || sourceFile))) return null
   return /(?:创建|生成|搭建|制作|构建|做一个|重新规划)|\b(?:create|build|generate)\b/iu.test(text) && (board || component) ? human : null
 }
 
@@ -59,7 +62,7 @@ function hasAcceptedPlan(session, messageId) {
         if (block.type !== 'text') continue
         try {
           const value = JSON.parse(block.text)
-          if (typeof value.planId === 'string' && ['accepted', 'prepared'].includes(value.status)) return calls.get(message.source.callId)
+          if (typeof value?.planId === 'string' && value.planId.trim() && ['accepted', 'prepared'].includes(value.status)) return calls.get(message.source.callId)
         } catch { /* Only successful structured host receipts change the phase. */ }
       }
     }
@@ -90,8 +93,90 @@ function savePlanningBudget(session, state, phase) {
   session?.append?.(BUDGET_EVENT, { version: 1, messageId: state.messageId, provider: state.provider, model: state.model, original: controls(state.original), limited: controls(state.limited), phase })
 }
 
+const CREATE_TOOL = 'research_workbench_create'
+const MAX_PLANNING_DISCOVERIES = 2
+const PLAN_FIRST_GUIDANCE = '【先规划再取数】当前只理解需求、拆解组件、明确每卡内容与可视化，再调用 research_workbench_create。真实来源尚缺资料时，保留用户指定的来源、字段、日期与缺失说明，省略 artifact，由各独立面板发现接口并取数；不在主会话写整卡、报告、代码或读取完整 skill。来源名称/代码确需确认时，最多合计两次 public_data_query catalog 或 financial_query resolve/catalog；目录和名称确认不是实际数据。无需确认则立即提交规划，不先查询行情、历史、财报、新闻或网页。工具成功返回 accepted/prepared 后恢复其余工具。'
+const PLAN_FIRST_DENIAL = '首次规划阶段只允许有限来源发现和 research_workbench_create；请把待取字段与真实来源约束写进各 panel.prompt，省略未取得的 artifact，立即提交规划。'
+function planningDiscovery(name, args) {
+  return (name === 'public_data_query' && args?.operation === 'catalog') ||
+    (name === 'financial_query' && ['resolve', 'catalog'].includes(args?.intent))
+}
+function discoverySchema(tool) {
+  const field = tool.name === 'public_data_query' ? 'operation' : tool.name === 'financial_query' ? 'intent' : null
+  const property = field && tool.parameters?.properties?.[field]
+  if (!Array.isArray(property?.enum)) return null
+  const values = property.enum.filter(value => tool.name === 'public_data_query' ? value === 'catalog' : ['resolve', 'catalog'].includes(value))
+  if (!values.length) return null
+  return { ...tool, description: '首次规划仅用于来源目录或名称确认，合计最多两次，不取业务数据。', parameters: {
+    ...tool.parameters, properties: { ...tool.parameters.properties, [field]: { ...property, enum: values } }
+  } }
+}
+function discoveryCalls(session, messageId) {
+  const events = session?.events ?? []
+  const start = events.findLastIndex(event => (event.type === 'user/message' && event.data?.id === messageId && event.data?.source?.kind === 'user') ||
+    (event.type === 'agent/inbox/spliced' && event.data?.inserted?.some(message => message.id === messageId && message.source?.kind === 'user')))
+  const calls = new Set()
+  for (const event of events.slice(start + 1)) {
+    if (event.type !== 'tool/call') continue
+    let args
+    try { args = typeof event.data?.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data?.arguments } catch { continue }
+    if (planningDiscovery(event.data?.name, args)) calls.add(event.data.callId)
+  }
+  return calls
+}
+
 export function registerWorkbenchExecutionPolicy(ctx) {
   const applied = new WeakMap()
+  const planningScopes = new WeakMap(), activeScopes = new Set()
+  function releasePlanning(agent) {
+    const state = planningScopes.get(agent)
+    if (!state) return
+    state.signal?.removeEventListener('abort', state.abort)
+    activeScopes.delete(state)
+    planningScopes.delete(agent)
+  }
+  function currentPlanning(agent) {
+    const state = planningScopes.get(agent)
+    if (!state) return null
+    const human = workbenchCreationRequest(agent?.session)
+    if (state.session !== agent.session || state.signal?.aborted || human?.messageId !== state.messageId || hasAcceptedPlan(agent.session, state.messageId)) {
+      releasePlanning(agent); return null
+    }
+    return state
+  }
+  function enterPlanning(agent, human, signal) {
+    let state = currentPlanning(agent)
+    if (state && state.signal !== signal) releasePlanning(agent)
+    if (!state || state.signal !== signal) {
+      state = { agent, session: agent.session, messageId: human.messageId, calls: discoveryCalls(agent.session, human.messageId), discoveryTools: new Set(), signal,
+        abort: () => releasePlanning(agent) }
+      planningScopes.set(agent, state); activeScopes.add(state)
+      signal?.addEventListener('abort', state.abort, { once: true })
+    }
+    return state
+  }
+  // Do not call tools.restrict() on the parent registry: its inherited mask
+  // would hide sources from workers started inside create, before its receipt.
+  // The final wire surface and this identity-aware guard affect only this
+  // parent's active planning request, including scoped tools and run_code.
+  const disposeGuard = ctx.tools?.guard?.(exec => {
+    const state = currentPlanning(exec.agent)
+    if (!state || exec.name === CREATE_TOOL) return
+    if (state.discoveryTools.has(exec.name) && planningDiscovery(exec.name, exec.arguments) && !state.calls.has(exec.callId) && state.calls.size < MAX_PLANNING_DISCOVERIES) {
+      state.calls.add(exec.callId)
+      return
+    }
+    return PLAN_FIRST_DENIAL
+  })
+  const disposeEvents = ctx.on('session/event', (session, event) => {
+    for (const state of activeScopes) {
+      if (state.session !== session) continue
+      if (event.type === 'turn/end') releasePlanning(state.agent)
+      else currentPlanning(state.agent)
+    }
+  })
+  const disposeError = ctx.on('agent/error', ({ agent }) => releasePlanning(agent))
+  const disposeAgent = ctx.on('agent/disposed', ({ agent }) => releasePlanning(agent))
   const disposePrompt = ctx.systemPrompt.context({ name: 'sherlock:workbench-execution', order: 150,
     text: ({ agent }) => {
       const human = workbenchCreationRequest(agent?.session)
@@ -144,12 +229,28 @@ export function registerWorkbenchExecutionPolicy(ctx) {
     applied.set(agent, state)
     return limited
   })
-  const disposeContext = ctx.on('agent/request-context', async ({ agent }, next) => {
-    const request = await next(), human = workbenchCreationRequest(agent?.session)
-    if (!human || hasAcceptedPlan(agent.session, human.messageId) || !request.tools?.some(tool => tool.name === 'research_workbench_create')) return request
-    // The prepared route/effort is immutable here. Narrow only the planning
-    // tool's instructions; all parameter validation and other tools stay intact.
-    return { ...request, tools: request.tools.map(tool => tool.name === 'research_workbench_create' ? { ...tool, description: WORKBENCH_PLANNING_TOOL_GUIDANCE } : tool) }
+  const disposeContext = ctx.on('agent/request-context', async ({ agent, signal }, next) => {
+    let request
+    try { signal?.throwIfAborted(); request = await next(); signal?.throwIfAborted() }
+    catch (error) { releasePlanning(agent); throw error }
+    const human = workbenchCreationRequest(agent?.session)
+    if (!human || hasAcceptedPlan(agent.session, human.messageId) || !request.tools?.some(tool => tool.name === CREATE_TOOL)) {
+      releasePlanning(agent); return request
+    }
+    const state = enterPlanning(agent, human, signal ?? request.signal)
+    const discoveryAllowed = state.calls.size < MAX_PLANNING_DISCOVERIES && !/模拟|虚构|禁止联网|不要联网|无需联网|只用.{0,8}(?:资料|记录)/u.test(human.text)
+    const tools = request.tools.flatMap(tool => {
+      if (tool.name === CREATE_TOOL) return [{ ...tool, description: WORKBENCH_PLANNING_TOOL_GUIDANCE }]
+      const discovery = discoveryAllowed && discoverySchema(tool)
+      return discovery ? [discovery] : []
+    })
+    state.discoveryTools = new Set(tools.filter(tool => tool.name !== CREATE_TOOL).map(tool => tool.name))
+    // Model route, effort, signal and the shared registry stay unchanged. The
+    // low-cost plan has no complete-data prerequisite in any user domain.
+    return { ...request, system: [request.system, PLAN_FIRST_GUIDANCE].filter(Boolean).join('\n'), tools }
   })
-  return () => { disposePrompt(); disposeRequest(); disposeContext() }
+  return () => {
+    for (const state of activeScopes) releasePlanning(state.agent)
+    disposePrompt(); disposeRequest(); disposeContext(); disposeGuard?.(); disposeEvents(); disposeError(); disposeAgent()
+  }
 }
