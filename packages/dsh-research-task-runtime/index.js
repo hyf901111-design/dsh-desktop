@@ -539,7 +539,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     '为EWork Odyssey生成一个独立面板，仅输出完整JSON，不附前言、推理、代码围栏或其他组件。',
     componentSkillInstruction('panel',type),
     ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
-    `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；` : ''}${schemas[type]}`,
+    `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；直接输出这个数据对象，items等字段放在根对象，不再包裹panel或artifact；` : ''}${schemas[type]}`,
     ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? ['本卡未要求刷新绑定；优先直接交付原生模板 JSON：真实记录、来源及时点；无需data-bound或映射。'] : []),
     deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若没有任何可核验的数值或记录，不能交付空chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。主要品种/字段逐项列出，最多六项，detail简短，来源和查询时点放asOf。其余严格用指定schema字段，来源及时点放已有字段，不自造字段。',
     htmlRule,
@@ -1541,7 +1541,15 @@ export class ResearchTaskRuntime {
           if (deferredPanel) {
             const candidates = extractArtifactObjects(deliveredText)
             if (!candidates.some(candidate => candidate?.type === 'error')) {
-              const candidate = candidates.length === 1 ? candidates[0] : null
+              let candidate = candidates.length === 1 ? candidates[0] : null
+              // Some children repeat the plan's artifact envelope. Unwrap only
+              // a lossless, same-type envelope; never discard extra records,
+              // source metadata, conflicting titles or a different template.
+              if (candidate?.artifact && typeof candidate.artifact === 'object' && !Array.isArray(candidate.artifact) &&
+                  Object.keys(candidate).every(key => ['version','type','title','artifact'].includes(key)) &&
+                  candidate.version === 1 && candidate.artifact.version === 1 &&
+                  candidate.type === deferredPanel.type && candidate.artifact.type === candidate.type &&
+                  candidate.title === candidate.artifact.title) candidate = candidate.artifact
               if (mapped || candidate?.type !== deferredPanel.type) throw new ResearchTaskError('INVALID_OUTPUT', `本卡必须交付 ${deferredPanel.type} 模拟数据，不得换成其他类型或真实来源映射。`)
               const hasSource = value => value && typeof value === 'object' && Object.entries(value).some(([key, item]) => ['url','sources'].includes(key) || item && typeof item === 'object' && hasSource(item))
               if (hasSource(candidate)) throw new ResearchTaskError('INVALID_OUTPUT', '延后模拟数据不能包含虚构的来源链接。')

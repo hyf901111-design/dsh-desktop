@@ -40,6 +40,20 @@ async function setup(start) {
 }
 
 describe('领域自适应模拟工作台延后生成', () => {
+  it('accepts the observed same-type artifact envelope without a second generation and preserves all timeline records', async () => {
+    const f=await setup(async request=>{const data=artifact(request.query);return {childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:data.type,title:data.title,artifact:data})}]}),dispose:async()=>{}}})
+    try{
+      await f.tool.execute({...input(),panels:[panels[4]]},f.exec)
+      await vi.waitFor(()=>expect([...f.runtime.tasks.values()][0].state).toBe('completed'))
+      const task=[...f.runtime.tasks.values()][0],data=readTemplateModel(JSON.parse(task.finalOutput)).data
+      expect(data.items).toEqual(artifact(task.prompt).items)
+      expect(data.title).toContain('模拟');expect(f.adapter.start).toHaveBeenCalledTimes(1)
+    }finally{await f.close()}
+  })
+  it.each(['url','extra','type','title'])('does not unwrap a conflicting or additional %s envelope field',async field=>{
+    const f=await setup(async request=>{const data=artifact(request.query),envelope={version:1,type:data.type,title:data.title,artifact:data};envelope[field]=field==='type'?'note':field==='title'?'不相同标题':field==='url'?'https://example.com/invented':'不应丢弃的信息';return {childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(envelope)}]}),dispose:async()=>{}}})
+    try{await f.tool.execute({...input(),panels:[panels[4]]},f.exec);await vi.waitFor(()=>expect([...f.runtime.tasks.values()][0].state).toBe('failed'));expect([...f.runtime.tasks.values()][0].finalOutput).toBeUndefined()}finally{await f.close()}
+  })
   it('does not silently drop per-record detail interactions into a flat deferred table', () => {
     const panel = { ...panels[0], title: '古籍修复交接', prompt: '8册模拟古籍，含病害、修复阶段、负责人和预计交接时间；点击任一行展开查看病害详情、修复方案与交接注意事项。' }
     expect(() => validateWorkbench({ ...input(), panels: [panel] })).toThrow(/table.*详情/u)
@@ -134,6 +148,7 @@ describe('领域自适应模拟工作台延后生成', () => {
       expect(prompt).toContain(common)
       const built = buildResearchTaskPrompt({ kind: 'container', parentSessionId: 'p', canvasNodeId: p.title, prompt })
       expect(built).toContain(`"type":"${p.type}"`)
+      expect(built).toContain('items等字段放在根对象，不再包裹panel或artifact')
       expect(built).not.toContain('唯一交付格式：undefined')
     }
   })
