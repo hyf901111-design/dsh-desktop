@@ -12,7 +12,7 @@ export const PUBLIC_DATA_PROFILES = Object.freeze({
   news: { type: 'news', sources: ['sina-news'] }
 })
 const object = v => v && typeof v === 'object' && !Array.isArray(v)
-export function validatePublicDataPanel(value, type) {
+export function validatePublicDataPanel(value, type, { strictParameters = false } = {}) {
   const profile = object(value) && PUBLIC_DATA_PROFILES[value.profile]
   if (!profile || profile.type !== type || Object.keys(value).some(k => !['profile', 'requests', 'intervalMinutes', 'layoutProfile'].includes(k))) throw Error('免费源组件类型或参数无效')
   if (value.layoutProfile !== undefined && (value.layoutProfile !== 'openterminal' || !['quotes-table', 'price-volume', 'news'].includes(value.profile))) throw Error('当前免费源模板不支持此专用布局')
@@ -24,10 +24,34 @@ export function validatePublicDataPanel(value, type) {
     let parameters
     try { parameters = JSON.parse(request.parameters_json) } catch { throw Error('parameters_json必须为JSON对象字符串') }
     if (!object(parameters)) throw Error('parameters_json必须为JSON对象字符串')
+    // New plans check adapter capabilities before acceptance. Persisted tasks
+    // retain their shape contract so old failed recipes remain recoverable.
+    if(strictParameters&&value.profile==='news'){
+      if(Object.keys(parameters).some(key=>key!=='limit'))throw Error('新浪新闻直通只支持limit，不支持证券筛选、任意URL、密钥或请求头；证券新闻请使用普通面板取数。')
+      if(parameters.limit!==undefined&&(!Number.isInteger(parameters.limit)||parameters.limit<1||parameters.limit>100))throw Error('新浪新闻limit必须为1–100的整数')
+    }
     return { source: request.source, parameters_json: request.parameters_json }
   })
   if (new Set(requests.map(r => JSON.stringify(r))).size !== requests.length) throw Error('免费源组件请求重复')
   return { profile: value.profile, requests, intervalMinutes, ...(value.layoutProfile ? { layoutProfile: value.layoutProfile } : {}) }
+}
+
+// Sina's bundled feed cannot filter securities. Preserve a narrowly recognized
+// planner intent as a normal source task, rather than deleting symbols and
+// silently replacing company news with an unrelated market-wide feed.
+export function publicDataNewsTaskRequirement(value,type){
+  if(value?.profile!=='news'||!Array.isArray(value.requests)||value.requests.length!==1)return null
+  const request=value.requests[0]
+  if(typeof request?.parameters_json!=='string'||request.parameters_json.length>5000)return null
+  let parameters
+  try{parameters=JSON.parse(request?.parameters_json)}catch{return null}
+  if(!object(parameters)||!Object.hasOwn(parameters,'symbols'))return null
+  const {symbols,...supportedParameters}=parameters
+  if(!Array.isArray(symbols)||!symbols.length||symbols.length>12||new Set(symbols).size!==symbols.length||symbols.some(symbol=>typeof symbol!=='string'||!/^(?:sh\d{6}|sz\d{6}|hk\d{5}|us[A-Z][A-Z0-9.]{0,9})$/u.test(symbol)))throw Error('证券新闻symbols必须为1–12个唯一合规交易代码，不接受网址或其他指令')
+  const supported=validatePublicDataPanel({...value,requests:[{...request,parameters_json:JSON.stringify(supportedParameters)}]},type,{strictParameters:true})
+  const scope=JSON.stringify({source:request.source,symbols,limit:parameters.limit??20,intervalMinutes:supported.intervalMinutes,...(supported.layoutProfile?{layoutProfile:supported.layoutProfile}:{})})
+  const layout=supported.layoutProfile?'最终news数据对象顶层必须保留已校验的 "layoutProfile":"openterminal"（即artifact.layoutProfile），沿用该内部布局。':''
+  return `宿主来源能力校正：内置sina-news仅支持财经总流，不能按证券symbols筛选；本卡改由独立取数任务完成。保留原面板全部需求及筛选元信息：${scope}。${layout}不得删除证券筛选后交付全市场新闻；只保留与上述证券及原主题匹配的真实报道、时间、摘要和原文链接。使用当前已授权且能按标的检索的来源，继续遵从原需求的显式来源限制；无法取得时明确缺失，不编造新闻或声称已开启刷新。`
 }
 
 // Live single-security K lines use the actual library renderer. Keep explicit

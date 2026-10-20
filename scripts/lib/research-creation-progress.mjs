@@ -6,13 +6,21 @@ import {patchComposerSubmitPolicy} from './composer-submit-policy.mjs'
 export function classifyResearchCreationRequest(raw) {
   if (typeof raw !== 'string') return null
   const text = raw.trim().replace(/\s+/g, ' ')
-  if (!text || text.length > 4000 || /(?:不要|不用|无需|不需要|别|禁止|不)(?:再|重新)?(?:创建|新建|新增|生成|搭建|制作|添加)/.test(text)) return null
-  if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/.test(text) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|搭建|制作)/.test(text)) return null
-  if (/(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|搭建|制作|构建)/.test(text)) return null
-  if (/(?:优化|调整|修复|解释|设计)(?:.{0,20})(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/.test(text)) return null
-  if (!/(?:创建|生成|搭建|制作|构建|添加|做(?:一个|些|个)?|要(?:一个|些|个)?)/.test(text)) return null
-  const workbench = /(?:工作台|看板|仪表盘|dashboard)/i.test(text)
-  const component = /(?:组件|卡片|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图)/i.test(text)
+  if (!text || text.length > 4000) return null
+  // Keep clause/negation boundaries aligned with workbenchCreationRequest.
+  // This function is embedded with toString(), so its classifier is local.
+  const action = raw.trim().split(/[，,。；;！？!?\n]+|(?=另外|另行|同时|然后|但是|但|并且|并(?:创建|新建|新增|生成|搭建|制作|构建|添加))/u).filter(clause => {
+    const create = /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|制作|构建|添加|做(?:一个|些|个)?|要(?:一个|些|个)?|重新规划|\b(?:create|build|generate)\b/iu.test(clause)
+    const denied = /(?:暂不|先不|本轮不|本次不|这次不|目前不|现在不|不要|不用|无需|不需要|别|禁止|不再|停止|取消|不)(?:再|重新|继续|进行|执行|修改|编辑|调整|修复|或|和|及|以及|并|与|\s)*(?:创建|新建|新增|生成|搭建|制作|构建|添加|规划|做(?:一个|些|个)?|要(?:一个|些|个)?)/u.test(clause)
+    const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
+    return create && !denied && !inspection
+  }).join('；')
+  if (!action) return null
+  if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/.test(action) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|搭建|制作)/.test(action)) return null
+  if (/(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|搭建|制作|构建)/.test(action)) return null
+  if (/(?:优化|调整|修复|解释|设计)(?:.{0,20})(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/.test(action)) return null
+  const workbench = /(?:工作台|看板|仪表盘|dashboard)/i.test(action)
+  const component = /(?:组件|卡片|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图)/i.test(action)
   if (!workbench && !component) return null
   const types = [...new Set((text.match(/蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|指标卡/gi) ?? []).map(value => value.replace(/\s+/g, '')))].slice(0, 6)
   return { kind: workbench ? 'workbench' : 'component', request: text, description: text.slice(0, 100), types }

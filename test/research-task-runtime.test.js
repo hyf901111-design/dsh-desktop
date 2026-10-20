@@ -1198,6 +1198,8 @@ describe('Research task cancellation and terminal cleanup', () => {
     const delivered = runtime.inspect({ parentSessionId: 'parent-1', taskId: receipt.taskId, afterSeq: 0 }).finalOutput
     expect(readTemplateModel(JSON.parse(delivered))?.data).toEqual(JSON.parse(finalJson))
     expect(start).toHaveBeenCalledTimes(2)
+    expect(start.mock.calls[0][0].preservePrompt).toBe(false)
+    expect(start.mock.calls[1][0].preservePrompt).toBe(true)
   })
 })
 
@@ -1227,6 +1229,25 @@ function requestStream(body, options = {}) {
 }
 
 describe('Research task Subagent adapter', () => {
+  it('retries legacy security-filtered news as a normal task without repeating an unsupported direct query',async()=>{
+    const {ResearchTaskRuntime}=await runtimeModule()
+    let sequence=0
+    const query=vi.fn(async()=>{throw Error('存在不支持的参数')})
+    const start=vi.fn(async()=>({childSessionId:'filtered-news',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'news',title:'公司新闻',asOf:'2026-10-20',items:[{title:'中际旭创公告',date:'2026-10-19',category:'公告',summary:'仅与指定公司相关的已核实资料',url:'https://example.com/company-announcement'}]})}]}),dispose:async()=>{}}))
+    const runtime=new ResearchTaskRuntime({adapter:{start},publicDataClient:{query},storage:memoryTaskStorage(),createId:()=>`legacy-news-${++sequence}`})
+    const prompt='本面板：公司新闻\n仅展示中际旭创、新易盛、工业富联的真实新闻，优先使用 news 类型，保留原文链接。'
+    try{
+      const [first]=await runtime.startPublicDataBatch({parentSessionId:'parent-1',panels:[{canvasNodeId:'news-node',title:'公司新闻',type:'news',prompt,publicData:{profile:'news',requests:[{source:'sina-news',parameters_json:JSON.stringify({symbols:['sz300308','sz300502','sh601138'],limit:12})}],intervalMinutes:5}}]})
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:first.taskId}).state).toBe('failed'))
+      const retry=await runtime.start({...containerRequest('news-node'),prompt})
+      await eventually(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:retry.taskId}).state).toBe('completed'))
+      expect(query).toHaveBeenCalledTimes(1)
+      expect(start).toHaveBeenCalledTimes(1)
+      expect(start.mock.calls[0][0].query).toContain(prompt)
+      expect(start.mock.calls[0][0].query).toContain('"symbols":["sz300308","sz300502","sh601138"]')
+      expect(start.mock.calls[0][0].query).toContain('不得删除证券筛选')
+    }finally{await runtime.dispose()}
+  })
   const containerAdapterFixture = () => {
     const parent = { id: 'parent-1', session: { events: [] } }
     const child = { id: 'child-1', session: { id: 'child-1', events: [] } }
@@ -1254,6 +1275,109 @@ describe('Research task Subagent adapter', () => {
     expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件');
     await handle.dispose();
   });
+  it('keeps searchable sortable business tables on the native data path while preserving custom record details',async()=>{
+    for(const interaction of ['交互：排序与搜索。','支持按公司筛选、过滤记录、单击表头排序。']){
+      const fixture=containerAdapterFixture()
+      fixture.ctx.tools={schemas:()=>[{name:'public_data_query'}]}
+      const handle=await fixture.start(`工作台：经营差异\n本面板：经营基本面\n取得三家公司真实财报、来源与单位，${interaction}\n仅生成本面板，优先使用 table 类型。`)
+      try{
+        const prompt=fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+        expect(prompt).toContain('"type":"table"')
+        expect(prompt).toContain('不要写 HTML/CSS')
+        expect(prompt).not.toContain('"type":"html"')
+      }finally{await handle.dispose()}
+    }
+    const fixture=containerAdapterFixture()
+    const handle=await fixture.start('工作台：交接\n本面板：详情记录\n搜索记录；点击每行展开详情与完整说明。\n仅生成本面板，优先使用 table 类型。')
+    try{expect(fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text).toMatch(/"type"\s*:\s*"html"/)}finally{await handle.dispose()}
+  })
+  it.each([false,true])('keeps the original workbench scope and current schema in real child prompts (binding=%s)',async binding=>{
+    const {validateWorkbench,workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    const original='创建中际旭创(sz300308)、新易盛(sz300502)、工业富联(sh601138)真实研究工作台，近20个交易日；禁止模拟。其他卡绘制chart.bar和K线，不能替换本卡。'
+    const plan=validateWorkbench({requestId:'scope',title:'研究',dataMode:'source',originalRequest:original,panels:[{title:'经营差异',type:'table',size:'large',prompt:'比较三家公司的财报，使用真实数据。'+(binding?'每分钟自动更新。':'')}]})
+    const query=workbenchPanelPrompt(plan,plan.panels[0]),fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'}]}
+    const handle=await fixture.start(query)
+    try{
+      const prompt=fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+      expect(prompt).toContain(original)
+      expect(prompt).toContain('"type":"table"')
+      expect(prompt).not.toContain('"type":"chart"')
+      expect(prompt).toContain('只完成本面板')
+      expect(prompt.includes('mapping 的模板结构')).toBe(binding)
+    }finally{await handle.dispose()}
+  })
+  it.each([
+    '估值和财报面板使用通联DataYes，查询市盈率和净利润。',
+    '估值面板只用已有资料，不要联网。'
+  ])('keeps unrelated board scope out of the actual news child routing: %s',async otherCard=>{
+    const {validateWorkbench,workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    const original='创建中际旭创、新易盛、工业富联真实研究工作台。新闻卡检索近期新闻。'+otherCard
+    const plan=validateWorkbench({requestId:'routing-scope',title:'公司研究',dataMode:'source',originalRequest:original,panels:[{title:'近期新闻',type:'news',size:'large',prompt:'检索三家公司最新新闻，只取本次真实快照。'}]})
+    const fixture=containerAdapterFixture()
+    const names=['public_data_query','financial_query','web_search','web_fetch','ework__datayes']
+    fixture.ctx.tools={schemas:()=>names.map(name=>({name,...(name.startsWith('ework__')?{description:'通联 DataYes API'}:{})}))}
+    const handle=await fixture.start(workbenchPanelPrompt(plan,plan.panels[0]))
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow).toEqual(names)
+      expect(child.prompt[0].text).toContain(original)
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的通联工具')
+      expect(child.prompt[0].text).not.toContain('自动绑定数据交付协议')
+    }finally{await handle.dispose()}
+  })
+  it('keeps a current-card named source authoritative while retaining a whole-board source restriction verbatim',async()=>{
+    const {validateWorkbench,workbenchPanelPrompt}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    for(const ownSource of ['', '数据源：通联 DataYes。']){
+      const original='创建三个公司的研究工作台，所有卡只使用通联DataYes，禁止其他来源。'
+      const plan=validateWorkbench({requestId:'named-scope',title:'公司研究',dataMode:'source',originalRequest:original,panels:[{title:'近期新闻',type:'news',size:'large',prompt:ownSource+'检索三家公司真实新闻。'}]})
+      const fixture=containerAdapterFixture()
+      fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_fetch'},{name:'ework__datayes',description:'通联 DataYes API'}]}
+      const handle=await fixture.start(workbenchPanelPrompt(plan,plan.panels[0]))
+      try{
+        const child=fixture.ctx.subagents.start.mock.calls[0][1]
+        expect(child.prompt[0].text).toContain(original)
+        expect(child.toolFilter.allow).toContain('ework__datayes')
+        if(ownSource)expect(child.toolFilter.allow).not.toContain('public_data_query')
+        expect(child.prompt[0].text).toContain(ownSource?'本面板已指定使用配置的插件':'用户指定来源优先')
+      }finally{await handle.dispose()}
+    }
+  })
+  it.each(['财报估值研究工作台','DataYes财报与新闻研究工作台'])('does not route a news child from the global board title: %s',async title=>{
+    const {validateWorkbench,workbenchPanelPrompt,workbenchPanelIntent}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
+    const {preferredComponentSourceTools}=await import('../packages/dsh-research-task-runtime/component-source-tools.js')
+    const original='创建中际旭创、新易盛、工业富联真实研究工作台，含财报估值和新闻。'
+    const plan=validateWorkbench({requestId:'title-scope',title,dataMode:'source',originalRequest:original,panels:[{title:'近期新闻',type:'news',size:'large',prompt:'检索三家公司最新新闻，只取本次真实快照。'}]})
+    const query=workbenchPanelPrompt(plan,plan.panels[0]),fixture=containerAdapterFixture()
+    const names=['public_data_query','financial_query','web_search','web_fetch','ework__datayes']
+    const schemas=names.map(name=>({name,...(name.startsWith('ework__')?{description:'通联 DataYes API'}:{})}))
+    fixture.ctx.tools={schemas:()=>schemas}
+    expect(preferredComponentSourceTools(schemas,workbenchPanelIntent(query))).toEqual([])
+    const valuation=workbenchPanelPrompt(plan,{...plan.panels[0],title:'财报估值',type:'table',prompt:'查询三家公司财报、净利润与市盈率。'})
+    expect(preferredComponentSourceTools(schemas,workbenchPanelIntent(valuation)).map(tool=>tool.name)).toEqual(['ework__datayes'])
+    const handle=await fixture.start(query)
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow).toEqual(names)
+      expect(child.prompt[0].text).toContain('工作台：'+title)
+      expect(child.prompt[0].text).toContain(original)
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的通联工具')
+    }finally{await handle.dispose()}
+  })
+  it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'}]}
+    const {createSubagentAdapter}=await runtimeModule()
+    const correction='具体校验问题：labels 与 series.values 必须等长。\n上一轮已取得20条记录，请复用已有响应，不重做接口目录查询。\n来源样本：source-marker-20-records'
+    const handle=await createSubagentAdapter(fixture.ctx).start({parentSessionId:'parent-1',kind:'container',query:'工作台：比较\n本面板：真实走势\n优先使用 market 类型；variant: trend。',prompt:correction,preservePrompt:true,signal:new AbortController().signal,onSessionEvent:vi.fn()})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.prompt[0].text).toContain(correction)
+      expect(child.toolFilter.allow).toContain('public_data_query')
+    }finally{await handle.dispose()}
+  })
   it('does not grant the free data tool to offline or explicitly plugin-bound children', async () => {
     const schemas = [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }, { name: 'read' }];
     for (const query of ['不要联网，只用已有资料制作图表', '工作台：投资\n本面板：行情\n使用通联MCP取最新股票行情，优先使用 market 类型。']) {

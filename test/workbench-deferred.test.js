@@ -62,6 +62,8 @@ describe('领域自适应模拟工作台延后生成', () => {
   it('dispatches the suggested custom HTML correction through the ordinary model path while retaining simulation and offline constraints', async () => {
     const f = await setup(async request => ({ childSessionId: request.taskId, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify({ version: 1, type: 'html', title: '古籍交接（模拟）', html: '<main><p>模拟记录8册</p><details><summary>查看详情</summary><p>模拟病害与修复方案完整说明</p></details></main>' }) }] }), dispose: async () => {} }))
     const prompt = '8册古籍的模拟交接记录，禁止联网，不引用真实来源；点击记录展开完整说明。共同约束：2026-11交接，负责人均为虚构。'
+    const authored = '创建古籍交接模拟工作台。' + prompt
+    f.exec.agent.session.events[0].data.content[0].text = authored
     try {
       const receipt = await f.tool.execute({ title: '古籍交接（模拟）', panels: [{ ...panels[0], title: '古籍交接（模拟）', type: 'html', prompt }] }, f.exec)
       expect(receipt.status).toBe('accepted')
@@ -71,7 +73,7 @@ describe('领域自适应模拟工作台延后生成', () => {
       expect(plan.input).not.toHaveProperty('dataMode')
       expect(plan.input).not.toHaveProperty('generationMode')
       expect(plan.input).not.toHaveProperty('sharedContext')
-      expect(plan.input).not.toHaveProperty('originalRequest')
+      expect(plan.input.originalRequest).toBe(authored)
       await vi.waitFor(() => expect([...f.runtime.tasks.values()][0].state).toBe('completed'))
       const output = [...f.runtime.tasks.values()][0].finalOutput
       expect(output).toContain('查看详情')

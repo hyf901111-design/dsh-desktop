@@ -9,11 +9,16 @@ export function componentDataSourceNames(binding){
 // One canvas subscription; publishing status never updates the canvas model or
 // replaces an iframe. Only the affected footer subscribes to its own snapshot.
 export function createComponentDataStatusStore(){
- const sessions=new Map(),listeners=new Map()
+ const sessions=new Map(),listeners=new Map(),nativeRows=new Map()
  const key=(sessionId,nodeId)=>JSON.stringify([sessionId,nodeId])
  const notify=(sessionId,nodeId)=>listeners.get(key(sessionId,nodeId))?.forEach(fn=>fn())
+ const lastFailed=(row,old)=>['success','unchanged'].includes(row.status)?false:Boolean(row.status==='error'||row.failures>0||old?.lastRefreshFailed)
  return {
-  read:(sessionId,nodeId)=>sessions.get(sessionId)?.rows.get(nodeId)||null,
+  read:(sessionId,nodeId)=>nativeRows.get(key(sessionId,nodeId))||sessions.get(sessionId)?.rows.get(nodeId)||null,
+  // Builtin widgets own their live source/scheduler. Host binding polls must
+  // not erase those outcomes, and unmounting a widget releases its own row.
+  publishNative(sessionId,nodeId,row){const k=key(sessionId,nodeId),old=nativeRows.get(k),next={...row,nodeId,native:true,lastRefreshFailed:lastFailed(row,old)};if(JSON.stringify(old)!==JSON.stringify(next)){nativeRows.set(k,next);notify(sessionId,nodeId)}},
+  clearNative(sessionId,nodeId){if(nativeRows.delete(key(sessionId,nodeId)))notify(sessionId,nodeId)},
   subscribe(sessionId,nodeId,fn){const k=key(sessionId,nodeId);if(!listeners.has(k))listeners.set(k,new Set());listeners.get(k).add(fn);return()=>{const set=listeners.get(k);set?.delete(fn);if(!set?.size)listeners.delete(k)}},
   suspend(sessionId){const session=sessions.get(sessionId);if(session)session.ready=false},
   publish(sessionId,rows){
@@ -21,7 +26,7 @@ export function createComponentDataStatusStore(){
    for(const row of rows){
     const old=previous.rows.get(row.nodeId)
     const advanced=Number.isInteger(row.successSequence)?row.successSequence>(old?.successSequence||0):row.lastSuccess>old?.lastSuccess
-    const snapshot={successSequence:row.successSequence||0,nodeId:row.nodeId,status:row.status,lastSuccess:row.lastSuccess||null,dataAsOf:row.dataAsOf||'',enabled:row.enabled,viewPaused:row.viewPaused,intervalMinutes:row.intervalMinutes,sourceNames:componentDataSourceNames(row),
+    const snapshot={successSequence:row.successSequence||0,nodeId:row.nodeId,status:row.status,lastRefreshFailed:lastFailed(row,old),lastSuccess:row.lastSuccess||null,dataAsOf:row.dataAsOf||'',enabled:row.enabled,viewPaused:row.viewPaused,intervalMinutes:row.intervalMinutes,sourceNames:componentDataSourceNames(row),
      refreshSequence:(old?.refreshSequence||0)+(previous.ready&&old&&advanced&&row.status==='success'?1:0),
      completionSequence:(old?.completionSequence||0)+(previous.ready&&old&&advanced&&['success','unchanged'].includes(row.status)?1:0)}
     next.set(row.nodeId,JSON.stringify(old)===JSON.stringify(snapshot)?old:snapshot)
@@ -148,7 +153,7 @@ export function componentRssStatusView(node){
  let model;try{model=JSON.parse(source)}catch{return null}
  if(model.templateId!=='rss'||!Array.isArray(model.data?.feeds))return null
  const feeds=model.data.feeds,times=feeds.map(f=>f.fetchedAt).filter(t=>typeof t==='string'&&Number.isFinite(new Date(t).getTime())).sort((a,b)=>new Date(b)-new Date(a)),lastSuccess=times[0]||null,failed=feeds.some(f=>f.error)
- return {lastSuccess,time:lastSuccess?'读取 '+new Date(lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未读取',detail:!feeds.length?'尚未添加订阅':failed?'读取失败 · 保留上次条目':lastSuccess?'订阅 · 仅手动':'尚未读取订阅源',phase:failed?'error':null,title:feeds.map(f=>(f.title||f.url)+'：'+(f.error||'抓取 '+(f.fetchedAt||'尚未读取'))).join('\n')}
+ return {lastSuccess,refreshable:feeds.some(feed=>typeof feed.url==='string'&&feed.url.trim()),time:lastSuccess?'读取 '+new Date(lastSuccess).toLocaleTimeString('zh-CN',{hour12:false}):'尚未读取',detail:!feeds.length?'尚未添加订阅':failed?'读取失败 · 保留上次条目':lastSuccess?'订阅 · 仅手动':'尚未读取订阅源',phase:failed?'error':null,title:feeds.map(f=>(f.title||f.url)+'：'+(f.error||'抓取 '+(f.fetchedAt||'尚未读取'))).join('\n')}
 }
 
 export function ComponentDataStatusBar({sessionId,node,workbench=false}){

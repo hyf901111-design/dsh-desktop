@@ -65,6 +65,29 @@ it('does not show a new planning card when repairing failed existing components'
   expect(classifyResearchCreationRequest('修复现有工作台的图表，另外创建一个新的行业研究工作台。')).toMatchObject({kind:'workbench'})
 })
 
+it('does not announce creation for read-only status checks and scopes temporary negation to its own clause', () => {
+  const installed = new Function('return ' + classifyResearchCreationRequest.toString())()
+  for (const classify of [classifyResearchCreationRequest, installed]) {
+    for (const text of [
+      '请检查当前工作台各组件的生成状态与数据日期，说明仍需处理的缺失和错误，暂不修改或新建组件。',
+      '查看当前工作台组件生成状态和数据日期。',
+      '只读检查已有工作台中生成的组件，不做修改。',
+      '请检查当前工作台生成的图表，并列出缺失。',
+      '请检查当前工作台，暂不新建组件。',
+      '请检查当前工作台，先不生成新卡片。',
+      '本轮不创建工作台，只检查组件生成情况。'
+    ]) expect(classify(text), text).toBeNull()
+    for (const text of [
+      '请检查当前工作台组件生成状态，另外新建一个预算组件。',
+      '暂不修改或新建组件，但另外创建一个独立的行业工作台。',
+      '暂不新建工作台；另外创建一张排期卡片。',
+      '本轮不新建工作台\n请创建一张排期卡片。',
+      '本轮不修改当前工作台，同时新建一个独立行业研究工作台。',
+      '请检查当前已有工作台，并创建一张折线图组件。'
+    ]) expect(classify(text), text).not.toBeNull()
+  }
+})
+
 it('deals new cards outward from the planning card at the current canvas zoom', () => {
   const [start, end] = workbenchDealMotion(
     {left:100,top:100,width:160,height:110},

@@ -9,6 +9,20 @@ export function workbenchRefreshTooltip(lastSuccess,now=Date.now()) {
   const relative='上次刷新：'+(seconds<60?'刚刚':seconds<3600?Math.floor(seconds/60)+' 分钟前':seconds<86400?Math.floor(seconds/3600)+' 小时前':Math.floor(seconds/86400)+' 天前')
   return {relative,absolute:new Date(at).toLocaleString('zh-CN',{month:'long',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
 }
+export function workbenchRefreshState(node,binding,{rss=null,reload=false,error=''}={}) {
+  const spec=node?.containerSpec||{},native=spec.type==='financial-widget'&&['watchlist','quote','indices','news','announcements'].includes(spec.widget)
+  const nativeSource=native&&(spec.widget==='news'&&!spec.linkedSourceId||Array.isArray(spec.symbols)&&spec.symbols.length>0)
+  // Binding snapshots come from the validated host service, not static card
+  // data, generation timestamps, or a merely authored sourceBinding object.
+  const bound=!native&&Boolean(binding&&binding.nodeId===node?.id)
+  const url=value=>typeof value==='string'&&value.trim().length>0
+  const media=['audio','youtube','iframe'].includes(spec.type)&&url(spec.url)
+  const files=['files','gallery'].includes(spec.type)&&spec.items?.some(item=>url(item.url)||url(item.relativePath)||url(item.authorizationId))
+  if(!(nativeSource||bound||reload||rss?.refreshable||media||files||spec.type==='calendar-tool'||node?.kind==='web-link'&&url(node.url)))return null
+  const scheduled=native?spec.refreshEnabled!==false&&(spec.refreshMinutes??1)>0:bound&&binding.enabled===true&&binding.intervalMinutes>0
+  const failed=Boolean(error||binding?.status==='error'||binding?.lastRefreshFailed)
+  return {state:scheduled?failed?'error':'scheduled':'manual',icon:scheduled?'refresh':'refresh-manual'}
+}
 export function controlWorkbenchWebZoom(card,step) {
   const native=card?.querySelector('[data-research-native-web]')
   if(typeof native?.__eworkAdjustWebZoom==='function')return native.__eworkAdjustWebZoom(step)
@@ -65,11 +79,15 @@ export function WorkbenchTitle({title,systemTitle=false}){
 export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,onRemove,onExpand,onReload,titleExtra}) {
   const binding=react.useSyncExternalStore(react.useCallback(fn=>componentDataStatusStore.subscribe(sessionId,node.id,fn),[sessionId,node.id]),react.useCallback(()=>componentDataStatusStore.read(sessionId,node.id),[sessionId,node.id]))
   const [busy,setBusy]=react.useState(false),[error,setError]=react.useState(''),[now,setNow]=react.useState(Date.now()),[tip,setTip]=react.useState(null)
+  // A later automatic success also clears a previous header-click failure.
+  // Starting a retry keeps the last completed error until a result arrives.
+  react.useEffect(()=>{if(['success','unchanged'].includes(binding?.status))setError('')},[binding?.status,binding?.lastSuccess,binding?.successSequence])
   const rss=componentRssStatusView(node)
+  const refreshState=workbenchRefreshState(node,binding,{rss,reload:typeof onReload==='function',error})
   const time=workbenchRefreshTooltip(rss?rss.lastSuccess:binding?.lastSuccess||node.lastSuccessfulAt||(node.generationStatus==='completed'?node.generationCompletedAt:null),now)
   const refresh=async()=>{
     if(busy||readOnly)return {error:'组件当前不可刷新'}
-    setBusy(true);setError('')
+    setBusy(true)
     let message='指标数据已更新'
     try{
       if(onReload){const result=await onReload();if(result?.error)throw Error(result.error);message=result?.message||'已请求重新载入组件'}else if(node.containerSpec?.type==='calendar-tool'){await document.querySelector('[data-research-node-id=\"'+CSS.escape(node.id)+'\"] [data-calendar-tool]')?.__eworkRefreshCalendar?.();message='日历已更新'}else if(node.containerSpec?.type==='financial-widget'){const preset=document.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"] [data-financial-widget]');if(!preset?.__eworkRefreshFinancial)throw Error('组件暂未就绪');const result=await preset.__eworkRefreshFinancial();if(result?.error)throw Error(result.error);message=result?.message||'已刷新通联数据'}else if(node.containerSpec?.type==='audio'){
@@ -93,7 +111,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
       }else if(/<body\b[^>]*data-sherlock-template="rss"/.test(node.containerSpec?.html??'')){await window.dshDesktop.researchRss.request({sessionId,nodeId:node.id,action:'refresh'})}
       else if(binding){const result=await window.dshDesktop.componentData.request(sessionId,{action:'refresh',nodeId:node.id});const rows=await window.dshDesktop.componentData.request(sessionId,{action:'list'});componentDataStatusStore.publish(sessionId,rows);if(result?.status==='error')throw Error(result.error||'刷新失败，保留上次数据');if(!['success','unchanged'].includes(result?.status))throw Error('刷新尚未完成，保留上次数据');if(result.status==='unchanged')message='已检查数据，指标值未变化'}
       else {openComponentData(sessionId,node);return {message:'未绑定数据源，已打开数据源设置'}}
-      setNow(Date.now());window.dispatchEvent(new Event('sherlock:component-data-changed'))
+      setError('');setNow(Date.now());window.dispatchEvent(new Event('sherlock:component-data-changed'))
       return {message}
     }catch(e){const error=e?.message||'刷新失败，保留上次数据';setError(error);return {error}}finally{setBusy(false)}
   }
@@ -101,7 +119,7 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
-      react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button('refresh','刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-current':!!binding?.lastSuccess&&now-new Date(binding.lastSuccess).getTime()<60000||undefined})}),
+      refreshState&&react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button(refreshState.icon,'刷新组件',refresh,{disabled:readOnly||busy||binding?.status==='refreshing','data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':busy||binding?.status==='refreshing'||undefined,'data-refresh-state':refreshState.state})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),
       titleExtra,
       node.containerSpec?.type==='financial-widget'&&['quote','announcements'].includes(node.containerSpec.widget)&&react_jsx_runtime.jsx(FinancialQuoteSelector,{node,sessionId,readOnly}),

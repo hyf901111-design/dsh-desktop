@@ -19,13 +19,31 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
-import { validatePublicDataPanel, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
+import { validatePublicDataPanel, publicDataNewsTaskRequirement, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
 export const WORKBENCH_PANEL_TYPES = Object.freeze(['financial-widget','files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 export const DEFERRED_WORKBENCH_TYPES = Object.freeze(['table','chart','kpi','news','reports','calendar','dashboard','market','gantt','progress','tasks','approval','alerts','form','code','clock','note','timeline']);
 export const DEFERRED_WORKBENCH_MARKER = '【宿主延后模拟生成】';
+export const WORKBENCH_REQUEST_MARKER = '【原始工作台需求】';
+// Keep shared subject/range evidence separate from the current card's renderer contract.
+export function workbenchPanelScope(prompt) {
+    if (typeof prompt !== 'string' || !/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(prompt)) return null;
+    const index = prompt.indexOf('\n' + WORKBENCH_REQUEST_MARKER + '\n');
+    if (index < 0) return null;
+    const contract = prompt.slice(0, index);
+    const type = contract.match(/\n仅生成本面板，优先使用 ([a-z-]+) 类型/u)?.[1];
+    return WORKBENCH_PANEL_TYPES.includes(type) ? { contract, scope: prompt.slice(index) } : null;
+}
+// Machine routing reads the current card's authored request, not other cards
+// in the shared scope, the whole-board title, or host display boilerplate.
+// The complete original scope still goes to the model unchanged.
+export function workbenchPanelIntent(prompt) {
+    const contract = workbenchPanelScope(prompt)?.contract ?? prompt;
+    return typeof contract === 'string' && /^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(contract)
+        ? contract.slice(contract.indexOf('\n') + 1).split('\n仅生成本面板，')[0] : contract;
+}
 export function deferredWorkbenchPanel(prompt) {
     if (typeof prompt !== 'string') return null;
     const header = prompt.match(/^工作台：[^\n]+\n本面板：([^\n]+)\n/u);
@@ -321,7 +339,7 @@ export function validateWorkbench(value) {
     if (value.generationMode !== undefined && !parallel && !deferred) throw Error('工作台生成模式无效。');
     if ((parallel || deferred) && !isSimulated) throw Error('并行或延后模拟生成仅适用于模拟数据工作台。');
     if (value.sharedContext !== undefined && (!deferred || !str(value.sharedContext, 3000))) throw Error('共同场景约束仅支持延后模拟生成，限3000字符。');
-    if (value.originalRequest !== undefined && (!deferred || !str(value.originalRequest, 8000))) throw Error('原始工作台需求快照无效或超过8000字符。');
+    if (value.originalRequest !== undefined && !str(value.originalRequest, 8000)) throw Error('原始工作台需求快照无效或超过8000字符。');
     if (deferred && !value.sharedContext && !value.originalRequest) throw Error('延后模拟生成需要原始需求或共同场景约束。');
     const seen = new Set();
     const panels = resolveWorkbenchSamples(value.panels).map(p => {
@@ -362,12 +380,21 @@ export function validateWorkbench(value) {
             if (isSimulated || p.artifact !== undefined) throw Error('免费源直通面板不能混用模拟数据或静态artifact。');
             if (p.intervalMinutes !== undefined && p.publicData?.intervalMinutes !== undefined && p.intervalMinutes !== p.publicData.intervalMinutes)
                 throw Error('面板与免费源刷新频率冲突，请只填写一个一致的值。');
-            const publicData = validatePublicDataPanel(p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes }, p.type);
-            const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
-            const prefix = variant ? `variant: ${variant}；` : '';
-            p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
-            const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
-            if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
+            const candidate=p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes };
+            const sourceTaskRequirement=publicDataNewsTaskRequirement(candidate,p.type);
+            if(sourceTaskRequirement){
+                const {publicData:source,intervalMinutes,...planned}=p;
+                const prompt=p.prompt+'\n'+sourceTaskRequirement;
+                if(prompt.length>5000)throw Error('证券新闻需求与来源约束超过面板内容上限，请精简需求文字。');
+                p={...planned,prompt};
+            }else{
+                const publicData = validatePublicDataPanel(candidate, p.type,{strictParameters:true});
+                const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
+                const prefix = variant ? `variant: ${variant}；` : '';
+                p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
+                const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
+                if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
+            }
         }
         // Correct a metadata-only planner mismatch before launching a child.
         // Existing supplied data remains subject to its original schema.
@@ -420,8 +447,8 @@ export function validateWorkbench(value) {
     if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');
-    const result = { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(deferred && value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(deferred && value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
-    if (deferred && panels.some(panel => workbenchPanelPrompt(result, panel).length > 18000)) throw Error('共同场景与面板需求超过单卡生成上限，请压缩面板说明，保留原始需求。');
+    const result = { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(deferred && value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
+    if ((deferred || value.originalRequest) && panels.some(panel => workbenchPanelPrompt(result, panel).length > 18000)) throw Error('共同场景与面板需求超过单卡生成上限，请压缩面板说明，保留原始需求。');
     return result;
 }
 export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 }) {
@@ -440,12 +467,13 @@ export function layoutWorkbench(panels, canvasSize = { width: 1380, height: 900 
 }
 
 export function workbenchPanelPrompt(input, p) {
-    if(p.type==='financial-widget')return `工作台：${input.title}\n本面板：${p.title}\n使用内置个股行情等组件库金融组件，直接挂载已验证的标的配置，由客户端读取行情并每60秒刷新。${FINANCIAL_WIDGET_GUIDANCE}`;
+    const original = input.generationMode !== 'deferred' && input.originalRequest ? `\n${WORKBENCH_REQUEST_MARKER}\n以下原始用户需求仅约束本卡的研究对象、时间范围、数据来源和真实性；只完成本面板，不生成其他卡或整份工作台。沿用明确实体与约束，不用旧聊天记忆、行业样例或自行猜测替换；缺失就注明。\n${input.originalRequest}` : '';
+    if(p.type==='financial-widget')return `工作台：${input.title}\n本面板：${p.title}\n使用内置个股行情等组件库金融组件，直接挂载已验证的标的配置，由客户端读取行情并每60秒刷新。${FINANCIAL_WIDGET_GUIDANCE}${original}`;
     const template = workbenchDesignTemplate(p);
     const origin = ['chart','reports','news','gantt'].includes(p.type) ? 'Figma 组件族参考' : 'Figma 节点';
     const presentation = p.type === 'html'
         ? '交付自包含 HTML 与实际业务交互；使用宿主颜色、字体变量和 window.sherlockShared.register 共享状态接口，事件通过返回句柄 dispatch，不实现独立同步定时器。正文13px/20px，辅助说明至少11px/17px，随尺寸重排而不缩字。表格的表头和所有内容默认单行，超宽横向滚动，用户手动调整列宽后才允许该列换行；用标准 table/thead/tbody，宿主提供拖动列宽。组合图表用自然内容高度，标准数据图表必须使用宿主market/chart模板。必要的自定义图形监听ResizeObserver按容器宽高重绘，文字保持CSS像素字号；禁止preserveAspectRatio="none"或scaleX/scaleY拉伸文字。静态SVG保留自身宽高比，图表及竖向容器不用height:100%、100vh或flex:1撑出空白。'
         : '组件样式、深浅主题、字体和几何由宿主模板负责；仅提交数据，不自造视觉样式。';
     const shared = input.generationMode === 'deferred' ? `\n${DEFERRED_WORKBENCH_MARKER}\n${workbenchPlanningContext()}\n只生成上方声明的一个模板；下方是共同事实，不能改变本卡类型或另造面板。原始用户明确数值/范围优先；sharedContext中的共同预算分配、日期、容量、单位和口径必须逐项一致，不重新分配总额或另造矛盾假设。只有用户允许的部分可补充虚构记录；显著标注模拟，禁止联网、外部链接与真实来源声明。\n原始用户需求：\n${input.originalRequest ?? '见下方共同场景约束'}\n共同场景约束：\n${input.sharedContext ?? '遵从原始用户需求，不新增共同口径。'}` : '';
-    return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线单标的用 candles，多标的用 datasets，成交量缺失填 null，均不得用通用 chart 或自写 HTML 替代。` : ''}${p.type === 'chart' ? `必须输出 ${'chart.'+(p.artifact?.variant??requestedChartVariant(p.title+' '+p.prompt)??'line')} 的结构化数据。按对应图表契约填写；坐标图的labels与series.values等长，层级/分布/目标图用各自字段。` : ''}${presentation}用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。${shared}`;
+    return `工作台：${input.title}\n本面板：${p.title}\n${p.prompt}\n仅生成本面板，优先使用 ${p.type} 类型。${input.dataMode === 'simulated' ? '只使用明确标注的虚构模拟数据；不得检索外部资料、引用真实行情或伪造链接。' : ''}宿主设计合同 ${template.version}/${template.id}，${origin} ${template.figma}；目标内容尺寸 ${template.width}×${template.height}。${p.type === 'market' ? `必须输出 market.${template.variant} 的结构化数据；金融趋势用同单位、同纵轴的 trend 序列，不要混入右轴百分比；K线单标的用 candles，多标的用 datasets，成交量缺失填 null，均不得用通用 chart 或自写 HTML 替代。` : ''}${p.type === 'chart' ? `必须输出 ${'chart.'+(p.artifact?.variant??requestedChartVariant(p.title+' '+p.prompt)??'line')} 的结构化数据。按对应图表契约填写；坐标图的labels与series.values等长，层级/分布/目标图用各自字段。` : ''}${presentation}用户手动框保持原宽高，不裁切、折叠或隐藏主要字段。不要在正文重复宿主面板标题。来源、日期与单位就近标注；缺失数据明确说明，不伪造实时数据或声称已开启持续监控。${shared}${original}`;
 }
