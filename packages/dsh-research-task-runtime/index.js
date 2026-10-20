@@ -2021,7 +2021,11 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         ? [...new Set(scopedSchemas.map(tool => tool?.name).filter(name => typeof name === 'string'))]
         : null
       const defaultResearchTools = [...(scopedSchemas?.some(tool => tool.name === 'public_data_query') ? ['public_data_query'] : []), 'financial_query', 'web_search', 'web_fetch']
-      const networkTools = new Set([...defaultResearchTools, ...preferredSourceNames])
+      // Preference is a routing hint, not the boundary of network access.
+      // A child can legitimately use any parent-visible plugin API; every one
+      // must count toward and close with the same bounded research phase.
+      const networkTools = new Set([...defaultResearchTools, ...preferredSourceNames,
+        ...(kind === 'container' && Array.isArray(scopedSchemas) ? scopedSchemas.map(tool => tool?.name).filter(name => typeof name === 'string' && name.startsWith('ework__')) : [])])
       const fallbackTools = kind === 'board'
         ? [...defaultResearchTools, 'research_workbench_create', 'research_canvas_use', 'research_canvas_task', ...CANVAS_TOOL_NAMES]
         : kind === 'qa'
