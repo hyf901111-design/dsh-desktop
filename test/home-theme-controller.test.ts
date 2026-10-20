@@ -5,9 +5,11 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { mountHomeThemes } from '../src/preload/home-themes'
 import { HomeThemePreferenceStore } from '../src/main/home-theme-preferences'
+import koiLight from '../src/preload/home-theme-assets/koi-pond-light.png?inline'
+import koiDark from '../src/preload/home-theme-assets/koi-pond-dark.png?inline'
 
 const STORAGE_KEY = 'ework.home-background.v1'
-const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither']
+const THEME_IDS = ['default', 'berber', 'vghodki', 'jarrick', 'lowfreez', 'accelbia', 'boz', 'shashidhar', 'haseeb', 'kirian', 'splines', 'antiquue', 'crt-warp', 'dither', 'koi-pond']
 const fixtures: Array<{ dispose(): void; win: Window }> = []
 const userDataDirectories: string[] = []
 
@@ -195,7 +197,7 @@ describe('home background theme controller', () => {
   })
 
   it('loads thumbnails only when cards enter the visible strip, using the current color mode', async () => {
-    const f = fixture({ initial: 'default' })
+    const f = fixture({ initial: 'koi-pond' })
     f.mount()
     const image = (id: string) => f.cards().find(card => card.dataset.homeThemeId === id)!.style.getPropertyValue('--theme-thumbnail')
     const lightDither = image('dither')
@@ -253,13 +255,13 @@ describe('home background theme controller', () => {
     }
     f.click('previous')
     await f.settle()
-    check('dither')
+    check('koi-pond')
     f.click('current')
     await f.settle()
-    check('dither')
+    check('koi-pond')
   })
 
-  it('navigates and restores all fourteen themes with keyboard wrap and Home/End', async () => {
+  it('navigates all themes with keyboard wrap and Home/End', async () => {
     const f = fixture({ initial: 'boz' })
     f.mount()
     expect(f.current()!.dataset.homeThemeId).toBe('boz')
@@ -268,11 +270,11 @@ describe('home background theme controller', () => {
       await f.settle()
     }
     await key('End')
-    expect(f.current()!.dataset.homeThemeId).toBe('dither')
+    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
     await key('ArrowRight')
     expect(f.current()!.dataset.homeThemeId).toBe('default')
     await key('ArrowLeft')
-    expect(f.current()!.dataset.homeThemeId).toBe('dither')
+    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
     await key('Home')
     expect(f.current()!.dataset.homeThemeId).toBe('default')
     for (const id of THEME_IDS.slice(1)) {
@@ -280,6 +282,24 @@ describe('home background theme controller', () => {
       expect(f.current()!.dataset.homeThemeId).toBe(id)
       expect(f.win.document.activeElement?.getAttribute('data-home-theme-id')).toBe(id)
     }
+  })
+
+  it('restores Koi Pond with the approved mode-specific card and preserves the theme during appearance changes', async () => {
+    const f = fixture({ initial: 'koi-pond' })
+    f.mount()
+    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
+    expect(f.current()!.getAttribute('aria-label')).toContain('锦鲤水面')
+    expect(f.background()!.dataset.homeThemeFamily).toBe('koi')
+    const light = f.current()!.style.getPropertyValue('--theme-thumbnail')
+    expect(light.includes(koiLight)).toBe(true)
+    f.win.document.body.setAttribute('data-ds-dark-theme', 'true')
+    await f.settle()
+    expect(f.current()!.dataset.homeThemeId).toBe('koi-pond')
+    expect(f.current()!.style.getPropertyValue('--theme-thumbnail').includes(koiDark)).toBe(true)
+    expect(f.frames.size).toBe(1)
+    f.surface('settings')
+    await f.settle()
+    expect(f.frames.size).toBe(0)
   })
 
   it('restores a whitelisted preference and saves switches without changing the application light or dark mode', async () => {

@@ -2,11 +2,12 @@ import { HOME_THEME_CONFIGS, type HomeShaderThemeId as OpenShaderThemeId } from 
 import { createReactBitsRenderer, isReactBitsTheme, type ReactBitsThemeId } from './home-reactbits-renderer'
 import { HOME_THEME_FIELD_SHADER, HOME_THEME_POST_SHADERS, HOME_THEME_VERTEX_SHADER } from './home-theme-shaders'
 import glyphRuns from './home-theme-assets/boz-glyph-atlas.json'
+import { createKoiRenderer } from './home-koi-renderer'
 
-export type HomeShaderThemeId = OpenShaderThemeId | ReactBitsThemeId
+export type HomeShaderThemeId = OpenShaderThemeId | ReactBitsThemeId | 'koi-pond'
 
 export interface HomeThemeRenderer {
-  readonly backend: 'webgl2'
+  readonly backend: 'webgl2' | 'webgl'
   /** CSS dimensions. The renderer bounds Retina backing storage itself. */
   resize(width: number, height: number): void
   /** Elapsed animation seconds; false asks the caller to replace this canvas. */
@@ -33,6 +34,7 @@ export function createHomeThemeRenderer(
   options: Options
 ): HomeThemeRenderer | null {
   if (isReactBitsTheme(theme)) return createReactBitsRenderer(canvas, theme, options)
+  if (theme === 'koi-pond') return createKoiRenderer(canvas, options)
   const config = HOME_THEME_CONFIGS[theme]
   if (!config) return null
   let gl: WebGL2RenderingContext | null
