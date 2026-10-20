@@ -9,23 +9,49 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "统一旧版规划控件兼容测试基线",
+        "featureName": "保留逐条详情需求并拒绝不匹配的平面表格规划",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "46848bd009baf9e820c73d3761f707da159138b4",
-        "tipCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
+        "baseCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
+        "tipCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
         "commits": [
           {
-            "commit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
+            "commit": "4af855e29e81327744096db911c640451371842a",
             "parents": [
-              "46848bd009baf9e820c73d3761f707da159138b4"
+              "1d00f9a2d764503b0e593a1e3354b17f9f76adf6"
             ],
-            "subject": "统一旧版规划控件兼容测试的安装基线"
+            "subject": "阻止有详情交互的需求降级成普通表格"
+          },
+          {
+            "commit": "dd9a6bc60b2fb9caa38832f111bf171f82bb6bc0",
+            "parents": [
+              "4af855e29e81327744096db911c640451371842a"
+            ],
+            "subject": "明确自定义模拟组件的普通生成纠正路径"
+          },
+          {
+            "commit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
+            "parents": [
+              "dd9a6bc60b2fb9caa38832f111bf171f82bb6bc0"
+            ],
+            "subject": "限定模拟生成纠正说明不改变真实数据性质"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "test/research-planning-feedback.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-deferred.test.js"
           }
         ],
         "checks": [
@@ -34,75 +60,14 @@
               "npx",
               "vitest",
               "run",
-              "test/research-planning-feedback.test.js"
+              "test/workbench-deferred.test.js",
+              "test/workbench-planning-phase.test.js"
             ],
             "outcome": "passed",
-            "summary": "12项通过；兼容样本同时恢复旧版停止逻辑和按钮事件",
-            "verifiedCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
-            "completedAt": "2026-10-20T02:54:58.251458+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "空白检查通过",
-            "verifiedCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
-            "completedAt": "2026-10-20T02:54:58.251458+00:00",
-            "timeoutMs": 120000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "自动化展示边界回归通过：实际生产进度补丁重装后，单组件请求进入响应反馈、旧轮次不投射、未暴露模型内容。当前旧包原生窗口与用户数据已确认；新包原生展示和耗时待集成后验收，批次保持未接受。"
-        },
-        "acceptanceCriteria": [
-          "明确新建单组件复用有界规划并在受理后恢复原模型控制",
-          "代码问题、生成逻辑优化问题、现有看板编辑不误入快速创建",
-          "单张基金组件不误扩为八卡预设",
-          "仅延后模拟生成接纳外层artifact:null且不修改调用者数据、不丢数据或重复建卡",
-          "保留既有主题、组件功能与会话历史",
-          "编码任务在新版和已安装旧补丁中均不显示研究规划反馈"
-        ],
-        "risks": [
-          "本地可撤回试验，不晋升main、不推送或发布",
-          "实测性能受模型服务影响，需记录实际规划与生成阶段，不能以单个案例保证普遍延迟"
-        ],
-        "generatedAt": "2026-10-20T02:54:58.251458+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3e273db3e59418ade11e52869aac8123209dbde5",
-        "verificationCommit": "3e273db3e59418ade11e52869aac8123209dbde5",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "3e273db3e59418ade11e52869aac8123209dbde5",
-            "completedAt": "2026-10-20T02:55:24.029Z",
-            "timeoutMs": 120000
+            "summary": "2文件24项通过，含建卡前拒绝及普通HTML纠正路径真实工具分支完成",
+            "verifiedCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
+            "completedAt": "2026-10-20T03:21:38.025407+00:00",
+            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -111,9 +76,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3e273db3e59418ade11e52869aac8123209dbde5",
-            "completedAt": "2026-10-20T02:55:24.029Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
+            "completedAt": "2026-10-20T03:21:38.025407+00:00",
             "timeoutMs": 180000
           },
           {
@@ -123,13 +88,28 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "3e273db3e59418ade11e52869aac8123209dbde5",
-            "completedAt": "2026-10-20T02:55:24.029Z",
-            "timeoutMs": 120000
+            "summary": "空白检查通过",
+            "verifiedCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
+            "completedAt": "2026-10-20T03:21:38.025407+00:00",
+            "timeoutMs": 180000
           }
         ],
-        "recordedAt": "2026-10-20T02:55:24.029Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已在旧包真实生成和点击交接表，复现普通table丢失展开详情；本次新包原生纠正路径仍待构建后复测。自动化确认在计划受理前拒绝不匹配，不产生占位卡和子任务；普通表格搜索排序不变。批次未接受。"
+        },
+        "acceptanceCriteria": [
+          "不把要求逐条详情的延后生成需求静默降级为平面table",
+          "普通搜索排序和明确无需详情的平面表不误拦",
+          "保留业务内容和交互要求，由规划器选择合适模板或自定义HTML",
+          "不改已有组件内容和本地数据",
+          "模拟纠正指引只适用于模拟请求，不改变真实记录的来源性质"
+        ],
+        "risks": [
+          "本地可撤回试验，不晋升main、不推送或发布",
+          "实测性能受模型服务影响，需记录实际规划与生成阶段，不能以单个案例保证普遍延迟"
+        ],
+        "generatedAt": "2026-10-20T03:21:38.025407+00:00"
       }
     }
   ],
