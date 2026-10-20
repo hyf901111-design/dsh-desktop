@@ -24,11 +24,12 @@ void main() {
   color += vec3(0.035, 0.035 * (v_uv.y * 2.0 - 1.0), -0.012);
   color = mix(color, vec3(0.58, 0.96, 0.96), pow(1.0-v_uv.y, 8.0) * 0.20);
   color *= vec3(0.90, 0.97, 1.025);
-  // Grade the water before drawing fish. Neutral highlights in the source
-  // become mid-depth blue, rather than a pale strip under the dark overlay.
+  // Grade only the water, before compositing the red-and-white fish. Light
+  // mode keeps low-contrast cyan-white caustics beneath dark interface text.
   float waterLight = clamp(color.g * 0.65 + color.b * 0.35 - color.r * 0.55, 0.0, 1.0);
+  vec3 dayWater = mix(vec3(0.80, 0.89, 0.90), vec3(0.96, 0.99, 0.985), pow(waterLight, 0.8));
   vec3 nightWater = mix(vec3(0.008, 0.055, 0.20), vec3(0.025, 0.31, 0.72), pow(waterLight, 1.25));
-  color = mix(color, nightWater, smoothstep(0.0, 0.78, u_dark));
+  color = mix(dayWater, nightWater, smoothstep(0.0, 0.78, u_dark));
   gl_FragColor = vec4(color, 1.0);
 }`;
 
@@ -126,7 +127,7 @@ void main() {
   color += texture2D(u_scene, uv + vec2(0.0, blur.y)).rgb * 0.15;
   color += texture2D(u_scene, uv - vec2(0.0, blur.y)).rgb * 0.15;
   float shine = crests * u_strength;
-  vec3 crestColor = mix(vec3(0.69,0.96,0.93), vec3(0.035,0.38,0.80), smoothstep(0.0,0.78,u_dark));
+  vec3 crestColor = mix(vec3(0.94,1.0,0.98), vec3(0.035,0.38,0.80), smoothstep(0.0,0.78,u_dark));
   color = mix(color, crestColor, clamp(shine*0.26,0.0,0.34));
   color -= vec3(0.025,0.05,0.06)*max(0.0,-dot(gradient,vec2(-0.5,0.6)))*0.45;
   color *= u_brightness;

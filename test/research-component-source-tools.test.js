@@ -1,5 +1,13 @@
 import { expect, it } from 'vitest'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from '../packages/dsh-research-task-runtime/component-source-tools.js'
+import officialSchemas from './fixtures/official-mcp-source-schemas.json'
+
+it('recognizes the current official financial MCP tools even when descriptions no longer use the old vendor name',()=>{
+ const schemas=[{name:'public_data_query'},{name:'financial_query'},...officialSchemas,{name:'ework__calendar',description:'查询个人日历事项'}];
+ expect(preferredComponentSourceTools(schemas,'华能国际600011、华电国际600027、国电电力600795最新财务报表，营业收入和净利润对比').map(t=>t.name)).toEqual(officialSchemas.map(t=>t.name));
+ expect(preferredComponentSourceTools(schemas,'只使用腾讯行情做股票估值，未提供的市盈率明确缺失')).toEqual([]);
+ expect(preferredComponentSourceTools(schemas,'整理演出人员和设备排期')).toEqual([]);
+});
 
 it('keeps date windows local to the panel and does not route ETF names to index quotes', () => {
   const tools=[{name:'ework__data',description:'通联 DataYes API'}], now=new Date('2026-09-26T01:00:00Z')
@@ -34,7 +42,7 @@ it('prefers visible DataYes tools for a financial component without naming unava
   expect(selected.map(tool => tool.name)).toEqual(['ework__t_search', 'ework__t_call'])
   const instruction = componentSourceInstruction(selected)
   expect(instruction).toContain('ework__t_search')
-  expect(instruction).toContain('先实际调用与面板字段最匹配的通联工具')
+  expect(instruction).toContain('先实际调用与面板字段最匹配的金融工具')
   expect(instruction).toContain('若 API 搜索超时或失败')
   expect(instruction).toContain('目录工具，从实际展示的条目选接口')
   expect(instruction).toContain('目录若只展示首行')

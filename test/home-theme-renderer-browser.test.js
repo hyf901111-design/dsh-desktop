@@ -55,14 +55,17 @@ it('renders the Koi Pond assets offline, moves fish and water, changes appearanc
       const stats = () => {
         const bytes = new Uint8Array(canvas.width * canvas.height * 4)
         gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, bytes)
-        let luma = 0, blue = 0, red = 0, hash = 2166136261
+        let luma = 0, blue = 0, red = 0, paleCyan = 0, hash = 2166136261
         for (let i = 0; i < bytes.length; i += 4) {
           luma += .2126 * bytes[i] + .7152 * bytes[i + 1] + .0722 * bytes[i + 2]
           blue += bytes[i + 2] > bytes[i] * 1.3 ? 1 : 0
           red += bytes[i] > bytes[i + 2] * 1.2 && bytes[i] > 90 ? 1 : 0
+          paleCyan += bytes[i] >= 195 && bytes[i + 1] >= 215 && bytes[i + 2] >= 215 &&
+            bytes[i + 1] >= bytes[i] && bytes[i + 2] >= bytes[i] &&
+            Math.max(bytes[i], bytes[i + 1], bytes[i + 2]) - Math.min(bytes[i], bytes[i + 1], bytes[i + 2]) <= 45 ? 1 : 0
           hash = Math.imul(hash ^ bytes[i], 16777619)
         }
-        return { luma: luma / (bytes.length / 4), blue, red, hash }
+        return { luma: luma / (bytes.length / 4), blue, red, paleCyanFraction: paleCyan / (bytes.length / 4), hash }
       }
       renderer.render(0, false)
       const first = stats()
@@ -82,11 +85,12 @@ it('renders the Koi Pond assets offline, moves fish and water, changes appearanc
       return { first, moving, dark, pixels, backend, disposed, released, pendingState: pendingCanvas.dataset.homeKoiState }
     })
     expect(result.backend).toBe('webgl')
-    expect(result.first.luma).toBeGreaterThan(35)
-    expect(result.first.blue).toBeGreaterThan(100_000)
+    expect(result.first.luma).toBeGreaterThan(210)
+    expect(result.first.paleCyanFraction).toBeGreaterThan(.85)
     expect(result.first.red).toBeGreaterThan(1_000)
     expect(result.moving.hash).not.toBe(result.first.hash)
     expect(result.dark.luma).toBeLessThan(result.moving.luma * .65)
+    expect(result.dark.blue).toBeGreaterThan(100_000)
     expect(result.dark.red).toBeGreaterThan(1_000)
     expect(result.pixels).toBeLessThanOrEqual(2_400_000)
     expect(result.disposed).toBe(false)
