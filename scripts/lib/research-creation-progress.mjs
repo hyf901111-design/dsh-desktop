@@ -1,4 +1,5 @@
 import {patchResearchPlanningFeedback} from './research-planning-feedback.mjs'
+import {patchComposerSubmitPolicy} from './composer-submit-policy.mjs'
 // The planner may spend minutes before calling research_workbench_create. Keep
 // this first, deliberately provisional card in the renderer; only the accepted
 // tool plan is allowed to create persistent, named canvas components.
@@ -239,7 +240,7 @@ export function patchResearchCreationProgress(source) {
     const submit = source.includes(queuedSubmit) ? queuedSubmit : plainSubmit;
     source = replaceOnce(source, submit, 'odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning);\n\t\t\t\t' + submit);
   }
-  if (!source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit();')) source = replaceOnce(source,
+  if (!source.includes('/* EWORK_PRIMARY_SUBMIT_POLICY_V1 */') && !source.includes('odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit();')) source = replaceOnce(source,
     'if (!empty && !disabled && !machineBusy) inputActions.submit();',
     'if (!empty && !disabled && !machineBusy) { odysseyCreationAnnounce(sessionId, draft, subagentPanel, running || canvasRunning); inputActions.submit(); }')
   const workspaceAnchor = 'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'
@@ -394,5 +395,5 @@ export function patchResearchCreationProgress(source) {
     const pattern = new RegExp('/\\* ' + marker + ' \\*/\\n[^\\n]+')
     source = pattern.test(source) ? source.replace(pattern, style) : source + '\n' + style + '\n'
   }
-  return patchResearchPlanningFeedback(source,classifyResearchCreationRequest)
+  return patchComposerSubmitPolicy(patchResearchPlanningFeedback(source,classifyResearchCreationRequest))
 }
