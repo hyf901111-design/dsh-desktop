@@ -9,49 +9,169 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留逐条详情需求并拒绝不匹配的平面表格规划",
+        "featureName": "缩短工作台首次规划并分离真实内容交付与刷新绑定",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
-        "tipCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
+        "baseCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
+        "tipCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
         "commits": [
           {
-            "commit": "4af855e29e81327744096db911c640451371842a",
+            "commit": "658ffb2a3bafe0f4605377bc37a79380766607e9",
             "parents": [
-              "1d00f9a2d764503b0e593a1e3354b17f9f76adf6"
+              "88be03f1aba0f81fa35dc484de5ef85678965c31"
             ],
-            "subject": "阻止有详情交互的需求降级成普通表格"
+            "subject": "让发送按钮遵循默认插队设置并与回车保持一致"
           },
           {
-            "commit": "dd9a6bc60b2fb9caa38832f111bf171f82bb6bc0",
+            "commit": "8bca1cf96fd3c121f23465b7dd40605284d4f467",
             "parents": [
-              "4af855e29e81327744096db911c640451371842a"
+              "658ffb2a3bafe0f4605377bc37a79380766607e9"
             ],
-            "subject": "明确自定义模拟组件的普通生成纠正路径"
+            "subject": "避免已有组件修复任务误入新工作台规划阶段"
           },
           {
-            "commit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
+            "commit": "a3cc4d33c5a00e105761965b6a126c4d6e2d0908",
             "parents": [
-              "dd9a6bc60b2fb9caa38832f111bf171f82bb6bc0"
+              "8bca1cf96fd3c121f23465b7dd40605284d4f467"
             ],
-            "subject": "限定模拟生成纠正说明不改变真实数据性质"
+            "subject": "升级旧安装中内联的规划分类规则"
+          },
+          {
+            "commit": "ee0e1ed441de9d302e92ba11d852b7b9593a5d12",
+            "parents": [
+              "a3cc4d33c5a00e105761965b6a126c4d6e2d0908"
+            ],
+            "subject": "让新闻标题直接访问原文并兼容已保存组件"
+          },
+          {
+            "commit": "9aada033494f2d16afb138f7eb48dfc1acb94fc1",
+            "parents": [
+              "ee0e1ed441de9d302e92ba11d852b7b9593a5d12"
+            ],
+            "subject": "限制工作台首次规划工具并将真实取数交给独立面板"
+          },
+          {
+            "commit": "698923d3b5d88511dd161187271a7aa197469ee3",
+            "parents": [
+              "9aada033494f2d16afb138f7eb48dfc1acb94fc1"
+            ],
+            "subject": "修正组件共享句柄分步赋值被误判为空注册的问题"
+          },
+          {
+            "commit": "b9cc8d41f0fa250525ff623c1a8d5bf63b13f7b1",
+            "parents": [
+              "698923d3b5d88511dd161187271a7aa197469ee3"
+            ],
+            "subject": "将首次工作台来源指引收敛为规划并保留子组件取数规范"
+          },
+          {
+            "commit": "979b5491fae1c09c32d0165faf9f12e5333bebcc",
+            "parents": [
+              "b9cc8d41f0fa250525ff623c1a8d5bf63b13f7b1"
+            ],
+            "subject": "分离真实数据交付与自动刷新绑定验收"
+          },
+          {
+            "commit": "f822747ae9fcbcd5bf9e6e7f4046dc79e30a7156",
+            "parents": [
+              "979b5491fae1c09c32d0165faf9f12e5333bebcc"
+            ],
+            "subject": "保留关闭自动更新后的手动刷新绑定"
+          },
+          {
+            "commit": "18c67719a9bf58ae11a69b65f8f2a53051e0ccd0",
+            "parents": [
+              "f822747ae9fcbcd5bf9e6e7f4046dc79e30a7156"
+            ],
+            "subject": "保留静态修复的完整来源映射并识别刷新否定"
+          },
+          {
+            "commit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
+            "parents": [
+              "18c67719a9bf58ae11a69b65f8f2a53051e0ccd0"
+            ],
+            "subject": "补充静态内容修复的字段映射语法示例"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "status": "A",
+            "path": "scripts/lib/composer-submit-policy.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
+            "path": "scripts/lib/research-creation-progress.mjs"
           },
           {
             "status": "M",
-            "path": "test/workbench-deferred.test.js"
+            "path": "scripts/lib/research-planning-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/composer-submit-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-component-source-tools.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-interactive-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-component-validation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/stored-template-refinements.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-planning-phase.test.js"
           }
         ],
         "checks": [
@@ -60,13 +180,28 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-deferred.test.js",
-              "test/workbench-planning-phase.test.js"
+              "test/composer-submit-policy.test.js",
+              "test/research-creation-progress.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-planning-session.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/research-interactive-artifact.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/shared-component-validation.test.js",
+              "test/research-component-source-tools.test.js",
+              "test/component-source-binding.test.js",
+              "test/research-task-runtime.test.js",
+              "test/component-refresh-policy.test.js",
+              "test/component-data-refresh.test.js",
+              "test/workbench-public-data.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "2文件24项通过，含建卡前拒绝及普通HTML纠正路径真实工具分支完成",
-            "verifiedCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
-            "completedAt": "2026-10-20T03:21:38.025407+00:00",
+            "summary": "15个相关文件408项通过，含真实Harness调度、完整来源物化、手动刷新、发送按钮和旧新闻迁移",
+            "verifiedCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
+            "completedAt": "2026-10-20T04:31:21.320453+00:00",
             "timeoutMs": 180000
           },
           {
@@ -77,8 +212,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
-            "completedAt": "2026-10-20T03:21:38.025407+00:00",
+            "verifiedCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
+            "completedAt": "2026-10-20T04:31:21.320453+00:00",
             "timeoutMs": 180000
           },
           {
@@ -89,85 +224,28 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
-            "completedAt": "2026-10-20T03:21:38.025407+00:00",
+            "verifiedCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
+            "completedAt": "2026-10-20T04:31:21.320453+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已在旧包真实生成和点击交接表，复现普通table丢失展开详情；本次新包原生纠正路径仍待构建后复测。自动化确认在计划受理前拒绝不匹配，不产生占位卡和子任务；普通表格搜索排序不变。批次未接受。"
+          "summary": "旧客户端实际复现规划301秒、七卡两失败及默认按钮排队；已保留并修复真实金融看板。相关原生bundle回调和宿主运行时检查通过。新包原生耗时、默认插队和旧新闻标题仍待集成构建后验收，不声明已通过。"
         },
         "acceptanceCriteria": [
-          "不把要求逐条详情的延后生成需求静默降级为平面table",
-          "普通搜索排序和明确无需详情的平面表不误拦",
-          "保留业务内容和交互要求，由规划器选择合适模板或自定义HTML",
-          "不改已有组件内容和本地数据",
-          "模拟纠正指引只适用于模拟请求，不改变真实记录的来源性质"
+          "先拆分并提交计划，再由独立面板取数与宿主可视化",
+          "普通真实快照不被自动刷新绑定拖入额外修复",
+          "显式手动或自动刷新保留参数、字段与来源校验",
+          "完整来源映射不因前三条样本而丢记录",
+          "默认发送插队、旧新闻标题右侧浏览器访问和已有卡片内容保持可用"
         ],
         "risks": [
-          "本地可撤回试验，不晋升main、不推送或发布",
-          "实测性能受模型服务影响，需记录实际规划与生成阶段，不能以单个案例保证普遍延迟"
+          "仅本地可撤回实验，不接受晋升批次、不发布或推送",
+          "外部接口权限、缺失字段和模型服务延迟仍需如实显示；新包实际规划1–2分钟目标待复测",
+          "原生旧金融看板已保存，构建保留全部用户数据"
         ],
-        "generatedAt": "2026-10-20T03:21:38.025407+00:00"
-      },
-      "merged": {
-        "mergeCommit": "8dbb08ea7f88d717200c08a0465022c02872f809",
-        "verificationCommit": "8dbb08ea7f88d717200c08a0465022c02872f809",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "8dbb08ea7f88d717200c08a0465022c02872f809",
-            "completedAt": "2026-10-20T03:22:11.160Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8dbb08ea7f88d717200c08a0465022c02872f809",
-            "completedAt": "2026-10-20T03:22:11.160Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "8dbb08ea7f88d717200c08a0465022c02872f809",
-            "completedAt": "2026-10-20T03:22:11.160Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T03:22:11.160Z"
+        "generatedAt": "2026-10-20T04:31:21.320453+00:00"
       }
     }
   ],
