@@ -9,61 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "优化单组件规划入口与空内容参数兼容",
+        "featureName": "统一旧版规划控件兼容测试基线",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "9702b90879316026237bc9cd0d682a2da22dd037",
-        "tipCommit": "46848bd009baf9e820c73d3761f707da159138b4",
+        "baseCommit": "46848bd009baf9e820c73d3761f707da159138b4",
+        "tipCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
         "commits": [
           {
-            "commit": "627ada4e00df0de9af786a162b8db0a4e438e352",
+            "commit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
             "parents": [
-              "9702b90879316026237bc9cd0d682a2da22dd037"
+              "46848bd009baf9e820c73d3761f707da159138b4"
             ],
-            "subject": "让新建单组件复用快速规划与实时响应反馈"
-          },
-          {
-            "commit": "3815abe164477c64e1a7468280aa9271e0ca7d9b",
-            "parents": [
-              "627ada4e00df0de9af786a162b8db0a4e438e352"
-            ],
-            "subject": "兼容延后模拟规划中的空内容字段并保持严格校验"
-          },
-          {
-            "commit": "46848bd009baf9e820c73d3761f707da159138b4",
-            "parents": [
-              "3815abe164477c64e1a7468280aa9271e0ca7d9b"
-            ],
-            "subject": "排除编码任务的研究规划反馈并更新旧补丁"
+            "subject": "统一旧版规划控件兼容测试的安装基线"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-planning-feedback.mjs"
-          },
-          {
-            "status": "M",
             "path": "test/research-planning-feedback.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-deferred.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
           }
         ],
         "checks": [
@@ -72,27 +34,13 @@
               "npx",
               "vitest",
               "run",
-              "test/workbench-deferred.test.js",
-              "test/workbench-planning-phase.test.js",
               "test/research-planning-feedback.test.js"
             ],
             "outcome": "passed",
-            "summary": "3文件33项通过，含真实工具边界、编码排除及生产进度补丁旧版迁移与幂等性",
-            "verifiedCommit": "46848bd009baf9e820c73d3761f707da159138b4",
-            "completedAt": "2026-10-20T02:52:22.350841+00:00",
+            "summary": "12项通过；兼容样本同时恢复旧版停止逻辑和按钮事件",
+            "verifiedCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
+            "completedAt": "2026-10-20T02:54:58.251458+00:00",
             "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "46848bd009baf9e820c73d3761f707da159138b4",
-            "completedAt": "2026-10-20T02:52:22.350841+00:00",
-            "timeoutMs": 180000
           },
           {
             "argv": [
@@ -102,8 +50,8 @@
             ],
             "outcome": "passed",
             "summary": "空白检查通过",
-            "verifiedCommit": "46848bd009baf9e820c73d3761f707da159138b4",
-            "completedAt": "2026-10-20T02:52:22.350841+00:00",
+            "verifiedCommit": "1d00f9a2d764503b0e593a1e3354b17f9f76adf6",
+            "completedAt": "2026-10-20T02:54:58.251458+00:00",
             "timeoutMs": 120000
           }
         ],
@@ -123,65 +71,7 @@
           "本地可撤回试验，不晋升main、不推送或发布",
           "实测性能受模型服务影响，需记录实际规划与生成阶段，不能以单个案例保证普遍延迟"
         ],
-        "generatedAt": "2026-10-20T02:52:22.350841+00:00"
-      },
-      "merged": {
-        "mergeCommit": "339a2049505ce097004772214fa49173f33df723",
-        "verificationCommit": "339a2049505ce097004772214fa49173f33df723",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "339a2049505ce097004772214fa49173f33df723",
-            "completedAt": "2026-10-20T02:53:18.574Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "339a2049505ce097004772214fa49173f33df723",
-            "completedAt": "2026-10-20T02:53:18.574Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "339a2049505ce097004772214fa49173f33df723",
-            "completedAt": "2026-10-20T02:53:18.574Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T02:53:18.574Z"
+        "generatedAt": "2026-10-20T02:54:58.251458+00:00"
       }
     }
   ],
