@@ -1,0 +1,60 @@
+import {afterEach, describe, expect, it, vi} from 'vitest'
+import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
+import {generationProgressOnly,patchGenerationProgressPersistence} from '../scripts/lib/generation-progress-persistence.mjs'
+
+let f
+afterEach(async()=>{await f?.dispose();f=undefined})
+const card={id:'progress-card',messageId:'message-1',kind:'generated-container',title:'实时分析',excerpt:'正在生成',refreshMinutes:0,containerPrompt:'保留业务需求',generationStatus:'running',generationTaskId:'task-1',generationChildSessionId:'child-1',generationStartedAt:100,generationLastSeq:1,generationEvents:[],sizeMode:'manual',x:400,y:300,width:720,height:400}
+const receipt=(patch={})=>({taskId:'task-1',canvasNodeId:card.id,state:'running',lastSeq:2,events:[],...patch})
+const canvasKey='sherlock.research.canvas.artifacts.v1:financial-test'
+async function setup(node=card){
+ f=await financialClientFixture({}, {generationProgress:true})
+ await f.act(async()=>f.workspace.setArtifacts([structuredClone(node)]))
+ const saved=f.win.localStorage.getItem(canvasKey),recency=vi.fn(),changed=vi.fn()
+ f.document.addEventListener('sherlock-sidebar-recency',recency)
+ f.workspace.subscribe(changed)
+ return {saved,recency,changed}
+}
+const apply=async value=>{let result;await f.act(async()=>{result=f.workspace.applyGenerationInspection(card.id,value)});return result}
+describe('生成进度的瞬态更新与持久结果',()=>{
+ it('treats only preview progress as transient and fails closed for any other field',()=>{
+  expect(generationProgressOnly(card,{...card,generationLastSeq:2,generationEvents:[{type:'assistant-delta',text:'进度'}],generationPartialText:'进度'})).toBe(true)
+  for(const patch of [{width:721},{height:401},{x:401},{y:301},{generationSources:[{id:'source'}]},{title:'新标题'},{containerPrompt:'新需求'},{generationError:'刚失败'},{config:{source:'new'}},{generationTaskId:'new-task'},{generationStatus:'completed'},{unknownFutureField:true}])expect(generationProgressOnly(card,{...card,...patch})).toBe(false)
+  expect(()=>patchGenerationProgressPersistence('unknown native client')).toThrow('无法定位')
+ })
+ it('publishes repeated sequence/event/text progress without rewriting the durable canvas or sidebar recency',async()=>{
+  const {saved,recency,changed}=await setup()
+  for(let seq=2;seq<=12;seq++)expect(await apply(receipt({lastSeq:seq,events:[{taskId:'task-1',canvasNodeId:card.id,seq,type:'assistant-delta',text:'正在分析'}]}))).toBe(true)
+  expect(f.workspace.getSnapshot().artifacts[0]).toMatchObject({generationLastSeq:12,generationPartialText:expect.stringContaining('正在分析')})
+  expect(changed).toHaveBeenCalledTimes(11)
+  expect(f.win.localStorage.getItem(canvasKey)).toBe(saved)
+  expect(recency).not.toHaveBeenCalled()
+  // A fresh registry recovers the persisted task binding and old watermark,
+  // so the watcher can inspect from the beginning instead of losing the task.
+  const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test').getSnapshot().artifacts[0]
+  expect(restored).toMatchObject({generationTaskId:'task-1',generationLastSeq:1,containerPrompt:card.containerPrompt,width:JSON.parse(saved)[0].width})
+ })
+ it.each(['completed','failed','cancelled','interrupted'])('immediately persists %s after transient progress',async state=>{
+  const {saved}=await setup()
+  await apply(receipt())
+  const finalOutput=JSON.stringify({version:1,type:'html',title:'完整结果',html:'<p>完整业务内容</p>'})
+  expect(await apply(receipt({state,lastSeq:3,finalOutput,error:'来源暂时不可用',completedAt:300}))).toBe(true)
+  expect(f.win.localStorage.getItem(canvasKey)).not.toBe(saved)
+  const stored=JSON.parse(f.win.localStorage.getItem(canvasKey))[0]
+  expect(stored).toMatchObject({generationStatus:state,generationLastSeq:3,width:JSON.parse(saved)[0].width,generationTaskId:'task-1'})
+  if(state==='completed')expect(stored.containerSpec).toMatchObject({title:'完整结果',html:'<p>完整业务内容</p>'})
+ })
+ it.each([{generationStatus:'queued'},{generationChildSessionId:undefined},{generationStartedAt:undefined}])('persists a changed lifecycle binding %j',async changed=>{
+  const {saved}=await setup({...card,...changed})
+  await apply(receipt({childSessionId:'child-1',startedAt:100}))
+  expect(f.win.localStorage.getItem(canvasKey)).not.toBe(saved)
+  expect(JSON.parse(f.win.localStorage.getItem(canvasKey))[0]).toMatchObject({generationStatus:'running',generationChildSessionId:'child-1',generationStartedAt:100,generationLastSeq:2})
+ })
+ it('keeps stale-task and draft protection, and persists an explicit later user edit with current progress',async()=>{
+  await setup()
+  expect(await apply(receipt({taskId:'old-task'}))).toBe(false)
+  await apply(receipt())
+  await f.act(async()=>f.workspace.renameNode(card.id,'用户改名'))
+  expect(JSON.parse(f.win.localStorage.getItem(canvasKey))[0]).toMatchObject({title:'用户改名',generationLastSeq:2,containerPrompt:card.containerPrompt})
+ })
+})

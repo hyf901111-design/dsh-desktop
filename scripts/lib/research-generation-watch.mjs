@@ -1,3 +1,5 @@
+import { patchGenerationProgressPersistence } from './generation-progress-persistence.mjs';
+
 // A retained canvas must be able to replace a stalled inspection on re-entry.
 export function installResearchGenerationWatch({ workspace, sessionId, inspect, apply = (id, value) => workspace.applyGenerationInspection(id, value), eventTarget, documentTarget, delayMs = 350, timeoutMs = 8000 }) {
   let active = true, timer, polling = false, epoch = 0, flight, fullNext = true;
@@ -38,6 +40,7 @@ export function installResearchGenerationWatch({ workspace, sessionId, inspect, 
 
 /** Replace only the original inspection effect; source/task acceptance stays native. */
 export function patchResearchGenerationWatch(source) {
+  source = patchGenerationProgressPersistence(source);
   const marker = '/* SHERLOCK_GENERATION_WATCH_RECOVERY_V1 */';
   if (source.includes(marker)) return source;
   // Ignore escaped restoration text retained in trailing patch metadata.

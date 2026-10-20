@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isMethodDeclaration } from 'typescript'
 import { restoreResearchGridWorkbench, patchResearchGridWorkbench } from '../scripts/lib/research-grid-workbench.mjs'
 import { parseResearchContainerSpec } from '../packages/dsh-research-task-runtime/artifact-validator.js'
+import { generationProgressOnly } from '../scripts/lib/generation-progress-persistence.mjs'
 afterEach(() => vi.useRealTimers())
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 function setup(inspect, extra = {}) {
@@ -22,11 +23,11 @@ function nativeApply(source, node) {
   const tree = createSourceFile('client.js', source, ScriptTarget.Latest, false, ScriptKind.JS); let method
   const visit = n => { if (!method && isMethodDeclaration(n) && n.name.getText(tree) === 'applyGenerationInspection') method = n; forEachChild(n, visit) }; visit(tree)
   const snapshot = { artifacts: [node] }
-  const apply = new Function('snapshot', 'parseResearchContainerSpec', `
+  const apply = new Function('snapshot', 'parseResearchContainerSpec', 'generationProgressOnly', `
 const RESEARCH_CANVAS_TEXT_LIMIT=20000,RESEARCH_ACTIVE_GENERATION_STATUSES=new Set(['queued','running','retrying']);
 const boundedResearchArtifactString=v=>typeof v==='string'?v:null,researchGenerationStatus=v=>v,researchGenerationInspectionEvents=()=>[];
 const researchContainerPlainText=s=>s.html,researchContainerFinalGeometry=()=>({}),researchGenerationSizedNode=n=>n,researchResolvedGenerationSources=()=>({}),researchCanvasReflowGrowth=(_a,b)=>b;
-const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree)}}).applyGenerationInspection;`)(snapshot, parseResearchContainerSpec)
+const update=patch=>Object.assign(snapshot,patch);return ({${method.getText(tree)}}).applyGenerationInspection;`)(snapshot, parseResearchContainerSpec, generationProgressOnly)
   return { apply, snapshot }
 }
 describe('任务检查切板恢复', () => {
