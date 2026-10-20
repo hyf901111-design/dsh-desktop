@@ -47,14 +47,24 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
 
 // A valid quote request does not imply that the fixed renderer covers every
 // business field. Keep the observed unsupported requirements in a source task.
+const quoteExtraField=String.raw`(?:成交量|成交额|市盈率(?:\s*[(（]TTM[)）])?|市净率|(?:总)?市值|(?:昨收|前收盘)(?:价)?|涨跌额|\b(?:PE(?:[-_ ]?TTM)?|PB|volume|amount|market[ _-]?cap|previousClose|previous[ _-]close|change)\b)`
+const metricsExtraField=String.raw`(?:开盘(?:价)?|最高(?:价)?|最低(?:价)?|\b(?:open|high|low)(?:Price)?\b)`
+function requiredQuoteFields(requirement,profile){
+  const field=profile==='quotes-metrics'?`(?:${quoteExtraField}|${metricsExtraField})`:quoteExtraField
+  // Remove only an explicit exclusion followed by a list of known fields.
+  // Stop before other text, so "but need PB" or "另外要成交额" stays required.
+  const exclusion=String.raw`(?:(?:不要|不需要|无需|不必|不用)(?:展示|显示|提供|包含|包括)?|不(?:展示|显示|包含|包括)|排除|\b(?:do\s+not|don't)\s+(?:need(?:\s+to)?\s+)?(?:show|display|include|provide)?|\bno\b(?:\s+need\s+(?:for|to(?:\s+(?:show|display|include))?))?|\b(?:without|exclude|omit)\b)`
+  const separator=String.raw`(?:[、，,/](?:\s*\b(?:and|or)\b)?|和|与|以及|及|或者|或|\b(?:and|or)\b)`
+  return requirement.replace(new RegExp(`${exclusion}\\s*${field}(?:\\s*${separator}\\s*${field})*`,'giu'),'')
+}
 export function publicDataQuoteTaskRequirement(value,type,requirement=''){
   if(!['quotes-table','quotes-metrics'].includes(value?.profile))return null
   const supported=validatePublicDataPanel(value,type,{strictParameters:true})
-  const missing=/成交量|成交额|市盈率|市净率|市值|昨收|前收盘|涨跌额|\b(?:PE(?:[-_ ]?TTM)?|PB|volume|amount|market[ _-]?cap|previousClose|previous[ _-]close|change)\b/iu.test(requirement)||
-    value.profile==='quotes-metrics'&&/开盘|最高|最低|\b(?:open|high|low)(?:Price)?\b/iu.test(requirement)
+  const required=requiredQuoteFields(requirement,value.profile)
+  const missing=new RegExp(quoteExtraField,'iu').test(required)||value.profile==='quotes-metrics'&&new RegExp(metricsExtraField,'iu').test(required)
   if(!missing)return null
   const layout=supported.layoutProfile?'最终使用market的variant: table，顶层保留已校验的 "layoutProfile":"openterminal"（artifact.layoutProfile）。':'最终使用table的columns/rows，原规划的market/metrics仅是路由提示，不能替代本卡字段。'
-  return {type:supported.layoutProfile?'market':'table',requirement:`宿主来源能力校正：${value.profile}直通仅展示固定报价字段，不能完整表达本卡要求；改由独立表格取数任务完成。${layout}保留原面板全部标的、字段、单位、时间及交互要求，复用已校验来源参数：${JSON.stringify(supported)}。继续遵从显式来源限制，不猜接口或改请求参数；来源未提供的字段逐项标注「来源未提供」，不能删列或用股价/涨跌幅替代估值、成交量等指标，不补模拟值或声称已开启刷新。`}
+  return {type:supported.layoutProfile?'market':'table',promptPrefix:supported.layoutProfile?'market.table；variant: table；\n':'',requirement:`宿主来源能力校正：${value.profile}直通仅展示固定报价字段，不能完整表达本卡要求；改由独立表格取数任务完成。${layout}保留原面板全部标的、字段、单位、时间及交互要求，复用已校验来源参数：${JSON.stringify(supported)}。继续遵从显式来源限制，不猜接口或改请求参数；来源未提供的字段逐项标注「来源未提供」，不能删列或用股价/涨跌幅替代估值、成交量等指标，不补模拟值或声称已开启刷新。`}
 }
 
 // Sina's bundled feed cannot filter securities. Preserve a narrowly recognized

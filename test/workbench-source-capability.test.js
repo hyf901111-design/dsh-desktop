@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { validateWorkbench, workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { marketVariant, requestedMarketVariant, requiredMarketVariant, workbenchDesignTemplate } from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
 import { preparePublicDataPanel } from '../packages/dsh-research-task-runtime/workbench-public-data.js'
 import { readTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import { prepareRequest } from '../skills/ework-free-data-sources/scripts/query.mjs'
@@ -72,6 +73,60 @@ it('distinguishes quote-metrics display capability and preserves an explicitly s
   expect(panel.prompt).toContain('variant: table')
   expect(panel.prompt).toContain('"layoutProfile":"openterminal"')
   expect(panel.prompt).toContain('artifact.layoutProfile')
+})
+
+it.each(['variant: metrics；', 'market.metrics；', 'market.metrics；variant: metrics；'])('keeps the final OpenTerminal fallback contract on market.table despite the old route %s', route => {
+  const input = quotePanel('quotes-table', 'market', `${route}比较PE、PB、总市值，保留缺失说明与原来源。`)
+  input.publicData.layoutProfile = 'openterminal'
+  const panel = validatePanel(input), contract = workbenchPanelPrompt({ title: '真实研究', dataMode: 'source' }, panel)
+  expect(panel.type).toBe('market')
+  expect(panel.publicData).toBeUndefined()
+  expect(panel.prompt).toContain(input.prompt)
+  expect(panel.prompt).toContain(input.publicData.requests[0].parameters_json.replaceAll('"', '\\"'))
+  expect(panel.prompt).toContain('"layoutProfile":"openterminal"')
+  expect(marketVariant(panel)).toBe('table')
+  expect(requestedMarketVariant(panel.prompt)).toBe('table')
+  expect(workbenchDesignTemplate(panel).variant).toBe('table')
+  expect(requiredMarketVariant(contract)).toBe('table')
+  expect(requestedMarketVariant(contract)).toBe('table')
+  expect(contract).toContain('必须输出 market.table 的结构化数据')
+  expect(contract).not.toContain('必须输出 market.metrics 的结构化数据')
+  expect(validatePanel(panel)).toEqual(panel)
+})
+
+it.each([
+  ['quotes-table', '只展示名称、代码、最新价、涨跌幅和报价时间；不要成交量、成交额、市盈率、市净率或市值。'],
+  ['quotes-table', '只展示最新价；不需要 PE、PB、volume、amount。'],
+  ['quotes-table', '只展示最新价；无需显示市盈率(TTM)、市净率和总市值。'],
+  ['quotes-table', 'Only show name, code, price, changePercent and time; do not show PE, PB, volume or amount.'],
+  ['quotes-table', 'Only show price; do not need to show PE, PB, volume, or amount.'],
+  ['quotes-table', 'Only show price; no PE/PB/volume/amount.'],
+  ['quotes-table', 'Only show price; without volume and amount.'],
+  ['quotes-metrics', '只展示最新价格和涨跌幅；不要开盘、最高价、最低价。'],
+  ['quotes-metrics', 'Only show price and changePercent; do not display open, high or low.']
+])('keeps explicit excluded fields on the standard quote fast path: %s / %s', (profile, prompt) => {
+  const input = quotePanel(profile, 'market', prompt), panel = validatePanel(input)
+  expect(panel.publicData).toEqual(input.publicData)
+  expect(panel.type).toBe('market')
+  expect(panel.prompt).toContain(input.prompt)
+})
+
+it.each([
+  ['quotes-table', '展示成交额；不要PE、PB。'],
+  ['quotes-table', '不要PE、PB，但要成交额。'],
+  ['quotes-table', '不需要成交量，另外要PB。'],
+  ['quotes-table', '不需要修改PE的数据来源。'],
+  ['quotes-table', 'Show amount; do not show PE or PB.'],
+  ['quotes-table', 'Do not show volume or amount, but include PB.'],
+  ['quotes-table', 'No PE/PB; show volume.'],
+  ['quotes-table', 'Do not change the PE data source.'],
+  ['quotes-metrics', '不要开盘、最高价，但要最低价。'],
+  ['quotes-metrics', 'Do not display open or high, but show low.']
+])('retains required fields before or after an exclusion clause: %s / %s', (profile, prompt) => {
+  const input = quotePanel(profile, 'market', prompt), panel = validatePanel(input)
+  expect(panel.publicData).toBeUndefined()
+  expect(panel.type).toBe('table')
+  expect(panel.prompt).toContain(input.prompt)
 })
 
 it('recognizes the actual related latest real news wording without expanding it to the market feed', () => {

@@ -392,7 +392,7 @@ export function validateWorkbench(value) {
             const sourceTaskRequirement=quoteTask?.requirement??publicDataNewsTaskRequirement(candidate,p.type,p.title+'\n'+p.prompt)??publicDataHistoryTaskRequirement(candidate,p.type);
             if(sourceTaskRequirement){
                 const {publicData:source,intervalMinutes,...planned}=p;
-                const prompt=p.prompt+'\n'+sourceTaskRequirement;
+                const prompt=(quoteTask?.promptPrefix??'')+p.prompt+'\n'+sourceTaskRequirement;
                 if(prompt.length>5000)throw Error('面板需求与来源约束超过内容上限，请精简需求文字。');
                 p={...planned,...(quoteTask?{type:quoteTask.type}:{}),prompt};
             }else{
