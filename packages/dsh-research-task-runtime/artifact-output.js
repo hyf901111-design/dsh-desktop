@@ -63,11 +63,13 @@ function normalizeTemplateAliases(value) {
  }
  // Native tables cannot carry provenance. Route a fully valid sourced table
  // to the trusted interactive template instead of retrying or losing its notes.
- if(value?.type==='table'&&typeof value.asOf==='string'&&value.asOf.trim()&&
+ // A note-only snapshot must keep its actual dates/sources in the note/rows;
+ // the host supplies only a status label, never an inferred observation date.
+ if(value?.type==='table'&&(typeof value.asOf==='string'&&value.asOf.trim()||value.asOf===undefined&&typeof value.note==='string'&&value.note.trim())&&
    Object.keys(value).every(key=>['version','type','title','columns','rows','asOf','note'].includes(key))&&
    (value.note===undefined||typeof value.note==='string'&&value.note.trim())) {
   const {asOf,note,...core}=value;
-  if(parseResearchContainerSpec(core))return {...value,type:'market',variant:'table'};
+  if(parseResearchContainerSpec(core))return {...value,type:'market',variant:'table',asOf:asOf??'静态快照 · 来源与时点见表格及说明'};
  }
  if(value?.type!=='market')return value;
  if(value.variant==='metrics'&&Array.isArray(value.items))return {...value,items:value.items.map(item=>

@@ -1275,6 +1275,18 @@ describe('Research task Subagent adapter', () => {
     expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件');
     await handle.dispose();
   });
+  it.each(['calendar', 'reports', 'chart'])('prioritizes a native snapshot for an online %s panel without requested refresh', async type => {
+    const fixture = containerAdapterFixture()
+    fixture.ctx.tools = { schemas: () => [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'web_fetch' }] }
+    const handle = await fixture.start(`工作台：真实研究\n本面板：已核实资料\n取得真实记录、日期和来源；缺失明确标注。\n仅生成本面板，优先使用 ${type} 类型。`)
+    try {
+      const prompt = fixture.ctx.subagents.start.mock.calls[0][1].prompt[0].text
+      expect(prompt).toContain(`"type":"${type}"`)
+      expect(prompt).toContain('优先直接交付原生模板 JSON')
+      expect(prompt).not.toContain('自动绑定数据交付协议')
+      expect(prompt).not.toContain('mapping 的模板结构')
+    } finally { await handle.dispose() }
+  })
   it('keeps searchable sortable business tables on the native data path while preserving custom record details',async()=>{
     for(const interaction of ['交互：排序与搜索。','支持按公司筛选、过滤记录、单击表头排序。']){
       const fixture=containerAdapterFixture()

@@ -1,0 +1,126 @@
+{
+  "artifact": {
+    "version": 1,
+    "type": "table",
+    "title": "估值水平对比（PE / PB / 市值）",
+    "columns": [
+      "代码",
+      "名称",
+      "PE(TTM) 倍",
+      "PB 倍",
+      "总市值 亿元",
+      "行情日期 / 来源"
+    ],
+    "rows": [
+      [
+        "300308.XSHE",
+        "中际旭创",
+        "39.25",
+        "26.15",
+        "7,782.45",
+        "2026-10-19 · 通联数据 getMktEqudEvalNew"
+      ],
+      [
+        "300502.XSHE",
+        "新易盛",
+        "32.83",
+        "23.97",
+        "4,295.79",
+        "2026-10-19 · 通联数据 getMktEqudEvalNew"
+      ],
+      [
+        "601138.XSHG",
+        "工业富联",
+        "20.81",
+        "5.68",
+        "9,467.62",
+        "2026-10-19 · 通联数据 getMktEqudEvalNew"
+      ]
+    ],
+    "note": "PE(TTM) 为总市值/扣非净利润TTM（PECTTM）；PB 为总市值/(净资产-其他权益工具，最新年报)（PBLYR）；总市值=收盘价×总股本。数据为 2026-10-19 收盘估值快照，来源：通联数据 Aladdin getMktEqudEvalNew 接口；三只标的全字段取得，无缺失。financial_query(asset=stock) 查询返回不可用，改用上述来源。"
+  },
+  "sourceRecord": {
+    "tool": "ework__t_cea057132bf7c47c5a4fc6b2f32ee323",
+    "args": {
+      "http_method": "GET",
+      "nameEn": "getMktEqudEvalNew",
+      "url": "https://gw.datayes.com/aladdin_proxy/data_api/api/market/getMktEqudEvalNew.json",
+      "url_params": {
+        "ticker": "300308,300502,601138",
+        "tradeDate": "20261019"
+      }
+    },
+    "response": {
+      "retCode": 1,
+      "retMsg": "Success",
+      "data": [
+        {
+          "secID": "300308.XSHE",
+          "secShortName": "中际旭创",
+          "exchangeCD": "XSHE",
+          "ticker": "300308",
+          "tradeDate": "2026-10-19",
+          "marketValue": 778244872720,
+          "negMarketValue": 733335375900,
+          "freeMarketValue": 555069623538.7,
+          "freeTurnoverRate": 0.0232,
+          "PELYR": 72.078,
+          "PECLYR": 72.6649,
+          "PECTTM": 39.2532,
+          "PBLYR": 26.1462,
+          "PBLYDGW": 27.968,
+          "PBDGW": 20.5232,
+          "PSLYR": 20.3516,
+          "PCFLYR": 130.6653,
+          "PCFOLYR": 71.424,
+          "PRRLYR": 464.3657,
+          "updateTime": "2026-10-19 15:28:59"
+        },
+        {
+          "secID": "300502.XSHE",
+          "secShortName": "新易盛",
+          "exchangeCD": "XSHE",
+          "ticker": "300502",
+          "tradeDate": "2026-10-19",
+          "marketValue": 429579057600,
+          "negMarketValue": 386454899600,
+          "freeMarketValue": 372138106340,
+          "freeTurnoverRate": 0.0272,
+          "PELYR": 45.0674,
+          "PECLYR": 45.1841,
+          "PECTTM": 32.832,
+          "PBLYR": 23.9681,
+          "PBLYDGW": 24.2408,
+          "PBDGW": 17.8284,
+          "PSLYR": 17.2926,
+          "PCFLYR": 67.8514,
+          "PCFOLYR": 55.7805,
+          "PRRLYR": 611.8106,
+          "updateTime": "2026-10-19 15:28:43"
+        },
+        {
+          "secID": "601138.XSHG",
+          "secShortName": "工业富联",
+          "exchangeCD": "XSHG",
+          "ticker": "601138",
+          "tradeDate": "2026-10-19",
+          "marketValue": 946761643633,
+          "negMarketValue": 946761643633,
+          "freeMarketValue": 153478715842.27,
+          "freeTurnoverRate": 0.0216,
+          "PELYR": 26.8314,
+          "PECLYR": 27.6926,
+          "PECTTM": 20.8059,
+          "PBLYR": 5.6768,
+          "PBLYDGW": 5.688,
+          "PBDGW": 5.397,
+          "PSLYR": 1.0486,
+          "PCFLYR": 42.1745,
+          "PCFOLYR": 180.7518,
+          "PRRLYR": 84.9032,
+          "updateTime": "2026-10-19 15:28:45"
+        }
+      ]
+    }
+  }
+}
