@@ -9,51 +9,137 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留研究组件来源范围说明并修复趋势纵轴展示",
+        "featureName": "接入锦鲤动态首页主题并增加兼容连接点脉冲，修复真实公告误判失败",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263",
-        "tipCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
+        "baseCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
+        "tipCommit": "619c2c4e14df21c39d449667655c32a4d923f5b9",
         "commits": [
           {
-            "commit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
+            "commit": "7893b373cc2333103fc4b0f33418c4bce68d52d2",
             "parents": [
-              "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263"
+              "682de48735ffd4c8404ce21cbbc6c0c70251687b"
             ],
-            "subject": "修复研究组件来源说明丢失与趋势纵轴压缩"
+            "subject": "按真实公告记录还原标题并保留多个来源日期"
+          },
+          {
+            "commit": "0f6929f9ede087b033c3d19a8ad25d794ab8a3f1",
+            "parents": [
+              "7893b373cc2333103fc4b0f33418c4bce68d52d2"
+            ],
+            "subject": "将锦鲤动态水面和明暗主题卡片接入首页主题库"
+          },
+          {
+            "commit": "619c2c4e14df21c39d449667655c32a4d923f5b9",
+            "parents": [
+              "0f6929f9ede087b033c3d19a8ad25d794ab8a3f1"
+            ],
+            "subject": "拖动组件连接节点时为兼容目标增加循环脉冲提示"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/feed-context.js"
+            "path": "src/preload/home-koi-renderer.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/README.md"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/assets/koi-sprite.png"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/assets/water-plate.png"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/renderer.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/renderer.js"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/shaders.js"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/simulation.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/simulation.js"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-koi/spine.js"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-theme-assets/koi-pond-dark.png"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/home-theme-assets/koi-pond-light.png"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+            "path": "src/preload/home-theme-renderer.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+            "path": "src/preload/home-themes.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
+            "path": "src/shared/home-themes.ts"
           },
           {
             "status": "M",
-            "path": "test/cartesian-chart-template.test.js"
+            "path": "test/component-web-snapshot-evidence.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-interactive-artifact.test.js"
+            "path": "test/financial-port-openterminal-browser.test.js"
           },
           {
             "status": "M",
-            "path": "test/stored-template-refinements.test.js"
+            "path": "test/financial-widget-link.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-controller.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-motion-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-preferences.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-theme-renderer-browser.test.js"
           }
         ],
         "checks": [
@@ -61,17 +147,34 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/cartesian-chart-template.test.js",
-              "test/research-interactive-artifact.test.js",
-              "test/openterminal-layout.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/special-chart-layout.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/home-theme-controller.test.ts",
+              "test/home-theme-preferences.test.ts",
+              "test/financial-port-openterminal-browser.test.js",
+              "test/financial-widget-link.test.js",
+              "test/financial-widget-announcements.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "75项直接相关检查通过；保存组件回放路径和原数据保持；/tmp/feed-chart-final-focused-20261020.log",
-            "verifiedCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
-            "completedAt": "2026-10-20T12:28:57.698148+00:00",
+            "summary": "109项直接相关检查通过；/tmp/koi-port-source-final-focused-20261020.log",
+            "verifiedCommit": "619c2c4e14df21c39d449667655c32a4d923f5b9",
+            "completedAt": "2026-10-20T13:06:25.301045+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/home-theme-motion-browser.test.js",
+              "test/home-theme-renderer-browser.test.js",
+              "-t",
+              "Koi Pond",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "3项锦鲤WebGL与首页交互检查；/tmp/koi-final-webgl-20261020.log",
+            "verifiedCommit": "619c2c4e14df21c39d449667655c32a4d923f5b9",
+            "completedAt": "2026-10-20T13:06:25.301045+00:00",
             "timeoutMs": 120000
           },
           {
@@ -81,9 +184,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/feed-chart-final-typecheck-20261020.log",
-            "verifiedCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
-            "completedAt": "2026-10-20T12:28:57.698148+00:00",
+            "summary": "类型检查通过；/tmp/koi-port-final-typecheck-20261020.log",
+            "verifiedCommit": "619c2c4e14df21c39d449667655c32a4d923f5b9",
+            "completedAt": "2026-10-20T13:06:25.301045+00:00",
             "timeoutMs": 180000
           },
           {
@@ -91,118 +194,31 @@
               "git",
               "diff",
               "--check",
-              "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263..HEAD"
+              "682de48735ffd4c8404ce21cbbc6c0c70251687b..HEAD"
             ],
             "outcome": "passed",
-            "summary": "差异检查通过；真实失败卡16条公告及四系列趋势记录离线回放数据不变，修复说明可见性与范围缩放。",
-            "verifiedCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
-            "completedAt": "2026-10-20T12:28:57.698148+00:00",
+            "summary": "差异检查通过",
+            "verifiedCommit": "619c2c4e14df21c39d449667655c32a4d923f5b9",
+            "completedAt": "2026-10-20T13:06:25.301045+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端；集成后原生核验已保存卡片和新生成组件。"
+          "summary": "功能worktree禁止构建共享客户端；完成集成后原生核验主题和连接。"
         },
         "acceptanceCriteria": [
-          "新闻与研报完整显示已取得的来源时点、公司和缺失范围，不吞掉note。",
-          "折线、阶梯、哑铃图按完整序列范围绘图，图例切换保持轴域稳定；柱、面积图保留零基线。",
-          "已保存组件显示升级保留原数据、交互版本与已有控件回放路径。",
-          "实际客户端查看保存卡片并新生成复测。"
+          "主题库增加锦鲤水面 / Koi Pond，使用批准的明暗动效与Figma卡片，离线加载并保存选择。",
+          "沿用首页动画调度，离开首页和隐藏窗口暂停；切换主题释放GL资源，减少动态效果保留静态画面。",
+          "拖动节点时仅兼容的其他目标循环脉冲；连接、取消和失焦停止；四种工作台样式及减少动态效果兼容。",
+          "公告仅凭本次真实同ID链接和已观察日期还原官方原文标题，保留日期和摘要，不放宽错误内容匹配。",
+          "本地客户端核验后保持打开供用户测试。"
         ],
         "risks": [
-          "仅本地测试，不晋升main或发布。",
-          "缺失说明可见不代表缺失公司数据已经取到；仍需继续改善多目标检索。",
-          "扩大检查确认8项HEAD基线旧失败：registry空artifact断言1项、html主题及profiles7项；/tmp/feed-chart-baseline-registry-20261020.log与/tmp/feed-chart-related-baseline-20261020.log。"
+          "仅本地测试，不晋升main、不发布或推送。",
+          "工作台完整生成仍存在检索与模型等待，不能以此次公告匹配修复宣称速度问题全部解决。"
         ],
-        "generatedAt": "2026-10-20T12:28:57.698148+00:00"
-      },
-      "merged": {
-        "mergeCommit": "854a3abcf653c12f5b3dcfe84bc2313378574efd",
-        "verificationCommit": "854a3abcf653c12f5b3dcfe84bc2313378574efd",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "854a3abcf653c12f5b3dcfe84bc2313378574efd",
-            "completedAt": "2026-10-20T12:29:20.010Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "854a3abcf653c12f5b3dcfe84bc2313378574efd",
-            "completedAt": "2026-10-20T12:29:20.010Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "854a3abcf653c12f5b3dcfe84bc2313378574efd",
-            "completedAt": "2026-10-20T12:29:20.010Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "854a3abcf653c12f5b3dcfe84bc2313378574efd",
-            "completedAt": "2026-10-20T12:29:20.010Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "854a3abcf653c12f5b3dcfe84bc2313378574efd",
-            "completedAt": "2026-10-20T12:29:20.010Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T12:29:20.010Z"
+        "generatedAt": "2026-10-20T13:06:25.301045+00:00"
       }
     },
     {
