@@ -1513,6 +1513,7 @@ export class ResearchTaskRuntime {
       const bindablePanel = Boolean(plannedFormat && plannedFormat !== 'html')
       const panelRequest = workbenchPanelIntent(task.prompt)
       const bindingRequested = componentBindingRequested(panelRequest)
+      const historyOptions=/(?:相对\s*沪深300|沪深300.{0,8}(?:基准|参考))/u.test(panelRequest)?{benchmarkSymbol:'000300.SH'}:{}
       let output, binding, verifiedSnapshot, bindingRepairEvidence = '', recoveryText = '', recoveryEvidence = '', generationError, sharedStateError, designPolicyError
       // At most one repair generation, within the same task/concurrency slot.
       // Completed malformed output and truncated output follow the same acceptance gate.
@@ -1525,7 +1526,7 @@ export class ResearchTaskRuntime {
         if (typeof result?.researchEvidence === 'string' && result.researchEvidence.trim()) recoveryEvidence = truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES)
         let deliveredText = (result?.output ?? []).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text).join('\n')
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
-        const restoredSnapshot=task.kind==='container'&&(restoreSnapshotMarketHistory(deliveredText,sourceRecords)||restoreSnapshotFeedHeadlines(deliveredText,sourceRecords))
+        const restoredSnapshot=task.kind==='container'&&(restoreSnapshotMarketHistory(deliveredText,sourceRecords,historyOptions)||restoreSnapshotFeedHeadlines(deliveredText,sourceRecords))
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
@@ -1547,7 +1548,7 @@ export class ResearchTaskRuntime {
             mapped=snapshot
           }
           binding=bindingRequested?mapped?.recipe:undefined
-          if(mapped)deliveredText=JSON.stringify(mapped.data)
+          if(mapped)deliveredText=restoreSnapshotMarketHistory(JSON.stringify(mapped.data),sourceRecords,historyOptions)??JSON.stringify(mapped.data)
           if (deferredPanel) {
             const candidates = extractArtifactObjects(deliveredText)
             if (!candidates.some(candidate => candidate?.type === 'error')) {

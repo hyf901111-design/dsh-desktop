@@ -18,6 +18,7 @@ it('recalculates every normalized market trend point and its dates and provenanc
  expect(data.note).toContain('2026-10-20T17:47:14.069Z')
  expect(data.note).toContain('非报价时间')
  expect(data.note).toContain('仅含已取得记录')
+ expect(data.note).toContain('+7.63%')
  expect(data.note).not.toContain('手写')
  expect(data.asOf).not.toContain('晚于')
  expect(JSON.stringify(model)).toBe(before)
@@ -38,10 +39,11 @@ it('normalizes a completed runtime output before rendering without another model
  const start=vi.fn(async()=>({childSessionId:'child',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(model)}],sourceRecords:records})}))
  const runtime=new ResearchTaskRuntime({adapter:{start,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'history-task'})
  try{
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'chart',kind:'container',prompt:'工作台：火电股价对比\n本面板：股价走势\n优先使用 market 类型；variant: trend。取真实日线按首值100归一化，仅静态快照。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'chart',kind:'container',prompt:'工作台：火电股价对比\n本面板：股价走势\n优先使用 market 类型；variant: trend。取真实日线按首值100归一化，计算相对沪深300的超额表现和排序，仅静态快照。'})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'history-task'}).state).toBe('completed'))
   const output=JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'history-task'}).finalOutput)
   expect(readTemplateModel(output).data.series[0].values).toEqual([100,96.98,107.63])
+  expect(readTemplateModel(output).data.note).toContain('600011.SH +14.32')
   expect(start).toHaveBeenCalledOnce()
  }finally{await runtime.dispose()}
 })

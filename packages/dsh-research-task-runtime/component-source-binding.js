@@ -136,10 +136,10 @@ function snapshotRecordMatches(value,record) {
 // exact original text from an unambiguous fetched record, never weaken the
 // evidence comparison to accept altered amounts or negations. The source link
 // and one observed date must already match; summaries and gaps stay untouched.
-export function restoreSnapshotMarketHistory(text,records) {
+export function restoreSnapshotMarketHistory(text,records,options={}) {
  const candidates=extractArtifactObjects(text)
  if(candidates.length!==1)return
- const restored=observedMarketHistory(candidates[0],records)
+ const restored=observedMarketHistory(candidates[0],records,options)
  if(restored)return JSON.stringify(restored)
 }
 export function restoreSnapshotFeedHeadlines(text,records) {
