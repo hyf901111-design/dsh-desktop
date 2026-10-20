@@ -9,27 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "兼容v1数据映射内层版本缺省避免失败重试",
+        "featureName": "更新失败保留旧内容时保留可操作顶栏和预留空间",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
-        "tipCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
+        "baseCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
+        "tipCommit": "e9fddb328d3b18126b6ef4217bb764ed3bfad7b0",
         "commits": [
           {
-            "commit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
+            "commit": "e9fddb328d3b18126b6ef4217bb764ed3bfad7b0",
             "parents": [
-              "4368d4d542f6332ca8c26fbd83eeb59f02bd192a"
+              "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79"
             ],
-            "subject": "兼容已知数据映射版本的嵌套缺省避免无效重试"
+            "subject": "更新失败保留旧内容时恢复组件顶栏和重试入口"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+            "path": "scripts/lib/figma-generation-client.mjs"
           },
           {
             "status": "M",
-            "path": "test/observed-market-history.test.js"
+            "path": "scripts/lib/research-grid-workbench.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-scrollbar-theme-browser.test.js"
           }
         ],
         "checks": [
@@ -37,15 +45,17 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/observed-market-history.test.js",
-              "test/component-source-binding.test.js",
-              "test/research-task-runtime.test.js",
+              "test/workbench-scrollbar-theme-browser.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/figma-container-build.test.js",
+              "test/figma-task-progress.test.ts",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "317项版本兼容及来源验证检查通过；/tmp/observed-market-envelope-focused-20261021.log",
-            "verifiedCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
-            "completedAt": "2026-10-20T18:15:44.545860+00:00",
+            "summary": "60项恢复入口、顶栏留白、生成控件与主题滚动条检查通过；/tmp/retained-component-actions-final-focused-20261021.log",
+            "verifiedCommit": "e9fddb328d3b18126b6ef4217bb764ed3bfad7b0",
+            "completedAt": "2026-10-20T18:32:16.217354+00:00",
             "timeoutMs": 180000
           },
           {
@@ -55,9 +65,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/observed-market-envelope-typecheck-20261021.log",
-            "verifiedCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
-            "completedAt": "2026-10-20T18:15:44.545860+00:00",
+            "summary": "类型检查通过；/tmp/retained-component-actions-final-typecheck-20261021.log",
+            "verifiedCommit": "e9fddb328d3b18126b6ef4217bb764ed3bfad7b0",
+            "completedAt": "2026-10-20T18:32:16.217354+00:00",
             "timeoutMs": 180000
           },
           {
@@ -65,114 +75,28 @@
               "git",
               "diff",
               "--check",
-              "4368d4d542f6332ca8c26fbd83eeb59f02bd192a..HEAD"
+              "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79..HEAD"
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
-            "completedAt": "2026-10-20T18:15:44.545860+00:00",
+            "verifiedCommit": "e9fddb328d3b18126b6ef4217bb764ed3bfad7b0",
+            "completedAt": "2026-10-20T18:32:16.217354+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原位更新07fb1731因mapping漏写version失败；实际回放仅补外层已声明v1的相同内层版本就可生成4x20点。新实现已直接接受原始输出，仍需本地构建后再试同一卡。"
+          "summary": "实机失败任务07fb1731旧图仍可见但顶栏消失；已定位grid和Figma生成样式把所有非completed卡当空规划卡。浏览器真实样式验证保留内容时34px预留和操作可见，空生成控件仍独占。须构建后实机重试。"
         },
         "acceptanceCriteria": [
-          "仅外层version=1且已注册模板内层缺少version时继承v1；显式冲突或其他外层版本仍拒绝。",
-          "全部来源参数匹配、字段、日期和值检查保持原样，不重复调用模型补相同版本。"
+          "已有预览内容的更新失败卡保留原顶栏、编辑需求等入口，顶栏不覆盖预览。",
+          "空生成卡以data-research-generation-empty或真实生成面板判断，继续全框显示独立生成控件。",
+          "主题滚动条及真实组件状态汇总保持通过。"
         ],
         "risks": [
-          "本地测试，不发布、不晋升main。"
+          "仅本地测试，不发布、不晋升main。"
         ],
-        "generatedAt": "2026-10-20T18:15:44.545860+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1fbb80157da970ba93a3cbd29b97c0f024f2831b",
-        "verificationCommit": "1fbb80157da970ba93a3cbd29b97c0f024f2831b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "1fbb80157da970ba93a3cbd29b97c0f024f2831b",
-            "completedAt": "2026-10-20T18:16:13.762Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1fbb80157da970ba93a3cbd29b97c0f024f2831b",
-            "completedAt": "2026-10-20T18:16:13.762Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "1fbb80157da970ba93a3cbd29b97c0f024f2831b",
-            "completedAt": "2026-10-20T18:16:13.762Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "1fbb80157da970ba93a3cbd29b97c0f024f2831b",
-            "completedAt": "2026-10-20T18:16:13.762Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1fbb80157da970ba93a3cbd29b97c0f024f2831b",
-            "completedAt": "2026-10-20T18:16:13.762Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T18:16:13.762Z"
+        "generatedAt": "2026-10-20T18:32:16.217354+00:00"
       }
     },
     {
