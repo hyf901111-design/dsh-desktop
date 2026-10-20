@@ -384,28 +384,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "记忆设置直接编辑与移除AI概括",
+        "featureName": "逐条记忆启用开关与删除二次确认",
         "branch": "codex/feat/memory-editor-20261020",
-        "baseCommit": "23e02a4ac318d7404d048c7389de4780d2f034f6",
-        "tipCommit": "7d1f388105367888c2ad23fdcd58789586319262",
+        "baseCommit": "7d1f388105367888c2ad23fdcd58789586319262",
+        "tipCommit": "23f29fc55f3fe0a0791d64bcaff9745cade24e8b",
         "commits": [
           {
-            "commit": "7d1f388105367888c2ad23fdcd58789586319262",
+            "commit": "80b8fcc46adf3d09ccb3b4f239d88c9dd833b050",
             "parents": [
-              "23e02a4ac318d7404d048c7389de4780d2f034f6"
+              "7d1f388105367888c2ad23fdcd58789586319262"
             ],
-            "subject": "支持逐条编辑记忆并移除设置中的AI概括"
+            "subject": "为逐条记忆增加启用开关和删除确认"
+          },
+          {
+            "commit": "23f29fc55f3fe0a0791d64bcaff9745cade24e8b",
+            "parents": [
+              "80b8fcc46adf3d09ccb3b4f239d88c9dd833b050"
+            ],
+            "subject": "修正未关联项目记忆的开关提示"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-memory-runtime/README.md"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-memory-runtime/index.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/notes-locale.js"
@@ -424,10 +423,6 @@
           },
           {
             "status": "M",
-            "path": "test/memory-runtime.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/memory-service.test.ts"
           },
           {
@@ -440,17 +435,12 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
+              "test/memory-view.test.ts"
             ],
             "outcome": "passed",
-            "summary": "4个记忆聚焦测试文件78条通过；日志 /tmp/memory-editor-focused-20261020.log；覆盖直接编辑保存/取消/删除、revision与状态保持、草稿刷新重开及账号隔离、加密与Markdown存储保护、移除summary调度且保留自动提取。",
-            "verifiedCommit": "7d1f388105367888c2ad23fdcd58789586319262",
-            "completedAt": "2026-10-20T05:09:03.632896+00:00",
+            "summary": "记忆界面29项测试通过，含未关联项目禁用开关中英文诚实提示；日志 /tmp/memory-row-controls-view-final-20261020.log。前一功能提交80b8fcc4的4文件86项验证记录保留于旧交接卡。",
+            "verifiedCommit": "23f29fc55f3fe0a0791d64bcaff9745cade24e8b",
+            "completedAt": "2026-10-20T06:03:20.857890+00:00",
             "timeoutMs": 300000
           },
           {
@@ -460,117 +450,30 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript检查通过；日志 /tmp/memory-editor-typecheck-20261020.log。",
-            "verifiedCommit": "7d1f388105367888c2ad23fdcd58789586319262",
-            "completedAt": "2026-10-20T05:09:03.633132+00:00",
+            "summary": "TypeScript检查通过；日志 /tmp/memory-row-controls-typecheck-final-20261020.log。",
+            "verifiedCommit": "23f29fc55f3fe0a0791d64bcaff9745cade24e8b",
+            "completedAt": "2026-10-20T06:03:20.857890+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "按授权仅在隔离feature中完成聚焦行为测试，不构建或替换共享客户端。真实中英文设置UI验收由pending集成批次05完成，当前未声称客户端验收通过。"
+          "summary": "功能worktree按授权不构建或替换共享客户端；已运行真实DOM行为回归，真实客户端视觉与点击验收交由集成批次05，未声称已完成native验收。"
         },
         "acceptanceCriteria": [
-          "记忆设置直接展示真实条目，可逐条编辑标题与内容并保存、取消或删除。",
-          "保留已有记忆、状态、来源、项目范围、固定标记及有效期；陈旧revision不得覆盖新版本。",
-          "未保存草稿跨后台刷新、设置关闭重开及语言切换保留；切换账号后清空私密草稿，旧响应不得污染新账号。",
-          "移除设置AI概括展示、runtime summary生成和轮询，保留自动记忆提取/召回及旧加密数据兼容。",
-          "中英文按钮与错误提示配套，账号隔离、0600/0700、加密存储及Markdown冲突副本不放宽。"
+          "每条记忆卡片右上角及编辑状态均有独立开关，顶部全局开关保留。",
+          "active经disable停用、disabled经enable启用、candidate经accept明确确认；superseded保持关闭且不可直接复活。",
+          "删除按钮只打开原生可访问确认对话框；取消、关闭和Escape均不删除，确认后才发送绑定原revision的delete动作。",
+          "删除有未保存修改的记忆时明确提示草稿会丢弃；取消或冲突保留草稿，确认删除成功后才清除。",
+          "状态切换不覆盖输入；本地状态变更推进对应草稿revision，后台冲突保持冲突可见。",
+          "账号变化关闭私密对话框并忽略旧动作返回；中英文切换同步卡片与打开的确认对话框。"
         ],
         "risks": [
-          "真实客户端视觉及点击验收尚待集成批次05；本分支未构建共享客户端。",
-          "草稿仅保留在当前preload内存，应用完全退出或重新加载后不持久化；不额外将私密草稿写入磁盘。",
-          "外部版本冲突时保留草稿并拒绝覆盖，用户可复制草稿或取消查看最新内容。",
-          "后端旧summary接口与缓存兼容保留，但当前runtime和设置UI不再触发或显示。"
+          "真实客户端视觉与点击验收等待集成批次05；本分支未构建、未改用户记忆存储。",
+          "未绑定所属项目的待确认记忆沿用既有服务规则，不能直接启用。",
+          "草稿仍仅保留在preload内存，应用重载或完全退出后不额外持久化。"
         ],
-        "generatedAt": "2026-10-20T05:09:03.633137+00:00"
-      },
-      "merged": {
-        "mergeCommit": "e3ab77c3726ac80e57c604a4fbc74c08bd92f1bd",
-        "verificationCommit": "e3ab77c3726ac80e57c604a4fbc74c08bd92f1bd",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "e3ab77c3726ac80e57c604a4fbc74c08bd92f1bd",
-            "completedAt": "2026-10-20T05:13:17.062Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e3ab77c3726ac80e57c604a4fbc74c08bd92f1bd",
-            "completedAt": "2026-10-20T05:13:17.062Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "e3ab77c3726ac80e57c604a4fbc74c08bd92f1bd",
-            "completedAt": "2026-10-20T05:13:17.062Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "e3ab77c3726ac80e57c604a4fbc74c08bd92f1bd",
-            "completedAt": "2026-10-20T05:13:17.062Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e3ab77c3726ac80e57c604a4fbc74c08bd92f1bd",
-            "completedAt": "2026-10-20T05:13:17.062Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T05:13:17.062Z"
+        "generatedAt": "2026-10-20T06:03:20.857890+00:00"
       }
     }
   ],
