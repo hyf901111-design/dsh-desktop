@@ -67,3 +67,6 @@
 
 ## Kraken公开市场接口
 [报价文档](https://docs.kraken.com/api-reference/market-data/get-ticker-information)、[K线文档](https://docs.kraken.com/api-reference/market-data/get-ohlc-data)。免密钥，只代表该交易所；ticker不提供交易时间，不伪称实时。支持pair及OHLC interval/limit，末根K线可能未收盘。
+
+## 东方财富证券公告列表（eastmoney-announcements）
+[来源页面](https://data.eastmoney.com/notices/)；按单个已确认A股代码读取近期公告首页，无密钥，尽力而为的网页接口。每家公司分别查询，避免多公司混排首页遗漏范围。`time` 是原 `display_time`（上海时区）的列表展示时间，`noticeDate` 是公告标注日期，可能次日，不混称交易所发布时间；保留原文链接，摘要未提供。仅首页不代表完整披露范围，不能把空结果解释成未发生公告。公开可访问不代表商业再分发授权。
