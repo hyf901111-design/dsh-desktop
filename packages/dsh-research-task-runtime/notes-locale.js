@@ -190,7 +190,7 @@ export const NOTE_ENGLISH = {
   "启用此记忆": "Enable this memory",
   "已被替代的记忆不能重新启用。": "Superseded memories cannot be enabled again.",
   "启用后将确认这条记忆。": "Enabling will accept this memory.",
-  "请先编辑并选择记忆所属项目。": "Edit and select a project for this memory first.",
+  "此记忆尚未关联项目，暂不能启用。": "This memory is not linked to a project and cannot be enabled yet.",
   "修改未完成，记忆和草稿已保留。请刷新后重试。": "Could not change the memory. Your memory and draft are preserved. Refresh and try again.",
   "删除这条记忆？": "Delete this memory?",
   "删除后，这条记忆将不再用于后续对话。": "This memory will no longer be used in future conversations.",

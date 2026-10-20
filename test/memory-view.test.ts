@@ -137,6 +137,7 @@ describe('simple ordinary memory settings', () => {
     expect(rowSwitch('candidate').checked).toBe(false)
     expect(rowSwitch('superseded').disabled).toBe(true)
     expect(rowSwitch('unbound').disabled).toBe(true)
+    expect(rowSwitch('unbound').parentElement?.title).toBe('此记忆尚未关联项目，暂不能启用。')
     expect(rowSwitch(record.id).closest('.ew-memory-record-heading')).not.toBeNull()
     rowSwitch(record.id).click(); await tick()
     rowSwitch('disabled').click(); await tick()
@@ -159,6 +160,8 @@ describe('simple ordinary memory settings', () => {
     expect(doc.querySelector('[data-memory-editor]')?.textContent).not.toContain('已在其他位置更新')
     button('保存').click(); await tick()
     expect(commands.find(command => command.type === 'save')).toMatchObject({ expectedRevision: 3, input: { content: '开关切换仍需保留的草稿' } })
+    doc.documentElement.dataset.odysseyLocale = 'en'; await tick()
+    expect(rowSwitch('unbound').parentElement?.title).toBe('This memory is not linked to a project and cannot be enabled yet.')
   })
   it('requires an accessible delete confirmation and leaves memory untouched on cancel, close or Escape', async () => {
     const commands: MemoryCommand[] = []

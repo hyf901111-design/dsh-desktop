@@ -360,7 +360,7 @@ export function mountMemoryUi(document: Document, bridge: MemoryBridge) {
     toggle.setAttribute('aria-label', t('启用此记忆'))
     toggle.checked = row.status === 'active'
     toggle.disabled = !latest || row.status === 'superseded' || row.status === 'candidate' && row.scope === 'project' && !row.projectId || changing.has(row.id) || deleting.has(row.id) || draft?.pending === true
-    label.title = t(row.status === 'superseded' ? '已被替代的记忆不能重新启用。' : row.status === 'candidate' && row.scope === 'project' && !row.projectId ? '请先编辑并选择记忆所属项目。' : row.status === 'candidate' ? '启用后将确认这条记忆。' : '启用此记忆')
+    label.title = t(row.status === 'superseded' ? '已被替代的记忆不能重新启用。' : row.status === 'candidate' && row.scope === 'project' && !row.projectId ? '此记忆尚未关联项目，暂不能启用。' : row.status === 'candidate' ? '启用后将确认这条记忆。' : '启用此记忆')
     toggle.onchange = () => void changeRowStatus(row)
     label.append(toggle); heading.append(title, label); item.append(heading)
     const remove = button(t('删除'), () => requestDelete(row), 'ew-memory-delete')
