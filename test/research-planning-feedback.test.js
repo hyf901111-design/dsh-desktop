@@ -108,8 +108,11 @@ it('uses the event timestamp when reopening a running conversation instead of in
 })
 it('also installs on an older client without the planning-card action hook',()=>{
  const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
- const prior=original.replace(/\/\* ODYSSEY_CREATION_CARD_ACTIONS \*\/[\s\S]*?resolveSubmitMode, subagent\]\);/u,'')
+ const prior=original
+  .replace(/\/\* ODYSSEY_CREATION_CARD_ACTIONS \*\/[\s\S]*?resolveSubmitMode, subagent\]\);/u,'')
+  .replace(/stop=\(\)=>\{\/\* ODYSSEY_PLANNING_COMPOSER_STOP \*\/[\s\S]*?ordinaryStop\?\.\(\)\};/u,'stop=()=>{if(canvasRunning)void canvasExecution.stop().catch(error=>showToast(error.message));ordinaryStop?.()};')
  expect(prior).not.toContain('/* ODYSSEY_CREATION_CARD_ACTIONS */')
+ expect(prior).not.toContain('/* ODYSSEY_PLANNING_COMPOSER_STOP */')
  const patched=patchResearchCreationProgress(prior)
  expect(patched).toContain('/* ODYSSEY_CREATION_CARD_ACTIONS */')
  expect(patched).toContain('/* ODYSSEY_PLANNING_COMPOSER_STOP */')
