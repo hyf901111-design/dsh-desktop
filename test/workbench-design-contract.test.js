@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateWorkbench, layoutWorkbench, workbenchPanelPrompt } from '../packages/dsh-research-task-runtime/workbench-plan.js';
-import { workbenchDesignTemplate, MARKET_DESIGN_TEMPLATES, WORKBENCH_DESIGN_VERSION } from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
+import { marketVariant, workbenchDesignTemplate, MARKET_DESIGN_TEMPLATES, WORKBENCH_DESIGN_VERSION } from '../packages/dsh-research-task-runtime/workbench-design-contract.js';
 import { renderMarketArtifact } from '../packages/dsh-research-task-runtime/market-artifact.js';
 import { researchMarketDimensions, researchBentoLayout } from '../packages/dsh-research-task-runtime/bento-layout.js';
 import { buildResearchTaskPrompt } from '../packages/dsh-research-task-runtime/index.js';
@@ -13,6 +13,27 @@ const candles = [
 const panel = (title, type, prompt, artifact) => ({ title, type, prompt, size: 'small', artifact });
 
 describe('research workbench Figma design contract', () => {
+  it.each([
+    ['股价相对表现：三家火电 vs 沪深300','取得三只股票与沪深300的收盘价，计算区间涨跌幅并绘制对比走势（归一化起点100）。支持显示/隐藏各标的序列。'],
+    ['多只股票最近走势','按真实交易日对齐收盘价，用共同基期100比较。'],
+    ['Three-stock relative strength','Plot normalized time series for multiple stocks and the benchmark.']
+  ])('keeps the requested multi-security trend instead of replacing it with a quote table: %s', (title,prompt) => {
+    const input=validateWorkbench({requestId:'trend-intent',title:'金融研究',panels:[{title,type:'market',size:'large',prompt}]});
+    const task=workbenchPanelPrompt(input,input.panels[0]);
+    expect(marketVariant(input.panels[0])).toBe('trend');
+    expect(task).toContain('必须输出 market.trend 的结构化数据');
+    expect(task).not.toContain('必须输出 market.table');
+    expect(buildResearchTaskPrompt({parentSessionId:'session',canvasNodeId:'node',kind:'container',prompt:task})).toContain('"variant":"trend"');
+  });
+
+  it.each([
+    ['热门股票行情明细','三只股票最新行情，按涨跌幅排序'],
+    ['自选报价','展示多只股票的价格和涨跌幅，不要绘制趋势图。'],
+    ['股票对比','variant: table；三只股票的报价；趋势另在其他组件展示。']
+  ])('preserves a quote table when no trend display is requested: %s',(title,prompt)=>{
+    expect(marketVariant({title,type:'market',prompt})).toBe('table');
+  });
+
   it('reads the rendered body kind after shared CSS injection and preserves provenance space during arrange', () => {
     const quote={version:1,type:'market',variant:'metrics',title:'指数行情',asOf:'2026-09-30',items:Array.from({length:4},(_,i)=>({label:`指标${i}`,value:'100',detail:'来源返回'})),note:'最近交易日指数，人民币口径；来源数据时点为2026-09-30。',sources:[{label:'已验证行情接口'}]};
     const containerSpec=JSON.parse(acceptArtifactOutput(JSON.stringify(quote)));
