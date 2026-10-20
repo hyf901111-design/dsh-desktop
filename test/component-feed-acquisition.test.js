@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {acquireFeedSourceEvidence,observedFeedSearchUrls} from '../packages/dsh-research-task-runtime/component-feed-acquisition.js'
+import {acquireFeedSourceEvidence,observedFeedSearchUrls,compactFetchedPageText} from '../packages/dsh-research-task-runtime/component-feed-acquisition.js'
 import {componentFeedEvidenceIssue} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 
 const url='https://example.org/policy/114'
@@ -76,4 +76,25 @@ it('honors parent cancellation and does not fetch other templates or malformed c
  await expect(acquireFeedSourceEvidence({text:draft(),records:[],observedUrls:[url],readPage,signal})).rejects.toThrow('cancelled')
  for(const text of ['progress text','{"version":1,"type":"table","rows":[]}'])await acquireFeedSourceEvidence({text,records:[],observedUrls:[url],readPage})
  expect(readPage).not.toHaveBeenCalled()
+})
+
+it('keeps every acquired article in the shared evidence budget instead of crowding out later sources',async()=>{
+ const urls=Array.from({length:6},(_,i)=>`https://example.org/policy/${i}`)
+ const readPage=async address=>{const p=page(address);p.content=p.content.replace('原文明确',`正文标记${urls.indexOf(address)}：`+'原文内容。'.repeat(5000));return p}
+ const result=await acquireFeedSourceEvidence({text:draft(urls),records:[],observedUrls:urls,readPage})
+ expect(Buffer.byteLength(result.evidence)).toBeLessThanOrEqual(30000)
+ for(let i=0;i<6;i++)expect(result.evidence).toContain(`正文标记${i}`)
+ expect(result.records).toHaveLength(6)
+})
+
+it('removes navigation packets only from an identified article excerpt, preserving list-page evidence and original authority',()=>{
+ const article=page(),links={links:Array.from({length:150},(_,i)=>({title:'网站导航'+i,url:`https://example.org/navigation/${i}`}))}
+ article.content=article.content.replace('{"links":[]}',JSON.stringify(links))
+ const compact=compactFetchedPageText(url,article.content)
+ expect(compact).not.toContain('网站导航149')
+ expect(compact).toContain('原文明确各地提高煤电容量电价标准')
+ expect(compact).toContain('[网页主文记录]')
+ const list=article.content.replace(/\[网页主文记录\][\s\S]*?\[\/网页主文记录\]\n\n/u,'')
+ expect(compactFetchedPageText(url,list)).toBe(list)
+ expect(article.content).toContain('网站导航149')
 })

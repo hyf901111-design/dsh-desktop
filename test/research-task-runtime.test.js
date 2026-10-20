@@ -3286,3 +3286,11 @@ it.each(['allowed','no-fetch-tool','offline'])('keeps host feed reads within the
   }else{expect(result.acquireFeedEvidence).toBeUndefined();expect(ctx.web.fetch).not.toHaveBeenCalled()}
  }finally{await handle.dispose()}
 })
+
+it('compacts identified article navigation before the source excerpt limit can cut away its body',async()=>{
+ const {researchSearchEvidence}=await runtimeModule(),url='https://example.org/article',title='Original policy',links=[]
+ while(JSON.stringify({links}).length<48500)links.push({title:'Navigation '+links.length+' '+ 'x'.repeat(200),url:'https://example.org/navigation/'+links.length})
+ const text=`Fetched ${url} (HTTP 200)\n\n${title}\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[{title,date:'2026-01-30',url}]})}\n[/网页主文记录]\n\n[网页内链接记录]\n${JSON.stringify({links})}\n[/网页内链接记录]\n\nACTUAL-ARTICLE-BODY-RETAINED`
+ const event={type:'tool/result',data:{message:{content:[{type:'tool-result',toolCallId:'page',content:[{type:'text',text}]}]}}}
+ expect(researchSearchEvidence(event,new Set(['page']),{pageUrl:url})).toContain('ACTUAL-ARTICLE-BODY-RETAINED')
+})
