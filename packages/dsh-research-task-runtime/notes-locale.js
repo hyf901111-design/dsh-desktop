@@ -213,6 +213,8 @@ export const NOTE_ENGLISH = {
   "默认": "Default",
   "笔记暂不可编辑，请重新打开后重试。": "This note is currently read-only. Reopen it and try again.",
   "生成已停止": "Generation stopped",
+  "自选": "Watchlist",
+  "行情面板": "Market panel",
   "自选股": "Watchlist",
   "个股行情": "Stock quote",
   "市场指数": "Market indices",

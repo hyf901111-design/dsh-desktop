@@ -4,9 +4,11 @@ import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 
-const native = vi.hoisted(() => ({ views: [] as any[], external: vi.fn() }))
+const native = vi.hoisted(() => ({ views: [] as any[], menus: [] as any[], external: vi.fn() }))
 vi.mock('electron', () => ({
   shell: { openExternal: native.external },
+  Menu: {buildFromTemplate:(items:any[])=>{native.menus.push(items);return {popup:vi.fn()}}},
+  clipboard:{writeText:vi.fn()},
   BrowserWindow: vi.fn(), webContents: {},
   session: { fromPartition: () => ({ on: vi.fn(), setPermissionRequestHandler: vi.fn(), setPermissionCheckHandler: vi.fn() }) },
   WebContentsView: class {
@@ -135,5 +137,12 @@ it('navigates a trusted source request into the existing right-side conversation
     receive(opened[0][1])
     expect(service.openTab).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ type: 'sherlock-conversation-browser', meta: expect.objectContaining({ sherlockPanel: 'right', url: 'https://example.org/news?original=1' }) }), { sessionId: 'source-session' })
     expect(native.external).not.toHaveBeenCalled()
+    const menuHandler=native.views[0].webContents.on.mock.calls.find(([name]:any[])=>name==='context-menu')?.[1]
+    menuHandler({}, {linkURL:'https://example.org/next',selectionText:'',isEditable:false,editFlags:{}})
+    const before=native.views[0].webContents.loadURL.mock.calls.length
+    native.menus.at(-1).find((item:any)=>item.label==='在客户端浏览器中打开').click()
+    await Promise.resolve()
+    expect(native.views[0].webContents.loadURL.mock.calls).toHaveLength(before)
+    expect(sent.at(-1)).toEqual(['conversation:browser',{request:'open-link',url:'https://example.org/next'}])
   } finally { browser.dispose() }
 })

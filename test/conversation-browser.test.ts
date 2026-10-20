@@ -67,3 +67,13 @@ it('follows session completion even while another tab is selected and keeps pers
   tasks.value=[{state:'stopped'}];taskChanged();expect(updates.at(-1).active).toBe(false)
   expect(patchConversationBrowser(source)).toBe(source)
 })
+
+it('keeps link failure feedback above native pages when upgrading an existing browser patch',async()=>{
+  // @ts-ignore Frontend patch module is plain JavaScript.
+  const {patchConversationBrowser}=await import('../scripts/lib/conversation-browser-client.mjs')
+  const source=patchConversationBrowser('class ResearchSidebarCoordinator { attach(){ const unregisterGenerated=service.registerTab({}); return()=>{unregisterGenerated?.();}; }}')
+  const legacy=source.replace('dialog[open],[aria-modal=true],[role=menu],[data-ework-web-link-error]','dialog[open],[aria-modal=true],[role=menu]')
+  const upgraded=patchConversationBrowser(legacy)
+  expect(upgraded).toContain('dialog[open],[aria-modal=true],[role=menu],[data-ework-web-link-error]')
+  expect(patchConversationBrowser(upgraded)).toBe(upgraded)
+})

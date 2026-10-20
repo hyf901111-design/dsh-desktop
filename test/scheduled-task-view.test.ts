@@ -2,6 +2,27 @@ import { Window } from 'happy-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ScheduledTaskView } from '../src/preload/scheduled/view'
 const windows: Window[] = []
+it('shows and edits interval reminders without replacing the structured rule with a workspace task',async()=>{
+ vi.useFakeTimers();const w=new Window();windows.push(w)
+ vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
+ const doc=w.document as unknown as Document
+ doc.body.innerHTML='<main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+ const task:import('../src/shared/scheduled-tasks').ScheduledTask={id:'watch',title:'涨跌提醒',prompt:'超过3%提醒',workspaceId:'',schedule:{frequency:'interval',intervalMinutes:5,time:'00:00',timezone:'Asia/Shanghai',date:'',weekday:1},notification:'changes',state:'enabled',nextRun:Date.now()+300000,createdAt:Date.now(),runs:[],watch:{source:'tencent-quotes',symbols:['sh600000'],thresholdPercent:3,ownerAccountId:'a',originSessionId:'board',requestId:'m',requestDigest:'a'.repeat(64)}}
+ const save=vi.fn(async input=>({...task,...input})),view=new ScheduledTaskView(doc,{list:async()=>[task],workspaces:async()=>[],save,action:vi.fn()})
+ view.mount();await view.open();doc.querySelector<HTMLButtonElement>('.st-row-main')!.click()
+ expect(doc.querySelector('.st-plan-label')?.textContent).toBe('每 5 分钟')
+ expect(doc.querySelector('.st-workspace')).toBeNull()
+ expect(doc.querySelector('.st-component-target')?.textContent).toContain('sh600000')
+ expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')?.readOnly).toBe(true)
+ doc.querySelector<HTMLButtonElement>('.st-repeat')!.click()
+ expect(doc.querySelector<HTMLSelectElement>('[name=frequency]')?.value).toBe('interval')
+ const interval=doc.querySelector<HTMLInputElement>('[name=intervalMinutes]')!
+ interval.value='10';interval.dispatchEvent(new w.Event('change',{bubbles:true}) as unknown as Event)
+ doc.querySelector<HTMLButtonElement>('[data-save]')!.click()
+ await vi.advanceTimersByTimeAsync(1)
+ expect(save.mock.calls[0]?.[0]).toMatchObject({watch:task.watch,schedule:{frequency:'interval',intervalMinutes:10}})
+ view.close()
+})
 afterEach(() => {
   windows.forEach((w) => w.happyDOM.abort())
   vi.unstubAllGlobals()

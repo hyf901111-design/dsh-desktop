@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import { registerWorkbench } from '../packages/dsh-research-task-runtime/workbench.js'
 import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import { AIRLINE_REAL_WORKBENCH_REQUEST, AFFIRMATIVE_WORKBENCH_REQUESTS, NON_CREATION_WORKBENCH_REQUESTS } from './fixtures/workbench-creation-requests.js'
 
 const session = (text, id = 'u') => ({ header: {}, events: [{ type: 'user/message', data: { id, source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 const accepted = (s, isError = false) => s.events.push(
@@ -45,6 +46,34 @@ async function registeredCreationSchema() {
 }
 
 describe('工作台首次规划阶段预算', () => {
+  it.each(AFFIRMATIVE_WORKBENCH_REQUESTS)('bounds explicit natural-language creation before research: %s', async text => {
+    for (const inbox of [false, true]) {
+      const s = session(text)
+      if (inbox) s.events = [{ type: 'agent/inbox/spliced', data: { inserted: s.events.map(event => event.data) } }]
+      s.append = (type, data) => s.events.push({ type, data })
+      const h = harness(undefined, planningTools), agent = { session: s }
+      expect(workbenchCreationRequest(s)?.text).toBe(text)
+      expect(await h.request(agent, config)).toEqual({ ...config, reasoningEffort: 'low', maxTokens: 4096 })
+      expect(s.events.find(event => event.type === 'sherlock/workbench-planning-budget')?.data.phase).toBe('planning')
+      const wire = await h.context(agent, wireRequest())
+      expect(wire.tools.map(tool => tool.name)).toEqual(['research_workbench_create', 'public_data_query', 'financial_query'])
+      expect(h.guard(invocation(agent, 'skill'))).toContain('首次规划阶段')
+      expect(h.guard(invocation(agent, 'financial_query', { intent: 'quote' }))).toContain('首次规划阶段')
+      expect(h.guard(invocation(agent, 'research_workbench_create'))).toBeUndefined()
+      if (text === AIRLINE_REAL_WORKBENCH_REQUEST) expect(wire.tools[0].parameters.properties.dataMode.enum).toEqual(['source'])
+      h.dispose()
+    }
+  })
+
+  it.each(NON_CREATION_WORKBENCH_REQUESTS)('preserves ordinary controls and tools for existing-board requests: %s', async text => {
+    const h = harness(undefined, planningTools), agent = { session: session(text) }, wire = wireRequest()
+    expect(workbenchCreationRequest(agent.session)).toBeNull()
+    expect(await h.request(agent, config)).toBe(config)
+    expect(await h.context(agent, wire)).toBe(wire)
+    expect(h.text(agent)).toBe('')
+    h.dispose()
+  })
+
   it('keeps model controls unchanged for failed-component repairs and no-add instructions',async()=>{
     for(const text of [
       '继续修复当前这个工作台，估值组件生成失败，请先做静态展示。不要新增工作台和重复组件。',
@@ -392,7 +421,7 @@ describe('工作台首次规划阶段预算', () => {
     expect(text).not.toContain('仅原请求为模拟数据时，省略dataMode')
   })
 
-  it('enforces plan-first through the real agent loop and tool scheduler while workers retain every parent source', async () => {
+  it.each(['创建珊瑚礁生态监测工作台，使用真实来源', AIRLINE_REAL_WORKBENCH_REQUEST])('enforces plan-first through the real agent loop and tool scheduler while workers retain every parent source: %s', async text => {
     const ctx = new Context(), requests = [], bodies = [], errors = []
     new SessionStore(ctx); new AgentRegistry(ctx); new LlmRuntime(ctx); new SystemPrompt(ctx, {}); new ToolRuntime(ctx)
     new AgentLoop(ctx, { agents: [], maxParallelToolCalls: 2 })
@@ -427,7 +456,7 @@ describe('工作台首次规划阶段预算', () => {
     const dispose = registerWorkbenchExecutionPolicy(ctx)
     try {
       const parent = (await ctx.agents.create({ sessionId: 'planning-parent', agentOptions: { provider: 'local', model: 'local', maxTokens: 16384 } })).agent
-      parent.followup({ ...session('创建珊瑚礁生态监测工作台，使用真实来源').events[0].data, role: 'user' })
+      parent.followup({ ...session(text).events[0].data, role: 'user' })
       await parent.whenIdle()
       expect(errors).toEqual([])
       expect(requests).toHaveLength(3)
@@ -435,6 +464,7 @@ describe('工作台首次规划阶段预算', () => {
       expect(requests[0].tools[0].parameters.properties.intent.enum).toEqual(['resolve', 'catalog'])
       expect(requests[0].reasoningEffort).toBe('low')
       expect(requests[0].maxTokens).toBe(4096)
+      expect(parent.session.events.find(event => event.type === 'sherlock/workbench-planning-budget')?.data.phase).toBe('planning')
       expect(bodies).toEqual([['planning-child', 'web_search']])
       expect(inherited.sort()).toEqual(['financial_query', 'research_workbench_create', 'web_search'])
       expect(ctx.tools.schemas(child).map(value => value.name).sort()).toEqual(inherited)

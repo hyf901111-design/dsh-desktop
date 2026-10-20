@@ -2,7 +2,8 @@ import { contextMenuCaptureScript, contextMenuTargetScript } from './context-men
 import { generatedFileFinderPath } from './generated-file-finder'
 import { buildNativeFileMenu } from './native-file-menu'
 import { registerTrustedMainWindowHandler } from './ipc-trust'
-import { clipboard, ipcMain, Menu, shell, type BrowserWindow } from 'electron'
+import { clipboard, ipcMain, Menu, shell, type BrowserWindow, type WebContents } from 'electron'
+import {openClientLink} from './search/open-client-link'
 import { existsSync } from 'node:fs'
 import { buildContextMenuTemplate, resolveFinderPath } from './context-menu-template'
 
@@ -72,8 +73,9 @@ export function installContextMenu(
     if (window.isDestroyed()) return
     const template = buildContextMenuTemplate({ ...params, finderPath }, locale(), {
       openLink: (url) => {
-        void shell.openExternal(url)
+        void openClientLink(window,url).catch(()=>{})
       },
+      openDesktopLink: url=>{void shell.openExternal(url)},
       copyLink: (url) => clipboard.writeText(url),
       revealItem: (path) => shell.showItemInFolder(path),
       copyImage: () => {
@@ -92,4 +94,16 @@ export function installContextMenu(
     if (template.length === 0 || window.isDestroyed()) return
     Menu.buildFromTemplate(template).popup({ window })
   })
+}
+
+/** Native webpage views do not inherit their owner's WebContents menu. */
+export function installWebPageContextMenu(contents:WebContents,owner:()=>BrowserWindow|undefined,locale:()=> 'en'|'zh',open:(url:string)=>void):void {
+ contents.on('context-menu',(_event,params)=>{
+  const window=owner();if(!window||window.isDestroyed()||contents.isDestroyed())return
+  const template=buildContextMenuTemplate({...params,finderPath:''},locale(),{
+   openLink:open,openDesktopLink:url=>{void shell.openExternal(url)},copyLink:url=>clipboard.writeText(url),
+   copyImage:()=>{if(!contents.isDestroyed())contents.copyImageAt(params.x,params.y)},revealItem:()=>{}
+  })
+  if(template.length)Menu.buildFromTemplate(template).popup({window})
+ })
 }

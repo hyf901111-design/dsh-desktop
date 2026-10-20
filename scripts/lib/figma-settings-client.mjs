@@ -5,6 +5,8 @@ function exact(source, from, to) {
   return source.replace(from, to)
 }
 export function patchFigmaSettingsGeneral(source) {
+  source=exact(source,'document.addEventListener("keydown", onKeyDown);','document.addEventListener("keydown", onKeyDown);\n                document.addEventListener("sherlock:open-client-browser",onClose);')
+  source=exact(source,'document.removeEventListener("keydown", onKeyDown);','document.removeEventListener("keydown", onKeyDown);\n                    document.removeEventListener("sherlock:open-client-browser",onClose);')
   // Settings and Menu both listen on document. A single Escape belongs to the
   // visible menu first; background portals concealed by settings do not count.
   source = exact(source, 'if (e.key === "Escape") onClose();', `if (e.key !== "Escape" || e.defaultPrevented || e.isComposing) return;

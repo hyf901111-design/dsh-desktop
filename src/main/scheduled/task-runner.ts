@@ -1,4 +1,5 @@
 import type { ComponentExecutor } from './component-executor'
+import type {MarketWatchExecutor} from './market-watch-executor'
 import { randomUUID } from 'node:crypto'
 import { TaskStore } from './task-store'
 import type { ScheduledTask, TaskRun } from '../../shared/scheduled-tasks'
@@ -43,6 +44,7 @@ export class TaskRunner {
     private now = Date.now,
     private componentExecutor?: ComponentExecutor,
     private integrationPreflight?: TaskIntegrationPreflight,
+    private watchExecutor?: MarketWatchExecutor,
   ) {}
   start() {
     this.timer = setInterval(() => void this.tick().catch(console.error), 15000)
@@ -92,6 +94,14 @@ export class TaskRunner {
       const run = task.runs[0]!
       let dispatching = false
       try {
+        if(task.watch){
+          if(!this.watchExecutor)throw Error('后台行情提醒服务未就绪')
+          const watchResult=await this.watchExecutor.execute(task,run)
+          if(watchResult.waitingForQuote&&task.schedule.frequency==='once')watchResult.summary+=' 一次性计划已暂停；新报价到来后可在任务菜单“立即运行”重试。'
+          await this.store.updateRun(task.id,run.id,{watchResult})
+          await this.finish(task,{...run,watchResult},watchResult.waitingForQuote?'blocked':'success',watchResult.waitingForQuote?watchResult.summary:undefined,watchResult.noChange)
+          return
+        }
         if (task.integrationBindings?.length && !this.integrationPreflight) {
           await this.finish(task, run, 'blocked', '任务所需能力的检查服务尚未就绪，请稍后重试')
           return
@@ -175,6 +185,11 @@ export class TaskRunner {
     }
   }
   private async reconcile(task: ScheduledTask, run: TaskRun) {
+    if(task.watch){
+      if(run.watchResult)await this.finish(task,run,run.watchResult.waitingForQuote?'blocked':'success',run.watchResult.waitingForQuote?run.watchResult.summary:undefined,run.watchResult.noChange)
+      else await this.finish(task,run,'failed','上次行情检查在客户端退出前未完成；下次计划会重新查询')
+      return
+    }
     if (task.component) {
       if (!this.componentExecutor) return
       try {
@@ -265,12 +280,15 @@ export class TaskRunner {
       status,
       finishedAt: this.now(),
       ...(error ? { error } : {}),
+      ...(task.watch&&run.watchResult&&this.watchExecutor?.isOwner(task)?{watchResult:run.watchResult}:{}),
     }
     await this.store.updateRun(task.id, run.id, patch)
+    if(run.watchResult?.waitingForQuote)return
+    if(task.watch&&(!this.watchExecutor?.isOwner(task)||!this.store.list().some(t=>t.id===task.id&&t.state!=='paused')))return
     if (
       !task.deletedAt &&
       task.notification !== 'never' &&
-      (status === 'failed' || status === 'blocked' || task.notification === 'always' || !noChange)
+      (task.watch ? status === 'success' ? !noChange : task.runs.slice(1).find(r=>r.status!=='running')?.status !== status : status === 'failed' || status === 'blocked' || task.notification === 'always' || !noChange)
     )
       this.notify(task, { ...run, ...patch })
   }

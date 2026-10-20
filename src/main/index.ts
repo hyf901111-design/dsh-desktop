@@ -2,7 +2,6 @@ import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
 import {installComponentLibrary} from './state/component-library'
-import {openFinancialArticle} from './financial/article-link'
 import { createComponentDataService } from './component-data/service'
 import { legacyConnectionSources } from './integrations/legacy-connections'
 import { legacySkillRoots } from './integrations/legacy-skills'
@@ -23,8 +22,12 @@ import { validateTask } from '../shared/scheduled-tasks'
 import { generateTaskTitle } from './scheduled/task-title'
 import { TaskStore } from './scheduled/task-store'
 import { TaskRunner, harnessRpc } from './scheduled/task-runner'
+import { ScheduledMarketWatchExecutor } from './scheduled/market-watch-executor'
+import { createScheduledTaskService } from './scheduled/task-service'
+import { createPublicDataClient } from '../../packages/dsh-research-task-runtime/public-data-client.js'
 import { createDesktopComputer } from './computer/desktop-computer'
 import { registerConversationBrowser } from './search/conversation-browser'
+import {openClientLink} from './search/open-client-link'
 import { guardUnexpectedErrorDownloads } from './search/research-web-downloads'
 import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
@@ -635,6 +638,7 @@ function createWindow(): BrowserWindow {
   })
   installPluginRecoveryNavigation(window)
   secureWindow(window, {
+    openWebLink:url=>{void openClientLink(window,url).catch(()=>{})},
     youtubeAppId: app.isPackaged ? desktopChannel === 'notarized' ? 'com.evanarts.sherlock' : developmentBuild ? 'io.dsh.desktop.dev' : 'io.dsh.desktop' : undefined,
     allowsResearchFrameUrl: (url) => researchLinkFrameRegistry.allows(url),
     ownsResearchFrame: (frame) => researchLinkFrameRegistry.ownsFrame(frame),
@@ -871,7 +875,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     onRejected: (error) => console.warn('[research-canvas] rejected wheel region update', error)
   })
   guardUnexpectedErrorDownloads(session.defaultSession)
-  const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,navigation:new ResearchWebNavigationStore(join(app.getPath('userData'),'research-web-navigation.bin'),safeStorage),browserSession:new ResearchWebSessionPersistence(session.fromPartition('persist:research-web-pages'),join(app.getPath('userData'),'research-web-session-cookies.bin'),safeStorage)})
+  const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,locale:harnessLocale,navigation:new ResearchWebNavigationStore(join(app.getPath('userData'),'research-web-navigation.bin'),safeStorage),browserSession:new ResearchWebSessionPersistence(session.fromPartition('persist:research-web-pages'),join(app.getPath('userData'),'research-web-session-cookies.bin'),safeStorage)})
   flushResearchNativeWeb=()=>nativeResearchWeb.flush()
   const nativeResearchYoutube = registerResearchYoutubeNative({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,appId:desktopChannel==='notarized'?'com.evanarts.sherlock':developmentBuild?'io.dsh.desktop.dev':'io.dsh.desktop'})
   registerCanvasUseWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,native:nativeResearchWeb.contents,authorize:(id,write)=>{if(!researchBoardsService)throw Error('画板服务尚未就绪');researchBoardsService.authorizeCanvasUse(id,write)}})
@@ -1262,8 +1266,10 @@ async function bootstrap(): Promise<void> {
   const rssService=createResearchRssService({canvas:canvasActions,isShared:id=>researchBoardsService?.isSharedSession(id)===true})
   app.once('before-quit',registerResearchRssHandlers({ipcMain,getMainWindow:()=>mainWindow,service:rssService}))
   let isScheduledSession = (_id: string) => false
+  let scheduledTaskRequest = (_value: unknown): Promise<unknown> => Promise.reject(Error('定时任务服务未就绪。'))
   const notifiedSessionTurns = new Map<string, number>()
   researchContextBridge = new ResearchContextBridge({
+    scheduledTask: value => scheduledTaskRequest(value),
     sessionCompleted: ({ sessionId, seq, title, preview }) => {
       if (isScheduledSession(sessionId) || seq <= (notifiedSessionTurns.get(sessionId) ?? -1)) return
       notifiedSessionTurns.delete(sessionId)
@@ -1340,7 +1346,7 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
   desktopComputer = createDesktopComputer(() => mainWindow)
-  const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow})
+  const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow,locale:harnessLocale})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
     readPage: readBrowserPage,
@@ -1485,7 +1491,7 @@ async function bootstrap(): Promise<void> {
   const financialIdentity=()=>accountService?.authenticated?accountService.accountId??null:null
   const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
-  registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openFinancialArticle(url,shell.openExternal))
+  registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openClientLink(mainWindow,url))
   noteComponentLibrary=await installComponentLibrary({ipcMain,getWindow:()=>mainWindow,file:join(app.getPath('userData'),'component-library.json'),readCanvas:id=>researchBoardsService?.isSharedSession(id)?researchBoardsService.readSharedCanvas(id):readStoredResearchCanvas(researchCanvasStorage,id),getBinding:(sessionId,nodeId)=>componentDataService?.engine.list(sessionId).find((b:any)=>b.nodeId===nodeId),owner:integrationOwner})
   await installCalendarService({getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>{
     if(readStoredResearchCanvas(researchCanvasStorage,target.sessionId).artifacts.some((n:any)=>n.id===target.nodeId&&n.containerSpec?.type==='calendar-tool'))return true
@@ -1504,8 +1510,9 @@ async function bootstrap(): Promise<void> {
     canvasActions.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]})
     return canvasActions.execute({sessionId:target.sessionId,method,args,scheduled:true})
   }, async target => {if(!componentDataService)throw Error('数据刷新服务不可用');const result=await componentDataService.request(target.sessionId,{action:'refresh',nodeId:target.nodeId});if(Array.isArray(result))throw Error('刷新结果无效');return result})
+  const watchExecutor = new ScheduledMarketWatchExecutor({owner: () => integrationOwner() || 'local', publicData: createPublicDataClient({root: bundledSkillDirectory()})})
   scheduledRunner = new TaskRunner(scheduledStore, taskRpc, () => !scheduledLoadError && runtime.snapshot().phase === 'ready', (task, run) => {
-    if (Notification.isSupported()) new Notification({ title: task.title, body: run.status === 'success' ? (task.component ? '组件已按计划更新' : '定时任务已完成，打开专属对话查看结果') : `定时任务需要处理：${run.error}` }).show()
+    if (Notification.isSupported()) new Notification({ title: task.title, body: run.watchResult?.summary ?? (run.status === 'success' ? (task.component ? '组件已按计划更新' : '定时任务已完成，打开专属对话查看结果') : `定时任务需要处理：${run.error}`) }).show()
   }, Date.now, componentExecutor, async task => {
     if (!task.integrationBindings?.length) return { ready: true, issues: [] }
     if (!dependencyIndex || !integrationService) return { ready: false, issues: [{ message: '连接检查服务暂不可用' }] }
@@ -1519,15 +1526,20 @@ async function bootstrap(): Promise<void> {
       return { ready: false, issues: [{ message: '部分工具未获当前账户或任务工作区授权，请重新选择连接范围' }] }
     }
     return dependencyIndex.preflight(task.id, task.integrationBindings)
-  })
+  }, watchExecutor)
+  const scheduledTaskService = createScheduledTaskService({store: scheduledStore, runner: scheduledRunner, owner: () => integrationOwner() || 'local', readCanvas: id => readStoredResearchCanvas(researchCanvasStorage, id), isShared: id => researchBoardsService?.isSharedSession(id) === true})
+  scheduledTaskRequest = value => scheduledLoadError ? Promise.reject(Error('定时任务数据读取失败，原数据已保留，请检查日志')) : scheduledTaskService.request(value)
   ipcMain.handle('scheduled-tasks:request', async (event, method: unknown, payload: any) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (scheduledLoadError) throw new Error('定时任务数据读取失败，原数据已保留，请检查日志')
-    if (method === 'list') return scheduledStore.list()
+    const owner = integrationOwner() || 'local'
+    if (method === 'list') return scheduledStore.list().filter(task => !task.watch || task.watch.ownerAccountId === owner)
     if (method === 'workspaces') return (await taskRpc('workspace.list', {})).items
     if (method === 'save') {
       const input = validateTask(payload?.input)
-      if (input.component) await componentExecutor.target(input.component)
+      if (input.watch) {
+        if (typeof payload.id !== 'string' || !scheduledStore.list().some(task => task.id === payload.id && task.watch?.ownerAccountId === owner)) throw Error('行情提醒请通过原会话创建或编辑')
+      } else if (input.component) await componentExecutor.target(input.component)
       else {
         const workspaces = (await taskRpc('workspace.list', {})).items
         if (!workspaces.some((w: any) => w.workspaceId === input.workspaceId)) throw new Error('工作区不存在')
@@ -1538,6 +1550,8 @@ async function bootstrap(): Promise<void> {
       return task
     }
     if (typeof payload?.id !== 'string') throw new Error('任务标识无效')
+    const targetTask = scheduledStore.list().find(task => task.id === payload.id)
+    if (targetTask?.watch && targetTask.watch.ownerAccountId !== owner) throw Error('任务不存在或没有管理权限')
     if (method === 'run') return scheduledRunner!.run(payload.id)
     if (method === 'pause' || method === 'resume' || method === 'delete') {
       const component=scheduledStore.list().find(t=>t.id===payload.id)?.component

@@ -1,7 +1,9 @@
+import {openClientLink} from './open-client-link'
 import { WebContentsView, session, type BrowserWindow, type IpcMain } from 'electron'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { readablePageUrl } from './browser-page-reader'
 import { guardResearchWebDownloads } from './research-web-downloads'
+import {installWebPageContextMenu} from '../context-menu'
 // @ts-ignore Fixed sandbox API, shared with canvas browser interaction.
 import { createCanvasUseSurface } from '../../../packages/dsh-research-task-runtime/canvas-use-surface.js'
 
@@ -35,7 +37,7 @@ export function fittedBrowserZoom(base: number, current: number, viewport: numbe
 }
 
 type Entry = { view: WebContentsView; snapshot: any; x: number; y: number; label: string; tail: Promise<unknown>; visible: boolean; ready: Promise<void>; active: boolean; name: string; baseZoom: number; fitting: boolean; refit?: boolean; resetFit?: boolean; fitPromise?: Promise<void>; width: number; timer?: ReturnType<typeof setInterval> }
-export function registerConversationBrowser(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined }) {
+export function registerConversationBrowser(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined;locale?:()=> 'en'|'zh' }) {
   const entries = new Map<string, Entry>()
   const main = () => { const win=options.getMainWindow();if(!win||win.isDestroyed())throw Error('客户端窗口不可用');return win }
   const publish = (sessionId: string, entry: Entry) => {
@@ -64,6 +66,7 @@ export function registerConversationBrowser(options: { ipcMain: IpcMain; getMain
     main().contentView.addChildView(view);view.setVisible(false)
     const entry=e
     view.webContents.setAudioMuted(true)
+    installWebPageContextMenu(view.webContents,options.getMainWindow,options.locale??(()=> 'zh'),url=>{void openClientLink(options.getMainWindow(),url).catch(()=>{})})
     view.webContents.setWindowOpenHandler(({url})=>{try{void view.webContents.loadURL(readablePageUrl(url)).catch(()=>{});}catch{}return {action:'deny'}})
     const guard=(event:{preventDefault():void},url:string)=>{try{readablePageUrl(url)}catch{event.preventDefault()}}
     view.webContents.on('will-navigate',guard);view.webContents.on('will-redirect',guard)
