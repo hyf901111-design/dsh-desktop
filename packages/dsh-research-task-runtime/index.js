@@ -2119,6 +2119,8 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       let finishResearch, handoffTimer
       const researchPhase = new Promise(resolve => { finishResearch = resolve })
       const evidenceCalls = new Set(), evidenceParts = hostEvidence ? [hostEvidence] : []
+      const discoveryEvidenceCalls = new Set(), discoveryEvidenceParts = []
+      let discoveryEvidenceBytes = 0
       // Keep actual fetched pages ahead of large catalogs or unrelated feeds.
       // This is attempt-local context only, never persisted source authority.
       const webEvidenceCalls = new Map(), webEvidenceParts = new Map()
@@ -2128,7 +2130,10 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         const web = (webEvidenceTruncated?'网页已超过上下文保留上限，下方仅保留最近3页摘录；未出现的页面不代表未取得。\n':'')+[...webEvidenceParts.values()].join('\n\n')
         const heading = web && evidenceParts.length ? '\n\n【其他已取得的检索资料，仍须核实是否属于业务数据】\n' : ''
         const other = truncateUtf8(evidenceParts.join('\n\n'),Math.max(0,MAX_CONTAINER_EVIDENCE_BYTES-Buffer.byteLength(web+heading)))
-        return web+(other?heading+other:'')
+        const business=web+(other?heading+other:'')
+        const discoveryHeading='\n\n【接口目录与参数定义摘录，非业务记录】\n'
+        const discovery=truncateUtf8(discoveryEvidenceParts.join('\n\n'),Math.max(0,MAX_CONTAINER_EVIDENCE_BYTES-Buffer.byteLength(business+discoveryHeading)))
+        return business+(discovery?discoveryHeading+discovery:'')
       }
       const closeResearch = () => {
         if (researchClosed || signal.aborted || !child.ctx?.tools?.restrict) return
@@ -2185,9 +2190,12 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
           networkCallCount++
           let args
           try{args=typeof event.data.arguments==='string'?JSON.parse(event.data.arguments):event.data.arguments}catch{}
-          if(discoveryTools.has(event.data.name)){discoveryCallCount++;knownDiscoveryUsed=true}
-          else if(event.data.name==='public_data_query'&&args?.operation==='catalog'||event.data.name==='financial_query'&&['resolve','search','catalog'].includes(args?.intent))discoveryCallCount++
+          const knownDiscovery=discoveryTools.has(event.data.name)
+          const discovery=knownDiscovery||event.data.name==='public_data_query'&&args?.operation==='catalog'||event.data.name==='financial_query'&&['resolve','search','catalog'].includes(args?.intent)
+          if(knownDiscovery)knownDiscoveryUsed=true
+          if(discovery)discoveryCallCount++
           if (typeof event.data.callId === 'string') {
+            if(discovery)discoveryEvidenceCalls.add(event.data.callId)
             if(event.data.name==='web_fetch'){
               try{
                 const args=typeof event.data.arguments==='string'?JSON.parse(event.data.arguments):event.data.arguments
@@ -2212,12 +2220,21 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
             }
           }
         }
-        if (event?.type === 'tool/result' && evidenceBytes < MAX_CONTAINER_EVIDENCE_BYTES) {
+        if (event?.type === 'tool/result') {
           const text = researchSearchEvidence(event, evidenceCalls, {request:sourceRequest})
           if (text) {
-            const piece = truncateUtf8(text, MAX_CONTAINER_EVIDENCE_BYTES - evidenceBytes)
-            evidenceParts.push(piece)
-            evidenceBytes += Buffer.byteLength(piece, 'utf8')
+            const metadata=event.data?.message?.content?.some(block=>discoveryEvidenceCalls.has(block.toolCallId))
+            if(metadata){
+              // Discovery can contain hundreds of field definitions. Keep a
+              // small source/parameter excerpt after the actual observations;
+              // it must not crowd out a company fetched later in this attempt.
+              const piece=truncateUtf8(text,Math.max(0,Math.min(2000,4000-discoveryEvidenceBytes)))
+              if(piece){discoveryEvidenceParts.push(piece);discoveryEvidenceBytes+=Buffer.byteLength(piece,'utf8')}
+            }else if(evidenceBytes<MAX_CONTAINER_EVIDENCE_BYTES){
+              const piece = truncateUtf8(text, MAX_CONTAINER_EVIDENCE_BYTES - evidenceBytes)
+              evidenceParts.push(piece)
+              evidenceBytes += Buffer.byteLength(piece, 'utf8')
+            }
           }
         }
         // A timer must not revoke a tool already advertised to the current model step.

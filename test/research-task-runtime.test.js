@@ -1887,6 +1887,27 @@ describe('Research task Subagent adapter', () => {
     }finally{await handle.dispose()}
   });
 
+  it('keeps late business records ahead of large interface definitions in the bounded synthesis context',async()=>{
+    const {createSubagentAdapter}=await runtimeModule(),parent={id:'parent'},child={id:'child',session:{events:[]}},result=Promise.withResolvers();
+    const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);
+    ctx.tools={schemas:()=>[{name:'ework__definition',description:'读取官网 MCP 接口参数定义；不是业务数据'},{name:'ework__business',description:'返回实际财务业务记录'}]};
+    const handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'工作台：研究\n本面板：公司比较\n查询三家公司实际记录。\n仅生成本面板，优先使用 table 类型。',prompt:'生成组件',signal:new AbortController().signal,onSessionEvent:()=>{}});
+    let seq=0;
+    const emit=(name,id,args,text)=>{
+      ctx.emit(child,{seq:++seq,type:'tool/call',data:{name,callId:id,arguments:JSON.stringify(args)}});
+      ctx.emit(child,{seq:++seq,type:'tool/result',data:{message:{source:{callId:id},content:[{type:'tool-result',toolCallId:id,content:[{type:'text',text}]}]}}});
+    };
+    try{
+      for(let i=0;i<2;i++)emit('ework__definition','definition-'+i,{nameEn:'definition-'+i},'接口参数定义与单位说明：'+'definition-only-marker '.repeat(1500));
+      for(const ticker of ['COMPANY-A','COMPANY-B','COMPANY-C'])emit('ework__business',ticker,{ticker},JSON.stringify({records:[{ticker,profit:3.2,unit:'CNY',fullLabel:'业务说明'.repeat(1000)}]}));
+      result.resolve({stopReason:'completed',output:[{type:'text',text:'完成'}]});
+      const finished=await handle.result;
+      for(const ticker of ['COMPANY-A','COMPANY-B','COMPANY-C'])expect(finished.researchEvidence).toContain(ticker);
+      expect(Buffer.byteLength(finished.researchEvidence)).toBeLessThanOrEqual(48000);
+      expect(finished.sourceRecords.filter(r=>r.response?.records).map(r=>r.response.records[0].fullLabel.length)).toEqual([4000,4000,4000]);
+    }finally{await handle.dispose()}
+  });
+
   it.each(['calls','time','financial'])('hands verified native-template data to synthesis at the %s boundary without waiting for the 180-second deadline',async boundary=>{
     const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
     const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}},steer:vi.fn()},result=Promise.withResolvers();
