@@ -9,35 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "完整来源映射静态图表及确定性归一化",
+        "featureName": "补全明确图表映射字段及单层数据映射封套",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "3473e5b9df196d690293f0c148dd7934fd2eb922",
-        "tipCommit": "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0",
+        "baseCommit": "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0",
+        "tipCommit": "f717c3665130e818747801f31e6e9027b358d68a",
         "commits": [
           {
-            "commit": "7c78122817d3397cdec32f68ed5b0ef54df82d10",
+            "commit": "4164e5b50cf7b57a79660ef2e1d26f55091a31b9",
             "parents": [
-              "3473e5b9df196d690293f0c148dd7934fd2eb922"
+              "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0"
             ],
-            "subject": "避免旧进度文字阻止组件资料进入展示阶段"
+            "subject": "按明确图表合同补全映射元信息并识别金融固定数值字段"
           },
           {
-            "commit": "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0",
+            "commit": "f717c3665130e818747801f31e6e9027b358d68a",
             "parents": [
-              "7c78122817d3397cdec32f68ed5b0ef54df82d10"
+              "4164e5b50cf7b57a79660ef2e1d26f55091a31b9"
             ],
-            "subject": "用完整来源映射生成静态图表并由宿主计算归一化"
+            "subject": "恢复完整数据映射缺失的单个外层闭合括号"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
@@ -52,19 +44,7 @@
           },
           {
             "status": "M",
-            "path": "test/cartesian-chart-template.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/component-source-snapshot-chart.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/component-source-history-snapshot.json"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
           }
         ],
         "checks": [
@@ -81,9 +61,9 @@
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "442项直接相关检查通过，含真实120点回放及恢复全标的；/tmp/static-source-mapping-final-focused-20261020.log",
-            "verifiedCommit": "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0",
-            "completedAt": "2026-10-20T15:45:20.076522+00:00",
+            "summary": "445项直接相关检查通过；/tmp/static-chart-envelope-final-focused-20261021.log",
+            "verifiedCommit": "f717c3665130e818747801f31e6e9027b358d68a",
+            "completedAt": "2026-10-20T16:08:04.619954+00:00",
             "timeoutMs": 120000
           },
           {
@@ -93,9 +73,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/static-source-mapping-typecheck-20261020.log",
-            "verifiedCommit": "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0",
-            "completedAt": "2026-10-20T15:45:20.076522+00:00",
+            "summary": "类型检查通过；/tmp/static-chart-envelope-typecheck-20261021.log",
+            "verifiedCommit": "f717c3665130e818747801f31e6e9027b358d68a",
+            "completedAt": "2026-10-20T16:08:04.619954+00:00",
             "timeoutMs": 180000
           },
           {
@@ -103,120 +83,31 @@
               "git",
               "diff",
               "--check",
-              "3473e5b9df196d690293f0c148dd7934fd2eb922..HEAD"
+              "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0..HEAD"
             ],
             "outcome": "passed",
             "summary": "本批次差异检查通过",
-            "verifiedCommit": "b36c6af44efb4ec5d50cdc7a32a9127bc0c1e5d0",
-            "completedAt": "2026-10-20T15:45:20.076522+00:00",
+            "verifiedCommit": "f717c3665130e818747801f31e6e9027b358d68a",
+            "completedAt": "2026-10-20T16:08:04.619954+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "真实第三轮4组件仅1成功3失败，已捕获所有曲线的完整来源。此次修复需集成后重试原失败走势图，不能以回放代替实际客户端生成。"
+          "summary": "前版真实原位重试87.828秒失败，当前逐项回放该首轮输出已能编译4条26点完整曲线；需新版客户端再次原位测试，回放不替代新生成。"
         },
         "acceptanceCriteria": [
-          "静态图表可映射本轮参数完全一致的financial_query响应，不登记刷新配方、不补造数据。",
-          "列表归一化由宿主先筛选排序取样再计算，按共同日期校验，零起点/缺失/错误日期不伪造曲线。",
-          "恢复包含全部标的、收盘价字段样本和完整条数，不把样本截断认定为来源缺失。",
-          "来源说明超过短栏容量时完整保留到note，保留原生图表与数值。",
-          "历史进度文字不阻止资料交接，正在输出的JSON和实际模型排队仍受保护。",
-          "相对时间以宿主当前中国日期为锚，明确历史范围保留。"
+          "仅从明确的宿主图表合同补全缺失variant，不覆盖已有变体。",
+          "仅financial-1固定数值字段且明确metric筛选时恢复缺失的value选择，不猜其他来源字段。",
+          "只恢复完整mapping已闭合且缺一个外层括号的data-bound，不修补数值、数组、字符串、任意JSON或其他字段。",
+          "所有来源必须是本轮实际成功且参数完全相同的响应，保留真实日期和单位。"
         ],
         "risks": [
-          "仅本地试验，不晋升main、不发布。",
-          "公告与政策的限流、查询预算及最终汇总反馈尚待继续优化，目标未达成。",
-          "静态映射不代表自动刷新；旧模型输出仍可交付直接原生JSON。"
+          "仍属本地试验，不晋升main、不发布。",
+          "新生成仍需检查说明中的计数、涨跌幅、排名等文字断言，不能仅以编译成功代替质量验收。",
+          "公告、政策取数和最终任务汇总仍待后续优化，整体目标未达成。"
         ],
-        "generatedAt": "2026-10-20T15:45:20.076522+00:00"
-      },
-      "merged": {
-        "mergeCommit": "20a46816acc263ed7637d79b71e3114258bc669d",
-        "verificationCommit": "20a46816acc263ed7637d79b71e3114258bc669d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "20a46816acc263ed7637d79b71e3114258bc669d",
-            "completedAt": "2026-10-20T15:47:32.287Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "20a46816acc263ed7637d79b71e3114258bc669d",
-            "completedAt": "2026-10-20T15:47:32.287Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "20a46816acc263ed7637d79b71e3114258bc669d",
-            "completedAt": "2026-10-20T15:47:32.287Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "20a46816acc263ed7637d79b71e3114258bc669d",
-            "completedAt": "2026-10-20T15:47:32.287Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "20a46816acc263ed7637d79b71e3114258bc669d",
-            "completedAt": "2026-10-20T15:47:32.287Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T15:47:32.287Z"
+        "generatedAt": "2026-10-20T16:08:04.619954+00:00"
       }
     },
     {
