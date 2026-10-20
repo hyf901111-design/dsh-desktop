@@ -9,6 +9,20 @@ import {patchLegacyDashboardPreview} from '../scripts/lib/patch-research-board-c
 import {researchInteractionVersion,compactHostDashboardHtml} from '../packages/dsh-research-task-runtime/html-artifact.js';
 import {advancedChartSamples as samples} from './fixtures/advanced-chart-samples.js';
 import vm from 'node:vm';
+it('upgrades saved source-backed feed titles while preserving records and disclosure paths',()=>{
+ const data={version:1,type:'news',title:'保存的真实资讯',items:[{title:'原文 <核对>',summary:'已取得内容',url:'https://example.com/source?a=1&b=2'},{title:'缺失来源',summary:'原始缺失说明'}]};
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(data)));
+ const legacy=spec.html.replace(/<h2><a\b[^>]*>([^<]*)<\/a><\/h2>/g,'<h2>$1</h2>');
+ const next=refineStoredTemplateHtml(legacy),w=new Window();w.document.write(next);
+ expect(w.document.querySelector('.feed-copy h2 a')?.href).toBe('https://example.com/source?a=1&b=2');
+ expect(w.document.querySelector('.feed-copy h2 a')?.textContent).toContain('原文 <核对>');
+ expect(w.document.querySelectorAll('.feed-copy h2 a')).toHaveLength(1);
+ expect(readTemplateModel({...spec,html:next})).toEqual(readTemplateModel(spec));
+ expect(routes(next)).toEqual(routes(legacy));
+ expect(refineStoredTemplateHtml(next)).toBe(next);
+ expect(refineStoredTemplateHtml(legacy.replace(/<script id="sherlock-template-data"[^]*?<\/script>/,''))).not.toContain('<h2><a');
+ w.close();
+});
 function routes(html){
  const window=new Window({settings:{disableJavaScriptEvaluation:true}});window.document.write(html);
  return [...window.document.querySelectorAll('button,input,select,summary,svg,tr')].map(el=>{

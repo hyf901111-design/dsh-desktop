@@ -7,6 +7,22 @@ import { compactHostDashboardHtml } from '../packages/dsh-research-task-runtime/
 import { CALENDAR_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/calendar-presentation.js';
 import { WORKBENCH_PRESENTATION_CSS } from '../packages/dsh-research-task-runtime/workbench-presentation.js';
 
+it('opens source-backed news and report titles without first expanding their summaries',()=>{
+ for(const type of ['news','reports']){
+  const output=renderInteractiveArtifact({version:1,type,title:'已取得真实资料',items:[
+   {title:'公告与经营数据',summary:'原文核对入口',url:'https://example.com/source?a=1&b=2'},
+   {title:'来源尚未取得',summary:'保留缺失说明'}
+  ]});
+  const w=new Window();w.document.write(output.html);
+  const a=w.document.querySelector('.feed-copy h2 a');
+  expect(a?.href).toBe('https://example.com/source?a=1&b=2');
+  expect(a?.target).toBe('_blank');expect(a?.rel).toContain('noopener');
+  expect(w.document.querySelector('details').open).toBe(false);
+  expect(w.document.querySelectorAll('.feed-copy h2 a')).toHaveLength(1);
+  w.close();
+ }
+});
+
 it('calendar layout preserves six weeks, a separate footer and working saved interactions',()=>{
  const output=renderInteractiveArtifact({version:1,type:'calendar',title:'模拟事件日历',items:[
   {title:'行业例会',summary:'确认研究进度',date:'2026-07-03'},
