@@ -3,11 +3,11 @@ import { canvasHumanRequest } from './canvas-task-routing.js'
 import { workbenchCreationRequest } from './workbench-execution-policy.js'
 import { bundledSkillEnabled } from './bundled-skill-preferences.js'
 
-const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|财务报表|营业收入|净利润|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
+const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
 const datayesSource = /通联|datayes|萝卜投研|官网\s*MCP/iu
 const recentMarketRequest = /最近|最新|今日|当前|实时|日行情/iu
 
-const planningSourceInstruction = sources => `工作台首次规划只需理解需求、拆分组件并立即提交组件计划。在各 panel.prompt 中保留用户指定的来源、所需字段和来源、日期与单位要求，由各组件任务独立取数并展示；父会话不要提前查询整套业务数据、编写页面或配置刷新。按内容选择适合的可视化，不强制套用固定组件组合。当前会话实际可见的来源入口：${sources.join('；')}。这些入口用于记录来源路线；接口发现和目录结果不是真实业务数据，不能填成已取得的记录。`
+const planningSourceInstruction = sources => `工作台首次规划只需理解需求、拆分组件并立即提交组件计划。在各 panel.prompt 中保留用户指定的来源、所需字段和来源、日期与单位要求，由各组件任务独立取数并展示；父会话不要提前查询整套业务数据、编写页面或配置刷新。除宿主已声明的publicData直通和用户明确指定的来源外，panel.prompt只写业务需求，不替子任务编写工具调用流程，不猜接口能力。financial_query的research/profile仅支持公募基金，不能取A股财报或公司公告。用户未规定历史跨度时保留原来的“近期”等范围，不自行扩大到一年或多年度。按内容选择适合的可视化，不强制套用固定组件组合。当前会话实际可见的来源入口：${sources.join('；')}。这些入口用于记录来源路线；接口发现和目录结果不是真实业务数据，不能填成已取得的记录。`
 
 // Initial planning records source intent. Workers receive the detailed
 // acquisition guidance after the parent has submitted its component plan.
@@ -43,7 +43,7 @@ export function chinaMarketWindow(now, calendarDays = 10) {
 export function preferredComponentSourceTools(schemas, request) {
   if (!financialTopic.test(request ?? '') || !Array.isArray(schemas)) return []
   const text = request ?? ''
-  const professionalFields = /估值|市盈率|市净率|财报|财务报表|营业收入|净利润|基金净值|持仓|研报|\b(?:valuation|fundamentals|earnings)\b/iu.test(text)
+  const professionalFields = /估值|市盈率|市净率|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|基金净值|持仓|研报|\b(?:valuation|fundamentals|earnings)\b/iu.test(text)
   const explicitSource = /(?:仅|只)(?:使用|用).{0,16}(?:腾讯|新浪|tencent|sina|public_data_query)|(?:数据来源|数据源|来源)\s*(?:(?:[:：]|为|是|于|采用|使用)\s*[^，。；;\n]+|(?:腾讯|新浪|tencent|sina))/iu.test(text)
   // Basic quotes/history cannot supply financial statements or valuation
   // fields. Skip that discovery detour when an authorized professional source
