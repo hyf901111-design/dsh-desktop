@@ -14,6 +14,7 @@ export const TEMPLATE_RULES=Object.freeze({
  'fund-holdings':`1–${TEMPLATE_LIMITS.holdingsColumns} 列、1–${TEMPLATE_LIMITS.holdingsRows} 行；rows 每一行是与 columns 等长的数组，不是对象`,
  'fund-industry':`1–${TEMPLATE_LIMITS.fundIndustries} 项；weight 是0–100百分数；benchmark 可省略或null，缺失时只展示实际权重，不编造基准和偏离`
 })
+export const TABLE_GUIDANCE='table 仅支持 version/type/title/columns/rows/asOf/note；不使用 variant 或 notes，完整说明合并为 note 单个非空字符串，asOf/note 可省略，提供时为1–2000字。证券代码、名称、单位和报价时间必须引用各行真实字段，不把一个证券代码或交易所固定拼到所有行；缺失字段明确说明。'
 export function normalizeIndexedTableRows(data){
  if(!(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant))||!Array.isArray(data.columns)||!Array.isArray(data.rows))return data
  const keys=data.columns.map((_,i)=>String(i))
@@ -33,6 +34,11 @@ export function templateDataIssue(data){
  if(data?.type==='kpi')return kpiDataIssue(data)
  if(['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(data?.type))return operationsDataIssue(data)
  if(data?.type==='chart')return chartDataIssue(data)
+ if(data?.type==='table'){
+  const unsupported=Object.keys(data).filter(key=>!['version','type','title','columns','rows','asOf','note'].includes(key))
+  if(unsupported.length)return `table 不支持字段：${unsupported.join('、')}。${TABLE_GUIDANCE}`
+  for(const key of ['asOf','note'])if(data[key]!==undefined&&(typeof data[key]!=='string'||!data[key].trim()||data[key].length>2000))return `table.${key} 必须为1–2000字的非空文字。${TABLE_GUIDANCE}`
+ }
  const finite=v=>typeof v==='number'&&Number.isFinite(v)
  const array=(key,max,min=1)=>!Array.isArray(data[key])||data[key].length<min||data[key].length>max?`${key} 必须包含 ${min}–${max} 项`:null
  if(data?.type!=='market')return null
