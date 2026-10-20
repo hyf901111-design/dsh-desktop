@@ -1,5 +1,6 @@
 import {it,expect,vi} from 'vitest'
-import {componentSourceCollector,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {componentSourceCollector,componentBindingEvidence,componentBindingRequested,resolveBoundComponent,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import officialSchemas from './fixtures/official-mcp-source-schemas.json'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {ComponentDataRefresh} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
@@ -8,6 +9,18 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it('classifies the actual current MCP search, directory and parameter definitions as discovery rather than financial data',()=>{
+ const collector=componentSourceCollector(officialSchemas.map(s=>s.name),officialSchemas);
+ for(const schema of officialSchemas){
+  const callId=schema.name;
+  collector.accept({type:'tool/call',data:{callId,name:schema.name,arguments:'{}'}});
+  collector.accept({type:'tool/result',data:{message:{source:{callId},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify(schema.name==='ework__business'?{data:[{code:'600011',revenue:123}]}:{api:'financials',example:{code:'600011',revenue:999}})}]}]}}});
+ }
+ expect(collector.records.map(r=>r.purpose)).toEqual(['discovery','discovery','discovery',undefined]);
+ const evidence=componentBindingEvidence(collector.records);
+ expect(evidence).toContain('ework__business');expect(evidence).toContain('123');
+ expect(evidence).not.toContain('999');expect(evidence).not.toContain('ework__definition');
+});
 it.each([
  ['使用通联真实数据，优先使用 market 类型；variant: metrics。',false],
  ['更新当前卡片的真实行情。',false],

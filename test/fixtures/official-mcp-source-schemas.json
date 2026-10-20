@@ -1,0 +1,6 @@
+[
+  {"name":"ework__search","description":"在官网 MCP 积分服务的接口目录中搜索结构化金融数据 API。此结果是接口发现，不是业务数据。取数流程为 search_api → get_api_info → call_api。文字资讯、研报、会议纪要等未覆盖资料使用当前可用网页检索或其他已启用来源；不调用旧综合套餐。"},
+  {"name":"ework__catalog","description":"读取官网 MCP 积分服务的分类与接口目录，不向旧综合服务请求。仅返回接口目录，不是业务数据。"},
+  {"name":"ework__definition","description":"按 search_api 或 get_catalog 返回的英文接口名读取官网 MCP 实时参数定义；不得猜测接口名。"},
+  {"name":"ework__business","description":"按 get_api_info 返回的 GET URL、nameEn 和查询参数调用官网 MCP 积分服务，返回真实业务数据。HTTP 200 仍需检查业务 retCode 和 data；不会回落到旧综合套餐。"}
+]

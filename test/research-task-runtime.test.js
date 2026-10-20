@@ -1335,7 +1335,7 @@ describe('Research task Subagent adapter', () => {
       expect(child.toolFilter.allow).toEqual(names)
       expect(child.prompt[0].text).toContain(original)
       expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
-      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的通联工具')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的金融工具')
       expect(child.prompt[0].text).not.toContain('自动绑定数据交付协议')
     }finally{await handle.dispose()}
   })
@@ -1375,7 +1375,7 @@ describe('Research task Subagent adapter', () => {
       expect(child.prompt[0].text).toContain('工作台：'+title)
       expect(child.prompt[0].text).toContain(original)
       expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
-      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的通联工具')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的金融工具')
     }finally{await handle.dispose()}
   })
   it('preserves a targeted correction and prior evidence when an online typed child is restarted',async()=>{
@@ -1716,7 +1716,7 @@ describe('Research task Subagent adapter', () => {
     const handle = await fixture.start(query)
     const child = fixture.ctx.subagents.start.mock.calls[0][1]
     expect(fixture.ctx.web.search).not.toHaveBeenCalled()
-    expect(child.prompt[0].text).toContain('先实际调用与面板字段最匹配的通联工具取可溯源数据')
+    expect(child.prompt[0].text).toContain('先实际调用与面板字段最匹配的金融工具取可溯源数据')
     expect(child.prompt[0].text).not.toContain('优先调用 financial_query')
     expect(child.prompt[0].text).not.toContain('金融数据先使用 financial_query')
     expect(child.toolFilter.allow).toContain('ework__datayes_call')

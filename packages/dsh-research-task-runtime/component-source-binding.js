@@ -9,7 +9,7 @@ import { templateFor } from './component-template-registry.js'
 export function componentSourceCollector(allowed,schemas=[]) {
   const discovery=new Set(schemas.filter(schema=>{
     const introduction=(schema.description??'').slice(0,300)
-    return /导航接口|搜的是【数据接口】，不是数据本身/u.test(introduction)||/^(?:获取|读取).{0,40}(?:API|接口).{0,10}(?:完整定义|参数定义)/iu.test(introduction)
+    return /导航接口|搜的是【数据接口】，不是数据本身|接口发现|不是业务数据|仅返回接口目录/u.test(introduction)||/(?:获取|读取).{0,60}(?:API|接口|参数).{0,16}(?:完整定义|参数定义|定义)/iu.test(introduction)
   }).map(schema=>schema.name))
   const calls=new Map(), records=[]
   return {
