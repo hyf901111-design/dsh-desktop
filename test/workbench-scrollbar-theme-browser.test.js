@@ -4,6 +4,7 @@ import {pathToFileURL} from 'node:url'
 import {patchFinancialWidgetClient} from '../scripts/lib/financial-widget-client.mjs'
 import {patchResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../packages/dsh-research-task-runtime/workbench-scrollbars.js'
+import {generationCss} from '../scripts/lib/figma-generation-client.mjs'
 
 let browser,css
 beforeAll(async()=>{
@@ -14,6 +15,19 @@ beforeAll(async()=>{
  css=JSON.parse(block.match(/style\.textContent=("(?:\\.|[^"\\])*")/)[1])+'\n'+await readFile('src/preload/figma-refinements.css','utf8')
 },30000)
 afterAll(async()=>browser?.close())
+
+it('keeps the existing component actions visible after an update fails while leaving empty planning cards on their own controls',async()=>{
+ const page=await browser.newPage({viewport:{width:1000,height:700}})
+ try{
+  await page.setContent('<main data-research-canvas data-ework-grid><article style="height:300px;width:500px;display:flex;flex-direction:column" data-research-compact-chrome data-research-artifact-card data-research-node-id="retained" data-research-generation-state="failed"><div class="rScV5Q_nodeTitle">标题预留空间</div><div class="rScV5Q_previewBody" data-research-preview-body>上一次成功生成的图表</div><div class="ew-grid-chrome-host"><header class="ew-grid-header"><button>组件更多操作</button></header></div></article></main>')
+  await page.addStyleTag({content:css+'\n'+generationCss})
+  expect(await page.locator('.ew-grid-header button').isVisible()).toBe(true)
+  expect(await page.locator('.rScV5Q_nodeTitle').evaluate(el=>el.getBoundingClientRect().height)).toBe(34)
+  await page.locator('article').evaluate(el=>el.setAttribute('data-research-generation-empty',''))
+  expect(await page.locator('.ew-grid-header button').isVisible()).toBe(false)
+  expect(await page.locator('.rScV5Q_nodeTitle').evaluate(el=>el.getBoundingClientRect().height)).toBe(0)
+ }finally{await page.close()}
+})
 
 it('switches both component scrollbar axes with the board palette independently of the app theme and preserves scrolling',async()=>{
  const page=await browser.newPage({viewport:{width:1000,height:700},reducedMotion:'reduce'})
