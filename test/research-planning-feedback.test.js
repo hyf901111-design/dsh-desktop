@@ -108,6 +108,14 @@ it('recognizes code-mode nested host receipts without interpreting arguments or 
  receipt.isError=true
  expect(planningResponseMetadata([{key:'code',kind:'tool-call',data:{root:receipt}}])).toMatchObject({accepted:false,failedTools:1})
 })
+it('retains only verified plan identities and deduplicates repeated receipts for live component feedback',()=>{
+ const receipt=id=>({kind:'tool-result',call:{name:'research_workbench_create',argsRaw:'PRIVATE'},content:[{type:'text',text:JSON.stringify({planId:id,status:'accepted',panels:['a','b','c','d']})}]})
+ const meta=planningResponseMetadata([{key:'one',kind:'tool-call',data:{root:receipt('actual-plan')}},{key:'duplicate',kind:'tool-call',data:{root:receipt('actual-plan')}}])
+ expect(meta.plans).toEqual([{id:'actual-plan',count:4}])
+ expect(JSON.stringify(meta.plans)).not.toContain('PRIVATE')
+ const failed=receipt('failed');failed.isError=true
+ expect(planningResponseMetadata([{key:'bad',kind:'tool-call',data:{root:failed}}]).plans).toEqual([])
+})
 it('marks ordinary composer cancellation as stopping before the actual session stops',()=>{
  const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const patched=patchResearchCreationProgress(original),start=patched.indexOf('stop=()=>{/* ODYSSEY_PLANNING_COMPOSER_STOP */'),end=patched.indexOf(';',patched.indexOf('ordinaryStop?.()',start))+1

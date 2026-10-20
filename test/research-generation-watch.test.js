@@ -55,14 +55,25 @@ describe('任务检查切板恢复', () => {
     const patched = patchResearchGenerationWatch(source)
     expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     expect(patchResearchGenerationWatch(patched)).toBe(patched)
-    const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V2 */','/* SHERLOCK_GENERATION_WATCH_RECOVERY_V1 */')
-    expect(patchResearchGenerationWatch(previous)).toBe(patched)
+    for(const version of ['V1','V2']){
+      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V3 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
+      expect(patchResearchGenerationWatch(previous)).toBe(patched)
+    }
     expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
     expect(patched).toContain('return sherlockBoardsAdapter.inspectShared(session.sessionId,request)')
     expect(patched).toContain('this.deps.generationInspectSink(request, options)')
     expect(patched).toContain('postResearchTask(RESEARCH_TASK_INSPECT_PATH, request, options?.signal)')
     expect(restoreResearchGridWorkbench(patchResearchGridWorkbench(patched))).toBe(patched)
     expect(() => patchResearchGenerationWatch('unknown native lifecycle')).toThrow('无法定位')
+  },15000) // Three passes over the full 13 MB production bundle exceed 5 s on a cold run.
+  it('publishes actual canvas completion for a settled parent and marks the snapshot inactive on leaving',async()=>{
+    vi.useFakeTimers();const pending=deferred(),f=setup(()=>pending.promise)
+    f.snapshot.artifacts[0].workbenchId='plan'
+    pending.resolve(completed);await vi.advanceTimersByTimeAsync(0)
+    const current=f.events.__sherlockWorkbenchGenerationV1.get('festival')
+    expect(current).toMatchObject({active:true,nodes:[{id:'card',planId:'plan',status:'completed',taskId:'task'}]})
+    expect(JSON.stringify(current)).not.toContain('全部完整结果')
+    f.dispose();expect(f.events.__sherlockWorkbenchGenerationV1.get('festival').active).toBe(false)
   })
   it('applies a full same-watermark completion through the actual native transition, while rejecting older tasks and drafts', async () => {
     const source = patchResearchGenerationWatch(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')))

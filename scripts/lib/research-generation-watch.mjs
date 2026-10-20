@@ -1,7 +1,8 @@
 import { patchGenerationProgressPersistence } from './generation-progress-persistence.mjs';
+import {publishResearchWorkbenchProgress} from './research-workbench-feedback.mjs';
 
 // A retained canvas must be able to replace a stalled inspection on re-entry.
-export function installResearchGenerationWatch({ workspace, sessionId, inspect, apply = (id, value) => workspace.applyGenerationInspection(id, value), eventTarget, documentTarget, delayMs = 350, timeoutMs = 8000, trace }) {
+export function installResearchGenerationWatch({ workspace, sessionId, inspect, apply = (id, value) => workspace.applyGenerationInspection(id, value), eventTarget, documentTarget, delayMs = 350, timeoutMs = 8000, trace, publishProgress=publishResearchWorkbenchProgress }) {
   let active = true, timer, polling = false, epoch = 0, flight, fullNext = true;
   const watch = Date.now(); let lastReport = watch;
   const tag = value => { let hash = 2166136261; for (const letter of String(value)) hash = Math.imul(hash ^ letter.charCodeAt(0), 16777619); return hash >>> 0; };
@@ -42,20 +43,22 @@ export function installResearchGenerationWatch({ workspace, sessionId, inspect, 
   eventTarget?.addEventListener('sherlock:conversation-initial-research', reopen);
   eventTarget?.addEventListener('focus', wake);
   documentTarget?.addEventListener('visibilitychange', visible);
-  const off = workspace.subscribe(() => schedule(0));
+  const publish=()=>publishProgress(eventTarget,sessionId,workspace.getSnapshot().artifacts);
+  const off = workspace.subscribe(() => {publish();schedule(0)});
+  publish();
   report('watch', { pending: nodes().length });
   void poll();
-  return () => { report('stop', { pending: nodes().length }); active = false; ++epoch; flight?.abort(); off(); if (timer !== undefined) clearTimeout(timer); eventTarget?.removeEventListener('sherlock:conversation-initial-research', reopen); eventTarget?.removeEventListener('focus', wake); documentTarget?.removeEventListener('visibilitychange', visible); };
+  return () => { report('stop', { pending: nodes().length }); active = false; ++epoch; flight?.abort(); off(); publishProgress(eventTarget,sessionId,workspace.getSnapshot().artifacts,false); if (timer !== undefined) clearTimeout(timer); eventTarget?.removeEventListener('sherlock:conversation-initial-research', reopen); eventTarget?.removeEventListener('focus', wake); documentTarget?.removeEventListener('visibilitychange', visible); };
 }
 
 /** Replace only the original inspection effect; source/task acceptance stays native. */
 export function patchResearchGenerationWatch(source) {
   source = patchGenerationProgressPersistence(source);
-  const marker = '/* SHERLOCK_GENERATION_WATCH_RECOVERY_V2 */';
+  const marker = '/* SHERLOCK_GENERATION_WATCH_RECOVERY_V3 */';
   if (source.includes(marker)) return source;
   const ending = '}, [sessionId, workspace, selectionGeneration?.inspect]);';
-  const hook = `(0, react.useEffect)(() => {\n${marker}\nif (typeof selectionGeneration?.inspect !== 'function') return;\nreturn (${installResearchGenerationWatch.toString()})({workspace,sessionId,eventTarget:window,documentTarget:document,inspect:(request,signal)=>selectionGeneration.inspect(request,{signal}),apply:(id,result)=>!sherlockShared(sessionId)&&workspace.applyGenerationInspection(id,result),trace:value=>console.info('[ework-generation-delivery] '+JSON.stringify(value))});\n${ending}`;
-  const prior = source.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V1 */');
+  const hook = `(0, react.useEffect)(() => {\n${marker}\nif (typeof selectionGeneration?.inspect !== 'function') return;\nreturn (${installResearchGenerationWatch.toString()})({workspace,sessionId,eventTarget:window,documentTarget:document,publishProgress:${publishResearchWorkbenchProgress.toString()},inspect:(request,signal)=>selectionGeneration.inspect(request,{signal}),apply:(id,result)=>!sherlockShared(sessionId)&&workspace.applyGenerationInspection(id,result),trace:value=>console.info('[ework-generation-delivery] '+JSON.stringify(value))});\n${ending}`;
+  const prior = Math.max(source.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V1 */'),source.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V2 */'));
   if (prior >= 0) {
     const start = source.lastIndexOf('(0, react.useEffect)(() => {', prior), end = source.indexOf(ending, prior);
     if (start < 0 || end < 0) throw Error('任务检查恢复无法升级原生轮询生命周期。');

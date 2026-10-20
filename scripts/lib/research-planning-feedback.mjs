@@ -1,7 +1,8 @@
 // Only transport activity and verified host receipts are projected here.
 // Never display or summarize reasoning, tool arguments or source payloads.
+import {patchResearchWorkbenchFeedback} from './research-workbench-feedback.mjs'
 export function planningResponseMetadata(nodes) {
- const parts=[],calls=[];let responding=false,accepted=false,prepared=false,count=0,lastActivityAt=0
+ const parts=[],calls=[],plans=new Map();let responding=false,accepted=false,prepared=false,count=0,lastActivityAt=0
  for(const node of nodes||[]){
   if(Number.isFinite(node?.data?.lastActivityAt))lastActivityAt=Math.max(lastActivityAt,node.data.lastActivityAt)
   if(node?.kind==='assistant-step'){
@@ -22,13 +23,13 @@ export function planningResponseMetadata(nodes) {
     calls.push({settled,failed});parts.push([node.key,'call',visited.size,settled,failed])
     if(call.name==='research_workbench_create'&&settled&&!failed)for(const block of root.content||[]){
      if(block?.type!=='text'||typeof block.text!=='string'||block.text.length>500000)continue
-     try{const value=JSON.parse(block.text);if(typeof value.planId==='string'&&['accepted','prepared'].includes(value.status)){accepted=true;prepared=value.status==='prepared';count=Array.isArray(value.panels)?value.panels.length:Number.isSafeInteger(value.panelCount)?value.panelCount:0}}catch{}
+     try{const value=JSON.parse(block.text);if(typeof value.planId==='string'&&value.planId.length<=256&&['accepted','prepared'].includes(value.status)){accepted=true;prepared=value.status==='prepared';count=Array.isArray(value.panels)?value.panels.length:Number.isSafeInteger(value.panelCount)?value.panelCount:0;plans.set(value.planId,{id:value.planId,count})}}catch{}
     }
    }
    if(Array.isArray(root.subCalls))pending.push(...root.subCalls)
   }
  }
- return {signature:JSON.stringify(parts),lastActivityAt,responding,toolCount:calls.length,failedTools:calls.filter(c=>c.failed).length,accepted,prepared,count}
+ return {signature:JSON.stringify(parts),lastActivityAt,responding,toolCount:calls.length,failedTools:calls.filter(c=>c.failed).length,accepted,prepared,count,plans:[...plans.values()]}
 }
 export function advancePlanningHeartbeat(previous,meta,now) {
  if(!meta.responding&&!meta.toolCount)return previous
@@ -73,6 +74,9 @@ function ResearchPlanningFeedback({meta,startedAt,now,running}) {
 export function patchResearchPlanningFeedback(source,classify) {
  const marker='/* ework:planning-feedback:v1 */'
  if(source.includes(marker)){
+  const metaStart=source.indexOf('function planningResponseMetadata('),metaEnd=source.indexOf('\nfunction advancePlanningHeartbeat(',metaStart)
+  if(metaStart<0||metaEnd<0)throw Error('Planning receipt metadata helper missing on reinstall')
+  source=source.slice(0,metaStart)+planningResponseMetadata.toString()+source.slice(metaEnd)
   const start=source.indexOf('function researchPlanningRequest('),end=source.indexOf('\nfunction ResearchPlanningFeedback(',start)
   if(start<0||end<0)throw Error('Planning feedback request helper missing on reinstall')
   source=source.slice(0,start)+researchPlanningRequest.toString()+source.slice(end)
@@ -82,7 +86,7 @@ export function patchResearchPlanningFeedback(source,classify) {
   const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text) : null;'
   const callStart=source.indexOf(prefix),callEnd=source.indexOf(suffix,callStart)
   if(callStart<0||callEnd<0)throw Error('Planning feedback classifier missing on reinstall')
-  return source.slice(0,callStart+prefix.length)+classify.toString()+source.slice(callEnd)
+  return patchResearchWorkbenchFeedback(source.slice(0,callStart+prefix.length)+classify.toString()+source.slice(callEnd))
  }
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Planning feedback anchor missing or ambiguous: '+before.slice(0,75));source=source.replace(before,after)}
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t }) {'
@@ -105,5 +109,5 @@ export function patchResearchPlanningFeedback(source,classify) {
  exact(call,call+`\n                                const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,${classify.toString()},parts=>parseResearchPrompt(contentParts(parts).text).text) : null;`)
  const props='\t\t\t\t\t\t\t\t\tstartTime: turn?.start?.time ?? (entry.running ? runningTurn?.startTime ?? null : null),'
  exact(props,'\t\t\t\t\t\t\t\t\tplanningRequest,\n'+props)
- return source
+ return patchResearchWorkbenchFeedback(source)
 }
