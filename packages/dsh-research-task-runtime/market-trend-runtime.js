@@ -1,6 +1,7 @@
 export function trendRuntime(labels, series, low, high, viewport, observe) {
  const svg=document.querySelector('.market-trend svg'),readout=document.querySelector('.trend-readout'),crosshair=svg?.querySelector('.trend-crosshair'),dots=[...svg.querySelectorAll('.trend-selected-dot')],lines=[...svg.querySelectorAll('.trend-line')],buttons=[...document.querySelectorAll('[data-trend-series]')]
  if(!svg||!readout||!crosshair)return
+ const selectedDate=readout.querySelector('[data-trend-selected-date]'),pointRows=[...readout.querySelectorAll('[data-trend-readout-row]')]
  const visible=series.map(()=>true)
  const original={low,high,start:0,end:labels.length-1};let start=0,end=labels.length-1
  let layout=viewport(svg,[low.toFixed(2),high.toFixed(2)])
@@ -21,8 +22,12 @@ export function trendRuntime(labels, series, low, high, viewport, observe) {
   svg.dataset.selectedIndex=String(i)
   crosshair.setAttribute('x1',String(x(i)));crosshair.setAttribute('x2',String(x(i)))
   dots.forEach((dot,n)=>{dot.setAttribute('cx',String(x(i)));dot.setAttribute('cy',String(y(series[n].values[i])))})
-  readout.textContent=labels[i]+'  ·  '+series.filter((_,n)=>visible[n]).map(item=>item.name+' '+item.values[i]).join('  ·  ')
-  svg.setAttribute('aria-label',readout.textContent+'；方向键切换时点')
+  const description=labels[i]+'  ·  '+series.filter((_,n)=>visible[n]).map(item=>item.name+' '+item.values[i]).join('  ·  ')
+  if(selectedDate&&pointRows.length===series.length){
+   selectedDate.textContent=labels[i]
+   pointRows.forEach((row,n)=>{row.hidden=!visible[n];row.querySelector('[data-trend-point-value]').textContent=String(series[n].values[i])})
+  }else readout.textContent=description
+  svg.setAttribute('aria-label',description+'；方向键切换时点')
  }
  const syncLegend=()=>buttons.forEach((button,i)=>{button.setAttribute('aria-pressed',String(visible[i]));button.disabled=visible[i]&&visible.filter(Boolean).length===1})
  buttons.forEach((button,n)=>button.addEventListener('click',()=>{if(visible[n]&&visible.filter(Boolean).length===1)return;visible[n]=!visible[n];syncLegend();lines.forEach((line,i)=>{line.style.display=visible[i]?'':'none'});dots.forEach((dot,i)=>{dot.style.display=visible[i]?'':'none'});update(Number(svg.dataset.selectedIndex))}))

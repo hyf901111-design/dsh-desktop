@@ -9,6 +9,7 @@ import {priceVolumeRuntime} from './market-price-volume.js';
 import {valuationBandRuntime} from './market-valuation-band.js';
 import {equityDrawdownRuntime} from './market-equity-drawdown.js';
 import {trendRuntime} from './market-trend-runtime.js';
+import {refineTrendPresentation} from './market-trend-presentation.js';
 import {marketSeriesViewport,observeMarketSeries} from './market-series-viewport.js';
 import {FEED_CONTEXT_CSS as FEED_CONTEXT_STYLE} from './feed-context.js';
 import {cartesianChartRuntime,cartesianChartSvg} from './cartesian-chart-artifact.js';
@@ -82,6 +83,7 @@ export function refineStoredTemplateHtml(html){
    if(!Array.isArray(series)||!series.length||series.length>12||series.some(x=>typeof x?.name!=='string'||!values(x.values)))return html;
    const all=series.flatMap(x=>x.values),min=Math.min(...all),max=Math.max(...all),range=max-min||Math.max(1,Math.abs(max)*.02);
    args=[labels,series,min-range*.08,max+range*.08];
+   html=refineTrendPresentation(html,data);
   }else if(seriesVariant==='price-volume'){
    if(!values(data.prices)||data.prices.some(x=>x<=0)||!Array.isArray(data.volumes)||data.volumes.length!==labels.length||data.volumes.some(x=>x!==null&&(!finite(x)||x<0))||!data.volumes.some(finite)||!unit(data.priceUnit)||!unit(data.volumeUnit))return html;
    args=[labels,data.prices,data.volumes,data.priceUnit,data.volumeUnit];
