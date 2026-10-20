@@ -9,17 +9,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复实际模拟组件数据合同误拒绝",
+        "featureName": "收紧插件检索预算并修正时间线子任务合同",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "964651f6a17a7e9fdcdeec29e6d9d443897f5bef",
-        "tipCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
+        "baseCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
+        "tipCommit": "bde191bcc463aa7162134d14ce955ecf84bb94bd",
         "commits": [
           {
-            "commit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
+            "commit": "9b26ef4932fba4482ef4ed904450b7589f365250",
             "parents": [
-              "964651f6a17a7e9fdcdeec29e6d9d443897f5bef"
+              "045683a7eea3ab9bdf5a2196a8684b50f40dc386"
             ],
-            "subject": "保留任务业务状态并接收无损模拟数据封套"
+            "subject": "将全部可见插件取数纳入组件检索预算"
+          },
+          {
+            "commit": "bde191bcc463aa7162134d14ce955ecf84bb94bd",
+            "parents": [
+              "9b26ef4932fba4482ef4ed904450b7589f365250"
+            ],
+            "subject": "统一时间线子任务数据合同并保留业务标题"
           }
         ],
         "files": [
@@ -29,15 +36,15 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-artifact.js"
+            "path": "packages/dsh-research-task-runtime/timeline-template-contract.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
           },
           {
             "status": "M",
-            "path": "test/operations-template.test.js"
+            "path": "test/research-task-runtime.test.js"
           },
           {
             "status": "M",
@@ -49,15 +56,30 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/operations-template.test.js",
+              "test/research-task-runtime.test.js",
+              "--maxWorkers=1",
+              "-t",
+              "bounds every visible plugin retrieval|closes repetitive research|keeps provider queue waiting|does not enqueue a new turn|keeps.*source.*authoritative|preserves MCP retrieval|retains the existing non-component"
+            ],
+            "outcome": "passed",
+            "summary": "9项直接相关检索预算、来源及board/qa策略通过；/tmp/plugin-retrieval-budget-focused-20261020.log",
+            "verifiedCommit": "bde191bcc463aa7162134d14ce955ecf84bb94bd",
+            "completedAt": "2026-10-20T11:41:55.909736+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
               "test/workbench-deferred.test.js",
+              "test/timeline-template.test.js",
               "test/workbench-planning-phase.test.js",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "3文件109项通过；/tmp/deferred-contract-committed-focused-20261020.log。实际失败输出回放12条tasks与10条timeline均完整通过，无二次生成。",
-            "verifiedCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
-            "completedAt": "2026-10-20T11:17:17.428013+00:00",
+            "summary": "3文件103项通过；/tmp/timeline-worker-contract-focused-20261020.log。原生实际26条输出回放一次完整接收，保留双标题。",
+            "verifiedCommit": "bde191bcc463aa7162134d14ce955ecf84bb94bd",
+            "completedAt": "2026-10-20T11:41:55.909736+00:00",
             "timeoutMs": 120000
           },
           {
@@ -67,9 +89,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/deferred-contract-committed-typecheck-20261020.log",
-            "verifiedCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
-            "completedAt": "2026-10-20T11:17:17.428013+00:00",
+            "summary": "类型检查通过；/tmp/timeline-worker-contract-typecheck-20261020.log",
+            "verifiedCommit": "bde191bcc463aa7162134d14ce955ecf84bb94bd",
+            "completedAt": "2026-10-20T11:41:55.909736+00:00",
             "timeoutMs": 180000
           },
           {
@@ -77,117 +99,31 @@
               "git",
               "diff",
               "--check",
-              "964651f6a17a7e9fdcdeec29e6d9d443897f5bef..HEAD"
+              "045683a7eea3ab9bdf5a2196a8684b50f40dc386..HEAD"
             ],
             "outcome": "passed",
-            "summary": "差异检查及五文件独立审查通过，无Important；交互日志重放保留筛选与勾选。",
-            "verifiedCommit": "045683a7eea3ab9bdf5a2196a8684b50f40dc386",
-            "completedAt": "2026-10-20T11:17:17.428013+00:00",
+            "summary": "差异检查通过；两个修复分别经独立审查无Important",
+            "verifiedCommit": "bde191bcc463aa7162134d14ce955ecf84bb94bd",
+            "completedAt": "2026-10-20T11:41:55.909736+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree不构建共享客户端；集成后原生验证失败卡重试及新生成。"
+          "summary": "功能worktree不构建共享客户端；此前原生5卡规划54.6s，已完成卡显示延迟0.256s，但公告超时及嵌套业务标题问题仍复现，本修复集成后原生重试。"
         },
         "acceptanceCriteria": [
-          "tasks保留可选来源status，按状态和负责人组合筛选。",
-          "本地勾选仅改变个人完成记录，不修改来源status。",
-          "deferred同型同标题纯artifact信封无损接收，额外字段/来源/类型冲突仍拒绝。",
-          "客户端实际生成并保留完整记录。"
+          "container全部父可见插件取数纳入8次或90秒预算，仍在step/end收尾且保留已取证据。",
+          "board/qa检索和队列等待策略不变。",
+          "创建工具时间线指引不变，子任务及修复指引只要求根数据对象。",
+          "已知时间线外标题和内业务标题无损保留，已有subject不覆盖。",
+          "原生重试生成并实际显示完整卡片。"
         ],
         "risks": [
           "仅本地测试，不晋升main或发布。",
-          "本次只修复已经实际复现的两条格式失败，不将所有错误吞掉或补造数据。"
+          "外部数据覆盖及模型响应速度仍有波动，不声明所有需求均在固定时间完成。"
         ],
-        "generatedAt": "2026-10-20T11:17:17.428013+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1a9c417f14b80c689da6d45f3210a01b957ecc02",
-        "verificationCommit": "1a9c417f14b80c689da6d45f3210a01b957ecc02",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "1a9c417f14b80c689da6d45f3210a01b957ecc02",
-            "completedAt": "2026-10-20T11:17:59.947Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1a9c417f14b80c689da6d45f3210a01b957ecc02",
-            "completedAt": "2026-10-20T11:17:59.947Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "1a9c417f14b80c689da6d45f3210a01b957ecc02",
-            "completedAt": "2026-10-20T11:17:59.947Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "1a9c417f14b80c689da6d45f3210a01b957ecc02",
-            "completedAt": "2026-10-20T11:17:59.947Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1a9c417f14b80c689da6d45f3210a01b957ecc02",
-            "completedAt": "2026-10-20T11:17:59.947Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T11:17:59.947Z"
+        "generatedAt": "2026-10-20T11:41:55.909736+00:00"
       }
     },
     {
