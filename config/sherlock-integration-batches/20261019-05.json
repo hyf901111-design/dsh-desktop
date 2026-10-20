@@ -9,93 +9,114 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "缩短工作台首次规划并分离真实内容交付与刷新绑定",
+        "featureName": "修复真实工作台子任务上下文、取数路径与组件刷新状态",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "88be03f1aba0f81fa35dc484de5ef85678965c31",
-        "tipCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
+        "baseCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
+        "tipCommit": "4c8da0f59e422e9cc1a30ab6f374f8bc7ae527f4",
         "commits": [
           {
-            "commit": "658ffb2a3bafe0f4605377bc37a79380766607e9",
+            "commit": "566c4e41df3397aa998308c1cfe5ed88bfbf6c2a",
             "parents": [
-              "88be03f1aba0f81fa35dc484de5ef85678965c31"
+              "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8"
             ],
-            "subject": "让发送按钮遵循默认插队设置并与回车保持一致"
+            "subject": "按真实数据需求收窄首次规划参数并明确模拟回退边界"
           },
           {
-            "commit": "8bca1cf96fd3c121f23465b7dd40605284d4f467",
+            "commit": "427529e474d731b0467fd00f244d066a76fdd856",
             "parents": [
-              "658ffb2a3bafe0f4605377bc37a79380766607e9"
+              "566c4e41df3397aa998308c1cfe5ed88bfbf6c2a"
             ],
-            "subject": "避免已有组件修复任务误入新工作台规划阶段"
+            "subject": "将不支持证券筛选的新闻直通改为独立取数任务"
           },
           {
-            "commit": "a3cc4d33c5a00e105761965b6a126c4d6e2d0908",
+            "commit": "9a4d4f7ca845f6249b9532e0c2c851019d3cace4",
             "parents": [
-              "8bca1cf96fd3c121f23465b7dd40605284d4f467"
+              "427529e474d731b0467fd00f244d066a76fdd856"
             ],
-            "subject": "升级旧安装中内联的规划分类规则"
+            "subject": "保留组件重试中的具体纠错提示与已取得资料"
           },
           {
-            "commit": "ee0e1ed441de9d302e92ba11d852b7b9593a5d12",
+            "commit": "3b3276e284810aaa52efc789728aa5eeb2fe7979",
             "parents": [
-              "a3cc4d33c5a00e105761965b6a126c4d6e2d0908"
+              "9a4d4f7ca845f6249b9532e0c2c851019d3cace4"
             ],
-            "subject": "让新闻标题直接访问原文并兼容已保存组件"
+            "subject": "让旧证券新闻失败卡重试转入保留筛选的取数路径"
           },
           {
-            "commit": "9aada033494f2d16afb138f7eb48dfc1acb94fc1",
+            "commit": "029c97d3cacde39d57b5a11bb337db8afd6bddda",
             "parents": [
-              "ee0e1ed441de9d302e92ba11d852b7b9593a5d12"
+              "3b3276e284810aaa52efc789728aa5eeb2fe7979"
             ],
-            "subject": "限制工作台首次规划工具并将真实取数交给独立面板"
+            "subject": "让搜索排序表格直接使用原生数据渲染而不生成整页代码"
           },
           {
-            "commit": "698923d3b5d88511dd161187271a7aa197469ee3",
+            "commit": "77b07af8d0387dcfc419e90d62fda869f0078d20",
             "parents": [
-              "9aada033494f2d16afb138f7eb48dfc1acb94fc1"
+              "029c97d3cacde39d57b5a11bb337db8afd6bddda"
             ],
-            "subject": "修正组件共享句柄分步赋值被误判为空注册的问题"
+            "subject": "保留证券新闻回退任务的内部布局配置"
           },
           {
-            "commit": "b9cc8d41f0fa250525ff623c1a8d5bf63b13f7b1",
+            "commit": "41209e8db3dd8208f116a36570dcf8a59a47525f",
             "parents": [
-              "698923d3b5d88511dd161187271a7aa197469ee3"
+              "77b07af8d0387dcfc419e90d62fda869f0078d20"
             ],
-            "subject": "将首次工作台来源指引收敛为规划并保留子组件取数规范"
+            "subject": "区分只读状态检查与工作台新增并限定否定分句范围"
           },
           {
-            "commit": "979b5491fae1c09c32d0165faf9f12e5333bebcc",
+            "commit": "90be7b48e5e3c7c6b57bc74fe65c94437184e5a9",
             "parents": [
-              "b9cc8d41f0fa250525ff623c1a8d5bf63b13f7b1"
+              "41209e8db3dd8208f116a36570dcf8a59a47525f"
             ],
-            "subject": "分离真实数据交付与自动刷新绑定验收"
+            "subject": "按数据覆盖能力优先选择估值和财报的专业来源"
           },
           {
-            "commit": "f822747ae9fcbcd5bf9e6e7f4046dc79e30a7156",
+            "commit": "340767d8e486d4161e83cdadae7a0b0bf14bb728",
             "parents": [
-              "979b5491fae1c09c32d0165faf9f12e5333bebcc"
+              "90be7b48e5e3c7c6b57bc74fe65c94437184e5a9"
             ],
-            "subject": "保留关闭自动更新后的手动刷新绑定"
+            "subject": "保留无冒号及为是写法中的明确数据来源约束"
           },
           {
-            "commit": "18c67719a9bf58ae11a69b65f8f2a53051e0ccd0",
+            "commit": "4a54f739f77054556c22f2bb4847c2e889184475",
             "parents": [
-              "f822747ae9fcbcd5bf9e6e7f4046dc79e30a7156"
+              "340767d8e486d4161e83cdadae7a0b0bf14bb728"
             ],
-            "subject": "保留静态修复的完整来源映射并识别刷新否定"
+            "subject": "向独立工作台子任务传递原始研究范围"
           },
           {
-            "commit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
+            "commit": "f9135bd5e62cecd04bc622b33b17c23587ee47ab",
             "parents": [
-              "18c67719a9bf58ae11a69b65f8f2a53051e0ccd0"
+              "4a54f739f77054556c22f2bb4847c2e889184475"
             ],
-            "subject": "补充静态内容修复的字段映射语法示例"
+            "subject": "按真实刷新能力和定时结果显示组件刷新图标"
+          },
+          {
+            "commit": "194469a70178475c6790d56c2e950b42fa9c9270",
+            "parents": [
+              "f9135bd5e62cecd04bc622b33b17c23587ee47ab"
+            ],
+            "subject": "隔离工作台单卡来源与刷新意图解析"
+          },
+          {
+            "commit": "dd3fc9ac1f7ae323fe8fab9eca9d0129f67255b6",
+            "parents": [
+              "194469a70178475c6790d56c2e950b42fa9c9270"
+            ],
+            "subject": "排除工作台全局标题对单卡来源路由的影响"
+          },
+          {
+            "commit": "4c8da0f59e422e9cc1a30ab6f374f8bc7ae527f4",
+            "parents": [
+              "dd3fc9ac1f7ae323fe8fab9eca9d0129f67255b6"
+            ],
+            "subject": "保留金融组件最近刷新结果避免可见性切换误报成功"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+            "status": "A",
+            "path": "build/figma-workbench-icons/refresh-manual.svg"
           },
           {
             "status": "M",
@@ -107,23 +128,31 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/shared-component-validation.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
           },
           {
-            "status": "A",
-            "path": "scripts/lib/composer-submit-policy.mjs"
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
           },
           {
             "status": "M",
@@ -131,15 +160,23 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-planning-feedback.mjs"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "test/component-source-binding.test.js"
+            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
-            "status": "A",
-            "path": "test/composer-submit-policy.test.js"
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workbench-style.css"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
           },
           {
             "status": "M",
@@ -151,27 +188,31 @@
           },
           {
             "status": "M",
-            "path": "test/research-interactive-artifact.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-planning-feedback.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/research-task-runtime.test.js"
           },
           {
             "status": "M",
-            "path": "test/shared-component-validation.test.js"
+            "path": "test/workbench-deferred.test.js"
           },
           {
             "status": "M",
-            "path": "test/stored-template-refinements.test.js"
+            "path": "test/workbench-kpi-refresh.test.js"
           },
           {
             "status": "M",
             "path": "test/workbench-planning-phase.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-public-data.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-refresh-state.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-source-context.test.js"
           }
         ],
         "checks": [
@@ -180,29 +221,32 @@
               "npx",
               "vitest",
               "run",
-              "test/composer-submit-policy.test.js",
               "test/research-creation-progress.test.js",
               "test/workbench-planning-phase.test.js",
               "test/workbench-execution-policy.test.js",
               "test/workbench-planning-session.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/research-interactive-artifact.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/shared-component-validation.test.js",
               "test/research-component-source-tools.test.js",
-              "test/component-source-binding.test.js",
               "test/research-task-runtime.test.js",
+              "test/workbench-public-data.test.js",
+              "test/component-source-binding.test.js",
+              "test/free-data-sources.test.js",
+              "test/workbench-deferred.test.js",
+              "test/workbench-source-context.test.js",
+              "test/workbench-refresh-state.test.js",
               "test/component-refresh-policy.test.js",
               "test/component-data-refresh.test.js",
-              "test/workbench-public-data.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/component-data-status.test.js",
+              "test/workbench-kpi-refresh.test.js",
+              "test/financial-widget-refresh.test.js",
               "--maxWorkers=1",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "15个相关文件408项通过，含真实Harness调度、完整来源物化、手动刷新、发送按钮和旧新闻迁移",
-            "verifiedCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
-            "completedAt": "2026-10-20T04:31:21.320453+00:00",
-            "timeoutMs": 180000
+            "summary": "工作台生成与刷新状态相关聚焦检查通过；日志 /tmp/bloomberg-final-combined-focused.log。",
+            "verifiedCommit": "4c8da0f59e422e9cc1a30ab6f374f8bc7ae527f4",
+            "completedAt": "2026-10-20T05:33:17.747216+00:00",
+            "timeoutMs": 300000
           },
           {
             "argv": [
@@ -211,9 +255,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过",
-            "verifiedCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
-            "completedAt": "2026-10-20T04:31:21.320453+00:00",
+            "summary": "类型检查通过；日志 /tmp/bloomberg-final-combined-typecheck.log。",
+            "verifiedCommit": "4c8da0f59e422e9cc1a30ab6f374f8bc7ae527f4",
+            "completedAt": "2026-10-20T05:33:17.747216+00:00",
             "timeoutMs": 180000
           },
           {
@@ -223,87 +267,31 @@
               "--check"
             ],
             "outcome": "passed",
-            "summary": "空白检查通过",
-            "verifiedCommit": "9d2f7bcdc3720abfa0ccb2154532bb8d27e38bd8",
-            "completedAt": "2026-10-20T04:31:21.320453+00:00",
-            "timeoutMs": 180000
+            "summary": "空白检查通过。",
+            "verifiedCommit": "4c8da0f59e422e9cc1a30ab6f374f8bc7ae527f4",
+            "completedAt": "2026-10-20T05:33:17.747216+00:00",
+            "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "旧客户端实际复现规划301秒、七卡两失败及默认按钮排队；已保留并修复真实金融看板。相关原生bundle回调和宿主运行时检查通过。新包原生耗时、默认插队和旧新闻标题仍待集成构建后验收，不声明已通过。"
+          "outcome": "not-applicable",
+          "summary": "feature worktree按治理禁止替换共享客户端；前一c13原生复测规划101.411秒、8卡6完成2失败并有3卡研究对象错误，已针对实际根因修复。最新原生耗时、成功率、四类刷新icon与记忆编辑联合UI验收待批次05构建后进行，不声称已通过。"
         },
         "acceptanceCriteria": [
-          "先拆分并提交计划，再由独立面板取数与宿主可视化",
-          "普通真实快照不被自动刷新绑定拖入额外修复",
-          "显式手动或自动刷新保留参数、字段与来源校验",
-          "完整来源映射不因前三条样本而丢记录",
-          "默认发送插队、旧新闻标题右侧浏览器访问和已有卡片内容保持可用"
+          "真实规划仅提供合法source参数，工作台原始需求由宿主保存并传递每个子任务，指代不丢研究对象。",
+          "普通搜索排序表格直接用原生数据渲染，仍保留丰富行交互的HTML路径。",
+          "证券筛选新闻不把不支持参数发给sina-news，保持目标范围与明确布局，旧失败卡可重试。",
+          "具体纠错提示与已获得资料在工具可用的修复尝试中保留；估值财报优先实际可用的专业数据源并遵守指定来源。",
+          "只读状态检查不进入新工作台规划；原默认发送插队与新闻原文直接右屏浏览器访问保持可用。",
+          "顶栏刷新icon按定时、最近结果及真实手动能力呈现四状态，不可刷新组件隐藏并让标题左移。"
         ],
         "risks": [
-          "仅本地可撤回实验，不接受晋升批次、不发布或推送",
-          "外部接口权限、缺失字段和模型服务延迟仍需如实显示；新包实际规划1–2分钟目标待复测",
-          "原生旧金融看板已保存，构建保留全部用户数据"
+          "可撤回本地实验，仅pending批次05；不接受、晋升main、发布或推送。",
+          "外部接口权限、缺失资料及模型服务耗时仍会影响结果；必须用新包实测并如实报告。",
+          "旧宽泛research-workbench fixtures有既存Figma derived anchor及KPI/模拟预期失败，日志 /tmp/bloomberg-filtered-news-focused-20261020.log；本次未改共享依赖或无关旧fixture。",
+          "保留全部已有看板、会话及记忆数据，不删除或重置用户内容。"
         ],
-        "generatedAt": "2026-10-20T04:31:21.320453+00:00"
-      },
-      "merged": {
-        "mergeCommit": "a926086d7f4a04426f03c3aa106a982a7b763436",
-        "verificationCommit": "a926086d7f4a04426f03c3aa106a982a7b763436",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "a926086d7f4a04426f03c3aa106a982a7b763436",
-            "completedAt": "2026-10-20T04:31:53.366Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a926086d7f4a04426f03c3aa106a982a7b763436",
-            "completedAt": "2026-10-20T04:31:53.366Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "a926086d7f4a04426f03c3aa106a982a7b763436",
-            "completedAt": "2026-10-20T04:31:53.366Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T04:31:53.366Z"
+        "generatedAt": "2026-10-20T05:33:17.747216+00:00"
       }
     },
     {
