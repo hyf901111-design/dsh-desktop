@@ -100,6 +100,40 @@ it('does not put values from a different observed date under an equal-length dat
  expect(resolveComponentSnapshot(JSON.stringify(draft()),sources,now)).toBeNull()
 })
 
+it('derives normalized financial chart captions from the selected source rows instead of model arithmetic or imagined controls',()=>{
+ const input=draft(),sources=structuredClone(records)
+ input.mapping.labels.$take=-26
+ for(const series of input.mapping.series)series.values.$take=-26
+ input.mapping.note='共28个交易日；华电涨幅最大；请切换原始价格。'
+ input.mapping.subtitle='可切换原始价格'
+ input.mapping.asOf='获取于2099年；无缺失'
+ sources[1].response.received_at='2026-10-20T15:24:05.000Z'
+ sources[1].response.status='partial';sources[1].response.limitations=['来源只提供部分历史记录']
+ const before=JSON.stringify(input),result=resolveComponentSnapshot(JSON.stringify(input),sources,now)
+ expect(result).not.toBeNull()
+ expect(result.data.subtitle).toContain('26个实际交易日')
+ expect(result.data.note).toContain('26个实际交易日')
+ expect(result.data.note).toContain('价格/各自首值×100')
+ expect(result.data.note).toContain('CNY')
+ expect(result.data.note).toContain('前复权')
+ expect(result.data.note).toContain('points')
+ expect(result.data.note).toContain('不复权')
+ expect(result.data.note).toContain('2026-10-20T15:24:05.000Z')
+ expect(result.data.note).toContain('来源只提供部分历史记录')
+ for(const invented of ['28个','涨幅最大','切换原始','2099','无缺失'])expect(JSON.stringify(result.data)).not.toContain(invented)
+ expect(result.data.asOf).toContain('2026-10-20')
+ expect(result.data.asOf).toContain('静态快照')
+ expect(result.data.series.every(series=>series.values.length===26)).toBe(true)
+ expect(JSON.stringify(input)).toBe(before)
+})
+
+it('retains custom notes for raw values and unknown financial response contracts',()=>{
+ const raw=draft();for(const series of raw.mapping.series)delete series.values.$normalize
+ expect(resolveComponentSnapshot(JSON.stringify(raw),records,now).data.note).toBe(raw.mapping.note)
+ const unknown=draft(),sources=structuredClone(records);sources[1].response.schema_version='other-schema'
+ expect(resolveComponentSnapshot(JSON.stringify(unknown),sources,now).data.note).toBe(unknown.mapping.note)
+})
+
 it('completes the actual multi-source static chart in one worker without a refresh recipe',async()=>{
  const input=draft();delete input.mapping.variant
  for(const [i,source]of records.entries())if(source.tool==='financial_query')delete input.mapping.series[i].values.$map

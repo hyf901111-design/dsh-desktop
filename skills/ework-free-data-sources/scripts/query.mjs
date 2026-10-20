@@ -113,6 +113,29 @@ export function prepareRequest(sourceId, p = {}) {
   } else if (sourceId === 'sina-news') {
     endpoint = url('https://feed.mix.sina.com.cn/api/roll/get', { pageid: 384, lid: 2519, num: Math.min(limit, 50), page: 1 }); headers.referer = 'https://finance.sina.com.cn/';
     normalize = d => ({ records: d.result.data.slice(0, limit).map(r => ({ title: clean(r.title), url: r.url, publisher: clean(r.media_name), time: /^\d{10}$/.test(String(r.ctime)) ? new Date(Number(r.ctime) * 1000).toISOString() : null })), units: {}, dataTime: latest(d.result.data.map(r => ({ time: /^\d{10}$/.test(String(r.ctime)) ? new Date(Number(r.ctime) * 1000).toISOString() : null }))) });
+  } else if (sourceId === 'eastmoney-announcements') {
+    // A separate, bounded query per issuer avoids a combined first page being
+    // dominated by one company and silently omitting the other requested ones.
+    const symbol = token(p, 'symbol', /^(?:sh|sz|bj)\d{6}$/), code = symbol.slice(2);
+    endpoint = url('https://np-anotice-stock.eastmoney.com/api/security/ann', { sr: -1, page_size: limit, page_index: 1, ann_type: 'A', stock_list: code });
+    headers.referer = 'https://data.eastmoney.com/';
+    normalize = d => {
+      if (d?.success !== 1 || d.error || !Array.isArray(d.data?.list)) throw Error('invalid announcements');
+      const records = d.data.list.slice(0, limit).map(row => {
+        const issuer = row.codes?.find(issuer => issuer.stock_code === code);
+        if (!issuer || !/^AN\d{12,24}$/.test(row.art_code ?? '') || typeof row.title !== 'string' || !row.title.trim()) throw Error('invalid announcement identity');
+        const display = typeof row.display_time === 'string' && row.display_time.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?::(\d{3}))?$/);
+        const displayed = display ? `${display[1]}T${display[2]}.${display[3] ?? '000'}+08:00` : null;
+        const noticeDate = typeof row.notice_date === 'string' ? row.notice_date.match(/^\d{4}-\d{2}-\d{2}(?=$|\s)/)?.[0] ?? null : null;
+        return { symbol, code, name: clean(issuer.short_name), title: clean(row.title),
+          url: `https://data.eastmoney.com/notices/detail/${code}/${row.art_code}.html`,
+          time: displayed && Number.isFinite(Date.parse(displayed)) ? displayed : null,
+          displayTime: typeof row.display_time === 'string' ? row.display_time : null, noticeDate,
+          publisher: `${clean(issuer.short_name)} · ${code}`, category: (row.columns ?? []).map(c => clean(c.column_name)).filter(Boolean).join(' · '), summary: null };
+      });
+      return { records, units: {}, dataTime: latest(records), coverage: { symbol, scope: 'first-page', requestedLimit: limit, returned: records.length },
+        timeMeaning: 'time为东方财富列表display_time（Asia/Shanghai），不是交易所发布时点；noticeDate为原公告日期，可能次日，必须单独保留。仅首页，不代表区间全部公告；摘要未提供。' };
+    };
   }
   if (!endpoint || !normalize) throw new PublicDataError('SOURCE_REQUIRES_SETUP', '该来源尚无内置适配器');
   return { source, endpoint, normalize, headers };

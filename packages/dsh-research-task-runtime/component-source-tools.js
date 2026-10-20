@@ -6,6 +6,18 @@ import { bundledSkillEnabled } from './bundled-skill-preferences.js'
 const financialTopic = /股票|证券|A股|指数|行情|成交量|K\s*线|蜡烛图|基金|ETF|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|研报|宏观|行业数据|估值|市值|股价|白酒|医药|金融|通联|datayes|\b(?:stock|market|fund|equity|candlestick)\b/iu
 const datayesSource = /通联|datayes|萝卜投研|官网\s*MCP/iu
 const recentMarketRequest = /最近|最新|今日|当前|实时|日行情/iu
+const pluginName=String.raw`(?:通联|datayes|萝卜投研|\bMCP\b|插件)`
+
+export function componentPluginSourceProhibited(request='') {
+  return new RegExp(`(?:(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用|通过|接入)[^。；;，,\\n]{0,24}|\\b(?:do\\s+not|don't|never)\\s+(?:use|call|query)\\s+)${pluginName}`,'iu').test(request)
+}
+export function componentPluginSourceRequired(request='') {
+  return request.split(/[。；;，,\n]/u).some(part=>{
+    if(componentPluginSourceProhibited(part)||/可经|可(?:以)?(?:通过|使用|调用|接入)|可选|例如|比如|优先|建议|来源不限|\b(?:may|optional|prefer|for example)\b/iu.test(part))return false
+    if(/(?:或|或者|失败时|不可用时).{0,24}(?:网页|其他来源|腾讯|新浪|public_data_query)/iu.test(part))return false
+    return new RegExp(`(?:(?:数据来源|数据源|来源)\\s*(?:[:：]|为|是|采用|使用)\\s*|使用\\s*|通过\\s*|调用\\s*|接入\\s*|用\\s*|\\buse\\s+)(?:当前\\s*)?(?:已(?:连接|配置)(?:的)?\\s*)?${pluginName}`,'iu').test(part)
+  })
+}
 
 const planningSourceInstruction = sources => `工作台首次规划只需理解需求、拆分组件并立即提交组件计划。在各 panel.prompt 中保留用户指定的来源、所需字段和来源、日期与单位要求，由各组件任务独立取数并展示；父会话不要提前查询整套业务数据、编写页面或配置刷新。除宿主已声明的publicData直通和用户明确指定的来源外，panel.prompt只写业务需求，不替子任务编写工具调用流程，不猜接口能力。financial_query的research/profile仅支持公募基金，不能取A股财报或公司公告。用户未规定历史跨度时保留原来的“近期”等范围，不自行扩大到一年或多年度。按内容选择适合的可视化，不强制套用固定组件组合。当前会话实际可见的来源入口：${sources.join('；')}。这些入口用于记录来源路线；接口发现和目录结果不是真实业务数据，不能填成已取得的记录。`
 
@@ -43,12 +55,13 @@ export function chinaMarketWindow(now, calendarDays = 10) {
 export function preferredComponentSourceTools(schemas, request) {
   if (!financialTopic.test(request ?? '') || !Array.isArray(schemas)) return []
   const text = request ?? ''
+  if(componentPluginSourceProhibited(text))return []
   const professionalFields = /估值|市盈率|市净率|财报|财务(?:报表|与经营|数据|指标|差异|对比|比较|情况)|营业收入|净利润|基金净值|持仓|研报|\b(?:valuation|fundamentals|earnings)\b/iu.test(text)
   const explicitSource = /(?:仅|只)(?:使用|用).{0,16}(?:腾讯|新浪|tencent|sina|public_data_query)|(?:数据来源|数据源|来源)\s*(?:(?:[:：]|为|是|于|采用|使用)\s*[^，。；;\n]+|(?:腾讯|新浪|tencent|sina))/iu.test(text)
   // Basic quotes/history cannot supply financial statements or valuation
   // fields. Skip that discovery detour when an authorized professional source
   // is visible, while preserving a user's explicit source restriction.
-  if (schemas.some(tool => tool.name === 'public_data_query') && !/通联|datayes|萝卜投研|mcp|插件/iu.test(text) && (!professionalFields || explicitSource)) return []
+  if (schemas.some(tool => tool.name === 'public_data_query') && !componentPluginSourceRequired(text) && (!professionalFields || explicitSource)) return []
   return schemas.filter(tool => typeof tool?.name === 'string' && tool.name.startsWith('ework__') &&
     typeof tool.description === 'string' && datayesSource.test(tool.description))
     .map(tool => ({ name: tool.name, description: tool.description.replace(/\s+/gu, ' ').slice(0, 120) }))

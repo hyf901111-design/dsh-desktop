@@ -1378,6 +1378,23 @@ describe('Research task Subagent adapter', () => {
       }finally{await handle.dispose()}
     }
   })
+  it.each([
+    '来源可经 DataYes 积分服务接口发现或网页检索获取真实资讯。',
+    '可以通过通联或公开网页取得实际政策，来源不限。',
+    '优先使用已配置的MCP，失败时可用网页原文。',
+    '不要使用通联，查询官方政策原文。'
+  ])('does not turn an optional plugin mention into a mandatory source gate: %s',async source=>{
+    const fixture=containerAdapterFixture(),names=['public_data_query','financial_query','web_search','web_fetch','ework__datayes']
+    fixture.ctx.tools={schemas:()=>names.map(name=>({name,...(name.startsWith('ework__')?{description:'通联 DataYes API'}:{})}))}
+    const handle=await fixture.start('工作台：能源研究\n本面板：煤电政策与行业动态\n检索近期影响火电利润的政策与行业动态，'+source+'\n仅生成本面板，优先使用 news 类型。')
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow).toContain('public_data_query')
+      expect(child.toolFilter.allow).toContain('web_fetch')
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      if(source.startsWith('不要'))expect(child.toolFilter.allow).not.toContain('ework__datayes')
+    }finally{await handle.dispose()}
+  })
   it.each(['财报估值研究工作台','DataYes财报与新闻研究工作台'])('does not route a news child from the global board title: %s',async title=>{
     const {validateWorkbench,workbenchPanelPrompt,workbenchPanelIntent}=await import('../packages/dsh-research-task-runtime/workbench-plan.js')
     const {preferredComponentSourceTools}=await import('../packages/dsh-research-task-runtime/component-source-tools.js')

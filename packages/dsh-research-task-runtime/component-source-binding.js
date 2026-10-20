@@ -217,6 +217,47 @@ function financialValueSelectors(value,sources,depth=0) {
  }
  return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,financialValueSelectors(v,sources,depth+1)]))
 }
+
+// For known historical-price contracts, explanatory facts are source data too.
+// A model-authored note must not invent counts, rankings or unavailable controls
+// beside host-calculated curves. Other charts and custom data keep their notes.
+function normalizedHistoryMetadata(data,mapping,sources,now) {
+ if(data.type!=='chart'||!Array.isArray(mapping.series)||!data.labels?.length||
+    !data.labels.every((date,i)=>snapshotDate(date)===date&&(i===0||date>data.labels[i-1])))return data
+ const facts=[],limitations=new Set(),providers=new Set(),received=new Set()
+ for(const series of mapping.series){
+  const selector=series?.values,source=sources[selector?.$from],response=source?.response
+  const financial=source?.tool==='financial_query'&&source.args?.intent==='history'&&source.args?.interval==='1d'&&response?.schema_version==='financial-1'
+  const publicHistory=source?.tool==='public_data_query'&&source.args?.source==='tencent-history'&&response?.sourceId==='tencent-history'
+  const valuePath=financial?'value':'close',datePath=financial?'as_of':'time'
+  if((!financial&&!publicHistory)||selector?.$each!=='records'||selector.$normalize!=='base100'||selector.$sortBy!==datePath||
+     selector.$map?.$path!==valuePath||Object.keys(selector.$map).length!==1||
+     ['$scale','$prefix','$suffix','$path','$single'].some(key=>Object.hasOwn(selector,key)))return data
+  const {$map,$normalize,$digits,$as,...selection}=selector
+  const rows=evaluateMapping({...selection,$map:{$path:''}},Object.fromEntries(Object.entries(sources).map(([key,record])=>[key,record.response])),now)
+  if(rows.length!==data.labels.length||rows.some((row,i)=>row?.[datePath]!==data.labels[i]||typeof row[valuePath]!=='number'||!Number.isFinite(row[valuePath])||financial&&row.metric!=='收盘价'))return data
+  const single=values=>{const unique=[...new Set(values)];return unique.length===1&&typeof unique[0]==='string'&&unique[0].trim()?unique[0]:null}
+  const instrument=single(rows.map(row=>financial?row.instrument:row.symbol))
+  const unit=financial?single(rows.map(row=>row.unit)):response.units?.price
+  const basis=financial?single(rows.map(row=>row.price_basis)):response.adjustment
+  if(!instrument||typeof unit!=='string'||!unit.trim()||typeof basis!=='string'||!basis.trim())return data
+  facts.push(`${instrument}：原始单位 ${unit}，${basis}；基期值 ${rows[0][valuePath]}，末值 ${rows.at(-1)[valuePath]}`)
+  providers.add(financial?'financial_query / financial-1':`${response.source}（${snapshotUrl(response.sourceUrl)??'tencent-history'}）`)
+  const fetched=financial?response.received_at:response.receivedAt
+  if(typeof fetched==='string'&&Number.isFinite(Date.parse(fetched)))received.add(fetched)
+  const warnings=typeof response.limitations==='string'?[response.limitations]:response.limitations??[]
+  for(const warning of warnings)if(typeof warning==='string'&&warning.trim())limitations.add(warning)
+  if(response.status==='partial')limitations.add(`${instrument} 来源响应为部分数据`)
+ }
+ const range=`${data.labels[0]} 至 ${data.labels.at(-1)}`
+ const count=`${data.labels.length}个实际交易日`
+ const note=[`来源：${[...providers].join('；')}。展示区间 ${range}，各序列${count}，日期逐项对齐。`,
+  ...facts,`宿主按筛选、排序及截取后的价格/各自首值×100计算；原始单位与复权口径保留如上。仅反映已取得记录，不能据此判断所请求区间是否完整。`,
+  received.size?`获取时间（非报价时间）：${[...received].join('、')}`:'获取时间：来源未提供',
+  ...limitations].join('\n')
+ if(note.length>2000)throw Error('历史来源说明超过当前图表容量，不能省略来源限制')
+ return {...data,unit:'基期100',subtitle:`${range} · ${count} · 各自首值=100`,asOf:`历史日线 · 数据截至 ${data.labels.at(-1)}`,note}
+}
 export function resolveComponentSnapshot(text,records,now=new Date(),options={}) {
   const candidate=dataBoundCandidate(text)
   const contract=mappingContract(candidate?.mapping,options)
@@ -246,7 +287,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
     const mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
     const data=materializeComponentMapping(mapping,responses,now)
     if(templateSourceDataIssue(data)||templateDataIssue(data))return null
-    const snapshot=normalizeChartMetadata(componentSnapshotData(data)),output=acceptArtifactOutput(JSON.stringify(snapshot))
+    const snapshot=normalizeChartMetadata(componentSnapshotData(normalizedHistoryMetadata(data,mapping,sources,now))),output=acceptArtifactOutput(JSON.stringify(snapshot))
     return output?{data:snapshot,output}:null
   }catch{return null}
 }
@@ -256,7 +297,7 @@ export const COMPONENT_STATIC_CHART_PROMPT = `
 mapping 必须保留上文具体 variant，不得只写 type:chart 而省略变体。每条 values 都要选择数值字段，例如 financial-1 收盘价的完整表达式：{"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"value"},"$normalize":"base100","$digits":2}。不要漏掉 $map；其他来源使用其实际数值字段。
 $from 引 requests.key，$each 指真实列表路径，$map 指每行字段，$filter:{"实际字段":"实际值"} 为标量等值筛选（多个条件同时满足）；$sortBy:"真实日期字段"/$order:"asc" 排序，$take:-20 取末20条，$as:"number" 转数值，$digits:2 控制显示精度。例如 financial_query 的响应明确含 records/metric/as_of/value 时，labels 使用 {"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"as_of"}}；series.values 使用同一筛选排序，$map 改为 {"$path":"value"}。路径与筛选值以本轮真实响应为准，其他来源不套用这些字段。
 需求要求共同基期100比较时，在每条 values 的 $each 同层加 "$normalize":"base100" 和 "$digits":2，由宿主按筛选排序后的首值执行 值/首值×100；不手算数组，不写死 $scale=100/起点。归一化只用于所需的比较；原始价格需求保留原单位。每条序列都必须使用同一组实际日期，不能将不同日期按条数硬对齐；缺失值不填0。各标的、来源、复权口径、日期和计算说明保留在 note，asOf 仅放简短来源与时点（最多256字）。样本只说明字段路径，不代表完整数据条数；原响应中存在的标的不得因上下文样本省略而标为未取得。
-note 保留真实来源、日期、原单位和复权口径；不要凭样本、记忆或心算添加交易日数、区间涨跌幅、首尾值及强弱排名等额外数值断言。映射后的完整曲线由宿主计算，不能用未经计算核对的文字结论与曲线互相矛盾。
+note 保留真实来源、日期、原单位和复权口径；不要凭样本、记忆或心算添加交易日数、区间涨跌幅、首尾值及强弱排名等额外数值断言。映射后的完整曲线由宿主计算，不能用未经计算核对的文字结论与曲线互相矛盾。已识别的日线基期100映射由宿主从实际选中记录生成副标题、时点和来源说明，不采用手写计数、排名或控件操作说明；当前图表只支持图例显隐、数据点查看和完整数据展开，不承诺原始价格切换。
 仅有非结构化资料或映射无法表达必要内容时，按上文原生chart JSON交付可核查内容，不伪造映射。`
 
 export const COMPONENT_BOUND_DATA_PROMPT = `

@@ -352,6 +352,29 @@
       "reviewedOn": "2026-10-10"
     },
     {
+      "id": "eastmoney-announcements",
+      "name": "东方财富证券公告列表",
+      "category": "news",
+      "documentation": "https://data.eastmoney.com/notices/",
+      "coverage": "按已确认A股证券代码读取近期公告首页，原始标题、公司、列表展示时间、公告日期与原文链接",
+      "parameters": {
+        "symbol": "单个已确认交易代码，如sh600011/sz000001/bj430047；多公司分别查询，不合并抢占同一首页",
+        "limit": "1–100条，默认20；新闻组件总条数上限40，多公司需合理分配"
+      },
+      "example": {
+        "symbol": "sh600011",
+        "limit": 10
+      },
+      "cacheSeconds": 60,
+      "access": "public-web-best-effort",
+      "authentication": "none",
+      "limitations": "无稳定官方API文档，尽力而为；仅公告首页，不代表指定区间全部披露；display_time是列表展示时间，noticeDate是原公告日期，两者不可混用。不是普通新闻或政策检索，不提供摘要。",
+      "rights": "按东方财富及公告发布方条款核实；公开网页可访问不等于商业再分发授权",
+      "queryable": true,
+      "defaultEligible": true,
+      "reviewedOn": "2026-10-21"
+    },
+    {
       "id": "eurostat",
       "name": "Eurostat",
       "category": "macro",

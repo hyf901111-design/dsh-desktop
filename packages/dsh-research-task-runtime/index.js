@@ -6,7 +6,7 @@ import { templateDataIssue, templateSourceDataIssue, TABLE_GUIDANCE } from './te
 import { isDeepStrictEqual } from 'node:util'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
-import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow } from './component-source-tools.js'
+import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
 import { componentSourceCollector, componentSnapshotEvidence, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
@@ -273,13 +273,12 @@ function containerAllowsWebSearch(prompt) {
   const value = String(workbenchPanelIntent(prompt) ?? '')
   if (/(?:不需要|无需|不用|不要|不必|禁止)(?:再|去|进行|额外|任何)?(?:联网|上网|搜索|检索|查找|查询|获取外部数据)|不联网|\b(?:do not|don't|no need to|without)\s+(?:search|searching|browse|browsing|internet|network)\b/iu.test(value)) return false
   if (/(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用).{0,12}(?:web_search|financial_query|public_data_query|网页搜索|金融数据|免费数据)/iu.test(value)) return false
-  if (/(?:不要|禁止|不得|无需|不用|不)(?:再|实际)?(?:调用|使用|通过|接入).{0,12}(?:通联|DataYes|MCP)/iu.test(value)) return false
   // An explicit retrieval request is authoritative even when it says that old
   // results or example data must NOT be used. Those words are not an offline request.
   if (/(?:调用|使用).{0,16}(?:web_search|financial_query|public_data_query|网页搜索|金融数据|免费数据)/iu.test(value)) return true
   // A requested MCP fetch remains online even when the result is an offline
   // card and the user explicitly forbids invented/sample observations.
-  if (/(?:使用|通过|调用|接入|用)[^。；;\n]{0,40}(?:通联|DataYes|萝卜投研|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实(?:数据|资料)|查(?:最近|公告|研报))/iu.test(value)) return true
+  if (!componentPluginSourceProhibited(value)&&/(?:使用|通过|调用|接入|用)[^。；;\n]{0,40}(?:通联|DataYes|萝卜投研|\bMCP\b)[^。；;\n]{0,60}(?:获取|查询|检索|取数|取真实(?:数据|资料)|查(?:最近|公告|研报))/iu.test(value)) return true
   if (/离线(?:页面|模式|运行)?/u.test(value)) return false
   const explicitFresh = /(?:真实|实际)(?:的)?(?:最新|实时|当前)|(?:查询|获取|搜索|检索|接入|刷新|补充|更新)(?:真实|实际|的|市场)*(?:最新|实时|当前|今日|今天)|\b(?:fetch|search|retrieve|replace.*with)\s+(?:real|live|latest|current)\b/iu.test(value)
   // Rejecting invented observations is a retrieval requirement, not permission
@@ -1583,8 +1582,7 @@ export class ResearchTaskRuntime {
           // A named connected source is part of the requested result. Static
           // quotes from a different website cannot satisfy it, even if the
           // model writes the unavailable-source disclaimer into metadata.
-          if(plannedFormat&&
-            /(?:数据源\s*[:：]\s*|使用\s*|通过\s*|调用\s*|接入\s*|用\s*)(?:当前\s*)?(?:已连接的\s*)?(?:通联|DataYes)/iu.test(panelRequest)){
+          if(plannedFormat&&componentPluginSourceRequired(panelRequest)){
             const observedBusiness = componentBindingEvidence(sourceRecords.filter(record=>record.tool?.startsWith('ework__')))
             // Custom pages are snapshots, not registered native mapping
             // templates. They still require an actual business response.
@@ -1995,7 +1993,8 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       const needsWebData = kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(sourceRequest ?? '') && (surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_search'))
       if (signal.aborted) throw signal.reason
       const boundTemplate = kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__') || tool.name === 'public_data_query')
-      const pluginRequired = boundTemplate && /通联|datayes|\bmcp\b|插件/iu.test(sourceRequest ?? '')
+      const pluginRequired = boundTemplate && componentPluginSourceRequired(sourceRequest ?? '')
+      const pluginProhibited = componentPluginSourceProhibited(sourceRequest ?? '')
       const bindingRequested = componentBindingRequested(sourceRequest)
       // Compact the initial typed task, but retain a recovery's concrete error,
       // prior response and evidence instead of restarting the original request.
@@ -2074,6 +2073,7 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         // tools only encourages invalid-ID retries after retrieval is done.
         (!boundTemplate || name.startsWith('ework__') || ['public_data_query','financial_query','web_search','web_fetch'].includes(name)) &&
         (!pluginRequired || !['financial_query','public_data_query'].includes(name)) &&
+        (!pluginProhibited || !name.startsWith('ework__')) &&
         (permitsTools || !networkTools.has(name) && !name.startsWith('ework__')) &&
         // Keep the generic financial adapter as a last-resort fallback when
         // the specialist's search, catalog, or business API is unavailable.
