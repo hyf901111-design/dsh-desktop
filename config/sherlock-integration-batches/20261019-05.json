@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "财报取数预算、报告期与业务证据优先保留",
+        "featureName": "用原始财报金额核验明确计算的同比",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "a38142bb4c40b9819e52be3ac01f4e6dd5444412",
-        "tipCommit": "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e",
+        "baseCommit": "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e",
+        "tipCommit": "2b6d5aa38b3080d1fd3bb0697827743c5363f79e",
         "commits": [
           {
-            "commit": "9b681677df70a5b7a7d731deaf34a1688ed620b1",
+            "commit": "2b6d5aa38b3080d1fd3bb0697827743c5363f79e",
             "parents": [
-              "a38142bb4c40b9819e52be3ac01f4e6dd5444412"
+              "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e"
             ],
-            "subject": "分离财报接口与业务取数预算并保留近期和同比证据"
-          },
-          {
-            "commit": "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e",
-            "parents": [
-              "9b681677df70a5b7a7d731deaf34a1688ed620b1"
-            ],
-            "subject": "避免接口定义挤占后续公司业务数据的生成上下文"
+            "subject": "用原始财报金额核验计算同比并保留比较期依据"
           }
         ],
         "files": [
@@ -36,27 +29,15 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
-          },
-          {
-            "status": "M",
             "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "A",
-            "path": "packages/dsh-research-task-runtime/statement-evidence.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-component-source-tools.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "packages/dsh-research-task-runtime/observed-statement-growth.js"
           },
           {
             "status": "A",
-            "path": "test/statement-evidence.test.js"
+            "path": "test/observed-statement-growth.test.js"
           }
         ],
         "checks": [
@@ -64,17 +45,20 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "test/observed-statement-growth.test.js",
               "test/statement-evidence.test.js",
+              "test/observed-market-history.test.js",
               "test/research-component-source-tools.test.js",
               "test/research-task-runtime.test.js",
               "test/component-web-snapshot-evidence.test.js",
               "test/component-source-binding.test.js",
-              "test/research-task-integrations.test.js"
+              "test/research-task-integrations.test.js",
+              "test/workbench-scrollbar-theme-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "392项直接相关检查通过；/tmp/statement-business-context-final-focused-20261021-0345.log",
-            "verifiedCommit": "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e",
-            "completedAt": "2026-10-20T19:44:57.313818+00:00",
+            "summary": "433项直接相关检查通过；/tmp/statement-growth-final-focused-20261021.log",
+            "verifiedCommit": "2b6d5aa38b3080d1fd3bb0697827743c5363f79e",
+            "completedAt": "2026-10-20T20:10:12.012103+00:00",
             "timeoutMs": 180000
           },
           {
@@ -84,9 +68,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/statement-business-context-final-typecheck-20261021-0345.log",
-            "verifiedCommit": "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e",
-            "completedAt": "2026-10-20T19:44:57.313818+00:00",
+            "summary": "类型检查通过；/tmp/statement-growth-final-typecheck-20261021.log",
+            "verifiedCommit": "2b6d5aa38b3080d1fd3bb0697827743c5363f79e",
+            "completedAt": "2026-10-20T20:10:12.012103+00:00",
             "timeoutMs": 180000
           },
           {
@@ -94,120 +78,31 @@
               "git",
               "diff",
               "--check",
-              "a38142bb4c40b9819e52be3ac01f4e6dd5444412..HEAD"
+              "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e..HEAD"
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "c6d2b2f32a74f1b992debe5195e98c8ec4c2226e",
-            "completedAt": "2026-10-20T19:44:57.313818+00:00",
+            "verifiedCommit": "2b6d5aa38b3080d1fd3bb0697827743c5363f79e",
+            "completedAt": "2026-10-20T20:10:12.012103+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "后端取数与上下文行为变更。已回放上轮真实50KB截断财务响应，确认不把旧片段和内部溢出路径传给最终生成；新查询与字段完整性仍需构建后原生复测。/tmp/statement-native-response-replay-20261021.json"
+          "summary": "宿主静态表格计算核验变更；完整原生公开取数记录回放修正两项0.01百分点误差，其余单元格不变。/tmp/statement-growth-native-replay-20261021.json。原生同需求复测待本地构建后完成。"
         },
         "acceptanceCriteria": [
-          "组件最多4次元数据读取单独计数；实际使用已识别插件接口发现后允许至多12个业务读取成本、总计16次；目录循环8次截止；普通任务保留8个业务成本，qa/board原上限不变。",
-          "原有90秒检索窗口和子任务权限保持；只在step/end收起工具，不打断当前已公布调用。",
-          "最新财报首次按当前定义限制报告期，复用实际报告与同比基期；显式历史日期及日期区间不被默认覆盖，证券代码内的年份样式数字不当日期。",
-          "最终生成保留有效响应中各证券近期完整字段及需要的上年同期记录；原始证据不被修改，不把本次响应内最近记录冒充来源全量最新。",
-          "已截断财务JSON（包括中部拼接）不当成完整最新资料，不转发内部溢出路径；不读取该路径来代替授权业务取数。",
-          "接口目录与参数定义每源最多2KB、累计4KB，仅使用业务与网页证据剩余额度；后取得公司的有效数据优先进入原48KB上下文，源记录完整保留。"
+          "仅静态表格中明确标注计算值的营业收入或归母净利同比，当前展示原值与观测来源相符时处理；实时绑定配方不被注入静态计算。",
+          "严格匹配证券代码、交易所、报告日期、披露日期、币种、会计准则、合并标记、报告类型及跨度，使用同份报告中的上年比较期；多义或冲突来源不猜测。",
+          "同比使用原始金额按十进制整数比运算，最后四舍五入两位；零负基期保留原始值并标注普通同比不适用。",
+          "不额外调用模型，不修改原始来源或组件布局；长原有说明完整保留，幂等回放不重复添加注释。"
         ],
         "risks": [
-          "真实字段完整性与速度待原生同需求复测，不能仅按预算和测试称整体完成。",
-          "本批只做本地测试，不发布、不晋升main。",
-          "政策资讯标题与链接逐条校验仍待后续处理：/tmp/policy-fourth-title-url-mismatch-audit-20261021.json。"
+          "真实生成可能使用其他列名或布局；本次仅处理明确可对应的计算值，不宣称全部财务数据已验证。",
+          "经营数据重复和截断、政策资讯逐项标题日期链接对应仍待后续处理。",
+          "本批只做本地测试，不发布、不晋升main。"
         ],
-        "generatedAt": "2026-10-20T19:44:57.313818+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3c6664f43bc7864009959787ef110671d63d40b9",
-        "verificationCommit": "3c6664f43bc7864009959787ef110671d63d40b9",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "3c6664f43bc7864009959787ef110671d63d40b9",
-            "completedAt": "2026-10-20T19:45:58.843Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3c6664f43bc7864009959787ef110671d63d40b9",
-            "completedAt": "2026-10-20T19:45:58.843Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "3c6664f43bc7864009959787ef110671d63d40b9",
-            "completedAt": "2026-10-20T19:45:58.843Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "3c6664f43bc7864009959787ef110671d63d40b9",
-            "completedAt": "2026-10-20T19:45:58.843Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3c6664f43bc7864009959787ef110671d63d40b9",
-            "completedAt": "2026-10-20T19:45:58.843Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T19:45:58.843Z"
+        "generatedAt": "2026-10-20T20:10:32.724976+00:00"
       }
     },
     {
