@@ -78,3 +78,74 @@ it('skips merged headers so column handles cannot misalign grouped data', async 
   const stop = installWorkbenchTableColumns(f.doc.body)
   try { expect(f.table.querySelector('[role=separator]')).toBe(null) } finally { stop(); await f.win.happyDOM.close() }
 })
+
+it('uses live retained-header labels after regeneration and restores manual widths only for the same column identity',async()=>{
+ const f=fixture(),storage=new Map(),state=createWorkbenchTableColumnState({getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)},'board')
+ const saved=vi.fn((owner,index,labels,value)=>state.set(owner.dataset.researchNodeId,index,labels,value))
+ const stop=installWorkbenchTableColumns(f.doc.body,{load:(owner,index,labels)=>state.get(owner.dataset.researchNodeId,index,labels),save:saved})
+ const oldLabels=['名称','日期','完整说明'],newLabels=['公司（代码）','最新报告期（披露日）','完整说明']
+ try{
+  const headers=[...f.table.tHead.querySelector('tr').cells],oldHandles=headers.map(header=>header.querySelector('[role=separator]'))
+  oldHandles[0].dispatchEvent(new f.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowRight'}))
+  expect(f.table.style.width).toBe('370px')
+  // React keeps the TH and its imperative data attributes while updating the
+  // sort button. Those cached attributes must not override the new renderer.
+  headers[0].querySelector('button').firstChild.nodeValue=newLabels[0];headers[0].querySelector('button').setAttribute('aria-label','按'+newLabels[0]+'排序')
+  headers[1].querySelector('button').firstChild.nodeValue=newLabels[1];headers[1].querySelector('button').setAttribute('aria-label','按'+newLabels[1]+'排序')
+  await vi.waitFor(()=>expect(headers.map(header=>header.querySelector('[role=separator]').getAttribute('aria-label'))).toEqual(newLabels.map(label=>'调整“'+label+'”列宽')))
+  expect(headers.map(header=>header.dataset.columnLabel)).toEqual(newLabels)
+  expect(f.table.style.width).toBe('')
+  oldHandles[1].dispatchEvent(new f.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowRight'}))
+  expect(saved.mock.calls.at(-1)[2]).toEqual(newLabels)
+  expect(saved.mock.calls.at(-1)[3].widths).toEqual([120,130,120])
+  expect(state.get('own-table',0,oldLabels).widths).toEqual([130,120,120])
+  f.table.tBodies[0].querySelector('tr').cells[0].textContent='刷新后的公司'
+  await vi.waitFor(()=>expect(f.table.rows[1].cells[1].dataset.columnWrap).toBe('true'))
+  expect(f.table.style.width).toBe('370px')
+ }finally{stop();await f.win.happyDOM.close()}
+})
+
+it('does not restore a saved presentation onto a different same-count set of columns',async()=>{
+ const f=fixture();let stop=installWorkbenchTableColumns(f.doc.body)
+ const view=createWorkbenchRefreshSurface(f.doc.body)
+ try{
+  f.table.querySelector('[role=separator]').dispatchEvent(new f.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowRight'}))
+  const previous=view.snapshot()
+  stop()
+  const head=f.table.tHead.querySelector('tr')
+  head.innerHTML='<th>证券代码</th><th>报告期</th><th>经营数据</th>'
+  stop=installWorkbenchTableColumns(f.doc.body)
+  expect(f.table.style.width).toBe('')
+  view.apply(previous)
+  expect(f.table.style.width).toBe('')
+  expect([...head.cells].every(cell=>cell.dataset.columnWrap==='false')).toBe(true)
+ }finally{view.dispose();stop();await f.win.happyDOM.close()}
+})
+
+it('keeps the current manual widths when a renderer replaces header elements without changing their labels',async()=>{
+ const f=fixture(),stop=installWorkbenchTableColumns(f.doc.body)
+ try{
+  f.table.querySelector('[role=separator]').dispatchEvent(new f.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowRight'}))
+  const head=f.table.tHead.querySelector('tr'),old=head.cells[0],replacement=f.doc.createElement('th')
+  replacement.innerHTML='<button aria-label="按名称排序">名称</button>'
+  head.replaceChild(replacement,old)
+  await vi.waitFor(()=>expect(replacement.querySelector('[role=separator]')).not.toBeNull())
+  expect(replacement.querySelector('[role=separator]').getAttribute('aria-valuenow')).toBe('130')
+  expect(f.table.style.width).toBe('370px')
+ }finally{stop();await f.win.happyDOM.close()}
+})
+
+it('refreshes separator indices when existing headers move and reads changed plain HTML header text',async()=>{
+ const f=fixture(),saved=vi.fn(),stop=installWorkbenchTableColumns(f.doc.body,{save:saved})
+ try{
+  const row=f.table.tHead.querySelector('tr'),first=row.cells[0],second=row.cells[1]
+  row.insertBefore(second,first)
+  await vi.waitFor(()=>expect(second.querySelector('[role=separator]').dataset.workbenchColumnResize).toBe('0'))
+  expect(first.querySelector('[role=separator]').dataset.workbenchColumnResize).toBe('1')
+  second.querySelector('[role=separator]').dispatchEvent(new f.win.KeyboardEvent('keydown',{bubbles:true,key:'ArrowRight'}))
+  expect(saved.mock.calls.at(-1)[2]).toEqual(['日期','名称','完整说明'])
+  expect(saved.mock.calls.at(-1)[3].widths).toEqual([130,120,120])
+  row.cells[2].textContent='经营披露与来源'
+  await vi.waitFor(()=>expect(row.cells[2].querySelector('[role=separator]').getAttribute('aria-label')).toBe('调整“经营披露与来源”列宽'))
+ }finally{stop();await f.win.happyDOM.close()}
+})

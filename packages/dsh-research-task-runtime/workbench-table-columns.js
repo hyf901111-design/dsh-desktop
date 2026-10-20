@@ -22,14 +22,22 @@ export function installWorkbenchTableColumns(root, options = {}) {
     const headers = [...(table.tHead?.querySelector('tr')?.cells || table.querySelector('tr')?.cells || [])]
     if (!headers.length || headers.length > 40 || headers.some(el => el.tagName !== 'TH' || el.colSpan !== 1) || table.querySelector('[colspan]:not([colspan="1"]),[rowspan]:not([rowspan="1"])')) return
     let control = tables.get(table)
-    const labels = headers.map(el => el.getAttribute('data-column-label') || el.querySelector('button[aria-label]')?.getAttribute('aria-label')?.replace(/^按(.+)排序$/, '$1') || el.textContent.trim())
-    if (control && JSON.stringify(control.labels) !== JSON.stringify(labels)) { control.dispose(); tables.delete(table); control = null }
+    const labels = headers.map(el => el.querySelector('button[aria-label]')?.getAttribute('aria-label')?.replace(/^按(.+)排序$/, '$1') || el.textContent.trim() || el.getAttribute('data-column-label') || '')
+    const sameLabels = control && JSON.stringify(control.labels) === JSON.stringify(labels)
+    let previousState = null, previousGroups = []
+    if (control && (!sameLabels || headers.some((header,i) => header !== control.headers[i]))) {
+      if (sameLabels) { previousState = control.snapshot(); previousGroups = control.groups }
+      control.dispose(); tables.delete(table); control = null
+    }
     if (!control) {
       const owner = table.closest('[data-research-node-id]') || root
       const index = [...owner.querySelectorAll('table')].indexOf(table)
-      let state = null, dragging = null, usedGroup = false, published = ''
-      const originalGroups = [...table.querySelectorAll(':scope>colgroup')].filter(group => !group.hasAttribute('data-workbench-columns')).map(group => group.cloneNode(true))
-      const key = 'table-columns-' + index
+      let state = previousState, dragging = null, usedGroup = false, published = ''
+      const currentGroups = [...table.querySelectorAll(':scope>colgroup')].filter(group => !group.hasAttribute('data-workbench-columns')).map(group => group.cloneNode(true))
+      const originalGroups = currentGroups.length ? currentGroups : previousGroups
+      let labelHash = 2166136261
+      for (const char of JSON.stringify(labels)) labelHash = Math.imul(labelHash ^ char.charCodeAt(0), 16777619)
+      const key = 'table-columns-' + index + '-' + (labelHash >>> 0).toString(36)
       const apply = () => {
         table.setAttribute('data-workbench-table-columns', '')
         const rows = [...table.rows]
@@ -68,9 +76,10 @@ export function installWorkbenchTableColumns(root, options = {}) {
           if (!handle) {
             handle = doc.createElement('span'); handle.setAttribute('data-workbench-column-resize', String(i))
             handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'vertical'); handle.tabIndex = 0
-            handle.setAttribute('aria-label', '调整“' + labels[i] + '”列宽'); handle.title = '拖动调整列宽 · 双击恢复默认'
             header.append(handle)
           }
+          handle.setAttribute('data-workbench-column-resize', String(i))
+          handle.setAttribute('aria-label', '调整“' + labels[i] + '”列宽'); handle.title = '拖动调整列宽 · 双击恢复默认'
           handle.setAttribute('aria-valuemin', '48'); handle.setAttribute('aria-valuemax', '1600')
           handle.setAttribute('aria-valuenow', String(Math.round(state?.widths[i] || header.getBoundingClientRect().width || 80)))
         })
@@ -97,16 +106,19 @@ export function installWorkbenchTableColumns(root, options = {}) {
       const reset = event => { if (!handleFor(event)) return; click(event); state = null; apply(); save() }
       const keyboard = event => { const handle = handleFor(event); if (!handle || !['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return; click(event); if (event.key === 'Home') reset(event); else { const i = Number(handle.dataset.workbenchColumnResize), current = widths(); resize(i, current[i] + (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 50 : 10), current); save() } }
       const restore = event => { if (event.detail === null || valid(event.detail, headers.length)) { state = event.detail; apply() } }
-      try { const saved = options.load?.(owner, index, labels); if (valid(saved, headers.length)) state = saved } catch {}
+      try { const saved = previousState || options.load?.(owner, index, labels); if (valid(saved, headers.length)) state = saved } catch {}
       table.addEventListener('pointerdown', down, true); table.addEventListener('click', click, true); table.addEventListener('dblclick', reset, true); table.addEventListener('keydown', keyboard, true); table.addEventListener('sherlock-chart-restore', restore)
-      control = { labels, apply, dispose() { table.removeEventListener('pointerdown', down, true); table.removeEventListener('click', click, true); table.removeEventListener('dblclick', reset, true); table.removeEventListener('keydown', keyboard, true); table.removeEventListener('sherlock-chart-restore', restore); doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', finish); doc.removeEventListener('pointercancel', finish) } }
+      control = { labels, headers, groups:originalGroups, snapshot:()=>state, apply, dispose() { table.removeEventListener('pointerdown', down, true); table.removeEventListener('click', click, true); table.removeEventListener('dblclick', reset, true); table.removeEventListener('keydown', keyboard, true); table.removeEventListener('sherlock-chart-restore', restore); doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', finish); doc.removeEventListener('pointercancel', finish) } }
       tables.set(table, control)
     }
     control.apply()
   }
   const scan = () => { queued = false; if (disposed) return; for (const [table, control] of tables) if (!root.contains(table)) { control.dispose(); tables.delete(table) } for (const table of root.querySelectorAll('table')) configure(table) }
-  const observer = new win.MutationObserver(() => { if (!queued && !disposed) { queued = true; win.queueMicrotask(scan) } })
-  observer.observe(root, { childList: true, subtree: true }); scan()
+  const observer = new win.MutationObserver(records => {
+    const changed = records.some(record => record.type === 'childList' || record.type === 'characterData' && record.target.parentElement?.closest('th') || record.type === 'attributes' && record.target.tagName === 'BUTTON' && record.target.closest('th'))
+    if (changed && !queued && !disposed) { queued = true; win.queueMicrotask(scan) }
+  })
+  observer.observe(root, { childList: true, characterData: true, attributes:true, attributeFilter:['aria-label'], subtree: true }); scan()
   return () => { disposed = true; observer.disconnect(); for (const control of tables.values()) control.dispose(); tables.clear() }
 }
 

@@ -36,13 +36,14 @@ export class Simulation {
     this.fish.length = Math.min(this.fish.length, count);
     while (this.fish.length < count) {
       const i = this.fish.length;
-      const x = (i === 0 ? 0.45 : i === 1 ? 0.65 : this.range(0.2, 0.8)) * this.width;
-      const y = (i === 0 ? 0.42 : i === 1 ? 0.86 : this.range(0.2, 0.8)) * this.height;
+      const x = (i === 0 ? 0.48 : i === 1 ? 0.64 : this.range(0.2, 0.8)) * this.width;
+      const y = (i === 0 ? 0.27 : i === 1 ? 0.75 : this.range(0.2, 0.8)) * this.height;
       const fish={
-        x, y, angle: i === 0 ? -0.55 : -2.0, turn: 0,
+        x, y, angle: i === 0 ? -0.12 : -Math.PI + 0.12, turn: 0,
+        lane: i % 2 === 0 ? 0.26 : 0.77,
         phase: this.range(0, TAU), rhythm: this.range(0.87, 1.12),
         wander: this.range(0, TAU), cycle: this.range(0, TAU),
-        cyclePeriod: this.range(3.8,7.2), effort: 0.5, velocity: 90,
+        cyclePeriod: this.range(5.5,8.5), effort: 0.5, velocity: 66,
         size: i === 0 ? 1 : this.range(0.87, 0.97),
         tx: this.range(0.15, 0.85) * this.width,
         ty: this.range(0.12, 0.88) * this.height,
@@ -63,8 +64,8 @@ export class Simulation {
     // Keep destinations in open water. Repeated forward targets on the edge
     // would trap a smooth-turning fish in a perimeter orbit.
     fish.tx=clamp(fish.x+Math.cos(angle)*distance,this.width*0.25,this.width*0.75);
-    fish.ty=clamp(fish.y+Math.sin(angle)*distance,this.height*0.25,this.height*0.75);
-    fish.retarget=this.range(6,11);
+    fish.ty=clamp(fish.y+Math.sin(angle)*distance,this.height*(fish.lane-0.10),this.height*(fish.lane+0.10));
+    fish.retarget=this.range(8,13);
   }
 
   resize(width, height) {
@@ -117,11 +118,24 @@ export class Simulation {
       const margin=Math.max(16,130*scale);
       dx+=1.8*(Math.pow(Math.max(0,(margin-aheadX)/margin),2)-Math.pow(Math.max(0,(aheadX-this.width+margin)/margin),2));
       dy+=1.8*(Math.pow(Math.max(0,(margin-aheadY)/margin),2)-Math.pow(Math.max(0,(aheadY-this.height+margin)/margin),2));
+      // Broad, overlapping home ranges let each fish wander without repeatedly
+      // steering both toward the middle of the pond.
+      dy+=clamp((fish.lane*this.height-fish.y)/(this.height*0.18),-1.7,1.7);
+      let encounter=0;
       for(const other of this.fish) {
         if(other===fish) continue;
-        const px=fish.x-other.x,py=fish.y-other.y,distance=Math.hypot(px,py);
-        const repel=Math.max(0,1-distance/(145*scale));
-        if(distance>0.001) { dx+=px/distance*repel*0.55;dy+=py/distance*repel*0.55; }
+        // Look ahead against the whole other body, not just its head. A smooth
+        // steering force starts before the turn radius makes avoidance too late.
+        const lead=fish.velocity*scale*1.8;
+        const fx=fish.x+Math.cos(fish.angle)*lead,fy=fish.y+Math.sin(fish.angle)*lead;
+        let nearest=Infinity,px=0,py=0;
+        for(let k=2;k<=22;k+=4) {
+          const bx=fx-other.spine[k*4],by=fy-other.spine[k*4+1],distance=Math.hypot(bx,by);
+          if(distance<nearest) { nearest=distance;px=bx;py=by; }
+        }
+        const repel=Math.max(0,1-nearest/(230*scale));
+        encounter=Math.max(encounter,repel);
+        if(nearest>0.001) { dx+=px/nearest*repel*2.4;dy+=py/nearest*repel*2.4; }
       }
       if (this.pointer) {
         const px = fish.x - this.pointer.x, py = fish.y - this.pointer.y;
@@ -129,31 +143,32 @@ export class Simulation {
         const repel = Math.max(0, 1 - distance / (160 * scale));
         if(distance>0.001) { dx+=px/distance*repel*1.2;dy+=py/distance*repel*1.2; }
       }
-      const exploration=Math.sin(this.time*0.37+fish.wander)*0.13
-        +Math.sin(this.time*0.81+fish.wander*1.7)*0.065;
+      const exploration=Math.sin(this.time*0.23+fish.wander)*0.10
+        +Math.sin(this.time*0.47+fish.wander*1.7)*0.045;
       const wanted=Math.atan2(dy,dx)+exploration;
       let headingError=angleDelta(fish.angle,wanted);
       // A target almost directly behind has two equivalent turn directions.
       // Keep the current arc instead of reversing yaw when that angle crosses π.
       if(Math.abs(headingError)>2.2&&Math.abs(fish.turn)>0.12) headingError=Math.sign(fish.turn)*Math.abs(headingError);
-      const wantedTurn=clamp(headingError*0.85,-0.66,0.66);
-      fish.turn+=clamp(wantedTurn-fish.turn,-0.8*motionDt,0.8*motionDt);
+      const wantedTurn=clamp(headingError*0.70,-0.56,0.56);
+      fish.turn+=clamp((wantedTurn-fish.turn)*(1-Math.exp(-motionDt/0.45)),-0.6*motionDt,0.6*motionDt);
       fish.angle+=fish.turn*motionDt;
       fish.cycle+=motionDt*TAU/fish.cyclePeriod;
-      if(fish.cycle>=TAU) { fish.cycle%=TAU;fish.cyclePeriod=this.range(3.8,7.2); }
-      fish.effort=Math.pow(0.5+0.5*Math.sin(fish.cycle),4.0);
+      if(fish.cycle>=TAU) { fish.cycle%=TAU;fish.cyclePeriod=this.range(5.5,8.5); }
+      fish.effort=Math.pow(0.5+0.5*Math.sin(fish.cycle),3.0);
       // Ease off propulsion near an edge so the head can complete a smaller arc.
       // The same velocity damping preserves a continuous glide into and out of it.
       const clearance=Math.min(fish.x,this.width-fish.x,fish.y,this.height-fish.y);
       const edgePace=clamp(clearance/(160*scale),0.35,1);
-      const targetVelocity=(62+85*fish.effort)*fish.rhythm*edgePace;
-      const response=targetVelocity>fish.velocity?0.42:0.95;
+      const turnPace=1-Math.min(0.35,Math.abs(fish.turn)*0.55);
+      const targetVelocity=(52+48*fish.effort)*fish.rhythm*edgePace*turnPace*(1-encounter*0.35);
+      const response=targetVelocity>fish.velocity?0.85:1.2;
       const change=(targetVelocity-fish.velocity)*(1-Math.exp(-motionDt/response));
-      fish.velocity+=clamp(change,-110*motionDt,110*motionDt);
+      fish.velocity+=clamp(change,-65*motionDt,65*motionDt);
       const velocity = fish.velocity * scale * speed;
       fish.x += Math.cos(fish.angle) * velocity * dt;
       fish.y += Math.sin(fish.angle) * velocity * dt;
-      fish.phase=(fish.phase+motionDt*TAU*(0.52+1.10*fish.effort)*fish.rhythm)%TAU;
+      fish.phase=(fish.phase+motionDt*TAU*(0.40+0.75*fish.effort)*fish.rhythm)%TAU;
       updateSpine(fish,FISH_LENGTH*fish.size,motionDt);
     }
   }
