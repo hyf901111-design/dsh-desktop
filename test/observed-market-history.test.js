@@ -33,6 +33,15 @@ it('calculates the same source metadata when the market trend is delivered as a 
  expect(result.data.note).toContain('获取时间（非报价时间）')
  expect(result.data.note).not.toContain('手写')
  expect(result.data).not.toHaveProperty('unit')
+ const envelope={version:1,type:'data-bound',requests:records.map((r,i)=>({key:'q'+i,tool:r.tool,args:r.args})),mapping:structuredClone(mapping)}
+ delete envelope.mapping.version
+ const before=JSON.stringify(envelope)
+ expect(resolveComponentSnapshot(before,records)?.data.series[0].values).toEqual([100,96.98,107.63])
+ expect(JSON.stringify(envelope)).toBe(before)
+ envelope.mapping.version=2
+ expect(resolveComponentSnapshot(JSON.stringify(envelope),records)).toBeNull()
+ envelope.mapping.version=undefined;envelope.version=2
+ expect(resolveComponentSnapshot(JSON.stringify(envelope),records)).toBeNull()
 })
 
 it('normalizes a completed runtime output before rendering without another model call',async()=>{

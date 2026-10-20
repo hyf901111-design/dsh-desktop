@@ -199,7 +199,10 @@ export function componentMappableSource(record) {
 // refresh recipe, but cannot erase fields mapped from other exact observed calls.
 // Missing referenced requests/fields still fail; no guessed arguments or literals
 // are substituted for the source data.
-function mappingContract(mapping,options) {
+function mappingContract(mapping,options,envelopeVersion) {
+ // The outer v1 envelope fixes the protocol version. Omitting its identical
+ // nested copy carries no missing data; explicit conflicting versions fail.
+ if(envelopeVersion===1&&mapping&&typeof mapping==='object'&&!Array.isArray(mapping)&&mapping.version===undefined&&templateFor({...mapping,version:1}))mapping={...mapping,version:1}
  return mapping?.type==='chart'&&mapping.variant===undefined&&CHART_VARIANTS.includes(options.chartVariant)?{...mapping,variant:options.chartVariant}:mapping
 }
 function dataBoundCandidate(text) {
@@ -269,7 +272,7 @@ function normalizedHistoryMetadata(data,mapping,sources,now) {
 }
 export function resolveComponentSnapshot(text,records,now=new Date(),options={}) {
   const candidate=dataBoundCandidate(text)
-  const contract=mappingContract(candidate?.mapping,options)
+  const contract=mappingContract(candidate?.mapping,options,candidate?.version)
   if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))return null
   const responses={},sources={}
   try {
@@ -412,7 +415,7 @@ function normalizeRequestDates(value,depth=0) {
 export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const candidate=dataBoundCandidate(text)
   if(!candidate)return null
-  const contract=mappingContract(candidate.mapping,options)
+  const contract=mappingContract(candidate.mapping,options,candidate.version)
   if(contract?.type==='chart'&&contract.variant===undefined)throw Error('chart.variant 缺失：mapping 必须保留本卡设计合同中的具体图表变体。')
   if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))throw Error('数据映射需要已成功调用的接口及当前模板字段，核对 mapping.version/type/variant。')
   const requests=[],responses={},observed=[]
