@@ -44,6 +44,13 @@ it('recovers an omitted chart variant from its explicit host contract and the fi
  expect(input.mapping.series[1].values.$map).toBeUndefined()
 })
 
+it('recovers only a missing outer data-bound brace after the complete mapping has already closed',()=>{
+ const input=draft(),text=JSON.stringify(input),result=resolveComponentSnapshot(text.slice(0,-1),records,now)
+ expect(result).not.toBeNull()
+ expect(result.data.series).toEqual(resolveComponentSnapshot(text,records,now).data.series)
+ for(const broken of [text.slice(0,-2),text.slice(0,text.indexOf('"series"')+15),JSON.stringify({...input,extra:true}).slice(0,-1),JSON.stringify(input.mapping).slice(0,-1)])expect(resolveComponentSnapshot(broken,records,now)).toBeNull()
+})
+
 it('does not guess a missing numeric selector for an unregistered response shape or an arbitrary public source',()=>{
  for(const mode of ['unknown-financial-schema','public-data']){
   const input=draft(),sources=structuredClone(records)

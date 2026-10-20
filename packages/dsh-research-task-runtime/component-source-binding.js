@@ -193,6 +193,18 @@ export function componentMappableSource(record) {
 function mappingContract(mapping,options) {
  return mapping?.type==='chart'&&mapping.variant===undefined&&CHART_VARIANTS.includes(options.chartVariant)?{...mapping,variant:options.chartVariant}:mapping
 }
+function dataBoundCandidate(text) {
+ const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
+ if(candidate)return candidate
+ // Recover exactly one missing outer brace, never a partial mapping, string,
+ // array or data value. The exact observed-source and template checks below
+ // remain mandatory; no free-form chart/numeric JSON is repaired here.
+ if(typeof text!=='string'||text.length>256000||!text.trim().startsWith('{'))return
+ try{
+  const value=JSON.parse(text.trim()+'}')
+  if(value?.version===1&&value.type==='data-bound'&&Array.isArray(value.requests)&&value.mapping&&typeof value.mapping==='object'&&!Array.isArray(value.mapping)&&Object.keys(value).every(key=>['version','type','requests','mapping'].includes(key)))return value
+ }catch{}
+}
 function financialValueSelectors(value,sources,depth=0) {
  if(!value||typeof value!=='object'||depth>24)return value
  if(Array.isArray(value))return value.map(v=>financialValueSelectors(v,sources,depth+1))
@@ -206,7 +218,7 @@ function financialValueSelectors(value,sources,depth=0) {
  return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,financialValueSelectors(v,sources,depth+1)]))
 }
 export function resolveComponentSnapshot(text,records,now=new Date(),options={}) {
-  const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
+  const candidate=dataBoundCandidate(text)
   const contract=mappingContract(candidate?.mapping,options)
   if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))return null
   const responses={},sources={}
@@ -348,7 +360,7 @@ function normalizeRequestDates(value,depth=0) {
 }
 
 export function resolveBoundComponent(text,records,now=new Date(),options={}) {
-  const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
+  const candidate=dataBoundCandidate(text)
   if(!candidate)return null
   const contract=mappingContract(candidate.mapping,options)
   if(contract?.type==='chart'&&contract.variant===undefined)throw Error('chart.variant 缺失：mapping 必须保留本卡设计合同中的具体图表变体。')
