@@ -9,27 +9,51 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "确保组件检索结束后立即进入无工具交付",
+        "featureName": "保留研究组件来源范围说明并修复趋势纵轴展示",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "bde191bcc463aa7162134d14ce955ecf84bb94bd",
-        "tipCommit": "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263",
+        "baseCommit": "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263",
+        "tipCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
         "commits": [
           {
-            "commit": "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263",
+            "commit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
             "parents": [
-              "bde191bcc463aa7162134d14ce955ecf84bb94bd"
+              "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263"
             ],
-            "subject": "将组件检索收尾切为无工具内容生成"
+            "subject": "修复研究组件来源说明丢失与趋势纵轴压缩"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/feed-context.js"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "packages/dsh-research-task-runtime/interactive-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/cartesian-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-interactive-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/stored-template-refinements.test.js"
           }
         ],
         "checks": [
@@ -37,15 +61,17 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-task-runtime.test.js",
-              "--maxWorkers=1",
-              "-t",
-              "bounds every visible plugin retrieval|closes repetitive research|keeps provider queue waiting|does not enqueue a new turn|keeps.*source.*authoritative|preserves MCP retrieval|retains the existing non-component|makes the component synthesis-only"
+              "test/cartesian-chart-template.test.js",
+              "test/research-interactive-artifact.test.js",
+              "test/openterminal-layout.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/special-chart-layout.test.js",
+              "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "11项直接相关检查通过；/tmp/component-synthesis-boundary-focused-20261020.log；独立39项边界验证通过。",
-            "verifiedCommit": "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263",
-            "completedAt": "2026-10-20T11:55:23.593605+00:00",
+            "summary": "75项直接相关检查通过；保存组件回放路径和原数据保持；/tmp/feed-chart-final-focused-20261020.log",
+            "verifiedCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
+            "completedAt": "2026-10-20T12:28:57.698148+00:00",
             "timeoutMs": 120000
           },
           {
@@ -55,9 +81,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/component-synthesis-boundary-typecheck-20261020.log",
-            "verifiedCommit": "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263",
-            "completedAt": "2026-10-20T11:55:23.593605+00:00",
+            "summary": "类型检查通过；/tmp/feed-chart-final-typecheck-20261020.log",
+            "verifiedCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
+            "completedAt": "2026-10-20T12:28:57.698148+00:00",
             "timeoutMs": 180000
           },
           {
@@ -65,117 +91,31 @@
               "git",
               "diff",
               "--check",
-              "bde191bcc463aa7162134d14ce955ecf84bb94bd..HEAD"
+              "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263..HEAD"
             ],
             "outcome": "passed",
-            "summary": "差异检查与独立审查通过，无Important。",
-            "verifiedCommit": "2b9ab2cd434901d6c5a736c1bfd8c155ee42a263",
-            "completedAt": "2026-10-20T11:55:23.593605+00:00",
+            "summary": "差异检查通过；真实失败卡16条公告及四系列趋势记录离线回放数据不变，修复说明可见性与范围缩放。",
+            "verifiedCommit": "682de48735ffd4c8404ce21cbbc6c0c70251687b",
+            "completedAt": "2026-10-20T12:28:57.698148+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "功能worktree禁止构建共享客户端。上版原生网络查询58秒已收尾，但随后反复读图拖至200秒，最终真实公告已显示。本版封闭该逃逸路径，集成后再次原生生成。"
+          "summary": "功能worktree禁止构建共享客户端；集成后原生核验已保存卡片和新生成组件。"
         },
         "acceptanceCriteria": [
-          "container在既有8次/90秒边界之后关闭本任务全部既有工具，不转入重复读图或本地读取。",
-          "当前步骤读取不被打断，既有资料和已完成来源记录保留。",
-          "board/qa及离线起始权限、取消和dispose行为不变。",
-          "实际客户端原生生成并检查最终内容。"
+          "新闻与研报完整显示已取得的来源时点、公司和缺失范围，不吞掉note。",
+          "折线、阶梯、哑铃图按完整序列范围绘图，图例切换保持轴域稳定；柱、面积图保留零基线。",
+          "已保存组件显示升级保留原数据、交互版本与已有控件回放路径。",
+          "实际客户端查看保存卡片并新生成复测。"
         ],
         "risks": [
           "仅本地测试，不晋升main或发布。",
-          "外部来源及模型仍可能异常，不能以格式通过声称所有事实已经核实。"
+          "缺失说明可见不代表缺失公司数据已经取到；仍需继续改善多目标检索。",
+          "扩大检查确认8项HEAD基线旧失败：registry空artifact断言1项、html主题及profiles7项；/tmp/feed-chart-baseline-registry-20261020.log与/tmp/feed-chart-related-baseline-20261020.log。"
         ],
-        "generatedAt": "2026-10-20T11:55:23.593605+00:00"
-      },
-      "merged": {
-        "mergeCommit": "97d03ad6789300a76f6bd115b11da7f7b2266945",
-        "verificationCommit": "97d03ad6789300a76f6bd115b11da7f7b2266945",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "97d03ad6789300a76f6bd115b11da7f7b2266945",
-            "completedAt": "2026-10-20T11:55:46.218Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "97d03ad6789300a76f6bd115b11da7f7b2266945",
-            "completedAt": "2026-10-20T11:55:46.218Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "97d03ad6789300a76f6bd115b11da7f7b2266945",
-            "completedAt": "2026-10-20T11:55:46.218Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "97d03ad6789300a76f6bd115b11da7f7b2266945",
-            "completedAt": "2026-10-20T11:55:46.218Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "97d03ad6789300a76f6bd115b11da7f7b2266945",
-            "completedAt": "2026-10-20T11:55:46.218Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T11:55:46.218Z"
+        "generatedAt": "2026-10-20T12:28:57.698148+00:00"
       }
     },
     {
