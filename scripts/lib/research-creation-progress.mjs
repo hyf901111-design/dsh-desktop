@@ -361,6 +361,7 @@ export function patchResearchCreationProgress(source) {
                             const finish = value => { if (settled) return; settled = true; clearTimeout(timeout); resolve(value); };
                             const timeout = setTimeout(() => finish(false), 1500);
                             const check = () => {
+                                if (settled) return;
                                 if (!active) return finish(false);
                                 const shown = new Set([...document.querySelectorAll('[data-research-artifact-card]')]
                                     .filter(card => card.querySelector('[data-research-generation-process]'))
@@ -378,6 +379,10 @@ export function patchResearchCreationProgress(source) {
       "session?.running || odysseyCreationIntents.get(sessionId)?.state === 'planning' || researchWorkspace.getSnapshot().artifacts.some(node => node.workbenchId && node.generationStatus === 'queued' && !node.generationTaskId) ? 250 : 1500")
     source = replaceOnce(source, '}, [sessionId, researchWorkspace]);', '}, [sessionId, researchWorkspace, session?.running]);')
   }
+  // Existing installs already have this helper; stop their queued frame after timeout too.
+  const oldPaintCheck = 'const check = () => {\n                                if (!active) return finish(false);'
+  if (source.includes(oldPaintCheck)) source = replaceOnce(source, oldPaintCheck,
+    oldPaintCheck.replace('if (!active)', 'if (settled) return;\n                                if (!active)'))
   source = source.replace('workbenchRevealAt: Date.now() + plan.panels.indexOf(p) * 500',
     'workbenchRevealAt: Date.now() + plan.panels.indexOf(p) * 120')
   if (!source.includes('generationStartedAt: odysseyCreationIntents.get(sessionId)?.startedAt')) {
