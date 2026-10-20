@@ -31,7 +31,7 @@ beforeAll(async () => {
   installedCss = JSON.parse(block.match(/style.textContent=("[^\n]+");}/)[1])
   const functions = clientFunctions(source)
   // Render the installed native header tree; only its stores and extension slots are fixtures.
-  Header = runInNewContext(notesUiLocaleSource+'\n'+['deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'EWorkNoteExportMenu','ConversationSessionHeader'].map(name => {
+  Header = runInNewContext(notesUiLocaleSource+'\n'+['isSessionViewId', 'hasSessionViewPreference', 'deriveAncestry', 'equalBreadcrumbs', 'conversationViewTabProps', 'EWorkNoteExportMenu','ConversationSessionHeader'].map(name => {
     if (!functions.has(name)) throw Error(`Missing native function: ${name}`)
     return functions.get(name)
   }).join('\n') + '\nConversationSessionHeader', {
@@ -168,7 +168,7 @@ for (const dark of [false, true]) for (const view of ['home', 'chat', 'research'
       expect(m.paddingRight).toBe(closed ? '56px' : '20px')
       expect(m.tabs).toHaveLength(3)
       for (const tab of m.tabs) {
-        expect(tab).toMatchObject({ width: 56, height: 28, color: tab.active ? dark ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' : dark ? 'rgb(160, 160, 160)' : 'rgb(119, 119, 119)' })
+        expect(tab).toMatchObject({ width: 56, height: 28, color: tab.active ? dark ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' : dark ? 'rgb(210, 210, 210)' : 'rgb(89, 89, 89)' })
         if (tab.active) {
           const alpha = Number(tab.background.match(/rgba\(255, 255, 255, ([.\d]+)\)/)?.[1])
           // Chromium serializes .085 via 8-bit alpha as .086; the prior .09 must still fail.

@@ -12,6 +12,7 @@
   --odyssey-input-shadow: 0 4px 16px rgb(0 0 0 / .09);
   --odyssey-text: #252525;
   --odyssey-muted: #777;
+  --odyssey-header-tab-idle: #595959;
   --odyssey-active: #477ef3;
   --odyssey-active-fill: #fff;
   --odyssey-dot: rgb(82 88 98 / .16);
@@ -28,6 +29,7 @@
   --odyssey-input-shadow: 0 4px 16px rgb(0 0 0 / .2);
   --odyssey-text: #e5e5e5;
   --odyssey-muted: #a0a0a0;
+  --odyssey-header-tab-idle: #d2d2d2;
   --odyssey-active: #94b4ff;
   --odyssey-active-fill: rgb(255 255 255 / .09);
   --odyssey-dot: rgb(151 157 168 / .16);
