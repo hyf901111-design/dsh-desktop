@@ -535,18 +535,18 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     ? '内容从数据/操作开始并自然展开，不截断行列；窄框重排，手动框保持原尺寸。'
     : '使用宿主原生渲染和交互；不要写 HTML/CSS。指标详情放 detail，列表日期/链接只填写有依据的信息。'
   return [
-    '为 EWork Odyssey 工作台生成一个独立面板。直接输出一个完整 JSON 对象，禁止前言、推理、代码围栏或其他组件。',
+    '为EWork Odyssey生成一个独立面板，仅输出完整JSON，不附前言、推理、代码围栏或其他组件。',
     componentSkillInstruction('panel',type),
     ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
     `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；` : ''}${schemas[type]}`,
-    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? ['本卡未要求刷新绑定；优先直接交付原生模板 JSON，填入已取得的真实记录、来源与时点，不必生成 data-bound 或字段映射。'] : []),
-    deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若本轮没有任何可核验的数值或记录，不能输出空 chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。将需求中的主要品种或字段逐项列出，最多六项；每项 detail 简短，数据来源与查询时点放在 asOf，避免大段说明文字。其余情况严格只用上方指定 schema 的字段，来源与数据时点写进已有内容字段，不添加自造字段。',
+    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? ['本卡未要求刷新绑定；优先直接交付原生模板 JSON：真实记录、来源及时点；无需data-bound或映射。'] : []),
+    deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '无可核验数值或记录时，不能交付空chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。主要品种/字段逐项列出，最多六项，detail简短，来源和查询时点放asOf。其余严格用指定schema字段，来源及时点放已有字段，不自造字段。',
     htmlRule,
     ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
       '自定义业务正文13px/20px，辅助文字至少11px/17px，标题14px/22px；不把紧凑表格字号设置为整页正文。字体继承宿主或 var(--sherlock-font-sans)，数字 tabular-nums。使用语义控件和可读名称，颜色使用完整 --sherlock-control-* / --sherlock-status-* 变量；主按钮搭配 control-primary/control-on-primary。业务色徽章放在按钮及 summary 外的独立元素。所有条数从同一记录集合及当前筛选结果计算，不能手写计数；评论按 review 记录数计，不按审查人数计。分类仅依据对应资料，不相关记录单列为未分类。'
     ] : []),
     ...(['news', 'reports'].includes(type) ? ['每条资料原文明确提供的来源机构、作者、评级、目标价及其他业务字段，连同原摘要保留在 summary；不要只复制短摘要而丢弃这些信息。未提供的机构、作者、评级或目标价必须省略，不自行推断。日期用 date，原分类用 category，未提供链接时省略 url。'] : []),
-    '保留需求中的全部字段和条目，遵守上方对应 schema 的容量和字段约束；dashboard 支持1–40项。只在明确允许“示例/虚构/情景模拟”时构造并标注样例数据；其余数值、日期和来源必须有依据，缺失就注明缺失。新闻/政策仅在用户允许联网且需要补充资料时检索真实来源，不能编造法规或链接；核实的网址可作为每条的 url 字段加入，查不到则省略。用户提供完整记录时直接使用，不为补充可选字段继续检索。资料足够后立即交付。',
+    '保留全部字段和条目并遵守schema容量；dashboard为1–40项。仅明确允许示例/虚构/情景模拟时构造并标注样例；其余数值、日期、来源须有依据，缺失注明。新闻/政策仅获联网授权且需补资料时检索，不编造法规/链接；核实网址放条目url，未取得则省略。完整记录直接用，不为可选字段续查；资料足够即交付。',
     type === 'market'
       ? '组件名称由 JSON title 提供，不在内容中重复。金融组件的字体、尺寸和深浅主题由宿主 Figma 模板执行；指标值按源节点使用 DIN Pro 21/26px。'
       : type === 'html'
