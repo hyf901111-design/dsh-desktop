@@ -19,7 +19,7 @@ type NavigationEvent = {
   frame?: { url: string; parent?: { processId: number; routingId: number } | null }
 }
 
-function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false, ownsResearchFrame?: (frame: any) => boolean, researchFrameUrl?: (frame: any) => string | null, youtubeAppId?: string) {
+function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = () => false, ownsResearchFrame?: (frame: any) => boolean, researchFrameUrl?: (frame: any) => string | null, youtubeAppId?: string,openWebLink?:(url:string)=>void) {
   const listeners = new Map<string, (event: NavigationEvent, url?: string) => void>()
   const permissionCheck = vi.fn()
   const permissionRequest = vi.fn()
@@ -37,11 +37,19 @@ function secureWindowFixture(allowsResearchFrameUrl: (url: string) => boolean = 
       setPermissionRequestHandler: permissionRequest
     }
   }
-  secureWindow({ webContents } as never, { allowsResearchFrameUrl, ownsResearchFrame, researchFrameUrl, youtubeAppId })
+  secureWindow({ webContents } as never, { allowsResearchFrameUrl, ownsResearchFrame, researchFrameUrl, youtubeAppId,openWebLink })
   return { listeners, mainFrame, webContents }
 }
 
 describe('main-window navigation security', () => {
+  it('routes shell web navigation and popups through the client browser when configured',()=>{
+    const open=vi.fn(),f=secureWindowFixture(undefined,undefined,undefined,undefined,open),preventDefault=vi.fn()
+    f.listeners.get('will-navigate')!({preventDefault},'https://example.com/read')
+    expect(preventDefault).toHaveBeenCalledOnce()
+    f.webContents.setWindowOpenHandler.mock.calls[0]![0]({url:'https://example.com/popup'})
+    expect(open.mock.calls).toEqual([['https://example.com/read'],['https://example.com/popup']])
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+  })
   it('identifies the authorized YouTube embed using the desktop app ID without changing other headers', () => {
     const url = 'https://www.youtube.com/embed/M7lc1UVf-VE?start=90'
     const { mainFrame, webContents } = secureWindowFixture(() => false, frame => frame?.name === 'owned', () => url, 'com.evanarts.sherlock')

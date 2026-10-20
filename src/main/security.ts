@@ -4,8 +4,9 @@ import { youtubeSignInUrl } from '../../packages/dsh-research-task-runtime/youtu
 
 export function secureWindow(
   window: BrowserWindow,
-  options: { allowsResearchFrameUrl?(url: string): boolean; ownsResearchFrame?(frame: WebFrameMain | null | undefined): boolean; researchFrameUrl?(frame: WebFrameMain | null | undefined): string | null; youtubeAppId?: string } = {}
+  options: { openWebLink?(url:string):void; allowsResearchFrameUrl?(url: string): boolean; ownsResearchFrame?(frame: WebFrameMain | null | undefined): boolean; researchFrameUrl?(frame: WebFrameMain | null | undefined): string | null; youtubeAppId?: string } = {}
 ): void {
+  const openWebLink=(url:string)=>{if(options.openWebLink)options.openWebLink(url);else void shell.openExternal(url)}
   // Desktop embeds identify the installed application, not the loopback shell.
   // Scope this to the exact registered player document; never rewrite Google
   // sign-in, YouTube API requests, unrelated frames or the browser identity.
@@ -32,21 +33,21 @@ export function secureWindow(
     )) ?? [] : []
     if (sources.length) {
       const browserSignIn = sources.length === 1 ? youtubeBrowserSignIn(url, options.researchFrameUrl?.(sources[0])) : null
-      if (browserSignIn) { void shell.openExternal(browserSignIn); return { action: 'deny' } }
+      if (browserSignIn) { openWebLink(browserSignIn); return { action: 'deny' } }
       if (sources.length === 1 && isExternalUrl(url) && !isTrustedAppUrl(url)) {
         void sources[0]!.executeJavaScript(`location.assign(${JSON.stringify(url)})`).catch(() => undefined)
       }
       return { action: 'deny' }
     }
     if (isTrustedAppUrl(url)) return { action: 'allow' }
-    if (isExternalUrl(url)) void shell.openExternal(url)
+    if (isExternalUrl(url)) openWebLink(url)
     return { action: 'deny' }
   })
 
   window.webContents.on('will-navigate', (event, url) => {
     if (isTrustedAppUrl(url)) return
     event.preventDefault()
-    if (isExternalUrl(url)) void shell.openExternal(url)
+    if (isExternalUrl(url)) openWebLink(url)
   })
 
   window.webContents.on('will-frame-navigate', (event) => {
@@ -70,7 +71,7 @@ export function secureWindow(
     }
     if (options.ownsResearchFrame?.(event.frame)) {
       const browserSignIn = youtubeBrowserSignIn(event.url, options.researchFrameUrl?.(event.frame))
-      if (browserSignIn) { event.preventDefault(); void shell.openExternal(browserSignIn); return }
+      if (browserSignIn) { event.preventDefault(); openWebLink(browserSignIn); return }
       if (isExternalUrl(event.url) && !isTrustedAppUrl(event.url)) return
       event.preventDefault()
       return

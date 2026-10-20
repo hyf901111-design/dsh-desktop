@@ -2,7 +2,6 @@ import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import {createPublicFinancialWidgetData} from './financial/public-widget-data'
 import {installCalendarService} from './calendar/calendar-service'
 import {installComponentLibrary} from './state/component-library'
-import {openFinancialArticle} from './financial/article-link'
 import { createComponentDataService } from './component-data/service'
 import { legacyConnectionSources } from './integrations/legacy-connections'
 import { legacySkillRoots } from './integrations/legacy-skills'
@@ -25,6 +24,7 @@ import { TaskStore } from './scheduled/task-store'
 import { TaskRunner, harnessRpc } from './scheduled/task-runner'
 import { createDesktopComputer } from './computer/desktop-computer'
 import { registerConversationBrowser } from './search/conversation-browser'
+import {openClientLink} from './search/open-client-link'
 import { guardUnexpectedErrorDownloads } from './search/research-web-downloads'
 import { readBrowserPage } from './search/browser-page-reader'
 import { installWindowResize } from './window-resize'
@@ -635,6 +635,7 @@ function createWindow(): BrowserWindow {
   })
   installPluginRecoveryNavigation(window)
   secureWindow(window, {
+    openWebLink:url=>{void openClientLink(window,url).catch(()=>{})},
     youtubeAppId: app.isPackaged ? desktopChannel === 'notarized' ? 'com.evanarts.sherlock' : developmentBuild ? 'io.dsh.desktop.dev' : 'io.dsh.desktop' : undefined,
     allowsResearchFrameUrl: (url) => researchLinkFrameRegistry.allows(url),
     ownsResearchFrame: (frame) => researchLinkFrameRegistry.ownsFrame(frame),
@@ -871,7 +872,7 @@ function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): 
     onRejected: (error) => console.warn('[research-canvas] rejected wheel region update', error)
   })
   guardUnexpectedErrorDownloads(session.defaultSession)
-  const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,navigation:new ResearchWebNavigationStore(join(app.getPath('userData'),'research-web-navigation.bin'),safeStorage),browserSession:new ResearchWebSessionPersistence(session.fromPartition('persist:research-web-pages'),join(app.getPath('userData'),'research-web-session-cookies.bin'),safeStorage)})
+  const nativeResearchWeb = registerResearchNativeWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,locale:harnessLocale,navigation:new ResearchWebNavigationStore(join(app.getPath('userData'),'research-web-navigation.bin'),safeStorage),browserSession:new ResearchWebSessionPersistence(session.fromPartition('persist:research-web-pages'),join(app.getPath('userData'),'research-web-session-cookies.bin'),safeStorage)})
   flushResearchNativeWeb=()=>nativeResearchWeb.flush()
   const nativeResearchYoutube = registerResearchYoutubeNative({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,appId:desktopChannel==='notarized'?'com.evanarts.sherlock':developmentBuild?'io.dsh.desktop.dev':'io.dsh.desktop'})
   registerCanvasUseWeb({ipcMain,getMainWindow:()=>mainWindow,registry:researchLinkFrameRegistry,native:nativeResearchWeb.contents,authorize:(id,write)=>{if(!researchBoardsService)throw Error('画板服务尚未就绪');researchBoardsService.authorizeCanvasUse(id,write)}})
@@ -1340,7 +1341,7 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain, 'account:invoke', () => mainWindow, (_event, action: string, input: unknown) => accountService!.invoke(action, input))
   createWindow()
   desktopComputer = createDesktopComputer(() => mainWindow)
-  const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow})
+  const conversationBrowser = registerConversationBrowser({ipcMain,getMainWindow:()=>mainWindow,locale:harnessLocale})
   localSearchRuntime = await startLocalSearchRuntime({
     createWindow: createLocalSearchWindow,
     readPage: readBrowserPage,
@@ -1485,7 +1486,7 @@ async function bootstrap(): Promise<void> {
   const financialIdentity=()=>accountService?.authenticated?accountService.accountId??null:null
   const financialWidgetData=createPublicFinancialWidgetData({identity:financialIdentity})
   registerTrustedMainWindowHandler(ipcMain,'research:financial-widget',()=>mainWindow,(_event,args:unknown)=>financialWidgetData.query(args))
-  registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openFinancialArticle(url,shell.openExternal))
+  registerTrustedMainWindowHandler(ipcMain,'research:financial-open-link',()=>mainWindow,(_event,url:unknown)=>openClientLink(mainWindow,url))
   noteComponentLibrary=await installComponentLibrary({ipcMain,getWindow:()=>mainWindow,file:join(app.getPath('userData'),'component-library.json'),readCanvas:id=>researchBoardsService?.isSharedSession(id)?researchBoardsService.readSharedCanvas(id):readStoredResearchCanvas(researchCanvasStorage,id),getBinding:(sessionId,nodeId)=>componentDataService?.engine.list(sessionId).find((b:any)=>b.nodeId===nodeId),owner:integrationOwner})
   await installCalendarService({getWindow:()=>mainWindow,ensureWindow:async()=>{const url=runtime.snapshot().url;if(url)await openHarness(url)},isShared:id=>researchBoardsService?.isSharedSession(id)===true,english:()=>harnessLocale()==='en',exists:target=>{
     if(readStoredResearchCanvas(researchCanvasStorage,target.sessionId).artifacts.some((n:any)=>n.id===target.nodeId&&n.containerSpec?.type==='calendar-tool'))return true

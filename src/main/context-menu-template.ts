@@ -21,6 +21,7 @@ export interface ContextMenuState {
 
 export interface ContextMenuActions {
   openLink: (url: string) => void
+  openDesktopLink: (url: string) => void
   copyLink: (url: string) => void
   copyImage: () => void
   revealItem: (path: string) => void
@@ -28,6 +29,7 @@ export interface ContextMenuActions {
 
 interface ContextMenuLabels {
   openLink: string
+  openDesktopLink: string
   copyLink: string
   copyImage: string
   revealItem: string
@@ -41,7 +43,8 @@ interface ContextMenuLabels {
 
 const labels: Record<'en' | 'zh', ContextMenuLabels> = {
   en: {
-    openLink: 'Open Link in Browser',
+    openLink: 'Open in App Browser',
+    openDesktopLink: 'Open in Desktop Browser',
     copyLink: 'Copy Link Address',
     copyImage: 'Copy Image',
     revealItem: 'Show in Finder',
@@ -53,7 +56,8 @@ const labels: Record<'en' | 'zh', ContextMenuLabels> = {
     selectAll: 'Select All'
   },
   zh: {
-    openLink: '在浏览器中打开链接',
+    openLink: '在客户端浏览器中打开',
+    openDesktopLink: '在桌面浏览器中打开',
     copyLink: '复制链接地址',
     copyImage: '复制图片',
     revealItem: '在 Finder 中显示',
@@ -151,6 +155,9 @@ export function buildContextMenuTemplate(
       linkItems.push({
         label: text.openLink,
         click: () => actions.openLink(state.linkURL)
+      },{
+        label: text.openDesktopLink,
+        click: () => actions.openDesktopLink(state.linkURL)
       })
     }
     linkItems.push({

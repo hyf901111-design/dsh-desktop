@@ -5,6 +5,8 @@ import { guardResearchWebDownloads } from '../search/research-web-downloads'
 import { measureResearchWebLayout } from './research-web-layout'
 import { ResearchWebNavigationStore } from './research-web-navigation'
 import type { ResearchWebSessionPersistence } from './research-web-session'
+import {installWebPageContextMenu} from '../context-menu'
+import {openClientLink} from '../search/open-client-link'
 
 export function requiresNativeWeb(headers: Pick<Headers, 'get'>): boolean {
   const xfo = headers.get('x-frame-options') ?? ''
@@ -32,7 +34,7 @@ function nativeWebResultBefore<T>(operation: Promise<T>, milliseconds: number): 
   const timeout=new Promise<undefined>(resolve=>{timer=setTimeout(()=>resolve(undefined),milliseconds)})
   return Promise.race([operation,timeout]).finally(()=>clearTimeout(timer))
 }
-export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry; navigation?:ResearchWebNavigationStore; browserSession?:ResearchWebSessionPersistence }) {
+export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWindow(): BrowserWindow | undefined; registry: ResearchLinkFrameRegistry; navigation?:ResearchWebNavigationStore; browserSession?:ResearchWebSessionPersistence;locale?:()=> 'en'|'zh' }) {
   const navigation=options.navigation??new ResearchWebNavigationStore()
   const browserSessions=new Set<ReturnType<typeof session.fromPartition>>()
   const entries = new Map<string, { view: WebContentsView; url: string; image: string; imageRevision: number; error: string; busy: boolean; typing: boolean; ready: boolean; touched: number; presentation: string; bounds: string; layout: string; surfaceScale: number; generation: number; reloadToken: number; capturedAt: number; inspectedAt: number; inspecting: boolean; fitZoom: number; fitWidth: number; fitKey: string; pageZoom: number; zoomMode: 'auto'|'manual'; zoomResetToken: number; fitting: boolean; wasShown: boolean; snapshotRequested: number; snapshotCompleted: number; pageFit: ReturnType<typeof measureResearchWebLayout> | null; inspection: Awaited<ReturnType<typeof inspectResearchWebContent>> }>()
@@ -89,6 +91,7 @@ export function registerResearchNativeWeb(options: { ipcMain: IpcMain; getMainWi
       isolated.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false))
       isolated.setPermissionCheckHandler(()=>false)
       const view=new WebContentsView({webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,backgroundThrottling:true}})
+      installWebPageContextMenu(view.webContents,options.getMainWindow,options.locale??(()=> 'zh'),url=>{void openClientLink(options.getMainWindow(),url).catch(()=>{})})
       entry={view,url:authorization.url,image:'',imageRevision:0,error:'',busy:false,typing:false,ready:false,touched:Date.now(),presentation:'',bounds:'',layout:'',surfaceScale:1,generation:0,reloadToken:Number(value.reloadToken)||0,capturedAt:0,inspectedAt:0,inspecting:false,fitZoom:1,fitWidth:0,fitKey:'',pageZoom,zoomMode,zoomResetToken,fitting:false,wasShown:false,snapshotRequested:0,snapshotCompleted:0,pageFit:null,inspection:null};entries.set(id,entry)
       const current=entry
       const remember=()=>{

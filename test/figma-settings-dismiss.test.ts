@@ -62,6 +62,8 @@ it('dismisses the real settings menu before the settings page and ignores hidden
     window.document.body.append(hiddenMenu)
     await react.act(async () => window.document.dispatchEvent(new window.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true})))
     expect(closed).toBe(1)
+    await react.act(async()=>window.document.dispatchEvent(new window.Event('sherlock:open-client-browser')))
+    expect(closed).toBe(2)
   } finally {
     await react.act(async () => root.unmount())
     vi.unstubAllGlobals()

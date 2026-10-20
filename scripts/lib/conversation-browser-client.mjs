@@ -1,4 +1,5 @@
 import { restoreResearchGridWorkbench, patchResearchGridWorkbench } from './research-grid-workbench.mjs'
+import { patchDefaultWebLinks } from './default-web-links-client.mjs'
 
 function patchResearchComponentSourceBrowser(source) {
   const marker='/* odyssey:component-source-browser:v2 */'
@@ -40,7 +41,7 @@ export function patchConversationBrowser(source) {
   if(grid)source=restoreResearchGridWorkbench(source)
   source=patchResearchComponentSourceBrowser(source)
   const marker='/* odyssey:conversation-browser:v2 */'
-  if(source.includes(marker))return grid?patchResearchGridWorkbench(source):source
+  if(source.includes(marker)){source=patchDefaultWebLinks(source);return grid?patchResearchGridWorkbench(source):source}
   if(source.includes('/* odyssey:conversation-browser:v1 */')){
     const start=source.indexOf('/* odyssey:conversation-browser:v1 */'),end=source.indexOf('class ResearchSidebarCoordinator {',start);
     if(end<0)throw Error('Conversation browser v1 migration missing class');
@@ -102,5 +103,6 @@ class ResearchSidebarCoordinator {`)
     });
     const unregisterGenerated=service.registerTab(`)
   exact('unregisterGenerated?.();','unregisterGenerated?.();unregisterBrowser?.();unsubscribeBrowser?.();unsubscribeBrowserActivity?.();for(const watch of browserSessions.values()){watch.unsubscribe();watch.release()}')
+  source=patchDefaultWebLinks(source)
   return grid?patchResearchGridWorkbench(source):source
 }

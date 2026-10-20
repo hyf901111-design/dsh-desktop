@@ -29,6 +29,7 @@ function state(overrides: Partial<ContextMenuState> & { finderPath?: string } = 
 function actions(): ContextMenuActions & { revealItem: ReturnType<typeof vi.fn> } {
   return {
     openLink: vi.fn(),
+    openDesktopLink: vi.fn(),
     copyLink: vi.fn(),
     copyImage: vi.fn(),
     revealItem: vi.fn()
@@ -80,7 +81,7 @@ describe('conversation context menu', () => {
     expect(template[1]?.enabled).toBe(false)
   })
 
-  it('opens safe web links externally and can copy their address', () => {
+  it('offers separate app and desktop browser actions for web links and can copy their address', () => {
     const callbacks = actions()
     const template = buildContextMenuTemplate(
       state({ linkURL: 'https://example.com/docs' }),
@@ -90,8 +91,12 @@ describe('conversation context menu', () => {
 
     template[0]?.click?.({} as never, undefined, {} as never)
     template[1]?.click?.({} as never, undefined, {} as never)
+    template[2]?.click?.({} as never, undefined, {} as never)
     expect(callbacks.openLink).toHaveBeenCalledWith('https://example.com/docs')
+    expect(callbacks.openDesktopLink).toHaveBeenCalledWith('https://example.com/docs')
     expect(callbacks.copyLink).toHaveBeenCalledWith('https://example.com/docs')
+    expect(template.slice(0,2).map(item=>item.label)).toEqual(['Open in App Browser','Open in Desktop Browser'])
+    expect(buildContextMenuTemplate(state({linkURL:'https://example.com'}),'zh',callbacks).slice(0,2).map(item=>item.label)).toEqual(['在客户端浏览器中打开','在桌面浏览器中打开'])
   })
 
   it('never offers to open non-web link schemes externally', () => {
