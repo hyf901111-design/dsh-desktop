@@ -1806,6 +1806,32 @@ describe('Research task Subagent adapter', () => {
     expect(lift).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['calls','time'])('bounds every visible plugin retrieval at the %s boundary, including non-preferred APIs',async boundary=>{
+    vi.useFakeTimers();const fixture=containerAdapterFixture(),lift=vi.fn();
+    fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>lift)}};
+    const names=['public_data_query','financial_query','web_search','web_fetch','ework__read_a','ework__read_b'];
+    fixture.ctx.tools={schemas:()=>names.map(name=>({name,description:'已授权的业务读取接口'}))};
+    let handle;
+    try{
+      handle=await fixture.start('工作台：真实来源研究\n本面板：经营差异\n取得三家公司真实财务数据与来源；缺失明确说明。\n仅生成本面板，优先使用 table 类型。');
+      expect(fixture.ctx.subagents.start.mock.calls[0][1].toolFilter.allow).toEqual(names);
+      if(boundary==='calls')for(let i=0;i<8;i++)fixture.ctx.emit(fixture.ctx.child.session,{seq:i+1,type:'tool/call',data:{name:i%2?'ework__read_a':'ework__read_b',arguments:'{}'}});
+      else await vi.advanceTimersByTimeAsync(90001);
+      expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled();
+      fixture.ctx.emit(fixture.ctx.child.session,{seq:20,type:'step/end',data:{}});
+      expect(new Set(fixture.ctx.child.ctx.tools.restrict.mock.calls[0]?.[0].deny)).toEqual(new Set(names));
+      fixture.ctx.emit(fixture.ctx.child.session,{seq:21,type:'step/end',data:{}});
+      expect(fixture.ctx.child.ctx.tools.restrict).toHaveBeenCalledOnce();
+    }finally{await handle?.dispose();vi.useRealTimers()}
+    expect(lift).toHaveBeenCalledOnce();
+  });
+  it.each(['qa','board'])('retains the existing non-component %s retrieval policy',async kind=>{
+    const fixture=containerAdapterFixture();fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>()=>{})}};
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'ework__read_a',description:'已授权的业务读取接口'}]};
+    const {createSubagentAdapter}=await runtimeModule();const handle=await createSubagentAdapter(fixture.ctx).start({parentSessionId:'parent-1',kind,query:'读取已有资料',prompt:'读取已有资料',signal:new AbortController().signal,onSessionEvent:()=>{}});
+    try{for(let i=0;i<8;i++)fixture.ctx.emit(fixture.ctx.child.session,{seq:i+1,type:'tool/call',data:{name:'ework__read_a',arguments:'{}'}});fixture.ctx.emit(fixture.ctx.child.session,{seq:10,type:'step/end',data:{}});expect(fixture.ctx.child.ctx.tools.restrict).not.toHaveBeenCalled()}finally{await handle.dispose()}
+  });
+
   it('does not remove search merely because a request has no freshness keyword', async () => {
     const fixture = containerAdapterFixture()
     const handle = await fixture.start('分析黄金的供需格局')

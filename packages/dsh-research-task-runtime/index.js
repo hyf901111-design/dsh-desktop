@@ -34,7 +34,7 @@ import { preparePublicDataPanel, validatePublicDataPanel, publicDataNewsTaskRequ
 import { loadBundledComponentSkill } from './component-skill.js'
 import { deferredWorkbenchPanel, prepareSimulatedArtifact, workbenchPanelScope, workbenchPanelIntent } from './workbench-plan.js'
 import { GANTT_GUIDANCE } from './gantt-template-contract.js'
-import { TIMELINE_GUIDANCE } from './timeline-template-contract.js'
+import { TIMELINE_DATA_GUIDANCE } from './timeline-template-contract.js'
 import { applyBundledSkillPreferences, bundledSkillEnabled } from './bundled-skill-preferences.js'
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
@@ -509,7 +509,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     alerts: operationsTemplateSchema('alerts'),
     progress: operationsTemplateSchema('progress'),
     tasks: operationsTemplateSchema('tasks'),
-    timeline: TIMELINE_GUIDANCE,
+    timeline: TIMELINE_DATA_GUIDANCE,
     gantt: GANTT_GUIDANCE,
     kpi: '{"version":1,"type":"kpi","title":"标题","asOf":"原数据来源及时点","items":[{"label":"指标","value":"原数值及单位"}]}\n' + KPI_GUIDANCE,
     table: '{"version":1,"type":"table","title":"标题","columns":["列名"],"rows":[["单元格"]]}\n' + TABLE_GUIDANCE,
@@ -1548,8 +1548,16 @@ export class ResearchTaskRuntime {
               if (candidate?.artifact && typeof candidate.artifact === 'object' && !Array.isArray(candidate.artifact) &&
                   Object.keys(candidate).every(key => ['version','type','title','artifact'].includes(key)) &&
                   candidate.version === 1 && candidate.artifact.version === 1 &&
-                  candidate.type === deferredPanel.type && candidate.artifact.type === candidate.type &&
-                  candidate.title === candidate.artifact.title) candidate = candidate.artifact
+                  candidate.type === deferredPanel.type && candidate.artifact.type === candidate.type) {
+                const nested = candidate.artifact
+                if (candidate.title === nested.title) candidate = nested
+                // The observed timeline envelope has a host title outside and
+                // a business heading inside. Retain both, without overwriting
+                // an existing subject or accepting an unknown outer title.
+                else if (deferredPanel.type === 'timeline' && candidate.title === deferredPanel.title &&
+                    nested.subject === undefined && typeof nested.title === 'string' && nested.title.trim() && nested.title.length <= 256)
+                  candidate = { ...nested, title: candidate.title, subject: nested.title }
+              }
               if (mapped || candidate?.type !== deferredPanel.type) throw new ResearchTaskError('INVALID_OUTPUT', `本卡必须交付 ${deferredPanel.type} 模拟数据，不得换成其他类型或真实来源映射。`)
               const hasSource = value => value && typeof value === 'object' && Object.entries(value).some(([key, item]) => ['url','sources'].includes(key) || item && typeof item === 'object' && hasSource(item))
               if (hasSource(candidate)) throw new ResearchTaskError('INVALID_OUTPUT', '延后模拟数据不能包含虚构的来源链接。')
@@ -2021,7 +2029,11 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         ? [...new Set(scopedSchemas.map(tool => tool?.name).filter(name => typeof name === 'string'))]
         : null
       const defaultResearchTools = [...(scopedSchemas?.some(tool => tool.name === 'public_data_query') ? ['public_data_query'] : []), 'financial_query', 'web_search', 'web_fetch']
-      const networkTools = new Set([...defaultResearchTools, ...preferredSourceNames])
+      // Preference is a routing hint, not the boundary of network access.
+      // A child can legitimately use any parent-visible plugin API; every one
+      // must count toward and close with the same bounded research phase.
+      const networkTools = new Set([...defaultResearchTools, ...preferredSourceNames,
+        ...(kind === 'container' && Array.isArray(scopedSchemas) ? scopedSchemas.map(tool => tool?.name).filter(name => typeof name === 'string' && name.startsWith('ework__')) : [])])
       const fallbackTools = kind === 'board'
         ? [...defaultResearchTools, 'research_workbench_create', 'research_canvas_use', 'research_canvas_task', ...CANVAS_TOOL_NAMES]
         : kind === 'qa'
