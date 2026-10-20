@@ -13,6 +13,10 @@ it.each([
  ['更新当前卡片的真实行情。',false],
  ['每分钟自动更新，失败保留已有数据。',true],
  ['仅手动刷新。',true],
+ ['不要自动更新，但需要手动刷新。',true],
+ ['不需要自动刷新，只手动刷新。',true],
+ ['不要自动更新但需要手动刷新。',true],
+ ['不要手动刷新，只要本次数据。',false],
  ['不要自动更新，只要真实静态快照。',false],
  ['仅静态快照，明确未绑定自动刷新。',false],
  ['引用示例：“每分钟自动更新”。只取本次数据。',false]
@@ -323,11 +327,11 @@ it('materializes observed data and saves the same mapping for model-free updates
  expect(readTemplateModel(saved[0]).data.items).toEqual([{label:'沪深300ETF',value:'4.6 元'}])
  expect(b.intervalMinutes).toBe(1)
 })
-it('binds manual-only source data with automatic scheduling disabled while allowing a manual refresh',async()=>{
+it.each(['设置仅手动刷新','不要自动更新，但需要手动刷新','不需要自动刷新，只手动刷新'])('binds manual-only source data with automatic scheduling disabled while allowing a manual refresh: %s',async setting=>{
  const bindData=vi.fn(async()=>{})
  const runtime=new ResearchTaskRuntime({adapter:{start:async()=>({childSessionId:'child',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(draft)}],sourceRecords:records}),dispose:async()=>{}}),bindData,dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
  try {
-  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'使用通联生成ETF行情指标面板，variant: metrics。设置仅手动刷新，失败保留旧数据。'})
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:`使用通联生成ETF行情指标面板，variant: metrics。${setting}，失败保留旧数据。`})
   await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
   expect(bindData.mock.calls[0][1].intervalMinutes).toBe(0)
   const result=resolveBoundComponent(JSON.stringify(draft),records,now,{intervalMinutes:0})

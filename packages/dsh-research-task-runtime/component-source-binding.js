@@ -70,7 +70,7 @@ export function componentSnapshotEvidence(text,records) {
 // Ignore quoted examples and negative status/prohibitions in the task contract.
 export function componentBindingRequested(text) {
   const request=typeof text==='string'?text.split('\n仅生成本面板，')[0].replace(/```[\s\S]*?```/gu,'').replace(/^\s*>.*$/gmu,'').replace(/[“「][^”」]*[”」]/gu,''):''
-  return request.split(/[。；;\n]/u).some(part=>
+  return request.split(/[。；;，,\n]|但(?:是)?|而是/u).some(part=>
     !/(?:不要|不用|不需要|禁止|关闭|禁用|未绑定|不绑定|不得声称).{0,20}(?:自动|定时|持续|周期|刷新|更新|绑定)|(?:仅|只).{0,8}(?:静态|快照)/u.test(part)&&
     /自动(?:刷新|更新|绑定)|(?:定时|持续|周期)(?:刷新|更新)|(?:仅|只)?\s*手动(?:刷新|更新)|每\s*(?:\d+|[一二三四五六七八九十]+)?\s*(?:分(?:钟)?|小时|天).{0,16}(?:刷新|更新)|\b(?:auto(?:matic)?\s*(?:refresh|update)|refresh\s+every|every\s+\d+\s+(?:minutes?|hours?))\b/iu.test(part))
 }
