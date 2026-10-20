@@ -75,6 +75,47 @@ describe('宿主免费源工作台直通', () => {
     }
   })
 
+  it.each([1,3])('retains singular security filters in %i news requests without rejecting or replanning the whole workbench',count=>{
+    const symbols=['sh600011','sh600027','sh600795'].slice(0,count)
+    const original={...spec('news','sina-news',{},'news'),title:'近期公告与煤电政策动态',prompt:'三家火电公司近期公告及煤电政策，仅真实日期和原文链接，不扩大到全市场。',publicData:{profile:'news',intervalMinutes:30,layoutProfile:'openterminal',requests:symbols.map((symbol,i)=>({source:'sina-news',parameters_json:JSON.stringify({symbol,limit:12+i})}))}}
+    const before=structuredClone(original)
+    const panel=validateWorkbench({requestId:'thermal-news',title:'火电利润弹性观察',dataMode:'source',panels:[original]}).panels[0]
+    expect(panel.type).toBe('news');expect(panel.publicData).toBeUndefined()
+    expect(panel.prompt).toContain(original.prompt)
+    for(const [i,symbol]of symbols.entries())expect(panel.prompt).toContain(JSON.stringify({source:'sina-news',symbol,limit:12+i}))
+    expect(panel.prompt).toContain('"intervalMinutes":30')
+    expect(panel.prompt).toContain('"layoutProfile":"openterminal"')
+    expect(panel.prompt).toContain('不得扩大为全市场新闻')
+    expect(panel.prompt).toContain('不支持symbol')
+    expect(validateWorkbench({requestId:'thermal-news-again',title:'火电利润弹性观察',panels:[panel]}).panels[0]).toEqual(panel)
+    expect(original).toEqual(before)
+  })
+
+  it.each([
+    {symbol:'sh600011',url:'https://private.test'},
+    {symbol:'sh600011',headers:{authorization:'secret'}},
+    {symbol:'sh600011',query:'另一个主题'},
+    {symbol:'sh600011',symbols:['sh600027']},
+    {symbol:'https://private.test'}, {symbol:'600011'}, {symbol:[]},
+    {symbol:'sh600011',limit:101}, {symbol:'sh600011',limit:'12'}
+  ])('rejects an invalid singular news filter without silently deleting it: %o',parameters=>{
+    const original=spec('news','sina-news',parameters,'news')
+    expect(()=>validateWorkbench({requestId:'invalid-singular-news',title:'新闻',panels:[original]})).toThrow()
+  })
+
+  it('rejects mixed, duplicate, wrong-source or excessive singular news requests',()=>{
+    const request=symbol=>({source:'sina-news',parameters_json:JSON.stringify({symbol,limit:12})})
+    for(const requests of [
+      [request('sh600011'),{source:'sina-news',parameters_json:'{"limit":12}'}],
+      [request('sh600011'),request('sh600011')],
+      [{...request('sh600011'),source:'tencent-quotes'}],
+      Array.from({length:9},(_,i)=>request('sh'+String(600010+i)))
+    ]){
+      const original={...spec('news','sina-news',{},'news'),publicData:{profile:'news',requests,intervalMinutes:30}}
+      expect(()=>validateWorkbench({requestId:'invalid-news-requests',title:'新闻',panels:[original]})).toThrow()
+    }
+  })
+
   it('keeps an existing history comparison chart variant requested by the user',()=>{
     const original={title:'航司近一月收益比较',type:'chart',size:'large',prompt:'chart.bar；用户明确要求柱状图比较南方航空、中国国航的月收益率，使用实际取得的记录。',publicData:{profile:'price-volume',requests:['sh600029','sh601111'].map(symbol=>({source:'tencent-history',parameters_json:JSON.stringify({symbol,limit:22})})),intervalMinutes:0}}
     const panel=validateWorkbench({requestId:'history-bar',title:'航空观察',panels:[original]}).panels[0]
