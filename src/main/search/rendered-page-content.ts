@@ -81,6 +81,26 @@ async function collectRenderedPage(maxMilliseconds: number) {
     for (const time of document.querySelectorAll<HTMLTimeElement>('article time[itemprop="datePublished"],main time[itemprop="datePublished"],article time[pubdate]')) {
       const value = date(time.dateTime); if (value) dates.add(value)
     }
+    // Legacy publishers often expose no Article JSON-LD or publication meta.
+    // Read only explicitly labelled publication captions in small metadata
+    // siblings immediately after the unique primary heading. Never scan the
+    // whole page: its clock, recommended stories and quoted body dates belong
+    // to other records. The CCTD news_show H1 + news_tool structure is one such
+    // observed page; this does not depend on a publisher-specific class name.
+    for (const heading of document.querySelectorAll<HTMLElement>('h1')) {
+      if (heading.closest('[hidden],[aria-hidden="true"],nav,footer') || normalize(heading.innerText) !== title) continue
+      let next = heading.nextElementSibling
+      for (let n = 0; next && n < 3; n++, next = next.nextElementSibling) {
+        if (next.matches('script,style,[hidden],[aria-hidden="true"]')) continue
+        if (next.matches('article,main,section,p,pre,code,blockquote,aside,nav,footer') || next.querySelector('h1,h2,h3,article,main,section,p,blockquote')) break
+        const caption = (next as HTMLElement).innerText ?? ''
+        if (caption.length > 800) break
+        const labels = [caption, ...[...next.querySelectorAll<HTMLElement>('li,span,time')].map(node => node.innerText)]
+        for (const label of labels) for (const match of label.matchAll(/(?:^|[\r\n])\s*(?:发布时间|发布日期|Published(?:\s+on)?)\s*[:：]\s*(\d{4}-\d{2}-\d{2})(?=$|[T\s])/giu)) {
+          const value = date(match[1]); if (value) dates.add(value)
+        }
+      }
+    }
     let visited = 0
     const visit = (value: unknown, depth = 0) => {
       if (!value || typeof value !== 'object' || depth > 6 || ++visited > 200) return
