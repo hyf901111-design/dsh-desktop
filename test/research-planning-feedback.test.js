@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
 import {planningResponseMetadata,advancePlanningHeartbeat,planningFeedbackState,researchPlanningRequest,patchResearchPlanningFeedback} from '../scripts/lib/research-planning-feedback.mjs'
 import {classifyResearchCreationRequest,patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
-import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {restoreResearchGridWorkbench,patchResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 const model=(text='private reasoning')=>({key:'m',kind:'assistant-step',data:{blocks:[{kind:'reasoning',text}]}})
 it('projects actual response metadata without retaining private reasoning or tool payloads',()=>{
  const meta=planningResponseMetadata([model(),{key:'t',kind:'tool-call',data:{root:{name:'read',argsRaw:'private/path'}}}])
@@ -66,6 +66,24 @@ it('excludes coding requests from fresh and previously installed planning feedba
   expect(patchResearchCreationProgress(source)).toBe(source)
  }
 })
+it('refreshes the actual inlined classifier when upgrading an installed planning report',()=>{
+ const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+ const fresh=patchResearchCreationProgress(original)
+ const prefix='const planningRequest=entry.running && entry.turn===runningTurnNumber ? researchPlanningRequest(order,nodeStore,entry.turn,'
+ const suffix=',parts=>parseResearchPrompt(contentParts(parts).text).text) : null;'
+ const start=fresh.indexOf(prefix),end=fresh.indexOf(suffix,start)
+ const legacyClassifier='function oldClassify(text){return /生成/.test(text)&&/工作台|组件/.test(text)?{kind:"workbench",request:text}:null}'
+ const legacy=patchResearchGridWorkbench(fresh.slice(0,start+prefix.length)+legacyClassifier+fresh.slice(end))
+ const reinstalled=patchResearchCreationProgress(restoreResearchGridWorkbench(legacy))
+ const helpersStart=reinstalled.indexOf('/* ework:planning-feedback:v1 */'),helpersEnd=reinstalled.indexOf('const ExecutionStatusGroup =',helpersStart)
+ const callStart=reinstalled.indexOf(prefix),callEnd=reinstalled.indexOf(suffix,callStart)+suffix.length
+ const nodes=new Map([['repair',{kind:'user',data:{turn:6,content:[{text:'修复现有工作台的图表生成失败问题，保留原组件和数据。'}]}}]])
+ const request=runInNewContext(reinstalled.slice(helpersStart,helpersEnd)+reinstalled.slice(callStart,callEnd)+';planningRequest',{
+  entry:{running:true,turn:6},runningTurnNumber:6,order:['repair'],nodeStore:nodes,parseResearchPrompt:text=>({text}),contentParts:parts=>({text:parts.map(p=>p.text).join('')})
+ })
+ expect(request).toBeNull()
+ expect(reinstalled.slice(callStart,callEnd)).not.toContain('function oldClassify')
+},15000)
 it('patches the real progress component and its owning turn without duplicating the report on reinstall',()=>{
  const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const patched=patchResearchCreationProgress(original)
