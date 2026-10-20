@@ -9,42 +9,77 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留组件重试原生合同并修正规划财务来源与时间范围",
+        "featureName": "修复新闻筛选重规划、网页原文链接丢失与参数错误数据误判",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "438b02adcc67455d76499d2f34c9e68fc33f6751",
-        "tipCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
+        "baseCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
+        "tipCommit": "3473e5b9df196d690293f0c148dd7934fd2eb922",
         "commits": [
           {
-            "commit": "646e8896d37e0ec2ab120819369628a93e5a1f75",
+            "commit": "22d861498e9b7f1acb12cbaea4e6aeaa79873af9",
             "parents": [
-              "438b02adcc67455d76499d2f34c9e68fc33f6751"
+              "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9"
             ],
-            "subject": "重试组件时恢复原生类型合同并保留最新尺寸约束"
+            "subject": "保留多证券新闻筛选并避免整台重复规划"
           },
           {
-            "commit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
+            "commit": "f7584a319c50680f4b147c3b1e67eb75261e69e1",
             "parents": [
-              "646e8896d37e0ec2ab120819369628a93e5a1f75"
+              "22d861498e9b7f1acb12cbaea4e6aeaa79873af9"
             ],
-            "subject": "规划公司财务组件时匹配专业来源并保留原始时间范围"
+            "subject": "阻止接口参数错误被当作组件业务数据"
+          },
+          {
+            "commit": "3473e5b9df196d690293f0c148dd7934fd2eb922",
+            "parents": [
+              "f7584a319c50680f4b147c3b1e67eb75261e69e1"
+            ],
+            "subject": "保留网页新闻原文链接与逐条日期以支持组件溯源"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
+            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
           },
           {
             "status": "M",
-            "path": "test/research-component-source-tools.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
           },
           {
             "status": "M",
-            "path": "test/research-task-runtime.test.js"
+            "path": "src/main/search/browser-page-reader.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/rendered-page-content.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-reader.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-data-refresh.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-web-snapshot-evidence.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/rendered-page-content.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-public-data.test.js"
           }
         ],
         "checks": [
@@ -52,30 +87,18 @@
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "test/research-task-runtime.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/workbench-source-context.test.js",
+              "test/workbench-public-data.test.js",
+              "test/component-data-refresh.test.js",
+              "test/component-source-binding.test.js",
+              "test/component-web-snapshot-evidence.test.js",
+              "test/rendered-page-content.test.ts",
+              "test/browser-page-reader.test.ts",
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "255项任务重试、生成控制和来源范围检查；/tmp/retry-native-contract-focused-20261020.log",
-            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
-            "completedAt": "2026-10-20T14:38:58.620947+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/research-component-source-tools.test.js",
-              "test/workbench-planning-phase.test.js",
-              "test/workbench-source-capability.test.js",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "144项规划来源能力和阶段预算检查；/tmp/planning-source-scope-focused-20261020.log",
-            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
-            "completedAt": "2026-10-20T14:38:58.620947+00:00",
+            "summary": "213项直接相关检查通过；/tmp/news-source-chain-final-focused-20261020.log",
+            "verifiedCommit": "3473e5b9df196d690293f0c148dd7934fd2eb922",
+            "completedAt": "2026-10-20T15:13:39.265774+00:00",
             "timeoutMs": 120000
           },
           {
@@ -85,9 +108,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查；/tmp/native-retry-planning-typecheck-20261020.log",
-            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
-            "completedAt": "2026-10-20T14:38:58.620947+00:00",
+            "summary": "类型检查通过；/tmp/news-source-chain-final-typecheck-20261020.log",
+            "verifiedCommit": "3473e5b9df196d690293f0c148dd7934fd2eb922",
+            "completedAt": "2026-10-20T15:13:39.265774+00:00",
             "timeoutMs": 180000
           },
           {
@@ -95,118 +118,31 @@
               "git",
               "diff",
               "--check",
-              "438b02adcc67455d76499d2f34c9e68fc33f6751..HEAD"
+              "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9..HEAD"
             ],
             "outcome": "passed",
-            "summary": "提交差异检查",
-            "verifiedCommit": "f707f2cf8d3462f12ed6b9ea6d2da8a3262ccdb9",
-            "completedAt": "2026-10-20T14:38:58.620947+00:00",
+            "summary": "本批次提交差异检查通过",
+            "verifiedCommit": "3473e5b9df196d690293f0c148dd7934fd2eb922",
+            "completedAt": "2026-10-20T15:13:39.265774+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "当前共享客户端财务重试已用MCP取回三家报表并成功，198.911秒但降级为HTML。定位到附加几何包装阻止原合同恢复，修复后需集成复测结构化类型和耗时。"
+          "summary": "本批次为取数与来源校验链路；真实新浪列表已核对39条带日期原文链接，集成后须在实际客户端新生成测量。"
         },
         "acceptanceCriteria": [
-          "同一父会话同一组件且完整需求未变时，剥离已知尺寸包装后恢复原生合同，保留新的手动或自动尺寸约束和原始用户范围。",
-          "修改业务需求时不恢复旧要求；显式格式保持优先。",
-          "识别财务与经营差异为公司专业数据任务，规划不编造取数调用流程、不将近期擅自扩大为一年。",
-          "真实工作台复测应保留全部三家标的、真实金额、同比口径、日期和来源，不能以模板成功替代完整性。"
+          "单个或多个symbol证券新闻保留全部原范围，改为普通取数任务，不能触发全工作台重规划或退化成全市场新闻。",
+          "网页读取同时保留原始标题、相邻唯一日期与原文地址，优先保留带日期记录；未知日期不借用相邻新闻日期。",
+          "工具外层成功但接口返回参数错误时，不得将错误JSON作为组件业务数据或绑定证据。",
+          "实际客户端新生成需保留所有研究标的、原始日期和单位，记录耗时与成功率。"
         ],
         "risks": [
-          "只作本地试验，不晋升main、不发布。",
-          "三家公司财务数字已与本次业务响应逐项核对；来源原文链接完整性和上一轮走势缺标的仍待继续优化。",
-          "实际模型与来源延迟仍需通过新版客户端新生成测量，不预报提速幅度。"
+          "仅本地集成测试，不晋升main、不发布。",
+          "财务模型仍可能误用请求参数，本次先确保错误不冒充数据；行情混合单位及量能缺失仍待继续优化。",
+          "213项检查不替代客户端实际生成验收，不预报提速幅度。"
         ],
-        "generatedAt": "2026-10-20T14:38:58.620947+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ca4acd492b08e78734af28121c73f42144367880",
-        "verificationCommit": "ca4acd492b08e78734af28121c73f42144367880",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "ca4acd492b08e78734af28121c73f42144367880",
-            "completedAt": "2026-10-20T14:40:27.963Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ca4acd492b08e78734af28121c73f42144367880",
-            "completedAt": "2026-10-20T14:40:27.963Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "ca4acd492b08e78734af28121c73f42144367880",
-            "completedAt": "2026-10-20T14:40:27.963Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "ca4acd492b08e78734af28121c73f42144367880",
-            "completedAt": "2026-10-20T14:40:27.963Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ca4acd492b08e78734af28121c73f42144367880",
-            "completedAt": "2026-10-20T14:40:27.963Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T14:40:27.963Z"
+        "generatedAt": "2026-10-20T15:13:39.265774+00:00"
       }
     },
     {
