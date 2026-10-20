@@ -7,6 +7,7 @@ import {normalizeChartMetadata,CHART_VARIANTS} from './chart-template-contract.j
 import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {observedMarketHistory} from './observed-market-history.js'
 import {observedStatementGrowth} from './observed-statement-growth.js'
+import {expandBusinessEvidence} from './component-source-projection.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -35,7 +36,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
       const snapshotTool=['web_fetch','financial_query'].includes(call.tool)
       const purpose=discovery.has(call.tool)||call.tool==='public_data_query'&&call.args?.operation!=='query'||call.tool==='financial_query'&&['resolve','search','catalog'].includes(call.args?.intent)?'discovery':snapshotTool?'snapshot':undefined
       let response,snapshotRows
-      try { response=decodeDataResponse(result) }
+      try { response=expandBusinessEvidence(decodeDataResponse(result)) }
       catch { if(!purpose)return;response=null }
       if(call.tool==='web_fetch') {
         const text=(result.content??[]).filter(b=>b?.type==='text'&&typeof b.text==='string').map(b=>b.text).join('\n')

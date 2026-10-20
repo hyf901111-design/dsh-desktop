@@ -30,7 +30,7 @@ afterEach(async () => { for (const close of cleanups.splice(0).reverse()) await 
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done }); return { promise, resolve } }
 const encryption = { isEncryptionAvailable: () => true, encryptString: value => Buffer.from(value), decryptString: value => value.toString() }
 
-async function fixture(mode = 'native') {
+async function fixture(mode = 'native', businessResponse) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'ework-research-integrations-')))
   const ctx = new Context(), entered = deferred(), finish = deferred(), requests = [], admitted = [], handles = [], modelRequests = []
   let service, bridge, runtime, adapter, server
@@ -87,7 +87,7 @@ async function fixture(mode = 'native') {
   runtime = createIntegrationRuntime(ctx, { env: { EWORK_INTEGRATION_BRIDGE: JSON.stringify({ url: bridge.url, token: bridge.token }) }, pollIntervalMs: 0, requestTimeoutMs: 2000 })
   await runtime.ready
   server = createServer((request, response) => {
-    const result = { path: request.url, nonce: randomUUID() }; requests.push(result)
+    const result = businessResponse ?? { path: request.url, nonce: randomUUID() }; requests.push(result)
     response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); response.end(JSON.stringify(result))
   })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -123,6 +123,17 @@ async function fixture(mode = 'native') {
 }
 
 describe('research children inherit authorized EWork tools', () => {
+  it('installs lossless source projection for an actual component child using the authenticated managed-tool bridge',async()=>{
+    const response={retCode:1,data:Array.from({length:60},(_,i)=>({ticker:'600027',publishDate:'2026-08-28',endDate:'2026-06-30',itemName:'指标'+i,value:i,content:'已披露经营数据，保留全部记录及单位。'.repeat(100)}))}
+    const f=await fixture('native',response),child=await f.start('container')
+    const result=await f.invoke(child,f.names.visible)
+    expect(result.isError,JSON.stringify(result.content)).toBe(false)
+    const projection=JSON.parse(result.content[0].text)
+    expect(projection.__eworkEvidenceProjection?.rowCount).toBe(60)
+    expect(projection.data).toHaveLength(60)
+    expect(result.value.content[0].text).toBe(JSON.stringify(response))
+    expect(f.requests).toHaveLength(1)
+  })
   it('uses the selected concise effort in the actual first component model request', async () => {
     const f = await fixture(); await f.start('container')
     expect(f.modelRequests[0].reasoningEffort).toBe('low')
