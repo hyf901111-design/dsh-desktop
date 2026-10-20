@@ -58,6 +58,16 @@ async function collectRenderedPage(maxMilliseconds: number) {
     const titles = [...new Set([...document.querySelectorAll<HTMLElement>('h1')]
       .filter(el => !el.closest('[hidden],[aria-hidden="true"],nav,footer'))
       .map(el => normalize(el.innerText)).filter(value => value.length > 0 && value.length <= 256))]
+    // Government publishers can use H2 for the primary article and H2 links
+    // for recommendations. Require the explicit page ArticleTitle metadata to
+    // agree with an unlinked visible heading; H2 alone is never a primary ID.
+    if (!titles.length) {
+      const metadataTitles = [...new Set([...document.querySelectorAll<HTMLMetaElement>('meta[name]')]
+        .filter(meta => meta.name.toLowerCase() === 'articletitle')
+        .map(meta => normalize(meta.content)).filter(value => value.length > 0 && value.length <= 256))]
+      if (metadataTitles.length === 1 && [...document.querySelectorAll<HTMLElement>('h2')].some(el =>
+        !el.closest('[hidden],[aria-hidden="true"],nav,footer,aside,a') && !el.querySelector('a') && normalize(el.innerText) === metadataTitles[0])) titles.push(metadataTitles[0]!)
+    }
     if (!titles.length && [...document.querySelectorAll<HTMLMetaElement>('meta[property="og:type"]')].some(meta => meta.content.toLowerCase() === 'article')) {
       const metadataTitles = [...new Set([...document.querySelectorAll<HTMLMetaElement>('meta[property="og:title"]')].map(meta => normalize(meta.content)).filter(value => value.length > 0 && value.length <= 256))]
       if (metadataTitles.length === 1) titles.push(metadataTitles[0]!)
@@ -74,7 +84,7 @@ async function collectRenderedPage(maxMilliseconds: number) {
     // of this article. Conflicting publication metadata stays unresolved.
     for (const meta of document.querySelectorAll<HTMLMetaElement>('meta')) {
       const key = (meta.getAttribute('property') ?? meta.name).toLowerCase()
-      if (key === 'og:title' && normalize(meta.content) !== title) return
+      if (['og:title','articletitle'].includes(key) && normalize(meta.content) !== title) return
       if (!['article:published_time','datepublished','publishdate','pubdate'].includes(key)) continue
       const value = date(meta.content); if (value) dates.add(value)
     }

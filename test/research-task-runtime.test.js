@@ -759,6 +759,19 @@ describe('Research task contract and prompt', () => {
 })
 
 describe('Research task public event sanitization', () => {
+  it('reports failed tool-result blocks and message errors without exposing their bodies', async () => {
+    const { publicEventFromSessionEvent } = await runtimeModule()
+    for (const data of [
+      { message: { content: [{ type: 'tool-result', isError: true, content: [{ type: 'text', text: 'private connection failure' }] }] } },
+      { message: { isError: true, content: [{ type: 'text', text: 'private connection failure' }] } },
+      { message: { content: [{ type: 'tool-result', error: 'private connection failure' }] } },
+      { error: 'private connection failure' }
+    ]) expect(publicEventFromSessionEvent({type:'tool/result', data})).toEqual({type:'tool-finished',failed:true})
+    // Failure-like words in successful source data are still ordinary content.
+    expect(publicEventFromSessionEvent({type:'tool/result',data:{message:{content:[{type:'tool-result',isError:false,content:[{type:'text',text:'{"isError":true,"error":"business observation"}'}]}]}}}))
+      .toEqual({type:'tool-finished',failed:false})
+  })
+
   it('emits assistant text deltas without private reasoning', async () => {
     const { publicEventFromSessionEvent } = await runtimeModule()
 
@@ -3228,4 +3241,56 @@ describe('component design policy generation gate', () => {
   const runtime=new ResearchTaskRuntime({adapter:{start:vi.fn(),dispose:async()=>{}},storage})
   try {await runtime.restore();expect(runtime.inspect({parentSessionId:'parent-1',taskId:'legacy-design'})).toMatchObject({state:'completed',finalOutput})}finally{await runtime.dispose()}
  })
+})
+
+it('supplements observed news originals before rejection without generating a second model response',async()=>{
+ const {ResearchTaskRuntime}=await runtimeModule()
+ const {fetchedWebPageRecord}=await import('../packages/dsh-research-task-runtime/component-source-binding.js')
+ const url='https://example.org/policy/original',title='煤电容量电价机制政策解读'
+ const model={version:1,type:'news',title:'政策动态',items:[{title,date:'2026-01-30',url,summary:'【原文】容量电价标准调整。【分析】可能提高容量收入。'}]}
+ const evidence=`${title}\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[{title,date:'2026-01-30',url}]})}\n[/网页主文记录]\n\n原文内容。`
+ const acquireFeedEvidence=vi.fn(async()=>({records:[fetchedWebPageRecord(url,evidence)],evidence,attempts:[{url,status:'read'}]}))
+ const start=vi.fn(async()=>({childSessionId:'feed-host-supplement',result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(model)}],sourceRecords:[{tool:'web_fetch',purpose:'snapshot',args:{url:'https://example.org/earlier-page'},snapshotRows:[]}],acquireFeedEvidence}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+ try{
+  const task=await runtime.start({...containerRequest('feed-supplement'),prompt:'工作台：真实政策研究\n本面板：政策动态\n取得煤电真实政策原文及其日期和原文链接。仅生成本面板，优先使用 news 类型。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent-1',taskId:task.taskId}).state).toBe('completed'))
+  expect(acquireFeedEvidence).toHaveBeenCalledOnce()
+  expect(start).toHaveBeenCalledOnce()
+  expect(readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent-1',taskId:task.taskId}).finalOutput)).data.items).toEqual(model.items)
+ }finally{await runtime.dispose()}
+})
+
+it.each(['allowed','no-fetch-tool','offline'])('keeps host feed reads within the actual child web permission and observed search sources: %s',async mode=>{
+ const {createSubagentAdapter}=await runtimeModule()
+ const parent={id:'parent-1',session:{events:[]}},child={id:'child-1',session:{events:[]}},done=Promise.withResolvers()
+ const run={id:child.id,localAgent:child,result:done.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
+ const url='https://example.org/policy/actual',title='煤电政策原文'
+ ctx.agents.withInitiator=vi.fn((_parent,operation)=>operation())
+ ctx.tools={schemas:()=>mode==='no-fetch-tool'?[{name:'web_search'}]:[{name:'web_search'},{name:'web_fetch'}]}
+ ctx.web={fetch:vi.fn(async()=>({statusCode:200,body:{kind:'text',content:`${title}\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[{title,date:'2026-01-30',url}]})}\n[/网页主文记录]\n\n原文内容。`}}))}
+ const query=`工作台：政策研究\n本面板：煤电政策\n${mode==='offline'?'不要联网，只用已有资料':'检索实际政策原文'}，优先使用 news 类型。`
+ const handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query,prompt:query,signal:new AbortController().signal,onSessionEvent:()=>{}})
+ try{
+  ctx.emit(child,{type:'tool/call',data:{name:'web_search',callId:'found-policy',arguments:'{"query":"煤电政策"}'}})
+  ctx.emit(child,{type:'tool/result',data:{message:{source:{callId:'found-policy'},content:[{type:'tool-result',toolCallId:'found-policy',content:[{type:'text',text:`Sources:\n- [${title}](${url}) — 原文摘要\n\nCite the relevant URLs above as markdown links in your answer.`}]}]}}})
+  const model={version:1,type:'news',title:'政策',items:[{title,date:'2026-01-30',url,summary:'原文摘要'}]}
+  done.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(model)}]})
+  const result=await handle.result
+  if(mode==='allowed'){
+   const supplement=await result.acquireFeedEvidence(JSON.stringify(model),[])
+   expect(supplement.records).toHaveLength(1)
+   expect(ctx.web.fetch).toHaveBeenCalledOnce()
+   expect(ctx.web.fetch.mock.calls[0][0]).toEqual({url})
+   expect(ctx.agents.withInitiator.mock.calls[0][0]).toBe(parent)
+  }else{expect(result.acquireFeedEvidence).toBeUndefined();expect(ctx.web.fetch).not.toHaveBeenCalled()}
+ }finally{await handle.dispose()}
+})
+
+it('compacts identified article navigation before the source excerpt limit can cut away its body',async()=>{
+ const {researchSearchEvidence}=await runtimeModule(),url='https://example.org/article',title='Original policy',links=[]
+ while(JSON.stringify({links}).length<48500)links.push({title:'Navigation '+links.length+' '+ 'x'.repeat(200),url:'https://example.org/navigation/'+links.length})
+ const text=`Fetched ${url} (HTTP 200)\n\n${title}\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[{title,date:'2026-01-30',url}]})}\n[/网页主文记录]\n\n[网页内链接记录]\n${JSON.stringify({links})}\n[/网页内链接记录]\n\nACTUAL-ARTICLE-BODY-RETAINED`
+ const event={type:'tool/result',data:{message:{content:[{type:'tool-result',toolCallId:'page',content:[{type:'text',text}]}]}}}
+ expect(researchSearchEvidence(event,new Set(['page']),{pageUrl:url})).toContain('ACTUAL-ARTICLE-BODY-RETAINED')
 })
