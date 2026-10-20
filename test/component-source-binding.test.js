@@ -17,6 +17,12 @@ it.each([
  ['不需要自动刷新，只手动刷新。',true],
  ['不要自动更新但需要手动刷新。',true],
  ['不要手动刷新，只要本次数据。',false],
+ ['无需自动刷新，只取本次真实数据。',false],
+ ['不要求自动刷新。',false],
+ ['no automatic refresh',false],
+ ['do not auto refresh',false],
+ ["don't auto refresh",false],
+ ['no automatic refresh, manual refresh only',true],
  ['不要自动更新，只要真实静态快照。',false],
  ['仅静态快照，明确未绑定自动刷新。',false],
  ['引用示例：“每分钟自动更新”。只取本次数据。',false]
@@ -211,6 +217,28 @@ it('repairs ordinary retrieved content into a static card without adding a refre
   expect(bindData).not.toHaveBeenCalled()
   const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
   expect(data.items[0].value).toBe('4.515 元')
+ }finally{await runtime.dispose()}
+})
+it('repairs a static data task through a mapping of all twenty observed rows despite a three-row evidence sample',async()=>{
+ const fullResponse={data:{date:'2026-09-25',rows:Array.from({length:20},(_,i)=>({day:'2026-09-'+String(i+1).padStart(2,'0'),price:i+1}))}}
+ const mapped={version:1,type:'data-bound',requests:[{key:'quote',tool,args}],mapping:{version:1,type:'table',title:'已核验历史数据',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},columns:['日期','价格'],rows:{$from:'quote',$each:'data.rows',$map:[{$path:'day'},{$path:'price',$as:'string'}]}}}
+ const start=vi.fn(async()=>({childSessionId:'snapshot-'+start.mock.calls.length,dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:start.mock.calls.length===1?'已取得20条真实记录，准备展示。':JSON.stringify(mapped)}],sourceRecords:start.mock.calls.length===1?[{tool,args,response:fullResponse}]:[]})}))
+ const bindData=vi.fn(async()=>{})
+ const runtime=new ResearchTaskRuntime({adapter:{start,bindData},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'task',now:()=>now.getTime()})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'node',kind:'container',prompt:'工作台：ETF研究\n本面板：历史记录\n使用通联真实数据，完整展示20条记录。优先使用 table 类型。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'task'}).state).toBe('completed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  const repair=start.mock.calls[1][0]
+  expect(repair.synthesisOnly).toBe(true)
+  expect(repair.prompt).not.toContain('不输出 data-bound')
+  const sampled=repair.prompt.split('\n').find(line=>line.startsWith('{"tool":'))
+  expect(JSON.parse(sampled).responseSample.data.rows).toHaveLength(3)
+  const data=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'task'}).finalOutput)).data
+  expect(data.rows).toHaveLength(20)
+  expect(data.rows[19]).toEqual(['2026-09-20','20'])
+  expect(data.asOf).toContain('静态快照')
+  expect(bindData).not.toHaveBeenCalled()
  }finally{await runtime.dispose()}
 })
 it('materializes a legacy bound draft without enabling automatic refresh when it was not requested',async()=>{
