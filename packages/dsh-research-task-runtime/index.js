@@ -9,7 +9,7 @@ import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
-import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
+import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import {compactStatementEvidence,truncatedStatementEvidence} from './statement-evidence.js'
 import {compactBusinessEvidence,expandBusinessEvidence,registerComponentSourceProjection} from './component-source-projection.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
@@ -547,7 +547,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
       '自定义业务正文13px/20px，辅助文字至少11px/17px，标题14px/22px；不把紧凑表格字号设置为整页正文。字体继承宿主或 var(--sherlock-font-sans)，数字 tabular-nums。使用语义控件和可读名称，颜色使用完整 --sherlock-control-* / --sherlock-status-* 变量；主按钮搭配 control-primary/control-on-primary。业务色徽章放在按钮及 summary 外的独立元素。所有条数从同一记录集合及当前筛选结果计算，不能手写计数；评论按 review 记录数计，不按审查人数计。分类仅依据对应资料，不相关记录单列为未分类。'
     ] : []),
-    ...(['news', 'reports'].includes(type) ? ['每条资料原文明确提供的来源机构、作者、评级、目标价及其他业务字段，连同原摘要保留在 summary；不要只复制短摘要而丢弃这些信息。未提供的机构、作者、评级或目标价必须省略，不自行推断。日期用 date，原分类用 category，未提供链接时省略 url。'] : []),
+    ...(['news', 'reports'].includes(type) ? ['有联网取数时，每个资讯条目均按同一条来源的原始标题、原始日期和真实链接交付，优先直接复用工具返回的网页主文记录或链接记录；不能把推荐新闻日期用于主文，也不能为一个未取得的新闻借用其他文章链接。研究范围中的未取得对象或维度完整保留在 note，不能伪装成新闻或静默删去。', '每条资料原文明确提供的来源机构、作者、评级、目标价及其他业务字段，连同原摘要保留在 summary；不要只复制短摘要而丢弃这些信息。未提供的机构、作者、评级或目标价必须省略，不自行推断。日期用 date，原分类用 category，未提供链接时省略 url。'] : []),
     '保留全部字段和条目并遵守schema容量；dashboard为1–40项。仅明确允许示例/虚构/情景模拟时构造并标注样例；其余数值、日期、来源须有依据，缺失注明。新闻/政策仅获联网授权且需补资料时检索，不编造法规/链接；核实网址放条目url，未取得则省略。完整记录直接用，不为可选字段续查；资料足够即交付。',
     type === 'market'
       ? '组件名称由 JSON title 提供，不在内容中重复。金融组件的字体、尺寸和深浅主题由宿主 Figma 模板执行；指标值按源节点使用 DIN Pro 21/26px。'
@@ -1539,7 +1539,7 @@ export class ResearchTaskRuntime {
           // A valid-looking static card can contain values copied from an API
           // example. Discovery-only evidence requires retrieval even when the
           // previous response was empty or a provider retry already ran.
-          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords))throw new ResearchTaskError('GENERATION_FAILED',sourceRecords.some(record=>record.snapshotRows?.length)?'已取得来源记录，但当前标题、日期或原文链接尚未与同一条来源记录对应。请使用已取得记录的原始标题、原始日期及真实链接，不重新枚举接口或猜测记录。':'当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。')
+          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords))throw new ResearchTaskError('GENERATION_FAILED',componentFeedEvidenceIssue(deliveredText,sourceRecords)??(sourceRecords.some(record=>record.snapshotRows?.length)?'已取得来源记录，但当前标题、日期或原文链接尚未与同一条来源记录对应。请使用已取得记录的原始标题、原始日期及真实链接，不重新枚举接口或猜测记录。':'当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。'))
           let mapped
           const chartVariant=plannedFormat==='chart'?requestedChartVariant(workbenchPanelScope(task.prompt)?.contract??task.prompt):undefined
           try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,intervalMinutes:requestedComponentRefreshInterval(panelRequest),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(panelRequest)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(panelRequest)}) }
@@ -1578,6 +1578,8 @@ export class ResearchTaskRuntime {
               catch (error) { throw new ResearchTaskError('INVALID_OUTPUT', error.message) }
             }
           }
+          const feedIssue=!deferredPanel&&sourceRecords.length&&componentFeedEvidenceIssue(deliveredText,sourceRecords)
+          if(feedIssue)throw new ResearchTaskError('GENERATION_FAILED',feedIssue)
           const sourceIssue=extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
           if(sourceIssue)throw new ResearchTaskError('GENERATION_FAILED',sourceIssue)
           const templateIssue=extractArtifactObjects(deliveredText).filter(data=>data?.type==='market'&&['metrics','fund-kpi'].includes(data.variant)).map(templateDataIssue).find(Boolean)

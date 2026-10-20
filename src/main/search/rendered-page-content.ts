@@ -53,6 +53,56 @@ async function collectRenderedPage(maxMilliseconds: number) {
       links.set(key, link); linkBytes += key.length
     }
   }
+  const primaryArticle = () => {
+    const normalize = (value: string) => clean(value).replace(/\s+/g, ' ')
+    const titles = [...new Set([...document.querySelectorAll<HTMLElement>('h1')]
+      .filter(el => !el.closest('[hidden],[aria-hidden="true"],nav,footer'))
+      .map(el => normalize(el.innerText)).filter(value => value.length > 0 && value.length <= 256))]
+    if (!titles.length && [...document.querySelectorAll<HTMLMetaElement>('meta[property="og:type"]')].some(meta => meta.content.toLowerCase() === 'article')) {
+      const metadataTitles = [...new Set([...document.querySelectorAll<HTMLMetaElement>('meta[property="og:title"]')].map(meta => normalize(meta.content)).filter(value => value.length > 0 && value.length <= 256))]
+      if (metadataTitles.length === 1) titles.push(metadataTitles[0]!)
+    }
+    if (titles.length !== 1) return
+    const title = titles[0]!, dates = new Set<string>()
+    const date = (value: unknown) => {
+      if (typeof value !== 'string') return
+      const found = value.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/u)?.[0]
+      return found && Number.isFinite(Date.parse(found)) && new Date(found).toISOString().slice(0, 10) === found ? found : undefined
+    }
+    // Publication metadata belongs to the page. Arbitrary dates in body text,
+    // modified timestamps, comments and recommended-link dates are not dates
+    // of this article. Conflicting publication metadata stays unresolved.
+    for (const meta of document.querySelectorAll<HTMLMetaElement>('meta')) {
+      const key = (meta.getAttribute('property') ?? meta.name).toLowerCase()
+      if (key === 'og:title' && normalize(meta.content) !== title) return
+      if (!['article:published_time','datepublished','publishdate','pubdate'].includes(key)) continue
+      const value = date(meta.content); if (value) dates.add(value)
+    }
+    for (const time of document.querySelectorAll<HTMLTimeElement>('article time[itemprop="datePublished"],main time[itemprop="datePublished"],article time[pubdate]')) {
+      const value = date(time.dateTime); if (value) dates.add(value)
+    }
+    let visited = 0
+    const visit = (value: unknown, depth = 0) => {
+      if (!value || typeof value !== 'object' || depth > 6 || ++visited > 200) return
+      if (Array.isArray(value)) { for (const item of value.slice(0, 40)) visit(item, depth + 1); return }
+      const item = value as Record<string, unknown>, types = Array.isArray(item['@type']) ? item['@type'] : [item['@type']]
+      if (types.some(type => typeof type === 'string' && /^(?:NewsArticle|Article|BlogPosting|ScholarlyArticle|Report)$/.test(type)) && typeof item.headline === 'string' && normalize(item.headline) === title) {
+        let samePage = item.url === undefined
+        if (typeof item.url === 'string') {
+          try { const url = new URL(item.url, location.href), current = new URL(location.href); url.hash = ''; current.hash = ''; samePage = url.href === current.href } catch {}
+        }
+        const published = samePage && date(item.datePublished)
+        if (published) dates.add(published)
+      }
+      // Only explicit JSON-LD graphs, not related/hasPart article objects.
+      if (item['@graph']) visit(item['@graph'], depth + 1)
+    }
+    for (const script of [...document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]')].slice(0, 32)) {
+      if (!script.textContent || script.textContent.length > 100_000) continue
+      try { visit(JSON.parse(script.textContent)) } catch {}
+    }
+    if (dates.size === 1) return { title, date: [...dates][0] }
+  }
   const content = () => blocks.size
     ? [...blocks.values()].sort((a, b) => a.order - b.order).map(b => b.text).filter(Boolean).join('\n\n')
     : text
@@ -104,6 +154,7 @@ async function collectRenderedPage(maxMilliseconds: number) {
     await pause()
   }
   const missingHeadings = [...headings].filter(id => !seenHeadings.has(id))
-  return { title: document.title, sourceText: content().slice(0, 120_000), complete: complete && missingHeadings.length === 0,
+  const article = primaryArticle()
+  return { title: document.title, ...(article ? { article } : {}), sourceText: content().slice(0, 120_000), complete: complete && missingHeadings.length === 0,
     missingHeadings: missingHeadings.length, images, blockCount: blocks.size, links: [...links.values()].sort((a, b) => Number(Boolean(b.date)) - Number(Boolean(a.date))) }
 }

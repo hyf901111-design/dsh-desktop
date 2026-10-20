@@ -75,3 +75,41 @@ it('prioritizes dated source records over long nonsemantic navigation menus with
   expect(result.links).toHaveLength(200)
   expect(result.links[0]).toEqual({title:'公司最新财务与经营差异公告',url:'https://example.org/story/real',date:'2026-10-20'})
 })
+
+
+it('returns primary article metadata from its own H1 and publication metadata, not recommended stories or arbitrary body dates',async()=>{
+ window=new Window({url:'https://example.org/policy/main'})
+ window.document.head.innerHTML='<title>页面标题 - 网站</title><meta property="og:type" content="article"><meta property="og:title" content="煤电容量电价机制政策解读"><meta property="article:published_time" content="2026-01-30T16:27:00+08:00">'
+ window.document.body.innerHTML='<article><h1>煤电容量电价机制政策解读</h1><p>该政策介绍2023-11-10以来的制度变化。</p><li>2026-10-20 <a href="/recommended">另一条推荐新闻，不能替换主文日期</a></li></article>'
+ const result=await window.eval(renderedPageContentScript(400))
+ expect(result.article).toEqual({title:'煤电容量电价机制政策解读',date:'2026-01-30'})
+ expect(result.links[0].date).toBe('2026-10-20')
+})
+
+it.each(['body-only-date','conflicting-published','recommended-jsonld','multiple-h1'])('does not invent main article identity from %s',async mode=>{
+ window=new Window({url:'https://example.org/policy/main'})
+ window.document.head.innerHTML='<title>页面标题 - 网站</title>'
+ window.document.body.innerHTML='<article><h1>煤电容量电价机制政策解读</h1><p>这是正文日期2026-01-30，不能自动认定为发布日期。</p></article>'
+ if(mode==='conflicting-published')window.document.head.innerHTML+='<meta property="article:published_time" content="2026-01-30"><meta name="publishdate" content="2026-02-01">'
+ if(mode==='recommended-jsonld')window.document.head.innerHTML+='<script type="application/ld+json">{"@type":"NewsArticle","headline":"另一篇标题不匹配的推荐文章","datePublished":"2026-01-30","url":"https://example.org/recommended"}</script>'
+ if(mode==='multiple-h1'){window.document.body.innerHTML+='<h1>另一个不同的主标题</h1>';window.document.head.innerHTML+='<meta property="article:published_time" content="2026-01-30">'}
+ const result=await window.eval(renderedPageContentScript(400))
+ expect(result.article).toBeUndefined()
+})
+
+it('accepts same-page Article JSON-LD only when its headline matches the unique visible H1',async()=>{
+ window=new Window({url:'https://example.org/policy/main'})
+ window.document.head.innerHTML='<title>页面标题 - 网站</title><script type="application/ld+json">{"@graph":[{"@type":"NewsArticle","headline":"煤电容量电价机制政策解读","datePublished":"2026-01-30T16:27:00+08:00","url":"https://example.org/policy/main"},{"@type":"NewsArticle","headline":"推荐文章","datePublished":"2026-10-20","url":"https://example.org/another"}]}</script>'
+ window.document.body.innerHTML='<article><h1>煤电容量电价机制政策解读</h1><p>原文正文</p></article>'
+ const result=await window.eval(renderedPageContentScript(400))
+ expect(result.article).toEqual({title:'煤电容量电价机制政策解读',date:'2026-01-30'})
+})
+
+
+it('supports a short primary headline and an article with explicit OpenGraph identity but no visible H1',async()=>{
+ window=new Window({url:'https://example.org/story/price'})
+ window.document.head.innerHTML='<meta property="og:type" content="article"><meta property="og:title" content="煤价上涨"><meta property="article:published_time" content="2026-10-20">'
+ window.document.body.innerHTML='<main><p>原文正文，不以正文中的2026-01-30当发布日期。</p></main>'
+ const result=await window.eval(renderedPageContentScript(400))
+ expect(result.article).toEqual({title:'煤价上涨',date:'2026-10-20'})
+})

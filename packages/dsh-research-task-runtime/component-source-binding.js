@@ -43,7 +43,7 @@ export function componentSourceCollector(allowed,schemas=[]) {
         if(!text.trim()||!snapshotUrl(call.args?.url))return
         // Public lists can identify detail pages without fetching each article.
         // Keep bounded record fingerprints, never a page body or refresh recipe.
-        snapshotRows=webSnapshotRows(text)
+        snapshotRows=webSnapshotRows(text,call.args?.url)
         response=null
       }
       // Plain-text API definitions still establish discovery, never data.
@@ -73,18 +73,30 @@ function snapshotTitle(value) {
   const title=typeof value==='string'?value.normalize('NFKC').replace(/\s/gu,'').toLowerCase():''
   return title.length<=1000?title:''
 }
-function webSnapshotRows(text) {
+function webSnapshotRows(text,sourceUrl) {
   // The JSON decoder also accepts examples inside prose. Only a complete JSON
   // body or the reader's bounded, prefixed DOM link records establishes a list.
   // Do not search arbitrary prose for JSON or borrow dates from the whole page.
-  const body=text.replace(/^Fetched [^\n]+ \(HTTP 2\d\d\)[\r\n]+/u,'').trim()
+  const fetched=text.match(/^Fetched ([^\n]{1,8192}) \(HTTP 2\d\d\)[\r\n]+/u)
+  let body=text.replace(/^Fetched [^\n]+ \(HTTP 2\d\d\)[\r\n]+/u,'').trim(),articles=[]
+  const main=body.match(/^((?:[^\r\n]{1,512}\r?\n\r?\n)?\[网页读取状态：[^\]\r\n]+\]\r?\n\r?\n)\[网页主文记录\]\r?\n([^\r\n]{1,5000})\r?\n\[\/网页主文记录\]\r?\n\r?\n/u)
+  if(main){
+    try{
+      const packet=JSON.parse(main[2]),actual=snapshotUrl(fetched?.[1]??sourceUrl)
+      if(!actual||Object.keys(packet).some(key=>key!=='articles')||!Array.isArray(packet.articles)||packet.articles.length!==1)return []
+      const article=packet.articles[0]
+      if(!article||Object.keys(article).some(key=>!['title','date','url'].includes(key))||typeof article.title!=='string'||!article.title.trim()||article.title.length>256||!snapshotDate(article.date)||snapshotUrl(article.url)!==actual)return []
+      articles=packet.articles
+    }catch{return []}
+    body=main[1]+body.slice(main[0].length)
+  }
   const rendered=body.match(/^(?:[^\r\n]{1,512}\r?\n\r?\n)?\[网页读取状态：[^\]\r\n]+\]\r?\n\r?\n\[网页内链接记录\]\r?\n([^\r\n]{1,50000})\r?\n\[\/网页内链接记录\](?:\r?\n|$)/u)
   let value
   try{
     value=decodeDataResponse(JSON.parse(rendered?rendered[1]:body.replace(/^\s*\[网页读取状态：[^\]]+\]\s*/u,'')))
     if(rendered&&(!Array.isArray(value?.links)||value.links.length>200||Object.keys(value).some(key=>key!=='links')))return []
-  }catch{return []}
-  const rows=[],ignored=/^(?:examples?|samples?|schemas?|properties|parameters|definitions|documentation|docs?|request|responseSchema)$/iu
+  }catch{value=null}
+  const rows=articles.map(article=>({title:snapshotTitle(article.title),sourceTitle:article.title,date:snapshotDate(article.date),dates:[snapshotDate(article.date)],ids:[],urls:[snapshotUrl(article.url)]})),ignored=/^(?:examples?|samples?|schemas?|properties|parameters|definitions|documentation|docs?|request|responseSchema)$/iu
   const heading=/^(?:title|title_ch|headline|name)$/iu,identity=/^(?:title|title_ch|headline|name|id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu
   const marked=entries=>entries.some(([key,v])=>/^(?:documentation|docs?|examples?|samples?)$/iu.test(key)&&v===true)
   const visit=(value,depth=0,inList=false)=>{
@@ -97,7 +109,7 @@ function webSnapshotRows(text) {
     // Retain their observed dates instead of treating the first key as the only
     // possible publication date. Never derive a date from an article identifier.
     const dates=[...new Set(entries.filter(([key])=>/date|time|published|released/iu.test(key)).map(([,v])=>snapshotDate(v)).filter(Boolean))].slice(0,8),date=dates[0]
-    if(inList&&title.length>=10&&date){
+    if(inList&&title){
       const ids=entries.filter(([key,v])=>/^(?:id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu.test(key)&&typeof v==='string'&&/^[\w-]{8,128}$/u.test(v)).map(([,v])=>v).slice(0,8),urls=[]
       const links=(object,level=0)=>{
         if(!object||typeof object!=='object'||level>3)return
@@ -109,7 +121,7 @@ function webSnapshotRows(text) {
       }
       links(value)
       const subjects=Array.isArray(value.codes)?value.codes.slice(0,12).flatMap(code=>typeof code?.short_name==='string'&&code.short_name.trim()&&code.short_name.length<=128&&typeof code.stock_code==='string'&&/^[\w.-]{1,32}$/u.test(code.stock_code)?[`${code.short_name}（${code.stock_code}）`]:[]):[]
-      if(ids.length||urls.length)rows.push({title,sourceTitle,date,dates,ids,urls,...(subjects.length?{subjects}:{})})
+      if(ids.length||urls.length||date&&title.length>=10)rows.push({title,sourceTitle,date,dates,ids,urls,...(subjects.length?{subjects}:{})})
     }
     for(const [key,v]of entries)if(!ignored.test(key))visit(v,depth+1,Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).some(key=>heading.test(key))))
   }
@@ -128,13 +140,13 @@ function snapshotLinkMatches(url,record,row) {
 }
 function snapshotRecordMatches(value,record) {
   if(!value||typeof value!=='object'||!Array.isArray(record.snapshotRows))return false
-  const title=snapshotTitle(value.title??value.headline??value.name),date=snapshotDate(value.date??value.publishedAt??value.notice_date),url=snapshotUrl(value.url??value.link)
-  if(title.length<10||!date||!url)return false
+  const rawDate=value.date??value.publishedAt??value.notice_date,title=snapshotTitle(value.title??value.headline??value.name),date=snapshotDate(rawDate),url=snapshotUrl(value.url??value.link)
+  if(!title||rawDate!==undefined&&!date||!url&&(value.url!==undefined||value.link!==undefined))return false
   return record.snapshotRows.some(row=>{
     // Formatting can change width/whitespace, never business wording, signs
     // or decimals. A matching ID cannot justify deleting a negation or amount.
-    if(!(row.dates??[row.date]).includes(date)||row.title!==title)return false
-    return snapshotLinkMatches(url,record,row)
+    if((date?!(row.dates??[row.date]).includes(date):(row.dates??[row.date]).filter(Boolean).length>0)||row.title!==title)return false
+    return url?snapshotLinkMatches(url,record,row):row.urls.length===0&&row.ids.length===0
   })
 }
 
@@ -174,7 +186,19 @@ export function restoreSnapshotFeedHeadlines(text,records) {
   const restored=normalizeAnnouncementFeed(changed?{...data,items}:data,records)
   if(changed||restored!==data)return JSON.stringify(restored)
 }
+// A feed is accepted per record. A valid quote or one valid headline cannot
+// establish the identity of another article in the same generated component.
+export function componentFeedEvidenceIssue(text,records) {
+  const candidates=extractArtifactObjects(text),data=candidates.length===1?candidates[0]:null
+  if(!['news','reports'].includes(data?.type))return null
+  if(data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>40)return '资讯列表必须包含1–40条已取得的实际记录。'
+  const sources=records.filter(record=>record.purpose!=='discovery').map(record=>record.snapshotRows?record:{...record,snapshotRows:record.response&&componentMappableSource(record)?webSnapshotRows(JSON.stringify(record.response)):[]})
+  const missing=data.items.flatMap((item,index)=>sources.some(record=>snapshotRecordMatches(item,record))?[]:[index+1])
+  return missing.length?`资讯第 ${missing.join('、')} 条的标题、日期与原文链接未能对应同一条已取得记录。逐条复用网页主文记录或链接记录的原始字段，不能借用另一条新闻的网址或日期。已取得的有效条目保留；未取得的研究对象、政策维度及原因放入 note，不以缺失说明伪装新闻，也不能静默缩小原研究范围。`:null
+}
 export function componentSnapshotEvidence(text,records) {
+  const candidates=extractArtifactObjects(text)
+  if(candidates.some(data=>['news','reports'].includes(data?.type)))return candidates.length===1&&!componentFeedEvidenceIssue(text,records)
   if(records.some(r=>r.tool==='financial_query'&&r.purpose==='snapshot'&&componentMappableSource(r)))return true
   const urls=new Set(records.filter(r=>r.tool==='web_fetch'&&r.purpose==='snapshot').map(r=>snapshotUrl(r.args?.url)).filter(Boolean))
   if(!urls.size)return false
@@ -182,9 +206,8 @@ export function componentSnapshotEvidence(text,records) {
     if(!value||typeof value!=='object')return false
     return records.some(record=>record.tool==='web_fetch'&&record.purpose==='snapshot'&&snapshotRecordMatches(value,record))||Object.entries(value).some(([key,v])=>['url','link','sourceUrl'].includes(key)&&typeof v==='string'&&urls.has(snapshotUrl(v))||v&&typeof v==='object'&&(Array.isArray(v)?v.some(referenced):referenced(v)))
   }
-  return extractArtifactObjects(text).some(referenced)
+  return candidates.some(referenced)
 }
-
 // A request for real observations does not imply a recurring refresh recipe.
 // Ignore quoted examples and negative status/prohibitions in the task contract.
 export function componentBindingRequested(text) {

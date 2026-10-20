@@ -124,9 +124,11 @@ it('synthesizes a rendered news list in one worker with a directly usable origin
  }finally{await runtime.dispose()}
 })
 
-it('recognizes observed announcement list records behind their different detail URLs',()=>{
+it('requires every announcement headline to be restored to its observed wording before accepting the whole list',()=>{
  const records=collect()
- expect(proof(observed.artifact,records)).toBe(true)
+ expect(proof(observed.artifact,records)).toBe(false)
+ const restored=JSON.parse(restoreSnapshotFeedHeadlines(JSON.stringify(observed.artifact),records))
+ expect(proof(restored,records)).toBe(true)
  expect(records.filter(r=>r.tool==='web_fetch').every(r=>r.response===null)).toBe(true)
 })
 
@@ -138,7 +140,8 @@ it('retains only bounded public record fingerprints, including the real fetch tr
  const calls=structuredClone(observed.calls)
  calls[0].data.data.list[0].body='Do not retain this full public page body'
  const records=collect(calls,{prefix:'[网页读取状态：已滚动至文末，完成正文收集]\n\n'})
- expect(proof(observed.artifact,records)).toBe(true)
+ const restored=JSON.parse(restoreSnapshotFeedHeadlines(JSON.stringify(observed.artifact),records))
+ expect(proof(restored,records)).toBe(true)
  expect(JSON.stringify(records)).not.toContain('Do not retain this full public page body')
 })
 
@@ -219,4 +222,78 @@ it.each(['unobserved-id','wrong-date','wrong-title','unrelated-host','public-suf
  if(mode==='document-example')calls=calls.map(c=>({...c,data:{documentation:{examples:c.data}}}))
  if(mode==='business-error')calls=calls.map(c=>({...c,data:{...c.data,success:false}}))
  expect(proof(artifact,collect(calls,{failed}))).toBe(false)
+})
+
+
+it.each(['news','reports'])('requires every retrieved %s item to match its own observed title, date and URL, even beside valid financial evidence',type=>{
+ const records=collectRenderedNews(),good={...renderedNews},bad={...renderedNews,title:'另一条未取得的行业新闻，不能借用前一条的原文链接'}
+ const finance={tool:'financial_query',purpose:'snapshot',response:{schema_version:'financial-1',status:'complete',records:[{metric:'close',instrument:'600011.SH',value:7,as_of:'2026-10-20'}]}}
+ expect(proof({version:1,type,items:[good]},records)).toBe(true)
+ expect(proof({version:1,type,items:[good,bad]},records)).toBe(false)
+ expect(proof({version:1,type,items:[bad]},[finance,...records])).toBe(false)
+ expect(proof({version:1,type,items:[good,bad]},[finance,...records])).toBe(false)
+ expect(proof({version:1,type,items:[good],note:'其他请求维度本次未取得；保留缺失说明，不补写条目。'},records)).toBe(true)
+})
+
+const mainArticle={title:'政策解读：煤电容量电价机制的扩围与升级',date:'2026-01-30',url:'https://example.org/policy/article-1482147'}
+function collectMainArticle(){
+ const collector=componentSourceCollector(['web_fetch'])
+ const text=`Fetched ${mainArticle.url} (HTTP 200)\n\n政策解读 - 来源网站\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[mainArticle]})}\n[/网页主文记录]\n\n[网页内链接记录]\n${JSON.stringify({links:[renderedNews]})}\n[/网页内链接记录]\n\n主文正文已经由网页工具返回，但不能将整篇正文和其中任意日期持久化为另一条记录。`
+ collector.accept({type:'tool/call',data:{callId:'main',name:'web_fetch',arguments:JSON.stringify({url:mainArticle.url})}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'main'},content:[{type:'tool-result',content:[{type:'text',text}]}]}}})
+ return collector.records
+}
+it('keeps a directly fetched article fingerprint separate from recommended links without persisting the whole page',()=>{
+ const records=collectMainArticle()
+ expect(proof({version:1,type:'news',items:[mainArticle,renderedNews]},records)).toBe(true)
+ expect(proof({version:1,type:'news',items:[{...mainArticle,date:renderedNews.date}]},records)).toBe(false)
+ expect(proof({version:1,type:'news',items:[{...renderedNews,url:mainArticle.url}]},records)).toBe(false)
+ expect(JSON.stringify(records)).not.toContain('主文正文已经由网页工具返回')
+})
+
+it('rejects a mixed feed through runtime acceptance and performs only the existing bounded repair, retaining missing scope in the repair contract',async()=>{
+ const feed={version:1,type:'news',title:'行业资讯',items:[renderedNews,{...renderedNews,date:'2026-10-19',title:'标题日期链接错配，不能作为另一条资讯交付'}],note:'上网电价政策未取得，不能缩小研究范围。'}
+ const start=vi.fn(async()=>({childSessionId:'mixed-news-'+start.mock.calls.length,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(feed)}],sourceRecords:collectRenderedNews()}),dispose:async()=>{}}))
+ const runtime=new ResearchTaskRuntime({adapter:{start},storage:{save:async()=>{}},createId:()=> 'mixed-feed'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'news',kind:'container',prompt:'工作台：真实行业研究\n本面板：煤电政策及行业资讯\n优先使用 news 类型；保留每条真实标题、日期和原文链接及未取得的研究范围，静态快照。'})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'mixed-feed'}).state).toBe('failed'))
+  expect(start).toHaveBeenCalledTimes(2)
+  expect(start.mock.calls[1][0].prompt).toContain('上网电价政策未取得')
+  expect(start.mock.calls[1][0].prompt).toContain('资讯第 2 条')
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'mixed-feed'}).finalOutput).toBeUndefined()
+ }finally{await runtime.dispose()}
+})
+
+
+it('retains genuine title/date-only source records without inventing a detail URL, but does not omit a provided URL to evade matching',()=>{
+ const item={title:'来源确实提供但没有详情网址的行业记录',date:'2026-10-20',summary:'来源未提供单条详情链接。'}
+ const records=collect([{url:'https://example.org/list',data:{records:[{title:item.title,date:item.date}]}}])
+ expect(proof({version:1,type:'news',items:[item]},records)).toBe(true)
+ expect(proof({version:1,type:'news',items:[{...item,url:'https://example.org/invented'}]},records)).toBe(false)
+ expect(proof({version:1,type:'news',items:[{...renderedNews,url:undefined}]},collectRenderedNews())).toBe(false)
+})
+
+
+it('checks a short observed headline by its own URL and date rather than requiring a minimum headline length',()=>{
+ const item={title:'煤价上涨',date:'2026-10-20',url:'https://example.org/story/price'}
+ expect(proof({version:1,type:'news',items:[item]},collect([{url:'https://example.org/list',data:{records:[item]}}]))).toBe(true)
+})
+
+it('keeps the primary article fingerprint when a page also returns the full recommended-link budget',()=>{
+ const collector=componentSourceCollector(['web_fetch']),links=Array.from({length:200},(_,i)=>({title:'独立的推荐新闻标题 '+i,url:'https://example.org/related/'+i,date:'2026-10-20'}))
+ const text=`Fetched ${mainArticle.url} (HTTP 200)\n\n页面标题\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[mainArticle]})}\n[/网页主文记录]\n\n[网页内链接记录]\n${JSON.stringify({links})}\n[/网页内链接记录]\n\n正文`
+ collector.accept({type:'tool/call',data:{callId:'full',name:'web_fetch',arguments:JSON.stringify({url:mainArticle.url})}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'full'},content:[{type:'tool-result',content:[{type:'text',text}]}]}}})
+ expect(collector.records[0].snapshotRows).toHaveLength(200)
+ expect(proof({version:1,type:'news',items:[mainArticle]},collector.records)).toBe(true)
+})
+
+
+it('does not invent a publication date when an observed linked record has none, or omit an actual provided date',()=>{
+ const item={title:'未提供发布日期的真实原文记录',url:'https://example.org/article/no-date',summary:'来源未提供发布日期。'}
+ const records=collect([{url:'https://example.org/list',data:{records:[item]}}])
+ expect(proof({version:1,type:'news',items:[item]},records)).toBe(true)
+ expect(proof({version:1,type:'news',items:[{...item,date:'2026-10-20'}]},records)).toBe(false)
+ expect(proof({version:1,type:'news',items:[{...renderedNews,date:undefined}]},collectRenderedNews())).toBe(false)
 })
