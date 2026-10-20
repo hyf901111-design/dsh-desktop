@@ -46,27 +46,58 @@ export function workbenchProgressState(plans,snapshot,english=false) {
  return {phase,title,detail,total,planned,completed,pending,failed,cancelled,unknown}
 }
 
-function ResearchWorkbenchProgress({sessionId,plans}) {
+export function researchWorkbenchReceiptPlans(order,nodeStore,readMetadata) {
+ const plans=new Map()
+ for(const key of order??[]){
+  const node=nodeStore?.get?.(key)
+  if(node?.kind!=='tool-call')continue
+  for(const plan of readMetadata([node]).plans??[])plans.set(plan.id,plan)
+ }
+ return [...plans.values()]
+}
+
+function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  const [snapshot,setSnapshot]=react.useState(()=>window.__sherlockWorkbenchGenerationV1?.get?.(sessionId)??null)
  react.useEffect(()=>observeResearchWorkbenchProgress(window,sessionId,setSnapshot),[sessionId])
- const state=workbenchProgressState(plans,snapshot?.sessionId===sessionId?snapshot:null,document.documentElement.dataset.odysseyLocale==='en')
- return react_jsx_runtime.jsxs('div',{'data-research-workbench-progress':state.phase,style:{margin:'4px 0 8px 20px',padding:'8px 10px',borderLeft:'2px solid var(--dsw-alias-border-l2)',fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:[
-  react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{fontWeight:500},children:state.title}),
-  react_jsx_runtime.jsx('div',{children:state.detail})
+ const current=snapshot?.sessionId===sessionId?snapshot:null
+ const visiblePlans=footer&&current?plans.filter(p=>current.nodes.some(n=>n.planId===p.id)):plans
+ if(footer&&current&&!visiblePlans.length)return null
+ const state=workbenchProgressState(visiblePlans,current,document.documentElement.dataset.odysseyLocale==='en')
+ if(footer&&current?.active===false&&['completed','empty'].includes(state.phase))return null
+ return react_jsx_runtime.jsxs('div',{'data-research-workbench-progress':state.phase,...(footer?{'data-research-workbench-footer':true}:{}),style:{margin:footer?'8px 0 12px':'4px 0 8px 20px',padding:'8px 10px',...(footer?{border:'1px solid var(--dsw-alias-border-l2)',borderRadius:8,background:'var(--dsw-alias-bg-l2)'}:{borderLeft:'2px solid var(--dsw-alias-border-l2)'}),fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:[
+  react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{fontWeight:500,color:'var(--dsw-alias-label-primary)'},children:state.title}),
+  footer&&state.phase==='completed'&&state.total===state.planned?null:react_jsx_runtime.jsx('div',{children:state.detail})
  ]})
 }
 
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v1 */'
+ const marker='/* ework:workbench-feedback:v2 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
+ const helpers=marker+'\n'+[observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
+ const previous=source.indexOf('/* ework:workbench-feedback:v1 */')
+ if(previous>=0){
+  const end=source.indexOf('const ExecutionStatusGroup =',previous)
+  if(end<0)throw Error('Workbench feedback upgrade anchor missing')
+  source=source.slice(0,previous)+helpers+source.slice(end)
+ }else{
  const anchor='const ExecutionStatusGroup = (0, react.memo)(function ExecutionStatusGroup({ entry, activityNodes, startTime, endTime, seatProps, t, planningRequest }) {'
- const helpers=marker+'\n'+[observeResearchWorkbenchProgress,workbenchProgressState,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
  exact(anchor,helpers+anchor.replace('t, planningRequest','t, planningRequest, sessionId'))
  const meta='const planningMeta=planningRequest && entry.running ? planningResponseMetadata(activityNodes) : null;'
  exact(meta,meta+'\nconst workbenchMeta=planningResponseMetadata(activityNodes);')
  exact('planningMeta ? react_jsx_runtime.jsx(ResearchPlanningFeedback,',"workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,")
  const props='activityNodes,\n\t\t\t\t\t\t\t\t\tplanningRequest,'
  exact(props,'activityNodes, sessionId,\n\t\t\t\t\t\t\t\t\tplanningRequest,')
+ }
+ const start=source.indexOf('function ChatView('),end=source.indexOf('//#region lib/types/client/contract/slots.js',start)
+ if(start<0||end<0)throw Error('Workbench feedback ChatView scope missing')
+ let chat=source.slice(start,end)
+ const nodes='const nodeStore = useSession((s) => s.chat.nodes);'
+ if(chat.split(nodes).length!==2)throw Error('Workbench feedback ChatView nodes missing or ambiguous')
+ chat=chat.replace(nodes,nodes+'\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);')
+ const tail=/(\}\))(\s*\]\s*\}\), \(0, react_jsx_runtime\.jsx\)\(OdysseyReadingStatus,)/g
+ if([...chat.matchAll(tail)].length!==1)throw Error('Workbench feedback ChatView footer missing or ambiguous')
+ chat=chat.replace(tail,'$1, workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null$2')
+ source=source.slice(0,start)+chat+source.slice(end)
  return source
 }
