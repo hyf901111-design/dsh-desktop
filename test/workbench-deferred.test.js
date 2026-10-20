@@ -50,6 +50,14 @@ describe('领域自适应模拟工作台延后生成', () => {
       expect(data.title).toContain('模拟');expect(f.adapter.start).toHaveBeenCalledTimes(1)
     }finally{await f.close()}
   })
+  it('preserves a nested timeline business title as its subject under the known host panel title',async()=>{
+    const f=await setup(async request=>{const data={...artifact(request.query),title:'潜器作业·仪器与样品流转记录'};return {childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:data.type,title:request.query.match(/本面板：([^\n]+)/u)[1],artifact:data})}]}),dispose:async()=>{}}})
+    try{await f.tool.execute({...input(),panels:[panels[4]]},f.exec);await vi.waitFor(()=>expect([...f.runtime.tasks.values()][0].state).toBe('completed'));const data=readTemplateModel(JSON.parse([...f.runtime.tasks.values()][0].finalOutput)).data;expect(data.subject).toBe('潜器作业·仪器与样品流转记录');expect(data.items).toHaveLength(1);expect(data.title).toContain('三日节目安排');expect(f.adapter.start).toHaveBeenCalledTimes(1)}finally{await f.close()}
+  })
+  it('does not overwrite an existing timeline subject to resolve a conflicting nested title',async()=>{
+    const f=await setup(async request=>{const data={...artifact(request.query),title:'业务标题',subject:'另一个必须保留的正文标题'};return {childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:data.type,title:request.query.match(/本面板：([^\n]+)/u)[1],artifact:data})}]}),dispose:async()=>{}}})
+    try{await f.tool.execute({...input(),panels:[panels[4]]},f.exec);await vi.waitFor(()=>expect([...f.runtime.tasks.values()][0].state).toBe('failed'));expect([...f.runtime.tasks.values()][0].finalOutput).toBeUndefined()}finally{await f.close()}
+  })
   it.each(['url','extra','type','title'])('does not unwrap a conflicting or additional %s envelope field',async field=>{
     const f=await setup(async request=>{const data=artifact(request.query),envelope={version:1,type:data.type,title:data.title,artifact:data};envelope[field]=field==='type'?'note':field==='title'?'不相同标题':field==='url'?'https://example.com/invented':'不应丢弃的信息';return {childSessionId:request.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(envelope)}]}),dispose:async()=>{}}})
     try{await f.tool.execute({...input(),panels:[panels[4]]},f.exec);await vi.waitFor(()=>expect([...f.runtime.tasks.values()][0].state).toBe('failed'));expect([...f.runtime.tasks.values()][0].finalOutput).toBeUndefined()}finally{await f.close()}
@@ -149,6 +157,7 @@ describe('领域自适应模拟工作台延后生成', () => {
       const built = buildResearchTaskPrompt({ kind: 'container', parentSessionId: 'p', canvasNodeId: p.title, prompt })
       expect(built).toContain(`"type":"${p.type}"`)
       expect(built).toContain('items等字段放在根对象，不再包裹panel或artifact')
+      if(p.type==='timeline')expect(built).not.toContain('同次提供artifact:')
       expect(built).not.toContain('唯一交付格式：undefined')
     }
   })

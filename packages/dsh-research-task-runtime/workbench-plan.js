@@ -3,7 +3,7 @@ import {AUDIO_GUIDANCE} from './audio-template-contract.js';
 import {DERIVED_GUIDANCE} from './derived-template-contract.js';
 import {YOUTUBE_GUIDANCE} from './youtube-template-contract.js';
 import {IFRAME_GUIDANCE} from './iframe-template-contract.js';
-import {TIMELINE_GUIDANCE,timelineDataIssue} from './timeline-template-contract.js';
+import {TIMELINE_GUIDANCE,TIMELINE_DATA_GUIDANCE,timelineDataIssue} from './timeline-template-contract.js';
 import {GANTT_GUIDANCE,ganttDataIssue} from './gantt-template-contract.js';
 import { workbenchPlanningContext } from './workbench-planning-context.js';
 import {KPI_GUIDANCE,kpiDataIssue} from './kpi-template-contract.js';
@@ -228,7 +228,7 @@ function simulatedArtifactProblem(artifact) {
     if (artifact.type === 'audio') return AUDIO_GUIDANCE;
     if (artifact.type === 'youtube') return YOUTUBE_GUIDANCE;
     if (artifact.type === 'iframe') return IFRAME_GUIDANCE;
-    if (artifact.type === 'timeline') return `${timelineDataIssue(artifact) ?? ''}。${TIMELINE_GUIDANCE}`;
+    if (artifact.type === 'timeline') return `${timelineDataIssue(artifact) ?? ''}。${TIMELINE_DATA_GUIDANCE}`;
     if (artifact.type === 'market' && FINANCIAL_PROFILE_VARIANTS.includes(artifact.variant)) return `${financialProfileDataIssue(artifact) ?? ''}。${FINANCIAL_PROFILE_FIELDS[artifact.variant]}`;
     if (['progress','tasks','approval','alerts','form','code','clock','note','rss'].includes(artifact.type)) return `${operationsDataIssue(artifact) ?? ''}。${operationsTemplateSchema(artifact.type)}`;
     if (artifact.type === 'kpi') return `${kpiDataIssue(artifact) ?? ''}。${KPI_GUIDANCE}`;
