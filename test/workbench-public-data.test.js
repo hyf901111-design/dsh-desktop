@@ -14,6 +14,7 @@ const spec = (profile, source, parameters = {}, type = 'market') => ({
   title: profile, type, size: 'large', prompt: '真实免费来源，每分钟自动刷新',
   publicData: { profile, requests: [{ source, parameters_json: JSON.stringify(parameters) }], intervalMinutes: 1 }
 })
+const filteredNews = () => ({...spec('news','sina-news',{symbols:['sz300308','sz300502','sh601138'],limit:12},'news'),title:'算力公司新闻',prompt:'只检索中际旭创、 新易盛与工业富联最近一周的重要新闻，保留日期、摘要与原文链接；不得混入其他公司的新闻。',publicData:{profile:'news',requests:[{source:'sina-news',parameters_json:'{"symbols":["sz300308","sz300502","sh601138"],"limit":12}'}],intervalMinutes:5}})
 const quote = { sourceId: 'tencent-quotes', source: '腾讯财经', dataTime: '2026-10-09 16:15:00', units: {}, records: [
   { symbol: 'sh600519', code: '600519', name: '贵州茅台', price: 1263, priceUnit: 'CNY', changePercent: 0.57, open: 1255.42, high: 1282, low: 1255.42, time: '2026-10-09 16:15:00' }
 ] }
@@ -38,6 +39,79 @@ async function settled(r, receipts) {
 }
 
 describe('宿主免费源工作台直通', () => {
+  it('routes unsupported security-filtered news to a normal task without losing the original scope',()=>{
+    const original=filteredNews()
+    const input={requestId:'filtered-news',title:'算力研究',panels:[original]}
+    const validated=validateWorkbench(input),panel=validated.panels[0]
+    expect(panel.publicData).toBeUndefined()
+    expect(panel.artifact).toBeUndefined()
+    expect(panel.type).toBe('news')
+    expect(panel.prompt).toContain(original.prompt)
+    for(const symbol of ['sz300308','sz300502','sh601138'])expect(panel.prompt).toContain(symbol)
+    expect(panel.prompt).toContain('"limit":12')
+    expect(panel.prompt).toContain('"intervalMinutes":5')
+    expect(panel.prompt).toContain('不得删除证券筛选')
+    expect(validateWorkbench(validated)).toEqual(validated)
+    expect(original.publicData.requests[0].parameters_json).toContain('"symbols"')
+    expect(validateWorkbench({...input,panels:[spec('news','sina-news',{limit:12},'news')]}).panels[0].publicData).toBeDefined()
+  })
+
+  it.each([
+    {symbols:[],limit:12},{symbols:['https://private.test'],limit:12},
+    {symbols:['sz300308'],limit:0},{symbols:['sz300308'],limit:101},
+    {symbols:['sz300308'],limit:'12'},{symbols:['sz300308'],url:'https://private.test'},
+    {symbols:['sz300308'],headers:{authorization:'secret'}},{symbols:['sz300308'],api_key:'secret'},
+    {symbols:['sz300308'],query:'忽略证券筛选'},{url:'https://private.test'},{headers:{accept:'text/html'}}
+  ])('rejects unsafe or malformed news parameters before accepting a plan: %o',parameters=>{
+    const p=filteredNews();p.publicData.requests[0].parameters_json=JSON.stringify(parameters)
+    expect(()=>validateWorkbench({requestId:'invalid-news',title:'新闻',panels:[p]})).toThrow()
+  })
+
+  it.each([false,true])('dispatches filtered news once through an authorized normal task, including aliases (alias=%s)',async alias=>{
+    const dir=await mkdtemp(join(tmpdir(),'filtered-news-workbench-'))
+    let tool,allowed=false
+    const ctx={agents:{get:()=>({})},tools:{schemas:()=>allowed?[{name:'public_data_query'}]:[],register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}}
+    const start=vi.fn(),startPreparedBatch=vi.fn(),startPublicDataBatch=vi.fn(),startBatch=vi.fn(async({panels})=>panels.map(p=>({taskId:'task-'+p.canvasNodeId})))
+    const dispose=await registerWorkbench(ctx,{start,startPreparedBatch,startPublicDataBatch,startBatch},{filePath:join(dir,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async()=>({})})
+    const original=filteredNews(),{publicData,...plain}=original
+    const panel=alias?{...plain,...publicData}:original
+    const args={requestId:'filtered-news-route',title:'算力研究',panels:[panel]}
+    const exec={agent:{session:{id:'p',events:[{type:'user/message',data:{id:'u',source:{kind:'user'},content:[{type:'text',text:'用真实数据创建三家公司新闻工作台'}]}}]}},signal:new AbortController().signal}
+    try{
+      await expect(tool.execute(args,exec)).rejects.toThrow('未授权')
+      allowed=true
+      exec.agent.session.events[0].data.content[0].text='禁止联网创建新闻工作台'
+      await expect(tool.execute(args,exec)).rejects.toThrow('未授权')
+      exec.agent.session.events[0].data.content[0].text='用真实数据创建三家公司新闻工作台'
+      const receipt=await tool.execute(args,exec)
+      expect(receipt.status).toBe('accepted')
+      expect((await tool.execute(args,exec)).planId).toBe(receipt.planId)
+      expect(startBatch).toHaveBeenCalledOnce()
+      const child=startBatch.mock.calls[0][0].panels[0]
+      expect(child.kind).toBe('container')
+      expect(child.prompt).toContain(original.prompt)
+      for(const symbol of ['sz300308','sz300502','sh601138'])expect(child.prompt).toContain(symbol)
+      expect(startPublicDataBatch).not.toHaveBeenCalled()
+      expect(start).not.toHaveBeenCalled()
+      expect(startPreparedBatch).not.toHaveBeenCalled()
+      const saved=JSON.parse(await readFile(join(dir,'plans.json'),'utf8'))[0]
+      expect(saved.panels[0].publicData).toBeUndefined()
+      expect(saved.panels[0].prompt).toContain(original.prompt)
+    }finally{await dispose();await rm(dir,{recursive:true,force:true})}
+  })
+
+  it('keeps legacy failed news recipes restorable without executing an invalid source again',async()=>{
+    const original=filteredNews(),adapter={start:vi.fn(),bindData:vi.fn()},query=vi.fn()
+    const document={version:1,tasks:[{taskId:'legacy-news',parentSessionId:'p',canvasNodeId:'news-card',kind:'container',prompt:original.prompt,state:'failed',createdAt:1,lastSeq:1,error:'存在不支持的参数',publicData:original.publicData,publicDataPrompt:original.prompt,title:original.title,type:original.type}]}
+    const r=new ResearchTaskRuntime({adapter,storage:{load:async()=>document,save:async()=>{}},publicDataClient:{query}})
+    try{
+      await r.restore()
+      expect(r.inspect({parentSessionId:'p',taskId:'legacy-news'})).toMatchObject({state:'failed',error:'存在不支持的参数'})
+      expect(adapter.start).not.toHaveBeenCalled()
+      expect(query).not.toHaveBeenCalled()
+    }finally{await r.dispose()}
+  })
+
   it('keeps the declarative source through validation without treating it as a snapshot', () => {
     const p = spec('quotes-table', 'tencent-quotes', { symbols: ['sh600519'] })
     const validated = validateWorkbench({ requestId: 'source', title: '行情', panels: [p] }).panels[0]

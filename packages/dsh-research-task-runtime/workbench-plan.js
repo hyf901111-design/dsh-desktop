@@ -19,7 +19,7 @@ import { marketVariant, workbenchDesignTemplate } from './workbench-design-contr
 import { expandSimulatedWorkbenchPreset } from './simulated-workbench-presets.js';
 import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
-import { validatePublicDataPanel, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
+import { validatePublicDataPanel, publicDataNewsTaskRequirement, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
@@ -362,12 +362,21 @@ export function validateWorkbench(value) {
             if (isSimulated || p.artifact !== undefined) throw Error('免费源直通面板不能混用模拟数据或静态artifact。');
             if (p.intervalMinutes !== undefined && p.publicData?.intervalMinutes !== undefined && p.intervalMinutes !== p.publicData.intervalMinutes)
                 throw Error('面板与免费源刷新频率冲突，请只填写一个一致的值。');
-            const publicData = validatePublicDataPanel(p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes }, p.type);
-            const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
-            const prefix = variant ? `variant: ${variant}；` : '';
-            p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
-            const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
-            if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
+            const candidate=p.intervalMinutes === undefined ? p.publicData : { ...p.publicData, intervalMinutes: p.intervalMinutes };
+            const sourceTaskRequirement=publicDataNewsTaskRequirement(candidate,p.type);
+            if(sourceTaskRequirement){
+                const {publicData:source,intervalMinutes,...planned}=p;
+                const prompt=p.prompt+'\n'+sourceTaskRequirement;
+                if(prompt.length>5000)throw Error('证券新闻需求与来源约束超过面板内容上限，请精简需求文字。');
+                p={...planned,prompt};
+            }else{
+                const publicData = validatePublicDataPanel(candidate, p.type,{strictParameters:true});
+                const variant = PUBLIC_DATA_PROFILES[publicData.profile].variant;
+                const prefix = variant ? `variant: ${variant}；` : '';
+                p = { ...p, publicData, prompt: prefix && !p.prompt.startsWith(prefix) ? prefix + p.prompt : p.prompt };
+                const quote=publicDataQuoteSpec(p.title,publicData,p.prompt);
+                if(quote){const {publicData:source,intervalMinutes,...planned}=p;p={...planned,type:'financial-widget',artifact:quote};}
+            }
         }
         // Correct a metadata-only planner mismatch before launching a child.
         // Existing supplied data remains subject to its original schema.
