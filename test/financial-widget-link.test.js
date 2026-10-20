@@ -216,6 +216,28 @@ async function setupNews(){
  let news;await f.act(async()=>{news=f.workspace.createFinancialWidget('news')})
  return {...f,news,calls}
 }
+it.each(['pointercancel','escape','blur','connected'])('拖动时只提示兼容的其他组件节点，%s后停止全部候选提示',async finish=>{
+ const f=await setupNews();let announcements
+ await f.act(async()=>{announcements=f.workspace.createFinancialWidget('announcements')})
+ f.document.elementFromPoint=()=>f.canvas
+ await f.event('pointerdown',f.output(),{button:0,pointerId:41,clientX:300,clientY:240})
+ expect(f.host.querySelector('[data-drop-eligible]')).toBeNull()
+ await f.event('pointermove',f.document.body,{pointerId:41,clientX:550,clientY:580})
+ const candidates=[...f.host.querySelectorAll('[data-drop-eligible]')]
+ expect(candidates.map(port=>port.dataset.financialPortNode).sort()).toEqual([f.quote.id,f.news.id,announcements.id].sort())
+ expect(candidates.every(port=>port.dataset.financialPort==='input'&&!port.disabled)).toBe(true)
+ expect(f.output().hasAttribute('data-drop-eligible')).toBe(false)
+ if(finish==='escape')await f.event('keydown',f.document.body,{key:'Escape'})
+ else if(finish==='blur')await f.event('blur',f.win)
+ else if(finish==='connected'){
+  f.document.elementFromPoint=()=>f.inlet()
+  await f.event('pointerup',f.document.body,{pointerId:41,clientX:550,clientY:580})
+ }else await f.event('pointercancel',f.document.body,{pointerId:41})
+ expect(f.host.querySelector('[data-drop-eligible]')).toBeNull()
+ expect(f.host.querySelector('[data-financial-connecting]')).toBeNull()
+ expect(f.host.querySelector('.ew-financial-connection-draft')).toBeNull()
+ expect(f.spec(f.quote.id).linkedWatchlistId).toBe(finish==='connected'?f.watch.id:undefined)
+})
 it('新闻左侧节点接收自选股票，串联行情到新闻时选择与数据都跟随，重开保留关系',async()=>{
  const f=await setupNews()
  expect(f.port(f.news.id,'input').closest('footer')).not.toBeNull()

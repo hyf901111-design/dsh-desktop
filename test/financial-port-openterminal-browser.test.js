@@ -42,6 +42,33 @@ async function metrics(page){
  }))
 }
 
+it('pulses compatible off-pointer targets during a drag and stops on cancellation, while reduced motion stays static',async()=>{
+ const page=await fixture(2)
+ try{
+  await page.emulateMedia({reducedMotion:'no-preference'})
+  const inlet=page.locator('[data-financial-port=input]')
+  const read=()=>inlet.evaluate(port=>{const ring=getComputedStyle(port,'::after');return{name:ring.animationName,iterations:ring.animationIterationCount,opacity:Number(ring.opacity),width:ring.width,height:ring.height}})
+  expect((await read()).name).toBe('none')
+  for(const style of ['light','dark','enterprise','openterminal']){
+   await page.locator('[data-ework-grid]').evaluate((root,style)=>{root.dataset.workbenchStyle=style;root.setAttribute('data-financial-connecting','');root.querySelector('[data-financial-port=input]').setAttribute('data-drop-eligible','')},style)
+   expect(await read()).toMatchObject({name:'ew-financial-port-available',iterations:'infinite',width:'16px',height:'16px'})
+   expect(await page.locator('[data-financial-port=output]').evaluate(port=>getComputedStyle(port,'::after').animationName)).toBe('none')
+   const samples=await inlet.evaluate(port=>{
+    const animation=port.getAnimations({subtree:true}).find(a=>a.animationName==='ew-financial-port-available')
+    if(!animation)return null
+    animation.pause();animation.currentTime=0;const first=Number(getComputedStyle(port,'::after').opacity)
+    animation.currentTime=900;return[first,Number(getComputedStyle(port,'::after').opacity)]
+   })
+   expect(samples).not.toBeNull();expect(samples[0]).toBeGreaterThan(samples[1])
+   await page.locator('[data-ework-grid]').evaluate(root=>{root.removeAttribute('data-financial-connecting');root.querySelector('[data-financial-port=input]').removeAttribute('data-drop-eligible')})
+   expect((await read()).name).toBe('none')
+  }
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await page.locator('[data-ework-grid]').evaluate(root=>{root.setAttribute('data-financial-connecting','');root.querySelector('[data-financial-port=input]').setAttribute('data-drop-eligible','')})
+  expect(await read()).toMatchObject({name:'none',opacity:.55})
+ }finally{await page.close()}
+})
+
 // Catch theme-wide square-control rules accidentally restyling the native
 // connection hit target, including at the fractional positions used by grids.
 it('keeps native connection targets and their circular dots/rings intact in every workbench style at DPR 1 and 2',async()=>{
