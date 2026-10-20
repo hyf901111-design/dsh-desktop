@@ -9,31 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留真实金融趋势的宿主区间计算和基准排序",
+        "featureName": "兼容v1数据映射内层版本缺省避免失败重试",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "7486bbcc9fee6ac0d104ba617921ad2df2b38b80",
-        "tipCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
+        "baseCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
+        "tipCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
         "commits": [
           {
-            "commit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
+            "commit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
             "parents": [
-              "7486bbcc9fee6ac0d104ba617921ad2df2b38b80"
+              "4368d4d542f6332ca8c26fbd83eeb59f02bd192a"
             ],
-            "subject": "按原始价格保留金融趋势的区间涨跌幅及基准排序"
+            "subject": "兼容已知数据映射版本的嵌套缺省避免无效重试"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/observed-market-history.js"
           },
           {
             "status": "M",
@@ -51,9 +43,9 @@
               "--maxWorkers=1"
             ],
             "outcome": "passed",
-            "summary": "317项检查通过；/tmp/observed-market-rankings-focused-20261021.log",
-            "verifiedCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
-            "completedAt": "2026-10-20T18:02:18.397444+00:00",
+            "summary": "317项版本兼容及来源验证检查通过；/tmp/observed-market-envelope-focused-20261021.log",
+            "verifiedCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
+            "completedAt": "2026-10-20T18:15:44.545860+00:00",
             "timeoutMs": 180000
           },
           {
@@ -63,9 +55,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/observed-market-rankings-typecheck-20261021.log",
-            "verifiedCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
-            "completedAt": "2026-10-20T18:02:18.397444+00:00",
+            "summary": "类型检查通过；/tmp/observed-market-envelope-typecheck-20261021.log",
+            "verifiedCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
+            "completedAt": "2026-10-20T18:15:44.545860+00:00",
             "timeoutMs": 180000
           },
           {
@@ -73,115 +65,27 @@
               "git",
               "diff",
               "--check",
-              "7486bbcc9fee6ac0d104ba617921ad2df2b38b80..HEAD"
+              "4368d4d542f6332ca8c26fbd83eeb59f02bd192a..HEAD"
             ],
             "outcome": "passed",
             "summary": "差异检查通过",
-            "verifiedCommit": "4368d4d542f6332ca8c26fbd83eeb59f02bd192a",
-            "completedAt": "2026-10-20T18:02:18.397444+00:00",
+            "verifiedCommit": "d60b823b2151c0a810f81f7ff1aabe55dc7d1f79",
+            "completedAt": "2026-10-20T18:15:44.545860+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "已验证当前真实金融需求明确要求相对沪深300的超额排序；宿主计算后保留该字段，使用原始价格最后取两位小数。仍须集成构建并原位重生成确认。"
+          "summary": "原位更新07fb1731因mapping漏写version失败；实际回放仅补外层已声明v1的相同内层版本就可生成4x20点。新实现已直接接受原始输出，仍需本地构建后再试同一卡。"
         },
         "acceptanceCriteria": [
-          "区间涨跌幅由源价格计算；用户明确以沪深300为参考时保留超额差与排序，不因移除模型手算说明丢失需求。",
-          "直接原生输出及字段映射输出均经过同一计算。"
+          "仅外层version=1且已注册模板内层缺少version时继承v1；显式冲突或其他外层版本仍拒绝。",
+          "全部来源参数匹配、字段、日期和值检查保持原样，不重复调用模型补相同版本。"
         ],
         "risks": [
-          "仅本地测试，不发布、不晋升main。",
-          "其他基准尚未自动识别，保留区间涨跌幅和源价格，不猜基准。"
+          "本地测试，不发布、不晋升main。"
         ],
-        "generatedAt": "2026-10-20T18:02:18.397444+00:00"
-      },
-      "merged": {
-        "mergeCommit": "97a15c75c996b5375cc65b5d224912c7c1f08237",
-        "verificationCommit": "97a15c75c996b5375cc65b5d224912c7c1f08237",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "97a15c75c996b5375cc65b5d224912c7c1f08237",
-            "completedAt": "2026-10-20T18:02:52.105Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "97a15c75c996b5375cc65b5d224912c7c1f08237",
-            "completedAt": "2026-10-20T18:02:52.105Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "97a15c75c996b5375cc65b5d224912c7c1f08237",
-            "completedAt": "2026-10-20T18:02:52.105Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "97a15c75c996b5375cc65b5d224912c7c1f08237",
-            "completedAt": "2026-10-20T18:02:52.105Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "97a15c75c996b5375cc65b5d224912c7c1f08237",
-            "completedAt": "2026-10-20T18:02:52.105Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-20T18:02:52.105Z"
+        "generatedAt": "2026-10-20T18:15:44.545860+00:00"
       }
     },
     {
