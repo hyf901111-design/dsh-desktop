@@ -108,53 +108,19 @@ afterEach(async () => {
 })
 
 describe('simple ordinary memory settings', () => {
-  it('shows exactly one master switch, the real document directory and the supplied AI summary', async () => {
-    const state = snapshot({
-      summary: {
-        state: 'ready',
-        text: '真实模型概括 <img src=x onerror=alert(1)>\n保留完整文本。',
-        updatedAt: at,
-        model: '本轮所选模型',
-        count: 3
-      }
-    })
-    const { doc, toggle, open } = setup({
-      request: async () => state,
-      openDirectory: async () => {}
-    })
+  it('shows original saved records and one master switch without an AI summary', async () => {
+    const state = snapshot({ rows: [{ ...record, content: '<img src=x onerror=alert(1)>原始正文' }] })
+    const { doc, toggle, open } = setup({ request: async () => state, openDirectory: async () => {} })
     await open()
     expect(doc.querySelectorAll('input[type=checkbox]')).toHaveLength(1)
     expect(toggle().checked).toBe(true)
-    expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain(
-      '记忆.md'
-    )
-    expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain(
-      '/actual/memory/local'
-    )
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      state.summary.text
-    )
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '本轮所选模型'
-    )
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '2026'
-    )
+    expect(doc.querySelector('[data-memory-directory]')?.textContent).toContain('/actual/memory/local')
+    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain(state.rows[0]!.content)
+    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain(record.title)
     expect(doc.querySelector('[data-memory-page] img')).toBeNull()
-    expect(doc.querySelector('[data-memory-page]')?.textContent).not.toContain(
-      record.content
-    )
-    expect(doc.querySelector('[data-memory-page]')?.textContent).not.toContain(
-      '内部项目名称'
-    )
-    expect(
-      doc.querySelector(
-        '[data-memory-row],[data-memory-editor],select,textarea'
-      )
-    ).toBeNull()
-    expect(
-      [...doc.querySelectorAll('button')].map((el) => el.textContent)
-    ).not.toContain('新增记忆')
+    expect(doc.querySelector('[data-memory-summary],[data-memory-editor]')).toBeNull()
+    expect(doc.body.textContent).not.toContain(state.summary.text)
+    expect(doc.body.textContent).not.toContain('AI 概括')
   })
   it('turns use and auto on together when the stored switches disagree, then turns both off', async () => {
     let state = snapshot({ settings: { use: true, auto: false } })
@@ -218,78 +184,131 @@ describe('simple ordinary memory settings', () => {
     )
     expect(button('打开记忆存储目录').disabled).toBe(false)
   })
-  it('shows an honest empty state instead of inventing an AI overview from internal rows', async () => {
-    const { doc, open } = setup({
-      request: async () =>
-        snapshot({ summary: { state: 'empty', text: '', count: 0 } })
-    })
+  it('shows an honest empty state for no saved records', async () => {
+    const { doc, open } = setup({ request: async () => snapshot({ rows: [] }) })
     await open()
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '还没有保存记忆'
-    )
-    expect(doc.querySelector('[data-memory-page]')?.textContent).not.toContain(
-      record.content
-    )
+    expect(doc.querySelector('[data-memory-list]')?.textContent).toContain('还没有保存记忆')
     expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(0)
   })
-  it('follows actual pending, ready and failed summary states while retaining the last real overview', async () => {
-    let state = snapshot({
-        summary: {
-          state: 'pending',
-          text: '上次模型概括',
-          updatedAt: at,
-          count: 2
-        }
-      }),
-      notify = () => {}
-    const { doc, open } = setup({
-      request: async () => state,
-      subscribe: (listener) => {
-        notify = listener
-        return () => {}
-      }
-    })
+  it('saves edited text using the original revision and metadata, then supports cancel and deletion', async () => {
+    let state = snapshot({ rows: [{ ...record, scope: 'project', projectId: 'p1', pinned: true, expiresAt: at + 999999 }] })
+    const commands: MemoryCommand[] = []
+    const { doc, window, button, open } = setup({ request: async command => {
+      commands.push(command)
+      if (command.type === 'save') state = { ...state, revision: state.revision + 1, rows: [{ ...state.rows[0]!, ...command.input, revision: 2 }] }
+      if (command.type === 'action') state = { ...state, revision: state.revision + 1, rows: [] }
+      return state
+    } })
     await open()
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '正在更新'
-    )
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '上次模型概括'
-    )
-    state = snapshot({
-      revision: 2,
-      summary: {
-        state: 'ready',
-        text: '刚完成的真实概括',
-        updatedAt: at + 60000,
-        count: 2
-      }
-    })
-    notify()
-    await tick()
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '刚完成的真实概括'
-    )
-    expect(
-      doc.querySelector('[data-memory-summary]')?.textContent
-    ).not.toContain('正在更新')
-    state = snapshot({
-      revision: 3,
-      summary: {
-        state: 'failed',
-        text: '刚完成的真实概括',
-        updatedAt: at + 60000,
-        count: 2
-      }
-    })
-    notify()
-    await tick()
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '暂未更新'
-    )
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '刚完成的真实概括'
-    )
+    button('编辑').click()
+    const title = doc.querySelector<HTMLInputElement>('[data-memory-field=title]')!
+    const content = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    title.value = '更清楚的标题'; title.dispatchEvent(new window.Event('input') as unknown as Event)
+    content.value = '用户修订的真实记忆'; content.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('保存').click(); await tick()
+    expect(commands.find(c => c.type === 'save')).toEqual({ type: 'save', id: record.id, expectedRevision: 1, input: { title: '更清楚的标题', content: '用户修订的真实记忆', kind: record.kind, scope: 'project', projectId: 'p1', pinned: true, expiresAt: at + 999999 } })
+    expect(doc.querySelector('[data-memory-editor]')).toBeNull()
+    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain('用户修订的真实记忆')
+    button('编辑').click()
+    const draft = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    draft.value = '取消的草稿'; draft.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('取消').click()
+    expect(doc.querySelector('[data-memory-row]')?.textContent).not.toContain('取消的草稿')
+    expect(commands.filter(c => c.type === 'save')).toHaveLength(1)
+    button('删除').click(); await tick()
+    expect(commands.at(-1)).toEqual({ type: 'action', ids: [record.id], action: 'delete', expectedRevisions: { [record.id]: 2 } })
+    expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(0)
+  })
+  it('retains dirty drafts and selection through background refresh, settings reopen and language changes', async () => {
+    let state = snapshot(), notify = () => {}
+    const { doc, window, button, open } = setup({ request: async () => state, subscribe: listener => { notify = listener; return () => {} } })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '尚未保存的草稿'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    field.focus(); field.setSelectionRange(2, 4)
+    state = snapshot({ revision: 2, rows: [{ ...record, content: '后台的新版本', revision: 2 }] })
+    notify(); await tick()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('尚未保存的草稿')
+    expect((doc.activeElement as HTMLTextAreaElement).selectionStart).toBe(2)
+    expect(doc.querySelector('[data-memory-editor]')?.textContent).toContain('已在其他位置更新')
+    button('通用设置').click(); await open()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('尚未保存的草稿')
+    doc.documentElement.dataset.odysseyLocale = 'en'; await tick()
+    expect(button('Save')).toBeDefined(); expect(button('Cancel')).toBeDefined()
+    expect(doc.querySelector<HTMLTextAreaElement>('[aria-label="Memory content"]')?.value).toBe('尚未保存的草稿')
+    button('Cancel').click()
+    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain('后台的新版本')
+  })
+  it('keeps a draft on revision conflict and never silently overwrites the latest record', async () => {
+    const commands: MemoryCommand[] = []
+    let state = snapshot()
+    const { doc, window, button, open } = setup({ request: async command => { commands.push(command); if (command.type === 'save') { state = snapshot({ revision: 2, rows: [{ ...record, content: '发生冲突后的最新版本', revision: 2 }] }); throw Error('记忆已更新，请重新读取最新版本后保存。') }; return state } })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '冲突时保留我'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('保存').click(); await tick()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('冲突时保留我')
+    expect(doc.querySelector('[data-memory-editor] [role=alert]')?.textContent).toContain('草稿已保留')
+    expect(commands.filter(c => c.type === 'save')).toHaveLength(1)
+    button('取消').click()
+    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain('发生冲突后的最新版本')
+  })
+  it('keeps edits typed during a pending save and uses its returned revision for the next save', async () => {
+    let finish: (value: Snapshot) => void = () => {}
+    const commands: MemoryCommand[] = []
+    const { doc, window, button, open } = setup({ request: command => { commands.push(command); return command.type === 'save' ? new Promise(resolve => { finish = resolve }) : Promise.resolve(snapshot()) } })
+    await open(); button('编辑').click()
+    let field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '第一版'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('保存').click()
+    field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '保存期间继续输入'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    finish(snapshot({ revision: 2, rows: [{ ...record, content: '第一版', revision: 2 }] })); await tick()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('保存期间继续输入')
+    button('保存').click()
+    expect(commands.at(-1)).toMatchObject({ type: 'save', expectedRevision: 2, input: { content: '保存期间继续输入' } })
+    finish(snapshot({ revision: 3, rows: [{ ...record, content: '保存期间继续输入', revision: 3 }] })); await tick()
+  })
+  it('clears private drafts on identity change and ignores a late edit completion', async () => {
+    let owner = 'local', finish: (value: Snapshot) => void = () => {}
+    const { doc, window, ui, button, open } = setup({ request: command => command.type === 'save' ? new Promise(resolve => { finish = resolve }) : Promise.resolve(snapshot({ owner, rows: owner === 'local' ? [record] : [] })) })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '旧身份私密草稿'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    button('保存').click(); owner = 'new'; ui.resetIdentity(); await tick()
+    finish(snapshot({ revision: 2, rows: [{ ...record, content: '旧身份私密草稿', revision: 2 }] })); await tick()
+    expect(doc.querySelector('[data-memory-editor]')).toBeNull()
+    expect(doc.body.textContent).not.toContain('旧身份私密草稿')
+    expect(doc.body.textContent).toContain('还没有保存记忆')
+  })
+  it('preserves a draft for a record deleted elsewhere without recreating it', async () => {
+    let state = snapshot(), notify = () => {}, writes = 0
+    const { doc, window, button, open } = setup({ request: async command => { if (command.type === 'save') { writes++; throw Error('deleted') }; return state }, subscribe: listener => { notify = listener; return () => {} } })
+    await open(); button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = '删除之后仍可复制的草稿'; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    state = snapshot({ revision: 2, rows: [] }); notify(); await tick()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('删除之后仍可复制的草稿')
+    expect(doc.querySelector('[data-memory-editor]')?.textContent).toContain('已在其他位置删除')
+    expect(writes).toBe(0)
+    button('保存').click(); await tick()
+    expect(writes).toBe(1)
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe('删除之后仍可复制的草稿')
+    button('取消').click()
+    expect(doc.querySelectorAll('[data-memory-row]')).toHaveLength(0)
+  })
+  it('keeps the original record visible on a failed delete and validates blank drafts before IPC', async () => {
+    const writes: MemoryCommand[] = []
+    const { doc, window, button, open } = setup({ request: async command => { if (command.type !== 'snapshot') { writes.push(command); throw Error('write failed') }; return snapshot() } })
+    await open(); button('删除').click(); await tick()
+    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain(record.content)
+    expect(doc.querySelector('[role=alert]')?.textContent).toContain('删除未完成')
+    button('编辑').click()
+    const field = doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')!
+    field.value = ' '; field.dispatchEvent(new window.Event('input') as unknown as Event)
+    expect(button('保存').disabled).toBe(true)
+    button('保存').click(); await tick()
+    expect(writes.filter(command => command.type === 'save')).toHaveLength(0)
   })
   it('preserves the native settings tree and removes its own page when other sections become active', async () => {
     const { doc, button, open } = setup({ request: async () => snapshot() })
@@ -325,7 +344,7 @@ describe('simple ordinary memory settings', () => {
                   directory: '/new/identity',
                   file: '/new/identity/记忆.md'
                 },
-                summary: { state: 'ready', text: '新身份概括', count: 1 }
+                rows: [{ ...record, content: '新身份记忆' }]
               })
             )
     })
@@ -335,12 +354,12 @@ describe('simple ordinary memory settings', () => {
     old(
       snapshot({
         document: { directory: '/old/private', file: '/old/private/记忆.md' },
-        summary: { state: 'ready', text: '旧身份私密概括', count: 1 }
+        rows: [{ ...record, content: '旧身份私密记忆' }]
       })
     )
     await tick()
-    expect(doc.body.textContent).toContain('新身份概括')
-    expect(doc.body.textContent).not.toContain('旧身份私密概括')
+    expect(doc.body.textContent).toContain('新身份记忆')
+    expect(doc.body.textContent).not.toContain('旧身份私密记忆')
     expect(doc.body.textContent).not.toContain('/old/private')
   })
   it('ignores old switch and directory completions after identity rotation', async () => {
@@ -483,7 +502,7 @@ describe('simple ordinary memory settings', () => {
     expect(writes).toBe(0)
     expect(doc.querySelector('[data-memory-toast]')).toBeNull()
   })
-  it('shows a document write error alongside readable storage information without replacing the AI text', async () => {
+  it('shows a document write error alongside readable storage information without hiding saved records', async () => {
     const { doc, open } = setup({
       request: async () =>
         snapshot({
@@ -498,22 +517,15 @@ describe('simple ordinary memory settings', () => {
     expect(
       doc.querySelector('[data-memory-document-error]')?.textContent
     ).toContain('原数据已保留')
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '用户喜欢先说明结论'
-    )
+    expect(doc.querySelector('[data-memory-row]')?.textContent).toContain(record.content)
   })
-  it('does not claim the memory is empty when the service has not supplied a summary', async () => {
-    const { doc, open } = setup({
-      request: async () => ({ ...snapshot(), summary: undefined })
-    })
+  it('shows editable original records even when the service has no summary', async () => {
+    const { doc, button, open } = setup({ request: async () => ({ ...snapshot(), summary: undefined }) })
     await open()
-    expect(doc.querySelector('[data-memory-summary]')?.textContent).toContain(
-      '暂不可用'
-    )
-    expect(
-      doc.querySelector('[data-memory-summary]')?.textContent
-    ).not.toContain('还没有保存记忆')
-    expect(doc.body.textContent).not.toContain(record.content)
+    expect(doc.body.textContent).toContain(record.content)
+    expect(doc.querySelector('[data-memory-summary]')).toBeNull()
+    button('编辑').click()
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-memory-field=content]')?.value).toBe(record.content)
   })
   it('does not report document save success when the service reports a file write failure', async () => {
     const { doc, selection } = setup({

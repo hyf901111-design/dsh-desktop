@@ -349,126 +349,13 @@ it('rejects tool-call extraction output even when valid text and reasoning are a
   expect(JSON.stringify(f.warnings)).not.toContain('内部推理禁止持久化')
 })
 
-it('generates a real text-only summary after recovery without adding a conversation or capture', async () => {
-  const f = await fixture({ summaryEnabled: true, reasoning: true })
-  const summaries = f.calls.filter(call => call.purpose === 'memory-summary')
-  expect(summaries).toHaveLength(1)
-  expect(summaries[0]).toMatchObject({ provider: 'selected-provider', model: 'selected-model', tools: [], maxTokens: 1000 })
-  expect(f.control.summaryCache).toBe(f.control.summaryText)
-  expect(f.wire.find(call => call.path === '/summary-commit').body).toMatchObject({ ownerEpoch: 'owner-1', scopeEpoch: 1, signature: 'summary-1', text: f.control.summaryText, model: 'selected-provider/selected-model' })
-  expect(f.wire.some(call => call.path === '/capture')).toBe(false)
-  expect(f.agent.session.events).toEqual([])
-  expect(JSON.stringify(f.wire)).not.toContain('内部推理禁止持久化')
-  expect(f.warnings).toEqual([])
-})
-
-it('checks for updated summary after capture while keeping summary text out of JSONL and recall history', async () => {
-  const f = await fixture(); f.control.summaryEnabled = true
+it('does not reserve or generate an AI summary at startup, after capture, or on the old poll schedule', async () => {
+  const f = await fixture({ summaryEnabled: true, summaryPollIntervalMs: 10 })
+  await new Promise(resolve => setTimeout(resolve, 35))
   await f.turn('请记住，我今后默认用中文回答。')
-  expect(f.calls.map(call => call.purpose ?? 'conversation')).toEqual(['conversation', 'memory-extraction', 'memory-summary'])
-  expect((await f.ctx.sessionPersistence.readRaw(f.agent.id)).content).not.toContain(f.control.summaryText)
-  expect(JSON.stringify(f.agent.session.deriveMessages())).not.toContain(f.control.summaryText)
-  expect(f.wire.filter(call => call.path === '/capture')).toHaveLength(1)
-})
-
-it('selects whole summary records under the UTF-8 input budget without chopping a fact', async () => {
-  const records = Array.from({ length: 20 }, (_, index) => ({ title: `项目决策${index}`, content: '已确认采用本地优先方案。'.repeat(40), kind: 'decision', scope: 'project', projectName: '测试项目' }))
-  const f = await fixture({ summaryEnabled: true, summaryRecords: records })
-  const call = f.calls.find(item => item.purpose === 'memory-summary')
-  expect(call).toBeDefined()
-  expect(Buffer.byteLength(call.system + JSON.stringify(call.messages))).toBeLessThanOrEqual(8000)
-  const input = JSON.parse(call.messages[0].content[0].text)
-  expect(input.records.length).toBeGreaterThan(0); expect(input.records.length).toBeLessThan(20)
-  expect(input.count).toBe(20)
-  for (const record of input.records) expect(records).toContainEqual(record)
-})
-
-it('does not generate summary while off or without an authorized selected route', async () => {
-  const disabled = await fixture({ summaryEnabled: true, enabled: false })
-  expect(disabled.calls).toEqual([]); expect(disabled.warnings).toEqual([])
-  await disabled.turn('请记住，我今后默认用中文回答。')
-  expect(disabled.calls.map(call => call.purpose ?? 'conversation')).toEqual(['conversation'])
-  const unrouted = await fixture({ summaryEnabled: true, summaryNoRoute: true })
-  expect(unrouted.calls).toEqual([])
-  expect(unrouted.wire.some(call => call.path === '/summary-commit')).toBe(false)
-})
-
-it('discards a summary committed after an owner and scope switch rather than updating another cache', async () => {
-  const f = await fixture(); f.control.summaryEnabled = true
-  let entered, release
-  const started = new Promise(resolve => { entered = resolve }), gate = new Promise(resolve => { release = resolve })
-  f.control.delaySummary = async () => { entered(); await gate }
-  expect(f.runtime.checkSummary).toBeTypeOf('function')
-  const checking = f.runtime.checkSummary()
-  await started
-  f.control.ownerEpoch = 'owner-2'; f.control.scopeEpoch = 2
-  release(); await checking
-  expect(f.control.summaryCache).toBeUndefined()
-  expect(f.wire.find(call => call.path === '/summary-commit').body).toMatchObject({ ownerEpoch: 'owner-1', scopeEpoch: 1 })
-  f.control.delaySummary = undefined
-  await f.runtime.checkSummary()
-  expect(f.control.summaryCache).toBe(f.control.summaryText)
-})
-
-it('reports tool output as generic summary failure and does not rerun an unchanged signature', async () => {
-  const f = await fixture(); f.control.summaryEnabled = true; f.control.outputTool = true; f.control.reasoning = true
-  expect(f.runtime.checkSummary).toBeTypeOf('function')
-  await f.runtime.checkSummary(); await f.runtime.checkSummary()
-  expect(f.calls.filter(call => call.purpose === 'memory-summary')).toHaveLength(1)
-  expect(f.wire.filter(call => call.path === '/summary-failure')).toHaveLength(1)
-  expect(f.control.summaryCache).toBeUndefined()
-  expect(f.warnings).toEqual(['记忆概括未完成，请稍后重试。'])
-  expect(JSON.stringify(f.wire)).not.toContain('内部推理禁止持久化')
-})
-
-it('polls summary changes outside chat and stops polling on dispose', async () => {
-  const f = await fixture({ summaryPollIntervalMs: 20 }); f.control.summaryEnabled = true
-  const stopAt = Date.now() + 1000
-  while (!f.control.summaryCache && Date.now() < stopAt) await new Promise(resolve => setTimeout(resolve, 10))
-  expect(f.control.summaryCache).toBe(f.control.summaryText)
-  await f.runtime.dispose()
-  const checks = f.wire.filter(call => call.path === '/summary-input').length
-  await new Promise(resolve => setTimeout(resolve, 70))
-  expect(f.wire.filter(call => call.path === '/summary-input')).toHaveLength(checks)
-  expect(f.agent.session.events).toEqual([])
-})
-
-it('keeps chat responsive while a summary is running and serializes extraction behind it', async () => {
-  const f = await fixture(); f.control.summaryEnabled = true
-  let entered, release
-  const started = new Promise(resolve => { entered = resolve }), gate = new Promise(resolve => { release = resolve })
-  f.control.delaySummary = async () => { entered(); await gate }
-  const checking = f.runtime.checkSummary(); await started
-  f.agent.followup(createUserMessage({ content: [{ type: 'text', text: '请记住，我今后默认用中文回答。' }], source: { kind: 'user' } }))
-  await f.agent.whenIdle()
-  expect(f.calls.map(call => call.purpose ?? 'conversation')).toEqual(['memory-summary', 'conversation'])
-  expect(f.wire.some(call => call.path === '/capture')).toBe(false)
-  release(); await checking; await f.runtime.idle()
-  expect(f.calls.map(call => call.purpose ?? 'conversation')).toEqual(['memory-summary', 'conversation', 'memory-extraction'])
-  expect(f.wire.filter(call => call.path === '/capture')).toHaveLength(1)
-})
-
-it('discards a failed summary after scope invalidation without changing or warning another scope', async () => {
-  const f = await fixture(); f.control.summaryEnabled = true; f.control.outputTool = true
-  let entered, release
-  const started = new Promise(resolve => { entered = resolve }), gate = new Promise(resolve => { release = resolve })
-  f.control.delaySummary = async () => { entered(); await gate }
-  const checking = f.runtime.checkSummary(); await started
-  f.control.scopeEpoch++
-  release(); await checking
-  expect(f.wire.find(call => call.path === '/summary-failure').body).toEqual({ ownerEpoch: 'owner-1', scopeEpoch: 1, signature: 'summary-1' })
-  expect(f.control.summaryCache).toBeUndefined()
+  expect(f.calls.map(call => call.purpose ?? 'conversation')).toEqual(['conversation', 'memory-extraction'])
+  expect(f.wire.some(call => call.path.startsWith('/summary-'))).toBe(false)
+  expect(f.wire.filter(call => call.path === '/commit')).toHaveLength(1)
+  expect(f.runtime.checkSummary).toBeUndefined()
   expect(f.warnings).toEqual([])
-})
-
-it('bounds summary timeout to a generic failure without retrying the same model request', async () => {
-  const f = await fixture({ summaryTimeoutMs: 20 }); f.control.summaryEnabled = true
-  f.control.delaySummary = request => new Promise((resolve, reject) => {
-    request.signal.addEventListener('abort', () => reject(Error('PRIVATE SOURCE OR REASONING')), { once: true })
-  })
-  await f.runtime.checkSummary()
-  expect(f.calls.filter(call => call.purpose === 'memory-summary')).toHaveLength(1)
-  expect(f.wire.filter(call => call.path === '/summary-failure')).toHaveLength(1)
-  expect(f.warnings).toEqual(['记忆概括未完成，请稍后重试。'])
-  expect(JSON.stringify(f.wire)).not.toContain('PRIVATE SOURCE OR REASONING')
 })

@@ -25,6 +25,35 @@ afterEach(async()=>{for(const s of stores.splice(0))await s.close();for(const r 
 
 describe('长期记忆真实行为',()=>{
 
+  it('preserves a disabled record and its metadata when manually editing with a matching revision',async()=>{
+    const {service}=await setup()
+    const saved=await service.request({type:'save',input:{...preference(),pinned:true,expiresAt:1_900_000_000_000}})
+    const old=saved.rows[0]!
+    const disabled=await service.request({type:'action',ids:[old.id],action:'disable',expectedRevisions:{[old.id]:old.revision}})
+    const row=disabled.rows[0]!
+    const edited=await service.request({type:'save',id:row.id,expectedRevision:row.revision,input:{...preference('用户修改的内容'),pinned:row.pinned,expiresAt:row.expiresAt}})
+    expect(edited.rows[0]).toMatchObject({id:row.id,status:'disabled',revision:row.revision+1,content:'用户修改的内容',pinned:true,expiresAt:1_900_000_000_000,sources:row.sources,createdAt:row.createdAt})
+    expect((await service.recall({sessionId:'a',query:'报告'})).entries).toHaveLength(0)
+    await expect(service.request({type:'save',id:row.id,expectedRevision:row.revision,input:preference('陈旧输入')})).rejects.toThrow(/已更新/)
+    expect((await service.request({type:'snapshot'})).rows[0]!.content).toBe('用户修改的内容')
+  })
+  it('keeps candidate and superseded states when their original text is edited',async()=>{
+    const {service}=await setup()
+    const original=(await service.request({type:'save',input:preference()})).rows[0]!
+    const cap=await authorizedCapture(service,{sessionId:'a',turnId:'1',events:[{seq:1,role:'user',text:'以后默认用英文回答'}]})
+    await service.commitExtraction({captureId:cap.captureId,candidates:[{title:'回答语言',content:'默认用英文回答',kind:'preference',scope:'global',sourceSeq:1,evidence:'以后默认用英文回答',explicit:true}]})
+    const candidate=(await service.request({type:'snapshot'})).rows.find(r=>r.status==='candidate')!
+    expect(candidate).toBeDefined()
+    const edited=(await service.request({type:'save',id:candidate.id,expectedRevision:candidate.revision,input:preference('默认用英文回答。')})).rows.find(r=>r.id===candidate.id)!
+    expect(edited.status).toBe('candidate')
+    expect(edited.manualLocked).toBe(true)
+    await service.request({type:'action',ids:[edited.id],action:'accept',expectedRevisions:{[edited.id]:edited.revision}})
+    const superseded=(await service.request({type:'snapshot'})).rows.find(r=>r.id===original.id)!
+    expect(superseded.status).toBe('superseded')
+    const updated=await service.request({type:'save',id:superseded.id,expectedRevision:superseded.revision,input:preference('旧版中文偏好，保留记录。')})
+    expect(updated.rows.find(r=>r.id===original.id)?.status).toBe('superseded')
+    expect((await service.recall({sessionId:'b',query:'报告'})).entries.map(r=>r.id)).toEqual([edited.id])
+  })
   it('uses a single conservative master switch for persisted mixed legacy settings',async()=>{
     const {service,root}=await setup();await service.request({type:'save',input:preference()});await service.close()
     const {MemoryStore}=await import('../src/main/memory/store');const store=await MemoryStore.open(root,encryption),state:any=store.read('local')
