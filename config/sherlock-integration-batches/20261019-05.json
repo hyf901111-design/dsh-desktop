@@ -149,6 +149,93 @@
           "扩展检查存在6项原基线失败，已在未修改集成tip复现：research-market-layout四项（衍生菜单锚点三项、六面板旧几何一项），terminal-component-presentation旧矩阵一项、research-market-artifact既有KPI详情一项。/tmp/trend-existing-baseline-focused-20261021.log；本次不变更其业务。"
         ],
         "generatedAt": "2026-10-20T19:10:44.650133+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2bae9d88941d6ce095f4791ad1d9ed7e3dc45dca",
+        "verificationCommit": "2bae9d88941d6ce095f4791ad1d9ed7e3dc45dca",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
+            "verifiedCommit": "2bae9d88941d6ce095f4791ad1d9ed7e3dc45dca",
+            "completedAt": "2026-10-20T19:11:21.358Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2bae9d88941d6ce095f4791ad1d9ed7e3dc45dca",
+            "completedAt": "2026-10-20T19:11:21.358Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "2bae9d88941d6ce095f4791ad1d9ed7e3dc45dca",
+            "completedAt": "2026-10-20T19:11:21.358Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
+            "verifiedCommit": "2bae9d88941d6ce095f4791ad1d9ed7e3dc45dca",
+            "completedAt": "2026-10-20T19:11:21.358Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2bae9d88941d6ce095f4791ad1d9ed7e3dc45dca",
+            "completedAt": "2026-10-20T19:11:21.358Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-20T19:11:21.358Z"
       }
     },
     {
