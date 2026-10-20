@@ -51,7 +51,7 @@ export function createKoiRenderer(canvas: HTMLCanvasElement, options: { dark: bo
   }
   canvas.addEventListener('webglcontextlost', contextLost)
   canvas.dataset.homeKoiState = 'loading'
-  context.clearColor(dark ? .01 : .88, dark ? .08 : .94, dark ? .25 : .94, 1)
+  context.clearColor(dark ? .01 : .94, dark ? .08 : .94, dark ? .25 : .94, 1)
   context.clear(context.COLOR_BUFFER_BIT)
   for (const image of images) {
     image.onload = loaded

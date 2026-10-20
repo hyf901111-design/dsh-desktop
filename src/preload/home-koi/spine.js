@@ -1,5 +1,5 @@
 export const SPINE_POINTS = 25;
-export const FISH_LENGTH = 365;
+export const FISH_LENGTH = 310;
 const angleDelta = (a,b) => Math.atan2(Math.sin(b-a),Math.cos(b-a));
 const smoothstep = (a,b,x) => {
   const t=Math.max(0,Math.min(1,(x-a)/(b-a)));
