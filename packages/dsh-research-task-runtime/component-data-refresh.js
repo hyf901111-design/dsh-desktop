@@ -1,5 +1,6 @@
 import { normalizeIndexedTableRows, templateDataIssue } from './template-data-contract.js'
 import {normalizeChartMetadata} from './chart-template-contract.js'
+import {normalizeAnnouncementFeed} from './announcement-provenance.js'
 import {randomUUID,createHash} from 'node:crypto'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
@@ -114,7 +115,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  return Object.fromEntries(Object.entries(mapping).map(([k,v])=>{if(k.startsWith('$'))throw Error('不支持的字段映射：'+k);return [k,next(v)]}))
 }
 /** Apply display-only defaults consistently at generation and refresh time. */
-export function materializeComponentMapping(mapping,responses,now=new Date()){
+export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
  const data=normalizeChartMetadata(normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now)))
  if(data.type==='chart'&&Array.isArray(data.labels)&&data.labels.every(label=>typeof label==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(label))&&Array.isArray(mapping.series)){
@@ -162,7 +163,7 @@ export function materializeComponentMapping(mapping,responses,now=new Date()){
    return result
   })
  }
- return data
+ return normalizeAnnouncementFeed(data,sourceRecords)
 }
 function rejectCredentials(value){
  if(!value||typeof value!=='object')return
@@ -335,7 +336,8 @@ export class ComponentDataRefresh {
    if(!before.writable||!model||model.templateId!==b.templateId||model.version!==b.templateVersion)throw Error('组件模板已变化，请重新绑定数据')
    const baseline=hash(before.spec)
    const results=await Promise.all(b.requests.map(async r=>[r.key,await this.request(b,r,signal)]));signal.throwIfAborted()
-   const data=materializeComponentMapping(b.mapping,Object.fromEntries(results),new Date(startedAt))
+   const responses=Object.fromEntries(results)
+   const data=materializeComponentMapping(b.mapping,responses,new Date(startedAt),b.requests.map(request=>({tool:request.toolId,args:request.args,response:responses[request.key]})))
    data.title=model.data.title
    // A source recipe updates data; it cannot silently discard the chosen layout.
    if(model.data.layoutProfile!==undefined)data.layoutProfile=model.data.layoutProfile

@@ -372,7 +372,11 @@
       "rights": "按东方财富及公告发布方条款核实；公开网页可访问不等于商业再分发授权",
       "queryable": true,
       "defaultEligible": true,
-      "reviewedOn": "2026-10-21"
+      "reviewedOn": "2026-10-21",
+      "categories": [
+        "news",
+        "disclosures"
+      ]
     },
     {
       "id": "eurostat",

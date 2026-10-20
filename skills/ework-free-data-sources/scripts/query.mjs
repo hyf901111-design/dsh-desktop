@@ -37,7 +37,7 @@ const chineseIndex = symbol => /^(?:sh000\d{3}|sz399\d{3})$/.test(symbol);
 const quoteUnit = symbol => chineseIndex(symbol) ? 'points' : symbol.startsWith('hk') ? 'HKD' : symbol.startsWith('us') ? 'USD' : 'CNY';
 export function catalog(category) {
   if (category !== undefined && (typeof category !== 'string' || category.length > 40)) fail('类别无效');
-  return structuredClone({ ...DIRECTORY, sources: DIRECTORY.sources.filter(s => !category || s.category === category) });
+  return structuredClone({ ...DIRECTORY, sources: DIRECTORY.sources.filter(s => !category || s.category === category || s.categories?.includes(category)) });
 }
 export function prepareRequest(sourceId, p = {}) {
   const source = DIRECTORY.sources.find(s => s.id === sourceId);
