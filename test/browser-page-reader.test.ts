@@ -65,3 +65,13 @@ describe('conversation browser page reader', () => {
     expect(result.truncated).toBe(false)
   })
 })
+
+
+it('exports the primary article record with the actual loaded URL before independent recommended-link records',async()=>{
+ mocks.script.mockResolvedValueOnce({title:'主文',sourceText:'正文'.repeat(80),scrollWidth:1000,clientWidth:1000})
+  .mockResolvedValueOnce({title:'政策解读 - 来源网站',sourceText:'主文完整正文',complete:true,article:{title:'煤电容量电价机制政策解读',date:'2026-01-30'},links:[{title:'另一条推荐记录',date:'2026-10-20',url:'https://example.org/recommended'}]})
+ const result=await readBrowserPage('https://efund.feishu.cn/wiki/document',new AbortController().signal)
+ const record=result.body.content.match(/\[网页主文记录\]\n([^\n]+)\n\[\/网页主文记录\]/)?.[1]
+ expect(JSON.parse(record!)).toEqual({articles:[{title:'煤电容量电价机制政策解读',date:'2026-01-30',url:'https://efund.feishu.cn/wiki/document'}]})
+ expect(result.body.content.indexOf('网页主文记录')).toBeLessThan(result.body.content.indexOf('网页内链接记录'))
+})
