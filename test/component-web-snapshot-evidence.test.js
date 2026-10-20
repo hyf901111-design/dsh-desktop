@@ -52,11 +52,44 @@ it('uses a nested article link actually returned by the source without trusting 
  expect(proof({version:1,type:'reports',items:[{...item,url:'https://publisher.example.net/story/unobserved'}]},records)).toBe(false)
 })
 
+it.each(['array','object'])('keeps a related article with its own identity separate from its parent record (%s)',shape=>{
+ const first={title:'An observed first business announcement',date:'2026-10-15',url:'https://example.org/articles/first-record-483838.html'}
+ const related={title:'A different related business announcement',date:'2026-10-16',url:'https://example.org/articles/other-record-747474.html'}
+ const child={...related,id:'other-record-747474'}
+ const records=collect([{url:'https://example.org/api/news',data:{records:[{...first,id:'first-record-483838',article:{href:first.url},relatedArticles:shape==='array'?[child]:child}]}}])
+ expect(proof({version:1,type:'reports',items:[first]},records)).toBe(true)
+ expect(proof({version:1,type:'reports',items:[related]},records)).toBe(true)
+ expect(proof({version:1,type:'reports',items:[{...first,url:related.url}]},records)).toBe(false)
+})
+
 it('matches an observed identifier only as a complete same-host detail URL segment',()=>{
  const item={title:'Observed company shareholder meeting announcement',date:'2026-10-15',url:'https://example.org/articles/observed-483838.html'}
  const records=collect([{url:'https://example.org/api/records',data:{records:[{id:'observed-483838',title:item.title,date:item.date}]}}])
  expect(proof({version:1,type:'reports',items:[item]},records)).toBe(true)
  expect(proof({version:1,type:'reports',items:[{...item,url:item.url.replace('example.org','news.example.org')}]},records)).toBe(false)
+})
+
+it.each([
+ ['示例股份：关于不实施本年度现金分红计划的公告','示例股份：关于实施本年度现金分红计划的公告'],
+ ['示例股份：关于本年度拟投资10亿元的公告','示例股份：关于本年度拟投资1亿元的公告'],
+ ['示例股份：本年度净利润变动为-10.5%的公告','示例股份：本年度净利润变动为10.5%的公告'],
+ ['示例股份：本年度净利润变动为10.5%的公告','示例股份：本年度净利润变动为105%的公告']
+])('does not verify changed business wording or numbers under the same record ID: %s',(title,changed)=>{
+ const item={title,date:'2026-10-20',url:'https://example.org/articles/observed-483838.html'}
+ const records=collect([{url:'https://example.org/api/records',data:{records:[{id:'observed-483838',title,date:item.date}]}}])
+ expect(proof({version:1,type:'reports',items:[item]},records)).toBe(true)
+ expect(proof({version:1,type:'reports',items:[{...item,title:changed}]},records)).toBe(false)
+})
+
+it.each(['documentation','sample','example'])('does not treat a %s=true envelope as actual business list data',marker=>{
+ const calls=observed.calls.map(call=>({...call,data:{[marker]:true,...call.data}}))
+ expect(proof(observed.artifact,collect(calls))).toBe(false)
+})
+
+it('does not borrow a link from an explicitly marked example wrapper',()=>{
+ const item={title:'An observed company business announcement',date:'2026-10-15',url:'https://publisher.example.net/example/unobserved-1234'}
+ const records=collect([{url:'https://example.org/api/news',data:{records:[{title:item.title,date:item.date,article:{example:true,href:item.url}}]}}])
+ expect(proof({version:1,type:'reports',items:[item]},records)).toBe(false)
 })
 
 it.each(['unobserved-id','wrong-date','wrong-title','unrelated-host','public-suffix-host','url-substring','failed-fetch','document-example','business-error'])('rejects %s as evidence for a generated list',mode=>{

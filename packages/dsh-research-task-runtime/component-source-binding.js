@@ -60,7 +60,7 @@ function snapshotDate(value) {
   const date=typeof value==='string'?value.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/u)?.[0]:null
   return date&&Number.isFinite(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date?date:null
 }
-function snapshotTitle(value) {return typeof value==='string'?value.normalize('NFKC').replace(/[^\p{L}\p{N}]/gu,'').toLowerCase().slice(0,1000):''}
+function snapshotTitle(value) {return typeof value==='string'?value.normalize('NFKC').replace(/\s/gu,'').toLowerCase().slice(0,1000):''}
 function webSnapshotRows(text) {
   // The JSON decoder also accepts examples inside prose. Only a complete JSON
   // body, after the fetcher's known transport notices, establishes list data.
@@ -68,18 +68,29 @@ function webSnapshotRows(text) {
   let value
   try{value=decodeDataResponse(JSON.parse(body))}catch{return []}
   const rows=[],ignored=/^(?:examples?|samples?|schemas?|properties|parameters|definitions|documentation|docs?|request|responseSchema)$/iu
+  const heading=/^(?:title|title_ch|headline|name)$/iu,identity=/^(?:title|title_ch|headline|name|id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu
+  const marked=entries=>entries.some(([key,v])=>/^(?:documentation|docs?|examples?|samples?)$/iu.test(key)&&v===true)
   const visit=(value,depth=0,inList=false)=>{
     if(!value||typeof value!=='object'||depth>10||rows.length>=200)return
     if(Array.isArray(value)){for(const row of value.slice(0,2000))visit(row,depth+1,true);return}
-    const entries=Object.entries(value),title=snapshotTitle(entries.find(([key,v])=>/^(?:title|title_ch|headline|name)$/iu.test(key)&&typeof v==='string')?.[1])
+    const entries=Object.entries(value)
+    if(marked(entries))return
+    const title=snapshotTitle(entries.find(([key,v])=>heading.test(key)&&typeof v==='string')?.[1])
     const date=entries.filter(([key])=>/date|time|published|released/iu.test(key)).map(([,v])=>snapshotDate(v)).find(Boolean)
     if(inList&&title.length>=10&&date){
       const ids=entries.filter(([key,v])=>/^(?:id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu.test(key)&&typeof v==='string'&&/^[\w-]{8,128}$/u.test(v)).map(([,v])=>v).slice(0,8),urls=[]
-      const links=(object,level=0)=>{if(!object||typeof object!=='object'||level>3)return;for(const [key,v]of Object.entries(object)){if(/^(?:url|link|href|sourceUrl)$/iu.test(key)&&typeof v==='string'){const url=snapshotUrl(v);if(url&&url.length<=2048&&urls.length<8)urls.push(url)}else if(v&&typeof v==='object'&&!ignored.test(key))links(v,level+1)}}
+      const links=(object,level=0)=>{
+        if(!object||typeof object!=='object'||level>3)return
+        const entries=Object.entries(object)
+        // Related records own their links; an unlabelled {article:{href}}
+        // wrapper still belongs to this row. Visit independent records below.
+        if(marked(entries)||level>0&&!Array.isArray(object)&&entries.some(([key,v])=>identity.test(key)&&v!==undefined&&v!==null))return
+        for(const [key,v]of entries){if(/^(?:url|link|href|sourceUrl)$/iu.test(key)&&typeof v==='string'){const url=snapshotUrl(v);if(url&&url.length<=2048&&urls.length<8)urls.push(url)}else if(v&&typeof v==='object'&&!ignored.test(key))links(v,level+1)}
+      }
       links(value)
       if(ids.length||urls.length)rows.push({title,date,ids,urls})
     }
-    for(const [key,v]of entries)if(!ignored.test(key))visit(v,depth+1,false)
+    for(const [key,v]of entries)if(!ignored.test(key))visit(v,depth+1,Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).some(key=>heading.test(key))))
   }
   visit(value);return rows
 }
@@ -88,10 +99,9 @@ function snapshotRecordMatches(value,record) {
   const title=snapshotTitle(value.title??value.headline??value.name),date=snapshotDate(value.date??value.publishedAt??value.notice_date),url=snapshotUrl(value.url??value.link)
   if(title.length<10||!date||!url)return false
   return record.snapshotRows.some(row=>{
-    // A shortened title may omit the full legal company name, but its ordered
-    // content, source date and record identity must still agree.
-    let at=0;for(const character of row.title)if(character===title[at])at++
-    if(row.date!==date||at!==title.length)return false
+    // Formatting can change width/whitespace, never business wording, signs
+    // or decimals. A matching ID cannot justify deleting a negation or amount.
+    if(row.date!==date||row.title!==title)return false
     if(row.urls.includes(url))return true
     const source=new URL(record.args.url),target=new URL(url)
     // Sibling domains cannot be inferred from their final two labels (com.cn,
