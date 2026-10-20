@@ -233,6 +233,16 @@ describe('data refresh without generation',()=>{
   for(const text of ['说明\n{"data":1}\n{"data":2}','说明\n{"data":[1,2}','说明\n{"data":[\n{"value":1}\n','x'.repeat(2_000_001),'来源\n{"provenance":{},"data":{"retCode":-1,"data":[]}}'])expect(()=>decodeDataResponse({content:[{type:'text',text}]})).toThrow()
   expect(decodeDataResponse({structuredContent:{data:[1]},content:[{type:'text',text:'human summary'}]})).toEqual({data:[1]})
  })
+ it.each(['object','text','nested'])('rejects a transport-successful MCP parameter error as business data (%s)',mode=>{
+  const error={error:'API parameter validation failed',code:'INVALID_API_PARAMETERS',api_name:'getFdmtISLT2018',message:'api_parameters 与接口 OpenAPI 参数定义不匹配',details:[{field:'mergedFlag',message:'不支持的请求参数'}]}
+  const result=mode==='object'?error:mode==='nested'?{provenance:{api_name:'getFdmtISLT2018'},data:error}:{isError:false,content:[{type:'text',text:JSON.stringify(error)}]}
+  expect(()=>decodeDataResponse(result)).toThrow('业务请求失败')
+ })
+ it('keeps successful security records and per-record error information distinct from an error envelope',()=>{
+  const result={code:'600011',error:null,data:[{error:'本行有缺失字段',errorRate:.03,revenue:0},{errorRate:-.2,revenue:106909000000}]}
+  expect(decodeDataResponse(result)).toEqual(result)
+  expect(decodeDataResponse({code:'600027',error:false,data:{retCode:1,data:[]}})).toEqual({code:'600027',error:false,data:{retCode:1,data:[]}})
+ })
  it('refreshes a component from a citation-wrapped business response',async()=>{
   const f=setup();await f.service.load();const b=await f.service.bind(f.input)
   f.execute.mockResolvedValue({content:[{type:'text',text:'=== 已登记来源 SOURCES ===\n示例来源\n'+JSON.stringify({items:[{name:'指数',price:102}],date:'2026-09-26'})}]})

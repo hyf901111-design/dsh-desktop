@@ -9,6 +9,13 @@ const args={api_name:'quote',url_params:{date:'20260926',ticker:'510300'}}
 const response={data:{date:'2026-09-25',rows:[{name:'沪深300ETF',price:4.515}]}}
 const draft={version:1,type:'data-bound',requests:[{key:'quote',tool,args:{...args,url_params:{...args.url_params,date:{$date:{format:'yyyyMMdd'}}}}}],mapping:{version:1,type:'market',variant:'metrics',title:'ETF行情',asOf:{$from:'quote',$path:'data.date',$suffix:' · 通联 DataYes'},items:{$from:'quote',$each:'data.rows',$map:{label:{$path:'name'},value:{$path:'price',$as:'string',$suffix:' 元'}}}}}
 const records=[{tool,args,response}]
+it('never supplies a transport-successful MCP parameter rejection as usable business evidence',()=>{
+ const collector=componentSourceCollector([tool])
+ collector.accept({type:'tool/call',data:{callId:'invalid-parameters',name:tool,arguments:JSON.stringify({api_name:'getFdmtISLT2018',url_params:{ticker:'600011',mergedFlag:'1'}})}})
+ collector.accept({type:'tool/result',data:{message:{source:{callId:'invalid-parameters'},content:[{type:'tool-result',isError:false,content:[{type:'text',text:JSON.stringify({error:'API parameter validation failed',code:'INVALID_API_PARAMETERS',api_name:'getFdmtISLT2018',details:[{field:'mergedFlag',message:'not supported'}]})}]}]}}})
+ expect(collector.records).toEqual([])
+ expect(componentBindingEvidence(collector.records)).toBeFalsy()
+})
 it('classifies the actual current MCP search, directory and parameter definitions as discovery rather than financial data',()=>{
  const collector=componentSourceCollector(officialSchemas.map(s=>s.name),officialSchemas);
  for(const schema of officialSchemas){
