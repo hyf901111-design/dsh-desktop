@@ -53,4 +53,15 @@ describe('conversation browser page reader', () => {
     await expect(readBrowserPage('https://efund.feishu.cn/wiki/document',controller.signal)).rejects.toThrow()
     expect(mocks.options).toHaveLength(0)
   })
+
+  it('returns bounded observed links before the page body so source synthesis does not lose them',async()=>{
+    const links=[{title:'公司发布最新经营与财务数据公告',date:'2026-10-20',url:'https://example.org/story/123'}]
+    mocks.script.mockResolvedValueOnce({title:'公司公告',sourceText:'公告列表'.repeat(40),scrollWidth:1000,clientWidth:1000})
+      .mockResolvedValueOnce({title:'公司公告',sourceText:'这是完整公告列表正文',complete:true,links})
+    const result=await readBrowserPage('https://example.org/news',new AbortController().signal)
+    const captured=result.body.content.match(/\[网页内链接记录\]\n([^\n]+)\n\[\/网页内链接记录\]/)?.[1]
+    expect(JSON.parse(captured!)).toEqual({links})
+    expect(result.body.content.indexOf('https://example.org/story/123')).toBeLessThan(result.body.content.indexOf('这是完整公告列表正文'))
+    expect(result.truncated).toBe(false)
+  })
 })

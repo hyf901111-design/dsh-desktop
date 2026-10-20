@@ -12,12 +12,26 @@ export function readablePageUrl(value: unknown): string {
 export function pageNeedsLogin(text: string) {
   return text.trim().length < 1200 && /扫码登录|登录飞书|扫码成功|(?:登录|sign in|log in|扫码).{0,35}(?:访问|继续|查看|账户|account)|(?:请先|需要|立即).{0,12}登录/i.test(text)
 }
-type PageContent = { url: string; title: string; sourceText: string; complete: boolean; images?: number; missingHeadings?: number }
+type PageContent = { url: string; title: string; sourceText: string; complete: boolean; images?: number; missingHeadings?: number; links?: { title: string; url: string; date?: string }[] }
+function pageLinkRecords(page: PageContent) {
+  if (!Array.isArray(page.links)) return ''
+  const links: NonNullable<PageContent['links']> = []
+  let bytes = 0
+  for (const link of page.links.slice(0, 200)) {
+    if (!link || typeof link.title !== 'string' || !link.title.trim() || link.title.length > 256 || typeof link.url !== 'string' || link.url.length > 2048) continue
+    let url: string; try { url = readablePageUrl(link.url) } catch { continue }
+    const date = typeof link.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(link.date) && Number.isFinite(Date.parse(link.date)) && new Date(link.date).toISOString().slice(0, 10) === link.date ? link.date : undefined
+    const value = { title: link.title, url, ...(date ? { date } : {}) }
+    bytes += Buffer.byteLength(JSON.stringify(value)); if (bytes > 50_000) break
+    links.push(value)
+  }
+  return links.length ? `[网页内链接记录]\n${JSON.stringify({ links })}\n[/网页内链接记录]\n\n` : ''
+}
 export async function readBrowserPage(rawUrl: string, signal: AbortSignal) {
   const url = readablePageUrl(rawUrl)
   signal.throwIfAborted()
   const result = (page: PageContent) => ({ url: page.url, statusCode: 200,
-    body: { kind: 'text' as const, content: `${page.title}\n\n[网页读取状态：${page.complete ? '已滚动至文末，完成正文收集' : '正文收集不完整，请勿当作全文'}${page.images ? `；含 ${page.images} 张图片，图片内文字未提取` : ''}${page.missingHeadings ? `；尚缺 ${page.missingHeadings} 个目录章节` : ''}]\n\n${page.sourceText}` },
+    body: { kind: 'text' as const, content: `${page.title.replace(/\s+/g, ' ').slice(0, 512)}\n\n[网页读取状态：${page.complete ? '已滚动至文末，完成正文收集' : '正文收集不完整，请勿当作全文'}${page.images ? `；含 ${page.images} 张图片，图片内文字未提取` : ''}${page.missingHeadings ? `；尚缺 ${page.missingHeadings} 个目录章节` : ''}]\n\n${pageLinkRecords(page)}${page.sourceText}` },
     truncated: !page.complete || page.sourceText.length >= 120000 })
   let best: PageContent | null = null
   const sessions: Session[] = []
