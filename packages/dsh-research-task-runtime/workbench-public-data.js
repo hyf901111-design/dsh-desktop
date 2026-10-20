@@ -51,11 +51,12 @@ const quoteExtraField=String.raw`(?:成交量|成交额|市盈率(?:\s*[(（]TTM
 const metricsExtraField=String.raw`(?:开盘(?:价)?|最高(?:价)?|最低(?:价)?|\b(?:open|high|low)(?:Price)?\b)`
 function requiredQuoteFields(requirement,profile){
   const field=profile==='quotes-metrics'?`(?:${quoteExtraField}|${metricsExtraField})`:quoteExtraField
-  // Remove only an explicit exclusion followed by a list of known fields.
-  // Stop before other text, so "but need PB" or "另外要成交额" stays required.
+  // Erase only complete exclusion lists ending at punctuation or the end.
+  // Unknown trailing text may affirm the last field; retain the whole match.
   const exclusion=String.raw`(?:(?:不要|不需要|无需|不必|不用)(?:展示|显示|提供|包含|包括)?|不(?:展示|显示|包含|包括)|排除|\b(?:do\s+not|don't)\s+(?:need(?:\s+to)?\s+)?(?:show|display|include|provide)?|\bno\b(?:\s+need\s+(?:for|to(?:\s+(?:show|display|include))?))?|\b(?:without|exclude|omit)\b)`
   const separator=String.raw`(?:[、，,/](?:\s*\b(?:and|or)\b)?|和|与|以及|及|或者|或|\b(?:and|or)\b)`
-  return requirement.replace(new RegExp(`${exclusion}\\s*${field}(?:\\s*${separator}\\s*${field})*`,'giu'),'')
+  return requirement.replace(new RegExp(`${exclusion}\\s*${field}(?:\\s*${separator}\\s*${field})*`,'giu'),(match,offset)=>
+    /^\s*(?:[，,。.;；!！?？：:\n]|$)/u.test(requirement.slice(offset+match.length))?'':match)
 }
 export function publicDataQuoteTaskRequirement(value,type,requirement=''){
   if(!['quotes-table','quotes-metrics'].includes(value?.profile))return null

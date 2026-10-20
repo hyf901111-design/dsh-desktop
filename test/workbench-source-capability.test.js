@@ -129,6 +129,22 @@ it.each([
   expect(panel.prompt).toContain(input.prompt)
 })
 
+it.each([
+  ['quotes-table', '不要PE，PB必须保留。'],
+  ['quotes-table', '不需要成交量，成交额必须显示。'],
+  ['quotes-table', 'Only show price. No PE, PB is required.'],
+  ['quotes-table', 'Only show price. No PE, PB is needed.'],
+  ['quotes-table', 'Only show price. No PE, PB should remain visible.'],
+  ['quotes-table', '不要PE、PB待核实。'],
+  ['quotes-metrics', '不要开盘，最高价必须保留。'],
+  ['quotes-metrics', 'Do not show open, high is required.']
+])('conservatively retains fields with unknown or affirmative text after an exclusion list: %s / %s', (profile, prompt) => {
+  const input = quotePanel(profile, 'market', prompt), panel = validatePanel(input)
+  expect(panel.publicData).toBeUndefined()
+  expect(panel.type).toBe('table')
+  expect(panel.prompt).toContain(input.prompt)
+})
+
 it('recognizes the actual related latest real news wording without expanding it to the market feed', () => {
   const input = structuredClone(observed[1].panels[5]), panel = validatePanel(input)
   expect(panel.publicData).toBeUndefined()
