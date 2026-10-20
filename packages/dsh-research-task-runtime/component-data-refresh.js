@@ -1,10 +1,11 @@
 import { normalizeIndexedTableRows, templateDataIssue } from './template-data-contract.js'
+import {normalizeChartMetadata} from './chart-template-contract.js'
 import {randomUUID,createHash} from 'node:crypto'
 import {acceptArtifactOutput} from './artifact-output.js'
 import {readTemplateModel,templateFor} from './component-template-registry.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
-const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default'])
+const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize'])
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex')
 const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
@@ -51,6 +52,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
  if(mapping.$from!==undefined&&(!id(mapping.$from)||forbidden.has(mapping.$from)||!Object.hasOwn(responses,mapping.$from)))throw Error('字段映射来源不存在')
  const source=mapping.$from!==undefined?responses[mapping.$from]:row
  const eachPath=mapping.$each??(Object.hasOwn(mapping,'$map')?mapping.$path:undefined)
+ if(mapping.$normalize!==undefined&&(mapping.$normalize!=='base100'||eachPath===undefined||mapping.$single===true))throw Error('归一化仅支持列表 $each 的 $normalize:"base100"，不能用于单值或表达式')
  if(eachPath!==undefined){
   let rows=path(source,eachPath)
   if(!Array.isArray(rows)||rows.length>2000)throw Error('列表字段不存在或超过 2000 条')
@@ -76,7 +78,14 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   // An explicit collection plus a field path is a scalar row selector. Keep
   // conversions on the outer expression so units and precision apply once.
   const rowMapping=!Object.hasOwn(mapping,'$map')&&mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:mapping.$map
-  const mapped=rows.map(item=>next(rowMapping,item))
+  let mapped=rows.map(item=>next(rowMapping,item))
+  if(mapping.$normalize!==undefined){
+   if(mapping.$as==='number')mapped=mapped.map(value=>scalarMapping(value,{$as:'number'}))
+   if(!mapped.length||mapped.some(value=>typeof value!=='number'||!Number.isFinite(value))||mapped[0]===0)throw Error('归一化需要完整有限数值列表及非零起点；缺失值不能填0')
+   const base=mapped[0]
+   mapped=mapped.map(value=>value/base*100)
+   if(mapped.some(value=>!Number.isFinite(value)))throw Error('归一化结果超出数值范围')
+  }
   if(mapping.$single===true){if(mapped.length!==1)throw Error('单值映射必须恰好匹配一条记录');return scalarMapping(mapped[0],mapping)}
   return mapped.map(value=>scalarMapping(value,mapping))
  }
@@ -106,7 +115,16 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
 /** Apply display-only defaults consistently at generation and refresh time. */
 export function materializeComponentMapping(mapping,responses,now=new Date()){
  const candle=mapping?.type==='market'&&mapping.variant==='candlestick'
- const data=normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now))
+ const data=normalizeChartMetadata(normalizeIndexedTableRows(evaluateMapping(candle?{...mapping,asOf:''}:mapping,responses,now)))
+ if(data.type==='chart'&&Array.isArray(data.labels)&&data.labels.every(label=>typeof label==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(label))&&Array.isArray(mapping.series)){
+  for(const [i,series]of mapping.series.entries()){
+   const values=series?.values
+   if(!record(values)||typeof values.$each!=='string'||typeof values.$sortBy!=='string')continue
+   const {$map,$path,$normalize,$digits,$scale,$as,$prefix,$suffix,...select}=values
+   const dates=evaluateMapping({...select,$map:{$path:values.$sortBy}},responses,now)
+   if(Array.isArray(dates)&&dates.every(date=>typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date))&&(dates.length!==data.labels.length||dates.some((date,j)=>date!==data.labels[j])))throw Error(`chart.series[${i}] 的真实日期与 labels 不一致，不能按条数将不同日期对齐`)
+  }
+ }
  if(candle){
   try{
    const asOf=evaluateMapping(mapping.asOf,responses,now)

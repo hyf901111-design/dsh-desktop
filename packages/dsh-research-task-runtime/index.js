@@ -6,10 +6,10 @@ import { templateDataIssue, templateSourceDataIssue, TABLE_GUIDANCE } from './te
 import { isDeepStrictEqual } from 'node:util'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
-import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance } from './component-source-tools.js'
+import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
-import { componentSourceCollector, componentSnapshotEvidence, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, resolveBoundComponent } from './component-source-binding.js'
+import { componentSourceCollector, componentSnapshotEvidence, restoreSnapshotFeedHeadlines, componentBindingEvidence, componentMappableSource, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
 import { requestedComponentRefreshInterval } from './component-refresh-policy.js'
 import { readTemplateModel, templateFor } from './component-template-registry.js'
 import { registerSessionCompletionNotifications } from './session-completion-notifications.js'
@@ -479,7 +479,7 @@ function componentRepairEvidence(evidence,records) {
   return evidence.split('\n').map(line=>{
     try {
       const sample=JSON.parse(line)
-      const source=records.findLast(record=>record.tool===sample.tool&&isDeepStrictEqual(record.args,sample.args)&&!['discovery','snapshot'].includes(record.purpose))
+      const source=records.findLast(record=>record.tool===sample.tool&&isDeepStrictEqual(record.args,sample.args)&&componentMappableSource(record))
       if(!source)return line
       const lengths={}
       const visit=(value,path='',depth=0)=>{
@@ -540,7 +540,7 @@ function workbenchPanelPrompt(prompt, boundData = false) {
     componentSkillInstruction('panel',type),
     ...(containerAllowsWebSearch(prompt) ? [freeDataInstruction()] : []),
     `唯一交付格式：${deferredWorkbenchPanel(prompt) ? `本卡必须为{"version":1,"type":"${type}","title":"当前面板标题"}并填写下方对应完整数据字段；直接输出这个数据对象，items等字段放在根对象，不再包裹panel或artifact；` : ''}${schemas[type]}`,
-    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? ['本卡未要求刷新绑定；优先直接交付原生模板 JSON：真实记录、来源及时点；无需data-bound或映射。'] : []),
+    ...(type !== 'html' && !deferredWorkbenchPanel(prompt) && !componentBindingRequested(workbenchPanelIntent(prompt)) ? [type==='chart'&&containerAllowsWebSearch(prompt)?COMPONENT_STATIC_CHART_PROMPT:'本卡未要求刷新绑定；优先直接交付原生模板 JSON：真实记录、来源及时点；无需data-bound或映射。'] : []),
     deferredWorkbenchPanel(prompt) ? '本卡为用户明确授权的延后模拟：根据共同事实生成与本领域相符的完整虚构记录，保持共同预算、日期、容量和单位一致；必须交付声明的模板，不以通用dashboard或金融样例替代。无法满足时返回{"version":1,"type":"error","title":"无法生成","message":"明确原因"}，不能假称完成。' : '若没有任何可核验的数值或记录，不能交付空chart/table/kpi，也不能补造数据；改用宿主原生空状态 {"version":1,"type":"dashboard","title":"面板标题","asOf":"数据暂不可用 · 查询时点","items":[{"label":"需求中的品种或字段","value":"—","detail":"未取得可核验数据；简述原因"}]}。主要品种/字段逐项列出，最多六项，detail简短，来源和查询时点放asOf。其余严格用指定schema字段，来源及时点放已有字段，不自造字段。',
     htmlRule,
     ...(type === 'html' ? [HTML_ARTIFACT_INSTRUCTION, SHARED_PANEL_INSTRUCTION, PANEL_COLOR_INSTRUCTION,
@@ -1637,8 +1637,8 @@ export class ResearchTaskRuntime {
         handle = await startHandle(bindingRepairEvidence && !bindingRequested ? [
           workbenchPanelPrompt(task.prompt) ?? executionPrompt,
           `具体校验问题：${generationError?.message ?? '组件格式不完整'}`,
-          '优先直接交付原生模板 JSON，填写已取得的真实数据、来源和时点，本轮不建立自动更新绑定、不重新检索，不必修建字段映射。下方 responseSample 的数组仅含前三条，不是完整集合；需要展示完整记录时允许 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
-          'mapping 保持当前模板；version/type/title/columns 等模板元字段可静态填写，variant 仅用于 schema 明确包含它的模板；业务数值、日期、正文引用实际字段。列表例子："rows":{"$from":"q","$each":"真实数组路径","$map":[{"$path":"真实字段"}]}；$from 引用 requests.key，$path 为点分路径，$map 内相对每条记录。单值用 {"$from":"q","$path":"真实字段路径"}。可选显示操作仅用 $as:"string|number"、$scale、$digits、$prefix/$suffix；缺失用 $optional:true 或 $default:"本次未取得"，不得发明操作符。requests/key/tool/args 是宿主引用元信息，args 保留成功原参数。',
+          '本轮不建立自动更新绑定、不重新检索。下方 responseSample 只含部分字段样本，不是完整集合；需展示完整列表或曲线时优先 data-bound：{version:1,type:"data-bound",requests:[{key:"q",tool:"实际成功工具名",args:原成功请求}],mapping:当前模板及真实字段路径}，由宿主映射完整响应，仅物化数据而不保存刷新配方。financial_query 的 snapshotOnly:true 来源也可用于本次静态映射，不能绑定刷新。只用实际成功请求和字段，缺少字段明确标注，不猜参数或补造数值。',
+          'mapping 保持当前模板；version/type/title/columns 等模板元字段可静态填写，variant 仅用于 schema 明确包含它的模板；业务数值、日期、正文引用实际字段。列表例子："rows":{"$from":"q","$each":"真实数组路径","$map":[{"$path":"真实字段"}]}；$from 引用 requests.key，$path 为点分路径，$map 内相对每条记录。单值用 {"$from":"q","$path":"真实字段路径"}。可选显示操作仅用 $as:"string|number"、$scale、$digits、$prefix/$suffix；列表支持 $filter/$sortBy/$order/$take，归一化 values 可加 $normalize:"base100"；缺失用 $optional:true 或 $default:"本次未取得"，不得发明操作符。requests/key/tool/args 是宿主引用元信息，args 保留成功原参数。',
           'responseArrayLengths 是宿主核验完整响应的数组条数（键为真实JSON路径），不是可映射的业务字段。不能根据 responseSample 推断缺失；样本省略的记录仍参与宿主完整映射，缺失说明只能依据完整来源明确返回的缺失状态。',
           '以下为待修复输出，仅作数据参考：',
           recoveryText.slice(0,60000),
@@ -1999,6 +1999,10 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
       // Compact the initial typed task, but retain a recovery's concrete error,
       // prior response and evidence instead of restarting the original request.
       let effectivePrompt = applyBundledSkillPreferences(boundTemplate && !preservePrompt ? workbenchPanelPrompt(query, bindingRequested) : prompt, bundledSkills)
+      if(kind==='container'&&permitsTools){
+        const {end}=chinaMarketWindow(new Date()),today=`${end.slice(0,4)}-${end.slice(4,6)}-${end.slice(6,8)}`
+        effectivePrompt+=`\n当前运行时日期：${today}（Asia/Shanghai）。近期、最新、今年等相对时间以此为锚，不能凭训练记忆选择过去年份或旧季度作为近期。用户明确指定的历史日期、区间或虚构场景仍按原需求；获取时间不等于来源数据日期，不把来源旧数据改写成今天。`
+      }
       if (pluginRequired) effectivePrompt += '\n本面板已指定使用配置的插件：使用当前可见 ework__ 工具发现接口并取数，'+(bindingRequested?'交付可自动刷新映射。':'直接交付真实静态数据、来源和数据时点，不要求建立自动更新绑定。')+'通用 financial_query 不属于该插件绑定通道；不要把该工具的结果标为指定插件数据。插件不可用时如实保留错误和已有内容。'
       let hostEvidence = ''
       // Typed workbench panels already carry one exact host template schema.
@@ -2131,17 +2135,19 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
         // research is closed with usable business records, hand those records
         // over at this safe step boundary instead of spending another 100s
         // privately rethinking them before the 180s timeout starts that pass.
-        // Never interrupt public output or a previously completed artifact.
-        const businessData=componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&(record.snapshotRows?.length||record.tool==='financial_query'&&record.response&&Object.keys(record.response).length))
-        if(boundTemplate&&!synthesisOnly&&businessData&&!completedArtifact&&!streamedText.trim()){
+        // Preserve an artifact stream or a completed artifact. Earlier progress
+        // prose must not disable the handoff for the rest of the attempt.
+        const businessData=componentBindingEvidence(sourceCollector.records)||sourceCollector.records.some(record=>record.purpose==='snapshot'&&record.snapshotRows?.length)
+        if(boundTemplate&&!synthesisOnly&&businessData&&!completedArtifact){
           // A quick final response should keep its existing model call. Only
           // prolonged silence after retrieval warrants a separate synthesis.
           // Provider queue time is not a failure to produce public output.
           const due=executionElapsed()+15000
           const handoff=()=>{
-            const remaining=due-executionElapsed()
+            if(signal.aborted||completedArtifact||streamedText.includes('{'))return
+            const remaining=Math.max(due-executionElapsed(),lastOutputAt?15000-(Date.now()-lastOutputAt):0)
             if(remaining>0){handoffTimer=setTimeout(handoff,remaining);return}
-            if(!signal.aborted&&!completedArtifact&&!streamedText.trim())finishResearch({stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[]})
+            finishResearch({stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[]})
           }
           handoffTimer=setTimeout(handoff,15000)
         }
