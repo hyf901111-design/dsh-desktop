@@ -474,6 +474,93 @@
           "草稿仍仅保留在preload内存，应用重载或完全退出后不额外持久化。"
         ],
         "generatedAt": "2026-10-20T06:03:20.857890+00:00"
+      },
+      "merged": {
+        "mergeCommit": "8ff33257baa3e13a691e43d92f9f7eef6e45f62e",
+        "verificationCommit": "8ff33257baa3e13a691e43d92f9f7eef6e45f62e",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
+            "verifiedCommit": "8ff33257baa3e13a691e43d92f9f7eef6e45f62e",
+            "completedAt": "2026-10-20T06:12:13.192Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8ff33257baa3e13a691e43d92f9f7eef6e45f62e",
+            "completedAt": "2026-10-20T06:12:13.192Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "8ff33257baa3e13a691e43d92f9f7eef6e45f62e",
+            "completedAt": "2026-10-20T06:12:13.192Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
+            "verifiedCommit": "8ff33257baa3e13a691e43d92f9f7eef6e45f62e",
+            "completedAt": "2026-10-20T06:12:13.192Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "8ff33257baa3e13a691e43d92f9f7eef6e45f62e",
+            "completedAt": "2026-10-20T06:12:13.192Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-10-20T06:12:13.192Z"
       }
     }
   ],
