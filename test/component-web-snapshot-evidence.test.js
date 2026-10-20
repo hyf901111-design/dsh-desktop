@@ -86,6 +86,12 @@ it.each(['documentation','sample','example'])('does not treat a %s=true envelope
  expect(proof(observed.artifact,collect(calls))).toBe(false)
 })
 
+it('does not hide a changed title suffix behind the fingerprint size bound',()=>{
+ const prefix='完整业务说明'.repeat(200),item={title:prefix+'不实施现金分红计划',date:'2026-10-15',url:'https://example.org/articles/observed-483838.html'}
+ const records=collect([{url:'https://example.org/api/news',data:{records:[{title:item.title,date:item.date,id:'observed-483838'}]}}])
+ expect(proof({version:1,type:'reports',items:[{...item,title:prefix+'实施现金分红计划'}]},records)).toBe(false)
+})
+
 it('does not borrow a link from an explicitly marked example wrapper',()=>{
  const item={title:'An observed company business announcement',date:'2026-10-15',url:'https://publisher.example.net/example/unobserved-1234'}
  const records=collect([{url:'https://example.org/api/news',data:{records:[{title:item.title,date:item.date,article:{example:true,href:item.url}}]}}])

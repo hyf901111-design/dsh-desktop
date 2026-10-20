@@ -60,7 +60,10 @@ function snapshotDate(value) {
   const date=typeof value==='string'?value.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/u)?.[0]:null
   return date&&Number.isFinite(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date?date:null
 }
-function snapshotTitle(value) {return typeof value==='string'?value.normalize('NFKC').replace(/\s/gu,'').toLowerCase().slice(0,1000):''}
+function snapshotTitle(value) {
+  const title=typeof value==='string'?value.normalize('NFKC').replace(/\s/gu,'').toLowerCase():''
+  return title.length<=1000?title:''
+}
 function webSnapshotRows(text) {
   // The JSON decoder also accepts examples inside prose. Only a complete JSON
   // body, after the fetcher's known transport notices, establishes list data.
