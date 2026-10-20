@@ -36,6 +36,16 @@ async function fixture(options = {}) {
 }
 
 describe('trusted research canvas capture', () => {
+  it('exposes scheduled requests only through the authenticated session-bound local bridge',async()=>{
+    const calls:unknown[]=[],f=await fixture({scheduledTask:async(value:unknown)=>{calls.push(value);return {status:'saved',taskId:'watch-1'}},canReadSession:(id:string)=>id==='parent'})
+    const request={sessionId:'parent',action:'create',requestId:'message-1',humanRequest:'设置涨跌幅超过3%的定时提醒',symbols:['sh510310'],thresholdPercent:3}
+    const post=(body:unknown,headers:Record<string,string>={})=>fetch(f.endpoint.url+'/scheduled-tasks',{method:'POST',headers:{authorization:`Bearer ${f.endpoint.token}`,'content-type':'application/json',...headers},body:JSON.stringify(body)})
+    expect((await post(request,{authorization:'Bearer invalid'})).status).toBe(403)
+    expect((await post(request,{origin:'https://example.com'})).status).toBe(403)
+    expect((await post({...request,sessionId:'other'})).status).toBe(403)
+    expect(calls).toHaveLength(0)
+    const response=await post(request);expect(response.status).toBe(200);expect(await response.json()).toEqual({status:'saved',taskId:'watch-1'});expect(calls).toEqual([request])
+  })
   it('freezes note-owned sources in a separate session-bound capture without including research board files',async()=>{
     const f=await fixture(),sources=[{id:'note-file',title:'笔记附件',kind:'file',text:'',status:'ready',path:f.file,revision:{size:1,mtimeMs:2}}]
     const capture=f.bridge.captureSources('parent',sources);sources[0]!.title='后来修改'

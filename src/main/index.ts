@@ -22,6 +22,9 @@ import { validateTask } from '../shared/scheduled-tasks'
 import { generateTaskTitle } from './scheduled/task-title'
 import { TaskStore } from './scheduled/task-store'
 import { TaskRunner, harnessRpc } from './scheduled/task-runner'
+import { ScheduledMarketWatchExecutor } from './scheduled/market-watch-executor'
+import { createScheduledTaskService } from './scheduled/task-service'
+import { createPublicDataClient } from '../../packages/dsh-research-task-runtime/public-data-client.js'
 import { createDesktopComputer } from './computer/desktop-computer'
 import { registerConversationBrowser } from './search/conversation-browser'
 import {openClientLink} from './search/open-client-link'
@@ -1263,8 +1266,10 @@ async function bootstrap(): Promise<void> {
   const rssService=createResearchRssService({canvas:canvasActions,isShared:id=>researchBoardsService?.isSharedSession(id)===true})
   app.once('before-quit',registerResearchRssHandlers({ipcMain,getMainWindow:()=>mainWindow,service:rssService}))
   let isScheduledSession = (_id: string) => false
+  let scheduledTaskRequest = (_value: unknown): Promise<unknown> => Promise.reject(Error('定时任务服务未就绪。'))
   const notifiedSessionTurns = new Map<string, number>()
   researchContextBridge = new ResearchContextBridge({
+    scheduledTask: value => scheduledTaskRequest(value),
     sessionCompleted: ({ sessionId, seq, title, preview }) => {
       if (isScheduledSession(sessionId) || seq <= (notifiedSessionTurns.get(sessionId) ?? -1)) return
       notifiedSessionTurns.delete(sessionId)
@@ -1505,8 +1510,9 @@ async function bootstrap(): Promise<void> {
     canvasActions.bind({sessionId:target.sessionId,selectedIds:[target.nodeId]})
     return canvasActions.execute({sessionId:target.sessionId,method,args,scheduled:true})
   }, async target => {if(!componentDataService)throw Error('数据刷新服务不可用');const result=await componentDataService.request(target.sessionId,{action:'refresh',nodeId:target.nodeId});if(Array.isArray(result))throw Error('刷新结果无效');return result})
+  const watchExecutor = new ScheduledMarketWatchExecutor({owner: () => integrationOwner() || 'local', publicData: createPublicDataClient({root: bundledSkillDirectory()})})
   scheduledRunner = new TaskRunner(scheduledStore, taskRpc, () => !scheduledLoadError && runtime.snapshot().phase === 'ready', (task, run) => {
-    if (Notification.isSupported()) new Notification({ title: task.title, body: run.status === 'success' ? (task.component ? '组件已按计划更新' : '定时任务已完成，打开专属对话查看结果') : `定时任务需要处理：${run.error}` }).show()
+    if (Notification.isSupported()) new Notification({ title: task.title, body: run.watchResult?.summary ?? (run.status === 'success' ? (task.component ? '组件已按计划更新' : '定时任务已完成，打开专属对话查看结果') : `定时任务需要处理：${run.error}`) }).show()
   }, Date.now, componentExecutor, async task => {
     if (!task.integrationBindings?.length) return { ready: true, issues: [] }
     if (!dependencyIndex || !integrationService) return { ready: false, issues: [{ message: '连接检查服务暂不可用' }] }
@@ -1520,15 +1526,20 @@ async function bootstrap(): Promise<void> {
       return { ready: false, issues: [{ message: '部分工具未获当前账户或任务工作区授权，请重新选择连接范围' }] }
     }
     return dependencyIndex.preflight(task.id, task.integrationBindings)
-  })
+  }, watchExecutor)
+  const scheduledTaskService = createScheduledTaskService({store: scheduledStore, runner: scheduledRunner, owner: () => integrationOwner() || 'local', readCanvas: id => readStoredResearchCanvas(researchCanvasStorage, id), isShared: id => researchBoardsService?.isSharedSession(id) === true})
+  scheduledTaskRequest = value => scheduledLoadError ? Promise.reject(Error('定时任务数据读取失败，原数据已保留，请检查日志')) : scheduledTaskService.request(value)
   ipcMain.handle('scheduled-tasks:request', async (event, method: unknown, payload: any) => {
     assertTrustedMainWindowEvent(event, mainWindow)
     if (scheduledLoadError) throw new Error('定时任务数据读取失败，原数据已保留，请检查日志')
-    if (method === 'list') return scheduledStore.list()
+    const owner = integrationOwner() || 'local'
+    if (method === 'list') return scheduledStore.list().filter(task => !task.watch || task.watch.ownerAccountId === owner)
     if (method === 'workspaces') return (await taskRpc('workspace.list', {})).items
     if (method === 'save') {
       const input = validateTask(payload?.input)
-      if (input.component) await componentExecutor.target(input.component)
+      if (input.watch) {
+        if (typeof payload.id !== 'string' || !scheduledStore.list().some(task => task.id === payload.id && task.watch?.ownerAccountId === owner)) throw Error('行情提醒请通过原会话创建或编辑')
+      } else if (input.component) await componentExecutor.target(input.component)
       else {
         const workspaces = (await taskRpc('workspace.list', {})).items
         if (!workspaces.some((w: any) => w.workspaceId === input.workspaceId)) throw new Error('工作区不存在')
@@ -1539,6 +1550,8 @@ async function bootstrap(): Promise<void> {
       return task
     }
     if (typeof payload?.id !== 'string') throw new Error('任务标识无效')
+    const targetTask = scheduledStore.list().find(task => task.id === payload.id)
+    if (targetTask?.watch && targetTask.watch.ownerAccountId !== owner) throw Error('任务不存在或没有管理权限')
     if (method === 'run') return scheduledRunner!.run(payload.id)
     if (method === 'pause' || method === 'resume' || method === 'delete') {
       const component=scheduledStore.list().find(t=>t.id===payload.id)?.component

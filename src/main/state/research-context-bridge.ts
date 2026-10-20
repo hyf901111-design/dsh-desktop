@@ -17,6 +17,7 @@ type Capture = { sessionId: string; createdAt: number; sources: Source[]; bytes:
 type Options = {
   sessionCompleted?(value: { sessionId: string; seq: number; title: string; preview: string }): void
   canvasAction?(value: unknown,signal?:AbortSignal): Promise<unknown>
+  scheduledTask?(value: unknown): Promise<unknown>
   canReadSession?(sessionId: string): boolean
   isSharedSession?(sessionId:string):boolean
   additionalSources?(sessionId:string):Source[]|Promise<Source[]>
@@ -120,11 +121,11 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (!['/snapshot','/board-authority','/canvas-actions','/session-completed'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/board-authority','/canvas-actions','/session-completed','/scheduled-tasks'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
       try {
         const chunks: Buffer[] = []
         let size = 0
-        const maxBody = req.url === "/canvas-actions" ? 1600000 : MAX_BODY_BYTES
+        const maxBody = req.url === "/canvas-actions" ? 1600000 : req.url === "/scheduled-tasks" ? 32768 : MAX_BODY_BYTES
         if (Number(req.headers['content-length']) > maxBody) throw new Error()
         for await (const part of req) {
           const chunk = Buffer.from(part); size += chunk.length
@@ -132,6 +133,14 @@ export class ResearchContextBridge {
           chunks.push(chunk)
         }
         const raw=JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        if (req.url === '/scheduled-tasks') {
+          if (!id(raw?.sessionId)) return send(400, { error: '定时任务会话无效。' })
+          if (this.options.canReadSession?.(raw.sessionId) === false) return send(403, { error: '定时任务请求被拒绝。' })
+          try {
+            if (!this.options.scheduledTask) throw Error('定时任务服务未就绪。')
+            return send(200, await this.options.scheduledTask(raw))
+          } catch (error) { return send(400, { error: error instanceof Error ? error.message : '定时任务操作失败。' }) }
+        }
         if (req.url === '/session-completed') {
           if (!id(raw?.sessionId) || !Number.isSafeInteger(raw?.seq) || raw.seq < 0 || typeof raw?.title !== 'string' || raw.title.length > 160 || (raw.preview !== undefined && (typeof raw.preview !== 'string' || raw.preview.length > 242))) return send(400, { error: 'Invalid completion' })
           this.options.sessionCompleted?.({ sessionId: raw.sessionId, seq: raw.seq, title: raw.title, preview: raw.preview ?? '' })
