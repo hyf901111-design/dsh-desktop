@@ -228,7 +228,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         intervalMinutes: { type: 'number', description: '仅publicData面板的可选兼容写法；规范写在publicData.intervalMinutes。两处同时提供须一致，否则拒绝。' },
                         profile: { type: 'string', enum: Object.keys(PUBLIC_DATA_PROFILES), description: '兼容平铺写法，必须同时提供requests；优先写入publicData.profile，不与嵌套配置冲突。' },
                         requests: { ...publicDataRequestsSchema, description: '兼容平铺写法，必须同时提供profile；优先写入publicData.requests。' },
-                        artifact: { type: 'object', additionalProperties: true, description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。真实来源/时点就近标注。' },
+                        artifact: { oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }], description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。deferred模式优先省略，null仅在该模式表示尚未提供数据；其他模式不接受null。真实来源/时点就近标注。' },
                         publicData: { type: 'object', additionalProperties: false, description: '嵌套于panel的常用免费源直通配置，例如 {"profile":"quotes-table","requests":[{"source":"tencent-quotes","parameters_json":"{\\"symbols\\":[\\"sh510300\\"]}"}],"intervalMinutes":1}。宿主并行取数、渲染模板并保存自动刷新；无需先query、抄写数据或逐卡模型。与artifact/模拟模式互斥。', properties: {
                             profile: { type: 'string', required: true, enum: Object.keys(PUBLIC_DATA_PROFILES), description: 'quotes-table/quotes-metrics用tencent-quotes；crypto-metrics用kraken-ticker（最多2个pair）；price-volume用kraken-candles或tencent-history；candlestick仅tencent-history日线；news用sina-news且panel.type=news，其余panel.type=market。' },
                             intervalMinutes: { type: 'number', description: '默认1分钟；0仅手动；遵从用户指定的频率。' },

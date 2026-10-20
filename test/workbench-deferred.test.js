@@ -40,6 +40,32 @@ async function setup(start) {
 }
 
 describe('领域自适应模拟工作台延后生成', () => {
+  it('accepts the observed null optional artifact at the real tool boundary without inventing data or duplicating a retry', async () => {
+    const f = await setup(async request => ({ childSessionId: request.taskId, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify(artifact(request.query)) }] }), dispose: async () => {} }))
+    const payload = { ...input(), panels: [{ ...panels[4], artifact: null }] }, before = structuredClone(payload)
+    try {
+      const receipt = await f.tool.execute(payload, f.exec)
+      expect(receipt.status).toBe('accepted')
+      expect(receipt.templateIds).toEqual(['timeline'])
+      expect(f.runtime.tasks.size).toBe(1)
+      const plan = JSON.parse(await readFile(f.filePath, 'utf8'))[0]
+      expect(Object.hasOwn(plan.input.panels[0], 'artifact')).toBe(false)
+      expect(plan.input.originalRequest).toBe(original)
+      expect(plan.input.sharedContext).toBe(common)
+      const { artifact: omitted, ...panel } = payload.panels[0]
+      expect((await f.tool.execute({ ...payload, panels: [panel] }, f.exec)).planId).toBe(receipt.planId)
+      expect(f.runtime.tasks.size).toBe(1)
+      expect(payload).toEqual(before)
+    } finally { await f.close() }
+  })
+
+  it('does not reinterpret null as supplied source data or weaken the prohibition on mixed deferred artifacts', () => {
+    for (const mode of [{ dataMode: 'source', generationMode: undefined }, { generationMode: 'parallel' }, { generationMode: undefined }]) {
+      expect(() => validateWorkbench({ ...input(), ...mode, sharedContext: undefined, panels: [{ ...panels[4], artifact: null }] })).toThrow()
+    }
+    for (const artifact of [{}, false, '']) expect(() => validateWorkbench({ ...input(), panels: [{ ...panels[4], artifact }] })).toThrow()
+  })
+
   it('validates metadata-first plans while preserving their shared facts and refusing unsupported or mixed paths', () => {
     const plan = validateWorkbench(input())
     expect(plan.generationMode).toBe('deferred')
