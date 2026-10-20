@@ -34,6 +34,17 @@ it('starts an A-share filed-statement comparison from verified statement definit
  expect(componentSourceInstruction(tools,request,new Date(),{planning:true})).not.toContain('getFdmtISLT2018')
 })
 
+it.each(['600011.SH','002026.SZ','601985.SH'])('bounds the first latest-statement query by reporting dates without treating stock digits as a historical year: %s',symbol=>{
+ const tools=[{name:'ework__data',description:'通联 DataYes 金融数据 API'}],now=new Date('2026-10-20T18:00:00Z')
+ const text=componentSourceInstruction(tools,symbol+'最新已披露财务指标，收入、利润、同比和发电量。',now)
+ expect(text).toContain('20250101 至 20261021')
+ expect(text).toContain('必要同比基期')
+ expect(text).toContain('不先取全部历史')
+ const explicit=componentSourceInstruction(tools,'600011.SH 2021年半年报财务指标，与2020年同期对比',now)
+ expect(explicit).not.toContain('20250101 至 20261021')
+ expect(explicit).toContain('实际报告期、披露日期和单位')
+})
+
 it.each(['600011.SH业绩预告与盈利预测对比','AAPL最新已披露财报','只查询600011.SH近期股价，不取财报'])('does not route a different financial task through the A-share filed-statement path: %s',request=>{
  const text=componentSourceInstruction([{name:'ework__data',description:'通联 DataYes 金融数据 API'}],request)
  expect(text).not.toContain('getFdmtISLT2018')
