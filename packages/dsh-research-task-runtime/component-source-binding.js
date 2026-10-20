@@ -26,21 +26,22 @@ export function componentSourceCollector(allowed,schemas=[]) {
       if(!result||result.isError||result.error)return
       const snapshotTool=['web_fetch','financial_query'].includes(call.tool)
       const purpose=discovery.has(call.tool)||call.tool==='public_data_query'&&call.args?.operation!=='query'||call.tool==='financial_query'&&['resolve','search','catalog'].includes(call.args?.intent)?'discovery':snapshotTool?'snapshot':undefined
-      let response
+      let response,snapshotRows
       try { response=decodeDataResponse(result) }
       catch { if(!purpose)return;response=null }
       if(call.tool==='web_fetch') {
         const text=(result.content??[]).filter(b=>b?.type==='text'&&typeof b.text==='string').map(b=>b.text).join('\n')
         if(!text.trim()||!snapshotUrl(call.args?.url))return
-        // A public document is snapshot evidence, not an automatically
-        // executable refresh recipe. Retain its observed URL, not its body.
+        // Public lists can identify detail pages without fetching each article.
+        // Keep bounded record fingerprints, never a page body or refresh recipe.
+        snapshotRows=webSnapshotRows(text)
         response=null
       }
       // Plain-text API definitions still establish discovery, never data.
       {
         const previous=records.findIndex(r=>r.tool===call.tool&&isDeepStrictEqual(r.args,call.args))
         if(previous>=0)records.splice(previous,1)
-        records.push({...call,response,...(purpose?{purpose}:{})})
+        records.push({...call,response,...(purpose?{purpose}:{}),...(snapshotRows?.length?{snapshotRows}:{})})
         // A late business response must never be lost because discovery filled
         // the first slots. Evict directory responses first, then oldest data.
         while(records.length>32||Buffer.byteLength(JSON.stringify(records))>8_000_000){
@@ -55,13 +56,59 @@ export function componentSourceCollector(allowed,schemas=[]) {
 function snapshotUrl(value) {
   try {const url=new URL(value);if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return null;url.hash='';return url.href} catch {return null}
 }
+function snapshotDate(value) {
+  const date=typeof value==='string'?value.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/u)?.[0]:null
+  return date&&Number.isFinite(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date?date:null
+}
+function snapshotTitle(value) {return typeof value==='string'?value.normalize('NFKC').replace(/[^\p{L}\p{N}]/gu,'').toLowerCase().slice(0,1000):''}
+function webSnapshotRows(text) {
+  // The JSON decoder also accepts examples inside prose. Only a complete JSON
+  // body, after the fetcher's known transport notices, establishes list data.
+  const body=text.replace(/^Fetched [^\n]+ \(HTTP 2\d\d\)[\r\n]+/u,'').replace(/^\s*\[网页读取状态：[^\]]+\]\s*/u,'').trim()
+  let value
+  try{value=decodeDataResponse(JSON.parse(body))}catch{return []}
+  const rows=[],ignored=/^(?:examples?|samples?|schemas?|properties|parameters|definitions|documentation|docs?|request|responseSchema)$/iu
+  const visit=(value,depth=0,inList=false)=>{
+    if(!value||typeof value!=='object'||depth>10||rows.length>=200)return
+    if(Array.isArray(value)){for(const row of value.slice(0,2000))visit(row,depth+1,true);return}
+    const entries=Object.entries(value),title=snapshotTitle(entries.find(([key,v])=>/^(?:title|title_ch|headline|name)$/iu.test(key)&&typeof v==='string')?.[1])
+    const date=entries.filter(([key])=>/date|time|published|released/iu.test(key)).map(([,v])=>snapshotDate(v)).find(Boolean)
+    if(inList&&title.length>=10&&date){
+      const ids=entries.filter(([key,v])=>/^(?:id|identifier|(?:\w+_)?(?:id|code)|articleId|recordId|noticeId)$/iu.test(key)&&typeof v==='string'&&/^[\w-]{8,128}$/u.test(v)).map(([,v])=>v).slice(0,8),urls=[]
+      const links=(object,level=0)=>{if(!object||typeof object!=='object'||level>3)return;for(const [key,v]of Object.entries(object)){if(/^(?:url|link|href|sourceUrl)$/iu.test(key)&&typeof v==='string'){const url=snapshotUrl(v);if(url&&url.length<=2048&&urls.length<8)urls.push(url)}else if(v&&typeof v==='object'&&!ignored.test(key))links(v,level+1)}}
+      links(value)
+      if(ids.length||urls.length)rows.push({title,date,ids,urls})
+    }
+    for(const [key,v]of entries)if(!ignored.test(key))visit(v,depth+1,false)
+  }
+  visit(value);return rows
+}
+function snapshotRecordMatches(value,record) {
+  if(!value||typeof value!=='object'||!Array.isArray(record.snapshotRows))return false
+  const title=snapshotTitle(value.title??value.headline??value.name),date=snapshotDate(value.date??value.publishedAt??value.notice_date),url=snapshotUrl(value.url??value.link)
+  if(title.length<10||!date||!url)return false
+  return record.snapshotRows.some(row=>{
+    // A shortened title may omit the full legal company name, but its ordered
+    // content, source date and record identity must still agree.
+    let at=0;for(const character of row.title)if(character===title[at])at++
+    if(row.date!==date||at!==title.length)return false
+    if(row.urls.includes(url))return true
+    const source=new URL(record.args.url),target=new URL(url)
+    // Sibling domains cannot be inferred from their final two labels (com.cn,
+    // private hosting, etc.). Only this observed provider pair is admitted.
+    const sameSite=source.hostname===target.hostname||source.hostname==='np-anotice-stock.eastmoney.com'&&target.hostname==='data.eastmoney.com'
+    if(!sameSite)return false
+    const parts=[...target.pathname.split(/[/.]/u),...target.searchParams.values()].map(part=>{try{return decodeURIComponent(part)}catch{return ''}})
+    return row.ids.some(id=>parts.includes(id))
+  })
+}
 export function componentSnapshotEvidence(text,records) {
   if(records.some(r=>r.tool==='financial_query'&&r.purpose==='snapshot'&&r.response&&typeof r.response==='object'&&Object.keys(r.response).length))return true
   const urls=new Set(records.filter(r=>r.tool==='web_fetch'&&r.purpose==='snapshot').map(r=>snapshotUrl(r.args?.url)).filter(Boolean))
   if(!urls.size)return false
   const referenced=value=>{
     if(!value||typeof value!=='object')return false
-    return Object.entries(value).some(([key,v])=>['url','link','sourceUrl'].includes(key)&&typeof v==='string'&&urls.has(snapshotUrl(v))||v&&typeof v==='object'&&(Array.isArray(v)?v.some(referenced):referenced(v)))
+    return records.some(record=>record.tool==='web_fetch'&&record.purpose==='snapshot'&&snapshotRecordMatches(value,record))||Object.entries(value).some(([key,v])=>['url','link','sourceUrl'].includes(key)&&typeof v==='string'&&urls.has(snapshotUrl(v))||v&&typeof v==='object'&&(Array.isArray(v)?v.some(referenced):referenced(v)))
   }
   return extractArtifactObjects(text).some(referenced)
 }
