@@ -88,16 +88,26 @@ export class IntegrationService {
     private async updateBundledDatayes(resetAuthentication: boolean) {
         const options=this.options.bundledDatayes,owner=this.options.getOwnerId();if(this.disposed||!options||!owner)return;
         const authenticated=options.authenticated(),key=bundledDatayesId(owner),expected=bundledDatayesConnection(owner,authenticated);
-        const currentIsValid=(current?:Connection)=>!!current&&current.configDigest===expected.configDigest
-            &&(authenticated?!['unconfigured','revoked'].includes(current.authState):current.authState==='unconfigured')
-            &&current.toolGrants.length===DATAYES_TOOLS.length&&current.deniedToolIds?.length===0;
-        if(!resetAuthentication&&currentIsValid(this.store.snapshot().connections[key]))return;
+        // A successful discovery can legitimately have a different tool count
+        // and schema from the bootstrap catalog. Keep that verified cache;
+        // authentication rotation must not reintroduce removed wire names.
+        const hasCurrentTools=(state:IntegrationState,current?:Connection)=>{
+            if(!current||current.ownerAccountId!==owner||current.configDigest!==expected.configDigest||!current.toolGrants.length||current.deniedToolIds?.length!==0)return false;
+            const tools=Object.values(state.tools).filter(tool=>tool.connectionId===key);
+            return tools.length===current.toolGrants.length&&new Set(current.toolGrants).size===tools.length
+                &&current.toolGrants.every(id=>state.tools[id]?.connectionId===key&&state.tools[id]?.enabled);
+        };
+        const currentIsValid=(state:IntegrationState,current=state.connections[key])=>!!current&&hasCurrentTools(state,current)
+            &&(authenticated?!['unconfigured','revoked'].includes(current.authState):current.authState==='unconfigured');
+        if(!resetAuthentication&&currentIsValid(this.store.snapshot()))return;
         await this.store.change(state=>{
             if(this.disposed||this.options.getOwnerId()!==owner||options.authenticated()!==authenticated)return;
             const prior=state.connections[key];
-            if(!resetAuthentication&&currentIsValid(prior))return;
-            const connection={...expected,enabled:prior?.enabled??true,revision:prior?(prior.revision+1):1,createdAt:prior?.createdAt??expected.createdAt};
-            state.connections[key]=connection;this.replaceTools(state,connection,DATAYES_TOOLS);
+            if(!resetAuthentication&&currentIsValid(state,prior))return;
+            const retainTools=hasCurrentTools(state,prior);
+            const connection={...expected,...(retainTools?{toolGrants:[...prior!.toolGrants],workspaceGrant:prior!.workspaceGrant}:{}),enabled:prior?.enabled??true,revision:prior?(prior.revision+1):1,createdAt:prior?.createdAt??expected.createdAt};
+            state.connections[key]=connection;
+            if(!retainTools)this.replaceTools(state,connection,DATAYES_TOOLS);
         });
     }
     private async migrateDefaultToolGrants() {

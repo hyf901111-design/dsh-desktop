@@ -5,16 +5,16 @@ import {join} from 'node:path'
 import {IntegrationService} from '../src/main/integrations/service'
 // @ts-expect-error Cloudflare Worker is JavaScript and tested in the same runtime.
 import {handleRequest} from '../services/fund-data/http.js'
-import {bundledDatayesConnection} from '../src/main/integrations/bundled-datayes'
+import {bundledDatayesConnection,DATAYES_TOOLS} from '../src/main/integrations/bundled-datayes'
 import {McpSupervisor} from '../src/main/integrations/adapters/mcp'
 import {CredentialVault} from '../src/main/integrations/vault'
 
 const cleanup:Array<()=>Promise<void>>=[]
 afterEach(async()=>{for(const fn of cleanup.splice(0).reverse())await fn()})
 const encryption={isEncryptionAvailable:()=>true,encryptString:(value:string)=>Buffer.from(value),decryptString:(value:Buffer)=>value.toString()}
-async function serviceFixture(){
+async function serviceFixture(options={}){
  const root=await mkdtemp(join(tmpdir(),'ework-datayes-'));let owner='account-one'
- const service=await IntegrationService.open({root,encryption,getOwnerId:()=>owner,bundledDatayes:{request:vi.fn(),authenticated:()=>true}} as any)
+ const service=await IntegrationService.open({root,encryption,getOwnerId:()=>owner,bundledDatayes:{request:vi.fn(),authenticated:()=>true},...options} as any)
  cleanup.push(async()=>{await service.dispose();await rm(root,{recursive:true,force:true})})
  const row=async()=>{const reply=await service.request({type:'snapshot'});return (reply as any).snapshot.rows.find((r:any)=>r.id.startsWith('builtin:datayes-mcp:'))}
  return {service,row,setOwner:(value:string)=>{owner=value;service.rotateIdentity()}}
@@ -50,6 +50,44 @@ it('保留个人连接与失效状态，重复快照不重置已发现工具或�
  await Promise.all(Array.from({length:4},()=>f.row()))
  expect(f.service.store.snapshot().connections[personal.id]).toEqual(personal)
  expect(f.service.store.snapshot().connections[row.id]).toMatchObject({revision:row.revision,authState:'expired',health:'unreachable',lastError:'需要重新登录'})
+})
+it('保留已验证的实时目录，快照和同账号重新登录不再恢复已移除的旧工具或制造首次调用失败',async()=>{
+ const f=await serviceFixture({approveWrite:async()=>true}),first=await f.row()
+ const discovered=DATAYES_TOOLS.filter(tool=>tool.name!=='get_catalog').map(({effect,...tool})=>tool)
+ vi.spyOn(f.service.mcp,'connect').mockResolvedValue({tools:discovered,negotiatedVersion:'2025-03-26'} as any)
+ const invoke=vi.spyOn(f.service.mcp,'invoke').mockResolvedValue({content:[{type:'text',text:'真实业务资料'}]} as any)
+ await f.service.probe(first.id)
+ const snapshot=()=>Object.values(f.service.store.snapshot().tools).filter(tool=>tool.connectionId===first.id).sort((a,b)=>a.id.localeCompare(b.id))
+ const learned=structuredClone(snapshot());expect(learned).toHaveLength(3)
+ await f.row();expect(snapshot()).toEqual(learned)
+ f.service.rotateIdentity();await f.row();expect(snapshot()).toEqual(learned)
+ const connection=f.service.store.snapshot().connections[first.id]!,tool=snapshot().find(tool=>tool.rawName==='search_api')!
+ const result=await f.service.execute({callId:'after-login',toolId:tool.id,connectionRevision:connection.revision,arguments:{query:'真实财务资料'},context:{sessionId:'session',rootSessionId:'session',workspaceId:'workspace',ownerAccountId:'account-one',runtimeEpoch:f.service.runtimeEpoch,unattended:false}},new AbortController().signal)
+ expect(result.content[0]).toEqual({type:'text',text:'真实业务资料'})
+ expect(invoke).toHaveBeenCalledOnce()
+})
+it('真实工具定义变化仍在执行前拒绝旧调用，目录不会被预置定义覆盖',async()=>{
+ const f=await serviceFixture({approveWrite:async()=>true}),first=await f.row()
+ const discovered=DATAYES_TOOLS.filter(tool=>tool.name!=='get_catalog').map(({effect,...tool})=>structuredClone(tool))
+ const connect=vi.spyOn(f.service.mcp,'connect').mockResolvedValue({tools:discovered,negotiatedVersion:'2025-03-26'} as any)
+ const invoke=vi.spyOn(f.service.mcp,'invoke')
+ await f.service.probe(first.id);await f.row()
+ const connection=f.service.store.snapshot().connections[first.id]!,tool=Object.values(f.service.store.snapshot().tools).find(tool=>tool.connectionId===first.id&&tool.rawName==='search_api')!
+ const changed=structuredClone(discovered),search=changed.find(tool=>tool.name==='search_api')!
+ ;(search.inputSchema as any).properties.mustProvide={type:'string'}
+ ;(search.inputSchema as any).required.push('mustProvide')
+ connect.mockResolvedValue({tools:changed,negotiatedVersion:'2025-03-26'} as any)
+ await expect(f.service.execute({callId:'changed-schema',toolId:tool.id,connectionRevision:connection.revision,arguments:{query:'真实财务资料'},context:{sessionId:'session',rootSessionId:'session',workspaceId:'workspace',ownerAccountId:'account-one',runtimeEpoch:f.service.runtimeEpoch,unattended:false}},new AbortController().signal)).rejects.toMatchObject({code:'SCHEMA_CHANGED'})
+ expect(invoke).not.toHaveBeenCalled()
+ await f.row()
+ const current=Object.values(f.service.store.snapshot().tools).find(item=>item.id===tool.id)!
+ expect(current.inputSchema.required).toContain('mustProvide')
+})
+it('缺少工具定义的内置缓存仍由已知预置安全修复',async()=>{
+ const f=await serviceFixture(),first=await f.row(),connection=f.service.store.snapshot().connections[first.id]!
+ await f.service.store.change(state=>{delete state.tools[connection.toolGrants[0]!]})
+ await f.row()
+ expect(Object.values(f.service.store.snapshot().tools).filter(tool=>tool.connectionId===first.id)).toHaveLength(4)
 })
 function request(method='tools/list',params:any={},headers:Record<string,string>={}){
  return new Request('https://updates.evanarts.com/v1/datayes/mcp',{method:'POST',headers:{'content-type':'application/json','cf-connecting-ip':'192.0.2.1',authorization:'Bearer '+'a'.repeat(64),...headers},body:JSON.stringify({jsonrpc:'2.0',id:7,method,params})})
