@@ -78,6 +78,7 @@ export function evaluateMapping(mapping,responses,now=new Date(),row=responses,d
   // An explicit collection plus a field path is a scalar row selector. Keep
   // conversions on the outer expression so units and precision apply once.
   const rowMapping=!Object.hasOwn(mapping,'$map')&&mapping.$each!==undefined&&Object.hasOwn(mapping,'$path')?{$path:mapping.$path}:mapping.$map
+  if(mapping.$normalize!==undefined&&rowMapping===undefined)throw Error('归一化列表缺少数值选择：请提供 $map:{"$path":"真实数值字段"}，不能直接归一化整条记录')
   let mapped=rows.map(item=>next(rowMapping,item))
   if(mapping.$normalize!==undefined){
    if(mapping.$as==='number')mapped=mapped.map(value=>scalarMapping(value,{$as:'number'}))

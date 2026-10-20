@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { decodeDataResponse, evaluateMapping, materializeComponentMapping } from './component-data-refresh.js'
 import { extractArtifactObjects, acceptArtifactOutput } from './artifact-output.js'
 import { templateFor } from './component-template-registry.js'
-import {normalizeChartMetadata} from './chart-template-contract.js'
+import {normalizeChartMetadata,CHART_VARIANTS} from './chart-template-contract.js'
 
 // Only observed successful plugin or builtin responses can back a refresh recipe. These
 // records never include private model reasoning, guessed APIs or credentials.
@@ -190,10 +190,26 @@ export function componentMappableSource(record) {
 // refresh recipe, but cannot erase fields mapped from other exact observed calls.
 // Missing referenced requests/fields still fail; no guessed arguments or literals
 // are substituted for the source data.
-export function resolveComponentSnapshot(text,records,now=new Date()) {
+function mappingContract(mapping,options) {
+ return mapping?.type==='chart'&&mapping.variant===undefined&&CHART_VARIANTS.includes(options.chartVariant)?{...mapping,variant:options.chartVariant}:mapping
+}
+function financialValueSelectors(value,sources,depth=0) {
+ if(!value||typeof value!=='object'||depth>24)return value
+ if(Array.isArray(value))return value.map(v=>financialValueSelectors(v,sources,depth+1))
+ const source=sources[value.$from]
+ if(source?.tool==='financial_query'&&source.response?.schema_version==='financial-1'&&value.$each==='records'&&value.$normalize==='base100'&&value.$map===undefined&&value.$path===undefined&&value.$sortBy==='as_of'&&typeof value.$filter?.metric==='string'&&Object.keys(value.$filter).every(key=>['metric','instrument'].includes(key))){
+  const rows=source.response.records.filter(row=>Object.entries(value.$filter).every(([key,v])=>row[key]===v))
+  // financial-1 declares value as the observation's numeric value. This is
+  // fixed builtin schema recovery, never guessing among numeric table columns.
+  if(rows.length&&rows.every(row=>typeof row.value==='number'&&Number.isFinite(row.value)&&typeof row.as_of==='string'))value={...value,$map:{$path:'value'}}
+ }
+ return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,financialValueSelectors(v,sources,depth+1)]))
+}
+export function resolveComponentSnapshot(text,records,now=new Date(),options={}) {
   const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
-  if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(candidate.mapping))return null
-  const responses={}
+  const contract=mappingContract(candidate?.mapping,options)
+  if(candidate?.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))return null
+  const responses={},sources={}
   try {
     const keys=new Set()
     for(const request of candidate.requests){
@@ -201,7 +217,7 @@ export function resolveComponentSnapshot(text,records,now=new Date()) {
       keys.add(request.key)
       const args=evaluateMapping(normalizeRequestDates(request.args),{},now)
       const source=records.findLast(record=>record.tool===request.tool&&isDeepStrictEqual(record.args,args)&&componentMappableSource(record))
-      if(source)responses[request.key]=source.response
+      if(source){responses[request.key]=source.response;sources[request.key]=source}
     }
     if(!Object.keys(responses).length)return null
     let paths=0
@@ -214,8 +230,8 @@ export function resolveComponentSnapshot(text,records,now=new Date()) {
       // checked as usual, while formatting and missing-value text are metadata.
       return Object.entries(value).every(([k,v])=>k==='$default'?typeof v==='string'&&/未取得|未提供|缺失|暂无/u.test(v):k.startsWith('$')&&k!=='$map'?true:sourceBacked(v,k==='$map'?key:k))
     }
-    if(!sourceBacked(candidate.mapping)||!paths)return null
-    const mapping=singleSourceMapping(candidate.mapping,responses)
+    if(!sourceBacked(contract)||!paths)return null
+    const mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
     const data=materializeComponentMapping(mapping,responses,now)
     if(templateSourceDataIssue(data)||templateDataIssue(data))return null
     const snapshot=normalizeChartMetadata(componentSnapshotData(data)),output=acceptArtifactOutput(JSON.stringify(snapshot))
@@ -225,8 +241,10 @@ export function resolveComponentSnapshot(text,records,now=new Date()) {
 
 export const COMPONENT_STATIC_CHART_PROMPT = `
 本卡仅生成本次静态图表，不保存自动刷新设置。取得可映射的结构化列表时，优先交付一个 data-bound JSON，由宿主直接读取完整响应和计算曲线，不逐点抄写或手算数组：{"version":1,"type":"data-bound","requests":[{"key":"q0","tool":"实际成功调用的 public_data_query、financial_query 或 ework__ 工具名","args":原成功请求参数}],"mapping":上文chart模板及字段映射}。requests 必须与本卡实际成功调用完全一致；financial_query 仅支持本次静态映射，不能登记自动刷新。网页纯文本不能伪造为这些接口。
+mapping 必须保留上文具体 variant，不得只写 type:chart 而省略变体。每条 values 都要选择数值字段，例如 financial-1 收盘价的完整表达式：{"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"value"},"$normalize":"base100","$digits":2}。不要漏掉 $map；其他来源使用其实际数值字段。
 $from 引 requests.key，$each 指真实列表路径，$map 指每行字段，$filter:{"实际字段":"实际值"} 为标量等值筛选（多个条件同时满足）；$sortBy:"真实日期字段"/$order:"asc" 排序，$take:-20 取末20条，$as:"number" 转数值，$digits:2 控制显示精度。例如 financial_query 的响应明确含 records/metric/as_of/value 时，labels 使用 {"$from":"q0","$each":"records","$filter":{"metric":"收盘价"},"$sortBy":"as_of","$order":"asc","$map":{"$path":"as_of"}}；series.values 使用同一筛选排序，$map 改为 {"$path":"value"}。路径与筛选值以本轮真实响应为准，其他来源不套用这些字段。
 需求要求共同基期100比较时，在每条 values 的 $each 同层加 "$normalize":"base100" 和 "$digits":2，由宿主按筛选排序后的首值执行 值/首值×100；不手算数组，不写死 $scale=100/起点。归一化只用于所需的比较；原始价格需求保留原单位。每条序列都必须使用同一组实际日期，不能将不同日期按条数硬对齐；缺失值不填0。各标的、来源、复权口径、日期和计算说明保留在 note，asOf 仅放简短来源与时点（最多256字）。样本只说明字段路径，不代表完整数据条数；原响应中存在的标的不得因上下文样本省略而标为未取得。
+note 保留真实来源、日期、原单位和复权口径；不要凭样本、记忆或心算添加交易日数、区间涨跌幅、首尾值及强弱排名等额外数值断言。映射后的完整曲线由宿主计算，不能用未经计算核对的文字结论与曲线互相矛盾。
 仅有非结构化资料或映射无法表达必要内容时，按上文原生chart JSON交付可核查内容，不伪造映射。`
 
 export const COMPONENT_BOUND_DATA_PROMPT = `
@@ -332,7 +350,9 @@ function normalizeRequestDates(value,depth=0) {
 export function resolveBoundComponent(text,records,now=new Date(),options={}) {
   const candidate=extractArtifactObjects(text).reverse().find(value=>value?.type==='data-bound')
   if(!candidate)return null
-  if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(candidate.mapping))throw Error('自动更新配置需要已成功调用的接口及当前模板字段映射。')
+  const contract=mappingContract(candidate.mapping,options)
+  if(contract?.type==='chart'&&contract.variant===undefined)throw Error('chart.variant 缺失：mapping 必须保留本卡设计合同中的具体图表变体。')
+  if(candidate.version!==1||!Array.isArray(candidate.requests)||!candidate.requests.length||candidate.requests.length>8||!templateFor(contract))throw Error('数据映射需要已成功调用的接口及当前模板字段，核对 mapping.version/type/variant。')
   const requests=[],responses={}
   for(const request of candidate.requests) {
     if(typeof request.key!=='string'||!/^[a-zA-Z][\w-]{0,63}$/.test(request.key)||Object.hasOwn(responses,request.key)||!(request.tool==='public_data_query'||/^ework__t_[a-f\d]+$/i.test(request.tool??'')))throw Error('自动更新的数据引用无效。')
@@ -344,7 +364,7 @@ export function resolveBoundComponent(text,records,now=new Date(),options={}) {
     responses[request.key]=source.response
     requests.push({key:request.key,toolId:request.tool==='public_data_query'?request.tool:request.tool.slice('ework__'.length),args:options.rollingDates?rollingTodayAnchors(requestArgs,now):requestArgs})
   }
-  const mapping=singleSourceMapping(candidate.mapping,responses)
+  const mapping=singleSourceMapping(contract,responses)
   const data=materializeComponentMapping(mapping,responses,now)
   const sourceIssue=templateSourceDataIssue(data)
   if(sourceIssue)throw Object.assign(new Error(sourceIssue),{code:'SOURCE_DATA_REQUIRED'})
