@@ -17,9 +17,11 @@ const valuation = () => firstPlan().panels.find(p => p.type === 'financial-widge
 it('accepts the observed first plan without another full planning turn or changing its business scope', () => {
   const input = firstPlan(), plan = validateWorkbench(input)
   expect(plan.panels).toHaveLength(8)
-  expect(plan.panels.map(p => p.type)).toEqual(['market', 'chart', 'chart', 'table', 'table', 'reports', 'news', 'calendar'])
-  expect(plan.panels.filter(p => p.publicData)).toHaveLength(1)
-  for (const index of [1, 2, 3, 6]) {
+  // The observed quote prompt also asks for volume/amount, which the fixed
+  // quote renderer omits. It now keeps those fields in a normal source task.
+  expect(plan.panels.map(p => p.type)).toEqual(['table', 'chart', 'chart', 'table', 'table', 'reports', 'news', 'calendar'])
+  expect(plan.panels.filter(p => p.publicData)).toHaveLength(0)
+  for (const index of [0, 1, 2, 3, 6]) {
     const panel = plan.panels[index]
     expect(panel.artifact).toBeUndefined()
     expect(panel.publicData).toBeUndefined()
@@ -97,7 +99,7 @@ it('corrects only a missing-config valuation widget and keeps invalid supplied n
   expect(() => validateWorkbench({ requestId: 'simulation', title: '模拟', dataMode: 'simulated', panels: [valuation()] })).toThrow()
 })
 
-it('dispatches the mixed observed plan once, with scoped source children and the unchanged valid quote fast path', async () => {
+it('dispatches the mixed observed plan once, keeping unsupported quote fields in scoped source children', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'source-route-plan-'))
   let tool
   const ctx = { agents: { get: () => ({}) }, tools: { schemas: () => [{ name: 'public_data_query' }], register: value => { tool = value; return () => {} } }, webServer: { register: () => () => {} } }
@@ -110,10 +112,9 @@ it('dispatches the mixed observed plan once, with scoped source children and the
     const args = firstPlan(), result = await tool.execute(args, exec)
     expect(result.status).toBe('accepted')
     expect((await tool.execute(args, exec)).planId).toBe(result.planId)
-    expect(runtime.startPublicDataBatch).toHaveBeenCalledOnce()
-    expect(runtime.startPublicDataBatch.mock.calls[0][0].panels).toHaveLength(1)
+    expect(runtime.startPublicDataBatch).not.toHaveBeenCalled()
     expect(runtime.startBatch).toHaveBeenCalledOnce()
-    expect(runtime.startBatch.mock.calls[0][0].panels).toHaveLength(7)
+    expect(runtime.startBatch.mock.calls[0][0].panels).toHaveLength(8)
     for (const child of runtime.startBatch.mock.calls[0][0].panels) expect(child.prompt).toContain(request)
     expect(runtime.startPreparedBatch).not.toHaveBeenCalled()
     const saved = JSON.parse(await readFile(filePath, 'utf8'))[0]
