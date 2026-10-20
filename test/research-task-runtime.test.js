@@ -1806,6 +1806,79 @@ describe('Research task Subagent adapter', () => {
     expect(lift).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['calls','time','financial'])('hands verified native-template data to synthesis at the %s boundary without waiting for the 180-second deadline',async boundary=>{
+    const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
+    const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}},steer:vi.fn()},result=Promise.withResolvers();
+    const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);
+    ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'financial_query'},{name:'ework__business',description:'已授权业务数据接口'},{name:'web_search'},{name:'web_fetch'}]};
+    let handle;
+    try{
+      handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'工作台：真实研究\n本面板：经营差异\n取得三家公司的真实数据和来源。\n仅生成本面板，优先使用 table 类型。',prompt:'生成组件',signal:new AbortController().signal,onSessionEvent:()=>{}});
+      let done=false;void handle.result.then(()=>{done=true});
+      if(boundary!=='time')for(let i=0;i<7;i++)ctx.emit(child,{type:'tool/call',seq:i+1,data:{name:'web_search',callId:'search-'+i,arguments:'{}'}});
+      else await vi.advanceTimersByTimeAsync(90001);
+      const tool=boundary==='financial'?'financial_query':'ework__business';
+      ctx.emit(child,{type:'tool/call',seq:10,data:{name:tool,callId:'data',arguments:'{"symbols":["600011","600027","600795"]}'}});
+      expect(done).toBe(false);
+      ctx.emit(child,{type:'tool/result',seq:11,data:{message:{source:{callId:'data'},content:[{type:'tool-result',content:[{type:'text',text:JSON.stringify({records:[{code:'600011',profit:3.2},{code:'600027',profit:2.1},{code:'600795',profit:4.5}]})}]}]}}});
+      expect(done).toBe(false);
+      ctx.emit(child,{type:'step/end',seq:12,data:{}});
+      await vi.advanceTimersByTimeAsync(1);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(15000);
+      expect(done).toBe(true);
+      expect(await handle.result).toMatchObject({stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,sourceRecords:[{tool,args:{symbols:['600011','600027','600795']},response:{records:expect.any(Array)}}]});
+      expect(child.steer).not.toHaveBeenCalled();
+      expect(ctx.subagents.start).toHaveBeenCalledOnce();
+    }finally{await handle?.dispose();vi.useRealTimers()}
+  });
+
+  it.each(['snapshot','documentation','streaming','late-stream','completed','quick-final'])('respects %s evidence or output at the native retrieval handoff',async state=>{
+    const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
+    const parent={id:'parent'},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}}},result=Promise.withResolvers();
+    const run={id:child.id,localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run);
+    ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_search'},{name:'web_fetch'}]};let handle;
+    const output=JSON.stringify({version:1,type:'news',title:'公司公告',items:[{title:'公司已经披露的真实季度报告公告',date:'2026-10-20',summary:'季度报告'}]});
+    try{
+      handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'工作台：真实研究\n本面板：公告\n取得真实公告。\n仅生成本面板，优先使用 news 类型。',prompt:'生成组件',signal:new AbortController().signal,onSessionEvent:()=>{}});
+      for(let i=0;i<7;i++)ctx.emit(child,{type:'tool/call',seq:i+1,data:{name:'web_search',callId:'s-'+i,arguments:'{}'}});
+      ctx.emit(child,{type:'tool/call',seq:10,data:{name:'web_fetch',callId:'page',arguments:'{"url":"https://example.org/api/announcements"}'}});
+      const records=JSON.stringify({records:[{id:'announcement-20261020',title:'公司已经披露的真实季度报告公告',date:'2026-10-20',url:'https://example.org/announcement-20261020'}]});
+      ctx.emit(child,{type:'tool/result',seq:11,data:{message:{source:{callId:'page'},content:[{type:'tool-result',content:[{type:'text',text:state==='documentation'?'API documentation. Example response: '+records:records}]}]}}});
+      if(state==='streaming')ctx.emit(child,{type:'assistant/chunk',seq:12,data:{chunk:{type:'text-delta',text:'{"version":1,"type":"news",'}}});
+      if(state==='completed')ctx.emit(child,{type:'assistant/message',seq:12,data:{message:{content:[{type:'text',text:output}]}}});
+      let done=false;void handle.result.then(()=>{done=true});ctx.emit(child,{type:'step/end',seq:13,data:{}});
+      await vi.advanceTimersByTimeAsync(1);expect(done).toBe(false);
+      if(state==='quick-final')result.resolve({stopReason:'completed',output:[{type:'text',text:output}]});
+      if(state==='late-stream')ctx.emit(child,{type:'assistant/chunk',seq:14,data:{chunk:{type:'text-delta',text:'{"version":1,"type":"news",'}}});
+      await vi.advanceTimersByTimeAsync(15000);expect(done).toBe(['snapshot','quick-final'].includes(state));
+      if(state==='snapshot')expect(await handle.result).toMatchObject({researchPhaseComplete:true,sourceRecords:[{tool:'web_fetch',snapshotRows:expect.any(Array)}]});
+      else{result.resolve({stopReason:'completed',output:[{type:'text',text:output}]});expect(await handle.result).toMatchObject({stopReason:'completed'});}
+    }finally{await handle?.dispose();vi.useRealTimers()}
+  });
+
+  it('excludes actual provider queue wait from the native synthesis handoff grace',async()=>{
+    const {createSubagentAdapter}=await runtimeModule();vi.useFakeTimers();
+    const parent={id:'parent',session:{events:[{type:'user/message',data:{source:{kind:'user'},content:[{type:'text',text:'创建真实研究工作台'}]}}]}},child={id:'child',session:{events:[]},ctx:{tools:{restrict:vi.fn(()=>()=>{})}}},result=Promise.withResolvers();
+    const run={id:'child',localAgent:child,result:result.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run),on=ctx.on;let stream;
+    ctx.on=(name,fn)=>name==='llm/stream'?(stream=fn,()=>{}):on(name,fn);
+    ctx.agents.get=id=>id==='child'?child:parent;
+    ctx.tools={schemas:()=>[{name:'public_data_query'}]};
+    const disposeQueue=registerWorkbenchModelQueue(ctx),open=id=>stream({sessionId:id,provider:'test'},async function*(){yield{type:'finish',reason:{kind:'stop'}}})[Symbol.asyncIterator]();
+    let handle,a,b,queued;
+    try{
+      handle=await createSubagentAdapter(ctx).start({parentSessionId:'parent',kind:'container',query:'工作台：真实研究\n本面板：经营差异\n取得真实数据。\n仅生成本面板，优先使用 table 类型。',prompt:'生成组件',signal:new AbortController().signal,onSessionEvent:()=>{}});
+      await vi.advanceTimersByTimeAsync(90001);
+      ctx.emit(child,{type:'tool/call',seq:1,data:{name:'public_data_query',callId:'q',arguments:'{"operation":"query","source":"tencent-quotes"}'}});
+      ctx.emit(child,{type:'tool/result',seq:2,data:{message:{source:{callId:'q'},content:[{type:'tool-result',content:[{type:'text',text:'{"records":[{"code":"600011","price":12.3}]}'}]}]}}});
+      ctx.emit(child,{type:'step/end',seq:3,data:{}});
+      a=open('parent');b=open('parent');await a.next();await b.next();queued=open('child');const waiting=queued.next();
+      let done=false;void handle.result.then(()=>{done=true});await vi.advanceTimersByTimeAsync(150000);expect(done).toBe(false);
+      await a.return();await waiting;await queued.return();await vi.advanceTimersByTimeAsync(15001);
+      expect(await handle.result).toMatchObject({researchPhaseComplete:true});
+    }finally{await a?.return();await b?.return();await queued?.return();await handle?.dispose();disposeQueue();vi.useRealTimers()}
+  });
+
   it.each(['calls','time'])('bounds every visible plugin retrieval at the %s boundary, including non-preferred APIs',async boundary=>{
     vi.useFakeTimers();const fixture=containerAdapterFixture(),lift=vi.fn();
     fixture.ctx.child.ctx={tools:{restrict:vi.fn(()=>lift)}};

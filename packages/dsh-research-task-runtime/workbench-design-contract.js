@@ -139,6 +139,14 @@ export function marketVariant(panel = {}) {
   // stock's metrics or candles, even when the prompt calls them indicators.
   const primaryCandle = /K\s*线|蜡烛图|candlestick/iu.test(panel.title ?? '') ||
     /(?:展示|绘制|生成|画).{0,16}(?:K\s*线|蜡烛图|candlestick)/iu.test(panel.prompt ?? '');
+  // Security count describes the dataset, not the visualization. A normalized
+  // comparison still needs every series; the quote-list shortcut below must
+  // not replace an explicitly requested trend with a price table.
+  const trendInstruction=(panel.prompt??'').replace(/(?:不要|无需|不必|不需要|禁止|\b(?:do\s+not|without)\b)[^。；;，,\n]{0,100}(?:趋势|走势|折线|\b(?:trends?|time[- ]series|line\s+charts?)\b)[^。；;，,\n]*/giu,'');
+  const primaryTrend=/趋势|走势|折线|\btrends?\b/iu.test(panel.title??'')||
+    /(?:绘制|画|展示|显示|比较|对比|\b(?:plot|chart|draw|display|compare)\b)[^。；;\n]{0,60}(?:走势|趋势|折线|\b(?:trends?|time[- ]series|line\s+charts?)\b)/iu.test(trendInstruction);
+  const explicitTable=/明细表|数据表|报价表|行情表|价格表|对比表|\b(?:table|list)\b/iu.test(panel.title??'');
+  if(primaryTrend&&!primaryCandle&&!explicitTable)return 'trend';
   if (!primaryCandle &&
       /(?:按.{0,16}排序|排序切换|多只(?:股票|个股)|[三十百]\s*只(?:股票|个股)|热门.{0,8}(?:股|股票).{0,8}行情)/iu.test(value)) return 'table';
   const infer = text => {
