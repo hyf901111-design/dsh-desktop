@@ -1,3 +1,4 @@
+import {openClientLink} from './open-client-link'
 import { WebContentsView, session, type BrowserWindow, type IpcMain } from 'electron'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { readablePageUrl } from './browser-page-reader'
@@ -65,7 +66,7 @@ export function registerConversationBrowser(options: { ipcMain: IpcMain; getMain
     main().contentView.addChildView(view);view.setVisible(false)
     const entry=e
     view.webContents.setAudioMuted(true)
-    installWebPageContextMenu(view.webContents,options.getMainWindow,options.locale??(()=> 'zh'),url=>{try{void view.webContents.loadURL(readablePageUrl(url)).catch(()=>{})}catch{}})
+    installWebPageContextMenu(view.webContents,options.getMainWindow,options.locale??(()=> 'zh'),url=>{void openClientLink(options.getMainWindow(),url).catch(()=>{})})
     view.webContents.setWindowOpenHandler(({url})=>{try{void view.webContents.loadURL(readablePageUrl(url)).catch(()=>{});}catch{}return {action:'deny'}})
     const guard=(event:{preventDefault():void},url:string)=>{try{readablePageUrl(url)}catch{event.preventDefault()}}
     view.webContents.on('will-navigate',guard);view.webContents.on('will-redirect',guard)

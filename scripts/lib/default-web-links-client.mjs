@@ -37,6 +37,7 @@ export function installDefaultWebLinks({bridge,sessions,documentTarget}) {
 }
 
 export function patchDefaultWebLinks(source) {
+  source=source.replace('dialog[open],[aria-modal=true],[role=menu]\'','dialog[open],[aria-modal=true],[role=menu],[data-ework-web-link-error]\'');
   const marker='/* EWORK_DEFAULT_WEB_LINKS_V1 */';
   if(source.includes(marker))return source;
   const anchor='const unregisterBrowser=service.registerTab(';
