@@ -8,10 +8,22 @@ import {
   normalizeSearchResults,
   orderedSearchEngines,
   searchExtractionScript,
-  searchSnapshotScript
+  searchSnapshotScript,
+  hasSearchQueryOverlap
 } from '../src/main/search/search-engines'
 
 describe('local browser search engines', () => {
+  it.each([
+    ['2026年10月 煤价 保供稳价 发改委 电煤 政策','北京市人民政府门户网站','提供北京市政府信息',false],
+    ['煤电容量电价 国家发改委 2026','容量电价政策','煤电固定成本回收',true],
+    ['沪深300ETF 510300 最新净值','510300 净值','',true],
+    ['气候','Climate report','',true],
+    ['open source AI','Untranslated source title','',true],
+    ['"容量电价" 煤电 2026 政策','容量的意思','煤电报道未出现完整引号短语',false],
+    ['"capacity tariff" latest','Capacity tariff policy','',true]
+  ])('only rejects a directly observable query mismatch: %s',(query,title,snippet,expected)=>{
+    expect(hasSearchQueryOverlap(query,[{title,snippet,url:'https://example.org/article'}])).toBe(expected)
+  })
   it('builds encoded Bing and DuckDuckGo search URLs without carrying user state', () => {
     expect(buildSearchUrl('bing', '英伟达 2026 财报')).toBe(
       'https://www.bing.com/search?q=%E8%8B%B1%E4%BC%9F%E8%BE%BE+2026+%E8%B4%A2%E6%8A%A5'

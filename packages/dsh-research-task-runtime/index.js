@@ -1837,6 +1837,11 @@ function compactResearchEvidence(text,request) {
 function canSynthesizeResult(result) {
   return ['completed', 'max-tokens'].includes(result?.stopReason) || result?.stopReason === 'timeout' && result.localDeadlineExceeded === true
 }
+function artifactStreamStarted(text) {
+  // A short introduction or JSON fence is compatible with normal artifact
+  // extraction. A brace mentioned inside ongoing prose is not a data stream.
+  return /(?:^|\n)\s*(?:```(?:json)?\s*)?\{\s*(?:"|$)/iu.test(text.slice(0,512))
+}
 
 export function createSubagentAdapter(ctx, { surface } = {}) {
   let disposed = false
@@ -2174,8 +2179,11 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
           // Provider queue time is not a failure to produce public output.
           const due=executionElapsed()+15000
           const handoff=()=>{
-            if(signal.aborted||completedArtifact||streamedText.includes('{'))return
-            const remaining=Math.max(due-executionElapsed(),lastOutputAt?15000-(Date.now()-lastOutputAt):0)
+            if(signal.aborted||completedArtifact||artifactStreamStarted(streamedText))return
+            // Brief public prose earns the existing grace, but a stream of
+            // prose cannot postpone synthesis indefinitely. Provider queue
+            // wait is still excluded from both bounds.
+            const remaining=Math.min(due+15000-executionElapsed(),Math.max(due-executionElapsed(),lastOutputAt?15000-(Date.now()-lastOutputAt):0))
             if(remaining>0){handoffTimer=setTimeout(handoff,remaining);return}
             finishResearch({stopReason:'timeout',localDeadlineExceeded:true,researchPhaseComplete:true,output:[]})
           }
@@ -2309,8 +2317,9 @@ export function createSubagentAdapter(ctx, { surface } = {}) {
             const elapsed = executionElapsed()
             if (elapsed < budget) { completionTimer = setTimeout(finish, budget - elapsed); return }
             const remaining = budget + 120000 - elapsed
-            // Public output, not private reasoning or tool churn, earns bounded time to finish.
-            if (lastOutputAt && Date.now() - lastOutputAt < 15000 && remaining > 0) {
+            // Only an actual artifact stream earns extra completion time.
+            // Ongoing prose and private reasoning are not a rendered component.
+            if (artifactStreamStarted(streamedText) && lastOutputAt && Date.now() - lastOutputAt < 15000 && remaining > 0) {
               completionTimer = setTimeout(finish, Math.min(15000, remaining))
               return
             }

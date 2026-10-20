@@ -9,6 +9,32 @@ const record={tool:'ework__observed_business_query',args:{http_method:'GET',name
 const model={version:1,type:'market',variant:'table',asOf:'2026-10-21 · 静态快照',title:'已取得财务对比',columns:['证券代码 / 简称','报告期（最新定期报告）','营业收入（亿元）','收入同比（计算值）','归母净利润（亿元）','归母同比（计算值）'],rows:[['600011.SH 华能国际','2026年半年报（2026-06-30止）','1,069.09','-4.57%（vs 2025H1 1,120.32亿元）','65.86','-28.90%（vs 2025H1 92.62亿元）']],note:'保留原始单位、报告日期及来源。'}
 const restore=(input=model,sources=[record])=>binding.restoreSnapshotStatementGrowth?.(JSON.stringify(input),sources)
 
+const inlineNative=()=>({version:1,type:'market',variant:'table',title:'财务与经营对比',columns:['公司（代码）','最新报告期（披露日）','营业收入','归母净利润','收入同比（计算值）','归母净利同比（计算值）','经营数据（另行披露口径）'],rows:[['华能国际 600011.SH','2026年半年报（2026-08-19披露，合并口径）','1,069.09亿元（106,909,025,871元）','65.86亿元（6,585,729,326元）','-4.57%（上年同期1,120.32亿元）','-28.91%（上年同期92.62亿元）','2026H1境内上网电量1,995.78亿千瓦时；截至2026-06-30可控装机158,779兆瓦（2026-07-16公告），2026-08-19补充经营披露']],note:'财务为2026年半年报，经营披露日期另行保留。'})
+
+it('corrects the actual native period-label and inline-unit layout without treating distinct operating dates as statement dates',()=>{
+ const input=inlineNative(),before=JSON.stringify(input),text=restore(input)
+ expect(text).toBeTypeOf('string')
+ const corrected=JSON.parse(text)
+ expect(corrected.rows[0][5]).toBe('-28.89%（上年同期92.62亿元）')
+ expect(corrected.rows[0].slice(0,5)).toEqual(input.rows[0].slice(0,5))
+ expect(corrected.rows[0][6]).toBe(input.rows[0][6])
+ expect(corrected.note).toContain('9261884951')
+ expect(JSON.stringify(input)).toBe(before)
+ expect(restore(corrected)).toBeUndefined()
+})
+
+it.each(['wrong-publication','wrong-year','conflicting-period','wrong-rounded-amount','wrong-raw-amount','unknown-unit','ambiguous-amount'])('does not infer statement identity or units from a convenient inline representation: %s',mode=>{
+ const input=inlineNative()
+ if(mode==='wrong-publication')input.rows[0][1]='2026年半年报（2026-08-20披露）'
+ if(mode==='wrong-year')input.rows[0][1]='2025年半年报（2026-08-19披露）'
+ if(mode==='conflicting-period')input.rows[0][1]='2026年半年报（2026-03-31）'
+ if(mode==='wrong-rounded-amount')input.rows[0][3]='66.86亿元（6,585,729,326元）'
+ if(mode==='wrong-raw-amount')input.rows[0][3]='65.86亿元（6,585,729,327元）'
+ if(mode==='unknown-unit')input.rows[0][3]='65.86（6,585,729,326）'
+ if(mode==='ambiguous-amount'){input.columns.push('归母净利');input.rows[0].push(input.rows[0][3])}
+ expect(restore(input)).toBeUndefined()
+})
+
 it('recalculates explicitly computed YoY from full-precision same-report comparative amounts, preserving rows and source text without mutation',()=>{
  const before=JSON.stringify({model,record}),text=restore()
  expect(text).toBeTypeOf('string')

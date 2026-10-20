@@ -74,6 +74,28 @@ export function normalizeSearchResults(
   return sources
 }
 
+/** Reject only obvious lexical mismatches; overlap does not prove relevance. */
+export function hasSearchQueryOverlap(query: string, sources: SearchSource[]): boolean {
+  const normalize = (text: string) => text.normalize('NFKC').toLowerCase().replace(/\s+/gu, ' ').trim()
+  // Inspect source rows, never the page title or echoed query metadata.
+  const observed = sources.map(source => normalize([source.title, source.snippet, source.url].filter(Boolean).join(' ')))
+  const quoted = [...query.matchAll(/"([^"\r\n]{2,128})"|“([^”\r\n]{2,128})”/gu)].map(match => normalize(match[1] ?? match[2] ?? '')).filter(Boolean)
+  if (quoted.some(phrase => !observed.some(text => text.includes(phrase)))) return false
+  if (!/[\p{Script=Han}]/u.test(query)) return true
+  const context = new Set(['最新','近期','实时','政策','新闻','资讯','消息','资料','信息','公告','通知','官网','官方','news','latest','recent','official'])
+  const words = [...new Set((normalize(query).match(/[\p{L}\p{N}]+/gu) ?? []).filter(word =>
+    word.length >= 2 && !context.has(word) && !/^20\d{2}(?:年(?:\d{1,2}月(?:\d{1,2}日)?)?)?$/u.test(word) && (!/^\d+$/u.test(word) || word.length === 6)))]
+  // A single unsegmented Chinese expression has no reliable word boundary.
+  // Keep it compatible; do not guess dictionary segmentation or translations.
+  if (words.length < 2) return true
+  const fragments = words.flatMap(word => {
+    if (!/^[\p{Script=Han}]+$/u.test(word)) return [word]
+    const characters = [...word]
+    return characters.slice(1).map((character, i) => characters[i] + character)
+  })
+  return fragments.some(fragment => observed.some(text => text.includes(fragment)))
+}
+
 export function isSearchChallenge(page: {
   url: string
   title: string
