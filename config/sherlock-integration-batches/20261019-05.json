@@ -9,102 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "共同记录一次生成并组合为可靠的列表对比排程视图",
+        "featureName": "减少共同记录规划返工并补齐稳定编号显示元信息",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "edda791f35333ae73412478bfe33d77b888fe795",
-        "tipCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
+        "baseCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
+        "tipCommit": "ea06e83b1544264386367ffb3e3da128df75270c",
         "commits": [
           {
-            "commit": "2a8e01b253b0700fc7e372a4300beb6543a9f12f",
+            "commit": "ea06e83b1544264386367ffb3e3da128df75270c",
             "parents": [
-              "edda791f35333ae73412478bfe33d77b888fe795"
+              "5a44984cd8b3baef6c7ed0f41307c62291c95b73"
             ],
-            "subject": "记录工作台共用数据与组合视图的结构调整方案和验收计划"
-          },
-          {
-            "commit": "7491bccea2dad8e1af9c85731b0bbdb4347b15ca",
-            "parents": [
-              "2a8e01b253b0700fc7e372a4300beb6543a9f12f"
-            ],
-            "subject": "新增工作台共用记录和组合视图的严格数据引用契约"
-          },
-          {
-            "commit": "bd12c70911549e1ec976e24259b2a584cc0181da",
-            "parents": [
-              "7491bccea2dad8e1af9c85731b0bbdb4347b15ca"
-            ],
-            "subject": "用共用记录直接渲染列表对比排程并可靠恢复筛选排序状态"
-          },
-          {
-            "commit": "7c4d08fa6573ac7941e968436da0b4924249a52e",
-            "parents": [
-              "bd12c70911549e1ec976e24259b2a584cc0181da"
-            ],
-            "subject": "接入共用记录组合视图快路径并保留重试及来源边界"
-          },
-          {
-            "commit": "1b6b27d2e9c069728b2d54104a9485de386789dd",
-            "parents": [
-              "7c4d08fa6573ac7941e968436da0b4924249a52e"
-            ],
-            "subject": "修复组合视图准备失败重试短时排程及共同记录传递"
-          },
-          {
-            "commit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
-            "parents": [
-              "1b6b27d2e9c069728b2d54104a9485de386789dd"
-            ],
-            "subject": "同步工作台组合视图技能的随包版本校验"
+            "subject": "减少共同记录首次规划返工并自动补齐编号显示标签"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/superpowers/plans/2026-10-21-workbench-shared-data-views.md"
           },
           {
-            "status": "A",
-            "path": "docs/superpowers/specs/2026-10-21-workbench-shared-data-views.md"
-          },
-          {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/artifact-output.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-template-registry.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
-          },
-          {
-            "status": "A",
             "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/dataset-view-runtime.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-presentation.js"
           },
           {
             "status": "M",
@@ -112,14 +37,10 @@
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
             "path": "skills/ework-workbench-components/_meta.json"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "skills/ework-workbench-components/references/shared-data-views.md"
           },
           {
@@ -128,30 +49,14 @@
           },
           {
             "status": "M",
-            "path": "test/component-template-registry.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/dataset-view-artifact.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/dataset-view-browser.test.js"
-          },
-          {
-            "status": "A",
             "path": "test/dataset-view-contract.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/book-workbench-dataset.js"
           },
           {
             "status": "M",
             "path": "test/integration-bundled-skill.test.js"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "test/workbench-dataset-view.test.js"
           }
         ],
@@ -161,18 +66,16 @@
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=1",
+              "test/dataset-view-contract.test.js",
               "test/workbench-dataset-view.test.js",
               "test/dataset-view-artifact.test.js",
-              "test/workbench-deferred.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/dataset-view-browser.test.js",
               "test/bundled-component-skill.test.js",
               "test/integration-bundled-skill.test.js"
             ],
             "outcome": "passed",
-            "summary": "80项直接相关检查通过；/tmp/workbench-dataset-tip-focused-20261021.log",
-            "verifiedCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
-            "completedAt": "2026-10-21T04:46:11.038978+00:00",
+            "summary": "74项直接相关检查通过；/tmp/workbench-dataset-native-repair-tip-20261021.log",
+            "verifiedCommit": "ea06e83b1544264386367ffb3e3da128df75270c",
+            "completedAt": "2026-10-21T05:07:45.178263+00:00",
             "timeoutMs": 180000
           },
           {
@@ -182,117 +85,28 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/workbench-dataset-tip-typecheck-20261021.log",
-            "verifiedCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
-            "completedAt": "2026-10-21T04:46:11.038978+00:00",
+            "summary": "类型检查通过；/tmp/workbench-dataset-native-repair-tip-typecheck-20261021.log",
+            "verifiedCommit": "ea06e83b1544264386367ffb3e3da128df75270c",
+            "completedAt": "2026-10-21T05:07:45.178263+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "完整接受路径的双层浏览器验证筛选、比较、优先级、重开恢复、排程及四主题窄宽布局。真实客户端包验收待构建。"
+          "summary": "原生首轮实测发现两次参数返工及跨数据集说明不一致，本修正已加入真实边界回归并通过独立审查，需重新构建原生实测，不预判速度目标达到。旧海上排程长标题和负责人在当前原生包完整显示。"
         },
         "acceptanceCriteria": [
-          "共同记录只确定一次，三种组合视图保留全部原字段、单位和null。",
-          "已满足组合能力的模拟工作台直接prepared，不启动逐卡模型；重试及重启不重复建卡。",
-          "短时排程、零时长和资源冲突如实显示，控件与保存状态一致。",
-          "真实来源、自定义HTML和旧deferred路径保留，不降级真实数据。"
+          "记录已带稳定id时只补显示标签，不更改任何业务值、数量或字段语义。",
+          "仍拒绝缺失或重复记录id、超限或未声明的业务字段。",
+          "规划参数要求一次齐全提交面板与共同记录，以共同主记录承载相关事实。",
+          "不改变真实数据路径，不把模拟测试结果作为真实取数接受。"
         ],
         "risks": [
-          "此扩展首版仅明确模拟数据；不宣称真实取数提速或整体工作台目标完成。",
-          "快照数据各卡相同，本地筛选和优先级独立，不宣称跨卡可变业务事实实时同步。",
-          "修改需求仍走原生成路径并携带现有共同记录；原需求原样重试直接准备。",
-          "独立审查三项Important已由1b6b27d2修复并复核；本地预览建议不等于用户接受。",
-          "只在既有集成批次本地预览，不推送、不发布、不晋升main。"
+          "原生首轮147.08秒且有2次工具错误，本次修正尚未完成原生复测。",
+          "跨数据集业务语义一致性仍需实测检查；本次没有新增任意业务语义验证器。",
+          "只做既有集成批次本地预览，不推送、不发布、不晋升main。"
         ],
-        "generatedAt": "2026-10-21T04:46:11.038978+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f024b22bb9a8b16367d0197e9f45219aa7f0112a",
-        "verificationCommit": "f024b22bb9a8b16367d0197e9f45219aa7f0112a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "f024b22bb9a8b16367d0197e9f45219aa7f0112a",
-            "completedAt": "2026-10-21T04:46:57.690Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f024b22bb9a8b16367d0197e9f45219aa7f0112a",
-            "completedAt": "2026-10-21T04:46:57.690Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "f024b22bb9a8b16367d0197e9f45219aa7f0112a",
-            "completedAt": "2026-10-21T04:46:57.690Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "f024b22bb9a8b16367d0197e9f45219aa7f0112a",
-            "completedAt": "2026-10-21T04:46:57.690Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f024b22bb9a8b16367d0197e9f45219aa7f0112a",
-            "completedAt": "2026-10-21T04:46:57.690Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T04:46:57.690Z"
+        "generatedAt": "2026-10-21T05:07:45.178263+00:00"
       }
     },
     {
