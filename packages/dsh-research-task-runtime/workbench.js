@@ -32,7 +32,7 @@ import {generateSimulatedPanel} from './simulated-workbench-generator.js';
 import {marketVariant} from './workbench-design-contract.js';
 import { PUBLIC_DATA_PROFILES } from './workbench-public-data.js';
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js';
-import {DATASET_VIEW_GUIDANCE,DATASET_VIEW_SCHEMA,WORKBENCH_DATASETS_SCHEMA} from './dataset-view-contract.js';
+import {DATASET_VIEW_GUIDANCE,DATASET_VIEW_SCHEMA,WORKBENCH_DATASETS_SCHEMA,assertWorkbenchViewSources} from './dataset-view-contract.js';
 export {validateWorkbench, layoutWorkbench, PANEL_SIZES} from './workbench-plan.js';
 const publicDataRequestsSchema = { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
     source: { type: 'string', required: true, enum: ['tencent-quotes','tencent-history','kraken-ticker','kraken-candles','sina-news'] },
@@ -153,6 +153,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 if (old.ready && old.panels.some(p=>!p.taskId) && (input.generationMode==='deferred'||old.panels.every(p=>p.artifact))) { await startDeferred(old); await persist(); }
                 return { planId: old.id, panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? preparedWorkbench(input) && old.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' : 'preparing' };
             }
+            assertWorkbenchViewSources(input);
             const id = randomUUID();
             const plan = { ...input, input, id, parentSessionId, createdAt: Date.now(), ready: false,
                 panels: layoutWorkbench(input.panels).map((p, i) => ({ ...p, nodeId: `${id}-${i}` })) };

@@ -28,6 +28,12 @@ it('does not invent records or render invalid references as successful content',
  expect(renderDatasetViewArtifact({type:'html'})).toBeNull()
  const value=spec(archiveView());value.view.details=['missing'];expect(renderDatasetViewArtifact(value)).toBeNull()
 })
+it('keeps stable record identities visible even when the chosen columns omit id',()=>{
+ const value=spec(priorityView());value.view.sections=[{kind:'records',fields:['disease','owner']}];
+ const rendered=renderDatasetViewArtifact(value),w=new Window();w.document.write(rendered.html);
+ const table=w.document.querySelector('.dv-records');
+ expect([...table.querySelectorAll('tbody tr')].map(row=>row.querySelector('[data-view-select]').textContent)).toEqual(['B01','B02','B03','B04','B05','B06','B07','B08']);
+})
 
 it('keeps sub-hour bars and axis ticks on the identical time scale',()=>{
  const dataset=bookDataset();dataset.records=dataset.records.slice(0,1);dataset.records[0].start='2026-10-22T09:00:00+08:00';dataset.records[0].end='2026-10-22T09:20:00+08:00';

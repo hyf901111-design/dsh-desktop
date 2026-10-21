@@ -1,5 +1,5 @@
 import {describe,it,expect,vi} from 'vitest';
-import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {validateWorkbench,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js';
@@ -9,12 +9,12 @@ import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifa
 import {readTemplateModel,templateSummary} from '../packages/dsh-research-task-runtime/component-template-registry.js';
 import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js';
 const input=()=>({requestId:'book-shared',title:'古籍工坊交接演练',dataMode:'simulated',sharedDatasets:[bookDataset()],panels:[archiveView(),scheduleView(),priorityView()].map((view,i)=>({title:['逐册档案与比较','三日设备排程','复检优先级'][i],prompt:['按负责人和阶段筛选逐册档案，选择任意两册比较完整病害与交接。','查看每册入柜出柜、等待原因与复检；不能有同柜重叠。','按负责人筛选并修改复检优先级，保留实际原含水率和验收结果。'][i],type:'view',size:'large',view}))});
-async function setup(){
+async function setup(initialPlans){
  const dir=await mkdtemp(join(tmpdir(),'dataset-workbench-'));let data={version:1,tasks:[]},tool;
  const storage={save:async v=>{data=structuredClone(v)},load:async()=>structuredClone(data)};
  const adapter={start:vi.fn(async r=>({childSessionId:r.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'note',title:'补充（模拟）',asOf:'虚构演练记录',content:'模拟补充说明'})}]}),dispose:async()=>{}}))};
  const runtime=new ResearchTaskRuntime({adapter,storage,retryDelayMs:0});
- const filePath=join(dir,'plans.json');const dispose=await registerWorkbench({agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}},runtime,{filePath});
+ const filePath=join(dir,'plans.json');if(initialPlans)await writeFile(filePath,JSON.stringify(initialPlans));const dispose=await registerWorkbench({agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}},runtime,{filePath});
  const exec={agent:{session:{id:'parent',events:[{type:'user/message',data:{id:'u',source:{kind:'user'},content:[{type:'text',text:'生成虚构古籍修复工作台，8册、2名修复师、1个干燥柜，完整档案、任意两册比较、占用排程与复检优先级。'}]}}]}},signal:new AbortController().signal};
  return {tool,exec,runtime,storage,adapter,filePath,close:async()=>{await runtime.dispose();await dispose();await rm(dir,{recursive:true,force:true})}};
 }
@@ -33,8 +33,15 @@ describe('workbench common records at the real tool boundary',()=>{
  it('retains the canonical source through acceptance and readback, never degrading to generic HTML data',()=>{
   const value=validateWorkbench(input());for(const p of value.panels){const accepted=acceptArtifactOutput(JSON.stringify(p.artifact));expect(accepted).toBeTruthy();const spec=JSON.parse(accepted),model=readTemplateModel(spec);expect(model.templateId).toBe('view');expect(model.data).toEqual(p.artifact);expect(spec.html).toContain('B08');expect(templateSummary(spec).message).toContain('组合')}
  });
- it.each(['source','parallel','unknown-field','conflicting-view','missing-data','render-budget'])('rejects %s before starting tasks or persisting a partial plan',async kind=>{
+ it.each(['source','parallel','unknown-field','conflicting-view','missing-data','render-budget','unused-dataset','conflicting-record-facts','conflicting-null','conflicting-unit'])('rejects %s before starting tasks or persisting a partial plan',async kind=>{
   const f=await setup(),plan=input();
+  if(['unused-dataset','conflicting-record-facts','conflicting-null','conflicting-unit'].includes(kind)){
+   const other=structuredClone(plan.sharedDatasets[0]);other.id='drying-events';plan.sharedDatasets.push(other);
+   if(kind!=='unused-dataset'){plan.panels[2].view.dataset=other.id;plan.sharedDatasets[0].recordScope='books';other.recordScope='books';}
+   if(kind==='conflicting-record-facts')other.records[0].moisture=999;
+   if(kind==='conflicting-null')other.records[0].moisture=null;
+   if(kind==='conflicting-unit')other.fields.find(f=>f.key==='moisture').unit='ratio';
+  }
   if(kind==='render-budget'){
    plan.sharedDatasets=[{id:'books',label:'大记录',asOf:'模拟',note:'完整记录',fields:[{key:'id',label:'编号'},{key:'description',label:'完整描述'}],records:Array.from({length:6},(_,i)=>({id:'B'+i,description:'x'.repeat(7000)}))}];
    plan.panels=[{title:'完整列表',prompt:'保留全部长记录与四个对照区域。',type:'view',size:'large',view:{dataset:'books',sections:Array.from({length:4},()=>({kind:'records',fields:['id','description']}))}}];
@@ -43,6 +50,19 @@ describe('workbench common records at the real tool boundary',()=>{
   if(kind==='unknown-field')plan.panels[0].view.details=['unknown'];
   if(kind==='conflicting-view')plan.panels[0].type='html';if(kind==='missing-data')delete plan.sharedDatasets;
   try{await expect(f.tool.execute(plan,f.exec)).rejects.toThrow();expect(f.runtime.tasks.size).toBe(0);expect(f.adapter.start).not.toHaveBeenCalled();await expect(readFile(f.filePath,'utf8')).rejects.toMatchObject({code:'ENOENT'})}finally{await f.close()}
+ });
+ it.each(['consistent-snapshot','independent-events','independent-local-ids'])('preserves valid multiple datasets with %s without guessing shared values',async kind=>{
+  const f=await setup(),plan=input(),other=structuredClone(plan.sharedDatasets[0]);other.id='events';
+  if(kind==='consistent-snapshot'){plan.sharedDatasets[0].recordScope='books';other.recordScope='books';}
+  if(kind==='independent-events')for(const record of other.records){record.id='event-'+record.id;record.moisture=99;}
+  if(kind==='independent-local-ids')for(const record of other.records)record.moisture=99;
+  plan.sharedDatasets.push(other);plan.panels[2].view.dataset=other.id;const before=structuredClone(plan);
+  try{expect((await f.tool.execute(plan,f.exec)).status).toBe('prepared');expect(plan).toEqual(before);expect(f.adapter.start).not.toHaveBeenCalled();const tasks=[...f.runtime.tasks.values()];expect(readTemplateModel(JSON.parse(tasks[2].finalOutput)).data.dataset).toEqual(other);expect(readTemplateModel(JSON.parse(tasks[0].finalOutput)).data.dataset).toEqual(plan.sharedDatasets[0]);}finally{await f.close()}
+ });
+ it('returns an existing completed request unchanged when new creation rules would reject its old orphan dataset',async()=>{
+  const raw=input(),other=structuredClone(raw.sharedDatasets[0]);other.id='old-unused';raw.sharedDatasets.push(other);
+  const value=validateWorkbench(raw),saved={...value,input:value,id:'old-plan',parentSessionId:'parent',ready:true,panels:value.panels.map((p,i)=>({...p,nodeId:'old-'+i,taskId:'old-task-'+i}))};
+  const f=await setup([saved]);try{expect((await f.tool.execute(raw,f.exec)).planId).toBe('old-plan');expect(f.runtime.tasks.size).toBe(0);expect(f.adapter.start).not.toHaveBeenCalled();expect(JSON.parse(await readFile(f.filePath,'utf8'))).toEqual([saved]);}finally{await f.close()}
  });
  it('creates all complete views immediately, deduplicates both live and restored tool retries',async()=>{
   const f=await setup();try{
