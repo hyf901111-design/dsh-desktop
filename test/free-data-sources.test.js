@@ -30,7 +30,7 @@ describe('builtin free data sources', () => {
   it('is discovered by native filesystem and integration allowlist and protected as bundled', async () => {
     const provider = new FileSystemSkillProvider({ get: () => undefined, logger: { warn: vi.fn() } }, { signal: new AbortController().signal, invalidate: vi.fn() }, { includeDefaultRoots: false, bundledSkillDir: root, watch: false });
     try { const listed = await provider.list({}), candidate = (Array.isArray(listed) ? listed : listed.candidates).find(c => c.name === 'ework-free-data-sources'); expect(candidate.source).toBe('bundled'); expect((await provider.get(candidate, {})).content).toContain('public_data_query'); } finally { await provider.dispose(); }
-    const entries = await loadBundledSkills(root); const item = entries.find(e => e.skill.id === BUNDLED_FREE_DATA_SKILL_ID); expect(item.skill).toMatchObject({ enabled: true, provider: 'bundled', source: 'EWork 内置 · v1.0.7' }); expect(isBundledSkillId(item.skill.id)).toBe(true);
+    const entries = await loadBundledSkills(root); const item = entries.find(e => e.skill.id === BUNDLED_FREE_DATA_SKILL_ID); expect(item.skill).toMatchObject({ enabled: true, provider: 'bundled', source: 'EWork 内置 · v1.0.8' }); expect(isBundledSkillId(item.skill.id)).toBe(true);
   });
   it('only exposes adapters for eligible sources and never uses restricted/keyed providers', () => {
     expect(catalog().sources).toHaveLength(28); expect(catalog().sources.filter(s => s.queryable)).toHaveLength(16);
@@ -82,6 +82,43 @@ describe('builtin free data sources', () => {
   it('honors rate-limit backoff and never tries another provider or retries immediately', async () => {
     const fetcher = vi.fn(async () => response({}, { status: 429, headers: { 'retry-after': '120' } })); const client = createQueryClient({ fetcher }); const args = { source: 'coinbase-ticker', parameters: { product: 'BTC-USD' } }; await expect(client.query(args)).rejects.toMatchObject({ code: 'RATE_LIMITED', retryAfterSeconds: 120 }); await expect(client.query(args)).rejects.toMatchObject({ code: 'RATE_LIMITED' }); expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('fast-fails changed queries to an unreachable provider, preserves other providers, and probes again after a short cooldown', async () => {
+    let at=Date.parse('2026-10-21T06:00:00Z'),failed=true;
+    const fetcher=vi.fn(async endpoint=>{if(endpoint.includes('gdeltproject')&&failed)throw new TypeError('network unavailable');return response(endpoint.includes('gdeltproject')?{articles:[{title:'Retrieved headline',url:'https://example.org/article'}]}:quote)});
+    const client=createQueryClient({fetcher,now:()=>at}),query=text=>client.query({source:'gdelt-news',parameters:{query:text}});
+    await expect(query('capacity price')).rejects.toMatchObject({code:'NETWORK_ERROR'});
+    await expect(query('coal supply')).rejects.toMatchObject({code:'SOURCE_UNAVAILABLE',retryAfterSeconds:60});
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await expect(client.query({source:'coinbase-ticker',parameters:{product:'BTC-USD'}})).resolves.toMatchObject({records:[{price:100.1}]});
+    at+=60001;failed=false;
+    await expect(query('coal supply')).resolves.toMatchObject({records:[{title:'Retrieved headline'}]});
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+  it('does not trip provider cooldown for invalid data, bad parameters, or a user cancellation', async () => {
+    let at=Date.parse('2026-10-21T06:00:00Z');const abort=new AbortController();
+    const fetcher=vi.fn(async()=>{if(fetcher.mock.calls.length===1){abort.abort(Error('user cancelled'));throw abort.signal.reason}return response({error:'invalid data'})});
+    const client=createQueryClient({fetcher,now:()=>at}),args={source:'coinbase-ticker',parameters:{product:'BTC-USD'}};
+    await expect(client.query(args,abort.signal)).rejects.toThrow('user cancelled');
+    at+=1001;await expect(client.query(args)).rejects.toMatchObject({code:'INVALID_RESPONSE'});
+    at+=1001;await expect(client.query({...args,parameters:{product:'ETH-USD'}})).rejects.toMatchObject({code:'INVALID_RESPONSE'});
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+  it('lets queued calls observe a network failure without another request, and also backs off after a timeout',async()=>{
+    let rejectRequest,started;const ready=new Promise(resolve=>{started=resolve});
+    const fetcher=vi.fn(()=>new Promise((_resolve,reject)=>{rejectRequest=reject;started()})),client=createQueryClient({fetcher});
+    const a=client.query({source:'gdelt-news',parameters:{query:'capacity price'}});await ready;
+    const b=client.query({source:'gdelt-news',parameters:{query:'coal supply'}});rejectRequest(Error('offline'));
+    await expect(a).rejects.toMatchObject({code:'NETWORK_ERROR'});await expect(b).rejects.toMatchObject({code:'SOURCE_UNAVAILABLE'});expect(fetcher).toHaveBeenCalledTimes(1);
+    const slow=vi.fn((_url,{signal})=>new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}))),timeout=createQueryClient({fetcher:slow,timeoutMs:10});
+    await expect(timeout.query({source:'gdelt-news',parameters:{query:'capacity price'}})).rejects.toMatchObject({code:'TIMEOUT'});
+    await expect(timeout.query({source:'gdelt-news',parameters:{query:'coal supply'}})).rejects.toMatchObject({code:'SOURCE_UNAVAILABLE'});expect(slow).toHaveBeenCalledTimes(1);
+  });
+  it('keeps previously verified cached data available during a provider connectivity cooldown',async()=>{
+    let at=Date.parse('2026-10-21T06:00:00Z'),fail=false;const fetcher=vi.fn(async()=>{if(fail)throw Error('offline');return response(quote)}),client=createQueryClient({fetcher,now:()=>at});
+    const args={source:'coinbase-ticker',parameters:{product:'ETH-USD'}};await client.query(args);at+=1001;fail=true;
+    await expect(client.query({source:'coinbase-ticker',parameters:{product:'BTC-USD'}})).rejects.toMatchObject({code:'NETWORK_ERROR'});
+    await expect(client.query(args)).resolves.toMatchObject({cacheHit:true,records:[{price:100.1}]});expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it('keeps different requested record counts separate even when the provider endpoint is identical', async () => {
     let at = Date.parse('2026-10-11T00:00:00Z');
     const fetcher = vi.fn(async () => response([[1,1,3,2,2,10],[2,1,3,2,2,20],[3,1,3,2,2,30]]));
@@ -104,5 +141,10 @@ describe('builtin free data sources', () => {
     const offline = buildResearchTaskPrompt(request('不要联网，只用给定记录制作表格')); expect(offline).not.toContain('【EWork 内置免费数据源】');
     let registration; registerComponentSourceGuidance({ systemPrompt: { context: v => { registration = v; } }, tools: { schemas: () => schemas } }); expect(registration.name).toBe('sherlock:component-sources'); expect(freeDataInstruction()).toContain('不能称实时');
     expect(publicEventFromSessionEvent({ type: 'tool/call', data: { name: 'public_data_query', arguments: { source: 'met-weather' } } })).toMatchObject({ tool: '读取免费数据源', detail: 'met-weather' });
+  });
+  it('routes policy originals to official web sources rather than a generic rolling news feed',()=>{
+    expect(freeDataInstruction()).toContain('政策、法规或部委通知优先');
+    expect(freeDataInstruction()).toContain('不先遍历通用新闻源');
+    expect(buildResearchTaskPrompt(request('检索煤电容量电价部委政策原文与行业动态'))).toContain('政策、法规或部委通知优先');
   });
 });
