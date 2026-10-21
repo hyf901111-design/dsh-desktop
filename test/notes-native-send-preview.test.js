@@ -2,8 +2,9 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
 import {notesComposerSource,patchNotesComposer} from '../scripts/lib/notes-composer.mjs'
-import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 const repo=process.cwd(),require=createRequire(repo+'/package.json'),{build}=require('esbuild')
+// Production serializes these helpers with native Node, not Vite's SSR-import rewrites.
+const {patchNotesActivity}=require('./scripts/lib/notes-activity.mjs')
 let browser,script,css
 beforeAll(async()=>{
  const runtime=await readFile(repo+'/node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
@@ -102,11 +103,11 @@ it('lists nested and off-screen components, keeps long chips within a narrow com
 },15000)
 for(const changed of [false,true])it(`updates only the referenced component and protects newer edits (${changed?'changed':'unchanged'})`,async()=>{
  const {context,page,input,errors}=await fixture();try{
-  await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'body',type:'paragraph',content:'保留正文'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'source',title:'收入表',noteSize:{width:320},containerSpec:{version:1,type:'table',title:'收入表',columns:['收入'],rows:[[123]]}})}}]))
+  await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'body',type:'paragraph',content:'保留正文'},{id:'chart',type:'research',props:{payload:JSON.stringify({id:'note-component-source',title:'收入表',noteSize:{width:320},containerSpec:{version:1,type:'table',title:'收入表',columns:['收入'],rows:[[123]]}})}}]))
   await page.getByRole('button',{name:'选中组件并操作内容',exact:true}).click();await send(page,'将收入改成456')
   if(changed)await page.evaluate(()=>{const editor=window.noteEditor,node=JSON.parse(editor.getBlock('chart').props.payload);editor.updateBlock('chart',{props:{payload:JSON.stringify({...node,title:'较新修改'})}})})
   await page.evaluate(()=>window.resolveGeneration({kind:'component',targetBlockId:'chart',node:{id:'new',title:'修改后收入表',containerSpec:{version:1,type:'table',title:'修改后收入表',columns:['收入'],rows:[[456]]}}}));await page.locator('.en-ai-loading').waitFor({state:'hidden'})
-  const state=await page.evaluate(()=>({blocks:window.noteEditor.document,node:JSON.parse(window.noteEditor.getBlock('chart').props.payload)}));expect(state.blocks.filter(b=>b.type==='research')).toHaveLength(1);expect(state.node.title).toBe(changed?'较新修改':'修改后收入表');expect(state.node.id).toBe('source');expect(state.node.noteSize.width).toBe(320);if(changed)expect(await page.getByRole('alert').textContent()).toContain('组件已变化');expect(errors).toEqual([])
+  const state=await page.evaluate(()=>({blocks:window.noteEditor.document,node:JSON.parse(window.noteEditor.getBlock('chart').props.payload)}));expect(state.blocks.filter(b=>b.type==='research')).toHaveLength(1);expect(state.node.title).toBe(changed?'较新修改':'修改后收入表');expect(state.node.id).toBe('note-component-source');expect(state.node.noteSize.width).toBe(320);if(changed)expect(await page.getByRole('alert').textContent()).toContain('组件已变化');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
 it('replaces the displayed content of a component inserted from a conversation reply',async()=>{
@@ -131,6 +132,33 @@ for(const outcome of ['stop','fail'])it(`leaves only the original component when
 },15000)
 async function ready(page,markdown='改写后的正文。'){await page.evaluate(markdown=>window.resolveGeneration({kind:'text',markdown}),markdown);await page.locator('.en-preview').waitFor()}
 async function handleGeometry(handle){await expect.poll(()=>handle.evaluate(el=>el.getBoundingClientRect().height)).toBe(20);return handle.evaluate(el=>{const rect=el.getBoundingClientRect(),panel=el.closest('.en-preview').getBoundingClientRect(),thumb=getComputedStyle(el,'::after');return {gap:panel.top-(rect.top+parseFloat(thumb.top)+parseFloat(thumb.height)),hitHeight:rect.height,hit:document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)===el,top:rect.top}})}
+
+for(const dark of [false,true])it(`keeps the preview handle inside an offset clipped note workspace (${dark?'dark':'light'})`,async()=>{
+ const {context,page,errors}=await fixture(dark);try{
+  await page.setViewportSize({width:1100,height:700});await page.locator('.en-root').evaluate(el=>{el.style.top='160px';el.style.bottom='50px'})
+  await send(page);await ready(page,Array.from({length:80},(_,i)=>'长篇建议第'+i+'段。').join('\n\n'))
+  const panel=page.locator('.en-preview'),handle=panel.getByRole('separator',{name:'调整建议面板高度'});await handle.focus();await handle.press('End')
+  const workspace=await page.locator('.en-main').boundingBox();await expect.poll(async()=>(await handleGeometry(handle)).top).toBeGreaterThanOrEqual(workspace.y+8)
+  expect((await handleGeometry(handle)).hit).toBe(true);expect(await panel.locator('.en-preview-content').evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true)
+  const footer=await panel.locator('footer').boundingBox();expect(footer.y+footer.height).toBeLessThanOrEqual(workspace.y+workspace.height-8)
+  const initial=Number(await handle.getAttribute('aria-valuenow'));await handle.press('ArrowDown');expect(Number(await handle.getAttribute('aria-valuenow'))).toBeLessThan(initial)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('acknowledges a native note instruction immediately and reports real stages outside collapsed details',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await page.clock.install();await send(page,'优化本篇笔记')
+  const feedback=page.locator('#history [data-note-feedback]');await feedback.waitFor();expect(await feedback.textContent()).toContain('已收到，正在处理这条笔记指令。')
+  const id=await page.evaluate(()=>window.noteTasks.find(row=>row.phase==='preparing').requestId)
+  for(const [stage,label]of [['model','正在连接当前模型'],['thinking','正在分析内容与修改要求'],['writing','正在撰写建议内容'],['validating','正在检查生成内容']]){
+   await page.evaluate(({id,stage})=>document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId:'send-preview',requestId:id,stage,reasoning:'PRIVATE-REASONING',outputChars:0}})),{id,stage})
+   await expect.poll(()=>feedback.textContent()).toContain(label);expect(await feedback.textContent()).not.toContain('PRIVATE-REASONING');expect(await feedback.count()).toBe(1)
+  }
+  await page.clock.runFor(2100);await expect.poll(()=>feedback.textContent()).toContain('已用时 2 秒')
+  await ready(page,'建议正文');await expect.poll(()=>feedback.count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
 
 it('clears an admitted native draft while generating and keeps later typing through preview acceptance and regeneration',async()=>{
  const {context,page,input,errors}=await fixture();try{
