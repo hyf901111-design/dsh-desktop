@@ -313,5 +313,6 @@ for(const reducedMotion of [false,true])it(`aligns margin comments to export and
   if(reducedMotion)expect(await rail.evaluate(el=>el.getAnimations().length)).toBe(0)
   expect(errors).toEqual([])
   await page.screenshot({path:'/tmp/notes-comment-export-'+(reducedMotion?'reduced':'animated')+'-20261021.png'})
+  await page.locator('.en-root').evaluate(el=>el.dataset.dark='true');await page.screenshot({path:'/tmp/notes-comment-export-'+(reducedMotion?'reduced':'animated')+'-dark-20261021.png'})
  }finally{await context.close()}
 },15000)
