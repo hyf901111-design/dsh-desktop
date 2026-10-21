@@ -45,7 +45,7 @@ export function requestedChartVariant(text = '') {
       const tokenEnd = match.index + match[0].length;
       // A suffix such as “绘制普通柱状图” or “（饼图）” is still part of
       // the syntax example. Stop before a new clause or business instruction.
-      const boundary = text.slice(tokenEnd).search(/[。；;\n]|[，,]?(?=但|不过|本面板|本图|必须|务必|实际|最终|随后)|[，,](?=(?:使用|采用|输出|声明|选择)\s*chart\.)/u);
+      const boundary = text.slice(tokenEnd).search(/[。；;\n]|[，,]?(?=但|不过|本面板|本图|必须|务必|实际|最终|随后)|[，,](?=(?:请\s*)?(?:使用|采用|输出|声明|选择)\s*chart\.)/u);
       consumed = boundary < 0 ? text.length : tokenEnd + boundary;
     }
     previousEnd = match.index + match[0].length;
