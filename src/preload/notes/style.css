@@ -208,3 +208,9 @@ body .en-root .en-research .ew-financial-search-line>button{display:grid;place-i
 
 /* Menu rows reveal the shared material; hover and selection keep native feedback. */
 body .bn-mantine .mantine-Menu-label,body .bn-mantine .mantine-Menu-item:not(:hover):not(:focus-visible):not([aria-selected=true]):not([aria-checked=true]):not([data-hovered]):not([data-active]){background-color:transparent!important}
+
+/* Mantine keeps the color submenu inside this dropdown for native hover,
+   keyboard and outside-click handling. Paint the parent material beside the
+   submenu instead of making its DOM ancestor a backdrop-filter root. */
+body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu::before{content:"";position:absolute;inset:-1px;z-index:-1;pointer-events:none;box-sizing:border-box;border:1px solid var(--odyssey-menu-border);border-radius:inherit;background:var(--odyssey-menu);box-shadow:var(--odyssey-menu-shadow);backdrop-filter:var(--odyssey-menu-blur);-webkit-backdrop-filter:var(--odyssey-menu-blur)}
