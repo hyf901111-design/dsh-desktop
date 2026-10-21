@@ -115,6 +115,27 @@ it('places feedback after the owning turn answer and falls back to the receipt w
  expect([...researchWorkbenchReceiptAnchors(flow,nodes,planningResponseMetadata,node=>node?.data?.turn??null)]).toEqual([['tail',[{id:'first',count:1}]],['unknown',[{id:'second',count:1}]]])
 })
 
+it('keeps native pending and admitted steering from moving earlier plans to same-turn continuations',()=>{
+ const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const names=['conversationNodeTurn','assistantStepText','substantialAssistantReplies','isExecutionDetailNode','compactConversationFlow','mergePendingSteeringFlow']
+ const functions=names.map(name=>{const start=source.indexOf('function '+name+'('),end=source.indexOf('\n\t\t}',start);if(start<0||end<0)throw Error('Native flow function missing: '+name);return source.slice(start,end+4)})
+ const native=runInNewContext(functions.join('\n')+';({conversationNodeTurn,compactConversationFlow,mergePendingSteeringFlow})')
+ const location={kind:'step',turn:{turn:7}},row=(key,kind,seq,data={})=>({key,kind,anchorSeq:seq,location,data})
+ const tool=(key,seq,id,count)=>row(key,'tool-call',seq,{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:JSON.stringify({planId:id,status:'accepted',panelCount:count})}]}})
+ const original=[row('user','user',1),tool('receipt',2,'first-plan',8),row('original-answer','assistant-step',3,{finalNode:{seq:3},blocks:[{kind:'text',text:'Fixture answer. '.repeat(15)}]})]
+ const anchor=(rows,pending=[])=>{const nodes=new Map(rows.map(node=>[node.key,node]));const flow=native.mergePendingSteeringFlow(native.compactConversationFlow(rows.map(node=>node.key),nodes,7),pending,nodes);return [...researchWorkbenchReceiptAnchors(flow,nodes,planningResponseMetadata,native.conversationNodeTurn)]}
+ const expected=[['original-answer',[{id:'first-plan',count:8}]]]
+ expect(anchor(original)).toEqual(expected)
+ expect(anchor(original,[{id:'pending',anchorSeq:4,placement:'steering',content:[]}])).toEqual(expected)
+ const admitted=[...original,row('steering','steering',4)]
+ expect(anchor(admitted)).toEqual(expected)
+ const continued=[...admitted,row('continued-answer','assistant-step',5,{finalNode:{seq:5},blocks:[{kind:'text',text:'Fixture continuation.'}]})]
+ expect(anchor(continued)).toEqual(expected)
+ const final=[...continued,tool('same-plan-again',6,'first-plan',9),tool('new-plan',7,'second-plan',2),row('closing','turn-tail',8,{closing:{finalNode:{seq:8},blocks:[{kind:'text',text:'Fixture closing.'}]}})]
+ expect(anchor(final)).toEqual([['original-answer',[{id:'first-plan',count:9}]],['closing',[{id:'second-plan',count:2}]]])
+ expect(anchor(final.map(node=>node.key==='steering'?{...node,kind:'user'}:node))).toEqual([['original-answer',[{id:'first-plan',count:9}]],['closing',[{id:'second-plan',count:2}]]])
+})
+
 it('installs a live status for settled creation turns while preserving the existing planning-only feedback',()=>{
  const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  const source=patchResearchCreationProgress(original)
@@ -128,7 +149,7 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v5 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v6 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
  let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
  const Component=runInNewContext(source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[snapshot,()=>{}],useEffect:()=>{}},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
@@ -145,18 +166,20 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
  snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
  expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
- const legacy=source.replace('/* ework:workbench-feedback:v5 */','/* ework:workbench-feedback:v1 */')
+ const legacy=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v1 */')
   .replace('\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);','')
   .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
   .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
  expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
  // Simulate the installed v4 wiring, including its global footer and duplicate
  // execution status, so an existing client patch upgrades to the same output.
- const v4=source.replace('/* ework:workbench-feedback:v5 */','/* ework:workbench-feedback:v4 */')
+ const v4=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v4 */')
   .replace('/* ework:workbench-flow:v1 */\nconst workbenchReceiptAnchors=researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn);\n','')
   .replace('const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);')
   .replace('renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{','renderFlow.map((entry) => {')
   .replace('};const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];})','}), workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null')
   .replace('planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,','workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,')
  expect(patchResearchWorkbenchFeedback(v4)).toBe(source)
+ const v5=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v5 */')
+ expect(patchResearchWorkbenchFeedback(v5)).toBe(source)
 })
