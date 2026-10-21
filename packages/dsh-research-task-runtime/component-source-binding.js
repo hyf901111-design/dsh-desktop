@@ -67,7 +67,19 @@ export function componentSourceCollector(allowed,schemas=[]) {
 }
 
 function snapshotUrl(value) {
-  try {const url=new URL(value);if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return null;url.hash='';return url.href} catch {return null}
+  try {
+    const url=new URL(value)
+    if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return null
+    url.hash=''
+    // Sina search adds this attribution parameter to the same article link.
+    // Keep business query parameters, other publishers and non-article paths exact.
+    const article=url.hostname==='finance.sina.com.cn'&&/\/doc-[^/]+\.shtml$/u.test(url.pathname)||
+      url.hostname==='k.sina.com.cn'&&/^\/article_\d+_[a-z\d]+\.html$/iu.test(url.pathname)||
+      ['cj.sina.com.cn','t.cj.sina.com.cn'].includes(url.hostname)&&/^\/articles\/view\/\d+\/[a-z\d]+\/?$/iu.test(url.pathname)
+    if(article&&url.searchParams.getAll('from').length===1&&url.searchParams.get('from')==='pcsearch')
+      url.search=url.search.slice(1).split('&').filter(part=>part!=='from=pcsearch').join('&')
+    return url.href
+  } catch {return null}
 }
 function snapshotDate(value) {
   const date=typeof value==='string'?value.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/u)?.[0]:null
@@ -268,6 +280,9 @@ export function componentMappableSource(record) {
 // Missing referenced requests/fields still fail; no guessed arguments or literals
 // are substituted for the source data.
 function mappingContract(mapping,options,envelopeVersion) {
+ // Only the caller's trusted panel contract can supply display metadata.
+ // Explicit invalid values still reach the existing template validation.
+ if(mapping&&typeof mapping==='object'&&!Array.isArray(mapping)&&mapping.title===undefined&&typeof options.panelTitle==='string'&&options.panelTitle.trim()&&options.panelTitle.length<=256)mapping={...mapping,title:options.panelTitle}
  // The outer v1 envelope fixes the protocol version. Omitting its identical
  // nested copy carries no missing data; explicit conflicting versions fail.
  if(envelopeVersion===1&&mapping&&typeof mapping==='object'&&!Array.isArray(mapping)&&mapping.version===undefined&&templateFor({...mapping,version:1}))mapping={...mapping,version:1}
@@ -301,10 +316,11 @@ function financialValueSelectors(value,sources,depth=0) {
 // For known historical-price contracts, explanatory facts are source data too.
 // A model-authored note must not invent counts, rankings or unavailable controls
 // beside host-calculated curves. Other charts and custom data keep their notes.
-function normalizedHistoryMetadata(data,mapping,sources,now) {
+function normalizedHistoryMetadata(data,mapping,sources,now,options) {
  if(!(data.type==='chart'||data.type==='market'&&data.variant==='trend')||!Array.isArray(mapping.series)||!data.labels?.length||
     !data.labels.every((date,i)=>snapshotDate(date)===date&&(i===0||date>data.labels[i-1])))return data
- const facts=[],limitations=new Set(),providers=new Set(),received=new Set()
+ const facts=[],returns=[],limitations=new Set(),providers=new Set(),received=new Set()
+ const signed=value=>{const rounded=Number(value.toFixed(2));return (rounded>0?'+':'')+rounded.toFixed(2)}
  for(const series of mapping.series){
   const selector=series?.values,source=sources[selector?.$from],response=source?.response
   const financial=source?.tool==='financial_query'&&source.args?.intent==='history'&&source.args?.interval==='1d'&&response?.schema_version==='financial-1'
@@ -321,7 +337,10 @@ function normalizedHistoryMetadata(data,mapping,sources,now) {
   const unit=financial?single(rows.map(row=>row.unit)):response.units?.price
   const basis=financial?single(rows.map(row=>row.price_basis)):response.adjustment
   if(!instrument||typeof unit!=='string'||!unit.trim()||typeof basis!=='string'||!basis.trim())return data
-  facts.push(`${instrument}：原始单位 ${unit}，${basis}；基期值 ${rows[0][valuePath]}，末值 ${rows.at(-1)[valuePath]}`)
+  const change=(rows.at(-1)[valuePath]/rows[0][valuePath]-1)*100
+  if(!Number.isFinite(change))return data
+  returns.push({instrument,change})
+  facts.push(`${instrument}：原始单位 ${unit}，${basis}；基期值 ${rows[0][valuePath]}，末值 ${rows.at(-1)[valuePath]}；区间涨跌幅 ${signed(change)}%`)
   providers.add(financial?'financial_query / financial-1':`${response.source}（${snapshotUrl(response.sourceUrl)??'tencent-history'}）`)
   const fetched=financial?response.received_at:response.receivedAt
   if(typeof fetched==='string'&&Number.isFinite(Date.parse(fetched)))received.add(fetched)
@@ -331,10 +350,14 @@ function normalizedHistoryMetadata(data,mapping,sources,now) {
  }
  const range=`${data.labels[0]} 至 ${data.labels.at(-1)}`
  const count=`${data.labels.length}个实际交易日`
+ const benchmarks=returns.filter(item=>item.instrument===options.benchmarkSymbol)
+ const benchmark=benchmarks.length===1?benchmarks[0]:null
+ const comparisons=benchmark?returns.filter(item=>item!==benchmark).sort((a,b)=>b.change-a.change):[]
+ const ranking=comparisons.length?`相对 ${benchmark.instrument} 的区间涨跌幅差（百分点，由高到低）：${comparisons.map(item=>`${item.instrument} ${signed(item.change-benchmark.change)}`).join('；')}。`:''
  const note=[`来源：${[...providers].join('；')}。展示区间 ${range}，各序列${count}，日期逐项对齐。`,
-  ...facts,`宿主按筛选、排序及截取后的价格/各自首值×100计算；原始单位与复权口径保留如上。仅反映已取得记录，不能据此判断所请求区间是否完整。`,
+  ...facts,ranking,`宿主按筛选、排序及截取后的价格/各自首值×100计算；涨跌幅与涨跌幅差先由原始价格计算，最后保留两位小数；原始单位与复权口径保留如上。仅反映已取得记录，不能据此判断所请求区间是否完整。`,
   received.size?`获取时间（非报价时间）：${[...received].join('、')}`:'获取时间：来源未提供',
-  ...limitations].join('\n')
+  ...limitations].filter(Boolean).join('\n')
  if(note.length>2000)throw Error('历史来源说明超过当前图表容量，不能省略来源限制')
  return {...data,...(data.type==='chart'?{unit:'基期100',subtitle:`${range} · ${count} · 各自首值=100`}:{}),asOf:`历史日线 · 数据截至 ${data.labels.at(-1)}`,note}
 }
@@ -367,7 +390,7 @@ export function resolveComponentSnapshot(text,records,now=new Date(),options={})
     const mapping=financialValueSelectors(singleSourceMapping(contract,responses),sources)
     const data=materializeComponentMapping(mapping,responses,now,Object.values(sources))
     if(templateSourceDataIssue(data)||templateDataIssue(data))return null
-    const snapshot=normalizeChartMetadata(componentSnapshotData(normalizedHistoryMetadata(data,mapping,sources,now))),output=acceptArtifactOutput(JSON.stringify(snapshot))
+    const snapshot=normalizeChartMetadata(componentSnapshotData(normalizedHistoryMetadata(data,mapping,sources,now,options))),output=acceptArtifactOutput(JSON.stringify(snapshot))
     return output?{data:snapshot,output}:null
   }catch{return null}
 }

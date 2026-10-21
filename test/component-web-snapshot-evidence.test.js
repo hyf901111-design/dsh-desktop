@@ -299,3 +299,28 @@ it('does not invent a publication date when an observed linked record has none, 
  expect(proof({version:1,type:'news',items:[{...item,date:'2026-10-20'}]},records)).toBe(false)
  expect(proof({version:1,type:'news',items:[{...renderedNews,date:undefined}]},collectRenderedNews())).toBe(false)
 })
+
+it.each([
+ 'https://finance.sina.com.cn/wm/2026-10-21/doc-observed.shtml',
+ 'https://k.sina.com.cn/article_123456_abcdef123456.html',
+ 'https://cj.sina.com.cn/articles/view/123456/abcdef123456',
+ 'https://t.cj.sina.com.cn/articles/view/123456/abcdef123456'
+])('matches the same observed Sina article after removing only its pcsearch tracking parameter: %s',url=>{
+ const item={title:'实际取得的原始公司新闻标题',date:'2026-10-21',url};
+ const source=collect([{url:'https://search.sina.com.cn/search?q=company&tp=news',data:{records:[{...item,url:url+'?from=pcsearch'}]}}]);
+ expect(proof({version:1,type:'news',items:[item]},source)).toBe(true);
+ expect(proof({version:1,type:'news',items:[{...item,date:'2026-10-20'}]},source)).toBe(false);
+ expect(proof({version:1,type:'news',items:[{...item,title:'被改写的另一条公司新闻标题'}]},source)).toBe(false);
+ const different=collect([{url:'https://search.sina.com.cn/search?q=company&tp=news',data:{records:[{...item,url:url+'?article=1&from=pcsearch'}]}}]);
+ expect(proof({version:1,type:'news',items:[{...item,url:url+'?article=2'}]},different)).toBe(false);
+});
+it.each([
+ 'https://unobserved.example/story/article',
+ 'https://finance.sina.com.cn/api/news?id=12',
+ 'https://sina.com.cn.evil.example/wm/2026-10-21/doc-observed.shtml'
+])('preserves query identity for unrecognized sites and non-article paths: %s',url=>{
+ const item={title:'实际新闻标题',date:'2026-10-21',url};
+ const separator=url.includes('?')?'&':'?';
+ const source=collect([{url:'https://search.sina.com.cn/search?q=company&tp=news',data:{records:[{...item,url:url+separator+'from=pcsearch'}]}}]);
+ expect(proof({version:1,type:'news',items:[item]},source)).toBe(false);
+});

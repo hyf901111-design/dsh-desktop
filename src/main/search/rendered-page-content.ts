@@ -15,11 +15,52 @@ async function collectRenderedPage(maxMilliseconds: number) {
   let scroller: Element | null = null
   let first = true
   const clean = (value: string) => value.replace(/[\u200b\ufeff]/g, '').trim()
+  const hidden = (element: Element) => {
+    let node: Element | null = element
+    for (let depth = 0; node; depth++, node = node.parentElement) {
+      if (depth > 32 || node.matches('[hidden],[aria-hidden="true"],script,style,template,noscript')) return true
+      // Closed details expose only their first summary, even when computed
+      // styles and textContent still include the collapsed descendants.
+      if (node.matches('details:not([open])') && node !== element && !node.querySelector(':scope > summary')?.contains(element)) return true
+      const style = getComputedStyle(node)
+      if (style.display === 'none' || /^(hidden|collapse)$/.test(style.visibility) || style.opacity === '0' || style.contentVisibility === 'hidden') return true
+    }
+    return false
+  }
+  // Only small visible neighborhoods may provide a link's publication date.
+  // textContent includes hidden timestamps, while innerText on a hidden child
+  // can still return text; explicitly omit those branches and bound traversal.
+  const localText = (root: Node) => {
+    let visited = 0, size = 0, bounded = true
+    const visit = (node: Node, depth: number): string => {
+      if (++visited > 80 || depth > 6) { bounded = false; return '' }
+      if (node.nodeType === 3) {
+        const value = node.textContent ?? ''
+        if ((size += value.length) > 700) bounded = false
+        return value
+      }
+      if (node.nodeType !== 1 || hidden(node as Element)) return ''
+      if ((node as Element).matches('details:not([open])')) {
+        const summary = (node as Element).querySelector(':scope > summary')
+        return summary ? visit(summary, depth + 1) : ''
+      }
+      const values: string[] = []
+      for (const child of node.childNodes) {
+        values.push(visit(child, depth + 1))
+        if (!bounded) break
+      }
+      return values.join(' ')
+    }
+    const value = visit(root, 0)
+    return bounded ? value : undefined
+  }
+  const absoluteDates = (value: string) => [...new Set(value.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? [])]
+    .filter(date => Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0, 10) === date)
   const collectLinks = (root: Element) => {
     let scanned = 0
     for (const anchor of root.querySelectorAll<HTMLAnchorElement>('a[href]')) {
       if (++scanned > 2000) break
-      if (anchor.closest('nav,header,footer,[hidden],[aria-hidden="true"],pre,code') || anchor.getAttribute('href')?.startsWith('#')) continue
+      if (hidden(anchor) || anchor.closest('nav,header,footer,pre,code') || anchor.getAttribute('href')?.startsWith('#')) continue
       const title = clean(anchor.innerText).replace(/\s+/g, ' ')
       if (!title || title.length > 256) continue
       let url: URL
@@ -29,16 +70,46 @@ async function collectRenderedPage(maxMilliseconds: number) {
       const adjacent = (direction: 'previousSibling' | 'nextSibling') => {
         let node = anchor[direction], value = ''
         for (let n = 0; node && n < 6; node = node[direction], n++) {
-          if (node.nodeType === 1 && /^(?:A|BR|LI|TR|DIV|P|UL|OL|TABLE)$/i.test((node as Element).tagName)) break
+          if (node.nodeType === 1 && /^(?:A|BR|LI|TR|DIV|P|UL|OL|TABLE|ARTICLE|SECTION|MAIN|NAV|HEADER|FOOTER|ASIDE|H[1-6])$/i.test((node as Element).tagName)) break
           if (node.nodeType === 1 && (node as Element).querySelector('a')) break
-          value += ' ' + (node.textContent ?? '')
+          value += ' ' + (localText(node) ?? '')
         }
         return value
       }
       let context = adjacent('previousSibling') + ' ' + adjacent('nextSibling')
       const row = anchor.closest('li,tr,p')
-      if (row && row.querySelectorAll('a[href]').length === 1 && (row.textContent?.length ?? 0) <= 700) context = row.textContent ?? context
-      const dates = [...new Set(context.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? [])].filter(date => Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0, 10) === date)
+      if (row && [...row.querySelectorAll('a[href]')].filter(link => !hidden(link)).length === 1) context = localText(row) ?? ''
+      if (!row) {
+        let branch: Element = anchor
+        for (let depth = 0; depth < 4 && branch.parentElement; depth++) {
+          const card = branch.parentElement
+          if (card.matches('body,html,main,nav,header,footer,aside,li,tr,p,ul,ol,table') || (card === root && !card.matches('article'))) break
+          if (!card.matches('div,section,article')) { branch = card; continue }
+          // A title wrapper may contain inline highlighting, never a nested
+          // card or another heading. Do not climb out of an undated card to
+          // borrow a page clock or the next story's metadata.
+          if (branch.querySelector('div,section,article,li,tr,p,ul,ol,table,h1,h2,h3,h4,h5,h6')) break
+          const ownTitle = localText(branch), value = localText(card)
+          if (ownTitle?.replace(/\s+/g, '') !== title.replace(/\s+/g, '') || value === undefined) { context = ''; break }
+          // Other semantic sections or headings describe independent content,
+          // even when they contain no link. Ordinary div metadata is allowed.
+          if ([...card.querySelectorAll('section,article,details,h1,h2,h3,h4,h5,h6')].some(node => node !== branch && !branch.contains(node))) { context = ''; break }
+          const titleOnly = value.replace(/\s+/g, '') === title.replace(/\s+/g, '')
+          if (titleOnly && !branch.matches('div,section,article,h1,h2,h3,h4,h5,h6')) { branch = card; continue }
+          context = ''
+          if ([...card.querySelectorAll('a[href]')].filter(link => !hidden(link)).length !== 1) break
+          const dates = absoluteDates(value)
+          if (dates.length !== 1) break
+          // A standalone or explicitly labelled caption is an observed date.
+          // A date quoted in a news excerpt, URL or relative-time label is not.
+          const caption = /^(?:(?:发布时间|发布日期|Published(?:\s+on)?)\s*[:：]\s*)?\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/iu
+          if ([...card.querySelectorAll('span,time,div')].some(node => !node.children.length && !branch.contains(node)
+            && !node.closest('a,h1,h2,h3,h4,h5,h6,p,blockquote,nav,header,footer,aside,pre,code')
+            && !hidden(node) && caption.test(clean(localText(node) ?? '')))) context = dates[0]!
+          break
+        }
+      }
+      const dates = absoluteDates(context)
       const link = { title, url: url.href, ...(dates.length === 1 ? { date: dates[0] } : {}) }
       const key = JSON.stringify(link)
       if (links.has(key)) continue

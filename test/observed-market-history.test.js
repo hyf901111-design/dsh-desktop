@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {restoreSnapshotMarketHistory,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {restoreSnapshotMarketHistory,resolveComponentSnapshot,resolveBoundComponent} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 
@@ -68,4 +68,133 @@ it.each(['raw-values','missing-series','ambiguous-year','conflicting-response','
  if(mode==='wrong-request')sources[0].args.symbols=['600027.SH']
  if(mode==='missing-basis')delete sources[0].response.records[0].price_basis
  expect(restoreSnapshotMarketHistory(JSON.stringify(input),sources)).toBeUndefined()
+})
+
+const panelTitle='近一月走势与相对沪深300强弱'
+const panelPrompt=`工作台：算力产业链真实数据研究\n本面板：${panelTitle}\n取得真实日线并按各自首值100归一化，计算相对沪深300强弱，仅静态快照。\n仅生成本面板，优先使用 chart 类型；使用折线图。\n【原始工作台需求】\n研究中际旭创、新易盛、工业富联及沪深300。`
+const historyEnvelope=(sources=records)=>{
+ const select=(from,path)=>({$from:from,$each:'records',$filter:{metric:'收盘价'},$sortBy:'as_of',$order:'asc',$map:{$path:path}})
+ return {version:1,type:'data-bound',requests:sources.map((r,i)=>({key:'q'+i,tool:r.tool,args:r.args})),mapping:{version:1,type:'chart',variant:'line',title:panelTitle,labels:select('q0','as_of'),series:sources.map((r,i)=>({name:r.args.symbols[0],values:{...select('q'+i,'value'),$normalize:'base100',$digits:2}}))}}
+}
+// Small deterministic prices preserve the observed first-draft contract defect.
+// The complete dated native replay stays outside the source tree in /tmp.
+const nativeTrend=(()=>{
+ const records=[source('300308.SZ',[100,90,80]),source('300502.SZ',[100,85,75]),source('601138.SH',[100,95,90]),source('000300.SH',[100,100,95])]
+ const envelope=historyEnvelope(records)
+ delete envelope.mapping.version;delete envelope.mapping.title
+ return {records,text:JSON.stringify(envelope).slice(0,-1)}
+})()
+
+it('recovers the native-shaped first draft with its one missing outer brace and host title, keeping every observed price',()=>{
+ const before=JSON.stringify(nativeTrend)
+ const result=resolveComponentSnapshot(nativeTrend.text,nativeTrend.records,new Date(),{panelTitle,benchmarkSymbol:'000300.SH'})
+ expect(result?.data.title).toBe(panelTitle)
+ expect(result.data).toMatchObject({version:1,type:'chart',variant:'line'})
+ expect(result.data.labels).toHaveLength(3)
+ expect(result.data.series.map(s=>s.values.at(-1))).toEqual([80,75,90,95])
+ expect(result.data.note).toContain('300308.SZ：原始单位 元，前复权；基期值 100，末值 80；区间涨跌幅 -20.00%')
+ expect(result.data.note).toContain('601138.SH -5.00；300308.SZ -15.00；300502.SZ -20.00')
+ expect(result.data.note).toContain('2026-09-15 至 2026-10-20')
+ expect(result.data.note).toContain('2026-10-20T17:47:14.069Z')
+ expect(result.data.asOf).toContain('静态快照，自动更新未绑定')
+ expect(result).not.toHaveProperty('recipe')
+ expect(JSON.stringify(nativeTrend)).toBe(before)
+})
+
+it.each([undefined,'',null,123,{},'x'.repeat(257)])('does not substitute an absent or invalid trusted host title: %j',panelTitle=>{
+ expect(resolveComponentSnapshot(nativeTrend.text,nativeTrend.records,new Date(),{panelTitle})).toBeNull()
+})
+
+it.each(['',null,123,{},'x'.repeat(257)])('keeps an explicit invalid mapping title rejected: %j',title=>{
+ const candidate=JSON.parse(nativeTrend.text+'}')
+ candidate.mapping.title=title
+ expect(resolveComponentSnapshot(JSON.stringify(candidate),nativeTrend.records,new Date(),{panelTitle})).toBeNull()
+})
+
+it('keeps an existing valid title and rejects a changed request despite trusted host metadata',()=>{
+ const candidate=JSON.parse(nativeTrend.text+'}')
+ candidate.mapping.title='作者已有标题'
+ expect(resolveComponentSnapshot(JSON.stringify(candidate),nativeTrend.records,new Date(),{panelTitle})?.data.title).toBe('作者已有标题')
+ candidate.requests[1].args.symbols=['600011.SH']
+ expect(resolveComponentSnapshot(JSON.stringify(candidate),nativeTrend.records,new Date(),{panelTitle})).toBeNull()
+})
+
+it('applies the same missing-title rule to a genuinely refreshable source without admitting financial_query to refresh',()=>{
+ const record={tool:'ework__t_123abc',args:{symbol:'600011.SH'},response:{rows:[{name:'华能国际',value:7.48}]}}
+ const envelope={version:1,type:'data-bound',requests:[{key:'q',tool:record.tool,args:record.args}],mapping:{type:'table',columns:['名称','收盘价'],rows:{$from:'q',$each:'rows',$map:[{$path:'name'},{$path:'value'}]}}}
+ expect(()=>resolveBoundComponent(JSON.stringify(envelope),[record])).toThrow()
+ const mapped=resolveBoundComponent(JSON.stringify(envelope),[record],new Date(),{panelTitle:'真实行情'})
+ expect(mapped.data).toMatchObject({version:1,title:'真实行情',rows:[['华能国际','7.48']]})
+ expect(mapped.recipe.mapping.title).toBe('真实行情')
+ expect(()=>resolveBoundComponent(nativeTrend.text,nativeTrend.records,new Date(),{panelTitle})).toThrow()
+})
+
+it('finishes the native-shaped first draft through the runtime with one adapter request and no saved refresh recipe',async()=>{
+ let requests=0,bindings=0
+ const runtime=new ResearchTaskRuntime({adapter:{start:async()=>{requests++;return {childSessionId:'native-child',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:nativeTrend.text}],sourceRecords:nativeTrend.records})}},bindData:async()=>{bindings++},dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'native-history-task'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'chart',kind:'container',prompt:panelPrompt})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'native-history-task'}).state).toBe('completed'))
+  const output=readTemplateModel(JSON.parse(runtime.inspect({parentSessionId:'parent',taskId:'native-history-task'}).finalOutput)).data
+  expect(output.title).toBe(panelTitle)
+  expect(output.series.map(s=>s.values.at(-1))).toEqual([80,75,90,95])
+  expect(output.note).toContain('601138.SH -5.00；300308.SZ -15.00；300502.SZ -20.00')
+  expect(output.asOf).toContain('静态快照，自动更新未绑定')
+  expect(requests).toBe(1)
+  expect(bindings).toBe(0)
+ }finally{await runtime.dispose()}
+})
+
+it('computes relative returns from original prices before chart rounding',()=>{
+ const sources=[source('600011.SH',[3,2.5,2]),source('000300.SH',[7,6.5,6])]
+ const result=resolveComponentSnapshot(JSON.stringify(historyEnvelope(sources)),sources,new Date(),{benchmarkSymbol:'000300.SH'})
+ expect(result.data.series.map(s=>s.values.at(-1))).toEqual([66.67,85.71])
+ expect(result.data.note).toContain('区间涨跌幅 -33.33%')
+ expect(result.data.note).toContain('区间涨跌幅 -14.29%')
+ expect(result.data.note).toContain('600011.SH -19.05')
+ expect(result.data.note).toContain('百分点')
+ expect(result.data.note).toContain('前复权')
+ expect(result.data.note).toContain('仅含已取得记录')
+})
+
+it.each([
+ [[100,110,120],'+20.00%','+5.00'],
+ [[100,90,80],'-20.00%','-35.00'],
+ [[100,100,100],'0.00%','-15.00'],
+ [[100,110,115],'+15.00%','0.00'],
+ [[100,50,0],'-100.00%','-115.00']
+])('handles positive, negative and zero returns for %j',(values,change,difference)=>{
+ const sources=[source('600011.SH',values),source('000300.SH',[100,110,115])]
+ const result=resolveComponentSnapshot(JSON.stringify(historyEnvelope(sources)),sources,new Date(),{benchmarkSymbol:'000300.SH'})
+ expect(result.data.note).toContain('区间涨跌幅 '+change)
+ expect(result.data.note).toContain('600011.SH '+difference)
+ expect(result.data.note).not.toContain('-0.00')
+})
+
+it.each([undefined,'000905.SH'])('does not infer relative ranking without the actual explicit benchmark: %j',benchmarkSymbol=>{
+ const result=resolveComponentSnapshot(JSON.stringify(historyEnvelope()),records,new Date(),{benchmarkSymbol})
+ expect(result.data.note).toContain('区间涨跌幅 +7.63%')
+ expect(result.data.note).not.toContain('百分点')
+ expect(result.data.note).not.toContain('由高到低')
+})
+
+it('rejects a zero base and calculates no host relative-return claim on mismatched dates',()=>{
+ const sources=[source('600011.SH',[0,1,2]),source('000300.SH',[7,6.5,6])]
+ expect(resolveComponentSnapshot(JSON.stringify(historyEnvelope(sources)),sources,new Date(),{benchmarkSymbol:'000300.SH'})).toBeNull()
+ sources[0]=source('600011.SH',[3,2.5,2]);sources[1].response.records[1].as_of='2026-09-25'
+ const result=resolveComponentSnapshot(JSON.stringify(historyEnvelope(sources)),sources,new Date(),{benchmarkSymbol:'000300.SH'})
+ expect(result).toBeNull()
+})
+
+it.each([
+ '本面板：只来自正文的标题\n取得真实曲线。',
+ `工作台：研究\n本面板：${panelTitle}\n优先使用 chart 类型。`,
+ panelPrompt.replace('取得真实日线', '本面板：另一个冲突标题\n取得真实日线')
+])('does not use an unscoped or ambiguous runtime title: %s',async prompt=>{
+ const runtime=new ResearchTaskRuntime({adapter:{start:async()=>({childSessionId:'unscoped-child',dispose:async()=>{},result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:nativeTrend.text}],sourceRecords:nativeTrend.records})}),dispose:async()=>{}},storage:{load:async()=>({version:1,tasks:[]}),save:async()=>{}},createId:()=> 'unscoped-history-task'})
+ try{
+  await runtime.start({parentSessionId:'parent',canvasNodeId:'chart',kind:'container',prompt})
+  await vi.waitFor(()=>expect(runtime.inspect({parentSessionId:'parent',taskId:'unscoped-history-task'}).state).toBe('failed'))
+  expect(runtime.inspect({parentSessionId:'parent',taskId:'unscoped-history-task'}).finalOutput).toBeUndefined()
+ }finally{await runtime.dispose()}
 })

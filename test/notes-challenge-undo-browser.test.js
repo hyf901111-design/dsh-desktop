@@ -21,7 +21,7 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 
 async function fixture(quote=original){
- const context=await browser.newContext({viewport:{width:1440,height:900}}),page=await context.newPage(),errors=[]
+ const context=await browser.newContext({viewport:{width:2000,height:900}}),page=await context.newPage(),errors=[]
  page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(5000)
  await page.route('http://127.0.0.1/challenge-undo',route=>route.fulfill({contentType:'text/html',body:'<span data-ework-notes-session="undo-note"></span><div data-ework-note-view="undo-note"></div>'}))
  await page.goto('http://127.0.0.1/challenge-undo');await page.addScriptTag({content:script});await page.locator('.bn-editor').waitFor()

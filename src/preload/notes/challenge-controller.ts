@@ -10,6 +10,7 @@ import {findChallengeQuote,replaceChallengeQuote} from './challenge-anchors'
 
 export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
 type ChallengeAnchor={quote:string;sourceText:string}
+type ChallengeAction={controller:AbortController;threadId:string;kind:'reply'|'optimize'}
 export type ChallengeThread={id:string;metadata:{kind:string;issue:ChallengeIssue;sourceText:string;draft?:string;anchorHistory?:ChallengeAnchor[]};comments:any[];createdAt:Date;resolved:boolean}
 const body=(text:string)=>[{type:'paragraph',content:[{type:'text',text,styles:{}}]}]
 const fingerprint=(title:string,blocks:any[])=>JSON.stringify([title,blocks])
@@ -43,15 +44,18 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const ai=useMemo(()=>new YjsThreadStore(CHALLENGE_USER,doc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor')),[doc])
  const comments=editor.getExtension(CommentsExtension),prefs=doc.getMap('note-challenge')
  const readLevel=():ChallengeLevel=>{const value=prefs.get('level');return Number.isInteger(value)&&Number(value)>=0&&Number(value)<=4?value as ChallengeLevel:0}
- const [level,setLevelState]=useState<ChallengeLevel>(readLevel),[threads,setThreads]=useState<ChallengeThread[]>([]),[selected,setSelected]=useState<string>(),[busyId,setBusyId]=useState<string>(),[revision,setRevision]=useState(0)
- const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,string>()),dismissed=useRef(new Set<string>()),action=useRef<AbortController>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0)
+ const readMarginExpanded=()=>prefs.get('marginExpanded')!==false
+ const [level,setLevelState]=useState<ChallengeLevel>(readLevel),[marginExpanded,setMarginExpandedState]=useState(readMarginExpanded),[threads,setThreads]=useState<ChallengeThread[]>([]),[selected,setSelected]=useState<string>(),[pending,setPending]=useState<Pick<ChallengeAction,'threadId'|'kind'>>(),[revision,setRevision]=useState(0)
+ const busyId=pending?.threadId,actionKind=pending?.kind
+ const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,string>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0)
+ const cancelAction=(id?:string)=>{const current=action.current;if(!current||id&&current.threadId!==id)return;action.current=undefined;current.controller.abort();if(live.current)setPending(undefined)}
  const blocks=()=>challengeDocumentBlocks(editor.document)
  const active=()=>{const root=latest.current.scroll.current?.closest<HTMLElement>('.en-root');return !latest.current.recovery&&(!root||!root.hidden&&root.style.display!=='none')&&document.visibilityState!=='hidden'&&document.hasFocus()}
  const request=async(input:ChallengeRequest,signal:AbortSignal):Promise<ChallengeResult>=>{
   signal.throwIfAborted()
-  const abort=()=>{void bridge.request('challenge-stop',{sessionId,requestId:input.requestId}).catch(()=>{})}
-  signal.addEventListener('abort',abort,{once:true})
-  try{const result=await bridge.request('challenge',input);signal.throwIfAborted();return result}finally{signal.removeEventListener('abort',abort)}
+  let abort:()=>void=()=>{}
+  const cancelled=new Promise<never>((_,reject)=>{abort=()=>{void bridge.request('challenge-stop',{sessionId,requestId:input.requestId}).catch(()=>{});reject(signal.reason)};signal.addEventListener('abort',abort,{once:true})})
+  try{const result=await Promise.race([bridge.request('challenge',input),cancelled]);signal.throwIfAborted();return result}finally{signal.removeEventListener('abort',abort)}
  }
  const metadata=(id:string,patch:Record<string,unknown>)=>{const item=doc.getMap<any>('threads').get(id);if(item)doc.transact(()=>item.set('metadata',{...item.get('metadata'),...patch}))}
  const visibleThreads=()=>[...ai.getThreads().values()].filter((thread:any)=>thread.metadata?.kind===CHALLENGE_KIND&&!thread.resolved&&!thread.deletedAt&&findChallengeQuote(editor,thread.metadata.issue.blockId,thread.metadata.issue.quote)) as ChallengeThread[]
@@ -94,7 +98,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
    refresh()
   },onState:value=>{state.current.checks=value.checks;setChecks(value.checks);publish()}})
   scheduler.current=s;sync();s.setLevel(readLevel())
-  const pref=()=>{setLevelState(readLevel());s.setLevel(readLevel());latest.current.persist();publish()}
+  const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();s.setLevel(readLevel())}latest.current.persist();publish()}
   const off=editor.onChange((_editor:any,{getChanges}:any)=>{
    // BlockNote attributes native Yjs history changes to "undo-redo". Only
    // remap blocks whose text this history action actually restored; ordinary
@@ -115,7 +119,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   }),offSelection=editor.onSelectionChange(sync)
   const offThreads=ai.subscribe(refresh),offComments=comments.store.subscribe(()=>{const id=comments.store.state.selectedThreadId;if(id)dismissed.current.delete(id);setSelected(id)})
   prefs.observe(pref)
-  const visibility=()=>{if(!active()){action.current?.abort();action.current=undefined;setBusyId(undefined)}sync()}
+  const visibility=()=>{if(!active())cancelAction();sync()}
   const composition=()=>queueMicrotask(sync)
   let settleTimer:ReturnType<typeof setTimeout>|undefined
   const pasted=()=>{settle.current=Date.now()+10000;sync();clearTimeout(settleTimer);settleTimer=setTimeout(sync,10010)}
@@ -127,31 +131,36 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   document.addEventListener('sherlock:notes-challenge-locate',locate);document.addEventListener('sherlock:notes-challenge-recheck',recheck)
   latest.current.scroll.current?.addEventListener('click',markClick,true)
   refresh()
-  return()=>{live.current=false;s.dispose();action.current?.abort();action.current=undefined;off();offSelection();offThreads();offComments();prefs.unobserve(pref);clearTimeout(settleTimer);document.removeEventListener('visibilitychange',visibility);document.removeEventListener('sherlock:workspace-surface-change',visibility);window.removeEventListener('focus',visibility);window.removeEventListener('blur',visibility);document.removeEventListener('compositionstart',composition,true);document.removeEventListener('compositionend',composition,true);latest.current.scroll.current?.removeEventListener('paste',pasted,true);latest.current.scroll.current?.removeEventListener('click',markClick,true);document.removeEventListener('sherlock:notes-challenge-locate',locate);document.removeEventListener('sherlock:notes-challenge-recheck',recheck)}
+  return()=>{live.current=false;s.dispose();cancelAction();off();offSelection();offThreads();offComments();prefs.unobserve(pref);clearTimeout(settleTimer);document.removeEventListener('visibilitychange',visibility);document.removeEventListener('sherlock:workspace-surface-change',visibility);window.removeEventListener('focus',visibility);window.removeEventListener('blur',visibility);document.removeEventListener('compositionstart',composition,true);document.removeEventListener('compositionend',composition,true);latest.current.scroll.current?.removeEventListener('paste',pasted,true);latest.current.scroll.current?.removeEventListener('click',markClick,true);document.removeEventListener('sherlock:notes-challenge-locate',locate);document.removeEventListener('sherlock:notes-challenge-recheck',recheck)}
  },[editor,doc,bridge,sessionId])
- useEffect(()=>{if(options.busy||options.recovery){action.current?.abort();action.current=undefined;setBusyId(undefined)}sync()},[options.title,options.busy,options.recovery])
- const levelChange=(value:ChallengeLevel)=>{if(!value){action.current?.abort();action.current=undefined;setBusyId(undefined)}prefs.set('level',value)}
- const close=(id:string)=>{dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1)}
- const resolve=async(id:string)=>{if(action.current&&busyId===id){action.current.abort();action.current=undefined;setBusyId(undefined)}await comments.threadStore.resolveThread({threadId:id});refresh()}
+ useEffect(()=>{if(options.busy||options.recovery)cancelAction();sync()},[options.title,options.busy,options.recovery])
+ const levelChange=(value:ChallengeLevel)=>{if(!value)cancelAction();prefs.set('level',value)}
+ const setMarginExpanded=(value:boolean)=>{dismissed.current.clear();comments.selectThread(undefined,false);setSelected(undefined);prefs.set('marginExpanded',value);setRevision(v=>v+1)}
+ const close=(id:string)=>{cancelAction(id);dismissed.current.add(id);comments.selectThread(undefined,false);setSelected(undefined);setRevision(v=>v+1);sync()}
+ const resolve=async(id:string)=>{cancelAction(id);comments.selectThread(undefined,false);setSelected(undefined);await comments.threadStore.resolveThread({threadId:id});sync();refresh()}
  const runAction=async(thread:ChallengeThread,kind:'optimize'|'reply',text='')=>{
   if(action.current||latest.current.busy||!active())return
-  const issue=thread.metadata.issue,range=findChallengeQuote(editor,issue.blockId,issue.quote)
+  const currentThread=ai.getThreads().get(thread.id)
+  if(!currentThread||currentThread.resolved||currentThread.deletedAt||currentThread.metadata?.kind!==CHALLENGE_KIND||kind==='reply'&&(!text.trim()||text.trim().length>4000))return
+  const issue=currentThread.metadata.issue,range=findChallengeQuote(editor,issue.blockId,issue.quote)
   if(!range)return
-  const controller=new AbortController();action.current=controller;setBusyId(thread.id);sync()
-  const append=(text:string)=>ai.addComment({threadId:thread.id,comment:{body:body(text)}})
+  const controller=new AbortController(),job:ChallengeAction={controller,threadId:thread.id,kind};action.current=job;setPending({threadId:thread.id,kind});sync()
+  const current=()=>{const saved=ai.getThreads().get(thread.id);return live.current&&action.current===job&&!controller.signal.aborted&&active()&&!!saved&&!saved.resolved&&!saved.deletedAt}
+  const append=async(text:string)=>{if(current())await ai.addComment({threadId:thread.id,comment:{body:body(text)}})}
   try{
    if(kind==='reply'){
-    const message=text.trim();if(!message||message.length>4000)return
-    await comments.threadStore.addComment({threadId:thread.id,comment:{body:body(message)}})
+    await comments.threadStore.addComment({threadId:thread.id,comment:{body:body(text.trim())}})
     if(ai.getThreads().get(thread.id)?.metadata?.draft===text)metadata(thread.id,{draft:''})
+    latest.current.persist();refresh()
    }
-   const all=blocks(),captured=fingerprint(latest.current.title,all),current=ai.getThreads().get(thread.id)!
+   if(!current())return
+   const all=blocks(),captured=fingerprint(latest.current.title,all),savedThread=ai.getThreads().get(thread.id)!
    const target=all.find(b=>b.id===issue.blockId),others=all.filter(b=>b.id!==issue.blockId);if(!target||target.text.length>12000){await append('当前段落过长或已不存在，请分段并重新定位后继续。');return}let size=target.text.length
    const chosen=[target];for(const b of others){if(chosen.length>=24||size+b.text.length>24000)continue;chosen.push(b);size+=b.text.length}
    const threadInput={blockId:issue.blockId,quote:issue.quote,category:issue.category,message:issue.message,messages:[] as Array<{role:'assistant'|'user';text:string}>}
-   threadInput.messages=challengeThreadMessages(current.comments,Math.min(10000,15000-JSON.stringify(threadInput).length))
+   threadInput.messages=challengeThreadMessages(savedThread.comments,Math.min(10000,15000-JSON.stringify(threadInput).length))
    const result=await request({sessionId,requestId:crypto.randomUUID(),action:kind,level:readLevel()||2,title:latest.current.title,blocks:chosen,thread:threadInput},controller.signal)
-   if(!live.current||controller.signal.aborted||!active()||ai.getThreads().get(thread.id)?.resolved)return
+   if(!current())return
    if(fingerprint(latest.current.title,blocks())!==captured){await append('正文已变化，这次回复未应用到当前原文。请基于当前文字继续讨论。');return}
    state.current.checks=result.checks;setChecks(result.checks)
    if(result.reply?.replacement){
@@ -159,14 +168,14 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     if(!currentBlock||currentBlock.text.length-issue.quote.length+result.reply.replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
     if(fingerprint(latest.current.title,blocks())===captured&&findChallengeQuote(editor,issue.blockId,issue.quote)&&replaceChallengeQuote(editor,issue.blockId,issue.quote,result.reply.replacement)){
      const sourceText=blocks().find(b=>b.id===issue.blockId)!.text
-     metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText,anchorHistory:anchorHistory(current.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote:result.reply.replacement,sourceText})})
+     metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText,anchorHistory:anchorHistory(savedThread.metadata?.anchorHistory,{quote:issue.quote,sourceText:currentBlock.text},{quote:result.reply.replacement,sourceText})})
      settle.current=Date.now()+10000
      window.setTimeout(()=>{if(live.current)sync()},10010)
      await append(result.reply.text||'已优化这段表达，并保留原有研究立场。')
     }else await append('正文已变化，这次建议未替换原文。请基于当前文字继续讨论。')
    }else await append(result.reply?.text||'本轮未形成可核验的修改建议，原文保持不变。')
-  }catch(error){if(!controller.signal.aborted&&live.current)await append(error instanceof Error?error.message:'本轮未完成，请稍后再试。')}
-  finally{if(action.current===controller){action.current=undefined;if(live.current){setBusyId(undefined);sync();refresh()}}}
+  }catch{await append('没能完成，请重试')}
+  finally{if(action.current===job){action.current=undefined;if(live.current){setPending(undefined);sync();refresh()}}}
  }
- return {level,threads,selected,busyId,revision,checks,setLevel:levelChange,close,resolve,runAction,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ return {level,marginExpanded,threads,selected,busyId,actionKind,revision,checks,setLevel:levelChange,setMarginExpanded,close,resolve,runAction,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }
