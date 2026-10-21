@@ -88,11 +88,20 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     if(!live.current||!active()||readLevel()===0||fingerprint(latest.current.title,blocks())!==captured.key)break
     const range=findChallengeQuote(editor,issue.blockId,issue.quote),source=captured.blocks.find(v=>v.id===issue.blockId)
     if(!range||!source)continue
-    const prior=[...ai.getThreads().values()].find((thread:any)=>thread.metadata?.kind===CHALLENGE_KIND&&(!thread.resolved&&!thread.deletedAt||thread.metadata.sourceText===source.text)&&thread.metadata.issue.blockId===issue.blockId&&thread.metadata.issue.quote===issue.quote&&thread.metadata.issue.category===issue.category)
+    const anchored=[...ai.getThreads().values()].filter((thread:any)=>thread.metadata?.kind===CHALLENGE_KIND&&thread.metadata.issue.blockId===issue.blockId&&thread.metadata.issue.quote===issue.quote)
+    // Review categories can change between passes; the same live text anchor
+    // belongs to its existing discussion. A resolved different category may
+    // still represent a new finding, so retain the narrower suppression rule.
+    const prior=anchored.find(thread=>thread.metadata.issue.category===issue.category&&(!thread.resolved&&!thread.deletedAt||thread.metadata.sourceText===source.text))??anchored.find(thread=>!thread.resolved&&!thread.deletedAt)
     if(prior){
      if(!prior.resolved&&!prior.deletedAt){
       metadata(prior.id,{issue,sourceText:source.text})
-      const comment=prior.comments[0];if(comment&&noteText(comment.body)!==issue.message)await ai.updateComment({threadId:prior.id,commentId:comment.id,comment:{body:body(issue.message)}})
+      const discussion=prior.comments.filter(comment=>!comment.deletedAt)
+      if(!discussion.some(comment=>noteText(comment.body)===issue.message)){
+       const comment=discussion[0]
+       if(comment&&discussion.length===1&&!prior.metadata.draft)await ai.updateComment({threadId:prior.id,commentId:comment.id,comment:{body:body(issue.message)}})
+       else await ai.addComment({threadId:prior.id,comment:{body:body(issue.message)}})
+      }
       const current=findChallengeQuote(editor,issue.blockId,issue.quote)
       if(current&&live.current&&active()&&readLevel()&&fingerprint(latest.current.title,blocks())===captured.key)editor.transact((tr:any)=>tr.setMeta('addToHistory',false).addMark(current.from,current.to,tr.doc.type.schema.marks.comment.create({threadId:prior.id,orphan:false})))
      }
