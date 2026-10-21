@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 const load=()=>import('../packages/dsh-research-task-runtime/notes-challenge-consensus.js')
-const row={S_INFO_WINDCODE:'600519.SH',EST_REPORT_DT:'20261231',EST_DT:'20261019',NUM_EST_INST:45,EPS_AVG:67.3481,EPS_MEDIAN:67.0908,EPS_MIN:64.7795,EPS_MAX:71.1026,EPS_DEV:1.6094,S_EST_BASESHARE:125008.1601,NET_PROFIT_MEDIAN:8386900,NET_PROFIT_MIN:8097961,NET_PROFIT_MAX:8888400,NET_PROFIT_DEV:201182.2346,NET_PROFIT_UPGRADE:0,NET_PROFIT_DOWNGRADE:35,NET_PROFIT_MAINTAIN:8}
+const row={CONSEN_DATA_CYCLE_TYP:'263002000',S_INFO_WINDCODE:'600519.SH',EST_REPORT_DT:'20261231',EST_DT:'20261019',NUM_EST_INST:45,EPS_AVG:67.3481,EPS_MEDIAN:67.0908,EPS_MIN:64.7795,EPS_MAX:71.1026,EPS_DEV:1.6094,S_EST_BASESHARE:125008.1601,NET_PROFIT_MEDIAN:8386900,NET_PROFIT_MIN:8097961,NET_PROFIT_MAX:8888400,NET_PROFIT_DEV:201182.2346,NET_PROFIT_UPGRADE:0,NET_PROFIT_DOWNGRADE:35,NET_PROFIT_MAINTAIN:8}
 const claim={blockId:'forecast',quote:'EPS76元',windCode:'600519.SH',baseDate:'20261020',year:2026,metric:'EPS',value:76,unit:'元'}
 
 it('applies a configured mature-industry threshold and retains explicit capital-basis evidence',async()=>{
@@ -76,4 +76,19 @@ it('treats zero standard deviation as valid unanimous forecasts for the C3 formu
   expect(compareConsensusClaim({...claim,value:110},[base]).rules).toEqual(['C3'])
   expect(compareConsensusClaim({...claim,value:100},[base]).rules).toEqual([])
   expect(compareConsensusClaim({...claim,value:110},[{...base,EPS_DEV:-1}]).rules).toEqual([])
+})
+it('selects one disclosed statistical cycle before choosing its latest dated snapshot',async()=>{
+  const {compareConsensusClaim,consensusPolicyFromBlocks}=await load()
+  const rows=[{...row,CONSEN_DATA_CYCLE_TYP:'263001000',EST_DT:'20261020',NUM_EST_INST:null,EPS_MEDIAN:null},{...row,CONSEN_DATA_CYCLE_TYP:'263002000'},{...row,CONSEN_DATA_CYCLE_TYP:'263003000',EST_DT:'20261020',EPS_MEDIAN:70}]
+  expect(compareConsensusClaim(claim,rows).evidence?.data).toMatchObject({cycle:'263002000',estDt:'20261019',median:67.0908})
+  const policy=consensusPolicyFromBlocks([{text:'一致预期统计周期：180天'}])
+  expect(policy).toMatchObject({cycle:'263003000'})
+  expect(compareConsensusClaim(claim,rows,policy).evidence?.data).toMatchObject({cycle:'263003000',estDt:'20261020',median:70})
+  expect(()=>consensusPolicyFromBlocks([{text:'一致预期统计周期：90天\n一致预期统计周期：180天'}])).toThrow()
+})
+it('discloses inconsistent revision counts instead of presenting them as trustworthy market evidence',async()=>{
+  const r=(await load()).compareConsensusClaim({...claim,metric:'NET_PROFIT',unit:'亿元',value:950,revisionDirection:1},[{...row,NET_PROFIT_MAINTAIN:100}])
+  expect(r.rules).not.toContain('C4');expect(r.status).toBe('partial')
+  expect(r.evidence.data).toMatchObject({upgrade:null,downgrade:null,maintain:null})
+  expect(r.detail).toContain('修订家数')
 })

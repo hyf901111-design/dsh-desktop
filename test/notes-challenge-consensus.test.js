@@ -6,7 +6,7 @@ import { createToolProxy } from '../packages/dsh-integration-runtime/tool-proxy.
 
 const load = () => import('../packages/dsh-research-task-runtime/notes-challenge-consensus.js')
 const claim = { blockId: 'forecast', quote: 'EPS 76元', windCode: '600519.SH', baseDate: '20261020', year: 2026, metric: 'EPS', value: 76, unit: '元' }
-const row = { S_INFO_WINDCODE: '600519.SH', EST_REPORT_DT: '20261231', EST_DT: '20261019', NUM_EST_INST: 45, EPS_AVG: 67.3481, EPS_MEDIAN: 67.0908, EPS_MIN: 64.7795, EPS_MAX: 71.1026, EPS_DEV: 1.6094 }
+const row = { CONSEN_DATA_CYCLE_TYP:'263002000', S_INFO_WINDCODE: '600519.SH', EST_REPORT_DT: '20261231', EST_DT: '20261019', NUM_EST_INST: 45, EPS_AVG: 67.3481, EPS_MEDIAN: 67.0908, EPS_MIN: 64.7795, EPS_MAX: 71.1026, EPS_DEV: 1.6094 }
 const cleanups = []
 afterEach(async () => { vi.useRealTimers(); for (const close of cleanups.splice(0)) await close() })
 
@@ -161,6 +161,14 @@ it('explains a C4-only conflict with concrete report and market directions in th
   expect(issue.evidence[0].data.rules).toEqual(['C4'])
   expect(issue.message).toMatch(/报告.*增加10元/)
   expect(issue.message).toMatch(/一致预期.*减少10元/)
+})
+it('bounds both the as-of date and report coverage queries to the configured consensus cycle',async()=>{
+  const {reviewNoteConsensus}=await load()
+  const f=await sourceFixture({data:()=>[]})
+  await reviewNoteConsensus(f.ctx,{sessionId:'session',blocks:[{id:'meta',type:'paragraph',text:'一致预期统计周期：180天'},{id:'f',type:'paragraph',text:'600519.SH 报告基准日20261020。预计2026年EPS76元。'}]},new AbortController().signal)
+  expect(f.calls).toHaveLength(3)
+  expect(f.calls.every(c=>c.arguments.sql.includes("CONSEN_DATA_CYCLE_TYP = '263003000'"))).toBe(true)
+  expect(f.calls[0].arguments.sql.match(/CONSEN_DATA_CYCLE_TYP = '263003000'/g)).toHaveLength(2)
 })
 
 it('does not promote truncated data or mismatched codes into verified consensus evidence', async () => {

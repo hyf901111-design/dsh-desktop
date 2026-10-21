@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 const load = () => import('../packages/dsh-research-task-runtime/notes-challenge-consensus.js')
 const roots = []
 afterEach(async () => { vi.unstubAllEnvs(); for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }) })
-const row = { S_INFO_WINDCODE:'600519.SH', EST_REPORT_DT:'20261231', EST_DT:'20261019', NUM_EST_INST:45, EPS_AVG:67.3481, EPS_MEDIAN:67.0908, EPS_MIN:64.7795, EPS_MAX:71.1026, EPS_DEV:1.6094 }
+const row = { CONSEN_DATA_CYCLE_TYP:'263002000', S_INFO_WINDCODE:'600519.SH', EST_REPORT_DT:'20261231', EST_DT:'20261019', NUM_EST_INST:45, EPS_AVG:67.3481, EPS_MEDIAN:67.0908, EPS_MIN:64.7795, EPS_MAX:71.1026, EPS_DEV:1.6094 }
 const input = { sessionId:'skill-session', blocks:[{id:'forecast',type:'paragraph',text:'600519.SH 报告基准日20261020。预计2026年EPS 76元。'}] }
 
 async function fixture({ script, enabled = true, multiple = false } = {}) {

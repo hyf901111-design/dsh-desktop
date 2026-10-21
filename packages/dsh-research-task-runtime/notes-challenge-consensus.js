@@ -46,17 +46,26 @@ export function extractConsensusClaims(blocks) {
 
 const unavailable = detail => ({ status: 'unavailable', rules: [], detail })
 const scaleFor = claim => claim.metric==='EPS'?(claim.unit==='元'?1:null):({亿元:10000,万元:1,千元:.1,元:.0001})[claim.unit]
+function revisionCounts(row,metric,count) {
+  const values=['UPGRADE','DOWNGRADE','MAINTAIN'].map(s=>number(row[metric+'_'+s]))
+  const missing=values.every(v=>v===null)
+  const valid=!missing&&Number.isInteger(count)&&count>=0&&values.slice(0,2).every(v=>Number.isInteger(v)&&v>=0)&&(values[2]===null||Number.isInteger(values[2])&&values[2]>=0)&&values.reduce((sum,v)=>sum+(v??0),0)<=count
+  return {upgrade:valid?values[0]:null,downgrade:valid?values[1]:null,maintain:valid?values[2]:null,invalid:!missing&&!valid,valid}
+}
 
 /** Explicit report metadata selects a threshold; company names never infer an industry. */
 export function consensusPolicyFromBlocks(blocks) {
-  const lines=blocks.flatMap(b=>b.text.split('\n')).map(s=>s.trim()).filter(s=>/^一致预期偏离阈值\s*[:：]/u.test(s))
+  const all=blocks.flatMap(b=>b.text.split('\n')).map(s=>s.trim()),lines=all.filter(s=>/^一致预期偏离阈值\s*[:：]/u.test(s))
   const values=lines.map(line=>{const match=line.match(/^一致预期偏离阈值\s*[:：]\s*(\d+(?:\.\d+)?)\s*[%％]$/u);const value=match?Number(match[1])/100:NaN;if(!Number.isFinite(value)||value<=0||value>1)throw Error('一致预期偏离阈值无效，请明确指定0%到100%之间的正数。');return value})
   if(distinct(values).length>1)throw Error('一致预期偏离阈值有冲突，未作偏离判断。')
-  return {threshold:values[0]??.20}
+  const cycles=all.filter(s=>/^一致预期统计周期\s*[:：]/u.test(s)).map(line=>{const match=line.match(/^一致预期统计周期\s*[:：]\s*(30|90|180)\s*天$/u);if(!match)throw Error('一致预期统计周期须为30天、90天或180天。');return {'30':'263001000','90':'263002000','180':'263003000'}[match[1]]})
+  if(distinct(cycles).length>1)throw Error('一致预期统计周期有冲突，未作偏离判断。')
+  return {threshold:values[0]??.20,cycle:cycles[0]??'263002000'}
 }
 
-function snapshot(claim,rows) {
-  const matching=rows.filter(row=>record(row)&&row.S_INFO_WINDCODE===claim.windCode&&String(row.EST_REPORT_DT)===`${claim.year}1231`&&date(row.EST_DT))
+function snapshot(claim,rows,cycle) {
+  const all=rows.filter(row=>record(row)&&row.S_INFO_WINDCODE===claim.windCode&&String(row.EST_REPORT_DT)===`${claim.year}1231`&&date(row.EST_DT))
+  const matching=all.some(row=>row.CONSEN_DATA_CYCLE_TYP!=null)?all.filter(row=>row.CONSEN_DATA_CYCLE_TYP===cycle):all
   const historical=matching.filter(row=>date(row.EST_DT)<=date(claim.baseDate)),eligible=historical.length?historical:matching
   if(!eligible.length)return null
   const estDt=eligible.map(row=>date(row.EST_DT)).sort().at(-1),candidates=eligible.filter(row=>date(row.EST_DT)===estDt)
@@ -65,13 +74,13 @@ function snapshot(claim,rows) {
   return {row:candidates[0],estDt,fallback:!historical.length}
 }
 
-function directionFor(claim,rows,current,claims,minInstitutions) {
+function directionFor(claim,rows,current,claims,minInstitutions,cycle) {
   const none={kind:'unavailable',detail:'缺少可比的相邻年度预测或明确月度修订方向，未执行C4。'}
   const count=number(current.row.NUM_EST_INST)
-  if(current.fallback||!Number.isInteger(count)||count<minInstitutions)return none
+  if(current.fallback||!Number.isInteger(count)||count<minInstitutions||current.row.CONSEN_DATA_CYCLE_TYP!==cycle)return none
   const comparisons=[],previous=(claims??[]).filter(c=>c.windCode===claim.windCode&&c.baseDate===claim.baseDate&&c.metric===claim.metric&&c.year===claim.year-1&&!c.basis)
   if(previous.length===1){
-    const prior=snapshot(previous[0],rows),scale=scaleFor(previous[0]),median=number(current.row[claim.metric+'_MEDIAN'])
+    const prior=snapshot(previous[0],rows,cycle),scale=scaleFor(previous[0]),median=number(current.row[claim.metric+'_MEDIAN'])
     const previousMedian=prior?.row?number(prior.row[claim.metric+'_MEDIAN']):null
     const priorCount=number(prior?.row?.NUM_EST_INST),priorMin=number(prior?.row?.[claim.metric+'_MIN']),priorMax=number(prior?.row?.[claim.metric+'_MAX'])
     const validMedian=previousMedian!==null&&(priorMin===null||previousMedian>=priorMin)&&(priorMax===null||previousMedian<=priorMax)
@@ -81,8 +90,8 @@ function directionFor(claim,rows,current,claims,minInstitutions) {
     }
   }
   // EPS has no matching revision-count family; profit counts must not stand in for EPS revisions.
-  const upgrade=number(current.row[claim.metric+'_UPGRADE']),downgrade=number(current.row[claim.metric+'_DOWNGRADE'])
-  if(claim.metric!=='EPS'&&[1,-1].includes(claim.revisionDirection)&&Number.isInteger(upgrade)&&upgrade>=0&&Number.isInteger(downgrade)&&downgrade>=0&&upgrade+downgrade<=count){
+  const {upgrade,downgrade,valid}=revisionCounts(current.row,claim.metric,count)
+  if(claim.metric!=='EPS'&&[1,-1].includes(claim.revisionDirection)&&valid){
     const consensusDirection=Math.sign(upgrade-downgrade)
     comparisons.push({kind:'monthly-revision',reportedDirection:claim.revisionDirection,consensusDirection,conflict:claim.revisionDirection*consensusDirection<0})
   }
@@ -94,20 +103,23 @@ function directionFor(claim,rows,current,claims,minInstitutions) {
 export function compareConsensusClaim(claim, rows, options={}) {
   if (!METRICS[claim.metric] || !/^\d{6}\.(SH|SZ|BJ)$/.test(claim.windCode) || !date(claim.baseDate) || !Number.isInteger(claim.year) || claim.year < 2000 || claim.year > 2099 || !Number.isFinite(claim.value)) return unavailable('预测字段不完整，无法比对。')
   if (claim.basis) return { status: 'skipped', rules: [], detail: `${claim.basis}与静态表主营业务收入口径尚未确认，未作偏离判断。` }
-  const {threshold=.20,minInstitutions=5,stdMultiplier=1}=options
+  const {threshold=.20,minInstitutions=5,stdMultiplier=1,cycle='263002000'}=options
   if(!Number.isFinite(threshold)||threshold<=0||threshold>1||!Number.isInteger(minInstitutions)||minInstitutions<1||minInstitutions>1000||!Number.isFinite(stdMultiplier)||stdMultiplier<=0||stdMultiplier>10)return unavailable('一致预期比较配置无效。')
   if(options.enabledMetrics&&!options.enabledMetrics.includes(claim.metric))return {status:'skipped',rules:[],detail:'该指标未启用一致预期比较。'}
   const scale = scaleFor(claim)
   if (scale == null) return unavailable('报告单位不明确，未作换算。')
   const reportedValue = claim.value * scale, period = `${claim.year}1231`
   if (!Number.isFinite(reportedValue) || !Array.isArray(rows)) return unavailable('预测数值或数据无效。')
-  const current=snapshot(claim,rows)
+  if(!['263001000','263002000','263003000'].includes(cycle))return unavailable('一致预期统计周期无效。')
+  const current=snapshot(claim,rows,cycle)
   if(!current)return unavailable(`${claim.windCode} ${claim.year}年度本次来源未返回可用一致预期快照，无法比对。`)
   if(current.conflict)return unavailable('同一预测快照返回互相冲突的记录，未作判断。')
   const {row,estDt,fallback}=current,median = number(row[claim.metric + '_MEDIAN']), avg = number(row[claim.metric + '_AVG']), min = number(row[claim.metric + '_MIN']), max = number(row[claim.metric + '_MAX']), std = number(row[claim.metric + '_DEV']), count = number(row.NUM_EST_INST)
   const sample = Number.isInteger(count) && count >= minInstitutions, relativeBase = median !== null && median !== 0, interval = min !== null && max !== null && min <= max, deviation = relativeBase ? Math.abs(reportedValue - median) / Math.abs(median) : null
   if (interval && median !== null && (median < min || median > max)) return unavailable('一致预期中值与极值区间互相冲突，未作偏离判断。')
   const rules = [], notes = []
+  const revisions=revisionCounts(row,claim.metric,count)
+  if(revisions.invalid)notes.push('修订家数缺失或不一致，未采用这些家数作月度方向判断')
   if (!sample) notes.push(`预测家数${count ?? '未知'}，样本有限，不作C2/C3强判断`)
   if (!relativeBase) notes.push('中值为空或零，不作相对偏离判断')
   if (!interval || std === null || std < 0) notes.push('区间或标准差字段缺失/无效，对应规则未执行')
@@ -115,10 +127,10 @@ export function compareConsensusClaim(claim, rows, options={}) {
     if (Number.isInteger(count) && count > 0 && interval && (reportedValue < min || reportedValue > max)) rules.push('C1')
     if (sample && relativeBase && Math.abs(reportedValue - median) - Math.abs(median) * threshold > Math.max(1, Math.abs(reportedValue), Math.abs(median)) * 1e-12) rules.push('C2')
     if (sample && median !== null && std !== null && std >= 0 && Math.abs(reportedValue - median) > std*stdMultiplier) rules.push('C3')
-  const direction=directionFor(claim,rows,current,options.claims,minInstitutions)
+  const direction=directionFor(claim,rows,current,options.claims,minInstitutions,cycle)
   if(direction.conflict)rules.push('C4')
   const unit = claim.metric === 'EPS' ? '元' : '万元'
-  const evidence = { kind: 'consensus', label: `infodb · Wind一致预期 · ${estDt}`, data: { source: 'infodb', schema: SCHEMA, apiName: TABLE, windCode: claim.windCode, forecastYear: claim.year, estReportDt: period, estDt, reportBaseDate: claim.baseDate, fallback, metric: claim.metric, reportedValue, originalValue: claim.value, originalUnit: claim.unit, unit, avg, median, min, max, std, institutionCount: count, deviationPct: deviation === null ? null : deviation * 100, threshold, minInstitutions, stdMultiplier, rules, notes, direction, upgrade:number(row[claim.metric+'_UPGRADE']),downgrade:number(row[claim.metric+'_DOWNGRADE']),maintain:number(row[claim.metric+'_MAINTAIN']),baseShare:number(row.S_EST_BASESHARE),baseShareUnit:'万股',cycle:row.CONSEN_DATA_CYCLE_TYP??null,severity:rules.includes('C1')?'CRITICAL':rules.includes('C2')?'HIGH':'MEDIUM' } }
+  const evidence = { kind: 'consensus', label: `infodb · Wind一致预期 · ${estDt}`, data: { source: 'infodb', schema: SCHEMA, apiName: TABLE, windCode: claim.windCode, forecastYear: claim.year, estReportDt: period, estDt, reportBaseDate: claim.baseDate, fallback, metric: claim.metric, reportedValue, originalValue: claim.value, originalUnit: claim.unit, unit, avg, median, min, max, std, institutionCount: count, deviationPct: deviation === null ? null : deviation * 100, threshold, minInstitutions, stdMultiplier, rules, notes, direction, upgrade:revisions.upgrade,downgrade:revisions.downgrade,maintain:revisions.maintain,baseShare:number(row.S_EST_BASESHARE),baseShareUnit:'万股',cycle:row.CONSEN_DATA_CYCLE_TYP??null,severity:rules.includes('C1')?'CRITICAL':rules.includes('C2')?'HIGH':'MEDIUM' } }
   return { status: notes.length ? 'partial' : 'completed', rules, evidence, detail: notes.join('；') || `${claim.windCode} ${claim.year}年度${METRICS[claim.metric]}已按${estDt}快照比较。` }
 }
 
@@ -182,14 +194,15 @@ export async function reviewNoteConsensus(ctx, input, signal) {
       try {
         const discovery=deadline(signal,4000)
         let source
-        try {source=sourceFor(ctx,agent,claim)??await abortable(managedInfodbSource(ctx,agent,discovery.signal),discovery.signal)}finally{discovery.dispose()}
+        const queryClaim={...claim,cycle:policy.cycle}
+        try {source=sourceFor(ctx,agent,queryClaim)??await abortable(managedInfodbSource(ctx,agent,discovery.signal),discovery.signal)}finally{discovery.dispose()}
         if (!source) return { issues, checks: [...checks, { kind: 'consensus', status: 'unavailable', detail: '当前会话没有可用的已授权infodb只读SQL工具或已启用的infodb读取技能；未查询、未使用其他来源替代。' }] }
         const query = async mode => {
           const budget = deadline(signal, 4000)
           try {
-            const response = await abortable(source.query(claim,mode,budget.signal), budget.signal)
+            const response = await abortable(source.query(queryClaim,mode,budget.signal), budget.signal)
             const rows = sourceRows(response)
-            if (mode!=='coverage'&&rows.some(row => row.S_INFO_WINDCODE !== claim.windCode || String(row.EST_REPORT_DT) !== `${claim.year}1231` || !date(row.EST_DT) || mode==='historical' && date(row.EST_DT) > claim.baseDate)) throw Error('来源返回的代码、报告期或预测日期不符合查询条件。')
+            if (mode!=='coverage'&&rows.some(row => row.S_INFO_WINDCODE !== claim.windCode || String(row.EST_REPORT_DT) !== `${claim.year}1231` || row.CONSEN_DATA_CYCLE_TYP!==policy.cycle || !date(row.EST_DT) || mode==='historical' && date(row.EST_DT) > claim.baseDate)) throw Error('来源返回的代码、报告期、统计周期或预测日期不符合查询条件。')
             return rows
           } finally { budget.dispose() }
         }
