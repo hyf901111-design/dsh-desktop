@@ -140,6 +140,24 @@ function diagnostic(requestId, counts) {
   catch { /* Diagnostics must not affect generation or its existing rejection. */ }
 }
 
+// Classify rejected JSON by fixed structure only. Never record model keys,
+// paragraph IDs, content, or parser exception messages.
+function reviewShapeStats(value, targets) {
+  const kind = value => value === undefined ? 'missing' : value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value
+  const reviews = value?.reviews, targetIds = new Set(targets.map(block => block.id)), seen = new Set()
+  const stats = { valueKind: kind(value), reviewsKind: kind(reviews), reviewCount: Array.isArray(reviews) ? reviews.length : 0, nonObjectReviews: 0, unexpectedReviewFields: 0, unknownBlockIds: 0, duplicateBlockIds: 0, nonArrayIssues: 0, unreviewedTargets: targets.length }
+  if (!Array.isArray(reviews)) return stats
+  for (const review of reviews) {
+    if (!record(review)) { stats.nonObjectReviews++; continue }
+    if (!fields(review, ['blockId', 'issues'])) stats.unexpectedReviewFields++
+    if (!targetIds.has(review.blockId)) stats.unknownBlockIds++
+    else { if (seen.has(review.blockId)) stats.duplicateBlockIds++; seen.add(review.blockId) }
+    if (!Array.isArray(review.issues)) stats.nonArrayIssues++
+  }
+  stats.unreviewedTargets = targets.length - seen.size
+  return stats
+}
+
 // Diagnose a silent all-filtered response without recording note text, model
 // messages, arbitrary labels, or reasoning. A hashed request key correlates QA.
 function filteredReviewStats(value, targets) {
@@ -223,14 +241,15 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
       for (const key of ['inputTokens', 'outputTokens']) usage[key] += attemptUsage[key]
       // Only a complete, sole JSON fence is an envelope; never scan prose or reasoning for objects.
       const json = /^```json[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu.exec(text)?.[1] ?? text
-      let parsedJSON = false
+      let parsedJSON = false, value
       try {
-        const value = JSON.parse(json)
+        value = JSON.parse(json)
         parsedJSON = true
         if (reviewTargets) reviewEntries(value, reviewTargets)
         return { value, usage }
       }
       catch {
+        diagnostic(requestId, { event: 'notes-challenge-format-rejected', action: payload.action, attempt: attempt + 1, reason: parsedJSON ? 'review-envelope' : 'json-invalid', jsonChars: json.length, targetCount: reviewTargets?.length ?? 0, anchorCount: payload.existingAnchors?.length ?? 0, ...parsedJSON && reviewTargets ? reviewShapeStats(value, reviewTargets) : {} })
         // A stop response can contain malformed JSON or a malformed review envelope.
         // They share one regeneration allowance, deadline and size budgets; never repair
         // partial output, send it back, or retry a valid but empty/filtered review.
