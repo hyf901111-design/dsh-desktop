@@ -9,35 +9,46 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复后台搜索导航期间清理页面引发的原生崩溃",
+        "featureName": "恢复已声明组件类型并校准原始财务同比",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "71c59142749ead811b5683025db6814833d63568",
-        "tipCommit": "f21caa8b4dce357d17c7fa111451893dce4665e0",
+        "baseCommit": "f21caa8b4dce357d17c7fa111451893dce4665e0",
+        "tipCommit": "4082fe7de60e309616214b5fc9578d67def4d05e",
         "commits": [
           {
-            "commit": "f21caa8b4dce357d17c7fa111451893dce4665e0",
+            "commit": "e40fe19f15a5cf457970086bb7dbd32ef99f4617",
             "parents": [
-              "71c59142749ead811b5683025db6814833d63568"
+              "f21caa8b4dce357d17c7fa111451893dce4665e0"
             ],
-            "subject": "修复后台搜索导航清理引发的原生崩溃"
+            "subject": "按已声明组件类型恢复缺失字段并保留来源校验"
+          },
+          {
+            "commit": "4082fe7de60e309616214b5fc9578d67def4d05e",
+            "parents": [
+              "e40fe19f15a5cf457970086bb7dbd32ef99f4617"
+            ],
+            "subject": "校正纵向财务表同比并区分同日合并与母公司报表"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/search/browser-search-controller.ts"
+            "path": "packages/dsh-research-task-runtime/artifact-output.js"
           },
           {
             "status": "M",
-            "path": "src/main/search/local-search-runtime.ts"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "test/browser-search-controller.test.ts"
+            "path": "packages/dsh-research-task-runtime/observed-statement-growth.js"
           },
           {
             "status": "A",
-            "path": "test/browser-search-navigation-native.test.ts"
+            "path": "test/declared-component-type.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/observed-statement-growth.test.js"
           }
         ],
         "checks": [
@@ -46,15 +57,14 @@
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=1",
-              "test/browser-search-navigation-native.test.ts",
-              "test/browser-search-controller.test.ts",
-              "test/local-search-runtime.test.ts",
-              "test/local-search-bridge.test.ts"
+              "test/observed-statement-growth.test.js",
+              "test/declared-component-type.test.js",
+              "test/research-artifact-resilience.test.js"
             ],
             "outcome": "passed",
-            "summary": "41项直接相关检查通过，含3条真实Electron导航用例：成功、取消后队列恢复、关闭；修复前均SIGTRAP，修复后均正常退出并清理窗口。/tmp/browser-search-safe-lifetime-green-20261021.log",
-            "verifiedCommit": "f21caa8b4dce357d17c7fa111451893dce4665e0",
-            "completedAt": "2026-10-21T02:06:27.339247+00:00",
+            "summary": "103项直接相关测试通过，含缺失类型无损恢复、来源不匹配仍拦截、纵向财务表、同日母公司/合并报表消歧、明确披露日期与报告期校验。/tmp/workbench-known-output-repairs-focus-20261021.log",
+            "verifiedCommit": "4082fe7de60e309616214b5fc9578d67def4d05e",
+            "completedAt": "2026-10-21T02:34:39.284336+00:00",
             "timeoutMs": 180000
           },
           {
@@ -64,115 +74,28 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/browser-search-safe-lifetime-typecheck-20261021.log",
-            "verifiedCommit": "f21caa8b4dce357d17c7fa111451893dce4665e0",
-            "completedAt": "2026-10-21T02:06:27.339247+00:00",
+            "summary": "类型检查通过；/tmp/workbench-known-output-repairs-typecheck-20261021.log",
+            "verifiedCommit": "4082fe7de60e309616214b5fc9578d67def4d05e",
+            "completedAt": "2026-10-21T02:34:39.284336+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "主进程生命周期修复已在实际Electron 43.4.0隐藏窗口中验证导航、取消、关闭与后续搜索。正式本地包启动及原真实数据工作台仍需验收。"
+          "summary": "已离线重放本次真实模型输出与原始工具来源，原始字段保持不变；新本地包中的原始金融与政策组件仍待实际验收。"
         },
         "acceptanceCriteria": [
-          "页面导航回调或对应微任务中结束搜索、取消或关闭，不再直接停止或销毁WebContents。",
-          "后续搜索必须等待原页面安全退出，取消后可在新页面继续搜索，不泄漏隐藏窗口。",
-          "主进程搜索服务关闭和启动失败时等待异步清理完成。",
-          "保留原查询匹配、来源校验、超时、隔离和权限约束，不用缩小工作台研究范围来规避故障。"
+          "仅对工作台显式声明类型且缺失type的单个合法JSON补齐已声明类型，不推断自由组件样式。",
+          "类型恢复发生于来源采集与严格校验之前；不以缺失类型绕过来源证据。",
+          "按原始全精度金额校正计算同比，兼容纵向表格并唯一匹配合并/母公司报表。",
+          "日期、口径、证券、币种、单位或来源不明确时保持拦截或不改写，不缩小用户研究范围。"
         ],
         "risks": [
-          "当前只修复已稳定复现的后台搜索清理崩溃，不代表所有组件生成或其他浏览器操作故障已解决。",
-          "仍须在新本地包复测原始真实数据工作台的速度、来源证据和财务同比正确性。",
-          "仅本地测试，不发布、推送、递增版本、接受或晋升main。"
+          "模型输出恢复和离线重放通过不代表原始真实数据工作台已经全部成功。",
+          "政策页证据采集是否成功、实际耗时仍需在新本地包复测。",
+          "只本地集成测试；不发布、不推送、不晋升main。"
         ],
-        "generatedAt": "2026-10-21T02:06:27.339247+00:00"
-      },
-      "merged": {
-        "mergeCommit": "319f11bbe9b1e4a952c6f5ba418aa96475cfa03b",
-        "verificationCommit": "319f11bbe9b1e4a952c6f5ba418aa96475cfa03b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "319f11bbe9b1e4a952c6f5ba418aa96475cfa03b",
-            "completedAt": "2026-10-21T02:08:04.293Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "319f11bbe9b1e4a952c6f5ba418aa96475cfa03b",
-            "completedAt": "2026-10-21T02:08:04.293Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "319f11bbe9b1e4a952c6f5ba418aa96475cfa03b",
-            "completedAt": "2026-10-21T02:08:04.293Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "319f11bbe9b1e4a952c6f5ba418aa96475cfa03b",
-            "completedAt": "2026-10-21T02:08:04.293Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "319f11bbe9b1e4a952c6f5ba418aa96475cfa03b",
-            "completedAt": "2026-10-21T02:08:04.293Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T02:08:04.293Z"
+        "generatedAt": "2026-10-21T02:34:39.284336+00:00"
       }
     },
     {
