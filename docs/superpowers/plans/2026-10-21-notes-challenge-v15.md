@@ -18,3 +18,7 @@
 任务接口：Task 2 的控制器提供 `actionKind: 'reply'|'optimize'|undefined`、`marginExpanded:boolean`、`setMarginExpanded(boolean)`，Task 1 消费；调用持久化现有 Yjs note-challenge map。UI 与控制器按文件分工，禁止互相覆盖。Task 3 依赖两者。
 
 状态：Task 1/2 待实施，Task 3 待验收。
+
+## Task 4：新增颜色子菜单材质修复
+
+用户补充截图中的颜色子菜单与其他菜单模糊材质不一致。先在真实挂载路径定位（包括嵌套菜单的 backdrop-root 和 portal），复用公共菜单 token，只修复直接相关路径。测试必须打开实际「删除／颜色」菜单和颜色子菜单，检查明暗主题材质、颜色采纳、键盘和点击外部关闭。与 Task 1 的 challenge-ui/css/editor 文件保持分工；需要改 editor 时先协调。该项完成后才执行 Task 3 最终构建。
