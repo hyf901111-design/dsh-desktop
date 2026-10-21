@@ -23,6 +23,18 @@ export function workbenchRefreshState(node,binding,{rss=null,reload=false,error=
   const failed=Boolean(error||binding?.status==='error'||binding?.lastRefreshFailed)
   return {state:scheduled?failed?'error':'scheduled':'manual',icon:scheduled?'refresh':'refresh-manual'}
 }
+export function workbenchSmartCreateTarget(node){
+ return node?.kind==='generated-container'&&!node.containerSpec&&node.generationStatus==='draft'&&node.containerPrompt!=='odyssey:link-draft'
+}
+export function workbenchCanCreateFrom(source,target,nodes){
+ if(!source||!workbenchSmartCreateTarget(target)||source.id===target.id||source.kind==='generated-container'&&!source.containerSpec||!source.containerSpec&&!(source.excerpt||source.name))return false
+ const seen=new Set(),reachesTarget=node=>{if(node.id===target.id)return true;if(seen.has(node.id))return false;seen.add(node.id);return (node.sourceNodeIds||[]).some(id=>{const parent=nodes.find(n=>n.id===id);return parent&&reachesTarget(parent)})}
+ return !reachesTarget(source)
+}
+export function WorkbenchCreatePort({node,side,readOnly}){
+ const input=side==='input',editable=workbenchSmartCreateTarget(node),connected=input&&node.sourceNodeIds?.length>0
+ return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port ew-create-source-port','data-financial-port':side,'data-financial-port-node':node.id,'data-workbench-create-port':side,'data-create-draft':editable||undefined,'data-connected':connected||undefined,disabled:readOnly||input&&!editable,'aria-label':workbenchText(input?'接收组件作为创建基准':'输出组件内容'),'title':workbenchText(input?'拖到组件输出节点连接基准，拖到空白处断开':'拖到智能容器左侧节点，基于此组件创建'),children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
+}
 export function controlWorkbenchWebZoom(card,step) {
   const native=card?.querySelector('[data-research-native-web]')
   if(typeof native?.__eworkAdjustWebZoom==='function')return native.__eworkAdjustWebZoom(step)
@@ -119,6 +131,8 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const button=(name,label,onClick,extra={})=>react_jsx_runtime.jsx('button',{type:'button','aria-label':label,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();onClick?.(e)},...extra,children:react_jsx_runtime.jsx(WorkbenchIcon,{name})})
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
+    (workbenchSmartCreateTarget(node)||node.creationMode==='selection')&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'input',readOnly}),
+    node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.type!=='financial-widget'&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'output',readOnly}),
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       refreshState&&react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button(refreshState.icon,'刷新组件',refresh,{disabled:readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':refreshing||undefined,'data-refresh-state':refreshState.state})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),

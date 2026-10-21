@@ -12,13 +12,13 @@ const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversati
 // function references, which would corrupt functions serialized with toString.
 const source=execFileSync(process.execPath,['--input-type=module','-e',`import {readFileSync} from 'node:fs';import {patchResearchGridWorkbench} from './scripts/lib/research-grid-workbench.mjs';const next=patchResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));if(patchResearchGridWorkbench(next)!==next)throw Error('Not idempotent');process.stdout.write(next);`],{encoding:'utf8',maxBuffer:32*1024*1024})
 function fixture(){
- const window=new Window();let descriptor
+ const window=new Window();let descriptor,shared=false
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>fake})
- runInNewContext(source,{document:window.document,window:{__ModuleLoader__:{load:d=>descriptor=d}},crypto,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout})
+ runInNewContext(source,{document:window.document,window:{__ModuleLoader__:{load:d=>descriptor=d},dshDesktop:{researchBoards:{isSharedSession:()=>shared}}},crypto,Event:window.Event,CustomEvent:window.CustomEvent,TextEncoder,TextDecoder,AbortController,setTimeout,clearTimeout})
  const bundle=descriptor.factory(()=>fake),values=new Map(),storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>{values.set(k,v);return true}},workspace=bundle.createResearchWorkspaceSession(storage,'selected-create')
  const baseline={id:'base',messageId:'base',kind:'generated-container',title:'地域收入 · AAPL',excerpt:'原始内容',containerPrompt:'原始财年收入',refreshMinutes:0,generationStatus:'completed',generationLastSeq:0,containerSpec:{version:1,type:'table',title:'地域收入 · AAPL',columns:['地域','2025 财年'],rows:[['美洲','178 B']]},x:250,y:145,width:476,height:266,sizeMode:'manual'}
  workspace.setArtifacts([baseline]);workspace.setWorkbenchWidth(1000);workspace.applyWorkbenchCells([{id:'base',x:0,y:0,w:20,h:11}],true)
- return {workspace,bundle,storage,dispose:()=>window.happyDOM.abort()}
+ return {workspace,bundle,storage,setShared:value=>{shared=value},dispose:()=>window.happyDOM.abort()}
 }
 
 it('就地创建补丁可完整撤销、重复安装并通过实际工厂语法解析',()=>{
@@ -50,6 +50,26 @@ it('真实工厂的草稿持久化包含基准 ID、标题、输入需求，重�
   const reloaded=f.bundle.createResearchWorkspaceSession(f.storage,'selected-create'),saved=reloaded.getSnapshot().artifacts.find(n=>n.id===draft.id)
   expect(saved).toMatchObject({sourceNodeIds:['base'],containerPrompt:'按财年比较地域收入。',generationSources:[{title:'地域收入 · AAPL'}],generationStatus:'draft'})
   expect(reloaded.beginSelectedCreateDraft(['base']).id).toBe(draft.id)
+ }finally{f.dispose()}
+})
+
+it('智能容器基准连接保存原卡身份与输入，拒绝自身、失效来源、链接草稿和只读修改',()=>{
+ const f=fixture(),w=f.workspace
+ try{
+  const draft=w.createContainerDraft(),link=w.createContainerDraft(null,'link'),before=w.getSnapshot().artifacts
+  expect(w.connectSmartCreateSource(draft.id,draft.id)).toBe(false)
+  expect(w.connectSmartCreateSource(draft.id,'removed')).toBe(false)
+  expect(w.connectSmartCreateSource(link.id,'base')).toBe(false)
+  expect(w.getSnapshot().artifacts).toEqual(before)
+  w.setArtifacts([...before,{...before.find(n=>n.id==='base'),id:'descendant',sourceNodeIds:[draft.id],creationMode:'selection'}])
+  expect(w.connectSmartCreateSource(draft.id,'descendant')).toBe(false)
+  expect(w.updateSmartCreateDraftPrompt(draft.id,'本人\n输入')).toBe(true)
+  expect(w.connectSmartCreateSource(draft.id,'base')).toBe(true)
+  const reloaded=f.bundle.createResearchWorkspaceSession(f.storage,'selected-create'),stored=reloaded.getSnapshot().artifacts.find(n=>n.id===draft.id)
+  expect(stored).toMatchObject({sourceNodeIds:['base'],containerPrompt:'本人\n输入',creationMode:'selection'})
+  f.setShared(true);w.setCollaborationAccess(false);expect(w.connectSmartCreateSource(draft.id,null)).toBe(false)
+  f.setShared(false);w.setCollaborationAccess(true);expect(w.connectSmartCreateSource(draft.id,null)).toBe(true)
+  const detached=w.getSnapshot().artifacts.find(n=>n.id===draft.id);expect(detached.creationMode).toBeUndefined();expect(detached.containerPrompt).toBe('本人\n输入')
  }finally{f.dispose()}
 })
 

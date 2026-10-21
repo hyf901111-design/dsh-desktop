@@ -12,10 +12,11 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
  const connection=(side,id,otherSide,otherId,all)=>{
   if(side===otherSide||id===otherId)return null
   const sourceId=side==='output'?id:otherId,targetId=side==='input'?id:otherId
-  return financialCanLink(all.find(n=>n.id===sourceId)?.containerSpec,all.find(n=>n.id===targetId)?.containerSpec)?{sourceId,targetId}:null
+  const source=all.find(n=>n.id===sourceId),target=all.find(n=>n.id===targetId)
+  return workbenchCanCreateFrom(source,target,all)||financialCanLink(source?.containerSpec,target?.containerSpec)?{sourceId,targetId}:null
  }
  const clear=()=>{draftRef.current=null;setDraft(null)}
- const commit=(sourceId,targetId,previousTargetId=null)=>{const ok=financialLinkSinks.get(sessionId)?.(sourceId,targetId,previousTargetId);clear();return ok}
+ const commit=(sourceId,targetId,previousTargetId=null)=>{const target=workspace.getSnapshot().artifacts.find(n=>n.id===targetId),ok=workbenchSmartCreateTarget(target)?workspace.connectSmartCreateSource(targetId,sourceId):financialLinkSinks.get(sessionId)?.(sourceId,targetId,previousTargetId);clear();return ok}
  react.useLayoutEffect(()=>{
   const root=rootRef.current;if(!root)return
   const measure=()=>{
@@ -33,14 +34,14 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   const schedule=()=>{until=Date.now()+220;if(!frame)frame=window.requestAnimationFrame(tick)}
   measure();schedule();const observer=new ResizeObserver(schedule);observer.observe(root)
   for(const port of root.querySelectorAll('[data-financial-port]')){observer.observe(port);const card=port.closest('[data-research-node-id]');if(card)observer.observe(card)}
-  const mutations=new MutationObserver(schedule);mutations.observe(root,{subtree:true,attributes:true,attributeFilter:['style','data-grid-active','data-grid-operation']})
+  const mutations=new MutationObserver(records=>{if(records.some(r=>r.type==='attributes'||[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1&&(n.matches?.('[data-financial-port]')||n.querySelector?.('[data-financial-port]')))))schedule()});mutations.observe(root,{subtree:true,childList:true,attributes:true,attributeFilter:['style','data-grid-active','data-grid-operation']})
   root.addEventListener('scroll',measure);window.addEventListener('resize',schedule)
   return()=>{observer.disconnect();mutations.disconnect();if(frame)window.cancelAnimationFrame(frame);root.removeEventListener('scroll',measure);window.removeEventListener('resize',schedule)}
  },[rootRef,snapshot.artifacts,snapshot.viewport])
  react.useLayoutEffect(()=>{
   const root=rootRef.current;if(!root)return
   root.toggleAttribute('data-financial-connecting',Boolean(draft))
-  const sources=new Set(snapshot.artifacts.map(n=>financialLinkSourceId(n.containerSpec)).filter(Boolean))
+  const sources=new Set([...snapshot.artifacts.map(n=>financialLinkSourceId(n.containerSpec)).filter(Boolean),...snapshot.artifacts.filter(n=>n.creationMode==='selection').flatMap(n=>n.sourceNodeIds||[])])
   for(const port of root.querySelectorAll('[data-financial-port]')){
    const id=port.dataset.financialPortNode,side=port.dataset.financialPort
    if(side==='output')port.dataset.connected=String(sources.has(id))
@@ -113,9 +114,12 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
   const exit=Math.min(geometry.width-2,from.right+12),entry=Math.max(2,to.left-12),bottom=Math.min(geometry.height-2,Math.max(from.bottom,to.bottom)+16),radius=Math.max(0,Math.min(12,(exit-entry)/2,bottom-Math.max(from.y,to.y)))
   return `M ${from.x} ${from.y} C ${exit} ${from.y} ${exit} ${from.y} ${exit} ${from.y+12} C ${exit} ${from.y+12} ${exit} ${bottom-radius} ${exit} ${bottom-radius} C ${exit} ${bottom} ${exit} ${bottom} ${exit-radius} ${bottom} C ${exit-radius} ${bottom} ${entry+radius} ${bottom} ${entry+radius} ${bottom} C ${entry} ${bottom} ${entry} ${bottom} ${entry} ${bottom-radius} C ${entry} ${bottom-radius} ${entry} ${to.y+12} ${entry} ${to.y+12} C ${entry} ${to.y} ${entry} ${to.y} ${to.x} ${to.y}`
  }
- const selected=new Set(snapshot.selection.selectedNodeIds),input=id=>geometry.ports[portKey(id,'input')],output=id=>geometry.ports[portKey(id,'output')],links=snapshot.artifacts.filter(n=>{const source=financialLinkSourceId(n.containerSpec);return source&&n.id!==draft?.previousTargetId&&(selected.has(n.id)||selected.has(source))&&input(n.id)&&output(source)})
- return rootRef.current&&react_dom.createPortal(jsxs('svg',{className:'ew-financial-connections',width:geometry.width,height:geometry.height,'aria-label':'个股数据联动',children:[...links.map(n=>{
-  const from=output(financialLinkSourceId(n.containerSpec)),to=input(n.id),d=path(from,to),hit=path({...from,x:from.right+1},{...to,x:to.left-1})
-  return jsxs('g',{'data-financial-link':n.id,children:[jsx('path',{d,className:'ew-financial-connection-line'+(feedback?.ids.includes(n.id)?' ew-financial-connection-success':'')}),jsx('path',{d:hit,className:'ew-financial-connection-hit',role:'button',tabIndex:readOnly?-1:0,'aria-label':'断开组件数据连接',onPointerDown:e=>e.stopPropagation(),onContextMenu:e=>{e.preventDefault();e.stopPropagation();if(!readOnly)commit(null,n.id)},onKeyDown:e=>{if(!readOnly&&['Delete','Backspace','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();commit(null,n.id)}},children:jsx('title',{children:'右键断开连接'})})]},n.id)
+ const selected=new Set(snapshot.selection.selectedNodeIds),input=id=>geometry.ports[portKey(id,'input')],output=id=>geometry.ports[portKey(id,'output')],links=snapshot.artifacts.flatMap(n=>{
+  const sources=n.creationMode==='selection'?n.sourceNodeIds||[]:[financialLinkSourceId(n.containerSpec)]
+  return sources.filter(source=>source&&n.id!==draft?.previousTargetId&&(selected.has(n.id)||selected.has(source))&&input(n.id)&&output(source)).map(sourceId=>({node:n,sourceId,creation:n.creationMode==='selection'}))
+ })
+ return rootRef.current&&react_dom.createPortal(jsxs('svg',{className:'ew-financial-connections',width:geometry.width,height:geometry.height,'aria-label':'个股数据联动',children:[...links.map(({node:n,sourceId,creation})=>{
+  const from=output(sourceId),to=input(n.id),d=path(from,to),hit=path({...from,x:from.right+1},{...to,x:to.left-1}),editable=!readOnly&&(!creation||workbenchSmartCreateTarget(n))
+  return jsxs('g',{[creation?'data-workbench-create-link':'data-financial-link']:n.id,'data-connection-source':sourceId,children:[jsx('path',{d,className:'ew-financial-connection-line'+(feedback?.ids.includes(n.id)?' ew-financial-connection-success':'')}),jsx('path',{d:hit,className:'ew-financial-connection-hit',role:'button',tabIndex:editable?0:-1,'aria-label':creation?workbenchText('断开创建基准连接'):'断开组件数据连接',onPointerDown:e=>e.stopPropagation(),onContextMenu:e=>{e.preventDefault();e.stopPropagation();if(editable)commit(null,n.id)},onKeyDown:e=>{if(editable&&['Delete','Backspace','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();commit(null,n.id)}},children:jsx('title',{children:editable?'右键断开连接':workbenchText('创建基准')})})]},n.id+':'+sourceId)
  }),...(feedback?.ids||[]).filter(id=>input(id)&&snapshot.artifacts.some(n=>n.id===id&&financialLinkSourceId(n.containerSpec))).map(id=>{const p=input(id);return jsx('rect',{'data-financial-feedback':id,className:'ew-financial-connection-frame',x:p.left+1,y:p.top+1,width:Math.max(0,p.right-p.left-2),height:Math.max(0,p.bottom-p.top-2),rx:5,pathLength:100,'aria-hidden':true},id+'-'+feedback.stamp)}),draft&&geometry.ports[portKey(draft.nodeId,draft.side)]&&(()=>{const anchor=geometry.ports[portKey(draft.nodeId,draft.side)],from=output(draft.sourceId),to=input(draft.targetId),bend=Math.max(40,Math.min(160,Math.abs(draft.x-anchor.x)/2))*(draft.side==='input'?-1:1);return jsx('path',{className:'ew-financial-connection-line ew-financial-connection-draft',d:from&&to?path(from,to):`M ${anchor.x} ${anchor.y} C ${anchor.x+bend} ${anchor.y} ${draft.x-bend} ${draft.y} ${draft.x} ${draft.y}`})})()]}),rootRef.current)
 }

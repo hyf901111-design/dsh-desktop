@@ -153,7 +153,7 @@ export function patchResearchGridWorkbench(source){
         workbenchSelectedDrafts.current.set(node.id,state);
         return state;
       }
-      if(!state){
+      if(!state||state.ids.length!==node.sourceNodeIds.length||state.ids.some((id,index)=>id!==node.sourceNodeIds[index])){
         const current=workspace.getSnapshot(),ids=Object.freeze([...node.sourceNodeIds]);
         state={nodeId:node.id,ids,files:current.files.filter(n=>ids.includes(n.id)).map(n=>Object.freeze(structuredClone(n))),artifacts:current.artifacts.filter(n=>ids.includes(n.id)).map(n=>Object.freeze(structuredClone(n)))};
         workbenchSelectedDrafts.current.set(node.id,state);

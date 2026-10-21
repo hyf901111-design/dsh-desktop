@@ -47,6 +47,15 @@ body :is([data-ework-grid],.en-note-file) .ew-grid-header button:focus-visible{o
 body :is([data-ework-grid],.en-note-file) .ew-grid-header button:disabled{opacity:.4;cursor:default}
 body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh{display:flex;position:relative;flex:0 0 20px;min-width:20px;align-items:center;justify-content:center}
 .ew-grid-icon{display:block;flex:none;width:16px;height:16px;background:currentColor;mask-position:center;mask-repeat:no-repeat}
+/* Creation ports share the financial connection gestures without owning data. */
+body [data-ework-grid] .ew-create-source-port{--fw-accent:var(--grid-accent,#139dff);--fw-muted:var(--grid-muted,#858b95);--fw-card:var(--grid-card);position:absolute;bottom:3px;left:10px;right:auto;z-index:8;display:grid;place-items:center;box-sizing:border-box;width:20px;height:20px;min-width:20px;min-height:20px;padding:0;margin:0;border:0;border-radius:4px;background:transparent;color:var(--fw-muted);pointer-events:auto;cursor:crosshair;touch-action:none}
+body [data-ework-grid] .ew-create-source-port[data-create-draft]{bottom:16px}
+body [data-ework-grid] .ew-create-source-port[data-financial-port=output]{left:auto;right:10px;bottom:3px}
+body [data-ework-grid] .ew-create-source-port>span{display:block;width:10px;height:10px;min-width:10px;min-height:10px;aspect-ratio:1;box-sizing:border-box;border:1.5px solid currentColor;border-radius:50%;background:var(--fw-card);pointer-events:none}
+body [data-ework-grid] .ew-create-source-port:is(:hover,:focus-visible,[data-drop-target],[data-connected=true]){color:var(--fw-accent)}
+body [data-ework-grid] .ew-create-source-port:disabled{cursor:default;opacity:.55}
+body [data-ework-grid] [data-research-node-id]:has(.ew-create-source-port[data-financial-port=output]) .odyssey-data-stamp{padding-right:36px!important}
+body [data-ework-grid] [data-research-node-id]:has(.ew-create-source-port[data-financial-port=input]) .odyssey-data-stamp{padding-left:36px!important}
 body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh [data-workbench-refresh]{min-width:20px;min-height:24px}
 body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh .ew-grid-icon{width:16px;height:16px;min-width:16px;min-height:16px;aspect-ratio:1;mask-size:16px 16px}
 body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh [data-refresh-state=scheduled]{color:#22a06b!important}

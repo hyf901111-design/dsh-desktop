@@ -1,18 +1,18 @@
 // These renderers use the existing workspace actions. Draft presentation must
 // never turn a link into a model task or replace the node receiving its result.
-function ResearchContainerDraft({node,onSubmit,onCancel,readOnly=false}) {
+function ResearchContainerDraft({node,onSubmit,onCancel,readOnly=false,workspace}) {
  const inputRef=react.useRef(null),[prompt,setPrompt]=react.useState(node.containerPrompt??'');
+ react.useEffect(()=>setPrompt(node.containerPrompt??''),[node.id,node.containerPrompt]);
  /* ODYSSEY_DRAFT_CANVAS_FOCUS */
  // Canvas drafts receive input focus only on explicit click.
  const submit=()=>{const value=prompt.trim();if(!readOnly&&value&&typeof onSubmit==='function')onSubmit(node,value)};
  return react_jsx_runtime.jsxs('div',{className:'rScV5Q_containerDraft','data-research-container-draft':'','data-research-template-draft':'smart',children:[
-  react_jsx_runtime.jsx('textarea',{ref:inputRef,'data-research-container-prompt':'','aria-label':'描述要创建的组件内容',placeholder:'描述想创建的内容，例如：交互活动页、专业用户体验地图、月度趋势图或对比表格…',value:prompt,maxLength:RESEARCH_CONTAINER_MAX_PROMPT,disabled:readOnly,onInput:event=>setPrompt(event.currentTarget.value),onKeyDown:event=>{
+  react_jsx_runtime.jsx('textarea',{ref:inputRef,'data-research-container-prompt':'','aria-label':'描述要创建的组件内容',placeholder:'描述想创建的内容，例如：交互活动页、专业用户体验地图、月度趋势图或对比表格…',value:prompt,maxLength:RESEARCH_CONTAINER_MAX_PROMPT,disabled:readOnly,onInput:event=>{const value=event.currentTarget.value;setPrompt(value);if(!onCancel)workspace?.updateSmartCreateDraftPrompt?.(node.id,value)},onBlur:()=>{if(!onCancel)workspace?.updateSmartCreateDraftPrompt?.(node.id,prompt,true)},onKeyDown:event=>{
    event.stopPropagation();if(event.key==='Escape'&&onCancel){event.preventDefault();onCancel();return}
    /* ODYSSEY_MANUAL_COMPOSER_ENTER */
-   if(event.key==='Enter'&&!event.shiftKey&&!event.altKey&&!event.isComposing&&!event.nativeEvent?.isComposing&&event.keyCode!==229&&event.nativeEvent?.keyCode!==229){event.preventDefault();submit()}
+   if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)&&!event.repeat&&!event.shiftKey&&!event.altKey&&!event.isComposing&&!event.nativeEvent?.isComposing&&event.keyCode!==229&&event.nativeEvent?.keyCode!==229){event.preventDefault();submit()}
   }}),
   react_jsx_runtime.jsxs('div',{className:'rScV5Q_containerDraftFooter',children:[
-   react_jsx_runtime.jsx('span',{className:'ew-draft-hint',children:'Enter 创建 · Shift Enter 换行'}),
    onCancel&&react_jsx_runtime.jsx('button',{type:'button','data-research-container-cancel':'',onClick:onCancel,children:'取消'}),
    react_jsx_runtime.jsx('button',{type:'button','data-research-container-submit':'',disabled:readOnly||!prompt.trim()||typeof onSubmit!=='function',onClick:submit,children:onCancel?'更新组件':'创建'})
   ]})
@@ -46,6 +46,7 @@ export function patchCanvasDraftTemplates(source) {
  // The frame already knows shared-board permissions; forward them to its input.
  const anchor='onSubmit: onSubmitContainer\n';
  source=source.replace(anchor,'onSubmit: onSubmitContainer, readOnly\n');
+ source=source.replace(/onSubmit: onSubmitContainer, readOnly(?:, workspace:selectedCreateWorkspace)?\n/,'onSubmit: onSubmitContainer, readOnly, workspace:selectedCreateWorkspace\n');
  // Only new toolbar links receive the design default. Existing user geometry
  // and the shared grid minimum remain authoritative.
  source=source.replace("width:320,height:220,sizeMode:'manual'},'link'", "width:485,height:400,sizeMode:'manual'},'link'");
@@ -59,6 +60,7 @@ export const canvasDraftTemplatesCss=`
  body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-research-preview-body],[data-research-artifact-content],.rScV5Q_generatedContainer,.rScV5Q_containerContent):has([data-research-template-draft]){padding:0!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft]{box-sizing:border-box!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;padding:10px!important;display:grid!important;align-content:stretch!important;gap:10px!important;overflow:auto!important;background:var(--grid-card)!important;color:var(--grid-text)!important;font:13px/19px var(--ds-font-sans,Arial,sans-serif)!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft=smart]{grid-template-rows:minmax(40px,1fr) auto!important}
+ body [data-research-canvas][data-ework-grid] [data-research-template-draft=smart].ew-selected-create-draft{height:auto!important;flex:1!important;grid-template-rows:auto minmax(40px,1fr) auto!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft=link]{grid-template-rows:minmax(40px,1fr) auto!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] :is(.ew-draft-heading,.ew-draft-hint,.ew-draft-note,.ew-draft-error){min-width:0!important;margin:0!important;font-size:12px!important;line-height:18px!important;overflow-wrap:anywhere!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] .ew-draft-heading{font-weight:700!important;color:var(--grid-text)!important}
@@ -66,6 +68,7 @@ export const canvasDraftTemplatesCss=`
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] textarea{box-sizing:border-box!important;display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:40px!important;flex:none!important;margin:0!important;padding:12px!important;border:1px solid var(--grid-border)!important;border-radius:4px!important;resize:none!important;background:var(--grid-control,var(--grid-card))!important;color:var(--grid-text)!important;caret-color:var(--grid-text)!important;font-family:inherit!important;font-size:13px!important;line-height:19px!important;white-space:pre-wrap!important;overflow:auto!important;box-shadow:none!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] textarea::placeholder{color:var(--grid-muted)!important;opacity:1!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] textarea:focus{outline:2px solid var(--grid-accent,#0d99ff)!important;outline-offset:-2px!important;border-color:var(--grid-accent,#0d99ff)!important;box-shadow:none!important}
+ body [data-research-canvas][data-ework-grid] [data-research-template-draft=smart] textarea:focus{outline:0!important;border-color:var(--grid-border)!important;box-shadow:none!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] .rScV5Q_containerDraftFooter{display:flex!important;align-items:center!important;justify-content:flex-end!important;flex-wrap:wrap!important;min-width:0!important;gap:8px!important;margin:0!important;padding:0!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] .ew-draft-hint{flex:1 1 120px!important}
  body [data-research-canvas][data-ework-grid] [data-research-template-draft] .rScV5Q_containerDraftFooter button{box-sizing:border-box!important;flex:0 0 104px!important;width:104px!important;height:32px!important;min-height:32px!important;margin:0!important;padding:0 8px!important;border:0!important;border-radius:4px!important;background:var(--grid-text)!important;color:var(--grid-card)!important;font-size:12px!important;line-height:18px!important;white-space:nowrap!important}
