@@ -449,3 +449,36 @@ it('continues read-only discussion at a still-unique quote after unrelated sourc
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+
+it('keeps optimization running when its bubble closes and saves the preview without reopening or editing the note',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(id=>{window.challenge.select(id);window.challenge.setDraft(id,'关卡片时仍保留的草稿')},id)
+  const before=await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))
+  await start(page,'optimize');await page.evaluate(id=>window.challenge.close(id),id)
+  expect(await page.evaluate(()=>({busy:window.challenge.busyId,kind:window.challenge.actionKind,stops:window.calls.filter(c=>c.method==='challenge-stop').length}))).toEqual({busy:id,kind:'optimize',stops:0})
+  await finish(page,{...answer,reply:{text:'可替换的优化建议。',replacement:'这项结论的程度较高。'}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.challenge.selected||null)).toBeNull();expect(await page.locator('.en-challenge-card').count()).toBe(0)
+  expect(await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
+  await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'替换到原文',exact:true}).waitFor()
+  expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('关卡片时仍保留的草稿');expect(await page.locator('.en-challenge-replacement-text').textContent()).toBe('这项结论的程度较高。')
+  expect(await page.evaluate(()=>window.messages())).toContain('可替换的优化建议。');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('shows an in-button optimization ring, keeps it on reopening, and clears it on a hidden-task failure',async()=>{
+ const{context,page,errors,id}=await fixture();try{
+  await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  const button=page.getByRole('button',{name:'AI优化',exact:true}),ring=button.locator('[role="progressbar"]')
+  await ring.waitFor();expect(await button.getAttribute('aria-busy')).toBe('true');expect(await button.isDisabled()).toBe(true)
+  await page.screenshot({path:'/tmp/notes-optimize-button-running-20261021.png'})
+  expect(await ring.evaluate(el=>{const ring=el.getBoundingClientRect(),button=el.parentElement.getBoundingClientRect();return ring.width>0&&ring.left>=button.left&&ring.right<button.right&&getComputedStyle(el).borderRadius==='50%'})).toBe(true)
+  await page.evaluate(id=>{window.challenge.close(id);window.challenge.select(id)},id);await ring.waitFor();expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
+  await page.emulateMedia({reducedMotion:'reduce'});expect(await ring.evaluate(el=>getComputedStyle(el).animationName)).toBe('none')
+  await page.evaluate(id=>window.challenge.close(id),id);await page.evaluate(()=>window.jobs[0].reject(Error('fixture error')))
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
+  await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'AI优化',exact:true}).waitFor();expect(await ring.count()).toBe(0);expect(await button.isEnabled()).toBe(true)
+  expect(await page.evaluate(()=>window.messages().at(-1))).toBe('没能完成，请重试');expect(errors).toEqual([])
+  await page.screenshot({path:'/tmp/notes-optimize-background-finished-20261021.png'})
+ }finally{await context.close()}
+},15000)

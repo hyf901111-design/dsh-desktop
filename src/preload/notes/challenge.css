@@ -1,5 +1,5 @@
-:is(.en-root,.en-challenge-tools,.en-challenge-popover){--en-challenge-bg:#fff;--en-challenge-border:#e4e4e4;--en-challenge-muted:#7b7b7b;--en-challenge-input:#f1f1f1;--en-challenge-action:#e8e8e8;--en-challenge-action-ink:#323232;--en-challenge-ink:#262626;--en-challenge-selected-border:#d1d1d1;--en-challenge-selected-glow:rgb(0 0 0 / .1);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .08);--en-challenge-mark:#fff0be;--en-challenge-mark-selected:#ffe291;--en-challenge-trigger-bg:#e9e9e9}
-:is(.en-root,.en-challenge-tools,.en-challenge-popover)[data-dark=true]{--en-challenge-bg:#252525;--en-challenge-border:#3a3a3a;--en-challenge-muted:#a1a1a1;--en-challenge-input:#2f2f2f;--en-challenge-action:#3a3a3a;--en-challenge-action-ink:#e6e6e6;--en-challenge-ink:#e8e8e8;--en-challenge-selected-border:#4d4d4d;--en-challenge-selected-glow:rgb(255 255 255 / .08);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .22);--en-challenge-mark:#514526;--en-challenge-mark-selected:#6d5b2d;--en-challenge-trigger-bg:#2c2c2c}
+:is(.en-root,.en-challenge-tools,.en-challenge-popover){--en-challenge-bg:#fff;--en-challenge-border:#e4e4e4;--en-challenge-muted:#7b7b7b;--en-challenge-input:#f1f1f1;--en-challenge-action:#e8e8e8;--en-challenge-action-ink:#323232;--en-challenge-send-bg:#323232;--en-challenge-send-ink:#fff;--en-challenge-ink:#262626;--en-challenge-selected-border:#d1d1d1;--en-challenge-selected-glow:rgb(0 0 0 / .1);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .08);--en-challenge-mark:#fff0be;--en-challenge-mark-selected:#ffe291;--en-challenge-trigger-bg:#e9e9e9}
+:is(.en-root,.en-challenge-tools,.en-challenge-popover)[data-dark=true]{--en-challenge-bg:#252525;--en-challenge-border:#3a3a3a;--en-challenge-muted:#a1a1a1;--en-challenge-input:#2f2f2f;--en-challenge-action:#3a3a3a;--en-challenge-action-ink:#e6e6e6;--en-challenge-send-bg:#d9d9d9;--en-challenge-send-ink:#262626;--en-challenge-ink:#e8e8e8;--en-challenge-selected-border:#4d4d4d;--en-challenge-selected-glow:rgb(255 255 255 / .08);--en-challenge-popup-shadow:0 6px 20px rgb(0 0 0 / .22);--en-challenge-mark:#514526;--en-challenge-mark-selected:#6d5b2d;--en-challenge-trigger-bg:#2c2c2c}
 .en-challenge-header-slot{display:inline-flex;align-items:center;flex:none;position:relative;z-index:72;-webkit-app-region:no-drag}
 .en-challenge-tools{display:flex;align-items:center;gap:8px;flex:none;color:var(--en-challenge-ink);font:400 13px/20px "Noto Sans SC",system-ui,sans-serif;-webkit-app-region:no-drag}
 .en-challenge-tools[data-header=false]{position:absolute;right:18px;top:4px;z-index:72}
@@ -51,3 +51,15 @@ body [data-ework-notes-session]:has(.en-challenge-tools) [data-srb-utilities]{fl
 .en-root .en-challenge-reply textarea{padding:8px;line-height:18px}
 .en-challenge-suggestion{margin-top:8px}
 .en-root .en-challenge-replace{min-width:0;min-height:0;margin-top:8px;padding:4px 8px;border:0;border-radius:6px;background:var(--en-challenge-action);color:var(--en-challenge-action-ink);font-family:inherit;font-size:12px;font-weight:400;line-height:19px;cursor:pointer}
+
+/* The margin rail enters without moving the centered document or its anchors. */
+.en-challenge-comments{opacity:1;translate:0 0;transition:opacity 180ms cubic-bezier(.2,.7,.3,1),translate 180ms cubic-bezier(.2,.7,.3,1)}
+.en-challenge-comments:is([data-empty],[data-exiting]){opacity:0;translate:0 6px}
+.en-challenge-comments[data-exiting],.en-challenge-comments[data-exiting] .en-challenge-card{pointer-events:none}
+@media(prefers-reduced-motion:reduce){.en-challenge-comments{transition:none;translate:none}}
+
+.en-root .en-challenge-actions .en-challenge-optimize{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.en-challenge-optimize-spinner{box-sizing:border-box;display:block;width:12px;height:12px;flex:none;border:1.5px solid var(--en-challenge-border);border-top-color:var(--en-challenge-muted);border-radius:50%;animation:en-challenge-spin .9s linear infinite}
+@media(prefers-reduced-motion:reduce){.en-challenge-optimize-spinner{animation:none}}
+
+.en-root .en-challenge-card .en-challenge-reply>button:not(:disabled){background:var(--en-challenge-send-bg);color:var(--en-challenge-send-ink)}

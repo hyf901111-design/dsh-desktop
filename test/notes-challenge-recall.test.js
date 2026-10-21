@@ -218,3 +218,19 @@ it('retains only unacknowledged paragraphs for the next scheduled runtime pass a
     expect(requests).toHaveLength(2)
   } finally { scheduler.dispose() }
 })
+
+for(const [level,expected] of [[1,2],[2,2],[3,4],[4,6]])it(`retains up to ${expected} distinct issues in a dense paragraph at challenge level ${level}`,async()=>{
+ const quotes=['一周有十天','六月有四十天','正方形只有三条边','三角形有五个角','一米等于十厘米','一小时等于六分钟','三加四等于九','十减二等于一']
+ const input={...note([block('dense',quotes.join('。')+'。')]),level}
+ const result=await run(input,{reviews:[{blockId:'dense',issues:quotes.map(quote=>issue(quote))}]})
+ expect(result.issues.map(item=>item.quote)).toEqual(quotes.slice(0,expected));expect(result.coveredBlockIds).toEqual(['dense'])
+ expect(result.issues.every(item=>item.category==='uncertain'&&item.evidence.length===0&&item.message.includes('未联网核验'))).toBe(true)
+})
+
+it('keeps later independent claims across every paragraph in adversarial mode instead of truncating all paragraphs to two issues',async()=>{
+ const blocks=Array.from({length:6},(_,n)=>block('dense-'+n,'判断甲。判断乙。判断丙。判断丁。判断戊。'))
+ const result=await run({...note(blocks),level:4},{reviews:blocks.map(b=>({blockId:b.id,issues:['判断甲','判断乙','判断丙','判断丁','判断戊'].map(quote=>issue(quote))}))})
+ expect(result.issues).toHaveLength(24)
+ expect(blocks.map(b=>result.issues.filter(issue=>issue.blockId===b.id).map(issue=>issue.quote))).toEqual(blocks.map(()=>['判断甲','判断乙','判断丙','判断丁']))
+ expect(result.coveredBlockIds).toEqual(blocks.map(b=>b.id))
+})
