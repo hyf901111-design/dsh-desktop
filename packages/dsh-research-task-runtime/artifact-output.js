@@ -33,6 +33,41 @@ export function extractArtifactObjects(text) {
  }
  return result;
 }
+// Recover only sentence quotes inside string values of one complete artifact.
+// No keys, commas, braces, numbers or missing fields are repaired. Ambiguous
+// closing quotes still fail JSON.parse and follow the normal recovery path.
+export function restoreArtifactStringQuotes(text) {
+ if(typeof text!=='string'||text.length>262144)return;
+ const input=text.trim();if(!input.startsWith('{')||!input.endsWith('}'))return;
+ try{JSON.parse(input);return}catch{}
+ let quoted=false,key=false,escaped=false,previous='',changed=false,result='';const stack=[];
+ for(let i=0;i<input.length;i++){
+  const c=input[i];
+  if(quoted){
+   if(escaped)escaped=false;
+   else if(c==='\\')escaped=true;
+   else if(c==='"'){
+    let next=i+1;while(next<input.length&&/\s/u.test(input[next]))next++;
+    if(!key&&/[\p{L}\p{N}]/u.test(input[next]??'')){result+='\\';changed=true}
+    else{quoted=false;previous='"'}
+   }
+  }else{
+   if(c==='"'){quoted=true;key=previous!==':'&&previous!=='['&&!(previous===','&&stack.at(-1)==='[')}
+   else if(c==='{'||c==='[')stack.push(c);
+   else if(c==='}'||c===']')stack.pop();
+   if(!/\s/u.test(c))previous=c;
+  }
+  result+=c;
+ }
+ if(!changed)return;
+ try{
+  const data=JSON.parse(result);if(data.version!==1||typeof data.type!=='string')return;
+  const accepted=acceptArtifactOutput(result);if(!accepted)return;
+  const spec=JSON.parse(accepted),model=readTemplateModel(spec)?.data??spec;
+  if(model.type!==data.type&&!(data.type==='table'&&model.type==='market'&&model.variant==='table'))return;
+  return result;
+ }catch{}
+}
 // A planned panel already has a declared renderer. Recover only an omitted
 // discriminator on one complete, valid object; business values stay untouched.
 // Keep the data object so acquisition and per-record provenance still run.
