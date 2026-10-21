@@ -1,0 +1,39 @@
+{
+  "description": "2026-10-21 GLM-5.3-Flash structured review probe. Only public visible JSON is retained; no private reasoning or session credentials.",
+  "input": {
+    "sessionId": "fixture-session",
+    "requestId": "captured-controls",
+    "action": "review",
+    "level": 1,
+    "title": "写作对照",
+    "blocks": [
+      {
+        "id": "correct-math",
+        "type": "paragraph",
+        "text": "20名参与者中有15人完成任务，因此完成率为75%。"
+      },
+      {
+        "id": "fiction",
+        "type": "paragraph",
+        "text": "这是一个童话设定：假如月亮是奶酪，小兔子每天啃一口，夜空会出现怎样的故事？"
+      },
+      {
+        "id": "quotation",
+        "type": "paragraph",
+        "text": "“太阳从西边升起”是文中人物的错误说法，作者接着说明太阳一般从东边升起。"
+      },
+      {
+        "id": "incomplete",
+        "type": "paragraph",
+        "text": "下面我想进一步解释"
+      }
+    ],
+    "changedIds": [
+      "correct-math",
+      "fiction",
+      "quotation",
+      "incomplete"
+    ]
+  },
+  "visibleText": "{\"reviews\":[{\"blockId\":\"correct-math\",\"issues\":[]},{\"blockId\":\"fiction\",\"issues\":[]},{\"blockId\":\"quotation\",\"issues\":[]},{\"blockId\":\"incomplete\",\"issues\":[]}]}"
+}

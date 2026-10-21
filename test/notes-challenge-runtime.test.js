@@ -3,11 +3,17 @@ import { afterEach, expect, it, vi } from 'vitest'
 
 const load = () => import('../packages/dsh-research-task-runtime/notes-challenge-runtime.js')
 const input = { sessionId: 'session', requestId: 'review-1', action: 'review', level: 2, title: '分析', blocks: [{ id: 'a', type: 'paragraph', text: '收入增长10%。' }, { id: 'b', type: 'paragraph', text: '收入减少10%。' }], changedIds: ['a'] }
-function fixture(answer = { issues: [] }) {
+function fixture(answer) {
   const calls = [], events = [], session = { id: 'session', events }, ctx = {
     sessions: { get: () => session }, agents: { get: () => ({ id: 'session', session }) }, tools: { schemas: () => [] },
     apiProxy: { sessions: { models: async () => ({ result: { ok: true, value: { routable: true, current: { provider: 'selected-provider', model: 'selected-model' } } } }) } },
-    llm: { resolveModelInfo: async () => ({ reasoning: { efforts: [{ id: 'high' }, { id: 'low' }] } }), stream: async function* (options) { calls.push(options); yield { type: 'reasoning-delta', index: 0, text: 'PRIVATE REASONING' }; yield { type: 'text-delta', index: 1, text: JSON.stringify(answer) }; yield { type: 'usage', usage: { inputTokens: 30, outputTokens: 10 } }; yield { type: 'finish', reason: { kind: 'stop' } } } }
+    llm: { resolveModelInfo: async () => ({ reasoning: { efforts: [{ id: 'high' }, { id: 'low' }] } }), stream: async function* (options) {
+      calls.push(options)
+      // Explicit no-issue acknowledgement for every supplied target in the new provider protocol.
+      const payload = JSON.parse(options.messages[0].content[0].text)
+      const value = answer ?? { reviews: payload.targets.map(block => ({ blockId: block.id, issues: [] })) }
+      yield { type: 'reasoning-delta', index: 0, text: 'PRIVATE REASONING' }; yield { type: 'text-delta', index: 1, text: JSON.stringify(value) }; yield { type: 'usage', usage: { inputTokens: 30, outputTokens: 10 } }; yield { type: 'finish', reason: { kind: 'stop' } }
+    } }
   }
   return { ctx, calls, events }
 }
@@ -66,15 +72,15 @@ it('does not add a financial check to ordinary changed paragraphs because an unc
 it('only accepts unique target quotes and evidence whose actual note text is present', async () => {
   const { generateNoteChallenge } = await load()
   const valid = { blockId: 'a', quote: '收入增长10%', category: 'contradiction', message: '两处收入方向相反，请核对是否同一期间。', evidence: [{ kind: 'note', label: '另一段原文', blockId: 'b', quote: '收入减少10%' }] }
-  const f = fixture({ issues: [valid, { ...valid, quote: '不存在' }, { ...valid, blockId: 'b', quote: '收入减少10%' }, { ...valid, evidence: [{ kind: 'note', label: '伪造', blockId: 'b', quote: '净利润增长' }] }, { ...valid, evidence: [{ kind: 'consensus', label: '模型捏造', data: { median: 1 } }] }] })
+  const f = fixture({ reviews: [{ blockId: 'a', issues: [valid, { ...valid, quote: '不存在' }, { ...valid, blockId: 'b', quote: '收入减少10%' }, { ...valid, evidence: [{ kind: 'note', label: '伪造', blockId: 'b', quote: '净利润增长' }] }, { ...valid, evidence: [{ kind: 'consensus', label: '模型捏造', data: { median: 1 } }] }].map(item => ({ ...item, basis: 'note' })) }] })
   const result = await generateNoteChallenge(f.ctx, input)
   expect(result.issues).toEqual([valid])
-  expect((await generateNoteChallenge(fixture({ issues: [{ ...valid, quote: '收入' }] }).ctx, { ...input, blocks: [{ ...input.blocks[0], text: '收入增长10%，收入减少10%。' }, input.blocks[1]] })).issues).toEqual([])
+  expect((await generateNoteChallenge(fixture({ reviews: [{ blockId: 'a', issues: [{ ...valid, basis: 'note', quote: '收入' }] }] }).ctx, { ...input, blocks: [{ ...input.blocks[0], text: '收入增长10%，收入减少10%。' }, input.blocks[1]] })).issues).toEqual([])
 })
 
 it('keeps unsupported factual verdicts out of comments and never accepts model-generated coverage or checks', async () => {
   const { generateNoteChallenge } = await load()
-  const f = fixture({ issues: [{ blockId: 'a', quote: '收入增长10%', category: 'fact', message: '这是错的，真实收入增长20%。', evidence: [] }], coveredBlockIds: ['a', 'b', 'invented'], checks: [{ kind: 'consensus', status: 'completed', detail: '假数据已验证' }] })
+  const f = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '收入增长10%', basis: 'general-knowledge', category: 'fact', message: '这是错的，真实收入增长20%。', evidence: [] }] }], coveredBlockIds: ['a', 'b', 'invented'], checks: [{ kind: 'consensus', status: 'completed', detail: '假数据已验证' }] })
   const result = await generateNoteChallenge(f.ctx, input)
   expect(result.issues).toEqual([])
   expect(result.coveredBlockIds).toEqual(['a'])
@@ -83,7 +89,7 @@ it('keeps unsupported factual verdicts out of comments and never accepts model-g
 
 it('does not turn the unfinished current sentence into a grammar comment', async () => {
   const { generateNoteChallenge } = await load()
-  const f = fixture({ issues: [{ blockId: 'a', quote: '预计收入将', category: 'grammar', message: '句子缺少宾语。', evidence: [] }] })
+  const f = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '预计收入将', basis: 'note', category: 'grammar', message: '句子缺少宾语。', evidence: [] }] }] })
   expect((await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '上一句已完成。预计收入将' }], changedIds: ['a'] })).issues).toEqual([])
 })
 
@@ -130,7 +136,7 @@ it('accepts one complete JSON code fence from a streamed thread reply while keep
 
 it('applies the existing exact-quote and evidence checks to a single fenced review object', async () => {
   const { generateNoteChallenge } = await load()
-  const f = textFixture('```json\n{"issues":[{"blockId":"a","quote":"收入增长10%","category":"question","message":"请确认统计期间。","evidence":[]},{"blockId":"a","quote":"不存在","category":"question","message":"不应出现。","evidence":[]}],"coveredBlockIds":["a","b","invented"]}\n```')
+  const f = textFixture('```json\n{"reviews":[{"blockId":"a","issues":[{"quote":"收入增长10%","basis":"note","category":"question","message":"请确认统计期间。","evidence":[]},{"quote":"不存在","basis":"note","category":"question","message":"不应出现。","evidence":[]}]}],"coveredBlockIds":["a","b","invented"]}\n```')
   const result = await generateNoteChallenge(f.ctx, input)
   expect(result.issues).toEqual([{ blockId: 'a', quote: '收入增长10%', category: 'question', message: '请确认统计期间。', evidence: [] }])
   expect(result.coveredBlockIds).toEqual(['a'])
@@ -221,7 +227,7 @@ it('does not double count matching text deltas and block-end snapshots', async (
   const { generateNoteChallenge } = await load(), f = fixture()
   f.ctx.llm.stream = async function* (options) {
     f.calls.push(options)
-    const text = f.calls.length === 1 ? '{"issues":[]' + ' '.repeat(8988) : '{"issues":[]}'
+    const text = f.calls.length === 1 ? '{"issues":[]' + ' '.repeat(8988) : '{"reviews":[{"blockId":"a","issues":[]}]}'
     yield { type: 'text-delta', index: 0, text }
     yield { type: 'block-end', index: 0, block: { type: 'text', text } }
     yield { type: 'finish', reason: { kind: 'stop' } }
@@ -281,7 +287,7 @@ it('continues a thread after an accepted 6000-character replacement becomes its 
 
 it('keeps newly generated issue quotes limited to 2000 characters even when follow-up anchors allow 6000', async () => {
   const { generateNoteChallenge } = await load(), quote = '首' + '文'.repeat(1999) + '尾'
-  const f = fixture({ issues: [{ blockId: 'a', quote, category: 'question', message: '请核对假设。', evidence: [] }] })
+  const f = fixture({ reviews: [{ blockId: 'a', issues: [{ quote, basis: 'note', category: 'question', message: '请核对假设。', evidence: [] }] }] })
   expect((await generateNoteChallenge(f.ctx, { ...input, blocks: [{ id: 'a', type: 'paragraph', text: quote }] })).issues).toEqual([])
 })
 
@@ -313,7 +319,7 @@ it('coalesces simultaneous replacement requests so only the newest review starts
   f.ctx.llm.stream = async function* (options) {
     f.calls.push(options)
     if (f.calls.length === 1) { start(); await new Promise(() => {}) }
-    yield { type: 'text-delta', text: '{"issues":[]}' }; yield { type: 'finish', reason: { kind: 'stop' } }
+    yield { type: 'text-delta', text: '{"reviews":[{"blockId":"a","issues":[]}]}' }; yield { type: 'finish', reason: { kind: 'stop' } }
   }
   const first = generateNoteChallenge(f.ctx, input), firstRejected = expect(first).rejects.toThrow()
   await ready
@@ -326,7 +332,7 @@ it('coalesces simultaneous replacement requests so only the newest review starts
 
 it('requires note evidence for a logic verdict and degrades model metadata failures without changing selection', async () => {
   const { generateNoteChallenge } = await load()
-  const f = fixture({ issues: [{ blockId: 'a', quote: '收入增长10%', category: 'logic', message: '这是错误数据。', evidence: [] }] })
+  const f = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '收入增长10%', basis: 'note', category: 'logic', message: '这是错误数据。', evidence: [] }] }] })
   f.ctx.llm.resolveModelInfo = async () => { throw Error('metadata temporarily unavailable') }
   expect((await generateNoteChallenge(f.ctx, input)).issues).toEqual([])
   expect(f.calls[0]).toMatchObject({ provider: 'selected-provider', model: 'selected-model' })
