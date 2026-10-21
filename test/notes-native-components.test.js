@@ -5,6 +5,29 @@ import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/fin
 const require=createRequire(import.meta.url),React=require('react'),{createRoot}=require('react-dom/client'),close=[]
 afterEach(async()=>{for(const fn of close.splice(0))await fn()})
 
+it('uses the live research refresh states in note headers, hides static refresh, and acknowledges manual refresh errors',async()=>{
+ let notify,fail=false,resolveRefresh
+ const data={request:vi.fn(async()=>[]),subscribe:vi.fn(fn=>{notify=fn;return()=>{}})}
+ const f=await financialClientFixture({componentData:data},{notes:true,refreshState:true}),section=f.document.createElement('section');section.className='en-root';section.innerHTML='<section class="en-research en-native-component"><header id="refresh-title"></header><div id="refresh-host" class="en-native-component-host" data-note-component="refresh" data-note-session="notes-refresh"></div></section>';f.document.body.append(section)
+ const outlet=f.document.createElement('div');f.document.body.append(outlet);const root=createRoot(outlet),actions=[]
+ const node={id:'refresh',kind:'generated-container',title:'真实数据',containerPrompt:'更新数据',generationStatus:'completed',containerSpec:{version:1,type:'markdown',title:'原始数据',content:'原始内容'},noteDataBound:true}
+ const publish=value=>f.document.dispatchEvent(new f.win.CustomEvent('sherlock:notes-component-view',{detail:{instanceId:'refresh-instance',hostId:'refresh-host',headerId:'refresh-title',sessionId:'notes-refresh',node:value,refresh:0}}))
+ const receive=event=>{const value=event.detail;if(value.action!=='refresh')return;actions.push(value);resolveRefresh=()=>f.document.dispatchEvent(new f.win.CustomEvent('sherlock:notes-component-ack',{detail:{instanceId:value.instanceId,sessionId:value.sessionId,requestId:value.requestId,ok:!fail,message:fail?'来源请求失败':undefined}}))}
+ f.document.addEventListener('sherlock:notes-component-action',receive)
+ close.push(async()=>{f.document.removeEventListener('sherlock:notes-component-action',receive);await f.act(async()=>root.unmount());await f.dispose()})
+ await f.act(async()=>{root.render(React.createElement(f.bundle.EWorkNoteComponentViews,{sessionId:'notes-refresh',active:true}));publish(node)})
+ expect(section.querySelector('[data-workbench-refresh]')).toBeNull()
+ const row={nodeId:'refresh',enabled:true,intervalMinutes:1,status:'success',lastSuccess:1,successSequence:1},push=async update=>f.act(async()=>notify({sessionId:'notes-refresh',rows:[{...row,...update}]}))
+ await push({});expect(section.querySelector('[data-refresh-state="scheduled"] [data-workbench-icon="refresh"]')).toBeTruthy()
+ await push({status:'error'});expect(section.querySelector('[data-refresh-state="error"]')).toBeTruthy()
+ await push({status:'refreshing'});expect(section.querySelector('[data-busy="true"]')).toBeTruthy();expect(section.querySelector('button').disabled).toBe(true)
+ await push({status:'success',successSequence:2,lastSuccess:2});expect(section.querySelector('[data-refresh-state="scheduled"]')).toBeTruthy()
+ await push({enabled:false,intervalMinutes:0});expect(section.querySelector('[data-refresh-state="manual"] [data-workbench-icon="refresh-manual"]')).toBeTruthy()
+ fail=true;await f.event('click',section.querySelector('[data-workbench-refresh]'));expect(section.querySelector('[data-busy="true"]')).toBeTruthy();expect(actions).toHaveLength(1)
+ await f.act(async()=>resolveRefresh());expect(section.querySelector('[data-busy]')).toBeNull();expect(section.querySelector('[data-refresh-state="manual"]')).toBeTruthy()
+ await f.act(async()=>{notify({sessionId:'notes-refresh',rows:[]});publish({...node,noteDataBound:false})});expect(section.querySelector('[data-workbench-refresh]')).toBeNull()
+},15000)
+
 it('mounts the original research controls in note hosts, acknowledges cloned changes and positions index settings from the component header',async()=>{
  const symbol={code:'600519',market:'SH',name:'验收标的'},bridge={request:vi.fn(async v=>v.action==='search'?{symbols:[symbol]}:{quotes:(v.symbols||[]).map(s=>({...s,price:100,changePercent:1})),source:'验证来源'})}
  const f=await financialClientFixture({financialWidget:bridge},{notes:true}),section=f.document.createElement('section');section.className='en-root';f.document.body.append(section)

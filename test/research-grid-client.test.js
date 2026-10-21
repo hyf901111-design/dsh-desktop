@@ -13,6 +13,7 @@ import {patchDerivedPresetClient} from '../scripts/lib/derived-preset-client.mjs
 import {workbenchRefreshTooltip,measureWorkbenchContents} from '../scripts/lib/research-grid-ui.mjs'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {researchOptimalDimensions,researchCandleTemplate} from '../packages/dsh-research-task-runtime/bento-layout.js'
+import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
 it('表格所有表头正文默认单行，用户列宽与换行选择在看板重开后保留且数据不变',async()=>{
@@ -1690,7 +1691,7 @@ it('组件设置向右展开，复用原编辑和定时任务操作而不弹出�
   const child=f.document.querySelector('[aria-label="组件设置"][role="menu"]')
   expect(child).not.toBeNull();expect(main.contains(child)).toBe(false);expect(parseFloat(child.style.left)).toBeGreaterThanOrEqual(416)
   expect(f.document.querySelector('[data-odyssey-container-menu]')).toBeNull()
-  expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['编辑需求','刷新数据','设定定时任务','数据源与自动更新'])
+  expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['编辑需求','刷新数据','数据源与自动更新'])
   return child
  }
  let child=await open()
@@ -1698,9 +1699,26 @@ it('组件设置向右展开，复用原编辑和定时任务操作而不弹出�
  expect(f.host.querySelector('[role="dialog"][aria-label="编辑需求"]')).not.toBeNull()
  await f.event('keydown',f.host.querySelector('[role="dialog"][aria-label="编辑需求"]'),{key:'Escape'})
  child=await open();const schedule=vi.fn();f.win.addEventListener('sherlock:component-schedule-open',schedule)
- await f.event('click',[...child.querySelectorAll('button')].find(n=>n.textContent==='设定定时任务'))
+ const main=f.document.querySelector('[aria-label="组件更多操作"][role=menu]'),items=[...main.querySelectorAll('button')].map(n=>n.textContent);expect(items.indexOf('设定定时任务')).toBe(items.indexOf('数据源与自动更新')-1)
+ await f.event('click',[...main.querySelectorAll('button')].find(n=>n.textContent==='设定定时任务'))
  expect(schedule).toHaveBeenCalledOnce();expect(schedule.mock.calls[0][0].detail).toMatchObject({sessionId:'grid-test',nodeId:'settings'})
 })
+
+it('内置组件主菜单提供定时任务与数据设置',async()=>{
+ const f=await financialClientFixture({},{refreshState:true}),schedule=vi.fn(),data=vi.fn();disposals.push(f.dispose);f.win.addEventListener('sherlock:component-schedule-open',schedule);f.win.addEventListener('sherlock:component-data-open',data)
+ for(const widget of ['quote','watchlist','indices','news','announcements']){
+  let node;await f.act(async()=>{f.workspace.setArtifacts([]);node=f.workspace.createFinancialWidget(widget)})
+  await f.event('click',f.host.querySelector('[data-workbench-more="'+node.id+'"]'))
+  const main=f.document.querySelector('[role=menu][aria-label="组件更多操作"]'),buttons=[...main.querySelectorAll('button')],labels=buttons.map(b=>b.textContent)
+  expect(labels.indexOf('设定定时任务')).toBe(labels.indexOf('数据源与自动更新')-1)
+  await f.event('click',buttons.find(b=>b.textContent==='设定定时任务'));expect(schedule.mock.calls.at(-1)[0].detail).toMatchObject({nodeId:node.id,sessionId:'financial-test'})
+  await f.event('click',f.host.querySelector('[data-workbench-more="'+node.id+'"]'))
+  await f.event('click',[...f.document.querySelector('[role=menu][aria-label="组件更多操作"]').querySelectorAll('button')].find(b=>b.textContent==='数据源与自动更新'))
+  expect(data.mock.calls.at(-1)[0].detail).toMatchObject({nodeId:node.id,kind:'financial-widget'})
+  const close=f.document.querySelector('[aria-label="关闭数据设置"]');if(close)await f.event('click',close)
+ }
+
+},15000)
 
 it('斜移经过相邻行再进入右侧子菜单时保持展开，离开后关闭',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
@@ -1732,6 +1750,7 @@ it('共享只读组件的设置菜单仍允许浏览器阅读，禁止编辑和�
  await f.event('click',trigger)
  const child=f.document.querySelector('[role="menu"][aria-label="组件设置"]'),buttons=[...child.querySelectorAll('button')]
  expect(buttons.find(n=>n.textContent==='浏览器打开').disabled).toBe(false)
+ expect(buttons.find(n=>n.textContent==='浏览器打开').querySelector('[data-workbench-icon="globe"]')).toBeTruthy()
  expect(buttons.find(n=>n.textContent==='刷新').disabled).toBe(true)
  expect(buttons.find(n=>n.textContent==='修改名称').disabled).toBe(true)
 })

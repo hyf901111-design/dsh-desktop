@@ -153,18 +153,17 @@ export function useWorkbenchSettings({triggerRef,sessionId,node,disabled,editing
     ]:node.containerSpec?.type==='iframe'?[
       entry('edit','修改网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-iframe-preset]')?.__eworkEditIframe?.()),
       entry('refresh','重新载入网页',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
-      entry('link','浏览器打开',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
+      entry('globe','浏览器打开',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
     ]:node.kind==='web-link'?[
       entry('rename','修改名称',()=>onFrameAction?.(node,'rename')),
       ...(researchCanvasArtifactContentEditable(node)?[entry('edit','编辑内容',()=>onFrameAction?.(node,'edit'))]:[]),
       entry('refresh','刷新',()=>onRefresh?.(node)),
-      entry('link','浏览器打开',()=>onOpenBrowser?onOpenBrowser():window.open(node.url,'_blank','noopener,noreferrer'),false,false)
+      entry('globe','浏览器打开',()=>onOpenBrowser?onOpenBrowser():window.open(node.url,'_blank','noopener,noreferrer'),false,false)
     ]:node.creationMode==='selection'?[
       entry('branch','查看创建来源',onProvenance,false,false)
     ]:[
       entry('edit','编辑需求',onEdit,disabled),
       entry('refresh',shared?'重新生成':'刷新数据',()=>shared?onRefresh?.(node,node.containerPrompt):openComponentData(sessionId,node,'refresh'),disabled),
-      entry('schedule','设定定时任务',()=>openComponentSchedule(sessionId,node),editingPrompt),
       shared?entry('data',node.refreshMinutes?'关闭旧自动刷新':'共享组件暂不支持数据自动更新',()=>onSetRefresh?.(node,0),editingPrompt||!node.refreshMinutes):entry('data','数据源与自动更新',()=>openComponentData(sessionId,node))
     ]
     trigger.__eworkWorkbenchSettings=actions
@@ -252,7 +251,10 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
     separator('generate'),
     target.node.containerSpec?.type==='financial-widget'&&target.node.containerSpec.widget==='indices'&&row('settings','配置指数',()=>onConfigureIndices?.(target.node.id)),
-    target.node.containerSpec?.type==='calendar-tool'?row('schedule','新建事项',()=>card()?.querySelector('[data-calendar-add]')?.click(),readOnly):target.node.containerSpec?.type==='financial-widget'?row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly):row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
+    target.node.containerSpec?.type==='financial-widget'&&row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly),
+    target.node.containerSpec?.type==='calendar-tool'&&row('schedule','新建事项',()=>card()?.querySelector('[data-calendar-add]')?.click(),readOnly),
+    row('schedule','设定定时任务',()=>openComponentSchedule(target.sessionId,target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-component-schedule-open':target.node.id}),
+    target.node.containerSpec?.type!=='calendar-tool'&&row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
     target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))

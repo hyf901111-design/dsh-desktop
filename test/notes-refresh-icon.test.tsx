@@ -20,7 +20,7 @@ it('keeps the refresh arrow and its stroke inside the header icon in both themes
    })
    expect(actual.left).toBeGreaterThanOrEqual(1);expect(actual.top).toBeGreaterThanOrEqual(1)
    expect(actual.right).toBeLessThanOrEqual(15);expect(actual.bottom).toBeLessThanOrEqual(15)
-   expect(actual).toMatchObject({width:16,height:16,stroke:1.5,fill:'none',color:'rgb(201, 131, 61)',buttonWidth:26,headerHeight:42})
+   expect(actual).toMatchObject({width:16,height:16,stroke:1.5,fill:'none',color:'rgb(133, 139, 149)',buttonWidth:26,headerHeight:42})
    await page.close()
   }
  }finally{await browser.close()}
