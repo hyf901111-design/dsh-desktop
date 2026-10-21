@@ -9,23 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "根据来源输出能力隐藏基于所选创建的无效连接节点",
+        "featureName": "仅为明确支持连接的组件保留节点",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "79c4df7ecea79896b1263247842e1aaa1ba58386",
-        "tipCommit": "1ed4dec29a279f44024538e9909b0d21e4858ef1",
+        "baseCommit": "1ed4dec29a279f44024538e9909b0d21e4858ef1",
+        "tipCommit": "71c59142749ead811b5683025db6814833d63568",
         "commits": [
           {
-            "commit": "1ed4dec29a279f44024538e9909b0d21e4858ef1",
+            "commit": "71c59142749ead811b5683025db6814833d63568",
             "parents": [
-              "79c4df7ecea79896b1263247842e1aaa1ba58386"
+              "1ed4dec29a279f44024538e9909b0d21e4858ef1"
             ],
-            "subject": "按来源输出能力显示基于所选创建的连接节点"
+            "subject": "仅为明确支持连接的组件显示节点"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+            "path": "scripts/lib/financial-widget-link.mjs"
           },
           {
             "status": "M",
@@ -46,15 +46,16 @@
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=1",
+              "--testTimeout=20000",
               "test/financial-widget-link.test.js",
               "test/smart-container-connections-browser.test.js",
               "test/research-selected-create.test.js",
               "test/financial-widget-localization.test.js"
             ],
             "outcome": "passed",
-            "summary": "42项聚焦检查通过；四主题无节点底栏左移、真实输出连接、动态来源能力、输入和来源保留、中英文更新；/tmp/smart-source-port-visibility-focus-20261021.log",
-            "verifiedCommit": "1ed4dec29a279f44024538e9909b0d21e4858ef1",
-            "completedAt": "2026-10-21T01:39:28.718386+00:00",
+            "summary": "43项聚焦检查通过；普通组件无节点、完成后的普通衍生结果无节点和假连接状态、菜单创建保留来源与零负值、原生行情联动和智能输入保留；/tmp/generated-component-no-ports-delivery-20261021.log",
+            "verifiedCommit": "71c59142749ead811b5683025db6814833d63568",
+            "completedAt": "2026-10-21T01:53:47.869585+00:00",
             "timeoutMs": 180000
           },
           {
@@ -64,113 +65,26 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/smart-source-port-visibility-typecheck-20261021.log",
-            "verifiedCommit": "1ed4dec29a279f44024538e9909b0d21e4858ef1",
-            "completedAt": "2026-10-21T01:39:28.718386+00:00",
+            "summary": "类型检查通过；/tmp/generated-component-no-ports-typecheck-delivery-20261021.log",
+            "verifiedCommit": "71c59142749ead811b5683025db6814833d63568",
+            "completedAt": "2026-10-21T01:53:47.869585+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "实际完整ResearchCanvas浏览器四主题验收通过；更新原生包后再核对用户原场景。"
+          "summary": "完整ResearchCanvas在真实浏览器确认普通生成分析表无节点且保留内容、对应创建草稿不显示虚假接收节点；原生行情输出和智能接收功能仍通过。待构建新原生包核对截图场景。"
         },
         "acceptanceCriteria": [
-          "普通空智能容器保留接收节点；基于无输出节点的来源创建时隐藏左侧节点。",
-          "保留底栏并将补充文字左移，无输出来源显示基于组件数量。",
-          "实际有输出的来源继续显示正确节点与连线；来源输出能力变化时同步更新且保留已输入需求与基准。"
+          "普通生成的图表、表格、HTML、新闻等组件不自动添加输入或输出节点。",
+          "普通基于所选创建结果不把逻辑来源显示为物理连接，来源的输出节点不残留假连接状态。",
+          "保留已定义的金融原生联动节点和智能容器草稿接收节点；菜单基于所选创建仍保留原始内容证据与需求。"
         ],
         "risks": [
           "仅本地测试交付，不晋升main、不发布、不推送、不改变版本。",
           "独立的原生搜索导航崩溃已有复现证据，待后续专门修复；本次未改动搜索实现。"
         ],
-        "generatedAt": "2026-10-21T01:39:28.718386+00:00"
-      },
-      "merged": {
-        "mergeCommit": "140715788475e6fea3d869762d49420031ec102f",
-        "verificationCommit": "140715788475e6fea3d869762d49420031ec102f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "140715788475e6fea3d869762d49420031ec102f",
-            "completedAt": "2026-10-21T01:40:09.067Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "140715788475e6fea3d869762d49420031ec102f",
-            "completedAt": "2026-10-21T01:40:09.067Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "140715788475e6fea3d869762d49420031ec102f",
-            "completedAt": "2026-10-21T01:40:09.067Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "140715788475e6fea3d869762d49420031ec102f",
-            "completedAt": "2026-10-21T01:40:09.067Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "140715788475e6fea3d869762d49420031ec102f",
-            "completedAt": "2026-10-21T01:40:09.067Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T01:40:09.067Z"
+        "generatedAt": "2026-10-21T01:53:47.869585+00:00"
       }
     },
     {
