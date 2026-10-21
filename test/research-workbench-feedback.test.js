@@ -79,7 +79,7 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v2 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v3 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
  let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
  const Component=runInNewContext(source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[snapshot,()=>{}],useEffect:()=>{}},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
@@ -96,7 +96,7 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
  snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
  expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
- const legacy=source.replace('/* ework:workbench-feedback:v2 */','/* ework:workbench-feedback:v1 */')
+ const legacy=source.replace('/* ework:workbench-feedback:v3 */','/* ework:workbench-feedback:v1 */')
   .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
   .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
  expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
