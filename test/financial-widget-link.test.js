@@ -5,7 +5,7 @@ let current
 afterEach(async()=>{await current?.dispose();current=null})
 const first={market:'SH',code:'600519',name:'贵州茅台'},second={market:'SZ',code:'000858',name:'五粮液'}
 async function setup(desktop={}){
- const f=await financialClientFixture({financialWidget:{request:async q=>q.action==='history'?{bars:[{date:'2026-10-09',open:10,high:12,low:9,close:11,volume:100}]}:{quotes:q.symbols.map(s=>({...s,price:s.code==='600519'?1263:70.56,changePercent:.57})),receivedAt:'2026-10-10T12:00:00Z',source:'测试源'}},...desktop});current=f
+ const f=await financialClientFixture({financialWidget:{request:async q=>q.action==='history'?{bars:[{date:'2026-10-09',open:10,high:12,low:9,close:11,volume:100}]}:{quotes:q.symbols.map(s=>({...s,price:s.code==='600519'?1263:70.56,changePercent:.57})),receivedAt:'2026-10-10T12:00:00Z',source:'测试源'}},...desktop},{refreshState:true,creation:true});current=f
  let watch,quote
  await f.act(async()=>{
   watch=f.workspace.createFinancialWidget('watchlist');quote=f.workspace.createFinancialWidget('quote')
@@ -29,6 +29,39 @@ async function setup(desktop={}){
  }
  return {...f,watch,quote,spec,output,inlet,connect,port,dragPort}
 }
+it('连接智能容器原位切换为基于所选创建，保留输入尺寸与真实来源并支持撤销',async()=>{
+ const f=await setup();let draft;await f.act(async()=>draft=f.workspace.createContainerDraft())
+ const card=()=>f.host.querySelector('[data-research-node-id="'+draft.id+'"]'),before=f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id),input=card().querySelector('textarea')
+ input.value='基于当前标的核对风险\n保留原始口径';await f.event('input',input)
+ const target=card().querySelector('[data-financial-port="input"]');expect(target).not.toBeNull()
+ await f.dragPort(f.port(f.quote.id,'output'),target)
+ const connected=f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id)
+ expect(connected).toMatchObject({creationMode:'selection',sourceNodeIds:[f.quote.id],containerPrompt:input.value,x:before.x,y:before.y,width:before.width,height:before.height})
+ expect(f.workspace.getSnapshot().artifacts).toHaveLength(3)
+ expect(card().querySelector('[data-workbench-selected-create-draft] textarea').value).toBe(input.value)
+ expect(card().textContent).toContain('基于：');expect(card().textContent).toContain('希望基于这个组件生成什么？');expect(card().textContent).not.toContain('已关联基准内容与来源')
+ await f.act(async()=>f.workspace.undo());expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id).creationMode).toBeUndefined()
+ await f.act(async()=>f.workspace.redo());expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id).sourceNodeIds).toEqual([f.quote.id])
+ await f.event('click',card().querySelector('[data-financial-port="input"]'))
+ expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id)).toMatchObject({containerPrompt:input.value,generationStatus:'draft'})
+ expect(card().querySelector('[data-workbench-selected-create-context]')).toBeNull()
+},15000)
+it('连接后的命令回车使用原有基准生成通路和目标节点，非金融输出也能成为基准',async()=>{
+ const f=await setup();let draft,source
+ await f.act(async()=>{
+  draft=f.workspace.createContainerDraft();source={id:'own-table',kind:'generated-container',messageId:'own-table',title:'本人记录',excerpt:'本人原始记录',containerPrompt:'本人记录',refreshMinutes:0,generationStatus:'completed',generationLastSeq:1,x:100,y:100,width:400,height:300,sizeMode:'manual',containerSpec:{version:1,type:'table',title:'本人记录',columns:['项目','金额'],rows:[['收入','0万元'],['变化','-120万元']]}}
+  f.workspace.setArtifacts([...f.workspace.getSnapshot().artifacts,source])
+ })
+ const card=()=>f.host.querySelector('[data-research-node-id="'+draft.id+'"]'),output=f.port(source.id,'output');expect(output).not.toBeNull()
+ await f.dragPort(output,card().querySelector('[data-financial-port=input]'))
+ const input=card().querySelector('textarea');input.value='保留零值和负值并做对比';await f.event('input',input)
+ await f.event('keydown',input,{key:'Enter',metaKey:false,keyCode:13});expect(f.generation.generate).not.toHaveBeenCalled()
+ await f.event('keydown',input,{key:'Enter',metaKey:true,keyCode:13})
+ await vi.waitFor(()=>expect(f.generation.generate).toHaveBeenCalledOnce())
+ const request=f.generation.generate.mock.calls[0][0];expect(request).toMatchObject({kind:'create',targetNodeId:draft.id,prompt:'保留零值和负值并做对比'})
+ expect(request.selectedNodeIds).toEqual([source.id]);const started=f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id);expect(JSON.stringify(started.generationSources)).toContain('0万元');expect(JSON.stringify(started.generationSources)).toContain('-120万元')
+ expect(f.workspace.getSnapshot().artifacts.filter(n=>n.id===draft.id)).toHaveLength(1)
+},15000)
 it('底部节点连接后选中自选行原子切换行情，重开看板仍保存联动与选中项',async()=>{
  const f=await setup();await f.connect()
  expect(f.output().closest('footer')).not.toBeNull();expect(f.inlet().closest('footer')).not.toBeNull()

@@ -16,6 +16,24 @@ beforeAll(async()=>{
 },30000)
 afterAll(async()=>browser?.close())
 
+it('uses the same square refresh glyph and ring loading in note headers',async()=>{
+ const page=await browser.newPage({viewport:{width:600,height:240}})
+ try{
+  await page.setContent('<article class="en-native-component"><header class="en-research-header"><div class="en-native-component-heading"><span class="ew-grid-refresh"><button class="en-component-refresh" data-workbench-refresh="note" data-refresh-state="scheduled"><span class="ew-grid-icon ew-grid-icon-refresh"></span></button></span><strong>笔记中的数据组件</strong></div></header></article>')
+  await page.addStyleTag({content:css+'\n'+await readFile('src/preload/notes/style.css','utf8')})
+  const button=page.locator('button'),icon=button.locator('span')
+  for(const [state,color] of [['scheduled','rgb(34, 160, 107)'],['error','rgb(197, 128, 79)'],['manual','rgb(133, 139, 149)']]){
+   await button.evaluate((el,state)=>el.dataset.refreshState=state,state)
+   expect(await button.evaluate(el=>getComputedStyle(el).color)).toBe(color)
+   const box=await icon.boundingBox();expect(box.width).toBe(16);expect(box.height).toBe(16)
+  }
+  await button.evaluate(el=>el.dataset.busy='true')
+  expect(await icon.evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden')
+  const ring=await button.evaluate(el=>{const style=getComputedStyle(el,'::after');return {width:style.width,height:style.height,radius:style.borderRadius,animation:style.animationName}})
+  expect(ring).toEqual({width:'14px',height:'14px',radius:'50%',animation:'ew-grid-spin'})
+ }finally{await page.close()}
+})
+
 it('keeps the existing component actions visible after an update fails while leaving empty planning cards on their own controls',async()=>{
  const page=await browser.newPage({viewport:{width:1000,height:700}})
  try{

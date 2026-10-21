@@ -2,6 +2,7 @@ import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
  ...NOTE_ENGLISH,
  '彭博模式':'Bloomberg mode',
+ '接收组件作为创建基准':'Use a component as the creation source','输出组件内容':'Output component content','拖到组件输出节点连接基准，拖到空白处断开':'Drag to an output to connect sources; drag to the canvas to disconnect','拖到智能容器左侧节点，基于此组件创建':'Drag to a smart container input to create from this component','断开创建基准连接':'Disconnect creation sources','创建基准':'Creation sources',
  '计算口径与来源':'Methodology and sources',
  '同时调整组件宽高':'Resize component width and height','拖动右下角调整宽高':'Drag corner to resize width and height',
  '日K':'Daily','周K':'Weekly','月K':'Monthly','年K':'Yearly','显示交易日数量':'Visible bars','K线标的':'Chart instrument','数据来源':'Data source','条':'records','日期':'Date','开盘':'Open','最高':'High','最低':'Low','收盘':'Close','成交量':'Volume','开 ':'O ','高 ':'H ','低 ':'L ','收 ':'C ',

@@ -68,20 +68,20 @@ function NoteListButtons(){
 }
 function ResearchBlock({block}:any){
  const context=useContext(Context)!,node=useMemo(()=>{try{return JSON.parse(block.props.payload)}catch{return {}}},[block.props.payload])
- return (context as any).isGeneratingComponent?.(block.id)&&node.generationTaskId&&['queued','running','retrying'].includes(node.generationStatus)?<NoteGenerationBlock block={block} node={node} context={context}/>:node.noteDraft?<NoteCreationBlock block={block} node={node} context={context}/>:node.noteLibrary?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
+ return (context as any).isGeneratingComponent?.(block.id)&&node.generationTaskId&&['queued','running','retrying'].includes(node.generationStatus)?<NoteGenerationBlock block={block} node={node} context={context}/>:node.noteDraft?<NoteCreationBlock block={block} node={node} context={context}/>:node.noteLibrary||node.noteDataBound?<NativeComponentBlock block={block} node={node} context={context}/>:<ResearchSnapshotBlock block={block}/>
 }
 function ResearchSnapshotBlock({ block }: any) {
-  const interaction=useNoteComponentInteraction(),[refresh,setRefresh]=useState(0),[refreshing,setRefreshing]=useState(false)
+  const interaction=useNoteComponentInteraction()
   const context = useContext(Context)!, [html, setHtml] = useState(''), [error, setError] = useState('')
   const node = useMemo(() => { try { return JSON.parse(block.props.payload) } catch { return {} } }, [block.props.payload])
   const [height, setHeight] = useState(Number.isFinite(node.height)?Math.max(120,node.height-80):320), frame = useRef<HTMLIFrameElement>(null), intrinsic=useRef(false)
   const size=useNoteComponentSize({block,node,editor:context.editor,root:interaction.root,naturalHeight:height}),renderKey=JSON.stringify(node.containerSpec)
   useEffect(() => {
     let live = true; setError(''); setHtml('');intrinsic.current=false
-    if (!node.containerSpec) { setRefreshing(false);setError(node.generationError || (node.generationStatus === 'running' ? t("正在创建组件，已保留正文中的位置…") : node.generationStatus === 'interrupted' ? t("创建已停止，可重新描述需求。") : t("组件尚未提供内容。"))); return }
-    context.bridge.request('render', { sessionId: context.sessionId, spec: node.containerSpec, dark:context.dark }).then((result: any) => { if (live) { setHtml(result.document || result.html); if (!result.html) setError(t("此组件保留在笔记中，可在研究中查看。")) } }).catch((e: Error) => live && setError(e.message)).finally(()=>{if(live)setRefreshing(false)})
+    if (!node.containerSpec) { setError(node.generationError || (node.generationStatus === 'running' ? t("正在创建组件，已保留正文中的位置…") : node.generationStatus === 'interrupted' ? t("创建已停止，可重新描述需求。") : t("组件尚未提供内容。"))); return }
+    context.bridge.request('render', { sessionId: context.sessionId, spec: node.containerSpec, dark:context.dark }).then((result: any) => { if (live) { setHtml(result.document || result.html); if (!result.html) setError(t("此组件保留在笔记中，可在研究中查看。")) } }).catch((e: Error) => live && setError(e.message))
     return () => { live = false }
-  }, [renderKey,node.generationError,node.generationStatus, context.bridge, context.sessionId,refresh])
+  }, [renderKey,node.generationError,node.generationStatus, context.bridge, context.sessionId])
   useEffect(() => {
     const receive = (e: MessageEvent) => { if (e.source !== frame.current?.contentWindow || !Number.isFinite(e.data?.height))return;if(e.data.type==='sherlock-workbench-content-size')intrinsic.current=true;else if(intrinsic.current||!['ework-note-height','sherlock-content-size'].includes(e.data.type))return;setHeight(Math.min(2400,Math.max(120,e.data.height))) }
     window.addEventListener('message', receive); return () => window.removeEventListener('message', receive)
@@ -90,7 +90,7 @@ function ResearchSnapshotBlock({ block }: any) {
   const doc=html
 
   return <section className="en-research" ref={interaction.root as React.RefObject<HTMLElement>} style={size.style} contentEditable={false} data-note-research-block={block.id} data-selected={interaction.selected||undefined} data-resizing={size.resizing||undefined}>
-    <header className="en-research-header" draggable={!!context.editor?.isEditable}><button className="en-component-refresh" aria-label={t("刷新组件")} title={t("刷新组件")} disabled={refreshing||!node.containerSpec} onClick={()=>{setRefreshing(true);setRefresh(value=>value+1)}}><NoteMenuIcon kind="refresh"/></button><strong>{node.title||t("研究组件")}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label={t("移除笔记中的组件")} title={t("移除组件")} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
+    <header className="en-research-header" draggable={!!context.editor?.isEditable}><strong>{node.title||t("研究组件")}</strong>{context.editor?.getBlock(block.id)?<button className="en-component-close" aria-label={t("移除笔记中的组件")} title={t("移除组件")} onClick={()=>context.editor.removeBlocks([block.id])}><NoteMenuIcon kind="close"/></button>:null}</header>
     {html?<div className="en-research-view"><iframe ref={frame} title={node.title||t("研究组件")} sandbox="allow-scripts" srcDoc={doc} onLoad={()=>frame.current?.contentWindow?.postMessage({type:'sherlock-theme',colorScheme:context.dark?'dark':'light'},'*')} style={{height:size.height}}/>{!interaction.selected?<button className="en-component-scroll-guard" aria-label={t("选中组件并操作内容")} onClick={interaction.select}/>:null}</div>:<div className="en-component-empty"><strong>{node.title||t("研究组件")}</strong><p>{error||t("正在读取组件…")}</p></div>}
     {error&&html?<div className="en-component-error" role="alert">{error}</div>:null}
     {interaction.selected&&context.editor?.isEditable?<NoteComponentResizeHandles size={size}/>:null}

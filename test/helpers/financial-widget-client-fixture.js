@@ -3,20 +3,29 @@ import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
 import {vi} from 'vitest'
-import {EWorkNoteComponentView} from '../../scripts/lib/notes-components.mjs'
+import {EWorkNoteComponentView,EWorkNoteComponentViews} from '../../scripts/lib/notes-components.mjs'
 import {patchResearchNativeWeb} from '../../scripts/lib/research-native-web-client.mjs'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
+// Serializing the resident bundle is independent of each isolated DOM/store.
+// Reuse only its immutable source; every fixture still runs a fresh VM factory.
+const preparedSources=new Map()
 export async function financialClientFixture(desktop={},options={}){
  const win=new Window({url:'https://ework.local'}),document=win.document,keys=['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'],original=keys.map(k=>Object.getOwnPropertyDescriptor(globalThis,k));keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}));let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
- let source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
+ const sourceKey=JSON.stringify([!!options.generationProgress,!!options.refreshState,!!options.creation,!!options.notes]);
+ let source=preparedSources.get(sourceKey)
+ if(!source){
+ source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
  if(options.generationProgress)source=require('../../scripts/lib/generation-progress-persistence.mjs').patchGenerationProgressPersistence(source)
- if(options.refreshState){
+ if(options.refreshState||options.notes){
   // Exercise the production serializers without Vite's SSR import rewrites in toString().
   const [financial,data,grid]=['financial-widget-client.mjs','component-data-refresh.mjs','research-grid-workbench.mjs'].map(name=>require('../../scripts/lib/'+name))
   source=grid.patchResearchGridWorkbench(financial.patchFinancialWidgetClient(data.patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))
  }
- if(options.notes){const start=source.indexOf('function EWorkNoteComponentView('),end=source.indexOf('function EWorkNoteComponentViews(',start);source=source.slice(0,start)+EWorkNoteComponentView.toString()+'\n'+source.slice(end);source=patchResearchNativeWeb(source)};if(options.notes)source=source.replace('exports.ResearchCanvas = ResearchCanvas;','exports.EWorkNoteComponentViews=EWorkNoteComponentViews;exports.ResearchCanvas = ResearchCanvas;')
+ if(options.creation)source=require('../../scripts/lib/canvas-creation-tools.mjs').patchCanvasCreationTools(source)
+ if(options.notes){const start=source.indexOf('function EWorkNoteComponentView('),end=source.indexOf('function EWorkNoteComponentViews(',start);source=source.slice(0,start)+EWorkNoteComponentView.toString()+'\n'+source.slice(end);const viewsStart=source.indexOf('function EWorkNoteComponentViews('),viewsEnd=source.indexOf('const eworkNoteComponentViews=',viewsStart);source=source.slice(0,viewsStart)+EWorkNoteComponentViews.toString()+'\n'+source.slice(viewsEnd);source=patchResearchNativeWeb(source)};if(options.notes)source=source.replace('exports.ResearchCanvas = ResearchCanvas;','exports.EWorkNoteComponentViews=EWorkNoteComponentViews;exports.ResearchCanvas = ResearchCanvas;')
+ preparedSources.set(sourceKey,source)
+ }
  runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  const fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})}),bundle=descriptor.factory(id=>id==='react'?React:id==='react/jsx-runtime'?require(id):id==='react-dom'?require(id):id==='@deepseek-ai/dsh-client-ui-primitives'?new Proxy({MarkdownText:({text})=>createElement('div',null,text)},{get:(t,k)=>t[k]||(String(k).startsWith('Icon')?()=>null:fake)}):fake),registry=new bundle.ResearchWorkspaceRegistry(win.localStorage),workspace=registry.for('financial-test'),host=document.createElement('div');document.body.append(host)
  let root=createRoot(host),canvas

@@ -46,6 +46,8 @@ export const NOTE_ENGLISH = {
   "移除笔记中的文件": "Remove file from note",
   "移除组件": "Remove component",
   "刷新组件": "Refresh component",
+  "组件已变化或当前不可编辑。": "The component changed or is currently read-only.",
+  "组件数据刷新失败。": "The component data could not be refreshed.",
   "研究组件": "Research component",
   "选中组件并操作内容": "Select component to interact",
   "选中文件并操作预览": "Select file to interact with its preview",

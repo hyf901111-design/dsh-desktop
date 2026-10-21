@@ -23,6 +23,18 @@ export function workbenchRefreshState(node,binding,{rss=null,reload=false,error=
   const failed=Boolean(error||binding?.status==='error'||binding?.lastRefreshFailed)
   return {state:scheduled?failed?'error':'scheduled':'manual',icon:scheduled?'refresh':'refresh-manual'}
 }
+export function workbenchSmartCreateTarget(node){
+ return node?.kind==='generated-container'&&!node.containerSpec&&node.generationStatus==='draft'&&node.containerPrompt!=='odyssey:link-draft'
+}
+export function workbenchCanCreateFrom(source,target,nodes){
+ if(!source||!workbenchSmartCreateTarget(target)||source.id===target.id||source.kind==='generated-container'&&!source.containerSpec||!source.containerSpec&&!(source.excerpt||source.name))return false
+ const seen=new Set(),reachesTarget=node=>{if(node.id===target.id)return true;if(seen.has(node.id))return false;seen.add(node.id);return (node.sourceNodeIds||[]).some(id=>{const parent=nodes.find(n=>n.id===id);return parent&&reachesTarget(parent)})}
+ return !reachesTarget(source)
+}
+export function WorkbenchCreatePort({node,side,readOnly}){
+ const input=side==='input',editable=workbenchSmartCreateTarget(node),connected=input&&node.sourceNodeIds?.length>0
+ return react_jsx_runtime.jsx('button',{type:'button',className:'ew-financial-port ew-create-source-port','data-financial-port':side,'data-financial-port-node':node.id,'data-workbench-create-port':side,'data-create-draft':editable||undefined,'data-connected':connected||undefined,disabled:readOnly||input&&!editable,'aria-label':workbenchText(input?'接收组件作为创建基准':'输出组件内容'),'title':workbenchText(input?'拖到组件输出节点连接基准，拖到空白处断开':'拖到智能容器左侧节点，基于此组件创建'),children:react_jsx_runtime.jsx('span',{'aria-hidden':true})})
+}
 export function controlWorkbenchWebZoom(card,step) {
   const native=card?.querySelector('[data-research-native-web]')
   if(typeof native?.__eworkAdjustWebZoom==='function')return native.__eworkAdjustWebZoom(step)
@@ -119,6 +131,8 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,onAsk,onMore,o
   const button=(name,label,onClick,extra={})=>react_jsx_runtime.jsx('button',{type:'button','aria-label':label,onPointerDown:e=>e.stopPropagation(),onClick:e=>{e.stopPropagation();onClick?.(e)},...extra,children:react_jsx_runtime.jsx(WorkbenchIcon,{name})})
   const hover=kind=>e=>{setNow(Date.now());const r=e.currentTarget.getBoundingClientRect();setTip({kind,left:Math.min(r.left,window.innerWidth-340),top:r.bottom+6})}
   return react_jsx_runtime.jsxs(react.Fragment,{children:[
+    (workbenchSmartCreateTarget(node)||node.creationMode==='selection')&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'input',readOnly}),
+    node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.type!=='financial-widget'&&react_jsx_runtime.jsx(WorkbenchCreatePort,{node,side:'output',readOnly}),
     react_jsx_runtime.jsxs('header',{className:'ew-grid-header','data-workbench-drag-handle':node.id,children:[
       refreshState&&react_jsx_runtime.jsx('span',{className:'ew-grid-refresh',onMouseEnter:hover('refresh'),onMouseLeave:()=>setTip(null),onFocus:hover('refresh'),onBlur:()=>setTip(null),children:button(refreshState.icon,'刷新组件',refresh,{disabled:readOnly||refreshing,'aria-busy':refreshing||undefined,'data-workbench-refresh':node.id,ref:el=>{if(el)el.__eworkRefresh=refresh},'data-busy':refreshing||undefined,'data-refresh-state':refreshState.state})}),
       react_jsx_runtime.jsx(WorkbenchTitle,{title:node.displayName||node.title||node.name||'组件',systemTitle:!node.displayName&&(node.containerSpec?.type==='calendar-tool'&&node.title==='日历'||node.containerSpec?.type==='financial-widget'&&node.title===financialWidgetDefaults(node.containerSpec.widget)?.title)}),
@@ -153,18 +167,17 @@ export function useWorkbenchSettings({triggerRef,sessionId,node,disabled,editing
     ]:node.containerSpec?.type==='iframe'?[
       entry('edit','修改网址',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-research-iframe-preset]')?.__eworkEditIframe?.()),
       entry('refresh','重新载入网页',()=>trigger.closest('[data-research-node-id]')?.querySelector('[data-workbench-refresh]')?.__eworkRefresh?.(),!node.containerSpec.url),
-      entry('link','浏览器打开',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
+      entry('globe','浏览器打开',()=>window.open(node.containerSpec.url,'_blank','noopener,noreferrer'),!node.containerSpec.url,false)
     ]:node.kind==='web-link'?[
       entry('rename','修改名称',()=>onFrameAction?.(node,'rename')),
       ...(researchCanvasArtifactContentEditable(node)?[entry('edit','编辑内容',()=>onFrameAction?.(node,'edit'))]:[]),
       entry('refresh','刷新',()=>onRefresh?.(node)),
-      entry('link','浏览器打开',()=>onOpenBrowser?onOpenBrowser():window.open(node.url,'_blank','noopener,noreferrer'),false,false)
+      entry('globe','浏览器打开',()=>onOpenBrowser?onOpenBrowser():window.open(node.url,'_blank','noopener,noreferrer'),false,false)
     ]:node.creationMode==='selection'?[
       entry('branch','查看创建来源',onProvenance,false,false)
     ]:[
       entry('edit','编辑需求',onEdit,disabled),
       entry('refresh',shared?'重新生成':'刷新数据',()=>shared?onRefresh?.(node,node.containerPrompt):openComponentData(sessionId,node,'refresh'),disabled),
-      entry('schedule','设定定时任务',()=>openComponentSchedule(sessionId,node),editingPrompt),
       shared?entry('data',node.refreshMinutes?'关闭旧自动刷新':'共享组件暂不支持数据自动更新',()=>onSetRefresh?.(node,0),editingPrompt||!node.refreshMinutes):entry('data','数据源与自动更新',()=>openComponentData(sessionId,node))
     ]
     trigger.__eworkWorkbenchSettings=actions
@@ -252,7 +265,10 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     row('plus','基于所选创建',()=>onDerived('create',undefined,target.node.id)),
     separator('generate'),
     target.node.containerSpec?.type==='financial-widget'&&target.node.containerSpec.widget==='indices'&&row('settings','配置指数',()=>onConfigureIndices?.(target.node.id)),
-    target.node.containerSpec?.type==='calendar-tool'?row('schedule','新建事项',()=>card()?.querySelector('[data-calendar-add]')?.click(),readOnly):target.node.containerSpec?.type==='financial-widget'?row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly):row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
+    target.node.containerSpec?.type==='financial-widget'&&row('refresh','刷新行情与资讯',()=>card()?.querySelector('[data-workbench-refresh]')?.click(),readOnly),
+    target.node.containerSpec?.type==='calendar-tool'&&row('schedule','新建事项',()=>card()?.querySelector('[data-calendar-add]')?.click(),readOnly),
+    row('schedule','设定定时任务',()=>openComponentSchedule(target.sessionId,target.node),readOnly||RESEARCH_ACTIVE_GENERATION_STATUSES.has(target.node.generationStatus),{'data-component-schedule-open':target.node.id}),
+    target.node.containerSpec?.type!=='calendar-tool'&&row('data','数据源与自动更新',()=>openComponentData(target.sessionId,target.node),false),
     target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))

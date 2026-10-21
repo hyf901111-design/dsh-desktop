@@ -1,4 +1,7 @@
 /* The scroll viewport starts below the shared workspace header. */
+/* Square-grid heights depend on the available width. Keep that width stable
+   when toolbar clearance crosses the scroll threshold, avoiding a resize loop. */
+body [data-research-canvas][data-ework-grid]{scrollbar-gutter:stable}
 body [data-research-canvas][data-ework-grid]{margin-top:var(--odyssey-workspace-header-height,44px)!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;box-sizing:border-box;--grid-card:#fff;--grid-text:#202124;--grid-muted:#7b808b;--grid-menu:#f8f8fa;background:#edf0f3!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;background-image:none!important;scrollbar-width:thin;scrollbar-color:var(--ework-scroll-thumb,#0000001a) transparent}
 /* Keep the full canvas visible; reserve toolbar clearance in scrollable content. */
 body [data-research-canvas][data-ework-grid][data-workbench-toolbar-space]{flex:none!important;height:calc(100% - var(--odyssey-workspace-header-height,44px))!important;scroll-padding-bottom:80px}
@@ -42,13 +45,22 @@ body :is([data-ework-grid],.en-note-file) .ew-grid-header button{position:relati
 body :is([data-ework-grid],.en-note-file) .ew-grid-header button:hover{background:#8c8d9b22}
 body :is([data-ework-grid],.en-note-file) .ew-grid-header button:focus-visible{outline:1px solid #249bfa}
 body :is([data-ework-grid],.en-note-file) .ew-grid-header button:disabled{opacity:.4;cursor:default}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh{display:flex;position:relative;flex:0 0 20px;min-width:20px;align-items:center;justify-content:center}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh{display:flex;position:relative;flex:0 0 20px;min-width:20px;align-items:center;justify-content:center}
 .ew-grid-icon{display:block;flex:none;width:16px;height:16px;background:currentColor;mask-position:center;mask-repeat:no-repeat}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-workbench-refresh]{min-width:20px;min-height:24px}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh .ew-grid-icon{width:16px;height:16px;min-width:16px;min-height:16px;aspect-ratio:1;mask-size:16px 16px}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-refresh-state=scheduled]{color:#22a06b!important}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-refresh-state=error]{color:#c5804f!important}
-body :is([data-ework-grid],.en-note-file) .ew-grid-refresh [data-refresh-state=manual]{color:#858b95!important}
+/* Creation ports share the financial connection gestures without owning data. */
+body [data-ework-grid] .ew-create-source-port{--fw-accent:var(--grid-accent,#139dff);--fw-muted:var(--grid-muted,#858b95);--fw-card:var(--grid-card);position:absolute;bottom:3px;left:10px;right:auto;z-index:8;display:grid;place-items:center;box-sizing:border-box;width:20px;height:20px;min-width:20px;min-height:20px;padding:0;margin:0;border:0;border-radius:4px;background:transparent;color:var(--fw-muted);pointer-events:auto;cursor:crosshair;touch-action:none}
+body [data-ework-grid] .ew-create-source-port[data-create-draft]{bottom:16px}
+body [data-ework-grid] .ew-create-source-port[data-financial-port=output]{left:auto;right:10px;bottom:3px}
+body [data-ework-grid] .ew-create-source-port>span{display:block;width:10px;height:10px;min-width:10px;min-height:10px;aspect-ratio:1;box-sizing:border-box;border:1.5px solid currentColor;border-radius:50%;background:var(--fw-card);pointer-events:none}
+body [data-ework-grid] .ew-create-source-port:is(:hover,:focus-visible,[data-drop-target],[data-connected=true]){color:var(--fw-accent)}
+body [data-ework-grid] .ew-create-source-port:disabled{cursor:default;opacity:.55}
+body [data-ework-grid] [data-research-node-id]:has(.ew-create-source-port[data-financial-port=output]) .odyssey-data-stamp{padding-right:36px!important}
+body [data-ework-grid] [data-research-node-id]:has(.ew-create-source-port[data-financial-port=input]) .odyssey-data-stamp{padding-left:36px!important}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh [data-workbench-refresh]{min-width:20px;min-height:24px}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh .ew-grid-icon{width:16px;height:16px;min-width:16px;min-height:16px;aspect-ratio:1;mask-size:16px 16px}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh [data-refresh-state=scheduled]{color:#22a06b!important}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh [data-refresh-state=error]{color:#c5804f!important}
+body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh [data-refresh-state=manual]{color:#858b95!important}
 .ew-grid-refresh [data-busy=true] .ew-grid-icon,[data-component-refreshing] [data-workbench-refresh] .ew-grid-icon{visibility:hidden;animation:none}
 .ew-grid-refresh [data-busy=true],[data-component-refreshing] [data-workbench-refresh]{opacity:1!important}
 .ew-grid-refresh [data-busy=true]::after,[data-component-refreshing] [data-workbench-refresh]::after{content:"";position:absolute;box-sizing:border-box;width:14px;height:14px;border:1.5px solid currentColor;border-right-color:transparent;border-radius:50%;background:none;pointer-events:none;animation:ew-grid-spin 850ms linear infinite}

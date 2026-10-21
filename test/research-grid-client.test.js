@@ -13,6 +13,7 @@ import {patchDerivedPresetClient} from '../scripts/lib/derived-preset-client.mjs
 import {workbenchRefreshTooltip,measureWorkbenchContents} from '../scripts/lib/research-grid-ui.mjs'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {researchOptimalDimensions,researchCandleTemplate} from '../packages/dsh-research-task-runtime/bento-layout.js'
+import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 const require=createRequire(import.meta.url),React=require('react'),{act,createElement}=React,{createRoot}=require('react-dom/client')
 const disposals=[]
 it('表格所有表头正文默认单行，用户列宽与换行选择在看板重开后保留且数据不变',async()=>{
@@ -84,13 +85,13 @@ it('附件导入后的文本预览读取真实文件，预览不使画布消失'
  await act(async()=>f.workspace.setArtifacts([{...text('local-file-preview'),kind:'generated-container',containerPrompt:'本人文件',generationStatus:'completed',refreshMinutes:0,containerSpec:spec}]))
  const root=f.host.querySelector('[data-research-attachment-preset=files]');await f.event('click',Array.from(root.querySelectorAll('button')).find(b=>b.textContent==='预览'));expect(root.querySelector('[data-research-text-preview]').textContent).toBe(content);expect(f.host.querySelector('[data-research-canvas]')).not.toBeNull();expect(f.workspace.getSnapshot().artifacts[0].containerSpec).toEqual(spec)
 })
-it('智能组件草稿只保留输入与底部动作，组合回车不提交，普通回车仍走原生成入口',async()=>{
- const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft()})
+it('智能组件回车换行且命令回车创建，保留组合输入与同节点生成',async()=>{
+ const f=await fixture(true,{},true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft()})
  const card=f.host.querySelector('[data-research-node-id="'+draft.id+'"]');expect(card.querySelector('.ew-draft-heading')).toBeNull();expect(card.querySelector('.ew-draft-note')).toBeNull()
  const input=card.querySelector('textarea');input.value='本人虚构记录：0万元，变化-120万元，原因未提供。生成预置两列表格。';await act(async()=>input.focus());await f.event('input',input);expect(input.isConnected).toBe(true);expect(card.querySelector('button[data-research-container-submit],button[data-research-link-submit]').disabled).toBe(false)
  await f.event('keydown',input,{key:'Enter',keyCode:229,isComposing:true});expect(f.generation.generate).not.toHaveBeenCalled();expect(input.isConnected).toBe(true)
  await f.event('keydown',input,{key:'Enter',keyCode:13,shiftKey:true,isComposing:false});expect(f.generation.generate).not.toHaveBeenCalled()
- await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false});expect(f.generation.generate).toHaveBeenCalledTimes(1);expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({targetNodeId:draft.id,prompt:input.value}))
+ expect(card.querySelector('.ew-draft-hint')).toBeNull();await f.event('keydown',input,{key:'Enter',keyCode:13,isComposing:false});expect(f.generation.generate).not.toHaveBeenCalled();await f.event('keydown',input,{key:'Enter',keyCode:13,metaKey:true,isComposing:false});expect(f.generation.generate).toHaveBeenCalledTimes(1);expect(f.generation.generate).toHaveBeenCalledWith(expect.objectContaining({targetNodeId:draft.id,prompt:input.value}))
 })
 it('链接草稿只保留可伸展输入与底部动作，中文组合回车不完成且同节点接纳原链接',async()=>{
  const f=await fixture(true);let draft;await act(async()=>{draft=f.workspace.createContainerDraft(null,'link')})
@@ -160,14 +161,15 @@ it('音频共享只读禁止更改音源但保留完整转写和浏览功能',as
 })
 afterEach(async()=>{for(const dispose of disposals.splice(0).reverse())await dispose()})
 const text=(id,x=260,y=160)=>({id,kind:'pasted-text',messageId:id,title:id,excerpt:'# 真实组件\n保留正文',x,y,width:480,height:280,sizeMode:'manual'})
-async function fixture(mount=false,desktop={}){
+async function fixture(mount=false,desktop={},creation=false){
  const win=new Window({url:'https://ework.local'}),document=win.document
  const keys=['window','document','navigator','IS_REACT_ACT_ENVIRONMENT'],original=keys.map(k=>Object.getOwnPropertyDescriptor(globalThis,k))
  keys.forEach((k,i)=>Object.defineProperty(globalThis,k,{configurable:true,value:[win,document,win.navigator,true][i]}))
  let descriptor
  win.dshDesktop=desktop;win.__ModuleLoader__={load:d=>descriptor=d};win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  // Load the serializer through Node so Vitest does not rewrite the functions it embeds.
- const source=require('../scripts/lib/research-grid-workbench.mjs').patchResearchGridWorkbench(patchDerivedPresetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+ let source=require('../scripts/lib/research-grid-workbench.mjs').patchResearchGridWorkbench(patchDerivedPresetClient(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+ if(creation)source=require('../scripts/lib/canvas-creation-tools.mjs').patchCanvasCreationTools(source)
  runInNewContext(source,{window:win,document,localStorage:win.localStorage,navigator:win.navigator,CSS:win.CSS,DOMParser:win.DOMParser,HTMLElement:win.HTMLElement,HTMLTextAreaElement:win.HTMLTextAreaElement,Text:win.Text,CustomEvent:win.CustomEvent,Event:win.Event,ResizeObserver:win.ResizeObserver,MutationObserver:win.MutationObserver,requestAnimationFrame:win.requestAnimationFrame.bind(win),cancelAnimationFrame:win.cancelAnimationFrame.bind(win),structuredClone,AbortController,TextDecoder,TextEncoder,setTimeout,clearTimeout,setInterval,clearInterval,console})
  // Desktop preload supplies this stylesheet from the current checkout; the
  // dependency bundle can still embed a previous build's shared color tokens.
@@ -1690,7 +1692,7 @@ it('组件设置向右展开，复用原编辑和定时任务操作而不弹出�
   const child=f.document.querySelector('[aria-label="组件设置"][role="menu"]')
   expect(child).not.toBeNull();expect(main.contains(child)).toBe(false);expect(parseFloat(child.style.left)).toBeGreaterThanOrEqual(416)
   expect(f.document.querySelector('[data-odyssey-container-menu]')).toBeNull()
-  expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['编辑需求','刷新数据','设定定时任务','数据源与自动更新'])
+  expect([...child.querySelectorAll('button')].map(n=>n.textContent)).toEqual(['编辑需求','刷新数据','数据源与自动更新'])
   return child
  }
  let child=await open()
@@ -1698,9 +1700,26 @@ it('组件设置向右展开，复用原编辑和定时任务操作而不弹出�
  expect(f.host.querySelector('[role="dialog"][aria-label="编辑需求"]')).not.toBeNull()
  await f.event('keydown',f.host.querySelector('[role="dialog"][aria-label="编辑需求"]'),{key:'Escape'})
  child=await open();const schedule=vi.fn();f.win.addEventListener('sherlock:component-schedule-open',schedule)
- await f.event('click',[...child.querySelectorAll('button')].find(n=>n.textContent==='设定定时任务'))
+ const main=f.document.querySelector('[aria-label="组件更多操作"][role=menu]'),items=[...main.querySelectorAll('button')].map(n=>n.textContent);expect(items.indexOf('设定定时任务')).toBe(items.indexOf('数据源与自动更新')-1)
+ await f.event('click',[...main.querySelectorAll('button')].find(n=>n.textContent==='设定定时任务'))
  expect(schedule).toHaveBeenCalledOnce();expect(schedule.mock.calls[0][0].detail).toMatchObject({sessionId:'grid-test',nodeId:'settings'})
 })
+
+it('内置组件主菜单提供定时任务与数据设置',async()=>{
+ const f=await financialClientFixture({},{refreshState:true}),schedule=vi.fn(),data=vi.fn();disposals.push(f.dispose);f.win.addEventListener('sherlock:component-schedule-open',schedule);f.win.addEventListener('sherlock:component-data-open',data)
+ for(const widget of ['quote','watchlist','indices','news','announcements']){
+  let node;await f.act(async()=>{f.workspace.setArtifacts([]);node=f.workspace.createFinancialWidget(widget)})
+  await f.event('click',f.host.querySelector('[data-workbench-more="'+node.id+'"]'))
+  const main=f.document.querySelector('[role=menu][aria-label="组件更多操作"]'),buttons=[...main.querySelectorAll('button')],labels=buttons.map(b=>b.textContent)
+  expect(labels.indexOf('设定定时任务')).toBe(labels.indexOf('数据源与自动更新')-1)
+  await f.event('click',buttons.find(b=>b.textContent==='设定定时任务'));expect(schedule.mock.calls.at(-1)[0].detail).toMatchObject({nodeId:node.id,sessionId:'financial-test'})
+  await f.event('click',f.host.querySelector('[data-workbench-more="'+node.id+'"]'))
+  await f.event('click',[...f.document.querySelector('[role=menu][aria-label="组件更多操作"]').querySelectorAll('button')].find(b=>b.textContent==='数据源与自动更新'))
+  expect(data.mock.calls.at(-1)[0].detail).toMatchObject({nodeId:node.id,kind:'financial-widget'})
+  const close=f.document.querySelector('[aria-label="关闭数据设置"]');if(close)await f.event('click',close)
+ }
+
+},15000)
 
 it('斜移经过相邻行再进入右侧子菜单时保持展开，离开后关闭',async()=>{
  const f=await fixture(true);await act(async()=>f.workspace.setArtifacts([text('a')]))
@@ -1732,6 +1751,7 @@ it('共享只读组件的设置菜单仍允许浏览器阅读，禁止编辑和�
  await f.event('click',trigger)
  const child=f.document.querySelector('[role="menu"][aria-label="组件设置"]'),buttons=[...child.querySelectorAll('button')]
  expect(buttons.find(n=>n.textContent==='浏览器打开').disabled).toBe(false)
+ expect(buttons.find(n=>n.textContent==='浏览器打开').querySelector('[data-workbench-icon="globe"]')).toBeTruthy()
  expect(buttons.find(n=>n.textContent==='刷新').disabled).toBe(true)
  expect(buttons.find(n=>n.textContent==='修改名称').disabled).toBe(true)
 })

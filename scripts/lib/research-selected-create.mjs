@@ -41,17 +41,16 @@ export function WorkbenchSelectedCreateDraft({node,state,inputRef,onPrompt,onSub
   react.useEffect(()=>setPrompt(node.containerPrompt||''),[node.id,node.containerPrompt])
   const preparing=state?.preparing===true,error=state?.error,jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
   const submit=()=>{if(!readOnly&&!preparing&&prompt.trim())onSubmit?.(node,prompt)}
-  return jsxs('div',{className:'ew-selected-create-draft','data-workbench-selected-create-draft':node.id,'data-research-preview-interactive':'',onKeyDown:event=>{
+  return jsxs('div',{className:'rScV5Q_containerDraft ew-selected-create-draft','data-workbench-selected-create-draft':node.id,'data-research-template-draft':'smart','data-research-preview-interactive':'',onKeyDown:event=>{
     event.stopPropagation()
     if(researchDerivedIsComposing(event)||event.repeat)return
     if(event.key==='Escape'&&state?.editing){event.preventDefault();onCancel?.();return}
-    if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();submit()}
+    if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)&&!event.shiftKey&&!event.altKey){event.preventDefault();submit()}
   },children:[
     jsx('strong',{children:'希望基于这个组件生成什么？'}),
     jsx('textarea',{ref:inputRef,'aria-label':'创建需求','data-research-create-prompt':'',value:prompt,rows:4,maxLength:RESEARCH_CONTAINER_MAX_PROMPT,disabled:readOnly||preparing,placeholder:'例如：整理为地域收入对比表，保留年份、单位和原始来源。',onInput:event=>{const value=event.currentTarget.value;setPrompt(value);onPrompt?.(node,value)},onBlur:()=>onPrompt?.(node,prompt,true),onCompositionStart:event=>{event.currentTarget.dataset.researchComposing='true'},onCompositionEnd:event=>{delete event.currentTarget.dataset.researchComposing}}),
     error&&jsx('div',{role:'alert',className:'ew-selected-create-error',children:error}),
-    jsxs('div',{className:'ew-selected-create-actions',children:[jsx('button',{type:'button','data-research-create-submit':'',disabled:readOnly||preparing||!prompt.trim()||prompt.length>RESEARCH_CONTAINER_MAX_PROMPT,onClick:submit,children:preparing?'正在读取基准…':'生成组件'}),state?.editing&&jsx('button',{type:'button','data-workbench-cancel-selected-edit':'',onClick:onCancel,children:'取消'}),preparing&&jsx('button',{type:'button','data-workbench-stop-preparing':'',onClick:onStop,children:'停止'})]}),
-    jsx('p',{children:'已关联基准内容与来源；原组件保持可见。'})
+    jsxs('div',{className:'rScV5Q_containerDraftFooter ew-selected-create-actions',children:[jsx('button',{type:'button','data-research-create-submit':'',disabled:readOnly||preparing||!prompt.trim()||prompt.length>RESEARCH_CONTAINER_MAX_PROMPT,onClick:submit,children:preparing?'正在读取基准…':'创建'}),state?.editing&&jsx('button',{type:'button','data-workbench-cancel-selected-edit':'',onClick:onCancel,children:'取消'}),preparing&&jsx('button',{type:'button','data-workbench-stop-preparing':'',onClick:onStop,children:'停止'})]})
   ]})
 }
 
@@ -70,7 +69,27 @@ export function patchWorkbenchSelectedCreate(source,change) {
     }
     `+inspectionAnchor)
   const begin='beginGeneration(kind, sourceNodeIds, placement, requestedDetail = "standard", frozenSnapshot = snapshot) {'
-  change(begin,`beginSelectedCreateDraft(sourceNodeIds) {
+  change(begin,`updateSmartCreateDraftPrompt(nodeId,prompt,persist=false) {
+    if(!collaborationCanWrite()||typeof prompt!=='string'||prompt.length>RESEARCH_CONTAINER_MAX_PROMPT)return false;
+    const node=snapshot.artifacts.find(n=>n.id===nodeId&&workbenchSmartCreateTarget(n));if(!node)return false;
+    if(node.containerPrompt!==prompt)update({artifacts:snapshot.artifacts.map(n=>n.id===nodeId?{...n,containerPrompt:prompt}:n)},false);
+    if(persist)this.persist();return true;
+  },
+  connectSmartCreateSource(nodeId,sourceId) {
+    if(!collaborationCanWrite())return false;
+    const node=snapshot.artifacts.find(n=>n.id===nodeId),all=[...snapshot.files,...snapshot.artifacts];
+    if(!workbenchSmartCreateTarget(node))return false;
+    const source=all.find(n=>n.id===sourceId);
+    if(sourceId!==null&&!workbenchCanCreateFrom(source,node,all))return false;
+    const ids=sourceId===null?[]:researchSelectionIds([...(node.sourceNodeIds||[]),sourceId]);
+    if(ids.length>RESEARCH_GENERATION_MAX_SOURCES||ids.some(id=>!all.some(n=>n.id===id)))return false;
+    const {creationMode,sourceNodeIds,generationSources,...base}=node;
+    const next=canonicalResearchCanvasArtifactNode({...base,...(ids.length?{creationMode:'selection',sourceNodeIds:ids,generationSources:ids.map(id=>{const n=all.find(n=>n.id===id);return {id,type:snapshot.files.includes(n)?'file':'artifact',title:n.displayName||n.title||n.name}})}:{})});
+    if(!next)return false;
+    if(JSON.stringify(next)===JSON.stringify(node))return true;
+    finalizeHistoryTransaction();const before=historyState();update({artifacts:snapshot.artifacts.map(n=>n.id===nodeId?next:n),selection:{selectedNodeIds:[nodeId],orderedFileIds:[]}},true);recordHistory(before);return true;
+  },
+  beginSelectedCreateDraft(sourceNodeIds) {
     if(!collaborationCanWrite())return null;
     const ids=researchSelectionIds(sourceNodeIds),currentNodes=[...snapshot.files,...snapshot.artifacts];
     if(!ids.length||ids.length>RESEARCH_GENERATION_MAX_SOURCES||ids.some(id=>!currentNodes.some(n=>n.id===id)))return null;

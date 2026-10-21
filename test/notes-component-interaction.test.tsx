@@ -45,11 +45,9 @@ function ppt(f:Awaited<ReturnType<typeof fixture>>,right=830){
  return {handle,changes,controller}
 }
 
-it('selects a component from its header and keeps header refresh functional',async()=>{
+it('selects a component from its header and keeps removal functional',async()=>{
  const f=await fixture();await f.event(f.component.querySelector('strong')!,'pointerdown')
  expect(f.component.dataset.selected).toBe('true')
- const before=f.bridge.request.mock.calls.length;await f.event(f.component.querySelector('.en-component-refresh')!,'click')
- expect(f.bridge.request.mock.calls.length).toBeGreaterThan(before)
  expect(f.editor.removeBlocks).not.toHaveBeenCalled()
  await f.event(f.component.querySelector('.en-component-close')!,'pointerdown');await f.event(f.component.querySelector('.en-component-close')!,'click')
  expect(f.editor.removeBlocks).toHaveBeenCalledWith(['block'])
