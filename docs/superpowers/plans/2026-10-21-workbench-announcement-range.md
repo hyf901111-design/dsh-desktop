@@ -63,3 +63,31 @@
 - [ ] 运行直接相关artifact-resilience、table contract/market renderer和新增浏览器回归及diff check，记录真实fixture与合成边界的区别，自审后仅提交本任务文件，中文本地提交。禁止构建、启动、重启共享应用或派生agent；写task-3-report.md交root审阅。
 
 **Binding constraints and review focus:** 保留全部字段和原始数值，不能静默删列／截断；原生12列合同保持不变；1–32列/1–100行只在可信交互模板路径放宽，shape、字节/文字容量和来源校验不削弱；水平滚动只在表格区；普通/来源表分别验证；相关聚焦测试，不运行全功能测试、不修改共享客户端。未绑定表格不能声称自动刷新。
+
+## Native 基线B内容核验补充
+
+同一已保存任务由实际客户端发送并完成，原始证据 `/tmp/compute-b-native-benchmark-20261021.json`、`/tmp/compute-b-artifact-models-20261021.json`。`一键整理画布`真实反馈已整理6个组件，滚动检查覆盖顶部到底部。行情回退纯文字导致一列跨越多屏，交互宽表修复前不能将这套排版记为通过。
+
+- 公告/新闻实际先搜索两次DataYes目录、读一次目录，然后6次网页搜索；没有web_fetch，没有实际公告/新闻业务响应。单次修复也没有补取资料，最终正确失败；诊断文字“只有接口文档”未完整表达已有搜索摘要，但搜索摘要不足以证明原文和精确日期。两子会话分别 `36a38936-eeb6-48c2-8a5f-73d8c9d5e515`、`2e642d2c-2aca-485b-8af2-6b49795a3403`。原始产物还混入范围外背景和“约10月16日”推测日期，不能放行凑6/6。
+- 财务主数据的同报告期逐项核验发现：新易盛2026-06-30实际 revenueYoy=100.3392、niAttrPYoy=90.9844、grossMargin=48.4397、roeW=34.86，产物却写282.64/355.68/47.43/38.12（其他期数据）。工业富联同期grossMargin=7.1507、roeW=13.36，产物写6.60/7.64。营收/归母利润绝对值、披露日期本次匹配，但不能抵消上述错期。
+- 财务卡宣称调用getFdmtCFLT并列出三个经营现金流净额；实际成功业务调用只有getFdmtMainDataLt及getFdmtISLT2018。三个现金流金额在全部成功工具文本均无对应记录；最后只有一次现金流接口目录搜索。不得将该列视为已取得。安全证据 `/tmp/compute-b-finance-safe-tools-20261021.json`。
+- 未来日历混入过去报告期2026-09-30，且把“未取得解禁记录”的缺口备注放在2026-10-21算作1项安排；页面称6条来源日程，不能证明6个真实未来事件。
+- 父会话宣称行情“每分钟自动刷新”，实际完整字段表已回退静态、未绑定；宿主应提供/传递实际降级状态，不能以计划的publicData绑定代替最终绑定结果。
+
+这些为真实复测新发现，尚待各自聚焦修复，不并入公告/宽表提交，不记完整金融工作台通过。
+
+### Task 4: 财务表同期间字段来源核验
+
+**依赖：** Task1修复轮与Task3实现均提交后再执行，单implementer；root可同时审阅/记录，不能同时修改同文件。
+
+**Files:** 新增focused `packages/dsh-research-task-runtime/statement-table-evidence.js`，最小接入 `index.js` 现有来源校验/单次修复路径；必要时复用/导出 `observed-statement-growth.js` 中已证明的精度工具，但不大改既有计算逻辑。新增 `test/statement-table-evidence.test.js` 与actual来源fixture，不改UI/notes/native schema。collector/repair证据如有必要只做已证实的最小改动并报告。
+
+**Interfaces:** helper消费实际source records、模板结构和宿主panelRequest，返回具体field/company/reportPeriod错误或undefined；只触发已观察到DataYes getFdmtMainDataLt/getFdmtISLT2018等正式财务数据的table/market.table，error artifact/missing fields不伪造。generic和retained HTML应同门禁，最终fallback不能越过新事实检查。保留原有一次repair预算与数据工具权限。
+
+- [ ] 从 `/tmp/compute-b-finance-safe-tools-20261021.json` 和 `/tmp/compute-b-artifact-models-20261021.json` 提取实际完整成功调用/响应和原始表，记录无private reasoning、真实观察与合成边界。先red证明旧Runtime交付错误同比分期/ROE/毛利率/无依据现金流。
+- [ ] 使用明确证券代码（含SH/SZ/XSHE/XSHG）和实际报告期字段，匹配同期间记录；毛利率grossMargin、加权ROE roeW、revenueYoy、niAttrPYoy、nCFOpa不能跨期/跨公司。对请求明确没有实际现金流查询、表却声称有金额的已复现输入返回具体缺口。代码应区分绝对值和同比、口径和日期，不以“数字在整份响应出现过”判真。
+- [ ] 合成回归：同报告期正确数据、两位/更多位显示精度、零和负值、元/万元/亿元换算、单列“金额/同比”组合、独立列、来源字段null与明确缺失、跨公司同值、其他期同值、冲突修订/口径、未知证券/期间或含糊字段、明确其他来源、模拟表、非财务行情/普通表均覆盖。不从财务比例倒算缺失现金流；未知结构保守说明限制，不能误称已证明。
+- [ ] 新门禁位于单次有界repair和最终成功之间，具体证据能让下一轮纠正/实际补查缺失字段；已有数据复用，生成失败不得被readableFallback改成成功。Runtime回归分别覆盖首次错误第二次修正、两次错误终态failed、取消/原预算和所有公司/列保留。不得以删字段/删公司/新一轮完整研究提高通过率。
+- [ ] 相关statement evidence/growth/operating/source binding/runtime聚焦验证和diff check；不运行全功能测试、不构建、不操作共享客户端、不派生agent。自审，中文本地提交own files，完整报告写task-4-report.md，返回短状态。
+
+**Binding constraints and review focus:** source row的证券、期间、口径和字段是事实依据，不以展示标签或API名称作为业务证据；不猜日期、不发明数值、不静默改写成不同指标；保留全部对象和字段，缺失诚实显示；明确未知结构和其他来源边界；不改变既有模拟/普通表行为；原一次repair预算、fallback失败边界、取消语义必须保留；禁止全功能测试和功能worktree构建。
