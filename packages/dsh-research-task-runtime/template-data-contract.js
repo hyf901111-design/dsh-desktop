@@ -5,8 +5,9 @@ import {operationsDataIssue} from './operations-template-contract.js'
 import {FINANCIAL_PROFILE_VARIANTS,financialProfileDataIssue} from './financial-profile.js'
 // Shared by prompt construction, renderers and mapping validation. Keep data
 // limits here so a compact prompt cannot promise a shape the renderer rejects.
-export const TEMPLATE_LIMITS=Object.freeze({trendSeries:12,trendPoints:366,scatterItems:20,allocationItems:12,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
+export const TEMPLATE_LIMITS=Object.freeze({tableColumns:32,tableRows:100,trendSeries:12,trendPoints:366,scatterItems:20,allocationItems:12,fundMetrics:12,fundIndustries:40,holdingsColumns:8,holdingsRows:30})
 export const TEMPLATE_RULES=Object.freeze({
+ table:`1–${TEMPLATE_LIMITS.tableColumns}列、1–${TEMPLATE_LIMITS.tableRows}行；rows 每一行是与 columns 等长的完整单元格数组；保留所有字段和原始精度，不删列或截断；最终交付仍须满足 HTML 字节容量限制`,
  metrics:'1–12 项，每项必须同时有 label 和 value，均为非空文字；数值与单位放 value，detail 为可选非空文字。证券名称可作为 value 或写入标题，不能只提交 label；缺失指标写“—”并解释，不编造数值',
  trend:`1–${TEMPLATE_LIMITS.trendSeries} 条同单位同纵轴序列，2–${TEMPLATE_LIMITS.trendPoints} 个时点；每条 values 必须与 labels 等长且全为有限数值，允许负数`,
  scatter:`1–${TEMPLATE_LIMITS.scatterItems} 个样本；x/y 为有限数值，允许负数；可选 size 必须大于0`,
@@ -14,7 +15,24 @@ export const TEMPLATE_RULES=Object.freeze({
  'fund-holdings':`1–${TEMPLATE_LIMITS.holdingsColumns} 列、1–${TEMPLATE_LIMITS.holdingsRows} 行；rows 每一行是与 columns 等长的数组，不是对象`,
  'fund-industry':`1–${TEMPLATE_LIMITS.fundIndustries} 项；weight 是0–100百分数；benchmark 可省略或null，缺失时只展示实际权重，不编造基准和偏离`
 })
-export const TABLE_GUIDANCE='table 仅支持 version/type/title/columns/rows/asOf/note；不使用 variant 或 notes，完整说明合并为 note 单个非空字符串，asOf/note 可省略，提供时为1–2000字。证券代码、名称、单位和报价时间必须引用各行真实字段，不把一个证券代码或交易所固定拼到所有行；缺失字段明确说明。'
+export const TABLE_GUIDANCE=`table 仅支持 version/type/title/columns/rows/asOf/note；不使用 variant 或 notes，完整说明合并为 note 单个非空字符串，asOf/note 可省略，提供时为1–2000字。带 asOf 或 note 的可信交互表格支持${TEMPLATE_RULES.table}；无来源原生表格仍限1–12列、1–100行。title 为1–256字，列名为1–128字，单元格为1–512字非空文字或绝对值不超过1e15的有限数值。证券代码、名称、单位和报价时间必须引用各行真实字段，不把一个证券代码或交易所固定拼到所有行；缺失字段明确说明。`
+// Only dimensions are relaxed for trusted tables. Sourced generic tables keep
+// the native scalar/text capacities; existing market tables keep theirs.
+export function tableShapeIssue(data,{generic=false,maxColumns=TEMPLATE_LIMITS.tableColumns}={}){
+ const text=(value,limit)=>typeof value==='string'&&value.trim().length>0&&value.length<=limit
+ if(!Array.isArray(data.columns)||data.columns.length<1||data.columns.length>maxColumns)return `columns 必须包含 1–${maxColumns} 列`
+ const column=data.columns.findIndex(value=>!text(value,generic?128:2000))
+ if(column>=0)return `columns[${column}] 必须为1–${generic?128:2000}字的非空文字`
+ if(!Array.isArray(data.rows)||data.rows.length<1||data.rows.length>TEMPLATE_LIMITS.tableRows)return `rows 必须包含 1–${TEMPLATE_LIMITS.tableRows} 行`
+ for(const [i,row]of data.rows.entries()){
+  if(!Array.isArray(row)||row.length!==data.columns.length)return `rows[${i}] 必须是 ${data.columns.length} 个单元格的数组`
+  const cell=row.findIndex(value=>generic
+   ? !(text(value,512)||typeof value==='number'&&Number.isFinite(value)&&Math.abs(value)<=1e15)
+   : !(typeof value==='string'||typeof value==='number'&&Number.isFinite(value)))
+  if(cell>=0)return `rows[${i}][${cell}] 必须为${generic?'1–512字的非空文字或绝对值不超过1e15的有限数值':'文字或有限数值'}`
+ }
+ return null
+}
 export function normalizeIndexedTableRows(data){
  if(!(data?.type==='table'||data?.type==='market'&&['table','fund-holdings'].includes(data.variant))||!Array.isArray(data.columns)||!Array.isArray(data.rows))return data
  const keys=data.columns.map((_,i)=>String(i))
@@ -38,6 +56,10 @@ export function templateDataIssue(data){
   const unsupported=Object.keys(data).filter(key=>!['version','type','title','columns','rows','asOf','note'].includes(key))
   if(unsupported.length)return `table 不支持字段：${unsupported.join('、')}。${TABLE_GUIDANCE}`
   for(const key of ['asOf','note'])if(data[key]!==undefined&&(typeof data[key]!=='string'||!data[key].trim()||data[key].length>2000))return `table.${key} 必须为1–2000字的非空文字。${TABLE_GUIDANCE}`
+  if(data.version!==1)return `table.version 必须为1。${TABLE_GUIDANCE}`
+  if(typeof data.title!=='string'||!data.title.trim()||data.title.length>256)return `table.title 必须为1–256字的非空文字。${TABLE_GUIDANCE}`
+  const issue=tableShapeIssue(data,{generic:true,maxColumns:data.asOf!==undefined||data.note!==undefined?TEMPLATE_LIMITS.tableColumns:12})
+  return issue?`table.${issue}。${TABLE_GUIDANCE}`:null
  }
  const finite=v=>typeof v==='number'&&Number.isFinite(v)
  const array=(key,max,min=1)=>!Array.isArray(data[key])||data[key].length<min||data[key].length>max?`${key} 必须包含 ${min}–${max} 项`:null
@@ -59,6 +81,7 @@ export function templateDataIssue(data){
   }
  }
  if(FINANCIAL_PROFILE_VARIANTS.includes(data.variant))return financialProfileDataIssue(data)
+ if(data.variant==='table')return fail(tableShapeIssue(data))
  if(['metrics','fund-kpi'].includes(data.variant)){
   const issue=array('items',TEMPLATE_LIMITS.fundMetrics);if(issue)return fail(issue)
   for(const [i,item]of data.items.entries()){

@@ -2,6 +2,7 @@ import {expect,it,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
 import {publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,patchResearchWorkbenchFeedback,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors} from '../scripts/lib/research-workbench-feedback.mjs'
+import {componentDataStatusDefinitions,createComponentDataStatusStore} from '../scripts/lib/component-data-status.mjs'
 import {planningResponseMetadata} from '../scripts/lib/research-planning-feedback.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
@@ -149,37 +150,84 @@ it('installs a live status for settled creation turns while preserving the exist
  expect(source).toContain('const planningRequest=entry.running && entry.turn===runningTurnNumber')
  expect(patchResearchWorkbenchFeedback(source)).toBe(source)
  expect(patchResearchCreationProgress(source)).toBe(source)
- const start=source.indexOf('/* ework:workbench-feedback:v6 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
+ const start=source.indexOf('/* ework:workbench-feedback:v8 */'),end=source.indexOf('const ExecutionStatusGroup =',start)
  const element=(type,props)=>({type,props})
  let snapshot=publishResearchWorkbenchProgress(new EventTarget(),'s',done())
- const Component=runInNewContext(source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[snapshot,()=>{}],useEffect:()=>{}},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
+ const Component=runInNewContext(componentDataStatusDefinitions()+source.slice(start,end)+';ResearchWorkbenchProgress',{react:{useState:initializer=>[typeof initializer==='function'?snapshot:false,()=>{}],useEffect:()=>{},useCallback:fn=>fn,useSyncExternalStore:(_subscribe,read)=>read()},react_jsx_runtime:{jsx:element,jsxs:element},window:new EventTarget(),document:{documentElement:{dataset:{}}}})
  const view=Component({sessionId:'s',plans})
  expect(view.props['data-research-workbench-progress']).toBe('completed')
  expect(JSON.stringify(view)).toContain('4/4')
  expect(JSON.stringify(view)).not.toContain('PRIVATE')
  const footer=Component({sessionId:'s',plans,footer:true})
  expect(footer.props['data-research-workbench-footer']).toBe(true)
- expect(footer.props.children[1]).toBeNull()
+ expect(JSON.stringify(footer.props.children[1])).toContain('刷新状态待确认 4')
  snapshot={...snapshot,active:false}
- expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
+ expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('刷新状态待确认 4')
  snapshot={...snapshot,nodes:[{id:'pending',planId:'plan',status:'running'}]}
  expect(JSON.stringify(Component({sessionId:'s',plans,footer:true}))).toContain('上次状态')
  snapshot={...snapshot,active:true,nodes:[{id:'other',planId:'other-plan',status:'completed'}]}
  expect(Component({sessionId:'s',plans,footer:true})).toBeNull()
- const legacy=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v1 */')
+ const legacy=source.replace('/* ework:workbench-feedback:v8 */','/* ework:workbench-feedback:v1 */')
   .replace('\nreact.useEffect(()=>{publishInactiveResearchWorkbenchProgress(window,sessionId,researchWorkspaceSnapshot2.artifacts)},[sessionId,researchWorkspaceSnapshot2]);','')
   .replace('\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);','')
   .replace(', workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null','')
  expect(patchResearchWorkbenchFeedback(legacy)).toBe(source)
  // Simulate the installed v4 wiring, including its global footer and duplicate
  // execution status, so an existing client patch upgrades to the same output.
- const v4=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v4 */')
+ const v4=source.replace('/* ework:workbench-feedback:v8 */','/* ework:workbench-feedback:v4 */')
   .replace('/* ework:workbench-flow:v1 */\nconst workbenchReceiptAnchors=researchWorkbenchReceiptAnchors(renderFlow,nodeStore,planningResponseMetadata,conversationNodeTurn);\n','')
   .replace('const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);\nconst workbenchReceiptPlans=researchWorkbenchReceiptPlans(order,nodeStore,planningResponseMetadata);')
   .replace('renderFlow.flatMap((entry) => {const renderWorkbenchEntry=()=>{','renderFlow.map((entry) => {')
   .replace('};const renderedWorkbenchEntry=renderWorkbenchEntry(),receiptPlans=workbenchReceiptAnchors.get(entry.key);return receiptPlans?.length ? [renderedWorkbenchEntry,react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:receiptPlans,footer:true},sessionId+":workbench:"+entry.key)] : [renderedWorkbenchEntry];})','}), workbenchReceiptPlans.length ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId,plans:workbenchReceiptPlans,footer:true}) : null')
   .replace('planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,','workbenchMeta.plans.length&&sessionId ? react_jsx_runtime.jsx(ResearchWorkbenchProgress,{sessionId, plans:workbenchMeta.plans}) : null, planningMeta && !workbenchMeta.plans.length ? react_jsx_runtime.jsx(ResearchPlanningFeedback,')
  expect(patchResearchWorkbenchFeedback(v4)).toBe(source)
- const v5=source.replace('/* ework:workbench-feedback:v6 */','/* ework:workbench-feedback:v5 */')
+ const v7=source.replace('/* ework:workbench-feedback:v8 */','/* ework:workbench-feedback:v7 */').replace('refreshSnapshot.complete===true','true /* STALE_V7_INCOMPLETE_IS_STATIC */')
+ expect(v7).toContain('STALE_V7_INCOMPLETE_IS_STATIC')
+ expect(patchResearchWorkbenchFeedback(v7)).toBe(source)
+ const v6=source.replace('/* ework:workbench-feedback:v8 */','/* ework:workbench-feedback:v6 */').replace("const cacheKey='__sherlockWorkbenchGenerationV1'","const cacheKey='STALE_V6_PUBLISHER'")
+ expect(v6).toContain('STALE_V6_PUBLISHER')
+ expect(patchResearchWorkbenchFeedback(v6)).toBe(source)
+ expect(source.split('/* ework:workbench-feedback:v8 */')).toHaveLength(2)
+ const v5=source.replace('/* ework:workbench-feedback:v8 */','/* ework:workbench-feedback:v5 */')
  expect(patchResearchWorkbenchFeedback(v5)).toBe(source)
+})
+
+
+it('reports actual refresh facts rather than the minute plan, including unmounted builtins and last observed notes',()=>{
+ const target=new EventTarget(),store=createComponentDataStatusStore()
+ const nodes=['static','manual','paused','configured','failed','success','native'].map(id=>card(id,'completed',id==='native'?{containerSpec:{type:'financial-widget',config:{secret:'PRIVATE'}}}:{}))
+ const snapshot=publishResearchWorkbenchProgress(target,'s',nodes)
+ expect(snapshot.nodes.find(n=>n.id==='native').builtin).toBe(true)
+ let state=workbenchProgressState([{id:'plan',count:7}],snapshot,false,store.snapshotSession('s'))
+ expect(state.refreshDetail).toContain('刷新状态待确认 7')
+ store.publish('s',[
+  {nodeId:'manual',status:'idle',enabled:false,intervalMinutes:0},
+  {nodeId:'paused',status:'idle',enabled:false,intervalMinutes:1},
+  {nodeId:'configured',status:'idle',enabled:true,intervalMinutes:1},
+  {nodeId:'failed',status:'error',enabled:true,intervalMinutes:1,lastSuccess:1000},
+  {nodeId:'success',status:'success',enabled:true,intervalMinutes:5,lastSuccess:2000}
+ ])
+ state=workbenchProgressState([{id:'plan',count:7}],snapshot,false,store.snapshotSession('s'))
+ for(const text of ['静态内容 1','仅手动刷新 1','刷新已暂停 1','已配置每分钟刷新，尚无成功记录 1','最近刷新失败 1','已配置每 5 分钟刷新，最近刷新成功 1','刷新状态待确认 1'])expect(state.refreshDetail).toContain(text)
+ expect(state.refreshDetail).not.toContain('已自动更新')
+ store.publishNative('s','native',{status:'success',enabled:true,intervalMinutes:1,lastSuccess:3000,error:'PRIVATE'})
+ expect(workbenchProgressState([{id:'plan',count:7}],snapshot,false,store.snapshotSession('s')).refreshDetail).toContain('已配置每分钟刷新，最近刷新成功 1')
+ store.clearNative('s','native');store.clear('s')
+ state=workbenchProgressState([{id:'plan',count:7}],{...snapshot,active:false},false,store.snapshotSession('s'))
+ expect(state.refreshDetail).toContain('上次观察')
+ expect(state.refreshDetail).not.toContain('正在自动')
+ expect(JSON.stringify(store.snapshotSession('s'))).not.toContain('PRIVATE')
+})
+
+it('final historical refresh groups use one qualifier while mixed current and retired facts stay local',()=>{
+ const target=new EventTarget(),snapshot=publishResearchWorkbenchProgress(target,'s',done())
+ const rows=[{nodeId:'card-0',enabled:true,intervalMinutes:1,lastSuccess:10},{nodeId:'card-1',enabled:false,intervalMinutes:0},{nodeId:'card-2',enabled:false,intervalMinutes:5},{nodeId:'card-3',enabled:true,intervalMinutes:5,lastRefreshFailed:true}]
+ const stale=workbenchProgressState(plans,{...snapshot,active:false},false,{ready:false,observed:true,complete:true,rows})
+ expect(stale.refreshDetail.match(/上次观察：/g)).toHaveLength(1)
+ expect(stale.refreshLines).toHaveLength(4)
+ expect(stale.refreshLines.join(' ')).toContain('仅手动刷新 1')
+ const mixed=workbenchProgressState(plans,snapshot,false,{ready:true,observed:true,complete:true,rows:rows.map((row,i)=>i===3?{...row,lastObserved:true}:row)})
+ expect(mixed.refreshHistory).toBe('')
+ expect(mixed.refreshDetail).toContain('上次观察：已配置每 5 分钟刷新，最近刷新失败 1')
+ expect(mixed.refreshDetail).not.toContain('上次观察：已配置每分钟刷新')
 })

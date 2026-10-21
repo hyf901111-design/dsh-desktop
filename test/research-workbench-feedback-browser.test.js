@@ -4,11 +4,14 @@ import {readFile,mkdir} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {patchComponentDataRefresh} from '../scripts/lib/component-data-refresh.mjs'
 import {planningResponseMetadata,researchPlanningRequest} from '../scripts/lib/research-planning-feedback.mjs'
 let browser,script
-const evidence='/tmp/workbench-feedback-actions-20261021'
+const evidence=process.env.SHERLOCK_FEEDBACK_EVIDENCE||'/tmp/workbench-feedback-task9-20261021'
 beforeAll(async()=>{
- const source=patchResearchCreationProgress(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
+ const source=patchComponentDataRefresh(patchResearchCreationProgress(restoreResearchGridWorkbench(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))))
+ const storeStart=source.indexOf('/* ODYSSEY_COMPONENT_DATA_START */'),storeEnd=source.indexOf('function openComponentData(',storeStart)
+ if(storeStart<0||storeEnd<0)throw Error('Actual injected component store missing')
  const start=source.search(/\/\* ework:workbench-feedback:v\d+ \*\//),end=source.indexOf('const ExecutionStatusGroup =',start)
  const chat=source.slice(source.indexOf('function ChatView('),source.indexOf('//#region lib/types/client/contract/slots.js',source.indexOf('function ChatView(')))
  const flowStart=chat.search(/renderFlow\.(?:map|flatMap)\(\(entry\) => \{/),flowEnd=chat.indexOf('\n\t\t\t\t\t\t]',flowStart)
@@ -18,6 +21,7 @@ beforeAll(async()=>{
  const nativeFlow=nativeNames.map(name=>{const start=source.indexOf('function '+name+'('),end=source.indexOf('\n\t\t}',start);if(start<0||end<0)throw Error('Native flow function missing: '+name);return source.slice(start,end+4)}).join('\n')
  if(!receiptLookup)throw Error('Actual ChatView receipt anchors missing')
  const output=await build({stdin:{resolveDir:process.cwd(),contents:`import * as react from 'react';import * as react_jsx_runtime from 'react/jsx-runtime';import {createRoot} from 'react-dom/client';
+${source.slice(storeStart,storeEnd)}
 ${source.slice(start,end)}
 ${planningResponseMetadata.toString()}
 ${researchPlanningRequest.toString()}
@@ -44,6 +48,11 @@ function RestoredNotesEntry(){react.useEffect(()=>{publishInactiveResearchWorkbe
 window.restoreNotes=()=>{dispose?.();root.render(react.createElement(RestoredNotesEntry))};
 window.showConversation=({sessionId,flow,rows,artifacts,active=true,pending=[],runningTurnNumber=null})=>{dispose?.();nodes=artifacts;const publishCurrent=()=>publishResearchWorkbenchProgress(window,sessionId,nodes,active,active);publishCurrent();dispose=installResearchWorkbenchRetry({eventTarget:window,sessionId,getArtifacts:()=>nodes,canRetry:()=>active,retry:async node=>{window.retries.push(node.id);node.generationStatus='retrying';publishCurrent();await new Promise(r=>setTimeout(r,100));node.generationStatus='completed';node.containerSpec={type:'html'};publishCurrent()}});root.render(react.createElement(ReceiptConversation,{sessionId,flow,rows,pending,runningTurnNumber}))};
 window.publishSession=(sessionId,artifacts,active=true)=>publishResearchWorkbenchProgress(window,sessionId,artifacts,active,active);
+let refreshMonitor,refreshPush;
+window.startRefresh=(sessionId,rows)=>{refreshMonitor?.dispose();refreshMonitor=createComponentDataStatusMonitor({sessionId,store:componentDataStatusStore,isVisible:()=>true,bridge:{setVisible:async()=>{},request:async()=>rows,subscribe:fn=>{refreshPush=fn;return()=>{refreshPush=null}}}})};
+window.refreshRows=(sessionId,rows)=>refreshPush?.({sessionId,rows});
+window.nativeRefresh=(sessionId,nodeId,row)=>row?componentDataStatusStore.publishNative(sessionId,nodeId,row):componentDataStatusStore.clearNative(sessionId,nodeId);
+window.leaveRefresh=()=>{refreshMonitor?.dispose();refreshMonitor=null};
 window.show(['completed','completed','running','failed']);`},bundle:true,platform:'browser',format:'iife',write:false})
  script=output.outputFiles[0].text
  const {chromium}=await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -189,5 +198,57 @@ it('shows saved partial feedback on a cold notes entry with no canvas, with retr
   expect(await page.getByRole('img',{name:'正在生成组件'}).count()).toBe(0)
   expect(await page.locator('[data-research-workbench-progress="waiting"]').count()).toBe(0)
   await page.screenshot({path:evidence+'/cold-notes-saved-state.png'})
+ }finally{await page.close()}
+},15000)
+
+
+it('renders real refresh states without crowding actions in light/dark narrow/wide cards and retains them on the original Notes turn',async()=>{
+ const page=await browser.newPage({viewport:{width:380,height:620}}),errors=[]
+ page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')errors.push(message.text())})
+ try{
+  await page.setContent('<title>Workbench refresh feedback</title><style>:root{--dsw-alias-border-l2:#ddd;--dsw-alias-bg-l2:#f7f7f7;--dsw-alias-label-primary:#161616;--dsw-alias-label-secondary:#666}body{font:12px system-ui;margin:16px}main{width:300px}</style><main></main>')
+  await page.addScriptTag({content:script})
+  expect(await page.title()).toBe('Workbench refresh feedback');expect(page.url()).toBe('about:blank')
+  const first=turn(1,'refresh-plan',8),artifacts=['static','manual','paused','configured','failure','success','native','incomplete'].map(id=>artifact(id,'refresh-plan',id==='incomplete'?'failed':'completed'))
+  artifacts[6].containerSpec={type:'financial-widget'}
+  const rows=[{nodeId:'manual',enabled:false,intervalMinutes:0},{nodeId:'paused',enabled:false,intervalMinutes:1},{nodeId:'configured',enabled:true,intervalMinutes:1},{nodeId:'failure',enabled:true,intervalMinutes:1,status:'error',lastSuccess:1000,error:'PRIVATE'},{nodeId:'success',enabled:true,intervalMinutes:5,status:'success',lastSuccess:2000}]
+  await page.evaluate(value=>window.showConversation(value),{sessionId:'refresh',...first,artifacts})
+  await page.getByText(/刷新状态待确认 7/).waitFor()
+  await page.evaluate(({rows})=>window.startRefresh('refresh',rows),{rows})
+  await page.getByText(/静态内容 1/).waitFor()
+  const card=page.locator('[data-research-workbench-progress]')
+  for(const text of ['仅手动刷新 1','刷新已暂停 1','尚无成功记录 1','最近刷新失败 1','每 5 分钟刷新，最近刷新成功 1','刷新状态待确认 1'])expect(await card.textContent()).toContain(text)
+  const assertLayout=async()=>{
+   const bounds=await card.boundingBox(),button=await card.getByRole('button').boundingBox(),title=await card.getByRole('status').boundingBox()
+   expect(button.x).toBeGreaterThanOrEqual(title.x+title.width)
+   expect(button.x+button.width).toBeLessThanOrEqual(bounds.x+bounds.width)
+   expect(await card.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true)
+   for(const group of await card.locator('[data-refresh-group]').all()){const rect=await group.boundingBox();expect(rect.x+rect.width).toBeLessThanOrEqual(button.x);expect(await group.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true)}
+   expect(await page.locator('body').textContent()).not.toMatch(/PRIVATE|Error overlay|Vite Error/)
+  }
+  await assertLayout();await page.screenshot({path:evidence+'/refresh-mixed-light-narrow.png'})
+  await page.evaluate(()=>{document.documentElement.style.cssText='--dsw-alias-border-l2:#444;--dsw-alias-bg-l2:#242424;--dsw-alias-label-primary:#eee;--dsw-alias-label-secondary:#aaa';document.body.style.background='#151515'})
+  await assertLayout();await page.screenshot({path:evidence+'/refresh-mixed-dark-narrow.png'})
+  await page.setViewportSize({width:1100,height:620});await page.evaluate(()=>document.querySelector('main').style.width='800px')
+  await assertLayout();await page.screenshot({path:evidence+'/refresh-mixed-dark-wide.png'})
+  await page.evaluate(()=>{document.documentElement.style.cssText='';document.body.style.background='white'})
+  await assertLayout();await page.screenshot({path:evidence+'/refresh-mixed-light-wide.png'})
+  await page.evaluate(()=>window.nativeRefresh('refresh','native',{enabled:true,intervalMinutes:1,status:'success',lastSuccess:3000}))
+  await page.getByText(/已配置每分钟刷新，最近刷新成功 1/).waitFor()
+  await page.evaluate(()=>{window.nativeRefresh('refresh','native',null);window.refreshRows('refresh',[])})
+  await page.getByText(/上次观察：已配置每分钟刷新，最近刷新成功 1/).waitFor()
+  expect(await card.textContent()).toContain('静态内容 6')
+  await page.evaluate(({rows})=>window.refreshRows('refresh',rows),{rows})
+  await page.getByText(/静态内容 1/).waitFor()
+  await page.evaluate(()=>window.leaveRefresh())
+  await page.evaluate(value=>window.showConversation(value),{sessionId:'refresh',rows:[...first.rows,{key:'new-message',kind:'user'}],flow:[...first.flow,{kind:'node',key:'new-message'}],artifacts,active:false})
+  await page.locator('[data-refresh-history]').waitFor()
+  expect((await card.textContent()).match(/上次观察：/g)).toHaveLength(1)
+  expect(await card.locator('[data-refresh-group]').count()).toBe(7)
+  expect(await positions(page)).toEqual(['user-1','execution:1','assistant-1','progress','new-message'])
+  expect(await card.getByRole('button').isDisabled()).toBe(true)
+  expect(await page.locator('svg').count()).toBe(0)
+  await assertLayout();await page.screenshot({path:evidence+'/refresh-notes-last-observed.png'})
+  expect(errors).toEqual([])
  }finally{await page.close()}
 },15000)

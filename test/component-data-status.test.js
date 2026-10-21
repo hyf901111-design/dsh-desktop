@@ -139,3 +139,28 @@ describe('component refresh status',()=>{
   }finally{await react.act(async()=>roots.forEach(root=>root.unmount()));vi.useRealTimers();vi.unstubAllGlobals();await window.happyDOM.close()}
  })
 })
+
+
+it('exposes stable readonly session facts, preserves last observations without changing footer clear semantics, and bounds summaries',()=>{
+ const store=createComponentDataStatusStore(),listener=vi.fn()
+ const cold=store.snapshotSession('cold')
+ expect(cold).toMatchObject({ready:false,observed:false,rows:[]})
+ expect(store.snapshotSession('cold')).toBe(cold)
+ const stop=store.subscribeSession('s',listener)
+ store.publish('s',[])
+ const empty=store.snapshotSession('s')
+ expect(empty).toMatchObject({ready:true,observed:true,rows:[]})
+ store.publish('s',[]);expect(store.snapshotSession('s')).toBe(empty);expect(listener).toHaveBeenCalledOnce()
+ store.publishNative('s','native',row('native',1000,{error:'PRIVATE',parameters:{secret:'PRIVATE'}}))
+ const live=store.snapshotSession('s')
+ expect(live.rows[0]).toMatchObject({nodeId:'native',native:true,lastSuccess:1000})
+ expect(JSON.stringify(live)).not.toContain('PRIVATE')
+ expect(Object.isFrozen(live)).toBe(true);expect(Object.isFrozen(live.rows)).toBe(true);expect(Object.isFrozen(live.rows[0])).toBe(true)
+ store.clearNative('s','native');expect(store.read('s','native')).toBeNull()
+ expect(store.snapshotSession('s').rows[0]).toMatchObject({nodeId:'native',lastObserved:true})
+ store.suspend('s');expect(store.snapshotSession('s').ready).toBe(false)
+ store.clear('s');expect(store.snapshotSession('s')).toMatchObject({ready:false,observed:true})
+ stop();listener.mockClear();store.publish('s',[]);expect(listener).not.toHaveBeenCalled()
+ for(let i=0;i<70;i++)store.publish('session-'+i,[])
+ expect(store.snapshotSession('s')).toMatchObject({ready:false,observed:false,rows:[]})
+})

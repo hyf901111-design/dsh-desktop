@@ -55,13 +55,20 @@ describe('任务检查切板恢复', () => {
     const patched = patchResearchGenerationWatch(source)
     expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     expect(patchResearchGenerationWatch(patched)).toBe(patched)
-    for(const version of ['V1','V2','V3']){
-      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V4 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
+    for(const version of ['V1','V2','V3','V4']){
+      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V5 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
       expect(patchResearchGenerationWatch(previous)).toBe(patched)
     }
+    const hookStart=patched.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V5 */'),hookEnd=patched.indexOf('}, [sessionId, workspace, selectionGeneration?.inspect]);',hookStart)
+    const staleHook=patched.slice(hookStart,hookEnd).replace('RECOVERY_V5','RECOVERY_V4').replace("cacheKey='__sherlockWorkbenchGenerationV1'","cacheKey='STALE_V4_INLINE_PUBLISHER'")
+    const currentV4=patched.slice(0,hookStart)+staleHook+patched.slice(hookEnd)
+    expect(currentV4).toContain('STALE_V4_INLINE_PUBLISHER')
+    expect(patchResearchGenerationWatch(currentV4)).toBe(patched)
+    expect(patched.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V5')).toHaveLength(2)
     expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
     expect(patched).toContain('return sherlockBoardsAdapter.inspectShared(session.sessionId,request)')
     expect(patched).toContain('this.deps.generationInspectSink(request, options)')
+    expect(patched).toContain("node.containerSpec?.type==='financial-widget'?{builtin:true}")
     expect(patched).toContain('postResearchTask(RESEARCH_TASK_INSPECT_PATH, request, options?.signal)')
     expect(restoreResearchGridWorkbench(patchResearchGridWorkbench(patched))).toBe(patched)
     expect(() => patchResearchGenerationWatch('unknown native lifecycle')).toThrow('无法定位')

@@ -6,6 +6,7 @@ import * as jsx from 'react/jsx-runtime'
 import {renderToStaticMarkup} from 'react-dom/server'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {componentDataStatusDefinitions} from '../scripts/lib/component-data-status.mjs'
 import {publishResearchWorkbenchProgress} from '../scripts/lib/research-workbench-feedback.mjs'
 
 const original=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
@@ -16,7 +17,7 @@ const card=(id,status)=>({id,workbenchId:'plan',generationTaskId:'task-'+id,gene
 function fixture(statuses,english=false){
  const target=new EventTarget()
  const snapshot=publishResearchWorkbenchProgress(target,'session',statuses.map((s,i)=>card('node-'+i,s)),true,true)
- const api=runInNewContext(source.slice(start,end)+`;({Component:ResearchWorkbenchProgress,install:typeof installResearchWorkbenchRetry==='function'?installResearchWorkbenchRetry:null,request:typeof requestResearchWorkbenchRetry==='function'?requestResearchWorkbenchRetry:null})`,{react:React,react_jsx_runtime:jsx,window:target,document:{documentElement:{dataset:{odysseyLocale:english?'en':'zh'}}},CustomEvent})
+ const api=runInNewContext(componentDataStatusDefinitions()+source.slice(start,end)+`;({Component:ResearchWorkbenchProgress,install:typeof installResearchWorkbenchRetry==='function'?installResearchWorkbenchRetry:null,request:typeof requestResearchWorkbenchRetry==='function'?requestResearchWorkbenchRetry:null})`,{react:React,react_jsx_runtime:jsx,window:target,document:{documentElement:{dataset:{odysseyLocale:english?'en':'zh'}}},CustomEvent})
  return {...api,target,snapshot,html:()=>renderToStaticMarkup(React.createElement(api.Component,{sessionId:'session',plans,footer:true}))}
 }
 it('shows a circular loading indicator for real pending components, then a completed label only when all planned components exist',()=>{

@@ -1,3 +1,4 @@
+import {articleTimelineRequired} from './article-timeline-provenance.js'
 import {extractArtifactObjects} from './artifact-output.js'
 import {componentFeedEvidenceIssue,fetchedWebPageRecord} from './component-source-binding.js'
 
@@ -44,17 +45,18 @@ function excerptText(value,budget) {
 }
 
 /** Supplement missing feed identities, without editing or filtering the draft. */
-export async function acquireFeedSourceEvidence({text,records=[],observedUrls=[],readPage,signal,onProgress,maxPages=6,concurrency=3,timeoutMs=20000}) {
+export async function acquireFeedSourceEvidence({text,records=[],observedUrls=[],readPage,signal,onProgress,maxPages=6,concurrency=3,timeoutMs=20000,...options}) {
   signal?.throwIfAborted()
   const empty={records:[],evidence:'',attempts:[]},objects=extractArtifactObjects(text)
   const data=objects.length===1?objects[0]:null
-  if(typeof readPage!=='function'||!['news','reports'].includes(data?.type)||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>40)return empty
+  if(typeof readPage!=='function'||(!['news','reports'].includes(data?.type)&&!articleTimelineRequired(data,options))||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>(data.type==='timeline'?60:40))return empty
   const allowed=new Set(observedUrls.map(sourceUrl).filter(Boolean))
   for(const record of records)if(record.tool==='web_fetch'&&record.purpose==='snapshot')for(const row of record.snapshotRows??[])for(const value of row.urls??[]){const url=sourceUrl(value);if(url)allowed.add(url)}
   const urls=[...new Set(data.items.flatMap(item=>{
     const url=sourceUrl(item?.url)
-    return url&&allowed.has(url)&&componentFeedEvidenceIssue(JSON.stringify({...data,items:[item]}),records)?[url]:[]
-  }))].slice(0,Math.max(1,Math.min(8,maxPages)))
+    const alreadyRead=articleTimelineRequired(data,options)&&records.some(record=>record.tool==='web_fetch'&&record.purpose==='snapshot'&&sourceUrl(record.args?.url)===url)
+    return url&&allowed.has(url)&&!alreadyRead&&componentFeedEvidenceIssue(JSON.stringify({...data,items:[item]}),records,options)?[url]:[]
+  }))].slice(0,Math.max(1,Math.min(6,maxPages)))
   if(!urls.length)return empty
   const controller=new AbortController(),stop=()=>controller.abort(signal.reason)
   signal?.addEventListener('abort',stop,{once:true})

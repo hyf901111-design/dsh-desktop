@@ -7,7 +7,7 @@ import {renderInputArtifact} from './input-artifact.js';
 import {renderAdvancedChart} from './advanced-chart-artifact.js';
 import {renderSpecialChart} from './special-chart-artifact.js';
 import { renderCartesianChart } from './cartesian-chart-artifact.js';
-import { normalizeIndexedTableRows } from './template-data-contract.js';
+import { normalizeIndexedTableRows, templateDataIssue } from './template-data-contract.js';
 import { normalizeChartMetadata } from './chart-template-contract.js';
 import {retainTemplateModel,readTemplateModel} from './component-template-registry.js';
 import { renderMarketArtifact } from './market-artifact.js';
@@ -84,10 +84,17 @@ export function restoreDeclaredArtifactType(text,type) {
  if(model.type!==type&&!(type==='table'&&model.type==='market'&&model.variant==='table'))return;
  return encoded;
 }
+export function retainedTableData(spec) {
+ const data=spec?.type==='html'?readTemplateModel(spec)?.data:undefined;
+ return data?.type==='table'||data?.type==='market'&&data.variant==='table'?data:undefined;
+}
 export function acceptArtifactOutput(text) {
  const candidates=extractArtifactObjects(text);
  for(const original of candidates.reverse()) {
-  const candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(original)));
+  // Retained JSON is data, not proof that model-supplied HTML displays it.
+  // Rebuild tables with the same trusted renderer used for structured output.
+  const tableData=retainedTableData(original)??original;
+  const candidate=normalizeChartMetadata(normalizeTemplateAliases(normalizeIndexedTableRows(tableData)));
   const missingChart=preserveMissingChartExplanation(candidate);
   if(missingChart)return JSON.stringify(missingChart);
   const chartWithNotes=renderAdvancedChart(candidate) ?? renderSpecialChart(candidate) ?? renderCartesianChart(candidate) ?? preserveLongChartCaption(candidate);
@@ -122,8 +129,7 @@ function normalizeTemplateAliases(value) {
  if(value?.type==='table'&&(typeof value.asOf==='string'&&value.asOf.trim()||value.asOf===undefined&&typeof value.note==='string'&&value.note.trim())&&
    Object.keys(value).every(key=>['version','type','title','columns','rows','asOf','note'].includes(key))&&
    (value.note===undefined||typeof value.note==='string'&&value.note.trim())) {
-  const {asOf,note,...core}=value;
-  if(parseResearchContainerSpec(core))return {...value,type:'market',variant:'table',asOf:asOf??'静态快照 · 来源与时点见表格及说明'};
+  if(!templateDataIssue(value))return {...value,type:'market',variant:'table',asOf:value.asOf??'静态快照 · 来源与时点见表格及说明'};
  }
  if(value?.type!=='market')return value;
  if(value.variant==='metrics'&&Array.isArray(value.items))return {...value,items:value.items.map(item=>

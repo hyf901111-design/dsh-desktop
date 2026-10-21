@@ -1304,12 +1304,58 @@ describe('Research task Subagent adapter', () => {
     const ctx = sessionEventContext(parent, child, run)
     ctx.agents.withInitiator = vi.fn((_parent, operation) => operation())
     ctx.web = { search: vi.fn(), fetch: vi.fn() }
-    return { ctx, start: async (query, onProgress) => {
+    return { ctx, start: async (query, onProgress, hostContext) => {
       const runtime = await runtimeModule()
       const prompt = runtime.buildResearchTaskPrompt({ ...containerRequest(), prompt: query })
-      return runtime.createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt, signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress })
+      return runtime.createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt, hostContext, signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress })
     } }
   }
+
+  it('uses trusted host source policy rather than the planner route in the SDK child',async()=>{
+    const fixture=containerAdapterFixture()
+    const names=['public_data_query','financial_query','web_search','web_fetch','ework__datayes']
+    fixture.ctx.tools={schemas:()=>names.map(name=>({name,description:name.startsWith('ework__')?'通联 DataYes API':''}))}
+    const query='工作台：公司研究\n本面板：近期新闻\n使用通联DataYes查询真实新闻，保留日期和原文。\n仅生成本面板，优先使用 news 类型。'
+    const handle=await fixture.start(query,undefined,{sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:'近期新闻，查询真实新闻，保留日期和原文。'}})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).not.toContain('先实际调用与面板字段最匹配的金融工具')
+      expect(child.toolFilter.allow).toContain('web_fetch')
+      expect(child.toolFilter.allow).toContain('public_data_query')
+    }finally{await handle.dispose()}
+  })
+
+  it.each([true,false])('keeps the host human plugin restriction in SDK routing (required=%s)',async required=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_fetch'},{name:'ework__datayes',description:'通联 DataYes API'}]}
+    const query='工作台：研究\n本面板：新闻\n'+(required?'不要使用DataYes，检索真实新闻。':'使用DataYes，检索真实新闻。')+'\n仅生成本面板，优先使用 news 类型。'
+    const policy={pluginRequired:required,pluginProhibited:!required,preferenceRequest:required?'真实新闻，使用DataYes。':'真实新闻，禁止使用插件。'}
+    const handle=await fixture.start(query,undefined,{sourcePolicy:policy})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow.includes('ework__datayes')).toBe(required)
+      expect(child.toolFilter.allow.includes('public_data_query')).toBe(!required)
+      expect(child.prompt[0].text.includes('本面板已指定使用配置的插件')).toBe(required)
+      expect(child.toolFilter.allow).not.toContain('ework__invisible')
+    }finally{await handle.dispose()}
+  })
+
+  it.each(['不用DataYes','不要用插件'])('fix round1 SDK obeys parsed short human prohibition: %s',async restriction=>{
+    const {workbenchSourcePolicy}=await import('../packages/dsh-research-task-runtime/workbench-source-policy.js')
+    const panel={title:'新闻',type:'news',prompt:'使用DataYes检索真实新闻。'}
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[{name:'public_data_query'},{name:'web_fetch'},{name:'ework__datayes',description:'通联 DataYes API'}]}
+    const query=workbenchPanelPrompt({title:'研究',dataMode:'source'},panel)
+    const handle=await fixture.start(query,undefined,{sourcePolicy:workbenchSourcePolicy('创建真实新闻工作台，'+restriction+'。',panel)})
+    try{
+      const child=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(child.toolFilter.allow).not.toContain('ework__datayes')
+      expect(child.toolFilter.allow).toContain('web_fetch')
+      expect(child.prompt[0].text).not.toContain('本面板已指定使用配置的插件')
+      expect(child.prompt[0].text).toContain('本卡禁止使用插件')
+    }finally{await handle.dispose()}
+  })
 
   it.each(['html','gantt'])('generates a deferred offline %s panel directly without rediscovering skills or files',async type=>{
     const panel={title:'古籍修复交接',type,size:'large',prompt:'B01和B02两册演练记录，保留负责人、步骤和交接事项。'}
@@ -3292,7 +3338,7 @@ it('supplements observed news originals before rejection without generating a se
  }finally{await runtime.dispose()}
 })
 
-it.each(['allowed','no-fetch-tool','offline'])('keeps host feed reads within the actual child web permission and observed search sources: %s',async mode=>{
+it.each(['allowed','timeline','no-fetch-tool','offline'])('keeps host feed reads within the actual child web permission and observed search sources: %s',async mode=>{
  const {createSubagentAdapter}=await runtimeModule()
  const parent={id:'parent-1',session:{events:[]}},child={id:'child-1',session:{events:[]}},done=Promise.withResolvers()
  const run={id:child.id,localAgent:child,result:done.promise,dispose:vi.fn(async()=>{})},ctx=sessionEventContext(parent,child,run)
@@ -3300,15 +3346,15 @@ it.each(['allowed','no-fetch-tool','offline'])('keeps host feed reads within the
  ctx.agents.withInitiator=vi.fn((_parent,operation)=>operation())
  ctx.tools={schemas:()=>mode==='no-fetch-tool'?[{name:'web_search'}]:[{name:'web_search'},{name:'web_fetch'}]}
  ctx.web={fetch:vi.fn(async()=>({statusCode:200,body:{kind:'text',content:`${title}\n\n[网页读取状态：已滚动至文末，完成正文收集]\n\n[网页主文记录]\n${JSON.stringify({articles:[{title,date:'2026-01-30',url}]})}\n[/网页主文记录]\n\n原文内容。`}}))}
- const query=`工作台：政策研究\n本面板：煤电政策\n${mode==='offline'?'不要联网，只用已有资料':'检索实际政策原文'}，优先使用 news 类型。`
- const handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query,prompt:query,signal:new AbortController().signal,onSessionEvent:()=>{}})
+ const query=`工作台：政策研究\n本面板：煤电政策\n${mode==='offline'?'不要联网，只用已有资料':'检索实际政策新闻原文'}，优先使用 news 类型。`
+ const handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query,prompt:query,...(mode==='timeline'?{hostContext:{sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:'新闻'},sourceRequirement:'检索政策新闻',workbenchRequest:{originalRequest:'创建真实政策新闻工作台。',dataMode:'source'}}}:{}),signal:new AbortController().signal,onSessionEvent:()=>{}})
  try{
   ctx.emit(child,{type:'tool/call',data:{name:'web_search',callId:'found-policy',arguments:'{"query":"煤电政策"}'}})
   ctx.emit(child,{type:'tool/result',data:{message:{source:{callId:'found-policy'},content:[{type:'tool-result',toolCallId:'found-policy',content:[{type:'text',text:`Sources:\n- [${title}](${url}) — 原文摘要\n\nCite the relevant URLs above as markdown links in your answer.`}]}]}}})
-  const model={version:1,type:'news',title:'政策',items:[{title,date:'2026-01-30',url,summary:'原文摘要'}]}
+  const model=mode==='timeline'?{version:1,type:'timeline',title:'政策',items:[{id:'policy',title,time:'2026-01-30',url,summary:'原文摘要'}]}:{version:1,type:'news',title:'政策',items:[{title,date:'2026-01-30',url,summary:'原文摘要'}]}
   done.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify(model)}]})
   const result=await handle.result
-  if(mode==='allowed'){
+  if(mode==='allowed'||mode==='timeline'){
    const supplement=await result.acquireFeedEvidence(JSON.stringify(model),[])
    expect(supplement.records).toHaveLength(1)
    expect(ctx.web.fetch).toHaveBeenCalledOnce()

@@ -121,3 +121,20 @@ describe('workbench common records at the real tool boundary',()=>{
   }finally{await f.close()}
  });
 });
+
+
+it('keeps prepared and accepted receipts idempotent while explicitly deferring refresh verification',async()=>{
+ const f=await setup();try{
+  const plan=input(),receipt=await f.tool.execute(plan,f.exec)
+  expect(receipt).toMatchObject({status:'prepared',refreshStatus:'unverified'})
+  expect(receipt.refreshGuidance).toContain('刷新配置待确认')
+  expect(await f.tool.execute(plan,f.exec)).toEqual(receipt)
+  expect(f.adapter.start).not.toHaveBeenCalled()
+  const deferred={...input(),requestId:'refresh-unverified',generationMode:'deferred',sharedContext:'模拟演练',panels:[...input().panels,{title:'补充说明',type:'html',size:'large',prompt:'根据共同8册完整事实提供交接说明。'}]}
+  const accepted=await f.tool.execute(deferred,f.exec)
+  expect(accepted).toMatchObject({status:'accepted',refreshStatus:'unverified'})
+  expect(accepted.refreshGuidance).toBe(receipt.refreshGuidance)
+  const retry=await f.tool.execute(deferred,f.exec)
+  expect(retry).toEqual(accepted)
+ }finally{await f.close()}
+})
