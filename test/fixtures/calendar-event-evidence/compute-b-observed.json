@@ -1,0 +1,281 @@
+{
+  "evidenceBoundary": "Frozen actual calendar and three successful disclosure records collected by production componentSourceCollector. Three failed unlock calls/results are separate observed evidence, not accepted business records or proof of zero future events; no new online verification.",
+  "taskId": "31efebf3-f729-4ed5-9b5d-6655e843479f",
+  "artifact": {
+    "version": 1,
+    "type": "calendar",
+    "title": "未来重要事件日历",
+    "items": [
+      {
+        "title": "中际旭创（300308）2026年三季报披露",
+        "summary": "定期报告·预计披露日2026-10-24（曾预报2026-10-30，最新预披露日期2026-10-08）；来源：DataYes getEquReportPredisclo",
+        "date": "2026-10-24",
+        "category": "定期报告"
+      },
+      {
+        "title": "中际旭创（300308）Q3报告期",
+        "summary": "定期报告对应报告期2026-09-30；来源：DataYes getEquReportPredisclo",
+        "date": "2026-09-30",
+        "category": "报告期"
+      },
+      {
+        "title": "新易盛（300502）2026年三季报披露",
+        "summary": "定期报告·预计披露日2026-10-30；来源：DataYes getEquReportPredisclo",
+        "date": "2026-10-30",
+        "category": "定期报告"
+      },
+      {
+        "title": "工业富联（601138）2026年三季报披露",
+        "summary": "定期报告·预计披露日2026-10-30；来源：DataYes getEquReportPredisclo",
+        "date": "2026-10-30",
+        "category": "定期报告"
+      },
+      {
+        "title": "2026杭州国际光通信产业博览会（算力产业链行业会议）",
+        "summary": "行业会议·主题“光联算力·智通未来”，2026年11月启幕，具体日期未在检索结果中确认，待定；来源：oceanfair官网 www.ocefair.com",
+        "date": "待定",
+        "category": "行业会议"
+      },
+      {
+        "title": "解禁事件核查结果：三家公司未来窗口内均未取得解禁记录",
+        "summary": "查询区间2026-10-21至2027-06-30，中际旭创/新易盛/工业富联均无解禁数据返回；来源：DataYes getEquSharesFloat",
+        "date": "2026-10-21",
+        "category": "备注"
+      }
+    ],
+    "asOf": "数据时点：2026-10-21（Asia/Shanghai）·来源：DataYes积分服务getEquReportPredisclo、getEquSharesFloat，及公开网页检索；年度股东大会日期、新易盛与工业富联未披露事件未取得可核验记录，标注待定/缺失 · 静态快照，自动更新未绑定"
+  },
+  "records": [
+    {
+      "tool": "ework__t_cea057132bf7c47c5a4fc6b2f32ee323",
+      "args": {
+        "http_method": "GET",
+        "nameEn": "getEquReportPredisclo",
+        "url": "https://gw.datayes.com/aladdin_proxy/data_api/api/equity/getEquReportPredisclo.json",
+        "url_params": {
+          "beginDate": "20261021",
+          "endDate": "20270630",
+          "pagesize": 20,
+          "ticker": "300308"
+        }
+      },
+      "response": {
+        "retCode": 1,
+        "retMsg": "Success",
+        "data": [
+          {
+            "secID": "300308.XSHE",
+            "ticker": "300308",
+            "secShortName": "中际旭创",
+            "exchangeCD": "XSHE",
+            "preDate": "2026-10-24",
+            "endDate": "2026-09-30",
+            "updateDate1": "2026-10-30",
+            "intlPublishDate": "2026-09-30",
+            "latestPreDiscDate": "2026-10-08"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ework__t_cea057132bf7c47c5a4fc6b2f32ee323",
+      "args": {
+        "http_method": "GET",
+        "nameEn": "getEquReportPredisclo",
+        "url": "https://gw.datayes.com/aladdin_proxy/data_api/api/equity/getEquReportPredisclo.json",
+        "url_params": {
+          "beginDate": "20261021",
+          "endDate": "20270630",
+          "pagesize": 20,
+          "ticker": "300502"
+        }
+      },
+      "response": {
+        "retCode": 1,
+        "retMsg": "Success",
+        "data": [
+          {
+            "secID": "300502.XSHE",
+            "ticker": "300502",
+            "secShortName": "新易盛",
+            "exchangeCD": "XSHE",
+            "preDate": "2026-10-30",
+            "endDate": "2026-09-30",
+            "intlPublishDate": "2026-09-30",
+            "latestPreDiscDate": "2026-09-30"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "ework__t_cea057132bf7c47c5a4fc6b2f32ee323",
+      "args": {
+        "http_method": "GET",
+        "nameEn": "getEquReportPredisclo",
+        "url": "https://gw.datayes.com/aladdin_proxy/data_api/api/equity/getEquReportPredisclo.json",
+        "url_params": {
+          "beginDate": "20261021",
+          "endDate": "20270630",
+          "pagesize": 20,
+          "ticker": "601138"
+        }
+      },
+      "response": {
+        "retCode": 1,
+        "retMsg": "Success",
+        "data": [
+          {
+            "secID": "601138.XSHG",
+            "ticker": "601138",
+            "secShortName": "工业富联",
+            "exchangeCD": "XSHG",
+            "preDate": "2026-10-30",
+            "endDate": "2026-09-30",
+            "intlPublishDate": "2026-09-24",
+            "latestPreDiscDate": "2026-09-24"
+          }
+        ]
+      }
+    }
+  ],
+  "observedFailedCallsAndResults": [
+    {
+      "type": "tool/call",
+      "seq": 151,
+      "time": 1792577315795,
+      "data": {
+        "turn": 1,
+        "step": 4,
+        "callId": "call_ef8389e28d1e4bf6af119720",
+        "name": "ework__t_cea057132bf7c47c5a4fc6b2f32ee323",
+        "arguments": "{\"http_method\":\"GET\",\"nameEn\":\"getEquSharesFloat\",\"url\":\"https://gw.datayes.com/aladdin_proxy/data_api/api/equity/getEquSharesFloat.json\",\"url_params\":{\"beginFloatDate\":\"20261021\",\"endFloatDate\":\"20270630\",\"pagesize\":50,\"ticker\":\"300308\"}}"
+      }
+    },
+    {
+      "type": "tool/result",
+      "seq": 152,
+      "time": 1792577319796,
+      "data": {
+        "turn": 1,
+        "step": 4,
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_ef8389e28d1e4bf6af119720"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_ef8389e28d1e4bf6af119720",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"retCode\":-1,\"retMsg\":\"No Data Returned\",\"error_type\":\"无数据返回\",\"suggestion\":\"查询条件范围内无数据，请调整时间范围/证券代码等查询条件后重试\"}"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "e59291e6-e82c-40aa-af45-bc6a881a0827"
+        }
+      },
+      "sourceEventSeqs": [
+        151
+      ],
+      "surfaceOp": "append"
+    },
+    {
+      "type": "tool/call",
+      "seq": 153,
+      "time": 1792577319797,
+      "data": {
+        "turn": 1,
+        "step": 4,
+        "callId": "call_d1774819c53a4ffabedb1a8f",
+        "name": "ework__t_cea057132bf7c47c5a4fc6b2f32ee323",
+        "arguments": "{\"http_method\":\"GET\",\"nameEn\":\"getEquSharesFloat\",\"url\":\"https://gw.datayes.com/aladdin_proxy/data_api/api/equity/getEquSharesFloat.json\",\"url_params\":{\"beginFloatDate\":\"20261021\",\"endFloatDate\":\"20270630\",\"pagesize\":50,\"ticker\":\"300502\"}}"
+      }
+    },
+    {
+      "type": "tool/result",
+      "seq": 154,
+      "time": 1792577324037,
+      "data": {
+        "turn": 1,
+        "step": 4,
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_d1774819c53a4ffabedb1a8f"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_d1774819c53a4ffabedb1a8f",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"retCode\":-1,\"retMsg\":\"No Data Returned\",\"error_type\":\"无数据返回\",\"suggestion\":\"查询条件范围内无数据，请调整时间范围/证券代码等查询条件后重试\"}"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "87493182-d5d4-4c01-8eec-373882e228d1"
+        }
+      },
+      "sourceEventSeqs": [
+        153
+      ],
+      "surfaceOp": "append"
+    },
+    {
+      "type": "tool/call",
+      "seq": 155,
+      "time": 1792577324037,
+      "data": {
+        "turn": 1,
+        "step": 4,
+        "callId": "call_745a07e2fb1f46d3b7902805",
+        "name": "ework__t_cea057132bf7c47c5a4fc6b2f32ee323",
+        "arguments": "{\"http_method\":\"GET\",\"nameEn\":\"getEquSharesFloat\",\"url\":\"https://gw.datayes.com/aladdin_proxy/data_api/api/equity/getEquSharesFloat.json\",\"url_params\":{\"beginFloatDate\":\"20261021\",\"endFloatDate\":\"20270630\",\"pagesize\":50,\"ticker\":\"601138\"}}"
+      }
+    },
+    {
+      "type": "tool/result",
+      "seq": 156,
+      "time": 1792577328224,
+      "data": {
+        "turn": 1,
+        "step": 4,
+        "message": {
+          "source": {
+            "kind": "tool",
+            "callId": "call_745a07e2fb1f46d3b7902805"
+          },
+          "content": [
+            {
+              "type": "tool-result",
+              "toolCallId": "call_745a07e2fb1f46d3b7902805",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{\"retCode\":-1,\"retMsg\":\"No Data Returned\",\"error_type\":\"无数据返回\",\"suggestion\":\"查询条件范围内无数据，请调整时间范围/证券代码等查询条件后重试\"}"
+                }
+              ],
+              "isError": false
+            }
+          ],
+          "role": "user",
+          "id": "c00fa3ab-9abd-431f-99ac-56091af40f1d"
+        }
+      },
+      "sourceEventSeqs": [
+        155
+      ],
+      "surfaceOp": "append"
+    }
+  ]
+}
