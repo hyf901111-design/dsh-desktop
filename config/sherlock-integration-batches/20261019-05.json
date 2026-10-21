@@ -613,6 +613,183 @@
         ],
         "recordedAt": "2026-10-21T15:49:00.375Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "协作看板共享日历及只读事项详情",
+        "branch": "codex/feat/shared-calendar-20261021",
+        "baseCommit": "23e02a4ac318d7404d048c7389de4780d2f034f6",
+        "tipCommit": "9653363fea3c957e57e95f378621af191fa379a5",
+        "commits": [
+          {
+            "commit": "1533dac1aac02f5e0077ee9cca14982770365f41",
+            "parents": [
+              "23e02a4ac318d7404d048c7389de4780d2f034f6"
+            ],
+            "subject": "规划协作看板共享日历与并发验收范围"
+          },
+          {
+            "commit": "3b82ff5cee2f0d7941aa473e16347a8d8eb26f0a",
+            "parents": [
+              "1533dac1aac02f5e0077ee9cca14982770365f41"
+            ],
+            "subject": "支持协作看板日历共享事项与并发持久同步"
+          },
+          {
+            "commit": "a4c0fdff9af302820d24733805988abd8d118465",
+            "parents": [
+              "3b82ff5cee2f0d7941aa473e16347a8d8eb26f0a"
+            ],
+            "subject": "修复共享日历只读成员查看完整事项详情"
+          },
+          {
+            "commit": "9653363fea3c957e57e95f378621af191fa379a5",
+            "parents": [
+              "a4c0fdff9af302820d24733805988abd8d118465"
+            ],
+            "subject": "保持日历详情分层样式并用真实浏览器验证全文展示"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "docs/superpowers/plans/2026-10-21-shared-calendar.md"
+          },
+          {
+            "status": "A",
+            "path": "docs/superpowers/specs/2026-10-21-shared-calendar-design.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/shared-calendar-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/shared-calendar-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/calendar-tool-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/calendar-tool.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/calendar/calendar-service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/calendar/shared-calendar-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/calendar-tool.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/calendar-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/calendar-tool-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "A",
+            "path": "test/shared-calendar.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/calendar-tool-client.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "13项实际patched组件测试通过，含共享创建/远端更新/规范化保留/失败草稿/viewer和offline只读全文详情；/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/.worktrees/shared-calendar-20261021/.superpowers/sdd/2026-10-21-shared-calendar/task1-p2-green.log",
+            "verifiedCommit": "9653363fea3c957e57e95f378621af191fa379a5",
+            "completedAt": "2026-10-21T15:55:15.077620+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/shared-calendar.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "最终6项实际双ResearchBoardsService/Yjs副本通过，首次并发、断线重启、删后不复活和权限隔离；/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/.worktrees/shared-calendar-20261021/.superpowers/sdd/2026-10-21-shared-calendar/task1-final-core-9653363f.log",
+            "verifiedCommit": "9653363fea3c957e57e95f378621af191fa379a5",
+            "completedAt": "2026-10-21T15:55:15.077620+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "/Users/heyafeng/Documents/ChatGPT/sherlock-desktop/.worktrees/shared-calendar-20261021/.superpowers/sdd/2026-10-21-shared-calendar/task1-p2-typecheck.log；exit0",
+            "verifiedCommit": "9653363fea3c957e57e95f378621af191fa379a5",
+            "completedAt": "2026-10-21T15:55:15.077620+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
+            ],
+            "outcome": "passed",
+            "summary": "完整功能增量diff检查通过",
+            "verifiedCommit": "9653363fea3c957e57e95f378621af191fa379a5",
+            "completedAt": "2026-10-21T15:55:15.077620+00:00",
+            "timeoutMs": 30000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际patched renderer与Chromium验证共享创建、完整只读详情、1339字备注换行和滚动到底、无可写控件/无mutation。已查看顶部与末尾截图，原生双客户端仍待本次集成包验收。"
+        },
+        "acceptanceCriteria": [
+          "协作看板编辑成员可创建、编辑、完成、删除共享日程，查看成员可浏览全文详情。",
+          "稳定事项ID直接存于已集成containerSpec Y.Map，首次/后续并行添加不覆盖，删除不被陈旧编辑复活。",
+          "走既有看板持久队列；权限、换号、组件/看板隔离；无个人存储回退或私有记录迁移。",
+          "显示待同步/已共享同步/连接状态，远端事件自动更新，保存失败保留草稿。",
+          "共享提醒显式禁用且说明，个人提醒和收据保持原路径。",
+          "仅集成checkout本地构建，双账号原生验收，不部署/发布/push/accept/promote。"
+        ],
+        "risks": [
+          "全部参与者需升级到支持扩展日历spec的新版客户端；旧严格解析器不能显示带共享事项的日历。",
+          "共享日程当前无系统提醒；离线可看缓存但禁止新增写入，已持久入队的事项等待同步。",
+          "9文件161项原始验证及exit0已由独立审查核验，P2后13项/浏览器和最终核心6项通过；原生双客户端仍待实际验证。",
+          "无云协议变更或部署；金融D生成3完成3失败另行保留，Notes真实宽松回归随最终包继续。"
+        ],
+        "generatedAt": "2026-10-21T15:55:15.077620+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -693,6 +870,33 @@
         "git",
         "diff",
         "--check"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/calendar-tool-client.test.js"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "test/shared-calendar.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
       ],
       "timeoutMs": 30000
     }
