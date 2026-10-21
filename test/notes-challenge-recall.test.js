@@ -151,11 +151,11 @@ it('normalizes explicit general knowledge to unverified questions but rejects in
   expect(result.issues).toEqual([{ blockId: 'a', quote: '第一句', category: 'uncertain', message: '常识疑问（未联网核验）：是否需要核对这个判断？', evidence: [] }])
 })
 
-it('deduplicates validated questions before enforcing the two-comment limit for a paragraph', async () => {
+it('deduplicates validated questions without discarding a third independent error', async () => {
   const result = await run(note([block('a', '甲句。乙句。丙句。')]), { reviews: [{ blockId: 'a', issues: [
     issue('不存在'), issue('甲句'), issue('甲句'), issue('乙句'), issue('丙句')
   ] }] })
-  expect(result.issues.map(item => item.quote)).toEqual(['甲句', '乙句'])
+  expect(result.issues.map(item => item.quote)).toEqual(['甲句', '乙句', '丙句'])
 })
 
 it('cannot reassign an issue to a different review block even when the quote occurs in both blocks', async () => {
@@ -180,15 +180,15 @@ it('allocates a bounded review fairly across six generic paragraphs and orders r
   expect(result.issues.map(item => item.quote)).toEqual(['三加四等于九', '十减二等于一', '一周有十天', '六月有四十天', '正方形只有三条边', '三角形有五个角', '一米等于十厘米', '一小时等于六分钟', '字母表从Z开始', '句号专门表示提问', '昨天发生在明天之后', '午夜之后马上是傍晚'])
 })
 
-it('uses the twelve-comment budget for one issue per paragraph before adding second issues', async () => {
+it('uses the common-error comment budget for one issue per paragraph before adding second issues', async () => {
   const input = note(Array.from({ length: 14 }, (_, n) => block('b' + n, '甲句。乙句。丙句。')))
   const result = await generateNoteChallenge(provider([
     JSON.stringify({ reviews: input.blocks.slice(0, 12).map(b => ({ blockId: b.id, issues: [issue('甲句'), issue('乙句'), issue('丙句')] })) }),
     JSON.stringify({ reviews: [{ blockId: 'b12', issues: [issue('甲句')] }, { blockId: 'b13', issues: [issue('甲句')] }] })
   ]), input)
   expect(result.coveredBlockIds).toHaveLength(14)
-  expect(result.issues).toHaveLength(12)
-  expect(new Set(result.issues.map(item => item.blockId)).size).toBe(12)
+  expect(result.issues).toHaveLength(24)
+  expect(new Set(result.issues.map(item => item.blockId)).size).toBe(14)
 })
 
 it('retains only unacknowledged paragraphs for the next scheduled runtime pass and does not repeat unchanged covered text', async () => {
@@ -219,7 +219,7 @@ it('retains only unacknowledged paragraphs for the next scheduled runtime pass a
   } finally { scheduler.dispose() }
 })
 
-for(const [level,expected] of [[1,2],[2,2],[3,4],[4,6]])it(`retains up to ${expected} distinct issues in a dense paragraph at challenge level ${level}`,async()=>{
+for(const [level,expected] of [[1,6],[2,6],[3,6],[4,6]])it(`retains up to ${expected} distinct issues in a dense paragraph at challenge level ${level}`,async()=>{
  const quotes=['一周有十天','六月有四十天','正方形只有三条边','三角形有五个角','一米等于十厘米','一小时等于六分钟','三加四等于九','十减二等于一']
  const input={...note([block('dense',quotes.join('。')+'。')]),level}
  const result=await run(input,{reviews:[{blockId:'dense',issues:quotes.map(quote=>issue(quote))}]})
@@ -227,9 +227,9 @@ for(const [level,expected] of [[1,2],[2,2],[3,4],[4,6]])it(`retains up to ${expe
  expect(result.issues.every(item=>item.category==='uncertain'&&item.evidence.length===0&&item.message.includes('未联网核验'))).toBe(true)
 })
 
-it('keeps later independent claims across every paragraph in adversarial mode instead of truncating all paragraphs to two issues',async()=>{
+for(const level of [1,2,3,4])it(`keeps later independent claims across every paragraph at level ${level} instead of truncating all paragraphs to two issues`,async()=>{
  const blocks=Array.from({length:6},(_,n)=>block('dense-'+n,'判断甲。判断乙。判断丙。判断丁。判断戊。'))
- const result=await run({...note(blocks),level:4},{reviews:blocks.map(b=>({blockId:b.id,issues:['判断甲','判断乙','判断丙','判断丁','判断戊'].map(quote=>issue(quote))}))})
+ const result=await run({...note(blocks),level},{reviews:blocks.map(b=>({blockId:b.id,issues:['判断甲','判断乙','判断丙','判断丁','判断戊'].map(quote=>issue(quote))}))})
  expect(result.issues).toHaveLength(24)
  expect(blocks.map(b=>result.issues.filter(issue=>issue.blockId===b.id).map(issue=>issue.quote))).toEqual(blocks.map(()=>['判断甲','判断乙','判断丙','判断丁']))
  expect(result.coveredBlockIds).toEqual(blocks.map(b=>b.id))
