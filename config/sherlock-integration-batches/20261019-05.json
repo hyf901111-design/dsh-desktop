@@ -9,23 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "减少共同记录规划返工并补齐稳定编号显示元信息",
+        "featureName": "拦截未展示数据及显式共同身份的矛盾事实，保留原记录编号和旧请求重试",
         "branch": "codex/feat/openterminal-style-20261019",
-        "baseCommit": "5a44984cd8b3baef6c7ed0f41307c62291c95b73",
-        "tipCommit": "ea06e83b1544264386367ffb3e3da128df75270c",
+        "baseCommit": "ea06e83b1544264386367ffb3e3da128df75270c",
+        "tipCommit": "317143c43400348c15c68c563f019d3a30ad0e48",
         "commits": [
           {
-            "commit": "ea06e83b1544264386367ffb3e3da128df75270c",
+            "commit": "ae5081c29c6f629c466b933fed6c279cbc5ae0fe",
             "parents": [
-              "5a44984cd8b3baef6c7ed0f41307c62291c95b73"
+              "ea06e83b1544264386367ffb3e3da128df75270c"
             ],
-            "subject": "减少共同记录首次规划返工并自动补齐编号显示标签"
+            "subject": "拦截工作台数据错引用与矛盾事实并保留可见记录编号"
+          },
+          {
+            "commit": "317143c43400348c15c68c563f019d3a30ad0e48",
+            "parents": [
+              "ae5081c29c6f629c466b933fed6c279cbc5ae0fe"
+            ],
+            "subject": "保留旧工作台幂等重试并明确跨表记录身份范围"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "docs/superpowers/plans/2026-10-21-workbench-shared-data-views.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
           },
           {
             "status": "M",
@@ -49,7 +60,11 @@
           },
           {
             "status": "M",
-            "path": "test/dataset-view-contract.test.js"
+            "path": "test/dataset-view-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-browser.test.js"
           },
           {
             "status": "M",
@@ -69,13 +84,14 @@
               "test/dataset-view-contract.test.js",
               "test/workbench-dataset-view.test.js",
               "test/dataset-view-artifact.test.js",
+              "test/dataset-view-browser.test.js",
               "test/bundled-component-skill.test.js",
               "test/integration-bundled-skill.test.js"
             ],
             "outcome": "passed",
-            "summary": "74项直接相关检查通过；/tmp/workbench-dataset-native-repair-tip-20261021.log",
-            "verifiedCommit": "ea06e83b1544264386367ffb3e3da128df75270c",
-            "completedAt": "2026-10-21T05:07:45.178263+00:00",
+            "summary": "90项直接相关工具/契约/浏览器/随包检查通过；/tmp/workbench-dataset-native-final-tip-20261021.log",
+            "verifiedCommit": "317143c43400348c15c68c563f019d3a30ad0e48",
+            "completedAt": "2026-10-21T05:24:58.459393+00:00",
             "timeoutMs": 180000
           },
           {
@@ -85,115 +101,29 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过；/tmp/workbench-dataset-native-repair-tip-typecheck-20261021.log",
-            "verifiedCommit": "ea06e83b1544264386367ffb3e3da128df75270c",
-            "completedAt": "2026-10-21T05:07:45.178263+00:00",
+            "summary": "类型检查通过；/tmp/workbench-dataset-native-final-tip-typecheck-20261021.log",
+            "verifiedCommit": "317143c43400348c15c68c563f019d3a30ad0e48",
+            "completedAt": "2026-10-21T05:24:58.459393+00:00",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原生首轮实测发现两次参数返工及跨数据集说明不一致，本修正已加入真实边界回归并通过独立审查，需重新构建原生实测，不预判速度目标达到。旧海上排程长标题和负责人在当前原生包完整显示。"
+          "summary": "原生第三轮70.375秒三卡就绪且1次成功调用，但发现错引用、跨表事实不一致和编号列缺失。对应修正经90项聚焦工具/浏览器检查及独立复核通过，当前tip仍需构建原生复测。"
         },
         "acceptanceCriteria": [
-          "记录已带稳定id时只补显示标签，不更改任何业务值、数量或字段语义。",
-          "仍拒绝缺失或重复记录id、超限或未声明的业务字段。",
-          "规划参数要求一次齐全提交面板与共同记录，以共同主记录承载相关事实。",
-          "不改变真实数据路径，不把模拟测试结果作为真实取数接受。"
+          "新创建在持久化和任务派发前拦截无人使用的数据集；同一明确recordScope下同编号同字段的值与单位不可冲突。",
+          "独立数据集同号记录保留原业务编号；不猜测或合并跨表身份。",
+          "旧请求原样重试复用原结果，不套用新建门禁、不改写存储。",
+          "记录列表始终显示稳定编号，排序优先级与对象身份独立；原值完整保留。"
         ],
         "risks": [
-          "原生首轮147.08秒且有2次工具错误，本次修正尚未完成原生复测。",
-          "跨数据集业务语义一致性仍需实测检查；本次没有新增任意业务语义验证器。",
-          "只做既有集成批次本地预览，不推送、不发布、不晋升main。"
+          "仅明确模拟快照路径；不宣称真实取数整体提速或全目标达成。",
+          "跨表事实比较需显式声明相同recordScope；不推断任意业务关系，不验证任意自然语言叙述。",
+          "原生第三轮仅速度达到1–2分钟，内容未通过；本tip待真实客户端再验。",
+          "独立复核两项Important均已复现并修复关闭；只做本地预览，不晋升main、不推送、不发布。"
         ],
-        "generatedAt": "2026-10-21T05:07:45.178263+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f2f3c73169e790cfeb9c65372f17d308056e6409",
-        "verificationCommit": "f2f3c73169e790cfeb9c65372f17d308056e6409",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "f2f3c73169e790cfeb9c65372f17d308056e6409",
-            "completedAt": "2026-10-21T05:08:23.785Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f2f3c73169e790cfeb9c65372f17d308056e6409",
-            "completedAt": "2026-10-21T05:08:23.785Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "f2f3c73169e790cfeb9c65372f17d308056e6409",
-            "completedAt": "2026-10-21T05:08:23.785Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "f2f3c73169e790cfeb9c65372f17d308056e6409",
-            "completedAt": "2026-10-21T05:08:23.785Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f2f3c73169e790cfeb9c65372f17d308056e6409",
-            "completedAt": "2026-10-21T05:08:23.785Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-10-21T05:08:23.785Z"
+        "generatedAt": "2026-10-21T05:24:58.459393+00:00"
       }
     },
     {
