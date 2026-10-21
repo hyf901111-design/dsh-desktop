@@ -84,12 +84,19 @@ function acknowledgesNoConflict(message) {
 const REVIEW_ISSUE_LIMITS = Object.freeze({ perBlock: 6, total: 24 })
 
 function reviewEntries(value, targets) {
-  if (!Array.isArray(value?.reviews) || value.reviews.length > targets.length) throw Error('挑战检查结果格式不完整。')
-  const reviewed = new Map(), targetIds = new Set(targets.map(block => block.id))
+  if (!Array.isArray(value?.reviews)) throw Error('挑战检查结果格式不完整。')
+  const reviewed = new Map(), targetIds = new Set(targets.map(block => block.id)), seen = new Set()
+  let ignored = 0
   for (const review of value.reviews) {
-    if (!fields(review, ['blockId', 'issues']) || !targetIds.has(review.blockId) || reviewed.has(review.blockId) || !Array.isArray(review.issues)) throw Error('挑战检查结果格式不完整。')
+    if (!fields(review, ['blockId', 'issues']) || !id(review.blockId) || seen.has(review.blockId) || !Array.isArray(review.issues)) throw Error('挑战检查结果格式不完整。')
+    seen.add(review.blockId)
+    if (!targetIds.has(review.blockId)) { ignored++; continue }
     reviewed.set(review.blockId, review.issues)
   }
+  // Never guess which target an unknown ID meant. Only a complete valid target
+  // set can stand independently of extra groups; output work remains bounded by
+  // the existing shared visible-JSON/stream limits before this projection.
+  if (ignored && reviewed.size !== targetIds.size) throw Error('挑战检查结果格式不完整。')
   return reviewed
 }
 
@@ -163,7 +170,7 @@ function reviewShapeStats(value, targets) {
 function filteredReviewStats(value, targets) {
   const byId = new Map(targets.map(block => [block.id, block.text]))
   const stats = { candidates: 0, categories: {}, bases: {}, uniqueAnchors: 0, emptyEvidence: 0, acknowledgedAgreement: 0 }
-  for (const review of value.reviews) for (const item of review.issues) {
+  for (const review of value.reviews.filter(review => byId.has(review.blockId))) for (const item of review.issues) {
     stats.candidates++
     const category = categories.has(item?.category) ? item.category : 'other'
     const basis = ['note', 'general-knowledge'].includes(item?.basis) ? item.basis : 'other'
@@ -245,7 +252,10 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
       try {
         value = JSON.parse(json)
         parsedJSON = true
-        if (reviewTargets) reviewEntries(value, reviewTargets)
+        if (reviewTargets) {
+          const reviewed = reviewEntries(value, reviewTargets), ignoredGroups = value.reviews.length - reviewed.size
+          if (ignoredGroups) diagnostic(requestId, { event: 'notes-challenge-review-extra-groups', action: payload.action, attempt: attempt + 1, targetCount: reviewTargets.length, reviewCount: value.reviews.length, ignoredGroups })
+        }
         return { value, usage }
       }
       catch {
