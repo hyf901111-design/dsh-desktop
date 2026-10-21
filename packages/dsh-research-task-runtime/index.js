@@ -1570,7 +1570,7 @@ export class ResearchTaskRuntime {
         if(restoredQuotes)deliveredText=restoredQuotes
         const restoredType=/^工作台：[^\n]+\n本面板：[^\n]+\n/u.test(task.prompt??'')?restoreDeclaredArtifactType(deliveredText,plannedFormat):undefined
         if(restoredType)deliveredText=restoredType
-        if (!feedAcquired && task.kind === 'container' && typeof acquireFeedEvidence === 'function' && componentFeedEvidenceIssue(deliveredText,sourceRecords)) {
+        if (!feedAcquired && task.kind === 'container' && typeof acquireFeedEvidence === 'function' && componentFeedEvidenceIssue(deliveredText,sourceRecords,{panelRequest})) {
           feedAcquired = true
           const supplement = await acquireFeedEvidence(deliveredText,sourceRecords)
           if (task.cancelRequested || terminalState(task.state)) return
@@ -1580,7 +1580,7 @@ export class ResearchTaskRuntime {
         if (structured && deliveredText && Buffer.byteLength(deliveredText, 'utf8') <= MAX_STRUCTURED_OUTPUT_BYTES) recoveryText = deliveredText
         const restoredSnapshot=task.kind==='container'&&(restoreSnapshotMarketHistory(deliveredText,sourceRecords,historyOptions)||(!bindingRequested&&restoreSnapshotStatementGrowth(deliveredText,sourceRecords))||restoreSnapshotFeedHeadlines(deliveredText,sourceRecords))
         if(restoredSnapshot)deliveredText=recoveryText=restoredSnapshot
-        const retainedFeed=attempt===1&&task.kind==='container'&&workbenchPanelFormat(task.prompt)?retainVerifiedFeedItems(deliveredText,sourceRecords):undefined
+        const retainedFeed=attempt===1&&task.kind==='container'&&workbenchPanelFormat(task.prompt)?retainVerifiedFeedItems(deliveredText,sourceRecords,{panelRequest}):undefined
         if(retainedFeed)deliveredText=recoveryText=retainedFeed
         if (structured) readableFallback = artifactReadableFallback(recoveryText) ?? readableFallback
         try {
@@ -1591,7 +1591,7 @@ export class ResearchTaskRuntime {
           // A valid-looking static card can contain values copied from an API
           // example. Discovery-only evidence requires retrieval even when the
           // previous response was empty or a provider retry already ran.
-          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords))throw new ResearchTaskError('GENERATION_FAILED',componentFeedEvidenceIssue(deliveredText,sourceRecords)??(sourceRecords.some(record=>record.snapshotRows?.length)?'已取得来源记录，但当前标题、日期或原文链接尚未与同一条来源记录对应。请使用已取得记录的原始标题、原始日期及真实链接，不重新枚举接口或猜测记录。':'当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。'))
+          if(task.kind==='container'&&workbenchPanelFormat(task.prompt)&&sourceRecords.some(record=>record.purpose==='discovery')&&sourceRecords.every(record=>['discovery','snapshot'].includes(record.purpose))&&!componentSnapshotEvidence(deliveredText,sourceRecords,{panelRequest}))throw new ResearchTaskError('GENERATION_FAILED',componentFeedEvidenceIssue(deliveredText,sourceRecords,{panelRequest})??(sourceRecords.some(record=>record.snapshotRows?.length)?'已取得来源记录，但当前标题、日期或原文链接尚未与同一条来源记录对应。请使用已取得记录的原始标题、原始日期及真实链接，不重新枚举接口或猜测记录。':'当前只取得接口文档或请求样例，尚未取得业务数据。请继续调用已确认的业务接口，禁止把接口文档中的样例数值当成真实行情或完成组件。'))
           let mapped
           const chartVariant=plannedFormat==='chart'?requestedChartVariant(workbenchPanelScope(task.prompt)?.contract??task.prompt):undefined
           try { mapped=resolveBoundComponent(deliveredText,sourceRecords,new Date(this.now()),{chartVariant,panelTitle,intervalMinutes:requestedComponentRefreshInterval(panelRequest),rollingDates:/(?:最新|近期|最近|实时|今日|当日|近\s*\d+\s*(?:个|交易|日|天|月))/u.test(panelRequest)&&!/(?:固定日期|指定日期|回测|(?:截至|截止)\s*20\d{2}[-年/]\d)/u.test(panelRequest)}) }
@@ -1630,7 +1630,7 @@ export class ResearchTaskRuntime {
               catch (error) { throw new ResearchTaskError('INVALID_OUTPUT', error.message) }
             }
           }
-          const feedIssue=!deferredPanel&&sourceRecords.length&&componentFeedEvidenceIssue(deliveredText,sourceRecords)
+          const feedIssue=!deferredPanel&&sourceRecords.length&&componentFeedEvidenceIssue(deliveredText,sourceRecords,{panelRequest})
           if(feedIssue)throw new ResearchTaskError('GENERATION_FAILED',feedIssue)
           const sourceIssue=extractArtifactObjects(deliveredText).map(templateSourceDataIssue).find(Boolean)
           if(sourceIssue)throw new ResearchTaskError('GENERATION_FAILED',sourceIssue)
