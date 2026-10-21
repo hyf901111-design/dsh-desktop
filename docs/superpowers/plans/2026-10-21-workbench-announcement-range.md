@@ -106,3 +106,50 @@
 - [ ] 复用现有isolated headless模式实际验证原生React组件与列宽installer；不得运行liveapp/CDP。运行本任务table parser/interaction及宽表直接受影响聚焦文件与diff check，不运行全功能测试；中文本地commitownfiles，自审和完整日志路径写task-5-report.md，交root独立审阅。
 
 **Binding constraints and review focus:** 来源、日期、口径、完整备注/链接不得被原生优化静默删除；不推断新日期/来源/数值，数据值保持；原生12列/宽表32列/200KB与OpenTerminal合同不变；保留原生文本及既有交互，无法无损时sandbox回退；长备注不挤坏内容/工具栏，深浅宽窄可访问；只安全http/https链接，无HTML执行/权限提升；聚焦测试，不构建/操作共享客户端。
+
+
+### Task 6: 工作台模型子卡遵从可信人类来源策略
+
+**Files:** 新增 `packages/dsh-research-task-runtime/workbench-source-policy.js`（纯策略解析），最小修改 `workbench.js`、`index.js`、`component-source-tools.js`；扩充 `test/workbench-source-context.test.js`、source-tools/SDK适用测试，必要新增 `test/workbench-source-policy.test.js`。不改Notes/native/feed/calendar/collector，不改模型档位或预算。
+
+**Interfaces:** `workbenchSourcePolicy(originalRequest, panel)` 返回冻结的 `{pluginRequired,pluginProhibited,preferenceRequest}`；panel包含当前title/type/prompt。只能在workbench.js已捕获真人originalRequest的路径产生，由Runtime内部hostContext参数传递给任务/SDK和最终门禁；不增加公开start JSON可接受参数，不信任模型originalRequest/marker。字段命名和持久化接线可按既有内部上下文模式最小调整，但这三个策略含义一致且只有一个计算权威。没有hostContext时沿用既有独立组件语义。
+
+- [ ] 先RED复现：真人未限来源、模型panel声称必须DataYes、实际已取得网页原文时，不应被最终插件门禁拒绝；SDK不应把模型路线说成用户指定。检查最终可见产物而非只检查策略布尔值。
+- [ ] RED反向约束：真人全局明确DataYes或禁止插件时，模型不能删掉/反转该限制；人类“估值卡用DataYes、新闻走网页”分别生效，已有another-card-source回归保持。可选/优先/允许替代不误作强制；引用、模型伪造marker/字段不能建立真人约束。原实体/字段/类型不能因策略解析消失。
+- [ ] 最小实现纯策略+可信捕获/内部传播/存储恢复与原门禁/SDK统一调用；专业财务字段仍可优先真实插件，不制造免费源可覆盖的假象。sourcePolicy不参与工具可见性授权。发生含糊真实限制时明确保守报错，不能默认覆盖人类要求。
+- [ ] 覆盖batch/非batch、同任务一次repair、持久化后未改需求retry、真实改需求retry、状态询问不替换原快照；旧任务、standalone、模拟、prepared/publicData原路径保持。不会让模型或HTTP start注入新字段。
+- [ ] 仅跑上述policy/context、直接SDK/source-tools和适用Runtime聚焦测试、syntax/diff，自审后中文本地提交ownfiles，报告task-6-report.md。禁止全套/真实SDK/网络/凭据/共享客户端/派agent。
+
+### Task 7: 真实文章时间线复用逐条核验与有界补读
+
+**Files:** `component-feed-acquisition.js`、`component-source-binding.js`及最小`index.js`接线；必要新增小型文章投影helper。扩充 `test/component-feed-acquisition.test.js`、web-snapshot/source-binding与专用Runtime测试，不改Task6来源策略/Notes/native/calendar。
+
+**Interfaces:** 现有 `componentFeedEvidenceIssue(text,records,options)`、`componentSnapshotEvidence`、`retainVerifiedFeedItems`与`acquireFeedSourceEvidence`在host options内识别真实文章类timeline；time只做明确原文日期的等价比较，不修改原值。与Task6内部来源策略共同工作，但不以source选择代替每条证据。
+
+- [ ] 先RED：真实新闻子卡返回timeline，同条标题/时间/URL尚未取得原文不得直接接受；已发现Sources URL应触发一次补读并交原记录门禁。显式区别B安全journal/未核验输出与合成网页fixture，不读private reasoning。
+- [ ] 实现已观察安全链接补读与同条身份核验，保留6页/并发3/20秒/30KB及一次repair。未知/约日期、公司/标题/URL冲突拒绝，Task1公告窗口不弱化。无有效条目失败，有效条目和完整缺口可沿既有fallback保留；不得静默删公司/类别或留错误计数。
+- [ ] 对照普通活动timeline、模拟、用户提供原文timeline、既有news/reports；覆盖已读不重复、未知/私网/凭据URL不补读、取消/超时/部分来源、第一次取证第二次完成与错误终态。最终可见标题/原日期/原URL/note证据与已核验来源相同。
+- [ ] 跑直接受影响feed/web-snapshot/announcement与专用Runtime聚焦文件、syntax/diff，自审中文本地提交ownfiles，报告task-7-report.md；不全套/在线/构建/操作客户端/派agent。
+
+### Task 8: 未来日历事件、背景与缺口分别展示
+
+**Files:** 新增小型 `packages/dsh-research-task-runtime/calendar-event-evidence.js`，最小`index.js`接入已有repair；专用 `test/calendar-event-evidence.test.js`及calendar renderer直接验证。既有schema/renderer仅在有实际缺失接口时最小调整，不改历史/模拟日历、feed/Notes/native。
+
+**Interfaces:** `calendarEventEvidenceIssue(data,request,records,{now})`返回具体问题或undefined；now由Runtime this.now提供，不由model asOf。消费原source records业务日期；已知getEquReportPredisclo的preDate为披露事件，endDate/update字段不冒充发生日。
+
+- [ ] 从安全B日历journal/冻结model提取原证据：三家公司preDate 10-24/10-30/10-30，另两个非事件项为报告期09-30与当天无解禁记录说明。先RED说明旧Runtime可把后两项作为未来事件成功交付；不重新在线取数。
+- [ ] 对明确未来/明确窗口的真实请求施加事件日期及缺口语义检查，给现有repair清晰证据。保留三个原事件、待定会议和全部公司/事件类别缺口，背景/缺口移入完整note不计数。缺源与已证明无事件不同，不能伪造日期/记录或仅删失配项绕过保留。
+- [ ] 测试用户历史窗口/模拟/普通日历不改变，host时间跨日、边界、非法/约日期、模型asOf绕过、正确二轮修复/仍错failed、无第三次、取消；从最终HTML读事件数/日期和note，不能仅看model。
+- [ ] 仅calendar/helper/Runtime直接聚焦、syntax/diff，自审中文commitownfiles，完整task-8-report.md；不全套/SDK/网络/构建/客户端/派agent。
+
+### Task 9: 生成完成卡反映实际刷新状态
+
+**Files:** `scripts/lib/research-workbench-feedback.mjs`、`research-creation-progress.mjs`、必要的workspace任务/recipe摘要读取接线，以及对应现有progress/feedback浏览器测试。具体接口先在本任务沿真实终态链窄查后补入brief；不得以计划prompt或asOf文字替代实际recipe事实，不改旧用户消息。
+
+- [ ] 先追踪并RED：计划每分钟但实际静态完整表时，反馈不能声称已自动更新；已保存recipe/成功或失败则分别显示。原“生成中/已完成/重试”、新消息后的归属与Notes复用保持。
+- [ ] 最小加入真实组件终态/recipe摘要及补充文字，区别静态、已配置未成功、最新成功/失败，不新增高频轮询或模型调用。原会话历史不重写，相关卡片随所属轮次留位。
+- [ ] 使用真实workspace/feedback挂载、fake transport测试混合静态/绑定、停止/部分失败重试、新消息和切Notes；深浅/窄宽状态文案不挤坏动作区。聚焦检查、中文commit、报告task-9-report.md，不全套/在线/构建/派agent；root另做Task2真实客户端验收。
+
+## 后续执行顺序与交付门禁
+
+Task6 → Task7 → Task8 → Task9，各自实现提交后独立复审；只读上一任务复审可与下一源码writer并行，一个源码writer。Task1/3/4/5已闭环，不重复派发。Task9接口调研尚未开展，因此不可从本文直接派实现；先沿真实feedback/recipe链补精确brief。全部来源/日历/UI修复审阅后统一交接到现有集成，按Task2/本地runbook构建、真实六项复测与完整画布整理/滚动。仍有缺口继续记录，不把测试通过改成全目标完成。
