@@ -11,6 +11,18 @@ function fixture(answer = { issues: [] }) {
   }
   return { ctx, calls, events }
 }
+function textFixture(text) {
+  const f = fixture()
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    const current = Array.isArray(text) ? text[Math.min(f.calls.length - 1, text.length - 1)] : text
+    yield { type: 'reasoning-delta', index: 0, text: 'PRIVATE REASONING' }
+    for (let start = 0; start < current.length; start += 7) yield { type: 'text-delta', index: 1, text: current.slice(start, start + 7) }
+    yield { type: 'usage', usage: { inputTokens: 30, outputTokens: 10 } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  return f
+}
 afterEach(() => vi.useRealTimers())
 
 it('runs an independent short review with the parent selected model and no parent conversation mutation', async () => {
@@ -103,6 +115,153 @@ it('requests a natural short thread reply without logs and preserves an honest m
   expect(f.calls[0].system).toContain('日志、工具')
   expect(result.reply).toEqual({ text: '目前没有可用的实际来源，无法核实这项判断。' })
   expect(JSON.stringify(result.reply)).not.toContain('PRIVATE REASONING')
+})
+
+it('accepts one complete JSON code fence from a streamed thread reply while keeping private reasoning out', async () => {
+  const { generateNoteChallenge } = await load()
+  const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '请核对来源。', messages: [{ role: 'user', text: '依据是什么？' }] }
+  const f = textFixture('```json\n{"reply":{"text":"目前没有实际来源，不能核实这项判断。"}}\n```')
+  const result = await generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread })
+  expect(result.reply).toEqual({ text: '目前没有实际来源，不能核实这项判断。' })
+  expect(result.usage).toEqual({ inputTokens: 30, outputTokens: 10 })
+  expect(f.events).toEqual([])
+  expect(JSON.stringify(result)).not.toContain('PRIVATE REASONING')
+})
+
+it('applies the existing exact-quote and evidence checks to a single fenced review object', async () => {
+  const { generateNoteChallenge } = await load()
+  const f = textFixture('```json\n{"issues":[{"blockId":"a","quote":"收入增长10%","category":"question","message":"请确认统计期间。","evidence":[]},{"blockId":"a","quote":"不存在","category":"question","message":"不应出现。","evidence":[]}],"coveredBlockIds":["a","b","invented"]}\n```')
+  const result = await generateNoteChallenge(f.ctx, input)
+  expect(result.issues).toEqual([{ blockId: 'a', quote: '收入增长10%', category: 'question', message: '请确认统计期间。', evidence: [] }])
+  expect(result.coveredBlockIds).toEqual(['a'])
+})
+
+it('does not extract JSON from surrounding explanation, thinking tags, multiple fences or malformed envelopes', async () => {
+  const { generateNoteChallenge } = await load()
+  for (const text of [
+    '解释：\n```json\n{"issues":[]}\n```',
+    '```json\n{"issues":[]}\n```\n补充说明。',
+    '<think>检查内容</think>\n{"issues":[]}',
+    '```json\n{"issues":[]}\n```\n```json\n{"issues":[]}\n```',
+    '```javascript\n{"issues":[]}\n```',
+    '```json\n{"issues":[]}',
+    '```json\n{"issues":[],}\n```',
+    '{"issues":[]}\n{"issues":[]}'
+  ]) await expect(generateNoteChallenge(textFixture(text).ctx, input)).rejects.toThrow('格式无效')
+})
+
+it('retries one malformed stop response on the same route without repairing it or exposing the partial reply', async () => {
+  const { generateNoteChallenge } = await load()
+  const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '请核对来源。', messages: [{ role: 'user', text: '依据是什么？' }] }
+  // Captured GLM behavior: both deltas and block-end finish normally but omit the outer brace.
+  const f = textFixture(['{"reply":{"text":"不得展示的未闭合结果。"}', '{"reply":{"text":"目前没有实际来源，不能核实这项判断。"}}'])
+  const result = await generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread })
+  expect(result.reply).toEqual({ text: '目前没有实际来源，不能核实这项判断。' })
+  expect(result.usage).toEqual({ inputTokens: 60, outputTokens: 20 })
+  expect(f.calls).toHaveLength(2)
+  expect(f.calls[1]).toMatchObject({ provider: 'selected-provider', model: 'selected-model', maxTokens: 2400, reasoningEffort: 'low', messages: f.calls[0].messages })
+  expect(f.calls[1].system).not.toContain('不得展示的未闭合结果')
+  expect(JSON.stringify(result)).not.toMatch(/PRIVATE REASONING|不得展示的未闭合结果/u)
+  expect(f.events).toEqual([])
+})
+
+it('caps malformed-result recovery at one retry and never treats a private reasoning block as a JSON result', async () => {
+  const { generateNoteChallenge } = await load()
+  for (const text of ['{"issues":[]', '']) {
+    const f = textFixture(text)
+    await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('格式无效')
+    expect(f.calls).toHaveLength(2)
+    expect(f.events).toEqual([])
+  }
+})
+
+it('does not retry output-size, tool-call or non-stop completion failures', async () => {
+  const { generateNoteChallenge } = await load()
+  for (const chunks of [
+    [{ type: 'text-delta', index: 0, text: '{"issues":[]}' }, { type: 'finish', reason: { kind: 'max-tokens' } }],
+    [{ type: 'text-delta', index: 0, text: 'x'.repeat(18000) }, { type: 'finish', reason: { kind: 'stop' } }],
+    [{ type: 'block-end', index: 0, block: { type: 'tool-call', id: 't', name: 'shell', arguments: '{}' } }, { type: 'finish', reason: { kind: 'stop' } }]
+  ]) {
+    const f = fixture(); f.ctx.llm.stream = async function* (options) { f.calls.push(options); yield* chunks }
+    await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow()
+    expect(f.calls).toHaveLength(1)
+  }
+})
+
+it('does not retry a syntactically valid result that fails the reply schema', async () => {
+  const { generateNoteChallenge } = await load(), f = textFixture('{"reply":{}}')
+  const thread = { blockId: 'a', quote: '收入增长10%', category: 'question', message: '请核对来源。', messages: [{ role: 'user', text: '依据是什么？' }] }
+  await expect(generateNoteChallenge(f.ctx, { ...input, action: 'reply', thread })).rejects.toThrow('格式不完整')
+  expect(f.calls).toHaveLength(1)
+})
+
+it('shares the original output size limit across a malformed response and its retry', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    yield { type: 'text-delta', index: 0, text: f.calls.length === 1 ? '{"issues":[]' + ' '.repeat(15980) : '{"issues":[]}' }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('输出过长')
+  expect(f.calls).toHaveLength(2)
+})
+
+it('counts block-end-only visible text toward the shared retry output limit', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    yield { type: 'block-end', index: 0, block: { type: 'text', text: f.calls.length === 1 ? '{"issues":[]' + ' '.repeat(15988) : '{"issues":[]}' } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('输出过长')
+  expect(f.calls).toHaveLength(2)
+})
+
+it('does not double count matching text deltas and block-end snapshots', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture()
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    const text = f.calls.length === 1 ? '{"issues":[]' + ' '.repeat(8988) : '{"issues":[]}'
+    yield { type: 'text-delta', index: 0, text }
+    yield { type: 'block-end', index: 0, block: { type: 'text', text } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  expect((await generateNoteChallenge(f.ctx, input)).issues).toEqual([])
+  expect(f.calls).toHaveLength(2)
+})
+
+it('keeps a format retry inside the original 20 second budget', async () => {
+  vi.useFakeTimers()
+  const { generateNoteChallenge } = await load(), f = fixture()
+  let started
+  const ready = new Promise(resolve => { started = resolve })
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options); started()
+    if (f.calls.length === 1) {
+      await new Promise(resolve => setTimeout(resolve, 12000))
+      yield { type: 'text-delta', index: 0, text: '{"issues":[]' }; yield { type: 'finish', reason: { kind: 'stop' } }
+    } else { await new Promise(() => {}) }
+  }
+  const observed = generateNoteChallenge(f.ctx, input).then(() => null, error => error)
+  await ready; await vi.advanceTimersByTimeAsync(20001)
+  expect((await observed).message).toMatch(/超时|timeout/iu)
+  expect(f.calls).toHaveLength(2)
+})
+
+it('does not start a format retry after cancellation or a provider error', async () => {
+  const { generateNoteChallenge } = await load()
+  for (const kind of ['abort', 'provider']) {
+    const f = fixture(), controller = new AbortController()
+    f.ctx.llm.stream = async function* (options) {
+      f.calls.push(options)
+      if (kind === 'provider') throw Error('provider unavailable')
+      yield { type: 'text-delta', index: 0, text: '{"issues":[]' }
+      controller.abort(new Error('cancelled'))
+      yield { type: 'finish', reason: { kind: 'stop' } }
+    }
+    await expect(generateNoteChallenge(f.ctx, input, controller.signal)).rejects.toThrow(kind === 'provider' ? 'provider unavailable' : 'cancelled')
+    expect(f.calls).toHaveLength(1)
+  }
 })
 
 it('continues a thread after an accepted 6000-character replacement becomes its exact quote', async () => {
