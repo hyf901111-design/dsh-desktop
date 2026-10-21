@@ -112,12 +112,12 @@ it('does not emit filtered-candidate diagnostics for an ordinary empty review or
   expect((await generateNoteChallenge(rejected.ctx, input)).issues).toEqual([])
 })
 
-for (const kind of ['tool-call', 'serialized-limit']) it('diagnoses '+kind+' stream rejection with only bounded counts', async () => {
+for (const kind of ['tool-call', 'payload-limit']) it('diagnoses '+kind+' stream rejection with only bounded counts', async () => {
   const { generateNoteChallenge } = await load(), f = fixture(), warn = vi.mocked(console.warn)
   f.ctx.llm.stream = async function* (options) {
     f.calls.push(options)
     if (kind === 'tool-call') yield { type: 'tool-call-start', id: 'PRIVATE-TOOL-ID', name: 'PRIVATE-TOOL-NAME' }
-    else for (let n = 0; n < 3000; n++) yield { type: 'reasoning-delta', index: 0, text: '秘密' }
+    else yield { type: 'reasoning-delta', index: 0, text: '秘密'.repeat(50001) }
   }
   await expect(generateNoteChallenge(f.ctx, { ...input, requestId: 'PRIVATE-REQUEST-ID', title: 'PRIVATE-NOTE-TITLE' })).rejects.toThrow('挑战检查返回内容超出边界')
   expect(f.calls).toHaveLength(1)
@@ -129,9 +129,9 @@ for (const kind of ['tool-call', 'serialized-limit']) it('diagnoses '+kind+' str
   if (kind === 'tool-call') expect(report.eventCounts).toEqual({ 'tool-call-start': 1 })
   else {
     expect(report.serializedChars).toBeGreaterThan(100000)
-    expect(report.reasoningDeltaChars).toBeGreaterThan(0)
-    expect(report.reasoningDeltaChars).toBeLessThan(16000)
-    expect(report.eventCounts['reasoning-delta']).toBeGreaterThan(1000)
+    expect(report.payloadChars).toBeGreaterThan(100000)
+    expect(report.reasoningDeltaChars).toBeGreaterThan(100000)
+    expect(report.eventCounts['reasoning-delta']).toBe(1)
   }
   for (const text of ['PRIVATE', '秘密', input.sessionId, input.blocks[0].text]) expect(logged).not.toContain(text)
   expect(logged.length).toBeLessThan(800)
@@ -142,7 +142,7 @@ it('keeps rejection diagnostics cumulative across format regeneration and preser
   const { generateNoteChallenge } = await load(), f = fixture(), warn = vi.mocked(console.warn)
   f.ctx.llm.stream = async function* (options) {
     f.calls.push(options)
-    for (let n = 0; n < 1400; n++) yield { type: 'reasoning-delta', index: 0, text: '秘' }
+    yield { type: 'reasoning-delta', index: 0, text: '秘'.repeat(60000) }
     yield { type: 'text-delta', index: 1, text: '{"issues":[]' }
     yield { type: 'finish', reason: { kind: 'stop' } }
   }
@@ -150,12 +150,70 @@ it('keeps rejection diagnostics cumulative across format regeneration and preser
   expect(f.calls).toHaveLength(2)
   expect(warn).toHaveBeenCalledTimes(1)
   const report = JSON.parse(warn.mock.calls[0][0])
-  expect(report).toMatchObject({ reason: 'serialized-limit', attempt: 2, textDeltaChars: 12 })
-  expect(report.eventCounts['reasoning-delta']).toBeGreaterThan(1000)
+  expect(report).toMatchObject({ reason: 'payload-limit', attempt: 2, textDeltaChars: 12 })
+  expect(report.payloadChars).toBeGreaterThan(100000)
+  expect(report.eventCounts['reasoning-delta']).toBe(2)
   expect(f.calls.every(call => call.signal.aborted)).toBe(true)
   const broken = fixture(); warn.mockImplementationOnce(() => { throw Error('PRIVATE-LOGGER-FAILURE') })
   broken.ctx.llm.stream = async function* () { yield { type: 'tool-call', name: 'PRIVATE-TOOL' } }
   await expect(generateNoteChallenge(broken.ctx, input)).rejects.toThrow('挑战检查返回内容超出边界')
+})
+
+it('accepts a fragmented short review across format recovery without charging repeated delta envelopes as content', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture(), warn = vi.mocked(console.warn)
+  const texts = ['{"reviews":' + ' '.repeat(1500), JSON.stringify({ reviews: [{ blockId: 'a', issues: [] }] }) + ' '.repeat(1000)]
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    const reasoning = 'PRIVATE REASONING '.repeat(20), text = texts[f.calls.length - 1]
+    for (const char of reasoning) yield { type: 'reasoning-delta', index: 0, text: char }
+    yield { type: 'block-end', index: 0, block: { type: 'reasoning', text: reasoning } }
+    for (const char of text) yield { type: 'text-delta', index: 1, text: char }
+    yield { type: 'block-end', index: 1, block: { type: 'text', text } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  const result = await generateNoteChallenge(f.ctx, input)
+  expect(result).toMatchObject({ issues: [], coveredBlockIds: ['a'] })
+  expect(f.calls).toHaveLength(2)
+  expect(f.calls.every(call => call.signal.aborted)).toBe(true)
+  expect(warn).not.toHaveBeenCalled()
+  expect(JSON.stringify(result)).not.toContain('PRIVATE')
+})
+
+for (const [kind, chunk] of [
+  ['additional delta metadata', { type: 'reasoning-delta', index: 0, text: '', privateMetadata: 'PRIVATE'.repeat(17000) }],
+  ['reasoning snapshot', { type: 'block-end', index: 0, block: { type: 'reasoning', text: 'PRIVATE'.repeat(17000) } }],
+  ['finish replay state', { type: 'finish', reason: { kind: 'stop' }, replayState: { response: 'PRIVATE'.repeat(17000) } }],
+  ['unknown event', { type: 'private-provider-event', text: 'PRIVATE'.repeat(17000) }],
+  ['invalid delta index', { type: 'reasoning-delta', index: 'PRIVATE'.repeat(17000), text: '' }],
+  ['JSON escaped payload', { type: 'reasoning-delta', index: 0, text: '\n'.repeat(50001) }]
+]) it('still bounds '+kind+' after discounting fixed delta envelopes', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture(), warn = vi.mocked(console.warn)
+  f.ctx.llm.stream = async function* (options) { f.calls.push(options); yield chunk }
+  await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('挑战检查返回内容超出边界')
+  expect(f.calls).toHaveLength(1)
+  expect(f.calls[0].signal.aborted).toBe(true)
+  expect(warn).toHaveBeenCalledTimes(1)
+  const report = JSON.parse(warn.mock.calls[0][0])
+  expect(report).toMatchObject({ reason: 'payload-limit', attempt: 1, eventCount: 1 })
+  expect(report.payloadChars).toBeGreaterThan(100000)
+  expect(warn.mock.calls[0][0]).not.toContain('PRIVATE')
+})
+
+it('bounds empty-delta work cumulatively across the one format recovery', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture(), warn = vi.mocked(console.warn)
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    for (let n = 0; n < 16400; n++) yield { type: 'reasoning-delta', index: 0, text: '' }
+    yield { type: 'text-delta', index: 1, text: '{"reviews":' }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('挑战检查返回内容超出边界')
+  expect(f.calls).toHaveLength(2)
+  expect(f.calls.every(call => call.signal.aborted)).toBe(true)
+  expect(warn).toHaveBeenCalledTimes(1)
+  const report = JSON.parse(warn.mock.calls[0][0])
+  expect(report).toMatchObject({ reason: 'event-limit', attempt: 2, eventCount: 32769 })
+  expect(report.payloadChars).toBeLessThan(1000)
 })
 
 it('does not turn the unfinished current sentence into a grammar comment', async () => {
