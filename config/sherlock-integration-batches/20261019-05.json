@@ -492,6 +492,121 @@
           "Task10观察到TABLE_GUIDANCE新增183字令既有长需求组合超5000；仅单卡摘要等价压缩5行，现4971，剩29字预算；不提高断言/删需求。此前集成检查失败未合并，需执行同批次全声明检查。"
         ],
         "generatedAt": "2026-10-21T14:25:33.461Z"
+      },
+      "merged": {
+        "mergeCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+        "verificationCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/openterminal-dark-controls.test.js",
+              "test/openterminal-layout.test.js",
+              "test/workbench-openterminal.test.js",
+              "test/workbench-style.test.js",
+              "test/workbench-component-presentation.test.js",
+              "test/research-grid-workbench.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
+              "test/component-data-refresh.test.js",
+              "test/research-canvas-tools.test.js",
+              "test/research-market-native-table.test.js",
+              "test/research-fund-workbench.test.js",
+              "test/research-generation-controls.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
+            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+            "completedAt": "2026-10-21T14:26:33.660Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+            "completedAt": "2026-10-21T14:26:33.660Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+            "completedAt": "2026-10-21T14:26:33.660Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/memory-view.test.ts",
+              "test/memory-service.test.ts",
+              "test/memory-document.test.ts",
+              "test/memory-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
+            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+            "completedAt": "2026-10-21T14:26:33.660Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+            "completedAt": "2026-10-21T14:26:33.660Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/notes-challenge-intent.test.ts",
+              "test/notes-challenge-runtime.test.js",
+              "test/notes-challenge-controller-browser.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
+            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+            "completedAt": "2026-10-21T14:26:33.660Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check",
+            "verifiedCommit": "98ccbf8b10a3a2c1d345662c736cdafc95925838",
+            "completedAt": "2026-10-21T14:26:33.660Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-10-21T14:26:33.660Z"
       }
     },
     {
