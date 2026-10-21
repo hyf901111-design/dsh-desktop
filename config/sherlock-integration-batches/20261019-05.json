@@ -404,71 +404,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "笔记评论导出对齐、显示动效、优化后台状态与高严格度覆盖",
+        "featureName": "所有挑战档位统一明显事实错误检查底线",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "9e49c8c1ef178e6dc974880436c0da1a9e8369ac",
-        "tipCommit": "9f8c841447926fc23339c7d60fa424df8264cd92",
+        "baseCommit": "9f8c841447926fc23339c7d60fa424df8264cd92",
+        "tipCommit": "ba5a094c0f558dd02182d0530e1390167fd7ed81",
         "commits": [
           {
-            "commit": "2862db071c873f4ec55e4f1d4902564105ee0c96",
+            "commit": "ba5a094c0f558dd02182d0530e1390167fd7ed81",
             "parents": [
-              "9e49c8c1ef178e6dc974880436c0da1a9e8369ac"
+              "9f8c841447926fc23339c7d60fa424df8264cd92"
             ],
-            "subject": "对齐笔记评论与导出按钮并增加展开收起动效"
-          },
-          {
-            "commit": "62f05dba40b27d87ef6cc59e12a9498d8b8296fa",
-            "parents": [
-              "2862db071c873f4ec55e4f1d4902564105ee0c96"
-            ],
-            "subject": "增加AI优化加载状态并保留关闭气泡后的优化任务"
-          },
-          {
-            "commit": "24ba4df67a3e3fea05b227ba0dfa637572141d98",
-            "parents": [
-              "62f05dba40b27d87ef6cc59e12a9498d8b8296fa"
-            ],
-            "subject": "按设计更新评论输入后的发送按钮实底样式"
-          },
-          {
-            "commit": "1810e9cf2940866d51a4f31a45c3de6e2b594107",
-            "parents": [
-              "24ba4df67a3e3fea05b227ba0dfa637572141d98"
-            ],
-            "subject": "提高严格和抬杠模式的逐段问题覆盖上限"
-          },
-          {
-            "commit": "9f8c841447926fc23339c7d60fa424df8264cd92",
-            "parents": [
-              "1810e9cf2940866d51a4f31a45c3de6e2b594107"
-            ],
-            "subject": "等待评论布局更新后验证隐藏优化失败状态"
+            "subject": "统一所有挑战档位的明显事实错误检查底线"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/notes-challenge-runtime.js"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/challenge-controller.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/challenge-ui.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/challenge.css"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-challenge-controller-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-challenge-layout-browser.test.js"
           },
           {
             "status": "M",
@@ -481,16 +433,14 @@
               "npx",
               "vitest",
               "run",
-              "test/notes-challenge-layout-browser.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "test/notes-challenge-runtime.test.js",
               "test/notes-challenge-recall.test.js",
+              "test/notes-challenge-runtime.test.js",
               "test/notes-challenge-consensus.test.js"
             ],
             "outcome": "passed",
-            "summary": "最终5个直接相关文件198项通过；对齐/动效、关闭优化后返回与草稿、发送、严格度与一致预期兼容。日志/tmp/notes-latest-9f8c8414-focused-20261021.log。",
-            "verifiedCommit": "9f8c841447926fc23339c7d60fa424df8264cd92",
-            "completedAt": "2026-10-21T15:21:49.408593+00:00",
+            "summary": "三个直接相关文件108项通过，所有开启档位共享6/24保留上限与逐段分配，保留正确句和虚构引文过滤；/tmp/notes-factual-floor-final-20261021.log。",
+            "verifiedCommit": "ba5a094c0f558dd02182d0530e1390167fd7ed81",
+            "completedAt": "2026-10-21T15:26:56.755795+00:00",
             "timeoutMs": 180000
           },
           {
@@ -500,9 +450,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "最终提交类型检查通过；/tmp/notes-latest-9f8c8414-typecheck-20261021.log。",
-            "verifiedCommit": "9f8c841447926fc23339c7d60fa424df8264cd92",
-            "completedAt": "2026-10-21T15:21:49.408593+00:00",
+            "summary": "最终提交类型检查通过；/tmp/notes-factual-floor-ba5a094c-typecheck-20261021.log。",
+            "verifiedCommit": "ba5a094c0f558dd02182d0530e1390167fd7ed81",
+            "completedAt": "2026-10-21T15:26:56.755795+00:00",
             "timeoutMs": 180000
           },
           {
@@ -510,148 +460,32 @@
               "git",
               "diff",
               "--check",
-              "9e49c8c1ef178e6dc974880436c0da1a9e8369ac..9f8c841447926fc23339c7d60fa424df8264cd92"
+              "9f8c841447926fc23339c7d60fa424df8264cd92..ba5a094c0f558dd02182d0530e1390167fd7ed81"
             ],
             "outcome": "passed",
-            "summary": "完整交接增量差异检查通过。",
-            "verifiedCommit": "9f8c841447926fc23339c7d60fa424df8264cd92",
-            "completedAt": "2026-10-21T15:21:49.408593+00:00",
+            "summary": "交接增量差异检查通过；/tmp/notes-factual-floor-ba5a094c-diffcheck-20261021.log。",
+            "verifiedCommit": "ba5a094c0f558dd02182d0530e1390167fd7ed81",
+            "completedAt": "2026-10-21T15:26:56.755795+00:00",
             "timeoutMs": 30000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实mountNotes浏览器验证：导出右缘、正文不移动、180ms淡入淡出/轻微位移、快速反向/减少动态效果、优化圆环与关闭后成功失败保存、发送实底明暗主题；已查看两主题截图。签名客户端仍待本次集成构建复验，不冒称已原生验收。"
+          "summary": "本次仅更改runtime与回放测试，UI增量为零；前次198项与两主题mounted浏览器证据保留。最终签名客户端宽松模式实际文章标记待本次集成构建验证。"
         },
         "acceptanceCriteria": [
-          "常驻评论气泡右缘与同会话导出按钮对齐；正文居中不移动，窄窗气泡仍贴近标记。",
-          "展开收起自然过渡，快速切换、减少动态效果、旧回复历史与草稿保留。",
-          "AI优化按钮显示左侧圆环，关闭气泡后优化继续，建议/错误保存原线程，不自动弹开或编辑正文。",
-          "有内容时发送按钮实底对比，空输入保持弱化，原Enter/IME与发送几何不变。",
-          "严格4/20、抬杠6/24问题上限与逐轮段落分配；保留精确引文、来源诚实与正确句过滤，不提高模型token或超时。",
-          "只在集成checkout本地构建，核验现有正文日期草稿，不发布/accept/promote/push。"
+          "所有开启档位共享明显事实、计算与常识错误底线，不因宽松而省略后句独立错误。",
+          "全部开启档位共享每段6条、全文24条上限，以轮转分配保留后段问题，保持原文顺序。",
+          "档位只调整可选表达建议、推理深度和反例，不提高token、超时、权限和来源预算。",
+          "保留正确句、明确虚构、被反驳引语、条件与否定过滤，常识质疑保持未联网核验语义。",
+          "仅在集成checkout本地构建，核验当前用户正文、日期与草稿保留，不发布或accept/promote/push。"
         ],
         "risks": [
-          "模型漏检与误报仍可能发生，24条是保留上限而不是穷尽事实核验承诺；签名客户端实际provider复验仍必须完成。",
-          "关闭气泡仅豁免优化的取消；解决、关闭挑战、切换笔记与卸载保护仍保留；普通回复关闭语义未改。",
-          "金融D复测3完成/3失败保留，不能冒称工作台整体通过；本交接仅更新notes功能。"
+          "108项是回放与接收策略验证，不能证明当前模型真实文章全检；仍需实际客户端宽松模式复验。",
+          "统一6/24是本轮替代之前按档位2/12和4/20上限，仍受既定输出预算约束，不承诺穷尽事实核验。",
+          "先前已批准UI和优化生命周期保持不变；金融D复测3完成/3失败另行保留。"
         ],
-        "generatedAt": "2026-10-21T15:21:49.408593+00:00"
-      },
-      "merged": {
-        "mergeCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-        "verificationCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-            "completedAt": "2026-10-21T15:22:15.764Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-            "completedAt": "2026-10-21T15:22:15.764Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-            "completedAt": "2026-10-21T15:22:15.764Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-            "completedAt": "2026-10-21T15:22:15.764Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-            "completedAt": "2026-10-21T15:22:15.764Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-            "completedAt": "2026-10-21T15:22:15.764Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "4127983dcfc7a1a9d4dd0919255e6c80ac9a6bf2",
-            "completedAt": "2026-10-21T15:22:15.764Z",
-            "timeoutMs": 30000
-          }
-        ],
-        "recordedAt": "2026-10-21T15:22:15.764Z"
+        "generatedAt": "2026-10-21T15:26:56.755795+00:00"
       }
     }
   ],
