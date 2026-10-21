@@ -55,7 +55,7 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
  for(const node of nodes.filter(node=>node.status==='completed')){
   const row=rows.get(node.id),lastObserved=snapshot.active===false||row?.lastObserved===true||!row?.native&&refreshSnapshot?.ready!==true
   let label
-  if(!row)label=!node.builtin&&refreshSnapshot?.observed?say('静态内容','Static content'):say('刷新状态待确认','Refresh status unverified')
+  if(!row)label=!node.builtin&&refreshSnapshot?.observed&&refreshSnapshot.complete===true?say('静态内容','Static content'):say('刷新状态待确认','Refresh status unverified')
   else {
    const frequency=row.intervalMinutes===1?say('每分钟','every minute'):row.intervalMinutes>0?say(`每 ${row.intervalMinutes} 分钟`,`every ${row.intervalMinutes} minutes`):''
    const outcome=row.lastRefreshFailed?say('最近刷新失败','Latest refresh failed'):row.lastSuccess?say('最近刷新成功','Latest refresh succeeded'):say('尚无成功记录','No successful refresh yet')
@@ -194,11 +194,11 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 }
 
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v7 */'
+ const marker='/* ework:workbench-feedback:v8 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[123456] \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v[1234567] \*\//)
  if(previous>=0){
   const end=source.indexOf('const ExecutionStatusGroup =',previous)
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')

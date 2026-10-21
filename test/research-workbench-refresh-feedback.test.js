@@ -8,6 +8,8 @@ import {createRoot} from 'react-dom/client'
 import {patchComponentDataRefresh} from '../scripts/lib/component-data-refresh.mjs'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
+import {createComponentDataStatusStore} from '../scripts/lib/component-data-status.mjs'
+import {publishResearchWorkbenchProgress,workbenchProgressState} from '../scripts/lib/research-workbench-feedback.mjs'
 import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {installResearchGenerationWatch} from '../scripts/lib/research-generation-watch.mjs'
 
@@ -72,7 +74,56 @@ it('mounts the injected feedback with the native workspace, host bridge and buil
   await react.act(async()=>store.publishNative('s','native',{status:'error',enabled:true,intervalMinutes:1,lastSuccess:3000,error:'PRIVATE ERROR'}))
   expect(document.body.textContent).toContain('已配置每分钟刷新，最近刷新失败 1')
   expect(document.body.textContent).not.toContain('上次观察：已配置每分钟刷新，最近刷新失败')
+  // Exercise both fixes through this actual injected store and mounted React.
+  await react.act(async()=>store.publish('s',[...Array.from({length:512},(_,i)=>({nodeId:'filler-'+i,status:'idle',enabled:true,intervalMinutes:5})),{nodeId:'success',status:'success',enabled:true,intervalMinutes:5,lastSuccess:5000}]))
+  expect(store.read('s','success')).toMatchObject({intervalMinutes:5,lastSuccess:5000})
+  expect(store.snapshotSession('s').complete).toBe(false)
+  expect(document.body.textContent).toContain('刷新状态待确认 7')
+  expect(document.body.textContent).not.toContain('静态内容')
+  await react.act(async()=>{store.clearNative('s','native');store.publish('s',[{nodeId:'native',status:'success',enabled:false,intervalMinutes:0,lastSuccess:6000}])})
+  expect(store.read('s','native')).toMatchObject({intervalMinutes:0,lastSuccess:6000})
+  expect(document.body.textContent).toContain('仅手动刷新，最近刷新成功 1')
+  expect(document.body.textContent).not.toContain('上次观察：已配置每分钟刷新')
   expect(JSON.stringify(store.snapshotSession('s'))).not.toContain('PRIVATE')
   expect(JSON.stringify(window.__sherlockWorkbenchGenerationV1.get('s'))).not.toContain('PRIVATE')
  }finally{await react.act(async()=>{stopWatch?.();monitor?.dispose();root?.unmount()});vi.unstubAllGlobals();window.happyDOM.abort()}
 },15000)
+
+
+it('keeps capped binding summaries unverified, including after clear, and recognizes a complete empty host list',()=>{
+ const store=createComponentDataStatusStore(),target=new EventTarget(),plans=[{id:'plan',count:1}]
+ const snapshot=publishResearchWorkbenchProgress(target,'s',[{id:'target',workbenchId:'plan',generationStatus:'completed',containerSpec:{type:'html'}}])
+ const rows=[...Array.from({length:512},(_,i)=>({nodeId:'filler-'+i,status:'idle',enabled:true,intervalMinutes:5})),{nodeId:'target',status:'success',enabled:true,intervalMinutes:5,lastSuccess:20}]
+ store.publish('s',rows)
+ expect(store.read('s','target')).toMatchObject({intervalMinutes:5,lastSuccess:20})
+ const capped=store.snapshotSession('s')
+ expect(capped.rows).toHaveLength(512)
+ const view=()=>workbenchProgressState(plans,snapshot,false,store.snapshotSession('s')).refreshDetail
+ expect(view()).toContain('刷新状态待确认 1');expect(view()).not.toContain('静态内容')
+ expect(capped.complete).toBe(false);expect(Object.isFrozen(capped)).toBe(true)
+ store.publish('s',rows);expect(store.snapshotSession('s')).toBe(capped)
+ store.clear('s');expect(store.snapshotSession('s').complete).toBe(false)
+ expect(view()).toContain('刷新状态待确认 1');expect(view()).not.toContain('静态内容')
+ store.publish('s',[])
+ expect(store.snapshotSession('s')).toMatchObject({ready:true,observed:true,complete:true,rows:[]})
+ expect(view()).toBe('静态内容 1')
+})
+
+it('lets current host facts replace a retired native row while live native still wins and empty-host retirement remains observed',()=>{
+ const store=createComponentDataStatusStore(),target=new EventTarget(),plans=[{id:'plan',count:1}]
+ const snapshot=publishResearchWorkbenchProgress(target,'s',[{id:'target',workbenchId:'plan',generationStatus:'completed',containerSpec:{type:'financial-widget'}}])
+ const view=()=>workbenchProgressState(plans,snapshot,false,store.snapshotSession('s')).refreshDetail
+ store.publishNative('s','target',{status:'success',enabled:true,intervalMinutes:1,lastSuccess:10})
+ store.clearNative('s','target');store.publish('s',[])
+ expect(view()).toBe('上次观察：已配置每分钟刷新，最近刷新成功 1')
+ store.publish('s',[{nodeId:'target',status:'success',enabled:false,intervalMinutes:0,lastSuccess:20}])
+ expect(store.read('s','target')).toMatchObject({intervalMinutes:0,lastSuccess:20})
+ expect(view()).toBe('仅手动刷新，最近刷新成功 1')
+ expect(store.snapshotSession('s').rows[0]).toMatchObject({intervalMinutes:0,lastSuccess:20})
+ expect(store.snapshotSession('s').rows[0].native).toBeUndefined()
+ store.publishNative('s','target',{status:'success',enabled:true,intervalMinutes:5,lastSuccess:30})
+ expect(store.read('s','target')).toMatchObject({native:true,intervalMinutes:5,lastSuccess:30})
+ expect(view()).toBe('已配置每 5 分钟刷新，最近刷新成功 1')
+ store.clearNative('s','target')
+ expect(view()).toBe('仅手动刷新，最近刷新成功 1')
+})

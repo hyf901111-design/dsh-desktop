@@ -10,12 +10,12 @@ export function componentDataSourceNames(binding){
 // replaces an iframe. Only the affected footer subscribes to its own snapshot.
 export function createComponentDataStatusStore(){
  const sessions=new Map(),listeners=new Map(),nativeRows=new Map(),summaries=new Map(),sessionListeners=new Map()
- const empty=Object.freeze({ready:false,observed:false,rows:Object.freeze([])})
+ const empty=Object.freeze({ready:false,observed:false,complete:true,rows:Object.freeze([])})
  // A bounded memory-only projection for conversation feedback. Footers retain
  // their original read/clear behavior; no source payload enters this summary.
  const project=row=>Object.freeze({nodeId:row.nodeId,status:['idle','refreshing','success','unchanged','error'].includes(row.status)?row.status:'unknown',lastRefreshFailed:row.lastRefreshFailed===true,lastSuccess:typeof row.lastSuccess==='number'&&Number.isFinite(row.lastSuccess)?row.lastSuccess:typeof row.lastSuccess==='string'&&Number.isFinite(Date.parse(row.lastSuccess))?new Date(row.lastSuccess).toISOString():null,...(typeof row.enabled==='boolean'?{enabled:row.enabled}:{}),...(typeof row.viewPaused==='boolean'?{viewPaused:row.viewPaused}:{}),...(Number.isFinite(row.intervalMinutes)&&row.intervalMinutes>=0?{intervalMinutes:row.intervalMinutes}:{}),...(row.native===true?{native:true}:{}),...(row.lastObserved===true?{lastObserved:true}:{})})
- const publishSummary=(sessionId,{ready,observed,rows})=>{
-  const previous=summaries.get(sessionId)??empty,next={ready,observed,rows:Object.freeze(rows.slice(0,512).map(project).sort((a,b)=>a.nodeId.localeCompare(b.nodeId)))}
+ const publishSummary=(sessionId,{ready,observed,complete,rows})=>{
+  const previous=summaries.get(sessionId)??empty,next={ready,observed,complete:complete!==false&&rows.length<=512,rows:Object.freeze(rows.slice(0,512).map(project).sort((a,b)=>a.nodeId.localeCompare(b.nodeId)))}
   if(JSON.stringify(previous)===JSON.stringify(next))return
   summaries.delete(sessionId);summaries.set(sessionId,Object.freeze(next))
   while(summaries.size>64){const oldest=summaries.keys().next().value;summaries.delete(oldest);sessionListeners.get(oldest)?.forEach(fn=>fn())}
@@ -23,10 +23,10 @@ export function createComponentDataStatusStore(){
  }
  const summarize=(sessionId,retiredNative)=>{
   const session=sessions.get(sessionId),previous=summaries.get(sessionId)??empty,rows=new Map((session?[...session.rows.values()]:previous.rows).map(row=>[row.nodeId,row]))
-  for(const row of previous.rows)if(row.native)rows.set(row.nodeId,row)
-  if(retiredNative)rows.set(retiredNative.nodeId,{...retiredNative,lastObserved:true})
+  for(const row of previous.rows)if(row.native&&!session?.rows.has(row.nodeId))rows.set(row.nodeId,row)
+  if(retiredNative&&!session?.rows.has(retiredNative.nodeId))rows.set(retiredNative.nodeId,{...retiredNative,lastObserved:true})
   for(const [k,row]of nativeRows)if(k===key(sessionId,row.nodeId))rows.set(row.nodeId,row)
-  publishSummary(sessionId,{ready:session?.ready===true,observed:session?.ready===true||previous.observed,rows:[...rows.values()]})
+  publishSummary(sessionId,{ready:session?.ready===true,observed:session?.ready===true||previous.observed,complete:session?true:previous.complete,rows:[...rows.values()]})
  }
  const key=(sessionId,nodeId)=>JSON.stringify([sessionId,nodeId])
  const notify=(sessionId,nodeId)=>listeners.get(key(sessionId,nodeId))?.forEach(fn=>fn())
