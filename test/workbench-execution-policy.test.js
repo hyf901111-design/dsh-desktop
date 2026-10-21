@@ -44,6 +44,8 @@ describe('workbench execution policy', () => {
     expect(text()).toContain('立即调用 research_workbench_create')
     result.data.message.content[0].isError = false
     expect(text()).toContain('主会话不要再重复接口发现')
+    expect(text()).toContain('刷新配置待确认')
+    expect(text()).toContain('不能由计划承诺自动刷新已生效')
     const next = session('再创建另一只股票的工作台').events[0]; next.data.id = 'human-next'
     current.events.push(next)
     expect(text()).toContain('立即调用 research_workbench_create')

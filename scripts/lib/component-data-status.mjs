@@ -9,18 +9,38 @@ export function componentDataSourceNames(binding){
 // One canvas subscription; publishing status never updates the canvas model or
 // replaces an iframe. Only the affected footer subscribes to its own snapshot.
 export function createComponentDataStatusStore(){
- const sessions=new Map(),listeners=new Map(),nativeRows=new Map()
+ const sessions=new Map(),listeners=new Map(),nativeRows=new Map(),summaries=new Map(),sessionListeners=new Map()
+ const empty=Object.freeze({ready:false,observed:false,rows:Object.freeze([])})
+ // A bounded memory-only projection for conversation feedback. Footers retain
+ // their original read/clear behavior; no source payload enters this summary.
+ const project=row=>Object.freeze({nodeId:row.nodeId,status:['idle','refreshing','success','unchanged','error'].includes(row.status)?row.status:'unknown',lastRefreshFailed:row.lastRefreshFailed===true,lastSuccess:typeof row.lastSuccess==='number'&&Number.isFinite(row.lastSuccess)?row.lastSuccess:typeof row.lastSuccess==='string'&&Number.isFinite(Date.parse(row.lastSuccess))?new Date(row.lastSuccess).toISOString():null,...(typeof row.enabled==='boolean'?{enabled:row.enabled}:{}),...(typeof row.viewPaused==='boolean'?{viewPaused:row.viewPaused}:{}),...(Number.isFinite(row.intervalMinutes)&&row.intervalMinutes>=0?{intervalMinutes:row.intervalMinutes}:{}),...(row.native===true?{native:true}:{}),...(row.lastObserved===true?{lastObserved:true}:{})})
+ const publishSummary=(sessionId,{ready,observed,rows})=>{
+  const previous=summaries.get(sessionId)??empty,next={ready,observed,rows:Object.freeze(rows.slice(0,512).map(project).sort((a,b)=>a.nodeId.localeCompare(b.nodeId)))}
+  if(JSON.stringify(previous)===JSON.stringify(next))return
+  summaries.delete(sessionId);summaries.set(sessionId,Object.freeze(next))
+  while(summaries.size>64){const oldest=summaries.keys().next().value;summaries.delete(oldest);sessionListeners.get(oldest)?.forEach(fn=>fn())}
+  sessionListeners.get(sessionId)?.forEach(fn=>fn())
+ }
+ const summarize=(sessionId,retiredNative)=>{
+  const session=sessions.get(sessionId),previous=summaries.get(sessionId)??empty,rows=new Map((session?[...session.rows.values()]:previous.rows).map(row=>[row.nodeId,row]))
+  for(const row of previous.rows)if(row.native)rows.set(row.nodeId,row)
+  if(retiredNative)rows.set(retiredNative.nodeId,{...retiredNative,lastObserved:true})
+  for(const [k,row]of nativeRows)if(k===key(sessionId,row.nodeId))rows.set(row.nodeId,row)
+  publishSummary(sessionId,{ready:session?.ready===true,observed:session?.ready===true||previous.observed,rows:[...rows.values()]})
+ }
  const key=(sessionId,nodeId)=>JSON.stringify([sessionId,nodeId])
  const notify=(sessionId,nodeId)=>listeners.get(key(sessionId,nodeId))?.forEach(fn=>fn())
  const lastFailed=(row,old)=>['success','unchanged'].includes(row.status)?false:Boolean(row.status==='error'||row.failures>0||old?.lastRefreshFailed)
  return {
+  snapshotSession:sessionId=>summaries.get(sessionId)??empty,
+  subscribeSession(sessionId,fn){if(!sessionListeners.has(sessionId))sessionListeners.set(sessionId,new Set());sessionListeners.get(sessionId).add(fn);return()=>{const set=sessionListeners.get(sessionId);set?.delete(fn);if(!set?.size)sessionListeners.delete(sessionId)}},
   read:(sessionId,nodeId)=>nativeRows.get(key(sessionId,nodeId))||sessions.get(sessionId)?.rows.get(nodeId)||null,
   // Builtin widgets own their live source/scheduler. Host binding polls must
   // not erase those outcomes, and unmounting a widget releases its own row.
-  publishNative(sessionId,nodeId,row){const k=key(sessionId,nodeId),old=nativeRows.get(k),next={...row,nodeId,native:true,lastRefreshFailed:lastFailed(row,old)};if(JSON.stringify(old)!==JSON.stringify(next)){nativeRows.set(k,next);notify(sessionId,nodeId)}},
-  clearNative(sessionId,nodeId){if(nativeRows.delete(key(sessionId,nodeId)))notify(sessionId,nodeId)},
+  publishNative(sessionId,nodeId,row){const k=key(sessionId,nodeId),old=nativeRows.get(k),next={...row,nodeId,native:true,lastRefreshFailed:lastFailed(row,old)};if(JSON.stringify(old)!==JSON.stringify(next)){nativeRows.set(k,next);notify(sessionId,nodeId);summarize(sessionId)}},
+  clearNative(sessionId,nodeId){const old=nativeRows.get(key(sessionId,nodeId));if(nativeRows.delete(key(sessionId,nodeId))){notify(sessionId,nodeId);summarize(sessionId,old)}},
   subscribe(sessionId,nodeId,fn){const k=key(sessionId,nodeId);if(!listeners.has(k))listeners.set(k,new Set());listeners.get(k).add(fn);return()=>{const set=listeners.get(k);set?.delete(fn);if(!set?.size)listeners.delete(k)}},
-  suspend(sessionId){const session=sessions.get(sessionId);if(session)session.ready=false},
+  suspend(sessionId){const session=sessions.get(sessionId);if(session)session.ready=false;summarize(sessionId)},
   publish(sessionId,rows){
    const previous=sessions.get(sessionId)||{rows:new Map(),ready:false},next=new Map()
    for(const row of rows){
@@ -31,10 +51,10 @@ export function createComponentDataStatusStore(){
      completionSequence:(old?.completionSequence||0)+(previous.ready&&old&&advanced&&['success','unchanged'].includes(row.status)?1:0)}
     next.set(row.nodeId,JSON.stringify(old)===JSON.stringify(snapshot)?old:snapshot)
    }
-   sessions.set(sessionId,{rows:next,ready:true})
+   sessions.set(sessionId,{rows:next,ready:true});summarize(sessionId)
    for(const nodeId of new Set([...previous.rows.keys(),...next.keys()]))if(previous.rows.get(nodeId)!==next.get(nodeId))notify(sessionId,nodeId)
   },
-  clear(sessionId){const previous=sessions.get(sessionId);sessions.delete(sessionId);previous?.rows.forEach((_,nodeId)=>notify(sessionId,nodeId))}
+  clear(sessionId){const previous=sessions.get(sessionId);sessions.delete(sessionId);previous?.rows.forEach((_,nodeId)=>notify(sessionId,nodeId));summarize(sessionId)}
  }
 }
 

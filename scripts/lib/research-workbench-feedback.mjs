@@ -11,7 +11,7 @@ export function publishResearchWorkbenchProgress(target,sessionId,artifacts,acti
   if(typeof node?.id!=='string'||typeof node.workbenchId!=='string'||!node.workbenchId)continue
   let status=valid.includes(node.generationStatus)?node.generationStatus:'unknown'
   if(status==='completed'&&!(node.containerSpec&&typeof node.containerSpec==='object'&&typeof node.containerSpec.type==='string'))status='unknown'
-  current.set(node.id,{id:node.id,planId:node.workbenchId,status,...(typeof node.generationTaskId==='string'?{taskId:node.generationTaskId}:{})})
+  current.set(node.id,{id:node.id,planId:node.workbenchId,status,...(node.containerSpec?.type==='financial-widget'?{builtin:true}:{}),...(typeof node.generationTaskId==='string'?{taskId:node.generationTaskId}:{})})
  }
  const nodes=[...current.values()].sort((a,b)=>a.id.localeCompare(b.id)),prior=cache.get(sessionId)
  if(prior?.active===active&&prior.retryAvailable===retryAvailable&&JSON.stringify(prior.nodes)===JSON.stringify(nodes))return prior
@@ -40,7 +40,7 @@ export function observeResearchWorkbenchProgress(target,sessionId,listener) {
  return ()=>target?.removeEventListener('sherlock:workbench-generation',change)
 }
 
-export function workbenchProgressState(plans,snapshot,english=false) {
+export function workbenchProgressState(plans,snapshot,english=false,refreshSnapshot=null) {
  const say=(zh,en)=>english?en:zh,ids=new Map((plans??[]).filter(p=>typeof p?.id==='string').map(p=>[p.id,p]))
  const planned=[...ids.values()].reduce((sum,p)=>sum+(Number.isSafeInteger(p.count)&&p.count>0?p.count:0),0)
  const nodes=[...new Map((snapshot?.nodes??[]).filter(n=>ids.has(n.planId)).map(n=>[n.id,n])).values()]
@@ -51,7 +51,22 @@ export function workbenchProgressState(plans,snapshot,english=false) {
  const counts=[say(`已生成 ${completed}`,`${completed} generated`),pending?say(`进行中 ${pending}`,`${pending} in progress`):'',failed?say(`未完成 ${failed}`,`${failed} failed`):'',cancelled?say(`已停止 ${cancelled}`,`${cancelled} stopped`):'',unknown?say(`待确认 ${unknown}`,`${unknown} unverified`):''].filter(Boolean).join(' · ')
  const scope=planned&&total!==planned?say(`当前画布 ${total} 个组件，原计划 ${planned} 个。`,`Current canvas: ${total} components; original plan: ${planned}.`):''
  const detail=phase==='waiting'?say('正在读取这批组件在画布中的实际生成状态。','Reading the actual generation state of these canvas components.'):phase==='empty'?say('尚未挂载或已从画布移除。','Not mounted or removed from the canvas.'):[counts,scope,snapshot.active===false?say('以上为上次状态，打开研究看板可查看最新进度。','These are the last observed states; open the research canvas for current progress.'):''].filter(Boolean).join(' ')
- return {phase,title,detail,total,planned,completed,pending,failed,cancelled,unknown}
+ const rows=new Map((refreshSnapshot?.rows??[]).map(row=>[row.nodeId,row])),refreshGroups=new Map()
+ for(const node of nodes.filter(node=>node.status==='completed')){
+  const row=rows.get(node.id),lastObserved=snapshot.active===false||row?.lastObserved===true||!row?.native&&refreshSnapshot?.ready!==true
+  let label
+  if(!row)label=!node.builtin&&refreshSnapshot?.observed?say('静态内容','Static content'):say('刷新状态待确认','Refresh status unverified')
+  else {
+   const frequency=row.intervalMinutes===1?say('每分钟','every minute'):row.intervalMinutes>0?say(`每 ${row.intervalMinutes} 分钟`,`every ${row.intervalMinutes} minutes`):''
+   const outcome=row.lastRefreshFailed?say('最近刷新失败','Latest refresh failed'):row.lastSuccess?say('最近刷新成功','Latest refresh succeeded'):say('尚无成功记录','No successful refresh yet')
+   label=row.intervalMinutes===0?say('仅手动刷新','Manual refresh only'):row.viewPaused||row.enabled===false&&row.intervalMinutes>0?say('刷新已暂停','Refresh paused'):row.enabled===true&&frequency?say(`已配置${frequency}刷新`,`Refresh configured ${frequency}`):say('刷新配置待确认','Refresh configuration unverified')
+   if(row.lastRefreshFailed||row.lastSuccess||row.enabled===true&&frequency)label+=say('，',', ')+outcome
+  }
+  if(lastObserved&&(row||refreshSnapshot?.observed))label=say('上次观察：','Last observed: ')+label
+  refreshGroups.set(label,(refreshGroups.get(label)??0)+1)
+ }
+ const refreshDetail=[...refreshGroups].map(([label,count])=>`${label} ${count}`).join(' · ')
+ return {phase,title,detail,total,planned,completed,pending,failed,cancelled,unknown,refreshDetail}
 }
 
 export function researchWorkbenchReceiptPlans(order,nodeStore,readMetadata) {
@@ -146,12 +161,15 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  const [snapshot,setSnapshot]=react.useState(()=>window.__sherlockWorkbenchGenerationV1?.get?.(sessionId)??null)
  const [retrying,setRetrying]=react.useState(false),[retryError,setRetryError]=react.useState(false)
  react.useEffect(()=>observeResearchWorkbenchProgress(window,sessionId,setSnapshot),[sessionId])
+ const subscribeRefresh=react.useCallback(listener=>componentDataStatusStore.subscribeSession(sessionId,listener),[sessionId])
+ const readRefresh=react.useCallback(()=>componentDataStatusStore.snapshotSession(sessionId),[sessionId])
+ const refreshSnapshot=react.useSyncExternalStore(subscribeRefresh,readRefresh,readRefresh)
  const current=snapshot?.sessionId===sessionId?snapshot:null
  const visiblePlans=footer&&current?plans.filter(p=>current.nodes.some(n=>n.planId===p.id)):plans
  if(footer&&current&&!visiblePlans.length)return null
  const english=document.documentElement.dataset.odysseyLocale==='en',say=(zh,en)=>english?en:zh
- const state=workbenchProgressState(visiblePlans,current,english)
- if(footer&&current?.active===false&&['completed','empty'].includes(state.phase))return null
+ const state=workbenchProgressState(visiblePlans,current,english,refreshSnapshot)
+ if(footer&&current?.active===false&&state.phase==='empty')return null
  const generating=current?.active!==false&&state.pending>0||retrying
  const complete=state.phase==='completed'&&state.total>0&&(!state.planned||state.total===state.planned)
  const hasRetry=state.failed+state.cancelled>0
@@ -163,7 +181,7 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  }
  return react_jsx_runtime.jsxs('div',{'data-research-workbench-progress':state.phase,...(footer?{'data-research-workbench-footer':true}:{}),style:{display:'grid',gridTemplateColumns:'minmax(0,1fr) auto',columnGap:12,margin:footer?'8px 0 12px':'4px 0 8px 20px',padding:'8px 10px',...(footer?{border:'1px solid var(--dsw-alias-border-l2)',borderRadius:8,background:'var(--dsw-alias-bg-l2)'}:{borderLeft:'2px solid var(--dsw-alias-border-l2)'}),fontSize:12,lineHeight:1.65,color:'var(--dsw-alias-label-secondary)',overflowWrap:'anywhere'},children:[
   react_jsx_runtime.jsx('div',{role:'status','aria-live':'polite',style:{gridColumn:1,fontWeight:500,color:'var(--dsw-alias-label-primary)'},children:state.title}),
-  footer&&complete?null:react_jsx_runtime.jsx('div',{style:{gridColumn:1},children:state.detail}),
+  react_jsx_runtime.jsx('div',{style:{gridColumn:1,minWidth:0},children:[footer&&complete?'':state.detail,state.refreshDetail].filter(Boolean).join(' ')}),
   react_jsx_runtime.jsxs('div',{style:{gridColumn:2,gridRow:'1 / span 2',alignSelf:'center',display:'flex',alignItems:'center',gap:10,flexShrink:0,whiteSpace:'nowrap'},children:[
    generating?react_jsx_runtime.jsxs('svg',{width:18,height:18,viewBox:'0 0 20 20',role:'img','aria-label':say('正在生成组件','Generating components'),style:{display:'block',width:18,height:18,flexShrink:0},children:[
     react_jsx_runtime.jsx('circle',{cx:10,cy:10,r:7,fill:'none',stroke:'currentColor',strokeWidth:2,opacity:.2}),
@@ -176,11 +194,11 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 }
 
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v6 */'
+ const marker='/* ework:workbench-feedback:v7 */'
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+[publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v[12345] \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v[123456] \*\//)
  if(previous>=0){
   const end=source.indexOf('const ExecutionStatusGroup =',previous)
   if(end<0)throw Error('Workbench feedback upgrade anchor missing')
