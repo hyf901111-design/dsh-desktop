@@ -67,7 +67,19 @@ export function componentSourceCollector(allowed,schemas=[]) {
 }
 
 function snapshotUrl(value) {
-  try {const url=new URL(value);if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return null;url.hash='';return url.href} catch {return null}
+  try {
+    const url=new URL(value)
+    if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return null
+    url.hash=''
+    // Sina search adds this attribution parameter to the same article link.
+    // Keep business query parameters, other publishers and non-article paths exact.
+    const article=url.hostname==='finance.sina.com.cn'&&/\/doc-[^/]+\.shtml$/u.test(url.pathname)||
+      url.hostname==='k.sina.com.cn'&&/^\/article_\d+_[a-z\d]+\.html$/iu.test(url.pathname)||
+      ['cj.sina.com.cn','t.cj.sina.com.cn'].includes(url.hostname)&&/^\/articles\/view\/\d+\/[a-z\d]+\/?$/iu.test(url.pathname)
+    if(article&&url.searchParams.getAll('from').length===1&&url.searchParams.get('from')==='pcsearch')
+      url.search=url.search.slice(1).split('&').filter(part=>part!=='from=pcsearch').join('&')
+    return url.href
+  } catch {return null}
 }
 function snapshotDate(value) {
   const date=typeof value==='string'?value.match(/^\d{4}-\d{2}-\d{2}(?=$|[T\s])/u)?.[0]:null
