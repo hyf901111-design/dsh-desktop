@@ -55,7 +55,7 @@ it('keeps stacked right-edge comments scrollable and follows original paragraphs
   const gutter=page.locator('.en-challenge-comments');await gutter.evaluate(el=>el.scrollTop=el.scrollHeight);await expect.poll(()=>gutter.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
   const last=await page.locator('.en-challenge-card').last().boundingBox(),outer=await gutter.boundingBox();expect(last.y+last.height).toBeLessThanOrEqual(outer.y+outer.height+1)
   await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop=180);await expect.poll(()=>gutter.evaluate(el=>el.scrollTop)).toBe(0)
-  await page.locator('.en-challenge-close').first().click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBeLessThan(10)
+  expect(await page.locator('.en-challenge-close').count()).toBe(0)
   const value=await dimensions(page);expect(Math.abs(value.center-value.areaCenter)).toBeLessThanOrEqual(1);expect(Math.abs(value.triggerRight-value.cardRight)).toBeLessThanOrEqual(1);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
@@ -181,10 +181,10 @@ it('restores each note display preference and unsent reply when switching notes 
  }finally{await context.close()}
 },15000)
 
-it('keeps the close control reachable while a long pending conversation scrolls and avoids selection glow on a lone visible margin card',async()=>{
+it('keeps the composer reachable while a long pending conversation scrolls and uses selection glow only when multiple margin cards are visible',async()=>{
  const {context,page}=await fixture(2000,true);try{
   await page.evaluate(()=>window.seed(2,true));await page.locator('.bn-editor [data-bn-thread-id]').first().click();await page.getByRole('textbox',{name:'回复AI挑战'}).first().fill('请继续核对');await page.getByRole('button',{name:'发送挑战回复'}).first().click();await page.locator('.en-challenge-thinking').waitFor();await page.locator('.en-challenge-comments').evaluate(el=>el.scrollTop=0)
-  const value=await page.locator('.en-challenge-card').first().evaluate(el=>{const close=el.querySelector('.en-challenge-close').getBoundingClientRect(),card=el.getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();return{closeVisible:close.top>=card.top&&close.bottom<=Math.min(card.bottom,area.bottom),selected:el.dataset.selected==='true'}});expect(value.closeVisible).toBe(true);await expect.poll(()=>page.locator('.en-challenge-card[data-selected=true]').count()).toBe(0)
+  const value=await page.locator('.en-challenge-card').first().evaluate(el=>{const close=el.querySelector('.en-challenge-reply').getBoundingClientRect(),card=el.getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();return{closeVisible:close.top>=card.top&&close.bottom<=Math.min(card.bottom,area.bottom),selected:el.dataset.selected==='true'}});expect(value.closeVisible).toBe(true);const visible=await page.locator('.en-challenge-card').evaluateAll(cards=>{const area=document.querySelector('.en-main').getBoundingClientRect();return cards.filter(card=>{const r=card.getBoundingClientRect();return r.bottom>area.top&&r.top<area.bottom}).length});expect(await page.locator('.en-challenge-card[data-selected=true]').count()).toBe(visible>1?1:0)
  }finally{await context.close()}
 },15000)
 
@@ -250,8 +250,41 @@ it('sends with Enter while preserving Shift+Enter and IME composition, and uses 
   await input.fill('发送中文');await page.keyboard.press('Enter');await page.locator('.en-challenge-thinking').waitFor()
   expect(await page.evaluate(()=>Object.keys(window.jobs).length)).toBe(1)
   expect(await page.locator('.en-challenge-author strong').allTextContents()).toEqual(['AI挑战者','我'])
+  await page.evaluate(()=>{window.challenge.setMarginExpanded(false);window.challenge.select(window.challenge.threads[0].id)});await page.locator('.en-challenge-close').waitFor()
   const geometry=await page.locator('.en-challenge-card').evaluate(card=>{const box=el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return{width:r.width,height:r.height,padding:s.padding,minWidth:s.minWidth,bg:s.backgroundColor}},close=card.querySelector('.en-challenge-close'),icon=close.querySelector('img'),c=close.getBoundingClientRect(),i=icon.getBoundingClientRect();return{card:box(card),close:box(close),send:box(card.querySelector('.en-challenge-reply>button')),input:box(card.querySelector('textarea')),iconCentered:Math.abs(c.x+c.width/2-i.x-i.width/2)<.1&&Math.abs(c.y+c.height/2-i.y-i.height/2)<.1}})
   expect(geometry.card.width).toBe(320);expect(geometry.close.width).toBe(24);expect(geometry.close.height).toBe(24);expect(geometry.close.padding).toBe('0px');expect(geometry.send.width).toBe(36);expect(geometry.send.height).toBe(32);expect(geometry.input.width).toBe(244);expect(geometry.input.height).toBe(36);expect(geometry.iconCentered).toBe(true)
   await page.screenshot({path:'/tmp/notes-challenge-v16-native-geometry.png'});await page.locator('.en-root').evaluate(el=>el.dataset.dark='true');await page.locator('.en-challenge-close').hover();await page.screenshot({path:'/tmp/notes-challenge-v16-native-geometry-dark.png'});console.log('v16 geometry',JSON.stringify(geometry));expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+for(const width of [2000,900])it(`limits long cards to 560px with a fixed composer and internally consumed wheel at ${width}px`,async()=>{
+ const{context,page,errors}=await fixture(width,true);try{
+  await page.setViewportSize({width:width+250,height:700});await page.evaluate(()=>window.seed(1,true));await openSelected(page)
+  const card=page.locator('.en-challenge-card'),messages=card.locator('.en-challenge-messages'),input=card.getByRole('textbox',{name:'回复AI挑战'})
+  await expect.poll(()=>card.evaluate(el=>el.getBoundingClientRect().height)).toBeLessThanOrEqual(560)
+  expect(await messages.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true)
+  expect(await card.locator('.en-challenge-close').count()).toBe(width===2000?0:1)
+  await input.fill('内部滚动保留我的草稿');await input.evaluate(el=>window.fixedComposer=el)
+  const before=await card.evaluate(el=>({composer:el.querySelector('.en-challenge-reply').getBoundingClientRect().toJSON(),note:document.querySelector('.en-document-scroll').scrollTop,margin:document.querySelector('.en-challenge-comments').scrollTop}))
+  await messages.hover();await page.mouse.wheel(0,450);await expect.poll(()=>messages.evaluate(el=>el.scrollTop)).toBeGreaterThan(0)
+  await messages.evaluate(el=>el.scrollTop=el.scrollHeight);await messages.hover();await page.mouse.wheel(0,800);await page.waitForTimeout(100)
+  const after=await card.evaluate(el=>({composer:el.querySelector('.en-challenge-reply').getBoundingClientRect().toJSON(),note:document.querySelector('.en-document-scroll').scrollTop,margin:document.querySelector('.en-challenge-comments').scrollTop}))
+  expect(after).toEqual(before);expect(await card.evaluate(el=>{const r=el.querySelector('.en-challenge-reply').getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();return r.bottom<=area.bottom-16})).toBe(true);expect(await input.evaluate(el=>el===window.fixedComposer&&document.activeElement===el)).toBe(true);expect(await input.inputValue()).toBe('内部滚动保留我的草稿')
+  await page.setViewportSize({width:width+250,height:460});await expect.poll(()=>card.evaluate(el=>{const r=el.getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();return r.height<=area.height-32&&r.height<=560})).toBe(true)
+  await page.evaluate(()=>{window.longSuggestion='完整建议。'.repeat(700);window.challenge.runAction(window.challenge.threads[0],'optimize')});await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(1)
+  await page.evaluate(()=>Object.values(window.jobs).at(-1).resolve({version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'可替换建议如下。',replacement:window.longSuggestion}}));await expect.poll(()=>card.locator('.en-challenge-replacement-text').textContent()).toBe('完整建议。'.repeat(700))
+  await card.getByRole('button',{name:'替换到原文',exact:true}).scrollIntoViewIfNeeded();expect(await card.evaluate(el=>{const button=el.querySelector('.en-challenge-replace').getBoundingClientRect(),messages=el.querySelector('.en-challenge-messages').getBoundingClientRect(),reply=el.querySelector('.en-challenge-reply').getBoundingClientRect();return button.top>=messages.top&&button.bottom<=messages.bottom&&reply.top>=messages.bottom-1})).toBe(true)
+  expect(await input.inputValue()).toBe('内部滚动保留我的草稿');await page.screenshot({path:'/tmp/notes-challenge-v16-fix1-long-'+width+'.png'});expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('shows no margin close control but preserves draft when the toolbar changes the card into a closable popup',async()=>{
+ const{context,page}=await fixture(2000,true);try{
+  await page.evaluate(()=>window.seed());await openSelected(page);await page.getByRole('textbox',{name:'回复AI挑战'}).fill('常驻与浮层切换保留草稿')
+  expect(await page.locator('.en-challenge-close').count()).toBe(0)
+  expect(await page.locator('.en-challenge-quote').evaluate(el=>({width:el.getBoundingClientRect().width,right:getComputedStyle(el).paddingRight}))).toEqual({width:288,right:'0px'})
+  await page.getByRole('button',{name:'收起评论',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0);await openSelected(page);await expect.poll(()=>page.locator('.en-challenge-close').count()).toBe(1)
+  expect(await page.locator('.en-challenge-quote').evaluate(el=>getComputedStyle(el).paddingRight)).toBe('16px')
+  await page.getByRole('button',{name:'收起挑战评论'}).click();await openSelected(page);expect(await page.getByRole('textbox',{name:'回复AI挑战'}).inputValue()).toBe('常驻与浮层切换保留草稿')
+  await page.getByRole('button',{name:'展开评论',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-close').count()).toBe(0)
  }finally{await context.close()}
 },15000)

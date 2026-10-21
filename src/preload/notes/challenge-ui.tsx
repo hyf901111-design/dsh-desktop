@@ -77,7 +77,7 @@ export function ChallengeToolbar({controller,sessionId,dark,marginAvailable,disa
 function NativeThread(props:any){return props.thread?.metadata?.kind===CHALLENGE_KIND?null:<Thread {...props}/>}
 export function ManualNoteThreads(){const editor:any=useBlockNoteEditor(),selected=useExtensionState(CommentsExtension,{selector:state=>state.selectedThreadId}),store=editor.getExtension(CommentsExtension)?.threadStore;return selected&&store?.getThreads().get(selected)?.metadata?.kind===CHALLENGE_KIND?null:<FloatingThreadController floatingThread={NativeThread}/>}
 
-function ChallengeCard({thread,controller,style,cardRef,selected}:{thread:ChallengeThread;controller:Controller;style:React.CSSProperties;cardRef(el:HTMLElement|null):void;selected:boolean}){
+function ChallengeCard({thread,controller,style,cardRef,selected,popup}:{thread:ChallengeThread;controller:Controller;style:React.CSSProperties;cardRef(el:HTMLElement|null):void;selected:boolean;popup:boolean}){
  const draft=thread.metadata.draft||'',[text,setText]=useState(draft),input=useRef<HTMLTextAreaElement>(null),messages=useRef<HTMLDivElement>(null),busy=controller.busyId===thread.id,replyPending=busy&&controller.actionKind==='reply',followEnd=useRef(true),priorMessages=useRef({pending:false,count:thread.comments.length})
  useEffect(()=>setText(draft),[draft])
  useLayoutEffect(()=>{const el=input.current;if(el){el.style.height='auto';el.style.height=Math.min(120,Math.max(36,el.scrollHeight))+'px'}},[text])
@@ -87,8 +87,8 @@ function ChallengeCard({thread,controller,style,cardRef,selected}:{thread:Challe
   priorMessages.current={pending:replyPending,count:thread.comments.length}
  },[replyPending,thread.comments.length])
  const send=()=>{if(text.trim()&&!busy)void controller.runAction(thread,'reply',text)}
- return <article className="en-challenge-card" ref={cardRef} style={style} data-thread-id={thread.id} data-selected={selected||undefined} aria-label="AI挑战评论" onPointerDown={e=>{e.stopPropagation();if(controller.selected!==thread.id)controller.select(thread.id)}}>
-   <button className="en-challenge-close" aria-label="收起挑战评论" onClick={()=>controller.close(thread.id)}><img src={closeIcon} alt=""/></button>
+ return <article className="en-challenge-card" ref={cardRef} style={style} data-thread-id={thread.id} data-popup={popup||undefined} data-selected={selected||undefined} aria-label="AI挑战评论" onPointerDown={e=>{e.stopPropagation();if(controller.selected!==thread.id)controller.select(thread.id)}}>
+   {popup?<button className="en-challenge-close" aria-label="收起挑战评论" onClick={()=>controller.close(thread.id)}><img src={closeIcon} alt=""/></button>:null}
   <div className="en-challenge-messages" ref={messages} onScroll={e=>{const el=e.currentTarget;followEnd.current=el.scrollHeight-el.clientHeight-el.scrollTop<=24}}>
    <div className="en-challenge-quote">{thread.metadata.issue.quote}</div>
    {thread.comments.filter(c=>!c.deletedAt).map((comment,index)=><div className="en-challenge-message" key={comment.id}>
@@ -125,9 +125,15 @@ export function ChallengeComments({controller,editor,scroll,onMarginAvailableCha
     const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected||t.id===editingId)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};return {thread:t,rect,position:range.from}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number};position:number}>
     candidates.sort((a,b)=>a.position-b.position)
     const items=candidates.map(({thread,rect})=>{
-     const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260,maxHeight=Math.max(120,area.height-32)
+     const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260
+     let maxHeight=Math.max(0,Math.min(560,area.height-32))
      let top=rect.top-area.top
-     if(wide){top=Math.max(top,bottom);bottom=top+Math.min(height,maxHeight)+12}
+     if(wide){
+      top=Math.max(top,bottom)
+      const visibleTop=top-(root.current?.scrollTop||0)
+      if(visibleTop>=16&&visibleTop<area.height-120)maxHeight=Math.min(maxHeight,area.height-visibleTop-16)
+      bottom=top+Math.min(height,maxHeight)+12
+     }
      else{
       const below=rect.bottom-area.top+10,above=rect.top-area.top-Math.min(height,maxHeight)-10
       top=below+Math.min(height,maxHeight)<=area.height-16?below:above>=16?above:below
@@ -150,5 +156,5 @@ export function ChallengeComments({controller,editor,scroll,onMarginAvailableCha
   return()=>{cancelAnimationFrame(frame);if(resize.current===observer)resize.current=undefined;observer.disconnect();margin?.removeEventListener('scroll',measure);scroller.removeEventListener('scroll',documentScroll);window.removeEventListener('resize',measure);document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}
  },[controller.revision,controller.selected,controller.level,controller.marginExpanded,layout.wide,onMarginAvailableChange])
  const markStyles=controller.threads.map(thread=>'.en-root [data-bn-thread-id="'+CSS.escape(thread.id)+'"]:not([data-orphan="true"]){background:var('+(thread.id===controller.selected?'--en-challenge-mark-selected':'--en-challenge-mark')+');border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone}').join('')
- return <><style>{markStyles}</style><div className="en-challenge-comments" ref={root} data-wide={layout.wide||undefined} style={{left:layout.columnLeft}}>{layout.items.map(item=>{const thread=controller.threads.find(t=>t.id===item.id);return thread?<ChallengeCard key={thread.id} thread={thread} controller={controller} selected={layout.multiple&&thread.id===controller.selected} style={item.style} cardRef={el=>{const prior=cards.current.get(thread.id);if(prior&&prior!==el)resize.current?.unobserve(prior);if(el){cards.current.set(thread.id,el);resize.current?.observe(el)}else cards.current.delete(thread.id)}}/>:null})}</div></>
+ return <><style>{markStyles}</style><div className="en-challenge-comments" ref={root} data-wide={layout.wide||undefined} style={{left:layout.columnLeft}}>{layout.items.map(item=>{const thread=controller.threads.find(t=>t.id===item.id);return thread?<ChallengeCard key={thread.id} thread={thread} controller={controller} popup={!layout.wide} selected={layout.multiple&&thread.id===controller.selected} style={item.style} cardRef={el=>{const prior=cards.current.get(thread.id);if(prior&&prior!==el)resize.current?.unobserve(prior);if(el){cards.current.set(thread.id,el);resize.current?.observe(el)}else cards.current.delete(thread.id)}}/>:null})}</div></>
 }

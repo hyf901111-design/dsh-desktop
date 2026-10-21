@@ -130,7 +130,7 @@ it('persists an optimization preview without editing and applies it only through
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
-for(const [text,direct] of [['请帮我优化一下表达，先给建议',false],['请直接修改原文，把成度替换为程度',true],['你直接帮我改好替换上去',true],['不用解释，直接替换到原文',true],['不要解释，直接替换',true],['不要替换，只解释',false],['请解释为什么直接修改原文',false]])it(`uses human intent to ${direct?'execute':'preview'} a reply replacement: ${text}`,async()=>{
+for(const [text,direct] of [['请帮我优化一下表达，先给建议',false],['请直接修改原文，把成度替换为程度',true],['你直接帮我改好替换上去',true],['不用解释，直接替换到原文',true],['不要解释，直接替换',true],['不要替换，只解释',false],['请解释为什么直接修改原文',false],['直接修改原文会丢格式吗？',false],['直接替换原文会影响已有评论吗？',false],['他说“直接替换原文”，你怎么看？',false],['现在就把原文改为程度',true],['可以帮我直接改好',true],['可以帮我改好吗？',true],['替换一下',true]])it(`uses human intent to ${direct?'execute':'preview'} a reply replacement: ${text}`,async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));await start(page,'reply',text)
   await finish(page,{...answer,reply:{text:'模型声称已修改原文',replacement:'程度'}})

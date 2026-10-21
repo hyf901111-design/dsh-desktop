@@ -81,7 +81,7 @@ it('keeps every comment reachable in a scrolling wide gutter and keeps prior dis
   await enable(page)
   await finish(page,{version:1,issues:Array.from({length:5},(_,i)=>({blockId:'item'+i,quote:'研究判断'+i,category:'question',message:'什么证据支持这项判断？',evidence:[]})),coveredBlockIds:Array.from({length:5},(_,i)=>'item'+i),checks:[]})
   await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(5)
-  const gutter=page.locator('.en-challenge-comments');await page.locator('.en-challenge-messages').first().hover();await page.mouse.wheel(0,700);await expect.poll(()=>gutter.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);await gutter.evaluate(el=>el.scrollTop=el.scrollHeight)
+  const gutter=page.locator('.en-challenge-comments');await gutter.hover({position:{x:4,y:16}});await page.mouse.wheel(0,700);await expect.poll(()=>gutter.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);await gutter.evaluate(el=>el.scrollTop=el.scrollHeight)
   const end=await page.locator('.en-challenge-card').last().boundingBox(),outer=await gutter.boundingBox();expect(end.y+end.height).toBeLessThanOrEqual(outer.y+outer.height+1)
   await page.evaluate(()=>window.challenge.setLevel(0));expect(await page.locator('.en-challenge-card').count()).toBe(5)
   expect(await page.getByRole('button',{name:'挑战模式，当前关闭'}).count()).toBe(1)
