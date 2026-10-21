@@ -63,6 +63,38 @@ it('tolerates absent or noisy basis labels only by downgrading unsupported reaso
   expect(result.issues.every(item => item.category === 'uncertain' && item.message.startsWith('常识疑问（未联网核验）：是否需要核对这一说法？') && item.evidence.length === 0)).toBe(true)
 })
 
+it('excludes a captured knowledge question that explicitly admits agreement while retaining findings in all five later paragraphs', async () => {
+  const input = captured('captured-six-blocks').input
+  const result = await generateNoteChallenge(provider(captured('captured-self-negating-claim').visibleText), input)
+  expect(result.issues.some(item => item.blockId === 'initialBlockId')).toBe(false)
+  expect(result.issues).toHaveLength(9)
+  expect(new Set(result.issues.map(item => item.blockId)).size).toBe(5)
+  expect(result.coveredBlockIds).toEqual(input.changedIds)
+})
+
+it('does not flag correct arithmetic merely to request intermediate steps or guard against possible misunderstanding', async () => {
+  const result = await run(note([block('math', '20名参与者中有15人完成任务，因此完成率为75%。')]), {
+    reviews: [{ blockId: 'math', issues: [
+      issue('完成率为75%', { message: '原文的计算结果正确，只建议补充中间步骤。' }),
+      issue('20名参与者中有15人完成任务', { message: '原文没有问题，仅可能让读者误解，可进一步细化。' })
+    ] }]
+  })
+  expect(result.issues).toEqual([])
+})
+
+for (const message of [
+  '原文与常见结论并不相符，是否需要核对？',
+  '原文是否正确？请核对分母是否包括未完成者。',
+  '计算结果与原文相符，但后续结论与给定人数冲突。',
+  '原文数字正确，不过样本范围与上下文不一致。'
+]) it('retains an actual or unresolved conflict rather than interpreting negation, questions or a contrasting clause as agreement: ' + message, async () => {
+  const result = await run(note([block('a', '有15人完成任务，所以所有人都完成了。')]), {
+    reviews: [{ blockId: 'a', issues: [issue('所以所有人都完成了', { message })] }]
+  })
+  expect(result.issues).toHaveLength(1)
+  expect(result.issues[0].category).toBe('uncertain')
+})
+
 it('does not claim missing blocks were reviewed and accepts an explicit empty record as a completed check', async () => {
   const input = note([block('a', '第一段。'), block('b', '第二段。'), block('c', '第三段。')])
   const result = await run(input, { reviews: [{ blockId: 'b', issues: [] }], coveredBlockIds: ['a', 'b', 'c'], checks: [{ status: 'completed' }] })
