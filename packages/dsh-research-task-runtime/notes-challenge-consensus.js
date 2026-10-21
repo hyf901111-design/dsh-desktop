@@ -15,6 +15,8 @@ function date(value) {
 }
 const codes = text => distinct([...text.matchAll(/\b\d{6}\.(?:SH|SZ|BJ)\b/giu)].map(match => match[0].toUpperCase()))
 const dates = text => distinct([...text.matchAll(/(?:报告基准日|报告发布日期|报告发布日|报告日期|基准日|模型日|预测截止日)\s*[:：]?\s*(20\d{2}(?:[-/]\d{2}[-/]\d{2}|\d{4}))/gu)].map(match => date(match[1])).filter(Boolean))
+const nonAnnual = /(?:上|下)半年|半年度|半年报|中报|季度|[一二三四1-4]季(?:度|报)?|单季|前[一二三四五六七八九十\d]+个月|(?:^|[^A-Za-z])(?:Q[1-4]|H[12]|[1-4]Q|[12]H|[369]M)(?!\d)/iu
+const incompatibleBasis = /扣非|剔除非经常性损益|调整后|经调整|稀释|摊薄|\badjusted\b|\bnon[- ]?GAAP\b/iu
 
 /** Conservative parsing: names, missing units, ambiguous years and multi-ticker inheritance do not become claims. */
 export function extractConsensusClaims(blocks) {
@@ -26,6 +28,9 @@ export function extractConsensusClaims(blocks) {
     if (!code || !baseDate) continue
     for (const sentence of block.text.split(/[。；;\n]/u)) {
       if (!/预计|预测|forecast|\bFY\s*20\d{2}|\b\d{2,4}E\b/iu.test(sentence) || /已实现|实际实现|滚动|未来\s*12\s*个月|FTTM|TTM/iu.test(sentence)) continue
+      // The static table is annual and does not identify adjusted/diluted bases.
+      // Do not strip an explicit incompatible period or basis from a metric.
+      if (nonAnnual.test(sentence) || incompatibleBasis.test(sentence)) continue
       const years = distinct([...sentence.matchAll(/(?:\bFY\s*)?(20\d{2})\s*(?:年(?:度|报)?|[eE]\b)|\bFY\s*(20\d{2})\b|\b(\d{2})E\b/giu)].map(match => Number(match[1] ?? match[2] ?? ('20' + match[3]))))
       if (years.length !== 1) continue
       const metricPattern = /(EPS|每股收益|归母净利润|归属于母公司(?:股东)?的?净利润|主营业务收入|主营收入|营业总收入|营业收入)\s*(?:预测)?\s*(?:为|达|约为|约|预计|[:：=])?\s*([+-]?\d+(?:,\d{3})*(?:\.\d+)?)\s*(亿元|万元|千元|元(?:\/股)?)/giu
