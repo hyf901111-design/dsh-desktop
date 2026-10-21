@@ -404,43 +404,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复笔记挑战返回身份抄写错误并保留原文精确校验",
+        "featureName": "完善笔记指令即时阶段反馈与预览可达性并减少泛泛争议误报",
         "branch": "codex/feat/notes-challenge-v16-20261021",
-        "baseCommit": "6472677b240729bb783ad8cb1e7a4abe84d4125b",
-        "tipCommit": "82b0bb0c051043c2347f99cccfefa6d63854c69c",
+        "baseCommit": "82b0bb0c051043c2347f99cccfefa6d63854c69c",
+        "tipCommit": "1512e1c4e5aad5e76c0779c158cac892dcffd6e6",
         "commits": [
           {
-            "commit": "82b0bb0c051043c2347f99cccfefa6d63854c69c",
+            "commit": "136e778fa3830d047a9bdb0bf08f22dac074d0bc",
             "parents": [
-              "6472677b240729bb783ad8cb1e7a4abe84d4125b"
+              "82b0bb0c051043c2347f99cccfefa6d63854c69c"
             ],
-            "subject": "修复笔记挑战返回段落身份易抄错的问题"
+            "subject": "复核泛泛争议评语以减少笔记正确内容误报"
+          },
+          {
+            "commit": "1512e1c4e5aad5e76c0779c158cac892dcffd6e6",
+            "parents": [
+              "136e778fa3830d047a9bdb0bf08f22dac074d0bc"
+            ],
+            "subject": "增加笔记指令即时进度反馈并限制预览卡片高度"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "docs/superpowers/plans/2026-10-22-notes-review-return-keys.md"
-          },
-          {
-            "status": "A",
-            "path": "docs/superpowers/specs/2026-10-22-notes-review-return-keys.md"
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-challenge-consistency.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/notes-challenge-runtime.js"
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
           },
           {
             "status": "M",
-            "path": "test/notes-challenge-review-identity.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/notes-challenge-review-keys.test.js"
+            "path": "scripts/lib/notes-activity.mjs"
           },
           {
             "status": "M",
-            "path": "test/notes-challenge-runtime.test.js"
+            "path": "src/preload/figma-refinements.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/suggestion-panel.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-challenge-consistency.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-send-preview.test.js"
           }
         ],
         "checks": [
@@ -457,9 +468,9 @@
               "test/notes-challenge-consensus.test.js"
             ],
             "outcome": "passed",
-            "summary": "6文件206项通过；新返回键21项RED→GREEN；固定格式模式观察；/tmp/notes-review-keys-final-green-20261022.log",
-            "verifiedCommit": "82b0bb0c051043c2347f99cccfefa6d63854c69c",
-            "completedAt": "2026-10-21T22:07:27.690956+00:00",
+            "summary": "6文件208项通过；新增争议候选2项RED→GREEN；/tmp/notes-vague-controversy-green-20261022.log",
+            "verifiedCommit": "1512e1c4e5aad5e76c0779c158cac892dcffd6e6",
+            "completedAt": "2026-10-21T22:28:55.489410+00:00",
             "timeoutMs": 180000
           },
           {
@@ -469,9 +480,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "/tmp/notes-review-keys-final-typecheck-20261022.log",
-            "verifiedCommit": "82b0bb0c051043c2347f99cccfefa6d63854c69c",
-            "completedAt": "2026-10-21T22:07:27.690956+00:00",
+            "summary": "/tmp/notes-writing-feedback-typecheck-20261022.log",
+            "verifiedCommit": "1512e1c4e5aad5e76c0779c158cac892dcffd6e6",
+            "completedAt": "2026-10-21T22:28:55.489410+00:00",
             "timeoutMs": 180000
           },
           {
@@ -479,185 +490,58 @@
               "git",
               "diff",
               "--check",
-              "6472677b240729bb783ad8cb1e7a4abe84d4125b..82b0bb0c051043c2347f99cccfefa6d63854c69c"
+              "82b0bb0c051043c2347f99cccfefa6d63854c69c..1512e1c4e5aad5e76c0779c158cac892dcffd6e6"
             ],
             "outcome": "passed",
             "summary": "返回键增量差异检查通过",
-            "verifiedCommit": "82b0bb0c051043c2347f99cccfefa6d63854c69c",
-            "completedAt": "2026-10-21T22:07:27.690956+00:00",
+            "verifiedCommit": "1512e1c4e5aad5e76c0779c158cac892dcffd6e6",
+            "completedAt": "2026-10-21T22:28:55.489410+00:00",
             "timeoutMs": 30000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "无UI状态代码改动；新包原文实际模型短返回键、四档底线与正确语境控制及保护审计待执行。"
-        },
-        "acceptanceCriteria": [
-          "主审查target携带相互距离至少2的短返回键；原文/上下文/已有标记及依据ID不变。",
-          "每批精确映射回真实ID，完整旧格式兼容；混合/双字段/未知加缺失/重复拒绝，不做近似修复。",
-          "原覆盖、引用、数量、公平限制、可选consistency、一次恢复与总期限不变；日志仅固定模式计数与哈希。",
-          "保护原文日期、旧线程、真实讨论与两份草稿；真实新包多轮验证，不发布推送或晋升主干。"
-        ],
-        "risks": [
-          "模型可能继续使用旧格式，必须根据实际模式事件确认短返回键路径。",
-          "源测试不能证明实际模型效果；需复测四档明显错误底线、正确及语境对照，保留失败和残余。",
-          "复合断言漏检、既有宽引用重叠和旧标记可读性仍待优化。"
-        ],
-        "generatedAt": "2026-10-21T22:07:27.690956+00:00"
-      },
-      "merged": {
-        "mergeCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-        "verificationCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/openterminal-dark-controls.test.js",
-              "test/openterminal-layout.test.js",
-              "test/workbench-openterminal.test.js",
-              "test/workbench-style.test.js",
-              "test/workbench-component-presentation.test.js",
-              "test/research-grid-workbench.test.js",
-              "test/financial-widget-layout.test.js",
-              "test/bundled-component-skill.test.js",
-              "test/integration-bundled-skill.test.js",
-              "test/component-data-refresh.test.js",
-              "test/research-canvas-tools.test.js",
-              "test/research-market-native-table.test.js",
-              "test/research-fund-workbench.test.js",
-              "test/research-generation-controls.test.ts",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/openterminal-dark-controls.test.js test/openterminal-layout.test.js test/workbench-openterminal.test.js test/workbench-style.test.js test/workbench-component-presentation.test.js test/research-grid-workbench.test.js test/financial-widget-layout.test.js test/bundled-component-skill.test.js test/integration-bundled-skill.test.js test/component-data-refresh.test.js test/research-canvas-tools.test.js test/research-market-native-table.test.js test/research-fund-workbench.test.js test/research-generation-controls.test.ts --reporter=dot",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "test/memory-view.test.ts",
-              "test/memory-service.test.ts",
-              "test/memory-document.test.ts",
-              "test/memory-runtime.test.js",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/memory-view.test.ts test/memory-service.test.ts test/memory-document.test.ts test/memory-runtime.test.js --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 120000
           },
           {
             "argv": [
               "npx",
               "vitest",
               "run",
-              "test/notes-challenge-intent.test.ts",
-              "test/notes-challenge-runtime.test.js",
-              "test/notes-challenge-controller-browser.test.js",
-              "--maxWorkers=2"
+              "test/notes-native-send-preview.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/notes-challenge-intent.test.ts test/notes-challenge-runtime.test.js test/notes-challenge-controller-browser.test.js --maxWorkers=2",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
+            "summary": "原生写作与预览30/30；3新增交互RED→GREEN；/tmp/notes-writing-feedback-native-all-20261022.log",
+            "verifiedCommit": "1512e1c4e5aad5e76c0779c158cac892dcffd6e6",
+            "completedAt": "2026-10-21T22:28:55.489410+00:00",
             "timeoutMs": 240000
           },
           {
             "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 30000
-          },
-          {
-            "argv": [
               "npx",
               "vitest",
               "run",
-              "test/calendar-tool-client.test.js"
+              "test/notes-activity.test.js",
+              "test/notes-header-runtime.test.js"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/calendar-tool-client.test.js",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
+            "summary": "活动与头部15/15；/tmp/notes-writing-feedback-row-header-20261022.log",
+            "verifiedCommit": "1512e1c4e5aad5e76c0779c158cac892dcffd6e6",
+            "completedAt": "2026-10-21T22:28:55.489410+00:00",
             "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/shared-calendar.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run test/shared-calendar.test.ts",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check",
-              "23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：git diff --check 23e02a4ac318d7404d048c7389de4780d2f034f6..9653363fea3c957e57e95f378621af191fa379a5",
-            "verifiedCommit": "c2e282d122c73b32588976bdc6fbf3b8007e26d0",
-            "completedAt": "2026-10-21T22:09:21.198Z",
-            "timeoutMs": 30000
           }
         ],
-        "recordedAt": "2026-10-21T22:09:21.198Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "现有项目渲染交互测试：亮暗主题、实际笔记区域偏移和裁剪、拖动/键盘/内部滚动、即时反馈与真实阶段更新、终态清理、原生草稿与后续输入保护；实际本地新包交互待验证。"
+        },
+        "acceptanceCriteria": [
+          "收到笔记指令立即显示独立反馈，不需要展开执行详情；只展示真实连接/分析/撰写/校验阶段及等待时间，不生成伪百分比或思考摘要。",
+          "预览正文内部滚动，高度按实际笔记区域与窗口交集计算，外侧顶部手柄与底部按钮始终可达，保留键盘和拖动调高能力。",
+          "泛泛争议评语只送入已有一致性判断，不自动删除；8候选16k上下文、8秒可选预算和原失败回退不变。",
+          "保留原文、日期、旧评论与两份未发送草稿，完成本地集成和实际可见UI验证。"
+        ],
+        "risks": [
+          "旧outline/layout大文件探索性检查仍有失败；代表性4项在82基线同样失败，其他项未逐一归因，不宣称全套UI绿色。",
+          " source82实际20次无身份失败，但一次正确句的泛泛争议误报触发后续修复；最终包需继续验证。",
+          "复合事实漏检、文体边界、旧宽引用重叠仍待后续优化；保留评论历史。"
+        ],
+        "generatedAt": "2026-10-21T22:28:55.489410+00:00"
       }
     },
     {
