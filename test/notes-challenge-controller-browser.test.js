@@ -476,7 +476,7 @@ it('shows an in-button optimization ring, keeps it on reopening, and clears it o
   await page.evaluate(id=>{window.challenge.close(id);window.challenge.select(id)},id);await ring.waitFor();expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(0)
   await page.emulateMedia({reducedMotion:'reduce'});expect(await ring.evaluate(el=>getComputedStyle(el).animationName)).toBe('none')
   await page.evaluate(id=>window.challenge.close(id),id);await page.evaluate(()=>window.jobs[0].reject(Error('fixture error')))
-  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull();expect(await page.locator('.en-challenge-card').count()).toBe(0)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   await page.evaluate(id=>window.challenge.select(id),id);await page.getByRole('button',{name:'AI优化',exact:true}).waitFor();expect(await ring.count()).toBe(0);expect(await button.isEnabled()).toBe(true)
   expect(await page.evaluate(()=>window.messages().at(-1))).toBe('没能完成，请重试');expect(errors).toEqual([])
   await page.screenshot({path:'/tmp/notes-optimize-background-finished-20261021.png'})
