@@ -12,7 +12,7 @@
         "featureName": "优化组件阅读分区、宽内容布局与独特业务交互",
         "branch": "codex/feat/openterminal-style-20261019",
         "baseCommit": "5bcb3757865d1d94dd945738cde41c1690b7efc3",
-        "tipCommit": "5c4fa764cdaf8c83228509551dd6144c46426a3c",
+        "tipCommit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
         "commits": [
           {
             "commit": "5c4fa764cdaf8c83228509551dd6144c46426a3c",
@@ -20,6 +20,13 @@
               "5bcb3757865d1d94dd945738cde41c1690b7efc3"
             ],
             "subject": "优化生成组件阅读分区并支持宽内容布局与自定义交互"
+          },
+          {
+            "commit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
+            "parents": [
+              "5c4fa764cdaf8c83228509551dd6144c46426a3c"
+            ],
+            "subject": "同步组件生成规则新版的集成断言"
           }
         ],
         "files": [
@@ -89,6 +96,10 @@
           },
           {
             "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/research-grid-workbench.test.js"
           },
           {
@@ -127,6 +138,7 @@
               "test/workbench-deferred.test.js",
               "test/workbench-planning-phase.test.js",
               "test/bundled-component-skill.test.js",
+              "test/integration-bundled-skill.test.js",
               "test/workbench-execution-policy.test.js",
               "test/workbench-reading-layout-browser.test.js",
               "test/workflow-layout-browser.test.js",
@@ -135,9 +147,9 @@
               "test/workbench-layout-stability-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "198项相关检查通过；/tmp/workbench-layout-final-verified-20261021.log；最终序列化作用域另3项通过 /tmp/workbench-layout-serialization-scope-20261021.log",
-            "verifiedCommit": "5c4fa764cdaf8c83228509551dd6144c46426a3c",
-            "completedAt": "2026-10-21T03:19:57.484005+00:00",
+            "summary": "212项直接相关检查通过；/tmp/workbench-layout-final-with-skill-integration-20261021.log",
+            "verifiedCommit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
+            "completedAt": "2026-10-21T03:23:23.629751+00:00",
             "timeoutMs": 180000
           },
           {
@@ -148,8 +160,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过；/tmp/workbench-layout-typecheck-20261021.log",
-            "verifiedCommit": "5c4fa764cdaf8c83228509551dd6144c46426a3c",
-            "completedAt": "2026-10-21T03:19:57.484005+00:00",
+            "verifiedCommit": "6deb233a1c2e78af142fa4832ec23bae6777ac89",
+            "completedAt": "2026-10-21T03:23:23.629751+00:00",
             "timeoutMs": 180000
           }
         ],
@@ -170,7 +182,7 @@
           "历史research-workbench.test.js全文件存在与本改动无关的旧补丁锚点和契约断言失败；本次直接相关矩阵、网格、规划、内容布局、序列化与稳定性检查均通过。",
           "只本地集成与测试，不发布、不推送、不晋升main。"
         ],
-        "generatedAt": "2026-10-21T03:19:57.484005+00:00"
+        "generatedAt": "2026-10-21T03:23:23.629751+00:00"
       }
     },
     {
