@@ -238,7 +238,6 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             dataMode: { type: 'string', enum: ['simulated', 'source'], description: '真实来源使用source（也可省略）；用户允许演示数据且个人看板时使用simulated。实时预设cn-hot-etf-live不可使用simulated。' },
             generationMode: { type: 'string', enum: ['parallel','deferred'], description: '用户允许模拟时，多卡同一对象优先sharedDatasets+type:view直接准备；模板能力之外且未提供完整数据才用deferred：首轮只提交面板规划和sharedContext，受理后由受限子卡生成完整记录；普通延后卡不混用artifact/preset，已解析的view直接准备。parallel保留旧本地固定样例行为。真实来源省略。' },
             sharedContext: { type: 'string', description: '仅deferred。最多3000字符，跨卡共用的事实、总额及紧凑分配、日期、容量、单位和口径；不填逐行明细或完整图表序列。原始用户需求由宿主自动保留，用户明确约束优先。' },
-            sharedDatasets: WORKBENCH_DATASETS_SCHEMA,
             preset: { type: 'string', enum: [...LIVE_WORKBENCH_PRESETS, ...SIMULATED_WORKBENCH_PRESETS], description: 'cn-hot-etf-live为国内代表性基金ETF真实行情8卡，dataMode:source、panels:[]，无需先query或抄写数据，由宿主取数并自动刷新。其余为模拟预设，须dataMode:simulated。预设不能混用自定义面板。' },
             panels: { type: 'array', required: true, description: '必填。自定义工作台提交1–10个含title/prompt/type/size的完整面板；已提供内容必须附对应artifact。仅内置preset使用空数组[]。', items: { type: 'object', additionalProperties: false, properties: {
                         title: { type: 'string', required: true }, prompt: { type: 'string', required: true, description: '该面板独立的问题与内容边界；主对话已有的数据必须完整带入实际记录、日期、单位与来源，子任务看不到主对话工具返回。以及用户可执行的交互（筛选、日期选择、展开、跳转）；避免重复。' },
@@ -256,7 +255,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                             layoutProfile: { type: 'string', enum: ['openterminal'], description: '仅quotes-table、price-volume、news支持专用OpenTerminal布局；不改变原生金融组件或metrics布局。' },
                             requests: { ...publicDataRequestsSchema, required: true }
                         } }
-                    } } }
+                    } } },
+            sharedDatasets: WORKBENCH_DATASETS_SCHEMA
         },
         output: { schema: { type: 'object', additionalProperties: false, properties: { planId: { type: 'string', required: true }, panels: { type: 'array', items: { type: 'string' }, required: true }, templateIds: { type: 'array', items: { type: 'string' }, required: true }, status: { type: 'string', required: true } } }, render: (_a, v) => [{ type: 'text', text: JSON.stringify(v) }] },
         execute: create

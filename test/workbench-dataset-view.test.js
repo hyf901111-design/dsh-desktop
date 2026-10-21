@@ -26,6 +26,10 @@ describe('workbench common records at the real tool boundary',()=>{
   expect(validateWorkbench(value)).toEqual(value);expect(plan).toEqual(before);
   const changed=structuredClone(value);changed.panels[0].artifact.dataset.records[0].moisture=90;expect(()=>validateWorkbench(changed)).toThrow(/共同|冲突/);
  });
+ it('accepts complete records with explicit identities and omitted id display metadata without another model call',async()=>{
+  const f=await setup();const plan=input();plan.sharedDatasets[0].fields=plan.sharedDatasets[0].fields.filter(field=>field.key!=='id');
+  try{const receipt=await f.tool.execute(plan,f.exec);expect(receipt.status).toBe('prepared');expect(f.adapter.start).not.toHaveBeenCalled();const saved=JSON.parse(await readFile(f.filePath,'utf8'))[0];expect(saved.input.sharedDatasets[0].records).toEqual(plan.sharedDatasets[0].records);expect((await f.tool.execute(plan,f.exec)).planId).toBe(receipt.planId);expect(f.runtime.tasks.size).toBe(3)}finally{await f.close()}
+ });
  it('retains the canonical source through acceptance and readback, never degrading to generic HTML data',()=>{
   const value=validateWorkbench(input());for(const p of value.panels){const accepted=acceptArtifactOutput(JSON.stringify(p.artifact));expect(accepted).toBeTruthy();const spec=JSON.parse(accepted),model=readTemplateModel(spec);expect(model.templateId).toBe('view');expect(model.data).toEqual(p.artifact);expect(spec.html).toContain('B08');expect(templateSummary(spec).message).toContain('组合')}
  });
