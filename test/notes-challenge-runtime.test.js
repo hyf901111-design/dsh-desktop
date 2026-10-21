@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const load = () => import('../packages/dsh-research-task-runtime/notes-challenge-runtime.js')
 const input = { sessionId: 'session', requestId: 'review-1', action: 'review', level: 2, title: '分析', blocks: [{ id: 'a', type: 'paragraph', text: '收入增长10%。' }, { id: 'b', type: 'paragraph', text: '收入减少10%。' }], changedIds: ['a'] }
@@ -29,7 +29,8 @@ function textFixture(text) {
   }
   return f
 }
-afterEach(() => vi.useRealTimers())
+beforeEach(() => vi.spyOn(console, 'warn').mockImplementation(() => {}))
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 it('runs an independent short review with the parent selected model and no parent conversation mutation', async () => {
   const { generateNoteChallenge } = await load(), f = fixture()
@@ -88,10 +89,9 @@ it('keeps unsupported factual verdicts out of comments and never accepts model-g
 })
 
 it('reports only bounded validation counts when every provider candidate is discarded', async () => {
-  const { generateNoteChallenge } = await load(), warn = vi.fn()
+  const { generateNoteChallenge } = await load(), warn = vi.mocked(console.warn)
   const candidate = { quote: '收入增长10%', basis: 'general-knowledge', category: 'fact', message: 'PRIVATE-MODEL-NOTE-TEXT', evidence: [] }
   const f = fixture({ reviews: [{ blockId: 'a', issues: [candidate, { ...candidate, category: 'research' }, { ...candidate, category: 'PRIVATE-CATEGORY', basis: 'PRIVATE-BASIS' }, { ...candidate, category: 'uncertain', quote: 'PRIVATE-INVALID-QUOTE' }] }] })
-  f.ctx.logger = { warn }
   const result = await generateNoteChallenge(f.ctx, input)
   expect(result.issues).toEqual([])
   expect(warn).toHaveBeenCalledTimes(1)
@@ -103,13 +103,59 @@ it('reports only bounded validation counts when every provider candidate is disc
 })
 
 it('does not emit filtered-candidate diagnostics for an ordinary empty review or let a logging failure break a review', async () => {
-  const { generateNoteChallenge } = await load(), warn = vi.fn()
-  const empty = fixture(); empty.ctx.logger = { warn }
+  const { generateNoteChallenge } = await load(), warn = vi.mocked(console.warn)
+  const empty = fixture()
   expect((await generateNoteChallenge(empty.ctx, input)).issues).toEqual([])
   expect(warn).not.toHaveBeenCalled()
   const rejected = fixture({ reviews: [{ blockId: 'a', issues: [{ quote: '收入增长10%', basis: 'general-knowledge', category: 'fact', message: '请核对。', evidence: [] }] }] })
-  rejected.ctx.logger = { warn: () => { throw Error('logger unavailable') } }
+  warn.mockImplementationOnce(() => { throw Error('logger unavailable') })
   expect((await generateNoteChallenge(rejected.ctx, input)).issues).toEqual([])
+})
+
+for (const kind of ['tool-call', 'serialized-limit']) it('diagnoses '+kind+' stream rejection with only bounded counts', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture(), warn = vi.mocked(console.warn)
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    if (kind === 'tool-call') yield { type: 'tool-call-start', id: 'PRIVATE-TOOL-ID', name: 'PRIVATE-TOOL-NAME' }
+    else for (let n = 0; n < 3000; n++) yield { type: 'reasoning-delta', index: 0, text: '秘密' }
+  }
+  await expect(generateNoteChallenge(f.ctx, { ...input, requestId: 'PRIVATE-REQUEST-ID', title: 'PRIVATE-NOTE-TITLE' })).rejects.toThrow('挑战检查返回内容超出边界')
+  expect(f.calls).toHaveLength(1)
+  expect(f.calls[0].signal.aborted).toBe(true)
+  expect(warn).toHaveBeenCalledTimes(1)
+  const logged = warn.mock.calls[0][0], report = JSON.parse(logged)
+  expect(report).toMatchObject({ event: 'notes-challenge-stream-rejected', reason: kind, attempt: 1, action: 'review', textDeltaChars: 0, textSnapshotChars: 0, reasoningSnapshotChars: 0 })
+  expect(report.requestKey).toMatch(/^[a-f0-9]{12}$/u)
+  if (kind === 'tool-call') expect(report.eventCounts).toEqual({ 'tool-call-start': 1 })
+  else {
+    expect(report.serializedChars).toBeGreaterThan(100000)
+    expect(report.reasoningDeltaChars).toBeGreaterThan(0)
+    expect(report.reasoningDeltaChars).toBeLessThan(16000)
+    expect(report.eventCounts['reasoning-delta']).toBeGreaterThan(1000)
+  }
+  for (const text of ['PRIVATE', '秘密', input.sessionId, input.blocks[0].text]) expect(logged).not.toContain(text)
+  expect(logged.length).toBeLessThan(800)
+  expect(f.events).toEqual([])
+})
+
+it('keeps rejection diagnostics cumulative across format regeneration and preserves failure if logging throws', async () => {
+  const { generateNoteChallenge } = await load(), f = fixture(), warn = vi.mocked(console.warn)
+  f.ctx.llm.stream = async function* (options) {
+    f.calls.push(options)
+    for (let n = 0; n < 1400; n++) yield { type: 'reasoning-delta', index: 0, text: '秘' }
+    yield { type: 'text-delta', index: 1, text: '{"issues":[]' }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }
+  await expect(generateNoteChallenge(f.ctx, input)).rejects.toThrow('挑战检查返回内容超出边界')
+  expect(f.calls).toHaveLength(2)
+  expect(warn).toHaveBeenCalledTimes(1)
+  const report = JSON.parse(warn.mock.calls[0][0])
+  expect(report).toMatchObject({ reason: 'serialized-limit', attempt: 2, textDeltaChars: 12 })
+  expect(report.eventCounts['reasoning-delta']).toBeGreaterThan(1000)
+  expect(f.calls.every(call => call.signal.aborted)).toBe(true)
+  const broken = fixture(); warn.mockImplementationOnce(() => { throw Error('PRIVATE-LOGGER-FAILURE') })
+  broken.ctx.llm.stream = async function* () { yield { type: 'tool-call', name: 'PRIVATE-TOOL' } }
+  await expect(generateNoteChallenge(broken.ctx, input)).rejects.toThrow('挑战检查返回内容超出边界')
 })
 
 it('does not turn the unfinished current sentence into a grammar comment', async () => {
