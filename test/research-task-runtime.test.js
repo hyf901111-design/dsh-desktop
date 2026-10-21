@@ -1311,6 +1311,24 @@ describe('Research task Subagent adapter', () => {
     } }
   }
 
+  it.each(['html','gantt'])('generates a deferred offline %s panel directly without rediscovering skills or files',async type=>{
+    const panel={title:'古籍修复交接',type,size:'large',prompt:'B01和B02两册演练记录，保留负责人、步骤和交接事项。'}
+    const plan={title:'工坊演练',dataMode:'simulated',generationMode:'deferred',originalRequest:'用两册古籍创建演练工作台，禁止联网。',sharedContext:'B01和B02；修复师甲；2026-10-22T08:00:00+08:00至12:00:00+08:00。'}
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>['skill','read','bash','web_search','public_data_query','ework__source'].map(name=>({name}))}
+    const handle=await fixture.start(workbenchPanelPrompt(plan,panel))
+    try{
+      const request=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(request.toolFilter.allow).toEqual([])
+      expect(request.prompt[0].text).toContain(plan.originalRequest)
+      expect(request.prompt[0].text).toContain(plan.sharedContext)
+      expect(request.prompt[0].text).toContain('无工具')
+      expect(request.prompt[0].text).toContain('唯一交付格式')
+      expect(request.prompt[0].text).toContain('B01和B02两册演练记录')
+      expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+    }finally{await handle.dispose()}
+  })
+
   it('uses free data in an online child without imposing a refresh recipe on a data request', async () => {
     const fixture = containerAdapterFixture();
     fixture.ctx.tools = { schemas: () => [{ name: 'public_data_query' }, { name: 'financial_query' }, { name: 'ework__call', description: '调用通联 DataYes API' }, { name: 'web_search' }, { name: 'web_fetch' }] };
