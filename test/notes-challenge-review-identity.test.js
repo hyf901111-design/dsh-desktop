@@ -63,8 +63,8 @@ it('classifies accepted extra groups without changing exact coverage or ignoring
   expect(result.coveredBlockIds).toEqual(input.changedIds)
   expect(result.issues).toEqual([])
   expect(f.calls).toHaveLength(1)
-  expect(reports()).toEqual([expect.objectContaining({ event: 'notes-challenge-review-extra-groups', ignoredGroups: 2, unknownTitleIds: 1, unknownContextIds: 1, unknownNearTargetIds: 0, unknownEmptyGroups: 2, unknownNonStringIds: 0 })])
-  expect(Object.keys(reports()[0]).sort()).toEqual(['event', 'action', 'attempt', 'targetCount', 'reviewCount', 'ignoredGroups', 'requestKey', ...Object.keys(counts)].sort())
+  expect(reports()).toEqual([expect.objectContaining({ event: 'notes-challenge-review-identity', mode: 'block-id' }), expect.objectContaining({ event: 'notes-challenge-review-extra-groups', ignoredGroups: 2, unknownTitleIds: 1, unknownContextIds: 1, unknownNearTargetIds: 0, unknownEmptyGroups: 2, unknownNonStringIds: 0 })])
+  expect(Object.keys(reports()[1]).sort()).toEqual(['event', 'action', 'attempt', 'targetCount', 'reviewCount', 'ignoredGroups', 'requestKey', ...Object.keys(counts)].sort())
   expect(JSON.stringify(input)).toBe(before)
   privateSafe(reports())
 })
@@ -75,7 +75,7 @@ it('does not report known IDs as unknown or change a normal no-issue review', as
   expect(result.coveredBlockIds).toEqual(input.changedIds)
   expect(result.issues).toEqual([])
   expect(f.calls).toHaveLength(1)
-  expect(reports()).toEqual([])
+  expect(reports()).toEqual([expect.objectContaining({ event: 'notes-challenge-review-identity', mode: 'block-id', ignoredGroups: 0 })])
 })
 
 it('preserves the original format failure and retry bound when diagnostic logging throws', async () => {
