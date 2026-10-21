@@ -136,10 +136,10 @@
 
 **Files:** 新增小型 `packages/dsh-research-task-runtime/calendar-event-evidence.js`，最小`index.js`接入已有repair；专用 `test/calendar-event-evidence.test.js`及calendar renderer直接验证。既有schema/renderer仅在有实际缺失接口时最小调整，不改历史/模拟日历、feed/Notes/native。
 
-**Interfaces:** `calendarEventEvidenceIssue(data,request,records,{now})`返回具体问题或undefined；now由Runtime this.now提供，不由model asOf。消费原source records业务日期；已知getEquReportPredisclo的preDate为披露事件，endDate/update字段不冒充发生日。
+**Interfaces:** `calendarEventEvidenceIssue(data,request,records,{now})`返回具体问题或undefined；request使用内部 `{panelRequest,workbenchRequest}`，复用Task7可信originalRequest/dataMode，不新增公开参数或从artifact自称模拟推断豁免；now由Runtime this.now提供，不由model asOf。未来截止日使用宿主本地日期，模型timeZone不能改变校验窗口；测试注入时钟跨宿主午夜。消费原source records业务日期；已知getEquReportPredisclo的preDate为披露事件，endDate/update字段不冒充发生日，也不能把updateDate1/latestPreDiscDate解释为先前预披露事件或改期历史。
 
 - [ ] 从安全B日历journal/冻结model提取原证据：三家公司preDate 10-24/10-30/10-30，另两个非事件项为报告期09-30与当天无解禁记录说明。先RED说明旧Runtime可把后两项作为未来事件成功交付；不重新在线取数。
-- [ ] 对明确未来/明确窗口的真实请求施加事件日期及缺口语义检查，给现有repair清晰证据。保留三个原事件、待定会议和全部公司/事件类别缺口，背景/缺口移入完整note不计数。缺源与已证明无事件不同，不能伪造日期/记录或仅删失配项绕过保留。
+- [ ] 对明确未来/明确窗口的真实请求施加事件日期及缺口语义检查，给现有repair清晰证据。保留三个原事件和全部公司/事件类别缺口，背景/缺口移入完整note不计数。B会议只为未核验模型线索，保留行业会议维度和明确未核验/日期待定说明到note，不计已确认安排；用户/实际来源给出的已存在但日期待定事件沿既有待定合同。缺源与已证明无事件不同，不能伪造日期/记录或仅删失配项绕过保留；修复省略已核验事件须恢复或失败，人类公司/类别范围不能静默缩小，模型发明候选不成为强制事实。
 - [ ] 测试用户历史窗口/模拟/普通日历不改变，host时间跨日、边界、非法/约日期、模型asOf绕过、正确二轮修复/仍错failed、无第三次、取消；从最终HTML读事件数/日期和note，不能仅看model。
 - [ ] 仅calendar/helper/Runtime直接聚焦、syntax/diff，自审中文commitownfiles，完整task-8-report.md；不全套/SDK/网络/构建/客户端/派agent。
 
@@ -147,10 +147,10 @@
 
 **Files:** `scripts/lib/research-workbench-feedback.mjs`、`component-data-status.mjs`，必要`research-generation-watch.mjs`/`component-data-refresh.mjs`接线；`workbench.js`/`workbench-execution-policy.js`仅accepted receipt与短提示。扩充对应workbench-feedback/actions/browser、component-data-status/monitor与直接generation-watch测试，不改creation布局/分类或旧用户消息。
 
-**Interfaces:** 现有 `createComponentDataStatusStore`增加稳定只读` snapshotSession(sessionId):{ready,rows}`和`subscribeSession(sessionId,listener)`（名称可等价，语义不可变）；复用其原host list/push与publishNative数据，不新增poll。`workbenchProgressState`/React通过该真实摘要补充状态，不把敏感来源内容写入generation snapshot。原publisher/receiptAnchors身份与归属保持。
+**Interfaces:** 现有 `createComponentDataStatusStore`增加稳定只读` snapshotSession(sessionId):{ready,rows}`和`subscribeSession(sessionId,listener)`（名称可等价，语义不可变）；复用其原host list/push与publishNative数据，不新增poll。保留节点read/subscribe及clear/unmount语义，若反馈需last-observed则用有界的只读内存摘要，冷启动无事实保持待确认，不新建持久化数据源缓存。`workbenchProgressState`/React通过该真实摘要补充状态，不把敏感来源内容写入generation snapshot；可从宿主containerSpec.type投影最小builtin布尔身份，区分未挂载financial-widget与已证实host静态组件，不含组件内容/参数。原publisher/receiptAnchors身份与归属保持。
 
 - [ ] 先RED：计划每分钟但实际静态完整表时，反馈不能声称已自动更新；已保存recipe/成功或失败则分别显示。null/尚未载入不是未绑定；builtin未挂载不是静态；inactive/Notes显示上次观察。原“生成中/已完成/重试”、新消息后的归属与Notes复用保持。
-- [ ] 最小加入真实组件终态/recipe摘要及补充文字，区别静态、手动、暂停、已配置未成功、最新成功/失败；保留读取就绪与last-observed，不新增轮询或模型调用。accepted receipt/短提示明确刷新配置待确认，不能由计划承诺已生效；prepared/accepted原含义与重试幂等保持。原会话历史不重写，相关卡片随所属轮次留位。
+- [ ] 最小加入真实组件终态/recipe摘要及补充文字，区别静态、手动、暂停、已配置未成功、最新成功/失败；保留读取就绪与last-observed，不新增轮询或模型调用。Notes/非活动会话若已有完成卡的刷新事实，在原轮次保留带上次观察说明的终态卡，不因旧的inactive-completed隐藏分支抹掉事实；没有已观察刷新数据时只待确认，不猜当前运行。accepted receipt/短提示明确刷新配置待确认，不能由计划承诺已生效；prepared/accepted原含义与重试幂等保持。原会话历史不重写，相关卡片随所属轮次留位。
 - [ ] 使用真实workspace/feedback挂载、fake transport测试混合静态/绑定、停止/部分失败重试、新消息和切Notes；深浅/窄宽状态文案不挤坏动作区。聚焦检查、中文commit、报告task-9-report.md，不全套/在线/构建/派agent；root另做Task2真实客户端验收。
 
 ## 后续执行顺序与交付门禁
