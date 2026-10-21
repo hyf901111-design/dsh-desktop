@@ -58,3 +58,22 @@ it('does not use impossible monthly revision counts to create a C4 conflict',asy
   const r=compareConsensusClaim({...claim,metric:'NET_PROFIT',value:950,unit:'亿元',revisionDirection:1},[{...row,NET_PROFIT_DOWNGRADE:100}])
   expect(r.rules).not.toContain('C4')
 })
+it.each(['营业收入增速','行业景气假设'])('does not transfer a revision of %s to a following profit forecast',async other=>{
+  const {extractConsensusClaims,compareConsensusClaim}=await load()
+  const claims=extractConsensusClaims([{id:'p',text:`600519.SH 报告基准日20261020。较上月上调${other}，预计2026年归母净利润838.69亿元。`}])
+  expect(claims).toHaveLength(1);expect(claims[0].revisionDirection).toBeUndefined()
+  expect(compareConsensusClaim(claims[0],[row]).rules).not.toContain('C4')
+})
+it('does not hide a monthly revision conflict when annual growth agrees with the market',async()=>{
+  const {compareConsensusClaim}=await load(),current={...claim,metric:'NET_PROFIT',value:950,unit:'亿元',revisionDirection:1},previous={...current,year:2025,value:900,revisionDirection:undefined}
+  const currentRow={...row,NET_PROFIT_MEDIAN:9500000,NET_PROFIT_MIN:9000000,NET_PROFIT_MAX:10000000,NET_PROFIT_DEV:1000000},priorRow={...currentRow,EST_REPORT_DT:'20251231',NET_PROFIT_MEDIAN:9000000,NET_PROFIT_MIN:8000000}
+  const r=compareConsensusClaim(current,[currentRow,priorRow],{claims:[previous,current]})
+  expect(r.rules).toEqual(['C4'])
+  expect(r.evidence.data.direction.comparisons).toEqual(expect.arrayContaining([expect.objectContaining({kind:'adjacent-year',conflict:false}),expect.objectContaining({kind:'monthly-revision',conflict:true})]))
+})
+it('treats zero standard deviation as valid unanimous forecasts for the C3 formula',async()=>{
+  const {compareConsensusClaim}=await load(),base={...row,EPS_MEDIAN:100,EPS_MIN:null,EPS_MAX:null,EPS_DEV:0,NUM_EST_INST:5}
+  expect(compareConsensusClaim({...claim,value:110},[base]).rules).toEqual(['C3'])
+  expect(compareConsensusClaim({...claim,value:100},[base]).rules).toEqual([])
+  expect(compareConsensusClaim({...claim,value:110},[{...base,EPS_DEV:-1}]).rules).toEqual([])
+})

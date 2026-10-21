@@ -153,6 +153,15 @@ it('compares adjacent-year forecasts after both independently bounded date-align
   expect(f.calls).toHaveLength(2)
   expect(result.issues.find(i=>i.blockId==='b').evidence[0].data.rules).toContain('C4')
 })
+it('explains a C4-only conflict with concrete report and market directions in the visible comment',async()=>{
+  const {reviewNoteConsensus}=await load(),current={...row,EPS_MEDIAN:100,EPS_MIN:80,EPS_MAX:120,EPS_DEV:20},prior={...current,EST_REPORT_DT:'20251231',EPS_MEDIAN:110,EPS_MIN:70,EPS_MAX:130}
+  const f=await sourceFixture({data:body=>[body.arguments.sql.includes("EST_REPORT_DT = '20251231'")?prior:current]})
+  const result=await reviewNoteConsensus(f.ctx,{sessionId:'session',blocks:[{id:'meta',type:'paragraph',text:'600519.SH 报告基准日20261020。'},{id:'a',type:'paragraph',text:'预计2025年EPS 90元。'},{id:'b',type:'paragraph',text:'预计2026年EPS 100元。'}]},new AbortController().signal)
+  const issue=result.issues.find(i=>i.blockId==='b')
+  expect(issue.evidence[0].data.rules).toEqual(['C4'])
+  expect(issue.message).toMatch(/报告.*增加10元/)
+  expect(issue.message).toMatch(/一致预期.*减少10元/)
+})
 
 it('does not promote truncated data or mismatched codes into verified consensus evidence', async () => {
   const { reviewNoteConsensus } = await load()

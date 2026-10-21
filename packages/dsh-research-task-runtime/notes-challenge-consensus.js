@@ -32,12 +32,12 @@ export function extractConsensusClaims(blocks) {
       const metricPattern = /(EPS|每股收益|归母净利润|归属于母公司(?:股东)?的?净利润|主营业务收入|主营收入|营业总收入|营业收入)\s*(?:预测)?\s*(?:为|达|至|约为|约|预计|[:：=])?\s*([+-]?\d+(?:,\d{3})*(?:\.\d+)?)\s*(亿元|万元|千元|元(?:\/股)?)/giu
       let previousMetricEnd=0
       for (const match of sentence.matchAll(metricPattern)) {
-        const revisions=distinct([...sentence.slice(previousMetricEnd,match.index).matchAll(/(?:较|相较)(?:上月|一个月前)[^。；;]{0,24}?(上调|调高|上修|下调|调低|下修)/gu)].map(m=>/上|高/u.test(m[1])?1:-1))
+        const revision=sentence.slice(previousMetricEnd,match.index).match(/(?:较|相较)(?:上月|一个月前)\s*[，,]?\s*(?:我们|本报告)?\s*(上调|调高|上修|下调|调低|下修)\s*(?:对)?\s*(?:20\d{2}\s*年(?:度)?)?\s*$/u)
         previousMetricEnd=match.index+match[0].length
         const label = match[1], metric = /EPS|每股收益/iu.test(label) ? 'EPS' : /净利润/u.test(label) ? 'NET_PROFIT' : 'MAIN_BUS_INC'
         const unit = match[3].replace('/股', ''), value = Number(match[2].replaceAll(',', ''))
         if (!Number.isFinite(value) || metric === 'EPS' && unit !== '元' || !uniqueQuote(block.text, match[0])) continue
-        claims.push({ blockId: block.id, quote: match[0], windCode: code, baseDate, year: years[0], metric, value, unit, ...metric === 'MAIN_BUS_INC' && !/^主营/u.test(label) ? { basis: label } : {}, ...revisions.length===1?{revisionDirection:revisions[0]}:{} })
+        claims.push({ blockId: block.id, quote: match[0], windCode: code, baseDate, year: years[0], metric, value, unit, ...metric === 'MAIN_BUS_INC' && !/^主营/u.test(label) ? { basis: label } : {}, ...revision?{revisionDirection:/上|高/u.test(revision[1])?1:-1}:{} })
       }
     }
   }
@@ -69,7 +69,7 @@ function directionFor(claim,rows,current,claims,minInstitutions) {
   const none={kind:'unavailable',detail:'缺少可比的相邻年度预测或明确月度修订方向，未执行C4。'}
   const count=number(current.row.NUM_EST_INST)
   if(current.fallback||!Number.isInteger(count)||count<minInstitutions)return none
-  const previous=(claims??[]).filter(c=>c.windCode===claim.windCode&&c.baseDate===claim.baseDate&&c.metric===claim.metric&&c.year===claim.year-1&&!c.basis)
+  const comparisons=[],previous=(claims??[]).filter(c=>c.windCode===claim.windCode&&c.baseDate===claim.baseDate&&c.metric===claim.metric&&c.year===claim.year-1&&!c.basis)
   if(previous.length===1){
     const prior=snapshot(previous[0],rows),scale=scaleFor(previous[0]),median=number(current.row[claim.metric+'_MEDIAN'])
     const previousMedian=prior?.row?number(prior.row[claim.metric+'_MEDIAN']):null
@@ -77,16 +77,17 @@ function directionFor(claim,rows,current,claims,minInstitutions) {
     const validMedian=previousMedian!==null&&(priorMin===null||previousMedian>=priorMin)&&(priorMax===null||previousMedian<=priorMax)
     if(prior?.row&&!prior.fallback&&scale!=null&&Number.isFinite(previous[0].value)&&median!==null&&validMedian&&Number.isInteger(priorCount)&&priorCount>=minInstitutions&&prior.row.CONSEN_DATA_CYCLE_TYP===current.row.CONSEN_DATA_CYCLE_TYP){
       const reportedChange=claim.value*scaleFor(claim)-previous[0].value*scale,consensusChange=median-previousMedian
-      return {kind:'adjacent-year',previousYear:previous[0].year,previousEstDt:prior.estDt,previousReportedValue:previous[0].value*scale,previousMedian,reportedChange,consensusChange,conflict:reportedChange*consensusChange<0}
+      comparisons.push({kind:'adjacent-year',previousYear:previous[0].year,previousEstDt:prior.estDt,previousReportedValue:previous[0].value*scale,previousMedian,reportedChange,consensusChange,conflict:reportedChange*consensusChange<0})
     }
   }
   // EPS has no matching revision-count family; profit counts must not stand in for EPS revisions.
   const upgrade=number(current.row[claim.metric+'_UPGRADE']),downgrade=number(current.row[claim.metric+'_DOWNGRADE'])
   if(claim.metric!=='EPS'&&[1,-1].includes(claim.revisionDirection)&&Number.isInteger(upgrade)&&upgrade>=0&&Number.isInteger(downgrade)&&downgrade>=0&&upgrade+downgrade<=count){
     const consensusDirection=Math.sign(upgrade-downgrade)
-    return {kind:'monthly-revision',reportedDirection:claim.revisionDirection,consensusDirection,conflict:claim.revisionDirection*consensusDirection<0}
+    comparisons.push({kind:'monthly-revision',reportedDirection:claim.revisionDirection,consensusDirection,conflict:claim.revisionDirection*consensusDirection<0})
   }
-  return none
+  const primary=comparisons.find(c=>c.conflict)??comparisons[0]
+  return primary?{...primary,comparisons}:none
 }
 
 /** Rows here must come from the host source adapter; model output never reaches this calculation. */
@@ -109,11 +110,11 @@ export function compareConsensusClaim(claim, rows, options={}) {
   const rules = [], notes = []
   if (!sample) notes.push(`预测家数${count ?? '未知'}，样本有限，不作C2/C3强判断`)
   if (!relativeBase) notes.push('中值为空或零，不作相对偏离判断')
-  if (!interval || std === null || std <= 0) notes.push('区间或标准差字段缺失/无效，对应规则未执行')
+  if (!interval || std === null || std < 0) notes.push('区间或标准差字段缺失/无效，对应规则未执行')
   if (fallback) notes.push(`报告基准日${claim.baseDate}无快照，已回退至最新EST_DT=${estDt}比较；仅作事后参考，不能据此认定历史报告当时有误`)
     if (Number.isInteger(count) && count > 0 && interval && (reportedValue < min || reportedValue > max)) rules.push('C1')
     if (sample && relativeBase && Math.abs(reportedValue - median) - Math.abs(median) * threshold > Math.max(1, Math.abs(reportedValue), Math.abs(median)) * 1e-12) rules.push('C2')
-    if (sample && median !== null && std !== null && std > 0 && Math.abs(reportedValue - median) > std*stdMultiplier) rules.push('C3')
+    if (sample && median !== null && std !== null && std >= 0 && Math.abs(reportedValue - median) > std*stdMultiplier) rules.push('C3')
   const direction=directionFor(claim,rows,current,options.claims,minInstitutions)
   if(direction.conflict)rules.push('C4')
   const unit = claim.metric === 'EPS' ? '元' : '万元'
@@ -226,7 +227,9 @@ export async function reviewNoteConsensus(ctx, input, signal) {
     const data = comparison.evidence.data
     const display=value=>value===null?'缺失':Number((value/scaleFor(claim)).toFixed(4))+claim.unit
     const revision=data.downgrade!==null||data.upgrade!==null?`近一月调高${data.upgrade??'未知'}家、调低${data.downgrade??'未知'}家。`:''
-    issues.push({ blockId: claim.blockId, quote: claim.quote, category: 'research', message: `${claim.windCode} ${claim.year}年度${METRICS[claim.metric]}预测${claim.value}${claim.unit}；${data.estDt}一致预期中值${display(data.median)}，范围[${display(data.min)}, ${display(data.max)}]，${data.institutionCount??'未知'}家机构，触发${comparison.rules.join('/')}。${revision}请说明收入、利润率等核心假设差异${claim.metric === 'EPS' ? '及EPS股本基准是否一致' : ''}；不会将预测强制改为市场中值。${comparison.status === 'partial' ? comparison.detail : ''}`.slice(0, 600), evidence: [comparison.evidence] })
+    const directions=(data.direction.comparisons??[]).filter(c=>c.conflict).map(c=>c.kind==='adjacent-year'?`报告较${c.previousYear}年${c.reportedChange>0?'增加':'减少'}${display(Math.abs(c.reportedChange))}，一致预期中值同期${c.consensusChange>0?'增加':'减少'}${display(Math.abs(c.consensusChange))}。`:`报告较上月${c.reportedDirection>0?'上调':'下调'}该预测，市场近一月以${c.consensusDirection>0?'上调':'下调'}为主。`).join('')
+    const deviation=data.deviationPct===null?'':`相对中值偏离${Number(data.deviationPct.toFixed(2))}%（阈值${Number((data.threshold*100).toFixed(2))}%）。`
+    issues.push({ blockId: claim.blockId, quote: claim.quote, category: 'research', message: `${claim.windCode} ${claim.year}年度${METRICS[claim.metric]}预测${claim.value}${claim.unit}；${data.estDt}一致预期中值${display(data.median)}，范围[${display(data.min)}, ${display(data.max)}]，${data.institutionCount??'未知'}家机构，触发${comparison.rules.join('/')}。${deviation}${directions}${revision}请说明收入、利润率等核心假设差异${claim.metric === 'EPS' ? '及EPS股本基准是否一致' : ''}；不会将预测强制改为市场中值。${comparison.status === 'partial' ? comparison.detail : ''}`.slice(0, 600), evidence: [comparison.evidence] })
   }
   if (claims.length > 12) checks.push({ kind: 'consensus', status: 'partial', detail: `本批识别${claims.length}项预测，仅前12项进入专项预算。` })
   return { issues, checks }

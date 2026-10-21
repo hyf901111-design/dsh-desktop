@@ -99,3 +99,15 @@ it('never forwards exceptions that might contain connection credentials',async()
   expect(result.issues).toEqual([]);expect(result.checks[0].status).toBe('unavailable')
   expect(JSON.stringify(result)).not.toMatch(/private-user|private-password|private-host/)
 })
+it.each(['before-query','after-query'])('rechecks live agent identity after an asynchronous skill read %s',async phase=>{
+  const f=await fixture(),get=f.ctx.skills.get
+  f.ctx.skills.get=async(...args)=>{
+    const definition=await get(...args)
+    if(f.state.gets===(phase==='before-query'?2:3))f.ctx.agents.get=()=>undefined
+    return definition
+  }
+  const result=await (await load()).reviewNoteConsensus(f.ctx,input,new AbortController().signal)
+  expect(result.issues).toEqual([]);expect(result.checks[0].status).toBe('unavailable')
+  if(phase==='before-query')await expect(readFile(f.marker)).rejects.toMatchObject({code:'ENOENT'})
+  else expect((await readFile(f.marker,'utf8')).length).toBeGreaterThan(0)
+})

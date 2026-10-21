@@ -70,18 +70,23 @@ export async function managedInfodbSource(ctx,agent,signal) {
   if(!inside(root,path)||!(await stat(path)).isFile()||await realpath(definition.path)!==join(root,'SKILL.md'))return null
   const authorize=async()=>{
     signal?.throwIfAborted()
-    if(!live(ctx,agent)||!same(definition,await ctx.skills.get(candidate.name,options)))throw Error('infodb技能已停用或会话已变化。')
+    const current=await ctx.skills.get(candidate.name,options)
+    signal?.throwIfAborted()
+    if(!live(ctx,agent)||!same(definition,current))throw Error('infodb技能已停用或会话已变化。')
   }
   return {name:candidate.name,kind:'skill',async query(claim,mode,querySignal){
     await authorize();querySignal?.throwIfAborted()
     const sql=consensusSql(claim,mode),configured=process.env.EWORK_INFODB_PYTHON
     const executables=configured?[configured]:[process.env.CONDA_PREFIX&&join(process.env.CONDA_PREFIX,'bin/python3'),'/opt/anaconda3/bin/python3',join(homedir(),'anaconda3/bin/python3'),'/opt/miniconda3/bin/python3','python3'].filter(Boolean)
     for(const executable of [...new Set(executables)]){
+      querySignal?.throwIfAborted()
+      if(!live(ctx,agent))throw Error('infodb读取会话已变化。')
       let result
       try {result=await readProcess(executable,path,sql,querySignal)}catch(error){if(error.code==='ENOENT'&&!configured)continue;throw error}
       if(result.error==='missing-driver'&&!configured)continue
       if(result.error)throw Error('infodb技能未取得有效数据。')
       await authorize();querySignal?.throwIfAborted()
+      if(!live(ctx,agent))throw Error('infodb读取会话已变化。')
       return {content:[{type:'text',text:JSON.stringify(result)}]}
     }
     throw Error('infodb技能所需Python驱动不可用。')
