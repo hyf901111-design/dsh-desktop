@@ -34,6 +34,6 @@ it('replaces only a current exact anchor, preserving the paragraph and formattin
  expect(replaceChallengeQuote(editor,'first','成度','程度')).toBe(true)
  expect(state.doc.firstChild?.attrs.id).toBe('first')
  expect(state.doc.textContent).toBe('原文：程度。继续写作。')
- expect(state.doc.firstChild?.firstChild?.firstChild?.marks[0].type.name).toBe('bold')
+ expect(state.doc.firstChild?.firstChild?.firstChild?.marks[0]?.type.name).toBe('bold')
  expect(state.selection.from).toBe(13)
 })

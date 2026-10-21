@@ -15,8 +15,10 @@ export function findChallengeQuote(editor:any,blockId:string,quote:string):{from
     else if(child.type.name==='hardBreak'){plain+='\n';positions.push(pos+1+offset)}
    })
    for(let at=plain.indexOf(quote);at>=0;at=plain.indexOf(quote,at+1)){
-    const from=positions[at],to=positions[at+quote.length-1]+1
-    if(from!==undefined&&doc.textBetween(from,to,'\n',(node:any)=>node.type.name==='hardBreak'?'\n':'')===quote)matches.push({from,to})
+    const from=positions[at],last=positions[at+quote.length-1]
+    if(from===undefined||last===undefined)continue
+    const to=last+1
+    if(doc.textBetween(from,to,'\n',(node:any)=>node.type.name==='hardBreak'?'\n':'')===quote)matches.push({from,to})
    }
    return false
   }

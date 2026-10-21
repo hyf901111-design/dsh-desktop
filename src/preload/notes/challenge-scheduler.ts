@@ -29,6 +29,7 @@ export class NoteChallengeScheduler{
  private level:ChallengeLevel=0
  private value:DocumentInput={title:'',blocks:[],active:false,busy:false,composing:false}
  private pending=new Set<string>()
+ private failed=new Set<string>()
  private timer?:ReturnType<typeof setTimeout>
  private editedAt=0
  private initialized=false
@@ -62,15 +63,15 @@ export class NoteChallengeScheduler{
    for(const block of value.blocks)if(titleChanged||before.get(block.id)!==JSON.stringify(block))this.pending.add(block.id)
    const ids=new Set(value.blocks.map(b=>b.id));for(const id of this.pending)if(!ids.has(id))this.pending.delete(id)
    if(initial){if(this.level)this.firstAt=this.now()+2000}
-   else{this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined}
+   else{this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined;this.failed.clear()}
   }
   if(composingEnded){this.editedAt=this.now();this.hasEdited=true;this.firstAt=undefined}
   if(!this.value.active||this.value.busy||this.value.composing)this.cancel()
   this.schedule()
  }
- recheck(){if(!this.level||this.disposed)return;for(const b of this.value.blocks)this.pending.add(b.id);this.firstAt=this.now();this.schedule()}
+ recheck(){if(!this.level||this.disposed)return;this.failed.clear();for(const b of this.value.blocks)this.pending.add(b.id);this.firstAt=this.now();this.schedule()}
  private cancel(){clearTimeout(this.timer);this.timer=undefined;if(this.flight){for(const id of this.flight.ids)if(this.value.blocks.some(b=>b.id===id))this.pending.add(id);this.flight.controller.abort()}}
- private eligible(){return this.value.blocks.filter(b=>this.pending.has(b.id)&&(b.id!==this.value.editingBlockId||b.type==='heading'||/[。！？.!?；;：:]\s*$/u.test(b.text)))}
+ private eligible(){return this.value.blocks.filter(b=>this.pending.has(b.id)&&!this.failed.has(b.id)&&(b.id!==this.value.editingBlockId||b.type==='heading'||/[。！？.!?；;：:]\s*$/u.test(b.text)))}
  private batch(){
   const chosen:ChallengeBlock[]=[],ids:string[]=[];let chars=0,oversized=false,deep=false
   for(const block of this.eligible()){
@@ -123,11 +124,12 @@ export class NoteChallengeScheduler{
   try{
    const aborted=new Promise<never>((_,reject)=>{onAbort=()=>reject(controller.signal.reason);controller.signal.addEventListener('abort',onAbort,{once:true})})
    const response=await Promise.race([this.options.run({sessionId:this.options.sessionId,requestId:crypto.randomUUID(),action:'review',level:this.level,title:this.value.title,blocks:chosen,changedIds:ids},controller.signal),aborted])
-   for(const id of ids)if(!response.coveredBlockIds.includes(id)&&this.value.blocks.some(b=>b.id===id))this.pending.add(id)
+   const madeProgress=ids.some(id=>response.coveredBlockIds.includes(id)),unchanged=key(this.value)===captured.key
+   for(const id of ids)if(!response.coveredBlockIds.includes(id)&&this.value.blocks.some(b=>b.id===id)){this.pending.add(id);if(!madeProgress&&unchanged)this.failed.add(id)}
    if(response.usage){usage.input=response.usage.inputTokens;usage.output=response.usage.outputTokens}
    if(!this.disposed&&!controller.signal.aborted&&this.level&&key(this.value)===captured.key){this.checks=[...this.checks.filter(v=>v.kind==='coverage'),...response.checks];await this.options.onResult(response,captured)}
    else for(const id of ids)if(this.value.blocks.some(b=>b.id===id))this.pending.add(id)
-  }catch(error){if(!controller.signal.aborted){for(const id of ids)if(this.value.blocks.some(b=>b.id===id))this.pending.add(id);this.checks=[{kind:'review',status:'unavailable',detail:'本轮检查未完成，未将未核验结果写入正文。'}];this.emit('failed')}}
+  }catch(error){if(!controller.signal.aborted){const unchanged=key(this.value)===captured.key;for(const id of ids)if(this.value.blocks.some(b=>b.id===id)){this.pending.add(id);if(unchanged)this.failed.add(id)}this.checks=[{kind:'review',status:'unavailable',detail:'本轮检查未完成，待正文变化或主动重查后继续，未将未核验结果写入正文。'}];this.emit('failed')}}
   finally{controller.signal.removeEventListener('abort',onAbort);if(this.flight===job)this.flight=undefined;this.schedule()}
  }
  dispose(){this.disposed=true;this.cancel()}
