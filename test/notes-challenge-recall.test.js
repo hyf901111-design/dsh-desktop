@@ -140,6 +140,18 @@ for (const message of [
   expect(result.issues[0].category).toBe('uncertain')
 })
 
+for (const message of [
+  '该句大体相符，但结冰温度应为0℃而非10℃，是否需修正？',
+  '该句看似相符，实际并非如此：结冰温度应为0℃而非10℃，是否需修正？',
+  '该表述基本一致，不过结冰温度应为0℃，是否需要改正？'
+]) it('retains a qualified agreement with a concrete correction even without error vocabulary: ' + message, async () => {
+  const result = await run(note([block('a', '水在标准大气压下100℃沸腾、10℃结冰。')]), {
+    reviews: [{ blockId: 'a', issues: [issue('水在标准大气压下100℃沸腾、10℃结冰', { message })] }]
+  })
+  expect(result.issues).toHaveLength(1)
+  expect(result.coveredBlockIds).toEqual(['a'])
+})
+
 it('does not claim missing blocks were reviewed and accepts an explicit empty record as a completed check', async () => {
   const input = note([block('a', '第一段。'), block('b', '第二段。'), block('c', '第三段。')])
   const result = await run(input, { reviews: [{ blockId: 'b', issues: [] }], coveredBlockIds: ['a', 'b', 'c'], checks: [{ status: 'completed' }] })

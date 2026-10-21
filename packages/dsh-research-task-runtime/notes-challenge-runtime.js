@@ -72,10 +72,11 @@ function requestedReplacement(input) {
 
 function acknowledgesNoConflict(message) {
   // A narrow low-interruption gate, not a fact checker: only use the model's explicit
-  // admission of agreement. Negated/questioned agreement or a stated contrast survives.
-  if (/(?:但|然而|不过|却|同时|另外)[^。；！？]{0,80}(?:错误|有误(?!解)|矛盾|冲突|不成立|不正确|不准确|不适用|不相符|不一致|不符|偏差|不匹配|相反)/u.test(message)) return false
+  // admission of agreement. A contrast may give a corrected value without naming
+  // an "error", so conservatively keep it rather than relying on that vocabulary.
+  if (/(?:但|然而|不过|却)/u.test(message) || /(?:同时|另外)[^。；！？]{0,80}(?:错误|有误(?!解)|矛盾|冲突|不成立|不正确|不准确|不适用|不相符|不一致|不符|偏差|不匹配|相反)/u.test(message)) return false
   const clauses = message.match(/[^，,。；;！？!?]+[，,。；;！？!?]?/gu) ?? []
-  return clauses.some(clause => !/[不未非否吗?？]/u.test(clause) && (
+  return clauses.some(clause => !/[不未非否吗?？]|看似|貌似|似乎|表面上/u.test(clause) && (
     /(?:原文|原句|该句|这句|该说法|该表述)[^，,。；;！？!?]{0,16}(?:正确|准确|无误|没有问题|相符|一致)/u.test(clause) ||
     /(?:与|和)[^，,。；;！？!?]{1,40}(?:相符|一致)/u.test(clause)
   ))
