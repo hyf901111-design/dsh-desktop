@@ -91,3 +91,18 @@
 - [ ] 相关statement evidence/growth/operating/source binding/runtime聚焦验证和diff check；不运行全功能测试、不构建、不操作共享客户端、不派生agent。自审，中文本地提交own files，完整报告写task-4-report.md，返回短状态。
 
 **Binding constraints and review focus:** source row的证券、期间、口径和字段是事实依据，不以展示标签或API名称作为业务证据；不猜日期、不发明数值、不静默改写成不同指标；保留全部对象和字段，缺失诚实显示；明确未知结构和其他来源边界；不改变既有模拟/普通表行为；原一次repair预算、fallback失败边界、取消语义必须保留；禁止全功能测试和功能worktree构建。
+
+### Task 5: 原生行情表保留日期备注和来源入口
+
+**依赖：** Task4已提交，审阅可同时只读进行；本任务不改runtime来源helper。
+
+**Files:** `scripts/lib/research-market-native-table.mjs` 的parser、React原生renderer与现有CSS；`test/research-market-native-table.test.js`、`test/research-market-native-interaction.test.js`及必要专用隔离浏览器测试/实际fixture。不得构建/操作共享客户端。实际B估值/财务artifact在 `/tmp/compute-b-artifact-models-20261021.json`，人工修正的Task4fixture只作渲染样本，不能冒充在线正确取数。
+
+**Interfaces:** `parseResearchMarketNativeTable(html,doc)` 保留现有columns/rows/variant/simulated，增加宿主已渲染footer的纯文本语义与安全来源链接投影；React用文本/安全anchor渲染，不执行HTML，不解析未知脚本，不提升任意页面权限。保持原生文本优化与原有search/sort/selected readout/列宽安装器。不能无损投影时返回null让现有完整sandbox路径显示。
+
+- [ ] 先red固定actual估值model的asOf和note，证明旧parser/renderer丢来源日期和PECTTM扣非、PB年报等口径；fixture为已经观察的数据，未再在线请求。另覆盖无footer、note-only、sources链接、单元格详情链接。
+- [ ] 最小实现完整footer/链接投影与可读的备注区，保留原精度与行数据，不以字符串truncate隐藏说明。危险protocol、用户信息URL、任意HTML/scripts、未知/无法无损投影的组合不能变为可信客户端交互；沿用既有http/https安全边界。OpenTerminal仍返回null，>12列仍走完整HTML，普通native schema不改。
+- [ ] 相关回归验证escaped文本、2000字说明、无说明/空sources、深浅主题、窄/宽视口、全量备注能滚动读取、页面无横溢、首屏有表内容、筛选/排序/行点选仍有效，表格与备注不遮挡。链接保留原href，由客户端既有链接拦截处理，不新增系统浏览器默认打开行为。
+- [ ] 复用现有isolated headless模式实际验证原生React组件与列宽installer；不得运行liveapp/CDP。运行本任务table parser/interaction及宽表直接受影响聚焦文件与diff check，不运行全功能测试；中文本地commitownfiles，自审和完整日志路径写task-5-report.md，交root独立审阅。
+
+**Binding constraints and review focus:** 来源、日期、口径、完整备注/链接不得被原生优化静默删除；不推断新日期/来源/数值，数据值保持；原生12列/宽表32列/200KB与OpenTerminal合同不变；保留原生文本及既有交互，无法无损时sandbox回退；长备注不挤坏内容/工具栏，深浅宽窄可访问；只安全http/https链接，无HTML执行/权限提升；聚焦测试，不构建/操作共享客户端。
