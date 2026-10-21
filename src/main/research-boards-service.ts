@@ -2924,6 +2924,58 @@ export class ResearchBoardsService {
       canvas: local
     })
   }
+  // Calendar edits share the exact canvas branch captured before materialization.
+  // Per-event keys patch an existing containerSpec Y.Map, even for first events.
+  readCalendar(target: { sessionId: string; nodeId: string }) {
+    const binding = this.getBinding(target.sessionId)
+    if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
+    const r = this.requireBoard(binding.boardId, target.sessionId)
+    const node = projectDocument(r.doc).artifacts.find(n => n.id === target.nodeId)
+    if ((node?.containerSpec as any)?.type !== 'calendar-tool') throw Error('日历组件不存在')
+    const permission = this.permissions(r)
+    return {
+      spec: copy(node!.containerSpec) as Record<string, unknown>,
+      shared: {
+        canEdit: permission.execute,
+        connected: r.connection === 'online',
+        pending: this.store.account(binding.accountId).pending.some(p => p.boardId === binding.boardId)
+      }
+    }
+  }
+  async updateCalendar<T>(
+    target: { sessionId: string; nodeId: string },
+    change: (spec: Record<string, unknown>) => T
+  ): Promise<T> {
+    this.authorizeCanvasUse(target.sessionId, true)
+    const binding = this.getBinding(target.sessionId)
+    if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
+    const ctx = this.boardContext(binding.boardId)
+    const r = this.requireBoard(binding.boardId, target.sessionId, true)
+    const baseRevision = r.revision, canvas = projectDocument(r.doc)
+    const node = canvas.artifacts.find(n => n.id === target.nodeId)
+    if ((node?.containerSpec as any)?.type !== 'calendar-tool') throw Error('日历组件不存在')
+    const result = change(node!.containerSpec as Record<string, unknown>)
+    const local = this.options.hooks?.materializeBoard
+      ? await this.options.hooks.materializeBoard({
+          accountId: binding.accountId,
+          boardId: binding.boardId,
+          epoch: r.snapshot.board.sharingEpoch,
+          localSessionId: target.sessionId,
+          canvas,
+          signal: AbortSignal.any([this.generationAbort.signal, r.abort.signal])
+        })
+      : canvas
+    this.checkBoard(ctx)
+    this.authorizeCanvasUse(target.sessionId, true)
+    await this.applyCanvas({
+      boardId: binding.boardId,
+      localSessionId: target.sessionId,
+      baseRevision,
+      clientMutationId: randomUUID(),
+      canvas: local
+    })
+    return result
+  }
   readSharedCanvas(sessionId: string): Canvas {
     const binding = this.getBinding(sessionId)
     if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
