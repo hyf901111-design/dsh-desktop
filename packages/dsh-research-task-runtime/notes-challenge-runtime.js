@@ -5,6 +5,7 @@ import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { abortable, deadline, uniqueQuote } from './notes-challenge-bounds.js'
 import { extractConsensusClaims, reviewNoteConsensus } from './notes-challenge-consensus.js'
 import { challengeReviewAnchors, REVIEW_ANCHOR_LIMITS } from './notes-challenge-review-context.js'
+import { CONSISTENCY_SYSTEM, buildConsistencyInput, applyConsistencyDecisions } from './notes-challenge-consistency.js'
 
 const jobs = new WeakMap()
 const categories = new Set(['typo', 'grammar', 'contradiction', 'logic', 'fact', 'research', 'question', 'uncertain'])
@@ -198,16 +199,17 @@ function boundedIssues(issues, blocks, limit) {
   return blocks.flatMap((block, index) => groups[index].filter(issue => selected.has(issue)).sort((a, b) => block.text.indexOf(a.quote) - block.text.indexOf(b.quote)))
 }
 
-async function modelResult(ctx, route, system, payload, signal, reasoningEffort, reviewTargets, requestId) {
+async function modelResult(ctx, route, system, payload, signal, reasoningEffort, reviewTargets, requestId, usageSink) {
   const messages = [createUserMessage({ content: [{ type: 'text', text: JSON.stringify(payload) }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime' } })]
   let outputSize = 0, totalSize = 0, payloadSize = 0, eventCount = 0, usage = { inputTokens: 0, outputTokens: 0 }
   const knownEvents = new Set(['block-start', 'text-delta', 'reasoning-delta', 'tool-call-delta', 'block-end', 'usage', 'finish', 'tool-call', 'tool-call-start'])
   const streamStats = { eventCounts: {}, serializedByKind: {}, textDeltaChars: 0, reasoningDeltaChars: 0, textSnapshotChars: 0, reasoningSnapshotChars: 0 }
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const attempts = payload.action === 'consistency' ? 1 : 2
+  for (let attempt = 0; attempt < attempts; attempt++) {
     signal.throwIfAborted()
     const transport = new AbortController(), streamSignal = AbortSignal.any([signal, transport.signal])
     const requestSystem = attempt ? system + '\n输出必须是一个闭合完整的JSON对象，包括所有结束大括号；不要解释或Markdown代码围栏。' + (reviewTargets ? '检查结果必须使用reviews数组，每项只含blockId与issues；blockId必须精确复制targets中的id，不得重复，issues必须为数组。' : '') : system
-    const assembler = new BlockAssembler(), attemptUsage = { inputTokens: 0, outputTokens: 0 }, iterator = ctx.llm.stream({ provider: route.provider, model: route.model, purpose: 'workspace-note-challenge', signal: streamSignal, maxTokens: payload.action === 'review' ? 3000 : 2400, ...reasoningEffort ? { reasoningEffort } : {}, system: requestSystem, messages })[Symbol.asyncIterator]()
+    const assembler = new BlockAssembler(), attemptUsage = { inputTokens: 0, outputTokens: 0 }, iterator = ctx.llm.stream({ provider: route.provider, model: route.model, purpose: 'workspace-note-challenge', signal: streamSignal, maxTokens: payload.action === 'review' ? 3000 : payload.action === 'consistency' ? 800 : 2400, ...reasoningEffort ? { reasoningEffort } : {}, system: requestSystem, messages })[Symbol.asyncIterator]()
     let attemptOutputSize = 0
     try {
       while (true) {
@@ -247,7 +249,6 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
       outputSize += Math.max(0, visibleText.length - attemptOutputSize)
       if (outputSize > 16000) throw Error('挑战检查输出过长。')
       const text = visibleText.trim()
-      for (const key of ['inputTokens', 'outputTokens']) usage[key] += attemptUsage[key]
       // Only a complete, sole JSON fence is an envelope; never scan prose or reasoning for objects.
       const json = /^```json[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu.exec(text)?.[1] ?? text
       let parsedJSON = false, value
@@ -263,11 +264,18 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
       catch {
         diagnostic(requestId, { event: 'notes-challenge-format-rejected', action: payload.action, attempt: attempt + 1, reason: parsedJSON ? 'review-envelope' : 'json-invalid', jsonChars: json.length, targetCount: reviewTargets?.length ?? 0, anchorCount: payload.existingAnchors?.length ?? 0, ...parsedJSON && reviewTargets ? reviewShapeStats(value, reviewTargets) : {} })
         // A stop response can contain malformed JSON or a malformed review envelope.
-        // They share one regeneration allowance, deadline and size budgets; never repair
-        // partial output, send it back, or retry a valid but empty/filtered review.
-        if (attempt) throw Error(parsedJSON ? '挑战检查结果格式不完整。' : '挑战检查结果格式无效。')
+        // Primary/reply operations share one regeneration allowance and budgets.
+        // Optional consistency fails closed on its first invalid response so a
+        // later regeneration cannot authorize removal after a protocol failure.
+        if (attempt + 1 === attempts) throw Error(parsedJSON ? '挑战检查结果格式不完整。' : '挑战检查结果格式无效。')
       }
     } finally {
+      // Count all reported usage, including a malformed optional review whose
+      // validated primary result will still be returned to the user.
+      for (const key of ['inputTokens', 'outputTokens']) {
+        usage[key] += attemptUsage[key]
+        if (usageSink) usageSink[key] += attemptUsage[key]
+      }
       // Do not wait on an uncooperative generator; it already received the original abort signal.
       transport.abort()
       void Promise.resolve(iterator.return?.()).catch(() => {})
@@ -275,7 +283,7 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort,
   }
 }
 
-async function run(ctx, input, signal, modelMilliseconds = 20000) {
+async function run(ctx, input, signal, modelMilliseconds = 20000, taskExpiresAt = Infinity) {
   const { batches, total } = batchesFor(input), issueLimits = REVIEW_ISSUE_LIMITS, result = { version: 1, issues: [], coveredBlockIds: [], checks: [] }
   if (!batches.length) return { ...result, checks: [{ kind: 'review', status: 'skipped', detail: '本次没有待审查的正文变化。' }] }
   const response = await abortable(ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } }), signal)
@@ -288,7 +296,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000) {
       reasoningEffort = ['minimal', 'low'].find(effort => info?.reasoning?.efforts?.some(level => level.id === effort))
     } catch { signal.throwIfAborted() }
   }
-  const modelBudget = deadline(signal, modelMilliseconds), usage = { inputTokens: 0, outputTokens: 0 }
+  const modelExpiresAt = Math.min(Date.now() + modelMilliseconds, taskExpiresAt), modelBudget = deadline(signal, Math.max(0, modelExpiresAt - Date.now())), usage = { inputTokens: 0, outputTokens: 0 }
   try {
     for (const targets of batches) {
       signal.throwIfAborted()
@@ -307,8 +315,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000) {
         if (JSON.stringify(thread).length > 16000) throw Error('完整句与讨论上下文过长，请缩小或分段后重试。')
       }
       const existingAnchors = input.action === 'review' ? challengeReviewAnchors(input.existingAnchors ?? [], targets) : []
-      const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits, ...existingAnchors.length ? { existingAnchors } : {} } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined, input.requestId)
-      for (const key of ['inputTokens', 'outputTokens']) usage[key] += generated.usage[key]
+      const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits, ...existingAnchors.length ? { existingAnchors } : {} } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined, input.requestId, usage)
       if (input.action === 'review') {
         const reviewed = issuesFrom(generated.value, targets, available, issueLimits)
         if (!reviewed.issues.length) {
@@ -324,6 +331,32 @@ async function run(ctx, input, signal, modelMilliseconds = 20000) {
         result.reply = { text: reply.text, ...allowReplacement && reply.replacement !== undefined ? { replacement: reply.replacement } : {} }
       }
       if (input.action !== 'review') result.coveredBlockIds.push(...targets.map(block => block.id))
+    }
+    if (input.action === 'review') {
+      const shown = boundedIssues(result.issues, input.blocks, issueLimits.total), payload = buildConsistencyInput(shown, input.blocks, input.title)
+      if (payload) {
+        const remaining = modelExpiresAt - Date.now()
+        if (remaining < 3000) diagnostic(input.requestId, { event: 'notes-challenge-consistency', status: 'skipped', reason: 'budget', selectedCount: payload.candidates.length, droppedCount: 0 })
+        else {
+          const secondary = deadline(modelBudget.signal, Math.min(8000, remaining - 1000))
+          try {
+            const generated = await modelResult(ctx, route, CONSISTENCY_SYSTEM, { action: 'consistency', ...payload }, secondary.signal, reasoningEffort, undefined, input.requestId, usage)
+            secondary.signal.throwIfAborted()
+            const kept = applyConsistencyDecisions(generated.value, payload, shown)
+            if (!kept) diagnostic(input.requestId, { event: 'notes-challenge-consistency', status: 'failed', reason: 'decision', selectedCount: payload.candidates.length, droppedCount: 0 })
+            else {
+              const retained = new Set(kept), dropped = new Set(shown.filter(issue => !retained.has(issue)))
+              result.issues = result.issues.filter(issue => !dropped.has(issue))
+              const reasons = { 'outside-body': 0, 'no-conflict': 0, 'already-qualified': 0 }
+              for (const decision of generated.value.decisions) if (!decision.keep) reasons[decision.reason]++
+              diagnostic(input.requestId, { event: 'notes-challenge-consistency', status: 'completed', selectedCount: payload.candidates.length, droppedCount: dropped.size, reasons })
+            }
+          } catch {
+            modelBudget.signal.throwIfAborted()
+            diagnostic(input.requestId, { event: 'notes-challenge-consistency', status: 'failed', reason: secondary.signal.aborted ? 'timeout' : 'provider', selectedCount: payload.candidates.length, droppedCount: 0 })
+          } finally { secondary.dispose() }
+        }
+      }
     }
   } finally { modelBudget.dispose() }
   signal.throwIfAborted()
@@ -362,12 +395,12 @@ export async function generateNoteChallenge(ctx, value, requestedSignal) {
   // and stay below the host's 65s request deadline. Consensus retains its budget.
   const targets = input.action === 'review' ? batchesFor(input).batches.flat().length : 1
   const milliseconds = deep ? 45000 : Math.min(60000, 20000 + Math.max(0, targets - 1) * 10000)
-  const budget = deadline(signal, milliseconds), state = { controller, done: null }
+  const taskExpiresAt = Date.now() + milliseconds, budget = deadline(signal, milliseconds), state = { controller, done: null }
   // Reserve the replacement before yielding, so a third request can cancel a second waiting request.
   const done = Promise.resolve().then(async () => {
     if (previous) await abortable(previous.done.catch(() => {}), budget.signal)
     budget.signal.throwIfAborted()
-    return run(ctx, input, budget.signal, deep ? 20000 : milliseconds)
+    return run(ctx, input, budget.signal, deep ? 20000 : milliseconds, taskExpiresAt)
   })
   state.done = done; active.set(input.sessionId, state)
   try { const result = await done; budget.signal.throwIfAborted(); return result }
