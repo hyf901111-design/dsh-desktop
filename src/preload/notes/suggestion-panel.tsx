@@ -10,17 +10,19 @@ export function SuggestionPanel({children, header, footer}: {children: React.Rea
   useLayoutEffect(() => {
     const section=panel.current, body=content.current
     if(!section||!body)return
+    const workspace=section.closest('.en-main')
     const measure=()=>{
       const viewport=window.visualViewport, top=viewport?.offsetTop||0, bottom=top+(viewport?.height||window.innerHeight)
       const rect=section.getBoundingClientRect(), bodyHeight=body.getBoundingClientRect().height, chrome=rect.height-bodyHeight
       const topSpace=wrap.current?Math.max(0,rect.top-wrap.current.getBoundingClientRect().top):0
-      const room=section.closest('.en-composer-area')?Math.min(bottom-8,rect.bottom)-top-8-topSpace:bottom-Math.max(top+8,rect.top)-8
+      const area=workspace?.getBoundingClientRect(), visibleTop=Math.max(top,area?.top??top), visibleBottom=Math.min(bottom,area?.bottom??bottom)
+      const room=section.closest('.en-composer-area')?Math.min(visibleBottom-8,rect.bottom)-visibleTop-8-topSpace:visibleBottom-Math.max(visibleTop+8,rect.top)-8
       const max=Math.max(24,Math.min(640,Math.floor(room-chrome))), current=Math.round(Math.min(max,bodyHeight))
       setBounds(previous=>previous.max===max&&previous.current===current?previous:{min:24,max,current})
       setHeight(previous=>previous===undefined?undefined:Math.max(24,Math.min(max,previous)))
     }
     measure()
-    const observer=new ResizeObserver(measure);observer.observe(section);observer.observe(body)
+    const observer=new ResizeObserver(measure);observer.observe(section);observer.observe(body);if(workspace)observer.observe(workspace)
     window.addEventListener('resize',measure);window.visualViewport?.addEventListener('resize',measure)
     return()=>{observer.disconnect();window.removeEventListener('resize',measure);window.visualViewport?.removeEventListener('resize',measure)}
   }, [])
