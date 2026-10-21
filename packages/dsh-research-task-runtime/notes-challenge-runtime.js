@@ -85,30 +85,43 @@ function issuesFrom(value, targets, available) {
 }
 
 async function modelResult(ctx, route, system, payload, signal, reasoningEffort) {
-  const transport = new AbortController(), streamSignal = AbortSignal.any([signal, transport.signal])
-  const assembler = new BlockAssembler(), iterator = ctx.llm.stream({ provider: route.provider, model: route.model, purpose: 'workspace-note-challenge', signal: streamSignal, maxTokens: 2400, ...reasoningEffort ? { reasoningEffort } : {}, system, messages: [createUserMessage({ content: [{ type: 'text', text: JSON.stringify(payload) }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime' } })] })[Symbol.asyncIterator]()
+  const messages = [createUserMessage({ content: [{ type: 'text', text: JSON.stringify(payload) }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime' } })]
   let outputSize = 0, totalSize = 0, usage = { inputTokens: 0, outputTokens: 0 }
-  try {
-    while (true) {
-      const step = await abortable(iterator.next(), signal)
-      signal.throwIfAborted()
-      if (step.done) break
-      const chunk = step.value
-      totalSize += JSON.stringify(chunk).length
-      if (totalSize > 100000 || chunk.type === 'tool-call' || chunk.type === 'tool-call-start' || chunk.block?.type === 'tool-call') throw Error('挑战检查返回内容超出边界。')
-      if (chunk.type === 'text-delta') outputSize += chunk.text.length
-      if (outputSize > 16000) throw Error('挑战检查输出过长。')
-      if (chunk.type === 'usage') for (const key of ['inputTokens', 'outputTokens']) if (Number.isFinite(chunk.usage?.[key]) && chunk.usage[key] >= 0) usage[key] = chunk.usage[key]
-      assembler.push(chunk)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    signal.throwIfAborted()
+    const transport = new AbortController(), streamSignal = AbortSignal.any([signal, transport.signal])
+    const requestSystem = attempt ? system + '\n输出必须是一个闭合完整的JSON对象，包括所有结束大括号；不要解释或Markdown代码围栏。' : system
+    const assembler = new BlockAssembler(), attemptUsage = { inputTokens: 0, outputTokens: 0 }, iterator = ctx.llm.stream({ provider: route.provider, model: route.model, purpose: 'workspace-note-challenge', signal: streamSignal, maxTokens: 2400, ...reasoningEffort ? { reasoningEffort } : {}, system: requestSystem, messages })[Symbol.asyncIterator]()
+    try {
+      while (true) {
+        const step = await abortable(iterator.next(), signal)
+        signal.throwIfAborted()
+        if (step.done) break
+        const chunk = step.value
+        totalSize += JSON.stringify(chunk).length
+        if (totalSize > 100000 || chunk.type === 'tool-call' || chunk.type === 'tool-call-start' || chunk.block?.type === 'tool-call') throw Error('挑战检查返回内容超出边界。')
+        if (chunk.type === 'text-delta') outputSize += chunk.text.length
+        if (outputSize > 16000) throw Error('挑战检查输出过长。')
+        if (chunk.type === 'usage') for (const key of ['inputTokens', 'outputTokens']) if (Number.isFinite(chunk.usage?.[key]) && chunk.usage[key] >= 0) attemptUsage[key] = chunk.usage[key]
+        assembler.push(chunk)
+      }
+      if (assembler.finish.kind !== 'stop' || assembler.blocks().some(block => block.type === 'tool-call')) throw Error('挑战检查未完整结束。')
+      const text = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('').trim()
+      if (text.length > 16000) throw Error('挑战检查输出过长。')
+      for (const key of ['inputTokens', 'outputTokens']) usage[key] += attemptUsage[key]
+      // Only a complete, sole JSON fence is an envelope; never scan prose or reasoning for objects.
+      const json = /^```json[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu.exec(text)?.[1] ?? text
+      try { return { value: JSON.parse(json), usage } }
+      catch {
+        // A stop response can still contain malformed JSON. Regenerate once within the same
+        // deadline and size budgets; do not repair partial output or send it back to the model.
+        if (attempt) throw Error('挑战检查结果格式无效。')
+      }
+    } finally {
+      // Do not wait on an uncooperative generator; it already received the original abort signal.
+      transport.abort()
+      void Promise.resolve(iterator.return?.()).catch(() => {})
     }
-    if (assembler.finish.kind !== 'stop' || assembler.blocks().some(block => block.type === 'tool-call')) throw Error('挑战检查未完整结束。')
-    const text = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('').trim()
-    if (text.length > 16000) throw Error('挑战检查输出过长。')
-    try { return { value: JSON.parse(text), usage } } catch { throw Error('挑战检查结果格式无效。') }
-  } finally {
-    // Do not wait on an uncooperative generator; it already received the original abort signal.
-    transport.abort()
-    void Promise.resolve(iterator.return?.()).catch(() => {})
   }
 }
 
