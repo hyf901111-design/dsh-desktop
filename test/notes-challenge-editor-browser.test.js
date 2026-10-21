@@ -34,9 +34,10 @@ it('keeps writing quiet until real anchored issues exist, persists the five-leve
   await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'只是文字用法问题，研究观点可以保留。'}})
   await expect.poll(()=>page.locator('.en-challenge-text').allTextContents()).toEqual(['这里是否应为“程度”？','请解释理由\n保留我的观点','只是文字用法问题，研究观点可以保留。'])
   await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(3)
-  await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'已修正用字。',replacement:'程度'}})
+  await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'已修正用字。',replacement:'这项结论的程度较高。'}})
   await page.getByRole('button',{name:'替换到原文',exact:true}).click()
   await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.every(part=>part.styles.bold===true))).toBe(true)
   expect(await page.evaluate(()=>window.editor.getBlock('other').content[0].text)).toBe('另一段保持不变。')
   await page.getByRole('button',{name:'已解决',exact:true}).click();await expect.poll(()=>page.locator('.en-challenge-card').count()).toBe(0)
   expect(await page.evaluate(()=>window.noteDoc.getMap('note-challenge').get('level'))).toBe(2)
@@ -104,6 +105,14 @@ it('continues a discussion after a long explicit optimization, bounds recent mes
   await page.evaluate(replacement=>window.editor.updateBlock('p',{content:'前文'.repeat(4400)+replacement}),replacement);await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop=el.scrollHeight)
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
   await page.locator('.en-document-scroll').evaluate(el=>{const card=document.querySelector('.en-challenge-card').getBoundingClientRect(),area=document.querySelector('.en-main').getBoundingClientRect();el.scrollTop+=card.top-area.top-36})
+  // An ordinary edit invalidates the old source snapshot; it must not issue call 4.
+  await page.getByRole('button',{name:'AI优化',exact:true}).click()
+  await expect.poll(()=>page.locator('.en-challenge-text').last().textContent()).toContain('正文已变化')
+  expect(await page.evaluate(()=>Object.keys(window.jobs).length)).toBe(3)
+  // Prepare a fresh anchored source fixture for the paragraph-capacity branch.
+  // The sentence boundary keeps the editing scope bounded while the surrounding
+  // paragraph remains close to 12000; refresh metadata, rather than bypassing the guard.
+  await page.evaluate(replacement=>{const sourceText='前文'.repeat(4400)+'。'+replacement;window.editor.updateBlock('p',{content:sourceText});const thread=window.noteDoc.getMap('threads').get(window.challenge.threads[0].id);thread.set('metadata',{...thread.get('metadata'),sourceText})},replacement)
   await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(4)
   const before=await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))
   await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'较长建议',replacement:'更多表达。'.repeat(1100)}})

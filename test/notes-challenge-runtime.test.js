@@ -276,7 +276,7 @@ it('continues a thread after an accepted 6000-character replacement becomes its 
   const original = { blockId: 'a', quote: '收入增长10%', category: 'logic', message: '请明确统计期间。', messages: [{ role: 'user', text: '请优化' }] }
   const optimized = await generateNoteChallenge(f.ctx, { ...input, action: 'optimize', thread: original })
   expect(optimized.reply.replacement).toBe(quote)
-  const current = { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '原文：' + optimized.reply.replacement + '。' }] }, thread = { ...original, quote, messages: [{ role: 'user', text: '请继续说明这段的前提。' }] }
+  const current = { ...input, blocks: [{ id: 'a', type: 'paragraph', text: '前句。' + optimized.reply.replacement }] }, thread = { ...original, quote, messages: [{ role: 'user', text: '请继续说明这段的前提。' }] }
   answer.reply = { text: '这仍是基于原研究假设的表述。' }
   expect((await generateNoteChallenge(f.ctx, { ...current, action: 'reply', thread })).reply).toEqual({ text: '这仍是基于原研究假设的表述。' })
   answer.reply = { text: '只调整表达。', replacement: '在明确的前提下，收入预计增长10%。' }
@@ -416,4 +416,35 @@ for(const text of ['请把建议改为“更谨慎的表达”','请把这条评
  const thread={blockId:'a',quote:'收入增长10%',category:'grammar',message:'请明确表达。',messages:[{role:'user',text}]}
  expect((await generateNoteChallenge(f.ctx,{...input,action:'reply',thread})).reply.replacement).toBe('本期收入增加10%。')
  expect(JSON.parse(f.calls[0].messages[0].content[0].text).allowReplacement).toBe(true)
+})
+
+it('constructs a host sentence replacement scope while retaining the captured issue quote as intent context',async()=>{
+ const {generateNoteChallenge}=await load(),source='20名参与者中有15人完成任务，因此完成率为90%。',quote='20名参与者中有15人完成任务',replacement='20名参与者中有15人完成任务，因此完成率为75%。'
+ const f=fixture({reply:{text:'完成率应为75%。',replacement}}),thread={blockId:'a',quote,category:'logic',message:'完成率是否需要核对？',messages:[{role:'user',text:'直接修改原文'}]}
+ const result=await generateNoteChallenge(f.ctx,{...input,action:'reply',blocks:[{id:'a',type:'paragraph',text:source}],thread})
+ const payload=JSON.parse(f.calls[0].messages[0].content[0].text)
+ expect(payload.thread).toMatchObject({quote,replacementQuote:source})
+ expect(payload.allowReplacement).toBe(true)
+ expect(f.calls[0].system).toContain('thread.replacementQuote')
+ expect(result.reply).toEqual({text:'完成率应为75%。',replacement})
+ expect(f.calls).toHaveLength(1)
+})
+
+it('rejects oversized editing sentences before model invocation but still permits a text-only discussion',async()=>{
+ const {generateNoteChallenge}=await load(),text='文'.repeat(6000)+'问题。',thread={blockId:'a',quote:'问题',category:'logic',message:'请核对',messages:[{role:'user',text:'直接修改原文'}]},f=fixture({reply:{text:'可以讨论前提。'}}),request={...input,blocks:[{id:'a',type:'paragraph',text}],thread,action:'reply'}
+ await expect(generateNoteChallenge(f.ctx,request)).rejects.toThrow('超过6000')
+ expect(f.calls).toHaveLength(0)
+ expect((await generateNoteChallenge(f.ctx,{...request,thread:{...thread,messages:[{role:'user',text:'为什么？'}]}})).reply).toEqual({text:'可以讨论前提。'})
+ expect(JSON.parse(f.calls[0].messages[0].content[0].text).allowReplacement).toBe(false)
+})
+
+it('keeps the existing model thread-context bound after adding a long host scope and retains the current intent',async()=>{
+ const {generateNoteChallenge}=await load(),text='文'.repeat(5990)+'问题。',f=fixture({reply:{text:'建议核对。',replacement:'已核对。'}}),messages=[{role:'user',text:'旧'.repeat(3900)},{role:'assistant',text:'旧'.repeat(3900)},{role:'user',text:'旧'.repeat(3900)},{role:'user',text:'直接修改原文'}]
+ await generateNoteChallenge(f.ctx,{...input,action:'reply',blocks:[{id:'a',type:'paragraph',text}],thread:{blockId:'a',quote:'问题',category:'logic',message:'请核对',messages}})
+ const payload=JSON.parse(f.calls[0].messages[0].content[0].text)
+ expect(JSON.stringify(payload.thread).length).toBeLessThanOrEqual(16000)
+ expect(payload.thread.replacementQuote).toBe(text)
+ expect(payload.thread.messages.at(-1)).toEqual({role:'user',text:'直接修改原文'})
+ expect(payload.allowReplacement).toBe(true)
+ expect(f.calls).toHaveLength(1)
 })

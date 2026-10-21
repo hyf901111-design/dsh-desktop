@@ -23,14 +23,14 @@ beforeAll(async()=>{
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },60000)
 afterAll(async()=>browser?.close())
-async function fixture(){
+async function fixture(content=original,quote='成度'){
  const context=await browser.newContext({viewport:{width:1440,height:900}}),page=await context.newPage(),errors=[]
  page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(5000)
  await page.route('http://127.0.0.1/challenge-controller',route=>route.fulfill({contentType:'text/html',body:'<span data-ework-notes-session="note-a"></span><div data-ework-note-view="note-a"></div>'}))
  await page.goto('http://127.0.0.1/challenge-controller');await page.addScriptTag({content:script});await page.locator('.bn-editor').waitFor()
  await expect.poll(()=>page.evaluate(()=>!!window.challenge)).toBe(true)
- await page.evaluate(original=>window.editor.replaceBlocks(window.editor.document,[{id:'p',type:'paragraph',content:original}]),original)
- const id=await page.evaluate(()=>window.seed());await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1)
+ await page.evaluate(content=>window.editor.replaceBlocks(window.editor.document,[{id:'p',type:'paragraph',content}]),content)
+ const id=await page.evaluate(quote=>window.seed({quote}),quote);await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1)
  return{context,page,errors,id}
 }
 async function finish(page,value=answer,index=0){await page.evaluate(({value,index})=>window.jobs[index].resolve(value),{value,index})}
@@ -98,7 +98,7 @@ it('keeps a new action busy when an older cancelled request settles later and gu
   await finish(page,{...answer,reply:{text:'旧建议',replacement:'旧替换'}})
   expect(await page.evaluate(()=>({id:window.challenge.busyId,kind:window.challenge.actionKind}))).toEqual({id,kind:'optimize'})
   await page.evaluate(()=>window.editor.updateBlock('p',{content:'这项结论的成度较高，但刚刚增加了限定。'}))
-  await finish(page,{...answer,reply:{text:'新建议',replacement:'程度'}},1)
+  await finish(page,{...answer,reply:{text:'新建议',replacement:'这项结论的程度较高。'}},1)
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的成度较高，但刚刚增加了限定。')
   expect(await page.evaluate(()=>window.messages())).not.toContain('旧建议')
@@ -128,10 +128,10 @@ it('persists margin preference per note across resize, reload and switching with
 
 it('persists an optimization preview without editing and applies it only through the explicit replacement action',async()=>{
  const{context,page,errors,id}=await fixture();try{
-  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'程度'}})
+  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}})
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
-  await expect.poll(()=>page.locator('.en-challenge-replacement-text').allTextContents()).toEqual(['程度'])
+  await expect.poll(()=>page.locator('.en-challenge-replacement-text').allTextContents()).toEqual(['这项结论的程度较高。'])
   await expect.poll(()=>page.evaluate(()=>Object.keys(window.saved).length)).toBe(1);await page.evaluate(()=>window.remount());await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(1);await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(1)
   await page.locator('.en-challenge-card').screenshot({path:'/tmp/notes-challenge-v16-replacement-preview.png'});await page.locator('.en-challenge-replace').click()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe('这项结论的程度较高。')
@@ -142,7 +142,7 @@ it('persists an optimization preview without editing and applies it only through
 for(const [text,direct] of [['请把原文改为程度的理由说明一下',false],['请把原文改为程度的方案给我看看',false],['请把这项结论替换为“程度”',false],['请把原文改为“程度’',false],['请把建议改为“更谨慎的表达”',false],['请把这条评论改为“是否需要核对”',false],['请把原文改为“程度”的理由说明一下',false],['请把原文改为“程度”的方案给我看看',false],['请把原文改为‘程度’',true],['请把成度替换为程度',true],['请帮我优化一下表达，先给建议',false],['请直接修改原文，把成度替换为程度',true],['你直接帮我改好替换上去',true],['不用解释，直接替换到原文',true],['不要解释，直接替换',true],['不要替换，只解释',false],['请解释为什么直接修改原文',false],['直接修改原文会丢格式吗？',false],['直接替换原文会影响已有评论吗？',false],['他说“直接替换原文”，你怎么看？',false],['现在就把原文改为程度',true],['可以帮我直接改好',true],['可以帮我改好吗？',true],['替换一下',true],['直接修改原文能保留格式吗？',false],['直接替换原文有格式丢失的问题吗？',false],['修改建议看起来很生硬',false]])it(`uses human intent to ${direct?'execute':'preview'} a reply replacement: ${text}`,async()=>{
  const{context,page,errors}=await fixture();try{
   await page.evaluate(()=>window.challenge.select(window.challenge.threads[0].id));const editedAt=await page.evaluate(()=>window.noteDoc.getMap('note-metadata').get('editedAt'));await start(page,'reply',text)
-  await finish(page,{...answer,reply:{text:'模型声称已修改原文',replacement:'程度'}})
+  await finish(page,{...answer,reply:{text:'模型声称已修改原文',replacement:'这项结论的程度较高。'}})
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(direct?'这项结论的程度较高。':original)
   await expect.poll(()=>page.locator('.en-challenge-replace').count()).toBe(direct?0:1)
@@ -152,7 +152,7 @@ for(const [text,direct] of [['请把原文改为程度的理由说明一下',fal
 },15000)
 it('rejects a persisted replacement when its captured source has changed',async()=>{
  const{context,page,errors}=await fixture();try{
-  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'程度'}})
+  await page.evaluate(id=>window.challenge.select(id),await page.evaluate(()=>window.challenge.threads[0].id));await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}})
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   await page.evaluate(()=>window.editor.updateBlock('p',{content:'新上下文。'+window.editor.getBlock('p').content.map(c=>c.text).join('')}))
   await page.locator('.en-challenge-replace').click()
@@ -174,7 +174,7 @@ it('orders reverse-arriving threads by real document and quote positions even fo
 
 it('includes the persisted proposed wording in later discussion context without authorizing its application',async()=>{
  const{context,page,errors}=await fixture();try{
-  await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'程度'}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议调整用字。',replacement:'这项结论的程度较高。'}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   await page.evaluate(()=>window.start('reply','为什么这样表达更合适？'));await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
   expect(await page.evaluate(()=>window.jobs[1].input.thread.messages.some(message=>message.role==='assistant'&&message.text.includes('程度')))).toBe(true)
   await finish(page,answer,1);await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
@@ -281,5 +281,171 @@ it('removes the busy icon and cancels its request when the mounted notes control
   await finish(page,{...answer,reply:{text:'迟到的回复'}})
   expect(await page.evaluate(()=>window.challenge.running)).toBe(false)
   expect(await page.evaluate(()=>window.messages())).not.toContain('迟到的回复');expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+const capturedSource='20名参与者中有15人完成任务，因此完成率为90%。',capturedQuote='20名参与者中有15人完成任务',capturedReplacement='20名参与者中有15人完成任务，因此完成率为75%。'
+it('previews the captured half-quote/full-sentence model result and applies exactly one corrected sentence',async()=>{
+ const {context,page,errors,id}=await fixture([{type:'text',text:capturedQuote,styles:{bold:true}},{type:'text',text:'，因此完成率为90%。后句保留。',styles:{italic:true}}],capturedQuote);try{
+  const before=await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))
+  await page.evaluate(id=>{window.challenge.select(id);window.challenge.setDraft(id,'保留这份未发送草稿')},id);await start(page,'optimize')
+  expect(await page.evaluate(()=>window.jobs[0].input.thread.quote)).toBe(capturedQuote)
+  await finish(page,{...answer,reply:{text:'完成率应为75%。',replacement:capturedReplacement}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
+  const preview=await page.evaluate(()=>window.challenge.threads[0].comments.at(-1).metadata.challengeReplacement)
+  expect(preview).toMatchObject({scopeVersion:2,anchorQuote:capturedQuote,quote:capturedSource,status:'pending'})
+  await page.getByRole('button',{name:'替换到原文',exact:true}).click()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedReplacement+'后句保留。')
+  expect(await page.evaluate(quote=>window.editor.getBlock('p').content.find(c=>c.text===quote)?.styles.bold,capturedQuote)).toBe(true)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.filter(c=>c.styles.italic).map(c=>c.text).join(''))).toBe('，因此完成率为75%。后句保留。')
+  expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('保留这份未发送草稿')
+  await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z')
+  await expect.poll(()=>page.locator('.en-challenge-quote').textContent()).toBe(capturedQuote)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content)).toEqual(before.content)
+  await page.keyboard.press('Meta+Shift+z')
+  await expect.poll(()=>page.locator('.en-challenge-quote').textContent()).toBe(capturedQuote)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('uses the complete host sentence for the captured second-paragraph direct reply',async()=>{
+ const quote='12人中有9人完成任务',source=quote+'，因此完成率为60%。',replacement=quote+'，因此完成率为75%。'
+ const {context,page,errors}=await fixture(capturedSource,capturedQuote);try{
+  const second=await page.evaluate(async({source,quote})=>{window.editor.insertBlocks([{id:'q',type:'paragraph',content:source}],'p','after');return window.seed({blockId:'q',quote})},{source,quote})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(2)
+  await page.evaluate(id=>{void window.challenge.runAction(window.challenge.threads.find(thread=>thread.id===id),'reply','直接修改原文')},second)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1);await finish(page,{...answer,reply:{text:'完成率应为75%。',replacement}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.editor.getBlock('q').content.map(c=>c.text).join(''))).toBe(replacement)
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedSource)
+  expect(await page.locator('.en-challenge-replace').count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('rejects an old pending suggestion without a V2 scope and retains its history with a re-optimize explanation',async()=>{
+ const {context,page,errors,id}=await fixture();try{
+  await start(page,'optimize');await finish(page,{...answer,reply:{text:'保留历史建议。',replacement:'这项结论的程度较高。'}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.evaluate(id=>{const thread=window.noteDoc.getMap('threads').get(id),comment=thread.get('comments').toArray().at(-1),metadata=comment.get('metadata'),suggestion={...metadata.challengeReplacement};delete suggestion.scopeVersion;delete suggestion.anchorQuote;comment.set('metadata',{...metadata,challengeReplacement:suggestion});window.challenge.select(id)},id)
+  const before=await page.evaluate(()=>({text:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))
+  await page.getByRole('button',{name:'替换到原文',exact:true}).click()
+  expect(await page.evaluate(()=>({text:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
+  expect(await page.evaluate(()=>window.messages())).toContain('保留历史建议。')
+  expect(await page.evaluate(()=>window.messages().at(-1))).toContain('请重新优化')
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('does not edit text or the date when a complete-sentence suggestion is unchanged',async()=>{
+ const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'optimize');await finish(page,{...answer,reply:{text:'原句无需变化。',replacement:capturedSource}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const before=await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))
+  await page.getByRole('button',{name:'替换到原文',exact:true}).click()
+  expect(await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+for(const tamper of ['scope','anchor','snapshot','thread'])it('independently rejects a pending V2 suggestion after '+tamper+' changes',async()=>{
+ const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议修正。',replacement:capturedReplacement}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const commentId=await page.evaluate(({id,tamper})=>{const thread=window.noteDoc.getMap('threads').get(id),comment=thread.get('comments').toArray().at(-1),metadata=comment.get('metadata'),suggestion={...metadata.challengeReplacement};if(tamper==='scope')suggestion.quote=suggestion.anchorQuote;if(tamper==='anchor')suggestion.anchorQuote='完成率';if(tamper==='snapshot')suggestion.documentKey='过期';if(tamper==='thread')thread.set('metadata',{...thread.get('metadata'),issue:{...thread.get('metadata').issue,quote:'完成率'}});comment.set('metadata',{...metadata,challengeReplacement:suggestion});return comment.get('id')},{id,tamper})
+  await page.evaluate(({id,commentId})=>window.challenge.applyReplacement(id,commentId),{id,commentId})
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedSource)
+  expect(await page.evaluate(()=>window.challenge.threads[0].comments.at(-1).metadata.challengeReplacement.status)).toBe('stale')
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('blocks an oversized complete sentence before requesting a replacement while allowing discussion',async()=>{
+ const {context,page,errors}=await fixture('文'.repeat(6000)+'错误。','错误');try{
+  await page.evaluate(()=>window.start('optimize'));await expect.poll(()=>page.evaluate(()=>window.completed)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs.length)).toBe(0)
+  expect(await page.evaluate(()=>window.messages().at(-1))).toContain('超过6000')
+  await start(page,'reply','依据是什么？');await finish(page,answer);await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('preserves another native comment inside the complete sentence and on native undo/redo',async()=>{
+ const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
+  const other=await page.evaluate(()=>window.seed({quote:'因此完成率'}))
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'optimize');await finish(page,{...answer,reply:{text:'建议修正。',replacement:capturedReplacement}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.locator('.en-challenge-card[data-thread-id="'+id+'"]').getByRole('button',{name:'替换到原文',exact:true}).click()
+  const mark=()=>page.locator('.bn-editor [data-bn-thread-id="'+other+'"]').allTextContents()
+  expect(await mark()).toEqual(['因此完成率'])
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedReplacement)
+  await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z');expect(await mark()).toEqual(['因此完成率'])
+  await page.keyboard.press('Meta+Shift+z');expect(await mark()).toEqual(['因此完成率'])
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+for(const change of ['anchor','source','kind'])it('drops an in-flight direct replacement after current thread '+change+' changes',async()=>{
+ const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
+  await start(page,'reply','直接修改原文')
+  await page.evaluate(({id,change})=>{const thread=window.noteDoc.getMap('threads').get(id),metadata=thread.get('metadata');thread.set('metadata',{...metadata,...change==='anchor'?{issue:{...metadata.issue,quote:'完成率'}}:change==='source'?{sourceText:'过期的原文快照'}:{kind:'其他评论'}})},{id,change})
+  await finish(page,{...answer,reply:{text:'迟到的完整句建议',replacement:capturedReplacement}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedSource)
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).get('comments').length,id)).toBe(2)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('retains a deleted-quote thread history and draft without reanchoring it to new digits, and restores its exact mark only on native undo',async()=>{
+ const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
+  await page.setViewportSize({width:2400,height:900})
+  const overwritten=await page.evaluate(()=>window.seed({quote:'90'})),unchanged=await page.evaluate(()=>window.seed({quote:'因此完成率'}))
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads.length)).toBe(3)
+  // Give B real native user/assistant history before its quoted text is replaced.
+  await page.evaluate(id=>{void window.challenge.runAction(window.challenge.threads.find(thread=>thread.id===id),'reply','请保留这项统计讨论。')},overwritten)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await finish(page,{...answer,reply:{text:'这份统计讨论仍可继续。'}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.evaluate(id=>{window.challenge.setDraft(id,'B未发送草稿不能丢');const thread=window.noteDoc.getMap('threads').get(id);thread.set('metadata',{...thread.get('metadata'),preservedContext:{source:'B的原始90统计依据',revision:7}})},overwritten)
+  const before=await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).toJSON(),overwritten)
+  const mark=id=>page.locator('.bn-editor [data-bn-thread-id="'+id+'"]').allTextContents()
+  expect(await mark(overwritten)).toEqual(['90']);expect(await mark(unchanged)).toEqual(['因此完成率'])
+  await page.evaluate(id=>{window.challenge.select(id);void window.challenge.runAction(window.challenge.threads.find(thread=>thread.id===id),'optimize')},id)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  await finish(page,{...answer,reply:{text:'完成率应为75%。',replacement:capturedReplacement}},1)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  await page.locator('.en-challenge-card[data-thread-id="'+id+'"]').getByRole('button',{name:'替换到原文',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedReplacement)
+  expect(await mark(overwritten)).toEqual([]);expect(await mark(unchanged)).toEqual(['因此完成率'])
+  expect(await page.locator('.en-challenge-card[data-thread-id="'+overwritten+'"]').count()).toBe(0)
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).toJSON(),overwritten)).toEqual(before)
+  await page.locator('.bn-editor').focus();await page.keyboard.press('Meta+z')
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedSource)
+  expect(await mark(overwritten)).toEqual(['90']);expect(await mark(unchanged)).toEqual(['因此完成率'])
+  await expect.poll(()=>page.locator('.en-challenge-card[data-thread-id="'+overwritten+'"]').count()).toBe(1)
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).toJSON(),overwritten)).toEqual(before)
+  await page.keyboard.press('Meta+Shift+z')
+  await expect.poll(()=>page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(capturedReplacement)
+  expect(await mark(overwritten)).toEqual([]);expect(await mark(unchanged)).toEqual(['因此完成率'])
+  expect(await page.locator('.en-challenge-card[data-thread-id="'+overwritten+'"]').count()).toBe(0)
+  expect(await page.evaluate(id=>window.noteDoc.getMap('threads').get(id).toJSON(),overwritten)).toEqual(before)
+  expect(await page.evaluate(()=>window.noteDoc.getMap('threads').size)).toBe(3)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('continues read-only discussion at a still-unique quote after unrelated source text changes but refuses stale optimization and direct edits',async()=>{
+ const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
+  await page.evaluate(()=>window.editor.updateBlock('p',{content:'另加一个背景句。'+window.editor.getBlock('p').content.map(c=>c.text).join('')}))
+  const before=await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))
+  await page.evaluate(id=>{void window.challenge.runAction(window.challenge.threads.find(thread=>thread.id===id),'reply','请说明这项统计的依据。')},id)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.evaluate(()=>window.jobs[0].input.blocks[0].text)).toBe('另加一个背景句。'+capturedSource)
+  await finish(page,{...answer,reply:{text:'可以继续讨论，当前没有外部核验来源。'}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.messages().at(-1))).toBe('可以继续讨论，当前没有外部核验来源。')
+  await page.evaluate(id=>{void window.challenge.runAction(window.challenge.threads.find(thread=>thread.id===id),'reply','继续说明这项统计。')},id)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(2)
+  await finish(page,{...answer,reply:{text:'模型擅自附带编辑建议。',replacement:capturedReplacement}},1)
+  await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.evaluate(()=>window.messages().at(-1))).toContain('请重新优化')
+  expect(await page.locator('.en-challenge-replace').count()).toBe(0)
+  for(const kind of ['optimize','reply']){
+   await page.evaluate(({id,kind})=>window.challenge.runAction(window.challenge.threads.find(thread=>thread.id===id),kind,kind==='reply'?'直接修改原文':''),{id,kind})
+   expect(await page.evaluate(()=>window.jobs.length)).toBe(2)
+   expect(await page.evaluate(()=>window.messages().at(-1))).toContain('正文已变化')
+  }
+  expect(await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
+  expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

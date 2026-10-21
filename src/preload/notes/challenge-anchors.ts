@@ -29,16 +29,43 @@ export function findChallengeQuote(editor:any,blockId:string,quote:string):{from
  return matches.length===1?matches[0]:undefined
 }
 
+/** Read this thread's surviving contiguous native anchor, without moving other marks. */
+export function challengeThreadQuote(editor:any,blockId:string,threadId:string):string|undefined{
+ let quote='',last:number|undefined,fragmented=false
+ editor._tiptapEditor.state.doc.descendants((block:any,blockPos:number)=>{
+  if(block.type.name!=='blockContainer'||block.attrs.id!==blockId)return
+  block.descendants((node:any,pos:number)=>{
+   if(!node.isText&&!node.type.name.includes('hardBreak'))return
+   if(!node.marks.some((mark:any)=>mark.type.name==='comment'&&mark.attrs.threadId===threadId))return
+   const from=blockPos+1+pos
+   if(last!==undefined&&from!==last)fragmented=true
+   quote+=node.isText?node.text:'\n';last=from+node.nodeSize
+  });return false
+ })
+ return !fragmented&&quote&&findChallengeQuote(editor,blockId,quote)?quote:undefined
+}
+
 /** Explicit user action only. Preserve selection, focus and unrelated marks. */
-export function replaceChallengeQuote(editor:any,blockId:string,quote:string,replacement:string):boolean{
+export function replaceChallengeQuote(editor:any,blockId:string,quote:string,replacement:string,threadId?:string):boolean{
  if(typeof replacement!=='string'||!replacement.trim()||replacement.length>12000)return false
  const range=findChallengeQuote(editor,blockId,quote)
  if(!range)return false
+ // Keep all unchanged text nodes and their marks at their proven coordinates.
+ let prefix=0,suffix=0
+ while(prefix<quote.length&&prefix<replacement.length&&quote[prefix]===replacement[prefix])prefix++
+ const splitsPair=(value:string,at:number)=>at>0&&at<value.length&&/[\uD800-\uDBFF]/u.test(value.charAt(at-1))&&/[\uDC00-\uDFFF]/u.test(value.charAt(at))
+ if(splitsPair(quote,prefix)||splitsPair(replacement,prefix))prefix--
+ while(suffix<quote.length-prefix&&suffix<replacement.length-prefix&&quote[quote.length-1-suffix]===replacement[replacement.length-1-suffix])suffix++
+ if(splitsPair(quote,quote.length-suffix)||splitsPair(replacement,replacement.length-suffix))suffix--
+ if(prefix===quote.length&&prefix===replacement.length)return true
+ const from=range.from+prefix,to=range.to-suffix,value=replacement.slice(prefix,replacement.length-suffix)
  const state=editor._tiptapEditor.state
- let marks:any[]=[]
- state.doc.nodesBetween(range.from,range.to,(node:any,pos:number)=>{if(node.isText&&pos<=range.from){marks=node.marks;return false}return true})
+ const marks=state.doc.resolve(from).marksAcross(state.doc.resolve(to))??state.doc.resolve(from).marks()
  const undo=state.plugins?.find((plugin:any)=>plugin.key.startsWith('y-undo'))?.getState(state)?.undoManager
  undo?.stopCapturing()
- editor.transact((tr:any)=>tr.replaceWith(range.from,range.to,tr.doc.type.schema.text(replacement,marks)))
+ editor.transact((tr:any)=>{
+  if(value)tr.replaceWith(from,to,tr.doc.type.schema.text(value,marks));else tr.delete(from,to)
+  if(threadId&&!challengeThreadQuote({_tiptapEditor:{state:{doc:tr.doc}}},blockId,threadId))tr.addMark(range.from,range.from+replacement.length,tr.doc.type.schema.marks.comment.create({threadId,orphan:false}))
+ })
  undo?.stopCapturing();return true
 }

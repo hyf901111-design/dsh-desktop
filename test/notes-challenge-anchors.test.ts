@@ -37,3 +37,26 @@ it('replaces only a current exact anchor, preserving the paragraph and formattin
  expect(state.doc.firstChild?.firstChild?.firstChild?.marks[0]?.type.name).toBe('bold')
  expect(state.selection.from).toBe(13)
 })
+it('writes only the middle difference at proven scope coordinates, preserving unchanged marks even when the changed digits repeat',()=>{
+ const doc=schema.nodes.doc.create(null,p('first',[text('90。前缀😀',true),text('因此完成率为90%。',true),text('后句90。')]))
+ let state=EditorState.create({doc});const edits:any[]=[]
+ const editor={_tiptapEditor:{get state(){return state}},transact:(fn:any)=>{const tr=state.tr;fn(tr);edits.push(tr);state=state.apply(tr)}}
+ expect(replaceChallengeQuote(editor,'first','前缀😀因此完成率为90%。','前缀😀因此完成率为75%。')).toBe(true)
+ expect(state.doc.textContent).toBe('90。前缀😀因此完成率为75%。后句90。')
+ expect(edits[0].steps).toHaveLength(1)
+ expect(edits[0].steps[0].to-edits[0].steps[0].from).toBe(2)
+ expect(state.doc.firstChild?.firstChild?.firstChild?.marks[0]?.type.name).toBe('bold')
+ const before=state.doc
+ expect(replaceChallengeQuote(editor,'first','前缀😀因此完成率为75%。','前缀😀因此完成率为75%。')).toBe(true)
+ expect(edits).toHaveLength(1)
+ expect(state.doc).toBe(before)
+})
+it('does not split UTF16 surrogate pairs at either end of the minimal write',()=>{
+ for(const [original,replacement,removed] of [['前😀后','前😁后',2],['前😀','前😁😀',0],['😀后','😁😀后',0]] as Array<[string,string,number]>){
+  const doc=schema.nodes.doc.create(null,p('first',[text(original)]));let state=EditorState.create({doc});let step:any
+  const editor={_tiptapEditor:{get state(){return state}},transact:(fn:any)=>{const tr=state.tr;fn(tr);step=tr.steps[0];state=state.apply(tr)}}
+  expect(replaceChallengeQuote(editor,'first',original,replacement)).toBe(true)
+  expect(state.doc.textContent).toBe(replacement)
+  expect(step.to-step.from).toBe(removed)
+ }
+})
