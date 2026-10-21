@@ -120,16 +120,16 @@ describe('client-owned bundled PPT skill integration', () => {
       await expect(service.request({ ...command, kind: 'skill', id, meta: { requestId: randomUUID(), expectedRevision: row.revision } })).rejects.toMatchObject({ code: 'ACCESS_DENIED' })
   })
 
-  it('projects the shipped free data skill as an client-owned v1.0.7 skill beside PPT', async () => {
+  it('projects the shipped free data skill as an client-owned v1.0.8 skill beside PPT', async () => {
     const root = await mkdtemp(join(tmpdir(), 'ework-real-free-data-skill-')), bundledSkillDirectory = resolve('skills')
     const service = await IntegrationService.open({ root, encryption, getOwnerId: () => 'account-one', bundledSkillDirectory })
     cleanups.push(async () => { await service.dispose(); await rm(root, { recursive: true, force: true }) })
     const rows = (await service.request({ type: 'snapshot' })).snapshot.rows
     expect(rows.find(item => item.id === builtinId)).toBeDefined()
     const id = 'builtin:ework-free-data-sources', row = rows.find(item => item.id === id)
-    expect(row).toMatchObject({ kind: 'skill', tab: 'skills', name: '基础数据源', source: 'EWork 内置 · v1.0.7', enabled: true, toggleable: true, removable: false })
+    expect(row).toMatchObject({ kind: 'skill', tab: 'skills', name: '基础数据源', source: 'EWork 内置 · v1.0.8', enabled: true, toggleable: true, removable: false })
     const skill = service.runtimeSnapshot().skills.find(item => item.id === id)
-    expect(skill).toMatchObject({ provider: 'bundled', version: 'v1.0.7', enabled: true, sourceId: 'bundled:ework-free-data-sources' })
+    expect(skill).toMatchObject({ provider: 'bundled', version: 'v1.0.8', enabled: true, sourceId: 'bundled:ework-free-data-sources' })
     const reply = await service.request({ type: 'skill-detail', id, revision: row.revision })
     expect(reply.content).toBe(await readFile(join(bundledSkillDirectory, 'ework-free-data-sources/SKILL.md'), 'utf8'))
     for (const command of [{ type: 'uninstall' }])
