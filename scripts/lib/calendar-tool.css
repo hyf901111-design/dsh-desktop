@@ -223,4 +223,8 @@
  .ew-calendar-session-reminder small{color:var(--fw-muted);font-size:10px}
  .ew-calendar-session-reminder>div button{display:flex;align-items:center;justify-content:center;width:24px;height:24px}
  body .ew-calendar-session-reminder .ew-calendar-notice-title{font-weight:600;overflow-wrap:anywhere}
+ .ew-calendar-details{display:flex;flex-direction:column;gap:12px;min-width:0;margin:0}
+ .ew-calendar-details>div{min-width:0}
+ .ew-calendar-details dt{font-size:11px;color:var(--fw-muted);margin-bottom:4px}
+ body .ew-calendar-details dd{margin:0;user-select:text}
 }

@@ -244,4 +244,36 @@ it('retains an editor draft on shared save and reload failure',async()=>{
  await f.event('submit',editor);expect(editor.querySelector('[name=title]').value).toBe('不可丢失的草稿');expect(editor.querySelector('[role=alert]').textContent).toContain('共享保存失败')
  await f.act(async()=>{listener({kind:'changed'});await new Promise(r=>setTimeout(r,20))})
  expect(f.document.querySelector('.ew-calendar-editor [name=title]').value).toBe('不可丢失的草稿')
+ expect(f.document.querySelector('.ew-calendar-editor [name=title]').readOnly).toBe(true)
+ expect(f.document.querySelector('.ew-calendar-editor [type=submit]')).toBeNull()
+ fail=false;await f.act(async()=>{listener({kind:'changed'});await new Promise(r=>setTimeout(r,20))})
+ expect(f.document.querySelector('.ew-calendar-editor [name=title]').value).toBe('不可丢失的草稿')
+ expect(f.document.querySelector('.ew-calendar-editor [name=title]').readOnly).toBe(false)
+})
+
+it.each([
+ {name:'viewer',edit:false,connected:true},
+ {name:'offline editor',edit:true,connected:false}
+])('opens full read-only event details for a compact shared $name without mutation requests',async({edit,connected})=>{
+ const title='共享研究会议完整标题与准备要求'.repeat(8),notes=('会议背景与材料清单。\n').repeat(120)+'末尾地点：纽约会议室；请携带全部资料。'
+ const event={id:'readonly-event',title,date:'2026-01-01',time:'15:45',timezone:'America/New_York',notes,repeat:'daily',reminderMinutes:null,completedDates:[],nextReminder:null},calls=[]
+ f=await financialClientFixture({researchBoards:{isSharedSession:()=>true},calendarTool:{request:async v=>{calls.push(v);return {events:[event],notices:[],shared:{canEdit:false,connected,pending:false}}},subscribe:()=>()=>{}}},{boardView:{permissions:{read:true,edit,execute:false}}})
+ const node={id:'readonly-calendar',messageId:'readonly-calendar',kind:'generated-container',title:'日历',excerpt:'日历',containerSpec:{version:1,type:'calendar-tool',title:'日历'},containerPrompt:'共享日历工具',generationStatus:'completed',generationLastSeq:0,refreshMinutes:0,x:300,y:200,width:300,height:200,sizeMode:'manual'}
+ await f.act(async()=>f.workspace.applyRemoteCanvas({files:[],artifacts:[node]}))
+ expect(f.host.querySelector('[data-calendar-compact]')).toBeTruthy()
+ const open=f.host.querySelector('.ew-calendar-event-title');expect(open.disabled).toBe(false)
+ expect(f.host.querySelector('[data-calendar-complete]').disabled).toBe(true)
+ expect(f.host.querySelector('[data-calendar-add]').disabled).toBe(true)
+ await f.event('click',open)
+ const details=f.document.querySelector('.ew-calendar-editor[role=dialog]');expect(details).toBeTruthy()
+ expect(details.getAttribute('aria-label')).toBe('事项详情')
+ expect(details.querySelector('[data-calendar-detail=title]').textContent).toBe(title)
+ expect(details.querySelector('[data-calendar-detail=notes]').textContent).toBe(notes)
+ expect(f.win.getComputedStyle(details.querySelector('[data-calendar-detail=notes]')).whiteSpace).toBe('pre-wrap')
+ expect(details.textContent).toContain('2026-01-01');expect(details.textContent).toContain('15:45');expect(details.textContent).toContain('America/New_York');expect(details.textContent).toContain('每天')
+ expect(details.querySelector('input,textarea,select,[type=submit],.ew-calendar-danger')).toBeNull()
+ await f.event('submit',details);await f.event('click',f.host.querySelector('[data-calendar-complete]'))
+ expect(calls.filter(v=>['save','delete','complete'].includes(v.action))).toEqual([])
+ await f.event('click',details.querySelector('[data-calendar-cancel]'))
+ expect(f.document.querySelector('.ew-calendar-editor')).toBeNull()
 })
