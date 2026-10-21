@@ -22,14 +22,14 @@ it('extracts only explicit, uniquely anchored forecast metrics with a code and r
   expect(extractConsensusClaims([blocks[0], { ...blocks[1], text: '预计2026年EPS 76元，EPS 76元。' }])).toEqual([])
 })
 
-it.each(['上半年', '下半年', '半年度', '一季度', '第二季度', '前三季度', 'Q1', 'H1', '前9个月'])(
+it.each(['上半年', '下半年', '半年度', '一季度', '第二季度', '前三季度', 'Q1', 'H1', '前9个月', '1-6月', '1至9月', 'first half'])(
   'does not reinterpret an explicit %s forecast as an annual consensus claim', async period => {
     const { extractConsensusClaims } = await load()
     expect(extractConsensusClaims([{ id: 'a', type: 'paragraph', text: `600519.SH 报告基准日20261020。预计2026年${period}EPS 30元。` }])).toEqual([])
   }
 )
 
-it.each(['扣非每股收益30元', '扣非归母净利润500亿元', '剔除非经常性损益后的归母净利润500亿元', '调整后EPS 30元', '稀释每股收益30元'])(
+it.each(['扣非每股收益30元', '扣非归母净利润500亿元', '剔除非经常性损益后的归母净利润500亿元', '扣除非经常性损益后每股收益30元', '调整后EPS 30元', '稀释每股收益30元'])(
   'does not strip the incompatible basis from %s before comparison', async metric => {
     const { extractConsensusClaims } = await load()
     expect(extractConsensusClaims([{ id: 'a', type: 'paragraph', text: `600519.SH 报告基准日20261020。预计2026年${metric}。` }])).toEqual([])
