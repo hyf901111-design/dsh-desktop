@@ -2,7 +2,7 @@ import {NOTE_ENGLISH} from './notes-locale.js'
 export const WORKBENCH_ENGLISH={
  ...NOTE_ENGLISH,
  '彭博模式':'Bloomberg mode',
- '智能容器底栏':'Smart container footer','待创建':'Awaiting creation','已连接 {count} 个组件':'Sources connected: {count}',
+ '智能容器底栏':'Smart container footer','待创建':'Awaiting creation','已连接 {count} 个组件':'Sources connected: {count}','基于 {count} 个组件':'Source components: {count}',
  '接收组件作为创建基准':'Use a component as the creation source','输出组件内容':'Output component content','拖到组件输出节点连接基准，拖到空白处断开':'Drag to an output to connect sources; drag to the canvas to disconnect','拖到智能容器左侧节点，基于此组件创建':'Drag to a smart container input to create from this component','断开创建基准连接':'Disconnect creation sources','创建基准':'Creation sources',
  '计算口径与来源':'Methodology and sources',
  '同时调整组件宽高':'Resize component width and height','拖动右下角调整宽高':'Drag corner to resize width and height',

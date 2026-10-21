@@ -29,6 +29,19 @@ async function setup(desktop={}){
  }
  return {...f,watch,quote,spec,output,inlet,connect,port,dragPort}
 }
+it('基于无输出节点的组件创建时隐藏接收节点，来源能力改变后同步显示且保留基准和需求',async()=>{
+ const f=await setup();let source,target
+ await f.act(async()=>{source=f.workspace.createContainerDraft();target=f.workspace.beginSelectedCreateDraft([source.id]);f.workspace.updateSelectedCreateDraft(target.id,'保留我的需求')})
+ const card=()=>f.host.querySelector('[data-research-node-id="'+target.id+'"]'),footer=()=>card().querySelector('[data-workbench-smart-footer]')
+ expect(f.port(source.id,'input')).not.toBeNull();expect(f.port(source.id,'output')).toBeNull()
+ expect(f.port(target.id,'input')).toBeNull();expect(footer().textContent).toBe('基于 1 个组件')
+ expect(card().querySelector('textarea').value).toBe('保留我的需求');expect(card().textContent).toContain('基于：智能容器')
+ await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.map(n=>n.id===source.id?{...n,generationStatus:'completed',containerSpec:{version:1,type:'table',title:'来源结果',columns:['项'],rows:[['内容']]}}:n)))
+ expect(f.port(source.id,'output')).not.toBeNull();expect(f.port(target.id,'input')).not.toBeNull();expect(footer().textContent).toBe('已连接 1 个组件')
+ await f.act(async()=>f.workspace.setArtifacts(f.workspace.getSnapshot().artifacts.filter(n=>n.id!==source.id)))
+ expect(f.port(target.id,'input')).toBeNull();expect(footer().textContent).toBe('基于 1 个组件')
+ expect(card().querySelector('textarea').value).toBe('保留我的需求');expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===target.id).sourceNodeIds).toEqual([source.id])
+},15000)
 it('连接智能容器原位切换为基于所选创建，保留输入尺寸与真实来源并支持撤销',async()=>{
  const f=await setup();let draft;await f.act(async()=>draft=f.workspace.createContainerDraft())
  const card=()=>f.host.querySelector('[data-research-node-id="'+draft.id+'"]'),before=f.workspace.getSnapshot().artifacts.find(n=>n.id===draft.id),input=card().querySelector('textarea')

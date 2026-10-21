@@ -75,6 +75,19 @@ it('keeps real canvas connection endpoints on visible circles across themes, scr
   await expect.poll(()=>footer.textContent()).toContain('Sources connected: 1')
   expect(await footer.getAttribute('aria-label')).toBe('Smart container footer');expect(await card.locator('textarea').inputValue()).toBe(prompt)
   await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await expect.poll(()=>footer.textContent()).toContain('已连接 1 个组件')
-  expect(errors).toEqual([]);await page.screenshot({path:'/tmp/smart-container-ports-20261021/connected.png'})
+  await page.screenshot({path:'/tmp/smart-container-ports-20261021/connected.png'})
+  const based=await page.evaluate(()=>{const source=window.__workspace.createContainerDraft(),target=window.__workspace.beginSelectedCreateDraft([source.id]);window.__workspace.updateSelectedCreateDraft(target.id,'保留我的基准和需求');return {source:source.id,target:target.id}})
+  const basedCard=page.locator('[data-research-node-id="'+based.target+'"]'),basedFooter=basedCard.locator('[data-workbench-smart-footer]')
+  await basedFooter.waitFor();await basedCard.scrollIntoViewIfNeeded()
+  expect(await page.locator('[data-financial-port-node="'+based.source+'"][data-financial-port=input]').count()).toBe(1)
+  for(const [mode,label] of [['light','浅色模式'],['dark','深色模式'],['enterprise','易方达模式'],['openterminal','彭博模式']]){
+   await page.getByRole('radio',{name:label,exact:true}).click();await expect.poll(()=>root.getAttribute('data-workbench-style')).toBe(mode)
+   expect(await basedCard.locator('[data-financial-port=input]').count()).toBe(0);expect(await basedFooter.textContent()).toBe('基于 1 个组件')
+   const inset=await basedFooter.evaluate(el=>{const r=el.getBoundingClientRect(),text=el.querySelector('.ew-smart-create-status').getBoundingClientRect();return text.left-r.left})
+   expect(inset).toBe(10);expect(await basedCard.locator('textarea').inputValue()).toBe('保留我的基准和需求')
+  }
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='en');await expect.poll(()=>basedFooter.textContent()).toBe('Source components: 1')
+  await page.evaluate(()=>document.documentElement.dataset.odysseyLocale='zh');await expect.poll(()=>basedFooter.textContent()).toBe('基于 1 个组件')
+  expect(errors).toEqual([]);await page.screenshot({path:'/tmp/smart-container-ports-20261021/no-source-output.png'})
  }finally{await page.close()}
 },20000)
