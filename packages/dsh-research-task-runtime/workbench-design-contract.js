@@ -187,6 +187,12 @@ export function marketVariant(panel = {}) {
 }
 
 export function workbenchDesignTemplate(panel = {}) {
+  if(panel.type==='view'){
+    const rows=panel.artifact?.dataset?.records?.length??8,view=panel.artifact?.view??panel.view;
+    const regions=(view?.sections??[]).map(s=>s.kind==='schedule'?120+Math.min(rows,10)*64:s.kind==='compare'?140+Math.min(s.fields?.length??0,10)*54:110+Math.min(rows,12)*34);
+    const body=view?.navigation==='tabs'?Math.max(0,...regions):regions.reduce((a,b)=>a+b,0);
+    return {id:'research.view',version:'dataset-view-v1',size:'large',figma:'现有控件规范组合扩展',width:656,height:Math.max(456,Math.min(900,body+100))};
+  }
   const ot=openTerminalDimensions(panel.artifact);
   if(ot)return {id:panel.type==='market'?'market.'+panel.artifact.variant:panel.type,size:'large',figma:'OpenTerminal aed097c',variant:panel.artifact.variant,...ot};
   if(panel.type==='financial-widget')return {id:'financial-widget.'+panel.artifact?.widget,version:WORKBENCH_DESIGN_VERSION,size:'large',figma:'内置金融组件',...financialWidgetDimensions(panel.artifact)};

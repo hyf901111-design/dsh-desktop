@@ -1,0 +1,77 @@
+import {describe,it,expect,vi} from 'vitest';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {validateWorkbench,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js';
+import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench.js';
+import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js';
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js';
+import {readTemplateModel,templateSummary} from '../packages/dsh-research-task-runtime/component-template-registry.js';
+import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js';
+const input=()=>({requestId:'book-shared',title:'古籍工坊交接演练',dataMode:'simulated',sharedDatasets:[bookDataset()],panels:[archiveView(),scheduleView(),priorityView()].map((view,i)=>({title:['逐册档案与比较','三日设备排程','复检优先级'][i],prompt:['按负责人和阶段筛选逐册档案，选择任意两册比较完整病害与交接。','查看每册入柜出柜、等待原因与复检；不能有同柜重叠。','按负责人筛选并修改复检优先级，保留实际原含水率和验收结果。'][i],type:'view',size:'large',view}))});
+async function setup(){
+ const dir=await mkdtemp(join(tmpdir(),'dataset-workbench-'));let data={version:1,tasks:[]},tool;
+ const storage={save:async v=>{data=structuredClone(v)},load:async()=>structuredClone(data)};
+ const adapter={start:vi.fn(async r=>({childSessionId:r.taskId,result:Promise.resolve({stopReason:'completed',output:[{type:'text',text:JSON.stringify({version:1,type:'note',title:'补充（模拟）',asOf:'虚构演练记录',content:'模拟补充说明'})}]}),dispose:async()=>{}}))};
+ const runtime=new ResearchTaskRuntime({adapter,storage,retryDelayMs:0});
+ const filePath=join(dir,'plans.json');const dispose=await registerWorkbench({agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}},runtime,{filePath});
+ const exec={agent:{session:{id:'parent',events:[{type:'user/message',data:{id:'u',source:{kind:'user'},content:[{type:'text',text:'生成虚构古籍修复工作台，8册、2名修复师、1个干燥柜，完整档案、任意两册比较、占用排程与复检优先级。'}]}}]}},signal:new AbortController().signal};
+ return {tool,exec,runtime,storage,adapter,filePath,close:async()=>{await runtime.dispose();await dispose();await rm(dir,{recursive:true,force:true})}};
+}
+describe('workbench common records at the real tool boundary',()=>{
+ it('resolves three views losslessly and idempotently without mutating the plan',()=>{
+  const plan=input(),before=structuredClone(plan),value=validateWorkbench(plan);
+  expect(value.sharedDatasets).toEqual(plan.sharedDatasets);
+  for(const p of value.panels){expect(p.artifact.type).toBe('view');expect(p.artifact.dataset).toEqual(plan.sharedDatasets[0]);expect(p.artifact.title).toContain('模拟')}
+  expect(validateWorkbench(value)).toEqual(value);expect(plan).toEqual(before);
+  const changed=structuredClone(value);changed.panels[0].artifact.dataset.records[0].moisture=90;expect(()=>validateWorkbench(changed)).toThrow(/共同|冲突/);
+ });
+ it('retains the canonical source through acceptance and readback, never degrading to generic HTML data',()=>{
+  const value=validateWorkbench(input());for(const p of value.panels){const accepted=acceptArtifactOutput(JSON.stringify(p.artifact));expect(accepted).toBeTruthy();const spec=JSON.parse(accepted),model=readTemplateModel(spec);expect(model.templateId).toBe('view');expect(model.data).toEqual(p.artifact);expect(spec.html).toContain('B08');expect(templateSummary(spec).message).toContain('组合')}
+ });
+ it.each(['source','parallel','unknown-field','conflicting-view','missing-data','render-budget'])('rejects %s before starting tasks or persisting a partial plan',async kind=>{
+  const f=await setup(),plan=input();
+  if(kind==='render-budget'){
+   plan.sharedDatasets=[{id:'books',label:'大记录',asOf:'模拟',note:'完整记录',fields:[{key:'id',label:'编号'},{key:'description',label:'完整描述'}],records:Array.from({length:6},(_,i)=>({id:'B'+i,description:'x'.repeat(7000)}))}];
+   plan.panels=[{title:'完整列表',prompt:'保留全部长记录与四个对照区域。',type:'view',size:'large',view:{dataset:'books',sections:Array.from({length:4},()=>({kind:'records',fields:['id','description']}))}}];
+  }
+  if(kind==='source')plan.dataMode='source';if(kind==='parallel')plan.generationMode='parallel';
+  if(kind==='unknown-field')plan.panels[0].view.details=['unknown'];
+  if(kind==='conflicting-view')plan.panels[0].type='html';if(kind==='missing-data')delete plan.sharedDatasets;
+  try{await expect(f.tool.execute(plan,f.exec)).rejects.toThrow();expect(f.runtime.tasks.size).toBe(0);expect(f.adapter.start).not.toHaveBeenCalled();await expect(readFile(f.filePath,'utf8')).rejects.toMatchObject({code:'ENOENT'})}finally{await f.close()}
+ });
+ it('creates all complete views immediately, deduplicates both live and restored tool retries',async()=>{
+  const f=await setup();try{
+   const receipt=await f.tool.execute(input(),f.exec);expect(receipt.status).toBe('prepared');expect(f.adapter.start).not.toHaveBeenCalled();expect(f.runtime.tasks.size).toBe(3);
+   const plan=JSON.parse(await readFile(f.filePath,'utf8'))[0];expect(plan.panels.every(p=>p.taskId)).toBe(true);
+   for(const task of f.runtime.tasks.values())expect(readTemplateModel(JSON.parse(task.finalOutput)).data.dataset).toEqual(bookDataset());
+   expect((await f.tool.execute(input(),f.exec)).planId).toBe(receipt.planId);expect(f.runtime.tasks.size).toBe(3);
+   const restored=new ResearchTaskRuntime({adapter:f.adapter,storage:f.storage});await restored.restore();
+   try{expect(restored.tasks.size).toBe(3);const first=plan.panels[0];const retry=await restored.start({parentSessionId:'parent',canvasNodeId:first.nodeId,kind:'container',prompt:first.prompt});expect(retry.state).toBe('completed');expect(readTemplateModel(JSON.parse(retry.finalOutput)).data).toEqual(first.artifact);expect(f.adapter.start).not.toHaveBeenCalled()}finally{await restored.dispose()}
+  }finally{await f.close()}
+ });
+ it('does not discard changed requirements or regenerate facts without the current snapshot',async()=>{
+  const f=await setup();try{
+   await f.tool.execute(input(),f.exec);const first=[...f.runtime.tasks.values()][0];
+   const changed='保留完整原档案，另外增加交接阶段的说明，不能丢失原含水率。';
+   const receipt=await f.runtime.start({parentSessionId:'parent',canvasNodeId:first.canvasNodeId,kind:'container',prompt:changed});
+   expect(receipt.state).not.toBe('completed');await vi.waitFor(()=>expect(f.adapter.start).toHaveBeenCalled());
+   const call=f.adapter.start.mock.calls[0][0];expect(call.query).toBe(changed);expect(call.prompt).toContain(JSON.stringify(bookDataset()));expect(call.prompt).toContain('不退回旧需求');
+  }finally{await f.close()}
+ });
+ it('does not duplicate prepared tasks after a partial mixed-batch failure',async()=>{
+  const f=await setup();try{
+   const payload={...input(),generationMode:'deferred',sharedContext:'全部为虚构古籍演练。'};payload.panels.push({title:'补充交接',type:'note',size:'large',prompt:'补充本地虚构的交接注意事项。'});
+   const batch=vi.spyOn(f.runtime,'startBatch').mockRejectedValueOnce(Error('transient dispatch failure'));
+   await expect(f.tool.execute(payload,f.exec)).rejects.toThrow('transient');expect(f.runtime.tasks.size).toBe(3);
+   const old=JSON.parse(await readFile(f.filePath,'utf8'))[0];expect(old.panels.slice(0,3).every(p=>p.taskId&&!p.error)).toBe(true);
+   await f.tool.execute(payload,f.exec);expect(f.runtime.tasks.size).toBe(4);expect(batch.mock.calls[1][0].panels).toHaveLength(1);
+  }finally{await f.close()}
+ });
+ it('prepares common views while only remaining deferred cards launch children',async()=>{
+  const f=await setup();try{
+   const value={...input(),generationMode:'deferred',sharedContext:'全部为虚构古籍演练，不联网。'};value.panels.push({title:'补充交接说明',type:'note',size:'large',prompt:'保留原共同演练约束，补充日常交接注意事项。'});
+   const result=await f.tool.execute(value,f.exec);expect(result.status).toBe('accepted');expect(f.runtime.tasks.size).toBe(4);await vi.waitFor(()=>expect(f.adapter.start).toHaveBeenCalledTimes(1));expect(f.adapter.start.mock.calls[0][0].query).toContain('补充交接说明');expect([...f.runtime.tasks.values()].filter(t=>readTemplateModel(t.finalOutput?JSON.parse(t.finalOutput):null)?.templateId==='view')).toHaveLength(3);
+  }finally{await f.close()}
+ });
+});

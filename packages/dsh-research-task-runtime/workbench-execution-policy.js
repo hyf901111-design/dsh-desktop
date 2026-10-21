@@ -1,3 +1,4 @@
+import {DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 import { canvasHumanRequest } from './canvas-task-routing.js'
 import { FINANCIAL_WIDGET_GUIDANCE } from './financial-widget-contract.js'
 import { workbenchPlanningContext } from './workbench-planning-context.js'
@@ -57,8 +58,8 @@ export function workbenchCreationRequest(session) {
   return board || component ? human : null
 }
 
-export const WORKBENCH_EARLY_PLAN = '【工作台首次规划】先确定用户领域的问题、信息结构和1–10个面板，立即调用 research_workbench_create；不要先写报告、读取skill/源码/完整模板规范或填整套数据。只规划用户要求的数量，不追加无关金融/KPI卡。用户允许自洽模拟数据时，优先 dataMode:"simulated"、generationMode:"deferred"，panels每项仅含title/prompt/type/size及可选layout，完全省略artifact。sharedContext只写跨卡共用的事实、日期、容量、单位与必要合计分配；使用同一份紧凑预算/时间轴，不写逐行明细或序列。宿主会把原始用户需求和sharedContext送给受限并行子卡，由子卡生成完整且显著标注模拟的数据，不能偷换成固定行业样例。每项prompt只写该卡问题、字段、范围与必要交互。按内容选择类型：排期用gantt/calendar/timeline，人员/物资/预算明细用table，执行用tasks/progress，风险用alerts或table，审批用approval，录入用form，正文用note，代码配置用code，指标仅用于真正的汇总读数，图表用chart并在prompt写chart变体；不为凑模板改写用户领域。按信息结构规划标题、独立筛选栏、图表/内容、点选详情和底部备注/来源；宽排程、宽对照与图表详情并排用layout:wide，其他standard，不能所有卡同宽同结构。普通table仅支持平面行、排序和搜索，不能逐行展开详情；有详情的时序记录可用timeline/calendar等支持说明的模板，用户明确要求可筛选展开的表格或模板表达不了的业务交互时用html；模拟场景仍保留deferred和sharedContext，单卡离线生成自包含HTML，保留原始约束；真实记录保持source性质和来源要求。已有完整数据可沿原artifact路径直接提交；标准确定性preset仍按原规则单独提交，不能混用deferred。真实数据未取得时省略artifact，按来源声明待取字段，不捏造记录；已有真实记录可直接artifact，不重复查询。工具返回accepted只表示规划已受理、面板生成中，prepared才表示内容已准备好，然后结束主会话本轮；不再逐卡检查、重复建卡或制作报告。'
-export const WORKBENCH_PLANNING_TOOL_GUIDANCE = '新增1–10个独立面板，不替换已有卡；编辑当前看板用已有编辑工具。先一次提交title与完整panels规划，不读skill/源码/全量规范、不先填所有数据。用户允许模拟时用dataMode:"simulated",generationMode:"deferred",panels:[{title,prompt,type,size,layout?}]，省略artifact；sharedContext仅保存跨卡共同事实与紧凑的预算/日期/容量分配，宿主保留原始用户需求，受限子卡再生成各自完整数据。按领域任务选择gantt/calendar/timeline/table/tasks/progress/alerts/approval/form/note/chart等注册模板，不套固定金融或KPI样例。模板无法表达的业务交互使用type:html，模拟场景可保留deferred与sharedContext，由单卡离线生成自包含HTML，不删改业务来凑模板。标题、筛选工具栏、内容/图表、点选详情、底部备注来源分区；宽排程、宽对照、图表详情并排用layout:wide，其余standard。已有完整数据沿artifact路径、标准preset沿原路径，均不混用deferred。真实来源用source或省略模式，未取数据只规划、不可补模拟值；内置免费源支持publicData直通，证券报价每请求最多12个。用户指定数量、数据、来源和范围必须保留。requestId重试保持一致。accepted是受理并生成中，prepared才是已准备好。'
+export const WORKBENCH_EARLY_PLAN = DATASET_VIEW_GUIDANCE+'【工作台首次规划】先确定用户领域的问题、信息结构和1–10个面板，立即调用 research_workbench_create；不要先写报告或读取skill/源码/完整模板规范。模拟场景多卡复用同一批对象且组合视图能够表达时，先提供一份完整sharedDatasets及各卡view，宿主直接准备，避免逐卡重造数据和代码；用户要求的范围超过容量或交互未覆盖时才沿其他原路径，不缩小范围。只规划用户要求的数量，不追加无关金融/KPI卡。组合视图无法表达、用户允许自洽模拟数据且缺完整记录时，使用 dataMode:"simulated"、generationMode:"deferred"，panels每项仅含title/prompt/type/size及可选layout，完全省略artifact。sharedContext只写跨卡共用的事实、日期、容量、单位与必要合计分配；使用同一份紧凑预算/时间轴，不写逐行明细或序列。宿主会把原始用户需求和sharedContext送给受限并行子卡，由子卡生成完整且显著标注模拟的数据，不能偷换成固定行业样例。每项prompt只写该卡问题、字段、范围与必要交互。按内容选择类型：排期用gantt/calendar/timeline，人员/物资/预算明细用table，执行用tasks/progress，风险用alerts或table，审批用approval，录入用form，正文用note，代码配置用code，指标仅用于真正的汇总读数，图表用chart并在prompt写chart变体；不为凑模板改写用户领域。按信息结构规划标题、独立筛选栏、图表/内容、点选详情和底部备注/来源；宽排程、宽对照与图表详情并排用layout:wide，其他standard，不能所有卡同宽同结构。普通table仅支持平面行、排序和搜索，不能逐行展开详情；有详情的时序记录可用timeline/calendar等支持说明的模板，用户明确要求可筛选展开的表格或模板表达不了的业务交互时用html；模拟场景仍保留deferred和sharedContext，单卡离线生成自包含HTML，保留原始约束；真实记录保持source性质和来源要求。已有完整数据可沿原artifact路径直接提交；标准确定性preset仍按原规则单独提交，不能混用deferred。真实数据未取得时省略artifact，按来源声明待取字段，不捏造记录；已有真实记录可直接artifact，不重复查询。工具返回accepted只表示规划已受理、面板生成中，prepared才表示内容已准备好，然后结束主会话本轮；不再逐卡检查、重复建卡或制作报告。'
+export const WORKBENCH_PLANNING_TOOL_GUIDANCE = DATASET_VIEW_GUIDANCE+'新增1–10个独立面板，不替换已有卡；编辑当前看板用已有编辑工具。先一次提交title与完整panels。多卡共用同一批模拟对象且交互已覆盖时优先sharedDatasets+view，一次提供完整记录，不生成各卡代码。其他需求不读skill/源码/全量规范；缺完整模拟数据时用dataMode:"simulated",generationMode:"deferred",panels:[{title,prompt,type,size,layout?}]，省略artifact；sharedContext仅保存跨卡共同事实与紧凑的预算/日期/容量分配，宿主保留原始用户需求，受限子卡再生成各自完整数据。按领域任务选择gantt/calendar/timeline/table/tasks/progress/alerts/approval/form/note/chart等注册模板，不套固定金融或KPI样例。模板无法表达的业务交互使用type:html，模拟场景可保留deferred与sharedContext，由单卡离线生成自包含HTML，不删改业务来凑模板。标题、筛选工具栏、内容/图表、点选详情、底部备注来源分区；宽排程、宽对照、图表详情并排用layout:wide，其余standard。已有完整数据沿artifact路径、标准preset沿原路径，均不混用deferred。真实来源用source或省略模式，未取数据只规划、不可补模拟值；内置免费源支持publicData直通，证券报价每请求最多12个。用户指定数量、数据、来源和范围必须保留。requestId重试保持一致。accepted是受理并生成中，prepared才是已准备好。'
 
 export const WORKBENCH_PLAN_SUBMITTED = 'research_workbench_create 已成功受理本次工作台。取数和模板填充由已启动的面板任务负责，主会话不要再重复接口发现、取数、重新创建或检查同一批面板。现在只向用户简要说明工具返回的真实状态：accepted 表示生成中，prepared 表示内容已准备好，然后结束本轮。面板各自完成后会自动更新画布；不要再生成一份重复报告。'
 export const WORKBENCH_LIVE_ETF_PLAN = '【实时ETF工作台预设】本轮已匹配国内热门基金/ETF综合行情需求，立即且仅调用一次 research_workbench_create：\n{"title":"国内热门基金ETF行情研究工作台","dataMode":"source","preset":"cn-hot-etf-live","panels":[]}\n此预设不是文件路径。宿主固定生成8卡：沪深300ETF内置行情、10只代表性ETF明细、4只核心ETF报价、4个国内指数内置组件、沪深300/创业板/黄金3张近20交易日量价、财经资讯。代表性名单不等于当前热度排名；用户指定标题时保留标题。所有数值由真实来源首次取数并按每分钟刷新保存，原生金融组件保留原有布局；用户要求全部只手动刷新时宿主会保留。不要先 public_data_query、搜索代码、逐卡规划、抄写行情数组或生成模拟样例；不启动逐卡模型。工具返回accepted只表示受理并生成中，prepared才表示内容已准备好；失败须如实说明。'
@@ -133,13 +134,18 @@ export function planningDataIntent(text) {
 }
 function sourceCreationParameters(parameters) {
   if (!parameters?.properties) return parameters
-  const omitted = new Set(['generationMode', 'sharedContext', 'originalRequest'])
+  const omitted = new Set(['generationMode', 'sharedContext', 'originalRequest', 'sharedDatasets'])
   const properties = Object.fromEntries(Object.entries(parameters.properties).filter(([name]) => !omitted.has(name)))
   properties.dataMode = { ...(properties.dataMode ?? { type: 'string' }), enum: ['source'], description: '仅真实来源，可省略。未取得的数据由独立面板取数，保留缺失，不使用模拟模式。' }
   if (Array.isArray(properties.preset?.enum)) {
     const presets = properties.preset.enum.filter(value => LIVE_WORKBENCH_PRESETS.includes(value))
     if (presets.length) properties.preset = { ...properties.preset, enum: presets, description: '仅需求匹配时使用真实来源预设；其余按用户内容提交 panels。' }
     else delete properties.preset
+  }
+  if(properties.panels?.items?.properties){
+    const {view,...panelProperties}=properties.panels.items.properties
+    if(panelProperties.type?.enum)panelProperties.type={...panelProperties.type,enum:panelProperties.type.enum.filter(type=>type!=='view')}
+    properties.panels={...properties.panels,items:{...properties.panels.items,properties:panelProperties}}
   }
   return { ...parameters, additionalProperties: false, properties, ...(parameters.required ? { required: parameters.required.filter(name => !omitted.has(name)) } : {}) }
 }

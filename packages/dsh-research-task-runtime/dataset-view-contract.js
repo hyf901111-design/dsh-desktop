@@ -94,3 +94,14 @@ export function parseDatasetViewArtifact(value){
 }
 export function datasetViewDataIssue(value){try{parseDatasetViewArtifact(value)}catch(error){return error.message}}
 export const DATASET_VIEW_GUIDANCE='同一工作台多卡复用记录时可提供sharedDatasets:[{id,label,asOf,note,fields:[{key,label,unit?}],records:[{id,...各字段原值}]}]，共同事实只确定一次。面板type:view，提供view:{dataset:"数据集id",filters:[字段键],details:[字段键],reorder:false,navigation:"flow|tabs",layout:"stack|split",sections:[{kind:"records|compare",fields:[字段键]}或{kind:"schedule",label:字段键,start:字段键,end:字段键,owner?:字段键,resource?:字段键}]}。由宿主直接生成不同组合和可靠交互，不编写HTML/JS、不重复填写各卡数据。仅明确模拟数据工作台支持sharedDatasets；已有真实资料仍沿原数据来源与artifact流程。缺失填null，日内排程使用含时区的ISO时间；不能为满足组件而删改业务、缩小用户范围或改称模拟。'
+
+const fieldKeysSchema={type:'array',items:{type:'string'}};
+export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{
+ dataset:{type:'string',required:true},subject:{type:'string'},filters:fieldKeysSchema,details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs']},layout:{type:'string',enum:['stack','split']},
+ sections:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
+}};
+export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'仅明确模拟场景，多卡共用记录只写一次；每条记录有稳定id并完整填写所有声明字段，缺失null。字段必须含id。最多5组，每组200条/24字段/48KB，总192KB；不截取记录，不猜共同值。',items:{type:'object',additionalProperties:false,properties:{
+ id:{type:'string',required:true},label:{type:'string',required:true},asOf:{type:'string',required:true},note:{type:'string',required:true},
+ fields:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},unit:{type:'string'}}}},
+ records:{type:'array',required:true,items:{type:'object',additionalProperties:true}}
+}}};

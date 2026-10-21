@@ -22,9 +22,10 @@ import { expandLiveWorkbenchPreset } from './live-workbench-presets.js';
 import { isDeepStrictEqual } from 'node:util';
 import { validatePublicDataPanel, publicDataNewsTaskRequirement, publicDataHistoryTaskRequirement, publicDataQuoteTaskRequirement, PUBLIC_DATA_PROFILES, publicDataQuoteSpec } from './workbench-public-data.js';
 import {financialWidgetSpec,financialWidgetDefaults,FINANCIAL_WIDGET_GUIDANCE} from './financial-widget-contract.js';
+import {validateWorkbenchDatasets,validateDatasetView,parseDatasetViewArtifact,datasetViewDataIssue,DATASET_VIEW_GUIDANCE} from './dataset-view-contract.js';
 export const PANEL_SIZES = { small: 220, medium: 220, large: 456 };
 const panelSize = p => Object.hasOwn(PANEL_SIZES, p.size) ? p.size : researchBentoSize(p);
-export const WORKBENCH_PANEL_TYPES = Object.freeze(['financial-widget','files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
+export const WORKBENCH_PANEL_TYPES = Object.freeze(['view','financial-widget','files','gallery','audio', 'markdown', 'table', 'chart', 'kpi', 'html', 'news', 'reports', 'calendar', 'dashboard', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 export const DEFERRED_WORKBENCH_TYPES = Object.freeze(['html','table','chart','kpi','news','reports','calendar','dashboard','market','gantt','progress','tasks','approval','alerts','form','code','clock','note','timeline']);
 export const DEFERRED_WORKBENCH_MARKER = '【宿主延后模拟生成】';
 export const WORKBENCH_REQUEST_MARKER = '【原始工作台需求】';
@@ -57,7 +58,7 @@ export function deferredWorkbenchPanel(prompt) {
     return DEFERRED_WORKBENCH_TYPES.includes(type) ? { type, title: header[1], contract, requirement: contract.slice(header[0].length, suffix) } : null;
 }
 const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
-const preparedTypes = new Set(['html','files','gallery','audio', 'chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
+const preparedTypes = new Set(['view','html','files','gallery','audio', 'chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
 const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
 const schemaHints = {
@@ -225,6 +226,7 @@ function normalizeSimulatedCalendar(artifact) {
 }
 function simulatedArtifactProblem(artifact) {
     if (!artifact || typeof artifact !== 'object') return '需提交包含 version:1、type、title 和对应模板数据字段的对象。';
+    if (artifact.type === 'view') return `${datasetViewDataIssue(artifact) ?? '组合视图完整渲染结果超过宿主容量，请拆分视图区，不能删改记录'}。${DATASET_VIEW_GUIDANCE}`;
     if (['files','gallery'].includes(artifact.type)) return ATTACHMENT_GUIDANCE;
     if (artifact.type === 'audio') return AUDIO_GUIDANCE;
     if (artifact.type === 'youtube') return YOUTUBE_GUIDANCE;
@@ -338,6 +340,9 @@ export function validateWorkbench(value) {
     const isSimulated = value.dataMode === 'simulated';
     const parallel = value.generationMode === 'parallel';
     const deferred = value.generationMode === 'deferred';
+    if ((value.sharedDatasets !== undefined || value.panels.some(p=>p?.type==='view')) && (!isSimulated || parallel))
+        throw Error('共同数据组合视图仅支持明确模拟数据，不能用于真实来源或parallel模式。');
+    const datasets = value.sharedDatasets === undefined ? undefined : validateWorkbenchDatasets(value.sharedDatasets);
     if (isSimulated && value.panels.some(p=>p?.type==='audio')) throw Error('音频需要本人实际音频网址或 url:null；请使用 source 模式，不生成模拟音频。');
     if (isSimulated && value.panels.some(p=>p?.type==='youtube')) throw Error('YouTube需要用户实际提供的视频网址或 url:null；请使用 source 模式提交，不猜测视频。');
     if (isSimulated && value.panels.some(p=>p?.type==='iframe')) throw Error('嵌入网页需要用户实际提供的网址或 url:null；请使用 source 模式提交，不生成模拟网址。');
@@ -352,13 +357,25 @@ export function validateWorkbench(value) {
             throw Error('面板标题、内容类型或规划尺寸无效。');
         if(p.layout !== undefined && !['standard','wide'].includes(p.layout))throw Error('面板阅读布局无效。');
         seen.add(p.title.trim());
+        if (p.view !== undefined && p.type !== 'view') throw Error('只有view组件可引用共同数据视图。');
+        if (p.type === 'view') {
+            if (!datasets || p.view === undefined) throw Error('组合视图需要共同数据sharedDatasets及面板view配置。');
+            const {dataset,view} = validateDatasetView(p.view,datasets);
+            const title = simulated(p.title) ? p.title.trim() : `${p.title.trim()}（模拟）`;
+            const artifact = parseDatasetViewArtifact({version:1,type:'view',title,dataset,view});
+            // Persisted normalized plans carry the resolved artifact. Accept only
+            // an identical snapshot; never overwrite a conflicting supplied fact.
+            if (p.artifact !== undefined && !isDeepStrictEqual(parseDatasetViewArtifact(p.artifact),artifact))
+                throw Error('组件artifact与共同数据或视图配置冲突。');
+            p = {...p,view,artifact};
+        }
         // Gateways sometimes spell absent source content as null or {}. Only
         // those empty slots can be omitted; supplied records/metadata stay strict.
         if ((deferred && p.artifact === null) || (!isSimulated && (p.artifact === null || p.artifact && Object.getPrototypeOf(p.artifact) === Object.prototype && Object.keys(p.artifact).length === 0))) {
             const { artifact, ...metadata } = p;
             p = metadata;
         }
-        if (deferred && (!DEFERRED_WORKBENCH_TYPES.includes(p.type) || p.artifact !== undefined || p.publicData !== undefined || p.title.length > 76))
+        if (deferred && p.type !== 'view' && (!DEFERRED_WORKBENCH_TYPES.includes(p.type) || p.artifact !== undefined || p.publicData !== undefined || p.title.length > 76))
             throw Error('延后模拟生成仅接受已注册数据模板的title/prompt/type/size规划，不能混用artifact或免费源；面板标题最多76字符。');
         if (deferred && p.type === 'table') {
             const instruction = p.prompt.replace(/(?:无需|不要|不必|不需要|禁止)[^。；;\n]{0,24}(?:详情|详细说明|完整说明|详细信息)/gu, '');
@@ -458,14 +475,14 @@ export function validateWorkbench(value) {
             throw Error(`面板「${p.title}」需要完整 artifact ${p.type==='clock'?'时区配置；live设备时钟同样需要明确城市和IANA时区':'中的实际需求记录；不能生成无关清单或进度样例'}。${operationsTemplateSchema(p.type)}`);
         const selected = isSimulated ? financialTemplatePanel(p, value.title) : p;
         const artifact = isSimulated && !parallel && selected.artifact !== undefined ? prepareSimulatedArtifact(selected) : !isSimulated && selected.artifact !== undefined ? structuredClone(selected.artifact) : undefined;
-        const panel = { ...(selected.layout ? {layout:selected.layout} : {}), title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}), ...(selected.publicData ? { publicData: selected.publicData } : {}) };
+        const panel = { ...(selected.layout ? {layout:selected.layout} : {}), title: artifact?.title ?? selected.title.trim(), prompt: selected.prompt.trim(), type: selected.type, size: panelSize(selected), height: PANEL_SIZES[panelSize(selected)], ...(artifact ? { artifact } : {}), ...(selected.view ? {view:selected.view} : {}), ...(selected.publicData ? { publicData: selected.publicData } : {}) };
         workbenchDesignTemplate(panel);
         return panel;
     });
     if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');
-    const result = { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(deferred && value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
+    const result = { requestId: value.requestId.trim(), title, ...(value.dataMode ? { dataMode: value.dataMode } : {}), ...(datasets ? {sharedDatasets:datasets} : {}), ...(parallel || deferred ? { generationMode: value.generationMode } : {}), ...(deferred && value.sharedContext ? { sharedContext: value.sharedContext.trim() } : {}), ...(value.originalRequest ? { originalRequest: value.originalRequest } : {}), panels };
     if ((deferred || value.originalRequest) && panels.some(panel => workbenchPanelPrompt(result, panel).length > 18000)) throw Error('共同场景与面板需求超过单卡生成上限，请压缩面板说明，保留原始需求。');
     return result;
 }

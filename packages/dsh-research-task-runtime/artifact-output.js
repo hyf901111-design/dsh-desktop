@@ -17,6 +17,7 @@ import { renderInteractiveArtifact } from './interactive-artifact.js';
 import {renderWorkflowArtifact} from './workflow-artifact.js';
 import {renderOperationsArtifact} from './operations-artifact.js';
 import { renderGanttArtifact } from './gantt-artifact.js';
+import {renderDatasetViewArtifact} from './dataset-view-artifact.js';
 import { researchHtmlText } from './html-artifact.js';
 import { chinaMarketWindow } from './component-source-tools.js';
 import { financialWidgetDefaults } from './financial-widget-contract.js';
@@ -95,12 +96,14 @@ export function acceptArtifactOutput(text) {
    if(parsed)return JSON.stringify(retainTemplateModel(parsed,candidate));
    continue;
   }
-  const spec=parseResearchContainerSpec(renderTimelineArtifact(candidate) ?? renderKpiArtifact(candidate) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderDatasetViewArtifact(candidate) ?? renderTimelineArtifact(candidate) ?? renderKpiArtifact(candidate) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.
   if(spec.type==='html' && researchHtmlText(spec.html).length===0 && !/<(?:svg|canvas)\b/i.test(spec.html))continue;
-  return JSON.stringify(retainTemplateModel(spec,candidate));
+  const retained=retainTemplateModel(spec,candidate);
+  if(candidate.type==='view'&&!parseResearchContainerSpec(retained))continue;
+  return JSON.stringify(retained);
  }
  return undefined;
 }

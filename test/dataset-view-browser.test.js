@@ -1,6 +1,6 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {pathToFileURL} from 'node:url'
-import {renderDatasetViewArtifact} from '../packages/dsh-research-task-runtime/dataset-view-artifact.js'
+import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js'
 let browser
@@ -11,7 +11,7 @@ beforeAll(async()=>{
 afterAll(async()=>{await browser?.close()})
 async function open(view,{dataset=bookDataset(),saved,width=900,mode='openterminal',readOnly=false}={}){
  const page=await browser.newPage({viewport:{width,height:720}})
- const spec=renderDatasetViewArtifact({version:1,type:'view',title:'演练组合组件',dataset,view})
+ const spec=JSON.parse(acceptArtifactOutput(JSON.stringify({version:1,type:'view',title:'演练组合组件',dataset,view})))
  const preview=buildResearchHtmlPreview(spec.html,spec.title,mode==='light'?'light':'dark',{workbench:true,notoFont:'runtime'})
  await page.setContent('<iframe id=preview style="width:100%;height:700px;border:0" sandbox="allow-scripts" srcdoc="'+preview.replaceAll('&','&amp;').replaceAll('"','&quot;')+'"></iframe>')
  const frame=page.frameLocator('#preview').frameLocator('iframe');await frame.locator('.dv-shell').waitFor()
