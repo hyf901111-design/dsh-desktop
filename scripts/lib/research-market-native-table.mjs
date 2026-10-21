@@ -15,11 +15,29 @@ export function parseResearchMarketNativeTable(html, doc) {
   const body = parsed.body;
   if (body.getAttribute('data-sherlock-market') !== variant || parsed.querySelectorAll('table').length !== 1) return null;
   const scripts = [...parsed.querySelectorAll('script')];
+  const retained = scripts.filter(script => script.id === 'sherlock-template-data');
+  if (retained.length > 1) return null;
+  if (retained.length) {
+    const script = retained[0];
+    if (script.parentElement !== body || script.attributes.length !== 2 ||
+        script.getAttribute('type') !== 'application/json') return null;
+    // The host appends inert refresh metadata after its rendered document.
+    // Recognize that envelope only; visible HTML remains the projection source.
+    // Never execute or render strings/links from the retained data object.
+    try {
+      const model = JSON.parse(script.textContent);
+      if (!model || Object.keys(model).sort().join(',') !== 'data,templateId,version' ||
+          model.templateId !== `market.${variant}` || model.version !== '21m-20260923-v1' ||
+          !model.data || Array.isArray(model.data) || model.data.version !== 1 ||
+          model.data.type !== 'market' || model.data.variant !== variant) return null;
+    } catch { return null; }
+  }
+  const runtimes = scripts.filter(script => !retained.includes(script));
   // Fingerprints identify the two fixed host runtimes that our controls replace.
   // They grant no execution privilege: scripts are never evaluated. Host script
   // changes deliberately fall back until their projection is reviewed again.
   const knownRuntime = variant === 'table' ? [2411, 2045077824] : [979, 2127678402];
-  if (scripts.length > 1 || scripts.some(script => {
+  if (runtimes.length > 1 || runtimes.some(script => {
     let hash = 2166136261;
     for (const char of script.textContent) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
     return script.attributes.length || script.textContent.length !== knownRuntime[0] || (hash >>> 0) !== knownRuntime[1];
@@ -48,6 +66,15 @@ export function parseResearchMarketNativeTable(html, doc) {
     invalid = true; return [];
   });
   const table = parsed.querySelector('table');
+  // Only one header row of TH cells and one body of TD rows are supported.
+  // Match extraction to that exact hierarchy so other visible cells/sections
+  // cannot pass the width checks and then silently disappear or flatten.
+  const heads = [...table.children].filter(node => node.tagName === 'THEAD');
+  const bodies = [...table.children].filter(node => node.tagName === 'TBODY');
+  if (heads.length !== 1 || bodies.length !== 1 || heads[0].children.length !== 1 ||
+      heads[0].firstElementChild.tagName !== 'TR' ||
+      [...heads[0].firstElementChild.children].some(cell => cell.tagName !== 'TH') ||
+      [...bodies[0].children].some(row => row.tagName !== 'TR' || [...row.children].some(cell => cell.tagName !== 'TD'))) return null;
   // A cell/header can contain escaped text or one plain safe anchor; no HTML is
   // promoted into the client. Preserve link segments as well as original text.
   const columns = [...table.querySelectorAll('thead th')].map(cell => {

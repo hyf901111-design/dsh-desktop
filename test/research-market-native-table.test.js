@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Window } from 'happy-dom';
 import { readFileSync } from 'node:fs';
+import { retainTemplateModel } from '../packages/dsh-research-task-runtime/component-template-registry.js';
 import { renderMarketArtifact } from '../packages/dsh-research-task-runtime/market-artifact.js';
 import { parseResearchMarketNativeTable, researchMarketNativeTableCss } from '../scripts/lib/research-market-native-table.mjs';
 
@@ -108,4 +109,71 @@ it('retains holdings simulation metadata and visible period/footer while keeping
     const html=renderMarketArtifact({...model,columns:Array.from({length:count},(_,i)=>'列'+i),rows:[Array(count).fill('值')]}).html;
     expect(project(html) === null).toBe(count>12);
   }
+});
+
+
+it.each([
+  ['extra tbody TH', html=>html.replace('<tbody><tr>','<tbody><tr><th>不可丢失的行标题</th>')],
+  ['extra thead TD', html=>html.replace('<thead><tr>','<thead><tr><td>不可丢失的表头数据</td>')],
+  ['two header rows with unchanged total width', html=>html.replace('<th data-numeric="true">','</tr><tr><th data-numeric="true">')],
+  ['two thead sections with unchanged total width', html=>html.replace('<th data-numeric="true">','</tr></thead><thead><tr><th data-numeric="true">')],
+  ['two tbody sections', html=>html.replace('</tbody>','</tbody><tbody><tr><td>另一区</td><td>另一区值</td></tr></tbody>')],
+  ['body TH replaces TD', html=>html.replace('<tbody><tr><td data-numeric="false" data-tone="neutral">A &lt; B</td>','<tbody><tr><th>A &lt; B</th>')],
+  ['header TD replaces TH', html=>html.replace('<th data-numeric="false"><button data-column="0" aria-label="按名称排序">名称</button></th>','<td>名称</td>')]
+])('keeps unsupported table hierarchy in the sandbox: %s', (_, mutate) => {
+  const html=renderMarketArtifact(model).html;
+  expect(mutate(html)).not.toBe(html);
+  expect(project(mutate(html))).toBeNull();
+});
+it('projects every cell of the supported single-header and multi-data-row hierarchy', () => {
+  const supported={...model,columns:['行标题 <文本>','完整值'],rows:[['正文 <甲>','1.23456789'],['正文 <乙>','精度与缺失说明']]};
+  const parsed=project(renderMarketArtifact(supported).html);
+  expect(parsed.columns).toEqual(supported.columns);
+  expect(parsed.rows.map(row=>row.map(cell=>cell.text))).toEqual(supported.rows);
+});
+it('accepts actual persisted host shape with inert retained metadata through serialized parser', () => {
+  const observed=JSON.parse(readFileSync(new URL('./fixtures/workbench-native-valuation-observed.json', import.meta.url),'utf8'));
+  const persisted=retainTemplateModel(renderMarketArtifact(observed),observed);
+  expect(persisted.html).toHaveLength(79846);
+  expect(persisted.html).toContain('<script id="sherlock-template-data" type="application/json">');
+  const parsed=project(persisted.html);
+  expect(parsed).not.toBeNull();
+  expect(parsed.columns).toEqual(observed.columns);
+  expect(parsed.rows.map(row=>row.map(cell=>cell.text))).toEqual(observed.rows);
+  expect(parsed.footer).toEqual([[{text:observed.asOf}],[{text:observed.note}]]);
+});
+
+
+const withRetained = () => retainTemplateModel(renderMarketArtifact(model),model).html;
+const replaceMetadata = (html, text) => html.replace(/(<script id="sherlock-template-data" type="application\/json">)[\s\S]*?(<\/script>)/, (_,open,close) => open+text+close);
+it.each([
+  ['executable MIME type', html=>html.replace('id="sherlock-template-data" type="application/json"','id="sherlock-template-data" type="text/javascript"')],
+  ['unknown metadata id', html=>html.replace('id="sherlock-template-data"','id="unknown-data"')],
+  ['extra src attribute', html=>html.replace('id="sherlock-template-data"','id="sherlock-template-data" src="https://example.com/unknown.js"')],
+  ['extra executable script', html=>html+'<script>window.mustNotExecute=true</script>'],
+  ['duplicate retained block', html=>html+html.match(/<script id="sherlock-template-data"[\s\S]*?<\/script>/)[0]],
+  ['invalid JSON', html=>replaceMetadata(html,'window.mustNotExecute=true')],
+  ['unknown envelope fields', html=>replaceMetadata(html,JSON.stringify({templateId:'market.table',version:'21m-20260923-v1',data:model,extra:true}))],
+  ['wrong template id', html=>html.replace('"templateId":"market.table"','"templateId":"market.unknown"')],
+  ['wrong retained version', html=>replaceMetadata(html,JSON.stringify({templateId:'market.table',version:'unknown',data:model}))],
+  ['wrong data variant', html=>replaceMetadata(html,JSON.stringify({templateId:'market.table',version:'21m-20260923-v1',data:{...model,variant:'metrics'}}))],
+  ['null data', html=>replaceMetadata(html,JSON.stringify({templateId:'market.table',version:'21m-20260923-v1',data:null}))],
+  ['nonobject envelope', html=>replaceMetadata(html,'null')]
+])('retains strict sandbox fallback for unrecognized persisted scripts: %s', (_, mutate) => {
+  const html=withRetained();
+  expect(mutate(html)).not.toBe(html);
+  expect(project(mutate(html))).toBeNull();
+});
+it('uses complete visible HTML rather than retained metadata as the projection source', () => {
+  const html=withRetained(),metadata={templateId:'market.table',version:'21m-20260923-v1',data:{...model,asOf:'不可推断日期',note:'不可提升的隐藏说明',rows:[['隐藏数据','999']],sources:[{label:'隐藏链接',url:'javascript:unknown()'}]}};
+  const changed=replaceMetadata(html,JSON.stringify(metadata));
+  expect(project(changed)).toEqual(project(html));
+  expect(JSON.stringify(project(changed))).not.toContain('隐藏');
+});
+it('retains safe source and cell hrefs on production-persisted host HTML', () => {
+  const linked={...model,note:'可见完整备注',sources:[{label:'来源',url:'https://example.com/source?a=1&b=2'}],rowLinks:['https://example.org/detail?id=A']};
+  const direct=renderMarketArtifact(linked);
+  expect(project(retainTemplateModel(direct,linked).html)).toEqual(project(direct.html));
+  const holdings={...model,variant:'fund-holdings',asOf:'模拟数据'};
+  expect(project(retainTemplateModel(renderMarketArtifact(holdings),holdings).html).simulated).toBe(true);
 });

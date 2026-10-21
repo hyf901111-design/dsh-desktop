@@ -2,6 +2,7 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
+import {retainTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {renderMarketArtifact} from '../packages/dsh-research-task-runtime/market-artifact.js'
 import {parseResearchMarketNativeTable,ResearchMarketNativeTable,researchMarketNativeTableCss} from '../scripts/lib/research-market-native-table.mjs'
 import {installWorkbenchTableColumns,WORKBENCH_TABLE_COLUMNS_CSS} from '../packages/dsh-research-task-runtime/workbench-table-columns.js'
@@ -11,6 +12,9 @@ import {installDefaultWebLinks} from '../scripts/lib/default-web-links-client.mj
 // Frozen observed data and synthetic long note, in a fresh isolated headless
 // page. No installed app, CDP, network, model call or source retrieval.
 const observed=JSON.parse(readFileSync(new URL('./fixtures/workbench-native-valuation-observed.json',import.meta.url),'utf8'))
+// This production-retained HTML is byte-identical to the observed persisted
+// 79,846-character artifact (verified independently in the round1 report).
+const persistedObserved=retainTemplateModel(renderMarketArtifact(observed),observed)
 const longNote=observed.note+'续注 <脚本> & "原样文本"。'.repeat(200).slice(0,2000-observed.note.length-2)+'终点'
 let browser,bundle
 beforeAll(async()=>{
@@ -36,17 +40,21 @@ it.each([[420,'light'],[420,'dark'],[1100,'light'],[1100,'dark']])('preserves na
   await page.addStyleTag({content:researchCompletedDesignCss+researchMarketNativeTableCss+WORKBENCH_TABLE_COLUMNS_CSS})
   await page.addScriptTag({content:bundle})
   expect(await page.locator('[data-research-artifact-card]').evaluate(el=>getComputedStyle(el).getPropertyValue('--research-completed-surface').trim())).toBe(theme==='dark'?'#11161c':'#ffffff')
-  const actual=await page.evaluate(html=>window.renderNative(html),renderMarketArtifact(observed).html)
+  const actual=await page.evaluate(html=>window.renderNative(html),persistedObserved.html)
+  expect(persistedObserved.html).toHaveLength(79846)
+  expect(actual.columns).toEqual(observed.columns)
   expect(actual.rows.map(row=>row.map(cell=>cell.text))).toEqual(observed.rows)
   expect(await page.locator('.terminal-native-context').textContent()).toBe(observed.asOf+observed.note)
-  await page.screenshot({path:`/tmp/workbench-native-valuation-${width}-${theme}.png`,fullPage:true})
+  await page.screenshot({path:`/tmp/workbench-native-persisted-valuation-${width}-${theme}.png`,fullPage:true})
   const source='https://example.com/source?x=1&y=2#original',detail='https://example.org/detail?code=300308&view=full'
   expect(longNote).toHaveLength(2000)
-  const html=renderMarketArtifact({...observed,note:longNote,sources:[{label:'来源 <甲>',url:source},{label:'无链接来源'}],rowLinks:[detail,null,null]}).html
+  const linkedModel={...observed,note:longNote,sources:[{label:'来源 <甲>',url:source},{label:'无链接来源'}],rowLinks:[detail,null,null]}
+  const html=retainTemplateModel(renderMarketArtifact(linkedModel),linkedModel).html
   await page.evaluate(html=>window.renderNative(html),html)
   await page.addScriptTag({content:`window.disposeWidths=(${installWorkbenchTableColumns.toString()})(document.querySelector('#fixture'));window.opened=[];window.disposeLinks=(${installDefaultWebLinks.toString()})({documentTarget:document,bridge:{subscribe:()=>()=>{},openSource:async request=>window.opened.push(request)},sessions:{list:{getSnapshot:()=>({current:'fixture-session'})}}});`})
   const context=page.locator('.terminal-native-context'),wrap=page.locator('.fund-native-table-wrap'),headers=page.locator('thead th'),rows=page.locator('tbody tr')
   expect(await context.textContent()).toBe(observed.asOf+longNote+'来源 <甲> ↗ · 无链接来源')
+  expect(await page.locator('#sherlock-template-data').count()).toBe(0)
   expect(await page.locator('script').count()).toBe(2) // Only fixture and installers, never artifact scripts.
   expect(await page.locator('tbody tr:first-child td').nth(1).evaluate(el=>getComputedStyle(el).color)).toBe(theme==='dark'?'rgb(225, 232, 240)':'rgb(27, 39, 52)')
   expect(await page.locator('tbody td,thead th').evaluateAll(items=>items.every(el=>getComputedStyle(el).whiteSpace==='nowrap'))).toBe(true)
@@ -82,7 +90,7 @@ it.each([[420,'light'],[420,'dark'],[1100,'light'],[1100,'dark']])('preserves na
   await context.evaluate(el=>el.scrollTop=el.scrollHeight)
   expect(await context.evaluate(el=>{const text=el.children[1].firstChild,range=document.createRange();range.setStart(text,text.length-2);range.setEnd(text,text.length);const end=range.getBoundingClientRect(),box=el.getBoundingClientRect();return end.bottom<=box.bottom+1&&end.top>=box.top})).toBe(true)
   expect(await context.evaluate(el=>{const end=el.lastElementChild;const b=end.getBoundingClientRect(),box=el.getBoundingClientRect();return b.bottom<=box.bottom+1&&b.top>=box.top})).toBe(true)
-  await page.screenshot({path:`/tmp/workbench-native-long-note-${width}-${theme}.png`,fullPage:true})
+  await page.screenshot({path:`/tmp/workbench-native-persisted-long-note-${width}-${theme}.png`,fullPage:true})
   await headers.first().locator('button').click();await headers.first().locator('button').click()
   expect(await rows.first().locator('td').first().textContent()).toBe('601138')
   await page.getByRole('searchbox',{name:'搜索表格内容'}).fill('新易盛')
