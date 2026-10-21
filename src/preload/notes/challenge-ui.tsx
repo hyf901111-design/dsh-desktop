@@ -8,6 +8,7 @@ import {CHALLENGE_KIND,CHALLENGE_USER,type ChallengeThread,type useNoteChallenge
 import {findChallengeQuote} from './challenge-anchors'
 import {noteText} from '../../shared/workspace-notes'
 import swordsIcon from './assets/challenge-swords.svg?inline'
+import busySwordsIcon from './assets/challenge-swords-busy.svg?inline'
 import collapseIcon from './assets/challenge-margin-collapse.svg?inline'
 import expandIcon from './assets/challenge-margin-expand.svg?inline'
 import chevronIcon from './assets/challenge-chevron.svg?inline'
@@ -19,7 +20,10 @@ import closeIcon from './assets/challenge-close.svg?inline'
 type Controller=ReturnType<typeof useNoteChallenge>
 const names:Record<string,string>={typo:'错别字',grammar:'表达建议',contradiction:'前后矛盾',logic:'逻辑挑战',fact:'事实核验',research:'研究挑战',question:'反驳与追问',uncertain:'待核验'}
 
-export function ChallengePicker({value,onChange,disabled=false,dark=false}:{value:ChallengeLevel;onChange(value:ChallengeLevel):void;disabled?:boolean;dark?:boolean}){
+export function ChallengePicker({value,onChange,disabled=false,dark=false,running=false}:{value:ChallengeLevel;running?:boolean;onChange(value:ChallengeLevel):void;disabled?:boolean;dark?:boolean}){
+ // SVG-as-image media queries do not reliably inherit the host motion preference.
+ const [reducedMotion,setReducedMotion]=useState(()=>typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+ useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReducedMotion(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[])
  const [open,setOpen]=useState(false),[preview,setPreview]=useState(value),[pressed,setPressed]=useState(false),root=useRef<HTMLDivElement>(null),popover=useRef<HTMLElement>(null),[position,setPosition]=useState({left:8,top:8}),track=useRef<HTMLDivElement>(null),drag=useRef(false),choice=useRef(value)
  useEffect(()=>{if(!drag.current){setPreview(value);choice.current=value}},[value])
  useEffect(()=>{if(disabled)setOpen(false)},[disabled])
@@ -48,7 +52,7 @@ export function ChallengePicker({value,onChange,disabled=false,dark=false}:{valu
  },[open])
  const pointer=(clientX:number)=>{const r=track.current!.getBoundingClientRect(),next=Math.max(0,Math.min(4,Math.round(((clientX-r.left)/r.width*252-12)/57))) as ChallengeLevel;choice.current=next;setPreview(next)}
  return <div className="en-challenge-picker" ref={root}>
-  <button className="en-challenge-trigger" disabled={disabled} aria-label={'挑战模式，当前'+CHALLENGE_LEVELS[value].name} aria-expanded={open} onClick={()=>setOpen(!open)}><img src={swordsIcon} alt=""/><span>AI挑战</span><span className="en-challenge-grade">{CHALLENGE_LEVELS[value].name}</span><img className="en-challenge-chevron" src={chevronIcon} alt=""/></button>
+  <button className="en-challenge-trigger" disabled={disabled} aria-busy={running} aria-description={running?'AI挑战正在执行':undefined} aria-label={'挑战模式，当前'+CHALLENGE_LEVELS[value].name} aria-expanded={open} onClick={()=>setOpen(!open)}><img src={running&&!reducedMotion?busySwordsIcon:swordsIcon} alt=""/><span>AI挑战</span><span className="en-challenge-grade">{CHALLENGE_LEVELS[value].name}</span><img className="en-challenge-chevron" src={chevronIcon} alt=""/></button>
   {open?createPortal(<section className="en-challenge-popover" ref={popover} data-dark={dark} style={position} aria-label="挑战强度"><div className="en-challenge-level-name">{CHALLENGE_LEVELS[preview].name}</div><div className="en-challenge-description">{CHALLENGE_LEVELS[preview].description}</div>
    <div className="en-challenge-slider" ref={track} role="slider" tabIndex={0} aria-label="挑战强度" aria-valuemin={0} aria-valuemax={4} aria-valuenow={preview} aria-valuetext={CHALLENGE_LEVELS[preview].name} data-pressed={pressed||undefined}
     onPointerDown={e=>{e.preventDefault();drag.current=true;setPressed(true);e.currentTarget.focus();e.currentTarget.setPointerCapture(e.pointerId);pointer(e.clientX)}} onPointerMove={e=>{if(drag.current)pointer(e.clientX)}} onPointerUp={e=>{if(!drag.current)return;pointer(e.clientX);drag.current=false;setPressed(false);onChange(choice.current);e.currentTarget.releasePointerCapture(e.pointerId)}} onPointerCancel={()=>{drag.current=false;setPressed(false);setPreview(value)}}
@@ -68,7 +72,7 @@ export function ChallengeToolbar({controller,sessionId,dark,marginAvailable,disa
  },[sessionId])
  const tools=<div className="en-challenge-tools" data-dark={dark} data-header={!!host}>
   {marginAvailable?<button className="en-challenge-margin-toggle" type="button" aria-expanded={controller.marginExpanded} onClick={()=>controller.setMarginExpanded(!controller.marginExpanded)}><img src={controller.marginExpanded?collapseIcon:expandIcon} alt=""/>{controller.marginExpanded?'收起评论':'展开评论'}</button>:null}
-  <ChallengePicker value={controller.level} onChange={controller.setLevel} disabled={disabled} dark={dark}/>
+  <ChallengePicker running={controller.running} value={controller.level} onChange={controller.setLevel} disabled={disabled} dark={dark}/>
  </div>
  return host?createPortal(tools,host):tools
 }

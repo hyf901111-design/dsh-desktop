@@ -44,10 +44,15 @@ it('publishes and saves a sent message before the deferred reply, blocks duplica
   expect(await page.evaluate(()=>window.savedMessages())).toContain('请核实来源')
   await page.evaluate(id=>{window.start('reply','重复发送');window.start('optimize');window.challenge.setDraft(id,'等待时继续写的新草稿')},id)
   expect(await page.evaluate(()=>window.jobs.length)).toBe(1)
+  expect(await page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('true')
+  expect(await page.locator('.en-challenge-trigger').getAttribute('aria-description')).toContain('正在执行')
+  expect(await page.evaluate(()=>window.challenge.running)).toBe(true)
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
   await finish(page)
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   expect(await page.evaluate(()=>window.challenge.actionKind||null)).toBeNull()
+  expect(await page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await page.evaluate(()=>window.challenge.running)).toBe(false)
   expect(await page.evaluate(()=>window.messages())).toEqual(['请核对这段用字。','请核实来源','目前没有实际来源，无法核实这项判断。'])
   expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('等待时继续写的新草稿')
   expect(errors).toEqual([])
@@ -59,6 +64,8 @@ it('replaces a transport failure with a short retry message while retaining the 
   await start(page);await page.evaluate(id=>window.challenge.setDraft(id,'下一个问题'),id)
   await page.evaluate(()=>window.jobs[0].reject(Error('PRIVATE provider stack tool trace')))
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await page.evaluate(()=>window.challenge.running)).toBe(false)
   expect(await page.evaluate(()=>window.messages())).toEqual(['请核对这段用字。','请核实来源','没能完成，请重试'])
   expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('下一个问题')
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original)
@@ -72,6 +79,8 @@ for(const route of ['close','resolve','switch','off','hidden'])it('ends a pendin
   await page.evaluate(({route,id})=>{window.challenge.setDraft(id,'保留新草稿');if(route==='close')window.challenge.close(id);if(route==='resolve')void window.challenge.resolve(id);if(route==='switch')window.switchNote('note-b');if(route==='off')window.challenge.setLevel(0);if(route==='hidden'){document.querySelector('.en-root').hidden=true;document.dispatchEvent(new Event('sherlock:workspace-surface-change'))}},{route,id})
   await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   await expect.poll(()=>page.evaluate(()=>window.completed)).toBe(1)
+  expect(await page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await page.evaluate(()=>window.challenge.running)).toBe(false)
   expect(await page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(1)
   await finish(page,{...answer,reply:{text:'迟到的建议',replacement:'新内容'}})
   if(route==='switch'){await page.evaluate(()=>window.switchNote('note-a'));await expect.poll(()=>page.locator('.en-title').inputValue()).toBe('note-a')}
@@ -169,5 +178,107 @@ it('includes the persisted proposed wording in later discussion context without 
   expect(await page.evaluate(()=>window.jobs[1].input.thread.messages.some(message=>message.role==='assistant'&&message.text.includes('程度')))).toBe(true)
   await finish(page,answer,1);await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(original);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+// Uses the real mounted scheduler; only the transport is deferred above.
+it('keeps the swords static while waiting, animates a real review, and stops for success, failure, off and leaving notes',async()=>{
+ const{context,page,errors}=await fixture();try{
+  const trigger=page.locator('.en-challenge-trigger'),icon=trigger.locator('img').first()
+  const staticSrc=await icon.getAttribute('src')
+  const bounds=()=>trigger.evaluate(el=>{const r=el.getBoundingClientRect(),i=el.querySelector('img').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,iconX:i.x,iconY:i.y,iconWidth:i.width,iconHeight:i.height}})
+  await page.clock.install()
+  await page.evaluate(()=>{window.editor._tiptapEditor.commands.blur();window.challenge.setLevel(2)})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.phase)).toBe('waiting')
+  const waitingBounds=await bounds(),waitingLabel=await trigger.getAttribute('aria-label')
+  expect(waitingBounds.iconWidth).toBe(16);expect(waitingBounds.iconHeight).toBe(16)
+  expect(await trigger.getAttribute('aria-busy')).toBe('false');expect(await icon.getAttribute('src')).toBe(staticSrc)
+  await page.clock.fastForward(5100)
+  await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(1)
+  await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('true')
+  expect(await page.evaluate(()=>window.challenge.phase)).toBe('running')
+  expect(await trigger.getAttribute('aria-label')).toBe(waitingLabel)
+  expect(await icon.getAttribute('src')).not.toBe(staticSrc)
+  const firstFrame=await icon.screenshot({path:'/tmp/notes-challenge-v16-motion-frame-a.png'})
+  await expect.poll(async()=>firstFrame.equals(await icon.screenshot({path:'/tmp/notes-challenge-v16-motion-frame-b.png'}))).toBe(false)
+  expect(await bounds()).toEqual(waitingBounds)
+  await trigger.screenshot({path:'/tmp/notes-challenge-v16-motion-running.png'})
+  await finish(page,{...answer,coveredBlockIds:['p']})
+  await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false')
+  expect(await icon.getAttribute('src')).toBe(staticSrc)
+  for(const stop of ['failure','off','hidden']){
+   await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-recheck',{detail:{sessionId:'note-a'}})))
+   // Rechecks still respect the real interval; move its clock without stubbing the scheduler.
+   await page.clock.fastForward(31000)
+   await expect.poll(()=>page.evaluate(()=>window.jobs.length)).toBe(stop==='failure'?2:stop==='off'?3:4)
+   await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('true')
+   await page.evaluate(stop=>{if(stop==='failure')window.jobs.at(-1).reject(Error('fixture failure'));if(stop==='off')window.challenge.setLevel(0);if(stop==='hidden'){document.querySelector('.en-root').hidden=true;document.dispatchEvent(new Event('sherlock:workspace-surface-change'))}},stop)
+   await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false')
+   expect(await icon.getAttribute('src')).toBe(staticSrc)
+   if(stop==='off')await page.evaluate(()=>window.challenge.setLevel(2))
+  }
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+it('retains every original sword path and independently counter-swings both groups while respecting reduced motion',async()=>{
+ const originalSvg=await readFile('src/preload/notes/assets/challenge-swords.svg','utf8'),busySvg=await readFile('src/preload/notes/assets/challenge-swords-busy.svg','utf8')
+ const context=await browser.newContext(),page=await context.newPage()
+ try{
+  await page.setContent(`<style>body{background:#252525;color:white;font:14px sans-serif}section{display:inline-flex;flex-direction:column;gap:12px;align-items:center;margin:24px}section svg{width:160px;height:160px}</style><section>原图${originalSvg}</section><section>初始${busySvg}</section><section>相向摆动${busySvg}</section><section>反向摆动${busySvg}</section>`)
+  const geometry=await page.evaluate(()=>{
+   const svgs=[...document.querySelectorAll('svg')],paths=svg=>[...svg.querySelectorAll('path')].map(path=>[...path.attributes].map(a=>[a.name,a.value])).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))
+   return svgs.map(svg=>({width:svg.getAttribute('width'),height:svg.getAttribute('height'),viewBox:svg.getAttribute('viewBox'),paths:paths(svg)}))
+  })
+  for(const animated of geometry.slice(1))expect(animated).toEqual(geometry[0])
+  const samples=await page.evaluate(()=>{
+   const svgs=[...document.querySelectorAll('svg')].slice(1)
+   return svgs.map((svg,index)=>{
+    const animations=svg.getAnimations({subtree:true});for(const animation of animations){animation.pause();animation.currentTime=[0,275,825][index]}
+    return [...svg.querySelectorAll('.sword')].map(sword=>({ids:[...sword.querySelectorAll('path')].map(p=>p.id),matrix:getComputedStyle(sword).transform}))
+   })
+  })
+  expect(samples[0].map(s=>s.ids)).toEqual([['Vector','Vector_2','Vector_4','Vector_5'],['Vector_3','Vector_6','Vector_7','Vector_8']])
+  const degrees=matrix=>{const [a,b]=matrix.slice(7,-1).split(',').map(Number);return Math.atan2(b,a)*180/Math.PI}
+  expect(degrees(samples[1][0].matrix)).toBeCloseTo(7,3);expect(degrees(samples[1][1].matrix)).toBeCloseTo(-7,3)
+  expect(degrees(samples[2][0].matrix)).toBeCloseTo(-7,3);expect(degrees(samples[2][1].matrix)).toBeCloseTo(7,3)
+  await page.screenshot({path:'/tmp/notes-challenge-v16-motion-geometry.png'})
+  await page.emulateMedia({reducedMotion:'reduce'})
+  expect(await page.evaluate(()=>[...document.querySelectorAll('.sword')].map(s=>getComputedStyle(s).transform))).toEqual(Array(6).fill('none'))
+  expect(await page.evaluate(()=>document.getAnimations().length)).toBe(0)
+  await page.screenshot({path:'/tmp/notes-challenge-v16-motion-reduced.png'})
+ }finally{await context.close()}
+},15000)
+
+it('keeps a reduced-motion mounted toolbar static throughout a real action with its accessible busy explanation',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await page.emulateMedia({reducedMotion:'reduce'})
+  const trigger=page.locator('.en-challenge-trigger'),icon=trigger.locator('img').first(),before=await icon.screenshot({path:'/tmp/notes-motion-reduced-static.png'})
+  await start(page,'optimize')
+  expect(await trigger.getAttribute('aria-busy')).toBe('true');expect(await trigger.getAttribute('aria-description')).toContain('正在执行')
+  await expect.poll(async()=>before.equals(await icon.screenshot())).toBe(true)
+  const running=await icon.screenshot();expect(running.equals(await icon.screenshot())).toBe(true)
+  await page.emulateMedia({reducedMotion:'no-preference'})
+  await expect.poll(async()=>before.equals(await icon.screenshot())).toBe(false)
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await expect.poll(async()=>before.equals(await icon.screenshot())).toBe(true)
+  await trigger.screenshot({path:'/tmp/notes-challenge-v16-motion-reduced-toolbar.png'})
+  await finish(page);await expect.poll(()=>trigger.getAttribute('aria-busy')).toBe('false')
+  expect(before.equals(await icon.screenshot())).toBe(true);expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+
+
+it('removes the busy icon and cancels its request when the mounted notes controller is disposed',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await start(page)
+  const oldIcon=await page.locator('.en-challenge-trigger img').first().elementHandle()
+  await page.evaluate(()=>window.remount())
+  await expect.poll(()=>page.locator('.en-challenge-trigger').getAttribute('aria-busy')).toBe('false')
+  expect(await oldIcon.evaluate(el=>el.isConnected)).toBe(false)
+  await expect.poll(()=>page.evaluate(()=>window.calls.filter(c=>c.method==='challenge-stop').length)).toBe(1)
+  await finish(page,{...answer,reply:{text:'迟到的回复'}})
+  expect(await page.evaluate(()=>window.challenge.running)).toBe(false)
+  expect(await page.evaluate(()=>window.messages())).not.toContain('迟到的回复');expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)

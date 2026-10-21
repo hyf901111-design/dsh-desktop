@@ -6,7 +6,7 @@ import type {NotesBridge} from '../../shared/workspace-notes'
 import {noteText} from '../../shared/workspace-notes'
 import type {ChallengeIssue,ChallengeLevel,ChallengeRequest,ChallengeResult,ChallengeCheck} from '../../shared/notes-challenge'
 import {challengeDirectReplacement,type ChallengeReplacement} from '../../shared/notes-challenge'
-import {challengeDocumentBlocks,NoteChallengeScheduler} from './challenge-scheduler'
+import {challengeDocumentBlocks,NoteChallengeScheduler,type ChallengeScheduleState} from './challenge-scheduler'
 import {findChallengeQuote,replaceChallengeQuote} from './challenge-anchors'
 
 export const CHALLENGE_KIND='ework-challenge-v1',CHALLENGE_USER='ework-ai-challenge'
@@ -50,6 +50,8 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
  const readMarginExpanded=()=>prefs.get('marginExpanded')!==false
  const [level,setLevelState]=useState<ChallengeLevel>(readLevel),[marginExpanded,setMarginExpandedState]=useState(readMarginExpanded),[threads,setThreads]=useState<ChallengeThread[]>([]),[selected,setSelected]=useState<string>(),[pending,setPending]=useState<Pick<ChallengeAction,'threadId'|'kind'>>(),[revision,setRevision]=useState(0)
  const busyId=pending?.threadId,actionKind=pending?.kind
+ const [phase,setPhase]=useState<ChallengeScheduleState['phase']>('off')
+ const running=phase==='running'||!!pending
  const [checks,setChecks]=useState<ChallengeCheck[]>([]),covered=useRef(new Map<string,string>()),dismissed=useRef(new Set<string>()),action=useRef<ChallengeAction>(),scheduler=useRef<NoteChallengeScheduler>(),live=useRef(true),settle=useRef(0)
  const cancelAction=(id?:string)=>{const current=action.current;if(!current||id&&current.threadId!==id)return;action.current=undefined;current.controller.abort();if(live.current)setPending(undefined)}
  const blocks=()=>challengeDocumentBlocks(editor.document)
@@ -103,7 +105,7 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     editor.transact((tr:any)=>tr.setMeta('addToHistory',false).addMark(current.from,current.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})))
    }
    refresh()
-  },onState:value=>{state.current.checks=value.checks;setChecks(value.checks);publish()}})
+  },onState:value=>{if(!live.current)return;setPhase(value.phase);state.current.checks=value.checks;setChecks(value.checks);publish()}})
   scheduler.current=s;sync();s.setLevel(readLevel())
   const pref=(event:Y.YMapEvent<unknown>)=>{setLevelState(readLevel());setMarginExpandedState(readMarginExpanded());if(event.keysChanged.has('level')){if(!readLevel())cancelAction();s.setLevel(readLevel())}latest.current.persist();publish()}
   const off=editor.onChange((_editor:any,{getChanges}:any)=>{
@@ -198,5 +200,5 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
   }catch{await append('没能完成，请重试')}
   finally{if(action.current===job){action.current=undefined;if(live.current){setPending(undefined);sync();refresh()}}}
  }
- return {level,marginExpanded,threads,selected,busyId,actionKind,revision,checks,setLevel:levelChange,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
+ return {level,marginExpanded,threads,selected,busyId,actionKind,phase,running,revision,checks,setLevel:levelChange,setMarginExpanded,close,resolve,runAction,applyReplacement,select:(id:string)=>{dismissed.current.delete(id);comments.selectThread(id,false)},isDismissed:(id:string)=>dismissed.current.has(id),setDraft:(id:string,draft:string)=>metadata(id,{draft:draft.slice(0,4000)}),openEvidence:(thread:ChallengeThread)=>{send('open',{sessionId,threadId:thread.id,quote:thread.metadata.issue.quote,evidence:thread.metadata.issue.evidence,checks:state.current.checks});publish()}}
 }
