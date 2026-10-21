@@ -112,6 +112,10 @@ export function refineStoredTemplateHtml(html){
   const next=html.replace(/<script>\(function inputRuntime\(spec\)\{[\s\S]*?<\/script>/,()=>`<script>(${INPUT_VIEW_RUNTIME})(${data});</script>`);
   return next+`<style data-code-viewport="v2">${CODE_VIEWPORT_CSS}</style>`;
  }
+ if(model.templateId==='alerts'&&model.data.type==='alerts'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="alerts" data-sherlock-template="alerts">')&&!html.includes('data-workflow-tools="v1"')){
+  // Append presentation only; keep saved controls and interaction routes.
+  return html+'<style data-workflow-tools="v1">.workflow-tools h2{flex:1 0 100%}.workflow-tools>*{max-width:100%}</style>';
+ }
  if(model.templateId==='tasks'&&model.data.type==='tasks'&&model.version==='21z-20260930'&&html.includes('<body data-research-kind="tasks" data-sherlock-template="tasks">')&&!html.includes('data-operations-density="v2"')){
   // The production preview embeds the saved document inside its own body.
   // A style added to the saved head becomes a body child in Chromium and
