@@ -76,13 +76,18 @@ function acknowledgesNoConflict(message) {
 // Low interruption controls optional advice, never truncates obvious errors more aggressively.
 const REVIEW_ISSUE_LIMITS = Object.freeze({ perBlock: 6, total: 24 })
 
-function issuesFrom(value, targets, available, limits) {
+function reviewEntries(value, targets) {
   if (!Array.isArray(value?.reviews) || value.reviews.length > targets.length) throw Error('挑战检查结果格式不完整。')
-  const result = [], reviewed = new Map(), byId = new Map(available.map(block => [block.id, block])), targetIds = new Set(targets.map(block => block.id))
+  const reviewed = new Map(), targetIds = new Set(targets.map(block => block.id))
   for (const review of value.reviews) {
     if (!fields(review, ['blockId', 'issues']) || !targetIds.has(review.blockId) || reviewed.has(review.blockId) || !Array.isArray(review.issues)) throw Error('挑战检查结果格式不完整。')
     reviewed.set(review.blockId, review.issues)
   }
+  return reviewed
+}
+
+function issuesFrom(value, targets, available, limits) {
+  const result = [], reviewed = reviewEntries(value, targets), byId = new Map(available.map(block => [block.id, block]))
   for (const target of targets) {
     const seen = new Set(), accepted = []
     for (const item of reviewed.get(target.id) ?? []) {
@@ -152,13 +157,13 @@ function boundedIssues(issues, blocks, limit) {
   return blocks.flatMap((block, index) => groups[index].filter(issue => selected.has(issue)).sort((a, b) => block.text.indexOf(a.quote) - block.text.indexOf(b.quote)))
 }
 
-async function modelResult(ctx, route, system, payload, signal, reasoningEffort) {
+async function modelResult(ctx, route, system, payload, signal, reasoningEffort, reviewTargets) {
   const messages = [createUserMessage({ content: [{ type: 'text', text: JSON.stringify(payload) }], source: { kind: 'plugin', plugin: 'dsh-research-task-runtime' } })]
   let outputSize = 0, totalSize = 0, usage = { inputTokens: 0, outputTokens: 0 }
   for (let attempt = 0; attempt < 2; attempt++) {
     signal.throwIfAborted()
     const transport = new AbortController(), streamSignal = AbortSignal.any([signal, transport.signal])
-    const requestSystem = attempt ? system + '\n输出必须是一个闭合完整的JSON对象，包括所有结束大括号；不要解释或Markdown代码围栏。' : system
+    const requestSystem = attempt ? system + '\n输出必须是一个闭合完整的JSON对象，包括所有结束大括号；不要解释或Markdown代码围栏。' + (reviewTargets ? '检查结果必须使用reviews数组，每项只含blockId与issues；blockId必须精确复制targets中的id，不得重复，issues必须为数组。' : '') : system
     const assembler = new BlockAssembler(), attemptUsage = { inputTokens: 0, outputTokens: 0 }, iterator = ctx.llm.stream({ provider: route.provider, model: route.model, purpose: 'workspace-note-challenge', signal: streamSignal, maxTokens: payload.action === 'review' ? 3000 : 2400, ...reasoningEffort ? { reasoningEffort } : {}, system: requestSystem, messages })[Symbol.asyncIterator]()
     let attemptOutputSize = 0
     try {
@@ -182,11 +187,18 @@ async function modelResult(ctx, route, system, payload, signal, reasoningEffort)
       for (const key of ['inputTokens', 'outputTokens']) usage[key] += attemptUsage[key]
       // Only a complete, sole JSON fence is an envelope; never scan prose or reasoning for objects.
       const json = /^```json[ \t]*\r?\n([\s\S]*?)\r?\n```$/iu.exec(text)?.[1] ?? text
-      try { return { value: JSON.parse(json), usage } }
+      let parsedJSON = false
+      try {
+        const value = JSON.parse(json)
+        parsedJSON = true
+        if (reviewTargets) reviewEntries(value, reviewTargets)
+        return { value, usage }
+      }
       catch {
-        // A stop response can still contain malformed JSON. Regenerate once within the same
-        // deadline and size budgets; do not repair partial output or send it back to the model.
-        if (attempt) throw Error('挑战检查结果格式无效。')
+        // A stop response can contain malformed JSON or a malformed review envelope.
+        // They share one regeneration allowance, deadline and size budgets; never repair
+        // partial output, send it back, or retry a valid but empty/filtered review.
+        if (attempt) throw Error(parsedJSON ? '挑战检查结果格式不完整。' : '挑战检查结果格式无效。')
       }
     } finally {
       // Do not wait on an uncooperative generator; it already received the original abort signal.
@@ -227,7 +239,7 @@ async function run(ctx, input, signal, modelMilliseconds = 20000) {
         while (thread.messages.length > 1 && JSON.stringify(thread).length > 16000) thread.messages = thread.messages.slice(1)
         if (JSON.stringify(thread).length > 16000) throw Error('完整句与讨论上下文过长，请缩小或分段后重试。')
       }
-      const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort)
+      const generated = await modelResult(ctx, route, input.action === 'review' ? REVIEW_SYSTEM : THREAD_SYSTEM, { action: input.action, level: input.level, title: input.title, targets, context, ...input.action === 'review' ? { issueLimits } : {}, ...thread ? { thread, allowReplacement } : {} }, modelBudget.signal, reasoningEffort, input.action === 'review' ? targets : undefined)
       for (const key of ['inputTokens', 'outputTokens']) usage[key] += generated.usage[key]
       if (input.action === 'review') {
         const reviewed = issuesFrom(generated.value, targets, available, issueLimits)
