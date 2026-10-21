@@ -10,9 +10,10 @@ let browser,script
 const firstDay='2026-10-20T16:05:00Z',secondDay='2026-10-21T16:05:00Z',thirdDay='2026-10-22T16:05:00Z'
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
-  import{mountNotes}from'./src/preload/notes/mount';import{YjsThreadStore}from'@blocknote/core/yjs';import{DefaultThreadStoreAuth}from'@blocknote/core/comments';import{findChallengeQuote}from'./src/preload/notes/challenge-anchors';import{CHALLENGE_KIND,CHALLENGE_USER}from'./src/preload/notes/challenge-controller';
+  import{mountNotes}from'./src/preload/notes/mount';import{BlockNoteEditor}from'@blocknote/core';import{YjsThreadStore,blocksToYDoc}from'@blocknote/core/yjs';import*as Y from'yjs';import{DefaultThreadStoreAuth}from'@blocknote/core/comments';import{findChallengeQuote}from'./src/preload/notes/challenge-anchors';import{CHALLENGE_KIND,CHALLENGE_USER}from'./src/preload/notes/challenge-controller';
   window.jobs={};window.calls=[];const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='challenge')return new Promise(resolve=>window.jobs[input.requestId]={input,resolve});return window.noteTestRequest(method,input)},draft:input=>window.noteTestDraft(input)};
-  const host={register:(_mode,surface)=>{surface.style.left='0';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>'notes'};let mounted=mountNotes(document,bridge,host);window.remount=()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)};
+  const host={register:(_mode,surface)=>{surface.style.left='0';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>'notes'};let mounted;window.remount=()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)};
+  void(async()=>{const seed=await window.noteTestLegacySeed();if(seed){const serialize=content=>{if(!seed.realYjs)return content;const model=BlockNoteEditor.create(),doc=blocksToYDoc(model,content.blocks,'note');try{let text='';for(const byte of Y.encodeStateAsUpdate(doc))text+=String.fromCharCode(byte);return{...content,yjs:btoa(text)}}finally{doc.destroy();model._tiptapEditor.destroy()}};await window.noteTestPersistLegacy({saved:serialize(seed.saved),draft:seed.draft?serialize(seed.draft):undefined})}mounted=mountNotes(document,bridge,host)})();
   window.switchNote=id=>{document.querySelector('[data-ework-notes-session]').dataset.eworkNotesSession=id;document.querySelector('[data-ework-note-view]').dataset.eworkNoteView=id;document.dispatchEvent(new CustomEvent('sherlock:notes-open',{detail:{sessionId:id}}))};
   window.seedChallenge=async()=>{const block=window.editor.document.find(b=>b.content?.some(c=>c.text?.includes('成度'))),quote='成度',issue={blockId:block.id,quote,category:'typo',message:'请核对用字。',evidence:[]},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:block.content.map(c=>c.text||'').join('')},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}});const range=findChallengeQuote(window.editor,block.id,quote);window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));return thread.id};
  `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.noteDoc=doc;window.challenge=challenge;window.systemUpdate=updateSystemComponent; const slashMenu = useMemo'),loader:'tsx'}))}}]})
@@ -22,11 +23,13 @@ beforeAll(async()=>{
 },60000)
 afterAll(async()=>browser?.close())
 
-async function fixture({legacy=false,legacyDraft=false}={}){
+async function fixture({legacy=false,legacyDraft=false,legacyContent,legacyDraftContent}={}){
  const folder=await mkdtemp(join(tmpdir(),'notes-edit-date-')),store=new NotesStore(folder),control={failSaves:false},errors=[]
- if(legacy||legacyDraft){const clock=vi.spyOn(Date,'now').mockReturnValue(new Date(firstDay).getTime());try{store.save('owner','date-note',0,{title:'原有笔记',blocks:[{id:'legacy',type:'paragraph',content:'已保存的真实内容。'}],yjs:''},'legacy');if(legacyDraft){clock.mockReturnValue(new Date(secondDay).getTime());store.draft('owner','date-note','old-client',1,{title:'原有离线草稿',blocks:[{id:'legacy-draft',type:'paragraph',content:'以前离线保存的正文。'}],yjs:''})}}finally{clock.mockRestore()}}
+ const legacySeed=legacy||legacyDraft||legacyContent||legacyDraftContent?{saved:legacyContent||{title:'原有笔记',blocks:[{id:'legacy',type:'paragraph',content:'已保存的真实内容。'}],yjs:''},draft:legacyDraft||legacyDraftContent?legacyDraftContent||{title:'原有离线草稿',blocks:[{id:'legacy-draft',type:'paragraph',content:'以前离线保存的正文。'}],yjs:''}:undefined,realYjs:!!(legacyContent||legacyDraftContent)}:undefined
  const context=await browser.newContext({viewport:{width:2000,height:900},timezoneId:'Asia/Shanghai'}),page=await context.newPage()
  page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(5000)
+ await page.exposeFunction('noteTestLegacySeed',()=>legacySeed)
+ await page.exposeFunction('noteTestPersistLegacy',seed=>{const clock=vi.spyOn(Date,'now').mockReturnValue(new Date(firstDay).getTime());try{store.save('owner','date-note',0,seed.saved,'legacy');if(seed.draft){clock.mockReturnValue(new Date(secondDay).getTime());store.draft('owner','date-note','old-client',1,seed.draft)}}finally{clock.mockRestore()}})
  await page.exposeFunction('noteTestRequest',(method,input)=>{if(method==='load')return store.load('owner',input.sessionId);if(method==='save'){if(control.failSaves)throw Error('离线保存');return store.save('owner',input.sessionId,input.revision,input.content,input.clientId)}if(method==='discard')return store.discardDraft('owner',input.sessionId,input.clientId);return{}})
  await page.exposeFunction('noteTestDraft',input=>store.draft('owner',input.sessionId,input.clientId,input.revision,input.content))
  await page.route('http://127.0.0.1/edit-date',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><span data-ework-notes-session="date-note"></span><div data-ework-note-view="date-note"></div>'}))
@@ -102,3 +105,24 @@ it('preserves the known original date and cleanup of a pre-feature recovery draf
   await f.page.evaluate(()=>window.remount());await f.page.locator('.bn-editor').waitFor();await date(f.page,'编辑于2026年10月22日');expect(await f.page.locator('.en-recovery').count()).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+
+const legacyStructures=[
+ ['table',{id:'legacy-table',type:'table',content:{type:'tableContent',rows:[{cells:[[{type:'text',text:'指标',styles:{}}],[{type:'text',text:'数值',styles:{}}]]},{cells:[[{type:'text',text:'留存率',styles:{}}],[{type:'text',text:'83%',styles:{}}]]}]}}],
+ ['image',{id:'legacy-image',type:'image',props:{url:'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="20" height="20"%3E%3Crect width="20" height="20" fill="gray"/%3E%3C/svg%3E',name:'原有图片',caption:''}}]
+]
+for(const[kind,block]of legacyStructures){
+ it(`inherits the known edit date of an untitled legacy ${kind} without creating a recovery draft`,async()=>{
+  const content={title:'',blocks:[block],yjs:''},f=await fixture({legacyContent:content});try{
+   await f.page.clock.setFixedTime(new Date(thirdDay));await date(f.page,'编辑于2026年10月21日');await f.page.locator(`.bn-block-content[data-content-type="${kind}"]`).waitFor();expect(await f.page.getByRole('textbox',{name:'笔记标题',exact:true}).inputValue()).toBe('')
+   await f.page.waitForTimeout(850);expect(f.store.load('owner','date-note').saved).toMatchObject({title:'',blocks:[block],revision:1});expect(f.store.load('owner','date-note').draft).toBeUndefined()
+   await f.page.evaluate(()=>window.challenge.setMarginExpanded(false));await saved(f);await f.page.evaluate(()=>window.remount());await f.page.locator('.bn-editor').waitFor();await date(f.page,'编辑于2026年10月21日');expect(await f.page.locator('.en-recovery').count()).toBe(0);expect(f.errors).toEqual([])
+  }finally{await f.close()}
+ },15000)
+ it(`restores an untitled legacy ${kind} draft with its original date while excluding an untouched empty paragraph`,async()=>{
+  const content={title:'',blocks:[block],yjs:''},f=await fixture({legacyContent:{title:'',blocks:[{id:'empty',type:'paragraph',content:[]}],yjs:''},legacyDraftContent:content});try{
+   await f.page.locator('.en-recovery').waitFor();await f.page.clock.setFixedTime(new Date(thirdDay));expect(await f.page.locator('.en-edit-date').count()).toBe(0)
+   await f.page.getByRole('button',{name:'恢复草稿',exact:true}).click();await expect.poll(()=>f.page.locator('.en-recovery').count()).toBe(0);await date(f.page,'编辑于2026年10月22日');await f.page.locator(`.bn-block-content[data-content-type="${kind}"]`).waitFor();expect(f.store.load('owner','date-note').saved.blocks).toEqual([block]);expect(f.store.load('owner','date-note').draft).toBeUndefined()
+   await f.page.evaluate(()=>window.remount());await f.page.locator('.bn-editor').waitFor();await date(f.page,'编辑于2026年10月22日');expect(await f.page.locator('.en-recovery').count()).toBe(0);expect(f.errors).toEqual([])
+  }finally{await f.close()}
+ },15000)
+}

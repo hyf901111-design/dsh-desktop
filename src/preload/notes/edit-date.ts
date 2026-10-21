@@ -5,7 +5,7 @@ export const noteEditTimestamp=(value:unknown):number|undefined=>typeof value===
 
 /** A generated empty paragraph and its id are not evidence of an earlier edit. */
 export function noteHasSavedContent(content:NoteContent):boolean{
- const meaningful=(blocks:any[]):boolean=>blocks.some(block=>!!noteText(block.content).trim()||['research','attachment','divider'].includes(block.type)||Array.isArray(block.children)&&meaningful(block.children))
+ const meaningful=(blocks:any[]):boolean=>blocks.some(block=>block.type!=='paragraph'||!!noteText(block.content).trim()||Array.isArray(block.children)&&meaningful(block.children))
  return !!content.title.trim()||meaningful(content.blocks)
 }
 export function noteEditDate(timestamp:number,locale:string|undefined){
