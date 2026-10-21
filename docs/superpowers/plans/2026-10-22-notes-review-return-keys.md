@@ -28,10 +28,10 @@
 **Files:** Modify packages/dsh-research-task-runtime/notes-challenge-runtime.js, test/notes-challenge-runtime.test.js as fixed-diagnostic schema changes require; Create test/notes-challenge-review-keys.test.js.
 **Interfaces:** 内部reviewKey(index)、reviewIdentity(value,targets)统一决定字段/模式/精确映射；reviewEntries仍返回原blockId Map。
 
-- [ ] RED：出站原ID/内容不变、目标键完整且距离≥2，context/anchor不改；key模式乱序映射和原文证据保留。
-- [ ] RED：未知/重复/非字符串/混合/双字段、字面ID碰撞、部分/额外组、跨批次与界限；旧精确格式兼容。
-- [ ] RED：原quote/证据过滤、固定模式日志保密、logger失败、原一次恢复、其他action无键。
-- [ ] 最小实现并跑keys/identity/runtime/recall/consistency/consensus和typecheck/diff；中文提交、一次独立整项审查及必要RED→GREEN修复。
-- [ ] 严格后继交接集成，本地构建签名/包/源一致性，实际原文多轮、四档底线/正确/混合/语境控制；保护审计并恢复原文前台。
+- [x] RED：出站原ID/内容不变、目标键完整且距离≥2，context/anchor不改；key模式乱序映射和原文证据保留。
+- [x] RED：未知/重复/非字符串/混合/双字段、字面ID碰撞、部分/额外组、跨批次与界限；旧精确格式兼容。
+- [x] RED：原quote/证据过滤、固定模式日志保密、logger失败、原一次恢复、其他action无键。
+- [x] 最小实现并跑keys/identity/runtime/recall/consistency/consensus和typecheck/diff；中文提交、一次独立整项审查及必要RED→GREEN修复。
+- [x] 严格后继交接集成，本地构建签名/包/源一致性，实际原文多轮、四档底线/正确/混合/语境控制；保护审计并恢复原文前台。
 
 **Completion:** 新包证实返回键路径实际运行，身份差错/失败较基线改善且原语义控制无回退；所有失败与残余明确保留，未满足则继续修复，不将诊断或仅兼容作为交付。
