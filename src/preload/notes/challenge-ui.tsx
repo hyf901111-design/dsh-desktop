@@ -65,7 +65,7 @@ export function ChallengeComments({controller,editor,scroll}:{controller:Control
     const doc=scroller.querySelector<HTMLElement>('.en-document')?.getBoundingClientRect();if(!doc)return
     let bottom=8
     const columnLeft=wide?Math.max(0,Math.min(area.width-336,doc.right-area.left+20)-8):0
-    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const rect=editor._tiptapEditor.view.coordsAtPos(range.from);if(wide&&(rect.bottom<area.top+36||rect.top>area.bottom-12))return;return {thread:t,rect}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number}}>
+    const candidates=controller.threads.filter(t=>!controller.isDismissed(t.id)&&(wide||t.id===controller.selected)).map(t=>{const range=findChallengeQuote(editor,t.metadata.issue.blockId,t.metadata.issue.quote);if(!range)return;try{const start=editor._tiptapEditor.view.coordsAtPos(range.from),end=editor._tiptapEditor.view.coordsAtPos(range.to),rect={...start,bottom:end.bottom};if(wide&&(rect.bottom<area.top+36||rect.top>area.bottom-12))return;return {thread:t,rect}}catch{return}}).filter(Boolean) as Array<{thread:ChallengeThread;rect:{top:number;bottom:number;left:number}}>
     candidates.sort((a,b)=>a.rect.top-b.rect.top)
     const items=candidates.map(({thread,rect})=>{
      const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260,maxHeight=Math.max(120,area.height-24)

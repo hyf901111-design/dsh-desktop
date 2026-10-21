@@ -87,3 +87,24 @@ it('keeps every comment reachable in a scrolling wide gutter and keeps prior dis
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+it('continues a discussion after a long explicit optimization, bounds recent message history, and leaves oversized replacements unapplied',async()=>{
+ const{context,page,errors}=await fixture();try{
+  await enable(page);await finish(page);await page.locator('.en-challenge-card').waitFor()
+  await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(2)
+  const replacement='更完整的研究表达。'.repeat(300)
+  await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'已按原意优化表达。',replacement}})
+  await expect.poll(()=>page.evaluate(()=>window.challenge.threads[0].metadata.issue.quote.length)).toBe(replacement.length)
+  await page.evaluate(async()=>{const c=window.editor.getExtension(window.CommentsExtension),thread=window.challenge.threads[0];for(let i=0;i<8;i++)await c.threadStore.addComment({threadId:thread.id,comment:{body:[{type:'paragraph',content:[{type:'text',text:'旧的完整讨论内容。'.repeat(350),styles:{}}]}]}})})
+  await page.getByRole('textbox',{name:'回复AI挑战'}).fill('请保留研究观点。');await page.getByRole('button',{name:'发送挑战回复'}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(3)
+  const input=await page.evaluate(()=>Object.values(window.jobs).at(-1).input.thread);expect(input.quote).toBe(replacement);expect(JSON.stringify(input).length).toBeLessThanOrEqual(16000);expect(input.messages.at(-1).text).toBe('请保留研究观点。')
+  await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'保留原有研究立场。'}})
+  await expect.poll(()=>page.getByRole('button',{name:'AI优化',exact:true}).isEnabled()).toBe(true)
+  await page.evaluate(replacement=>window.editor.updateBlock('p',{content:'前文'.repeat(4400)+replacement}),replacement);await page.locator('.en-document-scroll').evaluate(el=>el.scrollTop=el.scrollHeight)
+  await page.getByRole('button',{name:'AI优化',exact:true}).click();await expect.poll(()=>page.evaluate(()=>Object.keys(window.jobs).length)).toBe(4)
+  const before=await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))
+  await finish(page,{version:1,issues:[],coveredBlockIds:[],checks:[],reply:{text:'较长建议',replacement:'更多表达。'.repeat(1100)}})
+  await expect.poll(()=>page.locator('.en-challenge-text').last().textContent()).toContain('本次未替换原文')
+  expect(await page.evaluate(()=>window.editor.getBlock('p').content.map(c=>c.text).join(''))).toBe(before)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},20000)

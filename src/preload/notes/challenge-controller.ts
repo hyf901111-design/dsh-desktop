@@ -13,12 +13,12 @@ export type ChallengeThread={id:string;metadata:{kind:string;issue:ChallengeIssu
 const body=(text:string)=>[{type:'paragraph',content:[{type:'text',text,styles:{}}]}]
 const fingerprint=(title:string,blocks:any[])=>JSON.stringify([title,blocks])
 const send=(name:string,detail:any)=>document.dispatchEvent(new CustomEvent('sherlock:notes-challenge-'+name,{detail}))
-export function challengeThreadMessages(comments:any[]):Array<{role:'assistant'|'user';text:string}>{
+export function challengeThreadMessages(comments:any[],budget=10000):Array<{role:'assistant'|'user';text:string}>{
  const result:Array<{role:'assistant'|'user';text:string}>=[];let size=0
  for(const c of comments.filter(c=>!c.deletedAt).slice(-20).reverse()){
   const text=noteText(c.body);if(!text.trim()||text.length>4000)continue
   const message={role:c.userId===CHALLENGE_USER?'assistant' as const:'user' as const,text},length=JSON.stringify(message).length
-  if(size+length>10000)break
+  if(size+length>budget)break
   result.unshift(message);size+=length
  }
  return result
@@ -117,13 +117,17 @@ export function useNoteChallenge(options:{editor:any;doc:Y.Doc;bridge:NotesBridg
     if(ai.getThreads().get(thread.id)?.metadata?.draft===text)metadata(thread.id,{draft:''})
    }
    const all=blocks(),captured=fingerprint(latest.current.title,all),current=ai.getThreads().get(thread.id)!
-   const target=all.find(b=>b.id===issue.blockId)!,others=all.filter(b=>b.id!==issue.blockId);let size=target.text.length
+   const target=all.find(b=>b.id===issue.blockId),others=all.filter(b=>b.id!==issue.blockId);if(!target||target.text.length>12000){await append('当前段落过长或已不存在，请分段并重新定位后继续。');return}let size=target.text.length
    const chosen=[target];for(const b of others){if(chosen.length>=24||size+b.text.length>24000)continue;chosen.push(b);size+=b.text.length}
-   const result=await request({sessionId,requestId:crypto.randomUUID(),action:kind,level:readLevel()||2,title:latest.current.title,blocks:chosen,thread:{blockId:issue.blockId,quote:issue.quote,category:issue.category,message:issue.message,messages:challengeThreadMessages(current.comments)}},controller.signal)
+   const threadInput={blockId:issue.blockId,quote:issue.quote,category:issue.category,message:issue.message,messages:[] as Array<{role:'assistant'|'user';text:string}>}
+   threadInput.messages=challengeThreadMessages(current.comments,Math.min(10000,15000-JSON.stringify(threadInput).length))
+   const result=await request({sessionId,requestId:crypto.randomUUID(),action:kind,level:readLevel()||2,title:latest.current.title,blocks:chosen,thread:threadInput},controller.signal)
    if(!live.current||controller.signal.aborted||!active()||ai.getThreads().get(thread.id)?.resolved)return
    if(fingerprint(latest.current.title,blocks())!==captured){await append('正文已变化，这次回复未应用到当前原文。请基于当前文字继续讨论。');return}
    state.current.checks=result.checks;setChecks(result.checks)
    if(result.reply?.replacement){
+    const currentBlock=blocks().find(b=>b.id===issue.blockId)
+    if(!currentBlock||currentBlock.text.length-issue.quote.length+result.reply.replacement.length>12000){await append('建议会超出当前段落容量，本次未替换原文。请先分段后再优化。');return}
     if(fingerprint(latest.current.title,blocks())===captured&&findChallengeQuote(editor,issue.blockId,issue.quote)&&replaceChallengeQuote(editor,issue.blockId,issue.quote,result.reply.replacement)){
      metadata(thread.id,{issue:{...issue,quote:result.reply.replacement},sourceText:blocks().find(b=>b.id===issue.blockId)?.text})
      settle.current=Date.now()+10000
