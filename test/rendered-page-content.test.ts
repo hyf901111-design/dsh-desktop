@@ -76,6 +76,80 @@ it('prioritizes dated source records over long nonsemantic navigation menus with
   expect(result.links[0]).toEqual({title:'公司最新财务与经营差异公告',url:'https://example.org/story/real',date:'2026-10-20'})
 })
 
+it.each(['div','section','article'])('associates the only explicit date with its local %s news card',async tag=>{
+  window=new Window({url:'https://example.org/search'})
+  window.document.body.innerHTML=`<main><${tag}><h2><a href="/story">公司发布经营公告</a></h2><div><span>新闻来源</span><span>2026-10-20 18:06:00</span></div></${tag}></main>`
+  const pending=window.eval(renderedPageContentScript(400))
+  expect((await pending).links).toEqual([{title:'公司发布经营公告',url:'https://example.org/story',date:'2026-10-20'}])
+})
+
+it('reads the observed div title and separate metadata branches without including a neighboring relative-time story',async()=>{
+  window=new Window({url:'https://example.org/search'})
+  window.document.body.innerHTML=`<main><div class="result-content-wrapper"><a href="/dated"><img alt=""></a><div class="result-text"><div class="result-title"><a href="/dated">公司<font color="red">公告</font>标题</a></div><div class="result-intro">新闻摘要。</div><div class="result-meta"><span class="source">新闻来源</span><span class="time">2026-10-20 18:06:00</span></div></div></div><div class="result-text"><div class="result-title"><a href="/2026-10-21/relative">另一条新闻</a></div><div class="result-meta"><span>新闻来源</span><span>4小时前</span></div></div></main>`
+  const pending=window.eval(renderedPageContentScript(400))
+  expect((await pending).links).toEqual([
+    {title:'公司公告标题',url:'https://example.org/dated',date:'2026-10-20'},
+    {title:'另一条新闻',url:'https://example.org/2026-10-21/relative'}
+  ])
+})
+
+it.each([
+  ['neighboring card','<div><h2><a href="/story">新闻标题</a></h2></div><div><h2><a href="/other">另一条新闻</a></h2><span>2026-10-20</span></div>'],
+  ['outer page wrapper','<div><div><h2><a href="/story">新闻标题</a></h2></div><div>2026-10-20</div></div>'],
+  ['page clock','<header>2026-10-20</header><div><h2><a href="/story">新闻标题</a></h2></div>'],
+  ['footer date','<div><h2><a href="/story">新闻标题</a></h2><footer><span>2026-10-20</span></footer></div>'],
+  ['adjacent footer','<a href="/story">新闻标题</a><footer><span>2026-10-20</span></footer>'],
+  ['adjacent section','<a href="/story">新闻标题</a><section><span>2026-10-20</span></section>'],
+  ['heading date','<div><h2><span>2026-10-20</span><a href="/story">新闻标题</a></h2><div>4小时前</div></div>'],
+  ['multiple dates','<div><h2><a href="/story">新闻标题</a></h2><span>2026-10-20</span><span>2026-10-19</span></div>'],
+  ['multiple records','<div><h2><a href="/story">新闻标题</a></h2><span>2026-10-20</span><a href="/other">另一条新闻</a></div>'],
+  ['duplicate links','<div><h2><a href="/story">新闻标题</a></h2><span>2026-10-20</span><a href="/story">查看原文</a></div>'],
+  ['source link','<div><h2><a href="/story">新闻标题</a></h2><div><a href="/publisher">新闻来源</a><span>2026-10-20</span></div></div>'],
+  ['hidden date','<div><h2><a href="/story">新闻标题</a></h2><div hidden><span>2026-10-20</span></div></div>'],
+  ['aria-hidden date','<div><h2><a href="/story">新闻标题</a></h2><div aria-hidden="true"><span>2026-10-20</span></div></div>'],
+  ['display-none date','<div><h2><a href="/story">新闻标题</a></h2><div style="display:none"><span>2026-10-20</span></div></div>'],
+  ['invisible date','<div><h2><a href="/story">新闻标题</a></h2><span style="visibility:hidden">2026-10-20</span></div>'],
+  ['relative time with an excerpt date','<div><h2><a href="/story">新闻标题</a></h2><p>本文回顾2026-10-20的事件。</p><span>4小时前</span></div>'],
+  ['invalid calendar date','<div><h2><a href="/story">新闻标题</a></h2><span>2026-02-30</span></div>'],
+  ['deep wrapper','<div><h2><a href="/story">新闻标题</a></h2><div><div><div><div><div><span>2026-10-20</span></div></div></div></div></div></div>'],
+  ['deep headline','<div><h2><span><span><span><span><a href="/story">新闻标题</a></span></span></span></span></h2><span>2026-10-20</span></div>'],
+  ['oversized card',`<div><h2><a href="/story">新闻标题</a></h2><span>${'摘要'.repeat(400)}</span><span>2026-10-20</span></div>`],
+  ['many descendants',`<div><h2><a href="/story">新闻标题</a></h2>${'<span>摘要</span>'.repeat(80)}<span>2026-10-20</span></div>`]
+])('keeps a card date unknown for %s',async(_name,html)=>{
+  window=new Window({url:'https://example.org/search'})
+  window.document.body.innerHTML='<main>'+html+'</main>'
+  const pending=window.eval(renderedPageContentScript(400))
+  expect((await pending).links.find((link:{title:string})=>link.title==='新闻标题')).toEqual({title:'新闻标题',url:'https://example.org/story'})
+})
+
+it.each(['hidden','aria-hidden="true"','style="display:none"','style="visibility:hidden"'])('excludes %s dates from legacy rows and card captions',async hidden=>{
+  window=new Window({url:'https://example.org/search'})
+  window.document.body.innerHTML=`<main><ul><li><a href="/row">旧列表新闻</a><span ${hidden}>2026-10-19</span><span>2026-10-20</span></li></ul><div><h2><a href="/card">卡片新闻</a></h2><div ${hidden}><span>2026-10-19</span></div><div><span>2026-10-20</span></div></div><a ${hidden} href="/hidden">隐藏新闻</a></main>`
+  const pending=window.eval(renderedPageContentScript(400))
+  expect((await pending).links).toEqual([
+    {title:'旧列表新闻',url:'https://example.org/row',date:'2026-10-20'},
+    {title:'卡片新闻',url:'https://example.org/card',date:'2026-10-20'}
+  ])
+})
+
+it.each(['title','excerpt'])('does not treat a standalone date inside a %s as the publication caption',async mode=>{
+  window=new Window({url:'https://example.org/search'})
+  const title=mode==='title'?'<span>2026-10-20</span>新闻标题':'新闻标题'
+  const excerpt=mode==='excerpt'?'<p>新闻回顾<span>2026-10-20</span></p>':''
+  window.document.body.innerHTML=`<main><div><h2><a href="/story">${title}</a></h2>${excerpt}<div><span>4小时前</span></div></div></main>`
+  const result=await window.eval(renderedPageContentScript(400))
+  expect(result.links).toEqual([{title:mode==='title'?'2026-10-20新闻标题':'新闻标题',url:'https://example.org/story'}])
+})
+
+it.each(['li','tr','p'])('preserves the publication date in a single-link %s row',async tag=>{
+  window=new Window({url:'https://example.org/search'})
+  const content='2026-10-20 <a href="/story">旧列表新闻</a>'
+  const row=`<${tag}>${tag==='tr'?'<td>'+content+'</td>':content}</${tag}>`
+  window.document.body.innerHTML='<main>'+(tag==='tr'?'<table><tbody>'+row+'</tbody></table>':row)+'</main>'
+  const pending=window.eval(renderedPageContentScript(400))
+  expect((await pending).links).toEqual([{title:'旧列表新闻',url:'https://example.org/story',date:'2026-10-20'}])
+})
+
 
 it('returns primary article metadata from its own H1 and publication metadata, not recommended stories or arbitrary body dates',async()=>{
  window=new Window({url:'https://example.org/policy/main'})
