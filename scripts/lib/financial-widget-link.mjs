@@ -20,10 +20,12 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
  react.useLayoutEffect(()=>{
   const root=rootRef.current;if(!root)return
   const measure=()=>{
-   const base=root.getBoundingClientRect(),ports={}
+   // The SVG starts inside the scroll viewport's border, while DOMRects include
+   // that border. Use the same padding-box origin for circles and pointer paths.
+   const base=root.getBoundingClientRect(),originX=base.left+root.clientLeft,originY=base.top+root.clientTop,ports={}
    for(const port of root.querySelectorAll('[data-financial-port]')){
     const r=port.getBoundingClientRect(),card=port.closest('[data-research-node-id]')?.getBoundingClientRect()
-    ports[portKey(port.dataset.financialPortNode,port.dataset.financialPort)]={x:r.left+r.width/2-base.left+root.scrollLeft,y:r.top+r.height/2-base.top+root.scrollTop,left:(card?.left??r.left)-base.left+root.scrollLeft,right:(card?.right??r.right)-base.left+root.scrollLeft,top:(card?.top??r.top)-base.top+root.scrollTop,bottom:(card?.bottom??r.bottom)-base.top+root.scrollTop}
+    ports[portKey(port.dataset.financialPortNode,port.dataset.financialPort)]={x:r.left+r.width/2-originX+root.scrollLeft,y:r.top+r.height/2-originY+root.scrollTop,left:(card?.left??r.left)-originX+root.scrollLeft,right:(card?.right??r.right)-originX+root.scrollLeft,top:(card?.top??r.top)-originY+root.scrollTop,bottom:(card?.bottom??r.bottom)-originY+root.scrollTop}
    }
    const content=root.querySelector('[data-research-content-layer]')
    const next={width:root.clientWidth,height:Math.max(root.clientHeight,content?.scrollHeight||content?.getBoundingClientRect().height||0),ports}
@@ -83,7 +85,7 @@ export function FinancialConnections({rootRef,workspace,sessionId,snapshot,readO
    if(!dragging.moved&&Math.hypot(e.clientX-dragging.x,e.clientY-dragging.y)<4)return
    if(!dragging.moved)workspace.updateSelection([dragging.nodeId],'replace')
    dragging.moved=true;e.preventDefault()
-   const r=root.getBoundingClientRect(),target=portAt(document.elementFromPoint(e.clientX,e.clientY)),valid=compatible(dragging,target),value={nodeId:dragging.nodeId,side:dragging.side,sourceId:valid?.sourceId??(dragging.side==='output'?dragging.nodeId:null),targetId:valid?.targetId??(dragging.side==='input'?dragging.nodeId:null),previousTargetId:dragging.side==='input'?dragging.nodeId:null,x:e.clientX-r.left+root.scrollLeft,y:e.clientY-r.top+root.scrollTop,dropId:valid?target.dataset.financialPortNode:null,invalidId:target&&!valid?target.dataset.financialPortNode:null,invalidSide:target&&!valid?target.dataset.financialPort:null};draftRef.current=value;setDraft(value)
+   const r=root.getBoundingClientRect(),target=portAt(document.elementFromPoint(e.clientX,e.clientY)),valid=compatible(dragging,target),value={nodeId:dragging.nodeId,side:dragging.side,sourceId:valid?.sourceId??(dragging.side==='output'?dragging.nodeId:null),targetId:valid?.targetId??(dragging.side==='input'?dragging.nodeId:null),previousTargetId:dragging.side==='input'?dragging.nodeId:null,x:e.clientX-r.left-root.clientLeft+root.scrollLeft,y:e.clientY-r.top-root.clientTop+root.scrollTop,dropId:valid?target.dataset.financialPortNode:null,invalidId:target&&!valid?target.dataset.financialPortNode:null,invalidSide:target&&!valid?target.dataset.financialPort:null};draftRef.current=value;setDraft(value)
   }
   const up=e=>{
    if(!dragging||e.pointerId!==dragging.pointerId)return

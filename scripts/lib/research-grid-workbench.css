@@ -51,7 +51,9 @@ body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-refresh{
 body [data-ework-grid] .ew-create-source-port{--fw-accent:var(--grid-accent,#139dff);--fw-muted:var(--grid-muted,#858b95);--fw-card:var(--grid-card);position:absolute;bottom:3px;left:10px;right:auto;z-index:8;display:grid;place-items:center;box-sizing:border-box;width:20px;height:20px;min-width:20px;min-height:20px;padding:0;margin:0;border:0;border-radius:4px;background:transparent;color:var(--fw-muted);pointer-events:auto;cursor:crosshair;touch-action:none}
 body [data-ework-grid] .ew-create-source-port[data-create-draft]{bottom:16px}
 body [data-ework-grid] .ew-create-source-port[data-financial-port=output]{left:auto;right:10px;bottom:3px}
-body [data-ework-grid] .ew-create-source-port>span{display:block;width:10px;height:10px;min-width:10px;min-height:10px;aspect-ratio:1;box-sizing:border-box;border:1.5px solid currentColor;border-radius:50%;background:var(--fw-card);pointer-events:none}
+/* Shared financial-port rules own idle/hover/connected paint. Keep the circle
+   centered independently of button font metrics and preserve its filled state. */
+body [data-ework-grid] .ew-create-source-port>span{display:block;position:absolute;left:50%;top:50%;translate:-50% -50%;width:10px;height:10px;min-width:10px;min-height:10px;aspect-ratio:1;box-sizing:border-box;pointer-events:none}
 body [data-ework-grid] .ew-create-source-port:is(:hover,:focus-visible,[data-drop-target],[data-connected=true]){color:var(--fw-accent)}
 body [data-ework-grid] .ew-create-source-port:disabled{cursor:default;opacity:.55}
 body [data-ework-grid] [data-research-node-id]:has(.ew-create-source-port[data-financial-port=output]) .odyssey-data-stamp{padding-right:36px!important}
