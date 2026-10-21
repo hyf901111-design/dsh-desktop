@@ -164,3 +164,11 @@ Task6 → Task7 → Task8 → Task9，各自实现提交后独立复审；只读
 - Runtime保持已规划/首次确立的真实文章timeline义务，拒绝以markdown/custom HTML改变证据边界；保留模型经过同条证据核验后宿主重渲染，最终和outer fallback再检查。一次修复、来源权限、取数预算、财务/表格/Notes边界不变。
 - M1使用独立刷新状态组和单次全历史标记；当前/退役混合时逐组保留历史性。只复测受影响反馈注入/store/renderer与深浅、窄宽浏览器几何及截图。
 - 直接回归与RED→GREEN、接口取舍、实际/合成边界、原始日志及本地提交记录见ignored `.superpowers/sdd/2026-10-21-workbench-announcement-range/final-fix-report.md`。本轮不运行全套、不构建/发布/推送，Task2原生验收仍由root在唯一scoped复审后执行。
+
+### Task 10: 集成发现的单卡提示词预算兼容
+
+**触发/依赖：** 最终来源修复19810fdf及唯一scoped复审已闭环；现有integration清单14文件检查在暂存合并树发现 `bundled-component-skill.test.js:97` 的同一完整长需求提示词5145字，超过既有5000上限，执行器未合并且保留干净9abe468a。此为新观察到的集成兼容任务，不重开已完成来源任务或另做全分支review。
+
+**Owner / scope：** 新鲜单implementer；先重现/诊断来源，再仅在单卡提示词或panel内置摘要中压缩重复表述，保留原完整需求、唯一技能注入、输出协议、适用schema/设计/来源/日期/刷新真实性约束。优先workbench-plan.js或component-skill.js/该profile摘要，不改Runtime事实门禁、来源权限、预算、模板容量或用户请求。不得提高5000门槛、截断需求、隐藏失败、删除必要设计/事实约束或改其他profile语义。
+
+**验证/交接：** 既有失败用例RED→GREEN，新增测试仅在需要证明保留语义时补充，不镜像实现；只运行bundled skill及直接受影响workbench prompt/contract检查、语法/diff，不全套/SDK/客户端/构建。区分冻结旧tip和当前源码的证据。自审/ownfiles中文提交，task-10-report.md；root独立任务scoped审阅通过后刷新同一未验收批次、执行清单检查和Task2原生六卡。单源码writer；不重复之前wholebranch最终review波次。
