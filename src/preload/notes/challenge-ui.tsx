@@ -74,8 +74,14 @@ export function ChallengeComments({controller,editor,scroll}:{controller:Control
      const height=cards.current.get(thread.id)?.getBoundingClientRect().height||260,maxHeight=Math.max(120,area.height-32)
      let top=rect.top-area.top
      if(wide){top=Math.max(top,bottom);bottom=top+Math.min(height,maxHeight)+12}
-     else top=Math.max(16,Math.min(rect.bottom-area.top+10,area.height-Math.min(height,maxHeight)-16))
-     return {id:thread.id,style:{top,left:wide?16:Math.max(16,area.width-336),maxHeight,width:Math.min(320,area.width-32)}}
+     else{
+      const below=rect.bottom-area.top+10,above=rect.top-area.top-Math.min(height,maxHeight)-10
+      top=below+Math.min(height,maxHeight)<=area.height-16?below:above>=16?above:below
+      // A selected quote can scroll offscreen while its reply still has focus.
+      top=Math.max(16,Math.min(top,area.height-Math.min(height,maxHeight)-16))
+     }
+     const width=Math.min(320,area.width-32),left=wide?16:Math.max(16,Math.min(rect.left-area.left,area.width-width-16))
+     return {id:thread.id,style:{top,left,maxHeight,width}}
     })
     setLayout(old=>JSON.stringify(old)==JSON.stringify({wide,columnLeft,items})?old:{wide,columnLeft,items})
    })
