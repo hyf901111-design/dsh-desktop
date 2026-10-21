@@ -419,11 +419,31 @@ it('rejects an old pending suggestion without a V2 scope and retains its history
   expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
-it('does not edit text or the date when a complete-sentence suggestion is unchanged',async()=>{
+for(const kind of ['optimize','reply'])it('keeps an identical '+kind+' suggestion as discussion without a replace action or date change',async()=>{
  const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
-  await page.evaluate(id=>window.challenge.select(id),id);await start(page,'optimize');await finish(page,{...answer,reply:{text:'原句无需变化。',replacement:capturedSource}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
   const before=await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))
-  await page.getByRole('button',{name:'替换到原文',exact:true}).click()
+  await page.evaluate(id=>window.challenge.select(id),id);await start(page,kind,'直接替换到原文')
+  await page.evaluate(id=>window.challenge.setDraft(id,'下一条还没有发送的回复'),id)
+  await finish(page,{...answer,reply:{text:'原句无需变化。',replacement:capturedSource}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  expect(await page.locator('.en-challenge-suggestion').count()).toBe(0)
+  expect(await page.getByRole('button',{name:'替换到原文',exact:true}).count()).toBe(0)
+  expect(await page.evaluate(()=>window.challenge.threads[0].comments.at(-1).metadata?.challengeReplacement??null)).toBeNull()
+  expect(await page.evaluate(()=>window.messages().at(-1))).toBe('原句无需变化。')
+  expect(await page.evaluate(()=>window.challenge.threads[0].metadata.draft)).toBe('下一条还没有发送的回复')
+  expect(await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
+  expect(errors).toEqual([])
+ }finally{await context.close()}
+},15000)
+it('keeps an older identical preview in history without rendering a redundant replacement or applying it again',async()=>{
+ const {context,page,errors,id}=await fixture(capturedSource,capturedQuote);try{
+  await start(page,'optimize');await finish(page,{...answer,reply:{text:'保留这条历史优化说明。',replacement:capturedReplacement}});await expect.poll(()=>page.evaluate(()=>window.challenge.busyId||null)).toBeNull()
+  const commentId=await page.evaluate(({id,source})=>{const thread=window.noteDoc.getMap('threads').get(id),comment=thread.get('comments').toArray().at(-1),metadata=comment.get('metadata');comment.set('metadata',{...metadata,challengeReplacement:{...metadata.challengeReplacement,replacement:source}});window.challenge.select(id);return comment.get('id')},{id,source:capturedSource})
+  const before=await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))
+  await page.getByRole('button',{name:'AI优化',exact:true}).waitFor()
+  expect(await page.locator('.en-challenge-suggestion').count()).toBe(0)
+  expect(await page.evaluate(()=>window.messages().at(-1))).toBe('保留这条历史优化说明。')
+  await page.evaluate(({id,commentId})=>window.challenge.applyReplacement(id,commentId),{id,commentId})
+  expect(await page.evaluate(()=>window.challenge.threads[0].comments.at(-1).metadata.challengeReplacement.status)).toBe('pending')
   expect(await page.evaluate(()=>({content:window.editor.getBlock('p').content,date:window.noteDoc.getMap('note-metadata').get('editedAt')}))).toEqual(before)
   expect(errors).toEqual([])
  }finally{await context.close()}
